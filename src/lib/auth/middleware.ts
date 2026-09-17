@@ -16,7 +16,7 @@ const PUBLIC_AUTH_PREFIXES = [
   // Service worker POS (public/sw.js) — didaftarkan dari halaman kasir; registrasi
   // harus dapat berkas JS-nya langsung, bukan redirect ke /login.
   "/sw.js",
-  "/bg.",
+  "/bg",
   // Foto produk (public/products) & logo QRIS/GPN (public/qris) dipakai
   // halaman publik self-order meja (EPIC-048) sebelum ada sesi.
   "/products/",
