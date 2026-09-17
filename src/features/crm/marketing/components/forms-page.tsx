@@ -23,7 +23,7 @@ import type { FormRow, PublicFieldDef, PublicFormInput } from "../types";
 const dateTime = (v: string | null) =>
   v ? new Date(v).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
 
-/** EPIC-050 T-5.3 — kelola form publik yang tampil di tedja.reddie.id/public. */
+/** EPIC-050 T-5.3 — kelola form publik yang tampil di poskopi.reddie.id/public. */
 export function PublicFormsPage() {
   const formsQuery = useForms();
   const updateMutation = useUpdateForm();

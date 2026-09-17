@@ -33,7 +33,7 @@ const ORG_TYPE_LABELS: Record<string, string> = {
   lainnya: "Lainnya",
 };
 
-/** EPIC-050 T-5.3 — halaman publik tedja.reddie.id/public. */
+/** EPIC-050 T-5.3 — halaman publik poskopi.reddie.id/public. */
 export function PublicFormPage({ form }: { form: PublicFormView }) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});

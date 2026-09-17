@@ -4,7 +4,7 @@ import { loadPublicForm, publicFormView } from "@/lib/crm/public-forms-server";
 
 export const dynamic = "force-dynamic";
 
-/** Form publik tambahan: tedja.reddie.id/public/<slug>. */
+/** Form publik tambahan: poskopi.reddie.id/public/<slug>. */
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const form = await loadPublicForm(slug);

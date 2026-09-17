@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { absoluteImageUrl, buildGobizCatalog, variantCategoryId } from "./catalog";
 
-const appUrl = "https://tedja.reddie.id";
+const appUrl = "https://poskopi.reddie.id";
 
 describe("buildGobizCatalog", () => {
   it("mengelompokkan item per kategori, external_id = id produk, varian jadi variant_category min1/max1", () => {
@@ -41,7 +41,7 @@ describe("buildGobizCatalog", () => {
       description: "Signature",
       in_stock: true,
       price: 25000,
-      image: "https://tedja.reddie.id/products/kopi-susu.png",
+      image: "https://poskopi.reddie.id/products/kopi-susu.png",
       variant_category_external_ids: [variantCategoryId("p-kopi")],
     });
     expect(payload.variant_categories).toEqual([
