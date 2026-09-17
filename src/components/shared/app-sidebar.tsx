@@ -262,7 +262,7 @@ function SidebarHeader({
       {collapsed ? (
         <div className="flex w-full flex-col items-center justify-center gap-1">
           <img
-            src="/logos/logo.png"
+            src="/logos/logo.png?v=bcd"
             alt="BCD Coffee OS"
             className="h-9 w-9 object-contain"
           />
@@ -279,7 +279,7 @@ function SidebarHeader({
       ) : (
         <div className="flex w-full items-center gap-3">
           <img
-            src="/logos/logo.png"
+            src="/logos/logo.png?v=bcd"
             alt="BCD Coffee OS"
             className="h-16 w-auto max-w-[10rem] shrink-0 object-contain object-left"
           />
