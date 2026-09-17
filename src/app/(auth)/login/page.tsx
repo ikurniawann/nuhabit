@@ -54,7 +54,7 @@ export default function LoginPage() {
     const interval = window.setInterval(() => setNow(new Date()), 1000);
     const wallpapers = {
       arkiv: "/bg.webp",
-      pink: "linear-gradient(135deg,#1a0b0b,#5c1616 45%,#111827)",
+      pink: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)",
       midnight: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)",
       glass: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)",
     } as const;
@@ -85,7 +85,7 @@ export default function LoginPage() {
         .eq("id", authData.user.id)
         .single();
 
-      // Hanya super_admin yang mendarat di desktop Tedja Coffee OS. Semua role lain
+      // Hanya super_admin yang mendarat di desktop BCD Coffee OS. Semua role lain
       // langsung ke Area Karyawan (/dashboard/me = beranda); redirect yang
       // diminta dihormati hanya bila masih di dalam area /dashboard/me.
       const role = (profile as { role?: string } | null)?.role;
@@ -130,7 +130,7 @@ export default function LoginPage() {
           <div className="mb-5 grid size-24 place-items-center rounded-full border border-white/20 bg-white/15 text-3xl font-semibold shadow-2xl backdrop-blur-2xl">
             {email ? email.charAt(0).toUpperCase() : "A"}
           </div>
-          <h1 className="text-center text-2xl font-semibold tracking-[-0.03em] drop-shadow-lg">Tedja Coffee</h1>
+          <h1 className="text-center text-2xl font-semibold tracking-[-0.03em] drop-shadow-lg">BCD Coffee</h1>
           <p className="mt-1 text-center text-sm text-white/70">
             {requestedModule ? `Verifikasi akun untuk membuka ${requestedModule.toUpperCase()}` : "Verifikasi akun untuk masuk ke desktop"}
           </p>
@@ -188,7 +188,7 @@ export default function LoginPage() {
         </div>
 
         <div className="flex w-full items-center justify-between text-xs text-white/55">
-          <span>Tedja Coffee Operating System</span>
+          <span>BCD Coffee Operating System</span>
           <span>Single account session</span>
         </div>
       </section>

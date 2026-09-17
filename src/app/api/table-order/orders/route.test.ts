@@ -155,7 +155,7 @@ vi.mock("@/lib/table-order/server", () => ({
   loadVenueContext: vi.fn(async () => ({
     companyId: "company-1",
     branchId: "branch-1",
-    brandName: "Tedja Coffee",
+    brandName: "BCD Coffee",
     billingProfileName: "System",
     qrisAvailable: true,
     arkRate: 1000,

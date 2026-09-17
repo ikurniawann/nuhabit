@@ -174,18 +174,18 @@ export default function QaReportPage() {
   const highIssues = issues.filter((item) => item.severity === "High").length;
 
   return (
-    <main className="min-h-screen bg-[#fdf6f4] text-slate-950">
-      <section className="relative overflow-hidden border-b border-pink-100 bg-[#fdf3f2]">
+    <main className="min-h-screen bg-[#f4f6fe] text-slate-950">
+      <section className="relative overflow-hidden border-b border-pink-100 bg-[#f2f6fe]">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(219,39,119,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(219,39,119,0.08)_1px,transparent_1px)] bg-[size:48px_48px]" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-5 py-8 md:px-8 lg:grid-cols-[1fr_380px] lg:py-12">
           <div className="flex flex-col justify-between gap-8">
             <nav className="flex items-center justify-between">
               <Link href="/arkiv-os" className="inline-flex items-center gap-3">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-white shadow-sm">
-                  <Image src="/logos/logo.png" alt="Tedja Coffee OS" width={30} height={30} className="h-8 w-auto object-contain" />
+                  <Image src="/logos/logo.png" alt="BCD Coffee OS" width={30} height={30} className="h-8 w-auto object-contain" />
                 </span>
                 <span>
-                  <span className="block text-sm font-bold text-slate-950">Tedja Coffee OS</span>
+                  <span className="block text-sm font-bold text-slate-950">BCD Coffee OS</span>
                   <span className="text-xs font-medium text-slate-500">Quality Assurance Report</span>
                 </span>
               </Link>
@@ -201,7 +201,7 @@ export default function QaReportPage() {
             <div className="max-w-4xl">
               <Badge className="border-pink-200 bg-white text-pink-700">Progress QA berjalan · 24 Mei 2026</Badge>
               <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-tight text-slate-950 md:text-6xl">
-                QA progress dashboard untuk Tedja Coffee OS development
+                QA progress dashboard untuk BCD Coffee OS development
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
                 Ringkasan testing yang sudah dilakukan selama development CRM, POS, Purchasing, Barang Masuk, Recipe/BOM, dan Production Order.

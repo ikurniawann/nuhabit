@@ -281,7 +281,7 @@ type PathWindow = { id: string; title: string; path: string };
 /** Wallpaper bawaan; wallpaper unggahan admin ditambahkan dari /api/desktop/wallpapers. */
 const wallpapers: WallpaperItem[] = [
   { id: "arkiv", name: `${BRAND} Café`, src: "/bg.avif" },
-  { id: "pink", name: "Maroon Dusk", src: "linear-gradient(135deg,#1a0b0b,#5c1616 45%,#111827)" },
+  { id: "pink", name: "Indigo Dusk", src: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)" },
   { id: "midnight", name: "Midnight", src: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)" },
   { id: "glass", name: "Glass Blue", src: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)" },
 ];
@@ -3011,7 +3011,7 @@ function AiAssistantWindow({
               </div>
               <h3 className="text-xl font-bold text-white/90">Do</h3>
               <p className="mt-2 max-w-sm text-sm leading-6 text-white/55">
-                Asisten operasional Tedja. Data yang bisa diakses mengikuti hak menu Anda. Mode {activeScope.label} memakai {activeModel.label}.
+                Asisten operasional BCD. Data yang bisa diakses mengikuti hak menu Anda. Mode {activeScope.label} memakai {activeModel.label}.
               </p>
               <button
                 onClick={startNewChat}

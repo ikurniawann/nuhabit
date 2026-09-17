@@ -15,7 +15,7 @@ import { buildAskDoPrompt } from "@/lib/desktop/ask-do";
 import { PERIOD_KINDS, PERIOD_LABELS, type PeriodKind } from "@/lib/desktop/period";
 
 /**
- * Papan widget monitoring owner di desktop Tedja Coffee OS (EPIC-019 Fase B).
+ * Papan widget monitoring owner di desktop BCD Coffee OS (EPIC-019 Fase B).
  *
  * Revisi owner 2026-07-21: tanpa ikon sama sekali, dan permukaan kartu
  * disamakan dengan Calendar Widget (bg-slate-950/55 — lebih gelap daripada

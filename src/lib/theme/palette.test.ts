@@ -11,7 +11,7 @@ import {
 describe("normalizeHex", () => {
   it("expands shorthand and lowercases", () => {
     expect(normalizeHex("#FFF")).toBe("#ffffff");
-    expect(normalizeHex("741A1A")).toBe("#741a1a");
+    expect(normalizeHex("1D1DCC")).toBe("#1d1dcc");
   });
   it("throws on invalid input", () => {
     expect(() => normalizeHex("not-a-color")).toThrow();
@@ -34,13 +34,13 @@ describe("contrastRatio", () => {
 
 describe("pickForeground", () => {
   it("uses white text on the dark default pink", () => {
-    expect(pickForeground("#741a1a")).toBe("#ffffff");
+    expect(pickForeground("#1d1dcc")).toBe("#ffffff");
   });
   it("uses dark text on a light brand color", () => {
     expect(pickForeground("#fde68a")).toBe("#000000");
   });
   it("guarantees >= 4.5 contrast against the chosen brand", () => {
-    for (const c of ["#741a1a", "#0ea5e9", "#10b981", "#fde68a", "#111827"]) {
+    for (const c of ["#1d1dcc", "#0ea5e9", "#10b981", "#fde68a", "#111827"]) {
       const fg = pickForeground(c);
       expect(contrastRatio(fg, c)).toBeGreaterThanOrEqual(4.5);
     }
@@ -54,9 +54,9 @@ describe("pickForeground", () => {
 
 describe("buildBrandVars", () => {
   it("returns the three runtime-injected variables", () => {
-    const vars = buildBrandVars("741a1a", "#9b2c2c");
-    expect(vars["--brand-primary"]).toBe("#741a1a");
-    expect(vars["--brand-secondary"]).toBe("#9b2c2c");
+    const vars = buildBrandVars("1d1dcc", "#2941d3");
+    expect(vars["--brand-primary"]).toBe("#1d1dcc");
+    expect(vars["--brand-secondary"]).toBe("#2941d3");
     expect(vars["--primary-foreground"]).toBe("#ffffff");
   });
 });

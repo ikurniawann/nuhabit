@@ -53,7 +53,7 @@ export function buildCompNotifMessage(
       ? `${input.orderNumber} (${input.orderCount} order)`
       : input.orderNumber;
   return [
-    `Tedja Coffee OS — Komplimen ${compNotifLabel(input.compType)}`,
+    `BCD Coffee OS — Komplimen ${compNotifLabel(input.compType)}`,
     `Order : ${orderLine}`,
     `Customer : ${input.customerName?.trim() || "-"}`,
     `Nilai : ${rp(input.grossIdr)}`,
@@ -120,7 +120,7 @@ export function buildFocTopupMessage(
     timeStyle: "short",
   });
   return [
-    "Tedja Coffee OS — Topup FOC (Gratis)",
+    "BCD Coffee OS — Topup FOC (Gratis)",
     `Customer : ${input.customerName?.trim() || "-"}`,
     `Saldo ARK : ${rp(input.amountIdr)} (tanpa pembayaran, tanpa XP)`,
     `Disetujui : ${input.approvedName?.trim() || "-"}`,

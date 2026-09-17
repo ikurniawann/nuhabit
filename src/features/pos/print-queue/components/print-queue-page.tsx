@@ -115,7 +115,7 @@ function buildTicketEscPosBytes(job: PrintJob): Uint8Array {
   }
 
   lines.push({ text: "--------------------------------", align: "left" });
-  lines.push({ text: "TEDJA COFFEE POS PRINT QUEUE", align: "center" });
+  lines.push({ text: "BCD COFFEE POS PRINT QUEUE", align: "center" });
   return encodeEscPosLines(lines);
 }
 
@@ -163,7 +163,7 @@ function buildTicketHtml(job: PrintJob) {
           <div class="line"></div>
           ${itemRows || `<div class="muted">Tidak ada item.</div>`}
           <div class="line"></div>
-          <div class="center muted">TEDJA COFFEE POS PRINT QUEUE</div>
+          <div class="center muted">BCD COFFEE POS PRINT QUEUE</div>
         </main>
         <script>
           window.addEventListener("load", function () {
@@ -487,7 +487,7 @@ function ThermalTicket({ job }: { job: PrintJob }) {
         )}
       </div>
       <div className="my-3 border-t border-dashed border-gray-400" />
-      <div className="text-center text-[11px] text-gray-500">TEDJA COFFEE POS PRINT QUEUE</div>
+      <div className="text-center text-[11px] text-gray-500">BCD COFFEE POS PRINT QUEUE</div>
     </div>
   );
 }

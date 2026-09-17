@@ -28,7 +28,7 @@ const BORDER: Partial<ExcelJS.Borders> = {
 export async function newWorkbook(): Promise<ExcelJS.Workbook> {
   const { Workbook } = await import("exceljs");
   const wb = new Workbook();
-  wb.creator = "Tedja Coffee — Arkiv OS";
+  wb.creator = "BCD Coffee — Arkiv OS";
   wb.created = new Date();
   return wb;
 }

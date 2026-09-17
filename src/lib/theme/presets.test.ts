@@ -4,11 +4,11 @@ import { normalizeHex } from "./palette";
 import { DEFAULT_PRESET_ID, getPreset, THEME_PRESETS } from "./presets";
 
 describe("THEME_PRESETS", () => {
-  it("includes wonderland as the default with the current pink", () => {
+  it("includes wonderland as the default with the current brand blue", () => {
     const wonderland = getPreset(DEFAULT_PRESET_ID);
     expect(wonderland).toBeDefined();
-    expect(wonderland!.primary).toBe("#741a1a");
-    expect(wonderland!.secondary).toBe("#9b2c2c");
+    expect(wonderland!.primary).toBe("#1d1dcc");
+    expect(wonderland!.secondary).toBe("#2941d3");
   });
   it("has unique ids and valid hex values", () => {
     const ids = new Set<string>();

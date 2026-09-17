@@ -17,7 +17,7 @@ const ArkivOsDesktop = dynamic(() => import("./arkiv-os-desktop"), {
     <div className="grid min-h-dvh place-items-center bg-[#0b1020] text-white">
       <div className="flex flex-col items-center gap-4">
         <div className="size-12 animate-spin rounded-full border-2 border-white/20 border-t-pink-400" />
-        <div className="text-sm font-medium text-white/70">Memuat Tedja Coffee OS…</div>
+        <div className="text-sm font-medium text-white/70">Memuat BCD Coffee OS…</div>
       </div>
     </div>
   ),

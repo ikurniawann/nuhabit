@@ -62,8 +62,8 @@ export function MemberLoginCard({ onSuccess }: { onSuccess: () => void }) {
     <div className="flex flex-1 flex-col justify-center gap-7 py-8">
       <div className="mp-rise flex flex-col items-center text-center">
         <Image
-          src="/logos/tedja-coffee-logo.png"
-          alt="Tedja Coffee"
+          src="/logos/bcd-coffee-icon.png"
+          alt="BCD Coffee"
           width={112}
           height={112}
           className="size-28 object-contain"

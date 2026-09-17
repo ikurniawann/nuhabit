@@ -243,7 +243,7 @@ export function StockAlertsPage() {
             ? ` · Terakhir ${new Date(data.updated_at).toLocaleTimeString('id-ID')}`
             : ''}
         </span>
-        <span className="font-mono">Tedja Coffee POS · Stok Alert</span>
+        <span className="font-mono">BCD Coffee POS · Stok Alert</span>
       </footer>
     </div>
   );

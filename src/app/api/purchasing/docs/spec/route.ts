@@ -6,9 +6,9 @@ export const maxDuration = 60;
 const spec = {
   openapi: "3.0.3",
   info: {
-    title: "Tedja Coffee OS Purchasing Module API",
+    title: "BCD Coffee OS Purchasing Module API",
     version: "1.0.0",
-    description: "REST API for Tedja Coffee OS Purchasing Module — Suppliers, Purchase Orders, Materials",
+    description: "REST API for BCD Coffee OS Purchasing Module — Suppliers, Purchase Orders, Materials",
   },
   servers: [{ url: process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000" }],
   paths: {

@@ -166,7 +166,7 @@ export async function loadVenueContext(): Promise<VenueContext> {
   const venue = await getCrmDefaultVenue(db);
 
   const [brandName, billing, qrisAvailable, loyalty] = await Promise.all([
-    resolveBrandName(venue.companyId).catch(() => "Tedja Coffee"),
+    resolveBrandName(venue.companyId).catch(() => "BCD Coffee"),
     resolveBillingProfile({ branchId: venue.branchId }),
     loadActiveXenditConfig(db)
       .then(() => true)

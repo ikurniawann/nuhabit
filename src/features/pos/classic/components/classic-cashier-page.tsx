@@ -628,7 +628,7 @@ export function ClassicCashierPage() {
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-700 bg-slate-950 px-4">
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-black tracking-wide text-amber-400">POS Classic</span>
-          <span className="text-xs uppercase tracking-widest text-slate-400">Tedja Coffee</span>
+          <span className="text-xs uppercase tracking-widest text-slate-400">BCD Coffee</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button

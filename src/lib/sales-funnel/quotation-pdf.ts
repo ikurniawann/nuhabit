@@ -9,7 +9,7 @@ import PDFDocument from "pdfkit";
 const COLOR_TEXT = "#111827";
 const COLOR_MUTED = "#6b7280";
 const COLOR_LINE = "#d1d5db";
-const COLOR_ACCENT = "#741a1a";
+const COLOR_ACCENT = "#1d1dcc";
 
 type Doc = InstanceType<typeof PDFDocument>;
 

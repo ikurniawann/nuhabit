@@ -48,7 +48,7 @@ function Section({
 }
 
 export function DesignSystemShowcase() {
-  const [text, setText] = useState("Tedja Coffee OS");
+  const [text, setText] = useState("BCD Coffee OS");
   const [dept, setDept] = useState("hr");
   const [joinedAt, setJoinedAt] = useState("2026-06-24 09:00");
   const [page, setPage] = useState(1);

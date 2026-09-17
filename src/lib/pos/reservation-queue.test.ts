@@ -33,14 +33,14 @@ describe("buildReservationQueueWaMessage", () => {
       dateLabel: "Sabtu, 16 Agustus 2026",
       timeLabel: "19:00",
       paxCount: 3,
-      merchantName: "Tedja Coffee",
+      merchantName: "BCD Coffee",
     });
     expect(msg).toContain("Budi");
     expect(msg).toContain("*W-07*");
     expect(msg).toContain("Sabtu, 16 Agustus 2026");
     expect(msg).toContain("19:00");
     expect(msg).toContain("3 orang");
-    expect(msg).toContain("Tedja Coffee");
+    expect(msg).toContain("BCD Coffee");
     expect(msg).toContain("dipanggil");
   });
 

@@ -44,13 +44,13 @@ describe("buildReceiptLines mixed checkout", () => {
 describe("receipt header/footer dari konfigurasi (EPIC-040)", () => {
   const decorated: ReceiptPayload = {
     ...mixedPayload,
-    receiptHeader: ["TEDJA COFFEE", "Jl. Ir. H. Juanda 145"],
+    receiptHeader: ["BCD COFFEE", "Jl. Ir. H. Juanda 145"],
     receiptFooter: ["Terima kasih!", "WiFi: SULU-GUEST"],
   };
 
   it("customer copy memuat header di atas dan footer sebelum copy marker", () => {
     const lines = buildReceiptLines(decorated, "CUSTOMER");
-    expect(lines[0]).toBe("TEDJA COFFEE");
+    expect(lines[0]).toBe("BCD COFFEE");
     expect(lines[1]).toBe("Jl. Ir. H. Juanda 145");
     expect(lines.indexOf("--- CUSTOMER ---")).toBeGreaterThan(1);
     const footerIdx = lines.indexOf("Terima kasih!");
@@ -61,7 +61,7 @@ describe("receipt header/footer dari konfigurasi (EPIC-040)", () => {
   it("copy dapur/bar tidak memuat header maupun footer", () => {
     for (const label of ["KITCHEN", "BAR"] as const) {
       const lines = buildReceiptLines(decorated, label);
-      expect(lines).not.toContain("TEDJA COFFEE");
+      expect(lines).not.toContain("BCD COFFEE");
       expect(lines).not.toContain("Terima kasih!");
       expect(lines[0]).toBe(`--- ${label} ---`);
     }

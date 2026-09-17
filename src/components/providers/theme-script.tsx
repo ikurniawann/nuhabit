@@ -18,7 +18,7 @@ function fgOf(p){return ratio('#ffffff',p)>=ratio('#000000',p)?'#ffffff':'#00000
 var fonts=${JSON.stringify(FONT_STACKS)};
 var a=null;
 try{a=JSON.parse(localStorage.getItem('${APPEARANCE_STORAGE_KEY}')||'null')}catch(e){}
-var presets={wonderland:['#741a1a','#9b2c2c'],ocean:['#0ea5e9','#6366f1'],emerald:['#10b981','#14b8a6'],graphite:['#334155','#64748b'],sunset:['#f97316','#ef4444']};
+var presets={wonderland:['#1d1dcc','#2941d3'],ocean:['#0ea5e9','#6366f1'],emerald:['#10b981','#14b8a6'],graphite:['#334155','#64748b'],sunset:['#f97316','#ef4444']};
 var preset=(s&&typeof s.presetId==='string'&&presets[s.presetId])?presets[s.presetId]:presets.wonderland;
 var b=a&&a.base?a.base:{};
 var p=(typeof b.primary==='string')?b.primary:((s&&typeof s.customPrimary==='string')?s.customPrimary:preset[0]);
@@ -39,11 +39,11 @@ root.style.setProperty('--destructive',b.destructive||'#dc2626');
 root.style.setProperty('--border',b.border||'#e5e7eb');
 root.style.setProperty('--input',b.input||'#d1d5db');
 root.style.setProperty('--ring',b.ring||p);
-root.style.setProperty('--sidebar-background',sb.background||'#fdf6f4');
+root.style.setProperty('--sidebar-background',sb.background||'#f4f6fe');
 root.style.setProperty('--sidebar-foreground',sb.foreground||'#0f172a');
 root.style.setProperty('--sidebar-active-background',sb.activeBackground||p);
 root.style.setProperty('--sidebar-active-foreground',sb.activeForeground||fgOf(sb.activeBackground||p));
-root.style.setProperty('--sidebar-border',sb.border||'#fae4e2');
+root.style.setProperty('--sidebar-border',sb.border||'#e2eafd');
 root.style.setProperty('--navbar-background',nb.background||'#ffffff');
 root.style.setProperty('--navbar-foreground',nb.foreground||'#0f172a');
 root.style.setProperty('--navbar-border',nb.border||'#f3f4f6');

@@ -1,5 +1,5 @@
 // EPIC-039 Fase F — engine sinkronisasi marketplace.
-// Arah: PUSH stok (Tedja Coffee master, minus buffer per akun) dan PULL order
+// Arah: PUSH stok (BCD Coffee master, minus buffer per akun) dan PULL order
 // (idempoten by order_sn; order READY_TO_SHIP → shop.orders source shopee
 // + klaim stok). Stok tidak cukup saat pull → order TETAP dicatat (barang
 // sudah terjual di Shopee) + sync_log error supaya admin rekonsiliasi.

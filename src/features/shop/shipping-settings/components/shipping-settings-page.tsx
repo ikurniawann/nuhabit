@@ -265,7 +265,7 @@ export function ShippingSettingsPage() {
               <label className="mb-1 block text-xs text-gray-500">Nama pengirim</label>
               <Input
                 defaultValue={settings.origin_contact_name ?? ''}
-                placeholder="Toko Tedja"
+                placeholder="Toko BCD"
                 onBlur={(event) => {
                   if (event.target.value !== (settings.origin_contact_name ?? '')) {
                     patchSettings({ origin_contact_name: event.target.value }, 'Nama pengirim tersimpan');

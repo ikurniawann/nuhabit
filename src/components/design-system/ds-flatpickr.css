@@ -72,21 +72,21 @@
 .ds-flatpickr .flatpickr-day.selected,
 .ds-flatpickr .flatpickr-day.startRange,
 .ds-flatpickr .flatpickr-day.endRange {
-  background: #741a1a;
-  border-color: #741a1a;
+  background: #1d1dcc;
+  border-color: #1d1dcc;
 }
 
 .ds-flatpickr .flatpickr-day.selected:hover,
 .ds-flatpickr .flatpickr-day.startRange:hover,
 .ds-flatpickr .flatpickr-day.endRange:hover {
-  background: #5e1616;
-  border-color: #5e1616;
+  background: #121296;
+  border-color: #121296;
 }
 
 .ds-flatpickr .flatpickr-day.today {
-  border-color: #f9a8d4;
+  border-color: #acc3ff;
 }
 
 .ds-flatpickr .flatpickr-day.today:hover {
-  border-color: #741a1a;
+  border-color: #1d1dcc;
 }
