@@ -20,6 +20,12 @@ import {
   type MonitorWidgetKey,
 } from "./desktop-monitor";
 import type { DesktopOverview as DesktopOverviewData } from "@/lib/desktop/overview";
+import {
+  BUILTIN_WALLPAPERS,
+  WALLPAPER_STORAGE_KEY,
+  wallpaperBackgroundStyle,
+  type WallpaperItem,
+} from "@/lib/desktop/wallpapers";
 import { brandName, brandOsName } from "@/lib/branding";
 import { REPORT_EXPORTS, type ReportExportKey } from "@/lib/pos/report-excel/builders";
 import { DriveDataroomBrowser } from "@/features/dataroom/components/drive-browser";
@@ -273,18 +279,16 @@ const modules: DesktopModule[] = [
   },
 ];
 
-type WallpaperItem = { id: string; name: string; src: string; custom?: boolean };
 type SearchGroup = { source: string; label: string; items: Array<{ id: string; title: string; subtitle?: string | null; href: string }> };
 /** Jendela yang dibuka dari deep link / hasil Spotlight (bisa banyak sekaligus). */
 type PathWindow = { id: string; title: string; path: string };
 
-/** Wallpaper bawaan; wallpaper unggahan admin ditambahkan dari /api/desktop/wallpapers. */
-const wallpapers: WallpaperItem[] = [
-  { id: "arkiv", name: `${BRAND} Café`, src: "/bg.avif" },
-  { id: "pink", name: "Indigo Dusk", src: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)" },
-  { id: "midnight", name: "Midnight", src: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)" },
-  { id: "glass", name: "Glass Blue", src: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)" },
-];
+/**
+ * Wallpaper bawaan; unggahan admin ditambahkan dari /api/desktop/wallpapers.
+ * Daftarnya ada di @/lib/desktop/wallpapers supaya halaman login memakai
+ * sumber yang sama — pilihan di desktop langsung ikut dipakai di login.
+ */
+const wallpapers = BUILTIN_WALLPAPERS;
 
 const defaultWidgetVisibility: WidgetVisibility = {
   calendar: false,
@@ -722,7 +726,7 @@ export default function ArkivOsDesktop() {
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setNow(new Date());
-      const savedWallpaper = window.localStorage.getItem("arkiv-wallpaper");
+      const savedWallpaper = window.localStorage.getItem(WALLPAPER_STORAGE_KEY);
       const savedWidgets = window.localStorage.getItem("arkiv-widget-visibility");
       const savedOrder = window.localStorage.getItem("arkiv-widget-order");
       if (savedOrder) {
@@ -778,7 +782,7 @@ export default function ArkivOsDesktop() {
         if (cancelled || !Array.isArray(json?.data)) return;
         const items: WallpaperItem[] = json.data.map((item: WallpaperItem) => ({ ...item, custom: true }));
         setCustomWallpapers(items);
-        const savedWallpaper = window.localStorage.getItem("arkiv-wallpaper");
+        const savedWallpaper = window.localStorage.getItem(WALLPAPER_STORAGE_KEY);
         const match = savedWallpaper ? items.find((item) => item.id === savedWallpaper) : null;
         if (match) setWallpaper(match);
       })
@@ -932,7 +936,7 @@ export default function ArkivOsDesktop() {
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={wallpaper.src.startsWith("/") ? { backgroundImage: `url('${wallpaper.src}')` } : { background: wallpaper.src }}
+        style={wallpaperBackgroundStyle(wallpaper.src)}
       />
       <div className="absolute inset-0 bg-black/20" />
       <div className="absolute inset-0 opacity-[0.16] transition-transform duration-500 ease-out [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:80px_80px] [transform:translate3d(var(--float-x-reverse),var(--float-y-reverse),0)]" />
@@ -1141,18 +1145,18 @@ export default function ArkivOsDesktop() {
           items={allWallpapers}
           selected={wallpaper.id}
           canManage={userAccount?.role === "super_admin" || userAccount?.role === "admin"}
-          onSelect={(item) => { setWallpaper(item); window.localStorage.setItem("arkiv-wallpaper", item.id); }}
+          onSelect={(item) => { setWallpaper(item); window.localStorage.setItem(WALLPAPER_STORAGE_KEY, item.id); }}
           onUploaded={(item) => {
             const next = { ...item, custom: true };
             setCustomWallpapers((prev) => [next, ...prev.filter((row) => row.id !== next.id)]);
             setWallpaper(next);
-            window.localStorage.setItem("arkiv-wallpaper", next.id);
+            window.localStorage.setItem(WALLPAPER_STORAGE_KEY, next.id);
           }}
           onDeleted={(id) => {
             setCustomWallpapers((prev) => prev.filter((row) => row.id !== id));
             if (wallpaper.id === id) {
               setWallpaper(wallpapers[0]);
-              window.localStorage.setItem("arkiv-wallpaper", wallpapers[0].id);
+              window.localStorage.setItem(WALLPAPER_STORAGE_KEY, wallpapers[0].id);
             }
           }}
           onClose={() => setShowWallpaperPicker(false)}

@@ -101,7 +101,7 @@ export function PublicFormPage({ form }: { form: PublicFormView }) {
   return (
     <main className="relative min-h-screen bg-[#0d111b]">
       <div className="absolute inset-0">
-        <Image src="/bg.avif" alt="" fill priority className="object-cover opacity-25" sizes="100vw" />
+        <Image src="/bg-bcd.webp" alt="" fill priority className="object-cover opacity-25" sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0d111b]/80 via-[#10182e]/85 to-[#0d111b]/95" />
       </div>
 

@@ -54,7 +54,7 @@ import { MenuItemRow } from "./menu-item-row";
 import { OrderTracking } from "./order-tracking";
 import { VariantSheet } from "./variant-sheet";
 
-const HERO_IMAGE = "/bg.avif";
+const HERO_IMAGE = "/bg-bcd.webp";
 
 type View = "menu" | "tracking";
 

@@ -4,11 +4,57 @@
  * publik `desktop-wallpapers`. Helper murni tanpa DB/FS supaya mudah diuji.
  */
 
+import type { CSSProperties } from "react";
+import { brandName } from "@/lib/branding";
+
 export const DESKTOP_WALLPAPERS_SETTING_KEY = "desktop_wallpapers";
 export const DESKTOP_WALLPAPER_BUCKET = "desktop-wallpapers";
 export const DESKTOP_WALLPAPER_MAX_BYTES = 8 * 1024 * 1024;
 export const DESKTOP_WALLPAPER_MAX_ITEMS = 24;
 export const DESKTOP_WALLPAPER_NAME_MAX = 60;
+
+/** Wallpaper bawaan maupun unggahan memakai bentuk yang sama. */
+export interface WallpaperItem {
+  id: string;
+  name: string;
+  /** Path gambar ("/…") atau nilai CSS background (mis. linear-gradient). */
+  src: string;
+  custom?: boolean;
+}
+
+/**
+ * Kunci localStorage pilihan wallpaper — dibaca desktop DAN halaman login.
+ * Login berjalan sebelum ada sesi, jadi localStorage satu-satunya sinyal
+ * pilihan user di perangkat itu (preferensi server butuh user terautentikasi).
+ */
+export const WALLPAPER_STORAGE_KEY = "arkiv-wallpaper";
+
+/**
+ * Wallpaper bawaan. Id-nya stabil karena itulah nilai yang tersimpan di
+ * localStorage/user_desktop_prefs — mengganti id akan mereset pilihan user.
+ */
+export const BUILTIN_WALLPAPERS: WallpaperItem[] = [
+  { id: "arkiv", name: `${brandName()} Blue`, src: "/bg-bcd.webp" },
+  { id: "pink", name: "Indigo Dusk", src: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)" },
+  { id: "midnight", name: "Midnight", src: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)" },
+  { id: "glass", name: "Glass Blue", src: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)" },
+];
+
+export const DEFAULT_WALLPAPER: WallpaperItem = BUILTIN_WALLPAPERS[0];
+
+/** Path gambar dipasang sebagai backgroundImage; selain itu nilai background CSS. */
+export function wallpaperBackgroundStyle(src: string): CSSProperties {
+  return src.startsWith("/") ? { backgroundImage: `url('${src}')` } : { background: src };
+}
+
+/** Resolve id tersimpan ke wallpaper; fallback ke bawaan pertama. */
+export function resolveWallpaper(
+  id: string | null | undefined,
+  extra: WallpaperItem[] = []
+): WallpaperItem {
+  if (!id) return DEFAULT_WALLPAPER;
+  return [...BUILTIN_WALLPAPERS, ...extra].find((item) => item.id === id) ?? DEFAULT_WALLPAPER;
+}
 
 export interface DesktopWallpaper {
   id: string;

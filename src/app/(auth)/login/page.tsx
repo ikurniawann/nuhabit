@@ -6,6 +6,14 @@ import { useEffect, useMemo, useState } from "react";
 import { createBrowserClient } from "@/lib/pg/browser-client";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import {
+  BUILTIN_WALLPAPERS,
+  DEFAULT_WALLPAPER,
+  WALLPAPER_STORAGE_KEY,
+  resolveWallpaper,
+  wallpaperBackgroundStyle,
+  type WallpaperItem,
+} from "@/lib/desktop/wallpapers";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +27,7 @@ export default function LoginPage() {
   const [transitioning, setTransitioning] = useState(false);
   // null sampai mount — hindari hydration mismatch jam/locale SSR vs client
   const [now, setNow] = useState<Date | null>(null);
-  const [wallpaper, setWallpaper] = useState("/bg.webp");
+  const [wallpaper, setWallpaper] = useState(DEFAULT_WALLPAPER.src);
   const [requestedRedirect, setRequestedRedirect] = useState<string | null>(null);
   const [requestedModule, setRequestedModule] = useState<string | null>(null);
 
@@ -52,15 +60,33 @@ export default function LoginPage() {
 
     setNow(new Date());
     const interval = window.setInterval(() => setNow(new Date()), 1000);
-    const wallpapers = {
-      arkiv: "/bg.webp",
-      pink: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)",
-      midnight: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)",
-      glass: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)",
-    } as const;
-    const saved = window.localStorage.getItem("arkiv-wallpaper") as keyof typeof wallpapers | null;
-    if (saved && wallpapers[saved]) setWallpaper(wallpapers[saved]);
-    return () => window.clearInterval(interval);
+    // Wallpaper mengikuti pilihan di desktop Arkiv OS. Login belum punya sesi,
+    // jadi id-nya dibaca dari localStorage (ditulis desktop saat user memilih).
+    // Wallpaper bawaan resolve langsung; unggahan admin butuh daftar dari
+    // /api/desktop/wallpapers (GET-nya publik) untuk memetakan id -> URL.
+    const saved = window.localStorage.getItem(WALLPAPER_STORAGE_KEY);
+    setWallpaper(resolveWallpaper(saved).src);
+
+    const aborter = new AbortController();
+    const isBuiltin = BUILTIN_WALLPAPERS.some((item) => item.id === saved);
+    if (saved && !isBuiltin) {
+      fetch("/api/desktop/wallpapers", { signal: aborter.signal })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          const custom: WallpaperItem[] = Array.isArray(json?.data)
+            ? json.data.map((item: WallpaperItem) => ({ ...item, custom: true }))
+            : [];
+          setWallpaper(resolveWallpaper(saved, custom).src);
+        })
+        .catch(() => {
+          /* offline / 500 — tetap pakai wallpaper bawaan yang sudah dipasang */
+        });
+    }
+
+    return () => {
+      window.clearInterval(interval);
+      aborter.abort();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -108,7 +134,7 @@ export default function LoginPage() {
     <main className="relative min-h-dvh overflow-hidden bg-[#0b1020] text-white">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={wallpaper.startsWith("/") ? { backgroundImage: `url('${wallpaper}')` } : { background: wallpaper }}
+        style={wallpaperBackgroundStyle(wallpaper)}
       />
       <div className="absolute inset-0 bg-black/20" />
       <div className="absolute inset-0 opacity-[0.16] transition-transform duration-500 ease-out [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:80px_80px]" />
