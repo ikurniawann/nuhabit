@@ -15,6 +15,7 @@ import {
   baseQtyFromInput,
   convertQtyInputBetweenModes,
   displayQtyInputFromBase,
+  hasSmallUnit,
   toDisplayQty,
   type RawMaterialUnitInfo,
   type RawMaterialUnitMode,
@@ -54,6 +55,26 @@ function lineUnitInfo(line: CountLine): RawMaterialUnitInfo {
   };
 }
 
+/**
+ * Satuan hitung default untuk SEMUA bahan yang punya konversi (mis. Karung ↔
+ * Kg). Dipilih sebelum mulai menghitung; masih bisa diubah per item. Diingat
+ * di perangkat (localStorage) supaya petugas gudang tidak memilih ulang.
+ */
+const UNIT_MODE_STORAGE_KEY = "tedja:opname:unit-mode";
+
+function readStoredUnitMode(): RawMaterialUnitMode {
+  if (typeof window === "undefined") return "besar";
+  try {
+    return window.localStorage.getItem(UNIT_MODE_STORAGE_KEY) === "kecil" ? "kecil" : "besar";
+  } catch {
+    return "besar";
+  }
+}
+
+function modeFor(info: RawMaterialUnitInfo, preferred: RawMaterialUnitMode): RawMaterialUnitMode {
+  return preferred === "kecil" && hasSmallUnit(info) ? "kecil" : "besar";
+}
+
 interface StockOpnameCreatePageProps {
   opnameId?: string;
 }
@@ -74,6 +95,7 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
   const [itemSearch, setItemSearch] = useState("");
   const [lines, setLines] = useState<CountLine[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [unitMode, setUnitMode] = useState<RawMaterialUnitMode>(readStoredUnitMode);
 
   const previewQuery = useStockOpnamePreview(
     !isContinue && warehouseId ? warehouseId : ""
@@ -117,18 +139,28 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
         satuan_besar_nama: line.satuan_besar_nama ?? line.satuan ?? null,
         satuan_kecil_nama: line.satuan_kecil_nama ?? null,
         konversi_factor: line.konversi_factor ?? null,
-        input_unit_mode: "besar",
+        input_unit_mode: modeFor(
+          { satuan: line.satuan, satuan_besar_nama: line.satuan_besar_nama ?? line.satuan, satuan_kecil_nama: line.satuan_kecil_nama, konversi_factor: line.konversi_factor },
+          unitMode
+        ),
         qty_system: line.qty_system,
-        qty_counted_input: displayQtyInputFromBase(line.qty_counted, "besar", {
-          satuan: line.satuan,
-          satuan_besar_nama: line.satuan_besar_nama ?? line.satuan,
-          satuan_kecil_nama: line.satuan_kecil_nama,
-          konversi_factor: line.konversi_factor,
-        }),
+        qty_counted_input: displayQtyInputFromBase(
+          line.qty_counted,
+          modeFor(
+            { satuan: line.satuan, satuan_besar_nama: line.satuan_besar_nama ?? line.satuan, satuan_kecil_nama: line.satuan_kecil_nama, konversi_factor: line.konversi_factor },
+            unitMode
+          ),
+          {
+            satuan: line.satuan,
+            satuan_besar_nama: line.satuan_besar_nama ?? line.satuan,
+            satuan_kecil_nama: line.satuan_kecil_nama,
+            konversi_factor: line.konversi_factor,
+          }
+        ),
       }))
     );
     setInitialized(true);
-  }, [isContinue, detail, initialized, router, opnameDate]);
+  }, [isContinue, detail, initialized, router, opnameDate, unitMode]);
 
   useEffect(() => {
     if (isContinue || !warehouseId || previewQuery.isLoading) return;
@@ -144,12 +176,41 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
         satuan_besar_nama: item.satuan_besar_nama ?? item.satuan ?? null,
         satuan_kecil_nama: item.satuan_kecil_nama ?? null,
         konversi_factor: item.konversi_factor ?? null,
-        input_unit_mode: "besar",
+        input_unit_mode: modeFor(
+          { satuan: item.satuan, satuan_besar_nama: item.satuan_besar_nama ?? item.satuan, satuan_kecil_nama: item.satuan_kecil_nama, konversi_factor: item.konversi_factor },
+          unitMode
+        ),
         qty_system: item.qty_system,
         qty_counted_input: "",
       }))
     );
+    // unitMode sengaja tidak jadi dependensi: ganti satuan setelah data ada
+    // ditangani handleUnitModeAll (mengonversi input), bukan memuat ulang.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isContinue, warehouseId, previewQuery.data, previewQuery.isLoading]);
+
+  /** Ganti satuan hitung untuk semua bahan yang punya konversi; input yang sudah diisi dikonversi. */
+  const handleUnitModeAll = (next: RawMaterialUnitMode) => {
+    setUnitMode(next);
+    try {
+      window.localStorage.setItem(UNIT_MODE_STORAGE_KEY, next);
+    } catch {
+      /* penyimpanan lokal tidak tersedia — abaikan */
+    }
+    setLines((prev) =>
+      prev.map((line) => {
+        const info = lineUnitInfo(line);
+        const target = modeFor(info, next);
+        if (line.input_unit_mode === target) return line;
+        return {
+          ...line,
+          input_unit_mode: target,
+          qty_counted_input: convertQtyInputBetweenModes(line.qty_counted_input, line.input_unit_mode, target, info),
+        };
+      })
+    );
+  };
+  const linesWithSmallUnit = lines.filter((line) => hasSmallUnit(lineUnitInfo(line))).length;
 
   const handleFillSystemLine = (key: string) => {
     setLines((prev) =>
@@ -530,6 +591,43 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
                 disabled={isBusy}
                 className="h-9 border-gray-200/80 text-sm"
               />
+            </div>
+          </div>
+
+          <div className="space-y-1.5 border-t border-gray-200/70 pt-4">
+            <Label className="text-xs">Satuan hitung</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <div className="inline-flex rounded-lg border border-gray-200/80 p-0.5" role="radiogroup" aria-label="Satuan hitung">
+                {(
+                  [
+                    { value: "besar", label: "Satuan besar", hint: "mis. Karung, Dus" },
+                    { value: "kecil", label: "Satuan kecil", hint: "mis. Kg, Pcs" },
+                  ] as { value: RawMaterialUnitMode; label: string; hint: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={unitMode === opt.value}
+                    disabled={isBusy}
+                    onClick={() => handleUnitModeAll(opt.value)}
+                    className={
+                      "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors sm:flex-none " +
+                      (unitMode === opt.value ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-50")
+                    }
+                  >
+                    {opt.label}
+                    <span className={"block text-[10px] font-normal " + (unitMode === opt.value ? "text-white/70" : "text-gray-400")}>{opt.hint}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">
+                {hasItems
+                  ? linesWithSmallUnit > 0
+                    ? `Berlaku untuk ${linesWithSmallUnit} bahan yang punya konversi satuan; bahan lain tetap satuan dasarnya. Masih bisa diubah per item.`
+                    : "Tidak ada bahan dengan konversi satuan di stall ini."
+                  : "Pilih sebelum mulai menghitung; bisa diubah per item nanti."}
+              </p>
             </div>
           </div>
 
