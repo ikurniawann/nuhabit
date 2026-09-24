@@ -16,10 +16,6 @@ import {
   PRODUCT_STOCK_OPNAME_STATUS_LABELS,
 } from "../types";
 
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
 function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
   return new Date(dateStr).toLocaleDateString("id-ID", {

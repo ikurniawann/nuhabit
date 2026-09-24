@@ -25,10 +25,6 @@ import {
 } from "../mutations";
 import { toast } from "sonner";
 
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
 type CountLine = {
   key: string;
   lineId?: string;
