@@ -2,13 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CheckCircleIcon,
-  MagnifyingGlassIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
@@ -25,10 +20,7 @@ import {
   type StockOpnameLine,
 } from "../types";
 import { RawMaterialUnitSelect } from "./raw-material-unit-select";
-
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
+import { OpnameCountList, type OpnameCountItem } from "@/features/inventory/opname-shared";
 
 function formatDate(dateStr?: string | null) {
   if (!dateStr) return "—";
@@ -83,16 +75,38 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
     });
   }, [detail?.lines]);
 
-  const filteredLines = useMemo(() => {
-    const lines = detail?.lines ?? [];
-    const q = search.trim().toLowerCase();
-    if (!q) return lines;
-    return lines.filter(
-      (line) =>
-        line.material_nama?.toLowerCase().includes(q) ||
-        line.material_kode?.toLowerCase().includes(q)
-    );
-  }, [detail?.lines, search]);
+  const countItems = useMemo<OpnameCountItem[]>(
+    () =>
+      (detail?.lines ?? []).map((line) => {
+        const unit = lineUnitInfo(line);
+        const viewMode = viewUnitByLine[line.id] ?? "besar";
+        const displaySystem = toDisplayQty(line.qty_system, viewMode, unit);
+        const displayCounted =
+          line.qty_counted === null || line.qty_counted === undefined ? null : toDisplayQty(line.qty_counted, viewMode, unit);
+        const variance =
+          displayCounted === null
+            ? null
+            : line.qty_variance !== null && line.qty_variance !== undefined
+              ? toDisplayQty(line.qty_variance, viewMode, unit)
+              : displayCounted - displaySystem;
+        return {
+          key: line.id,
+          code: line.material_kode ?? "",
+          name: line.material_nama ?? "",
+          unit: (
+            <RawMaterialUnitSelect
+              info={unit}
+              value={viewMode}
+              onChange={(mode) => setViewUnitByLine((prev) => ({ ...prev, [line.id]: mode }))}
+            />
+          ),
+          qtySystem: displaySystem,
+          qtyInput: displayCounted === null ? "" : String(displayCounted),
+          variance,
+        };
+      }),
+    [detail?.lines, viewUnitByLine]
+  );
 
   const progress = useMemo(() => {
     const lines = detail?.lines ?? [];
@@ -197,102 +211,18 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
                 Hasil perhitungan stok fisik (hanya baca)
               </p>
             </div>
-            <div className="relative w-full sm:max-w-xs">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari bahan baku..."
-                className="h-10 border-gray-200/80 pl-9"
-              />
-            </div>
           </div>
 
-          <div className="overflow-x-auto px-4 pb-4">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  <th className="px-3 py-3">Kode</th>
-                  <th className="px-3 py-3">Nama Bahan Baku</th>
-                  <th className="px-3 py-3">Satuan</th>
-                  <th className="px-3 py-3 text-right">Stok Sistem</th>
-                  <th className="px-3 py-3 text-right">Qty Fisik</th>
-                  <th className="px-3 py-3 text-right">Selisih</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLines.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
-                      Data tidak ditemukan
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLines.map((line) => {
-                    const unit = lineUnitInfo(line);
-                    const viewMode = viewUnitByLine[line.id] ?? "besar";
-                    const displaySystem = toDisplayQty(line.qty_system, viewMode, unit);
-                    const displayCounted =
-                      line.qty_counted === null || line.qty_counted === undefined
-                        ? null
-                        : toDisplayQty(line.qty_counted, viewMode, unit);
-                    const variance =
-                      displayCounted === null
-                        ? null
-                        : line.qty_variance !== null && line.qty_variance !== undefined
-                          ? toDisplayQty(line.qty_variance, viewMode, unit)
-                          : displayCounted - displaySystem;
-
-                    return (
-                      <tr
-                        key={line.id}
-                        className="border-b border-gray-200/70 hover:bg-gray-50/80"
-                      >
-                        <td className="px-3 py-3 font-mono text-xs text-gray-600">
-                          {line.material_kode}
-                        </td>
-                        <td className="px-3 py-3 font-medium text-gray-900">
-                          {line.material_nama}
-                        </td>
-                        <td className="px-3 py-3">
-                          <RawMaterialUnitSelect
-                            info={unit}
-                            value={viewMode}
-                            onChange={(mode) =>
-                              setViewUnitByLine((prev) => ({
-                                ...prev,
-                                [line.id]: mode,
-                              }))
-                            }
-                          />
-                        </td>
-                        <td className="px-3 py-3 text-right text-gray-700">
-                          {formatQty(displaySystem)}
-                        </td>
-                        <td className="px-3 py-3 text-right text-gray-700">
-                          {displayCounted === null ? "—" : formatQty(displayCounted)}
-                        </td>
-                        <td className="px-3 py-3 text-right">
-                          {variance === null ? (
-                            <span className="text-gray-400">—</span>
-                          ) : variance === 0 ? (
-                            <span className="text-emerald-600">0</span>
-                          ) : variance > 0 ? (
-                            <span className="font-medium text-emerald-600">
-                              +{formatQty(variance)}
-                            </span>
-                          ) : (
-                            <span className="font-medium text-red-600">
-                              {formatQty(variance)}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div className="px-4 pb-4">
+            <OpnameCountList
+              items={countItems}
+              nameLabel="Nama Bahan Baku"
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Cari bahan baku..."
+              readOnly
+              emptyText="Tidak ada baris"
+            />
           </div>
         </CardContent>
       </Card>

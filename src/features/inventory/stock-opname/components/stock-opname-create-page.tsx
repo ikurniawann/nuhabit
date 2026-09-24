@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +21,7 @@ import {
 } from "@/lib/inventory/raw-material-units";
 import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
 import { RawMaterialUnitSelect } from "./raw-material-unit-select";
+import { OpnameCountList, type OpnameCountItem } from "@/features/inventory/opname-shared";
 import { useStockOpname, useStockOpnamePreview, useStockOpnameWarehouses } from "../queries";
 import {
   useCompleteStockOpname,
@@ -29,10 +29,6 @@ import {
   useUpdateStockOpname,
 } from "../mutations";
 import { toast } from "sonner";
-
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
 
 type CountLine = {
   key: string;
@@ -155,15 +151,42 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
     );
   }, [isContinue, warehouseId, previewQuery.data, previewQuery.isLoading]);
 
-  const filteredLines = useMemo(() => {
-    const q = itemSearch.trim().toLowerCase();
-    if (!q) return lines;
-    return lines.filter(
-      (line) =>
-        line.material_nama.toLowerCase().includes(q) ||
-        line.material_kode.toLowerCase().includes(q)
+  const handleFillSystemLine = (key: string) => {
+    setLines((prev) =>
+      prev.map((line) =>
+        line.key === key
+          ? { ...line, qty_counted_input: displayQtyInputFromBase(line.qty_system, line.input_unit_mode, lineUnitInfo(line)) }
+          : line
+      )
     );
-  }, [lines, itemSearch]);
+  };
+
+  const countItems = useMemo<OpnameCountItem[]>(
+    () =>
+      lines.map((line) => {
+        const unit = lineUnitInfo(line);
+        const displaySystem = toDisplayQty(line.qty_system, line.input_unit_mode, unit);
+        const counted = line.qty_counted_input === "" ? null : Number(line.qty_counted_input);
+        return {
+          key: line.key,
+          code: line.material_kode,
+          name: line.material_nama,
+          unit: (
+            <RawMaterialUnitSelect
+              info={unit}
+              value={line.input_unit_mode}
+              onChange={(mode) => handleRowUnitModeChange(line.key, mode)}
+              disabled={isBusy}
+            />
+          ),
+          qtySystem: displaySystem,
+          qtyInput: line.qty_counted_input,
+          variance: counted === null || !Number.isFinite(counted) ? null : counted - displaySystem,
+        };
+      }),
+    // handleRowUnitModeChange dibuat ulang tiap render; cukup lines & isBusy.
+    [lines, isBusy]
+  );
 
   const progress = useMemo(() => {
     const counted = lines.filter((line) => line.qty_counted_input !== "").length;
@@ -410,14 +433,14 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 md:pb-0">
       <PurchasingFormHeader
         backHref={RM_ROUTES.inventoryOpname}
         title={isContinue ? "Lanjutkan Stok Opname" : "Buat Stok Opname"}
         description="Pilih stall, masukkan qty fisik, lalu simpan sebagai draf atau selesaikan opname"
         actions={
           hasItems ? (
-            <>
+            <div className="hidden flex-wrap gap-2 md:flex">
               <Button
                 type="button"
                 variant="outline"
@@ -457,7 +480,7 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
               >
                 {completeMutation.isPending ? "Memproses..." : "Selesaikan Opname"}
               </Button>
-            </>
+            </div>
           ) : undefined
         }
       />
@@ -546,124 +569,49 @@ export function StockOpnameCreatePage({ opnameId }: StockOpnameCreatePageProps) 
                       : "Tidak ada bahan baku aktif di cabang stall ini"}
                 </p>
               </div>
-              {hasItems && (
-                <div className="relative w-full sm:max-w-xs">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    value={itemSearch}
-                    onChange={(e) => setItemSearch(e.target.value)}
-                    placeholder="Cari bahan baku..."
-                    className="h-10 border-gray-200/80 pl-9"
-                    disabled={isBusy}
-                  />
-                </div>
-              )}
             </div>
 
-            <div className="overflow-x-auto px-4 pb-4">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    <th className="px-3 py-3">Kode</th>
-                    <th className="px-3 py-3">Nama Bahan Baku</th>
-                    <th className="px-3 py-3">Satuan</th>
-                    <th className="px-3 py-3 text-right">Stok Sistem</th>
-                    <th className="px-3 py-3 text-right">Qty Fisik</th>
-                    <th className="px-3 py-3 text-right">Selisih</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {isPreviewLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
-                        Memuat data...
-                      </td>
-                    </tr>
-                  ) : filteredLines.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
-                        {hasItems
-                          ? "Data tidak ditemukan"
-                          : "Pilih stall untuk memuat bahan baku"}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLines.map((line) => {
-                      const unit = lineUnitInfo(line);
-                      const displaySystem = toDisplayQty(
-                        line.qty_system,
-                        line.input_unit_mode,
-                        unit
-                      );
-                      const counted =
-                        line.qty_counted_input === ""
-                          ? null
-                          : Number(line.qty_counted_input);
-                      const variance =
-                        counted === null || !Number.isFinite(counted)
-                          ? null
-                          : counted - displaySystem;
-
-                      return (
-                        <tr
-                          key={line.key}
-                          className="border-b border-gray-200/70 hover:bg-gray-50/80"
-                        >
-                          <td className="px-3 py-3 font-mono text-xs text-gray-600">
-                            {line.material_kode}
-                          </td>
-                          <td className="px-3 py-3 font-medium text-gray-900">
-                            {line.material_nama}
-                          </td>
-                          <td className="px-3 py-3">
-                            <RawMaterialUnitSelect
-                              info={unit}
-                              value={line.input_unit_mode}
-                              onChange={(mode) => handleRowUnitModeChange(line.key, mode)}
-                              disabled={isBusy}
-                            />
-                          </td>
-                          <td className="px-3 py-3 text-right text-gray-700">
-                            {formatQty(displaySystem)}
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            <Input
-                              type="number"
-                              min={0}
-                              step="any"
-                              value={line.qty_counted_input}
-                              onChange={(e) =>
-                                handleLineChange(line.key, e.target.value)
-                              }
-                              disabled={isBusy}
-                              className="ml-auto h-9 w-28 border-gray-200/80 text-right"
-                              placeholder="—"
-                            />
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            {variance === null ? (
-                              <span className="text-gray-400">—</span>
-                            ) : variance === 0 ? (
-                              <span className="text-emerald-600">0</span>
-                            ) : variance > 0 ? (
-                              <span className="font-medium text-emerald-600">
-                                +{formatQty(variance)}
-                              </span>
-                            ) : (
-                              <span className="font-medium text-red-600">
-                                {formatQty(variance)}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            <div className="px-4 pb-4">
+              <OpnameCountList
+                items={countItems}
+                nameLabel="Nama Bahan Baku"
+                search={itemSearch}
+                onSearchChange={setItemSearch}
+                searchPlaceholder="Cari bahan baku..."
+                busy={isBusy}
+                loading={isPreviewLoading}
+                emptyText="Pilih stall untuk memuat bahan baku"
+                onQtyChange={handleLineChange}
+                onFillSystem={handleFillSystemLine}
+              />
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {hasItems && (
+        <>
+          {/* Aksi sekunder di HP — tombol utama ada di bilah bawah */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:hidden">
+            <button type="button" className="text-gray-600 underline-offset-2 hover:underline disabled:opacity-50" onClick={handleFillSystem} disabled={isBusy}>
+              Isi semua dengan stok sistem
+            </button>
+            {isContinue && (
+              <button type="button" className="text-red-600 underline-offset-2 hover:underline disabled:opacity-50" onClick={handleCancel} disabled={isBusy}>
+                Batalkan sesi
+              </button>
+            )}
+          </div>
+          {/* Bilah aksi lengket di bawah — jempol tidak perlu menggulir ke atas */}
+          <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-gray-200/70 bg-white/95 p-3 backdrop-blur md:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+            <Button type="button" variant="outline" className="purchasing-secondary-button h-11 flex-1" onClick={handleSaveDraft} disabled={isBusy || !warehouseId}>
+              {updateMutation.isPending && !completeMutation.isPending ? "Menyimpan..." : "Simpan Draf"}
+            </Button>
+            <Button type="button" className="purchasing-main-button h-11 flex-1" onClick={handleComplete} disabled={isBusy || !warehouseId}>
+              {completeMutation.isPending ? "Memproses..." : "Selesaikan"}
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

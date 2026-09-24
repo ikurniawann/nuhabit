@@ -2,14 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  CheckCircleIcon,
-  MagnifyingGlassIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
+import { OpnameCountList, type OpnameCountItem } from "@/features/inventory/opname-shared";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
@@ -54,16 +50,20 @@ export function ProductStockOpnameDetailPage({ id }: ProductStockOpnameDetailPag
 
   const detail = detailQuery.data;
 
-  const filteredLines = useMemo(() => {
-    const lines = detail?.lines ?? [];
-    const q = search.trim().toLowerCase();
-    if (!q) return lines;
-    return lines.filter(
-      (line) =>
-        line.product_nama?.toLowerCase().includes(q) ||
-        line.product_kode?.toLowerCase().includes(q)
-    );
-  }, [detail?.lines, search]);
+  const countItems = useMemo<OpnameCountItem[]>(
+    () =>
+      (detail?.lines ?? []).map((line) => ({
+        key: line.id,
+        code: line.product_kode ?? "",
+        name: line.product_nama ?? "",
+        subtitle: line.pos_sku_id ? `Varian: ${line.pos_sku_code || "—"} — ${line.pos_sku_name || "—"}` : null,
+        unit: line.satuan || "—",
+        qtySystem: line.qty_system,
+        qtyInput: line.qty_counted === null || line.qty_counted === undefined ? "" : String(line.qty_counted),
+        variance: line.qty_variance === null || line.qty_variance === undefined ? null : line.qty_variance,
+      })),
+    [detail?.lines]
+  );
 
   const progress = useMemo(() => {
     const lines = detail?.lines ?? [];
@@ -177,79 +177,18 @@ export function ProductStockOpnameDetailPage({ id }: ProductStockOpnameDetailPag
                 Hasil perhitungan stok fisik (hanya baca)
               </p>
             </div>
-            <div className="relative w-full sm:max-w-xs">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari produk..."
-                className="h-10 border-gray-200/80 pl-9 text-sm"
-              />
-            </div>
           </div>
 
-          <div className="overflow-x-auto px-4 pb-4">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold">Kode</th>
-                  <th className="px-4 py-3 text-left font-semibold">Nama Produk</th>
-                  <th className="px-4 py-3 text-left font-semibold">Satuan</th>
-                  <th className="px-4 py-3 text-right font-semibold">Stok Sistem</th>
-                  <th className="px-4 py-3 text-right font-semibold">Qty Fisik</th>
-                  <th className="px-4 py-3 text-right font-semibold">Selisih</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredLines.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                      Data tidak ditemukan
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLines.map((line) => (
-                    <tr key={line.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                        {line.product_kode}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        {line.product_nama}
-                        {line.pos_sku_id && (
-                          <p className="mt-0.5 text-xs font-normal text-gray-400">
-                            Varian: {line.pos_sku_code || "—"} — {line.pos_sku_name || "—"}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{line.satuan || "—"}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">
-                        {formatQty(line.qty_system)}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
-                        {line.qty_counted === null || line.qty_counted === undefined
-                          ? "—"
-                          : formatQty(line.qty_counted)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {line.qty_variance === null || line.qty_variance === undefined ? (
-                          <span className="text-gray-400">—</span>
-                        ) : line.qty_variance === 0 ? (
-                          <span className="text-emerald-600">0</span>
-                        ) : line.qty_variance > 0 ? (
-                          <span className="font-medium text-emerald-600">
-                            +{formatQty(line.qty_variance)}
-                          </span>
-                        ) : (
-                          <span className="font-medium text-red-600">
-                            {formatQty(line.qty_variance)}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="px-4 pb-4">
+            <OpnameCountList
+              items={countItems}
+              nameLabel="Nama Produk"
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Cari produk..."
+              readOnly
+              emptyText="Tidak ada baris"
+            />
           </div>
         </CardContent>
       </Card>
