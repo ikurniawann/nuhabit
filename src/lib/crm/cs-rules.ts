@@ -1,3 +1,5 @@
+import { brandName } from "@/lib/branding";
+
 /**
  * EPIC-012 Fase D — aturan customer service: jam operasional, SLA respons,
  * dan pembacaan skor CSAT. Fungsi murni, tanpa DB/jaringan, agar bisa diuji.
@@ -47,7 +49,7 @@ export const CS_DEFAULTS: CsSettings = {
   businessHoursEnd: 22,
   autoReplyEnabled: true,
   autoReplyText:
-    "Terima kasih sudah menghubungi Sulu Wonderland. Saat ini di luar jam operasional kami. Pesan Anda sudah kami terima dan akan dibalas pada jam operasional berikutnya.",
+    `Terima kasih sudah menghubungi ${brandName()}. Saat ini di luar jam operasional kami. Pesan Anda sudah kami terima dan akan dibalas pada jam operasional berikutnya.`,
   csatEnabled: true,
   csatText:
     "Terima kasih sudah menghubungi kami. Boleh beri penilaian layanan kami? Balas dengan angka 1-5 (5 = sangat puas).",

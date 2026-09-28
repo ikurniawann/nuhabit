@@ -1,4 +1,5 @@
 import { createHash, randomInt } from "crypto";
+import { brandName } from "@/lib/branding";
 
 /**
  * OTP portal member (EPIC-011 Fase D) — konstanta & helper murni.
@@ -32,8 +33,8 @@ export function hashSecret(value: string): string {
 
 export function otpMessage(code: string): string {
   return (
-    `Kode masuk Portal Member Sulu Wonderland Anda: *${code}*\n` +
+    `Kode masuk Portal Member ${brandName()} Anda: *${code}*\n` +
     `Berlaku 5 menit. JANGAN bagikan kode ini kepada siapa pun, ` +
-    `termasuk yang mengaku staf Sulu.`
+    `termasuk yang mengaku staf ${brandName()}.`
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { brandName } from "@/lib/branding";
 import {
   AlertCircle,
   Calendar,
@@ -386,7 +387,7 @@ export function ReservationPage() {
       type === "confirmation"
         ? "Your reservation has been confirmed:"
         : "This is a reminder for your reservation:";
-    return `Hello ${reservationName(reservation)}!\n\n${intro}\n\nDate: ${formattedDate}\nTime: ${reservation.time_slot}\nGuests: ${reservation.pax_count}\n${reservation.table?.table_number ? `Table: ${reservation.table.table_number}\n` : ""}${reservation.notes ? `Notes: ${reservation.notes}\n` : ""}\nPlease arrive 10 minutes before your reservation time.\n\nPrologue Wonderland`;
+    return `Hello ${reservationName(reservation)}!\n\n${intro}\n\nDate: ${formattedDate}\nTime: ${reservation.time_slot}\nGuests: ${reservation.pax_count}\n${reservation.table?.table_number ? `Table: ${reservation.table.table_number}\n` : ""}${reservation.notes ? `Notes: ${reservation.notes}\n` : ""}\nPlease arrive 10 minutes before your reservation time.\n\n${brandName()}`;
   }
 
   function queueDateLabel(reservation: ReservationRow) {
