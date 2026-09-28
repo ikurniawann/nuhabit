@@ -292,8 +292,6 @@ export function createPgClient(ctx?: {
   };
 }
 
-export { createPgClient };
-
 export async function createServerPgClient() {
   const { cookies } = await import("next/headers");
   return createPgClient({ cookies: await cookies() });
