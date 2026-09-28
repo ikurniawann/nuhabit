@@ -78,8 +78,26 @@ const eventSchema = z.object({
 });
 
 /** Validasi bentuk event; null bila bukan event GoBiz yang dikenali. */
+/**
+ * GoBiz sungguhan mengirim null utk kolom kosong (outlet.external_outlet_id,
+ * order.scheduled_flag, sku_promo_id, …) — contoh di docs tidak. Null dibuang
+ * dulu supaya skema (yang memakai optional) menerimanya; arti null = tidak ada.
+ * Terbukti di sandbox 2026-09-28: semua event order ditolak sebelum ini.
+ */
+export function stripNulls(value: unknown): unknown {
+  if (Array.isArray(value)) return value.filter((item) => item != null).map(stripNulls);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item != null)
+        .map(([key, item]) => [key, stripNulls(item)])
+    );
+  }
+  return value;
+}
+
 export function parseGofoodWebhook(json: unknown): GofoodWebhookEvent | null {
-  const parsed = eventSchema.safeParse(json);
+  const parsed = eventSchema.safeParse(stripNulls(json));
   if (!parsed.success) return null;
   return parsed.data as GofoodWebhookEvent;
 }

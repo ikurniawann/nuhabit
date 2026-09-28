@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  stripNulls,
   gofoodOrderTypeFromServiceType,
   mapGofoodItems,
   parseGofoodWebhook,
@@ -209,5 +210,66 @@ describe("posOrderNotes", () => {
         unmappedCount: 1,
       })
     ).toBe("GoFood F-1 · Pickup · PIN 9999 · Pelanggan: Budi · 1 item TIDAK terpetakan — cek halaman GoFood");
+  });
+});
+
+describe("parseGofoodWebhook — payload asli sandbox GoBiz (2026-09-28)", () => {
+  // Diambil dari log produksi: kolom kosong dikirim sebagai null.
+  const real = {
+    header: {
+      version: 1,
+      timestamp: "2026-09-28T21:22:50.446+07:00",
+      event_name: "gofood.order.merchant_accepted",
+      event_id: "d6e031a7-bedc-3e5b-add0-10b6cedc931e",
+    },
+    body: {
+      service_type: "gofood",
+      outlet: { id: "G799456240", external_outlet_id: null },
+      customer: { id: "c-1", name: null },
+      driver: null,
+      order: {
+        takeaway_charges: 0,
+        status: "MERCHANT_ACCEPTED",
+        scheduled_flag: null,
+        pin: "7767",
+        order_total: 338000,
+        order_number: "F-885936681",
+        cancellation_detail: null,
+        order_items: [
+          { variants: [], sku_promo_id: null, quantity: 1, price: 108000, notes: "Less sugar", name: "1 Litre Iced Bold", external_id: "p-1" },
+          {
+            variants: [{ id: "v-1", name: "Extra Shot Espresso", external_id: "m-shot" }],
+            sku_promo_id: null,
+            quantity: 2,
+            price: 40000,
+            notes: null,
+            name: "Iced Bold",
+            external_id: "p-2",
+          },
+        ],
+      },
+    },
+  };
+
+  it("null tidak lagi membuat event ditolak; isi order utuh", () => {
+    const event = parseGofoodWebhook(real);
+    expect(event).not.toBeNull();
+    expect(event!.body.outlet?.id).toBe("G799456240");
+    expect(event!.body.order?.order_number).toBe("F-885936681");
+    expect(event!.body.order?.order_items).toHaveLength(2);
+    expect(event!.body.order?.order_items?.[1].variants?.[0].external_id).toBe("m-shot");
+    expect(event!.body.order?.order_items?.[0].notes).toBe("Less sugar");
+  });
+
+  it("event katalog (menu_mapping_updated) juga lolos parsing", () => {
+    const event = parseGofoodWebhook({
+      header: { version: 1, event_name: "gofood.catalog.menu_mapping_updated", event_id: "e-cat" },
+      body: { request_id: "r", outlet: { id: "G799456240", external_outlet_id: null }, menus: [{ id: "m", external_menu_id: "x" }] },
+    });
+    expect(event?.header.event_name).toBe("gofood.catalog.menu_mapping_updated");
+  });
+
+  it("stripNulls membuang null bersarang & elemen array null", () => {
+    expect(stripNulls({ a: null, b: { c: null, d: 1 }, e: [null, { f: null }] })).toEqual({ b: { d: 1 }, e: [{}] });
   });
 });
