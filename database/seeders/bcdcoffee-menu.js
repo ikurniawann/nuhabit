@@ -51,6 +51,18 @@ function loadEnv() {
   }
 }
 
+/**
+ * Foto dummy per produk: public/products/bcd/<sku>.webp (800x800). Foto asli
+ * berlisensi CC0/Public Domain dari Openverse & Wikimedia Commons, dipilih dan
+ * diperiksa manual (tanpa logo merek lain) — sumbernya di
+ * docs/product-photos-credits.md. Ganti dengan foto produk BCD sendiri kapan
+ * saja lewat halaman produk POS.
+ */
+function productImageUrl(sku) {
+  const file = path.join(ROOT, "public", "products", "bcd", `${sku.toLowerCase()}.webp`);
+  return fs.existsSync(file) ? `/products/bcd/${sku.toLowerCase()}.webp` : null;
+}
+
 const ONE_LITRE_NOTE = "1-litre pack, best consumed within 5 days from the production date.";
 
 /**
@@ -207,10 +219,11 @@ const UPSERT_ITEM_PRODUCT_SQL = `
 
 const UPSERT_POS_PRODUCT_SQL = `
   INSERT INTO pos.pos_products
-    (sku, name, description, category_id, base_price, station, source_product_id, is_active, is_available)
-  VALUES ($1, $2, $3, $4, $5, 'bar', $6, true, true)
+    (sku, name, description, category_id, base_price, station, source_product_id, image_url, is_active, is_available)
+  VALUES ($1, $2, $3, $4, $5, 'bar', $6, $7, true, true)
   ON CONFLICT (sku) DO UPDATE SET
     name = EXCLUDED.name,
+    image_url = EXCLUDED.image_url,
     description = EXCLUDED.description,
     category_id = EXCLUDED.category_id,
     base_price = EXCLUDED.base_price,
@@ -346,7 +359,15 @@ async function main() {
           scope.branch_id,
         ]);
         const itemId = rows[0].id;
-        const pos = await c.query(UPSERT_POS_PRODUCT_SQL, [sku, item.name, description, posCategoryId, item.price, itemId]);
+        const pos = await c.query(UPSERT_POS_PRODUCT_SQL, [
+          sku,
+          item.name,
+          description,
+          posCategoryId,
+          item.price,
+          itemId,
+          productImageUrl(sku),
+        ]);
         const posId = pos.rows[0].id;
         productIdsByCategory.get(cat.code).push(posId);
         productIdsByName.set(item.name, posId);
