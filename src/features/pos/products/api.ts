@@ -1,5 +1,6 @@
 import { computeMarginPercentage } from "@/lib/pos/purchasing-sync";
 import type { ApiPosProduct, PatchPosProductPayload, PosCatalogProduct } from "./types";
+import { normalizeSalesChannels } from "@/lib/pos/sales-channels";
 
 export type * from "./types";
 
@@ -79,6 +80,7 @@ export function mapApiPosProduct(product: ApiPosProduct): PosCatalogProduct {
       product.weight_gram === null || product.weight_gram === undefined
         ? null
         : toNumber(product.weight_gram),
+    salesChannels: normalizeSalesChannels(product.sales_channels),
     webDistributed: (product.channels ?? []).some(
       (channel) => channel.channel_code === "web" && channel.is_distributed !== false
     ),

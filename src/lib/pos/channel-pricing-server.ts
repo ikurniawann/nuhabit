@@ -55,12 +55,14 @@ export type ChannelProductRow = {
   is_available: boolean | null;
   variant_count: number;
   modifier_count: number;
+  sales_channels: string[] | null;
 };
 
 /** Produk aktif yang dijual (sama cakupannya dgn katalog GoFood). */
 export async function loadChannelProducts(): Promise<ChannelProductRow[]> {
   return query<ChannelProductRow>(
     `SELECT p.id, p.name, p.sku, c.name AS category_name, p.base_price::float AS base_price, p.is_available,
+            p.sales_channels,
             (SELECT count(*)::int FROM pos.pos_product_variants v
               WHERE v.product_id = p.id AND v.is_active IS NOT FALSE) AS variant_count,
             (SELECT count(*)::int FROM pos.pos_product_modifiers pm WHERE pm.product_id = p.id) AS modifier_count

@@ -9,6 +9,7 @@ export type ChannelPriceProduct = {
   is_available: boolean | null;
   variant_count: number;
   modifier_count: number;
+  sales_channels?: string[] | null;
   override_price: number | null;
 };
 

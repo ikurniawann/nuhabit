@@ -70,6 +70,8 @@ export type PosCatalogProduct = {
   merchSkus: PosMerchSku[];
   /** Fase D — tampil di katalog toko online (channel 'web') */
   webDistributed: boolean;
+  /** Channel penjualan (lib/pos/sales-channels); null = semua channel */
+  salesChannels: string[] | null;
 };
 
 export type ApiPosProduct = {
@@ -91,6 +93,7 @@ export type ApiPosProduct = {
   weight_gram?: number | string | null;
   skus?: ApiPosProductSku[] | null;
   channels?: Array<{ channel_code?: string | null; is_distributed?: boolean | null }> | null;
+  sales_channels?: string[] | string | null;
   variants?: Array<{
     id?: string;
     name?: string | null;
@@ -127,4 +130,6 @@ export interface PatchPosProductPayload {
   weight_gram?: number | null;
   /** Fase D — upsert shop.product_channels channel 'web' */
   web_distributed?: boolean;
+  /** null = semua channel; mis. ["gofood"] = hanya GoFood */
+  sales_channels?: string[] | null;
 }

@@ -4,6 +4,7 @@ import { requirePosMenu } from '@/lib/api/auth';
 import { IAM } from '@/lib/iam/prefixes';
 import { getApiUserScope } from '@/lib/api/scope';
 import { enrichPosProductsWithPurchasingCogs } from '@/lib/pos/purchasing-sync';
+import { isSoldIn } from '@/lib/pos/sales-channels';
 import {
   buildMerchandiseColumns,
   type MerchandiseFieldsPayload,
@@ -145,7 +146,12 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const normalizedProducts = (data ?? []).map((product) =>
+    // Daftar jual kasir: sembunyikan produk yang tidak dijual di kasir
+    // (mis. bundling "hanya GoFood"). Halaman Produk (include_inactive) tetap lihat semua.
+    const visibleRows = includeInactive
+      ? (data ?? [])
+      : (data ?? []).filter((product: { sales_channels?: unknown }) => isSoldIn(product.sales_channels, "pos"));
+    const normalizedProducts = visibleRows.map((product) =>
       withProductXpAlias(product as Record<string, unknown>)
     );
 

@@ -17,6 +17,7 @@ import {
   type RoundingMode,
   type RoundingStep,
 } from "@/lib/pos/channel-pricing";
+import { salesChannelSummary } from "@/lib/pos/sales-channels";
 import { cn } from "@/lib/utils";
 import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
 import { fetchChannelPrices, saveChannelPrices, saveChannelRule, type ChannelPriceProduct } from "../api";
@@ -352,6 +353,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                       <div className="text-xs text-muted-foreground">
                         {product.category_name || "Tanpa kategori"}
                         {product.variant_count + product.modifier_count > 0 ? " · varian/add-on ikut markup" : ""}
+                        {product.sales_channels?.length ? ` · dijual di: ${salesChannelSummary(product.sales_channels)}` : ""}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{rupiah(resolved.base)}</td>

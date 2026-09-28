@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPosSession } from '@/lib/api/auth';
 import { createPgClient } from "@/lib/pg/create-client";
 import { query } from '@/lib/db';
+import { normalizeSalesChannels, SALES_CHANNEL_CODES } from '@/lib/pos/sales-channels';
 import {
   buildMerchandiseColumns,
   type MerchandiseFieldsPayload,
@@ -56,7 +57,18 @@ export async function PATCH(
     const rawMinXp = (body as { min_xp?: unknown }).min_xp;
     const xpPoints = Math.max(0, Number(body.xp_points ?? body.xp ?? 0) || 0);
     const db = createPgClient();
-    const updatePayload: Record<string, number | string | boolean | null> = {
+    // Channel penjualan: null = semua channel; array kode = hanya di channel itu.
+    const rawSalesChannels = (body as { sales_channels?: unknown }).sales_channels;
+    const hasSalesChannelsUpdate = rawSalesChannels !== undefined;
+    if (
+      hasSalesChannelsUpdate &&
+      rawSalesChannels !== null &&
+      (!Array.isArray(rawSalesChannels) ||
+        rawSalesChannels.some((code) => !(SALES_CHANNEL_CODES as readonly string[]).includes(String(code))))
+    ) {
+      return NextResponse.json({ success: false, error: 'Channel penjualan tidak valid' }, { status: 400 });
+    }
+    const updatePayload: Record<string, number | string | boolean | null | string[]> = {
       updated_at: new Date().toISOString(),
     };
 
@@ -64,6 +76,7 @@ export async function PATCH(
     if (hasStationUpdate) updatePayload.station = normalizeStation(body.station);
     if (hasActiveUpdate) updatePayload.is_active = Boolean(body.is_active);
     if (hasAvailableUpdate) updatePayload.is_available = Boolean(body.is_available);
+    if (hasSalesChannelsUpdate) updatePayload.sales_channels = normalizeSalesChannels(rawSalesChannels);
     if (hasMinXpUpdate) {
       updatePayload.min_xp =
         rawMinXp === null || rawMinXp === "" || Number(rawMinXp) <= 0
@@ -83,7 +96,7 @@ export async function PATCH(
     const rawWebDistributed = (body as { web_distributed?: unknown }).web_distributed;
     const hasWebDistributedUpdate = rawWebDistributed !== undefined;
 
-    if (!hasXpUpdate && !hasStationUpdate && !hasActiveUpdate && !hasAvailableUpdate && !hasMinXpUpdate && !hasMerchUpdate && !hasWebDistributedUpdate) {
+    if (!hasXpUpdate && !hasStationUpdate && !hasActiveUpdate && !hasAvailableUpdate && !hasMinXpUpdate && !hasMerchUpdate && !hasWebDistributedUpdate && !hasSalesChannelsUpdate) {
       return NextResponse.json({ success: false, error: 'No product fields to update' }, { status: 400 });
     }
 

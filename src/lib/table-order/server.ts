@@ -10,6 +10,7 @@ import { loadActiveXenditConfig } from "@/lib/payments/xendit";
 import { createPgClient } from "@/lib/pg/create-client";
 import type { BillingCharge } from "@/lib/pos/billing-settings";
 import { resolveBillingProfile } from "@/lib/pos/billing-settings-server";
+import { isSoldIn, soldInSql } from "@/lib/pos/sales-channels";
 import { loadPosLoyaltySettings } from "@/lib/pos/loyalty-settings";
 import {
   normalizeTableOrderProduct,
@@ -35,7 +36,7 @@ export function clientIdentifier(request: Request) {
 const PRODUCT_SELECT = `
   SELECT p.id, p.sku, p.name, p.description, p.base_price::float AS base_price,
          p.image_url, p.xp_points, p.station, p.prep_time_minutes, p.min_xp,
-         p.is_active, p.is_available,
+         p.is_active, p.is_available, p.sales_channels,
          p.category_id, c.name AS category_name,
          COALESCE(
            json_agg(
@@ -76,6 +77,7 @@ const PRODUCT_GROUP = `GROUP BY p.id, c.name, c.display_order`;
 type SellableRow = ProductRowInput & {
   is_active: boolean | null;
   is_available: boolean | null;
+  sales_channels: string[] | null;
   variants: string | ProductRowInput["variants"];
 };
 
@@ -88,7 +90,8 @@ export type CatalogMeta = {
 /** Katalog yang boleh dipesan pemesan: aktif & tersedia, urut kategori lalu nama. */
 export async function loadSellableCatalog(search?: string | null) {
   const params: unknown[] = [];
-  let where = `WHERE p.is_active = true AND p.is_available = true`;
+  // Produk "hanya GoFood" (bundling) tidak ditawarkan di self-order.
+  let where = `WHERE p.is_active = true AND p.is_available = true AND ${soldInSql("p", "self_order")}`;
   const term = String(search || "").trim();
   if (term) {
     params.push(`%${term}%`);
@@ -129,7 +132,7 @@ export async function loadProductsByIds(ids: string[]) {
   for (const row of rows) {
     map.set(row.id, {
       ...normalizeTableOrderProduct(row),
-      sellable: row.is_active !== false && row.is_available !== false,
+      sellable: row.is_active !== false && row.is_available !== false && isSoldIn(row.sales_channels, "self_order"),
     });
   }
   return map;

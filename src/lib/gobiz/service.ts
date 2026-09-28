@@ -14,6 +14,7 @@ import { loadProductsByIds } from "@/lib/table-order/server";
 import type { CatalogModifierGroupInput, CatalogProductInput } from "./catalog";
 import { buildGobizCatalog, priceCatalogForChannel } from "./catalog";
 import { applyChannelMarkup } from "@/lib/pos/channel-pricing";
+import { soldInSql } from "@/lib/pos/sales-channels";
 import { loadChannelOverrides, loadChannelRule } from "@/lib/pos/channel-pricing-server";
 import {
   acceptGofoodOrder as apiAccept,
@@ -153,6 +154,7 @@ export async function loadCatalogProductsForGobiz(): Promise<CatalogProductInput
      LEFT JOIN pos.pos_categories c ON c.id = p.category_id
      LEFT JOIN pos.pos_product_variants v ON v.product_id = p.id
      WHERE p.is_active = true AND COALESCE(p.product_kind, 'regular') <> 'gift_card'
+       AND ${soldInSql("p", "gofood")}
      GROUP BY p.id, c.name, c.display_order
      ORDER BY c.display_order NULLS LAST, c.name NULLS LAST, p.name`
   );

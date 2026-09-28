@@ -36,6 +36,7 @@ import { expandMatrix, validateMatrixSize } from '@/lib/pos/merchandise-variants
 import type { PosCatalogProduct, PosProductModifier, PosProductModifierGroup, PosProductVariant } from '../types';
 import { usePosCatalogProducts } from '../queries';
 import { usePatchPosProduct } from '../mutations';
+import { SALES_CHANNEL_PRESETS, salesChannelPresetKey, salesChannelSummary } from '@/lib/pos/sales-channels';
 import {
   createProductSku,
   patchProductSku,
@@ -713,6 +714,22 @@ export function ProductsPage() {
     }
   };
 
+  const updateProductSalesChannels = async (product: PosCatalogProduct, presetKey: string) => {
+    if (savingProductId) return;
+    const preset = SALES_CHANNEL_PRESETS.find((item) => item.key === presetKey);
+    if (!preset) return;
+
+    setSavingProductId(product.id);
+    try {
+      await patchProductMutation.mutateAsync({ id: product.id, payload: { sales_channels: preset.channels } });
+      toast.success(`${product.name}: dijual di ${preset.label.toLowerCase()}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Gagal menyimpan channel penjualan'));
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
   const handleResetFilters = () => {
     setSearchQuery('');
     setSearchTerm('');
@@ -798,6 +815,7 @@ export function ProductsPage() {
                   <th className="px-4 py-3 text-left font-semibold">Station</th>
                   <th className="px-4 py-3 text-left font-semibold">Jenis</th>
                   <th className="px-4 py-3 text-right font-semibold">Min XP</th>
+                  <th className="px-4 py-3 text-left font-semibold">Dijual di</th>
                   <th className="px-4 py-3 text-center font-semibold">Variants</th>
                   <th className="px-4 py-3 text-center font-semibold">Modifiers</th>
                   <th className="px-4 py-3 text-center font-semibold">Active</th>
@@ -890,6 +908,26 @@ export function ProductsPage() {
                         disabled={savingProductId === product.id}
                         className="h-9 w-20 rounded-lg border border-gray-200/80 bg-white px-2 text-right text-xs font-medium text-gray-700 outline-none transition focus:border-pink-300 focus:ring-1 focus:ring-pink-100 disabled:opacity-50"
                       />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={salesChannelPresetKey(product.salesChannels)}
+                        onChange={(event) => updateProductSalesChannels(product, event.target.value)}
+                        disabled={savingProductId === product.id}
+                        title="Channel tempat produk dijual. Hanya GoFood = tidak tampil di kasir & self-order."
+                        className="h-9 rounded-lg border border-gray-200/80 bg-white px-2 text-xs font-medium text-gray-700 outline-none disabled:opacity-50"
+                      >
+                        {SALES_CHANNEL_PRESETS.map((preset) => (
+                          <option key={preset.key} value={preset.key}>
+                            {preset.label}
+                          </option>
+                        ))}
+                        {salesChannelPresetKey(product.salesChannels) === 'custom' ? (
+                          <option value="custom" disabled>
+                            {salesChannelSummary(product.salesChannels)}
+                          </option>
+                        ) : null}
+                      </select>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <Button
