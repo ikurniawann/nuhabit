@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { formatOrderElapsed } from "../order-elapsed";
 import { orderToPreviewReceipt } from "../order-to-receipt";
 import { PaymentProofBadge } from "@/features/pos/open-bills/payment-proof-badge";
+import { orderCustomerLabel } from "@/lib/pos/order-customer";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -73,12 +74,7 @@ function isOpenBill(order: Order) {
 }
 
 function resolveCustomerLabel(order: Order) {
-  const name = order.customer?.name?.trim();
-  const phone = order.customer?.phone?.trim();
-  if (name && phone) return `${name} · ${phone}`;
-  if (name) return name;
-  if (phone) return phone;
-  return "Walk-in";
+  return orderCustomerLabel(order, { withPhone: true });
 }
 
 function OrderDetailPanel({

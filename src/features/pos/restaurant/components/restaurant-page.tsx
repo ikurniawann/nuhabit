@@ -66,6 +66,7 @@ import { useReservationList } from "@/features/pos/reservation/queries";
 import { reservationQueryKeys } from "@/features/pos/reservation/query-keys";
 import { seatReservation } from "@/features/pos/reservation/api";
 import type { ReservationRow } from "@/features/pos/reservation/types";
+import { orderCustomerName } from "@/lib/pos/order-customer";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -757,7 +758,7 @@ function RestaurantPageContent() {
             total={Number(splitPaymentOrder.total_amount || 0)}
             taxAmount={Number(splitPaymentOrder.tax_amount || 0)}
             discountAmount={Number(splitPaymentOrder.discount_amount || 0)}
-            customerName={splitPaymentOrder.customer?.name}
+            customerName={orderCustomerName(splitPaymentOrder) ?? undefined}
             onBack={() => setSplitPaymentOrder(null)}
             onComplete={() => {
               setSplitPaymentOrder(null);

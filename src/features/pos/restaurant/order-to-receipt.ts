@@ -1,6 +1,7 @@
 import type { ReceiptPayload } from "@/components/pos/PrintReceipt";
 import type { PosCartItem } from "@/hooks/use-pos-cart";
 import type { Order } from "@/lib/pos-api";
+import { orderCustomerLabel } from "@/lib/pos/order-customer";
 
 type OrderLine = {
   id?: string;
@@ -47,10 +48,7 @@ export function orderToPreviewReceipt(
   order: Order,
   tableLabel: string | null
 ): ReceiptPayload {
-  const name = order.customer?.name?.trim();
-  const phone = order.customer?.phone?.trim();
-  const customerName =
-    name && phone ? `${name} · ${phone}` : name || phone || "Walk-in";
+  const customerName = orderCustomerLabel(order, { withPhone: true });
 
   return {
     orderId: order.id,

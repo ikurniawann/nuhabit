@@ -503,6 +503,11 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
             member={member}
             coach={coachVisible}
             onSave={saveGuest}
+            onMemberLogin={async () => {
+              await reloadMember();
+              setCoachOpen(false);
+              showToast("Berhasil masuk sebagai member");
+            }}
             onOpenMember={() => setMemberOpen(true)}
             onDismissCoach={() => setCoachOpen(false)}
           />

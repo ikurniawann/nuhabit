@@ -4,6 +4,7 @@ import { compReceiptLabel } from "@/lib/pos/comp-orders";
 import { idrToArk } from "@/lib/pos/loyalty-settings";
 import { useLoyaltySettings } from "@/features/pos/loyalty-settings";
 import type { TransactionReportRow } from "../types";
+import { orderCustomerLabel, orderCustomerPhone } from "@/lib/pos/order-customer";
 import {
   formatKitchenStatusLabel,
   formatOrderTypeLabel,
@@ -62,6 +63,9 @@ export type TransactionOrderDetail = {
     phone?: string | null;
     membership_tier?: string | null;
   } | null;
+  /** Kontak pemesan self-order (tamu). */
+  contact_name?: string | null;
+  contact_phone?: string | null;
   void_reason?: string | null;
   voided_at?: string | null;
   created_by_name?: string | null;
@@ -208,7 +212,7 @@ export function TransactionDetailBody({
           <DetailField label="Antrian" value={detail?.queue_number || "—"} />
           <DetailField
             label="Pelanggan"
-            value={detail?.customer?.name?.trim() || "Walk-in"}
+            value={orderCustomerLabel(detail)}
           />
           <DetailField label="Kasir" value={detail?.created_by_name || "—"} />
           {(detail?.comp_type ?? row?.comp_type) ? (
@@ -224,8 +228,8 @@ export function TransactionDetailBody({
               }
             />
           ) : null}
-          {detail?.customer?.phone ? (
-            <DetailField label="Telepon" value={detail.customer.phone} />
+          {orderCustomerPhone(detail) ? (
+            <DetailField label="Telepon" value={orderCustomerPhone(detail) ?? ""} />
           ) : null}
           {detail?.customer?.membership_tier ? (
             <DetailField

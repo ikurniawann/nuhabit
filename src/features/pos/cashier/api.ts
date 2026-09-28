@@ -27,6 +27,9 @@ export interface CashierOrderItem {
 
 export interface CashierOrder {
   id: string;
+  /** Kontak pemesan self-order (tamu) — nama utk struk bila bukan member. */
+  contact_name?: string | null;
+  contact_phone?: string | null;
   order_number?: string;
   order_type?: string;
   table_id?: string | null;

@@ -60,6 +60,7 @@ import {
   type TransactionOrderDetail,
 } from "@/features/pos/reports/components/transaction-detail-body";
 import { loadOrderTransactionDetail } from "@/features/pos/reports/utils/load-order-detail";
+import { orderCustomerLabel } from "@/lib/pos/order-customer";
 import {
   flattenOrderItems,
   mergeBillTransactionDetail,
@@ -605,7 +606,7 @@ export function OrdersPage() {
                         <div className="flex items-center gap-2">
                           <User className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           <span className="font-medium text-foreground">
-                            {order.customer?.name || "Walk-in"}
+                            {orderCustomerLabel(order)}
                           </span>
                         </div>
                       </td>

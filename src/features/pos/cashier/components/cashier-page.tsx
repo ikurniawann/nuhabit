@@ -258,6 +258,8 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   const { data: tables = [], isLoading: loadingTables, error: tablesQueryError } = useCashierTables();
   const tableError = tablesQueryError instanceof Error ? tablesQueryError.message : null;
   const { data: paymentOrder } = useCashierOrder(paymentCheckoutId ? null : paymentOrderId);
+  // Bill self-order tamu: nama pemesan dari form wajib (bukan member) → struk tidak "Walk-in".
+  const orderContactName = paymentOrder?.contact_name?.trim() || undefined;
   const { data: paymentCheckout } = useCashierCheckout(paymentCheckoutId);
 
   useEffect(() => {
@@ -1407,7 +1409,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           total,
           change: 0,
           paymentMethod: receiptMethod,
-          customerName: selectedCustomer?.name,
+          customerName: selectedCustomer?.name ?? orderContactName,
           discountAmount,
           taxAmount,
           chargesBreakdown: billCharges.breakdown,
@@ -1519,7 +1521,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           total: cTotal,
           change: 0,
           paymentMethod: receiptMethod,
-          customerName: selectedCustomer?.name,
+          customerName: selectedCustomer?.name ?? orderContactName,
           discountAmount,
           taxAmount,
           chargesBreakdown: billCharges.breakdown,
@@ -1625,7 +1627,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           total: cTotal,
           change: 0,
           paymentMethod: receiptMethod,
-          customerName: selectedCustomer?.name,
+          customerName: selectedCustomer?.name ?? orderContactName,
           discountAmount,
           taxAmount,
           chargesBreakdown: billCharges.breakdown,
@@ -1699,7 +1701,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           total: payTotal,
           change: method === 'cash' ? (parseFloat(cashValue) || 0) - payTotal : 0,
           paymentMethod: receiptMethod,
-          customerName: selectedCustomer?.name,
+          customerName: selectedCustomer?.name ?? orderContactName,
           discountAmount,
           taxAmount,
           // FOC = komplimen: struk menampilkan diskon 100% + total 0 + label
@@ -1771,7 +1773,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           total: payTotal,
           change: method === 'cash' ? (parseFloat(cashValue) || 0) - payTotal : 0,
           paymentMethod: receiptMethod,
-          customerName: selectedCustomer?.name,
+          customerName: selectedCustomer?.name ?? orderContactName,
           discountAmount,
           taxAmount,
           // EPIC-041: snapshot ARK/XP dari respons pembayaran utk struk
@@ -1867,7 +1869,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         total: cTotal,
         change: method === 'cash' ? (parseFloat(cashValue) || 0) - cTotal : 0,
         paymentMethod: receiptMethod,
-        customerName: selectedCustomer?.name,
+        customerName: selectedCustomer?.name ?? orderContactName,
         discountAmount,
         taxAmount,
         chargesBreakdown: billCharges.breakdown,
@@ -1932,7 +1934,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         total: res.total,
         change: res.change,
         paymentMethod: receiptMethod,
-        customerName: selectedCustomer?.name,
+        customerName: selectedCustomer?.name ?? orderContactName,
         discountAmount,
         taxAmount,
         chargesBreakdown: billCharges.breakdown,
@@ -2043,7 +2045,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         total,
         change: 0,
         paymentMethod,
-        customerName: selectedCustomer?.name,
+        customerName: selectedCustomer?.name ?? orderContactName,
         discountAmount,
         taxAmount,
         chargesBreakdown: billCharges.breakdown,

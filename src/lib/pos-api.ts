@@ -446,6 +446,9 @@ export interface Order {
   special_requests?: string;
   /** Static QRIS self-order: kapan pemesan mengunggah bukti bayar. */
   payment_proof_uploaded_at?: string | null;
+  /** Kontak pemesan self-order (tamu, wajib sejak 2026-09-28). */
+  contact_name?: string | null;
+  contact_phone?: string | null;
   items?: any[];
   splits?: any[];
   checkout_id?: string | null;
