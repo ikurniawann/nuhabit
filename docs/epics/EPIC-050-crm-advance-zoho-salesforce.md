@@ -10,7 +10,7 @@ retries: 0
 
 ## Goal
 
-Menaikkan CRM Tedja dari "loyalty + inbox + funnel B2B sederhana" menjadi CRM
+Menaikkan CRM BCD dari "loyalty + inbox + funnel B2B sederhana" menjadi CRM
 penuh setara Zoho CRM / Salesforce Sales Cloud untuk skala UMKM-menengah:
 objek **Account → Contact → Lead → Deal** yang utuh, **email dua arah** yang
 otomatis tercatat di timeline, **tasks & kalender**, **lead scoring**,
@@ -84,10 +84,10 @@ supaya tidak ada pekerjaan yang dibongkar ulang:
    akun tester; prosesnya berminggu-minggu dan berbiaya. Cara Salesforce
    (Email-to-Salesforce / Email-to-Case) & Zoho (Mail-in / BCC dropbox) lebih
    cepat dan cukup:
-   - **Keluar**: kirim dari CRM via Resend (domain `tedjacoffee.id`
+   - **Keluar**: kirim dari CRM via Resend (domain `bcdcoffee.id`
      diverifikasi), template + merge field, log otomatis, tracking open/click
      dari webhook Resend.
-   - **Masuk**: alamat dropbox `crm@in.tedjacoffee.id` (Resend inbound /
+   - **Masuk**: alamat dropbox `crm@in.bcdcoffee.id` (Resend inbound /
      Cloudflare Email Routing → endpoint kita). Sales cukup **BCC/forward** dari
      Gmail/Outlook apa pun → email otomatis nempel ke lead/deal/contact
      berdasarkan alamat pengirim/penerima dan `In-Reply-To`.
@@ -117,7 +117,7 @@ supaya tidak ada pekerjaan yang dibongkar ulang:
 7. **Report builder bertahap**: (a) saved views + filter + group-by + export
    + kirim terjadwal (email/WA) → menutup 80% kebutuhan; (b) dashboard widget
    builder; (c) drag-drop penuh belakangan.
-8. **Multi-pipeline dibuka** karena Tedja punya jenis penjualan berbeda
+8. **Multi-pipeline dibuka** karena BCD punya jenis penjualan berbeda
    (acara/booking venue, B2B kopi/katering, Resort, Ticketing grup) — tiap
    pipeline punya tahap + probability sendiri; ini prasyarat weighted forecast.
 9. **AI prediktif (win probability, churn) masuk P2** dan hanya bermakna
@@ -157,7 +157,7 @@ supaya tidak ada pekerjaan yang dibongkar ulang:
    diskon > 10% butuh persetujuan `admin`/manajer; > 20% butuh `super_admin`
    (owner). Berjenjang: tingkat 1 dulu, lalu tingkat 2 bila melewati ambang 2.
 6. **Web-to-lead** — SETUJU: **satu halaman publik** di
-   `https://tedja.reddie.id/public` (form permintaan penawaran / kontak) yang
+   `https://poskopi.reddie.id/public` (form permintaan penawaran / kontak) yang
    membuat lead otomatis + notifikasi WA ke sales. Bukan embed di WIT.ID.
    Route `/public` dan `/api/public/crm/forms` masuk daftar path publik
    middleware. Embed snippet untuk situs lain = opsional belakangan.
@@ -194,7 +194,7 @@ CRM
 ├── Marketing
 │   ├── Kampanye WA               (crm.campaigns — kanal email menyusul Fase 7)
 │   ├── Segmen                    BARU (crm.marketing.segments — dinamis + RFM)
-│   ├── Form Publik (/public)     BARU (crm.marketing.forms — halaman tedja.reddie.id/public)
+│   ├── Form Publik (/public)     BARU (crm.marketing.forms — halaman poskopi.reddie.id/public)
 │   ├── Journey                   BARU P2 (crm.marketing.journeys)
 │   └── Promo                     (crm.promo — ada)
 ├── Reports & Dashboards
@@ -391,10 +391,10 @@ Urutan final setelah keputusan owner 2026-09-13 (email ditunda ke akhir).
 ### Fase 5 — Marketing & Form Publik (P1-c)
 - [x] T-5.1 Segmen dinamis tersimpan + RFM + preview jumlah; dipakai kampanye WA.
 - [x] T-5.2 Attribution UTM & laporan sumber → deal → revenue.
-- [x] T-5.3 Halaman publik `tedja.reddie.id/public`: form permintaan penawaran/
+- [x] T-5.3 Halaman publik `poskopi.reddie.id/public`: form permintaan penawaran/
       kontak (field dari custom fields, anti-spam honeypot + rate limit),
       endpoint `POST /api/public/crm/forms/[slug]`, auto-create lead + scoring +
-      workflow + WA ke sales; branding Tedja Coffee.
+      workflow + WA ke sales; branding BCD Coffee.
 
 ### Fase 6 — Pelengkap (P2)
 - [ ] T-6.1 Cases/Tiket dari inbox/review + SLA + KB + CSAT.
@@ -444,7 +444,7 @@ Urutan final setelah keputusan owner 2026-09-13 (email ditunda ke akhir).
 ## Automation Log
 
 - 2026-09-13 — Epic dibuat dari rencana owner (benchmark Zoho/Salesforce) +
-  audit kode & DB deploy Tedja. Temuan kunci: Sales Funneling sudah punya
+  audit kode & DB deploy BCD. Temuan kunci: Sales Funneling sudah punya
   leads/deals/activities/quotation/invoice/laporan (EPIC-022) tapi tanpa
   Account, scoring, multi-pipeline, forecast, approval, email; CRM loyalty
   punya inbox omnichannel + AI insight + kampanye WA + data RFM mentah.
@@ -455,7 +455,7 @@ Urutan final setelah keputusan owner 2026-09-13 (email ditunda ke akhir).
   dipindah ke Fase 7, reminder/kampanye WA + in-app dulu; (3)(4) pipeline &
   kuota memakai default sementara (2 pipeline; target per sales per bulan
   dalam Rupiah) karena owner minta penjelasan; (5) approval diskon SETUJU,
-  default 10%/20%; (6) web-to-lead = halaman publik tedja.reddie.id/public.
+  default 10%/20%; (6) web-to-lead = halaman publik poskopi.reddie.id/public.
   Status → on-progress, mulai Fase 1.
 - 2026-09-13 — **Fase 1 selesai (deploy dev).** Keputusan implementasi:
   (a) KODE menu & route Sales Funneling TIDAK diganti (`sales-funnel.*`,
@@ -568,7 +568,7 @@ Urutan final setelah keputusan owner 2026-09-13 (email ditunda ke akhir).
   utm_source dipetakan ke daftar sumber yang sah (nilai asing jatuh ke default,
   tidak pernah masuk mentah). Halaman Atribusi Sumber menampilkan lead dan
   nilai deal per sumber/UTM, blok "Asal Lead" muncul di detail lead. (c) Form
-  publik (crm_forms + crm_form_submissions) di tedja.reddie.id/public: field
+  publik (crm_forms + crm_form_submissions) di poskopi.reddie.id/public: field
   builder, validasi ulang di server (kunci tak terdaftar dibuang), honeypot +
   ambang waktu pengisian + rate limit 5 per 5 menit per IP, kiriman selalu
   dicatat (ok/duplicate/rejected + alasan), lead otomatis dengan scoring &

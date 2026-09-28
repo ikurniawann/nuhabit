@@ -1,5 +1,5 @@
 /**
- * Boilerplate bersama untuk seeder demo Tedja Coffee.
+ * Boilerplate bersama untuk seeder demo BCD Coffee.
  *
  * Seeder lama menyalin loadEnv() dan pembukaan koneksi di tiap berkas. Berkas
  * ini memusatkannya supaya seeder baru hanya berisi datanya saja.

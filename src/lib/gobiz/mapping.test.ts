@@ -96,7 +96,7 @@ describe("mapGofoodItems", () => {
       "prod-1",
       {
         id: "prod-1",
-        name: "Burger Tedja",
+        name: "Burger BCD",
         sku: "BRG-01",
         station: "kitchen",
         variants: [{ id: "v-keju", name: "Keju" }],
@@ -109,7 +109,7 @@ describe("mapGofoodItems", () => {
     expect(lines).toEqual([
       {
         product_id: "prod-1",
-        product_name: "Burger Tedja",
+        product_name: "Burger BCD",
         product_sku: "BRG-01",
         quantity: 2,
         unit_price: 15000,

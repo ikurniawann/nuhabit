@@ -21,7 +21,7 @@ sticky, tombol **Menu** mengambang, bar keranjang di bawah.
 
 ## Konteks & Temuan Audit (2026-09-12)
 
-- Produksi `https://tedja.reddie.id/api/table-order/products` mengembalikan
+- Produksi `https://poskopi.reddie.id/api/table-order/products` mengembalikan
   **0 produk** → halaman jatuh ke menu demo dan tombol kirim mati. Repo lokal
   tidak punya `DATABASE_URL`, jadi isi `pos.pos_products` produksi belum bisa
   dipastikan — halaman kini menampilkan diagnosa (belum ada produk POS vs semua
@@ -95,7 +95,7 @@ sticky, tombol **Menu** mengambang, bar keranjang di bawah.
   meja/KDS/laporan tetap; asal pesanan ditandai di `notes`/`special_requests`
   (`Self-service table order <kode>`).
 - **Aksen warna memakai token brand** (`bg-primary` → `--brand-primary` dari
-  Appearance) — layout mengikuti referensi, warna mengikuti brand Tedja; ubah
+  Appearance) — layout mengikuti referensi, warna mengikuti brand BCD; ubah
   ke hijau referensi cukup lewat setting brand.
 - Kode meja tak terdaftar tetap boleh memesan (`table_id` null, kode di
   catatan) — mode strict/signed token ditunda sampai QA menilai perlu.
@@ -112,24 +112,24 @@ sticky, tombol **Menu** mengambang, bar keranjang di bawah.
   ganda `searchPlaceholder` & `FLOOR_PRESETS` readonly — ikut diperbaiki),
   test PASS (vitest 4 berkas / 31 test). Status → `ready-for-qa`; T-10 butuh
   akses DB/gateway produksi yang tidak tersedia di workspace ini.
-- 2026-09-12 11:09 WIB — Deploy produksi (`docker compose build/up tedja-app`
-  di `/home/wit/docker-infra/tedja`, image `tedja:local`, container healthy).
+- 2026-09-12 11:09 WIB — Deploy produksi (`docker compose build/up wwwcoffee-app`
+  di `/home/wit/docker-infra/bcdcoffee`, image `bcdcoffee:local`, container healthy).
   Verifikasi: `GET /api/table-order/session/TBL-501-SEED` → meja resolve
-  (Table 5-01, Indoor), brand Tedja Coffee, `qris_available=false` (Xendit
+  (Table 5-01, Indoor), brand BCD Coffee, `qris_available=false` (Xendit
   belum aktif); `GET /api/table-order/products` → `meta.total_products=0`
   (katalog POS produksi kosong — menu baru tampil setelah produk diisi).
   Halaman `/table-order/TBL-501-SEED` HTTP 200. T-10 tersisa: isi
   `pos_products`, aktifkan Xendit + callback webhook, Fonnte OTP.
-- 2026-09-12 — Seeder demo `database/seeders/tedja-self-order-demo.{sql,js}`
-  (`npm run db:seed:tedja-self-order`): 4 kategori, 12 produk TDJ-* ber-varian
+- 2026-09-12 — Seeder demo `database/seeders/bcdcoffee-self-order-demo.{sql,js}`
+  (`npm run db:seed:bcdcoffee-self-order`): 4 kategori, 12 produk BCD-* ber-varian
   /XP/station/foto (1 khusus member `min_xp=100`), 2 member demo
   (081200000001 bronze · 081200000002 gold). Dijalankan di DB produksi
-  (`docker exec tedja-db psql --single-transaction`) → API publik 12 produk
+  (`docker exec wwwcoffee-db psql --single-transaction`) → API publik 12 produk
   (Kopi 5 · Non-Kopi 2 · Makanan 3 · Dessert & Pastry 2). Sisa T-10: Xendit
   + callback webhook, Fonnte OTP.
 - 2026-09-12 — Foto produk: seeder diringkas ke 8 produk = 8 foto yang sudah
   ada di `public/products/*.png` (permintaan owner "ambil yang ada aja");
-  produk TDJ-* lama tanpa foto lokal dihapus (belum pernah dipesan). Temuan:
+  produk BCD-* lama tanpa foto lokal dihapus (belum pernah dipesan). Temuan:
   `/products/*` dan `/qris/*` di-redirect ke /login oleh middleware auth →
   ditambahkan ke `PUBLIC_AUTH_PREFIXES` (+ test). Perlu rebuild container
   agar foto & logo QRIS tampil di halaman publik.

@@ -10,7 +10,7 @@ retries: 0
 
 ## Goal
 
-Order GoFood masuk otomatis ke POS Tedja tanpa input ulang: webhook GoBiz →
+Order GoFood masuk otomatis ke POS BCD tanpa input ulang: webhook GoBiz →
 `pos.gofood_orders` → (auto/manual accept) → `pos.pos_orders` (order_type
 `delivery`, lunas via `gofood`) → KDS per station → "Siap diambil" dikirim
 balik ke GoFood saat dapur menandai siap. Katalog GoFood disinkron dari

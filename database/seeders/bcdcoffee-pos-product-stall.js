@@ -17,9 +17,9 @@
  * ulang setelah menambah produk POS baru.
  *
  * Usage:
- *   node database/seeders/tedja-pos-product-stall.js              # stall default
- *   node database/seeders/tedja-pos-product-stall.js --stall=COFFEESHOP
- *   npm run db:seed:tedja-pos-stall
+ *   node database/seeders/bcdcoffee-pos-product-stall.js              # stall default
+ *   node database/seeders/bcdcoffee-pos-product-stall.js --stall=COFFEESHOP
+ *   npm run db:seed:bcdcoffee-pos-stall
  */
 
 const fs = require("fs");

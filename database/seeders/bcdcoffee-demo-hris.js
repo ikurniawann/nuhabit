@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo HRIS Tedja Coffee: karyawan operasional, shift kerja, kontrak.
+ * Seeder demo HRIS BCD Coffee: karyawan operasional, shift kerja, kontrak.
  *
  * Melengkapi hris-master-data.js (departemen/jabatan/status kepegawaian) yang
  * hanya mengisi master. Tanpa karyawan ber-departemen, modul lain ikut macet —
@@ -12,24 +12,24 @@
  * Idempotent: karyawan upsert per NIP, shift per nama, kontrak per nomor.
  *
  * Usage:
- *   node database/seeders/tedja-demo-hris.js
- *   npm run db:seed:tedja-hris
+ *   node database/seeders/bcdcoffee-demo-hris.js
+ *   npm run db:seed:bcdcoffee-hris
  */
 
-const { dayFrom, runSeeder } = require("./lib/tedja-demo");
+const { dayFrom, runSeeder } = require("./lib/bcdcoffee-demo");
 
 /** [nama, nip, email, telepon, departemen_code, jabatan, status, gender, kota, mulai_kerja_hari] */
 const EMPLOYEES = [
-  ["Rizky Ananda", "TDJ-1001", "rizky.ananda@tedjacoffee.id", "081210001001", "OPS", "Store Manager", "permanent", "male", "Bandung", -720],
-  ["Putri Maharani", "TDJ-1002", "putri.maharani@tedjacoffee.id", "081210001002", "OPS", "Supervisor", "permanent", "female", "Bandung", -540],
-  ["Bagas Pratama", "TDJ-1003", "bagas.pratama@tedjacoffee.id", "081210001003", "OPS", "Barista", "permanent", "male", "Bandung", -400],
-  ["Nadia Safitri", "TDJ-1004", "nadia.safitri@tedjacoffee.id", "081210001004", "OPS", "Barista", "contract", "female", "Cimahi", -240],
-  ["Fajar Nugroho", "TDJ-1005", "fajar.nugroho@tedjacoffee.id", "081210001005", "OPS", "Barista", "probation", "male", "Bandung", -60],
-  ["Salsa Ramadhani", "TDJ-1006", "salsa.ramadhani@tedjacoffee.id", "081210001006", "OPS", "Cashier", "contract", "female", "Bandung", -300],
-  ["Dimas Kurniawan", "TDJ-1007", "dimas.kurniawan@tedjacoffee.id", "081210001007", "OPS", "Cook", "permanent", "male", "Bandung Barat", -480],
-  ["Ayu Lestari", "TDJ-1008", "ayu.lestari@tedjacoffee.id", "081210001008", "PROC", "Admin Staff", "permanent", "female", "Bandung", -365],
-  ["Hendra Saputra", "TDJ-1009", "hendra.saputra@tedjacoffee.id", "081210001009", "FIN", "Accounting Supervisor", "permanent", "male", "Bandung", -600],
-  ["Tiara Wulandari", "TDJ-1010", "tiara.wulandari@tedjacoffee.id", "081210001010", "MKT", "Digital Marketing Specialist", "contract", "female", "Bandung", -180],
+  ["Rizky Ananda", "BCD-1001", "rizky.ananda@bcdcoffee.id", "081210001001", "OPS", "Store Manager", "permanent", "male", "Bandung", -720],
+  ["Putri Maharani", "BCD-1002", "putri.maharani@bcdcoffee.id", "081210001002", "OPS", "Supervisor", "permanent", "female", "Bandung", -540],
+  ["Bagas Pratama", "BCD-1003", "bagas.pratama@bcdcoffee.id", "081210001003", "OPS", "Barista", "permanent", "male", "Bandung", -400],
+  ["Nadia Safitri", "BCD-1004", "nadia.safitri@bcdcoffee.id", "081210001004", "OPS", "Barista", "contract", "female", "Cimahi", -240],
+  ["Fajar Nugroho", "BCD-1005", "fajar.nugroho@bcdcoffee.id", "081210001005", "OPS", "Barista", "probation", "male", "Bandung", -60],
+  ["Salsa Ramadhani", "BCD-1006", "salsa.ramadhani@bcdcoffee.id", "081210001006", "OPS", "Cashier", "contract", "female", "Bandung", -300],
+  ["Dimas Kurniawan", "BCD-1007", "dimas.kurniawan@bcdcoffee.id", "081210001007", "OPS", "Cook", "permanent", "male", "Bandung Barat", -480],
+  ["Ayu Lestari", "BCD-1008", "ayu.lestari@bcdcoffee.id", "081210001008", "PROC", "Admin Staff", "permanent", "female", "Bandung", -365],
+  ["Hendra Saputra", "BCD-1009", "hendra.saputra@bcdcoffee.id", "081210001009", "FIN", "Accounting Supervisor", "permanent", "male", "Bandung", -600],
+  ["Tiara Wulandari", "BCD-1010", "tiara.wulandari@bcdcoffee.id", "081210001010", "MKT", "Digital Marketing Specialist", "contract", "female", "Bandung", -180],
 ];
 
 /** [nama, mulai, selesai, istirahat_menit, toleransi_menit, lintas_hari, urutan] */
@@ -119,7 +119,7 @@ runSeeder("Seeding demo HRIS", async (c, scope) => {
       `INSERT INTO hris.employment_contracts
          (employee_id, contract_number, contract_type, status, start_date, end_date,
           probation_end_date, sequence, position_title, department_name, work_location, notes)
-       VALUES ($1,$2,$3,'active',$4::date,$5::date,$6::date,1,$7,$8,'Tedja Bandung',$9)
+       VALUES ($1,$2,$3,'active',$4::date,$5::date,$6::date,1,$7,$8,'BCD Bandung',$9)
        ON CONFLICT (contract_number) DO UPDATE SET
          contract_type = EXCLUDED.contract_type,
          status = EXCLUDED.status,

@@ -95,7 +95,7 @@ function idList(raw: unknown): string[] {
 
 /** IP disimpan sebagai hash — cukup untuk menelusuri spam tanpa menyimpan IP mentah. */
 export function hashIp(ip: string): string {
-  return createHash("sha256").update(`tedja-form:${ip}`).digest("hex").slice(0, 64);
+  return createHash("sha256").update(`bcdcoffee-form:${ip}`).digest("hex").slice(0, 64);
 }
 
 export async function recordSubmission(input: {

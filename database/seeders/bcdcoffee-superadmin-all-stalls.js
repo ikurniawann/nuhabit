@@ -23,9 +23,9 @@
  * Idempotent.
  *
  * Usage:
- *   node database/seeders/tedja-superadmin-all-stalls.js
- *   node database/seeders/tedja-superadmin-all-stalls.js --email=admin@tedjacoffee.id
- *   npm run db:seed:tedja-superadmin-stalls
+ *   node database/seeders/bcdcoffee-superadmin-all-stalls.js
+ *   node database/seeders/bcdcoffee-superadmin-all-stalls.js --email=admin@bcdcoffee.id
+ *   npm run db:seed:bcdcoffee-superadmin-stalls
  */
 
 const fs = require("fs");

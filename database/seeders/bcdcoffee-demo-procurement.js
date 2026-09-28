@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo Procurement Tedja Coffee: supplier, purchase request, purchase order.
+ * Seeder demo Procurement BCD Coffee: supplier, purchase request, purchase order.
  *
  * Seeder supplier bawaan (purchasing-sulu-suppliers.js) membaca Excel milik
  * tenant lama yang tidak ada di repo ini, jadi daftar supplier di sini ditulis
@@ -10,20 +10,20 @@
  * ber-prefix DEMO- sehingga dijalankan ulang tidak menggandakan.
  *
  * Usage:
- *   node database/seeders/tedja-demo-procurement.js
- *   npm run db:seed:tedja-procurement
+ *   node database/seeders/bcdcoffee-demo-procurement.js
+ *   npm run db:seed:bcdcoffee-procurement
  */
 
-const { dayFrom, runSeeder, anyAdmin } = require("./lib/tedja-demo");
+const { dayFrom, runSeeder, anyAdmin } = require("./lib/bcdcoffee-demo");
 
 const SUPPLIERS = [
-  ["SUP-TDJ-001", "CV Gayo Highland Coffee", "Rahmat Iskandar", "081122334455", "Takengon", "kopi", "Roaster & eksportir biji arabica Gayo", "NET 30"],
-  ["SUP-TDJ-002", "PT Kintamani Bali Bean", "Wayan Suarta", "081233445566", "Bangli", "kopi", "Biji arabica Kintamani, pengiriman mingguan", "NET 14"],
-  ["SUP-TDJ-003", "CV Sumber Susu Lembang", "Dewi Puspita", "081344556677", "Bandung Barat", "dairy", "Fresh milk barista & produk olahan susu", "NET 7"],
-  ["SUP-TDJ-004", "PT Sirup Nusantara", "Andi Prakoso", "081455667788", "Bekasi", "minuman", "Sirup, bubuk minuman, dan pemanis", "NET 30"],
-  ["SUP-TDJ-005", "CV Kemasan Prima", "Lina Mardiana", "081566778899", "Bandung", "kemasan", "Cup, lid, paper bag custom bermerek", "NET 30"],
-  ["SUP-TDJ-006", "Toko Bahan Kue Sejahtera", "Hendra Wijaya", "081677889900", "Bandung", "bakery", "Tepung, gula, butter, dan bahan pastry", "COD"],
-  ["SUP-TDJ-007", "PT Gas Mitra Energi", "Siti Aminah", "081788990011", "Bandung", "operasional", "LPG dan perlengkapan dapur", "COD"],
+  ["SUP-BCD-001", "CV Gayo Highland Coffee", "Rahmat Iskandar", "081122334455", "Takengon", "kopi", "Roaster & eksportir biji arabica Gayo", "NET 30"],
+  ["SUP-BCD-002", "PT Kintamani Bali Bean", "Wayan Suarta", "081233445566", "Bangli", "kopi", "Biji arabica Kintamani, pengiriman mingguan", "NET 14"],
+  ["SUP-BCD-003", "CV Sumber Susu Lembang", "Dewi Puspita", "081344556677", "Bandung Barat", "dairy", "Fresh milk barista & produk olahan susu", "NET 7"],
+  ["SUP-BCD-004", "PT Sirup Nusantara", "Andi Prakoso", "081455667788", "Bekasi", "minuman", "Sirup, bubuk minuman, dan pemanis", "NET 30"],
+  ["SUP-BCD-005", "CV Kemasan Prima", "Lina Mardiana", "081566778899", "Bandung", "kemasan", "Cup, lid, paper bag custom bermerek", "NET 30"],
+  ["SUP-BCD-006", "Toko Bahan Kue Sejahtera", "Hendra Wijaya", "081677889900", "Bandung", "bakery", "Tepung, gula, butter, dan bahan pastry", "COD"],
+  ["SUP-BCD-007", "PT Gas Mitra Energi", "Siti Aminah", "081788990011", "Bandung", "operasional", "LPG dan perlengkapan dapur", "COD"],
 ];
 
 /**
@@ -41,10 +41,10 @@ const PURCHASE_REQUESTS = [
 
 /** [nomor, supplier_kode, status, subtotal, ppn%, catatan, hari_po, hari_kirim] */
 const PURCHASE_ORDERS = [
-  ["DEMO-PO-2601", "SUP-TDJ-001", "approved", 5_800_000, 11, "Arabica Gayo 20kg + house blend 20kg", -6, 1],
-  ["DEMO-PO-2602", "SUP-TDJ-003", "sent", 2_400_000, 11, "Fresh milk barista 10 karton", -3, 1],
-  ["DEMO-PO-2603", "SUP-TDJ-005", "approved", 2_230_000, 11, "Paper cup 12oz 2 dos + lid 2 dos", -2, 3],
-  ["DEMO-PO-2604", "SUP-TDJ-004", "draft", 1_450_000, 11, "Sirup vanilla, caramel, gula aren", 0, 7],
+  ["DEMO-PO-2601", "SUP-BCD-001", "approved", 5_800_000, 11, "Arabica Gayo 20kg + house blend 20kg", -6, 1],
+  ["DEMO-PO-2602", "SUP-BCD-003", "sent", 2_400_000, 11, "Fresh milk barista 10 karton", -3, 1],
+  ["DEMO-PO-2603", "SUP-BCD-005", "approved", 2_230_000, 11, "Paper cup 12oz 2 dos + lid 2 dos", -2, 3],
+  ["DEMO-PO-2604", "SUP-BCD-004", "draft", 1_450_000, 11, "Sirup vanilla, caramel, gula aren", 0, 7],
 ];
 
 runSeeder("Seeding demo Procurement", async (c, scope) => {

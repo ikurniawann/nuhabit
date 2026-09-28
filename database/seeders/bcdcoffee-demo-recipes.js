@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo Resep / BOM Tedja Coffee — penghubung produk jadi ke bahan baku.
+ * Seeder demo Resep / BOM BCD Coffee — penghubung produk jadi ke bahan baku.
  *
  * Bukan sekadar pelengkap. Halaman stok bahan baku memakai view
  * v_raw_materials_stock_by_warehouse saat pengguna sedang berada di satu stall,
@@ -15,84 +15,84 @@
  * Idempotent: resep tiap produk ditulis ulang utuh setiap dijalankan.
  *
  * Usage:
- *   node database/seeders/tedja-demo-recipes.js
- *   npm run db:seed:tedja-recipes
+ *   node database/seeders/bcdcoffee-demo-recipes.js
+ *   npm run db:seed:bcdcoffee-recipes
  */
 
-const { runSeeder } = require("./lib/tedja-demo");
+const { runSeeder } = require("./lib/bcdcoffee-demo");
 
 /**
  * Resep per produk: kodeProduk → [[kodeBahan, qty, waste%], ...]
  * qty dalam satuan kecil bahan (gram / ml / pcs / butir).
  */
 const RECIPES = {
-  "TDJ-KOPI-SUSU": [
-    ["TDJ-KOP-005", 18, 3],   // house blend 18 gr per shot
-    ["TDJ-DAI-002", 150, 2],  // fresh milk 150 ml
-    ["TDJ-SIR-004", 20, 0],   // gula aren 20 ml
-    ["TDJ-KER-004", 120, 5],  // es batu 120 gr
-    ["TDJ-KEM-003", 1, 1],    // plastic cup 16oz
-    ["TDJ-KEM-005", 1, 1],    // lid dingin
-    ["TDJ-KEM-006", 1, 1],    // sedotan
+  "BCD-KOPI-SUSU": [
+    ["BCD-KOP-005", 18, 3],   // house blend 18 gr per shot
+    ["BCD-DAI-002", 150, 2],  // fresh milk 150 ml
+    ["BCD-SIR-004", 20, 0],   // gula aren 20 ml
+    ["BCD-KER-004", 120, 5],  // es batu 120 gr
+    ["BCD-KEM-003", 1, 1],    // plastic cup 16oz
+    ["BCD-KEM-005", 1, 1],    // lid dingin
+    ["BCD-KEM-006", 1, 1],    // sedotan
   ],
-  "TDJ-ES-TEH": [
-    ["TDJ-TEH-001", 5, 2],
-    ["TDJ-SIR-006", 25, 0],
-    ["TDJ-KER-004", 150, 5],
-    ["TDJ-KEM-003", 1, 1],
-    ["TDJ-KEM-005", 1, 1],
-    ["TDJ-KEM-006", 1, 1],
+  "BCD-ES-TEH": [
+    ["BCD-TEH-001", 5, 2],
+    ["BCD-SIR-006", 25, 0],
+    ["BCD-KER-004", 150, 5],
+    ["BCD-KEM-003", 1, 1],
+    ["BCD-KEM-005", 1, 1],
+    ["BCD-KEM-006", 1, 1],
   ],
-  "TDJ-JUS-ALPUKAT": [
-    ["TDJ-DPR-005", 180, 8],  // alpukat 180 gr, susut kulit & biji
-    ["TDJ-DAI-005", 40, 0],   // SKM 40 gr
-    ["TDJ-DAI-001", 80, 2],   // susu UHT 80 ml
-    ["TDJ-KER-004", 100, 5],
-    ["TDJ-KEM-003", 1, 1],
-    ["TDJ-KEM-005", 1, 1],
-    ["TDJ-KEM-006", 1, 1],
+  "BCD-JUS-ALPUKAT": [
+    ["BCD-DPR-005", 180, 8],  // alpukat 180 gr, susut kulit & biji
+    ["BCD-DAI-005", 40, 0],   // SKM 40 gr
+    ["BCD-DAI-001", 80, 2],   // susu UHT 80 ml
+    ["BCD-KER-004", 100, 5],
+    ["BCD-KEM-003", 1, 1],
+    ["BCD-KEM-005", 1, 1],
+    ["BCD-KEM-006", 1, 1],
   ],
-  "TDJ-NASI-GORENG": [
-    ["TDJ-DPR-001", 200, 3],  // beras 200 gr
-    ["TDJ-DPR-003", 60, 5],   // ayam fillet 60 gr
-    ["TDJ-DAI-009", 1, 2],    // telur 1 butir
-    ["TDJ-DPR-006", 20, 0],   // minyak 20 ml
-    ["TDJ-DPR-007", 15, 8],   // bawang merah
-    ["TDJ-DPR-008", 10, 8],   // bawang putih
-    ["TDJ-DPR-009", 8, 8],    // cabai
-    ["TDJ-DPR-010", 15, 0],   // kecap manis
-    ["TDJ-KER-003", 3, 0],    // garam
+  "BCD-NASI-GORENG": [
+    ["BCD-DPR-001", 200, 3],  // beras 200 gr
+    ["BCD-DPR-003", 60, 5],   // ayam fillet 60 gr
+    ["BCD-DAI-009", 1, 2],    // telur 1 butir
+    ["BCD-DPR-006", 20, 0],   // minyak 20 ml
+    ["BCD-DPR-007", 15, 8],   // bawang merah
+    ["BCD-DPR-008", 10, 8],   // bawang putih
+    ["BCD-DPR-009", 8, 8],    // cabai
+    ["BCD-DPR-010", 15, 0],   // kecap manis
+    ["BCD-KER-003", 3, 0],    // garam
   ],
-  "TDJ-MIE-GORENG": [
-    ["TDJ-DPR-002", 1, 2],    // 1 pack mie
-    ["TDJ-DPR-003", 50, 5],
-    ["TDJ-DAI-009", 1, 2],
-    ["TDJ-DPR-006", 20, 0],
-    ["TDJ-DPR-007", 12, 8],
-    ["TDJ-DPR-008", 8, 8],
-    ["TDJ-DPR-010", 15, 0],
-    ["TDJ-KER-003", 3, 0],
+  "BCD-MIE-GORENG": [
+    ["BCD-DPR-002", 1, 2],    // 1 pack mie
+    ["BCD-DPR-003", 50, 5],
+    ["BCD-DAI-009", 1, 2],
+    ["BCD-DPR-006", 20, 0],
+    ["BCD-DPR-007", 12, 8],
+    ["BCD-DPR-008", 8, 8],
+    ["BCD-DPR-010", 15, 0],
+    ["BCD-KER-003", 3, 0],
   ],
-  "TDJ-AYAM-BAKAR": [
-    ["TDJ-DPR-003", 200, 6],
-    ["TDJ-DPR-001", 150, 3],  // nasi pendamping
-    ["TDJ-DPR-010", 25, 0],
-    ["TDJ-DPR-008", 10, 8],
-    ["TDJ-DPR-009", 10, 8],
-    ["TDJ-KER-003", 4, 0],
-    ["TDJ-BAR-001", 0.02, 0], // pemakaian gas per porsi (kg)
+  "BCD-AYAM-BAKAR": [
+    ["BCD-DPR-003", 200, 6],
+    ["BCD-DPR-001", 150, 3],  // nasi pendamping
+    ["BCD-DPR-010", 25, 0],
+    ["BCD-DPR-008", 10, 8],
+    ["BCD-DPR-009", 10, 8],
+    ["BCD-KER-003", 4, 0],
+    ["BCD-BAR-001", 0.02, 0], // pemakaian gas per porsi (kg)
   ],
-  "TDJ-KENTANG-GORENG": [
-    ["TDJ-DPR-004", 150, 4],
-    ["TDJ-DPR-006", 30, 0],
-    ["TDJ-KER-003", 2, 0],
-    ["TDJ-KEM-011", 1, 1],
+  "BCD-KENTANG-GORENG": [
+    ["BCD-DPR-004", 150, 4],
+    ["BCD-DPR-006", 30, 0],
+    ["BCD-KER-003", 2, 0],
+    ["BCD-KEM-011", 1, 1],
   ],
-  "TDJ-ROTI-BAKAR": [
-    ["TDJ-BAK-002", 2, 2],    // 2 lembar roti tawar
-    ["TDJ-DAI-008", 20, 2],   // butter
-    ["TDJ-BAK-004", 30, 0],   // selai cokelat
-    ["TDJ-KEM-011", 1, 1],
+  "BCD-ROTI-BAKAR": [
+    ["BCD-BAK-002", 2, 2],    // 2 lembar roti tawar
+    ["BCD-DAI-008", 20, 2],   // butter
+    ["BCD-BAK-004", 30, 0],   // selai cokelat
+    ["BCD-KEM-011", 1, 1],
   ],
 };
 

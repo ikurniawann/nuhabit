@@ -1,6 +1,6 @@
-# Tedja Coffee OS
+# BCD Coffee OS
 
-Tedja Coffee OS adalah ERP terpadu berbasis Next.js dan PostgreSQL native untuk operasional Aapex Technology. Sistem ini mencakup HRIS, rekrutmen, POS, CRM loyalty, purchasing, inventory, produksi, reporting QA, Tedja Coffee OS desktop, serta beberapa self-service flow untuk customer.
+BCD Coffee OS adalah ERP terpadu berbasis Next.js dan PostgreSQL native untuk operasional Aapex Technology. Sistem ini mencakup HRIS, rekrutmen, POS, CRM loyalty, purchasing, inventory, produksi, reporting QA, BCD Coffee OS desktop, serta beberapa self-service flow untuk customer.
 
 Database memakai PostgreSQL biasa (driver `pg`), auth/session di-handle di application layer (bcrypt + cookie session), dan data layer memakai shim ringan di `src/lib/db-client` yang meniru subset API PostgREST.
 
@@ -11,18 +11,18 @@ Database memakai PostgreSQL biasa (driver `pg`), auth/session di-handle di appli
 | Framework | Next.js App Router, React |
 | Database | PostgreSQL (driver `pg`), schema-per-domain |
 | Auth | Custom (bcrypt + cookie session), schema `auth` |
-| Styling | Tailwind CSS v4, shadcn/ui, custom Tedja Coffee OS design system |
+| Styling | Tailwind CSS v4, shadcn/ui, custom BCD Coffee OS design system |
 | Data & Form | React Hook Form, Zod, TanStack Query |
 | Charts | Recharts |
 | Drag & Drop | @hello-pangea/dnd |
 | Email | Resend |
 | WhatsApp | Fonnte API |
 | Deployment | Vercel |
-| AI | Ollama cloud models untuk Tedja Coffee OS AI Assistant |
+| AI | Ollama cloud models untuk BCD Coffee OS AI Assistant |
 
 ## Module Overview
 
-### Tedja Coffee OS Desktop
+### BCD Coffee OS Desktop
 
 Route utama:
 - `/arkiv-os`
@@ -31,7 +31,7 @@ Route utama:
 Fitur:
 - Desktop-style launcher untuk membuka module bisnis dalam window.
 - AI Assistant dengan mode context project atau general knowledge.
-- Pengaturan AI Assistant di Tedja Coffee OS Settings, termasuk pilihan LLM.
+- Pengaturan AI Assistant di BCD Coffee OS Settings, termasuk pilihan LLM.
 - QA progress dashboard sementara di `/qa` untuk ringkasan progress dan test result.
 
 Dokumentasi terkait:
@@ -291,7 +291,7 @@ Fitur:
 - Position.
 - Employment status.
 - Global settings.
-- Tedja Coffee OS settings.
+- BCD Coffee OS settings.
 
 ## API Surface
 
@@ -393,7 +393,7 @@ Catatan: sebagian logic CRM berada di `src/lib/crm/loyalty-engine.ts` dan dipang
 
 | Method | Endpoint | Deskripsi |
 | --- | --- | --- |
-| POST | `/api/ai/assistant` | Tedja Coffee OS AI Assistant |
+| POST | `/api/ai/assistant` | BCD Coffee OS AI Assistant |
 
 ## Database Highlights
 
@@ -620,7 +620,7 @@ Role valid mengikuti constraint `configuration.users.role`:
 
 ## Design Notes
 
-- Tedja Coffee OS memakai aksen pink sebagai primary action.
+- BCD Coffee OS memakai aksen pink sebagai primary action.
 - Dashboard operasional dibuat padat, scannable, dan action-oriented.
 - POS dan self-service flow mengutamakan touch-friendly controls.
 - Purchasing memakai istilah operasional Indonesia seperti Barang Masuk, Produksi, dan Recipe/BOM.

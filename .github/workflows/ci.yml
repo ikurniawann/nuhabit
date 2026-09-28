@@ -1,4 +1,4 @@
-# CI Tedja — menjaga perlindungan keamanan tetap teruji setiap perubahan.
+# CI BCD — menjaga perlindungan keamanan tetap teruji setiap perubahan.
 #
 # Yang MEMBLOKIR (sudah diverifikasi hijau lokal):
 #   - unit test (2200+), termasuk negative test: gerbang sesi fail-closed,

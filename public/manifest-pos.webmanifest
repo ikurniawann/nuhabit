@@ -1,7 +1,7 @@
 {
-  "name": "Tedja Coffee POS Kasir",
+  "name": "BCD Coffee POS Kasir",
   "short_name": "POS Kasir",
-  "description": "Mode tablet / kiosk untuk kasir Tedja Coffee POS",
+  "description": "Mode tablet / kiosk untuk kasir BCD Coffee POS",
   "start_url": "/dashboard/pos/tablet",
   "scope": "/dashboard/pos/",
   "display": "standalone",

@@ -235,7 +235,7 @@ WHERE deleted_at IS NULL
     'settings.wa_gateway', 'settings.payment-gateways',
     'crm.members.reviews',
     -- Modul Ticketing / Dataroom / Resort / Shop / Promo(CRM) / Items General / dll
-    -- (ditambahkan 12 Sep 2026 — seeder ini sempat menyapu 52 menu di deploy Tedja
+    -- (ditambahkan 12 Sep 2026 — seeder ini sempat menyapu 52 menu di deploy BCD
     -- karena kode-kodenya belum ada di daftar canonical):
     'crm.badges', 'crm.campaigns', 'crm.promo', 'crm.wallpapers',
     'dataroom', 'ess.requests', 'hris.kepegawaian.holidays', 'items.general',

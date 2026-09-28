@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo Inventory Tedja Coffee: stok bahan baku & produk jadi,
+ * Seeder demo Inventory BCD Coffee: stok bahan baku & produk jadi,
  * lengkap dengan riwayat pergerakan.
  *
  * Seeder bahan baku sebelumnya hanya mengisi DATA MASTER, sehingga semua item
@@ -20,11 +20,11 @@
  * ulang menghasilkan angka yang sama persis.
  *
  * Usage:
- *   node database/seeders/tedja-demo-inventory.js
- *   npm run db:seed:tedja-inventory
+ *   node database/seeders/bcdcoffee-demo-inventory.js
+ *   npm run db:seed:bcdcoffee-inventory
  */
 
-const { runSeeder, firstStall, anyAdmin } = require("./lib/tedja-demo");
+const { runSeeder, firstStall, anyAdmin } = require("./lib/bcdcoffee-demo");
 
 /** Hash stabil dari string — dasar semua variasi angka di seeder ini. */
 function hash(str) {

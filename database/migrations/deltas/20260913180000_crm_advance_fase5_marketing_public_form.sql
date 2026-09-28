@@ -89,7 +89,7 @@ INSERT INTO crm.crm_forms (slug, name, title, description, default_source, field
 VALUES (
   'kontak',
   'Permintaan Penawaran',
-  'Hubungi Tedja Coffee',
+  'Hubungi BCD Coffee',
   'Isi formulir di bawah ini untuk permintaan penawaran acara, katering, atau kerja sama. Tim kami membalas pada jam kerja.',
   'website',
   '[]'::jsonb

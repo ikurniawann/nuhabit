@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo Accounting Tedja Coffee: tahun buku, periode, dan jurnal contoh.
+ * Seeder demo Accounting BCD Coffee: tahun buku, periode, dan jurnal contoh.
  *
  * Melengkapi accounting-sulu-coa.js yang hanya mengisi Chart of Accounts.
  * Tanpa fiscal_periods, jurnal tidak bisa dibuat sama sekali karena
@@ -12,11 +12,11 @@
  * Idempotent: tahun buku per kode, periode per (tahun, nomor), jurnal per nomor.
  *
  * Usage:
- *   node database/seeders/tedja-demo-accounting.js
- *   npm run db:seed:tedja-accounting
+ *   node database/seeders/bcdcoffee-demo-accounting.js
+ *   npm run db:seed:bcdcoffee-accounting
  */
 
-const { runSeeder, anyAdmin } = require("./lib/tedja-demo");
+const { runSeeder, anyAdmin } = require("./lib/bcdcoffee-demo");
 
 const BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",

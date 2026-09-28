@@ -51,42 +51,42 @@ describe("POST /api/auth/login — rate limit", () => {
   it(`${LOGIN_MAX_PER_ACCOUNT} percobaan gagal masih 401, berikutnya 429`, async () => {
     const { POST } = await import("@/app/api/auth/login/route");
     for (let i = 0; i < LOGIN_MAX_PER_ACCOUNT; i++) {
-      const res = await POST(loginRequest("korban@tedjacoffee.id"));
+      const res = await POST(loginRequest("korban@bcdcoffee.id"));
       expect(res.status, `percobaan ke-${i + 1}`).toBe(401);
     }
-    const blocked = await POST(loginRequest("korban@tedjacoffee.id"));
+    const blocked = await POST(loginRequest("korban@bcdcoffee.id"));
     expect(blocked.status).toBe(429);
     expect((await blocked.json()).error).toMatch(/terlalu banyak/i);
   });
 
   it("saat diblokir, autentikasi TIDAK dipanggil lagi", async () => {
     const { POST } = await import("@/app/api/auth/login/route");
-    for (let i = 0; i < LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("a@tedjacoffee.id"));
+    for (let i = 0; i < LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("a@bcdcoffee.id"));
     const before = authenticateCredentials.mock.calls.length;
-    await POST(loginRequest("a@tedjacoffee.id"));
+    await POST(loginRequest("a@bcdcoffee.id"));
     expect(authenticateCredentials.mock.calls.length).toBe(before);
   });
 
   it("akun lain tidak ikut terkunci (batas per-akun)", async () => {
     const { POST } = await import("@/app/api/auth/login/route");
-    for (let i = 0; i <= LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("a@tedjacoffee.id"));
-    expect((await POST(loginRequest("b@tedjacoffee.id"))).status).toBe(401);
+    for (let i = 0; i <= LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("a@bcdcoffee.id"));
+    expect((await POST(loginRequest("b@bcdcoffee.id"))).status).toBe(401);
   });
 
   it("email disamakan huruf kecil — A@x dan a@x dihitung satu akun", async () => {
     const { POST } = await import("@/app/api/auth/login/route");
-    for (let i = 0; i < LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("Korban@Tedjacoffee.ID"));
-    expect((await POST(loginRequest("korban@tedjacoffee.id"))).status).toBe(429);
+    for (let i = 0; i < LOGIN_MAX_PER_ACCOUNT; i++) await POST(loginRequest("Korban@Bcdcoffee.ID"));
+    expect((await POST(loginRequest("korban@bcdcoffee.id"))).status).toBe(429);
   });
 
   it("login sukses membersihkan hitungan gagal akun itu", async () => {
     const { POST } = await import("@/app/api/auth/login/route");
-    await POST(loginRequest("c@tedjacoffee.id"));
-    expect(failures.get("c@tedjacoffee.id")).toBe(1);
-    authenticateCredentials.mockResolvedValue({ user: { id: "u1", email: "c@tedjacoffee.id" }, error: null });
-    const ok = await POST(loginRequest("c@tedjacoffee.id", "benar"));
+    await POST(loginRequest("c@bcdcoffee.id"));
+    expect(failures.get("c@bcdcoffee.id")).toBe(1);
+    authenticateCredentials.mockResolvedValue({ user: { id: "u1", email: "c@bcdcoffee.id" }, error: null });
+    const ok = await POST(loginRequest("c@bcdcoffee.id", "benar"));
     expect(ok.status).toBe(200);
-    expect(cleared).toContain("c@tedjacoffee.id");
-    expect(failures.has("c@tedjacoffee.id")).toBe(false);
+    expect(cleared).toContain("c@bcdcoffee.id");
+    expect(failures.has("c@bcdcoffee.id")).toBe(false);
   });
 });

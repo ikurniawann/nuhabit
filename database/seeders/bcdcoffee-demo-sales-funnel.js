@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seeder demo Sales Funneling / CRM Tedja Coffee.
+ * Seeder demo Sales Funneling / CRM BCD Coffee.
  *
  * Modul ini sama sekali belum punya seeder. Data demo dibuat menyebar di
  * beberapa tahap pipeline supaya kanban, forecast, dan laporan atribusi
@@ -13,11 +13,11 @@
  * di-upsert; dijalankan ulang tidak menggandakan.
  *
  * Usage:
- *   node database/seeders/tedja-demo-sales-funnel.js
- *   npm run db:seed:tedja-sales-funnel
+ *   node database/seeders/bcdcoffee-demo-sales-funnel.js
+ *   npm run db:seed:bcdcoffee-sales-funnel
  */
 
-const { dayFrom, runSeeder, anyAdmin } = require("./lib/tedja-demo");
+const { dayFrom, runSeeder, anyAdmin } = require("./lib/bcdcoffee-demo");
 
 const LOST_REASONS = [
   ["HARGA", "Harga di atas anggaran", 1],

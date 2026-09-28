@@ -1,16 +1,16 @@
 -- =============================================================================
--- Seeder: data demo ringkas utk self-order meja Tedja (EPIC-048).
+-- Seeder: data demo ringkas utk self-order meja BCD (EPIC-048).
 --
 -- Isi: 4 kategori POS, 8 produk (satu per foto yang tersedia di
 -- public/products/*.png) dengan varian, XP, station, dan 2 member demo.
 -- Meja TIDAK disentuh (sudah ada 5-01…5-05 dgn qr_code). Idempotent:
 -- produk upsert by sku, kategori/member by nama/nomor — aman dijalankan
--- berulang. Produk TDJ-* lama yang tidak ada di daftar ini dihapus bila belum
+-- berulang. Produk BCD-* lama yang tidak ada di daftar ini dihapus bila belum
 -- pernah dipesan. Transaksi diatur oleh runner (run-sql-file.js /
 -- psql --single-transaction).
 --
--- Jalankan: npm run db:seed:tedja-self-order
---   (atau: docker exec -i tedja-db psql -U tedja -d tedja --single-transaction < file ini)
+-- Jalankan: npm run db:seed:bcdcoffee-self-order
+--   (atau: docker exec -i wwwcoffee-db psql -U wwwcoffee -d wwwcoffee --single-transaction < file ini)
 -- =============================================================================
 
 
@@ -48,31 +48,31 @@ CREATE TEMP TABLE seed_products (
 
 INSERT INTO seed_products VALUES
   -- Kopi
-  ('TDJ-KOPI-SUSU',     'Es Kopi Susu Tedja',   'kopi',
-     'Espresso house blend, susu segar, dan gula aren — signature Tedja.',
+  ('BCD-KOPI-SUSU',     'Es Kopi Susu BCD',   'kopi',
+     'Espresso house blend, susu segar, dan gula aren — signature BCD.',
      25000, 9000, 25, 'bar', 5, '/products/kopi-susu.png'),
   -- Non-Kopi
-  ('TDJ-ES-TEH',        'Es Teh',               'non-kopi',
+  ('BCD-ES-TEH',        'Es Teh',               'non-kopi',
      'Teh hitam seduh segar, disajikan dingin.',
      12000, 3000, 12, 'bar', 3, '/products/es-teh.png'),
-  ('TDJ-JUS-ALPUKAT',   'Jus Alpukat',          'non-kopi',
+  ('BCD-JUS-ALPUKAT',   'Jus Alpukat',          'non-kopi',
      'Alpukat segar diblender dengan susu dan sedikit coklat.',
      22000, 8000, 22, 'bar', 5, '/products/jus-alpukat.png'),
   -- Makanan
-  ('TDJ-NASI-GORENG',   'Nasi Goreng Tedja',    'makanan',
+  ('BCD-NASI-GORENG',   'Nasi Goreng BCD',    'makanan',
      'Nasi goreng ala kafe dengan telur, ayam suwir, dan kerupuk.',
      30000, 12000, 30, 'kitchen', 12, '/products/nasi-goreng.png'),
-  ('TDJ-MIE-GORENG',    'Mie Goreng Tedja',     'makanan',
+  ('BCD-MIE-GORENG',    'Mie Goreng BCD',     'makanan',
      'Mie goreng dengan telur, sayur, dan bawang goreng.',
      28000, 11000, 28, 'kitchen', 12, '/products/mie-goreng.png'),
-  ('TDJ-AYAM-BAKAR',    'Ayam Bakar',           'makanan',
+  ('BCD-AYAM-BAKAR',    'Ayam Bakar',           'makanan',
      'Ayam bakar bumbu kecap, nasi hangat, sambal, dan lalapan.',
      38000, 16000, 38, 'kitchen', 18, '/products/ayam-bakar.png'),
-  ('TDJ-KENTANG-GORENG','Kentang Goreng',       'makanan',
+  ('BCD-KENTANG-GORENG','Kentang Goreng',       'makanan',
      'Kentang goreng renyah, cocok untuk teman ngopi.',
      20000, 7000, 20, 'kitchen', 8, '/products/kentang-goreng.png'),
   -- Dessert & Pastry
-  ('TDJ-ROTI-BAKAR',    'Roti Bakar',           'dessert & pastry',
+  ('BCD-ROTI-BAKAR',    'Roti Bakar',           'dessert & pastry',
      'Roti bakar tebal dengan pilihan isian coklat dan keju.',
      22000, 8000, 22, 'bakery', 8, '/products/roti-bakar.png');
 
@@ -101,16 +101,16 @@ ON CONFLICT (sku) DO UPDATE SET
   min_xp = EXCLUDED.min_xp,
   updated_at = now();
 
--- Produk seed lama (TDJ-*) yang tidak lagi ada di daftar & belum pernah dipesan → hapus.
+-- Produk seed lama (BCD-*) yang tidak lagi ada di daftar & belum pernah dipesan → hapus.
 DELETE FROM pos.pos_product_variants v
 USING pos.pos_products p
 WHERE v.product_id = p.id
-  AND p.sku LIKE 'TDJ-%'
+  AND p.sku LIKE 'BCD-%'
   AND p.sku NOT IN (SELECT sku FROM seed_products)
   AND NOT EXISTS (SELECT 1 FROM pos.pos_order_items oi WHERE oi.product_id = p.id);
 
 DELETE FROM pos.pos_products p
-WHERE p.sku LIKE 'TDJ-%'
+WHERE p.sku LIKE 'BCD-%'
   AND p.sku NOT IN (SELECT sku FROM seed_products)
   AND NOT EXISTS (SELECT 1 FROM pos.pos_order_items oi WHERE oi.product_id = p.id);
 
@@ -121,25 +121,25 @@ DELETE FROM pos.pos_product_variants
 WHERE product_id IN (SELECT id FROM pos.pos_products WHERE sku IN (SELECT sku FROM seed_products));
 
 WITH v(sku, group_name, name, price_adjustment, display_order) AS (VALUES
-  ('TDJ-KOPI-SUSU',      'Suhu',   'Ice',            0,    1),
-  ('TDJ-KOPI-SUSU',      'Suhu',   'Hot',            0,    2),
-  ('TDJ-KOPI-SUSU',      'Suhu',   'Ice — Oat Milk', 8000, 3),
-  ('TDJ-ES-TEH',         'Gula',   'Manis',          0,    1),
-  ('TDJ-ES-TEH',         'Gula',   'Less Sugar',     0,    2),
-  ('TDJ-ES-TEH',         'Gula',   'Tawar',          0,    3),
-  ('TDJ-JUS-ALPUKAT',    'Topping','Original',       0,    1),
-  ('TDJ-JUS-ALPUKAT',    'Topping','Extra Coklat',   3000, 2),
-  ('TDJ-NASI-GORENG',    'Porsi',  'Regular',        0,    1),
-  ('TDJ-NASI-GORENG',    'Porsi',  'Large',          8000, 2),
-  ('TDJ-MIE-GORENG',     'Level',  'Tidak Pedas',    0,    1),
-  ('TDJ-MIE-GORENG',     'Level',  'Pedas',          0,    2),
-  ('TDJ-AYAM-BAKAR',     'Bagian', 'Paha',           0,    1),
-  ('TDJ-AYAM-BAKAR',     'Bagian', 'Dada',           0,    2),
-  ('TDJ-KENTANG-GORENG', 'Rasa',   'Original',       0,    1),
-  ('TDJ-KENTANG-GORENG', 'Rasa',   'Cheese',         3000, 2),
-  ('TDJ-ROTI-BAKAR',     'Isian',  'Coklat Keju',    0,    1),
-  ('TDJ-ROTI-BAKAR',     'Isian',  'Coklat',         0,    2),
-  ('TDJ-ROTI-BAKAR',     'Isian',  'Keju',           0,    3)
+  ('BCD-KOPI-SUSU',      'Suhu',   'Ice',            0,    1),
+  ('BCD-KOPI-SUSU',      'Suhu',   'Hot',            0,    2),
+  ('BCD-KOPI-SUSU',      'Suhu',   'Ice — Oat Milk', 8000, 3),
+  ('BCD-ES-TEH',         'Gula',   'Manis',          0,    1),
+  ('BCD-ES-TEH',         'Gula',   'Less Sugar',     0,    2),
+  ('BCD-ES-TEH',         'Gula',   'Tawar',          0,    3),
+  ('BCD-JUS-ALPUKAT',    'Topping','Original',       0,    1),
+  ('BCD-JUS-ALPUKAT',    'Topping','Extra Coklat',   3000, 2),
+  ('BCD-NASI-GORENG',    'Porsi',  'Regular',        0,    1),
+  ('BCD-NASI-GORENG',    'Porsi',  'Large',          8000, 2),
+  ('BCD-MIE-GORENG',     'Level',  'Tidak Pedas',    0,    1),
+  ('BCD-MIE-GORENG',     'Level',  'Pedas',          0,    2),
+  ('BCD-AYAM-BAKAR',     'Bagian', 'Paha',           0,    1),
+  ('BCD-AYAM-BAKAR',     'Bagian', 'Dada',           0,    2),
+  ('BCD-KENTANG-GORENG', 'Rasa',   'Original',       0,    1),
+  ('BCD-KENTANG-GORENG', 'Rasa',   'Cheese',         3000, 2),
+  ('BCD-ROTI-BAKAR',     'Isian',  'Coklat Keju',    0,    1),
+  ('BCD-ROTI-BAKAR',     'Isian',  'Coklat',         0,    2),
+  ('BCD-ROTI-BAKAR',     'Isian',  'Keju',           0,    3)
 )
 INSERT INTO pos.pos_product_variants (product_id, group_name, name, price_adjustment, display_order, is_active)
 SELECT p.id, v.group_name, v.name, v.price_adjustment, v.display_order, true
@@ -161,7 +161,7 @@ WHERE NOT EXISTS (
 
 -- Ringkasan
 SELECT 'kategori' AS entitas, count(*) AS jumlah FROM pos.pos_categories WHERE is_active
-UNION ALL SELECT 'produk seed aktif', count(*) FROM pos.pos_products WHERE sku LIKE 'TDJ-%' AND is_active AND is_available
-UNION ALL SELECT 'produk berfoto lokal', count(*) FROM pos.pos_products WHERE sku LIKE 'TDJ-%' AND image_url LIKE '/products/%'
-UNION ALL SELECT 'varian seed', count(*) FROM pos.pos_product_variants v JOIN pos.pos_products p ON p.id = v.product_id WHERE p.sku LIKE 'TDJ-%'
+UNION ALL SELECT 'produk seed aktif', count(*) FROM pos.pos_products WHERE sku LIKE 'BCD-%' AND is_active AND is_available
+UNION ALL SELECT 'produk berfoto lokal', count(*) FROM pos.pos_products WHERE sku LIKE 'BCD-%' AND image_url LIKE '/products/%'
+UNION ALL SELECT 'varian seed', count(*) FROM pos.pos_product_variants v JOIN pos.pos_products p ON p.id = v.product_id WHERE p.sku LIKE 'BCD-%'
 UNION ALL SELECT 'member demo', count(*) FROM pos.pos_customers WHERE phone IN ('081200000001', '081200000002');
