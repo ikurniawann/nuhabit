@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Sparkles, Utensils } from "lucide-react";
 import { PosProductThumbnail } from "@/components/pos/PosProductThumbnail";
 import type { Product, ProductVariant } from "@/lib/pos-api";
+import { computeCustomizationPrice } from "@/lib/pos/customization-price";
 
 export interface SelectedCustomization {
   product: Product;
@@ -22,6 +23,8 @@ interface Props {
   onCancel: () => void;
   formatCurrency: (v: number) => string;
   formatArk: (v: number) => string;
+  /** Saklar fitur ARK Coin (CRM → Pengaturan). Default tampil. */
+  showArk?: boolean;
 }
 
 export function CustomizationModal({
@@ -33,28 +36,13 @@ export function CustomizationModal({
   onCancel,
   formatCurrency,
   formatArk,
+  showArk = true,
 }: Props) {
   if (!product) return null;
   const variants = product.variants || [];
   const modifiers = product.modifiers || [];
 
-  const selectedVariant = variants.find((v) => v.id === value?.selectedVariant);
-  const variantAdj = selectedVariant?.price_adjustment || 0;
-  let modifierAdj = 0;
-  const modifierNames: string[] = [];
-
-  modifiers.forEach((group) => {
-    const selectedIds = value?.selectedModifiers?.[group.modifier_group.name] || [];
-    selectedIds.forEach((modId) => {
-      const mod = group.modifier_group.modifiers.find((m) => m.id === modId);
-      if (mod) {
-        modifierAdj += mod.price_adjustment || 0;
-        modifierNames.push(mod.name);
-      }
-    });
-  });
-
-  const unitPrice = product.base_price + variantAdj + modifierAdj;
+  const { basePrice, unitPrice } = computeCustomizationPrice(product, value);
   const lineTotal = unitPrice * (value?.quantity || 1);
 
   return (
@@ -69,8 +57,8 @@ export function CustomizationModal({
               <PosProductThumbnail src={product.image_url} alt={product.name} iconClassName="h-8 w-8" />
             </div>
             <div className="flex-1">
-              <div className="text-lg font-bold text-primary">{formatCurrency(product.base_price)}</div>
-              <div className="text-sm text-amber-600 font-medium">{formatArk(product.base_price)}</div>
+              <div className="text-lg font-bold text-primary">{formatCurrency(basePrice)}</div>
+              {showArk && <div className="text-sm text-amber-600 font-medium">{formatArk(basePrice)}</div>}
             </div>
           </div>
 
@@ -208,7 +196,7 @@ export function CustomizationModal({
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-primary">{formatCurrency(lineTotal)}</div>
-                <div className="text-xs text-amber-600 font-medium">{formatArk(lineTotal)}</div>
+                {showArk && <div className="text-xs text-amber-600 font-medium">{formatArk(lineTotal)}</div>}
               </div>
             </div>
           </div>

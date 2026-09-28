@@ -52,6 +52,8 @@ interface CartPanelProps {
   total: number;
   formatCurrency: (value: number) => string;
   formatArk: (value: number) => string;
+  /** Saklar fitur ARK Coin (CRM → Pengaturan). Default tampil. */
+  showArk?: boolean;
   setIncludeTax: (val: boolean) => void;
   setIncludeService?: (val: boolean) => void;
   setShowPaymentModal: () => void;
@@ -108,16 +110,19 @@ function MoneyPair({
 }: {
   amount: number;
   formatCurrency: (value: number) => string;
-  formatArk: (value: number) => string;
+  /** Kosong = baris ARK tidak ditampilkan (fitur ARK Coin nonaktif). */
+  formatArk?: (value: number) => string;
   className?: string;
   arkClassName?: string;
 }) {
   return (
     <div className={cn('text-right leading-tight', className)}>
       <div className="font-medium text-foreground">{formatCurrency(amount)}</div>
-      <div className={cn('text-[11px] font-medium text-amber-600/90', arkClassName)}>
-        {formatArk(amount)}
-      </div>
+      {formatArk && (
+        <div className={cn('text-[11px] font-medium text-amber-600/90', arkClassName)}>
+          {formatArk(amount)}
+        </div>
+      )}
     </div>
   );
 }
@@ -142,6 +147,7 @@ export function CartPanel({
   total,
   formatCurrency,
   formatArk,
+  showArk = true,
   setIncludeTax,
   setIncludeService,
   setShowPaymentModal,
@@ -178,6 +184,8 @@ export function CartPanel({
   continuingCheckoutNumber = null,
   lockedItemIds = [],
 }: CartPanelProps) {
+  // ARK Coin nonaktif → semua angka ARK di keranjang disembunyikan.
+  const arkFormatter = showArk ? formatArk : undefined;
   const lockedItemIdSet = useMemo(() => new Set(lockedItemIds), [lockedItemIds]);
   const hasNewItems = cart.some((item) => !lockedItemIdSet.has(item.id));
   const membershipAmt = membershipDiscountAmount ?? discountAmount;
@@ -345,9 +353,11 @@ export function CartPanel({
                           <span className="text-xs text-muted-foreground">
                             {formatCurrency(discAmt > 0 ? netUnit : item.price)}
                           </span>
-                          <span className="text-[11px] font-medium text-amber-600/90">
-                            {formatArk(discAmt > 0 ? netUnit : item.price)}
-                          </span>
+                          {showArk && (
+                            <span className="text-[11px] font-medium text-amber-600/90">
+                              {formatArk(discAmt > 0 ? netUnit : item.price)}
+                            </span>
+                          )}
                           {label && (
                             <span className="text-[11px] font-medium text-green-700">
                               {label}
@@ -474,7 +484,7 @@ export function CartPanel({
           <MoneyPair
             amount={displaySubtotal}
             formatCurrency={formatCurrency}
-            formatArk={formatArk}
+            formatArk={arkFormatter}
           />
         </div>
 
@@ -615,12 +625,12 @@ export function CartPanel({
               </button>
               <HelpHint helpId="pos.tax-toggle" role="default" />
             </div>
-            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={formatArk} />
+            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={arkFormatter} />
           </div>
         ) : tax > 0 ? (
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">Tax</span>
-            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={formatArk} />
+            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={arkFormatter} />
           </div>
         ) : null}
 
@@ -646,7 +656,7 @@ export function CartPanel({
             <MoneyPair
               amount={serviceCharge}
               formatCurrency={formatCurrency}
-              formatArk={formatArk}
+              formatArk={arkFormatter}
             />
           </div>
         ) : serviceCharge > 0 ? (
@@ -655,7 +665,7 @@ export function CartPanel({
             <MoneyPair
               amount={serviceCharge}
               formatCurrency={formatCurrency}
-              formatArk={formatArk}
+              formatArk={arkFormatter}
             />
           </div>
         ) : null}
@@ -687,7 +697,7 @@ export function CartPanel({
           <div className="flex items-end justify-between gap-3 border-t border-gray-200/70 pt-2.5">
             <div>
               <div className="text-sm font-semibold text-foreground">Total</div>
-              <div className="text-xs font-medium text-amber-600">{formatArk(totalAfterArk)}</div>
+              {showArk && <div className="text-xs font-medium text-amber-600">{formatArk(totalAfterArk)}</div>}
             </div>
             <div className="text-xl font-bold tabular-nums text-primary">
               {formatCurrency(totalAfterArk)}

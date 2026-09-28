@@ -1,4 +1,6 @@
 'use client';
+import { computeCustomizationPrice } from '@/lib/pos/customization-price';
+import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
 
 /**
  * POS Classic — kasir gaya klasik (ala Quinos) untuk layar sentuh.
@@ -104,6 +106,8 @@ function formatClock(d: Date): string {
 export function ClassicCashierPage() {
   const router = useRouter();
   const cart = usePosCart();
+  // Saklar fitur CRM → Pengaturan: sembunyikan ARK Coin / XP bila dimatikan.
+  const { arkCoin: arkEnabled, xp: xpEnabled } = useLoyaltyFeatures();
   const { products, categories, loading: loadingProducts, error: productsError, stallBlockedReason, activeMode } =
     usePosProducts();
   const { customers, refetch: refetchCustomers } = usePosCustomers();
@@ -328,30 +332,18 @@ export function ClassicCashierPage() {
   const handleConfirmCustomization = useCallback(() => {
     if (!customizing) return;
     const product = customizing.product;
-    const variant = product.variants?.find((v) => v.id === customizing.selectedVariant);
-    const modifierNames: string[] = [];
-    let modifierAdj = 0;
-    product.modifiers?.forEach((g) => {
-      const ids = customizing.selectedModifiers[g.modifier_group.name] || [];
-      ids.forEach((id) => {
-        const mod = g.modifier_group.modifiers.find((m) => m.id === id);
-        if (mod) {
-          modifierNames.push(mod.name);
-          modifierAdj += mod.price_adjustment || 0;
-        }
-      });
-    });
-    const finalPrice = product.base_price + (variant?.price_adjustment || 0) + modifierAdj;
-    const compositeId = `${product.id}::${variant?.name ?? ''}::${modifierNames.join(',')}`;
+    const { variantName, variantAdj, modifierNames, modifierAdj, unitPrice: finalPrice } =
+      computeCustomizationPrice(product, customizing);
+    const compositeId = `${product.id}::${variantName ?? ''}::${modifierNames.join(',')}`;
     const ok = tryAddCatalogItem(product, {
       id: compositeId,
       productId: product.id,
       name: product.name,
       price: finalPrice,
       quantity: customizing.quantity,
-      variantName: variant?.name,
+      variantName,
       modifierNames,
-      variantPriceAdj: variant?.price_adjustment || 0,
+      variantPriceAdj: variantAdj,
       modifierPriceAdj: modifierAdj,
       notes: customizing.notes,
       imageUrl: product.image_url,
@@ -567,8 +559,8 @@ export function ClassicCashierPage() {
         chargesBreakdown: billCharges.breakdown,
         arkPaid: payload.arkToUse,
         arkBalanceAfter: res.arkBalanceAfter ?? null,
-        xpEarned: res.xpEarned,
-        xpTotalAfter: res.xpTotalAfter ?? null,
+        xpEarned: xpEnabled ? res.xpEarned : undefined,
+        xpTotalAfter: xpEnabled ? (res.xpTotalAfter ?? null) : null,
       };
       try {
         window.sessionStorage.setItem(LAST_RECEIPT_KEY, JSON.stringify(receipt));
@@ -597,6 +589,7 @@ export function ClassicCashierPage() {
       shiftState.shift?.id,
       submitting,
       total,
+      xpEnabled,
     ]
   );
 
@@ -1014,6 +1007,7 @@ export function ClassicCashierPage() {
 
       {/* ===== Modal ===== */}
       <CustomizationModal
+        showArk={arkEnabled}
         open={customizing !== null}
         product={customizing?.product ?? null}
         value={customizing}

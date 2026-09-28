@@ -73,6 +73,7 @@ import { isFocPaymentMethod } from '@/lib/pos/payment-methods';
 import { MerchSkuPickerDialog } from '@/components/pos/MerchSkuPickerDialog';
 import { useCashierCheckout, useCashierOrder, useCashierTables, useCustomerFavoriteProducts } from '../queries';
 import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
+import { computeCustomizationPrice } from '@/lib/pos/customization-price';
 import { usePayOpenOrder } from '../mutations';
 import { usePosCart } from '@/hooks/use-pos-cart';
 import { usePosProducts } from '@/hooks/use-pos-products';
@@ -1201,18 +1202,8 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
     if (!custom || !customizingProduct) return;
     if (!requireActiveShift()) return;
     const product = customizingProduct;
-    const variant = product.variants?.find(v => v.id === custom.selectedVariant);
-    const variantName = variant?.name;
-    const modifierNames: string[] = [];
-    let modifierAdj = 0;
-    product.modifiers?.forEach(g => {
-      const ids = custom.selectedModifiers[g.modifier_group.name] || [];
-      ids.forEach(id => {
-        const mod = g.modifier_group.modifiers.find(m => m.id === id);
-        if (mod) { modifierNames.push(mod.name); modifierAdj += (mod.price_adjustment || 0); }
-      });
-    });
-    const finalPrice = product.base_price + (variant?.price_adjustment || 0) + modifierAdj;
+    const { variantName, variantAdj, modifierNames, modifierAdj, unitPrice: finalPrice } =
+      computeCustomizationPrice(product, custom);
     const compositeId = `${product.id}::${variantName ?? ''}::${modifierNames.join(',')}`;
     if (!tryAddCatalogItem(product, {
       id: compositeId,
@@ -1222,7 +1213,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
       quantity: custom.quantity,
       variantName,
       modifierNames,
-      variantPriceAdj: variant?.price_adjustment || 0,
+      variantPriceAdj: variantAdj,
       modifierPriceAdj: modifierAdj,
       notes: custom.notes,
       imageUrl: product.image_url,
@@ -1291,7 +1282,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
       setShowNFC(false);
       toast.success(`Member ${found.name || found.phone} selected`);
     }
-  }, [customers, total, cart, showPayment, showNFC]);
+  }, [customers, total, cart, showPayment, showNFC, arkEnabled]);
 
   useEffect(() => {
     function onBridgeCard(event: Event) {
@@ -1792,8 +1783,9 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
           // EPIC-041: snapshot ARK/XP dari respons pembayaran utk struk
           arkPaid: method === 'ark_coin' ? arkCapped : 0,
           arkBalanceAfter: data.ark_balance_after ?? null,
-          xpEarned: data.crm_xp?.xpAwarded,
-          xpTotalAfter: data.xp_total_after ?? null,
+          // XP nonaktif (CRM → Pengaturan): blok XP tidak dicetak di struk.
+          xpEarned: xpEnabled ? data.crm_xp?.xpAwarded : undefined,
+          xpTotalAfter: xpEnabled ? (data.xp_total_after ?? null) : null,
           ...receiptExtras,
           // FOC = komplimen: total 0, diskon 100%, label penyetuju di struk.
           ...(focSelected
@@ -1955,8 +1947,8 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         // pembayaran (bukan fetch susulan yang bisa balapan).
         arkPaid: method === 'ark_coin' ? arkCapped : 0,
         arkBalanceAfter: res.arkBalanceAfter ?? null,
-        xpEarned: res.xpEarned,
-        xpTotalAfter: res.xpTotalAfter ?? null,
+        xpEarned: xpEnabled ? res.xpEarned : undefined,
+        xpTotalAfter: xpEnabled ? (res.xpTotalAfter ?? null) : null,
         ...receiptExtras,
         // FOC = komplimen: total 0, diskon 100%, label penyetuju di struk.
         ...(focSelected
@@ -1989,7 +1981,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
       toast.error(res.error || 'Payment failed');
     }
     setProcessingPayment(false);
-  }, [cart, paymentMethod, selectedCustomer, cashReceived, currentArkToUse, maxArkUsable, totalAfterArk, arkToUseCapped, checkout, discountAmount, taxAmount, isOnline, enqueue, membershipDiscount, shift, refreshCount, paymentOrderId, paymentCheckoutId, paymentCheckout, payingOrderNumber, router, processingPayment, selectedTableDisplay, effectiveTableId, requireActiveShift, payOpenOrderMutation, deferReturnToRestaurant, storeResultPayload, refetchCustomers, promoApplied, giftCardBuyer, billCharges, serviceChargeAmount, otherChargesAmount, total, homeRoute, guestCount, offerDiscount, offerEval]);
+  }, [cart, paymentMethod, selectedCustomer, cashReceived, currentArkToUse, maxArkUsable, totalAfterArk, arkToUseCapped, checkout, discountAmount, taxAmount, isOnline, enqueue, membershipDiscount, shift, refreshCount, paymentOrderId, paymentCheckoutId, paymentCheckout, payingOrderNumber, router, processingPayment, selectedTableDisplay, effectiveTableId, requireActiveShift, payOpenOrderMutation, deferReturnToRestaurant, storeResultPayload, refetchCustomers, promoApplied, giftCardBuyer, billCharges, serviceChargeAmount, otherChargesAmount, total, homeRoute, guestCount, offerDiscount, offerEval, xpEnabled]);
 
   /* Split Bill */
   const handleConfirmSplit = useCallback(async (config: SplitConfig) => {
@@ -2786,6 +2778,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
 
       {/* RIGHT PANEL — Cart */}
       <CartPanel
+        showArk={arkEnabled}
         className={cashierCartPanelClass(isTabletMode)}
         cart={cart.items}
         orderType={cart.orderType}
@@ -3099,6 +3092,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
 
       {/* ── Customization Modal ── */}
       <CustomizationModal
+        showArk={arkEnabled}
         open={!!custom}
         product={customizingProduct}
         value={custom}
