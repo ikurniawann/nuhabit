@@ -50,10 +50,15 @@ export type OrderAlertInput = {
   paymentLabel: string;
   paid: boolean;
   guestName?: string | null;
+  /** 628xx — ditampilkan lokal (08xx) supaya staf bisa langsung menghubungi. */
+  guestPhone?: string | null;
+  isMember?: boolean;
   customerNote?: string | null;
   total: number;
   items: Array<{ name: string; quantity: number; variant?: string | null; modifiers?: string[] }>;
 };
+
+const localPhone = (phone: string) => (phone.startsWith("62") ? `0${phone.slice(2)}` : phone);
 
 const rupiah = (value: number) => `Rp${Math.round(value).toLocaleString("id-ID")}`;
 
@@ -70,7 +75,9 @@ export function buildOrderAlertMessage(input: OrderAlertInput): string {
     input.brandName,
     place,
     `Antrean ${input.queueNumber || "-"} · ${input.orderNumber}`,
-    input.guestName ? `Atas nama: ${input.guestName}` : null,
+    input.guestName
+      ? `Atas nama: ${input.guestName}${input.isMember ? " (member)" : ""}${input.guestPhone ? ` · WA ${localPhone(input.guestPhone)}` : ""}`
+      : null,
     "",
     ...input.items.map((item) => {
       const extras = [item.variant, ...(item.modifiers ?? [])].filter(Boolean).join(", ");

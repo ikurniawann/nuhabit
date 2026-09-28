@@ -51,6 +51,8 @@ import { readTableState, writeTableState } from "../storage";
 import { BottomSheet } from "./sheet";
 import { CartSheet } from "./cart-sheet";
 import { MemberSheet } from "./member-sheet";
+import { GuestCard } from "./guest-card";
+import { displayGuestPhone, GUEST_STORAGE_KEY, parseStoredGuest, type GuestIdentity } from "@/lib/table-order/guest";
 import { MenuItemRow } from "./menu-item-row";
 import { OrderTracking } from "./order-tracking";
 import { VariantSheet } from "./variant-sheet";
@@ -70,7 +72,10 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   const [orderType, setOrderType] = useState<TableOrderType>("dine_in");
   const [paymentMethod, setPaymentMethod] = useState<TableOrderPaymentMethod>("cashier");
   const [note, setNote] = useState("");
-  const [guestName, setGuestName] = useState("");
+  /** Data pemesan tamu (wajib; tersimpan di HP ini). Member login = otomatis lengkap. */
+  const [guest, setGuest] = useState<GuestIdentity | null>(null);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const guestCardRef = useRef<HTMLDivElement>(null);
 
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -151,6 +156,15 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
 
         if (!restored.current) {
           restored.current = true;
+          let storedGuest: GuestIdentity | null = null;
+          try {
+            storedGuest = parseStoredGuest(window.localStorage.getItem(GUEST_STORAGE_KEY));
+          } catch {
+            storedGuest = null;
+          }
+          setGuest(storedGuest);
+          // Pertama kali buka (belum ada data & bukan member) → sorot kartu data pemesan.
+          if (!storedGuest && !sessionData.member_logged_in) setCoachOpen(true);
           const stored = readTableState(tableCode);
           if (stored.orderType) setOrderType(stored.orderType);
           if (stored.cart?.length) {
@@ -183,6 +197,38 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
     writeTableState(tableCode, { cart, orderType, activeOrderId: activeOrder?.id ?? null });
   }, [cart, orderType, activeOrder, tableCode]);
 
+  // Sorotan data pemesan: gulir ke kartu & fokus ke nomor WA.
+  const coachVisible = coachOpen && !member && view === "menu";
+  useEffect(() => {
+    if (!coachVisible) return;
+    const timer = window.setTimeout(() => {
+      guestCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("guest-phone")?.focus({ preventScroll: true });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [coachVisible]);
+
+  const contactReady = Boolean(member) || Boolean(guest);
+
+  function saveGuest(next: GuestIdentity) {
+    setGuest(next);
+    setCoachOpen(false);
+    try {
+      window.localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Mode privat / storage penuh — data tetap dipakai utk sesi ini.
+    }
+    showToast("Data tersimpan — silakan pilih menu");
+  }
+
+  /** Belum isi data pemesan → arahkan ke kartu (dengan sorotan). */
+  function requireContact() {
+    if (contactReady) return true;
+    setCartOpen(false);
+    setCoachOpen(true);
+    return false;
+  }
+
   // ---- scroll-spy kategori -------------------------------------------------
   useEffect(() => {
     if (view !== "menu" || sections.length === 0) return;
@@ -211,6 +257,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   }
 
   function handleAdd(product: TableOrderProduct) {
+    if (!requireContact()) return;
     if (isLocked(product)) {
       setMemberOpen(true);
       return;
@@ -235,6 +282,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   }
 
   function handleIncrement(product: TableOrderProduct) {
+    if (!requireContact()) return;
     if (product.customizable) {
       setVariantProduct(product);
       return;
@@ -253,6 +301,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   // ---- kirim pesanan -------------------------------------------------------
   async function submitOrder() {
     if (cart.length === 0 || submitting) return;
+    if (!requireContact()) return;
     setSubmitting(true);
     setOrderError(null);
     try {
@@ -268,7 +317,8 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
           quantity: line.quantity,
         })),
         customer_note: note.trim() || undefined,
-        guest_name: guestName.trim() || undefined,
+        guest_name: member ? undefined : guest?.name,
+        guest_phone: member ? undefined : guest?.phone,
       });
       setActiveOrder(order);
       setCart([]);
@@ -445,6 +495,21 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
           </div>
         </div>
 
+        {/* Data pemesan (wajib) — disorot saat pertama kali buka */}
+        <div className="mt-3">
+          <GuestCard
+            key={guest ? `${guest.phone}-${guest.name}` : "empty"}
+            ref={guestCardRef}
+            guest={guest}
+            member={member}
+            coach={coachVisible}
+            onSave={saveGuest}
+            onOpenMember={() => setMemberOpen(true)}
+            onDismissCoach={() => setCoachOpen(false)}
+          />
+        </div>
+        {coachVisible && <div className="fixed inset-0 z-40 bg-black/60" aria-hidden="true" />}
+
         {/* Kartu info horizontal */}
         <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
           {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
@@ -604,8 +669,12 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         onPaymentMethod={setPaymentMethod}
         note={note}
         onNote={setNote}
-        guestName={guestName}
-        onGuestName={setGuestName}
+        contactLabel={member ? `${member.name} (member)` : guest ? `${guest.name} · WA ${displayGuestPhone(guest.phone)}` : null}
+        onEditContact={() => {
+          setCartOpen(false);
+          if (!guest) setCoachOpen(true);
+          else guestCardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }}
         onQuantity={(cartId, delta) => setCart((current) => adjustCartQuantity(current, cartId, delta))}
         onOpenMember={() => setMemberOpen(true)}
         submitting={submitting}

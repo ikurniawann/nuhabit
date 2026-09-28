@@ -22,6 +22,7 @@ import {
 import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 import { fireOrderAlert } from "@/lib/notifications/order-alert-server";
 import { paymentMethodText } from "@/lib/table-order/order-status";
+import { validateGuest, type GuestIdentity } from "@/lib/table-order/guest";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,8 @@ const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1).max(50),
   customer_note: z.string().trim().max(300).optional(),
   guest_name: z.string().trim().max(80).optional(),
+  /** Wajib bila bukan member login (owner 2026-09-28) — tanpa OTP. */
+  guest_phone: z.string().trim().max(30).optional(),
 });
 
 function fail(message: string, status: number) {
@@ -90,6 +93,15 @@ export async function POST(request: NextRequest) {
 
     if (payload.payment_method === "ark_coin" && !customerId) {
       return fail("Masuk sebagai member dulu untuk membayar dengan ARK Coin", 401);
+    }
+
+    // Tamu wajib nomor WA + nama. Nomor TIDAK ditautkan ke member (belum
+    // terverifikasi) — hanya disimpan sbg kontak pesanan.
+    let guest: GuestIdentity | null = null;
+    if (!customerId) {
+      const checked = validateGuest({ name: payload.guest_name, phone: payload.guest_phone });
+      if (!checked.ok) return fail(checked.error, 400);
+      guest = checked.guest;
     }
 
     // ---- Validasi item & hitung ulang harga dari katalog -------------------
@@ -197,7 +209,7 @@ export async function POST(request: NextRequest) {
     const orderStatus = selfPaid ? "confirmed" : "pending";
     const noteParts = [
       `${TABLE_ORDER_TAG} ${tableCode}`,
-      payload.guest_name && !customerId ? `Atas nama: ${payload.guest_name}` : null,
+      guest ? `Atas nama: ${guest.name} · WA ${guest.phone}` : null,
       payload.customer_note ? `Catatan: ${payload.customer_note}` : null,
     ].filter(Boolean);
 
@@ -225,6 +237,8 @@ export async function POST(request: NextRequest) {
         notes: noteParts.join(" · "),
         special_requests: `${TABLE_ORDER_TAG} ${tableCode}; payment=${payload.payment_method}`,
         ordered_at: new Date().toISOString(),
+        contact_name: guest?.name ?? null,
+        contact_phone: guest?.phone ?? null,
         company_id: venue.companyId,
         branch_id: venue.branchId,
       })
@@ -322,7 +336,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Notifikasi staf (WA karyawan POS + Telegram) — tidak ditunggu, tidak
-    // pernah menggagalkan pesanan.
+    // pernah menggagalkan pesanan. Nama pemesan: tamu dari form wajib,
+    // member dari data pelanggan.
+    let memberContact: { name: string | null; phone: string | null } | null = null;
+    if (customerId) {
+      const { data: customerRow } = await db
+        .from("pos_customers")
+        .select("name, phone")
+        .eq("id", customerId)
+        .maybeSingle();
+      memberContact = (customerRow as { name: string | null; phone: string | null } | null) ?? null;
+    }
     fireOrderAlert({
       brandName: venue.brandName,
       sourceLabel: "Self-order QR",
@@ -332,7 +356,9 @@ export async function POST(request: NextRequest) {
       orderNumber,
       paymentLabel: paymentMethodText(qrisError ? "cashier" : payload.payment_method),
       paid: selfPaid,
-      guestName: customerId ? null : payload.guest_name || null,
+      guestName: guest?.name ?? memberContact?.name ?? null,
+      guestPhone: guest?.phone ?? memberContact?.phone ?? null,
+      isMember: Boolean(customerId),
       customerNote: payload.customer_note || null,
       total,
       items: lines.map((line) => ({

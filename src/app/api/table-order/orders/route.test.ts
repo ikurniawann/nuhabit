@@ -225,9 +225,13 @@ const rpcOk = {
   update_ark_coin_balance: { data: null, error: null },
 };
 
-async function post(body: unknown) {
+/** Tamu wajib nomor WA + nama (2026-09-28) — default untuk kasus lain. */
+const GUEST = { guest_name: "Budi", guest_phone: "081234567890" };
+
+async function post(body: unknown, withGuest = true) {
   const { POST } = await import("./route");
-  const response = await POST(makeRequest(body));
+  const payload = withGuest && body && typeof body === "object" ? { ...GUEST, ...(body as object) } : body;
+  const response = await POST(makeRequest(payload));
   return { status: response.status, json: (await response.json()) as Record<string, unknown> };
 }
 
@@ -520,5 +524,38 @@ describe("POST /api/table-order/orders — notifikasi staf", () => {
   it("order ditolak (validasi) tidak memicu notifikasi", async () => {
     await post({ table_code: "T-01", payment_method: "cashier", items: [{ product_id: OFF_PRODUCT_ID, quantity: 1 }] });
     expect(fireOrderAlert).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/table-order/orders — nomor WA & nama wajib", () => {
+  const base = { table_code: "T-01", payment_method: "cashier", items: [{ product_id: PRODUCT_ID, variant_id: "reg", quantity: 1 }] };
+
+  it("tamu tanpa nomor / nomor tidak valid / tanpa nama → 400, tidak ada insert", async () => {
+    expect((await post({ ...base, guest_name: "Budi" }, false)).status).toBe(400);
+    expect((await post({ ...base, guest_name: "Budi", guest_phone: "12345" }, false)).status).toBe(400);
+    expect((await post({ ...base, guest_phone: "081234567890" }, false)).status).toBe(400);
+    expect(fake.calls.some((c) => c.action === "insert")).toBe(false);
+  });
+
+  it("tamu valid → kontak tersimpan (628…), catatan kasir memuat nama & WA, tidak ditautkan ke member", async () => {
+    const { status } = await post({ ...base, guest_name: " Budi ", guest_phone: "0812-3456-7890" }, false);
+    expect(status).toBe(201);
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<string, unknown>;
+    expect(order.contact_name).toBe("Budi");
+    expect(order.contact_phone).toBe("6281234567890");
+    expect(order.customer_id).toBeNull();
+    expect(String(order.notes)).toContain("Atas nama: Budi · WA 6281234567890");
+    expect(fireOrderAlert.mock.calls[0][0]).toMatchObject({ guestName: "Budi", guestPhone: "6281234567890" });
+  });
+
+  it("member login tidak perlu isi nomor/nama tamu; nama member tetap ada di notifikasi", async () => {
+    memberSession.mockResolvedValue({ customerId: "cust-1" });
+    fake = createFakeDb({ ...baseDbResponses(), pos_customers: [{ data: { name: "Riksa", phone: "6281200001111" }, error: null }] }, rpcOk);
+    const { status } = await post(base, false);
+    expect(status).toBe(201);
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<string, unknown>;
+    expect(order.customer_id).toBe("cust-1");
+    expect(order.contact_phone).toBeNull();
+    expect(fireOrderAlert.mock.calls[0][0]).toMatchObject({ guestName: "Riksa", guestPhone: "6281200001111", isMember: true });
   });
 });

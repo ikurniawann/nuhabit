@@ -97,6 +97,8 @@ export type CreateOrderInput = {
   items: { product_id: string; variant_id: string | null; modifier_ids?: string[]; quantity: number }[];
   customer_note?: string;
   guest_name?: string;
+  /** Wajib bila bukan member login — 628xx. */
+  guest_phone?: string;
 };
 
 export class ApiRequestError extends Error {

@@ -14,6 +14,7 @@ describe("buildOrderAlertMessage", () => {
       paymentLabel: "Bayar di kasir",
       paid: false,
       guestName: "Budi",
+      guestPhone: "6281234567890",
       customerNote: "less ice",
       total: 48000,
       items: [
@@ -27,7 +28,7 @@ describe("buildOrderAlertMessage", () => {
         "BCD Coffee",
         "Meja WIT. Office Bandung · Makan di tempat",
         "Antrean 004 · POS-20260928-0004",
-        "Atas nama: Budi",
+        "Atas nama: Budi · WA 081234567890",
         "",
         "• 1× Iced Orange Black",
         "• 2× Iced Latte (Regular, Extra Shot Espresso, Oat Milk)",
@@ -77,5 +78,16 @@ describe("isTelegramBotToken", () => {
     expect(isTelegramBotToken("123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw")).toBe(true);
     expect(isTelegramBotToken("bukan-token")).toBe(false);
     expect(isTelegramBotToken("123:abc")).toBe(false);
+  });
+});
+
+describe("nama pemesan member", () => {
+  it("member ditandai (member)", () => {
+    const text = buildOrderAlertMessage({
+      brandName: "BCD Coffee", sourceLabel: "Self-order QR", tableLabel: "A1", orderType: "dine_in",
+      queueNumber: "001", orderNumber: "POS-1", paymentLabel: "ARK Coin", paid: true, total: 1000,
+      guestName: "Riksa", guestPhone: "081200001111", isMember: true, items: [{ name: "Espresso", quantity: 1 }],
+    });
+    expect(text).toContain("Atas nama: Riksa (member) · WA 081200001111");
   });
 });

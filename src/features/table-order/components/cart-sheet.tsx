@@ -21,8 +21,8 @@ export function CartSheet({
   onPaymentMethod,
   note,
   onNote,
-  guestName,
-  onGuestName,
+  contactLabel,
+  onEditContact,
   onQuantity,
   onOpenMember,
   submitting,
@@ -46,8 +46,9 @@ export function CartSheet({
   onPaymentMethod: (method: TableOrderPaymentMethod) => void;
   note: string;
   onNote: (value: string) => void;
-  guestName: string;
-  onGuestName: (value: string) => void;
+  /** Ringkasan data pemesan; null = belum diisi (pesanan tidak bisa dikirim). */
+  contactLabel: string | null;
+  onEditContact: () => void;
   onQuantity: (cartId: string, delta: number) => void;
   onOpenMember: () => void;
   submitting: boolean;
@@ -59,6 +60,7 @@ export function CartSheet({
   const arkEnough = member ? member.ark_coin_balance >= summary.total : false;
   const canSubmit =
     cart.length > 0 &&
+    Boolean(contactLabel) &&
     !submitting &&
     (paymentMethod !== "ark_coin" || (Boolean(member) && arkEnough)) &&
     (paymentMethod !== "qris" || qrisAvailable) &&
@@ -157,17 +159,23 @@ export function CartSheet({
           </div>
 
           <div className="space-y-3">
-            {!member && (
-              <label className="block">
-                <span className="text-xs font-semibold text-gray-700">Nama pemesan (opsional)</span>
-                <input
-                  value={guestName}
-                  onChange={(event) => onGuestName(event.target.value.slice(0, 80))}
-                  placeholder="Nama untuk dipanggil"
-                  className="mt-1.5 h-11 w-full rounded-xl border border-gray-200 px-4 text-sm text-gray-900 outline-none focus:border-primary"
-                />
-              </label>
-            )}
+            <div
+              className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 ${
+                contactLabel ? "border-gray-200" : "border-amber-300 bg-amber-50"
+              }`}
+            >
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-gray-700">Pemesan</div>
+                <div className={`truncate text-sm ${contactLabel ? "text-gray-900" : "font-semibold text-amber-700"}`}>
+                  {contactLabel ?? "Isi nomor WhatsApp & nama dulu"}
+                </div>
+              </div>
+              {!member && (
+                <button type="button" onClick={onEditContact} className="shrink-0 text-xs font-semibold text-primary">
+                  {contactLabel ? "Ubah" : "Isi sekarang"}
+                </button>
+              )}
+            </div>
             <label className="block">
               <span className="text-xs font-semibold text-gray-700">Catatan untuk dapur (opsional)</span>
               <textarea
