@@ -8,7 +8,6 @@ import {
   Coins,
   Loader2,
   MapPin,
-  QrCode,
   Receipt,
   Search,
   Sparkles,
@@ -511,12 +510,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         {coachVisible && <div className="fixed inset-0 z-40 bg-black/60" aria-hidden="true" />}
 
         {/* Kartu info horizontal */}
-        <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-          {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
-          {anyQris && <InfoCard icon={QrCode} title="Bayar QRIS" subtitle="Langsung dari meja" />}
-          {arkEnabled && <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />}
-          <InfoCard icon={UtensilsCrossed} title="Ke dapur otomatis" subtitle="Pesanan masuk KDS" />
-        </div>
+        {/* "Bayar QRIS" & "Ke dapur otomatis" dihapus atas permintaan owner (2026-09-28). */}
+        {(xpEnabled || arkEnabled) && (
+          <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+            {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
+            {arkEnabled && <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />}
+          </div>
+        )}
 
         {/* Sticky: pencarian + kategori */}
         <div className="sticky top-0 z-20 mt-4 bg-gray-50/95 backdrop-blur">
