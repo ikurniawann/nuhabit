@@ -260,6 +260,9 @@ export function OrderTracking({
                   <div className="font-semibold text-gray-900">
                     {item.quantity}× {item.product_name}
                   </div>
+                  {item.modifier_names?.length ? (
+                    <div className="text-xs text-gray-600">+ {item.modifier_names.join(", ")}</div>
+                  ) : null}
                   <div className="text-xs text-gray-500">
                     {item.variant_name ? `${item.variant_name} · ` : ""}
                     {item.kitchen_status ? kitchenStatusText(item.kitchen_status) : item.station}

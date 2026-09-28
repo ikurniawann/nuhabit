@@ -54,6 +54,7 @@ export type OrderItem = {
   id?: string;
   product_name: string;
   variant_name: string | null;
+  modifier_names?: string[];
   quantity: number;
   unit_price: number;
   total_amount: number;
@@ -88,7 +89,7 @@ export type CreateOrderInput = {
   table_code: string;
   order_type: TableOrderType;
   payment_method: TableOrderPaymentMethod;
-  items: { product_id: string; variant_id: string | null; quantity: number }[];
+  items: { product_id: string; variant_id: string | null; modifier_ids?: string[]; quantity: number }[];
   customer_note?: string;
   guest_name?: string;
 };

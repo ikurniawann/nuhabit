@@ -46,7 +46,27 @@ const PRODUCT_SELECT = `
              ) ORDER BY v.display_order NULLS LAST, v.name
            ) FILTER (WHERE v.id IS NOT NULL),
            '[]'::json
-         ) AS variants
+         ) AS variants,
+         -- Add-on per produk. Subquery berkorelasi (bukan JOIN) supaya baris
+         -- varian tidak ikut terduplikasi oleh jumlah grup/opsi add-on.
+         COALESCE((
+           SELECT json_agg(
+                    json_build_object(
+                      'id', g.id, 'name', g.name,
+                      'min_selection', g.min_selection, 'max_selection', g.max_selection,
+                      'modifiers', COALESCE((
+                        SELECT json_agg(
+                                 json_build_object('id', m.id, 'name', m.name,
+                                                   'price_adjustment', m.price_adjustment::float)
+                                 ORDER BY m.display_order, m.name)
+                        FROM pos.pos_modifiers m
+                        WHERE m.group_id = g.id AND m.is_active IS NOT FALSE
+                      ), '[]'::json)
+                    ) ORDER BY g.display_order, g.name)
+           FROM pos.pos_product_modifiers pm
+           JOIN pos.pos_modifier_groups g ON g.id = pm.modifier_group_id
+           WHERE pm.product_id = p.id AND g.is_active IS NOT FALSE
+         ), '[]'::json) AS modifier_groups
   FROM pos.pos_products p
   LEFT JOIN pos.pos_categories c ON c.id = p.category_id
   LEFT JOIN pos.pos_product_variants v ON v.product_id = p.id`;

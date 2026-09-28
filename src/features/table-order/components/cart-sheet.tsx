@@ -119,6 +119,9 @@ export function CartSheet({
               <div key={line.cartId} className="flex items-center gap-3 px-3 py-3">
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold text-gray-900">{line.name}</div>
+                  {line.modifierNames?.length ? (
+                    <div className="mt-0.5 truncate text-xs text-gray-600">+ {line.modifierNames.join(", ")}</div>
+                  ) : null}
                   <div className="mt-0.5 text-xs text-gray-500">
                     {line.variantName ? `${line.variantName} · ` : ""}
                     {formatRupiah(line.unitPrice)}

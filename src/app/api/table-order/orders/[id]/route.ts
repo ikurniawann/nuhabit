@@ -32,6 +32,7 @@ type ItemRow = {
   id: string;
   product_name: string;
   variants: unknown;
+  modifiers: unknown;
   quantity: number;
   unit_price: number;
   total_amount: number;
@@ -128,7 +129,7 @@ export async function GET(
     }
 
     const items = await query<ItemRow>(
-      `SELECT id, product_name, variants, quantity, unit_price::float AS unit_price,
+      `SELECT id, product_name, variants, modifiers, quantity, unit_price::float AS unit_price,
               total_amount::float AS total_amount, station, kitchen_status::text AS kitchen_status,
               COALESCE(xp_earned, 0)::int AS xp_earned
        FROM pos.pos_order_items WHERE order_id = $1 ORDER BY created_at, id`,
@@ -158,6 +159,9 @@ export async function GET(
           id: item.id,
           product_name: item.product_name,
           variant_name: variantName(item.variants),
+          modifier_names: Array.isArray(item.modifiers)
+            ? (item.modifiers as Array<{ name?: unknown }>).map((m) => String(m?.name ?? "")).filter(Boolean)
+            : [],
           quantity: Number(item.quantity) || 0,
           unit_price: item.unit_price,
           total_amount: item.total_amount,

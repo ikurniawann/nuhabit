@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BillingCharge } from "@/lib/pos/billing-settings";
-import { normalizeTableOrderProduct } from "./menu";
+import { normalizeTableOrderProduct, resolveModifiers } from "./menu";
 import {
   addToCart,
   adjustCartQuantity,
@@ -109,5 +109,32 @@ describe("summarizeCart", () => {
       total: 0,
       taxAmount: 0,
     });
+  });
+});
+
+describe("keranjang dengan add-on", () => {
+  const product = normalizeTableOrderProduct({
+    id: "p1",
+    name: "Iced Latte",
+    base_price: 25000,
+    modifier_groups: [
+      { id: "g1", name: "Tambahan", min_selection: 0, max_selection: 2, modifiers: [
+        { id: "a", name: "Shot", price_adjustment: 10000 }, { id: "b", name: "Oat Milk", price_adjustment: 5000 } ] },
+    ],
+  });
+  const pick = (ids: string[]) => {
+    const r = resolveModifiers(product, ids);
+    if (!r.ok) throw new Error(r.error);
+    return r.selected;
+  };
+
+  it("kombinasi add-on berbeda = baris berbeda; urutan pilihan tidak berpengaruh", () => {
+    let cart = addToCart([], product, null, 1, pick(["a", "b"]));
+    cart = addToCart(cart, product, null, 1, pick(["b", "a"]));
+    cart = addToCart(cart, product, null, 1, []);
+    expect(cart).toHaveLength(2);
+    expect(cart[0]).toMatchObject({ quantity: 2, unitPrice: 40000, modifierNames: ["Shot", "Oat Milk"] });
+    expect(cart[1]).toMatchObject({ quantity: 1, unitPrice: 25000, modifierIds: [] });
+    expect(summarizeCart(cart).subtotal).toBe(105000);
   });
 });

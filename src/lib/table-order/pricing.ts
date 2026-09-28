@@ -14,6 +14,7 @@ import {
 import {
   resolveVariant,
   unitPriceFor,
+  type SelectedModifier,
   type TableOrderProduct,
   type TableOrderVariant,
 } from "./menu";
@@ -25,6 +26,9 @@ export type CartLine = {
   image: string | null;
   variantId: string | null;
   variantName: string | null;
+  /** Add-on terpilih — id dikirim ke server (harga dihitung ulang di sana). */
+  modifierIds: string[];
+  modifierNames: string[];
   unitPrice: number;
   quantity: number;
   xp: number;
@@ -45,18 +49,22 @@ export type CartSummary = {
 
 export const MAX_LINE_QTY = 99;
 
-export function cartLineId(productId: string, variantId?: string | null) {
-  return variantId ? `${productId}:${variantId}` : productId;
+/** Kombinasi produk + varian + add-on = satu baris; urutan pilihan add-on tak berpengaruh. */
+export function cartLineId(productId: string, variantId?: string | null, modifierIds: readonly string[] = []) {
+  const base = variantId ? `${productId}:${variantId}` : productId;
+  return modifierIds.length ? `${base}+${[...modifierIds].sort().join(",")}` : base;
 }
 
 export function addToCart(
   cart: CartLine[],
   product: TableOrderProduct,
   variant: TableOrderVariant | null = resolveVariant(product, null),
-  quantity = 1
+  quantity = 1,
+  modifiers: SelectedModifier[] = []
 ): CartLine[] {
   const qty = Math.max(1, Math.min(MAX_LINE_QTY, Math.round(quantity)));
-  const cartId = cartLineId(product.id, variant?.id);
+  const modifierIds = modifiers.map((modifier) => modifier.id);
+  const cartId = cartLineId(product.id, variant?.id, modifierIds);
   const existing = cart.find((line) => line.cartId === cartId);
   if (existing) {
     return cart.map((line) =>
@@ -74,7 +82,9 @@ export function addToCart(
       image: product.image,
       variantId: variant?.id ?? null,
       variantName: variant?.name ?? null,
-      unitPrice: unitPriceFor(product, variant),
+      modifierIds,
+      modifierNames: modifiers.map((modifier) => modifier.name),
+      unitPrice: unitPriceFor(product, variant, modifiers),
       quantity: qty,
       xp: product.xp,
       station: product.station,

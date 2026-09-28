@@ -23,6 +23,7 @@ import {
   formatRupiah,
   groupBySection,
   UNCATEGORIZED_ID,
+  type SelectedModifier,
   type TableOrderProduct,
   type TableOrderVariant,
 } from "@/lib/table-order/menu";
@@ -217,8 +218,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
     showToast(`${product.name} ditambahkan`);
   }
 
-  function handleAddVariant(product: TableOrderProduct, variant: TableOrderVariant | null, quantity: number) {
-    setCart((current) => addToCart(current, product, variant, quantity));
+  function handleAddVariant(
+    product: TableOrderProduct,
+    variant: TableOrderVariant | null,
+    quantity: number,
+    modifiers: SelectedModifier[]
+  ) {
+    setCart((current) => addToCart(current, product, variant, quantity, modifiers));
     setVariantProduct(null);
     showToast(`${product.name} ditambahkan`);
   }
@@ -252,6 +258,8 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         items: cart.map((line) => ({
           product_id: line.productId,
           variant_id: line.variantId,
+          // Keranjang lama di localStorage belum punya field ini.
+          modifier_ids: line.modifierIds ?? [],
           quantity: line.quantity,
         })),
         customer_note: note.trim() || undefined,

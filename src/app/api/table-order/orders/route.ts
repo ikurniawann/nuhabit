@@ -8,7 +8,7 @@ import { loadActiveXenditConfig, type XenditGatewayConfig } from "@/lib/payments
 import { calculateBillCharges } from "@/lib/pos/billing-settings";
 import { allocateQueueNumber } from "@/lib/pos/queue-number";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { resolveVariant, unitPriceFor } from "@/lib/table-order/menu";
+import { resolveModifiers, resolveVariant, unitPriceFor, type SelectedModifier } from "@/lib/table-order/menu";
 import { ensureOrderQris, type OrderQrisPayload } from "@/lib/table-order/qris";
 import {
   clientIdentifier,
@@ -41,6 +41,8 @@ const RATE_LIMIT_PER_MINUTE = 20;
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
   variant_id: z.string().trim().max(80).nullable().optional(),
+  /** Add-on terpilih; divalidasi & dihargai ulang dari katalog di server. */
+  modifier_ids: z.array(z.string().uuid()).max(20).optional(),
   quantity: z.number().int().min(1).max(99),
 });
 
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
       product_name: string;
       product_sku: string;
       variant_name: string | null;
+      modifiers: SelectedModifier[];
       quantity: number;
       unit_price: number;
       xp: number;
@@ -108,13 +111,17 @@ export async function POST(request: NextRequest) {
       if (product.variants.length > 0 && !variant) {
         return fail(`Varian ${product.name} tidak dikenal — pilih ulang`, 409);
       }
+      // Add-on: id harus milik produk ini & patuh batas grup; harga dari DB.
+      const modifiers = resolveModifiers(product, item.modifier_ids ?? []);
+      if (!modifiers.ok) return fail(modifiers.error, 409);
       lines.push({
         product_id: product.id,
         product_name: product.name,
         product_sku: product.sku.slice(0, 50),
         variant_name: variant?.name ?? null,
+        modifiers: modifiers.selected,
         quantity: item.quantity,
-        unit_price: unitPriceFor(product, variant),
+        unit_price: unitPriceFor(product, variant, modifiers.selected),
         xp: product.xp,
         station: product.station,
       });
@@ -228,7 +235,12 @@ export async function POST(request: NextRequest) {
       product_name: line.product_name,
       product_sku: line.product_sku,
       variants: line.variant_name ? [{ name: line.variant_name }] : [],
-      modifiers: [],
+      // Bentuk sama dengan kasir ({ name, group }) supaya KDS & struk membacanya.
+      modifiers: line.modifiers.map((modifier) => ({
+        name: modifier.name,
+        group: modifier.groupName,
+        price: modifier.priceAdjustment,
+      })),
       quantity: line.quantity,
       unit_price: line.unit_price,
       subtotal: line.unit_price * line.quantity,

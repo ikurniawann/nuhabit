@@ -15,6 +15,29 @@ export type TableOrderVariant = {
   priceAdjustment: number;
 };
 
+/** Add-on (pos_modifiers) — mis. Extra Shot, Oat Milk. Harga tambahan per unit. */
+export type TableOrderModifier = {
+  id: string;
+  name: string;
+  priceAdjustment: number;
+};
+
+/**
+ * Grup add-on per produk (pos_modifier_groups via pos_product_modifiers).
+ * minSelection ≥ 1 = wajib pilih; maxSelection = batas opsi terpilih
+ * (0/kosong diperlakukan 1, sama seperti popup kasir).
+ */
+export type TableOrderModifierGroup = {
+  id: string;
+  name: string;
+  minSelection: number;
+  maxSelection: number;
+  modifiers: TableOrderModifier[];
+};
+
+/** Add-on terpilih lengkap dengan nama grupnya (untuk item order & KDS). */
+export type SelectedModifier = TableOrderModifier & { groupName: string };
+
 export type TableOrderProduct = {
   id: string;
   sku: string;
@@ -32,7 +55,8 @@ export type TableOrderProduct = {
   /** Produk khusus member (EPIC-011 Fase C) — 0 = bebas. */
   minXp: number;
   variants: TableOrderVariant[];
-  /** Punya >1 varian → tampil "Bisa custom" di daftar menu. */
+  modifierGroups: TableOrderModifierGroup[];
+  /** Punya >1 varian atau add-on → buka sheet pilihan & tampil "Bisa custom". */
   customizable: boolean;
 };
 
@@ -64,6 +88,16 @@ export type ProductRowInput = {
       }[]
     | string
     | null;
+  modifier_groups?:
+    | {
+        id: string;
+        name: string;
+        min_selection?: number | string | null;
+        max_selection?: number | string | null;
+        modifiers?: { id: string; name: string; price_adjustment?: number | string | null }[] | null;
+      }[]
+    | string
+    | null;
 };
 
 export const UNCATEGORIZED_ID = "__lainnya";
@@ -72,6 +106,38 @@ export const UNCATEGORIZED_LABEL = "Lainnya";
 export function toNumber(value: unknown): number {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function parseJsonArray<T>(raw: T[] | string | null | undefined): T[] {
+  if (!raw) return [];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(raw) ? raw : [];
+}
+
+function parseModifierGroups(raw: ProductRowInput["modifier_groups"]): TableOrderModifierGroup[] {
+  return parseJsonArray(raw)
+    .filter((group) => group && group.id)
+    .map((group) => ({
+      id: String(group.id),
+      name: String(group.name || "").trim() || "Tambahan",
+      minSelection: Math.max(0, Math.round(toNumber(group.min_selection))),
+      maxSelection: Math.max(1, Math.round(toNumber(group.max_selection)) || 1),
+      modifiers: (group.modifiers ?? [])
+        .filter((modifier) => modifier && modifier.id)
+        .map((modifier) => ({
+          id: String(modifier.id),
+          name: String(modifier.name || "").trim(),
+          priceAdjustment: toNumber(modifier.price_adjustment),
+        })),
+    }))
+    .filter((group) => group.modifiers.length > 0);
 }
 
 function parseVariants(raw: ProductRowInput["variants"]) {
@@ -96,6 +162,7 @@ export function normalizeTableOrderProduct(row: ProductRowInput): TableOrderProd
       priceAdjustment: toNumber(variant.price_adjustment),
     }));
 
+  const modifierGroups = parseModifierGroups(row.modifier_groups);
   const station = String(row.station || "kitchen").trim().toLowerCase() || "kitchen";
   const image = String(row.image_url || "").trim();
 
@@ -114,7 +181,8 @@ export function normalizeTableOrderProduct(row: ProductRowInput): TableOrderProd
     prepTimeMinutes: Math.max(0, Math.round(toNumber(row.prep_time_minutes))),
     minXp: Math.max(0, Math.round(toNumber(row.min_xp))),
     variants,
-    customizable: variants.length > 1,
+    modifierGroups,
+    customizable: variants.length > 1 || modifierGroups.length > 0,
   };
 }
 
@@ -134,9 +202,48 @@ export function resolveVariant(
 
 export function unitPriceFor(
   product: Pick<TableOrderProduct, "price">,
-  variant: TableOrderVariant | null
+  variant: TableOrderVariant | null,
+  modifiers: Pick<TableOrderModifier, "priceAdjustment">[] = []
 ) {
-  return Math.max(0, Math.round(product.price + (variant?.priceAdjustment ?? 0)));
+  const addOns = modifiers.reduce((sum, modifier) => sum + modifier.priceAdjustment, 0);
+  return Math.max(0, Math.round(product.price + (variant?.priceAdjustment ?? 0) + addOns));
+}
+
+/**
+ * Validasi pilihan add-on terhadap katalog (dipakai klien DAN server — server
+ * wajib, karena id dari HP tidak dipercaya):
+ * - setiap id harus milik salah satu grup produk ini;
+ * - tidak ada id ganda;
+ * - jumlah per grup ≤ maxSelection, dan grup wajib (minSelection) terpenuhi.
+ */
+export function resolveModifiers(
+  product: Pick<TableOrderProduct, "name"> & { modifierGroups?: TableOrderModifierGroup[] },
+  modifierIds: readonly string[] = []
+): { ok: true; selected: SelectedModifier[] } | { ok: false; error: string } {
+  const groups = product.modifierGroups ?? [];
+  const ids = modifierIds.map(String);
+  if (new Set(ids).size !== ids.length) {
+    return { ok: false, error: `Tambahan ${product.name} dipilih ganda — pilih ulang` };
+  }
+  const selected: SelectedModifier[] = [];
+  const perGroup = new Map<string, number>();
+  for (const id of ids) {
+    const group = groups.find((g) => g.modifiers.some((m) => m.id === id));
+    if (!group) return { ok: false, error: `Tambahan ${product.name} tidak dikenal — pilih ulang` };
+    const modifier = group.modifiers.find((m) => m.id === id)!;
+    selected.push({ ...modifier, groupName: group.name });
+    perGroup.set(group.id, (perGroup.get(group.id) ?? 0) + 1);
+  }
+  for (const group of groups) {
+    const count = perGroup.get(group.id) ?? 0;
+    if (count > group.maxSelection) {
+      return { ok: false, error: `${group.name}: maksimal ${group.maxSelection} pilihan` };
+    }
+    if (count < group.minSelection) {
+      return { ok: false, error: `${group.name}: wajib pilih ${group.minSelection}` };
+    }
+  }
+  return { ok: true, selected };
 }
 
 /**

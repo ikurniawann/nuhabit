@@ -98,6 +98,10 @@ vi.mock("@/lib/rate-limit", () => ({
 
 const PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
 const OFF_PRODUCT_ID = "22222222-2222-4222-8222-222222222222";
+const SHOT_ID = "33333333-3333-4333-8333-333333333333";
+const DOUBLE_ID = "44444444-4444-4444-8444-444444444444";
+const OAT_MILK_ID = "55555555-5555-4555-8555-555555555555";
+const FOREIGN_ID = "66666666-6666-4666-8666-666666666666";
 
 const catalog = new Map([
   [
@@ -119,6 +123,25 @@ const catalog = new Map([
       variants: [
         { id: "reg", name: "Regular", priceAdjustment: 0 },
         { id: "oat", name: "Oat", priceAdjustment: 10000 },
+      ],
+      modifierGroups: [
+        {
+          id: "g-shot",
+          name: "Tambahan Espresso",
+          minSelection: 0,
+          maxSelection: 1,
+          modifiers: [
+            { id: SHOT_ID, name: "Extra Shot Espresso", priceAdjustment: 10000 },
+            { id: DOUBLE_ID, name: "Double Shot", priceAdjustment: 18000 },
+          ],
+        },
+        {
+          id: "g-milk",
+          name: "Pilihan Susu",
+          minSelection: 0,
+          maxSelection: 1,
+          modifiers: [{ id: OAT_MILK_ID, name: "Oat Milk", priceAdjustment: 5000 }],
+        },
       ],
       customizable: true,
       sellable: true,
@@ -243,6 +266,59 @@ describe("POST /api/table-order/orders — harga dari server", () => {
     expect(data.queue_number).toBe("A-007");
     expect(data.total_amount).toBe(121000);
     expect(data.qris).toBeNull();
+  });
+
+  it("add-on: harga dari katalog server, disimpan ke item order (nama & grup) untuk KDS", async () => {
+    const { status } = await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [
+        // price/unit_price dari klien diabaikan — hanya id yang dipakai.
+        { product_id: PRODUCT_ID, variant_id: "reg", modifier_ids: [SHOT_ID, OAT_MILK_ID], quantity: 2, unit_price: 1 },
+      ],
+    });
+    expect(status).toBe(201);
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<string, unknown>;
+    // (30.000 + 10.000 + 5.000) × 2 = 90.000 ; PB1 10% = 9.000
+    expect(order.subtotal).toBe(90000);
+    expect(order.total_amount).toBe(99000);
+    const items = fake.calls.find((c) => c.table === "pos_order_items" && c.action === "insert")?.payload as Array<Record<string, unknown>>;
+    expect(items[0].unit_price).toBe(45000);
+    expect(items[0].modifiers).toEqual([
+      { name: "Extra Shot Espresso", group: "Tambahan Espresso", price: 10000 },
+      { name: "Oat Milk", group: "Pilihan Susu", price: 5000 },
+    ]);
+  });
+
+  it("add-on milik produk lain / tak dikenal → 409 tanpa insert", async () => {
+    const { status, json } = await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [{ product_id: PRODUCT_ID, modifier_ids: [FOREIGN_ID], quantity: 1 }],
+    });
+    expect(status).toBe(409);
+    expect(String(json.error)).toMatch(/tidak dikenal/);
+    expect(fake.calls.filter((c) => c.action === "insert")).toHaveLength(0);
+  });
+
+  it("melebihi batas grup (maks 1) → 409 tanpa insert", async () => {
+    const { status, json } = await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [{ product_id: PRODUCT_ID, modifier_ids: [SHOT_ID, DOUBLE_ID], quantity: 1 }],
+    });
+    expect(status).toBe(409);
+    expect(String(json.error)).toMatch(/maksimal 1/);
+    expect(fake.calls.filter((c) => c.action === "insert")).toHaveLength(0);
+  });
+
+  it("id add-on bukan UUID → 400 (validasi schema)", async () => {
+    const { status } = await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [{ product_id: PRODUCT_ID, modifier_ids: ["bukan-uuid"], quantity: 1 }],
+    });
+    expect(status).toBe(400);
   });
 
   it("produk yang tidak dijual → 409 tanpa insert apa pun", async () => {

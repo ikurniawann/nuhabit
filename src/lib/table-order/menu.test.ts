@@ -4,6 +4,7 @@ import {
   filterProducts,
   groupBySection,
   normalizeTableOrderProduct,
+  resolveModifiers,
   resolveVariant,
   unitPriceFor,
   UNCATEGORIZED_ID,
@@ -132,5 +133,49 @@ describe("formatMenuPrice", () => {
   it("format id-ID tanpa simbol mata uang seperti referensi daftar menu", () => {
     expect(formatMenuPrice(32500)).toBe("32.500");
     expect(formatMenuPrice(1234567.6)).toBe("1.234.568");
+  });
+});
+
+describe("add-on (modifier) self-order", () => {
+  const row = {
+    id: "p1",
+    name: "Iced Latte",
+    base_price: "25000.00",
+    modifier_groups: JSON.stringify([
+      { id: "g1", name: "Tambahan Espresso", min_selection: 0, max_selection: 1,
+        modifiers: [{ id: "m1", name: "Extra Shot Espresso", price_adjustment: 10000 }, { id: "m2", name: "Double", price_adjustment: "18000" }] },
+      { id: "g2", name: "Suhu", min_selection: 1, max_selection: null, modifiers: [{ id: "hot", name: "Hot" }, { id: "ice", name: "Iced" }] },
+      { id: "g3", name: "Kosong", modifiers: [] },
+    ]),
+  };
+  const product = normalizeTableOrderProduct(row);
+
+  it("parsing: string JSON, angka string, grup kosong dibuang, max 0/null → 1, produk jadi customizable", () => {
+    expect(product.modifierGroups.map((g) => [g.name, g.minSelection, g.maxSelection, g.modifiers.length])).toEqual([
+      ["Tambahan Espresso", 0, 1, 2],
+      ["Suhu", 1, 1, 2],
+    ]);
+    expect(product.modifierGroups[0].modifiers[1].priceAdjustment).toBe(18000);
+    expect(product.customizable).toBe(true);
+  });
+
+  it("valid: harga = dasar + add-on", () => {
+    const r = resolveModifiers(product, ["m1", "ice"]);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.selected.map((m) => [m.name, m.groupName])).toEqual([["Extra Shot Espresso", "Tambahan Espresso"], ["Iced", "Suhu"]]);
+      expect(unitPriceFor(product, null, r.selected)).toBe(35000);
+    }
+  });
+
+  it("ditolak: id asing, ganda, melebihi maks, grup wajib kosong", () => {
+    expect(resolveModifiers(product, ["x", "hot"])).toMatchObject({ ok: false });
+    expect(resolveModifiers(product, ["hot", "hot"])).toMatchObject({ ok: false, error: expect.stringMatching(/ganda/) });
+    expect(resolveModifiers(product, ["m1", "m2", "hot"])).toMatchObject({ ok: false, error: expect.stringMatching(/maksimal 1/) });
+    expect(resolveModifiers(product, ["m1"])).toMatchObject({ ok: false, error: expect.stringMatching(/wajib pilih 1/) });
+  });
+
+  it("produk tanpa data add-on (cache lama) tidak crash", () => {
+    expect(resolveModifiers({ name: "Lama" }, [])).toEqual({ ok: true, selected: [] });
   });
 });
