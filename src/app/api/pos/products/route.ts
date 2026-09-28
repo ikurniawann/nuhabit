@@ -114,7 +114,11 @@ export async function GET(request: NextRequest) {
         channels:product_channels(channel_code, is_distributed),
         modifiers:pos_product_modifiers(
           modifier_group:pos_modifier_groups(
+            id,
             name,
+            min_selection,
+            max_selection,
+            display_order,
             modifiers:pos_modifiers(*)
           )
         )
@@ -363,7 +367,11 @@ export async function POST(request: NextRequest) {
         variants:pos_product_variants(*),
         modifiers:pos_product_modifiers(
           modifier_group:pos_modifier_groups(
+            id,
             name,
+            min_selection,
+            max_selection,
+            display_order,
             modifiers:pos_modifiers(*)
           )
         )

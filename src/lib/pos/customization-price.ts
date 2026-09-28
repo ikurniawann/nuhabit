@@ -17,6 +17,7 @@ export type PricedVariant = { id: string; name: string; price_adjustment?: Numer
 export type PricedModifierGroup = {
   modifier_group: {
     name: string;
+    min_selection?: number | string | null;
     modifiers: Array<{ id: string; name: string; price_adjustment?: Numeric }>;
   };
 };
@@ -34,6 +35,25 @@ export type CustomizationPrice = {
   modifierAdj: number;
   unitPrice: number;
 };
+
+/**
+ * Pilihan awal saat popup kustomisasi dibuka. Varian: yang pertama (ukuran
+ * dsb. wajib ada). Modifier: HANYA grup wajib (min_selection ≥ 1) yang
+ * diisi opsi pertama — add-on opsional (Special Beans, Oat Milk, …) mulai
+ * kosong supaya kasir tidak menagih add-on yang tidak diminta.
+ */
+export function defaultCustomizationSelection(product: PricedProduct): {
+  selectedVariant: string | null;
+  selectedModifiers: Record<string, string[]>;
+} {
+  const selectedModifiers: Record<string, string[]> = {};
+  for (const group of product.modifiers ?? []) {
+    const required = Number(group.modifier_group.min_selection ?? 0) >= 1;
+    const first = group.modifier_group.modifiers[0];
+    if (required && first) selectedModifiers[group.modifier_group.name] = [first.id];
+  }
+  return { selectedVariant: product.variants?.[0]?.id ?? null, selectedModifiers };
+}
 
 export function toPrice(value: Numeric): number {
   const n = typeof value === "number" ? value : Number(value);

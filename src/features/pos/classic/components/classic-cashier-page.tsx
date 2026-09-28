@@ -1,5 +1,5 @@
 'use client';
-import { computeCustomizationPrice } from '@/lib/pos/customization-price';
+import { computeCustomizationPrice, defaultCustomizationSelection } from '@/lib/pos/customization-price';
 import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
 
 /**
@@ -297,16 +297,11 @@ export function ClassicCashierPage() {
       setBuffer('');
 
       if ((product.variants?.length ?? 0) > 0 || (product.modifiers?.length ?? 0) > 0) {
-        const defaultModifiers: Record<string, string[]> = {};
-        product.modifiers?.forEach((g) => {
-          if (g.modifier_group.modifiers.length > 0) {
-            defaultModifiers[g.modifier_group.name] = [g.modifier_group.modifiers[0].id];
-          }
-        });
+        const { selectedVariant, selectedModifiers } = defaultCustomizationSelection(product);
         setCustomizing({
           product,
-          selectedVariant: product.variants?.[0]?.id ?? null,
-          selectedModifiers: defaultModifiers,
+          selectedVariant,
+          selectedModifiers,
           quantity: qty,
           notes: '',
         });

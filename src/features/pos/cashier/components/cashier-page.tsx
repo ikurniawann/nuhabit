@@ -73,7 +73,7 @@ import { isFocPaymentMethod } from '@/lib/pos/payment-methods';
 import { MerchSkuPickerDialog } from '@/components/pos/MerchSkuPickerDialog';
 import { useCashierCheckout, useCashierOrder, useCashierTables, useCustomerFavoriteProducts } from '../queries';
 import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
-import { computeCustomizationPrice } from '@/lib/pos/customization-price';
+import { computeCustomizationPrice, defaultCustomizationSelection } from '@/lib/pos/customization-price';
 import { usePayOpenOrder } from '../mutations';
 import { usePosCart } from '@/hooks/use-pos-cart';
 import { usePosProducts } from '@/hooks/use-pos-products';
@@ -999,18 +999,12 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
     }
 
     if ((product.variants && product.variants.length > 0) || (product.modifiers && product.modifiers.length > 0)) {
-      const firstVariant = product.variants?.[0]?.id ?? null;
-      const defaultModifiers: Record<string, string[]> = {};
-      product.modifiers?.forEach(g => {
-        if (g.modifier_group.modifiers.length > 0) {
-          defaultModifiers[g.modifier_group.name] = [g.modifier_group.modifiers[0].id];
-        }
-      });
+      const { selectedVariant, selectedModifiers } = defaultCustomizationSelection(product);
       setCustomizingProduct(product);
       setCustom({
         product,
-        selectedVariant: firstVariant,
-        selectedModifiers: defaultModifiers,
+        selectedVariant,
+        selectedModifiers,
         quantity: 1,
         notes: '',
       });

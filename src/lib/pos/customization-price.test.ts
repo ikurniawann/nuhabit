@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCustomizationPrice, toPrice } from "./customization-price";
+import { computeCustomizationPrice, defaultCustomizationSelection, toPrice } from "./customization-price";
 
 // Bentuk data persis seperti dari API: base_price string (kolom numeric),
 // price_adjustment angka (lewat JSON relasi).
@@ -55,5 +55,33 @@ describe("toPrice", () => {
     expect(toPrice(undefined)).toBe(0);
     expect(toPrice("abc")).toBe(0);
     expect(toPrice("12.5")).toBe(12.5);
+  });
+});
+
+describe("defaultCustomizationSelection", () => {
+  it("add-on opsional (min_selection 0) tidak terpilih otomatis", () => {
+    const withMin = {
+      ...icedLight,
+      modifiers: icedLight.modifiers.map((g) => ({ modifier_group: { ...g.modifier_group, min_selection: 0 } })),
+    };
+    const sel = defaultCustomizationSelection(withMin);
+    expect(sel.selectedModifiers).toEqual({});
+    expect(computeCustomizationPrice(withMin, sel).unitPrice).toBe(25000);
+  });
+
+  it("grup wajib (min_selection ≥ 1) diisi opsi pertama; min_selection string juga dikenali", () => {
+    const sel = defaultCustomizationSelection({
+      base_price: 20000,
+      modifiers: [
+        { modifier_group: { name: "Suhu", min_selection: "1", modifiers: [{ id: "hot", name: "Hot" }, { id: "ice", name: "Iced" }] } },
+        { modifier_group: { name: "Topping", min_selection: 0, modifiers: [{ id: "t1", name: "Boba", price_adjustment: 5000 }] } },
+      ],
+    });
+    expect(sel.selectedModifiers).toEqual({ Suhu: ["hot"] });
+  });
+
+  it("varian default = yang pertama; tanpa varian = null", () => {
+    expect(defaultCustomizationSelection({ base_price: 1, variants: [{ id: "s", name: "S" }, { id: "l", name: "L" }] }).selectedVariant).toBe("s");
+    expect(defaultCustomizationSelection({ base_price: 1 }).selectedVariant).toBeNull();
   });
 });

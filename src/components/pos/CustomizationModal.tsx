@@ -47,7 +47,8 @@ export function CustomizationModal({
 
   return (
     <Dialog open={open} onOpenChange={() => onCancel()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      {/* sm:max-w-2xl menimpa bawaan DialogContent (sm:max-w-sm = 384px). */}
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
         </DialogHeader>
@@ -110,7 +111,7 @@ export function CustomizationModal({
                   <Utensils className="w-4 h-4 text-primary" />
                   {groupName}
                 </label>
-                <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {group.modifier_group.modifiers.map((mod) => {
                     const isSelected = selectedIds.includes(mod.id);
                     const priceText =
