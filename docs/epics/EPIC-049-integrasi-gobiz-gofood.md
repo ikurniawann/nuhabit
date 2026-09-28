@@ -112,3 +112,11 @@ Model **Direct Integration** di [GoBiz Developer Portal](https://developer.gobiz
   Sinkron katalog pertama ditolak 422 karena foto WebP; uji tanpa foto DITERIMA
   (add-on min 0 valid). Ditambah: add-on ke katalog, Harga Channel, konverter
   foto JPEG, Partner ID/Relay secret + verifikasi X-Go-Signature (mode pantau).
+- 2026-09-28 — Order emulator sandbox F-455394745 lolos end-to-end (webhook
+  X-Go-Signature valid → order POS delivery/paid/gofood → KDS dgn add-on →
+  food-prepared OK). Bug: payload asli berisi null → diperbaiki (stripNulls).
+  Owner mengirim form Production Request. Keputusan owner: bundling GoFood
+  (5/10 Pcs Bold/Light And Sweet) dibuat di POS kategori "Special Bundling"
+  dgn `sales_channels = {gofood}` (tidak tampil di kasir/self-order), harga
+  GoFood manual = harga GoFood lama; Couple/Family/Party (nonaktif di GoFood)
+  tidak dibuat. Dry-run katalog: 7 menu, 38 item.
