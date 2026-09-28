@@ -64,6 +64,7 @@
     "db:seed:items-menu": "node database/seeders/items-menu-tree.js",
     "db:seed:pos-tables": "node database/seeders/pos-tables.js",
     "db:seed:bcdcoffee-self-order": "node database/seeders/bcdcoffee-self-order-demo.js",
+    "db:seed:bcdcoffee-menu": "node database/seeders/bcdcoffee-menu.js",
     "db:seed:pos-loyalty-settings": "node database/seeders/pos-loyalty-settings.js",
     "db:seed:payment-gateways": "node database/seeders/payment-gateways.js",
     "db:seed:accounting-sulu-coa": "node database/seeders/accounting-sulu-coa.js",
