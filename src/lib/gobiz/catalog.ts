@@ -9,6 +9,7 @@
  * - Gambar harus URL http(s) port 80/443, jpeg/png.
  */
 
+import { applyChannelMarkup, resolveChannelPrice, type ChannelRule } from "@/lib/pos/channel-pricing";
 import type { GobizCatalogPayload } from "./types";
 
 export type CatalogProductInput = {
@@ -47,6 +48,26 @@ export function absoluteImageUrl(image: string | null | undefined, appUrl: strin
   if (/^https?:\/\//i.test(value)) return value;
   if (!appUrl) return undefined;
   return `${appUrl.replace(/\/$/, "")}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
+/**
+ * Terapkan harga channel GoFood (POS → Katalog → Harga Channel): harga item
+ * = harga manual bila ada, selain itu base_price + markup dibulatkan; harga
+ * varian = tambahan varian + markup yang sama. Channel nonaktif = harga dasar.
+ */
+export function priceCatalogForChannel(
+  products: CatalogProductInput[],
+  rule: ChannelRule,
+  overrides: ReadonlyMap<string, number>
+): CatalogProductInput[] {
+  return products.map((product) => ({
+    ...product,
+    price: resolveChannelPrice(product.price, rule, overrides.get(product.id)).final,
+    variants: product.variants.map((variant) => ({
+      ...variant,
+      priceAdjustment: applyChannelMarkup(variant.priceAdjustment, rule),
+    })),
+  }));
 }
 
 export function variantCategoryId(productId: string) {

@@ -12,7 +12,8 @@ import { getCrmDefaultVenue } from "@/lib/crm/server";
 import { allocateQueueNumber } from "@/lib/pos/queue-number";
 import { loadProductsByIds } from "@/lib/table-order/server";
 import type { CatalogProductInput } from "./catalog";
-import { buildGobizCatalog } from "./catalog";
+import { buildGobizCatalog, priceCatalogForChannel } from "./catalog";
+import { loadChannelOverrides, loadChannelRule } from "@/lib/pos/channel-pricing-server";
 import {
   acceptGofoodOrder as apiAccept,
   getGobizAccessToken,
@@ -133,7 +134,13 @@ export async function loadCatalogProductsForGobiz(): Promise<CatalogProductInput
 
 export async function syncCatalogToGobiz(appUrl: string) {
   const config = await requireConfig();
-  const products = await loadCatalogProductsForGobiz();
+  const [baseProducts, gofoodRule, gofoodOverrides] = await Promise.all([
+    loadCatalogProductsForGobiz(),
+    loadChannelRule("gofood"),
+    loadChannelOverrides("gofood"),
+  ]);
+  // Harga GoFood (markup + harga manual); tanpa baris channel = harga dasar.
+  const products = gofoodRule ? priceCatalogForChannel(baseProducts, gofoodRule, gofoodOverrides) : baseProducts;
   const requestId = randomUUID();
   const built = buildGobizCatalog(products, { appUrl, requestId });
 

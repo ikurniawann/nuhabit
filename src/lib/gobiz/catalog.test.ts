@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { absoluteImageUrl, buildGobizCatalog, variantCategoryId } from "./catalog";
+import { absoluteImageUrl, buildGobizCatalog, priceCatalogForChannel, variantCategoryId } from "./catalog";
 
 const appUrl = "https://poskopi.reddie.id";
 
@@ -105,5 +105,49 @@ describe("absoluteImageUrl", () => {
     expect(absoluteImageUrl("https://cdn/x.jpg", "https://x.id")).toBe("https://cdn/x.jpg");
     expect(absoluteImageUrl("", "https://x.id")).toBeUndefined();
     expect(absoluteImageUrl("/a.png", "")).toBeUndefined();
+  });
+});
+
+describe("priceCatalogForChannel (harga GoFood)", () => {
+  const rule = {
+    code: "gofood",
+    name: "GoFood",
+    markupPercent: 20,
+    roundingStep: 1000 as const,
+    roundingMode: "up" as const,
+    isActive: true,
+  };
+  const products = [
+    {
+      id: "p-latte",
+      name: "Iced Latte",
+      price: 28000,
+      inStock: true,
+      variants: [
+        { id: "v-reg", name: "Regular", priceAdjustment: 0 },
+        { id: "v-oat", name: "Oat", priceAdjustment: 5000 },
+      ],
+    },
+    { id: "p-black", name: "Iced Black", price: 25000, inStock: true, variants: [] },
+  ];
+
+  it("markup + pembulatan; harga manual menang; varian ikut markup; data asli tidak diubah", () => {
+    const priced = priceCatalogForChannel(products, rule, new Map([["p-black", 29000]]));
+    // 28.000 × 1,2 = 33.600 → 34.000
+    expect(priced[0].price).toBe(34000);
+    expect(priced[0].variants.map((v) => v.priceAdjustment)).toEqual([0, 6000]);
+    expect(priced[1].price).toBe(29000);
+    expect(products[0].price).toBe(28000);
+
+    const { payload } = buildGobizCatalog(priced, { appUrl, requestId: "r-1" });
+    const items = payload.menus.flatMap((menu) => menu.menu_items);
+    expect(items.find((item) => item.external_id === "p-latte")?.price).toBe(34000);
+    expect(payload.variant_categories[0].variants.map((v) => v.price)).toEqual([0, 6000]);
+  });
+
+  it("channel nonaktif → harga dasar, harga manual diabaikan", () => {
+    const priced = priceCatalogForChannel(products, { ...rule, isActive: false }, new Map([["p-black", 29000]]));
+    expect(priced.map((p) => p.price)).toEqual([28000, 25000]);
+    expect(priced[0].variants[1].priceAdjustment).toBe(5000);
   });
 });
