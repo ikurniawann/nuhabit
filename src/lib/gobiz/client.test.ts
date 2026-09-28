@@ -17,6 +17,9 @@ const config: GobizConfig = {
   outletId: "G123",
   webhookToken: "tok",
   autoAccept: false,
+  partnerId: "",
+  relaySecret: "",
+  enforceSignature: false,
   apiBase: "https://api.partner-sandbox.gobiz.co.id",
   oauthUrl: "https://integration-goauth.gojekapi.com/oauth2/token",
 };

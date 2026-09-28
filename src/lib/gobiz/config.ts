@@ -36,6 +36,11 @@ export type GobizConfig = {
   outletId: string;
   webhookToken: string;
   autoAccept: boolean;
+  partnerId: string;
+  /** Kunci HMAC X-Go-Signature (Relay secret di Developer Portal). */
+  relaySecret: string;
+  /** true = webhook dgn tanda tangan salah/absen ditolak 401; false = hanya dicatat. */
+  enforceSignature: boolean;
   apiBase: string;
   oauthUrl: string;
 };
@@ -79,6 +84,9 @@ export async function loadGobizConfig(): Promise<GobizConfig> {
     SETTING_KEYS.GOBIZ_AUTO_ACCEPT,
     SETTING_KEYS.GOBIZ_OAUTH_URL,
     SETTING_KEYS.GOBIZ_API_BASE_URL,
+    SETTING_KEYS.GOBIZ_PARTNER_ID,
+    SETTING_KEYS.GOBIZ_RELAY_SECRET,
+    SETTING_KEYS.GOBIZ_SIGNATURE_ENFORCE,
   ]);
   const environment = normalizeEnvironment(s[SETTING_KEYS.GOBIZ_ENVIRONMENT]);
   const urls = resolveGobizUrls(environment, {
@@ -93,6 +101,9 @@ export async function loadGobizConfig(): Promise<GobizConfig> {
     outletId: s[SETTING_KEYS.GOBIZ_OUTLET_ID]?.trim() || "",
     webhookToken: s[SETTING_KEYS.GOBIZ_WEBHOOK_TOKEN]?.trim() || "",
     autoAccept: s[SETTING_KEYS.GOBIZ_AUTO_ACCEPT] === "true",
+    partnerId: s[SETTING_KEYS.GOBIZ_PARTNER_ID]?.trim() || "",
+    relaySecret: s[SETTING_KEYS.GOBIZ_RELAY_SECRET]?.trim() || "",
+    enforceSignature: s[SETTING_KEYS.GOBIZ_SIGNATURE_ENFORCE] === "true",
     ...urls,
   };
 }

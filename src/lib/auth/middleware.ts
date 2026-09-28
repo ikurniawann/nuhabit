@@ -39,6 +39,8 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/table-order",
   // Webhook GoBiz/GoFood (EPIC-049) — autentikasi token acak di path.
   "/api/integrations/gobiz/webhook/",
+  // Foto produk JPEG utk katalog GoFood — diambil server GoBiz tanpa sesi.
+  "/api/public/gofood-image/",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/settings/appearance",

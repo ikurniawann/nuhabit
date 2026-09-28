@@ -12,6 +12,10 @@ type GobizSettings = {
   client_secret_masked: string | null;
   has_client_secret: boolean;
   outlet_id: string;
+  partner_id: string;
+  relay_secret_masked: string | null;
+  has_relay_secret: boolean;
+  enforce_signature: boolean;
   auto_accept: boolean;
   oauth_url: string;
   api_base_url: string;
@@ -44,6 +48,9 @@ export function GobizSettingsPanel() {
     client_id: "",
     client_secret: "",
     outlet_id: "",
+    partner_id: "",
+    relay_secret: "",
+    enforce_signature: false,
     auto_accept: false,
     oauth_url: "",
     api_base_url: "",
@@ -62,6 +69,9 @@ export function GobizSettingsPanel() {
       client_id: next.client_id,
       client_secret: "",
       outlet_id: next.outlet_id,
+      partner_id: next.partner_id ?? "",
+      relay_secret: "",
+      enforce_signature: next.enforce_signature ?? false,
       auto_accept: next.auto_accept,
       oauth_url: next.oauth_url,
       api_base_url: next.api_base_url,
@@ -81,6 +91,7 @@ export function GobizSettingsPanel() {
     try {
       const body: Record<string, unknown> = { ...form };
       if (!form.client_secret) delete body.client_secret; // kosong = tidak diubah
+      if (!form.relay_secret) delete body.relay_secret;
       await api("/api/settings/gobiz", { method: "PUT", body: JSON.stringify(body) });
       toast.success("Konfigurasi GoBiz disimpan");
       await load();
@@ -212,6 +223,44 @@ export function GobizSettingsPanel() {
             className={`${inputClass} mt-1 font-mono`}
             autoComplete="new-password"
           />
+        </label>
+
+        <label className="block">
+          <span className="text-xs font-semibold text-black/60">Partner ID</span>
+          <input
+            value={form.partner_id}
+            onChange={(event) => setForm((f) => ({ ...f, partner_id: event.target.value }))}
+            className={`${inputClass} mt-1 font-mono`}
+            autoComplete="off"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold text-black/60">
+            Relay secret {data?.has_relay_secret ? <span className="font-normal text-black/40">(tersimpan: {data.relay_secret_masked})</span> : null}
+          </span>
+          <input
+            type="password"
+            value={form.relay_secret}
+            onChange={(event) => setForm((f) => ({ ...f, relay_secret: event.target.value }))}
+            placeholder={data?.has_relay_secret ? "Kosongkan bila tidak diubah" : "Kunci tanda tangan webhook (X-Go-Signature)"}
+            className={`${inputClass} mt-1 font-mono`}
+            autoComplete="new-password"
+          />
+        </label>
+        <label className="flex items-center gap-3 rounded-xl border border-black/5 px-3 py-2.5 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={form.enforce_signature}
+            disabled={!data?.has_relay_secret}
+            onChange={(event) => setForm((f) => ({ ...f, enforce_signature: event.target.checked }))}
+            className="h-4 w-4"
+          />
+          <span>
+            <span className="block text-sm font-semibold">Tolak webhook bertanda tangan salah</span>
+            <span className="block text-xs text-black/50">
+              Nyalakan setelah uji sandbox membuktikan tanda tangan cocok. Mati = tanda tangan hanya dicatat di log.
+            </span>
+          </span>
         </label>
 
         <label className="flex items-center gap-3 rounded-xl border border-black/5 px-3 py-2.5">

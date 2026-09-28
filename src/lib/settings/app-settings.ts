@@ -56,6 +56,12 @@ export const SETTING_KEYS = {
   GOBIZ_AUTO_ACCEPT: "gobiz_auto_accept",
   GOBIZ_OAUTH_URL: "gobiz_oauth_url",
   GOBIZ_API_BASE_URL: "gobiz_api_base_url",
+  // Partner ID & Relay secret dari GoBiz Developer Portal. Relay secret =
+  // kunci HMAC header X-Go-Signature webhook (lib/gobiz/signature.ts);
+  // GOBIZ_SIGNATURE_ENFORCE "true" = tolak webhook bertanda tangan salah.
+  GOBIZ_PARTNER_ID: "gobiz_partner_id",
+  GOBIZ_RELAY_SECRET: "gobiz_relay_secret",
+  GOBIZ_SIGNATURE_ENFORCE: "gobiz_signature_enforce",
   QRIS_NMID: "qris_nmid",
   // Static QRIS self-order — gambar QRIS statis venue + saklar aktif
   // (lib/payments/static-qris.ts). Diatur di Settings → Payment Gateways.

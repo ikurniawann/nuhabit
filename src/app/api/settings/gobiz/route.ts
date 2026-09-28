@@ -39,6 +39,10 @@ export async function GET(request: NextRequest) {
         client_secret_masked: maskSecret(config.clientSecret || null),
         has_client_secret: Boolean(config.clientSecret),
         outlet_id: config.outletId,
+        partner_id: config.partnerId,
+        relay_secret_masked: maskSecret(config.relaySecret || null),
+        has_relay_secret: Boolean(config.relaySecret),
+        enforce_signature: config.enforceSignature,
         auto_accept: config.autoAccept,
         oauth_url: raw[SETTING_KEYS.GOBIZ_OAUTH_URL] || "",
         api_base_url: raw[SETTING_KEYS.GOBIZ_API_BASE_URL] || "",
@@ -64,6 +68,9 @@ const putSchema = z.object({
   client_id: z.string().max(200).optional(),
   client_secret: z.string().max(500).optional(),
   outlet_id: z.string().max(200).optional(),
+  partner_id: z.string().max(200).optional(),
+  relay_secret: z.string().max(500).optional(),
+  enforce_signature: z.boolean().optional(),
   auto_accept: z.boolean().optional(),
   oauth_url: z.string().max(500).optional(),
   api_base_url: z.string().max(500).optional(),
@@ -82,6 +89,11 @@ export async function PUT(request: NextRequest) {
     if (body.client_id !== undefined) writes.push([SETTING_KEYS.GOBIZ_CLIENT_ID, body.client_id.trim() || null]);
     if (body.client_secret !== undefined) writes.push([SETTING_KEYS.GOBIZ_CLIENT_SECRET, body.client_secret.trim() || null]);
     if (body.outlet_id !== undefined) writes.push([SETTING_KEYS.GOBIZ_OUTLET_ID, body.outlet_id.trim() || null]);
+    if (body.partner_id !== undefined) writes.push([SETTING_KEYS.GOBIZ_PARTNER_ID, body.partner_id.trim() || null]);
+    if (body.relay_secret !== undefined) writes.push([SETTING_KEYS.GOBIZ_RELAY_SECRET, body.relay_secret.trim() || null]);
+    if (body.enforce_signature !== undefined) {
+      writes.push([SETTING_KEYS.GOBIZ_SIGNATURE_ENFORCE, body.enforce_signature ? "true" : "false"]);
+    }
     if (body.auto_accept !== undefined) writes.push([SETTING_KEYS.GOBIZ_AUTO_ACCEPT, body.auto_accept ? "true" : "false"]);
     if (body.oauth_url !== undefined) {
       if (body.oauth_url.trim() && !/^https:\/\//.test(body.oauth_url.trim())) {

@@ -84,7 +84,16 @@ Model **Direct Integration** di [GoBiz Developer Portal](https://developer.gobiz
   akun piutang GoFood/komisi).
 - Item GoFood tanpa `external_id` cocok → order POS tetap dibuat dari item yang
   terpetakan, sisanya disorot merah di halaman GoFood (kasir tambah manual).
-- Modifier POS belum dikirim ke GoFood (hanya varian, satu level — batasan GoBiz).
+- ~~Modifier POS belum dikirim ke GoFood~~ → sejak 2026-09-28 tiap grup add-on POS
+  dikirim sbg variant category bersama `mg:<group>` (min = min_selection, opsional
+  = 0) dan terpetakan balik ke `pos_order_items.modifiers`.
+- Harga GoFood = Harga Channel (`pos.sales_channels` markup % + pembulatan,
+  `pos.pos_product_channel_prices` override); varian & add-on ikut markup.
+- Foto: GoBiz menolak WebP ("invalid image type") → foto non-JPEG/PNG dikirim
+  lewat konverter publik `/api/public/gofood-image/<base64url>.jpg` (sharp).
+- Webhook: X-Go-Signature = HMAC-SHA256 hex raw body dgn **Relay secret**
+  (docs receiving-notifications). Mode pantau default; `gobiz_signature_enforce`
+  = true menolak 401 setelah terbukti cocok di sandbox.
 
 ## Automation Log
 
@@ -95,3 +104,11 @@ Model **Direct Integration** di [GoBiz Developer Portal](https://developer.gobiz
   baru, tsc 0 error di berkas baru (5 error implicit-any lama di
   `orders/[id]/status/route.ts` sudah ada sebelum hook ditambahkan). T-8 butuh
   kredensial GoBiz dari owner — status `ready-for-qa`.
+- 2026-09-28 — Kredensial sandbox owner diterima: token OAuth sandbox OK (scope
+  lengkap), production 401 (memang kredensial sandbox). Outlet sandbox
+  `G799456240` (outlet asli G313322705 JANGAN disinkron — menu grup cabang berisi
+  bundling yang belum ada di POS; sinkron = full replace). 10 event webhook
+  terdaftar ke `https://poskopi.reddie.id/api/integrations/gobiz/webhook/<token>`.
+  Sinkron katalog pertama ditolak 422 karena foto WebP; uji tanpa foto DITERIMA
+  (add-on min 0 valid). Ditambah: add-on ke katalog, Harga Channel, konverter
+  foto JPEG, Partner ID/Relay secret + verifikasi X-Go-Signature (mode pantau).

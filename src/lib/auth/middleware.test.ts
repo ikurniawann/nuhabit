@@ -15,6 +15,7 @@ describe("isPublicAuthPath", () => {
 
   it("allows the GoBiz webhook receiver (token in path) but not its settings API", () => {
     expect(isPublicAuthPath("/api/integrations/gobiz/webhook/abc123")).toBe(true);
+    expect(isPublicAuthPath("/api/public/gofood-image/abc.jpg")).toBe(true);
     expect(isPublicAuthPath("/api/settings/gobiz")).toBe(false);
     expect(isPublicAuthPath("/api/pos/gofood/orders")).toBe(false);
   });

@@ -22,7 +22,8 @@ const sampleEvent = {
 };
 
 function makeRequest(body: unknown, headers: Record<string, string> = {}): NextRequest {
-  return { json: async () => body, headers: new Headers(headers) } as unknown as NextRequest;
+  const raw = typeof body === "string" ? body : JSON.stringify(body);
+  return { json: async () => JSON.parse(raw), text: async () => raw, headers: new Headers(headers) } as unknown as NextRequest;
 }
 
 async function post(token: string, body: unknown, headers?: Record<string, string>) {
@@ -81,5 +82,39 @@ describe("POST /api/integrations/gobiz/webhook/[token]", () => {
     const { status, json } = await post("secret-token", sampleEvent);
     expect(status).toBe(200);
     expect(json).toMatchObject({ success: true, processed: false });
+  });
+});
+
+describe("X-Go-Signature (Relay secret)", () => {
+  const secret = "relay-secret-test";
+  const sign = async (body: unknown) => {
+    const { computeGobizSignature } = await import("@/lib/gobiz/signature");
+    return computeGobizSignature(JSON.stringify(body), secret);
+  };
+
+  it("mode tegak: tanda tangan salah / absen → 401 tanpa menyentuh service", async () => {
+    loadGobizConfig.mockResolvedValue({ webhookToken: "secret-token", relaySecret: secret, enforceSignature: true });
+    expect((await post("secret-token", sampleEvent, { "x-go-signature": "deadbeef" })).status).toBe(401);
+    expect((await post("secret-token", sampleEvent)).status).toBe(401);
+    expect(recordGofoodEvent).not.toHaveBeenCalled();
+  });
+
+  it("mode tegak: tanda tangan HMAC-SHA256 hex raw body yang benar → diproses", async () => {
+    loadGobizConfig.mockResolvedValue({ webhookToken: "secret-token", relaySecret: secret, enforceSignature: true });
+    recordGofoodEvent.mockResolvedValue("row-1");
+    processGofoodEvent.mockResolvedValue("processed");
+    const { status } = await post("secret-token", sampleEvent, { "x-go-signature": await sign(sampleEvent) });
+    expect(status).toBe(200);
+    expect(processGofoodEvent).toHaveBeenCalled();
+  });
+
+  it("mode pantau (default): tanda tangan salah tetap diproses (token path tetap wajib)", async () => {
+    loadGobizConfig.mockResolvedValue({ webhookToken: "secret-token", relaySecret: secret, enforceSignature: false });
+    recordGofoodEvent.mockResolvedValue("row-1");
+    processGofoodEvent.mockResolvedValue("processed");
+    const { status } = await post("secret-token", sampleEvent, { "x-go-signature": "deadbeef" });
+    expect(status).toBe(200);
+    expect(processGofoodEvent).toHaveBeenCalled();
+    expect((await post("salah", sampleEvent, { "x-go-signature": await sign(sampleEvent) })).status).toBe(401);
   });
 });

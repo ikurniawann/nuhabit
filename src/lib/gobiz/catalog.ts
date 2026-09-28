@@ -9,10 +9,12 @@
  * - Add-on (grup modifier POS) = variant category tambahan per grup, dipakai
  *   bersama oleh semua produk yang memakai grup itu (external_id mg:<group>);
  *   external_id opsi = id pos_modifiers → webhook membawa id yang sama.
- * - Gambar harus URL http(s) port 80/443, jpeg/png.
+ * - Gambar harus URL http(s) port 80/443, jpeg/png — WebP lewat konverter
+ *   /api/public/gofood-image (lib/gobiz/image.ts).
  */
 
 import { applyChannelMarkup, resolveChannelPrice, type ChannelRule } from "@/lib/pos/channel-pricing";
+import { gofoodImageUrl } from "./image";
 import type { GobizCatalogPayload } from "./types";
 
 export type CatalogProductInput = {
@@ -148,7 +150,7 @@ export function buildGobizCatalog(
     };
     const description = String(product.description || "").trim();
     if (description) item.description = description;
-    const image = absoluteImageUrl(product.image, options.appUrl);
+    const image = gofoodImageUrl(product.image, options.appUrl);
     if (image) item.image = image;
 
     if (activeVariants.length > 0) {
