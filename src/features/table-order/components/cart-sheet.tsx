@@ -28,7 +28,12 @@ export function CartSheet({
   submitting,
   error,
   onSubmit,
+  arkEnabled = true,
+  xpEnabled = true,
 }: {
+  /** Saklar CRM → Pengaturan: sembunyikan opsi ARK Coin / info XP bila mati. */
+  arkEnabled?: boolean;
+  xpEnabled?: boolean;
   open: boolean;
   onClose: () => void;
   cart: CartLine[];
@@ -117,7 +122,7 @@ export function CartSheet({
                   <div className="mt-0.5 text-xs text-gray-500">
                     {line.variantName ? `${line.variantName} · ` : ""}
                     {formatRupiah(line.unitPrice)}
-                    {line.xp > 0 ? ` · +${line.xp} XP` : ""}
+                    {xpEnabled && line.xp > 0 ? ` · +${line.xp} XP` : ""}
                   </div>
                 </div>
                 <div className="inline-flex h-8 items-center rounded-full border border-primary">
@@ -184,7 +189,7 @@ export function CartSheet({
                 <span className="font-semibold text-gray-900">{formatRupiah(line.amount)}</span>
               </div>
             ))}
-            {summary.totalXp > 0 && (
+            {xpEnabled && summary.totalXp > 0 && (
               <div className="mt-1.5 flex justify-between text-amber-600">
                 <span>XP didapat</span>
                 <span className="font-semibold">+{summary.totalXp} XP</span>
@@ -211,6 +216,7 @@ export function CartSheet({
                 }
                 onClick={() => onPaymentMethod("qris")}
               />
+              {arkEnabled && (
               <PaymentOption
                 active={paymentMethod === "ark_coin"}
                 disabled={Boolean(member) && !arkEnough}
@@ -225,6 +231,7 @@ export function CartSheet({
                 }
                 onClick={() => (member ? onPaymentMethod("ark_coin") : onOpenMember())}
               />
+              )}
               <PaymentOption
                 active={paymentMethod === "cashier"}
                 icon={WalletCards}

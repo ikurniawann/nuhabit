@@ -88,7 +88,15 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   const restored = useRef(false);
   const sectionRefs = useRef(new Map<string, HTMLElement>());
 
-  const products = useMemo(() => catalog?.products ?? [], [catalog]);
+  // Saklar fitur loyalty dari server; absen (server lama) = aktif.
+  const arkEnabled = session?.ark_enabled !== false;
+  const xpEnabled = session?.xp_enabled !== false;
+  // XP mati → nol-kan xp & minXp di satu tempat: chip +XP, kunci "Member ≥ X XP",
+  // XP per baris keranjang, dan total XP ikut hilang tanpa menyentuh tiap komponen.
+  const products = useMemo(() => {
+    const list = catalog?.products ?? [];
+    return xpEnabled ? list : list.map((p) => ({ ...p, xp: 0, minXp: 0 }));
+  }, [catalog, xpEnabled]);
   const categories = useMemo(() => buildCategories(products), [products]);
   const filtered = useMemo(() => filterProducts(products, { query }), [products, query]);
   const sections = useMemo(() => groupBySection(filtered, categories), [filtered, categories]);
@@ -107,6 +115,11 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
     setMember(profile);
     if (!profile && paymentMethod === "ark_coin") setPaymentMethod("cashier");
   }, [paymentMethod]);
+
+  // ARK Coin dimatikan setelah pelanggan memilihnya → jatuh ke "Bayar di kasir".
+  // Nilai turunan (bukan setState di effect) supaya tak ada render berantai.
+  const effectivePaymentMethod: TableOrderPaymentMethod =
+    !arkEnabled && paymentMethod === "ark_coin" ? "cashier" : paymentMethod;
 
   const loadCatalog = useCallback(async () => {
     const next = await fetchCatalog();
@@ -235,7 +248,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
       const order = await createOrder({
         table_code: tableCode,
         order_type: orderType,
-        payment_method: paymentMethod,
+        payment_method: effectivePaymentMethod,
         items: cart.map((line) => ({
           product_id: line.productId,
           variant_id: line.variantId,
@@ -250,7 +263,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
       setCartOpen(false);
       setView("tracking");
       window.scrollTo({ top: 0 });
-      if (paymentMethod === "ark_coin") void reloadMember();
+      if (effectivePaymentMethod === "ark_coin") void reloadMember();
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 401) {
         setMemberOpen(true);
@@ -276,6 +289,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
       <main className="min-h-dvh bg-gray-50 text-gray-900">
         <div className="mx-auto max-w-md">
           <OrderTracking
+            xpEnabled={xpEnabled}
             order={activeOrder}
             tableLabel={tableLabel}
             brandName={brandName}
@@ -338,10 +352,14 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 font-bold text-emerald-700">
                     BUKA
                   </span>
-                  <span className="text-gray-300">·</span>
-                  <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
-                    <Sparkles className="size-3.5 fill-amber-500 text-amber-500" /> Dapat XP
-                  </span>
+                  {xpEnabled && (
+                    <>
+                      <span className="text-gray-300">·</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
+                        <Sparkles className="size-3.5 fill-amber-500 text-amber-500" /> Dapat XP
+                      </span>
+                    </>
+                  )}
                   <span className="text-gray-300">·</span>
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="size-3.5 text-primary" />
@@ -386,13 +404,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                 >
                   <UserRound className="size-4" />
                   {member ? member.name : "Masuk Member"}
-                  {!member && (
+                  {!member && xpEnabled && (
                     <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-black text-white">
                       XP
                     </span>
                   )}
                 </button>
-                {member && (
+                {member && arkEnabled && (
                   <span className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700">
                     <Coins className="size-4 text-amber-500" />
                     {idrToArkDisplay(member.ark_coin_balance, member.ark_rate)}
@@ -415,9 +433,9 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
 
         {/* Kartu info horizontal */}
         <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-          <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />
+          {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
           {session?.qris_available && <InfoCard icon={QrCode} title="Bayar QRIS" subtitle="Langsung dari meja" />}
-          <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />
+          {arkEnabled && <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />}
           <InfoCard icon={UtensilsCrossed} title="Ke dapur otomatis" subtitle="Pesanan masuk KDS" />
         </div>
 
@@ -558,6 +576,8 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
       <VariantSheet product={variantProduct} onClose={() => setVariantProduct(null)} onAdd={handleAddVariant} />
 
       <CartSheet
+        arkEnabled={arkEnabled}
+        xpEnabled={xpEnabled}
         open={cartOpen}
         onClose={() => setCartOpen(false)}
         cart={cart}
@@ -566,7 +586,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         member={member}
         orderType={orderType}
         onOrderType={setOrderType}
-        paymentMethod={paymentMethod}
+        paymentMethod={effectivePaymentMethod}
         onPaymentMethod={setPaymentMethod}
         note={note}
         onNote={setNote}
@@ -579,7 +599,14 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         onSubmit={() => void submitOrder()}
       />
 
-      <MemberSheet open={memberOpen} member={member} onClose={() => setMemberOpen(false)} onChanged={reloadMember} />
+      <MemberSheet
+        open={memberOpen}
+        member={member}
+        onClose={() => setMemberOpen(false)}
+        onChanged={reloadMember}
+        arkEnabled={arkEnabled}
+        xpEnabled={xpEnabled}
+      />
 
       <BottomSheet open={menuJumpOpen} onClose={() => setMenuJumpOpen(false)} title="Kategori menu">
         <ul className="divide-y divide-gray-100">

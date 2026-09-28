@@ -16,6 +16,9 @@ export type TableSession = {
   qris_available: boolean;
   ark_rate: number;
   member_logged_in: boolean;
+  /** Saklar CRM → Pengaturan (lib/crm/loyalty-features). Absen = aktif (server lama). */
+  ark_enabled?: boolean;
+  xp_enabled?: boolean;
 };
 
 export type CatalogMeta = {

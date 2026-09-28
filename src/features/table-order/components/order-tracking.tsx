@@ -30,7 +30,9 @@ export function OrderTracking({
   brandName,
   onOrderUpdate,
   onNewOrder,
+  xpEnabled = true,
 }: {
+  xpEnabled?: boolean;
   order: OrderData;
   tableLabel: string;
   brandName: string;
@@ -281,7 +283,7 @@ export function OrderTracking({
                 <span className="font-semibold text-gray-900">{formatRupiah(line.amount)}</span>
               </div>
             ))}
-            {order.total_xp > 0 && (
+            {xpEnabled && order.total_xp > 0 && (
               <div className="flex justify-between text-amber-600">
                 <span>XP</span>
                 <span className="font-semibold">+{order.total_xp} XP</span>

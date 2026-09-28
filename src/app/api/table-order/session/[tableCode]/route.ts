@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMemberSession } from "@/lib/member-portal/session";
 import { loadTableByCode, loadVenueContext, tableLabel } from "@/lib/table-order/server";
+import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +26,14 @@ export async function GET(
   }
 
   try {
-    const [table, venue, member] = await Promise.all([
+    const [table, venue, member, loyalty] = await Promise.all([
       loadTableByCode(code).catch((error) => {
         console.warn("Table order table lookup warning:", error instanceof Error ? error.message : error);
         return null;
       }),
       loadVenueContext(),
       getMemberSession().catch(() => null),
+      getLoyaltyFeatures(),
     ]);
 
     const inactiveTable = Boolean(table && table.is_active === false);
@@ -54,6 +56,9 @@ export async function GET(
         qris_available: venue.qrisAvailable,
         ark_rate: venue.arkRate,
         member_logged_in: Boolean(member),
+        // Saklar fitur loyalty — UI menyembunyikan ARK Coin & info XP bila dimatikan.
+        ark_enabled: loyalty.arkCoin,
+        xp_enabled: loyalty.xp,
       },
     });
   } catch (error) {

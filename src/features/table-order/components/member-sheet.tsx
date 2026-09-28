@@ -24,7 +24,11 @@ export function MemberSheet({
   member,
   onClose,
   onChanged,
+  arkEnabled = true,
+  xpEnabled = true,
 }: {
+  arkEnabled?: boolean;
+  xpEnabled?: boolean;
   open: boolean;
   member: MemberProfile | null;
   onClose: () => void;
@@ -135,7 +139,9 @@ export function MemberSheet({
               </div>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          {(arkEnabled || xpEnabled) && (
+          <div className={`mt-3 grid gap-3 ${arkEnabled && xpEnabled ? "grid-cols-2" : "grid-cols-1"}`}>
+            {arkEnabled && (
             <div className="rounded-2xl border border-gray-200 p-3">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
                 <Coins className="size-3.5 text-amber-500" /> Saldo ARK Coin
@@ -144,6 +150,8 @@ export function MemberSheet({
                 {idrToArkDisplay(member.ark_coin_balance, member.ark_rate)}
               </div>
             </div>
+            )}
+            {xpEnabled && (
             <div className="rounded-2xl border border-gray-200 p-3">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
                 <Sparkles className="size-3.5 text-amber-500" /> Total XP
@@ -152,11 +160,15 @@ export function MemberSheet({
                 {new Intl.NumberFormat("id-ID").format(member.total_xp)}
               </div>
             </div>
+            )}
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-gray-500">
-            XP dari pesanan ini masuk ke akun Anda setelah pembayaran lunas. ARK Coin bisa dipakai
-            langsung di langkah pembayaran.
-          </p>
+          )}
+          {(arkEnabled || xpEnabled) && (
+            <p className="mt-3 text-xs leading-relaxed text-gray-500">
+              {xpEnabled ? "XP dari pesanan ini masuk ke akun Anda setelah pembayaran lunas. " : ""}
+              {arkEnabled ? "ARK Coin bisa dipakai langsung di langkah pembayaran." : ""}
+            </p>
+          )}
           <button
             type="button"
             onClick={logout}
@@ -170,8 +182,14 @@ export function MemberSheet({
       ) : step === "phone" ? (
         <div>
           <p className="text-sm leading-relaxed text-gray-600">
-            Masukkan nomor WhatsApp yang terdaftar sebagai member untuk kumpulkan XP dan bayar
-            dengan ARK Coin.
+            Masukkan nomor WhatsApp yang terdaftar sebagai member
+            {xpEnabled && arkEnabled
+              ? " untuk kumpulkan XP dan bayar dengan ARK Coin."
+              : xpEnabled
+                ? " untuk kumpulkan XP."
+                : arkEnabled
+                  ? " untuk bayar dengan ARK Coin."
+                  : " untuk menikmati benefit member."}
           </p>
           <label className="mt-4 block">
             <span className="text-xs font-semibold text-gray-700">Nomor WhatsApp</span>
