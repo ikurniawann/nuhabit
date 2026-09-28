@@ -22,6 +22,7 @@ import {
   TelegramApiError,
 } from "@/lib/telegram/client";
 import { loadGatewayConfig } from "@/lib/whatsapp/gateway";
+import { brandName } from "@/lib/branding";
 
 /**
  * Notifikasi pesanan masuk (Settings → Notifikasi WA).
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         await sendTelegramMessage(
           telegram.token,
           body.chat_id,
-          "✅ Disetujui. Chat ini sekarang menerima notifikasi pesanan masuk BCD Coffee. Ketik /stop untuk berhenti."
+          `✅ Disetujui. Chat ini sekarang menerima notifikasi pesanan masuk ${brandName()}. Ketik /stop untuk berhenti.`
         ).catch(() => undefined);
       }
       return NextResponse.json({ success: true, data: await snapshot() });
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await sendStaffAlert(
-      "🧪 Tes notifikasi pesanan masuk BCD Coffee.\nKalau pesan ini sampai, notifikasi pesanan baru akan dikirim ke sini."
+      `🧪 Tes notifikasi pesanan masuk ${brandName()}.\nKalau pesan ini sampai, notifikasi pesanan baru akan dikirim ke sini.`
     );
     return NextResponse.json({ success: true, data: { result } });
   } catch (error) {

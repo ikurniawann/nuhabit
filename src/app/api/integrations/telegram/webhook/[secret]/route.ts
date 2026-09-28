@@ -6,12 +6,13 @@ import {
   setTelegramChatStatus,
 } from "@/lib/notifications/order-alert-server";
 import { sendTelegramMessage } from "@/lib/telegram/client";
+import { brandName } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/integrations/telegram/webhook/[secret] — update dari bot Telegram
- * BCD Coffee (didaftarkan lewat setWebhook dari Settings → Notifikasi WA).
+ * venue (didaftarkan lewat setWebhook dari Settings → Notifikasi WA).
  * Autentikasi: secret di path + header X-Telegram-Bot-Api-Secret-Token.
  *   /start → chat didaftarkan 'pending' (menunggu persetujuan admin)
  *   /stop  → berhenti menerima notifikasi
@@ -69,8 +70,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         settings.token,
         chat.id,
         status === "active"
-          ? "✅ Chat ini sudah menerima notifikasi pesanan masuk BCD Coffee. Ketik /stop untuk berhenti."
-          : "⏳ Permintaan diterima. Admin BCD Coffee perlu menyetujui chat ini dulu (Settings → Notifikasi WA → Notifikasi pesanan masuk). Ketik /stop untuk membatalkan."
+          ? `✅ Chat ini sudah menerima notifikasi pesanan masuk ${brandName()}. Ketik /stop untuk berhenti.`
+          : `⏳ Permintaan diterima. Admin ${brandName()} perlu menyetujui chat ini dulu (Settings → Notifikasi WA → Notifikasi pesanan masuk). Ketik /stop untuk membatalkan.`
       );
     } else if (command === "/stop") {
       await setTelegramChatStatus(chat.id, "stopped");
