@@ -17,8 +17,11 @@ import {
   loadTableByCode,
   loadVenueContext,
   TABLE_ORDER_TAG,
+  tableLabel,
 } from "@/lib/table-order/server";
 import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
+import { fireOrderAlert } from "@/lib/notifications/order-alert-server";
+import { paymentMethodText } from "@/lib/table-order/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -317,6 +320,28 @@ export async function POST(request: NextRequest) {
         paymentMethod: "ark_coin",
       });
     }
+
+    // Notifikasi staf (WA karyawan POS + Telegram) — tidak ditunggu, tidak
+    // pernah menggagalkan pesanan.
+    fireOrderAlert({
+      brandName: venue.brandName,
+      sourceLabel: "Self-order QR",
+      tableLabel: tableLabel(tableId ? table : null, tableCode),
+      orderType: payload.order_type,
+      queueNumber,
+      orderNumber,
+      paymentLabel: paymentMethodText(qrisError ? "cashier" : payload.payment_method),
+      paid: selfPaid,
+      guestName: customerId ? null : payload.guest_name || null,
+      customerNote: payload.customer_note || null,
+      total,
+      items: lines.map((line) => ({
+        name: line.product_name,
+        quantity: line.quantity,
+        variant: line.variant_name,
+        modifiers: line.modifiers.map((modifier) => modifier.name),
+      })),
+    });
 
     return NextResponse.json(
       {

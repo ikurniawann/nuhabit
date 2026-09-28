@@ -59,6 +59,10 @@ export const SETTING_KEYS = {
   // Partner ID & Relay secret dari GoBiz Developer Portal. Relay secret =
   // kunci HMAC header X-Go-Signature webhook (lib/gobiz/signature.ts);
   // GOBIZ_SIGNATURE_ENFORCE "true" = tolak webhook bertanda tangan salah.
+  // Bot Telegram notifikasi pesanan masuk (lib/notifications/order-alert*).
+  TELEGRAM_BOT_TOKEN: "telegram_bot_token",
+  TELEGRAM_WEBHOOK_SECRET: "telegram_webhook_secret",
+  TELEGRAM_BOT_USERNAME: "telegram_bot_username",
   GOBIZ_PARTNER_ID: "gobiz_partner_id",
   GOBIZ_RELAY_SECRET: "gobiz_relay_secret",
   GOBIZ_SIGNATURE_ENFORCE: "gobiz_signature_enforce",

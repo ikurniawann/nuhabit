@@ -76,6 +76,10 @@ vi.mock("@/lib/member-portal/session", () => ({
 vi.mock("@/lib/payments/xendit", () => ({
   loadActiveXenditConfig: () => loadXendit(),
 }));
+const fireOrderAlert = vi.fn();
+vi.mock("@/lib/notifications/order-alert-server", () => ({
+  fireOrderAlert: (...args: unknown[]) => fireOrderAlert(...args),
+}));
 const loadStatic = vi.fn(async () => ({ enabled: false, imageUrl: null as string | null, available: false }));
 vi.mock("@/lib/payments/static-qris", () => ({
   loadStaticQris: () => loadStatic(),
@@ -178,7 +182,8 @@ vi.mock("@/lib/table-order/server", () => ({
   TABLE_ORDER_TAG: "Self-service table order",
   clientIdentifier: () => "test-ip",
   loadProductsByIds: vi.fn(async () => catalog),
-  loadTableByCode: vi.fn(async () => ({ id: "table-1", is_active: true })),
+  loadTableByCode: vi.fn(async () => ({ id: "table-1", is_active: true, name: "WIT. Office Bandung" })),
+  tableLabel: (table: { name?: string } | null, code: string) => table?.name || code,
   loadVenueContext: vi.fn(async () => ({
     companyId: "company-1",
     branchId: "branch-1",
@@ -232,6 +237,7 @@ beforeEach(() => {
   memberSession.mockResolvedValue(null);
   loadXendit.mockClear();
   ensureQris.mockClear();
+  fireOrderAlert.mockClear();
   loadStatic.mockReset();
   loadStatic.mockResolvedValue({ enabled: false, imageUrl: null, available: false });
 });
@@ -484,5 +490,35 @@ describe("POST /api/table-order/orders — Static QRIS", () => {
     expect((json.data as Record<string, unknown>).payment_flow).toBe("static_qris");
     expect(loadXendit).not.toHaveBeenCalled();
     expect(ensureQris).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/table-order/orders — notifikasi staf", () => {
+  it("order sukses memicu notifikasi (meja, antrean, item + add-on, total, status bayar)", async () => {
+    const { status } = await post({
+      table_code: "WIT-OFFICE-BDG",
+      payment_method: "cashier",
+      guest_name: "Budi",
+      customer_note: "less ice",
+      items: [{ product_id: PRODUCT_ID, variant_id: "reg", modifier_ids: [SHOT_ID], quantity: 2 }],
+    });
+    expect(status).toBe(201);
+    expect(fireOrderAlert).toHaveBeenCalledTimes(1);
+    expect(fireOrderAlert.mock.calls[0][0]).toMatchObject({
+      sourceLabel: "Self-order QR",
+      tableLabel: "WIT. Office Bandung",
+      queueNumber: "A-007",
+      orderNumber: "ORD-1",
+      paymentLabel: "Bayar di kasir",
+      paid: false,
+      guestName: "Budi",
+      customerNote: "less ice",
+      items: [{ name: "Iced Latte", quantity: 2, variant: "Regular", modifiers: ["Extra Shot Espresso"] }],
+    });
+  });
+
+  it("order ditolak (validasi) tidak memicu notifikasi", async () => {
+    await post({ table_code: "T-01", payment_method: "cashier", items: [{ product_id: OFF_PRODUCT_ID, quantity: 1 }] });
+    expect(fireOrderAlert).not.toHaveBeenCalled();
   });
 });

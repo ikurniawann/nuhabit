@@ -41,6 +41,8 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/integrations/gobiz/webhook/",
   // Foto produk JPEG utk katalog GoFood — diambil server GoBiz tanpa sesi.
   "/api/public/gofood-image/",
+  // Webhook bot Telegram notifikasi pesanan — secret di path + header.
+  "/api/integrations/telegram/webhook/",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/settings/appearance",

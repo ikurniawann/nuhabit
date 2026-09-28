@@ -1,6 +1,7 @@
 import { requireIamPage } from "@/lib/auth/require-user";
 import { IAM } from "@/lib/iam/prefixes";
 import { WaNotifSettingsPanel } from "@/components/arkiv/wa-notif-settings";
+import { OrderAlertSettingsCard } from "@/features/configuration/order-alerts/order-alert-settings-card";
 
 /**
  * Settings → Notifikasi WA di dashboard.
@@ -23,6 +24,7 @@ export default async function WaNotificationsSettingsPage() {
       <div className="mt-4">
         <WaNotifSettingsPanel tone="light" />
       </div>
+      <OrderAlertSettingsCard />
     </div>
   );
 }
