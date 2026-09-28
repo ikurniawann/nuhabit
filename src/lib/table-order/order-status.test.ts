@@ -4,6 +4,7 @@ import {
   orderProgressStep,
   orderStatusText,
   orderTypeText,
+  paymentFlowFrom,
   paymentMethodText,
   paymentStatusText,
 } from "./order-status";
@@ -39,5 +40,18 @@ describe("teks status", () => {
     expect(paymentMethodText("")).toBe("—");
     expect(orderTypeText("takeaway")).toBe("Bawa pulang");
     expect(orderTypeText(null)).toBe("Makan di tempat");
+  });
+});
+
+describe("paymentFlowFrom & Static QRIS", () => {
+  it("membaca penanda payment= di special_requests; tanpa penanda → payment_method → cashier", () => {
+    expect(paymentFlowFrom("Self-service table order WIT-BDG; payment=static_qris")).toBe("static_qris");
+    expect(paymentFlowFrom("Self-service table order T1; payment=QRIS", "cash")).toBe("qris");
+    expect(paymentFlowFrom(null, "cash")).toBe("cash");
+    expect(paymentFlowFrom(undefined)).toBe("cashier");
+  });
+
+  it("label metode Static QRIS", () => {
+    expect(paymentMethodText("static_qris")).toBe("Static QRIS");
   });
 });

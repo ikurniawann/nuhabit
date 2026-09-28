@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 import { formatOrderElapsed } from "../order-elapsed";
 import { orderToPreviewReceipt } from "../order-to-receipt";
+import { PaymentProofBadge } from "@/features/pos/open-bills/payment-proof-badge";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -339,6 +340,7 @@ export function ViewOrdersDialog({
                               <div className="mt-0.5 text-xs text-gray-500">
                                 since {orderedClock}
                               </div>
+                              <PaymentProofBadge order={order} />
                             </td>
                             <td className="px-3 py-2.5">
                               <span className="inline-flex items-center gap-1.5 text-gray-700">

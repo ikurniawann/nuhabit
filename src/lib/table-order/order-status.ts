@@ -1,6 +1,7 @@
 /** Teks & progres status pesanan utk layar pelacakan self-order (bahasa pemesan). */
 
-export type TableOrderPaymentMethod = "qris" | "ark_coin" | "cashier";
+/** static_qris = gambar QRIS statis venue + bukti bayar diverifikasi kasir. */
+export type TableOrderPaymentMethod = "qris" | "static_qris" | "ark_coin" | "cashier";
 export type TableOrderType = "dine_in" | "takeaway";
 
 export const ORDER_PROGRESS_STEPS = [
@@ -62,6 +63,8 @@ export function paymentMethodText(method: string | null | undefined) {
   switch (String(method || "").toLowerCase()) {
     case "qris":
       return "QRIS";
+    case "static_qris":
+      return "Static QRIS";
     case "ark_coin":
       return "ARK Coin";
     case "cashier":
@@ -79,4 +82,13 @@ export function orderTypeText(type: string | null | undefined) {
 export function isOrderActive(status: string | null | undefined) {
   const step = orderProgressStep(status);
   return step >= 0 && step < 4;
+}
+
+/**
+ * Alur bayar yang dipilih pemesan, dari penanda `payment=<flow>` di
+ * special_requests order self-order (kolom payment_method baru terisi saat lunas).
+ */
+export function paymentFlowFrom(specialRequests: string | null | undefined, paymentMethod?: string | null) {
+  const match = /payment=([a-z_]+)/i.exec(specialRequests || "");
+  return match ? match[1].toLowerCase() : paymentMethod || "cashier";
 }

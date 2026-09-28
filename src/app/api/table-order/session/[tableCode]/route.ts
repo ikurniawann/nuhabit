@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMemberSession } from "@/lib/member-portal/session";
 import { loadTableByCode, loadVenueContext, tableLabel } from "@/lib/table-order/server";
 import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
+import { loadStaticQris } from "@/lib/payments/static-qris";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export async function GET(
   }
 
   try {
-    const [table, venue, member, loyalty] = await Promise.all([
+    const [table, venue, member, loyalty, staticQris] = await Promise.all([
       loadTableByCode(code).catch((error) => {
         console.warn("Table order table lookup warning:", error instanceof Error ? error.message : error);
         return null;
@@ -34,6 +35,7 @@ export async function GET(
       loadVenueContext(),
       getMemberSession().catch(() => null),
       getLoyaltyFeatures(),
+      loadStaticQris().catch(() => null),
     ]);
 
     const inactiveTable = Boolean(table && table.is_active === false);
@@ -54,6 +56,8 @@ export async function GET(
           charges: venue.charges,
         },
         qris_available: venue.qrisAvailable,
+        static_qris_available: staticQris?.available ?? false,
+        static_qris_image_url: staticQris?.available ? staticQris.imageUrl : null,
         ark_rate: venue.arkRate,
         member_logged_in: Boolean(member),
         // Saklar fitur loyalty — UI menyembunyikan ARK Coin & info XP bila dimatikan.

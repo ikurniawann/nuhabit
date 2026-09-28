@@ -1,6 +1,6 @@
 "use client";
 
-import { Coins, Loader2, Minus, Plus, QrCode, ShoppingBag, WalletCards } from "lucide-react";
+import { Coins, Loader2, Minus, Plus, QrCode, ScanLine, ShoppingBag, WalletCards } from "lucide-react";
 import { idrToArkDisplay } from "@/lib/pos/loyalty-settings";
 import { formatRupiah } from "@/lib/table-order/menu";
 import type { TableOrderPaymentMethod, TableOrderType } from "@/lib/table-order/order-status";
@@ -55,12 +55,14 @@ export function CartSheet({
   onSubmit: () => void;
 }) {
   const qrisAvailable = session?.qris_available ?? false;
+  const staticQrisAvailable = Boolean(session?.static_qris_available && session.static_qris_image_url);
   const arkEnough = member ? member.ark_coin_balance >= summary.total : false;
   const canSubmit =
     cart.length > 0 &&
     !submitting &&
     (paymentMethod !== "ark_coin" || (Boolean(member) && arkEnough)) &&
-    (paymentMethod !== "qris" || qrisAvailable);
+    (paymentMethod !== "qris" || qrisAvailable) &&
+    (paymentMethod !== "static_qris" || staticQrisAvailable);
 
   return (
     <BottomSheet
@@ -76,7 +78,7 @@ export function CartSheet({
         >
           <span className="flex items-center gap-2">
             {submitting && <Loader2 className="size-4 animate-spin" />}
-            {paymentMethod === "qris"
+            {paymentMethod === "qris" || paymentMethod === "static_qris"
               ? "Pesan & bayar QRIS"
               : paymentMethod === "ark_coin"
                 ? "Pesan & bayar ARK Coin"
@@ -207,6 +209,17 @@ export function CartSheet({
           <div>
             <div className="text-sm font-bold text-gray-900">Metode pembayaran</div>
             <div className="mt-2 space-y-2">
+              {staticQrisAvailable && (
+                <PaymentOption
+                  active={paymentMethod === "static_qris"}
+                  icon={ScanLine}
+                  title="Static QRIS"
+                  description="Scan QRIS venue, bayar sesuai total, lalu unggah bukti bayar."
+                  onClick={() => onPaymentMethod("static_qris")}
+                />
+              )}
+              {/* QRIS dinamis (Xendit) disembunyikan bila belum siap tapi Static QRIS ada. */}
+              {(qrisAvailable || !staticQrisAvailable) && (
               <PaymentOption
                 active={paymentMethod === "qris"}
                 disabled={!qrisAvailable}
@@ -219,6 +232,7 @@ export function CartSheet({
                 }
                 onClick={() => onPaymentMethod("qris")}
               />
+              )}
               {arkEnabled && (
               <PaymentOption
                 active={paymentMethod === "ark_coin"}

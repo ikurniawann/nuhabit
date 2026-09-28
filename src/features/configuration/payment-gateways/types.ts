@@ -14,3 +14,9 @@ export type UpdatePaymentGatewayPayload = {
   webhook_secret?: string | null;
   callback_url?: string | null;
 };
+
+export type StaticQrisConfig = {
+  enabled: boolean;
+  imageUrl: string | null;
+  available: boolean;
+};

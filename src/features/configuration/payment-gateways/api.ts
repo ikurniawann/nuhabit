@@ -1,4 +1,4 @@
-import type { PaymentGatewayPublic, UpdatePaymentGatewayPayload } from "./types";
+import type { PaymentGatewayPublic, StaticQrisConfig, UpdatePaymentGatewayPayload } from "./types";
 
 async function parseJson<T>(res: Response): Promise<T> {
   const json = (await res.json()) as T & { success?: boolean; error?: string; message?: string };
@@ -32,4 +32,31 @@ export async function updatePaymentGateway(
   });
   const json = await parseJson<{ data: PaymentGatewayPublic }>(res);
   return json.data;
+}
+
+export async function getStaticQris(): Promise<StaticQrisConfig> {
+  const res = await fetch("/api/settings/static-qris", { credentials: "include", cache: "no-store" });
+  return (await parseJson<{ data: StaticQrisConfig }>(res)).data;
+}
+
+export async function uploadStaticQris(file: File): Promise<StaticQrisConfig> {
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch("/api/settings/static-qris", { method: "POST", credentials: "include", body });
+  return (await parseJson<{ data: StaticQrisConfig }>(res)).data;
+}
+
+export async function setStaticQrisEnabled(enabled: boolean): Promise<StaticQrisConfig> {
+  const res = await fetch("/api/settings/static-qris", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+  return (await parseJson<{ data: StaticQrisConfig }>(res)).data;
+}
+
+export async function removeStaticQris(): Promise<StaticQrisConfig> {
+  const res = await fetch("/api/settings/static-qris", { method: "DELETE", credentials: "include" });
+  return (await parseJson<{ data: StaticQrisConfig }>(res)).data;
 }

@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { createPgClient } from "@/lib/pg/create-client";
 import { loadActiveXenditConfig } from "@/lib/payments/xendit";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { paymentFlowFrom } from "@/lib/table-order/order-status";
 import { checkAndSettleOrderQris, ensureOrderQris } from "@/lib/table-order/qris";
 import { clientIdentifier, isUuid } from "@/lib/table-order/server";
 
@@ -26,6 +27,7 @@ type OrderRow = {
   ordered_at: string | null;
   xendit_qr_id: string | null;
   xendit_external_id: string | null;
+  payment_proof_uploaded_at: string | null;
 };
 
 type ItemRow = {
@@ -50,7 +52,8 @@ async function loadOrder(orderId: string) {
             service_charge_amount::float AS service_charge_amount,
             COALESCE(other_charges_amount, 0)::float AS other_charges_amount,
             total_amount::float AS total_amount, charges_breakdown,
-            special_requests, ordered_at, xendit_qr_id, xendit_external_id
+            special_requests, ordered_at, xendit_qr_id, xendit_external_id,
+            payment_proof_uploaded_at
      FROM pos.pos_orders WHERE id = $1 LIMIT 1`,
     [orderId]
   );
@@ -63,9 +66,8 @@ function variantName(raw: unknown) {
   return first && typeof first.name === "string" ? first.name : null;
 }
 
-function paymentFlowFrom(order: OrderRow) {
-  const match = /payment=([a-z_]+)/i.exec(order.special_requests || "");
-  return match ? match[1].toLowerCase() : order.payment_method || "cashier";
+function paymentFlowOf(order: OrderRow) {
+  return paymentFlowFrom(order.special_requests, order.payment_method);
 }
 
 /**
@@ -103,7 +105,7 @@ export async function GET(
     let qrisCheckError: string | null = null;
 
     const isUnpaidQris =
-      order.payment_status === "unpaid" && paymentFlowFrom(order) === "qris" && Boolean(order.xendit_qr_id);
+      order.payment_status === "unpaid" && paymentFlowOf(order) === "qris" && Boolean(order.xendit_qr_id);
 
     if (isUnpaidQris && order.xendit_qr_id) {
       const db = createPgClient();
@@ -145,7 +147,7 @@ export async function GET(
         status: order.status,
         payment_status: order.payment_status,
         payment_method: order.payment_method,
-        payment_flow: paymentFlowFrom(order),
+        payment_flow: paymentFlowOf(order),
         order_type: order.order_type,
         subtotal: order.subtotal,
         tax_amount: order.tax_amount,
@@ -168,6 +170,7 @@ export async function GET(
           station: item.station,
           kitchen_status: item.kitchen_status,
         })),
+        payment_proof_uploaded_at: order.payment_proof_uploaded_at,
         qris,
         qris_status: qrisStatus,
         qris_check_error: qrisCheckError,

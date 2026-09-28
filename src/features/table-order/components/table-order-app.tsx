@@ -119,8 +119,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
 
   // ARK Coin dimatikan setelah pelanggan memilihnya → jatuh ke "Bayar di kasir".
   // Nilai turunan (bukan setState di effect) supaya tak ada render berantai.
+  // Sama utk Static QRIS yang dinonaktifkan admin di tengah sesi.
+  const staticQrisAvailable = Boolean(session?.static_qris_available && session.static_qris_image_url);
+  const anyQris = Boolean(session?.qris_available) || staticQrisAvailable;
   const effectivePaymentMethod: TableOrderPaymentMethod =
-    !arkEnabled && paymentMethod === "ark_coin" ? "cashier" : paymentMethod;
+    (!arkEnabled && paymentMethod === "ark_coin") || (!staticQrisAvailable && paymentMethod === "static_qris")
+      ? "cashier"
+      : paymentMethod;
 
   const loadCatalog = useCallback(async () => {
     const next = await fetchCatalog();
@@ -303,6 +308,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
             brandName={brandName}
             onOrderUpdate={setActiveOrder}
             onNewOrder={startNewOrder}
+            staticQrisImageUrl={session?.static_qris_image_url ?? null}
           />
         </div>
       </main>
@@ -375,7 +381,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   </span>
                 </div>
                 <div className="mt-1 text-xs font-semibold text-gray-700">
-                  {session?.qris_available ? "Bayar QRIS / di kasir" : "Bayar di kasir"} · Est. 10–20 mnt
+                  {anyQris ? "Bayar QRIS / di kasir" : "Bayar di kasir"} · Est. 10–20 mnt
                 </div>
               </div>
               <ChevronRight className="mt-1 size-5 shrink-0 text-gray-400" />
@@ -442,7 +448,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         {/* Kartu info horizontal */}
         <div className="mt-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
           {xpEnabled && <InfoCard icon={Sparkles} title="Kumpulkan XP" subtitle="Tiap pesanan member" />}
-          {session?.qris_available && <InfoCard icon={QrCode} title="Bayar QRIS" subtitle="Langsung dari meja" />}
+          {anyQris && <InfoCard icon={QrCode} title="Bayar QRIS" subtitle="Langsung dari meja" />}
           {arkEnabled && <InfoCard icon={Coins} title="ARK Coin" subtitle="Saldo member, langsung lunas" />}
           <InfoCard icon={UtensilsCrossed} title="Ke dapur otomatis" subtitle="Pesanan masuk KDS" />
         </div>

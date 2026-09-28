@@ -4,6 +4,7 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { awardCrmXpForPosOrder, syncPosCustomerOrderStats } from "@/lib/crm/loyalty-engine";
 import { checkProductPrivileges } from "@/lib/crm/product-privilege";
 import { getMemberSession } from "@/lib/member-portal/session";
+import { loadStaticQris } from "@/lib/payments/static-qris";
 import { loadActiveXenditConfig, type XenditGatewayConfig } from "@/lib/payments/xendit";
 import { calculateBillCharges } from "@/lib/pos/billing-settings";
 import { allocateQueueNumber } from "@/lib/pos/queue-number";
@@ -49,7 +50,7 @@ const orderItemSchema = z.object({
 const createOrderSchema = z.object({
   table_code: z.string().trim().min(1).max(80),
   order_type: z.enum(["dine_in", "takeaway"]).default("dine_in"),
-  payment_method: z.enum(["qris", "ark_coin", "cashier"]),
+  payment_method: z.enum(["qris", "static_qris", "ark_coin", "cashier"]),
   items: z.array(orderItemSchema).min(1).max(50),
   customer_note: z.string().trim().max(300).optional(),
   guest_name: z.string().trim().max(80).optional(),
@@ -154,6 +155,11 @@ export async function POST(request: NextRequest) {
         }
         throw error;
       }
+    }
+
+    // Static QRIS: order tetap unpaid; pemesan unggah bukti, kasir yang melunasi.
+    if (payload.payment_method === "static_qris" && !(await loadStaticQris()).available) {
+      return fail("Static QRIS belum tersedia di venue ini — pilih Bayar di Kasir", 503);
     }
 
     const table = await loadTableByCode(payload.table_code).catch(() => null);

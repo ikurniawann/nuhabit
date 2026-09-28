@@ -14,6 +14,9 @@ export type TableSession = {
   brand_name: string;
   billing: { profile: string; charges: BillingCharge[] };
   qris_available: boolean;
+  /** Static QRIS (Settings → Payment Gateways): gambar QR statis + unggah bukti bayar. */
+  static_qris_available?: boolean;
+  static_qris_image_url?: string | null;
   ark_rate: number;
   member_logged_in: boolean;
   /** Saklar CRM → Pengaturan (lib/crm/loyalty-features). Absen = aktif (server lama). */
@@ -83,6 +86,8 @@ export type OrderData = {
   qris_status?: string | null;
   qris_check_error?: string | null;
   table_code?: string;
+  /** Static QRIS: kapan pemesan terakhir mengunggah bukti bayar (null = belum). */
+  payment_proof_uploaded_at?: string | null;
 };
 
 export type CreateOrderInput = {
@@ -148,6 +153,33 @@ export async function fetchOrder(orderId: string, options: { qr?: boolean } = {}
   const json = await request<{ data: OrderData }>(
     `/api/table-order/orders/${encodeURIComponent(orderId)}${options.qr ? "?qr=1" : ""}`
   );
+  return json.data;
+}
+
+/** URL gambar bukti bayar milik order ini (akses = id order acak, sama dgn status). */
+export function paymentProofUrl(orderId: string, version?: string | null) {
+  const base = `/api/table-order/orders/${encodeURIComponent(orderId)}/payment-proof`;
+  return version ? `${base}?v=${encodeURIComponent(version)}` : base;
+}
+
+export async function uploadPaymentProof(orderId: string, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  // Tanpa helper request(): FormData butuh Content-Type multipart dari browser.
+  const response = await fetch(paymentProofUrl(orderId), {
+    method: "POST",
+    body,
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  const json = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    error?: string;
+    data?: { payment_proof_uploaded_at: string };
+  };
+  if (!response.ok || json.success === false || !json.data) {
+    throw new ApiRequestError(json.error || `Upload gagal (${response.status})`, response.status);
+  }
   return json.data;
 }
 

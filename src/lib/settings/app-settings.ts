@@ -57,6 +57,10 @@ export const SETTING_KEYS = {
   GOBIZ_OAUTH_URL: "gobiz_oauth_url",
   GOBIZ_API_BASE_URL: "gobiz_api_base_url",
   QRIS_NMID: "qris_nmid",
+  // Static QRIS self-order — gambar QRIS statis venue + saklar aktif
+  // (lib/payments/static-qris.ts). Diatur di Settings → Payment Gateways.
+  STATIC_QRIS_ENABLED: "static_qris_enabled",
+  STATIC_QRIS_IMAGE_URL: "static_qris_image_url",
   // Penerima laporan tutup kasir via WA — JSON array nomor `628xx`, boleh
   // lebih dari satu. Terpisah dari recipients notifikasi owner (EPIC-020)
   // karena audiensnya beda: laporan shift sering ke supervisor/finance,

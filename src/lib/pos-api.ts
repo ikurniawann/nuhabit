@@ -444,6 +444,8 @@ export interface Order {
   completed_at?: string;
   notes?: string;
   special_requests?: string;
+  /** Static QRIS self-order: kapan pemesan mengunggah bukti bayar. */
+  payment_proof_uploaded_at?: string | null;
   items?: any[];
   splits?: any[];
   checkout_id?: string | null;

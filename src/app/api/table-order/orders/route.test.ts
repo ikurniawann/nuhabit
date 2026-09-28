@@ -76,6 +76,10 @@ vi.mock("@/lib/member-portal/session", () => ({
 vi.mock("@/lib/payments/xendit", () => ({
   loadActiveXenditConfig: () => loadXendit(),
 }));
+const loadStatic = vi.fn(async () => ({ enabled: false, imageUrl: null as string | null, available: false }));
+vi.mock("@/lib/payments/static-qris", () => ({
+  loadStaticQris: () => loadStatic(),
+}));
 vi.mock("@/lib/table-order/qris", () => ({
   ensureOrderQris: (...args: unknown[]) => ensureQris(...(args as [])),
 }));
@@ -228,6 +232,8 @@ beforeEach(() => {
   memberSession.mockResolvedValue(null);
   loadXendit.mockClear();
   ensureQris.mockClear();
+  loadStatic.mockReset();
+  loadStatic.mockResolvedValue({ enabled: false, imageUrl: null, available: false });
 });
 
 describe("POST /api/table-order/orders — harga dari server", () => {
@@ -446,5 +452,37 @@ describe("POST /api/table-order/orders — QRIS", () => {
     expect(data.payment_flow).toBe("cashier");
     expect(data.qris).toBeNull();
     expect(data.qris_error).toBe("Xendit timeout");
+  });
+});
+
+describe("POST /api/table-order/orders — Static QRIS", () => {
+  const body = {
+    table_code: "WIT-OFFICE-BDG",
+    payment_method: "static_qris",
+    items: [{ product_id: PRODUCT_ID, variant_id: "reg", quantity: 1 }],
+  };
+
+  it("belum diaktifkan/tanpa gambar → 503 SEBELUM order dibuat", async () => {
+    const { status, json } = await post(body);
+    expect(status).toBe(503);
+    expect(String(json.error)).toMatch(/Static QRIS belum tersedia/);
+    expect(fake.calls.some((c) => c.action === "insert")).toBe(false);
+  });
+
+  it("aktif → order unpaid/pending ditandai payment=static_qris, tanpa QR Xendit", async () => {
+    loadStatic.mockResolvedValue({ enabled: true, imageUrl: "/api/files/payment-qris/q.png", available: true });
+    const { status, json } = await post(body);
+    expect(status).toBe(201);
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<
+      string,
+      unknown
+    >;
+    expect(order.payment_status).toBe("unpaid");
+    expect(order.status).toBe("pending");
+    expect(order.payment_method).toBeNull();
+    expect(order.special_requests).toBe("Self-service table order WIT-OFFICE-BDG; payment=static_qris");
+    expect((json.data as Record<string, unknown>).payment_flow).toBe("static_qris");
+    expect(loadXendit).not.toHaveBeenCalled();
+    expect(ensureQris).not.toHaveBeenCalled();
   });
 });

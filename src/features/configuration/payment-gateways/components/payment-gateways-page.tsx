@@ -10,6 +10,7 @@ import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purch
 import { useUpdatePaymentGateway } from "../mutations";
 import { usePaymentGateways } from "../queries";
 import type { PaymentGatewayEnvironment, PaymentGatewayPublic } from "../types";
+import { StaticQrisCard } from "./static-qris-card";
 
 type Draft = {
   is_active: boolean;
@@ -137,6 +138,8 @@ export function PaymentGatewaysPage() {
           )}
         </section>
       </div>
+
+      <StaticQrisCard />
     </div>
   );
 }

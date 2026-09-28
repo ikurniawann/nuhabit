@@ -14,6 +14,7 @@ import type { PosTable } from "@/lib/pos-api";
 
 import { buildCashierHandoffUrl } from "../nav";
 import { getActiveSplitSummary } from "@/features/pos/open-bills/split-summary";
+import { PaymentProofBadge } from "@/features/pos/open-bills/payment-proof-badge";
 import {
   cashierHandoffFromBill,
   listTableBoardBills,
@@ -267,6 +268,7 @@ export function RestaurantBillsRail({
                       Split · {splitSummary.paid}/{splitSummary.total}
                     </Badge>
                   ) : null}
+                  <PaymentProofBadge order={order} />
                 </div>
                 <div className="shrink-0 text-right text-sm font-bold text-gray-950">
                   {formatCurrency(bill.total_amount)}
