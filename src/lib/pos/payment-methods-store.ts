@@ -1,4 +1,6 @@
 import { query, queryOne } from "@/lib/db";
+import { isPaymentMethodEnabled } from "@/lib/crm/loyalty-features";
+import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 import {
   DEFAULT_POS_PAYMENT_METHODS,
   PROTECTED_PAYMENT_METHOD_CODES,
@@ -53,9 +55,14 @@ export async function listPosPaymentMethods(opts?: {
        ORDER BY sort_order ASC, name ASC`,
       [opts?.activeOnly === true]
     );
-    return rows
+    const methods = rows
       .map(mapRow)
       .filter((row): row is PosPaymentMethod => row !== null);
+    if (!opts?.activeOnly) return methods;
+    // Daftar aktif = yang ditawarkan kasir. ARK Coin ikut disembunyikan bila
+    // fiturnya dimatikan di CRM → Pengaturan; daftar admin tetap lengkap.
+    const features = await getLoyaltyFeatures();
+    return methods.filter((method) => isPaymentMethodEnabled(method.code, features));
   } catch (err) {
     const code = (err as { code?: string }).code;
     if (code === "42P01") {

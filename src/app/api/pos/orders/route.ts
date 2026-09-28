@@ -72,6 +72,7 @@ import {
 import { evaluateActiveOffersForPosCart } from '@/lib/promo/offer-pos';
 import { parseReportDateRange } from '@/lib/pos/report-stall-filter';
 import { validateKolComp } from '@/lib/pos/comp-orders-server';
+import { rejectIfArkCoinDisabled } from '@/lib/crm/loyalty-features-server';
 
 const ORDER_LIST_STATUSES = new Set([
   'pending',
@@ -440,6 +441,8 @@ export async function POST(request: NextRequest) {
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ success: false, error: 'Items and total amount are required' }, { status: 400 });
     }
+    const arkBlocked = await rejectIfArkCoinDisabled(payment_method === 'ark_coin' || Number(ark_coins_used) > 0);
+    if (arkBlocked) return arkBlocked;
 
     const productIds = items.map((item) => String(item.product_id || ''));
     const warehouseByProduct = await loadPosProductWarehouseIds(productIds);

@@ -12,6 +12,8 @@ import { AppSidebar } from "@/components/shared";
 import { IamAccessProvider } from "@/components/iam/iam-access-provider";
 import { LayoutLoadError } from "@/components/layout-load-error";
 import { getSafeErrorMessage, isNextControlFlowError } from "@/lib/next-control-flow";
+import { isPathEnabled } from "@/lib/crm/loyalty-features";
+import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 
 export default async function PosDashboardLayout({
   children,
@@ -47,6 +49,11 @@ export default async function PosDashboardLayout({
     (isFullAccessRole(user.role) || canAccessPath(user.role, pathname || "/dashboard/pos"));
   if (!hasPosMenu && !fallbackAllowed) {
     redirect("/dashboard");
+  }
+  // Halaman fitur loyalty yang dinonaktifkan (ARK Coin / XP) di CRM → Pengaturan.
+  // Layout ini tidak menjaga path lewat menu, jadi dicek eksplisit.
+  if (pathname && !isPathEnabled(pathname, await getLoyaltyFeatures())) {
+    redirect("/dashboard/pos");
   }
 
   return (

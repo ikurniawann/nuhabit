@@ -17,6 +17,7 @@ import {
   loadVenueContext,
   TABLE_ORDER_TAG,
 } from "@/lib/table-order/server";
+import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,8 @@ export async function POST(request: NextRequest) {
     }
     const payload = parsed.data;
     const db = createPgClient();
+    const arkBlocked = await rejectIfArkCoinDisabled(payload.payment_method === "ark_coin");
+    if (arkBlocked) return arkBlocked;
 
     // Identitas member dari sesi portal (bukan dari body).
     const member = await getMemberSession().catch(() => null);

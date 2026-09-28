@@ -1,5 +1,7 @@
 import { cache } from "react";
 import type { UserRole } from "@/types";
+import { filterMenusByLoyaltyFeatures } from "@/lib/crm/loyalty-features";
+import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 import { isEssOnlyRole } from "./access";
 import { iamDbQuery, isIamDbConfigured } from "./pg-client";
 import type { MenuRow, NavIconName, NavItem } from "./types";
@@ -246,13 +248,21 @@ export const getUserMenus = cache(async (userId: string, role: UserRole): Promis
     }
 
     const allMenuIds = await includeAncestorMenus(permittedIds);
-    const menus = await fetchMenusByIds([...allMenuIds]);
+    const [menus, loyaltyFeatures] = await Promise.all([
+      fetchMenusByIds([...allMenuIds]),
+      getLoyaltyFeatures(),
+    ]);
 
-    if (menus.length === 0) {
+    // Menu fitur loyalty yang dinonaktifkan (ARK Coin / XP) disaring di sini,
+    // jadi hilang dari sidebar, desktop, dan navigasi POS sekaligus — dan guard
+    // path layout (collectNavHrefs) ikut menutup akses langsung ke halamannya.
+    const visibleMenus = filterMenusByLoyaltyFeatures(menus, loyaltyFeatures);
+
+    if (visibleMenus.length === 0) {
       return [];
     }
 
-    return buildMenuTree(menus);
+    return buildMenuTree(visibleMenus);
   } catch (error) {
     if (isIamUnavailable(error)) {
       return [];

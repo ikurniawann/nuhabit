@@ -72,6 +72,7 @@ import { formatPaymentMethodLabel } from '@/features/pos/reports/utils/transacti
 import { isFocPaymentMethod } from '@/lib/pos/payment-methods';
 import { MerchSkuPickerDialog } from '@/components/pos/MerchSkuPickerDialog';
 import { useCashierCheckout, useCashierOrder, useCashierTables, useCustomerFavoriteProducts } from '../queries';
+import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
 import { usePayOpenOrder } from '../mutations';
 import { usePosCart } from '@/hooks/use-pos-cart';
 import { usePosProducts } from '@/hooks/use-pos-products';
@@ -249,6 +250,8 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   });
   const { customers, findCustomer, refetch: refetchCustomers } = usePosCustomers();
   const cart = usePosCart();
+  // Saklar fitur CRM → Pengaturan: sembunyikan ARK Coin / XP bila dimatikan.
+  const { arkCoin: arkEnabled, xp: xpEnabled } = useLoyaltyFeatures();
   const { checkout, submitting } = usePosCheckout();
   const payOpenOrderMutation = usePayOpenOrder();
   const { data: tables = [], isLoading: loadingTables, error: tablesQueryError } = useCashierTables();
@@ -1272,7 +1275,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
       return;
     }
 
-    if (action === 'topup' && found) {
+    if (action === 'topup' && found && arkEnabled) {
       setShowNFC(false);
       setTopupPrompt({
         uid: (found.nfc_uid || trimmed).toUpperCase(),
@@ -2620,8 +2623,12 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                 <span className="text-gray-300">•</span>
                 <span className="font-medium text-green-600">{selectedCustomer.discount}% off</span>
                 <HelpHint helpId="pos.discount" role="default" />
-                <span className="text-gray-300">•</span>
-                <span className="text-amber-600 font-medium">{formatArk(selectedCustomer.ark_coin_balance)}</span>
+                {arkEnabled && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-amber-600 font-medium">{formatArk(selectedCustomer.ark_coin_balance)}</span>
+                  </>
+                )}
               </div>
             </div>
             <button onClick={() => cart.setCustomer(null)} className="p-1 text-gray-400 hover:text-red-600 transition-colors"><X className="w-4 h-4" /></button>
@@ -2652,7 +2659,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                     <div className="text-xs font-medium text-gray-900 truncate">{product.name}</div>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-xs text-primary font-semibold">{formatCurrency(product.base_price)}</span>
-                      <span className="text-[10px] text-amber-600 font-medium">{formatArk(product.base_price)}</span>
+                      {arkEnabled && <span className="text-[10px] text-amber-600 font-medium">{formatArk(product.base_price)}</span>}
                     </div>
                   </div>
                 </button>
@@ -2712,7 +2719,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
               // member belum dipilih / lifetime XP belum memenuhi min_xp.
               const minXp = Number((product as { min_xp?: number | string | null }).min_xp) || 0;
               const customerXp = Number((selectedCustomer as { total_xp?: number | string } | null)?.total_xp) || 0;
-              const isLocked = minXp > 0 && (!selectedCustomer || customerXp < minXp);
+              const isLocked = xpEnabled && minXp > 0 && (!selectedCustomer || customerXp < minXp);
               return (
                 <button
                   key={product.id}
@@ -2734,7 +2741,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                       : 'border-gray-200/70 bg-white hover:border-primary/50 hover:shadow-sm'
                   }`}
                 >
-                  {minXp > 0 && (
+                  {xpEnabled && minXp > 0 && (
                     <span
                       className={`absolute right-1 top-1 z-10 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                         isLocked ? 'bg-gray-800/80 text-white' : 'bg-purple-600 text-white'
@@ -2756,13 +2763,19 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                       </div>
                     ) : null}
                     <div className={`font-bold text-primary ${isTabletMode ? 'text-xs @min-[40rem]:text-sm' : 'text-[11px]'}`}>{formatCurrency(product.base_price)}</div>
+                    {(arkEnabled || xpEnabled) && (
                     <div className="flex items-center justify-between gap-1">
-                      <span className={`font-medium text-amber-600 ${isTabletMode ? 'text-[11px]' : 'text-[9px]'}`}>{formatArk(product.base_price)}</span>
+                      {arkEnabled ? (
+                        <span className={`font-medium text-amber-600 ${isTabletMode ? 'text-[11px]' : 'text-[9px]'}`}>{formatArk(product.base_price)}</span>
+                      ) : <span />}
+                      {xpEnabled && (
                       <span className={`inline-flex items-center gap-0.5 font-semibold text-purple-600 ${isTabletMode ? 'text-[11px]' : 'text-[9px]'}`}>
                         <Sparkles className={isTabletMode ? 'h-3 w-3' : 'h-2.5 w-2.5'} />
                         +{xp}
                       </span>
+                      )}
                     </div>
+                    )}
                   </div>
                 </button>
               );

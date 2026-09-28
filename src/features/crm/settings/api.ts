@@ -18,6 +18,8 @@ export async function getCrmSettings(): Promise<CrmSettings> {
   );
   const d = json.data;
   return {
+    ark_coin_enabled: d.ark_coin_enabled !== false,
+    xp_enabled: d.xp_enabled !== false,
     topup_bonus_percent: Number(d.topup_bonus_percent ?? 0),
     profile_completion_free_xp: Number(d.profile_completion_free_xp ?? 0),
     cs_sla_response_minutes: Number(d.cs_sla_response_minutes ?? 15),

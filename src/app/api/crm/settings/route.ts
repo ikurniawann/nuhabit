@@ -12,9 +12,12 @@ import {
 /**
  * Konfigurasi CRM yang boleh diubah Super Admin dari UI.
  * - Loyalty (EPIC-011 Fase B): bonus topup, Free XP.
+ * - Saklar fitur (2026-09-28): ARK Coin & XP — lihat lib/crm/loyalty-features.
  * - Customer service (EPIC-012 Fase D): SLA, jam operasional, auto-reply, CSAT.
  */
 const EDITABLE_KEYS = [
+  "ark_coin_enabled",
+  "xp_enabled",
   "topup_bonus_percent",
   "profile_completion_free_xp",
   "cs_sla_response_minutes",
@@ -29,6 +32,8 @@ const EDITABLE_KEYS = [
 
 const updateSchema = z
   .object({
+    ark_coin_enabled: z.boolean().optional(),
+    xp_enabled: z.boolean().optional(),
     topup_bonus_percent: z.number().min(0).max(100).optional(),
     profile_completion_free_xp: z.number().int().min(0).optional(),
     cs_sla_response_minutes: z.number().int().min(1).max(1440).optional(),

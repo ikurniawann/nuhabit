@@ -20,6 +20,8 @@ import { IamAccessProvider } from "@/components/iam/iam-access-provider";
 import { AppSidebar } from "@/components/shared";
 import { LayoutLoadError } from "@/components/layout-load-error";
 import { getSafeErrorMessage, isNextControlFlowError } from "@/lib/next-control-flow";
+import { isPathEnabled } from "@/lib/crm/loyalty-features";
+import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 
 export default async function DashboardGroupLayout({
   children,
@@ -55,7 +57,11 @@ export default async function DashboardGroupLayout({
     isEssPath(pathname) ||
     menuAllowed ||
     fallbackAllowed;
-  if (!allowed) {
+  // Halaman fitur loyalty nonaktif (ARK Coin / XP). Guard menu di atas cocok
+  // per prefix — menu induk seperti /dashboard/crm akan meloloskan
+  // /dashboard/crm/rewards walau menu Rewards sudah disembunyikan.
+  const loyaltyBlocked = Boolean(pathname) && !isPathEnabled(pathname, await getLoyaltyFeatures());
+  if (!allowed || loyaltyBlocked) {
     if (essOnly) redirect(ESS_HOME_PATH);
     const firstMenu = collectNavHrefs(allNavItems).find(
       (href) => href.startsWith("/dashboard") && href !== ESS_HOME_PATH

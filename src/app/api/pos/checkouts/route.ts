@@ -18,6 +18,7 @@ import {
   loadCentralCashierGate,
   loadPosProductWarehouseIds,
 } from "@/lib/pos/pos-sell-stall-server";
+import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -85,6 +86,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = (await request.json()) as CheckoutBody;
+    const arkBlocked = await rejectIfArkCoinDisabled(
+      body.payment_method === "ark_coin" || Number(body.ark_coins_used) > 0
+    );
+    if (arkBlocked) return arkBlocked;
     const items = Array.isArray(body.items) ? body.items : [];
     if (items.length === 0) {
       return NextResponse.json(

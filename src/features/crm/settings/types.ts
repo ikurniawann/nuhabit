@@ -1,4 +1,7 @@
 export type CrmSettings = {
+  /** Saklar fitur (lib/crm/loyalty-features). Default aktif. */
+  ark_coin_enabled: boolean;
+  xp_enabled: boolean;
   topup_bonus_percent: number;
   profile_completion_free_xp: number;
   /** Customer service (EPIC-012 Fase D). */

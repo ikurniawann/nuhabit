@@ -15,6 +15,7 @@ import {
   createXenditDynamicQr,
   loadActiveXenditConfig,
 } from "@/lib/payments/xendit";
+import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -115,6 +116,9 @@ export async function POST(request: NextRequest) {
   try {
     const db = createPgClient();
     const body = await request.json();
+    // Topup = mengisi saldo ARK Coin; seluruh endpoint tertutup bila fitur mati.
+    const arkBlocked = await rejectIfArkCoinDisabled(true);
+    if (arkBlocked) return arkBlocked;
     const {
       customer_id,
       amount,

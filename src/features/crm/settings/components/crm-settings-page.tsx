@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ import {
   updateProductXp,
 } from "../api";
 import { CsSettingsSection } from "./cs-settings-section";
+import { LoyaltyFeaturesSection } from "./loyalty-features-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,6 +116,7 @@ const emptyRuleForm: RuleForm = {
 
 export function CrmSettingsPage() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const settingsQuery = useQuery({ queryKey: ["crm", "settings"], queryFn: getCrmSettings });
   const tiersQuery = useQuery({ queryKey: ["crm", "settings", "tiers"], queryFn: listCrmTiers });
@@ -140,6 +143,8 @@ export function CrmSettingsPage() {
     onSuccess: () => {
       toast.success("Konfigurasi loyalty berhasil disimpan");
       queryClient.invalidateQueries({ queryKey: ["crm", "settings"] });
+      // Menu (sidebar/POS) dirender server — segarkan agar saklar fitur langsung terlihat.
+      router.refresh();
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : "Gagal menyimpan konfigurasi");
@@ -303,6 +308,13 @@ export function CrmSettingsPage() {
           Muat ulang
         </Button>
       </div>
+
+      <LoyaltyFeaturesSection
+        settings={settingsQuery.data}
+        loading={settingsQuery.isLoading}
+        saving={saveSettingsMutation.isPending}
+        onSave={(payload) => saveSettingsMutation.mutate(payload)}
+      />
 
       <Card className="border-gray-200/70 shadow-xs">
         <CardHeader className="border-b border-gray-200/70 pb-3">

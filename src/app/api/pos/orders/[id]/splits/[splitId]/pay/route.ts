@@ -3,6 +3,7 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
 import { awardCrmXpForSplitPayment, syncPosCustomerOrderStats } from '@/lib/crm/loyalty-engine';
 import { AccountingPostError } from '@/lib/pos/accounting-posting';
+import { rejectIfArkCoinDisabled } from '@/lib/crm/loyalty-features-server';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unknown error';
@@ -31,6 +32,8 @@ export async function POST(
     if (!payment_method || amount_paid == null) {
       return NextResponse.json({ success: false, error: 'payment_method and amount_paid required' }, { status: 400 });
     }
+    const arkBlocked = await rejectIfArkCoinDisabled(payment_method === 'ark_coin' || Number(ark_coins_used) > 0);
+    if (arkBlocked) return arkBlocked;
 
     const db = createPgClient();
     const cashierId = await resolveCashierId();
