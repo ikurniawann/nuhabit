@@ -11,8 +11,9 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { getCrmDefaultVenue } from "@/lib/crm/server";
 import { allocateQueueNumber } from "@/lib/pos/queue-number";
 import { loadProductsByIds } from "@/lib/table-order/server";
-import type { CatalogProductInput } from "./catalog";
+import type { CatalogModifierGroupInput, CatalogProductInput } from "./catalog";
 import { buildGobizCatalog, priceCatalogForChannel } from "./catalog";
+import { applyChannelMarkup } from "@/lib/pos/channel-pricing";
 import { loadChannelOverrides, loadChannelRule } from "@/lib/pos/channel-pricing-server";
 import {
   acceptGofoodOrder as apiAccept,
@@ -94,7 +95,49 @@ type CatalogRow = {
   is_available: boolean | null;
   category_name: string | null;
   variants: Array<{ id: string; name: string; price_adjustment: number; group_name: string | null }> | string;
+  modifier_groups: ModifierGroupRow[] | string;
 };
+
+type ModifierGroupRow = {
+  id: string;
+  name: string;
+  min_selection: number | null;
+  max_selection: number | null;
+  modifiers: Array<{ id: string; name: string; price_adjustment: number }>;
+};
+
+/** Grup add-on aktif per produk (sama dgn katalog self-order), subquery berkorelasi. */
+const MODIFIER_GROUPS_SQL = `COALESCE((
+       SELECT json_agg(json_build_object(
+                'id', g.id, 'name', g.name,
+                'min_selection', g.min_selection, 'max_selection', g.max_selection,
+                'modifiers', COALESCE((
+                  SELECT json_agg(json_build_object('id', m.id, 'name', m.name,
+                                                    'price_adjustment', m.price_adjustment::float)
+                                  ORDER BY m.display_order, m.name)
+                  FROM pos.pos_modifiers m
+                  WHERE m.group_id = g.id AND m.is_active IS NOT FALSE
+                ), '[]'::json)
+              ) ORDER BY g.display_order, g.name)
+       FROM pos.pos_product_modifiers pm
+       JOIN pos.pos_modifier_groups g ON g.id = pm.modifier_group_id
+       WHERE pm.product_id = p.id AND g.is_active IS NOT FALSE
+     ), '[]'::json)`;
+
+function parseModifierGroups(raw: ModifierGroupRow[] | string | null | undefined): CatalogModifierGroupInput[] {
+  const groups = typeof raw === "string" ? (JSON.parse(raw) as ModifierGroupRow[]) : raw;
+  return (Array.isArray(groups) ? groups : []).map((group) => ({
+    id: group.id,
+    name: group.name,
+    minSelection: Number(group.min_selection) || 0,
+    maxSelection: Number(group.max_selection) || 1,
+    modifiers: (group.modifiers ?? []).map((modifier) => ({
+      id: modifier.id,
+      name: modifier.name,
+      priceAdjustment: Number(modifier.price_adjustment) || 0,
+    })),
+  }));
+}
 
 /** Katalog POS aktif (tersedia & tidak) — GoFood butuh full replace, in_stock ikut is_available. */
 export async function loadCatalogProductsForGobiz(): Promise<CatalogProductInput[]> {
@@ -104,7 +147,8 @@ export async function loadCatalogProductsForGobiz(): Promise<CatalogProductInput
             COALESCE(json_agg(json_build_object(
               'id', v.id, 'name', v.name, 'price_adjustment', v.price_adjustment::float,
               'group_name', v.group_name
-            ) ORDER BY v.display_order NULLS LAST, v.name) FILTER (WHERE v.id IS NOT NULL AND v.is_active IS NOT FALSE), '[]'::json) AS variants
+            ) ORDER BY v.display_order NULLS LAST, v.name) FILTER (WHERE v.id IS NOT NULL AND v.is_active IS NOT FALSE), '[]'::json) AS variants,
+            ${MODIFIER_GROUPS_SQL} AS modifier_groups
      FROM pos.pos_products p
      LEFT JOIN pos.pos_categories c ON c.id = p.category_id
      LEFT JOIN pos.pos_product_variants v ON v.product_id = p.id
@@ -128,6 +172,7 @@ export async function loadCatalogProductsForGobiz(): Promise<CatalogProductInput
         priceAdjustment: Number(variant.price_adjustment) || 0,
         groupName: variant.group_name,
       })),
+      modifierGroups: parseModifierGroups(row.modifier_groups),
     };
   });
 }
@@ -262,7 +307,7 @@ async function finishEvent(eventRowId: string | null, result: string, error?: st
 
 async function loadProductRefs(items: GofoodWebhookItem[]) {
   const ids = items.map((item) => String(item.external_id || "")).filter(Boolean);
-  const products = await loadProductsByIds(ids);
+  const [products, gofoodRule] = await Promise.all([loadProductsByIds(ids), loadChannelRule("gofood")]);
   const refs = new Map<string, CatalogProductRef>();
   for (const [id, product] of products) {
     refs.set(id, {
@@ -271,6 +316,15 @@ async function loadProductRefs(items: GofoodWebhookItem[]) {
       sku: product.sku,
       station: product.station,
       variants: product.variants.map((variant) => ({ id: variant.id, name: variant.name })),
+      // Harga add-on = harga GoFood (markup channel), sama dgn yang disinkron.
+      modifiers: product.modifierGroups.flatMap((group) =>
+        group.modifiers.map((modifier) => ({
+          id: modifier.id,
+          name: modifier.name,
+          groupName: group.name,
+          price: gofoodRule ? applyChannelMarkup(modifier.priceAdjustment, gofoodRule) : modifier.priceAdjustment,
+        }))
+      ),
     });
   }
   return refs;
@@ -421,7 +475,7 @@ export async function ensurePosOrderForGofood(row: GofoodOrderRow): Promise<stri
       product_name: line.product_name,
       product_sku: line.product_sku,
       variants: line.variant_name ? [{ name: line.variant_name }] : [],
-      modifiers: [],
+      modifiers: line.modifiers ?? [],
       quantity: line.quantity,
       unit_price: line.unit_price,
       subtotal: line.unit_price * line.quantity,

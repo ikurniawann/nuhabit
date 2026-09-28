@@ -144,6 +144,8 @@ export type CatalogProductRef = {
   sku: string;
   station: string;
   variants: Array<{ id: string; name: string }>;
+  /** Opsi add-on produk (id pos_modifiers) — harga = harga GoFood saat katalog disinkron. */
+  modifiers?: Array<{ id: string; name: string; groupName: string; price: number }>;
 };
 
 /** Petakan item GoFood ke produk POS via external_id (= id pos_products). */
@@ -172,14 +174,25 @@ export function mapGofoodItems(
       continue;
     }
 
-    const variantNames = (item.variants ?? [])
-      .map((variant) => {
-        const known = variant.external_id
-          ? product.variants.find((candidate) => candidate.id === variant.external_id)
-          : undefined;
-        return (known?.name || variant.name || "").trim();
-      })
-      .filter(Boolean);
+    // Pilihan GoFood = varian POS atau add-on POS (external_id menentukan);
+    // yang tak dikenali tetap ditampilkan sbg teks varian supaya dapur tahu.
+    const variantNames: string[] = [];
+    const modifiers: NonNullable<MappedGofoodLine["modifiers"]> = [];
+    for (const variant of item.variants ?? []) {
+      const externalVariantId = variant.external_id ? String(variant.external_id) : null;
+      const modifier = externalVariantId
+        ? product.modifiers?.find((candidate) => candidate.id === externalVariantId)
+        : undefined;
+      if (modifier) {
+        modifiers.push({ name: modifier.name, group: modifier.groupName, price: modifier.price });
+        continue;
+      }
+      const known = externalVariantId
+        ? product.variants.find((candidate) => candidate.id === externalVariantId)
+        : undefined;
+      const name = (known?.name || variant.name || "").trim();
+      if (name) variantNames.push(name);
+    }
 
     lines.push({
       product_id: product.id,
@@ -188,6 +201,7 @@ export function mapGofoodItems(
       quantity,
       unit_price: price,
       variant_name: variantNames.length > 0 ? variantNames.join(", ") : null,
+      ...(modifiers.length > 0 ? { modifiers } : {}),
       notes: item.notes?.trim() || null,
       station: product.station,
     });

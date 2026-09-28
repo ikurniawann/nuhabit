@@ -242,6 +242,9 @@ export function GofoodOrdersPage() {
                       <span>
                         <b>{line.quantity}×</b> {line.product_name}
                         {line.variant_name ? <span className="text-gray-500"> · {line.variant_name}</span> : null}
+                        {line.modifiers?.length ? (
+                          <span className="block text-xs text-gray-500">+ {line.modifiers.map((m) => m.name).join(", ")}</span>
+                        ) : null}
                         {line.notes ? <span className="block text-xs text-amber-700">“{line.notes}”</span> : null}
                       </span>
                       <span className="text-gray-700">{formatRupiah(line.unit_price * line.quantity)}</span>

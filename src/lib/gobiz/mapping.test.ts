@@ -131,6 +131,51 @@ describe("mapGofoodItems", () => {
     );
     expect(lines[0].variant_name).toBe("Extra");
   });
+
+  it("add-on GoFood (external_id = id pos_modifiers) → modifiers POS dgn grup & harga GoFood", () => {
+    const withAddons = new Map([
+      [
+        "prod-latte",
+        {
+          id: "prod-latte",
+          name: "Iced Latte",
+          sku: "LATTE",
+          station: "bar",
+          variants: [],
+          modifiers: [
+            { id: "m-shot", name: "Extra Shot Espresso", groupName: "Tambahan Espresso", price: 12000 },
+            { id: "m-oat", name: "Oat Milk", groupName: "Pilihan Susu", price: 6000 },
+          ],
+        },
+      ],
+    ]);
+    const { lines } = mapGofoodItems(
+      [
+        {
+          external_id: "prod-latte",
+          name: "Iced Latte",
+          quantity: 1,
+          price: 48000,
+          variants: [
+            { external_id: "m-shot", name: "Extra Shot Espresso" },
+            { external_id: "m-oat", name: "Oat Milk" },
+            { external_id: "m-hilang", name: "Less Ice" },
+          ],
+        },
+        { external_id: "prod-latte", name: "Iced Latte", quantity: 1, price: 30000 },
+      ],
+      withAddons
+    );
+    expect(lines[0].modifiers).toEqual([
+      { name: "Extra Shot Espresso", group: "Tambahan Espresso", price: 12000 },
+      { name: "Oat Milk", group: "Pilihan Susu", price: 6000 },
+    ]);
+    // pilihan tak dikenal tetap tampil sbg teks varian; harga item tetap dari GoFood
+    expect(lines[0].variant_name).toBe("Less Ice");
+    expect(lines[0].unit_price).toBe(48000);
+    // tanpa add-on: kunci modifiers tidak ada (bentuk lama tidak berubah)
+    expect(lines[1]).not.toHaveProperty("modifiers");
+  });
 });
 
 describe("status machine", () => {

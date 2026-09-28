@@ -6,6 +6,9 @@
  * - external_id item = id pos_products; external_id varian = id pos_product_variants
  *   → webhook order membawa external_id yang sama, jadi pemetaan balik pasti.
  * - Varian satu level; harga varian ditambahkan ke harga item.
+ * - Add-on (grup modifier POS) = variant category tambahan per grup, dipakai
+ *   bersama oleh semua produk yang memakai grup itu (external_id mg:<group>);
+ *   external_id opsi = id pos_modifiers → webhook membawa id yang sama.
  * - Gambar harus URL http(s) port 80/443, jpeg/png.
  */
 
@@ -22,6 +25,16 @@ export type CatalogProductInput = {
   inStock: boolean;
   categoryName?: string | null;
   variants: Array<{ id: string; name: string; priceAdjustment: number; groupName?: string | null }>;
+  /** Grup add-on POS (pos_modifier_groups) yang terpasang di produk. */
+  modifierGroups?: CatalogModifierGroupInput[];
+};
+
+export type CatalogModifierGroupInput = {
+  id: string;
+  name: string;
+  minSelection: number;
+  maxSelection: number;
+  modifiers: Array<{ id: string; name: string; priceAdjustment: number }>;
 };
 
 export type CatalogBuildResult = {
@@ -67,7 +80,30 @@ export function priceCatalogForChannel(
       ...variant,
       priceAdjustment: applyChannelMarkup(variant.priceAdjustment, rule),
     })),
+    modifierGroups: product.modifierGroups?.map((group) => ({
+      ...group,
+      modifiers: group.modifiers.map((modifier) => ({
+        ...modifier,
+        priceAdjustment: applyChannelMarkup(modifier.priceAdjustment, rule),
+      })),
+    })),
   }));
+}
+
+export function modifierCategoryId(groupId: string) {
+  return `mg:${groupId}`;
+}
+
+/**
+ * Aturan pilih GoFood dari batas grup POS: min tetap (0 = opsional), max
+ * dibatasi jumlah opsi & minimal 1, min tidak boleh melebihi max.
+ */
+export function modifierSelectionRule(group: CatalogModifierGroupInput) {
+  const options = group.modifiers.length;
+  const rawMax = Math.round(Number(group.maxSelection) || 0);
+  const max = Math.max(1, Math.min(options, rawMax > 0 ? rawMax : 1));
+  const min = Math.max(0, Math.min(max, Math.round(Number(group.minSelection) || 0)));
+  return { min_quantity: min, max_quantity: max };
 }
 
 export function variantCategoryId(productId: string) {
@@ -81,6 +117,7 @@ export function buildGobizCatalog(
   const menus = new Map<string, GobizCatalogPayload["menus"][number]>();
   const variantCategories: GobizCatalogPayload["variant_categories"] = [];
   const skipped: CatalogBuildResult["stats"]["skipped"] = [];
+  const modifierCategories = new Set<string>();
   let items = 0;
 
   for (const product of products) {
@@ -130,6 +167,28 @@ export function buildGobizCatalog(
         })),
       });
       item.variant_category_external_ids = [categoryId];
+    }
+
+    for (const group of product.modifierGroups ?? []) {
+      const options = group.modifiers.filter((modifier) => modifier.id && modifier.name.trim());
+      if (options.length === 0) continue;
+      const categoryId = modifierCategoryId(group.id);
+      if (!modifierCategories.has(categoryId)) {
+        modifierCategories.add(categoryId);
+        variantCategories.push({
+          external_id: categoryId,
+          internal_name: clampName(`Add-on — ${group.name}`),
+          name: clampName(group.name) || "Tambahan",
+          rules: { selection: modifierSelectionRule({ ...group, modifiers: options }) },
+          variants: options.map((modifier) => ({
+            external_id: modifier.id,
+            name: clampName(modifier.name),
+            price: Math.max(0, Math.round(Number(modifier.priceAdjustment) || 0)),
+            in_stock: true,
+          })),
+        });
+      }
+      item.variant_category_external_ids = [...(item.variant_category_external_ids ?? []), categoryId];
     }
 
     menu.menu_items.push(item);

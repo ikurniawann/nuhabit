@@ -120,6 +120,8 @@ export type MappedGofoodLine = {
   /** Harga satuan dari GoFood (yang dibayar pelanggan, sudah termasuk varian). */
   unit_price: number;
   variant_name: string | null;
+  /** Add-on POS yang dipilih di GoFood — bentuk sama dgn kasir ({ name, group, price }). */
+  modifiers?: Array<{ name: string; group: string; price: number }>;
   notes: string | null;
   station: string;
 };

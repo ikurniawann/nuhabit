@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { absoluteImageUrl, buildGobizCatalog, priceCatalogForChannel, variantCategoryId } from "./catalog";
+import {
+  absoluteImageUrl,
+  buildGobizCatalog,
+  modifierSelectionRule,
+  priceCatalogForChannel,
+  variantCategoryId,
+} from "./catalog";
 
 const appUrl = "https://poskopi.reddie.id";
 
@@ -149,5 +155,78 @@ describe("priceCatalogForChannel (harga GoFood)", () => {
     const priced = priceCatalogForChannel(products, { ...rule, isActive: false }, new Map([["p-black", 29000]]));
     expect(priced.map((p) => p.price)).toEqual([28000, 25000]);
     expect(priced[0].variants[1].priceAdjustment).toBe(5000);
+  });
+});
+
+describe("add-on (grup modifier POS) di katalog GoFood", () => {
+  const shot = {
+    id: "g-shot",
+    name: "Tambahan Espresso",
+    minSelection: 0,
+    maxSelection: 1,
+    modifiers: [{ id: "m-shot", name: "Extra Shot Espresso", priceAdjustment: 10000 }],
+  };
+  const milk = {
+    id: "g-milk",
+    name: "Pilihan Susu",
+    minSelection: 0,
+    maxSelection: 1,
+    modifiers: [{ id: "m-oat", name: "Oat Milk", priceAdjustment: 5000 }],
+  };
+  const products = [
+    { id: "p-latte", name: "Iced Latte", price: 28000, inStock: true, variants: [], modifierGroups: [shot, milk] },
+    { id: "p-espresso", name: "Espresso", price: 15000, inStock: true, variants: [], modifierGroups: [shot] },
+    { id: "p-black", name: "Hot Black", price: 20000, inStock: true, variants: [], modifierGroups: [] },
+  ];
+
+  it("grup jadi variant category bersama (dikirim sekali), item merujuk grupnya; opsional min 0", () => {
+    const { payload, stats } = buildGobizCatalog(products, { appUrl, requestId: "r" });
+    expect(payload.variant_categories).toEqual([
+      {
+        external_id: "mg:g-shot",
+        internal_name: "Add-on — Tambahan Espresso",
+        name: "Tambahan Espresso",
+        rules: { selection: { min_quantity: 0, max_quantity: 1 } },
+        variants: [{ external_id: "m-shot", name: "Extra Shot Espresso", price: 10000, in_stock: true }],
+      },
+      {
+        external_id: "mg:g-milk",
+        internal_name: "Add-on — Pilihan Susu",
+        name: "Pilihan Susu",
+        rules: { selection: { min_quantity: 0, max_quantity: 1 } },
+        variants: [{ external_id: "m-oat", name: "Oat Milk", price: 5000, in_stock: true }],
+      },
+    ]);
+    expect(stats.variantCategories).toBe(2);
+    const items = payload.menus.flatMap((menu) => menu.menu_items);
+    expect(items.find((i) => i.external_id === "p-latte")?.variant_category_external_ids).toEqual(["mg:g-shot", "mg:g-milk"]);
+    expect(items.find((i) => i.external_id === "p-espresso")?.variant_category_external_ids).toEqual(["mg:g-shot"]);
+    expect(items.find((i) => i.external_id === "p-black")).not.toHaveProperty("variant_category_external_ids");
+  });
+
+  it("varian produk + add-on: kategori varian dulu, lalu add-on", () => {
+    const { payload } = buildGobizCatalog(
+      [{ ...products[1], variants: [{ id: "v-s", name: "Single", priceAdjustment: 0, groupName: "Ukuran" }] }],
+      { appUrl, requestId: "r" }
+    );
+    expect(payload.menus[0].menu_items[0].variant_category_external_ids).toEqual([variantCategoryId("p-espresso"), "mg:g-shot"]);
+  });
+
+  it("harga add-on ikut markup GoFood (+20%, bulat Rp1.000 ke atas)", () => {
+    const rule = { code: "gofood", name: "GoFood", markupPercent: 20, roundingStep: 1000 as const, roundingMode: "up" as const, isActive: true };
+    const { payload } = buildGobizCatalog(priceCatalogForChannel(products, rule, new Map()), { appUrl, requestId: "r" });
+    expect(payload.variant_categories.map((c) => c.variants[0].price)).toEqual([12000, 6000]);
+    expect(products[0].modifierGroups[0].modifiers[0].priceAdjustment).toBe(10000);
+  });
+
+  it("grup tanpa opsi aktif dilewati; aturan pilih aman", () => {
+    const { payload } = buildGobizCatalog(
+      [{ ...products[2], modifierGroups: [{ ...milk, id: "g-kosong", modifiers: [] }] }],
+      { appUrl, requestId: "r" }
+    );
+    expect(payload.variant_categories).toEqual([]);
+    const two = { ...milk, modifiers: [milk.modifiers[0], { id: "m-almond", name: "Almond", priceAdjustment: 6000 }] };
+    expect(modifierSelectionRule({ ...two, minSelection: 1, maxSelection: 5 })).toEqual({ min_quantity: 1, max_quantity: 2 });
+    expect(modifierSelectionRule({ ...two, minSelection: 3, maxSelection: 0 })).toEqual({ min_quantity: 1, max_quantity: 1 });
   });
 });
