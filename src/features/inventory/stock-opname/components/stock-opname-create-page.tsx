@@ -60,7 +60,7 @@ function lineUnitInfo(line: CountLine): RawMaterialUnitInfo {
  * Kg). Dipilih sebelum mulai menghitung; masih bisa diubah per item. Diingat
  * di perangkat (localStorage) supaya petugas gudang tidak memilih ulang.
  */
-const UNIT_MODE_STORAGE_KEY = "tedja:opname:unit-mode";
+const UNIT_MODE_STORAGE_KEY = "opname:unit-mode";
 
 function readStoredUnitMode(): RawMaterialUnitMode {
   if (typeof window === "undefined") return "besar";
