@@ -115,6 +115,7 @@ function AppSidebarContent({
     <CanUseCentralCashierProvider value={canUseCentralCashier}>
     <PosNfcShell>
     <div
+      data-dashboard-shell
       className="arkiv-dashboard-theme flex min-h-screen print:block print:min-h-0 print:bg-white"
       style={{ background: "var(--page-mesh)" }}
     >
@@ -221,6 +222,7 @@ export default function AppSidebar(props: AppSidebarProps) {
     <Suspense
       fallback={
         <div
+          data-dashboard-shell
           className="min-h-dvh w-full"
           style={{ background: "var(--page-mesh)" }}
           aria-hidden

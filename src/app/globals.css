@@ -196,8 +196,20 @@
 }
 
 html {
-  font-size: var(--font-size-base);
+  /* --ui-scale: pengali skala tampilan (rem) di atas ukuran huruf Appearance. */
+  font-size: calc(var(--font-size-base) * var(--ui-scale, 1));
   font-family: var(--font-sans-stack);
+}
+
+/* Dashboard di tablet/iPad (layar sentuh ±700–1400px): skala default dikecilkan
+   supaya layar terasa lega (permintaan owner 2026-09-29). Laptop/PC (pointer
+   halus), HP portrait, dan halaman publik (self-order) tidak terpengaruh.
+   Breakpoint media query tetap memakai ukuran huruf bawaan browser, jadi
+   susunan responsif tidak ikut bergeser. */
+@media (pointer: coarse) and (min-width: 700px) and (max-width: 1400px) {
+  html:has([data-dashboard-shell]) {
+    --ui-scale: 0.875;
+  }
 }
 
 body {
