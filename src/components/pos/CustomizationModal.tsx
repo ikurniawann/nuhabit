@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sparkles, Utensils } from "lucide-react";
 import { PosProductThumbnail } from "@/components/pos/PosProductThumbnail";
-import type { Product, ProductVariant } from "@/lib/pos-api";
+import type { Product } from "@/lib/pos-api";
 import { computeCustomizationPrice } from "@/lib/pos/customization-price";
 
 export interface SelectedCustomization {
@@ -45,55 +45,54 @@ export function CustomizationModal({
   const { basePrice, unitPrice } = computeCustomizationPrice(product, value);
   const lineTotal = unitPrice * (value?.quantity || 1);
 
+  const quantity = value?.quantity || 1;
+  const priceLabel = (amount: number, zeroText = "") =>
+    amount > 0 ? `+${formatCurrency(amount)}` : amount < 0 ? formatCurrency(amount) : zeroText;
+  const optionClass = (selected: boolean) =>
+    `flex min-h-11 flex-col justify-center rounded-lg border-2 px-2.5 py-1.5 text-left transition-all ${
+      selected ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/30"
+    }`;
+
   return (
     <Dialog open={open} onOpenChange={() => onCancel()}>
-      {/* sm:max-w-2xl menimpa bawaan DialogContent (sm:max-w-sm = 384px). */}
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{product.name}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-6 py-4">
-          <div className="flex gap-4">
-            <div className="flex h-24 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-              <PosProductThumbnail src={product.image_url} alt={product.name} iconClassName="h-8 w-8" />
+      {/* Ringkas utk tablet (owner 2026-09-29): body scroll sendiri, footer
+          (jumlah · total · tombol) selalu terlihat tanpa perlu scroll. */}
+      <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-gray-100 px-5 py-3 pr-12">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+              <PosProductThumbnail src={product.image_url} alt={product.name} iconClassName="h-5 w-5" />
             </div>
-            <div className="flex-1">
-              <div className="text-lg font-bold text-primary">{formatCurrency(basePrice)}</div>
-              {showArk && <div className="text-sm text-amber-600 font-medium">{formatArk(basePrice)}</div>}
+            <div className="min-w-0">
+              <DialogTitle className="truncate text-lg font-bold">{product.name}</DialogTitle>
+              <div className="flex items-baseline gap-2 text-sm">
+                <span className="font-bold text-primary">{formatCurrency(basePrice)}</span>
+                {showArk && <span className="text-xs font-medium text-amber-600">{formatArk(basePrice)}</span>}
+              </div>
             </div>
           </div>
+        </DialogHeader>
 
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-3">
           {/* Variants */}
           {variants.length > 0 && (
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
                 Pilih Varian
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {variants.map((variant) => {
                   const selected = value?.selectedVariant === variant.id;
-                  const priceText =
-                    variant.price_adjustment > 0
-                      ? `+${formatCurrency(variant.price_adjustment)}`
-                      : variant.price_adjustment < 0
-                      ? `${formatCurrency(variant.price_adjustment)}`
-                      : "Same price";
                   return (
                     <button
                       key={variant.id}
                       type="button"
-                      onClick={() =>
-                        onChange({ ...value!, selectedVariant: variant.id })
-                      }
-                      className={`p-3 rounded-lg border-2 text-left transition-all ${
-                        selected
-                          ? "border-primary bg-primary/10"
-                          : "border-gray-200 hover:border-primary/30"
-                      }`}
+                      onClick={() => onChange({ ...value!, selectedVariant: variant.id })}
+                      className={optionClass(selected)}
                     >
-                      <div className="font-medium text-gray-900">{variant.name}</div>
-                      <div className="text-xs text-gray-600 mt-1">{priceText}</div>
+                      <span className="text-sm font-medium leading-tight text-gray-900">{variant.name}</span>
+                      <span className="text-[11px] text-gray-600">{priceLabel(variant.price_adjustment, "Harga sama")}</span>
                     </button>
                   );
                 })}
@@ -106,20 +105,15 @@ export function CustomizationModal({
             const groupName = group.modifier_group.name;
             const selectedIds = value?.selectedModifiers?.[groupName] || [];
             return (
-              <div key={group.modifier_group.id} className="space-y-3">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Utensils className="w-4 h-4 text-primary" />
+              <div key={group.modifier_group.id} className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                  <Utensils className="h-3.5 w-3.5 text-primary" />
                   {groupName}
-                </label>
-                <div className="grid gap-2 sm:grid-cols-2">
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {group.modifier_group.modifiers.map((mod) => {
                     const isSelected = selectedIds.includes(mod.id);
-                    const priceText =
-                      mod.price_adjustment > 0
-                        ? `+${formatCurrency(mod.price_adjustment)}`
-                        : mod.price_adjustment < 0
-                        ? `${formatCurrency(mod.price_adjustment)}`
-                        : "";
+                    const priceText = priceLabel(mod.price_adjustment);
                     return (
                       <button
                         key={mod.id}
@@ -140,14 +134,10 @@ export function CustomizationModal({
                           }
                           onChange({ ...value!, selectedModifiers: next });
                         }}
-                        className={`w-full p-3 rounded-lg border-2 text-left transition-all flex items-center justify-between ${
-                          isSelected
-                          ? "border-primary bg-primary/10"
-                          : "border-gray-200 hover:border-primary/30"
-                        }`}
+                        className={optionClass(isSelected)}
                       >
-                        <span className="font-medium text-gray-900">{mod.name}</span>
-                        {priceText && <span className="text-sm text-amber-600 font-medium">{priceText}</span>}
+                        <span className="text-sm font-medium leading-tight text-gray-900">{mod.name}</span>
+                        {priceText && <span className="text-[11px] font-medium text-amber-600">{priceText}</span>}
                       </button>
                     );
                   })}
@@ -157,53 +147,45 @@ export function CustomizationModal({
           })}
 
           {/* Notes */}
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-700">Catatan Tambahan</label>
-            <textarea
-              value={value?.notes || ""}
-              onChange={(e) => onChange({ ...value!, notes: e.target.value })}
-              placeholder="Contoh: Jangan terlalu pedas, kurang manis, dll."
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
+          <input
+            type="text"
+            value={value?.notes || ""}
+            onChange={(e) => onChange({ ...value!, notes: e.target.value })}
+            placeholder="Catatan (opsional) — mis. kurang manis, less ice"
+            className="h-10 w-full rounded-lg border border-gray-300 px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </div>
 
-          {/* Qty + Total */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <span className="text-sm font-medium text-gray-700">Jumlah</span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() =>
-                  onChange({ ...value!, quantity: Math.max(1, (value?.quantity || 1) - 1) })
-                }
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-              >
-                -
-              </button>
-              <span className="text-lg font-medium w-8 text-center">{value?.quantity || 1}</span>
-              <button
-                onClick={() => onChange({ ...value!, quantity: (value?.quantity || 1) + 1 })}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"
-              >
-                +
-              </button>
-            </div>
+        {/* Footer tetap: jumlah · total · tambah */}
+        <div className="flex shrink-0 items-center gap-3 border-t border-gray-100 bg-gray-50/80 px-5 py-3">
+          <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-white p-1">
+            <button
+              type="button"
+              aria-label="Kurangi jumlah"
+              onClick={() => onChange({ ...value!, quantity: Math.max(1, quantity - 1) })}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-gray-100"
+            >
+              −
+            </button>
+            <span className="w-8 text-center text-base font-semibold tabular-nums">{quantity}</span>
+            <button
+              type="button"
+              aria-label="Tambah jumlah"
+              onClick={() => onChange({ ...value!, quantity: quantity + 1 })}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-lg hover:bg-gray-100"
+            >
+              +
+            </button>
           </div>
-          <div className="pt-4 mt-4 border-t border-primary/30">
-            <div className="flex justify-between items-end">
-              <div>
-                <div className="text-lg font-bold text-gray-900">Total</div>
-                <div className="text-xs text-gray-600">× {value?.quantity || 1} item</div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-primary">{formatCurrency(lineTotal)}</div>
-                {showArk && <div className="text-xs text-amber-600 font-medium">{formatArk(lineTotal)}</div>}
-              </div>
-            </div>
+          <div className="min-w-0 flex-1 text-right">
+            <div className="text-[11px] text-gray-500">Total ({quantity} item)</div>
+            <div className="truncate text-xl font-bold tabular-nums text-primary">{formatCurrency(lineTotal)}</div>
+            {showArk && <div className="text-[11px] font-medium text-amber-600">{formatArk(lineTotal)}</div>}
           </div>
           <button
+            type="button"
             onClick={onConfirm}
-            className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+            className="h-12 shrink-0 rounded-lg bg-primary px-5 font-semibold text-white transition-colors hover:bg-primary/90"
           >
             Tambah ke Keranjang
           </button>
