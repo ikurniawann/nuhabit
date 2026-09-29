@@ -37,7 +37,7 @@ describe("cashierCartPanelClass", () => {
   it("drops 60vh cart cap from 800px on dashboard cashier", () => {
     const cls = cashierCartPanelClass(false);
     expect(cls).toContain("min-[800px]:max-h-none");
-    expect(cls).toContain("min-[800px]:w-56");
+    expect(cls).toContain("min-[800px]:w-64");
     expect(cls).not.toContain("60vh");
   });
 });

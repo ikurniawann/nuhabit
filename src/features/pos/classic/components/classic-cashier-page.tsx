@@ -11,11 +11,13 @@ import { useLoyaltyFeatures } from '@/lib/crm/use-loyalty-features';
  * POS utama — halaman ini hanya kulit baru, engine tidak disentuh.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
+  Calculator,
   CheckCircle2,
+  ChevronDown,
   CloudOff,
   Home,
   Loader2,
@@ -35,6 +37,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+import { brandName } from '@/lib/branding';
 import type { Product } from '@/lib/pos-api';
 import { formatAmount } from '@/lib/purchasing/utils';
 import { formatArkAmount } from '@/lib/pos/loyalty-settings';
@@ -103,6 +106,19 @@ function formatClock(d: Date): string {
   return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+const SHORT_SCREEN_QUERY = '(max-height: 760px)';
+const KEYPAD_PREF_KEY = 'pos-classic-keypad';
+
+function subscribeShortScreen(onChange: () => void) {
+  const mq = window.matchMedia(SHORT_SCREEN_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+}
+
+function readShortScreen() {
+  return window.matchMedia(SHORT_SCREEN_QUERY).matches;
+}
+
 export function ClassicCashierPage() {
   const router = useRouter();
   const cart = usePosCart();
@@ -124,6 +140,31 @@ export function ClassicCashierPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(ALL_CATEGORY);
   const [buffer, setBuffer] = useState('');
+  // Layar pendek (tablet landscape dgn toolbar browser, ±≤760px): keypad
+  // dilipat supaya area menu lega; kasir bisa membukanya kapan saja.
+  const isShortScreen = useSyncExternalStore(subscribeShortScreen, readShortScreen, () => false);
+  const [keypadPref, setKeypadPrefState] = useState<'auto' | 'open' | 'closed'>('auto');
+  // Pilihan kasir (buka/lipat keypad) diingat per perangkat.
+  const setKeypadPref = useCallback((next: 'auto' | 'open' | 'closed') => {
+    setKeypadPrefState(next);
+    try {
+      window.localStorage.setItem(KEYPAD_PREF_KEY, next);
+    } catch {
+      // storage diblokir — pilihan tetap berlaku utk sesi ini
+    }
+  }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem(KEYPAD_PREF_KEY);
+        if (saved === 'open' || saved === 'closed') setKeypadPrefState(saved);
+      } catch {
+        // abaikan
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  const showKeypad = keypadPref === 'open' || (keypadPref === 'auto' && !isShortScreen);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [customizing, setCustomizing] = useState<SelectedCustomization | null>(null);
   const [showPayment, setShowPayment] = useState(false);
@@ -374,15 +415,22 @@ export function ClassicCashierPage() {
       return;
     }
     if (bufferValue <= 0) {
+      if (!showKeypad) setKeypadPref('open');
       toast.message('Ketik jumlah di keypad dulu');
       return;
     }
     cart.updateQty(selectedItem.id, bufferValue - selectedItem.quantity);
     setBuffer('');
-  }, [bufferValue, cart, selectedItem]);
+  }, [bufferValue, cart, selectedItem, showKeypad, setKeypadPref]);
 
   const applyDiscount = useCallback(
     (type: 'percent' | 'fixed') => {
+      // Keypad terlipat & belum ada angka → buka keypad, jangan menghapus diskon.
+      if (bufferValue <= 0 && !showKeypad) {
+        setKeypadPref('open');
+        toast.message(type === 'percent' ? 'Ketik persen diskon, lalu tekan Diskon % lagi' : 'Ketik nominal diskon, lalu tekan Diskon Rp lagi');
+        return;
+      }
       if (bufferValue <= 0) {
         cart.setManualDiscount(null, null);
         setBuffer('');
@@ -394,7 +442,7 @@ export function ClassicCashierPage() {
       setBuffer('');
       toast.success(type === 'percent' ? `Diskon ${value}% diterapkan` : `Diskon ${fmtRp(value)} diterapkan`);
     },
-    [bufferValue, cart]
+    [bufferValue, cart, showKeypad, setKeypadPref]
   );
 
   const removeSelected = useCallback(() => {
@@ -613,10 +661,10 @@ export function ClassicCashierPage() {
     <div className="fixed inset-0 z-30 flex flex-col overflow-hidden bg-slate-900 text-slate-100 select-none">
       <PosOfflineRegistrar />
       {/* ===== Header ===== */}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-700 bg-slate-950 px-4">
+      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-slate-700 bg-slate-950 px-4 [@media(min-height:761px)]:h-14">
         <div className="flex items-baseline gap-2">
           <span className="text-lg font-black tracking-wide text-amber-400">POS Classic</span>
-          <span className="text-xs uppercase tracking-widest text-slate-400">BCD Coffee</span>
+          <span className="text-xs uppercase tracking-widest text-slate-400">{brandName()}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button
@@ -826,7 +874,8 @@ export function ClassicCashierPage() {
         </section>
 
         {/* ----- Katalog + kontrol ----- */}
-        <section className="flex min-h-0 flex-col">
+        {/* min-w-0: baris kategori yg bisa di-scroll tidak boleh melebarkan kolom grid. */}
+        <section className="flex min-h-0 min-w-0 flex-col">
           <div className="flex shrink-0 items-center gap-2 p-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -834,7 +883,7 @@ export function ClassicCashierPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari produk / SKU…"
-                className="h-12 w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-10 text-base text-slate-100 placeholder:text-slate-500 focus:border-amber-400 focus:outline-none"
+                className="h-10 w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-10 text-base text-slate-100 placeholder:text-slate-500 focus:border-amber-400 focus:outline-none [@media(min-height:761px)]:h-12"
               />
               {search ? (
                 <button
@@ -853,7 +902,7 @@ export function ClassicCashierPage() {
               type="button"
               onClick={() => setCategory(ALL_CATEGORY)}
               className={cn(
-                'h-16 min-w-32 shrink-0 rounded-xl px-4 text-base font-black uppercase tracking-wide transition active:scale-95',
+                'h-11 min-w-28 shrink-0 rounded-xl px-4 text-sm font-black uppercase tracking-wide transition active:scale-95 [@media(min-height:761px)]:h-16 [@media(min-height:761px)]:min-w-32 [@media(min-height:761px)]:text-base',
                 category === ALL_CATEGORY
                   ? 'bg-white text-slate-900 shadow-lg'
                   : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
@@ -869,7 +918,7 @@ export function ClassicCashierPage() {
                   type="button"
                   onClick={() => setCategory(c)}
                   className={cn(
-                    'h-16 min-w-32 shrink-0 rounded-xl px-4 text-base font-black uppercase tracking-wide text-white transition active:scale-95',
+                    'h-11 min-w-28 shrink-0 rounded-xl px-4 text-sm font-black uppercase tracking-wide text-white transition active:scale-95 [@media(min-height:761px)]:h-16 [@media(min-height:761px)]:min-w-32 [@media(min-height:761px)]:text-base',
                     colorOf(c).tile,
                     category === c ? 'ring-4 ring-white/90 shadow-lg' : 'opacity-80 hover:opacity-100'
                   )}
@@ -881,9 +930,9 @@ export function ClassicCashierPage() {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
             {loadingProducts ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2 [@media(min-height:761px)]:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] [@media(min-height:761px)]:gap-3">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-800" />
+                  <div key={i} className="h-[5.5rem] animate-pulse rounded-2xl bg-slate-800 [@media(min-height:761px)]:h-28" />
                 ))}
               </div>
             ) : productsError ? (
@@ -891,7 +940,7 @@ export function ClassicCashierPage() {
             ) : visibleProducts.length === 0 ? (
               <div className="flex h-full items-center justify-center text-slate-500">Tidak ada produk</div>
             ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2 [@media(min-height:761px)]:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] [@media(min-height:761px)]:gap-3">
                 {visibleProducts.map((p) => {
                   const color = colorOf(p.category?.name || 'Uncategorized');
                   return (
@@ -900,12 +949,12 @@ export function ClassicCashierPage() {
                       type="button"
                       onClick={() => handleProductTap(p)}
                       className={cn(
-                        'flex h-28 flex-col justify-between rounded-2xl p-3 text-left text-white shadow-md transition active:scale-95',
+                        'flex h-[5.5rem] flex-col justify-between rounded-xl p-2.5 text-left text-white shadow-md transition active:scale-95 [@media(min-height:761px)]:h-28 [@media(min-height:761px)]:rounded-2xl [@media(min-height:761px)]:p-3',
                         color.tile,
                         !p.is_available && 'opacity-40 grayscale'
                       )}
                     >
-                      <span className="line-clamp-2 text-base font-bold leading-tight">{p.name}</span>
+                      <span className="line-clamp-2 text-[15px] font-bold leading-tight [@media(min-height:761px)]:text-base">{p.name}</span>
                       <span className="flex items-end justify-between">
                         <span className="text-sm font-semibold text-white/90">{fmtRp(p.base_price)}</span>
                         {(p.variants?.length ?? 0) > 0 || (p.modifiers?.length ?? 0) > 0 ? (
@@ -921,12 +970,25 @@ export function ClassicCashierPage() {
             )}
           </div>
 
+          {showKeypad ? (
+            <>
           {/* ----- Deck kontrol ----- */}
           <div className="grid shrink-0 grid-cols-[auto_1fr] gap-2 border-t border-slate-700 bg-slate-950 p-2">
             <div className="flex gap-2">
               <div className="flex flex-col gap-1">
-                <div className="flex h-12 items-center justify-end rounded-lg bg-black px-3 font-mono text-2xl font-bold tabular-nums text-lime-300">
-                  {keypadDisplay}
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setKeypadPref('closed')}
+                    title="Sembunyikan keypad — menu jadi lebih lega"
+                    aria-label="Sembunyikan keypad"
+                    className="flex h-12 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </button>
+                  <div className="flex h-12 min-w-0 flex-1 items-center justify-end rounded-lg bg-black px-3 font-mono text-2xl font-bold tabular-nums text-lime-300">
+                    {keypadDisplay}
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {CLASSIC_KEYPAD.map((k) => (
@@ -997,6 +1059,54 @@ export function ClassicCashierPage() {
               </span>
             </button>
           </div>
+            </>
+          ) : (
+            // Deck kontrol ringkas (keypad terlipat)
+            <div className="flex shrink-0 items-stretch gap-1.5 border-t border-slate-700 bg-slate-950 p-2">
+              <button
+                type="button"
+                onClick={() => setKeypadPref('open')}
+                title="Tampilkan keypad angka"
+                className="flex h-14 w-16 shrink-0 flex-col items-center justify-center rounded-lg bg-slate-700 text-[11px] font-black uppercase text-slate-100 hover:bg-slate-600 active:scale-95"
+              >
+                <Calculator className="h-5 w-5" />
+                Keypad
+              </button>
+              {(
+                [
+                  ['Qty', applyQty, 'bg-sky-700 hover:bg-sky-600'],
+                  ['Hapus', removeSelected, 'bg-orange-700 hover:bg-orange-600'],
+                  ['Disk %', () => applyDiscount('percent'), 'bg-violet-700 hover:bg-violet-600'],
+                  ['Disk Rp', () => applyDiscount('fixed'), 'bg-violet-800 hover:bg-violet-700'],
+                  ['Batal', () => (cart.items.length ? setConfirmClear(true) : undefined), 'bg-rose-800 hover:bg-rose-700'],
+                ] as const
+              ).map(([label, onClick, color]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={onClick}
+                  className={cn(
+                    'h-14 w-[4.5rem] shrink-0 rounded-lg text-xs font-black uppercase leading-tight text-white active:scale-95',
+                    color
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={openPayment}
+                disabled={cart.items.length === 0}
+                className="flex h-14 min-w-0 flex-1 items-center justify-between gap-3 rounded-xl bg-emerald-600 px-4 text-white shadow-lg transition hover:bg-emerald-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                <span className="text-left">
+                  <span className="block text-lg font-black uppercase tracking-widest leading-none">Bayar</span>
+                  <span className="text-[11px] font-semibold uppercase opacity-80">{cart.itemCount} item</span>
+                </span>
+                <span className="truncate text-2xl font-black tabular-nums">{fmtRp(total)}</span>
+              </button>
+            </div>
+          )}
         </section>
       </div>
 

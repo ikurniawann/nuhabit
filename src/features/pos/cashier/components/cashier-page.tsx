@@ -2738,7 +2738,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                       {isLocked ? '🔒 ' : '★ '}{minXp} XP
                     </span>
                   )}
-                  <div className={`${isTabletMode ? 'aspect-[4/3]' : 'aspect-[5/4]'} w-full overflow-hidden bg-gray-100`}>
+                  <div className={`${isTabletMode ? 'aspect-[16/10]' : 'aspect-[5/4]'} w-full overflow-hidden bg-gray-100`}>
                     <PosProductThumbnail src={product.image_url} alt={product.name} />
                   </div>
                   <div className={`flex flex-col ${isTabletMode ? 'gap-0.5 p-2 @min-[40rem]:gap-1 @min-[40rem]:p-2.5' : 'gap-0.5 p-1.5'}`}>

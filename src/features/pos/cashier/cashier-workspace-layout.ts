@@ -15,9 +15,10 @@ export function cashierSplitRowClass(options: {
 
 export function cashierCartPanelClass(isTabletMode: boolean): string {
   if (isTabletMode) {
-    return "h-full max-h-none w-56 shrink-0 min-[900px]:w-72 min-[1100px]:w-80 min-[1280px]:w-96";
+    // Keranjang cukup lebar utk membaca item (keluhan owner 2026-09-29, tablet ±1024px).
+    return "h-full max-h-none w-64 shrink-0 min-[900px]:w-80 min-[1100px]:w-[22rem] min-[1280px]:w-96";
   }
-  return "max-h-[40vh] min-[800px]:max-h-none min-[800px]:h-full min-[800px]:w-56 min-[900px]:w-72 min-[1100px]:w-80 lg:w-96";
+  return "max-h-[40vh] min-[800px]:max-h-none min-[800px]:h-full min-[800px]:w-64 min-[900px]:w-80 min-[1100px]:w-[22rem] lg:w-96";
 }
 
 export function cashierLeftPanelClass(isTabletMode: boolean): string {
