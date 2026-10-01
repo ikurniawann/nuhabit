@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, Loader2, Phone, Wallet } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, MessageCircle, Phone, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatKitchenStatusLabel } from "@/features/pos/reports/utils/transaction-labels";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { fetchMemberBillDetail, memberBillKeys, settleMemberBill } from "../api";
 import { formatDateTimeWib, formatIdr, orderTypeLabel } from "../format";
 import { PayMemberBillDialog } from "./pay-member-bill-dialog";
+import { SendBillWaDialog } from "./send-bill-wa-dialog";
 
 type Tab = "open" | "payments" | "settled";
 
@@ -34,6 +35,7 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("open");
   const [payOpen, setPayOpen] = useState(false);
+  const [waOpen, setWaOpen] = useState(false);
   const detailQuery = useQuery({
     queryKey: memberBillKeys.detail(customerId),
     queryFn: () => fetchMemberBillDetail(customerId),
@@ -102,6 +104,16 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
               Tutup tagihan dari saldo
             </Button>
           ) : null}
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            disabled={balance.outstanding <= 0 || !detail.customer.phone}
+            title={detail.customer.phone ? "Kirim rincian tagihan ke WA member" : "Member belum punya nomor HP"}
+            onClick={() => setWaOpen(true)}
+          >
+            <MessageCircle className="h-4 w-4" /> Kirim WA
+          </Button>
           <Button type="button" size="lg" disabled={balance.outstanding <= 0} onClick={() => setPayOpen(true)}>
             <Wallet className="h-4 w-4" /> Bayar
           </Button>
@@ -238,6 +250,12 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
       ) : null}
 
       <PayMemberBillDialog open={payOpen} detail={detail} onOpenChange={setPayOpen} />
+      <SendBillWaDialog
+        open={waOpen}
+        customerId={detail.customer.id}
+        customerName={detail.customer.name}
+        onOpenChange={setWaOpen}
+      />
     </div>
   );
 }

@@ -194,3 +194,44 @@ export function buildShiftReportMessage(input: ShiftReportInput): string {
     `Selisih: ${selisih}`,
   ].join("\n");
 }
+
+export interface MemberBillReminderInput {
+  outletName: string;
+  customerName: string;
+  at: string;
+  /** Order belum lunas, urut terlama dulu. */
+  orders: { orderNumber: string; orderedAt: string; total: number }[];
+  openTotal: number;
+  /** Saldo cicilan yang sudah masuk (belum menutup order). */
+  paid: number;
+  outstanding: number;
+}
+
+/** Maks. baris order di pesan WA — sisanya diringkas supaya pesan tetap pendek. */
+export const MEMBER_BILL_WA_MAX_ORDERS = 15;
+
+const tanggalWib = (iso: string): string =>
+  new Date(iso).toLocaleDateString("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" });
+
+/** Pesan WA rincian Tagihan Member (POS → Tagihan → Kirim WA, owner 2026-10-01). */
+export function buildMemberBillReminderMessage(input: MemberBillReminderInput): string {
+  const shown = input.orders.slice(0, MEMBER_BILL_WA_MAX_ORDERS);
+  const hidden = input.orders.length - shown.length;
+  const baris = [
+    `Halo *${input.customerName}* 👋`,
+    `Berikut rincian tagihan Anda di *${input.outletName}* per ${jamWib(input.at)} WIB:`,
+    "",
+    ...shown.map(
+      (order, index) => `${index + 1}. ${order.orderNumber} · ${tanggalWib(order.orderedAt)} — ${rupiah(order.total)}`
+    ),
+  ];
+  if (hidden > 0) baris.push(`… dan ${hidden} order lainnya`);
+  baris.push("", `Total order: ${rupiah(input.openTotal)}`);
+  if (input.paid > 0) baris.push(`Sudah dibayar: ${rupiah(input.paid)}`);
+  baris.push(
+    `*Sisa tagihan: ${rupiah(input.outstanding)}*`,
+    "",
+    "Pembayaran bisa dilakukan di kasir dan boleh dicicil. Terima kasih 🙏"
+  );
+  return baris.join("\n");
+}

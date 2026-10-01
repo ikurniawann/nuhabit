@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildMemberBillReminderMessage,
   buildOrderReceiptMessage,
   buildShiftReportMessage,
   buildTopupReceiptMessage,
+  MEMBER_BILL_WA_MAX_ORDERS,
   normalizeWaPhone,
 } from "./receipt-wa";
 
@@ -192,5 +194,43 @@ describe("buildShiftReportMessage", () => {
       variance: 0,
     });
     expect(pesan).toContain("pas");
+  });
+});
+
+describe("buildMemberBillReminderMessage", () => {
+  const base = {
+    outletName: "BCD Coffee",
+    customerName: "Budi",
+    at: "2026-10-01T12:00:00.000Z",
+    orders: [
+      { orderNumber: "POS-20260928-0001", orderedAt: "2026-09-28T07:30:00.000Z", total: 25000 },
+      { orderNumber: "POS-20261001-0002", orderedAt: "2026-10-01T10:19:00.000Z", total: 622000 },
+    ],
+    openTotal: 647000,
+    paid: 400000,
+    outstanding: 247000,
+  };
+
+  it("memuat daftar order, total, yang sudah dibayar, dan sisa tagihan", () => {
+    const message = buildMemberBillReminderMessage(base);
+    expect(message).toContain("Halo *Budi*");
+    expect(message).toContain("*BCD Coffee*");
+    expect(message).toContain("1. POS-20260928-0001");
+    expect(message).toContain("Rp 25.000");
+    expect(message).toContain("Total order: Rp 647.000");
+    expect(message).toContain("Sudah dibayar: Rp 400.000");
+    expect(message).toContain("*Sisa tagihan: Rp 247.000*");
+  });
+
+  it("belum ada cicilan → baris 'Sudah dibayar' tidak muncul; order banyak diringkas", () => {
+    const orders = Array.from({ length: MEMBER_BILL_WA_MAX_ORDERS + 3 }, (_, i) => ({
+      orderNumber: `POS-${i}`,
+      orderedAt: "2026-10-01T10:00:00.000Z",
+      total: 1000,
+    }));
+    const message = buildMemberBillReminderMessage({ ...base, orders, paid: 0 });
+    expect(message).not.toContain("Sudah dibayar");
+    expect(message).toContain("… dan 3 order lainnya");
+    expect(message).not.toContain(`POS-${MEMBER_BILL_WA_MAX_ORDERS}`);
   });
 });

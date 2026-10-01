@@ -106,3 +106,13 @@ export function settleMemberBill(customerId: string) {
     { method: "POST" }
   );
 }
+
+export type MemberBillWaResult = { phone: string; message: string; sent: boolean };
+
+/** Pratinjau (`preview: true`) atau kirim rincian tagihan ke WA member. */
+export function sendMemberBillWa(customerId: string, preview: boolean) {
+  return request<MemberBillWaResult>(`/api/pos/member-bills/${customerId}/send-wa`, {
+    method: "POST",
+    body: JSON.stringify({ preview }),
+  });
+}
