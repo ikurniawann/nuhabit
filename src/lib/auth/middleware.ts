@@ -142,6 +142,10 @@ export async function updateSession(request: NextRequest) {
     }
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    // Deep link (mis. "Buatkan Pesanan" dari WA) → kembali ke halaman itu setelah login.
+    if (pathname.startsWith("/dashboard") && !url.searchParams.has("redirect")) {
+      url.searchParams.set("redirect", `${pathname}${request.nextUrl.search}`);
+    }
     return NextResponse.redirect(url);
   }
 

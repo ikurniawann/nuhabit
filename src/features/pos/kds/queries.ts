@@ -26,7 +26,7 @@ export function unlockKdsSound() {
   if (audioCtx?.state === "suspended") void audioCtx.resume();
 }
 
-function playNotificationSound() {
+export function playNotificationSound() {
   try {
     const audioCtx = getKdsAudioContext();
     if (!audioCtx) return;

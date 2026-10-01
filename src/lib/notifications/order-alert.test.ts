@@ -91,3 +91,15 @@ describe("nama pemesan member", () => {
     expect(text).toContain("Atas nama: Riksa (member) · WA 081200001111");
   });
 });
+
+describe("link Buatkan Pesanan", () => {
+  it("ditambahkan di akhir pesan bila ada actionUrl", () => {
+    const text = buildOrderAlertMessage({
+      brandName: "BCD Coffee", sourceLabel: "Self-order QR", tableLabel: "A1", orderType: "dine_in",
+      queueNumber: "003", orderNumber: "POS-3", paymentLabel: "Bayar di kasir", paid: false, total: 78000,
+      items: [{ name: "Dirty Latte", quantity: 1 }],
+      actionUrl: "https://poskopi.reddie.id/dashboard/pos/self-orders?order=abc",
+    });
+    expect(text.endsWith("👉 Buatkan Pesanan: https://poskopi.reddie.id/dashboard/pos/self-orders?order=abc")).toBe(true);
+  });
+});

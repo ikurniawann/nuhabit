@@ -61,6 +61,7 @@ import {
 } from "@/features/pos/reports/components/transaction-detail-body";
 import { loadOrderTransactionDetail } from "@/features/pos/reports/utils/load-order-detail";
 import { orderCustomerLabel } from "@/lib/pos/order-customer";
+import { SelfOrderBubble } from "@/features/pos/self-orders/components/self-order-bubble";
 import {
   flattenOrderItems,
   mergeBillTransactionDetail,
@@ -351,6 +352,7 @@ export function OrdersPage() {
 
   return (
     <div className="space-y-4">
+      <SelfOrderBubble />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Orders</h1>

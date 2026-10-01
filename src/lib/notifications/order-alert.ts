@@ -56,6 +56,8 @@ export type OrderAlertInput = {
   customerNote?: string | null;
   total: number;
   items: Array<{ name: string; quantity: number; variant?: string | null; modifiers?: string[] }>;
+  /** Link layar "Buatkan Pesanan" (/dashboard/pos/self-orders?order=…). */
+  actionUrl?: string | null;
 };
 
 const localPhone = (phone: string) => (phone.startsWith("62") ? `0${phone.slice(2)}` : phone);
@@ -86,6 +88,8 @@ export function buildOrderAlertMessage(input: OrderAlertInput): string {
     input.customerNote ? `\nCatatan: ${input.customerNote}` : null,
     "",
     `Total ${rupiah(input.total)} · ${input.paymentLabel}${input.paid ? " (lunas)" : " (belum dibayar)"}`,
+    // WA tidak mendukung tautan berjudul → judul ditulis di depan URL.
+    input.actionUrl ? `\n👉 Buatkan Pesanan: ${input.actionUrl}` : null,
   ];
   return lines.filter((line) => line !== null).join("\n").trim();
 }

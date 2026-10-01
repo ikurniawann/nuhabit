@@ -209,7 +209,7 @@ vi.mock("@/lib/table-order/server", () => ({
 }));
 
 function makeRequest(body: unknown): NextRequest {
-  return { json: async () => body, headers: new Headers() } as unknown as NextRequest;
+  return { json: async () => body, headers: new Headers(), nextUrl: new URL("http://localhost/api/table-order/orders") } as unknown as NextRequest;
 }
 
 function baseDbResponses() {
@@ -508,6 +508,7 @@ describe("POST /api/table-order/orders — notifikasi staf", () => {
     });
     expect(status).toBe(201);
     expect(fireOrderAlert).toHaveBeenCalledTimes(1);
+    expect(String(fireOrderAlert.mock.calls[0][0].actionUrl ?? "")).toMatch(/\/dashboard\/pos\/self-orders\?order=order-1$/);
     expect(fireOrderAlert.mock.calls[0][0]).toMatchObject({
       sourceLabel: "Self-order QR",
       tableLabel: "WIT. Office Bandung",

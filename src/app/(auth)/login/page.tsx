@@ -117,9 +117,13 @@ export default function LoginPage() {
       const role = (profile as { role?: string } | null)?.role;
       let target = requestedRedirect || "/arkiv-os";
       if (role !== "super_admin") {
-        target = requestedRedirect?.startsWith("/dashboard/me")
-          ? requestedRedirect
-          : "/dashboard/me";
+        // Deep link staf yang diizinkan (akses tetap dijaga layout dashboard):
+        // Area Karyawan & layar pesanan self-order dari link WA "Buatkan Pesanan".
+        target =
+          requestedRedirect?.startsWith("/dashboard/me") ||
+          requestedRedirect?.startsWith("/dashboard/pos/self-orders")
+            ? requestedRedirect
+            : "/dashboard/me";
       }
       setTransitioning(true);
       window.setTimeout(() => router.replace(target), 450);

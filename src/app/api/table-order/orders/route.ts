@@ -62,6 +62,12 @@ const createOrderSchema = z.object({
   guest_phone: z.string().trim().max(30).optional(),
 });
 
+/** Link layar kasir "Buatkan Pesanan" utk notifikasi WA/Telegram (null bila URL app tak diketahui). */
+function buildSelfOrderActionUrl(request: NextRequest, orderId: string) {
+  const base = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl?.origin || "").replace(/\/$/, "");
+  return base ? `${base}/dashboard/pos/self-orders?order=${encodeURIComponent(orderId)}` : null;
+}
+
 function fail(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
@@ -359,6 +365,7 @@ export async function POST(request: NextRequest) {
       guestName: guest?.name ?? memberContact?.name ?? null,
       guestPhone: guest?.phone ?? memberContact?.phone ?? null,
       isMember: Boolean(customerId),
+      actionUrl: buildSelfOrderActionUrl(request, orderId),
       customerNote: payload.customer_note || null,
       total,
       items: lines.map((line) => ({
