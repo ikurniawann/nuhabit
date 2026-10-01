@@ -289,17 +289,11 @@ export function CartPanel({
               <Truck className="h-3 w-3" /> Delivery
             </span>
           )}
-          {orderType === 'dine_in' && (
-            <span
-              className={
-                selectedTable
-                  ? 'inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary'
-                  : 'inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground'
-              }
-            >
-              {selectedTable ? `Table ${selectedTable}` : 'Without Table'}
+          {orderType === 'dine_in' && selectedTable ? (
+            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+              Table {selectedTable}
             </span>
-          )}
+          ) : null}
           {continuingCheckoutNumber ? (
             <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
               Open bill {continuingCheckoutNumber}

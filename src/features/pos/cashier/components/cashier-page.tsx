@@ -143,7 +143,6 @@ import {
 import { PageTransition } from '@/components/motion';
 import { HelpHint } from '@/components/ui/help-hint';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { floorLabel, floorSortKey } from '@/features/pos/tables/floor-options';
 import { useLoyaltySettings } from '@/features/pos/loyalty-settings';
 import { formatArkAmount } from '@/lib/pos/loyalty-settings';
 
@@ -172,28 +171,6 @@ function writeLastOpenCheckoutId(id: string | null) {
 
 const getTableDisplayName = (table?: PosTable | null) =>
   table?.label || table?.table_number || table?.name || table?.qr_code || 'Table';
-
-function groupCashierTablesByFloor(tables: PosTable[]) {
-  const map = new Map<string, PosTable[]>();
-  for (const table of tables) {
-    const key = String(table.floor ?? '').trim();
-    const list = map.get(key) ?? [];
-    list.push(table);
-    map.set(key, list);
-  }
-
-  return [...map.entries()]
-    .sort(([a], [b]) => floorSortKey(a) - floorSortKey(b))
-    .map(([floorKey, groupTables]) => ({
-      floorKey,
-      label: floorLabel(floorKey),
-      tables: [...groupTables].sort((a, b) =>
-        getTableDisplayName(a).localeCompare(getTableDisplayName(b), undefined, {
-          numeric: true,
-        })
-      ),
-    }));
-}
 
 // Diskon dari konfigurasi tier CRM yang disertakan server (EPIC-011)
 const withCustomerDiscount = (customer: Customer): CustomerWithDiscount => ({
@@ -256,8 +233,9 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   const { arkCoin: arkEnabled, xp: xpEnabled } = useLoyaltyFeatures();
   const { checkout, submitting } = usePosCheckout();
   const payOpenOrderMutation = usePayOpenOrder();
-  const { data: tables = [], isLoading: loadingTables, error: tablesQueryError } = useCashierTables();
-  const tableError = tablesQueryError instanceof Error ? tablesQueryError.message : null;
+  // Tabel hanya utk menampilkan nomor meja open bill dari mode Restaurant —
+  // kasir tidak lagi memilih meja (owner 2026-10-01: Dine-in / Take Away saja).
+  const { data: tables = [] } = useCashierTables();
   const { data: paymentOrder } = useCashierOrder(paymentCheckoutId ? null : paymentOrderId);
   // Bill self-order tamu: nama pemesan dari form wajib (bukan member) → struk tidak "Walk-in".
   const orderContactName = paymentOrder?.contact_name?.trim() || undefined;
@@ -293,7 +271,6 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   const [customerSearch, setCustomerSearch] = useState('');
   const [showProductSuggestions, setShowProductSuggestions] = useState(false);
   const [activeProductSuggestion, setActiveProductSuggestion] = useState(0);
-  const [showTableModal, setShowTableModal] = useState(false);
 
   /* Customization */
   const [custom, setCustom] = useState<SelectedCustomization | null>(null);
@@ -463,10 +440,6 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
     return new Map(tables.map((table) => [table.id, table]));
   }, [tables]);
 
-  const tablesByFloor = useMemo(
-    () => groupCashierTablesByFloor(tables),
-    [tables]
-  );
 
   const selectedTableDisplay = useMemo(() => {
     if (!effectiveTableId) return null;
@@ -2273,7 +2246,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                 ? `Meja ${selectedTableDisplay}`
                 : cart.orderType === 'takeaway'
                   ? 'Take Away'
-                  : 'Without Table'}
+                  : 'Dine-in'}
               {selectedTableDisplay || cart.orderType === 'dine_in'
                 ? ` · ${normalizeGuestCount(guestCount)} tamu`
                 : null}
@@ -2295,15 +2268,19 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                     Take Away
                   </span>
                 ) : cart.orderType === 'dine_in' ? (
-                  <span className="inline-flex items-center gap-1.5 font-medium text-gray-700">
-                    <TableIcon className="h-3.5 w-3.5" />
-                    Without Table
+                  <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+                    <Utensils className="h-3.5 w-3.5" />
+                    Dine-in
                   </span>
                 ) : null}
                 {selectedTableDisplay || cart.orderType === 'dine_in' ? (
                   <>
-                    <span className="text-gray-300">·</span>
-                    <span>Dine-in</span>
+                    {selectedTableDisplay ? (
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span>Dine-in</span>
+                      </>
+                    ) : null}
                     {/* Jumlah tamu (EPIC-038). Placeholder "1" bukan nilai
                         default yang tersimpan diam-diam — field kosong memang
                         berarti 1 orang, dan itu ditegakkan di server. */}
@@ -2483,26 +2460,17 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
             </button>
             <button
               type="button"
-              onClick={() => setShowTableModal(true)}
-              className={
-                selectedTableDisplay
-                  ? 'flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-all hover:border-primary/60 hover:bg-primary/15'
-                  : cart.orderType === 'takeaway'
-                    ? 'flex items-center gap-2 rounded-lg border border-amber-400 bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-600'
-                    : 'flex items-center gap-2 rounded-lg border border-gray-200/80 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary'
-              }
-              title="Service / table mode"
+              onClick={() => {
+                cart.setOrderType('takeaway');
+                cart.setTable(null);
+              }}
+              className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all ${
+                cart.orderType === 'takeaway'
+                  ? 'border-amber-500 bg-amber-500 text-white shadow-sm'
+                  : 'border-amber-300 bg-amber-50 text-amber-800 hover:border-amber-400 hover:bg-amber-100'
+              }`}
             >
-              {cart.orderType === 'takeaway' ? (
-                <ShoppingBag className="h-4 w-4" />
-              ) : (
-                <TableIcon className="h-4 w-4" />
-              )}
-              {selectedTableDisplay
-                ? `Table ${selectedTableDisplay}`
-                : cart.orderType === 'takeaway'
-                  ? 'Take Away'
-                  : 'Without Table'}
+              <ShoppingBag className="h-4 w-4" /> Take Away
             </button>
             <button
               onClick={() => setShowCustomerModal(true)}
@@ -2957,140 +2925,6 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         </DialogPanel>
       </Dialog>
 
-      <Dialog open={showTableModal} onOpenChange={setShowTableModal}>
-        <DialogPanel size="lg" className="max-h-[80vh]">
-          <DialogPanelHeader>
-            <DialogPanelTitle>Service / Table</DialogPanelTitle>
-            <DialogPanelDescription>
-              Choose Without Table, Take Away, or a dine-in table
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="flex min-h-0 flex-col">
-            <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => {
-                  cart.setTable(null);
-                  cart.setOrderType('dine_in');
-                  setShowTableModal(false);
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition-all ${
-                  cart.orderType === 'dine_in' && !effectiveTableId
-                    ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/30'
-                    : 'border-gray-200/70 bg-white text-gray-700 hover:border-primary/40 hover:bg-primary/5'
-                }`}
-              >
-                <TableIcon className="h-4 w-4" />
-                Without Table
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  cart.setTable(null);
-                  cart.setOrderType('takeaway');
-                  setShowTableModal(false);
-                }}
-                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition-all ${
-                  cart.orderType === 'takeaway' && !effectiveTableId
-                    ? 'border-amber-400 bg-amber-50 text-amber-800 ring-1 ring-amber-300'
-                    : 'border-gray-200/70 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50'
-                }`}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Take Away
-              </button>
-            </div>
-            {loadingTables ? (
-              <div className="flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 p-4 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading tables...
-              </div>
-            ) : tableError ? (
-              <div className="rounded-lg border border-red-200/80 bg-red-50 p-4 text-sm font-medium text-red-600">
-                {tableError}
-              </div>
-            ) : tables.length === 0 ? (
-              <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 p-4 text-sm text-gray-500">
-                No active tables available.
-              </div>
-            ) : (
-              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
-                {tablesByFloor.map((group) => (
-                  <section key={group.floorKey || '__unassigned'} className="space-y-2">
-                    <div className="sticky top-0 z-10 -mx-1 flex items-center justify-between gap-2 border-b border-gray-200/70 bg-white/95 px-1 py-2 backdrop-blur-sm">
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        {group.label}
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {group.tables.length} table
-                        {group.tables.length === 1 ? '' : 's'}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
-                      {group.tables.map((table) => {
-                        const isSelected = effectiveTableId === table.id;
-                        const isOccupied = table.status === 'occupied' && !isSelected;
-                        const activeOrder = table.active_order?.order_number;
-
-                        return (
-                          <button
-                            key={table.id}
-                            type="button"
-                            disabled={isOccupied}
-                            onClick={() => {
-                              cart.setOrderType('dine_in');
-                              cart.setTable(isSelected ? null : table.id);
-                              setShowTableModal(false);
-                            }}
-                            className={`min-h-[84px] rounded-lg border px-3 py-3 text-left transition-all ${
-                              isSelected
-                                ? 'border-primary bg-primary text-white shadow-sm'
-                                : isOccupied
-                                  ? 'cursor-not-allowed border-gray-200/70 bg-gray-100 text-gray-400'
-                                  : 'border-gray-200/70 bg-white text-gray-800 hover:border-primary/50 hover:bg-primary/10'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-sm font-bold tracking-normal">
-                                {getTableDisplayName(table)}
-                              </span>
-                              <TableIcon className="h-4 w-4 shrink-0" />
-                            </div>
-                            <div
-                              className={`mt-2 text-[11px] font-medium ${
-                                isSelected
-                                  ? 'text-primary-foreground/70'
-                                  : isOccupied
-                                    ? 'text-gray-400'
-                                    : 'text-gray-500'
-                              }`}
-                            >
-                              {table.area || '—'}
-                            </div>
-                            <div
-                              className={`mt-1 text-xs font-semibold ${
-                                isSelected
-                                  ? 'text-primary-foreground/70'
-                                  : isOccupied
-                                    ? 'text-gray-400'
-                                    : 'text-gray-500'
-                              }`}
-                            >
-                              {isOccupied
-                                ? activeOrder || 'Occupied'
-                                : `${table.capacity} seats`}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            )}
-          </DialogPanelBody>
-        </DialogPanel>
-      </Dialog>
 
       {/* ── Customization Modal ── */}
       <CustomizationModal
