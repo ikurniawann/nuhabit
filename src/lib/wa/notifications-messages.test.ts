@@ -289,3 +289,10 @@ describe("PR mendesak", () => {
     expect(msg).toContain("meninjau");
   });
 });
+
+describe("tanggal pesan WA = tanggal WIB, apa pun zona waktu server", () => {
+  it("judul Ringkasan Harian 2026-10-01 → Kamis, 1 Oktober 2026", () => {
+    const msg = buildDigestMessage(overviewKosong, "2026-10-01");
+    expect(msg).toContain("Ringkasan Harian — Kamis, 1 Oktober 2026");
+  });
+});

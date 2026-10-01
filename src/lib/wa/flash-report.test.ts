@@ -91,3 +91,14 @@ describe("wibDayRange", () => {
     expect(end).toBe("2026-08-22T17:00:00.000Z");
   });
 });
+
+describe("tanggal judul laporan = tanggal WIB, apa pun zona waktu server", () => {
+  // Bug owner 2026-10-01: container berjalan di UTC — 00:00 WIB 1 Okt =
+  // 17:00 UTC 30 Sep, jadi judul tertulis "Rabu, 30 September" padahal
+  // laporan (data & dedup) untuk Kamis 1 Oktober.
+  it("2026-10-01 → Kamis, 1 Oktober 2026", () => {
+    const msg = buildFlashReportMessage(contoh, "2026-10-01");
+    expect(msg).toContain("Kamis, 1 Oktober 2026");
+    expect(msg).not.toContain("30 September");
+  });
+});

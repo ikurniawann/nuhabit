@@ -192,11 +192,14 @@ export async function gatherFlashReportData(dateWib: string): Promise<FlashRepor
 const rp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
 
 export function buildFlashReportMessage(data: FlashReportData, dateWib: string): string {
+  // timeZone wajib: container berjalan di UTC — tanpa ini 00:00 WIB terbaca
+  // sebagai tanggal kemarin (judul mundur sehari, bug owner 2026-10-01).
   const tanggal = new Date(`${dateWib}T00:00:00+07:00`).toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Jakarta",
   });
   const avgPerPax = data.guestCount > 0 ? data.nettSales / data.guestCount : 0;
 

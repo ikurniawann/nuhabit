@@ -218,7 +218,7 @@ export function buildKontrakHabisMessage(items: KontrakHabisItem[]): string {
     .map((i) => {
       const tgl = new Date(`${i.endDate}T00:00:00+07:00`).toLocaleDateString(
         "id-ID",
-        { day: "numeric", month: "short" }
+        { day: "numeric", month: "short", timeZone: "Asia/Jakarta" }
       );
       const sisa = i.daysLeft <= 0 ? "SUDAH LEWAT" : `${i.daysLeft} hari lagi`;
       return `• ${i.employeeName} — ${tgl} (${sisa})`;
@@ -244,7 +244,8 @@ export function buildDigestMessage(
 ): string {
   const tanggal = new Date(`${dateWib}T00:00:00+07:00`).toLocaleDateString(
     "id-ID",
-    { weekday: "long", day: "numeric", month: "long", year: "numeric" }
+    // timeZone wajib — server UTC membaca 00:00 WIB sebagai tanggal kemarin.
+    { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta" }
   );
   const lines: (string | null)[] = [`📊 *Ringkasan Harian — ${tanggal}*`, ``];
 
