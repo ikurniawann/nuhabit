@@ -4,7 +4,7 @@ import { Coins, Loader2, Minus, Plus, QrCode, ScanLine, ShoppingBag, WalletCards
 import { idrToArkDisplay } from "@/lib/pos/loyalty-settings";
 import { formatRupiah } from "@/lib/table-order/menu";
 import type { TableOrderPaymentMethod, TableOrderType } from "@/lib/table-order/order-status";
-import type { CartLine, CartSummary } from "@/lib/table-order/pricing";
+import { memberPrice, type CartLine, type CartSummary } from "@/lib/table-order/pricing";
 import type { MemberProfile, TableSession } from "../api";
 import { BottomSheet } from "./sheet";
 
@@ -152,7 +152,18 @@ export function CartSheet({
                   </button>
                 </div>
                 <div className="w-20 text-right text-sm font-bold text-gray-900">
-                  {formatRupiah(line.unitPrice * line.quantity)}
+                  {summary.memberDiscountPercent > 0 ? (
+                    <>
+                      <div className="text-[11px] font-medium text-gray-400 line-through">
+                        {formatRupiah(line.unitPrice * line.quantity)}
+                      </div>
+                      <div className="text-primary">
+                        {formatRupiah(memberPrice(line.unitPrice, summary.memberDiscountPercent) * line.quantity)}
+                      </div>
+                    </>
+                  ) : (
+                    formatRupiah(line.unitPrice * line.quantity)
+                  )}
                 </div>
               </div>
             ))}
@@ -193,6 +204,14 @@ export function CartSheet({
               <span>Subtotal ({summary.totalItems} item)</span>
               <span className="font-semibold text-gray-900">{formatRupiah(summary.subtotal)}</span>
             </div>
+            {summary.memberDiscount > 0 && (
+              <div className="mt-1.5 flex justify-between text-primary">
+                <span>
+                  Diskon member{member?.tier?.name ? ` ${member.tier.name}` : ""} ({summary.memberDiscountPercent}%)
+                </span>
+                <span className="font-semibold">−{formatRupiah(summary.memberDiscount)}</span>
+              </div>
+            )}
             {summary.breakdown.map((line) => (
               <div key={line.code} className="mt-1.5 flex justify-between text-gray-600">
                 <span>

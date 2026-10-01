@@ -39,6 +39,9 @@ export type CartLine = {
 export type CartSummary = {
   totalItems: number;
   subtotal: number;
+  /** Potongan diskon tier member (0 bila tamu). */
+  memberDiscount: number;
+  memberDiscountPercent: number;
   totalXp: number;
   taxAmount: number;
   serviceChargeAmount: number;
@@ -114,14 +117,36 @@ export function productQuantity(cart: CartLine[], productId: string) {
     .reduce((sum, line) => sum + line.quantity, 0);
 }
 
-export function summarizeCart(cart: CartLine[], charges: BillingCharge[] = []): CartSummary {
+/**
+ * Potongan diskon member — sama dengan kasir (lib/pos/manual-discount):
+ * floor(basis × persen / 100). Dipakai klien (harga coret) & server (order).
+ */
+export function memberDiscountAmount(amount: number, percent: number) {
+  const pct = Math.min(100, Math.max(0, Number(percent) || 0));
+  const basis = Math.max(0, Number(amount) || 0);
+  return pct > 0 ? Math.floor((basis * pct) / 100) : 0;
+}
+
+/** Harga setelah diskon member — utk tampilan harga coret per item. */
+export function memberPrice(price: number, percent: number) {
+  return Math.max(0, price - memberDiscountAmount(price, percent));
+}
+
+export function summarizeCart(
+  cart: CartLine[],
+  charges: BillingCharge[] = [],
+  memberDiscountPercent = 0
+): CartSummary {
   const subtotal = cart.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
   const totalItems = cart.reduce((sum, line) => sum + line.quantity, 0);
   const totalXp = cart.reduce((sum, line) => sum + line.xp * line.quantity, 0);
-  const bill = calculateBillCharges({ subtotalAfterDiscount: subtotal, charges });
+  const memberDiscount = memberDiscountAmount(subtotal, memberDiscountPercent);
+  const bill = calculateBillCharges({ subtotalAfterDiscount: subtotal - memberDiscount, charges });
   return {
     totalItems,
     subtotal,
+    memberDiscount,
+    memberDiscountPercent: memberDiscount > 0 ? memberDiscountPercent : 0,
     totalXp,
     taxAmount: bill.tax_amount,
     serviceChargeAmount: bill.service_charge_amount,

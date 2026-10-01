@@ -73,6 +73,10 @@ vi.mock("@/lib/pg/create-client", () => ({
 vi.mock("@/lib/member-portal/session", () => ({
   getMemberSession: () => memberSession(),
 }));
+const memberDiscountPct = vi.fn(async (_customerId: string) => 0);
+vi.mock("@/lib/member-portal/tier", () => ({
+  loadMemberDiscountPercent: (customerId: string) => memberDiscountPct(customerId),
+}));
 vi.mock("@/lib/payments/xendit", () => ({
   loadActiveXenditConfig: () => loadXendit(),
 }));
@@ -239,6 +243,8 @@ beforeEach(() => {
   fake = createFakeDb(baseDbResponses(), rpcOk);
   memberSession.mockReset();
   memberSession.mockResolvedValue(null);
+  memberDiscountPct.mockReset();
+  memberDiscountPct.mockResolvedValue(0);
   loadXendit.mockClear();
   ensureQris.mockClear();
   fireOrderAlert.mockClear();
@@ -282,6 +288,38 @@ describe("POST /api/table-order/orders — harga dari server", () => {
     expect(data.queue_number).toBe("A-007");
     expect(data.total_amount).toBe(121000);
     expect(data.qris).toBeNull();
+  });
+
+  it("member login: diskon tier dipotong dari subtotal sebelum pajak (persen dari server)", async () => {
+    memberSession.mockResolvedValue({ customerId: "cust-1" });
+    memberDiscountPct.mockResolvedValue(10);
+    const { status, json } = await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [{ product_id: PRODUCT_ID, variant_id: "reg", quantity: 2 }],
+    }, false);
+    expect(status).toBe(201);
+    expect(memberDiscountPct).toHaveBeenCalledWith("cust-1");
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<string, unknown>;
+    // 60.000 − 10% (6.000) = 54.000 ; PB1 10% = 5.400
+    expect(order.subtotal).toBe(60000);
+    expect(order.discount_amount).toBe(6000);
+    expect(order.tax_amount).toBe(5400);
+    expect(order.total_amount).toBe(59400);
+    expect((json.data as Record<string, unknown>).total_amount).toBe(59400);
+  });
+
+  it("tamu: tanpa diskon member walau tier ada", async () => {
+    memberDiscountPct.mockResolvedValue(10);
+    await post({
+      table_code: "T-01",
+      payment_method: "cashier",
+      items: [{ product_id: PRODUCT_ID, variant_id: "reg", quantity: 1 }],
+    });
+    expect(memberDiscountPct).not.toHaveBeenCalled();
+    const order = fake.calls.find((c) => c.table === "pos_orders" && c.action === "insert")?.payload as Record<string, unknown>;
+    expect(order.discount_amount).toBe(0);
+    expect(order.total_amount).toBe(33000);
   });
 
   it("add-on: harga dari katalog server, disimpan ke item order (nama & grup) untuk KDS", async () => {

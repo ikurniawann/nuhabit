@@ -5,6 +5,8 @@ import {
   addToCart,
   adjustCartQuantity,
   MAX_LINE_QTY,
+  memberDiscountAmount,
+  memberPrice,
   productQuantity,
   setCartQuantity,
   summarizeCart,
@@ -136,5 +138,44 @@ describe("keranjang dengan add-on", () => {
     expect(cart[0]).toMatchObject({ quantity: 2, unitPrice: 40000, modifierNames: ["Shot", "Oat Milk"] });
     expect(cart[1]).toMatchObject({ quantity: 1, unitPrice: 25000, modifierIds: [] });
     expect(summarizeCart(cart).subtotal).toBe(105000);
+  });
+});
+
+describe("diskon member (harga coret self-order)", () => {
+  it("memberPrice: floor seperti kasir; 0%/negatif/>100% aman", () => {
+    expect(memberPrice(28000, 10)).toBe(25200);
+    expect(memberPrice(28500, 10)).toBe(25650);
+    expect(memberPrice(10005, 10)).toBe(9005); // potongan 1.000,5 → 1.000
+    expect(memberPrice(28000, 0)).toBe(28000);
+    expect(memberPrice(28000, -5)).toBe(28000);
+    expect(memberPrice(28000, 150)).toBe(0);
+    expect(memberDiscountAmount(-100, 10)).toBe(0);
+  });
+
+  it("summarizeCart: diskon dari subtotal, pajak dihitung setelah diskon", () => {
+    const cart = addToCart([], latte, null, 2); // 60.000
+    const tax: BillingCharge = {
+      code: "TAX",
+      name: "PB1",
+      charge_kind: "tax",
+      calc_method: "percent",
+      rate: 10,
+      amount: 0,
+      apply_order: 200,
+      is_enabled: true,
+      is_optional: false,
+      base: "subtotal_after_discount",
+    } as BillingCharge;
+    const member = summarizeCart(cart, [tax], 10);
+    expect(member.subtotal).toBe(60000);
+    expect(member.memberDiscount).toBe(6000);
+    expect(member.memberDiscountPercent).toBe(10);
+    expect(member.taxAmount).toBe(5400);
+    expect(member.total).toBe(59400);
+
+    const guest = summarizeCart(cart, [tax]);
+    expect(guest.memberDiscount).toBe(0);
+    expect(guest.memberDiscountPercent).toBe(0);
+    expect(guest.total).toBe(66000);
   });
 });

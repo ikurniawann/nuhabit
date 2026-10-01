@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Lock, Minus, Plus, Sparkles } from "lucide-react";
 import { formatMenuPrice, type TableOrderProduct } from "@/lib/table-order/menu";
+import { memberPrice } from "@/lib/table-order/pricing";
 
 /**
  * Baris daftar menu — mengikuti referensi (GoFood): kiri nama tebal, baris
@@ -16,6 +17,7 @@ export function MenuItemRow({
   product,
   quantity,
   locked,
+  memberDiscountPercent = 0,
   onAdd,
   onIncrement,
   onDecrement,
@@ -24,12 +26,16 @@ export function MenuItemRow({
   quantity: number;
   /** Produk khusus member yang belum memenuhi syarat XP */
   locked: boolean;
+  /** Diskon tier member login — harga reguler dicoret + harga member. */
+  memberDiscountPercent?: number;
   onAdd: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
 }) {
   const [imageBroken, setImageBroken] = useState(false);
   const showImage = Boolean(product.image) && !imageBroken;
+  const discounted = memberPrice(product.price, memberDiscountPercent);
+  const hasMemberPrice = discounted < product.price;
 
   return (
     <article className="flex gap-3 border-b border-gray-100 px-4 py-4 last:border-b-0">
@@ -58,7 +64,17 @@ export function MenuItemRow({
         )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-[15px] font-bold text-gray-900">{formatMenuPrice(product.price)}</span>
+          {hasMemberPrice ? (
+            <>
+              <span className="text-[15px] font-bold text-primary">{formatMenuPrice(discounted)}</span>
+              <span className="text-xs text-gray-400 line-through">{formatMenuPrice(product.price)}</span>
+              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                Member −{memberDiscountPercent}%
+              </span>
+            </>
+          ) : (
+            <span className="text-[15px] font-bold text-gray-900">{formatMenuPrice(product.price)}</span>
+          )}
           {product.minXp > 0 && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${

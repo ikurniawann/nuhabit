@@ -106,7 +106,12 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   const filtered = useMemo(() => filterProducts(products, { query }), [products, query]);
   const sections = useMemo(() => groupBySection(filtered, categories), [filtered, categories]);
   const charges = useMemo(() => session?.billing.charges ?? [], [session]);
-  const summary = useMemo(() => summarizeCart(cart, charges), [cart, charges]);
+  // Diskon tier member → harga coret (owner 2026-10-01); server menghitung ulang.
+  const memberDiscountPct = member?.tier?.discount_percent ?? 0;
+  const summary = useMemo(
+    () => summarizeCart(cart, charges, memberDiscountPct),
+    [cart, charges, memberDiscountPct]
+  );
   const tableLabel = session?.table_label || tableCode;
   const brandName = session?.brand_name || "BCD Coffee";
 
@@ -608,6 +613,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                     product={product}
                     quantity={productQuantity(cart, product.id)}
                     locked={isLocked(product)}
+                    memberDiscountPercent={memberDiscountPct}
                     onAdd={() => handleAdd(product)}
                     onIncrement={() => handleIncrement(product)}
                     onDecrement={() => handleDecrement(product)}
@@ -657,7 +663,12 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         </div>
       )}
 
-      <VariantSheet product={variantProduct} onClose={() => setVariantProduct(null)} onAdd={handleAddVariant} />
+      <VariantSheet
+        product={variantProduct}
+        memberDiscountPercent={memberDiscountPct}
+        onClose={() => setVariantProduct(null)}
+        onAdd={handleAddVariant}
+      />
 
       <CartSheet
         arkEnabled={arkEnabled}

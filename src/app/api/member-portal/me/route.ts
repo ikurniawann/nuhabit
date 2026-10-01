@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { getMemberSession } from "@/lib/member-portal/session";
+import { resolveTierByXp } from "@/lib/member-portal/tier";
 import {
   computeProfileCompletion,
   PROFILE_FIELD_LABELS,
@@ -68,9 +69,7 @@ export async function GET() {
     const completion = computeProfileCompletion(fields);
 
     const totalXp = Number(customer.total_xp) || 0;
-    const currentTier =
-      [...tiers].reverse().find((tier) => totalXp >= Number(tier.min_lifetime_xp)) ??
-      tiers[0] ?? null;
+    const currentTier = resolveTierByXp(tiers, totalXp);
     const nextTier = tiers.find((tier) => Number(tier.min_lifetime_xp) > totalXp) ?? null;
 
     return NextResponse.json({

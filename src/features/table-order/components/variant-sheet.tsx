@@ -14,7 +14,7 @@ import {
   type TableOrderProduct,
   type TableOrderVariant,
 } from "@/lib/table-order/menu";
-import { MAX_LINE_QTY } from "@/lib/table-order/pricing";
+import { MAX_LINE_QTY, memberPrice } from "@/lib/table-order/pricing";
 import { BottomSheet } from "./sheet";
 
 type AddHandler = (
@@ -26,16 +26,27 @@ type AddHandler = (
 
 export function VariantSheet({
   product,
+  memberDiscountPercent = 0,
   onClose,
   onAdd,
 }: {
   product: TableOrderProduct | null;
+  /** Diskon tier member login — total dicoret + harga member. */
+  memberDiscountPercent?: number;
   onClose: () => void;
   onAdd: AddHandler;
 }) {
   if (!product) return null;
   // key=product.id → state pilihan/qty otomatis mulai dari awal utk produk lain.
-  return <VariantSheetBody key={product.id} product={product} onClose={onClose} onAdd={onAdd} />;
+  return (
+    <VariantSheetBody
+      key={product.id}
+      product={product}
+      memberDiscountPercent={memberDiscountPercent}
+      onClose={onClose}
+      onAdd={onAdd}
+    />
+  );
 }
 
 /** Awal: grup wajib (min ≥ 1) terisi opsi pertama; add-on opsional kosong. */
@@ -47,10 +58,12 @@ function initialModifierIds(groups: TableOrderModifierGroup[]) {
 
 function VariantSheetBody({
   product,
+  memberDiscountPercent,
   onClose,
   onAdd,
 }: {
   product: TableOrderProduct;
+  memberDiscountPercent: number;
   onClose: () => void;
   onAdd: AddHandler;
 }) {
@@ -108,7 +121,16 @@ function VariantSheetBody({
               className="flex h-11 flex-1 items-center justify-between rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-sm transition active:scale-[0.99] disabled:bg-gray-300"
             >
               <span>Tambah ke keranjang</span>
-              <span>{formatRupiah(unitPrice * quantity)}</span>
+              {memberPrice(unitPrice, memberDiscountPercent) < unitPrice ? (
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-medium text-white/70 line-through">
+                    {formatRupiah(unitPrice * quantity)}
+                  </span>
+                  <span>{formatRupiah(memberPrice(unitPrice, memberDiscountPercent) * quantity)}</span>
+                </span>
+              ) : (
+                <span>{formatRupiah(unitPrice * quantity)}</span>
+              )}
             </button>
           </div>
         </div>

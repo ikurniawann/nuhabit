@@ -4,12 +4,14 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { awardCrmXpForPosOrder, syncPosCustomerOrderStats } from "@/lib/crm/loyalty-engine";
 import { checkProductPrivileges } from "@/lib/crm/product-privilege";
 import { getMemberSession } from "@/lib/member-portal/session";
+import { loadMemberDiscountPercent } from "@/lib/member-portal/tier";
 import { loadStaticQris } from "@/lib/payments/static-qris";
 import { loadActiveXenditConfig, type XenditGatewayConfig } from "@/lib/payments/xendit";
 import { calculateBillCharges } from "@/lib/pos/billing-settings";
 import { allocateQueueNumber } from "@/lib/pos/queue-number";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveModifiers, resolveVariant, unitPriceFor, type SelectedModifier } from "@/lib/table-order/menu";
+import { memberDiscountAmount } from "@/lib/table-order/pricing";
 import { ensureOrderQris, type OrderQrisPayload } from "@/lib/table-order/qris";
 import {
   clientIdentifier,
@@ -162,7 +164,14 @@ export async function POST(request: NextRequest) {
     const venue = await loadVenueContext();
     const subtotal = lines.reduce((sum, line) => sum + line.unit_price * line.quantity, 0);
     if (subtotal <= 0) return fail("Total pesanan tidak valid", 400);
-    const bill = calculateBillCharges({ subtotalAfterDiscount: subtotal, charges: venue.charges });
+    // Diskon tier member (owner 2026-10-01: harga coret di self-order) — persen
+    // dari sesi member di server, bukan dari klien. Tamu = 0.
+    const memberDiscountPercent = customerId ? await loadMemberDiscountPercent(customerId) : 0;
+    const discountAmount = memberDiscountAmount(subtotal, memberDiscountPercent);
+    const bill = calculateBillCharges({
+      subtotalAfterDiscount: subtotal - discountAmount,
+      charges: venue.charges,
+    });
     const total = bill.total;
 
     // ---- QRIS: pastikan gateway siap SEBELUM order dibuat -----------------
@@ -231,7 +240,7 @@ export async function POST(request: NextRequest) {
         cashier_id: FALLBACK_CASHIER_ID,
         table_id: tableId,
         subtotal,
-        discount_amount: 0,
+        discount_amount: discountAmount,
         tax_amount: bill.tax_amount,
         service_charge_amount: bill.service_charge_amount,
         other_charges_amount: bill.other_charges_amount,
