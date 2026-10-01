@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { CustomerWithDiscount } from "@/hooks/use-pos-customers";
 import { cn } from "@/lib/utils";
+import { prefersInputAutoFocus } from "@/lib/pos/input-autofocus";
 import {
   cardLinkConflictMessage,
   resolveCustomerSearchInitialView,
@@ -66,6 +67,9 @@ export function CustomerSearchModal({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  // Tablet/HP (owner 2026-10-01): jangan fokus otomatis → keyboard virtual
+  // tidak langsung muncul menutupi daftar. Desktop (mouse) tetap fokus.
+  const autoFocusInputs = useMemo(() => prefersInputAutoFocus(), []);
   const [nfcUid, setNfcUid] = useState("");
   const [nfcUidLocked, setNfcUidLocked] = useState(false);
   const [enrollMember, setEnrollMember] = useState(true);
@@ -351,7 +355,7 @@ export function CustomerSearchModal({
                   placeholder="Search by name, phone, or card ID…"
                   value={search}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  autoFocus
+                  autoFocus={autoFocusInputs}
                   disabled={busy}
                   className="h-11 border-gray-200/80 bg-white pl-10"
                 />
@@ -480,7 +484,7 @@ export function CustomerSearchModal({
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    autoFocus
+                    autoFocus={autoFocusInputs}
                     placeholder="Customer name"
                     disabled={busy}
                     required

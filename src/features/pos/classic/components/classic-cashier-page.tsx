@@ -70,6 +70,7 @@ import { PaymentModal } from '@/components/pos/PaymentModal';
 import { CustomizationModal, type SelectedCustomization } from '@/components/pos/CustomizationModal';
 import { MemberPriceText } from '@/components/pos/MemberPriceText';
 import { memberPrice } from '@/lib/pos/member-price';
+import { prefersInputAutoFocus } from '@/lib/pos/input-autofocus';
 import { printThermalReceipt, type ReceiptPayload } from '@/components/pos/PrintReceipt';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -1175,7 +1176,7 @@ export function ClassicCashierPage() {
             <DialogTitle>Pilih Pelanggan</DialogTitle>
           </DialogHeader>
           <input
-            autoFocus
+            autoFocus={prefersInputAutoFocus()}
             value={customerSearch}
             onChange={(e) => setCustomerSearch(e.target.value)}
             placeholder="Cari nama / nomor HP…"
