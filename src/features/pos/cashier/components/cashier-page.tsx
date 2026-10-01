@@ -103,6 +103,7 @@ import { PosProductThumbnail } from '@/components/pos/PosProductThumbnail';
 
 const CASHIER_ID = '00000000-0000-0000-0000-000000000001';
 import { CartPanel } from '@/components/pos/CartPanel';
+import { MemberPriceText } from '@/components/pos/MemberPriceText';
 import { CustomizationModal, type SelectedCustomization } from '@/components/pos/CustomizationModal';
 import { PaymentModal, type PaymentMethod } from '@/components/pos/PaymentModal';
 import {
@@ -2580,7 +2581,8 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-gray-900">{product.name}</div>
                             <div className="text-xs text-gray-500">
-                              {product.category?.name || 'Uncategorized'} · {formatCurrency(product.base_price)}
+                              {product.category?.name || 'Uncategorized'} ·{' '}
+                              <MemberPriceText price={product.base_price} memberDiscountPercent={membershipDiscount} format={formatCurrency} />
                             </div>
                           </div>
                           <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
@@ -2646,7 +2648,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                   <div className="min-w-0">
                     <div className="text-xs font-medium text-gray-900 truncate">{product.name}</div>
                     <div className="flex items-baseline gap-1 mt-0.5">
-                      <span className="text-xs text-primary font-semibold">{formatCurrency(product.base_price)}</span>
+                      <MemberPriceText price={product.base_price} memberDiscountPercent={membershipDiscount} format={formatCurrency} className="text-xs text-primary font-semibold" strikeClassName="text-gray-500" />
                       {arkEnabled && <span className="text-[10px] text-amber-600 font-medium">{formatArk(product.base_price)}</span>}
                     </div>
                   </div>
@@ -2750,7 +2752,10 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
                         {product.stall_name}
                       </div>
                     ) : null}
-                    <div className={`font-bold text-primary ${isTabletMode ? 'text-xs @min-[40rem]:text-sm' : 'text-[11px]'}`}>{formatCurrency(product.base_price)}</div>
+                    <div className={`font-bold text-primary ${isTabletMode ? 'text-xs @min-[40rem]:text-sm' : 'text-[11px]'}`}>
+                      {/* Member terpilih → harga reguler dicoret + harga member (owner 2026-10-01). */}
+                      <MemberPriceText price={product.base_price} memberDiscountPercent={membershipDiscount} format={formatCurrency} strikeClassName="text-gray-500" />
+                    </div>
                     {(arkEnabled || xpEnabled) && (
                     <div className="flex items-center justify-between gap-1">
                       {arkEnabled ? (
@@ -2782,6 +2787,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         subtotal={cart.subtotal}
         discountAmount={discountAmount}
         membershipDiscountAmount={membershipDiscountAmount}
+        membershipDiscountPct={membershipDiscount}
         promoApplied={promoApplied}
         promoDiscount={promoDiscount}
         promoInput={promoInput}
@@ -3097,6 +3103,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         onCancel={() => { setCustom(null); setCustomizingProduct(null); }}
         formatCurrency={formatCurrency}
         formatArk={formatArk}
+        memberDiscountPercent={membershipDiscount}
       />
 
       {/* ── Payment Modal ── */}

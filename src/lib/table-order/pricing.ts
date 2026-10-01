@@ -18,6 +18,9 @@ import {
   type TableOrderProduct,
   type TableOrderVariant,
 } from "./menu";
+import { memberDiscountAmount } from "@/lib/pos/member-price";
+
+export { memberDiscountAmount, memberPrice } from "@/lib/pos/member-price";
 
 export type CartLine = {
   cartId: string;
@@ -115,21 +118,6 @@ export function productQuantity(cart: CartLine[], productId: string) {
   return cart
     .filter((line) => line.productId === productId)
     .reduce((sum, line) => sum + line.quantity, 0);
-}
-
-/**
- * Potongan diskon member — sama dengan kasir (lib/pos/manual-discount):
- * floor(basis × persen / 100). Dipakai klien (harga coret) & server (order).
- */
-export function memberDiscountAmount(amount: number, percent: number) {
-  const pct = Math.min(100, Math.max(0, Number(percent) || 0));
-  const basis = Math.max(0, Number(amount) || 0);
-  return pct > 0 ? Math.floor((basis * pct) / 100) : 0;
-}
-
-/** Harga setelah diskon member — utk tampilan harga coret per item. */
-export function memberPrice(price: number, percent: number) {
-  return Math.max(0, price - memberDiscountAmount(price, percent));
 }
 
 export function summarizeCart(

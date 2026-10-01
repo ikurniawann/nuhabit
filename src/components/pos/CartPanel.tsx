@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { memberPrice } from '@/lib/pos/member-price';
 import {
   Minus,
   Plus,
@@ -69,6 +70,8 @@ interface CartPanelProps {
   onClearCart?: () => void;
   /** EPIC-032 C2 — kode promo kasir (opsional; tanpa props = tanpa UI promo) */
   membershipDiscountAmount?: number;
+  /** Persen diskon member terpilih — harga baris dicoret + harga member. */
+  membershipDiscountPct?: number;
   promoApplied?: { code: string; discount: number } | null;
   promoDiscount?: number;
   promoInput?: string;
@@ -161,6 +164,7 @@ export function CartPanel({
   removeFromCart,
   onClearCart,
   membershipDiscountAmount,
+  membershipDiscountPct = 0,
   promoApplied = null,
   promoDiscount = 0,
   promoInput = '',
@@ -315,6 +319,9 @@ export function CartPanel({
             const discAmt = lineDiscountAmount(item);
             const label = formatDiscountLabel(item.discount_type, item.discount_value);
             const netUnit = Math.max(0, item.price - (discAmt > 0 ? discAmt / item.quantity : 0));
+            // Member terpilih (owner 2026-10-01): harga reguler dicoret + harga member.
+            const memberUnit = memberPrice(netUnit, membershipDiscountPct);
+            const showMemberPrice = memberUnit < netUnit;
             const freeInfo = freeByLine.get(item.id);
             const freeQty = freeInfo?.freeQty ?? 0;
             const paidQty = Math.max(0, item.quantity - freeQty);
@@ -359,12 +366,23 @@ export function CartPanel({
                           </div>
                         )}
                         <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                          <span className="text-xs text-muted-foreground">
-                            {formatCurrency(discAmt > 0 ? netUnit : item.price)}
-                          </span>
+                          {showMemberPrice ? (
+                            <>
+                              <span className="text-[11px] text-muted-foreground line-through">
+                                {formatCurrency(item.price)}
+                              </span>
+                              <span className="text-xs font-semibold text-primary">
+                                {formatCurrency(memberUnit)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(discAmt > 0 ? netUnit : item.price)}
+                            </span>
+                          )}
                           {showArk && (
                             <span className="text-[11px] font-medium text-amber-600/90">
-                              {formatArk(discAmt > 0 ? netUnit : item.price)}
+                              {formatArk(showMemberPrice ? memberUnit : discAmt > 0 ? netUnit : item.price)}
                             </span>
                           )}
                           {label && (

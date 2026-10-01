@@ -5,6 +5,8 @@ import { Sparkles, Utensils } from "lucide-react";
 import { PosProductThumbnail } from "@/components/pos/PosProductThumbnail";
 import type { Product } from "@/lib/pos-api";
 import { computeCustomizationPrice } from "@/lib/pos/customization-price";
+import { memberPrice } from "@/lib/pos/member-price";
+import { MemberPriceText } from "@/components/pos/MemberPriceText";
 
 export interface SelectedCustomization {
   product: Product;
@@ -25,6 +27,8 @@ interface Props {
   formatArk: (v: number) => string;
   /** Saklar fitur ARK Coin (CRM → Pengaturan). Default tampil. */
   showArk?: boolean;
+  /** Persen diskon member terpilih — harga dicoret + harga member. */
+  memberDiscountPercent?: number;
 }
 
 export function CustomizationModal({
@@ -37,6 +41,7 @@ export function CustomizationModal({
   formatCurrency,
   formatArk,
   showArk = true,
+  memberDiscountPercent = 0,
 }: Props) {
   if (!product) return null;
   const variants = product.variants || [];
@@ -44,6 +49,7 @@ export function CustomizationModal({
 
   const { basePrice, unitPrice } = computeCustomizationPrice(product, value);
   const lineTotal = unitPrice * (value?.quantity || 1);
+  const memberLineTotal = memberPrice(unitPrice, memberDiscountPercent) * (value?.quantity || 1);
 
   const quantity = value?.quantity || 1;
   const priceLabel = (amount: number, zeroText = "") =>
@@ -66,7 +72,13 @@ export function CustomizationModal({
             <div className="min-w-0">
               <DialogTitle className="truncate text-lg font-bold">{product.name}</DialogTitle>
               <div className="flex items-baseline gap-2 text-sm">
-                <span className="font-bold text-primary">{formatCurrency(basePrice)}</span>
+                <MemberPriceText
+                  price={basePrice}
+                  memberDiscountPercent={memberDiscountPercent}
+                  format={formatCurrency}
+                  className="font-bold text-primary"
+                  strikeClassName="text-gray-500"
+                />
                 {showArk && <span className="text-xs font-medium text-amber-600">{formatArk(basePrice)}</span>}
               </div>
             </div>
@@ -179,8 +191,11 @@ export function CustomizationModal({
           </div>
           <div className="min-w-0 flex-1 text-right">
             <div className="text-[11px] text-gray-500">Total ({quantity} item)</div>
-            <div className="truncate text-xl font-bold tabular-nums text-primary">{formatCurrency(lineTotal)}</div>
-            {showArk && <div className="text-[11px] font-medium text-amber-600">{formatArk(lineTotal)}</div>}
+            {memberLineTotal < lineTotal && (
+              <div className="text-xs tabular-nums text-gray-400 line-through">{formatCurrency(lineTotal)}</div>
+            )}
+            <div className="truncate text-xl font-bold tabular-nums text-primary">{formatCurrency(memberLineTotal)}</div>
+            {showArk && <div className="text-[11px] font-medium text-amber-600">{formatArk(memberLineTotal)}</div>}
           </div>
           <button
             type="button"

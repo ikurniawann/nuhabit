@@ -68,6 +68,8 @@ import {
 } from '@/components/pos/confirm-stall-switch-dialog';
 import { PaymentModal } from '@/components/pos/PaymentModal';
 import { CustomizationModal, type SelectedCustomization } from '@/components/pos/CustomizationModal';
+import { MemberPriceText } from '@/components/pos/MemberPriceText';
+import { memberPrice } from '@/lib/pos/member-price';
 import { printThermalReceipt, type ReceiptPayload } from '@/components/pos/PrintReceipt';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
@@ -814,10 +816,30 @@ export function ClassicCashierPage() {
                           {[item.variantName, ...(item.modifierNames ?? [])].filter(Boolean).join(' · ')}
                         </span>
                       ) : null}
-                      <span className="block text-xs text-slate-500">@ {fmtRp(item.price)}</span>
+                      <span className="block text-xs text-slate-500">
+                        @{' '}
+                        <MemberPriceText
+                          price={item.price}
+                          memberDiscountPercent={membershipDiscount}
+                          format={fmtRp}
+                          className="font-semibold text-primary"
+                        />
+                      </span>
                     </span>
                     <span className="text-right text-sm font-black tabular-nums">
-                      {formatAmount(item.price * item.quantity)}
+                      {/* Member terpilih → total baris dicoret + harga member (owner 2026-10-01). */}
+                      {memberPrice(item.price, membershipDiscount) < item.price ? (
+                        <>
+                          <span className="block text-[11px] font-medium text-slate-400 line-through">
+                            {formatAmount(item.price * item.quantity)}
+                          </span>
+                          <span className="block text-primary">
+                            {formatAmount(memberPrice(item.price, membershipDiscount) * item.quantity)}
+                          </span>
+                        </>
+                      ) : (
+                        formatAmount(item.price * item.quantity)
+                      )}
                     </span>
                   </button>
                 );
@@ -956,7 +978,13 @@ export function ClassicCashierPage() {
                     >
                       <span className="line-clamp-2 text-[15px] font-bold leading-tight [@media(min-height:761px)]:text-base">{p.name}</span>
                       <span className="flex items-end justify-between">
-                        <span className="text-sm font-semibold text-white/90">{fmtRp(p.base_price)}</span>
+                        <MemberPriceText
+                          price={p.base_price}
+                          memberDiscountPercent={membershipDiscount}
+                          format={fmtRp}
+                          className="text-sm font-semibold text-white/90"
+                          strikeClassName="text-white/80"
+                        />
                         {(p.variants?.length ?? 0) > 0 || (p.modifiers?.length ?? 0) > 0 ? (
                           <span className="rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-bold uppercase">
                             Opsi
@@ -1121,6 +1149,7 @@ export function ClassicCashierPage() {
         onCancel={() => setCustomizing(null)}
         formatCurrency={fmtRp}
         formatArk={formatArk}
+        memberDiscountPercent={membershipDiscount}
       />
 
       <PaymentModal
