@@ -249,9 +249,28 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
     return () => observer.disconnect();
   }, [sections, view]);
 
+  // Lompat dari sheet "Kategori menu" ditunda sampai sheet tertutup: selama
+  // sheet terbuka body di-`position: fixed` (lockPageScroll) sehingga
+  // scrollIntoView tidak berefek, lalu unlock memulihkan scroll lama — daftar
+  // menu tidak bergeser (bug owner 2026-10-01).
+  const pendingJumpRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (menuJumpOpen || !pendingJumpRef.current) return;
+    const id = pendingJumpRef.current;
+    pendingJumpRef.current = null;
+    const frame = requestAnimationFrame(() => {
+      sectionRefs.current.get(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [menuJumpOpen]);
+
   function scrollToCategory(id: string) {
     setActiveCategory(id);
-    setMenuJumpOpen(false);
+    if (menuJumpOpen) {
+      pendingJumpRef.current = id;
+      setMenuJumpOpen(false);
+      return;
+    }
     sectionRefs.current.get(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
