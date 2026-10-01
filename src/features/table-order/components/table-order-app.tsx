@@ -30,6 +30,8 @@ import { isOrderActive, type TableOrderPaymentMethod, type TableOrderType } from
 import {
   addToCart,
   adjustCartQuantity,
+  directDecrementLine,
+  productLines,
   productQuantity,
   summarizeCart,
   type CartLine,
@@ -55,6 +57,7 @@ import { displayGuestPhone, GUEST_STORAGE_KEY, parseStoredGuest, type GuestIdent
 import { MenuItemRow } from "./menu-item-row";
 import { OrderTracking } from "./order-tracking";
 import { VariantSheet } from "./variant-sheet";
+import { DecrementSheet } from "./decrement-sheet";
 
 const HERO_IMAGE = "/bg-bcd.webp";
 
@@ -313,12 +316,15 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
     setCart((current) => addToCart(current, product));
   }
 
+  // Produk dgn >1 varian di keranjang → pilih varian yang dikurangi.
+  const [decrementProduct, setDecrementProduct] = useState<TableOrderProduct | null>(null);
   function handleDecrement(product: TableOrderProduct) {
-    setCart((current) => {
-      // Kurangi baris terakhir produk ini (varian apa pun).
-      const line = [...current].reverse().find((item) => item.productId === product.id);
-      return line ? adjustCartQuantity(current, line.cartId, -1) : current;
-    });
+    const cartId = directDecrementLine(cart, product.id);
+    if (cartId) {
+      setCart((current) => adjustCartQuantity(current, cartId, -1));
+      return;
+    }
+    if (productLines(cart, product.id).length > 1) setDecrementProduct(product);
   }
 
   // ---- kirim pesanan -------------------------------------------------------
@@ -724,6 +730,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         onChanged={reloadMember}
         arkEnabled={arkEnabled}
         xpEnabled={xpEnabled}
+      />
+
+      <DecrementSheet
+        productName={decrementProduct?.name ?? null}
+        lines={decrementProduct ? productLines(cart, decrementProduct.id) : []}
+        onQuantity={(cartId, delta) => setCart((current) => adjustCartQuantity(current, cartId, delta))}
+        onClose={() => setDecrementProduct(null)}
       />
 
       <BottomSheet open={menuJumpOpen} onClose={() => setMenuJumpOpen(false)} title="Kategori menu">

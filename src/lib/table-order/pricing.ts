@@ -113,6 +113,22 @@ export function adjustCartQuantity(cart: CartLine[], cartId: string, delta: numb
   return setCartQuantity(cart, cartId, line.quantity + delta);
 }
 
+/** Baris keranjang satu produk (tiap kombinasi varian/add-on = 1 baris). */
+export function productLines(cart: CartLine[], productId: string) {
+  return cart.filter((line) => line.productId === productId);
+}
+
+/**
+ * Tombol "−" di daftar menu: baris yang langsung dikurangi bila produk hanya
+ * punya SATU baris; null bila >1 varian di keranjang → pemesan memilih dulu
+ * varian mana yang dikurangi (revisi owner 2026-10-01: sebelumnya selalu
+ * mengurangi varian yang terakhir ditambahkan).
+ */
+export function directDecrementLine(cart: CartLine[], productId: string): string | null {
+  const lines = productLines(cart, productId);
+  return lines.length === 1 ? lines[0].cartId : null;
+}
+
 /** Jumlah unit satu produk di keranjang (semua varian) — utk stepper di daftar menu. */
 export function productQuantity(cart: CartLine[], productId: string) {
   return cart

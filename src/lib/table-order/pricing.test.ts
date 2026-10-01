@@ -4,9 +4,11 @@ import { normalizeTableOrderProduct, resolveModifiers } from "./menu";
 import {
   addToCart,
   adjustCartQuantity,
+  directDecrementLine,
   MAX_LINE_QTY,
   memberDiscountAmount,
   memberPrice,
+  productLines,
   productQuantity,
   setCartQuantity,
   summarizeCart,
@@ -177,5 +179,23 @@ describe("diskon member (harga coret self-order)", () => {
     expect(guest.memberDiscount).toBe(0);
     expect(guest.memberDiscountPercent).toBe(0);
     expect(guest.total).toBe(66000);
+  });
+});
+
+describe("kurangi dari daftar menu (revisi 2026-10-01)", () => {
+  it("satu varian di keranjang → langsung kurangi baris itu", () => {
+    const cart = addToCart([], latte, latte.variants[0], 2);
+    expect(directDecrementLine(cart, "latte")).toBe(cart[0].cartId);
+  });
+
+  it("dua varian (x2 + x4) → harus pilih dulu, tidak menebak baris terakhir", () => {
+    let cart = addToCart([], latte, latte.variants[0], 2);
+    cart = addToCart(cart, latte, latte.variants[1], 4);
+    expect(productLines(cart, "latte").map((line) => line.quantity)).toEqual([2, 4]);
+    expect(directDecrementLine(cart, "latte")).toBeNull();
+  });
+
+  it("produk tidak ada di keranjang → null", () => {
+    expect(directDecrementLine(addToCart([], cake), "latte")).toBeNull();
   });
 });

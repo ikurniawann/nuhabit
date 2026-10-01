@@ -118,9 +118,11 @@ function VariantSheetBody({
               type="button"
               disabled={!modifiers.ok}
               onClick={() => modifiers.ok && onAdd(product, variant, quantity, modifiers.selected)}
-              className="flex h-11 flex-1 items-center justify-between rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-sm transition active:scale-[0.99] disabled:bg-gray-300"
+              className="flex h-11 min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-bold tabular-nums text-white shadow-sm transition active:scale-[0.99] disabled:bg-gray-300"
             >
-              <span>Tambah ke keranjang</span>
+              {/* Label singkat (revisi owner 2026-10-01): harga ratusan ribu +
+                  harga coret member tidak muat bersama "Tambah ke keranjang". */}
+              <span>Tambah</span>
               {memberPrice(unitPrice, memberDiscountPercent) < unitPrice ? (
                 <span className="flex items-baseline gap-1.5">
                   <span className="text-xs font-medium text-white/70 line-through">
