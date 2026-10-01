@@ -120,15 +120,34 @@ server.listen(PORT, HOST, () => {
 
 // Listener tambahan berbagi handler yang sama — request-nya identik, hanya
 // alamat masuknya yang berbeda. Gagal bind di salah satu alamat (mis. docker
-// belum jalan sehingga 172.17.0.1 tidak ada) tidak mematikan listener utama.
-for (const extraHost of EXTRA_HOSTS) {
+// belum jalan sehingga 172.18.0.1 tidak ada) tidak mematikan listener utama.
+//
+// Setelah reboot server, PM2 menyalakan gateway SEBELUM bridge Docker siap →
+// EADDRNOTAVAIL. Dulu tidak dicoba ulang, sehingga container app (poskopi)
+// tidak bisa menjangkau gateway sampai di-restart manual (insiden 2026-10-01).
+// Kini dicoba ulang dgn jeda bertahap (5 dtk → maks 60 dtk) sampai berhasil.
+const EXTRA_RETRY_MIN_MS = 5_000;
+const EXTRA_RETRY_MAX_MS = 60_000;
+
+function listenExtra(extraHost, attempt = 0) {
   const extra = http.createServer(server.listeners("request")[0]);
-  extra.on("error", (error) => {
-    console.error(`[wa-gateway] Gagal mendengar di ${extraHost}:${PORT}:`, error?.message ?? error);
+  extra.once("error", (error) => {
+    const delay = Math.min(EXTRA_RETRY_MAX_MS, EXTRA_RETRY_MIN_MS * 2 ** Math.min(attempt, 4));
+    console.error(
+      `[wa-gateway] Gagal mendengar di ${extraHost}:${PORT}: ${error?.message ?? error} — coba lagi dalam ${delay / 1000} dtk`
+    );
+    extra.close();
+    setTimeout(() => listenExtra(extraHost, attempt + 1), delay).unref();
   });
   extra.listen(PORT, extraHost, () => {
-    console.log(`[wa-gateway] Mendengar juga di http://${extraHost}:${PORT}`);
+    console.log(
+      `[wa-gateway] Mendengar juga di http://${extraHost}:${PORT}${attempt > 0 ? ` (setelah ${attempt} percobaan ulang)` : ""}`
+    );
   });
+}
+
+for (const extraHost of EXTRA_HOSTS) {
+  listenExtra(extraHost);
 }
 
 connect().catch((error) => {
