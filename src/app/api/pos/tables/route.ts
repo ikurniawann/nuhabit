@@ -31,6 +31,7 @@ type ActiveOrderRow = {
   pre_settled_at?: string | null;
   checkout_id?: string | null;
   sold_from?: string | null;
+  guest_count?: number | string | null;
 };
 
 type UnpaidCheckoutRow = {
@@ -61,6 +62,7 @@ function toOrderPayload(order: ActiveOrderRow) {
     pre_settled_at: order.pre_settled_at ?? null,
     checkout_id: order.checkout_id ?? null,
     sold_from: order.sold_from ?? null,
+    guest_count: order.guest_count == null ? null : toNumber(order.guest_count),
   };
 }
 
@@ -113,6 +115,8 @@ function normalizeTable(
         total_amount: bill.total_amount,
       })),
     bill_count: bills.length,
+    // Tamu duduk (EPIC-038) — kursi terisi di papan Restaurant mode grid.
+    guest_count: orderPayloads.reduce((sum, order) => sum + (order.guest_count ?? 0), 0),
   };
 }
 
@@ -180,7 +184,7 @@ export async function GET(request: NextRequest) {
     const ordersFull = await db
       .from("pos_orders")
       .select(
-        "id, order_number, table_id, status, payment_status, total_amount, pre_settled_at, checkout_id, sold_from"
+        "id, order_number, table_id, status, payment_status, total_amount, pre_settled_at, checkout_id, sold_from, guest_count"
       )
       .not("table_id", "is", null)
       .in("status", ["pending", "confirmed", "preparing", "ready", "served", "completed"])

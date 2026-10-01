@@ -673,6 +673,8 @@ export interface PosTable {
     total_amount: number;
   }>;
   bill_count?: number;
+  /** Jumlah tamu duduk di order aktif meja (0 = belum tercatat). */
+  guest_count?: number;
 }
 
 export async function getPOSTables(params?: { include_inactive?: boolean }) {

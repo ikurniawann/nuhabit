@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Users } from "lucide-react";
+import { LayoutGrid, Loader2, Map as MapIcon, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,11 @@ import {
   canPickTransferDestination,
 } from "@/features/pos/restaurant/move-destination";
 import { capacityWarning, normalizeGuestCount } from "@/lib/pos/guest-count";
+import { cn } from "@/lib/utils";
+import {
+  RestaurantTableGrid,
+  TABLE_STATUS_LEGEND,
+} from "@/features/pos/restaurant/components/restaurant-table-grid";
 import type { PosTable } from "@/lib/pos-api";
 
 export type RestaurantBoardMode =
@@ -114,6 +119,53 @@ function pickBlockedMessage(mode: RestaurantBoardMode) {
   return "Choose a destination table.";
 }
 
+type BoardView = "grid" | "plan";
+const VIEW_KEY = "pos.restaurant.view";
+const FLOOR_KEY = "pos.restaurant.floor";
+
+const PREF_EVENT = "pos-restaurant-pref";
+const memoryPrefs = new Map<string, string>();
+
+function readPref(key: string) {
+  try {
+    return window.localStorage.getItem(key) ?? memoryPrefs.get(key) ?? null;
+  } catch {
+    return memoryPrefs.get(key) ?? null;
+  }
+}
+
+function writePref(key: string, value: string) {
+  memoryPrefs.set(key, value);
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // mode privat / storage diblokir — preferensi cukup di memori
+  }
+  window.dispatchEvent(new Event(PREF_EVENT));
+}
+
+function subscribePrefs(onChange: () => void) {
+  window.addEventListener(PREF_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(PREF_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/** Preferensi per-perangkat (tab lantai, grid/denah); server render = null. */
+function usePref(key: string) {
+  return useSyncExternalStore(
+    subscribePrefs,
+    () => readPref(key),
+    () => null
+  );
+}
+
+function isBusyTable(table: PosTable) {
+  return table.status === "occupied" || table.status === "billing";
+}
+
 export interface RestaurantTableBoardProps {
   tables: PosTable[];
   isLoading?: boolean;
@@ -161,6 +213,14 @@ export function RestaurantTableBoard({
    * depan mata. Masih bisa dikoreksi di kasir saat bayar.
    */
   const [tableMenungguPax, setTableMenungguPax] = useState<PosTable | null>(null);
+  // Tampilan grid rapi (default, owner 2026-10-01) atau denah bebas (posisi
+  // dari editor Tables). Lantai ditampilkan per tab, bukan ditumpuk.
+  const view: BoardView = usePref(VIEW_KEY) === "plan" ? "plan" : "grid";
+  const floorKey = usePref(FLOOR_KEY);
+  const activeFloor =
+    floors.find((group) => group.floorKey === floorKey) ?? floors[0] ?? null;
+  const changeView = (next: BoardView) => writePref(VIEW_KEY, next);
+  const changeFloor = (key: string) => writePref(FLOOR_KEY, key);
   const [paxInput, setPaxInput] = useState("");
 
   const lanjutKeKasir = (table: PosTable, pax: number) => {
@@ -231,6 +291,34 @@ export function RestaurantTableBoard({
     toast.error("This table has no active order to open.");
   };
 
+  const isTableDisabled = (table: PosTable) => {
+    if (inBoardMode) {
+      return isBusy || !canPickForMode(mode, table, sourceTableId, sourceBill);
+    }
+    return (
+      table.status !== "available" &&
+      table.status !== "occupied" &&
+      table.status !== "billing"
+    );
+  };
+
+  const activateTable = (table: PosTable) => {
+    if (inBoardMode) {
+      handlePick(table);
+      return;
+    }
+    if (table.status === "available") {
+      handleAvailableClick(table);
+    } else if (isBusyTable(table)) {
+      onSelectOccupied(table);
+    }
+  };
+
+  const doubleClickTable = (table: PosTable) => {
+    if (inBoardMode || isBusy || !isBusyTable(table)) return;
+    handleOccupiedDoubleClick(table);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -272,76 +360,116 @@ export function RestaurantTableBoard({
           No active tables found.
         </div>
       ) : (
-        <div className="space-y-5">
-          {floors.map((group) => (
-            <section
-              key={group.floorKey || "__unassigned"}
-              className="overflow-hidden rounded-xl border border-gray-200/70 bg-white"
-            >
-              <div className="flex items-center justify-between gap-3 border-b border-gray-200/70 px-4 py-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    {group.label}
-                  </h3>
-                  <p className="text-xs text-gray-500">
-                    {group.tables.length} table
-                    {group.tables.length === 1 ? "" : "s"}
-                    {modeHint(mode)}
-                  </p>
-                </div>
+        <section className="overflow-hidden rounded-xl border border-gray-200/70 bg-white dark:bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200/70 px-4 py-3">
+            {floors.length > 1 ? (
+              <div role="tablist" aria-label="Lantai" className="flex flex-wrap gap-1.5">
+                {floors.map((group) => {
+                  const active = group.floorKey === activeFloor?.floorKey;
+                  const busyCount = group.tables.filter(isBusyTable).length;
+                  return (
+                    <button
+                      key={group.floorKey || "__unassigned"}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => changeFloor(group.floorKey)}
+                      className={cn(
+                        "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition",
+                        active
+                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-primary/40 hover:text-primary dark:bg-transparent dark:text-gray-200"
+                      )}
+                    >
+                      {group.label}
+                      {busyCount > 0 ? (
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 text-[11px] tabular-nums",
+                            active ? "bg-white/25" : "bg-orange-100 text-orange-700"
+                          )}
+                        >
+                          {busyCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="p-3">
-                <FloorPlanCanvas
-                  mode="operate"
-                  tables={group.tables.map(toNode)}
-                  selectedId={selectedTableId}
-                  isDisabled={(node) => {
-                    const table = tablesById.get(node.id);
-                    if (!table) return true;
-                    if (inBoardMode) {
-                      return (
-                        isBusy || !canPickForMode(mode, table, sourceTableId, sourceBill)
-                      );
-                    }
-                    return (
-                      table.status !== "available" &&
-                      table.status !== "occupied" &&
-                      table.status !== "billing"
-                    );
-                  }}
-                  onActivate={(node) => {
-                    const table = tablesById.get(node.id);
-                    if (!table) return;
-                    if (inBoardMode) {
-                      handlePick(table);
-                      return;
-                    }
-                    if (table.status === "available") {
-                      handleAvailableClick(table);
-                    } else if (
-                      table.status === "occupied" ||
-                      table.status === "billing"
-                    ) {
-                      onSelectOccupied(table);
-                    }
-                  }}
-                  onDoubleClick={(node) => {
-                    if (inBoardMode || isBusy) return;
-                    const table = tablesById.get(node.id);
-                    if (
-                      !table ||
-                      (table.status !== "occupied" &&
-                        table.status !== "billing")
-                    ) {
-                      return;
-                    }
-                    handleOccupiedDoubleClick(table);
-                  }}
-                />
-              </div>
-            </section>
-          ))}
-        </div>
+            ) : (
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                {activeFloor?.label}
+              </h3>
+            )}
+            <div className="inline-flex rounded-lg border border-gray-200 p-0.5" role="group" aria-label="Tampilan meja">
+              {(
+                [
+                  { value: "grid", label: "Grid", icon: LayoutGrid },
+                  { value: "plan", label: "Denah", icon: MapIcon },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={view === option.value}
+                  onClick={() => changeView(option.value)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition",
+                    view === option.value
+                      ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                      : "text-gray-600 hover:text-gray-900 dark:text-gray-300"
+                  )}
+                >
+                  <option.icon className="h-3.5 w-3.5" />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-xs text-gray-600 dark:text-gray-300">
+            {/* Warna legenda = mode grid; denah memakai warna lamanya sendiri. */}
+            {view === "grid" && TABLE_STATUS_LEGEND.map((item) => (
+              <span key={item.status} className="inline-flex items-center gap-1.5">
+                <span className={cn("h-2.5 w-2.5 rounded-full", item.dot)} />
+                {item.label}
+              </span>
+            ))}
+            <span className="text-gray-400">
+              {view === "grid" ? "· " : ""}{activeFloor?.tables.length ?? 0} meja{modeHint(mode)}
+            </span>
+          </div>
+
+          <div className="p-4">
+            {activeFloor && view === "grid" ? (
+              <RestaurantTableGrid
+                tables={activeFloor.tables}
+                selectedId={selectedTableId}
+                isDisabled={(table) => isTableDisabled(table)}
+                onActivate={activateTable}
+                onDoubleClick={doubleClickTable}
+              />
+            ) : activeFloor ? (
+              <FloorPlanCanvas
+                mode="operate"
+                tables={activeFloor.tables.map(toNode)}
+                selectedId={selectedTableId}
+                isDisabled={(node) => {
+                  const table = tablesById.get(node.id);
+                  return table ? isTableDisabled(table) : true;
+                }}
+                onActivate={(node) => {
+                  const table = tablesById.get(node.id);
+                  if (table) activateTable(table);
+                }}
+                onDoubleClick={(node) => {
+                  const table = tablesById.get(node.id);
+                  if (table) doubleClickTable(table);
+                }}
+              />
+            ) : null}
+          </div>
+        </section>
       )}
 
       {/* Jumlah tamu saat mendudukkan (EPIC-038). Tombol cepat menutupi mayoritas
