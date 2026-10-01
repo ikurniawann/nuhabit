@@ -34,6 +34,8 @@ export const JOURNAL_LINE_ROLES = [
   "GRNI",
   "WALLET",
   "GIFT_CARD_LIABILITY",
+  /** Uang muka / deposit cicilan Tagihan Member (kewajiban). */
+  "MEMBER_DEPOSIT",
   "DISCOUNT",
   "SALARY_EXPENSE",
   "SALARY_PAYABLE",
@@ -49,6 +51,10 @@ export const JOURNAL_EVENT_CODES = [
   "POS_SALE_CREDIT",
   "POS_SALE_ARK_COIN",
   "POS_SALE_GIFT_CARD",
+  "POS_SALE_MEMBER_BILL",
+  "POS_MEMBER_DEPOSIT_CASH",
+  "POS_MEMBER_DEPOSIT_QRIS",
+  "POS_MEMBER_DEPOSIT_CARD",
   "POS_COGS_RELIEF",
   "POS_REFUND",
   "PURCHASE_GRN",
@@ -104,6 +110,26 @@ export const JOURNAL_EVENT_META: Record<
     name: "POS Sale — Gift Card",
     module: "POS",
     description: "Penjualan POS pakai gift card",
+  },
+  POS_SALE_MEMBER_BILL: {
+    name: "POS Sale — Tagihan Member",
+    module: "POS",
+    description: "Order member ditutup dari saldo cicilan (Uang Muka Member ↔ Penjualan)",
+  },
+  POS_MEMBER_DEPOSIT_CASH: {
+    name: "Tagihan Member — Cicilan Tunai",
+    module: "POS",
+    description: "Cicilan tagihan member diterima tunai (Kas ↔ Uang Muka Member)",
+  },
+  POS_MEMBER_DEPOSIT_QRIS: {
+    name: "Tagihan Member — Cicilan QRIS",
+    module: "POS",
+    description: "Cicilan tagihan member via QRIS (Bank ↔ Uang Muka Member)",
+  },
+  POS_MEMBER_DEPOSIT_CARD: {
+    name: "Tagihan Member — Cicilan Kartu/Transfer",
+    module: "POS",
+    description: "Cicilan tagihan member via kartu / non-tunai (Bank ↔ Uang Muka Member)",
   },
   POS_COGS_RELIEF: {
     name: "POS COGS Relief",

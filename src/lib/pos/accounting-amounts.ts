@@ -28,6 +28,7 @@ export type PosSaleEventCode =
       | "POS_SALE_CREDIT"
       | "POS_SALE_ARK_COIN"
       | "POS_SALE_GIFT_CARD"
+      | "POS_SALE_MEMBER_BILL"
     >;
 
 export type PosSaleEventResult = PosSaleEventCode | "SKIP_NFC_TAB" | null;
@@ -83,6 +84,8 @@ export function mapPaymentMethodToSaleEvent(
   if (value === "credit" || value === "credit_card") return "POS_SALE_CREDIT";
   if (value === "ark_coin") return "POS_SALE_ARK_COIN";
   if (value === "gift_card") return "POS_SALE_GIFT_CARD";
+  // Order member ditutup dari saldo cicilan (POS → Tagihan, 2026-10-01).
+  if (value === "member_bill") return "POS_SALE_MEMBER_BILL";
   return null;
 }
 

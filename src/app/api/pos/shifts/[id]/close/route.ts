@@ -3,6 +3,7 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
 import { isDrawerCashMethod } from '@/lib/pos/payment-methods';
 import { isRevenueOrder } from '@/lib/pos/revenue-order';
+import { summarizeMemberBillShiftPayments } from '@/lib/pos/member-bill';
 
 /** PATCH /api/pos/shifts/{id}/close
  *  Body: { closing_cash: number, notes?: string }
@@ -92,7 +93,19 @@ export async function PATCH(
     }
   });
 
-  const expectedCash = Number(shift.opening_cash) + totalCash;
+  // Cicilan Tagihan Member yang diterima di shift ini — tunainya ada di laci
+  // (owner 2026-10-01). Bukan penjualan: order-nya ditutup dgn metode
+  // 'member_bill' yang tidak masuk hitungan di atas, jadi tidak dobel.
+  const { data: memberBillRows, error: memberBillError } = await db
+    .from('pos_member_bill_payments')
+    .select('amount, payment_method, payment_method_code')
+    .eq('shift_id', shiftId);
+  if (memberBillError) {
+    return NextResponse.json({ success: false, error: memberBillError.message }, { status: 500 });
+  }
+  const memberBill = summarizeMemberBillShiftPayments(memberBillRows || []);
+
+  const expectedCash = Number(shift.opening_cash) + totalCash + memberBill.cash;
   const totalSales = totalCash + totalQris + totalDebit + totalCredit + totalArk;
   const variance = Number(closing_cash) - expectedCash;
 
@@ -133,6 +146,7 @@ export async function PATCH(
       closing_cash: Number(closing_cash),
       variance,
       method_breakdown: { cash: totalCash, qris: totalQris, debit: totalDebit, credit: totalCredit, ark_coin: totalArk, nfc_tab: totalNfcTab },
+      member_bill_payments: memberBill,
     },
   });
 }

@@ -12,6 +12,8 @@ export const IAM = {
   itemsReports: ["items.reports"],
   pos: ["pos"],
   posOperations: ["pos.operations", "pos.cashier.central"],
+  /** POS → Operasional → Tagihan (tagihan member, 2026-10-01). */
+  posMemberBills: ["pos.operations.member-bills"],
   posCatalog: ["pos.catalog"],
   posKitchen: ["pos.kitchen"],
   posLoyalty: ["pos.loyalty"],

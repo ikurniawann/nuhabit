@@ -17,6 +17,7 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   debit: "Kartu debit",
   ark_coin: "ARK Coin",
   nfc_tab: "NFC Tab",
+  member_bill: "Tagihan Member",
   gift_card: "Gift card",
 };
 

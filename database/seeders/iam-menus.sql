@@ -96,6 +96,7 @@ INSERT INTO iam.menus (code, menu_name, route_path, icon, menu_type, order_numbe
   ('pos.kitchen.printer-settings', 'Printer', '/dashboard/pos/printer-settings', 'settings', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
   ('pos.operations.orders', 'Orders', '/dashboard/pos/orders', 'clipboard', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
   ('pos.operations.gofood', 'GoFood', '/dashboard/pos/gofood', 'truck', 'sidebar', 32, '{"actions":["read","update"]}'::jsonb),
+  ('pos.operations.member-bills', 'Tagihan', '/dashboard/pos/member-bills', 'money', 'sidebar', 35, '{"actions":["read","create"]}'::jsonb),
   ('hris.master.employment-statuses', 'Status Karyawan', '/dashboard/master/employment-statuses', 'identification', 'sidebar', 30, '{"actions":["read"]}'::jsonb),
   ('hris.performance.review', 'Performance Review', '/dashboard/hris/performance', 'chart', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
   ('hris.recruitment.job-portal', 'Job Portal', '/dashboard/hris/job-portal', 'briefcase', 'sidebar', 40, '{"actions":["read"]}'::jsonb),
@@ -295,4 +296,6 @@ WHERE deleted_at IS NULL
     'pos.cashier.central',
     'pos.kitchen.queue-board',
     -- GoFood / GoBiz (EPIC-049, 12 Sep 2026):
-    'pos.operations.gofood');
+    'pos.operations.gofood',
+    -- Tagihan Member (1 Okt 2026):
+    'pos.operations.member-bills');
