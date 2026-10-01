@@ -142,7 +142,7 @@ function isUnpaid(order: Order) {
   );
 }
 
-function TypeBadge({ type }: { type?: string | null }) {
+function TypeBadge({ type, prominent = false }: { type?: string | null; prominent?: boolean }) {
   const value = String(type || "");
   const labels: Record<string, string> = {
     dine_in: "Dine-in",
@@ -153,7 +153,14 @@ function TypeBadge({ type }: { type?: string | null }) {
   return (
     <Badge
       variant="outline"
-      className="border-gray-200/80 bg-white font-medium text-foreground"
+      className={cn(
+        "border-gray-200/80 bg-white font-medium text-foreground",
+        // Header "Order detail" (owner 2026-10-01): tipe harus langsung terlihat.
+        prominent && "px-2.5 py-1 text-sm font-semibold",
+        prominent && value === "dine_in" && "border-primary/30 bg-primary/10 text-primary",
+        prominent && value === "takeaway" && "border-amber-300 bg-amber-50 text-amber-700",
+        prominent && value === "delivery" && "border-emerald-300 bg-emerald-50 text-emerald-700"
+      )}
     >
       {value === "delivery" ? <Truck className="mr-1 h-3 w-3" /> : null}
       {labels[value] || value || "—"}
@@ -764,10 +771,13 @@ export function OrdersPage() {
       >
         <DialogPanel size="xl">
           <DialogPanelHeader>
-            <DialogPanelTitle>
+            <DialogPanelTitle className="flex flex-wrap items-center gap-2">
               {selectedSiblings.length > 1
                 ? selectedOrder?.checkout_number || "Tagihan gabungan"
                 : "Order detail"}
+              {selectedOrder?.order_type ? (
+                <TypeBadge type={selectedOrder.order_type} prominent />
+              ) : null}
             </DialogPanelTitle>
             <DialogPanelDescription>
               {selectedSiblings.length > 1
