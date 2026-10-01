@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import { Check, CheckCircle2, Clock, Download, ImageUp, Loader2, RefreshCw, XCircle } from "lucide-react";
+import { Check, CheckCircle2, ChevronLeft, Clock, Download, ImageUp, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { QrisCard } from "@/components/pos/QrisCard";
 import { formatRupiah } from "@/lib/table-order/menu";
 import {
@@ -33,6 +33,8 @@ export function OrderTracking({
   brandName,
   onOrderUpdate,
   onNewOrder,
+  onShowAll,
+  orderCount = 1,
   xpEnabled = true,
   staticQrisImageUrl = null,
 }: {
@@ -44,6 +46,9 @@ export function OrderTracking({
   brandName: string;
   onOrderUpdate: (order: OrderData) => void;
   onNewOrder: () => void;
+  /** >1 pesanan di kunjungan ini → tombol kembali ke daftar "Pesanan saya". */
+  onShowAll?: () => void;
+  orderCount?: number;
 }) {
   const [order, setOrder] = useState(initialOrder);
   const [qris, setQris] = useState(initialOrder.qris);
@@ -140,6 +145,15 @@ export function OrderTracking({
   return (
     <div className="pb-28">
       <div className="bg-primary px-5 pb-16 pt-6 text-white">
+        {onShowAll ? (
+          <button
+            type="button"
+            onClick={onShowAll}
+            className="mb-3 inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white"
+          >
+            <ChevronLeft className="size-4" /> Semua pesanan ({orderCount})
+          </button>
+        ) : null}
         <div className="text-xs font-semibold uppercase tracking-wide text-white/70">{brandName}</div>
         <div className="mt-1 text-sm text-white/80">
           Meja {tableLabel} · {orderTypeText(order.order_type)}

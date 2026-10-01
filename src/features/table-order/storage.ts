@@ -7,6 +7,8 @@ type Stored = {
   cart?: CartLine[];
   orderType?: TableOrderType;
   activeOrderId?: string | null;
+  /** Semua pesanan kunjungan ini, terbaru di depan ("Pesanan saya"). */
+  orderIds?: string[];
   savedAt?: number;
 };
 

@@ -26,7 +26,7 @@ import {
   type TableOrderProduct,
   type TableOrderVariant,
 } from "@/lib/table-order/menu";
-import { isOrderActive, type TableOrderPaymentMethod, type TableOrderType } from "@/lib/table-order/order-status";
+import { type TableOrderPaymentMethod, type TableOrderType } from "@/lib/table-order/order-status";
 import {
   addToCart,
   adjustCartQuantity,
@@ -49,6 +49,8 @@ import {
   type TableSession,
 } from "../api";
 import { readTableState, writeTableState } from "../storage";
+import { orderNeedsAttention, rememberOrderId, storedOrderIds } from "@/lib/table-order/my-orders";
+import { MyOrdersList } from "./my-orders-list";
 import { BottomSheet } from "./sheet";
 import { CartSheet } from "./cart-sheet";
 import { MemberSheet } from "./member-sheet";
@@ -61,7 +63,7 @@ import { DecrementSheet } from "./decrement-sheet";
 
 const HERO_IMAGE = "/bg-bcd.webp";
 
-type View = "menu" | "tracking";
+type View = "menu" | "tracking" | "orders";
 
 export function TableOrderApp({ tableCode }: { tableCode: string }) {
   const [session, setSession] = useState<TableSession | null>(null);
@@ -90,6 +92,8 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [activeOrder, setActiveOrder] = useState<OrderData | null>(null);
+  // Semua pesanan kunjungan ini, terbaru di depan (owner 2026-10-01).
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [view, setView] = useState<View>("menu");
   const [toast, setToast] = useState<string | null>(null);
 
@@ -179,11 +183,16 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
             const sellable = new Set(catalogData.products.map((product) => product.id));
             setCart(stored.cart.filter((line) => sellable.has(line.productId)));
           }
-          if (stored.activeOrderId) {
-            const order = await fetchOrder(stored.activeOrderId).catch(() => null);
-            if (!cancelled && order) {
-              setActiveOrder(order);
-              if (isOrderActive(order.status) || order.payment_status === "unpaid") setView("tracking");
+          const ids = storedOrderIds(stored);
+          if (ids.length) {
+            const fetched = (await Promise.all(ids.map((id) => fetchOrder(id).catch(() => null)))).filter(
+              (order): order is OrderData => Boolean(order)
+            );
+            if (!cancelled && fetched.length) {
+              setOrders(fetched);
+              const current = fetched.find((order) => order.id === stored.activeOrderId) ?? fetched[0];
+              setActiveOrder(current);
+              if (fetched.some(orderNeedsAttention)) setView(fetched.length > 1 ? "orders" : "tracking");
             }
           }
         }
@@ -201,8 +210,24 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
 
   useEffect(() => {
     if (!restored.current) return;
-    writeTableState(tableCode, { cart, orderType, activeOrderId: activeOrder?.id ?? null });
-  }, [cart, orderType, activeOrder, tableCode]);
+    writeTableState(tableCode, {
+      cart,
+      orderType,
+      activeOrderId: activeOrder?.id ?? null,
+      orderIds: orders.map((order) => order.id),
+    });
+  }, [cart, orderType, activeOrder, orders, tableCode]);
+
+  /** Perbarui satu pesanan di daftar + yang sedang dilihat. */
+  const updateOrder = useCallback((order: OrderData) => {
+    setActiveOrder((current) => (current && current.id === order.id ? order : current));
+    setOrders((current) => current.map((existing) => (existing.id === order.id ? order : existing)));
+  }, []);
+
+  function openMyOrders() {
+    setView(orders.length > 1 ? "orders" : "tracking");
+    window.scrollTo({ top: 0 });
+  }
 
   // Sorotan data pemesan: gulir ke kartu & fokus ke nomor WA.
   const coachVisible = coachOpen && !member && view === "menu";
@@ -350,6 +375,11 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         guest_phone: member ? undefined : guest?.phone,
       });
       setActiveOrder(order);
+      setOrders((current) => {
+        const ids = rememberOrderId(current.map((existing) => existing.id), order.id);
+        const byId = new Map([...current, order].map((entry) => [entry.id, entry]));
+        return ids.map((id) => byId.get(id)).filter((entry): entry is OrderData => Boolean(entry));
+      });
       setCart([]);
       setNote("");
       setCartOpen(false);
@@ -376,17 +406,41 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   }
 
   // ---- render --------------------------------------------------------------
+  if (view === "orders" && orders.length > 0) {
+    return (
+      <main className="min-h-dvh bg-gray-50 text-gray-900">
+        <div className="mx-auto max-w-md">
+          <MyOrdersList
+            orders={orders}
+            tableLabel={tableLabel}
+            brandName={brandName}
+            onSelect={(order) => {
+              setActiveOrder(order);
+              setView("tracking");
+              window.scrollTo({ top: 0 });
+            }}
+            onOrdersUpdate={setOrders}
+            onNewOrder={startNewOrder}
+          />
+        </div>
+      </main>
+    );
+  }
+
   if (view === "tracking" && activeOrder) {
     return (
       <main className="min-h-dvh bg-gray-50 text-gray-900">
         <div className="mx-auto max-w-md">
           <OrderTracking
+            key={activeOrder.id}
             xpEnabled={xpEnabled}
             order={activeOrder}
             tableLabel={tableLabel}
             brandName={brandName}
-            onOrderUpdate={setActiveOrder}
+            onOrderUpdate={updateOrder}
             onNewOrder={startNewOrder}
+            onShowAll={orders.length > 1 ? openMyOrders : undefined}
+            orderCount={orders.length}
             staticQrisImageUrl={session?.static_qris_image_url ?? null}
           />
         </div>
@@ -422,7 +476,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
               {activeOrder && (
                 <button
                   type="button"
-                  onClick={() => setView("tracking")}
+                  onClick={openMyOrders}
                   className="flex size-11 items-center justify-center rounded-full bg-white/95 text-primary shadow"
                   aria-label="Pesanan saya"
                 >
@@ -512,7 +566,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                 {activeOrder && (
                   <button
                     type="button"
-                    onClick={() => setView("tracking")}
+                    onClick={openMyOrders}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700"
                   >
                     <Receipt className="size-4" />
