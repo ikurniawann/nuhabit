@@ -393,6 +393,15 @@ export function OrderTracking({
               <span>Subtotal</span>
               <span className="font-semibold text-gray-900">{formatRupiah(order.subtotal)}</span>
             </div>
+            {(order.discount_amount ?? 0) > 0 && (
+              <div className="flex justify-between text-primary">
+                <span>
+                  Diskon member
+                  {order.subtotal > 0 ? ` (${Math.round(((order.discount_amount ?? 0) * 100) / order.subtotal)}%)` : ""}
+                </span>
+                <span className="font-semibold">−{formatRupiah(order.discount_amount ?? 0)}</span>
+              </div>
+            )}
             {order.breakdown.map((line) => (
               <div key={line.code} className="flex justify-between">
                 <span>

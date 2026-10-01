@@ -399,6 +399,7 @@ export async function POST(request: NextRequest) {
           table_code: tableCode,
           table_resolved: Boolean(tableId),
           subtotal,
+          discount_amount: discountAmount,
           tax_amount: bill.tax_amount,
           service_charge_amount: bill.service_charge_amount,
           other_charges_amount: bill.other_charges_amount,

@@ -18,6 +18,7 @@ type OrderRow = {
   payment_method: string | null;
   order_type: string | null;
   subtotal: number;
+  discount_amount: number;
   tax_amount: number;
   service_charge_amount: number;
   other_charges_amount: number;
@@ -48,7 +49,8 @@ async function loadOrder(orderId: string) {
     `SELECT id, order_number, queue_number, status::text AS status,
             payment_status::text AS payment_status, payment_method::text AS payment_method,
             order_type::text AS order_type,
-            subtotal::float AS subtotal, tax_amount::float AS tax_amount,
+            subtotal::float AS subtotal, COALESCE(discount_amount, 0)::float AS discount_amount,
+            tax_amount::float AS tax_amount,
             service_charge_amount::float AS service_charge_amount,
             COALESCE(other_charges_amount, 0)::float AS other_charges_amount,
             total_amount::float AS total_amount, charges_breakdown,
@@ -150,6 +152,7 @@ export async function GET(
         payment_flow: paymentFlowOf(order),
         order_type: order.order_type,
         subtotal: order.subtotal,
+        discount_amount: order.discount_amount,
         tax_amount: order.tax_amount,
         service_charge_amount: order.service_charge_amount,
         other_charges_amount: order.other_charges_amount,

@@ -74,6 +74,8 @@ export type OrderData = {
   payment_flow: string;
   order_type: string | null;
   subtotal: number;
+  /** Diskon tier member (absen = server lama → 0). */
+  discount_amount?: number;
   tax_amount: number;
   service_charge_amount: number;
   other_charges_amount: number;

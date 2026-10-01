@@ -307,6 +307,8 @@ describe("POST /api/table-order/orders — harga dari server", () => {
     expect(order.tax_amount).toBe(5400);
     expect(order.total_amount).toBe(59400);
     expect((json.data as Record<string, unknown>).total_amount).toBe(59400);
+    // Halaman status pesanan menampilkan rincian diskon dari respons ini.
+    expect((json.data as Record<string, unknown>).discount_amount).toBe(6000);
   });
 
   it("tamu: tanpa diskon member walau tier ada", async () => {
