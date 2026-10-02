@@ -44,5 +44,8 @@ export async function register() {
     // EPIC-050 Fase 4 — pengirim report terjadwal (WA / notifikasi aplikasi)
     const { startReportScheduleWatcher } = await import("@/lib/crm/report-schedule-watcher");
     startReportScheduleWatcher();
+    // EPIC-058 — NüHabit: tutup hari studio (sesi lewat, pass kedaluwarsa) + pengingat WA member
+    const { startStudioJobsWatcher } = await import("@/lib/studio/jobs-watcher");
+    startStudioJobsWatcher();
   }
 }

@@ -11,3 +11,4 @@ export { StudioAvailabilityPage } from "./components/availability-page";
 export { StudioPtPage } from "./components/pt-page";
 export { StudioCommissionsPage } from "./components/commissions-page";
 export { StudioNewsPage } from "./components/news-page";
+export { StudioAutomationPage } from "./components/automation-page";

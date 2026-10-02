@@ -38,7 +38,7 @@ export function resolveProvider(): WhatsAppProvider | null {
  * bukan hanya ENV. resolveProvider sync dipertahankan untuk pemakaian lama
  * berbasis ENV murni.
  */
-async function resolveProviderAsync(): Promise<WhatsAppProvider | null> {
+export async function resolveProviderAsync(): Promise<WhatsAppProvider | null> {
   const explicit = process.env.WHATSAPP_PROVIDER?.trim().toLowerCase();
   if (explicit === "meta") return readMetaConfig() ? "meta" : null;
   if (explicit === "gateway") return (await loadGatewayConfig()) ? "gateway" : null;

@@ -56,6 +56,8 @@ export function ProfileTab() {
         )}
       </section>
 
+      <ReminderToggle />
+
       <PillButton variant="ghost" className="w-full" onClick={logout}>
         <LogOut className="size-4" /> Keluar
       </PillButton>
@@ -96,5 +98,50 @@ export function ProfileTab() {
         )}
       </Sheet>
     </div>
+  );
+}
+
+/** Pengingat WhatsApp (H-1 sesi, waitlist, paket) — member bisa mematikannya. */
+function ReminderToggle() {
+  const [on, setOn] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    memberFetch<{ data: { wa_reminders: boolean } }>("/api/member-portal/studio/prefs")
+      .then((r) => setOn(r.data.wa_reminders))
+      .catch(() => setOn(true));
+  }, []);
+
+  async function toggle() {
+    if (on === null) return;
+    setBusy(true);
+    try {
+      await memberFetch("/api/member-portal/studio/prefs", { method: "PUT", body: { wa_reminders: !on } });
+      setOn(!on);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="font-semibold">Pengingat WhatsApp</p>
+          <p className="mt-0.5 text-xs text-nh-beige/60">Sesi besok, tempat dari waitlist, dan paket yang hampir habis.</p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on === true}
+          aria-label="Pengingat WhatsApp"
+          disabled={on === null || busy}
+          onClick={toggle}
+          className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-nh-lime" : "bg-white/15"} disabled:opacity-60`}
+        >
+          <span className={`absolute top-1 size-5 rounded-full transition-all ${on ? "left-6 bg-nh-forest" : "left-1 bg-nh-beige"}`} />
+        </button>
+      </div>
+    </Card>
   );
 }

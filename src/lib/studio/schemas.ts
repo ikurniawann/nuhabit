@@ -267,3 +267,17 @@ export const newsCreateSchema = z.object({
   pinned: newsFields.pinned.default(false),
 });
 export const newsPatchSchema = z.object(newsFields).partial();
+
+// ── Otomasi & Pengingat (EPIC-058) ─────────────────────────────────────────
+export const jobSettingsSchema = z
+  .object({
+    auto_close_enabled: z.boolean(),
+    auto_close_hour: z.number().int().min(18).max(23),
+    reminders_enabled: z.boolean(),
+    reminder_hour: z.number().int().min(8).max(20),
+    pass_low_threshold: z.number().int().min(1).max(5),
+    pass_expiring_days: z.number().int().min(1).max(14),
+  })
+  .partial();
+export const jobRunSchema = z.object({ job: z.enum(["daily_close", "reminders"]) });
+export const memberPrefsSchema = z.object({ wa_reminders: z.boolean() });
