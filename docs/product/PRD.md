@@ -97,12 +97,15 @@ Lihat ringkasan di percakapan 2026-10-02; poin yang perlu dikonfirmasi owner ada
 
 ## 5. Pertanyaan Terbuka
 
-- [ ] File Excel perhitungan komisi coach.
+- [x] File Excel perhitungan komisi coach — pool 10% kelas + 40% Personal Training; Head Coach 20%, Coach 16%; opsi B (EPIC-056).
 - [ ] Jam kelas pagi (Senin–Sabtu & Minggu).
-- [ ] Insentif kelas: flat per sesi atau tergantung jumlah peserta?
-- [ ] PT: dikurangi dari paket (Class + PT) saja, atau juga bisa beli sesi PT terpisah?
+- [x] Insentif kelas: dari pool revenue yang diakui, bukan flat per sesi (EPIC-056).
+- [x] Personal Training: keduanya didukung — kredit di paket Class + Personal Training dan paket "Personal Training saja" (EPIC-055).
 - [ ] "Facility" mencakup apa (open gym, loker, sauna)? Dibatasi kuota atau unlimited selama masa aktif?
-- [ ] Kredit expired: masuk bonus pool coach atau revenue perusahaan? Aturannya?
-- [ ] Aturan cancel & no-show.
-- [ ] Hardware RFID (reader & jenis tag) dan cakupan (stok F&B, alat gym, merchandise?).
+- [x] Kredit expired: breakage → revenue perusahaan, tidak masuk pool komisi (EPIC-053/056).
+- [x] Aturan cancel & no-show: batal ≥ 12 jam kredit kembali; batal telat & no-show kredit hangus; waitlist otomatis (EPIC-054).
+- [ ] Hardware RFID (reader & jenis tag) dan cakupan (stok F&B, alat gym, merchandise?) — EPIC-060.
 - [ ] Single branch atau multi-branch?
+- [ ] Komisi tetap dibagi ke coach yang tidak mengajar di bulan itu? (opsi B saat ini: ya)
+
+Daftar kerja & checklist non-development: [BACKLOG.md](../BACKLOG.md).

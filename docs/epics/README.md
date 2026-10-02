@@ -59,7 +59,15 @@ deploying-dev · ready-for-qa · blocked · done).
 | [EPIC-054](./EPIC-054-booking-kelas-checkin.md) | Booking Kelas, Waitlist & Check-in — kredit dikunci, cancel 12 jam, scan check-in, revenue saat kelas selesai, API Member App | ready-for-qa | 2026-10-02 |
 | [EPIC-055](./EPIC-055-personal-training.md) | Personal Training — ketersediaan coach, slot otomatis, booking, paket Personal Training saja | ready-for-qa | 2026-10-02 |
 | [EPIC-056](./EPIC-056-komisi-coach-coach-portal.md) | Komisi Coach (di luar payroll) — pool 10% kelas + 40% Personal Training, spread per peran (opsi B), approve dan bayar, Coach Portal | ready-for-qa | 2026-10-02 |
-| EPIC-057 | Konten Member App & Notifikasi — news Hyrox, profil coach, pengingat WA | backlog | 2026-10-02 |
+| [EPIC-057](./EPIC-057-member-app-nuhabit.md) | Member App NüHabit — booking kelas, Personal Training, pass & beli paket online, profil coach, News Hyrox | on-progress | 2026-10-02 |
+| [EPIC-058](./EPIC-058-job-harian-notifikasi-wa.md) | Job harian otomatis (expire pass, selesaikan sesi) & pengingat WhatsApp | backlog | 2026-10-02 |
+| [EPIC-059](./EPIC-059-aset-tetap-qr-penyusutan.md) | Aset Tetap — QR code per aset, penyusutan, perawatan, disposal | backlog | 2026-10-02 |
+| [EPIC-060](./EPIC-060-inventory-rfid.md) | Inventory Control RFID (menunggu keputusan hardware) | backlog | 2026-10-02 |
+| [EPIC-061](./EPIC-061-pos-fnb-absensi-cs.md) | Penyesuaian POS F&B & Absensi CS | backlog | 2026-10-02 |
+| [EPIC-062](./EPIC-062-dashboard-hyrox.md) | Dashboard Hyrox — okupansi, utilisasi coach, member, liability | backlog | 2026-10-02 |
+| [EPIC-063](./EPIC-063-siklus-paket.md) | Siklus Paket — freeze, perpanjang, upgrade | backlog | 2026-10-02 |
+| [EPIC-064](./EPIC-064-calon-member-waiver-trial.md) | Calon Member — waiver PAR-Q & trial class | backlog | 2026-10-02 |
+| [EPIC-065](./EPIC-065-pembersihan-teknis.md) | Pembersihan teknis sisa BCD & PR ke development | backlog | 2026-10-02 |
 
 Aturan:
 - Epic + registry ini adalah sumber kebenaran status pekerjaan (canonical).
