@@ -29,6 +29,31 @@ const STATUS_TONE: Record<EffectivePassStatus, "positive" | "warning" | "danger"
   cancelled: "neutral",
 };
 
+/**
+ * POST dengan batas waktu: kalau respons tidak datang dalam 15 detik (koneksi
+ * putus/tertahan), spinner berhenti dan user diminta mencoba lagi — percobaan
+ * ulang aman karena nomor yang sudah tersimpan langsung dipakai.
+ */
+async function postWithTimeout(url: string, body: unknown, ms = 15_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const json = await res.json().catch(() => null);
+    return { ok: res.ok, status: res.status, json };
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw new Error("Koneksi lambat — data mungkin sudah tersimpan. Klik Daftarkan lagi untuk melanjutkan.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function credits(left: number, total: number) {
   return total > 0 ? `${left}/${total}` : "—";
 }
@@ -224,7 +249,9 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
   const [ref, setRef] = useState("");
   const [notes, setNotes] = useState("");
   const [customPrice, setCustomPrice] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [selling, setSelling] = useState(false);
+  const busy = registering || selling;
 
   useEffect(() => {
     apiGet<{ data: PassProductRow[] }>("/api/studio/pass-products?active=1")
@@ -258,22 +285,30 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
       toast.error("Nama dan nomor HP wajib diisi");
       return;
     }
-    setBusy(true);
+    setRegistering(true);
     try {
-      const res = await apiPost<{ data: MemberOption; message?: string }>("/api/studio/members", newMember);
-      toast.success(res.message ?? "Member terdaftar");
-      setMember(res.data);
+      const res = await postWithTimeout("/api/studio/members", newMember);
+      if (res.status === 409 && res.json?.existing) {
+        // Nomor sudah ada (mis. percobaan sebelumnya ternyata tersimpan) → pakai member itu.
+        setMember(res.json.existing as MemberOption);
+        setCreating(false);
+        toast.info(`Nomor sudah terdaftar — memakai member ${res.json.existing.name ?? res.json.existing.phone}`);
+        return;
+      }
+      if (!res.ok) throw new Error(res.json?.error ?? "Gagal mendaftarkan member");
+      toast.success(res.json?.message ?? "Member terdaftar");
+      setMember(res.json.data as MemberOption);
       setCreating(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal mendaftarkan member");
     } finally {
-      setBusy(false);
+      setRegistering(false);
     }
   }
 
   async function sell() {
     if (!member || !product) return;
-    setBusy(true);
+    setSelling(true);
     try {
       const res = await apiPost<{ data: { id: string }; message?: string }>("/api/studio/passes", {
         customer_id: member.id,
@@ -289,7 +324,7 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Gagal menjual pass");
     } finally {
-      setBusy(false);
+      setSelling(false);
     }
   }
 
@@ -326,8 +361,8 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
               </Field>
               <div className="flex justify-end gap-2 sm:col-span-2">
                 <Button variant="outline" size="sm" onClick={() => setCreating(false)} disabled={busy}>Batal</Button>
-                <Button size="sm" onClick={registerMember} disabled={busy}>
-                  {busy && <Loader2 className="size-3.5 animate-spin" />} Daftarkan
+                <Button size="sm" onClick={registerMember} disabled={registering}>
+                  {registering && <Loader2 className="size-3.5 animate-spin" />} Daftarkan
                 </Button>
               </div>
             </div>
@@ -419,7 +454,7 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose} disabled={busy}>Batal</Button>
           <Button onClick={sell} disabled={busy || !member || !product}>
-            {busy && <Loader2 className="size-4 animate-spin" />}
+            {selling && <Loader2 className="size-4 animate-spin" />}
             <Ticket className="size-4" /> Terbitkan pass
           </Button>
         </div>

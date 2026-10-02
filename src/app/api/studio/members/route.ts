@@ -35,11 +35,18 @@ export async function POST(request: NextRequest) {
     const b = await validateBody(request, memberCreateSchema);
     const phone = normalizeMemberPhone(b.phone);
     if (!phone) throw ApiError.badRequest("Nomor HP tidak valid");
-    const existing = await queryOne<{ id: string; name: string | null }>(
-      `SELECT id, name FROM pos.pos_customers WHERE regexp_replace(phone, '\\D', '', 'g') = $1 LIMIT 1`,
+    const existing = await queryOne<{ id: string; name: string | null; phone: string; email: string | null }>(
+      `SELECT id, name, phone, email FROM pos.pos_customers WHERE regexp_replace(phone, '\\D', '', 'g') = $1 LIMIT 1`,
       [phone]
     );
-    if (existing) throw ApiError.conflict(`Nomor HP sudah terdaftar atas nama ${existing.name ?? "member lain"}`);
+    if (existing) {
+      // 409 + data member: front desk bisa langsung memakai member yang sudah ada
+      // (mis. percobaan ulang setelah koneksi putus tetapi data sudah tersimpan).
+      return NextResponse.json(
+        { success: false, error: `Nomor HP sudah terdaftar atas nama ${existing.name ?? "member lain"}`, existing },
+        { status: 409 }
+      );
+    }
     const rows = await query(
       `INSERT INTO pos.pos_customers (name, phone, email, birth_date, gender, member_type, is_active)
        VALUES ($1,$2,$3,$4,$5,'registered',true) RETURNING id, name, phone, email`,
