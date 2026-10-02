@@ -274,4 +274,6 @@ WHERE deleted_at IS NULL
     -- EPIC-054 Booking & Check-in:
     'studio.attendance', 'studio.settings',
     -- EPIC-055 Personal Training:
-    'studio.pt', 'studio.availability');
+    'studio.pt', 'studio.availability',
+    -- EPIC-056 Komisi Coach:
+    'studio.commissions');

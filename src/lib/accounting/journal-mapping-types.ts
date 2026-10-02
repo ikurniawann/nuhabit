@@ -90,6 +90,8 @@ export const JOURNAL_EVENT_CODES = [
   "STUDIO_PASS_REDEEM_PT",
   "STUDIO_PASS_BREAKAGE",
   "STUDIO_PASS_CANCEL",
+  "STUDIO_COMMISSION_ACCRUAL",
+  "STUDIO_COMMISSION_PAYMENT",
 ] as const;
 export type JournalEventCode = (typeof JOURNAL_EVENT_CODES)[number];
 
@@ -286,6 +288,16 @@ export const JOURNAL_EVENT_META: Record<
     name: "Member Pass — Pembatalan",
     module: "STUDIO",
     description: "Batal pass sebelum dipakai (refund): Dr PASS_LIABILITY, Cr Kas/Bank",
+  },
+  STUDIO_COMMISSION_ACCRUAL: {
+    name: "Komisi Coach — Akrual Bulanan",
+    module: "STUDIO",
+    description: "Komisi coach disetujui (di luar payroll): Dr COMMISSION_EXPENSE, Cr COMMISSION_PAYABLE",
+  },
+  STUDIO_COMMISSION_PAYMENT: {
+    name: "Komisi Coach — Pembayaran",
+    module: "STUDIO",
+    description: "Pencairan komisi coach akhir bulan: Dr COMMISSION_PAYABLE, Cr Kas/Bank",
   },
 };
 

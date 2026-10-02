@@ -226,3 +226,22 @@ export const ptBookingSchema = z.object({
 });
 
 export const memberPtBookingSchema = ptBookingSchema.omit({ customer_id: true, notes: true });
+
+// ── Komisi coach (EPIC-056) ────────────────────────────────────────────────
+export const commissionSettingsSchema = z
+  .object({
+    class_pool_percent: z.number().min(0).max(100),
+    pt_pool_percent: z.number().min(0).max(100),
+    share_head_coach: z.number().min(0).max(100),
+    share_coach: z.number().min(0).max(100),
+  })
+  .partial();
+
+export const commissionPaySchema = z.object({
+  method: z.enum(["cash", "transfer"]),
+  ref: optText(120),
+});
+
+export const coachShareSchema = z.object({
+  commission_share_percent: z.number().min(0).max(100).nullable(),
+});

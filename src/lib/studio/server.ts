@@ -33,8 +33,11 @@ async function resolveVenue(): Promise<{ companyId: string | null; branchId: str
   return { companyId, branchId };
 }
 
-export async function requireStudioContext(action?: "create" | "update" | "delete"): Promise<StudioContext> {
-  const user = action ? await requireIamAction(IAM.studio, action) : await requireIamMenuPrefix(IAM.studio);
+export async function requireStudioContext(
+  action?: "create" | "update" | "delete" | "approve",
+  prefixes: readonly string[] = IAM.studio
+): Promise<StudioContext> {
+  const user = action ? await requireIamAction(prefixes, action) : await requireIamMenuPrefix(prefixes);
   const { companyId, branchId } = await resolveVenue();
   if (!companyId || !branchId) {
     throw ApiError.conflict("Venue belum dikonfigurasi — lengkapi scope bisnis user atau default venue di CRM Settings");

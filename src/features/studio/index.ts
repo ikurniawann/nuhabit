@@ -9,3 +9,4 @@ export { StudioAttendancePage } from "./components/attendance-page";
 export { StudioSettingsPage } from "./components/settings-page";
 export { StudioAvailabilityPage } from "./components/availability-page";
 export { StudioPtPage } from "./components/pt-page";
+export { StudioCommissionsPage } from "./components/commissions-page";

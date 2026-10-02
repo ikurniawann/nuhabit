@@ -24,7 +24,7 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
-    setRequestedRedirect(redirect?.startsWith("/dashboard") ? redirect : null);
+    setRequestedRedirect(redirect?.startsWith("/dashboard") || redirect?.startsWith("/coach") ? redirect : null);
     setRequestedModule(params.get("module"));
   }, []);
 
@@ -56,13 +56,18 @@ export default function LoginPage() {
       const role = (profile as { role?: string } | null)?.role;
       let target = requestedRedirect || "/arkiv-os";
       if (role !== "super_admin") {
+        // Coach (akun karyawan yang ditautkan ke profil coach) → Coach Portal.
+        const isCoach = await fetch("/api/coach/me").then((r) => r.ok).catch(() => false);
         // Deep link staf yang diizinkan (akses tetap dijaga layout dashboard):
         // Area Karyawan & layar pesanan self-order dari link WA "Buatkan Pesanan".
         target =
           requestedRedirect?.startsWith("/dashboard/me") ||
-          requestedRedirect?.startsWith("/dashboard/pos/self-orders")
+          requestedRedirect?.startsWith("/dashboard/pos/self-orders") ||
+          (isCoach && requestedRedirect?.startsWith("/coach"))
             ? requestedRedirect
-            : "/dashboard/me";
+            : isCoach
+              ? "/coach"
+              : "/dashboard/me";
       }
       setTransitioning(true);
       window.setTimeout(() => router.replace(target), 450);
