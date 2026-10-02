@@ -204,7 +204,7 @@ function SessionCard({ s, onClick }: { s: SessionRow; onClick: () => void }) {
       <div className="line-clamp-2 text-sm font-medium leading-snug text-foreground">{s.program_name}</div>
       <div className="mt-0.5 flex items-center justify-between gap-2 text-xs">
         <span className={`truncate ${s.coach_id ? "text-muted-foreground" : "font-semibold text-destructive"}`}>{s.coach_name ?? "Tanpa coach"}</span>
-        <span className="shrink-0 tabular-nums text-muted-foreground">{s.capacity}</span>
+        <span className="shrink-0 tabular-nums text-muted-foreground">{s.booked_count ?? 0}/{s.capacity}</span>
       </div>
     </button>
   );

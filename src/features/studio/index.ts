@@ -5,3 +5,5 @@ export { StudioTemplatesPage } from "./components/templates-page";
 export { StudioPassProductsPage } from "./components/pass-products-page";
 export { StudioPassesPage } from "./components/passes-page";
 export { StudioCalendarPage } from "./components/calendar-page";
+export { StudioAttendancePage } from "./components/attendance-page";
+export { StudioSettingsPage } from "./components/settings-page";

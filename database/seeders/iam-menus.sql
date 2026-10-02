@@ -270,4 +270,6 @@ WHERE deleted_at IS NULL
     -- Nuhabit EPIC-053 Member Pass:
     'studio.passes', 'studio.pass-products',
     -- Kalender Kelas (monitoring):
-    'studio.calendar');
+    'studio.calendar',
+    -- EPIC-054 Booking & Check-in:
+    'studio.attendance', 'studio.settings');

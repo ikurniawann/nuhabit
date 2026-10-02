@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { completePastSessions } from "@/lib/studio/booking-server";
 import { expireDuePasses } from "@/lib/studio/pass-server";
-import { requireStudioContext, studioRoute } from "@/lib/studio/server";
+import { requireStudioContext, staffActor, studioRoute } from "@/lib/studio/server";
 
 /**
  * Proses pass yang lewat masa berlaku: sisa kredit + nilai facility diakui
@@ -10,6 +11,9 @@ import { requireStudioContext, studioRoute } from "@/lib/studio/server";
 export async function POST() {
   return studioRoute("passes expire", async () => {
     const ctx = await requireStudioContext("update");
+    // Kelas yang sudah lewat diselesaikan dulu supaya kredit terkunci diakui
+    // sebagai redeem (bukan breakage) sebelum pass dikedaluwarsakan.
+    await completePastSessions(staffActor(ctx));
     const res = await expireDuePasses(ctx);
     const rupiah = res.recognized.toLocaleString("id-ID");
     return NextResponse.json({

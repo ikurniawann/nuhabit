@@ -56,7 +56,7 @@ deploying-dev · ready-for-qa · blocked · done).
 | [EPIC-051](./EPIC-051-tagihan-member.md) | Tagihan Member — Cicilan Order Member (POS → Operasional → Tagihan) | ready-for-qa | 2026-10-01 |
 | [EPIC-052](./EPIC-052-studio-coach-program-jadwal.md) | Studio — Coach, Program Kelas & Jadwal (Nuhabit) | ready-for-qa | 2026-10-02 |
 | [EPIC-053](./EPIC-053-member-pass.md) | Member Pass — paket kredit Class / Class+PT / Class+PT+Facility, penjualan, saldo kredit, utang pass | ready-for-qa | 2026-10-02 |
-| EPIC-054 | Booking Kelas & Check-in — booking/waitlist/cancel, check-in QR, Member App | backlog | 2026-10-02 |
+| [EPIC-054](./EPIC-054-booking-kelas-checkin.md) | Booking Kelas, Waitlist & Check-in — kredit dikunci, cancel 12 jam, scan check-in, revenue saat kelas selesai, API Member App | ready-for-qa | 2026-10-02 |
 | EPIC-055 | Personal Training — ketersediaan coach & booking PT | backlog | 2026-10-02 |
 | EPIC-056 | Komisi Coach (di luar payroll) — pool 10% kelas + 40% PT, spread per peran, statement & pencairan via Accounting, Coach Portal | backlog | 2026-10-02 |
 | EPIC-057 | Konten Member App & Notifikasi — news Hyrox, profil coach, pengingat WA | backlog | 2026-10-02 |

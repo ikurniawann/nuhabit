@@ -4,7 +4,8 @@ import { query, queryOne } from "@/lib/db";
 import { assertSessionCoachFree } from "@/lib/studio/conflicts";
 import { toMinutes } from "@/lib/studio/schedule";
 import { sessionPatchSchema } from "@/lib/studio/schemas";
-import { buildSet, requireStudioContext, studioRoute } from "@/lib/studio/server";
+import { completeSession, releaseSessionBookings } from "@/lib/studio/booking-server";
+import { buildSet, requireStudioContext, staffActor, studioRoute } from "@/lib/studio/server";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,10 +30,34 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (!ok) throw ApiError.notFound("Program tidak ditemukan");
     }
     if (merged.status !== "cancelled") await assertSessionCoachFree(ctx.branchId, { id, ...merged });
+    if (current.status === "completed" && body.status && body.status !== "completed") {
+      throw ApiError.conflict("Kelas yang sudah diselesaikan (revenue diakui) tidak bisa diubah statusnya");
+    }
+    if (body.capacity !== undefined) {
+      const taken = await queryOne<{ c: number }>(
+        `SELECT COUNT(*)::int AS c FROM studio.bookings WHERE session_id = $1 AND status IN ('booked','attended')`,
+        [id]
+      );
+      if (body.capacity < Number(taken?.c ?? 0)) throw ApiError.conflict(`Kuota tidak bisa di bawah jumlah peserta terdaftar (${taken?.c})`);
+    }
+    // "Selesai" harus lewat penyelesaian kelas supaya no-show & revenue diproses.
+    const completing = body.status === "completed" && current.status !== "completed";
+    if (body.status === "completed") delete body.status;
     const { sets, values } = buildSet(body);
-    if (sets.length === 0) return NextResponse.json({ success: true, data: { id } });
-    await query(`UPDATE studio.class_sessions SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, [id, ...values]);
-    const message = body.status === "cancelled" ? "Sesi dibatalkan" : "Sesi diperbarui";
+    if (sets.length === 0 && !completing) return NextResponse.json({ success: true, data: { id } });
+    if (sets.length > 0) {
+      await query(`UPDATE studio.class_sessions SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, [id, ...values]);
+    }
+    if (completing) {
+      const r = await completeSession(staffActor(ctx), id);
+      return NextResponse.json({ success: true, data: { id, ...r }, message: `Kelas selesai · ${r.attended} hadir, ${r.no_show} tidak hadir` });
+    }
+    let released = 0;
+    if (body.status === "cancelled" && current.status !== "cancelled") {
+      released = await releaseSessionBookings(staffActor(ctx), id, merged.cancel_reason ?? "dibatalkan");
+    }
+    const message =
+      body.status === "cancelled" ? `Sesi dibatalkan${released ? ` · ${released} booking dibatalkan, kredit dikembalikan` : ""}` : "Sesi diperbarui";
     return NextResponse.json({ success: true, data: { id }, message });
   });
 }
@@ -41,8 +66,8 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   return studioRoute("sessions DELETE", async () => {
     const ctx = await requireStudioContext("delete");
     const { id } = await params;
-    // Booking member (EPIC-054) akan mencegah hapus sesi yang sudah dipesan;
-    // sampai saat itu sesi boleh dihapus — batalkan bila ingin jejaknya tetap ada.
+    const booked = await queryOne<{ c: number }>(`SELECT COUNT(*)::int AS c FROM studio.bookings WHERE session_id = $1`, [id]);
+    if (Number(booked?.c) > 0) throw ApiError.conflict("Sesi sudah punya booking — batalkan sesi (kredit member otomatis kembali), jangan dihapus");
     const rows = await query(`DELETE FROM studio.class_sessions WHERE id = $1 AND branch_id = $2 RETURNING id`, [id, ctx.branchId]);
     if (rows.length === 0) throw ApiError.notFound("Sesi tidak ditemukan");
     return NextResponse.json({ success: true, message: "Sesi dihapus" });

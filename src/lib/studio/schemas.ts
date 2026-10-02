@@ -170,3 +170,34 @@ export const passExtendSchema = z.object({
 export const passCancelSchema = z.object({
   reason: z.string().trim().min(3).max(300),
 });
+
+// ── Booking (EPIC-054) ─────────────────────────────────────────────────────
+export const bookingCreateSchema = z.object({
+  session_id: z.string().uuid(),
+  customer_id: z.string().uuid(),
+  check_in: z.boolean().default(false),
+  notes: optText(300),
+});
+
+export const bookingCancelSchema = z.object({
+  reason: optText(300),
+  waive: z.boolean().default(false),
+});
+
+export const checkInScanSchema = z.object({
+  code: z.string().trim().min(3).max(40),
+  session_id: z.string().uuid().nullable().optional(),
+});
+
+export const settingsPatchSchema = z
+  .object({
+    cancel_window_hours: z.number().int().min(0).max(72),
+    booking_open_days: z.number().int().min(1).max(60),
+    booking_close_minutes: z.number().int().min(0).max(240),
+    checkin_open_minutes: z.number().int().min(0).max(240),
+    waitlist_enabled: z.boolean(),
+    max_active_bookings: z.number().int().min(0).max(50),
+  })
+  .partial();
+
+export const memberBookSchema = z.object({ session_id: z.string().uuid() });

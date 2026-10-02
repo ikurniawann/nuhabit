@@ -474,8 +474,9 @@ select,
 [data-slot="input"],
 [data-slot="select-trigger"],
 [data-slot="textarea"] {
-  border-color: rgba(209, 213, 219, 0.6) !important;
-  background: rgba(255, 255, 255, 0.7) !important;
+  /* Token NüHabit (DESIGN.md §8): border --input, latar kartu, fokus --ring. */
+  border-color: var(--input) !important;
+  background: color-mix(in oklch, var(--card) 88%, transparent) !important;
 }
 
 input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -490,9 +491,30 @@ select:focus-visible,
 [data-slot="select-trigger"]:focus-visible,
 [data-slot="textarea"]:focus,
 [data-slot="textarea"]:focus-visible {
-  border-color: rgba(209, 213, 219, 0.95) !important;
-  box-shadow: 0 0 0 1px rgba(229, 231, 235, 0.85) !important;
+  border-color: var(--ring) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 20%, transparent) !important;
   outline: none !important;
+}
+
+/* Input di atas permukaan gelap NüHabit (mis. kolom scan check-in): penawar
+   aturan global di atas — specificity input.class.class + ditulis belakangan. */
+input.nh-dark-input.nh-dark-input,
+input.nh-dark-input.nh-dark-input:hover,
+input.nh-dark-input.nh-dark-input:focus,
+input.nh-dark-input.nh-dark-input:focus-visible {
+  background: rgba(243, 236, 226, 0.08) !important;
+  border-color: rgba(243, 236, 226, 0.22) !important;
+  color: #f3ece2 !important;
+  -webkit-text-fill-color: #f3ece2 !important;
+}
+input.nh-dark-input.nh-dark-input:focus,
+input.nh-dark-input.nh-dark-input:focus-visible {
+  border-color: #daff59 !important;
+  box-shadow: 0 0 0 4px rgba(218, 255, 89, 0.2) !important;
+}
+input.nh-dark-input.nh-dark-input::placeholder {
+  color: rgba(243, 236, 226, 0.4) !important;
+  -webkit-text-fill-color: rgba(243, 236, 226, 0.4) !important;
 }
 
 /* Input di jendela kaca Arkiv OS (mis. Settings → Notifikasi WA): global rule
@@ -515,7 +537,7 @@ input.arkiv-glass-input.arkiv-glass-input:focus-visible {
 
 input.arkiv-glass-input.arkiv-glass-input:focus,
 input.arkiv-glass-input.arkiv-glass-input:focus-visible {
-  border-color: rgba(249, 168, 212, 0.6) !important;
+  border-color: rgba(218, 255, 89, 0.6) !important;
 }
 
 input.arkiv-glass-input.arkiv-glass-input::placeholder {

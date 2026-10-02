@@ -243,9 +243,10 @@ export function StudioCalendarPage() {
               </div>
               <div>
                 <p className="font-display text-2xl font-semibold tabular-nums text-foreground">
-                  {active.reduce((s, x) => s + x.capacity, 0)}
+                  {active.reduce((s, x) => s + (x.booked_count ?? 0), 0)}
+                  <span className="text-base text-muted-foreground">/{active.reduce((s, x) => s + x.capacity, 0)}</span>
                 </p>
-                <p className="text-xs text-muted-foreground">kursi</p>
+                <p className="text-xs text-muted-foreground">kursi terisi</p>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -429,8 +430,9 @@ function TimeGrid({
                         width: `calc(${100 / lanes}% - 6px)`,
                       }}
                     >
-                      <span className="block whitespace-nowrap text-[11px] font-semibold tabular-nums opacity-90">
-                        {s.start_time}–{s.end_time}
+                      <span className="flex items-center justify-between gap-1 whitespace-nowrap text-[11px] font-semibold tabular-nums opacity-90">
+                        <span>{s.start_time}–{s.end_time}</span>
+                        {!cancelled && <span>{s.booked_count ?? 0}/{s.capacity}</span>}
                       </span>
                       <span className={`block font-semibold leading-tight ${large ? "text-sm" : "text-xs"} ${tall ? "line-clamp-2" : "truncate"}`}>
                         {s.program_name}
@@ -438,7 +440,7 @@ function TimeGrid({
                       {roomy && (
                         <span className={`mt-0.5 block truncate text-[11px] ${s.coach_id ? "opacity-80" : "font-semibold"}`}>
                           {s.coach_name ?? "Tanpa coach"}
-                          {large ? ` · kuota ${s.capacity}` : ""}
+                          {large && s.waitlist_count ? ` · waitlist ${s.waitlist_count}` : ""}
                         </span>
                       )}
                     </button>
@@ -560,8 +562,12 @@ function SessionDetail({ s, onClose }: { s: SessionRow; onClose: () => void }) {
               </dd>
             </div>
             <div className="rounded-lg border border-border px-3 py-2">
-              <dt className="text-xs text-muted-foreground">Kuota</dt>
-              <dd className="font-medium tabular-nums text-foreground">{s.capacity} orang</dd>
+              <dt className="text-xs text-muted-foreground">Terisi</dt>
+              <dd className="font-medium tabular-nums text-foreground">
+                {s.booked_count ?? 0} / {s.capacity}
+                {s.waitlist_count ? <span className="block text-xs font-normal text-muted-foreground">+{s.waitlist_count} waitlist</span> : null}
+                {s.attended_count ? <span className="block text-xs font-normal text-muted-foreground">{s.attended_count} hadir</span> : null}
+              </dd>
             </div>
           </dl>
           {s.cancel_reason && <p className="text-destructive">Alasan batal: {s.cancel_reason}</p>}
@@ -569,7 +575,9 @@ function SessionDetail({ s, onClose }: { s: SessionRow; onClose: () => void }) {
           {!s.template_id && <p className="text-xs text-muted-foreground">Sesi khusus (di luar template mingguan).</p>}
         </div>
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Tutup</Button>
+          <LinkButton href={`/dashboard/studio/attendance?date=${s.session_date}&session=${s.id}`} variant="outline">
+            Peserta
+          </LinkButton>
           <LinkButton href={`/dashboard/studio/schedule?week=${startOfWeek(s.session_date)}`}>
             <PencilLine /> Ubah di Jadwal Kelas
           </LinkButton>

@@ -115,14 +115,34 @@ export async function loadTemplates(branchId: string) {
   );
 }
 
+/** Aktor booking untuk staf backoffice. */
+export function staffActor(ctx: StudioContext) {
+  return { companyId: ctx.companyId, branchId: ctx.branchId, actorId: ctx.user.id, staff: true };
+}
+
+/** Venue default untuk konteks member (Member App tidak punya scope bisnis). */
+export async function defaultVenue(): Promise<{ companyId: string; branchId: string }> {
+  const { companyId, branchId } = await resolveVenue();
+  if (!companyId || !branchId) throw ApiError.conflict("Venue belum dikonfigurasi");
+  return { companyId, branchId };
+}
+
 export async function loadSessions(branchId: string, from: string, to: string) {
   return query(
     `SELECT s.id, s.session_date::text AS session_date,
             to_char(s.start_time, 'HH24:MI') AS start_time, to_char(s.end_time, 'HH24:MI') AS end_time,
             s.program_id, p.name AS program_name, p.kind AS program_kind,
             s.coach_id, c.full_name AS coach_name, c.level AS coach_level,
-            s.capacity, s.status, s.template_id, s.cancel_reason, s.notes
+            s.capacity, s.status, s.template_id, s.cancel_reason, s.notes,
+            COALESCE(bk.booked, 0)::int AS booked_count, COALESCE(bk.attended, 0)::int AS attended_count,
+            COALESCE(bk.waitlist, 0)::int AS waitlist_count
      FROM studio.class_sessions s
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*) FILTER (WHERE b.status IN ('booked','attended')) AS booked,
+              COUNT(*) FILTER (WHERE b.status = 'attended') AS attended,
+              COUNT(*) FILTER (WHERE b.status = 'waitlisted') AS waitlist
+       FROM studio.bookings b WHERE b.session_id = s.id
+     ) bk ON true
      JOIN studio.programs p ON p.id = s.program_id
      LEFT JOIN studio.coaches c ON c.id = s.coach_id
      WHERE s.branch_id = $1 AND s.session_date BETWEEN $2::date AND $3::date

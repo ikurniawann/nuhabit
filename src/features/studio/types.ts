@@ -73,6 +73,28 @@ export interface SessionRow {
   template_id: string | null;
   cancel_reason: string | null;
   notes: string | null;
+  booked_count?: number;
+  attended_count?: number;
+  waitlist_count?: number;
+}
+
+export interface RosterRow {
+  id: string;
+  status: "booked" | "waitlisted" | "cancelled" | "late_cancelled" | "attended" | "no_show";
+  source: "front_desk" | "member_app" | "walk_in";
+  booked_at: string;
+  waitlisted_at: string | null;
+  checked_in_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  notes: string | null;
+  customer_id: string;
+  member_name: string | null;
+  member_phone: string;
+  photo_url: string | null;
+  pass_code: string | null;
+  product_name: string | null;
+  class_left: number | null;
 }
 
 export interface ApiList<T> {
