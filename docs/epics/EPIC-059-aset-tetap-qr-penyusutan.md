@@ -12,6 +12,12 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 
 ## Keputusan desain
 
+- **Menunggu konfirmasi proses bisnis owner (2026-10-02)** — jangan dikerjakan sebelum terjawab:
+  1. Nilai minimum kapitalisasi (usulan default: ≥ Rp1.000.000 & dipakai > 1 tahun; di bawahnya = biaya/stok).
+  2. Umur ekonomis per kategori (usulan default: alat latihan ringan & elektronik 4 tahun; alat berat, rig & furnitur 8 tahun; renovasi ikut kelompok bangunan) — konfirmasi tim finance.
+  3. Daftar aset yang sudah ada (Excel → fitur import).
+- Cakupan yang dibahas: alat gym Hyrox (SkiErg, rower, sled, bike, treadmill), beban & rig, elektronik, furnitur & peralatan F&B, renovasi. Barang kecil/habis pakai (band, rope, chalk, handuk) bukan aset tetap → biaya atau inventory (EPIC-060).
+
 - Penyusutan garis lurus bulanan, jurnal otomatis via mapping Accounting (Dr beban penyusutan / Cr akumulasi penyusutan).
 - Scan QR membuka detail aset (lokasi, kondisi, riwayat perawatan).
 
@@ -30,4 +36,5 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 
 ## Automation Log
 
+- 2026-10-02 — Owner: alat gym termasuk aset; ditunda sampai proses bisnis dikonfirmasi (kapitalisasi, umur ekonomis, daftar aset).
 - 2026-10-02 — Didaftarkan dari daftar sisa pekerjaan setelah EPIC-056; owner: "lanjut, 5 poin dimasukkan ke task".
