@@ -133,7 +133,7 @@ const SALE_EVENT: Record<string, string> = {
  * lengkap → draft. Kegagalan teknis dicatat saja; transaksi pass tidak dibatalkan.
  */
 async function postPassJournal(
-  ctx: StudioContext,
+  ctx: PassContext,
   eventCode: string,
   documentId: string,
   amount: number,
@@ -160,14 +160,26 @@ async function postPassJournal(
   }
 }
 
+/**
+ * Konteks penulis transaksi pass. `user.id = null` → sistem (webhook pembayaran
+ * online, job harian); StudioContext staf otomatis cocok.
+ */
+export interface PassContext {
+  companyId: string;
+  branchId: string;
+  user: { id: string | null };
+}
+
 export interface IssuePassInput {
   customer_id: string;
   product_id: string;
   valid_from: string;
-  payment_method: PaymentMethod;
+  payment_method: PaymentMethod | "xendit";
   payment_ref?: string | null;
   notes?: string | null;
   price_override?: number | null;
+  /** Default front_desk (complimentary otomatis); pembelian Member App = online. */
+  channel?: "front_desk" | "online";
 }
 
 async function uniquePassCode(client: PoolClient, branchId: string): Promise<string> {
@@ -184,7 +196,7 @@ async function uniquePassCode(client: PoolClient, branchId: string): Promise<str
  * di-snapshot dari produk (harga khusus/diskon dibagi proporsional), lalu jurnal
  * penjualan → utang pass diposting.
  */
-export async function issuePass(ctx: StudioContext, input: IssuePassInput): Promise<PassRow> {
+export async function issuePass(ctx: PassContext, input: IssuePassInput): Promise<PassRow> {
   const passId = await withTransaction(async (client) => {
     const { rows: prodRows } = await client.query(
       `SELECT id, name, category, class_credits, pt_credits, facility_access, validity_days,
@@ -216,7 +228,7 @@ export async function issuePass(ctx: StudioContext, input: IssuePassInput): Prom
       [
         ctx.companyId, ctx.branchId, code, input.customer_id, p.id, p.name, p.category,
         p.class_credits, p.pt_credits, p.facility_access, price, classValue, ptValue, Math.max(facilityValue, 0),
-        input.valid_from, p.validity_days, complimentary ? "complimentary" : "front_desk", input.payment_method,
+        input.valid_from, p.validity_days, complimentary ? "complimentary" : input.channel ?? "front_desk", input.payment_method,
         input.payment_ref ?? null, input.notes ?? null, ctx.user.id,
       ]
     );
@@ -248,7 +260,7 @@ export async function issuePass(ctx: StudioContext, input: IssuePassInput): Prom
  * `expire` beserta nilainya, nilai facility ikut diakui, status → expired,
  * jurnal breakage diposting. Aman dipanggil berulang (hanya yang belum diproses).
  */
-export async function expireDuePasses(ctx: StudioContext): Promise<{ expired: number; recognized: number }> {
+export async function expireDuePasses(ctx: PassContext): Promise<{ expired: number; recognized: number }> {
   const due = await query<PassRow>(
     `SELECT ${PASS_SELECT}
      FROM studio.member_passes mp

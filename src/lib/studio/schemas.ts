@@ -245,3 +245,25 @@ export const commissionPaySchema = z.object({
 export const coachShareSchema = z.object({
   commission_share_percent: z.number().min(0).max(100).nullable(),
 });
+
+// ── Member App: beli paket online (EPIC-057) ───────────────────────────────
+export const memberOrderSchema = z.object({ product_id: z.string().uuid() });
+
+// ── News Hyrox (EPIC-057) ──────────────────────────────────────────────────
+export const NEWS_CATEGORIES = ["news", "event", "tips", "promo"] as const;
+const newsFields = {
+  title: z.string().trim().min(3, "Judul minimal 3 karakter").max(160),
+  category: z.enum(NEWS_CATEGORIES),
+  summary: optText(300),
+  body: optText(20000),
+  image_url: optText(500),
+  status: z.enum(["draft", "published"]),
+  pinned: z.boolean(),
+};
+export const newsCreateSchema = z.object({
+  ...newsFields,
+  category: newsFields.category.default("news"),
+  status: newsFields.status.default("draft"),
+  pinned: newsFields.pinned.default(false),
+});
+export const newsPatchSchema = z.object(newsFields).partial();

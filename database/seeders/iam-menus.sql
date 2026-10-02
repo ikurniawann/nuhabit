@@ -276,4 +276,6 @@ WHERE deleted_at IS NULL
     -- EPIC-055 Personal Training:
     'studio.pt', 'studio.availability',
     -- EPIC-056 Komisi Coach:
-    'studio.commissions');
+    'studio.commissions',
+    -- EPIC-057 News Hyrox:
+    'studio.news');

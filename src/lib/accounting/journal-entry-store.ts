@@ -399,7 +399,8 @@ export type CreateJournalEntrySource = {
 };
 
 export async function createJournalEntryRecord(opts: {
-  userId: string;
+  /** null = posting otomatis oleh sistem (webhook pembayaran, job harian). */
+  userId: string | null;
   companyId: string | null;
   entry_date: string;
   description: string | null;

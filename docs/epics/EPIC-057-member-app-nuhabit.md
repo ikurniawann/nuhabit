@@ -1,6 +1,6 @@
 # EPIC-057: Member App NüHabit
 
-status: on-progress
+status: ready-for-qa
 environment: dev
 retries: 0
 
@@ -14,26 +14,36 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 
 - `/member` diganti aplikasi NüHabit (desain DESIGN.md, mobile-first); portal Nox/klasik BCD (ARK Coin, XP) tidak relevan dan tidak lagi jadi rute utama.
 - Login tetap OTP WhatsApp portal member yang sudah ada (identitas = `pos.pos_customers`, nomor 62xxx).
-- Beli paket online memakai Xendit QRIS dinamis yang sudah ada: pass dibuat `pending_payment`, aktif saat webhook/cek status lunas (event jurnal `STUDIO_PASS_SALE_ONLINE`).
 - "Personal Training" ditulis lengkap di seluruh UI.
+- **Pass baru terbit hanya saat lunas**: pesanan disimpan di `studio.pass_orders` (`pending → paid/expired`);
+  pass dibuat oleh `issuePass` channel `online` / metode `xendit` saat webhook (`reference_id` berawalan
+  `NHP-`, lewat webhook Xendit yang sudah ada) atau cek status dari aplikasi. Klaim status mencegah pass ganda
+  bila webhook & cek status datang bersamaan; pembayaran yang masuk setelah QR kedaluwarsa tetap dihormati.
+- Paket bisa dikecualikan dari penjualan online (`pass_products.sell_online`).
+- **Jurnal oleh sistem**: posting jurnal kini menerima `userId = null` (kolom `created_by` memang nullable), jadi
+  penjualan online dan penyelesaian sesi oleh sistem tetap memposting jurnal (sebelumnya dilewati bila tanpa staf).
+- Foto coach & gambar News diunggah lewat `/api/studio/uploads` (isi file dicek JPG/PNG/WebP, maks 5 MB).
+- Pengingat WhatsApp dipindah ke EPIC-058 (butuh job terjadwal).
 
 ## Tasks
 
-- [ ] T-057-1 Shell aplikasi `/member` NüHabit + login OTP + navigasi bawah (Beranda, Jadwal, Personal Training, Paket, Profil).
-- [ ] T-057-2 Beranda: booking terdekat, ringkasan kredit kelas/Personal Training, masa aktif.
-- [ ] T-057-3 Jadwal kelas: daftar per hari, booking, waitlist, batal (aturan 12 jam ditampilkan).
-- [ ] T-057-4 Personal Training: pilih program → coach (profil) → tanggal → jam → konfirmasi; daftar & batal.
-- [ ] T-057-5 Paket: pass saya + riwayat kredit; katalog paket + beli online via Xendit QRIS (order, polling/webhook, aktivasi).
-- [ ] T-057-6 Profil coach (foto, bio, spesialisasi) + upload foto coach di backoffice.
-- [ ] T-057-7 News Hyrox: CMS sederhana di backoffice (judul, gambar, isi, terbit) + daftar & detail di Member App.
+- [x] T-057-1 Shell aplikasi `/member` NüHabit + login OTP + navigasi bawah (Beranda, Jadwal, Personal Training, Paket, Profil).
+- [x] T-057-2 Beranda: booking terdekat, ringkasan kredit kelas/Personal Training, masa aktif.
+- [x] T-057-3 Jadwal kelas: daftar per hari, booking, waitlist, batal (aturan 12 jam ditampilkan).
+- [x] T-057-4 Personal Training: pilih program → coach (profil) → tanggal → jam → konfirmasi; daftar & batal.
+- [x] T-057-5 Paket: pass saya + riwayat kredit; katalog paket + beli online via Xendit QRIS (order, polling/webhook, aktivasi).
+- [x] T-057-6 Profil coach (foto, bio, spesialisasi) + upload foto coach di backoffice.
+- [x] T-057-7 News Hyrox: CMS sederhana di backoffice (judul, gambar, isi, terbit) + daftar & detail di Member App.
 
 ## Acceptance Criteria
 
-- [ ] Member login OTP lalu booking/batal kelas dan Personal Training dari HP.
-- [ ] Kredit & masa aktif sesuai backoffice; aturan batal ditampilkan sebelum konfirmasi.
-- [ ] Member membeli paket lewat QRIS; pass aktif otomatis setelah lunas dan utang pass tercatat.
-- [ ] News & profil coach yang diterbitkan admin tampil di Member App.
+- [x] Member login OTP lalu booking/batal kelas dan Personal Training dari HP.
+- [x] Kredit & masa aktif sesuai backoffice; aturan batal ditampilkan sebelum konfirmasi.
+- [x] Member membeli paket lewat QRIS; pass aktif otomatis setelah lunas dan utang pass tercatat.
+- [x] News & profil coach yang diterbitkan admin tampil di Member App.
 
 ## Automation Log
 
 - 2026-10-02 — Didaftarkan dari daftar sisa pekerjaan setelah EPIC-056; owner: "lanjut, 5 poin dimasukkan ke task".
+- 2026-10-02 — Selesai T-057-1..7. Migrasi `20261002230000_studio_pass_orders.sql`, `20261002240000_studio_news.sql` (menu News Hyrox). Gate: typecheck file terkait bersih; vitest studio+accounting 74/74; E2E `member-app-e2e` di `nuhabit_test` + mock Xendit 45/45 (login, coach publik, katalog online, pesanan→QRIS, lunas via cek status & webhook, idempoten, kedaluwarsa, booking/waitlist/batal, Personal Training, News draft/terbit, upload foto); regresi pass 27/27, booking 32/32, Personal Training 25/25, komisi 36/36.
+- 2026-10-02 — Catatan live: gateway Xendit di DEV belum aktif → tombol beli menampilkan "Pembayaran online belum aktif" sampai API key & webhook diisi (checklist di BACKLOG.md).

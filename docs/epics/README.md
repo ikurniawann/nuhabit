@@ -59,7 +59,7 @@ deploying-dev · ready-for-qa · blocked · done).
 | [EPIC-054](./EPIC-054-booking-kelas-checkin.md) | Booking Kelas, Waitlist & Check-in — kredit dikunci, cancel 12 jam, scan check-in, revenue saat kelas selesai, API Member App | ready-for-qa | 2026-10-02 |
 | [EPIC-055](./EPIC-055-personal-training.md) | Personal Training — ketersediaan coach, slot otomatis, booking, paket Personal Training saja | ready-for-qa | 2026-10-02 |
 | [EPIC-056](./EPIC-056-komisi-coach-coach-portal.md) | Komisi Coach (di luar payroll) — pool 10% kelas + 40% Personal Training, spread per peran (opsi B), approve dan bayar, Coach Portal | ready-for-qa | 2026-10-02 |
-| [EPIC-057](./EPIC-057-member-app-nuhabit.md) | Member App NüHabit — booking kelas, Personal Training, pass & beli paket online, profil coach, News Hyrox | on-progress | 2026-10-02 |
+| [EPIC-057](./EPIC-057-member-app-nuhabit.md) | Member App NüHabit — booking kelas, Personal Training, pass & beli paket online, profil coach, News Hyrox | ready-for-qa | 2026-10-02 |
 | [EPIC-058](./EPIC-058-job-harian-notifikasi-wa.md) | Job harian otomatis (expire pass, selesaikan sesi) & pengingat WhatsApp | backlog | 2026-10-02 |
 | [EPIC-059](./EPIC-059-aset-tetap-qr-penyusutan.md) | Aset Tetap — QR code per aset, penyusutan, perawatan, disposal | backlog | 2026-10-02 |
 | [EPIC-060](./EPIC-060-inventory-rfid.md) | Inventory Control RFID (menunggu keputusan hardware) | backlog | 2026-10-02 |

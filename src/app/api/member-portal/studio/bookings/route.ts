@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateBody } from "@/lib/api/auth";
 import { query } from "@/lib/db";
-import { createBooking } from "@/lib/studio/booking-server";
+import { createBooking, loadSettings } from "@/lib/studio/booking-server";
 import { requireMemberStudio } from "@/lib/studio/member-server";
 import { memberBookSchema } from "@/lib/studio/schemas";
 import { studioRoute } from "@/lib/studio/server";
@@ -13,7 +13,7 @@ export async function GET() {
     const rows = await query(
       `SELECT b.id, b.status, b.booked_at, b.checked_in_at, b.cancelled_at,
               s.id AS session_id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
-              to_char(s.end_time,'HH24:MI') AS end_time, p.name AS program_name,
+              to_char(s.end_time,'HH24:MI') AS end_time, p.name AS program_name, p.kind AS program_kind,
               COALESCE(c.display_name, c.full_name) AS coach_name, mp.pass_code,
               (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming
        FROM studio.bookings b
@@ -27,7 +27,8 @@ export async function GET() {
        LIMIT 100`,
       [customerId, actor.branchId]
     );
-    return NextResponse.json({ success: true, data: rows });
+    const settings = await loadSettings(actor.branchId);
+    return NextResponse.json({ success: true, data: rows, rules: { cancel_window_hours: settings.cancel_window_hours } });
   });
 }
 

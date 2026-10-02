@@ -7,6 +7,7 @@ import {
 } from "@/lib/pos/create-mixed-checkout";
 import { creditPendingTopup } from "@/lib/pos/topup-credit";
 import { settleOrderQrisPayment } from "@/lib/pos/settle-order-qris";
+import { settlePassOrderFromWebhook } from "@/lib/studio/order-server";
 import {
   extractXenditWebhookToken,
   loadActiveXenditConfig,
@@ -53,6 +54,11 @@ export async function POST(request: NextRequest) {
         reason: "not_paid",
         status: parsed.status,
       });
+    }
+
+    // Pesanan paket Member App NüHabit (EPIC-057): reference_id berawalan NHP-.
+    if (await settlePassOrderFromWebhook(parsed)) {
+      return NextResponse.json({ success: true, handled: "studio_pass_order" });
     }
 
     // Resolve pending topup by QR id or merchant reference

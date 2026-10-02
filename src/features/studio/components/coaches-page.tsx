@@ -12,6 +12,7 @@ import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api-client";
 import { COACH_LEVEL_LABEL, type CoachLevel } from "@/lib/studio/schedule";
 import type { ApiList, ApiMessage, CoachRow, EmployeeOption } from "../types";
 import { initials } from "../types";
+import { ImageUpload } from "./image-upload";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
 
 type DialogState = { mode: "create" } | { mode: "edit"; row: CoachRow } | null;
@@ -250,8 +251,8 @@ function CoachDialog({ initial, onClose, onSaved }: { initial: CoachRow | null; 
           <Field label="Email" className="sm:col-span-2">
             <Input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" />
           </Field>
-          <Field label="URL foto" hint="Foto profil untuk Member App" className="sm:col-span-2">
-            <Input value={form.photo_url} onChange={(e) => set("photo_url", e.target.value)} placeholder="https://…" />
+          <Field label="Foto profil" hint="Tampil di Member App & Coach Portal" className="sm:col-span-2">
+            <ImageUpload value={form.photo_url} onChange={(url) => set("photo_url", url)} />
           </Field>
           <Field label="Spesialisasi" hint="Pisahkan dengan koma, mis. Hyrox, Strength, Running" className="sm:col-span-2">
             <Input value={form.specialties} onChange={(e) => set("specialties", e.target.value)} />

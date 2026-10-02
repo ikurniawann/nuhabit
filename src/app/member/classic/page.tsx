@@ -1,12 +1,15 @@
 import { MemberPortalPage } from "@/features/member-portal/components/member-portal-page";
 
 /**
- * /member/classic — portal member lama (kartu-kartu ringkas).
- *
- * Dipertahankan sebagai fallback setelah /member digantikan portal Nox
- * (keputusan owner 2026-08-15): kalau Nox bermasalah di perangkat tertentu,
- * member tetap punya jalan masuk yang terbukti bekerja.
+ * /member/classic — portal member lama warisan BCD (kartu-kartu ringkas).
+ * /member kini Member App NüHabit (EPIC-057); rute ini tidak lagi dipromosikan.
  */
 export default function Page() {
-  return <MemberPortalPage />;
+  return (
+    <div className="member-portal member-portal-bg min-h-screen">
+      <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col px-3 pb-8 pt-5 sm:px-4">
+        <MemberPortalPage />
+      </div>
+    </div>
+  );
 }

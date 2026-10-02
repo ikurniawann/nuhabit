@@ -410,7 +410,7 @@ export async function completeSession(actor: BookingActor, sessionId: string): P
   });
 
   for (const [kind, amount] of [["class", res.totals.class], ["pt", res.totals.pt]] as const) {
-    if (amount <= 0 || !actor.actorId) continue;
+    if (amount <= 0) continue;
     try {
       const posted = await postJournalFromMapping({
         companyId: actor.companyId,

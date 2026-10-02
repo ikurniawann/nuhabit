@@ -187,7 +187,8 @@ async function resolveActiveMapping(
 
 export type PostFromMappingInput = {
   companyId: string | null;
-  userId: string;
+  /** null = posting otomatis oleh sistem. */
+  userId: string | null;
   eventCode: JournalEventCode | string;
   documentType: string;
   documentId: string;

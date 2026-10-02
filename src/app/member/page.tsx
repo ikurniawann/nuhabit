@@ -1,9 +1,6 @@
-import { NoxPortal } from "@/features/member-portal/nox/nox-portal";
+import { MemberApp } from "@/features/member-app/member-app";
 
-/**
- * /member — portal member "Nox Lab" (rute utama sejak Fase C).
- * Portal lama tetap hidup di /member/classic sebagai fallback.
- */
+/** /member — Member App NüHabit (EPIC-057). Portal loyalti BCD tetap di /member/classic. */
 export default function Page() {
-  return <NoxPortal />;
+  return <MemberApp />;
 }

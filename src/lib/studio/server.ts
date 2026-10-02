@@ -155,7 +155,7 @@ export async function loadSessions(branchId: string, from: string, to: string) {
 }
 
 /** Pastikan id milik venue ini; lempar 404 bila tidak. */
-export async function assertInBranch(table: "coaches" | "programs" | "schedule_templates" | "class_sessions", id: string, branchId: string, label: string) {
+export async function assertInBranch(table: "coaches" | "programs" | "schedule_templates" | "class_sessions" | "news", id: string, branchId: string, label: string) {
   const rows = await query<{ id: string }>(`SELECT id FROM studio.${table} WHERE id = $1 AND branch_id = $2`, [id, branchId]);
   if (rows.length === 0) throw ApiError.notFound(`${label} tidak ditemukan`);
 }
