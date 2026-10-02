@@ -7,12 +7,13 @@
 
 import { addDays } from "./schedule";
 
-export const PASS_CATEGORIES = ["class", "class_pt", "class_pt_facility"] as const;
+export const PASS_CATEGORIES = ["class", "class_pt", "class_pt_facility", "pt"] as const;
 export type PassCategory = (typeof PASS_CATEGORIES)[number];
 export const PASS_CATEGORY_LABEL: Record<PassCategory, string> = {
   class: "Class",
-  class_pt: "Class + PT",
-  class_pt_facility: "Class + PT + Facility",
+  class_pt: "Class + Personal Training",
+  class_pt_facility: "Class + Personal Training + Facility",
+  pt: "Personal Training saja",
 };
 
 export const PASS_STATUSES = ["pending_payment", "active", "expired", "exhausted", "cancelled"] as const;
@@ -81,12 +82,12 @@ export function isValueSplitValid(p: {
   pt_credits: number;
   facility_access: boolean;
 }): string | null {
-  if (p.class_credits + p.pt_credits <= 0 && !p.facility_access) return "Paket harus berisi kredit kelas, kredit PT, atau akses facility";
+  if (p.class_credits + p.pt_credits <= 0 && !p.facility_access) return "Paket harus berisi kredit kelas, kredit Personal Training, atau akses facility";
   if (toCents(p.class_value) + toCents(p.pt_value) + toCents(p.facility_value) !== toCents(p.price)) {
-    return "Pembagian nilai kelas + PT + facility harus sama dengan harga";
+    return "Pembagian nilai kelas + Personal Training + facility harus sama dengan harga";
   }
   if (p.class_value > 0 && p.class_credits <= 0) return "Nilai kelas diisi tetapi paket tidak punya kredit kelas";
-  if (p.pt_value > 0 && p.pt_credits <= 0) return "Nilai PT diisi tetapi paket tidak punya kredit PT";
+  if (p.pt_value > 0 && p.pt_credits <= 0) return "Nilai Personal Training diisi tetapi paket tidak punya kredit Personal Training";
   if (p.facility_value > 0 && !p.facility_access) return "Nilai facility diisi tetapi paket tanpa akses facility";
   return null;
 }

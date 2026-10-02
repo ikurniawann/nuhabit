@@ -133,7 +133,7 @@ export interface PassProductRow {
   id: string;
   code: string;
   name: string;
-  category: "class" | "class_pt" | "class_pt_facility";
+  category: "class" | "class_pt" | "class_pt_facility" | "pt";
   class_credits: number;
   pt_credits: number;
   facility_access: boolean;
@@ -219,4 +219,48 @@ export function rupiah(value: number): string {
 
 export function formatDate(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// ── Personal Training (EPIC-055) ───────────────────────────────────────────
+export interface PtCoach {
+  id: string;
+  full_name: string;
+  display_name: string | null;
+  level: "coach" | "head_coach";
+  photo_url: string | null;
+  bio: string | null;
+  certifications: string | null;
+  specialties: string[];
+}
+
+export interface PtProgram {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  level_label: string | null;
+  coaches: PtCoach[];
+}
+
+export interface AvailabilityData {
+  windows: { id: string; weekday: number; start_time: string; end_time: string; is_active: boolean }[];
+  program_ids: string[];
+  time_off: { id: string; date_from: string; date_to: string; reason: string | null }[];
+}
+
+export interface PtSessionRow {
+  session_id: string;
+  session_date: string;
+  start_time: string;
+  end_time: string;
+  session_status: "scheduled" | "cancelled" | "completed";
+  program_name: string;
+  coach_name: string | null;
+  booking_id: string | null;
+  booking_status: RosterRow["status"] | null;
+  source: RosterRow["source"] | null;
+  member_name: string | null;
+  member_phone: string | null;
+  pass_code: string | null;
 }

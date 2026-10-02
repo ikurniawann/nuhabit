@@ -186,6 +186,10 @@ manusiawi (seperti partner latihan) · menginspirasi, bukan menggurui · inklusi
 | "Masih ada tempat untuk satu orang." | "Hanya untuk member." |
 | "Setiap atlet mulai dari suatu tempat." | "Tidak ada alasan. Kerja!" |
 
+Istilah (keputusan owner 2026-10-02): tulis **"Personal Training"** lengkap di semua
+teks UI, dokumen untuk member, dan pesan — jangan disingkat "PT". Singkatan `pt` hanya
+boleh di nama variabel/kolom kode.
+
 Contoh microcopy:
 
 - Booking berhasil: **"Sesi kamu sudah terkunci. Sampai jumpa Sabtu, 06.30."**

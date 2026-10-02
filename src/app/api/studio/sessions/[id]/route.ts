@@ -50,7 +50,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
     if (completing) {
       const r = await completeSession(staffActor(ctx), id);
-      return NextResponse.json({ success: true, data: { id, ...r }, message: `Kelas selesai · ${r.attended} hadir, ${r.no_show} tidak hadir` });
+      return NextResponse.json({ success: true, data: { id, ...r }, message: `Sesi selesai · ${r.attended} hadir, ${r.no_show} tidak hadir` });
     }
     let released = 0;
     if (body.status === "cancelled" && current.status !== "cancelled") {

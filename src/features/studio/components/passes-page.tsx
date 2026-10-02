@@ -129,7 +129,7 @@ export function StudioPassesPage() {
           <Stat label="Pass aktif" value={String(summary.active_passes)} />
           <Stat label="Utang pass (belum di-redeem)" value={rupiah(summary.liability)} highlight />
           <Stat label="Kredit kelas tersisa" value={summary.class_credits_left.toLocaleString("id-ID")} />
-          <Stat label="Kredit PT tersisa" value={summary.pt_credits_left.toLocaleString("id-ID")} />
+          <Stat label="Kredit Personal Training tersisa" value={summary.pt_credits_left.toLocaleString("id-ID")} />
           <Stat label="Berakhir ≤ 7 hari" value={String(summary.expiring_7d)} />
         </div>
       )}
@@ -172,7 +172,7 @@ export function StudioPassesPage() {
                 <th className="px-4 py-3">Member</th>
                 <th className="px-4 py-3">Pass</th>
                 <th className="px-4 py-3 text-right">Kelas</th>
-                <th className="px-4 py-3 text-right">PT</th>
+                <th className="px-4 py-3 text-right">Personal Training</th>
                 <th className="px-4 py-3">Berlaku s/d</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Utang</th>
@@ -443,7 +443,7 @@ function SellPassDialog({ onClose, onSold }: { onClose: () => void; onSold: (pas
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-sm text-nh-beige/75">
                 {product.class_credits ? `${product.class_credits}x kelas` : ""}
-                {product.pt_credits ? ` + ${product.pt_credits}x PT` : ""}
+                {product.pt_credits ? ` + ${product.pt_credits}x Personal Training` : ""}
                 {product.facility_access ? " + facility" : ""} · berlaku s/d {formatDate(computeValidUntil(validFrom, product.validity_days))}
               </p>
               <p className="font-display text-2xl font-semibold tabular-nums text-nh-lime">{rupiah(price)}</p>
@@ -543,7 +543,7 @@ function PassDetailDialog({ id, onClose, onChanged }: { id: string; onClose: () 
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 <Meter label="Kelas" left={data.class_left} total={data.class_credits_total} />
-                <Meter label="PT" left={data.pt_left} total={data.pt_credits_total} />
+                <Meter label="Personal Training" left={data.pt_left} total={data.pt_credits_total} />
                 <div>
                   <p className="text-xs text-nh-beige/70">Utang tersisa</p>
                   <p className="font-display text-lg font-semibold tabular-nums text-nh-lime">{rupiah(data.liability)}</p>
@@ -580,7 +580,7 @@ function PassDetailDialog({ id, onClose, onChanged }: { id: string; onClose: () 
                 <Field label="Jenis kredit">
                   <NativeSelect value={adjust.credit_type} onChange={(e) => setAdjust((a) => ({ ...a, credit_type: e.target.value as "class" | "pt" }))}>
                     <option value="class">Kelas</option>
-                    <option value="pt" disabled={data.pt_credits_total === 0}>PT</option>
+                    <option value="pt" disabled={data.pt_credits_total === 0}>Personal Training</option>
                   </NativeSelect>
                 </Field>
                 <Field label="Jumlah" hint="+ kembalikan, − kurangi">
@@ -632,7 +632,7 @@ function PassDetailDialog({ id, onClose, onChanged }: { id: string; onClose: () 
                   <li key={l.id} className="flex items-start justify-between gap-3 px-4 py-2.5 text-sm">
                     <div className="min-w-0">
                       <p className="text-foreground">
-                        {ENTRY_LABEL[l.entry_type]} · {l.credit_type === "class" ? "kelas" : l.credit_type === "pt" ? "PT" : "facility"}
+                        {ENTRY_LABEL[l.entry_type]} · {l.credit_type === "class" ? "kelas" : l.credit_type === "pt" ? "Personal Training" : "facility"}
                         {l.program_name ? ` · ${l.program_name} ${l.session_date ? formatDate(l.session_date) : ""} ${l.session_time ?? ""}` : ""}
                       </p>
                       <p className="truncate text-xs text-muted-foreground">

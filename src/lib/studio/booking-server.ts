@@ -56,7 +56,7 @@ export async function saveSettings(branchId: string, patch: Partial<StudioSettin
 
 // ── Helper transaksi ───────────────────────────────────────────────────────
 
-interface LockedSession {
+export interface LockedSession {
   id: string;
   session_date: string;
   start_time: string;
@@ -67,7 +67,7 @@ interface LockedSession {
   program_name: string;
 }
 
-async function lockSession(client: PoolClient, branchId: string, sessionId: string): Promise<LockedSession> {
+export async function lockSession(client: PoolClient, branchId: string, sessionId: string): Promise<LockedSession> {
   const { rows } = await client.query(
     `SELECT s.id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
             to_char(s.end_time,'HH24:MI') AS end_time, s.capacity, s.status, p.kind AS program_kind, p.name AS program_name
@@ -89,7 +89,7 @@ async function seatsTakenTx(client: PoolClient, sessionId: string): Promise<numb
 }
 
 /** Pass member yang berlaku di tanggal sesi + saldo, dikunci untuk dipakai. */
-async function lockMemberPasses(client: PoolClient, branchId: string, customerId: string): Promise<(PassRow & { class_left: number; pt_left: number })[]> {
+export async function lockMemberPasses(client: PoolClient, branchId: string, customerId: string): Promise<(PassRow & { class_left: number; pt_left: number })[]> {
   await client.query(
     `SELECT id FROM studio.member_passes WHERE branch_id = $1 AND customer_id = $2 AND status IN ('active','exhausted') FOR UPDATE`,
     [branchId, customerId]
@@ -126,23 +126,33 @@ async function refreshPassStatus(client: PoolClient, passId: string) {
   );
 }
 
-/** Kunci 1 kredit kelas untuk booking (ledger redeem qty −1, nilai diakui nanti). */
-async function holdCredit(client: PoolClient, actor: BookingActor, passId: string, sessionId: string, bookingId: string, note: string) {
+/** Kunci 1 kredit (kelas / Personal Training) untuk booking — ledger redeem qty −1, nilai diakui nanti. */
+export async function holdCredit(
+  client: PoolClient,
+  actor: BookingActor,
+  passId: string,
+  sessionId: string,
+  bookingId: string,
+  note: string,
+  creditType: "class" | "pt" = "class"
+) {
   const { rows } = await client.query(
     `INSERT INTO studio.pass_credit_ledger (company_id, branch_id, pass_id, entry_type, credit_type, qty, amount, session_id, booking_id, note, created_by)
-     VALUES ($1,$2,$3,'redeem','class',-1,0,$4,$5,$6,$7) RETURNING id`,
-    [actor.companyId, actor.branchId, passId, sessionId, bookingId, note, actor.actorId]
+     VALUES ($1,$2,$3,'redeem',$8,-1,0,$4,$5,$6,$7) RETURNING id`,
+    [actor.companyId, actor.branchId, passId, sessionId, bookingId, note, actor.actorId, creditType]
   );
   await client.query(`UPDATE studio.bookings SET ledger_id = $2, pass_id = $3 WHERE id = $1`, [bookingId, rows[0].id, passId]);
   await refreshPassStatus(client, passId);
 }
 
-async function releaseCredit(client: PoolClient, actor: BookingActor, booking: { id: string; pass_id: string | null; ledger_id: string | null; session_id: string }, note: string) {
+export async function releaseCredit(client: PoolClient, actor: BookingActor, booking: { id: string; pass_id: string | null; ledger_id: string | null; session_id: string }, note: string) {
   if (!booking.ledger_id || !booking.pass_id) return;
+  const held = await client.query(`SELECT credit_type FROM studio.pass_credit_ledger WHERE id = $1`, [booking.ledger_id]);
+  const creditType = (held.rows[0]?.credit_type as string) ?? "class";
   await client.query(
     `INSERT INTO studio.pass_credit_ledger (company_id, branch_id, pass_id, entry_type, credit_type, qty, amount, session_id, booking_id, note, created_by)
-     VALUES ($1,$2,$3,'unredeem','class',1,0,$4,$5,$6,$7)`,
-    [actor.companyId, actor.branchId, booking.pass_id, booking.session_id, booking.id, note, actor.actorId]
+     VALUES ($1,$2,$3,'unredeem',$8,1,0,$4,$5,$6,$7)`,
+    [actor.companyId, actor.branchId, booking.pass_id, booking.session_id, booking.id, note, actor.actorId, creditType]
   );
   await client.query(`UPDATE studio.bookings SET ledger_id = NULL WHERE id = $1`, [booking.id]);
   await refreshPassStatus(client, booking.pass_id);
@@ -187,7 +197,7 @@ export async function createBooking(
   const settings = await loadSettings(actor.branchId);
   return withTransaction(async (client) => {
     const session = await lockSession(client, actor.branchId, input.session_id);
-    if (session.program_kind !== "class") throw ApiError.badRequest("Booking personal training lewat menu PT (EPIC-055)");
+    if (session.program_kind !== "class") throw ApiError.badRequest("Booking Personal Training lewat menu Personal Training");
     const win = checkBookingWindow(session, Date.now(), settings, actor.staff);
     if (!win.ok) throw ApiError.conflict(win.reason);
 
@@ -298,6 +308,17 @@ export async function cancelBooking(
       [b.id, status, opts.reason ?? null]
     );
     if (refund) await releaseCredit(client, actor, b, refund && timing === "late" ? "Batal (dikecualikan staf)" : "Batal tepat waktu");
+    if (session.program_kind === "pt") {
+      // Sesi Personal Training milik satu member: batal tepat waktu → slot coach dibebaskan.
+      // Batal telat → sesi tetap ada supaya kredit yang hangus diakui saat sesi diselesaikan.
+      if (refund) {
+        await client.query(
+          `UPDATE studio.class_sessions SET status = 'cancelled', cancel_reason = 'Booking Personal Training dibatalkan', updated_at = now() WHERE id = $1`,
+          [session.id]
+        );
+      }
+      return { status, refunded: refund, promoted: 0 };
+    }
     const promoted = await promoteWaitlist(client, actor, session);
     return { status, refunded: refund, promoted: promoted.length };
   });
@@ -353,27 +374,29 @@ export async function completeSession(actor: BookingActor, sessionId: string): P
       [sessionId]
     );
     const { rows: toRecognize } = await client.query(
-      `SELECT b.id, b.status, b.pass_id, b.ledger_id
+      `SELECT b.id, b.status, b.pass_id, b.ledger_id, l.credit_type
        FROM studio.bookings b JOIN studio.pass_credit_ledger l ON l.id = b.ledger_id
        WHERE b.session_id = $1 AND b.status = ANY($2) AND l.recognized_at IS NULL
        ORDER BY b.booked_at`,
       [sessionId, RECOGNIZE_STATUSES]
     );
-    let total = 0;
-    for (const r of toRecognize as { id: string; status: BookingStatus; pass_id: string; ledger_id: string }[]) {
+    const totals = { class: 0, pt: 0 };
+    for (const r of toRecognize as { id: string; status: BookingStatus; pass_id: string; ledger_id: string; credit_type: "class" | "pt" }[]) {
+      const isPt = r.credit_type === "pt";
       const { rows } = await client.query(
-        `SELECT mp.class_value::float8 AS class_value, mp.class_credits_total,
+        `SELECT ${isPt ? "mp.pt_value" : "mp.class_value"}::float8 AS value, ${isPt ? "mp.pt_credits_total" : "mp.class_credits_total"} AS credits,
                 (SELECT COUNT(*)::int FROM studio.pass_credit_ledger l
-                  WHERE l.pass_id = mp.id AND l.credit_type = 'class' AND l.entry_type = 'redeem' AND l.recognized_at IS NOT NULL) AS recognized_count
+                  WHERE l.pass_id = mp.id AND l.credit_type = $2 AND l.entry_type = 'redeem' AND l.recognized_at IS NOT NULL) AS recognized_count
          FROM studio.member_passes mp WHERE mp.id = $1 FOR UPDATE`,
-        [r.pass_id]
+        [r.pass_id, r.credit_type]
       );
-      const p = rows[0] as { class_value: number; class_credits_total: number; recognized_count: number };
-      const amount = redeemValue(p.class_value, p.class_credits_total, p.recognized_count);
+      const p = rows[0] as { value: number; credits: number; recognized_count: number };
+      const amount = redeemValue(p.value, p.credits, p.recognized_count);
       await client.query(`UPDATE studio.pass_credit_ledger SET amount = $2, recognized_at = now() WHERE id = $1`, [r.ledger_id, amount]);
       await client.query(`UPDATE studio.bookings SET recognized_at = now() WHERE id = $1`, [r.id]);
-      total += amount;
+      totals[isPt ? "pt" : "class"] += amount;
     }
+    const total = totals.class + totals.pt;
     await client.query(`UPDATE studio.class_sessions SET status = 'completed', completed_at = COALESCE(completed_at, now()), updated_at = now() WHERE id = $1`, [sessionId]);
     const { rows: counts } = await client.query(
       `SELECT COUNT(*) FILTER (WHERE status='attended')::int AS attended, COUNT(*) FILTER (WHERE status='no_show')::int AS no_show,
@@ -381,27 +404,28 @@ export async function completeSession(actor: BookingActor, sessionId: string): P
        FROM studio.bookings WHERE session_id = $1`,
       [sessionId]
     );
-    return { recognized: Math.round(total * 100) / 100, session, ...counts[0] } as {
-      recognized: number; session: LockedSession; attended: number; no_show: number; late: number;
+    return { recognized: Math.round(total * 100) / 100, totals, session, ...counts[0] } as {
+      recognized: number; totals: { class: number; pt: number }; session: LockedSession; attended: number; no_show: number; late: number;
     };
   });
 
-  if (res.recognized > 0 && actor.actorId) {
+  for (const [kind, amount] of [["class", res.totals.class], ["pt", res.totals.pt]] as const) {
+    if (amount <= 0 || !actor.actorId) continue;
     try {
       const posted = await postJournalFromMapping({
         companyId: actor.companyId,
         userId: actor.actorId,
-        eventCode: "STUDIO_PASS_REDEEM_CLASS",
+        eventCode: kind === "pt" ? "STUDIO_PASS_REDEEM_PT" : "STUDIO_PASS_REDEEM_CLASS",
         documentType: "STUDIO_SESSION",
         documentId: sessionId,
         entryDate: res.session.session_date,
-        amounts: { TOTAL: res.recognized, SUBTOTAL: res.recognized, PAID: res.recognized },
-        description: `Revenue kelas ${res.session.program_name} ${res.session.session_date} ${res.session.start_time}`,
+        amounts: { TOTAL: amount, SUBTOTAL: amount, PAID: amount },
+        description: `Revenue ${kind === "pt" ? "Personal Training" : "kelas"} ${res.session.program_name} ${res.session.session_date} ${res.session.start_time}`,
         sourceModule: "STUDIO",
       });
       if (posted.entryId) await query(`UPDATE studio.class_sessions SET journal_entry_id = $2 WHERE id = $1`, [sessionId, posted.entryId]);
     } catch (error) {
-      console.error("[studio] jurnal redeem kelas gagal (non-blocking):", error);
+      console.error(`[studio] jurnal redeem ${kind} gagal (non-blocking):`, error);
     }
   }
   return { recognized: res.recognized, attended: res.attended, no_show: res.no_show, late: res.late };

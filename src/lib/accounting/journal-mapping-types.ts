@@ -273,9 +273,9 @@ export const JOURNAL_EVENT_META: Record<
     description: "Kredit kelas terpakai: Dr PASS_LIABILITY, Cr Pendapatan Kelas",
   },
   STUDIO_PASS_REDEEM_PT: {
-    name: "Member Pass — Redeem PT",
+    name: "Member Pass — Redeem Personal Training",
     module: "STUDIO",
-    description: "Kredit personal training terpakai: Dr PASS_LIABILITY, Cr Pendapatan PT",
+    description: "Kredit personal training terpakai: Dr PASS_LIABILITY, Cr Pendapatan Personal Training",
   },
   STUDIO_PASS_BREAKAGE: {
     name: "Member Pass — Kedaluwarsa (Breakage)",

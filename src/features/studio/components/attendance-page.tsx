@@ -55,7 +55,8 @@ export function StudioAttendancePage() {
   const loadSessions = useCallback(async () => {
     try {
       const res = await apiGet<ApiList<SessionRow>>(`/api/studio/sessions?from=${date}&to=${date}`);
-      const classes = res.data.filter((s) => s.program_kind === "class");
+      // Kelas grup + sesi Personal Training (pakai jalur check-in yang sama).
+      const classes = res.data;
       setSessions(classes);
       if (autoPicked.current !== date) {
         autoPicked.current = date;
@@ -238,6 +239,9 @@ export function StudioAttendancePage() {
                       )}
                     </div>
                     <p className={`truncate font-display font-semibold ${s.status === "cancelled" ? "line-through" : ""}`}>{s.program_name}</p>
+                    {s.program_kind === "pt" && (
+                      <span className={`text-[10px] font-semibold uppercase tracking-wide ${on ? "text-nh-lime" : "text-nh-forest"}`}>Personal Training</span>
+                    )}
                     <p className={`truncate text-xs ${on ? "text-nh-beige/70" : "text-muted-foreground"}`}>{s.coach_name ?? "Tanpa coach"}</p>
                     <div className="mt-2 flex items-center gap-2">
                       <div className={`h-1.5 flex-1 rounded-full ${on ? "bg-nh-beige/15" : "bg-muted"}`}>
@@ -268,11 +272,13 @@ export function StudioAttendancePage() {
                   </div>
                   {isOpen && (
                     <div className="flex flex-wrap gap-2">
+                      {selected.program_kind !== "pt" && (
                       <Button variant="outline" onClick={() => setShowAdd(true)}>
                         <UserPlus className="size-4" /> Tambah peserta
                       </Button>
+                      )}
                       <Button onClick={complete} disabled={busyId === selected.id}>
-                        <Flag className="size-4" /> Selesaikan kelas
+                        <Flag className="size-4" /> {selected.program_kind === "pt" ? "Selesaikan sesi" : "Selesaikan kelas"}
                       </Button>
                     </div>
                   )}

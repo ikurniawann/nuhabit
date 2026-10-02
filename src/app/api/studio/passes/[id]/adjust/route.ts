@@ -34,6 +34,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     const status = nextUsed >= total && (b.credit_type === "class" ? pass.pt_credits_total - pass.pt_used : pass.class_credits_total - pass.class_used) <= 0 && !pass.facility_access
       ? "exhausted" : "active";
     await query(`UPDATE studio.member_passes SET status = $2, updated_at = now() WHERE id = $1 AND status IN ('active','exhausted')`, [id, status]);
-    return NextResponse.json({ success: true, message: `Kredit ${b.credit_type === "class" ? "kelas" : "PT"} ${b.qty > 0 ? "+" : ""}${b.qty}` });
+    return NextResponse.json({ success: true, message: `Kredit ${b.credit_type === "class" ? "kelas" : "Personal Training"} ${b.qty > 0 ? "+" : ""}${b.qty}` });
   });
 }

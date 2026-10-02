@@ -91,3 +91,19 @@ sudo systemctl restart cloudflared
 
 DNS (`CNAME nuhabitdev.reddie.id → tunnel`) dibuat dengan
 `cloudflared tunnel route dns ec3e1a8e-7973-4572-90a0-58710a2456d3 nuhabitdev.reddie.id`.
+
+## Database uji (E2E)
+
+Database `nuhabit` dipakai oleh nuhabitdev.reddie.id **dan berisi data asli owner** —
+jangan menjalankan E2E ke sana. Pakai `nuhabit_test` (Postgres yang sama, :5482):
+
+```bash
+# bangun ulang dari nol (replay 465 migrasi + seed IAM + super admin)
+docker exec nuhabit-db psql -U nuhabit -d postgres -c "DROP DATABASE IF EXISTS nuhabit_test" -c "CREATE DATABASE nuhabit_test"
+# lalu: ALTER DATABASE nuhabit_test SET search_path (lihat di atas), apply-migrations,
+# seed iam-menus + prune delta, iam-admin-permissions, super-admin — dengan
+# MIGRATE_DATABASE_URL/DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit_test
+
+# dev server ke database uji
+DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit_test npx next dev -p 3470
+```

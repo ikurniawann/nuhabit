@@ -13,7 +13,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     return NextResponse.json({
       success: true,
       data: r,
-      message: `Kelas selesai · ${r.attended} hadir, ${r.no_show} tidak hadir · Rp ${r.recognized.toLocaleString("id-ID")} diakui`,
+      message: `Sesi selesai · ${r.attended} hadir, ${r.no_show} tidak hadir · Rp ${r.recognized.toLocaleString("id-ID")} diakui`,
     });
   });
 }

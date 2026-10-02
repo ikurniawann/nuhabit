@@ -19,7 +19,7 @@ type DialogState = { mode: "create" } | { mode: "edit"; row: PassProductRow } | 
 function benefitLine(p: Pick<PassProductRow, "class_credits" | "pt_credits" | "facility_access" | "validity_days">) {
   const parts: string[] = [];
   if (p.class_credits) parts.push(`${p.class_credits}x kelas`);
-  if (p.pt_credits) parts.push(`${p.pt_credits}x PT`);
+  if (p.pt_credits) parts.push(`${p.pt_credits}x Personal Training`);
   if (p.facility_access) parts.push("akses facility");
   return `${parts.join(" + ")} · ${p.validity_days} hari`;
 }
@@ -56,7 +56,7 @@ export function StudioPassProductsPage() {
     <div className="p-4 sm:p-6">
       <StudioPageHeader
         title="Paket Member"
-        subtitle="Katalog pass: jumlah kredit kelas/PT, akses facility, masa berlaku, harga, dan pembagian nilai untuk pengakuan revenue."
+        subtitle="Katalog pass: jumlah kredit kelas & Personal Training, akses facility, masa berlaku, harga, dan pembagian nilai untuk pengakuan revenue."
         actions={
           <Button onClick={() => setDialog({ mode: "create" })}>
             <Plus className="size-4" /> Tambah paket
@@ -71,7 +71,7 @@ export function StudioPassProductsPage() {
       ) : rows.length === 0 ? (
         <EmptyState
           title="Belum ada paket"
-          description="Contoh: 3x kelas dalam 14 hari, 7x kelas dalam 30 hari, atau paket Class + PT + Facility."
+          description="Contoh: 3x kelas dalam 14 hari, 7x kelas dalam 30 hari, paket Class + Personal Training + Facility, atau Personal Training per sesi."
           action={<Button onClick={() => setDialog({ mode: "create" })}>Tambah paket pertama</Button>}
         />
       ) : (
@@ -93,7 +93,7 @@ export function StudioPassProductsPage() {
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <Pill tone={p.category === "class" ? "positive" : p.category === "class_pt" ? "warning" : "brand"}>
+                <Pill tone={p.category === "class" ? "positive" : p.category === "class_pt" ? "warning" : p.category === "pt" ? "neutral" : "brand"}>
                   {PASS_CATEGORY_LABEL[p.category]}
                 </Pill>
                 {!p.is_active && <Pill>Nonaktif</Pill>}
@@ -102,7 +102,7 @@ export function StudioPassProductsPage() {
               <p className="mt-3 text-sm text-muted-foreground">{benefitLine(p)}</p>
               <p className="mt-auto pt-4 font-display text-2xl font-semibold tabular-nums text-foreground">{rupiah(p.price)}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Nilai: kelas {rupiah(p.class_value)} · PT {rupiah(p.pt_value)}
+                Nilai: kelas {rupiah(p.class_value)} · Personal Training {rupiah(p.pt_value)}
                 {p.facility_access ? ` · facility ${rupiah(p.facility_value)}` : ""}
                 {typeof p.sold_count === "number" ? ` · ${p.sold_count} terjual` : ""}
               </p>
@@ -150,8 +150,10 @@ function PassProductDialog({ initial, onClose, onSaved }: { initial: PassProduct
     setForm((f) => ({
       ...f,
       category,
+      class_credits: category === "pt" ? "0" : f.class_credits === "0" ? "3" : f.class_credits,
       pt_credits: category === "class" ? "0" : f.pt_credits === "0" ? "1" : f.pt_credits,
       facility_access: category === "class_pt_facility",
+      class_value: category === "pt" ? "0" : f.class_value,
       pt_value: category === "class" ? "0" : f.pt_value,
       facility_value: category === "class_pt_facility" ? f.facility_value : "0",
     }));
@@ -166,12 +168,12 @@ function PassProductDialog({ initial, onClose, onSaved }: { initial: PassProduct
     code: form.code.trim(),
     name: form.name.trim(),
     category: form.category,
-    class_credits: num(form.class_credits),
+    class_credits: form.category === "pt" ? 0 : num(form.class_credits),
     pt_credits: form.category === "class" ? 0 : num(form.pt_credits),
     facility_access: form.facility_access,
     validity_days: num(form.validity_days),
     price: num(form.price),
-    class_value: num(form.class_value),
+    class_value: form.category === "pt" ? 0 : num(form.class_value),
     pt_value: form.category === "class" ? 0 : num(form.pt_value),
     facility_value: form.facility_access ? num(form.facility_value) : 0,
     description: form.description.trim() || null,
@@ -216,17 +218,18 @@ function PassProductDialog({ initial, onClose, onSaved }: { initial: PassProduct
           <Field label="Tipe">
             <NativeSelect value={form.category} onChange={(e) => pickCategory(e.target.value as PassCategory)}>
               <option value="class">Class</option>
-              <option value="class_pt">Class + PT</option>
-              <option value="class_pt_facility">Class + PT + Facility</option>
+              <option value="class_pt">Class + Personal Training</option>
+              <option value="class_pt_facility">Class + Personal Training + Facility</option>
+              <option value="pt">Personal Training saja</option>
             </NativeSelect>
           </Field>
           <Field label="Nama paket" className="sm:col-span-2">
             <Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Starter 3x · 2 minggu" />
           </Field>
           <Field label="Kredit kelas">
-            <Input type="number" min={0} value={form.class_credits} onChange={(e) => set("class_credits", e.target.value)} />
+            <Input type="number" min={0} value={form.category === "pt" ? "0" : form.class_credits} disabled={form.category === "pt"} onChange={(e) => set("class_credits", e.target.value)} />
           </Field>
-          <Field label="Kredit PT">
+          <Field label="Kredit Personal Training">
             <Input type="number" min={0} value={form.category === "class" ? "0" : form.pt_credits} disabled={form.category === "class"} onChange={(e) => set("pt_credits", e.target.value)} />
           </Field>
           <Field label="Masa berlaku (hari)" hint="2 minggu = 14 · 1 bulan = 30">
@@ -240,7 +243,7 @@ function PassProductDialog({ initial, onClose, onSaved }: { initial: PassProduct
             <div className="mb-3 flex items-center justify-between gap-2">
               <div>
                 <p className="text-[13px] font-semibold text-foreground">Pembagian nilai (pengakuan revenue)</p>
-                <p className="text-xs text-muted-foreground">Dasar revenue kelas vs PT saat kredit dipakai, dan pool komisi coach.</p>
+                <p className="text-xs text-muted-foreground">Dasar revenue kelas vs Personal Training saat kredit dipakai, dan pool komisi coach.</p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={autoSplit} disabled={!num(form.price)}>
                 <Wand2 className="size-3.5" /> Usulkan
@@ -248,9 +251,9 @@ function PassProductDialog({ initial, onClose, onSaved }: { initial: PassProduct
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Nilai kelas">
-                <Input inputMode="numeric" value={form.class_value} onChange={(e) => set("class_value", e.target.value)} />
+                <Input inputMode="numeric" value={form.category === "pt" ? "0" : form.class_value} disabled={form.category === "pt"} onChange={(e) => set("class_value", e.target.value)} />
               </Field>
-              <Field label="Nilai PT">
+              <Field label="Nilai Personal Training">
                 <Input inputMode="numeric" value={form.category === "class" ? "0" : form.pt_value} disabled={form.category === "class"} onChange={(e) => set("pt_value", e.target.value)} />
               </Field>
               <Field label="Nilai facility" hint="Diakui saat pass berakhir">

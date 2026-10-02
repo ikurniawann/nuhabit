@@ -291,7 +291,7 @@ export async function expireDuePasses(ctx: StudioContext): Promise<{ expired: nu
     if (!done) continue;
     recognized += total;
     await postPassJournal(ctx, "STUDIO_PASS_BREAKAGE", p.id, total, today,
-      `Pass kedaluwarsa ${p.pass_code} — sisa ${b.class_qty} kelas, ${b.pt_qty} PT`);
+      `Pass kedaluwarsa ${p.pass_code} — sisa ${b.class_qty} kelas, ${b.pt_qty} Personal Training`);
   }
   return { expired: due.length, recognized: Math.round(recognized * 100) / 100 };
 }

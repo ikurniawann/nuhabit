@@ -7,3 +7,5 @@ export { StudioPassesPage } from "./components/passes-page";
 export { StudioCalendarPage } from "./components/calendar-page";
 export { StudioAttendancePage } from "./components/attendance-page";
 export { StudioSettingsPage } from "./components/settings-page";
+export { StudioAvailabilityPage } from "./components/availability-page";
+export { StudioPtPage } from "./components/pt-page";

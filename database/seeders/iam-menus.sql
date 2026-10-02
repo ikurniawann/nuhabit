@@ -272,4 +272,6 @@ WHERE deleted_at IS NULL
     -- Kalender Kelas (monitoring):
     'studio.calendar',
     -- EPIC-054 Booking & Check-in:
-    'studio.attendance', 'studio.settings');
+    'studio.attendance', 'studio.settings',
+    -- EPIC-055 Personal Training:
+    'studio.pt', 'studio.availability');

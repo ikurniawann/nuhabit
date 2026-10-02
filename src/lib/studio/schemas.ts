@@ -109,7 +109,7 @@ const money = z.number().min(0).max(1_000_000_000);
 const passProductFields = {
   code: z.string().trim().min(1).max(30).transform((v) => v.toUpperCase()),
   name: z.string().trim().min(1).max(120),
-  category: z.enum(["class", "class_pt", "class_pt_facility"]),
+  category: z.enum(["class", "class_pt", "class_pt_facility", "pt"]),
   class_credits: z.number().int().min(0).max(500),
   pt_credits: z.number().int().min(0).max(500),
   facility_access: z.boolean(),
@@ -201,3 +201,28 @@ export const settingsPatchSchema = z
   .partial();
 
 export const memberBookSchema = z.object({ session_id: z.string().uuid() });
+
+// ── Personal Training (EPIC-055) ───────────────────────────────────────────
+export const availabilitySaveSchema = z.object({
+  windows: z
+    .array(z.object({ weekday: z.number().int().min(1).max(7), start_time: time, end_time: time }))
+    .max(50),
+  program_ids: z.array(z.string().uuid()).max(30),
+});
+
+export const timeOffCreateSchema = z.object({
+  date_from: date,
+  date_to: date,
+  reason: optText(200),
+});
+
+export const ptBookingSchema = z.object({
+  customer_id: z.string().uuid(),
+  program_id: z.string().uuid(),
+  coach_id: z.string().uuid(),
+  date,
+  start_time: time,
+  notes: optText(300),
+});
+
+export const memberPtBookingSchema = ptBookingSchema.omit({ customer_id: true, notes: true });
