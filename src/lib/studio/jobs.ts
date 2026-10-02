@@ -69,52 +69,63 @@ export function scheduledRemindersDue(s: JobSettings, now: Date): boolean {
   return s.reminders_enabled && inSendWindow(now) && wibNow(now).hour >= s.reminder_hour;
 }
 
-// ── Isi pesan (DESIGN.md §7: tenang, ringkas, seperti partner latihan) ─────
+// ── Isi pesan WA ke member — bahasa Inggris, seragam dengan Member App (keputusan owner 2026-10-02).
+// Tone DESIGN.md §7: tenang, ringkas, seperti partner latihan. longDate (Indonesia) tetap untuk teks backoffice.
 
 const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+const DAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export function firstName(name: string | null | undefined): string {
-  return (name ?? "").trim().split(/\s+/)[0] || "Atlet";
+  return (name ?? "").trim().split(/\s+/)[0] || "Athlete";
 }
 
-/** "Sabtu, 4 Oktober" */
+/** "Sabtu, 4 Oktober" — untuk teks backoffice (mis. deskripsi XP). */
 export function longDate(date: string): string {
   const d = new Date(`${date}T00:00:00Z`);
   return `${DAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
-const jam = (t: string) => t.slice(0, 5).replace(":", ".");
+/** "Saturday, 4 October" — untuk pesan ke member. */
+export function englishDate(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  return `${DAYS_EN[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS_EN[d.getUTCMonth()]}`;
+}
+
+const time24 = (t: string) => t.slice(0, 5);
+const sessions = (n: number) => `${n} ${n === 1 ? "session" : "sessions"}`;
 
 export function sessionReminderMessage(i: { name: string | null; program: string; kind: "class" | "pt"; time: string; coach: string | null; cancelWindowHours: number }): string {
-  const what = i.kind === "pt" ? `sesi Personal Training ${i.program}` : i.program;
+  const what =
+    i.kind !== "pt" ? i.program : /personal training/i.test(i.program) ? `your ${i.program} session` : `your Personal Training session (${i.program})`;
   return [
-    `Halo ${firstName(i.name)}, sesi berikutnya menunggu.`,
-    `Besok ${jam(i.time)} — ${what}${i.coach ? ` bersama ${i.coach}` : ""}.`,
-    `Berhalangan? Batalkan dari Member App paling lambat ${i.cancelWindowHours} jam sebelum sesi supaya kredit kembali.`,
-    "Sampai jumpa di NüHabit.",
+    `Hi ${firstName(i.name)}, your next session awaits.`,
+    `Tomorrow at ${time24(i.time)} — ${what}${i.coach ? ` with ${i.coach}` : ""}.`,
+    `Can't make it? Cancel in the Member App at least ${i.cancelWindowHours} hours before so your credit is returned.`,
+    "See you at NüHabit.",
   ].join("\n");
 }
 
 export function waitlistPromotedMessage(i: { name: string | null; program: string; date: string; time: string }): string {
   return [
-    `Halo ${firstName(i.name)}, ada tempat kosong untukmu.`,
-    `Kamu sudah masuk kelas ${i.program}, ${longDate(i.date)} pukul ${jam(i.time)}. 1 kredit kelas sudah dikunci.`,
-    "Tidak bisa datang? Batalkan dari Member App supaya tempatnya bisa dipakai teman lain.",
+    `Hi ${firstName(i.name)}, a spot just opened up for you.`,
+    `You're now booked into ${i.program} on ${englishDate(i.date)} at ${time24(i.time)}. 1 class credit has been locked in.`,
+    "Can't make it? Cancel in the Member App so someone else can take the spot.",
   ].join("\n");
 }
 
 export function passLowMessage(i: { name: string | null; product: string; left: number }): string {
   return [
-    `Halo ${firstName(i.name)}, tinggal ${i.left} sesi lagi di paket ${i.product}.`,
-    "Lanjutkan kebiasaanmu? Paket baru bisa dibeli langsung dari Member App.",
+    `Hi ${firstName(i.name)}, only ${sessions(i.left)} left on your ${i.product} pass.`,
+    "Keep the habit going? You can buy a new pass right in the Member App.",
   ].join("\n");
 }
 
 export function passExpiringMessage(i: { name: string | null; product: string; validUntil: string; left: number }): string {
   return [
-    `Halo ${firstName(i.name)}, paket ${i.product} berlaku sampai ${longDate(i.validUntil)}.`,
-    `Masih ada ${i.left} sesi yang bisa kamu pakai — booking dari Member App sebelum masa berlakunya habis.`,
+    `Hi ${firstName(i.name)}, your ${i.product} pass is valid until ${englishDate(i.validUntil)}.`,
+    `You still have ${sessions(i.left)} to use — book in the Member App before it expires.`,
   ].join("\n");
 }
 

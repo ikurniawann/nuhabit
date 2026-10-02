@@ -232,6 +232,7 @@ export function StudioAutomationPage() {
             <li>• <span className="text-foreground">Naik dari waitlist</span> — langsung saat ada tempat kosong.</li>
             <li>• <span className="text-foreground">Kredit hampir habis</span> & <span className="text-foreground">paket hampir berakhir</span> — ajakan lanjut latihan.</li>
           </ul>
+          <p className="mt-2 text-xs text-muted-foreground">Isi pesan dikirim dalam bahasa Inggris, seragam dengan Member App.</p>
 
           <div className="mt-4 flex justify-end border-t border-border pt-4">
             <Button variant="outline" onClick={() => run("reminders")} disabled={running !== null || !data.settings.reminders_enabled}>

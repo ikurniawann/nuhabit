@@ -3,6 +3,7 @@ import {
   DEFAULT_JOB_SETTINGS,
   dailyCloseDue,
   dedupKey,
+  englishDate,
   inSendWindow,
   longDate,
   passExpiringMessage,
@@ -42,23 +43,26 @@ describe("jadwal job", () => {
   });
 });
 
-describe("isi pesan", () => {
+describe("isi pesan (bahasa Inggris)", () => {
   it("H-1 kelas & Personal Training, tanpa singkatan PT", () => {
     const m = sessionReminderMessage({ name: "Ilham Kurniawan", program: "Hyrox Engine", kind: "class", time: "06:30:00", coach: "Coach Pras", cancelWindowHours: 12 });
-    expect(m).toContain("Halo Ilham, sesi berikutnya menunggu.");
-    expect(m).toContain("Besok 06.30 — Hyrox Engine bersama Coach Pras.");
-    expect(m).toContain("12 jam");
+    expect(m).toContain("Hi Ilham, your next session awaits.");
+    expect(m).toContain("Tomorrow at 06:30 — Hyrox Engine with Coach Pras.");
+    expect(m).toContain("at least 12 hours before");
     const pt = sessionReminderMessage({ name: null, program: "Strength 1:1", kind: "pt", time: "09:00", coach: null, cancelWindowHours: 12 });
-    expect(pt).toContain("Halo Atlet");
-    expect(pt).toContain("sesi Personal Training Strength 1:1");
+    expect(pt).toContain("Hi Athlete");
+    expect(pt).toContain("your Personal Training session (Strength 1:1)");
     expect(pt).not.toMatch(/\bPT\b/);
+    expect(sessionReminderMessage({ name: "Maya", program: "Personal Training Strength", kind: "pt", time: "09:00", coach: null, cancelWindowHours: 12 })).toContain("your Personal Training Strength session.");
   });
 
   it("waitlist, kredit habis, paket berakhir", () => {
     expect(longDate("2026-10-03")).toBe("Sabtu, 3 Oktober");
-    expect(waitlistPromotedMessage({ name: "Maya", program: "Hyrox Engine", date: "2026-10-03", time: "17:00" })).toContain("Sabtu, 3 Oktober pukul 17.00");
-    expect(passLowMessage({ name: "Maya", product: "10 Kelas", left: 1 })).toContain("tinggal 1 sesi lagi");
-    expect(passExpiringMessage({ name: "Maya", product: "10 Kelas", validUntil: "2026-10-05", left: 3 })).toContain("Senin, 5 Oktober");
+    expect(englishDate("2026-10-03")).toBe("Saturday, 3 October");
+    expect(waitlistPromotedMessage({ name: "Maya", program: "Hyrox Engine", date: "2026-10-03", time: "17:00" })).toContain("on Saturday, 3 October at 17:00");
+    expect(passLowMessage({ name: "Maya", product: "10 Classes", left: 1 })).toContain("only 1 session left on your 10 Classes pass");
+    expect(passLowMessage({ name: "Maya", product: "10 Classes", left: 2 })).toContain("only 2 sessions left");
+    expect(passExpiringMessage({ name: "Maya", product: "10 Classes", validUntil: "2026-10-05", left: 3 })).toContain("valid until Monday, 5 October");
   });
 
   it("kunci dedup unik per kejadian", () => {

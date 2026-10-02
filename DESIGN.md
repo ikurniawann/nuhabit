@@ -271,6 +271,7 @@ Urutan warna seri (light mode):
   Pesan server dari mesin bersama diterjemahkan di `src/features/member-app/i18n.ts`. Tone tetap sama:
   "You're locked in. See you tomorrow at 06:30.", "Only 1 session left. Keep the habit going?",
   "No sessions yet. Start with one." Istilah "Personal Training" tetap ditulis lengkap.
+  Pesan WhatsApp ke member (pengingat H-1, waitlist, paket) juga berbahasa Inggris (`src/lib/studio/jobs.ts`).
 
 - **Mobile-first**. Boleh lebih ekspresif: hero dengan sapuan grafis, foto atlet, headline Outfit besar.
 - Layar beranda: kartu **"Sesi berikutnya"** (Forest + Lime), **sisa sesi paket** (progress),
