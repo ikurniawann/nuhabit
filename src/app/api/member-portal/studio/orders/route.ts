@@ -12,11 +12,11 @@ export async function GET() {
   });
 }
 
-/** Buat pesanan paket + QRIS Xendit. */
+/** Buat pesanan paket + instruksi bayar (QRIS / Virtual Account / kartu). */
 export async function POST(request: NextRequest) {
   return studioRoute("member orders POST", async () => {
     const { customerId, actor } = await requireMemberStudio();
     const b = await validateBody(request, memberOrderSchema);
-    return NextResponse.json({ success: true, data: await createPassOrder(actor, customerId, b.product_id) }, { status: 201 });
+    return NextResponse.json({ success: true, data: await createPassOrder(actor, customerId, b.product_id, b.method, b.bank ?? null) }, { status: 201 });
   });
 }

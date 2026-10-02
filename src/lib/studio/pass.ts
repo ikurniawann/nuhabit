@@ -35,7 +35,7 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod | "xendit", string> = {
   card: "Kartu debit/kredit",
   transfer: "Transfer bank",
   complimentary: "Komplimen",
-  xendit: "Online (Xendit)",
+  xendit: "Online (Member App)",
 };
 
 const toCents = (rupiah: number) => Math.round(rupiah * 100);

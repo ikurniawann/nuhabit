@@ -247,7 +247,11 @@ export const coachShareSchema = z.object({
 });
 
 // ── Member App: beli paket online (EPIC-057) ───────────────────────────────
-export const memberOrderSchema = z.object({ product_id: z.string().uuid() });
+export const memberOrderSchema = z.object({
+  product_id: z.string().uuid(),
+  method: z.enum(["qris", "va", "card"]).default("qris"),
+  bank: z.enum(["BCA", "BNI", "BRI", "MANDIRI", "PERMATA"]).nullable().optional(),
+});
 
 // ── News Hyrox (EPIC-057) ──────────────────────────────────────────────────
 export const NEWS_CATEGORIES = ["news", "event", "tips", "promo"] as const;

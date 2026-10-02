@@ -28,4 +28,5 @@ berbeda, epic yang benar.
 - [ ] Owner/finance (EPIC-059): nilai minimum kapitalisasi, umur ekonomis per kategori, daftar aset existing (Excel).
 - [ ] Owner: hardware RFID (reader & tag) dan cakupannya (EPIC-060).
 - [ ] Konfigurasi WA Gateway (Settings → WA Gateway), lalu nyalakan pengingat di Kelas & Coach → Otomasi & Pengingat, dan **hapus `MEMBER_OTP_FIXED_CODE`** dari container DEV.
+- [ ] Sebelum produksi: hapus `PAYMENT_SIMULATOR`, `MEMBER_OTP_FIXED_CODE`, `MEMBER_PREVIEW_ENABLED` dari server; integrasi Xendit VA & kartu (EPIC-057 T-057-8).
 - [ ] Konfigurasi Xendit (API key & webhook token) di Payment Gateway untuk pembelian paket online.

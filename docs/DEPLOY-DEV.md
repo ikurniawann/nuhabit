@@ -28,7 +28,7 @@ docker rm -f nuhabitdev-app
 docker run -d --name nuhabitdev-app --restart unless-stopped --network host \
   -e PORT=8141 -e HOSTNAME=127.0.0.1 \
   -e DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit \
-  -e MEMBER_PREVIEW_ENABLED=1 -e MEMBER_OTP_FIXED_CODE=123456 \
+  -e MEMBER_PREVIEW_ENABLED=1 -e MEMBER_OTP_FIXED_CODE=123456 -e PAYMENT_SIMULATOR=1 \
   -v nuhabitdev-storage:/app/storage \
   nuhabitdev:local
 ```
@@ -39,6 +39,11 @@ atas nama member tanpa OTP (sesi 4 jam, tercatat di `studio.member_preview_log`)
 `MEMBER_OTP_FIXED_CODE=123456` (khusus DEV, sementara WA Gateway belum terhubung) — login Member App memakai kode tetap
 123456 dan WhatsApp tidak dikirim; layar login menampilkan petunjuk kodenya. Hanya nomor member terdaftar yang bisa
 masuk; rate limit & batas percobaan tetap berlaku. **Hapus** begitu WA Gateway terhubung; **jangan** di produksi.
+
+`PAYMENT_SIMULATOR=1` (khusus DEV) — beli paket di Member App menawarkan QRIS, Virtual Account (BCA/BNI/BRI/Mandiri/
+Permata), dan kartu kredit; instruksi bayar tampil seperti sungguhan dan pembayaran diperlakukan sukses lewat tombol
+simulasi (tanpa uang, kartu uji •••• 1111). Pass terbit seperti pembelian asli (catatan "simulasi DEV", ref `SIM-…`).
+**Jangan** di produksi — tanpa flag ini hanya QRIS Xendit yang ditawarkan.
 
 `NEXT_PUBLIC_*` di-inline saat build dari file `.env` (gitignored):
 

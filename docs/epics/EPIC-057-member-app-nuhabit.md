@@ -33,6 +33,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 - [x] T-057-4 Personal Training: pilih program → coach (profil) → tanggal → jam → konfirmasi; daftar & batal.
 - [x] T-057-5 Paket: pass saya + riwayat kredit; katalog paket + beli online via Xendit QRIS (order, polling/webhook, aktivasi).
 - [x] T-057-6 Profil coach (foto, bio, spesialisasi) + upload foto coach di backoffice.
+- [ ] T-057-8 Integrasi Xendit untuk Virtual Account & kartu kredit di produksi (saat ini hanya simulator DEV; QRIS sudah via Xendit).
 - [x] T-057-7 News Hyrox: CMS sederhana di backoffice (judul, gambar, isi, terbit) + daftar & detail di Member App.
 
 ## Acceptance Criteria
@@ -50,3 +51,4 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md).
 - 2026-10-02 — Owner: seluruh halaman member berbahasa **Inggris**. UI, format tanggal/jam/angka, dan pesan route khusus member diubah; pesan mesin bersama (booking/OTP) diterjemahkan di `src/features/member-app/i18n.ts` (+16 tes). Backoffice & Coach Portal tetap bahasa Indonesia. Dicatat di DESIGN.md §10. Regresi: member-app 45/45, loyalitas 37/37.
 - 2026-10-02 — Owner: di DEV Member App bisa dibuka tanpa OTP. Tombol **Buka Member App** (detail pass & Program Loyalitas) hanya aktif bila `MEMBER_PREVIEW_ENABLED=1` (di-set di container DEV saja); sesi 4 jam, cookie `member_preview` → banner "Staff preview", tercatat di `studio.member_preview_log`. E2E `preview-e2e` 7/7 (aktif) + 2/2 (mati → 404).
 - 2026-10-02 — Owner memilih kode OTP tetap untuk DEV (opsi 2) sampai WA Gateway terhubung: `MEMBER_OTP_FIXED_CODE=123456` (opt-in env, 6 digit) → OTP tidak dikirim WA, kode tetap 123456, Member App menampilkan petunjuk. Alur OTP lain tetap (member terdaftar, rate limit, percobaan). E2E `otp-e2e` 4/4 (aktif) + 2/2 (mati).
+- 2026-10-02 — Owner: selama masa DEV pembayaran QRIS dibuatkan flow & diperlakukan sukses, plus kartu kredit & Virtual Account. Simulator `PAYMENT_SIMULATOR=1`: pilih metode (QRIS / VA BCA-BNI-BRI-Mandiri-Permata / kartu uji), instruksi bayar realistis (QR, nomor VA 16 digit berlaku 24 jam, kartu •••• 1111), tombol simulasi → pass terbit. Kolom `pass_orders.payment_method/va_bank/va_number/card_last4`. Produksi tanpa flag: hanya QRIS Xendit (VA & kartu → T-057-8). E2E `payment-e2e` 14/14; regresi jalur Xendit `member-app-e2e` 45/45.
