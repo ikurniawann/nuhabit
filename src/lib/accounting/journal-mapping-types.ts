@@ -5,6 +5,8 @@ export const JOURNAL_MODULES = [
   "PINJAMAN",
   "SALES",
   "INVENTORY",
+  /** Nuhabit: Member Pass & komisi coach (EPIC-053/056). */
+  "STUDIO",
 ] as const;
 export type JournalModule = (typeof JOURNAL_MODULES)[number];
 
@@ -36,6 +38,11 @@ export const JOURNAL_LINE_ROLES = [
   "GIFT_CARD_LIABILITY",
   /** Uang muka / deposit cicilan Tagihan Member (kewajiban). */
   "MEMBER_DEPOSIT",
+  /** Pendapatan diterima di muka atas Member Pass yang belum di-redeem (kewajiban). */
+  "PASS_LIABILITY",
+  /** Beban & utang komisi coach (EPIC-056, di luar payroll). */
+  "COMMISSION_EXPENSE",
+  "COMMISSION_PAYABLE",
   "DISCOUNT",
   "SALARY_EXPENSE",
   "SALARY_PAYABLE",
@@ -74,6 +81,15 @@ export const JOURNAL_EVENT_CODES = [
   "STOCK_ADJUSTMENT_SHORTAGE",
   "STOCK_ADJUSTMENT_SURPLUS",
   "STOCK_TRANSFER",
+  "STUDIO_PASS_SALE_CASH",
+  "STUDIO_PASS_SALE_QRIS",
+  "STUDIO_PASS_SALE_CARD",
+  "STUDIO_PASS_SALE_TRANSFER",
+  "STUDIO_PASS_SALE_ONLINE",
+  "STUDIO_PASS_REDEEM_CLASS",
+  "STUDIO_PASS_REDEEM_PT",
+  "STUDIO_PASS_BREAKAGE",
+  "STUDIO_PASS_CANCEL",
 ] as const;
 export type JournalEventCode = (typeof JOURNAL_EVENT_CODES)[number];
 
@@ -225,6 +241,51 @@ export const JOURNAL_EVENT_META: Record<
     name: "Stock Transfer",
     module: "INVENTORY",
     description: "Transfer stok antar gudang (audit nilai inventori)",
+  },
+  STUDIO_PASS_SALE_CASH: {
+    name: "Member Pass — Penjualan Tunai",
+    module: "STUDIO",
+    description: "Jual pass dibayar tunai: Dr Kas, Cr Pendapatan Diterima di Muka (PASS_LIABILITY)",
+  },
+  STUDIO_PASS_SALE_QRIS: {
+    name: "Member Pass — Penjualan QRIS",
+    module: "STUDIO",
+    description: "Jual pass dibayar QRIS: Dr Bank, Cr PASS_LIABILITY",
+  },
+  STUDIO_PASS_SALE_CARD: {
+    name: "Member Pass — Penjualan Kartu",
+    module: "STUDIO",
+    description: "Jual pass dibayar kartu debit/kredit: Dr Bank, Cr PASS_LIABILITY",
+  },
+  STUDIO_PASS_SALE_TRANSFER: {
+    name: "Member Pass — Penjualan Transfer",
+    module: "STUDIO",
+    description: "Jual pass dibayar transfer bank: Dr Bank, Cr PASS_LIABILITY",
+  },
+  STUDIO_PASS_SALE_ONLINE: {
+    name: "Member Pass — Penjualan Online",
+    module: "STUDIO",
+    description: "Jual pass lewat Member App (Xendit): Dr Bank/Piutang Xendit, Cr PASS_LIABILITY",
+  },
+  STUDIO_PASS_REDEEM_CLASS: {
+    name: "Member Pass — Redeem Kelas",
+    module: "STUDIO",
+    description: "Kredit kelas terpakai: Dr PASS_LIABILITY, Cr Pendapatan Kelas",
+  },
+  STUDIO_PASS_REDEEM_PT: {
+    name: "Member Pass — Redeem PT",
+    module: "STUDIO",
+    description: "Kredit personal training terpakai: Dr PASS_LIABILITY, Cr Pendapatan PT",
+  },
+  STUDIO_PASS_BREAKAGE: {
+    name: "Member Pass — Kedaluwarsa (Breakage)",
+    module: "STUDIO",
+    description: "Sisa nilai pass kedaluwarsa + nilai facility: Dr PASS_LIABILITY, Cr Pendapatan Lain/Breakage",
+  },
+  STUDIO_PASS_CANCEL: {
+    name: "Member Pass — Pembatalan",
+    module: "STUDIO",
+    description: "Batal pass sebelum dipakai (refund): Dr PASS_LIABILITY, Cr Kas/Bank",
   },
 };
 

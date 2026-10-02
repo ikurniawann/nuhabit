@@ -1,0 +1,7 @@
+export { StudioCoachesPage } from "./components/coaches-page";
+export { StudioProgramsPage } from "./components/programs-page";
+export { StudioSchedulePage } from "./components/schedule-page";
+export { StudioTemplatesPage } from "./components/templates-page";
+export { StudioPassProductsPage } from "./components/pass-products-page";
+export { StudioPassesPage } from "./components/passes-page";
+export { StudioCalendarPage } from "./components/calendar-page";

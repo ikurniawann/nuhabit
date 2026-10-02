@@ -63,6 +63,7 @@ export const IAM = {
   promo: ["promo", "crm.promo"],
   dataroom: ["dataroom"],
   resort: ["resort"],
+  studio: ["studio"],
 } as const;
 
 export type IamPrefixGroup = (typeof IAM)[keyof typeof IAM];
