@@ -17,3 +17,7 @@ seeders/
 # memakai pnpm 9, yang membaca file ini sebagai definisi workspace dan gagal
 # dengan "packages field missing or empty" saat `pnpm build`.
 pnpm-workspace.yaml
+
+# Brand guideline PDF (28 MB) tidak dibutuhkan saat build
+*.pdf
+mobile/

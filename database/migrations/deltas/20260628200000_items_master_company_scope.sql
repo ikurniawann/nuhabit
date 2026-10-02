@@ -74,11 +74,16 @@ CREATE INDEX IF NOT EXISTS idx_rmc_company_id ON item.raw_material_categories (c
 -- ---------------------------------------------------------------------------
 -- item.storage_conditions
 -- ---------------------------------------------------------------------------
-ALTER TABLE item.storage_conditions
-    ADD COLUMN IF NOT EXISTS company_id uuid;
-
-DO $$
+DO $guard$
 BEGIN
+    -- Nuhabit: item.storage_conditions sudah tidak ada di baseline terbaru;
+    -- guard supaya replay migrasi dari database kosong tidak berhenti di sini.
+    IF to_regclass('item.storage_conditions') IS NULL THEN
+        RETURN;
+    END IF;
+
+    ALTER TABLE item.storage_conditions ADD COLUMN IF NOT EXISTS company_id uuid;
+
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'storage_conditions_company_id_fkey'
     ) THEN
@@ -86,16 +91,16 @@ BEGIN
             ADD CONSTRAINT storage_conditions_company_id_fkey
             FOREIGN KEY (company_id) REFERENCES configuration.companies(id) ON DELETE CASCADE;
     END IF;
-END $$;
 
-ALTER TABLE item.storage_conditions DROP CONSTRAINT IF EXISTS storage_conditions_code_key;
+    ALTER TABLE item.storage_conditions DROP CONSTRAINT IF EXISTS storage_conditions_code_key;
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_company_code
-    ON item.storage_conditions (company_id, code)
-    WHERE deleted_at IS NULL AND company_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_company_code
+        ON item.storage_conditions (company_id, code)
+        WHERE deleted_at IS NULL AND company_id IS NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_global_code
-    ON item.storage_conditions (code)
-    WHERE deleted_at IS NULL AND company_id IS NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_global_code
+        ON item.storage_conditions (code)
+        WHERE deleted_at IS NULL AND company_id IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_storage_company_id ON item.storage_conditions (company_id);
+    CREATE INDEX IF NOT EXISTS idx_storage_company_id ON item.storage_conditions (company_id);
+END $guard$;

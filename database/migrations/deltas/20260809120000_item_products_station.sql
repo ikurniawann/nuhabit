@@ -98,5 +98,5 @@ BEGIN
     EXECUTE 'GRANT SELECT ON TABLE public.v_products_cogs TO arkiv';
   END IF;
 END $$;
-GRANT SELECT ON TABLE public.v_products_cogs TO authenticated;
-GRANT SELECT ON TABLE public.v_products_cogs TO service_role;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN EXECUTE 'GRANT SELECT ON TABLE public.v_products_cogs TO authenticated'; END IF; END $$;
+DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN EXECUTE 'GRANT SELECT ON TABLE public.v_products_cogs TO service_role'; END IF; END $$;
