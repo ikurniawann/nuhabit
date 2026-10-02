@@ -28,9 +28,13 @@ docker rm -f nuhabitdev-app
 docker run -d --name nuhabitdev-app --restart unless-stopped --network host \
   -e PORT=8141 -e HOSTNAME=127.0.0.1 \
   -e DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit \
+  -e MEMBER_PREVIEW_ENABLED=1 \
   -v nuhabitdev-storage:/app/storage \
   nuhabitdev:local
 ```
+
+`MEMBER_PREVIEW_ENABLED=1` (khusus DEV) menyalakan tombol **Buka Member App** di backoffice — staf membuka Member App
+atas nama member tanpa OTP (sesi 4 jam, tercatat di `studio.member_preview_log`). **Jangan** disetel di produksi.
 
 `NEXT_PUBLIC_*` di-inline saat build dari file `.env` (gitignored):
 

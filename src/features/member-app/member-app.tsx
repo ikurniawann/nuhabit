@@ -79,6 +79,7 @@ export function MemberApp() {
 
   const logout = useCallback(async () => {
     await fetch("/api/member-portal/logout", { method: "POST" }).catch(() => {});
+    document.cookie = "member_preview=; Max-Age=0; path=/";
     setPasses(null);
     setBookings(null);
     setTab("home");
@@ -103,6 +104,7 @@ export function MemberApp() {
   return (
     <Ctx.Provider value={{ profile: auth.profile, passes, bookings, cancelWindowHours, refresh, go, logout }}>
       <div className="min-h-dvh bg-nh-ink text-nh-beige">
+        <PreviewBanner onExit={logout} />
         <div className="mx-auto max-w-lg">
           <header className="sticky top-0 z-30 flex items-center justify-between bg-nh-ink/90 px-5 py-4 backdrop-blur">
             <Image src="/brand/logo-neon.png" alt="NUHABIT" width={1325} height={173} className="h-4 w-auto" priority />
@@ -155,5 +157,23 @@ function BottomNav({ tab, onChange }: { tab: MemberTab; onChange: (t: MemberTab)
         })}
       </div>
     </nav>
+  );
+}
+
+/** Banner saat staf membuka Member App tanpa OTP (cookie member_preview dari backoffice). */
+function PreviewBanner({ onExit }: { onExit: () => void }) {
+  const [name, setName] = useState<string | null>(null);
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)member_preview=([^;]+)/);
+    setName(m ? decodeURIComponent(m[1]) : null);
+  }, []);
+  if (!name) return null;
+  return (
+    <div className="relative z-50 flex items-center justify-center gap-3 bg-nh-lime px-4 py-1.5 text-xs font-semibold text-nh-forest">
+      <span>Staff preview · viewing as {name}</span>
+      <button type="button" onClick={onExit} className="rounded-full bg-nh-forest/10 px-2.5 py-0.5 underline-offset-2 hover:underline">
+        Exit
+      </button>
+    </div>
   );
 }

@@ -19,6 +19,7 @@ import type {
 } from "../types";
 import { formatDate, rupiah, todayIso } from "../types";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
+import { OpenMemberAppButton } from "./open-member-app";
 
 const STATUS_TONE: Record<EffectivePassStatus, "positive" | "warning" | "danger" | "neutral" | "brand"> = {
   active: "positive",
@@ -525,7 +526,10 @@ function PassDetailDialog({ id, onClose, onChanged }: { id: string; onClose: () 
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>{data.member_name ?? data.member_phone}</DialogTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
+                <DialogTitle>{data.member_name ?? data.member_phone}</DialogTitle>
+                <OpenMemberAppButton customerId={data.customer_id} />
+              </div>
             </DialogHeader>
             <div className="rounded-xl bg-nh-forest p-4 text-nh-beige">
               <div className="flex flex-wrap items-start justify-between gap-3">

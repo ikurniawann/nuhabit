@@ -10,6 +10,7 @@ import { apiGet, apiPatch, apiPut } from "@/lib/api-client";
 import type { ApiMessage } from "../types";
 import { rupiah } from "../types";
 import { NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
+import { OpenMemberAppButton } from "./open-member-app";
 
 interface Rule {
   id: string;
@@ -426,6 +427,7 @@ function MemberStatusSection() {
                   </td>
                   <td className="px-4 py-2.5">
                     <div className="flex justify-end gap-1">
+                      {m.status !== "banned" && <OpenMemberAppButton customerId={m.id} label="Member App" />}
                       {m.status !== "active" ? (
                         <Button size="sm" variant="outline" disabled={busy === m.id} onClick={() => setStatus(m, "active")}>
                           <ShieldCheck className="size-3.5" /> Aktifkan
