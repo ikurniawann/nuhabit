@@ -25,12 +25,12 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await memberFetch<{ message: string; dev_bypass?: boolean }>("/api/member-portal/otp", { method: "POST", body: { phone } });
+      const res = await memberFetch<{ message: string; dev_bypass?: boolean; dev_fixed_code?: string }>("/api/member-portal/otp", { method: "POST", body: { phone } });
       if (res.dev_bypass) {
         await verify("");
         return;
       }
-      setInfo(toEnglish(res.message));
+      setInfo(res.dev_fixed_code ? `Development mode: WhatsApp isn't connected yet — use code ${res.dev_fixed_code}.` : toEnglish(res.message));
       setStep("code");
     } catch (e) {
       setError(e instanceof Error ? e.message : "We couldn't send the code");

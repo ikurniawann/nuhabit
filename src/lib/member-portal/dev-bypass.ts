@@ -60,3 +60,18 @@ export function canBypassOtp(code: string): boolean {
   if (devCode === null) return false;
   return code === "" || code === devCode;
 }
+
+/**
+ * Kode OTP tetap untuk server DEV yang ter-deploy (NüHabit, keputusan owner
+ * 2026-10-02) — beda dengan bypass lokal di atas: berlaku walau build produksi,
+ * karena DEV memakai build produksi tanpa WA Gateway. Opt-in eksplisit lewat
+ * MEMBER_OTP_FIXED_CODE (6 digit). Alur OTP tetap utuh: hanya nomor member
+ * terdaftar, rate limit, kedaluwarsa & batas percobaan tetap berlaku — yang
+ * berubah hanya kodenya (tetap) dan WhatsApp tidak dikirim.
+ *
+ * JANGAN pernah menyetel MEMBER_OTP_FIXED_CODE di produksi.
+ */
+export function memberOtpFixedCode(): string | null {
+  const code = String(process.env.MEMBER_OTP_FIXED_CODE ?? "").trim();
+  return /^\d{6}$/.test(code) ? code : null;
+}

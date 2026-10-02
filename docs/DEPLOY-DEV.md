@@ -28,13 +28,17 @@ docker rm -f nuhabitdev-app
 docker run -d --name nuhabitdev-app --restart unless-stopped --network host \
   -e PORT=8141 -e HOSTNAME=127.0.0.1 \
   -e DATABASE_URL=postgresql://nuhabit:<password>@localhost:5482/nuhabit \
-  -e MEMBER_PREVIEW_ENABLED=1 \
+  -e MEMBER_PREVIEW_ENABLED=1 -e MEMBER_OTP_FIXED_CODE=123456 \
   -v nuhabitdev-storage:/app/storage \
   nuhabitdev:local
 ```
 
 `MEMBER_PREVIEW_ENABLED=1` (khusus DEV) menyalakan tombol **Buka Member App** di backoffice — staf membuka Member App
 atas nama member tanpa OTP (sesi 4 jam, tercatat di `studio.member_preview_log`). **Jangan** disetel di produksi.
+
+`MEMBER_OTP_FIXED_CODE=123456` (khusus DEV, sementara WA Gateway belum terhubung) — login Member App memakai kode tetap
+123456 dan WhatsApp tidak dikirim; layar login menampilkan petunjuk kodenya. Hanya nomor member terdaftar yang bisa
+masuk; rate limit & batas percobaan tetap berlaku. **Hapus** begitu WA Gateway terhubung; **jangan** di produksi.
 
 `NEXT_PUBLIC_*` di-inline saat build dari file `.env` (gitignored):
 

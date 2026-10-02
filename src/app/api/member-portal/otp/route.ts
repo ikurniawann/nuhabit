@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { sendWhatsAppOtp } from "@/lib/whatsapp";
-import { isDevBypassActive } from "@/lib/member-portal/dev-bypass";
+import { isDevBypassActive, memberOtpFixedCode } from "@/lib/member-portal/dev-bypass";
 import {
   generateOtpCode,
   hashSecret,
@@ -64,18 +64,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const code = generateOtpCode();
+    // DEV ter-deploy: kode tetap, tanpa kirim WhatsApp (memberOtpFixedCode).
+    const fixedCode = memberOtpFixedCode();
+    const code = fixedCode ?? generateOtpCode();
     await pool.query(
       `INSERT INTO crm.member_portal_otp (phone, code_hash, expires_at)
        VALUES ($1, $2, now() + ($3 || ' milliseconds')::interval)`,
       [phone, hashSecret(code), OTP_TTL_MS]
     );
 
-    const sent = await sendWhatsAppOtp({
-      target: phone,
-      code,
-      fallbackText: otpMessage(code),
-    });
+    const sent = fixedCode
+      ? { success: true as const }
+      : await sendWhatsAppOtp({
+          target: phone,
+          code,
+          fallbackText: otpMessage(code),
+        });
     if (!sent.success) {
       // Kode hanya boleh muncul di log NON-produksi (jalan keluar saat
       // FONNTE_API_KEY belum diisi). Di produksi log cukup mencatat
@@ -95,9 +99,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Kode OTP dikirim ke WhatsApp Anda",
-      wa_delivered: sent.success,
+      wa_delivered: fixedCode ? false : sent.success,
       // Dev lokal: portal melompati layar kode dan langsung verify.
       dev_bypass: isDevBypassActive(),
+      // DEV ter-deploy: Member App menampilkan petunjuk kode tetap.
+      ...(fixedCode ? { dev_fixed_code: fixedCode } : {}),
     });
   } catch (error) {
     console.error("Error requesting member OTP:", error);

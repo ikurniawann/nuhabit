@@ -27,5 +27,5 @@ berbeda, epic yang benar.
 - [ ] Owner: komisi tetap dibagi ke coach yang tidak mengajar di bulan itu (opsi B saat ini: ya)?
 - [ ] Owner/finance (EPIC-059): nilai minimum kapitalisasi, umur ekonomis per kategori, daftar aset existing (Excel).
 - [ ] Owner: hardware RFID (reader & tag) dan cakupannya (EPIC-060).
-- [ ] Konfigurasi WA Gateway (Settings → WA Gateway), lalu nyalakan pengingat di Kelas & Coach → Otomasi & Pengingat.
+- [ ] Konfigurasi WA Gateway (Settings → WA Gateway), lalu nyalakan pengingat di Kelas & Coach → Otomasi & Pengingat, dan **hapus `MEMBER_OTP_FIXED_CODE`** dari container DEV.
 - [ ] Konfigurasi Xendit (API key & webhook token) di Payment Gateway untuk pembelian paket online.
