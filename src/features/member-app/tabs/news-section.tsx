@@ -14,10 +14,10 @@ interface NewsItem {
   published_at: string;
 }
 
-const CATEGORY: Record<NewsItem["category"], string> = { news: "Berita", event: "Event", tips: "Tips latihan", promo: "Promo" };
+const CATEGORY: Record<NewsItem["category"], string> = { news: "News", event: "Event", tips: "Training tips", promo: "Promo" };
 
 function published(at: string): string {
-  return new Date(at).toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
+  return new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
 }
 
 /** News Hyrox di beranda: kartu geser horizontal + detail di lembar bawah. */
@@ -45,7 +45,7 @@ export function NewsSection() {
 
   return (
     <section>
-      <SectionTitle>News Hyrox</SectionTitle>
+      <SectionTitle>Hyrox News</SectionTitle>
       <div className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-1">
         {items.map((n) => (
           <button key={n.id} type="button" onClick={() => show(n)} className="w-64 shrink-0 snap-start overflow-hidden rounded-3xl border border-white/10 bg-nh-jungle text-left">

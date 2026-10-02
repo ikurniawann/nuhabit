@@ -22,7 +22,7 @@ export function ScheduleTab() {
       setRules(res.rules);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memuat jadwal");
+      setError(e instanceof Error ? e.message : "Couldn't load the schedule");
       setSlots([]);
     }
   }, []);
@@ -48,9 +48,9 @@ export function ScheduleTab() {
   return (
     <div className="space-y-5 pt-2">
       <div>
-        <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Jadwal kelas</h1>
+        <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Class schedule</h1>
         <p className="mt-1 text-sm text-nh-beige/60">
-          Sisa {classCredits} kelas · batal gratis sampai {rules.cancel_window_hours} jam sebelum sesi.
+          {classCredits} {classCredits === 1 ? "class" : "classes"} left · free cancellation up to {rules.cancel_window_hours} hours before.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export function ScheduleTab() {
       {!slots ? (
         <CenterSpinner />
       ) : list.length === 0 ? (
-        <Empty title="Belum ada kelas di hari ini." hint="Coba pilih hari lain." />
+        <Empty title="No classes on this day." hint="Try another day." />
       ) : (
         <div className="space-y-2">
           {list.map((s) => (
@@ -102,10 +102,10 @@ export function ScheduleTab() {
   );
 }
 
-/** "Sampai jumpa besok, 06.30" / "Sabtu, 4 Okt". */
+/** "See you tomorrow at 06:30" / "See you Saturday, 4 Oct at 06:30". */
 function seeYou(date: string): string {
   const d = friendlyDay(date);
-  return d === "Hari ini" ? "nanti" : d === "Besok" ? "besok" : d;
+  return d === "Today" ? "later today" : d === "Tomorrow" ? "tomorrow" : d;
 }
 
 function SlotRow({ slot: s, onOpen }: { slot: ClassSlot; onOpen: () => void }) {
@@ -118,18 +118,18 @@ function SlotRow({ slot: s, onOpen }: { slot: ClassSlot; onOpen: () => void }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold">{s.program_name}</p>
-        <p className="truncate text-xs text-nh-beige/60">{s.coach_name ?? "Coach akan diumumkan"}</p>
+        <p className="truncate text-xs text-nh-beige/60">{s.coach_name ?? "Coach to be announced"}</p>
       </div>
       <div className="shrink-0 text-right">
         {s.my_status === "booked" ? (
-          <Tag tone="lime">Terkunci</Tag>
+          <Tag tone="lime">Locked in</Tag>
         ) : s.my_status === "waitlisted" ? (
           <Tag tone="warn">Waitlist</Tag>
         ) : full ? (
-          <Tag tone="danger">Penuh</Tag>
+          <Tag tone="danger">Full</Tag>
         ) : (
           <span className={`flex items-center gap-1 text-xs ${s.spots_left <= 2 ? "text-nh-lime" : "text-nh-beige/60"}`}>
-            <Users className="size-3.5" /> {s.spots_left} tempat
+            <Users className="size-3.5" /> {s.spots_left} {s.spots_left === 1 ? "spot" : "spots"}
           </span>
         )}
       </div>
@@ -164,10 +164,10 @@ function SlotSheet({
         kind === "book"
           ? await memberFetch<{ message: string }>("/api/member-portal/studio/bookings", { method: "POST", body: { session_id: s.id } })
           : await memberFetch<{ message: string }>(`/api/member-portal/studio/bookings/${s.my_booking_id}/cancel`, { method: "POST", body: {} });
-      setMsg({ tone: "ok", text: kind === "book" && !full ? `Sesi kamu sudah terkunci. Sampai jumpa ${seeYou(s.session_date)}, ${jam(s.start_time)}.` : res.message });
+      setMsg({ tone: "ok", text: kind === "book" && !full ? `You're locked in. See you ${seeYou(s.session_date)} at ${jam(s.start_time)}.` : res.message });
       await onChanged();
     } catch (e) {
-      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Gagal" });
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Something went wrong" });
     } finally {
       setBusy(false);
     }
@@ -192,13 +192,13 @@ function SlotSheet({
         </div>
       )}
       <p className="mt-4 text-sm text-nh-beige/70">
-        {full ? `Kelas penuh · ${s.waitlist_count} orang di waitlist` : s.spots_left === 1 ? "Masih ada tempat untuk satu orang." : `${s.spots_left} dari ${s.capacity} tempat tersisa`}
+        {full ? `Class full · ${s.waitlist_count} on the waitlist` : s.spots_left === 1 ? "There's room for one more." : `${s.spots_left} of ${s.capacity} spots left`}
       </p>
 
       <div className="mt-5 space-y-3">
         {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
         {msg?.tone === "ok" ? (
-          <PillButton variant="ghost" className="w-full" onClick={onClose}>Tutup</PillButton>
+          <PillButton variant="ghost" className="w-full" onClick={onClose}>Close</PillButton>
         ) : s.my_status ? (
           <>
             <div className={`rounded-2xl px-4 py-3 text-sm ${late && s.my_status === "booked" ? "bg-nh-ochre/20 text-nh-lemon" : "bg-white/5 text-nh-beige/80"}`}>
@@ -206,20 +206,20 @@ function SlotSheet({
             </div>
             <PillButton variant="danger" className="w-full" disabled={busy} onClick={() => act("cancel")}>
               {busy && <Loader2 className="size-4 animate-spin" />}
-              {s.my_status === "waitlisted" ? "Keluar dari waitlist" : "Batalkan booking"}
+              {s.my_status === "waitlisted" ? "Leave waitlist" : "Cancel booking"}
             </PillButton>
           </>
         ) : !hasCredit ? (
           <>
-            <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm text-nh-beige/80">Kredit kelasmu habis. Pilih paket untuk lanjut latihan.</div>
-            <PillButton className="w-full" onClick={onBuy}>Lihat paket</PillButton>
+            <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm text-nh-beige/80">You're out of class credits. Choose a pass to keep training.</div>
+            <PillButton className="w-full" onClick={onBuy}>See passes</PillButton>
           </>
         ) : (
           <>
-            <p className="text-xs text-nh-beige/50">1 kredit kelas dikunci saat booking. Batal ≥ {rules.cancel_window_hours} jam sebelum sesi, kredit kembali.</p>
+            <p className="text-xs text-nh-beige/50">Booking locks in 1 class credit. Cancel at least {rules.cancel_window_hours} hours before and it's returned.</p>
             <PillButton className="w-full" disabled={busy} onClick={() => act("book")}>
               {busy && <Loader2 className="size-4 animate-spin" />}
-              {full ? "Masuk waitlist" : "Booking sesi ini"}
+              {full ? "Join waitlist" : "Book this session"}
             </PillButton>
           </>
         )}

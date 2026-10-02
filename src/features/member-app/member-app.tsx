@@ -50,7 +50,7 @@ export function MemberApp() {
       setAuth({ status: "ready", profile: res.data.profile });
     } catch (e) {
       if (e instanceof MemberApiError && e.status === 401) setAuth({ status: "guest" });
-      else setAuth({ status: "error", message: e instanceof Error ? e.message : "Gagal memuat" });
+      else setAuth({ status: "error", message: e instanceof Error ? e.message : "Couldn't load your account" });
     }
   }, []);
 
@@ -96,7 +96,7 @@ export function MemberApp() {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-nh-ink px-6 text-center text-nh-beige">
         <p>{auth.message}</p>
-        <PillButton onClick={loadProfile}>Coba lagi</PillButton>
+        <PillButton onClick={loadProfile}>Try again</PillButton>
       </div>
     );
 
@@ -107,7 +107,7 @@ export function MemberApp() {
           <header className="sticky top-0 z-30 flex items-center justify-between bg-nh-ink/90 px-5 py-4 backdrop-blur">
             <Image src="/brand/logo-neon.png" alt="NUHABIT" width={1325} height={173} className="h-4 w-auto" priority />
             <button type="button" onClick={() => go("profile")} className="text-xs text-nh-beige/60">
-              {auth.profile.name ?? "Profil"}
+              {auth.profile.name ?? "Profile"}
             </button>
           </header>
           <main className="px-5 pb-32">
@@ -125,11 +125,11 @@ export function MemberApp() {
 }
 
 const NAV: { key: MemberTab; label: string; icon: typeof Home }[] = [
-  { key: "home", label: "Beranda", icon: Home },
-  { key: "schedule", label: "Kelas", icon: CalendarDays },
+  { key: "home", label: "Home", icon: Home },
+  { key: "schedule", label: "Classes", icon: CalendarDays },
   { key: "pt", label: "Personal Training", icon: Dumbbell },
-  { key: "passes", label: "Paket", icon: Ticket },
-  { key: "profile", label: "Progres", icon: Trophy },
+  { key: "passes", label: "Passes", icon: Ticket },
+  { key: "profile", label: "Progress", icon: Trophy },
 ];
 
 function BottomNav({ tab, onChange }: { tab: MemberTab; onChange: (t: MemberTab) => void }) {

@@ -15,7 +15,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
        FROM studio.news WHERE id = $1 AND branch_id = $2 AND status = 'published'`,
       [id, actor.branchId]
     );
-    if (!row) throw ApiError.notFound("News tidak ditemukan");
+    if (!row) throw ApiError.notFound("News not found");
     return NextResponse.json({ success: true, data: row });
   });
 }

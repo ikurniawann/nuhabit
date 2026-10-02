@@ -30,8 +30,8 @@ export async function PUT(request: NextRequest) {
     );
     const message =
       b.leaderboard_opt_in !== undefined
-        ? b.leaderboard_opt_in ? "Kamu tampil di leaderboard" : "Kamu disembunyikan dari leaderboard"
-        : b.wa_reminders ? "Pengingat WhatsApp dinyalakan" : "Pengingat WhatsApp dimatikan";
+        ? b.leaderboard_opt_in ? "You're now on the leaderboard" : "You're hidden from the leaderboard"
+        : b.wa_reminders ? "WhatsApp reminders on" : "WhatsApp reminders off";
     return NextResponse.json({ success: true, data: b, message });
   });
 }

@@ -85,7 +85,7 @@ export async function createPassOrder(actor: BookingActor, customerId: string, p
      WHERE id = $1 AND branch_id = $2 AND is_active AND sell_online AND price > 0`,
     [productId, actor.branchId]
   );
-  if (!product) throw ApiError.notFound("Paket tidak tersedia untuk dibeli online");
+  if (!product) throw ApiError.notFound("This pass isn't available to buy online");
 
   const existing = await loadOrder(
     `o.customer_id = $1 AND o.product_id = $2 AND o.status = 'pending' AND o.expires_at > now() + interval '2 minutes'`,
@@ -97,7 +97,7 @@ export async function createPassOrder(actor: BookingActor, customerId: string, p
   try {
     config = await loadActiveXenditConfig();
   } catch {
-    throw ApiError.conflict("Pembayaran online belum aktif. Silakan beli paket di front desk venue.");
+    throw ApiError.conflict("Online payment isn't available yet. Please buy your pass at the front desk.");
   }
 
   const code = orderCode();
@@ -109,7 +109,7 @@ export async function createPassOrder(actor: BookingActor, customerId: string, p
     description: `Paket ${product.name}`,
   }).catch((e) => {
     console.error("[studio] buat QR pesanan paket gagal:", e);
-    throw ApiError.conflict("Gagal membuat QRIS. Coba lagi sebentar lagi.");
+    throw ApiError.conflict("We couldn't create the QRIS. Please try again shortly.");
   });
 
   const expiresAt = qr.expires_at && Date.parse(qr.expires_at) > Date.now() ? qr.expires_at : new Date(Date.now() + ORDER_TTL_MINUTES * 60_000).toISOString();
@@ -172,7 +172,7 @@ export async function settlePassOrderFromWebhook(input: { referenceId: string; q
 /** Status pesanan untuk Member App; cek ke Xendit bila masih pending. */
 export async function refreshPassOrder(orderId: string, customerId: string): Promise<PassOrderView> {
   const order = await loadOrder("o.id = $1 AND o.customer_id = $2", [orderId, customerId]);
-  if (!order) throw ApiError.notFound("Pesanan tidak ditemukan");
+  if (!order) throw ApiError.notFound("Order not found");
   if (order.status !== "pending") return view(order);
 
   if (order.gateway_qr_id) {

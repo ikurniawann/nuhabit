@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const b = await validateBody(request, memberPtBookingSchema);
     const res = await createPtBooking(actor, { ...b, customer_id: customerId, source: "member_app" });
     return NextResponse.json(
-      { success: true, data: res, message: `Sesi Personal Training kamu sudah terkunci: ${b.date} ${b.start_time}–${res.end_time}. Sisa ${res.pt_left} sesi.` },
+      { success: true, data: res, message: `Your Personal Training session is locked in: ${b.date} ${b.start_time}–${res.end_time}. ${res.pt_left} ${res.pt_left === 1 ? "session" : "sessions"} left.` },
       { status: 201 }
     );
   });

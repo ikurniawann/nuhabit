@@ -6,12 +6,12 @@ import { CenterSpinner, Empty, SectionTitle, Tag } from "../ui";
 import { BuyPackages } from "./buy-packages";
 
 const STATUS: Record<MyPass["status"], { label: string; tone: "lime" | "muted" | "warn" | "danger" }> = {
-  active: { label: "Aktif", tone: "lime" },
-  scheduled: { label: "Mulai nanti", tone: "warn" },
-  expired: { label: "Kedaluwarsa", tone: "muted" },
-  exhausted: { label: "Habis", tone: "muted" },
-  cancelled: { label: "Dibatalkan", tone: "danger" },
-  pending_payment: { label: "Menunggu bayar", tone: "warn" },
+  active: { label: "Active", tone: "lime" },
+  scheduled: { label: "Starts later", tone: "warn" },
+  expired: { label: "Expired", tone: "muted" },
+  exhausted: { label: "Used up", tone: "muted" },
+  cancelled: { label: "Cancelled", tone: "danger" },
+  pending_payment: { label: "Awaiting payment", tone: "warn" },
 };
 
 export function PassesTab() {
@@ -25,12 +25,12 @@ export function PassesTab() {
   return (
     <div className="space-y-7 pt-2">
       <div>
-        <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Paket saya</h1>
-        <p className="mt-1 text-sm text-nh-beige/60">Kredit dipakai otomatis dari paket yang paling dulu berakhir.</p>
+        <h1 className="font-display text-3xl font-bold uppercase tracking-tight">My passes</h1>
+        <p className="mt-1 text-sm text-nh-beige/60">Credits are used from the pass that expires first.</p>
       </div>
 
       {current.length === 0 ? (
-        <Empty title="Belum ada paket aktif." hint="Pilih paket di bawah untuk mulai latihan." />
+        <Empty title="No active pass yet." hint="Choose a pass below to start training." />
       ) : (
         <div className="space-y-3">
           {current.map((p) => (
@@ -43,14 +43,14 @@ export function PassesTab() {
 
       {past.length > 0 && (
         <section>
-          <SectionTitle>Riwayat paket</SectionTitle>
+          <SectionTitle>Pass history</SectionTitle>
           <div className="space-y-2">
             {past.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold">{p.product_name}</p>
                   <p className="text-xs text-nh-beige/50">
-                    {p.pass_code} · s/d {friendlyDay(p.valid_until)}
+                    {p.pass_code} · until {friendlyDay(p.valid_until)}
                   </p>
                 </div>
                 <Tag tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Tag>
@@ -75,12 +75,12 @@ function PassCard({ pass: p }: { pass: MyPass }) {
         <Tag tone={s.tone}>{s.label}</Tag>
       </div>
       <div className="mt-5 space-y-4">
-        {p.class_credits_total > 0 && <Meter label="Kelas" left={p.class_left} total={p.class_credits_total} />}
+        {p.class_credits_total > 0 && <Meter label="Classes" left={p.class_left} total={p.class_credits_total} />}
         {p.pt_credits_total > 0 && <Meter label="Personal Training" left={p.pt_left} total={p.pt_credits_total} />}
-        {p.facility_access && <p className="text-sm text-nh-lemon">Termasuk akses fasilitas</p>}
+        {p.facility_access && <p className="text-sm text-nh-lemon">Includes facility access</p>}
       </div>
       <p className="mt-5 text-xs text-nh-beige/60">
-        {p.status === "scheduled" ? `Mulai ${friendlyDay(p.valid_from)} · ` : ""}Berlaku sampai {friendlyDay(p.valid_until)}
+        {p.status === "scheduled" ? `Starts ${friendlyDay(p.valid_from)} · ` : ""}Valid until {friendlyDay(p.valid_until)}
       </p>
     </div>
   );

@@ -14,10 +14,10 @@ export function hoursUntil(date: string, time: string): number {
 
 /** Konfirmasi batal: jelaskan apakah kredit kembali sesuai aturan venue. */
 export function cancelNote(status: string, date: string, time: string, windowHours: number): string {
-  if (status === "waitlisted") return "Kamu akan keluar dari waitlist. Tidak ada kredit yang terpakai.";
+  if (status === "waitlisted") return "You'll leave the waitlist. No credit has been used.";
   return hoursUntil(date, time) >= windowHours
-    ? `Masih lebih dari ${windowHours} jam sebelum sesi — kreditmu kembali ke paket.`
-    : `Kurang dari ${windowHours} jam sebelum sesi — kredit tidak kembali.`;
+    ? `More than ${windowHours} hours before the session — your credit goes back to your pass.`
+    : `Less than ${windowHours} hours before the session — the credit won't be returned.`;
 }
 
 export function BookingRow({ booking: b }: { booking: MyBooking }) {
@@ -34,7 +34,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
       setMsg({ tone: "ok", text: res.message });
       await refresh();
     } catch (e) {
-      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Gagal membatalkan" });
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Couldn't cancel" });
     } finally {
       setBusy(false);
     }
@@ -53,7 +53,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
           <p className="truncate font-semibold">{b.program_name}</p>
           <p className="truncate text-xs text-nh-beige/60">{b.coach_name ?? ""}</p>
         </div>
-        <Tag tone={b.status === "waitlisted" ? "warn" : "lime"}>{b.status === "waitlisted" ? "Waitlist" : "Terkunci"}</Tag>
+        <Tag tone={b.status === "waitlisted" ? "warn" : "lime"}>{b.status === "waitlisted" ? "Waitlist" : "Locked in"}</Tag>
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={b.program_name}>
@@ -64,7 +64,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
         {msg ? (
           <div className="mt-5 space-y-4">
             <Notice tone={msg.tone}>{msg.text}</Notice>
-            <PillButton variant="ghost" className="w-full" onClick={() => setOpen(false)}>Tutup</PillButton>
+            <PillButton variant="ghost" className="w-full" onClick={() => setOpen(false)}>Close</PillButton>
           </div>
         ) : (
           <div className="mt-5 space-y-4">
@@ -73,9 +73,9 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
             </div>
             <PillButton variant="danger" className="w-full" disabled={busy} onClick={cancel}>
               {busy && <Loader2 className="size-4 animate-spin" />}
-              {b.status === "waitlisted" ? "Keluar dari waitlist" : "Batalkan booking"}
+              {b.status === "waitlisted" ? "Leave waitlist" : "Cancel booking"}
             </PillButton>
-            <PillButton variant="ghost" className="w-full" onClick={() => setOpen(false)}>Tetap ikut</PillButton>
+            <PillButton variant="ghost" className="w-full" onClick={() => setOpen(false)}>Keep my spot</PillButton>
           </div>
         )}
       </Sheet>

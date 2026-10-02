@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "Member App · NüHabit",
-  description: "Booking kelas & Personal Training, cek sisa sesi, dan beli paket NüHabit.",
+  description: "Book classes & Personal Training, track your sessions, and buy NüHabit passes.",
 };
 
 export const viewport: Viewport = { themeColor: "#131a1c" };

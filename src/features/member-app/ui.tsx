@@ -104,7 +104,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/20" />
         <div className="mb-4 flex items-start justify-between gap-3">
           <h3 className="font-display text-xl font-semibold">{title}</h3>
-          <button type="button" onClick={onClose} aria-label="Tutup" className="rounded-full p-1.5 text-nh-beige/60 hover:bg-white/10">
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-nh-beige/60 hover:bg-white/10">
             <X className="size-5" />
           </button>
         </div>

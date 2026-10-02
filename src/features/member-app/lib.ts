@@ -1,4 +1,6 @@
-/** Helper & tipe Member App NüHabit (EPIC-057). */
+/** Helper & tipe Member App NüHabit (EPIC-057). UI berbahasa Inggris (keputusan owner 2026-10-02). */
+
+import { toEnglish } from "./i18n";
 
 export class MemberApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -18,11 +20,11 @@ export async function memberFetch<T>(url: string, init?: { method?: string; body
       signal: controller.signal,
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok || body.success === false) throw new MemberApiError(body.error ?? body.message ?? "Terjadi kesalahan, coba lagi", res.status);
+    if (!res.ok || body.success === false) throw new MemberApiError(toEnglish(body.error ?? body.message), res.status);
     return body as T;
   } catch (e) {
     if (e instanceof MemberApiError) throw e;
-    throw new MemberApiError("Koneksi bermasalah, coba lagi", 0);
+    throw new MemberApiError("Connection problem. Please try again.", 0);
   } finally {
     clearTimeout(timer);
   }
@@ -107,9 +109,9 @@ export interface PtCatalogEntry {
   coaches: { id: string; full_name: string; display_name: string | null; level: "coach" | "head_coach"; photo_url: string | null; bio: string | null; specialties: string[] | null }[];
 }
 
-const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-const DAYS_SHORT = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const asUtc = (date: string) => new Date(`${date}T00:00:00Z`);
 
@@ -132,28 +134,38 @@ export function dayShort(date: string): string {
   return DAYS_SHORT[asUtc(date).getUTCDay()];
 }
 
+/** "4 Oct" */
 export function dateLabel(date: string): string {
   const d = asUtc(date);
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
-/** "Sabtu, 4 Okt" atau "Hari ini" / "Besok". */
+/** Tanggal saja (angka) untuk strip hari. */
+export function dayNumber(date: string): string {
+  return String(asUtc(date).getUTCDate());
+}
+
+/** "Saturday, 4 Oct", or "Today" / "Tomorrow". */
 export function friendlyDay(date: string): string {
   const today = wibToday();
-  if (date === today) return "Hari ini";
-  if (date === addDaysIso(today, 1)) return "Besok";
+  if (date === today) return "Today";
+  if (date === addDaysIso(today, 1)) return "Tomorrow";
   return `${dayName(date)}, ${dateLabel(date)}`;
 }
 
-/** 06:30 → 06.30 (gaya penulisan jam Indonesia). */
+/** Jam 24-jam "06:30" (tampilan Inggris memakai titik dua). */
 export function jam(t: string): string {
-  return t.replace(":", ".");
+  return t.slice(0, 5);
 }
 
 export function firstName(name: string | null | undefined): string {
-  return (name ?? "").trim().split(/\s+/)[0] || "Atlet";
+  return (name ?? "").trim().split(/\s+/)[0] || "Athlete";
 }
 
 export function rupiah(v: number): string {
-  return `Rp ${Math.round(v).toLocaleString("id-ID")}`;
+  return `Rp ${Math.round(v).toLocaleString("en-US")}`;
+}
+
+export function num(v: number): string {
+  return Math.round(v).toLocaleString("en-US");
 }

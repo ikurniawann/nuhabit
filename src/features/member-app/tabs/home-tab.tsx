@@ -43,11 +43,11 @@ export function HomeTab() {
     <div className="space-y-7 pt-2">
       <section>
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-nh-beige/60">Halo, {firstName(profile.name)}</p>
+          <p className="text-sm text-nh-beige/60">Hi, {firstName(profile.name)}</p>
           <TierChip onOpen={() => go("profile")} />
         </div>
         <h1 className="font-display text-3xl font-bold uppercase leading-tight tracking-tight">
-          {next ? "Sesi berikutnya menunggu." : "Mulai dari satu sesi."}
+          {next ? "Your next session awaits." : "Start with one session."}
         </h1>
       </section>
 
@@ -56,23 +56,23 @@ export function HomeTab() {
           <Image src="/brand/wallpaper-forest.webp" alt="" fill className="object-cover opacity-40" />
           <div className="relative">
             <div className="flex items-center justify-between">
-              <Tag tone="lime">{next.status === "waitlisted" ? "Waitlist" : "Terkunci"}</Tag>
+              <Tag tone="lime">{next.status === "waitlisted" ? "Waitlist" : "Locked in"}</Tag>
               <span className="text-xs text-nh-beige/70">{friendlyDay(next.session_date)}</span>
             </div>
             <p className="mt-4 font-display text-5xl font-bold tabular-nums text-nh-lime">{jam(next.start_time)}</p>
             <p className="mt-1 font-display text-xl font-semibold">{next.program_name}</p>
-            <p className="text-sm text-nh-beige/70">{next.coach_name ? `bersama ${next.coach_name}` : ""}</p>
-            {upcoming.length > 1 && <p className="mt-3 text-xs text-nh-beige/60">+{upcoming.length - 1} sesi lain sudah dibooking</p>}
+            <p className="text-sm text-nh-beige/70">{next.coach_name ? `with ${next.coach_name}` : ""}</p>
+            {upcoming.length > 1 && <p className="mt-3 text-xs text-nh-beige/60">+{upcoming.length - 1} more {upcoming.length - 1 === 1 ? "session" : "sessions"} booked</p>}
           </div>
         </div>
       ) : (
         <div className="relative overflow-hidden rounded-[2rem] bg-nh-forest p-6">
           <Image src="/brand/wallpaper-forest.webp" alt="" fill className="object-cover opacity-40" />
           <div className="relative">
-            <p className="font-display text-xl font-semibold">Belum ada sesi.</p>
-            <p className="mt-1 text-sm text-nh-beige/70">Pilih kelas minggu ini dan kunci tempatmu.</p>
+            <p className="font-display text-xl font-semibold">No sessions yet.</p>
+            <p className="mt-1 text-sm text-nh-beige/70">Pick a class this week and lock in your spot.</p>
             <PillButton className="mt-5" onClick={() => go("schedule")}>
-              Booking kelas <ArrowRight className="size-4" />
+              Book a class <ArrowRight className="size-4" />
             </PillButton>
           </div>
         </div>
@@ -80,35 +80,35 @@ export function HomeTab() {
 
       <section className="grid grid-cols-2 gap-3">
         <Card onClick={() => go("passes")}>
-          <p className="text-xs text-nh-beige/60">Sisa kelas</p>
+          <p className="text-xs text-nh-beige/60">Classes left</p>
           <p className="mt-1 font-display text-3xl font-bold tabular-nums">{classLeft}</p>
           {classTotal > 0 && (
             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-nh-lime" style={{ width: `${Math.min(100, (classLeft / classTotal) * 100)}%` }} />
             </div>
           )}
-          <p className="mt-2 text-[11px] text-nh-beige/50">{soonest ? `Aktif s/d ${friendlyDay(soonest)}` : "Belum ada paket aktif"}</p>
+          <p className="mt-2 text-[11px] text-nh-beige/50">{soonest ? `Valid until ${friendlyDay(soonest)}` : "No active pass yet"}</p>
         </Card>
         <Card onClick={() => go("pt")}>
-          <p className="text-xs text-nh-beige/60">Sisa Personal Training</p>
+          <p className="text-xs text-nh-beige/60">Personal Training left</p>
           <p className="mt-1 font-display text-3xl font-bold tabular-nums">{ptLeft}</p>
           <p className="mt-2 flex items-center gap-1 text-[11px] text-nh-beige/50">
-            <Flame className="size-3.5 text-nh-lime" /> {attendedThisWeek} sesi minggu ini
+            <Flame className="size-3.5 text-nh-lime" /> {attendedThisWeek} this week
           </p>
         </Card>
       </section>
 
       {active.length > 0 && classLeft + ptLeft <= 1 && (
         <Card className="border-nh-lime/30">
-          <p className="font-semibold">Tinggal {classLeft + ptLeft} sesi lagi.</p>
-          <p className="mt-1 text-sm text-nh-beige/60">Lanjutkan kebiasaanmu?</p>
-          <PillButton className="mt-3" onClick={() => go("passes")}>Lihat paket</PillButton>
+          <p className="font-semibold">Only {classLeft + ptLeft} {classLeft + ptLeft === 1 ? "session" : "sessions"} left.</p>
+          <p className="mt-1 text-sm text-nh-beige/60">Keep the habit going?</p>
+          <PillButton className="mt-3" onClick={() => go("passes")}>See passes</PillButton>
         </Card>
       )}
 
       <section className="grid grid-cols-2 gap-3">
         <PillButton onClick={() => go("schedule")}>
-          <CalendarDays className="size-4" /> Booking kelas
+          <CalendarDays className="size-4" /> Book a class
         </PillButton>
         <PillButton variant="ghost" onClick={() => go("pt")}>
           <Dumbbell className="size-4" /> Personal Training
@@ -117,7 +117,7 @@ export function HomeTab() {
 
       {upcoming.length > 0 && (
         <section>
-          <SectionTitle>Booking saya</SectionTitle>
+          <SectionTitle>My bookings</SectionTitle>
           <div className="space-y-2">
             {upcoming.slice(0, 5).map((b) => (
               <BookingRow key={b.id} booking={b} />
@@ -132,16 +132,16 @@ export function HomeTab() {
         <SectionTitle
           action={
             <button type="button" onClick={() => go("profile")} className="text-xs font-semibold text-nh-lime">
-              Semua
+              See all
             </button>
           }
         >
-          Coach kami
+          Our coaches
         </SectionTitle>
         {!coaches ? (
           <CenterSpinner />
         ) : coaches.length === 0 ? (
-          <p className="text-sm text-nh-beige/50">Profil coach segera hadir.</p>
+          <p className="text-sm text-nh-beige/50">Coach profiles coming soon.</p>
         ) : (
           <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1">
             {coaches.map((c) => (
@@ -172,7 +172,7 @@ function TierChip({ onOpen }: { onOpen: () => void }) {
   return (
     <button type="button" onClick={onOpen} className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs">
       <span className="font-semibold" style={{ color: t.color ?? undefined }}>{t.name}</span>
-      <span className="text-nh-beige/60">{t.xp.toLocaleString("id-ID")} XP</span>
+      <span className="text-nh-beige/60">{t.xp.toLocaleString("en-US")} XP</span>
     </button>
   );
 }

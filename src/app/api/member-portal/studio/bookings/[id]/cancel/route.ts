@@ -9,13 +9,13 @@ export async function POST(_request: NextRequest, { params }: Params) {
   return studioRoute("member booking cancel", async () => {
     const { customerId, actor } = await requireMemberStudio();
     const { id } = await params;
-    const res = await cancelBooking(actor, id, { reason: "Dibatalkan member", customerId });
+    const res = await cancelBooking(actor, id, { reason: "Cancelled by member", customerId });
     const message =
       res.status === "late_cancelled"
-        ? "Booking dibatalkan. Karena kurang dari batas waktu, kreditnya tidak kembali."
+        ? "Booking cancelled. Since it was within the cancellation window, the credit isn't returned."
         : res.refunded
-          ? "Booking dibatalkan. Kredit sudah kembali ke pass kamu."
-          : "Kamu keluar dari waitlist.";
+          ? "Booking cancelled. Your credit is back on your pass."
+          : "You've left the waitlist.";
     return NextResponse.json({ success: true, data: res, message });
   });
 }

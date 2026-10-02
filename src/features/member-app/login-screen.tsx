@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { ArrowLeft, Loader2 } from "lucide-react";
+import { toEnglish } from "./i18n";
 import { memberFetch } from "./lib";
 import { Notice, PillButton } from "./ui";
 
@@ -29,10 +30,10 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
         await verify("");
         return;
       }
-      setInfo(res.message);
+      setInfo(toEnglish(res.message));
       setStep("code");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal mengirim kode");
+      setError(e instanceof Error ? e.message : "We couldn't send the code");
     } finally {
       setBusy(false);
     }
@@ -44,7 +45,7 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
     try {
       await verify(code);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Kode salah");
+      setError(e instanceof Error ? e.message : "That code isn't right");
     } finally {
       setBusy(false);
     }
@@ -58,11 +59,11 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
         <Image src="/brand/logo-neon.png" alt="NUHABIT" width={1325} height={173} className="h-6 w-auto self-start" priority />
         <div className="mt-auto">
           <h1 className="font-display text-4xl font-bold uppercase leading-[1.05] tracking-tight">
-            Latihan hari ini,
+            Train today,
             <br />
-            <span className="text-nh-lime">kebiasaan besok.</span>
+            <span className="text-nh-lime">build tomorrow.</span>
           </h1>
-          <p className="mt-3 text-sm text-nh-beige/70">Masuk dengan nomor WhatsApp yang terdaftar di venue.</p>
+          <p className="mt-3 text-sm text-nh-beige/70">Sign in with the WhatsApp number registered at the venue.</p>
 
           <form
             className="mt-8 space-y-4"
@@ -74,7 +75,7 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
           >
             {step === "phone" ? (
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Nomor WhatsApp</span>
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-nh-beige/60">WhatsApp number</span>
                 <input
                   inputMode="tel"
                   autoComplete="tel"
@@ -87,11 +88,11 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
             ) : (
               <>
                 <button type="button" onClick={() => { setStep("phone"); setCode(""); setError(null); }} className="flex items-center gap-1.5 text-sm text-nh-beige/70">
-                  <ArrowLeft className="size-4" /> Ganti nomor
+                  <ArrowLeft className="size-4" /> Change number
                 </button>
                 {info && <Notice tone="ok">{info}</Notice>}
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Kode 6 digit</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-nh-beige/60">6-digit code</span>
                   <input
                     inputMode="numeric"
                     autoComplete="one-time-code"
@@ -107,10 +108,10 @@ export function LoginScreen({ onLoggedIn }: { onLoggedIn: () => void }) {
             {error && <Notice tone="error">{error}</Notice>}
             <PillButton type="submit" disabled={busy || (step === "phone" ? phone.replace(/\D/g, "").length < 9 : code.length !== 6)} className="w-full">
               {busy && <Loader2 className="size-4 animate-spin" />}
-              {step === "phone" ? "Kirim kode" : "Masuk"}
+              {step === "phone" ? "Send code" : "Sign in"}
             </PillButton>
           </form>
-          <p className="mt-6 text-center text-xs text-nh-beige/50">Belum terdaftar? Daftar di front desk venue — setiap atlet mulai dari suatu tempat.</p>
+          <p className="mt-6 text-center text-xs text-nh-beige/50">Not a member yet? Sign up at the front desk — every athlete starts somewhere.</p>
         </div>
       </div>
     </div>

@@ -31,11 +31,11 @@ export function ProfileTab() {
       <ProgressSection />
 
       <section>
-        <SectionTitle>Coach kami</SectionTitle>
+        <SectionTitle>Our coaches</SectionTitle>
         {!coaches ? (
           <CenterSpinner />
         ) : coaches.length === 0 ? (
-          <p className="text-sm text-nh-beige/50">Profil coach segera hadir.</p>
+          <p className="text-sm text-nh-beige/50">Coach profiles coming soon.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {coaches.map((c) => (
@@ -54,7 +54,7 @@ export function ProfileTab() {
       <ReminderToggle />
 
       <PillButton variant="ghost" className="w-full" onClick={logout}>
-        <LogOut className="size-4" /> Keluar
+        <LogOut className="size-4" /> Sign out
       </PillButton>
 
       <Sheet open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ""}>
@@ -64,13 +64,13 @@ export function ProfileTab() {
               <Avatar name={open.name} photo={open.photo_url} size={88} />
               <div className="space-y-1">
                 <Tag tone={open.level === "head_coach" ? "lime" : "muted"}>{open.level === "head_coach" ? "Head Coach" : "Coach"}</Tag>
-                {open.offers_pt && <p className="text-xs text-nh-beige/60">Menerima Personal Training</p>}
+                {open.offers_pt && <p className="text-xs text-nh-beige/60">Offers Personal Training</p>}
               </div>
             </div>
             {open.bio && <p className="whitespace-pre-line text-sm leading-relaxed text-nh-beige/85">{open.bio}</p>}
             {open.specialties && open.specialties.length > 0 && (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Spesialisasi</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Specialties</p>
                 <div className="flex flex-wrap gap-1.5">
                   {open.specialties.map((s) => (
                     <Tag key={s}>{s}</Tag>
@@ -80,13 +80,13 @@ export function ProfileTab() {
             )}
             {open.certifications && (
               <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Sertifikasi</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Certifications</p>
                 <p className="whitespace-pre-line text-sm text-nh-beige/80">{open.certifications}</p>
               </div>
             )}
             {open.offers_pt && (
               <PillButton className="w-full" onClick={() => { setOpen(null); go("pt"); }}>
-                Booking Personal Training
+                Book Personal Training
               </PillButton>
             )}
           </div>
@@ -122,14 +122,14 @@ function ReminderToggle() {
     <Card>
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="font-semibold">Pengingat WhatsApp</p>
-          <p className="mt-0.5 text-xs text-nh-beige/60">Sesi besok, tempat dari waitlist, dan paket yang hampir habis.</p>
+          <p className="font-semibold">WhatsApp reminders</p>
+          <p className="mt-0.5 text-xs text-nh-beige/60">Tomorrow's sessions, waitlist spots, and passes running low.</p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={on === true}
-          aria-label="Pengingat WhatsApp"
+          aria-label="WhatsApp reminders"
           disabled={on === null || busy}
           onClick={toggle}
           className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-nh-lime" : "bg-white/15"} disabled:opacity-60`}

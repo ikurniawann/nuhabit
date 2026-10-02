@@ -266,6 +266,12 @@ Urutan warna seri (light mode):
 
 ### Member App (member & calon member)
 
+- **Bahasa: Inggris** (keputusan owner 2026-10-02) — seluruh teks Member App, pesan error yang tampil ke member,
+  format tanggal ("Saturday, 4 Oct") dan jam 24-jam ("06:30"). Backoffice & Coach Portal tetap bahasa Indonesia.
+  Pesan server dari mesin bersama diterjemahkan di `src/features/member-app/i18n.ts`. Tone tetap sama:
+  "You're locked in. See you tomorrow at 06:30.", "Only 1 session left. Keep the habit going?",
+  "No sessions yet. Start with one." Istilah "Personal Training" tetap ditulis lengkap.
+
 - **Mobile-first**. Boleh lebih ekspresif: hero dengan sapuan grafis, foto atlet, headline Outfit besar.
 - Layar beranda: kartu **"Sesi berikutnya"** (Forest + Lime), **sisa sesi paket** (progress),
   tombol pill Lime **"Booking kelas"**, news Hyrox, profil coach.

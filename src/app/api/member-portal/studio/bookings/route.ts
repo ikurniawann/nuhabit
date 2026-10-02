@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     const res = await createBooking(actor, { session_id: b.session_id, customer_id: customerId, source: "member_app" });
     const message =
       res.status === "waitlisted"
-        ? "Kelas penuh. Kamu masuk waitlist — kami kabari kalau ada tempat."
-        : `Sesi kamu sudah terkunci. Sisa ${res.class_left} kelas di pass ${res.pass_code}.`;
+        ? "This class is full. You're on the waitlist — we'll let you know if a spot opens up."
+        : `You're locked in. ${res.class_left} ${res.class_left === 1 ? "class" : "classes"} left on pass ${res.pass_code}.`;
     return NextResponse.json({ success: true, data: res, message }, { status: 201 });
   });
 }

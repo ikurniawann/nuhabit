@@ -63,10 +63,10 @@ export function PtTab() {
     setMsg(null);
     try {
       await memberFetch("/api/member-portal/studio/pt/bookings", { method: "POST", body: { program_id: program.id, coach_id: coach.id, date, start_time: time } });
-      setMsg({ tone: "ok", text: `Sesi Personal Training kamu sudah terkunci. Sampai jumpa ${friendlyDay(date)}, ${jam(time)} bersama ${coachName(coach)}.` });
+      setMsg({ tone: "ok", text: `Your Personal Training session is locked in. See you ${friendlyDay(date).replace(/^(Today|Tomorrow)$/, (d) => d.toLowerCase())} at ${jam(time)} with ${coachName(coach)}.` });
       await Promise.all([refresh(), loadSlots()]);
     } catch (e) {
-      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Gagal booking" });
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Couldn't book this session" });
     } finally {
       setBusy(false);
     }
@@ -78,12 +78,12 @@ export function PtTab() {
     <div className="space-y-6 pt-2">
       <div>
         <h1 className="font-display text-3xl font-bold uppercase leading-tight tracking-tight">Personal Training</h1>
-        <p className="mt-1 text-sm text-nh-beige/60">Sesi privat satu lawan satu bersama coach pilihanmu · sisa {ptLeft} sesi.</p>
+        <p className="mt-1 text-sm text-nh-beige/60">One-on-one sessions with the coach of your choice · {ptLeft} {ptLeft === 1 ? "session" : "sessions"} left.</p>
       </div>
 
       {myPt.length > 0 && !coach && (
         <section>
-          <SectionTitle>Jadwal Personal Training saya</SectionTitle>
+          <SectionTitle>My Personal Training</SectionTitle>
           <div className="space-y-2">
             {myPt.map((b) => (
               <BookingRow key={b.id} booking={b} />
@@ -93,24 +93,24 @@ export function PtTab() {
       )}
 
       {catalog.length === 0 ? (
-        <Empty title="Program Personal Training belum tersedia." hint="Tanyakan ke front desk untuk jadwal terdekat." />
+        <Empty title="No Personal Training programs yet." hint="Ask the front desk about upcoming availability." />
       ) : ptLeft === 0 && !coach ? (
         <Card className="border-nh-lime/30">
-          <p className="font-semibold">Belum ada kredit Personal Training.</p>
-          <p className="mt-1 text-sm text-nh-beige/60">Pilih paket yang berisi Personal Training untuk mulai booking.</p>
-          <PillButton className="mt-4" onClick={() => go("passes")}>Lihat paket</PillButton>
+          <p className="font-semibold">No Personal Training credits yet.</p>
+          <p className="mt-1 text-sm text-nh-beige/60">Choose a pass that includes Personal Training to start booking.</p>
+          <PillButton className="mt-4" onClick={() => go("passes")}>See passes</PillButton>
         </Card>
       ) : null}
 
       {catalog.length > 0 && !program && (
         <section>
-          <SectionTitle>1. Pilih program</SectionTitle>
+          <SectionTitle>1. Choose a program</SectionTitle>
           <div className="space-y-2">
             {catalog.map((p) => (
               <Card key={p.id} onClick={() => setProgramId(p.id)}>
                 <p className="font-semibold">{p.name}</p>
                 <p className="mt-0.5 text-xs text-nh-beige/60">
-                  {p.duration_minutes} menit{p.level_label ? ` · ${p.level_label}` : ""} · {p.coaches.length} coach
+                  {p.duration_minutes} min{p.level_label ? ` · ${p.level_label}` : ""} · {p.coaches.length} {p.coaches.length === 1 ? "coach" : "coaches"}
                 </p>
                 {p.description && <p className="mt-2 text-sm text-nh-beige/70">{p.description}</p>}
               </Card>
@@ -126,9 +126,9 @@ export function PtTab() {
               <ArrowLeft className="size-4" /> {program.name}
             </button>
           )}
-          <SectionTitle>{catalog.length > 1 ? "2. Pilih coach" : "Pilih coach"}</SectionTitle>
+          <SectionTitle>{catalog.length > 1 ? "2. Choose a coach" : "Choose a coach"}</SectionTitle>
           {program.coaches.length === 0 ? (
-            <Empty title="Belum ada coach untuk program ini." />
+            <Empty title="No coaches for this program yet." />
           ) : (
             <div className="space-y-2">
               {program.coaches.map((c) => (
@@ -160,20 +160,20 @@ export function PtTab() {
       {program && coach && (
         <section className="space-y-5">
           <button type="button" onClick={() => setCoach(null)} className="flex items-center gap-1.5 text-sm text-nh-beige/70">
-            <ArrowLeft className="size-4" /> Ganti coach
+            <ArrowLeft className="size-4" /> Change coach
           </button>
           <div className="flex items-center gap-3">
             <Avatar name={coachName(coach)} photo={coach.photo_url} size={48} />
             <div>
               <p className="font-display text-lg font-semibold">{coachName(coach)}</p>
               <p className="text-xs text-nh-beige/60">
-                {program.name} · {program.duration_minutes} menit
+                {program.name} · {program.duration_minutes} min
               </p>
             </div>
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Tanggal</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Date</p>
             <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
               {days.map((d) => (
                 <button
@@ -190,11 +190,11 @@ export function PtTab() {
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Jam tersedia · {friendlyDay(date)}</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Available times · {friendlyDay(date)}</p>
             {!slots ? (
               <CenterSpinner />
             ) : slots.length === 0 ? (
-              <Empty title="Tidak ada jam kosong." hint="Coba tanggal lain atau coach lain." />
+              <Empty title="No open times." hint="Try another date or coach." />
             ) : (
               <div className="grid grid-cols-4 gap-2">
                 {slots.map((t) => (
@@ -213,32 +213,32 @@ export function PtTab() {
         </section>
       )}
 
-      <Sheet open={!!(coach && time && program)} onClose={() => { setTime(null); setMsg(null); }} title="Konfirmasi Personal Training">
+      <Sheet open={!!(coach && time && program)} onClose={() => { setTime(null); setMsg(null); }} title="Confirm Personal Training">
         {program && coach && time && (
           <div className="space-y-4">
             <div className="rounded-2xl bg-white/5 p-4">
               <p className="font-display text-3xl font-bold text-nh-lime tabular-nums">{jam(time)}</p>
               <p className="mt-1 font-semibold">{friendlyDay(date)}</p>
               <p className="text-sm text-nh-beige/70">
-                {program.name} bersama {coachName(coach)}
+                {program.name} with {coachName(coach)}
               </p>
             </div>
             {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
             {msg?.tone === "ok" ? (
               <PillButton className="w-full" onClick={() => { setTime(null); setMsg(null); setCoach(null); }}>
-                <Check className="size-4" /> Selesai
+                <Check className="size-4" /> Done
               </PillButton>
             ) : ptLeft === 0 ? (
               <>
-                <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm text-nh-beige/80">Kredit Personal Training kamu habis.</div>
-                <PillButton className="w-full" onClick={() => go("passes")}>Lihat paket</PillButton>
+                <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm text-nh-beige/80">You're out of Personal Training credits.</div>
+                <PillButton className="w-full" onClick={() => go("passes")}>See passes</PillButton>
               </>
             ) : (
               <>
-                <p className="text-xs text-nh-beige/50">1 kredit Personal Training dikunci. Batal tepat waktu, kredit kembali.</p>
+                <p className="text-xs text-nh-beige/50">Booking locks in 1 Personal Training credit. Cancel in time and it's returned.</p>
                 <PillButton className="w-full" disabled={busy} onClick={book}>
                   {busy && <Loader2 className="size-4 animate-spin" />}
-                  Kunci sesi ini
+                  Lock in this session
                 </PillButton>
               </>
             )}
