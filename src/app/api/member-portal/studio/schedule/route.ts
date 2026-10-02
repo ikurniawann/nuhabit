@@ -5,12 +5,15 @@ import { loadSettings } from "@/lib/studio/booking-server";
 import { requireMemberStudio } from "@/lib/studio/member-server";
 import { venueToday } from "@/lib/studio/pass-server";
 import { studioRoute } from "@/lib/studio/server";
+import { applyBookingBenefits } from "@/lib/studio/loyalty";
+import { memberBenefits } from "@/lib/studio/loyalty-server";
 
 /** Jadwal kelas yang bisa dibooking member + sisa kursi + status booking saya. */
 export async function GET(request: NextRequest) {
   return studioRoute("member schedule", async () => {
     const { customerId, actor } = await requireMemberStudio();
-    const settings = await loadSettings(actor.branchId);
+    // Benefit tier (EPIC-066): jendela booking & batas batal mengikuti tier member.
+    const settings = applyBookingBenefits(await loadSettings(actor.branchId), await memberBenefits(customerId));
     const today = await venueToday();
     const fromQ = request.nextUrl.searchParams.get("from") ?? "";
     const from = isValidDate(fromQ) && fromQ >= today ? fromQ : today;

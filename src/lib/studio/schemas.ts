@@ -280,4 +280,31 @@ export const jobSettingsSchema = z
   })
   .partial();
 export const jobRunSchema = z.object({ job: z.enum(["daily_close", "reminders"]) });
-export const memberPrefsSchema = z.object({ wa_reminders: z.boolean() });
+export const memberPrefsSchema = z
+  .object({ wa_reminders: z.boolean(), leaderboard_opt_in: z.boolean() })
+  .partial()
+  .refine((v) => v.wa_reminders !== undefined || v.leaderboard_opt_in !== undefined, "Tidak ada perubahan");
+
+// ── Program Loyalitas (EPIC-066) ───────────────────────────────────────────
+export const loyaltyRulePatchSchema = z
+  .object({
+    xp_value: z.number().min(0).max(100000),
+    amount_step: z.number().min(1).max(100000000),
+    is_active: z.boolean(),
+    metadata: z.record(z.string(), z.unknown()),
+  })
+  .partial();
+export const loyaltyTierPatchSchema = z
+  .object({
+    name: z.string().trim().min(2).max(40),
+    min_lifetime_xp: z.number().int().min(0).max(10000000),
+    discount_percent: z.number().min(0).max(100),
+    early_booking_days: z.number().int().min(0).max(14),
+    cancel_window_hours: z.number().int().min(0).max(72).nullable(),
+    waitlist_priority: z.boolean(),
+  })
+  .partial();
+export const memberStatusSchema = z.object({
+  status: z.enum(["active", "suspended", "banned"]),
+  reason: z.string().trim().max(300).nullable().optional(),
+});

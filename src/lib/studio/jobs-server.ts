@@ -17,6 +17,7 @@ import {
 } from "@/lib/studio/jobs";
 import { expireDuePasses, normalizeMemberPhone, PASS_SELECT, PASS_USAGE_JOIN, type PassRow } from "@/lib/studio/pass-server";
 import { remainingCredits } from "@/lib/studio/pass";
+import { awardStreaks } from "@/lib/studio/loyalty-server";
 
 /**
  * Job harian & pengingat WhatsApp (EPIC-058). Dipanggil berkala oleh watcher
@@ -89,6 +90,8 @@ export interface DailyCloseSummary {
   passes_expired: number;
   breakage_recognized: number;
   orders_expired: number;
+  /** Bonus streak XP yang diberikan (EPIC-066). */
+  streak_bonus: number;
 }
 
 /**
@@ -98,7 +101,7 @@ export interface DailyCloseSummary {
 export async function runDailyClose(v: Venue, trigger: "auto" | "manual", userId: string | null = null): Promise<{ ran: boolean; summary?: DailyCloseSummary; error?: string }> {
   const runId = await startRun(v, "daily_close", trigger, userId);
   if (!runId) return { ran: false };
-  const summary: DailyCloseSummary = { sessions_completed: 0, passes_expired: 0, breakage_recognized: 0, orders_expired: 0 };
+  const summary: DailyCloseSummary = { sessions_completed: 0, passes_expired: 0, breakage_recognized: 0, orders_expired: 0, streak_bonus: 0 };
   try {
     const actor = { companyId: v.companyId, branchId: v.branchId, actorId: userId, staff: true };
     for (let i = 0; i < 25; i++) {
@@ -106,6 +109,8 @@ export async function runDailyClose(v: Venue, trigger: "auto" | "manual", userId
       summary.sessions_completed += n;
       if (n < 200) break;
     }
+    const streak = await awardStreaks(v, wibNow().date);
+    summary.streak_bonus = streak.weekly + streak.fourWeek;
     const exp = await expireDuePasses({ companyId: v.companyId, branchId: v.branchId, user: { id: userId } });
     summary.passes_expired = exp.expired;
     summary.breakage_recognized = exp.recognized;

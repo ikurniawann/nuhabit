@@ -8,6 +8,7 @@ berbeda, epic yang benar.
 | # | Epic | Ringkas | Status |
 |---|------|---------|--------|
 | 1 | [EPIC-057](./epics/EPIC-057-member-app-nuhabit.md) | Member App: booking kelas & Personal Training, pass, beli paket online (Xendit), profil coach + foto, News Hyrox | ready-for-qa |
+| 1b | [EPIC-066](./epics/EPIC-066-nuhabit-progress-loyalitas.md) | NüHabit Progress: XP, tier, reward, leaderboard, CRM retensi | on-progress |
 | 2 | [EPIC-058](./epics/EPIC-058-job-harian-notifikasi-wa.md) | Job harian otomatis + pengingat WhatsApp | ready-for-qa |
 | 3 | [EPIC-059](./epics/EPIC-059-aset-tetap-qr-penyusutan.md) | Aset tetap: QR per aset, penyusutan, perawatan | backlog — **tunggu konfirmasi proses bisnis owner** |
 | 4 | [EPIC-061](./epics/EPIC-061-pos-fnb-absensi-cs.md) | Penyesuaian POS F&B & absensi CS | backlog |

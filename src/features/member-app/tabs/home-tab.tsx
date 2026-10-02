@@ -42,7 +42,10 @@ export function HomeTab() {
   return (
     <div className="space-y-7 pt-2">
       <section>
-        <p className="text-sm text-nh-beige/60">Halo, {firstName(profile.name)}</p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-nh-beige/60">Halo, {firstName(profile.name)}</p>
+          <TierChip onOpen={() => go("profile")} />
+        </div>
         <h1 className="font-display text-3xl font-bold uppercase leading-tight tracking-tight">
           {next ? "Sesi berikutnya menunggu." : "Mulai dari satu sesi."}
         </h1>
@@ -154,5 +157,22 @@ export function HomeTab() {
         )}
       </section>
     </div>
+  );
+}
+
+/** Tier & saldo XP ringkas di beranda → buka tab Progres. */
+function TierChip({ onOpen }: { onOpen: () => void }) {
+  const [t, setT] = useState<{ name: string; color: string | null; xp: number } | null>(null);
+  useEffect(() => {
+    memberFetch<{ data: { tier: { name: string; display_color: string | null } | null; xp_balance: number } }>("/api/member-portal/studio/progress")
+      .then((r) => setT({ name: r.data.tier?.name ?? "Starter", color: r.data.tier?.display_color ?? null, xp: r.data.xp_balance }))
+      .catch(() => setT(null));
+  }, []);
+  if (!t) return null;
+  return (
+    <button type="button" onClick={onOpen} className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs">
+      <span className="font-semibold" style={{ color: t.color ?? undefined }}>{t.name}</span>
+      <span className="text-nh-beige/60">{t.xp.toLocaleString("id-ID")} XP</span>
+    </button>
   );
 }

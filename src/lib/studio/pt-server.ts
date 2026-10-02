@@ -5,6 +5,7 @@ import { holdCredit, loadSettings, lockMemberPasses, type BookingActor } from "@
 import { computeFreeSlots, isOnTimeOff, windowsForDate } from "@/lib/studio/pt";
 import { addDays, isValidDate, toMinutes } from "@/lib/studio/schedule";
 import { venueToday } from "@/lib/studio/pass-server";
+import { assertCanBook } from "@/lib/studio/loyalty-server";
 
 /**
  * Personal Training (EPIC-055): slot kosong coach & booking. Sesi Personal
@@ -117,6 +118,7 @@ export async function createPtBooking(
   actor: BookingActor,
   input: { customer_id: string; program_id: string; coach_id: string; date: string; start_time: string; source: "front_desk" | "member_app"; notes?: string | null }
 ): Promise<{ booking_id: string; session_id: string; pass_code: string; pt_left: number; end_time: string }> {
+  await assertCanBook(input.customer_id);
   const program = await queryOne<{ duration_minutes: number; name: string }>(
     `SELECT duration_minutes, name FROM studio.programs WHERE id = $1 AND branch_id = $2 AND kind = 'pt' AND is_active`,
     [input.program_id, actor.branchId]

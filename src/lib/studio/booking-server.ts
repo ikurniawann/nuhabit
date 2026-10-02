@@ -15,6 +15,8 @@ import {
 } from "@/lib/studio/booking";
 import { redeemValue } from "@/lib/studio/pass";
 import { PASS_SELECT, PASS_USAGE_JOIN, type PassRow } from "@/lib/studio/pass-server";
+import { applyBookingBenefits } from "@/lib/studio/loyalty";
+import { assertCanBook, awardSessionXp, memberBenefits } from "@/lib/studio/loyalty-server";
 
 /**
  * Mesin booking kelas (EPIC-054). Semua mutasi berjalan dalam transaksi dengan
@@ -164,8 +166,15 @@ async function promoteWaitlist(client: PoolClient, actor: BookingActor, session:
   let free = session.capacity - (await seatsTakenTx(client, session.id));
   if (free <= 0) return promoted;
   const { rows } = await client.query(
-    `SELECT id, customer_id FROM studio.bookings WHERE session_id = $1 AND status = 'waitlisted'
-     ORDER BY COALESCE(waitlisted_at, booked_at) FOR UPDATE`,
+    // Tier dengan prioritas waitlist (EPIC-066) didahulukan; member diblokir/banned tidak.
+    `SELECT b.id, b.customer_id FROM studio.bookings b
+     LEFT JOIN crm.crm_member_profiles mp ON mp.customer_id = b.customer_id
+     LEFT JOIN crm.crm_membership_tiers t ON t.id = mp.tier_id
+     WHERE b.session_id = $1 AND b.status = 'waitlisted'
+     ORDER BY CASE WHEN COALESCE((t.metadata->>'waitlist_priority')::boolean, false)
+                    AND COALESCE(mp.status, 'active') NOT IN ('suspended', 'banned') THEN 0 ELSE 1 END,
+              COALESCE(b.waitlisted_at, b.booked_at)
+     FOR UPDATE OF b`,
     [session.id]
   );
   for (const w of rows as { id: string; customer_id: string }[]) {
@@ -194,7 +203,9 @@ export async function createBooking(
   actor: BookingActor,
   input: { session_id: string; customer_id: string; source: "front_desk" | "member_app" | "walk_in"; check_in?: boolean; notes?: string | null }
 ): Promise<CreateBookingResult> {
-  const settings = await loadSettings(actor.branchId);
+  await assertCanBook(input.customer_id);
+  // Benefit tier (EPIC-066): booking dibuka lebih awal untuk tier tinggi.
+  const settings = applyBookingBenefits(await loadSettings(actor.branchId), await memberBenefits(input.customer_id));
   return withTransaction(async (client) => {
     const session = await lockSession(client, actor.branchId, input.session_id);
     if (session.program_kind !== "class") throw ApiError.badRequest("Booking Personal Training lewat menu Personal Training");
@@ -300,7 +311,8 @@ export async function cancelBooking(
       return { status: "cancelled" as BookingStatus, refunded: false, promoted: 0 };
     }
 
-    const timing = classifyCancel(Date.now(), sessionEpoch(session.session_date, session.start_time), settings.cancel_window_hours);
+    const cancelWindow = applyBookingBenefits(settings, await memberBenefits(b.customer_id)).cancel_window_hours;
+    const timing = classifyCancel(Date.now(), sessionEpoch(session.session_date, session.start_time), cancelWindow);
     const refund = timing === "in_time" || (actor.staff && Boolean(opts.waive));
     const status: BookingStatus = refund ? "cancelled" : "late_cancelled";
     await client.query(
@@ -428,6 +440,8 @@ export async function completeSession(actor: BookingActor, sessionId: string): P
       console.error(`[studio] jurnal redeem ${kind} gagal (non-blocking):`, error);
     }
   }
+  // XP hadir (EPIC-066) — non-blocking, idempoten.
+  await awardSessionXp(sessionId);
   return { recognized: res.recognized, attended: res.attended, no_show: res.no_show, late: res.late };
 }
 

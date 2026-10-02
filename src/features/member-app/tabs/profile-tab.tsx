@@ -5,9 +5,10 @@ import { LogOut } from "lucide-react";
 import { useMember } from "../member-app";
 import { type CoachProfile, memberFetch } from "../lib";
 import { Avatar, Card, CenterSpinner, PillButton, SectionTitle, Sheet, Tag } from "../ui";
+import { ProgressSection } from "./progress-section";
 
 export function ProfileTab() {
-  const { profile, bookings, logout, go } = useMember();
+  const { profile, logout, go } = useMember();
   const [coaches, setCoaches] = useState<CoachProfile[] | null>(null);
   const [open, setOpen] = useState<CoachProfile | null>(null);
 
@@ -16,8 +17,6 @@ export function ProfileTab() {
       .then((r) => setCoaches(r.data))
       .catch(() => setCoaches([]));
   }, []);
-
-  const attended = (bookings ?? []).filter((b) => b.status === "attended").length;
 
   return (
     <div className="space-y-7 pt-2">
@@ -29,11 +28,7 @@ export function ProfileTab() {
         </div>
       </section>
 
-      <Card>
-        <p className="text-xs text-nh-beige/60">Sesi hadir (30 hari terakhir)</p>
-        <p className="mt-1 font-display text-3xl font-bold tabular-nums text-nh-lime">{attended}</p>
-        <p className="mt-1 text-xs text-nh-beige/50">Konsisten itu progres. Sampai jumpa di sesi berikutnya.</p>
-      </Card>
+      <ProgressSection />
 
       <section>
         <SectionTitle>Coach kami</SectionTitle>

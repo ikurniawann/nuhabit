@@ -5,6 +5,8 @@ import { createBooking, loadSettings } from "@/lib/studio/booking-server";
 import { requireMemberStudio } from "@/lib/studio/member-server";
 import { memberBookSchema } from "@/lib/studio/schemas";
 import { studioRoute } from "@/lib/studio/server";
+import { applyBookingBenefits } from "@/lib/studio/loyalty";
+import { memberBenefits } from "@/lib/studio/loyalty-server";
 
 /** Booking saya: mendatang + 30 hari terakhir. */
 export async function GET() {
@@ -27,7 +29,7 @@ export async function GET() {
        LIMIT 100`,
       [customerId, actor.branchId]
     );
-    const settings = await loadSettings(actor.branchId);
+    const settings = applyBookingBenefits(await loadSettings(actor.branchId), await memberBenefits(customerId));
     return NextResponse.json({ success: true, data: rows, rules: { cancel_window_hours: settings.cancel_window_hours } });
   });
 }

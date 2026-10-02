@@ -4,6 +4,7 @@ import { postJournalFromMapping } from "@/lib/accounting/journal-mapping-posting
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
 import { breakageOnExpiry, generatePassCode, type PaymentMethod } from "@/lib/studio/pass";
+import { awardPassPurchaseXp } from "@/lib/studio/loyalty-server";
 import type { StudioContext } from "@/lib/studio/server";
 
 /**
@@ -252,6 +253,8 @@ export async function issuePass(ctx: PassContext, input: IssuePassInput): Promis
       `Penjualan ${pass.product_name} ${pass.pass_code} — ${pass.member_name ?? pass.member_phone}`);
     if (entryId) await query(`UPDATE studio.member_passes SET journal_entry_id = $2 WHERE id = $1`, [passId, entryId]);
   }
+  // XP beli paket & perpanjang (EPIC-066) — non-blocking, idempoten.
+  await awardPassPurchaseXp(passId);
   return pass;
 }
 

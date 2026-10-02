@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import Image from "next/image";
-import { CalendarDays, Dumbbell, Home, Ticket, UserRound } from "lucide-react";
+import { CalendarDays, Dumbbell, Home, Ticket, Trophy } from "lucide-react";
 import { LoginScreen } from "./login-screen";
 import { MemberApiError, memberFetch, type MemberProfile, type MyBooking, type MyPass } from "./lib";
 import { HomeTab } from "./tabs/home-tab";
@@ -129,7 +129,7 @@ const NAV: { key: MemberTab; label: string; icon: typeof Home }[] = [
   { key: "schedule", label: "Kelas", icon: CalendarDays },
   { key: "pt", label: "Personal Training", icon: Dumbbell },
   { key: "passes", label: "Paket", icon: Ticket },
-  { key: "profile", label: "Profil", icon: UserRound },
+  { key: "profile", label: "Progres", icon: Trophy },
 ];
 
 function BottomNav({ tab, onChange }: { tab: MemberTab; onChange: (t: MemberTab) => void }) {

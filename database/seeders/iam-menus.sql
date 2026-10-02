@@ -280,4 +280,6 @@ WHERE deleted_at IS NULL
     -- EPIC-057 News Hyrox:
     'studio.news',
     -- EPIC-058 Otomasi & Pengingat:
-    'studio.automation');
+    'studio.automation',
+    -- EPIC-066 Program Loyalitas:
+    'studio.loyalty');
