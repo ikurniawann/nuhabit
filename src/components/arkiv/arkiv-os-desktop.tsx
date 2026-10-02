@@ -111,7 +111,6 @@ import {
   MonitorDot,
   Paperclip,
   Pencil,
-  PieChart,
   RefreshCw,
   Search,
   Send,
@@ -159,7 +158,7 @@ type DesktopModule = {
 type DesktopIconPosition = { left: number; top: number };
 type WidgetVisibility = { calendar: boolean } & Record<MonitorWidgetKey, boolean>;
 
-const pinkAccent = "from-pink-300 via-pink-500 to-rose-600";
+const pinkAccent = "from-pink-300 via-pink-500 to-pink-700";
 // Merek instance (multi-perusahaan) — jangan tulis nama langsung di JSX.
 const BRAND = brandName();
 const BRAND_OS = brandOsName();
@@ -230,36 +229,12 @@ const modules: DesktopModule[] = [
     icon: MessageSquareMore,
   },
   {
-    name: "Sales Funneling",
-    subtitle: "Pipeline B2B",
-    description: "Leads, deals, aktivitas, quotation, invoice, dan analitik pipeline penjualan korporat.",
-    loginHref: "/login?redirect=/dashboard/sales-funnel/leads&module=sales-funnel",
-    dashboardHref: "/dashboard/sales-funnel/leads",
-    icon: PieChart,
-  },
-  {
     name: "Ticketing",
     subtitle: "Tiket & Kunjungan",
     description: "Master tiket, booking, loket, gate, gelang NFC, season pass, dan tab kunjungan.",
     loginHref: "/login?redirect=/dashboard/ticketing/tickets&module=ticketing",
     dashboardHref: "/dashboard/ticketing/tickets",
     icon: Ticket,
-  },
-  {
-    name: "Dataroom",
-    subtitle: "Berkas & Berbagi",
-    description: "Folder, subfolder, unggah berkas, berbagi publik atau per email dengan PIN dan watermark.",
-    loginHref: "/login?redirect=/dashboard/dataroom&module=dataroom",
-    dashboardHref: "/dashboard/dataroom",
-    icon: Folder,
-  },
-  {
-    name: "Resort",
-    subtitle: "Akomodasi & Front Office",
-    description: "Reservasi kamar, ketersediaan, check-in/check-out, folio tamu, dan status housekeeping.",
-    loginHref: "/login?redirect=/dashboard/resort/reservations&module=resort",
-    dashboardHref: "/dashboard/resort/reservations",
-    icon: Building2,
   },
   {
     name: "Integration",
@@ -932,17 +907,17 @@ export default function ArkivOsDesktop() {
         setContextMenu({ x: event.clientX, y: event.clientY, desktop: true });
       }}
       style={motionStyle}
-      className="relative min-h-dvh overflow-hidden bg-[#0b1020] text-white"
+      className="relative min-h-dvh overflow-hidden bg-nh-ink text-white"
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={wallpaperBackgroundStyle(wallpaper.src)}
       />
-      <div className="absolute inset-0 bg-black/20" />
-      <div className="absolute inset-0 opacity-[0.16] transition-transform duration-500 ease-out [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:80px_80px] [transform:translate3d(var(--float-x-reverse),var(--float-y-reverse),0)]" />
-      <div className="pointer-events-none absolute -left-24 top-24 size-72 rounded-full bg-cyan-300/14 blur-3xl transition-transform duration-500 ease-out [transform:translate3d(var(--float-x),var(--float-y),0)]" />
-      <div className="pointer-events-none absolute -right-24 bottom-16 size-80 rounded-full bg-pink-400/14 blur-3xl transition-transform duration-500 ease-out [transform:translate3d(var(--float-x-reverse),var(--float-y-reverse),0)]" />
-      <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-white/10 to-transparent" />
+      <div className="absolute inset-0 bg-black/10" />
+      <div className="absolute inset-0 opacity-[0.06] transition-transform duration-500 ease-out [background-image:linear-gradient(rgba(255,255,255,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.7)_1px,transparent_1px)] [background-size:80px_80px] [transform:translate3d(var(--float-x-reverse),var(--float-y-reverse),0)]" />
+      <div className="pointer-events-none absolute -left-24 top-24 size-72 rounded-full bg-nh-lime/10 blur-3xl transition-transform duration-500 ease-out [transform:translate3d(var(--float-x),var(--float-y),0)]" />
+      <div className="pointer-events-none absolute -right-24 bottom-16 size-80 rounded-full bg-nh-lettuce/10 blur-3xl transition-transform duration-500 ease-out [transform:translate3d(var(--float-x-reverse),var(--float-y-reverse),0)]" />
+      <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-white/5 to-transparent" />
 
       <header className="fixed inset-x-0 top-0 z-[75] flex h-9 items-center justify-between border-b border-white/10 bg-black/22 px-3 text-[13px] text-white/90 backdrop-blur-2xl">
         <div className="flex h-full items-center gap-5">
@@ -1057,7 +1032,7 @@ export default function ArkivOsDesktop() {
 
       {showAssistantShortcut && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-[92px]">
-          <div className="arkiv-assistant-shortcut-glow absolute bottom-[46px] h-36 w-[min(920px,calc(100vw-24px))] rounded-[48px] bg-gradient-to-r from-pink-400/26 via-orange-300/32 to-rose-400/26 blur-3xl" />
+          <div className="arkiv-assistant-shortcut-glow absolute bottom-[46px] h-36 w-[min(920px,calc(100vw-24px))] rounded-[48px] bg-gradient-to-r from-pink-400/26 via-nh-lime/24 to-pink-400/26 blur-3xl" />
           <form
             ref={assistantShortcutRef}
             onSubmit={openAssistantFromShortcut}
@@ -1097,7 +1072,7 @@ export default function ArkivOsDesktop() {
             <button
               type="submit"
               disabled={!assistantShortcutInput.trim()}
-              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 text-white shadow-lg transition hover:from-pink-300 hover:to-rose-500 disabled:cursor-not-allowed disabled:opacity-45"
+              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 to-pink-700 text-white shadow-lg transition hover:from-pink-300 hover:to-pink-600 disabled:cursor-not-allowed disabled:opacity-45"
               title="Buka Do"
             >
               <Send className="size-4" />
@@ -1608,7 +1583,7 @@ function WindowShell({
         ref={windowRef}
         style={{ ...floatingStyle, zIndex, display: minimized ? "none" : undefined }}
         onMouseDown={focusWindow}
-        className={`fixed overflow-hidden rounded-3xl border bg-slate-950/55 shadow-2xl backdrop-blur-2xl max-sm:inset-x-2! max-sm:top-11! max-sm:bottom-[72px]! max-sm:h-auto! max-sm:max-h-none! max-sm:w-auto! max-sm:translate-x-0! max-sm:translate-y-0! max-sm:rounded-2xl! ${isActive ? "border-pink-200/35 ring-1 ring-pink-300/20" : "border-white/18"} ${activeClassName}`}
+        className={`fixed overflow-hidden rounded-3xl border bg-nh-ink/55 shadow-2xl backdrop-blur-2xl max-sm:inset-x-2! max-sm:top-11! max-sm:bottom-[72px]! max-sm:h-auto! max-sm:max-h-none! max-sm:w-auto! max-sm:translate-x-0! max-sm:translate-y-0! max-sm:rounded-2xl! ${isActive ? "border-pink-200/35 ring-1 ring-pink-300/20" : "border-white/18"} ${activeClassName}`}
       >
         <div className="flex h-11 cursor-move items-center justify-between border-b border-white/10 px-4" onMouseDown={startDrag} onDoubleClick={() => (snapped ? restoreSnap() : applySnap("maximize"))}>
           <div className="flex items-center gap-2" onMouseDown={(event) => event.stopPropagation()}>
@@ -1698,7 +1673,7 @@ function ModuleOpenChoiceModal({
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-xl" onClick={onClose}>
       <div
-        className="w-[min(420px,calc(100vw-32px))] overflow-hidden rounded-[28px] border border-white/18 bg-slate-950/88 shadow-[0_28px_90px_rgba(0,0,0,.55)]"
+        className="w-[min(420px,calc(100vw-32px))] overflow-hidden rounded-[28px] border border-white/18 bg-nh-ink/88 shadow-[0_28px_90px_rgba(0,0,0,.55)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-white/10 p-5">
@@ -1828,7 +1803,7 @@ function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-[80] bg-black/35 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="mx-auto mt-20 max-w-xl overflow-hidden rounded-3xl border border-white/18 bg-slate-950/80 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div className="mx-auto mt-20 max-w-xl overflow-hidden rounded-3xl border border-white/18 bg-nh-ink/80 shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
           <Search className="size-5 text-white/50" />
           <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari aplikasi, transaksi, member, produk, karyawan…" className="w-full rounded-xl bg-white px-3 py-2 text-sm text-black outline-none placeholder:text-gray-600" />
@@ -1932,7 +1907,7 @@ function ApplicationFolderModal({ onClose, onOpen, onComingSoon }: { onClose: ()
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition-all duration-200 hover:bg-white/10 hover:shadow-xl hover:shadow-pink-500/20"
               >
                 {/* Icon dengan shadow dan gradient */}
-                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
+                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-pink-700 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
                   <Icon className="size-8 text-white drop-shadow-lg" />
                 </div>
                 
@@ -1955,7 +1930,7 @@ function ApplicationFolderModal({ onClose, onOpen, onComingSoon }: { onClose: ()
                 }}
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition-all duration-200 hover:bg-white/10 hover:shadow-xl hover:shadow-pink-500/20"
               >
-                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
+                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-pink-700 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
                   <Icon className="size-8 text-white drop-shadow-lg" />
                   <span className="absolute -right-1 -top-1 rounded-full border border-white/40 bg-amber-300 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">Soon</span>
                 </div>
@@ -2118,7 +2093,7 @@ function ApplicationWindow({ module, url, onClose }: { module: DesktopModule; ur
             {/* Loading Overlay */}
             {isLoading && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <div className="mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-xl">
+                <div className="mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 via-pink-500 to-pink-700 shadow-xl">
                   <Loader2 className="size-8 animate-spin text-white" />
                 </div>
                 <p className="text-sm font-medium text-gray-600">Loading {module.name}...</p>
@@ -3010,7 +2985,7 @@ function AiAssistantWindow({
             </div>
           ) : view === "landing" ? (
             <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-              <div className="mb-5 grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 shadow-xl">
+              <div className="mb-5 grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-300 via-pink-500 to-pink-700 shadow-xl">
                 <Bot className="size-8 text-white" />
               </div>
               <h3 className="text-xl font-bold text-white/90">Do</h3>
@@ -3299,7 +3274,7 @@ function OsAccountPopup({
   return (
     <div className="fixed inset-0 z-[80] bg-black/25 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="absolute left-1/2 top-1/2 w-[min(360px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/18 bg-slate-950/75 text-white shadow-2xl backdrop-blur-2xl"
+        className="absolute left-1/2 top-1/2 w-[min(360px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/18 bg-nh-ink/75 text-white shadow-2xl backdrop-blur-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
@@ -3314,7 +3289,7 @@ function OsAccountPopup({
 
         <div className="p-5">
           <div className="rounded-3xl border border-white/10 bg-white/8 p-4 text-center">
-            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 text-lg font-bold text-white shadow-lg">
+            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-pink-700 text-lg font-bold text-white shadow-lg">
               {isLoggedIn ? account?.fullName.slice(0, 1).toUpperCase() : "G"}
             </div>
             <div className="font-semibold">{isLoggedIn ? account?.fullName : "Guest"}</div>
@@ -3804,7 +3779,7 @@ function SystemStatusChip({ onOpenToday }: { onOpenToday: () => void }) {
         <span className="hidden text-[11px] text-white/70 lg:inline">Status</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-[90] w-64 overflow-hidden rounded-2xl border border-white/15 bg-slate-950/90 p-1.5 text-left shadow-2xl backdrop-blur-2xl">
+        <div className="absolute right-0 top-[calc(100%+6px)] z-[90] w-64 overflow-hidden rounded-2xl border border-white/15 bg-nh-ink/90 p-1.5 text-left shadow-2xl backdrop-blur-2xl">
           {(status?.items ?? []).map((item) => (
             <div key={item.key} className="flex items-start gap-2 rounded-xl px-2.5 py-2">
               <span
@@ -3905,7 +3880,7 @@ function TodayPanel({
   return (
     <div className="fixed inset-0 z-[90] flex justify-end bg-black/30 backdrop-blur-sm" onClick={onClose}>
       <aside
-        className="h-full w-[min(420px,100vw)] overflow-y-auto border-l border-white/12 bg-slate-950/90 p-5 text-white shadow-2xl backdrop-blur-2xl"
+        className="h-full w-[min(420px,100vw)] overflow-y-auto border-l border-white/12 bg-nh-ink/90 p-5 text-white shadow-2xl backdrop-blur-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -4033,9 +4008,9 @@ function LockScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/80 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-nh-ink/80 backdrop-blur-2xl">
       <div className="w-[min(380px,calc(100vw-32px))] text-center text-white">
-        <div className="mx-auto mb-4 grid size-20 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 text-2xl font-bold shadow-2xl">
+        <div className="mx-auto mb-4 grid size-20 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-pink-700 text-2xl font-bold shadow-2xl">
           {account.fullName.slice(0, 1).toUpperCase()}
         </div>
         <div className="text-lg font-semibold">{account.fullName}</div>
@@ -4105,7 +4080,7 @@ function AboutArkiv({ onClose }: { onClose: () => void }) {
 
 function DesktopContextMenu({ x, y, onWallpaper, onWidgets, onApps, onSettings, onAbout }: { x: number; y: number; onWallpaper: () => void; onWidgets: () => void; onApps: () => void; onSettings: () => void; onAbout: () => void }) {
   return (
-    <div className="fixed z-[80] w-52 overflow-hidden rounded-2xl border border-white/15 bg-slate-950/80 p-1 text-sm shadow-2xl backdrop-blur-xl" style={{ left: x, top: y }}>
+    <div className="fixed z-[80] w-52 overflow-hidden rounded-2xl border border-white/15 bg-nh-ink/80 p-1 text-sm shadow-2xl backdrop-blur-xl" style={{ left: x, top: y }}>
       <button onClick={onApps} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/10">Open Launchpad</button>
       <button onClick={onWidgets} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/10">Widgets</button>
       <button onClick={onSettings} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/10">System Settings</button>
@@ -4117,7 +4092,7 @@ function DesktopContextMenu({ x, y, onWallpaper, onWidgets, onApps, onSettings, 
 
 function ContextMenu({ x, y, module, onOpen, onInfo }: { x: number; y: number; module: DesktopModule; onOpen: () => void; onInfo: () => void }) {
   return (
-    <div className="fixed z-[80] w-44 overflow-hidden rounded-2xl border border-white/15 bg-slate-950/80 p-1 text-sm shadow-2xl backdrop-blur-xl" style={{ left: x, top: y }}>
+    <div className="fixed z-[80] w-44 overflow-hidden rounded-2xl border border-white/15 bg-nh-ink/80 p-1 text-sm shadow-2xl backdrop-blur-xl" style={{ left: x, top: y }}>
       <button disabled={module.disabled} onClick={onOpen} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/10 disabled:opacity-50">Open</button>
       <button onClick={onInfo} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-white/10">View Info</button>
       <button className="block w-full rounded-xl px-3 py-2 text-left text-white/45">Pin to Dock</button>

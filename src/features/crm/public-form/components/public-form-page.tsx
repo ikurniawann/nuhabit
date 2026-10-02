@@ -101,7 +101,7 @@ export function PublicFormPage({ form }: { form: PublicFormView }) {
   return (
     <main className="relative min-h-screen bg-[#0d111b]">
       <div className="absolute inset-0">
-        <Image src="/bg-bcd.webp" alt="" fill priority className="object-cover opacity-25" sizes="100vw" />
+        <Image src="/brand/wallpaper-forest.webp" alt="" fill priority className="object-cover opacity-25" sizes="100vw" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0d111b]/80 via-[#10182e]/85 to-[#0d111b]/95" />
       </div>
 
@@ -109,7 +109,7 @@ export function PublicFormPage({ form }: { form: PublicFormView }) {
           `.flex.min-h-screen` yang menimpa latar dengan page-mesh terang. */}
       <div className="relative mx-auto flex min-h-dvh max-w-3xl flex-col px-5 py-10 sm:py-16">
         <div className="flex items-center gap-3">
-          <Image src="/logos/bcd-coffee-logo.png" alt="BCD Coffee" width={188} height={44} className="h-11 w-auto" priority />
+          <Image src="/brand/logo-forest.png" alt="NüHabit" width={1325} height={173} className="h-7 w-auto" priority />
         </div>
 
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur sm:p-8">

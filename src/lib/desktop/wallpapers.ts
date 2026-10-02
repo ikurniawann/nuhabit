@@ -34,10 +34,11 @@ export const WALLPAPER_STORAGE_KEY = "arkiv-wallpaper";
  * localStorage/user_desktop_prefs — mengganti id akan mereset pilihan user.
  */
 export const BUILTIN_WALLPAPERS: WallpaperItem[] = [
-  { id: "arkiv", name: `${brandName()} Blue`, src: "/bg-bcd.webp" },
-  { id: "pink", name: "Indigo Dusk", src: "linear-gradient(135deg,#0b0f1b,#1d2d66 45%,#111827)" },
-  { id: "midnight", name: "Midnight", src: "linear-gradient(135deg,#030712,#111827 52%,#1e1b4b)" },
-  { id: "glass", name: "Glass Blue", src: "linear-gradient(135deg,#082f49,#0f172a 48%,#312e81)" },
+  // NüHabit graphic language (DESIGN.md §5): sapuan "Nü" besar, outline, dan pattern.
+  { id: "arkiv", name: `${brandName()} Forest`, src: "/brand/wallpaper-forest.webp" },
+  { id: "pink", name: "Lime Strokes", src: "/brand/wallpaper-ink.webp" },
+  { id: "midnight", name: "Nü Pattern", src: "/brand/wallpaper-pattern.webp" },
+  { id: "glass", name: "Everglade", src: "linear-gradient(135deg,#131a1c,#00281a 52%,#203b32)" },
 ];
 
 export const DEFAULT_WALLPAPER: WallpaperItem = BUILTIN_WALLPAPERS[0];

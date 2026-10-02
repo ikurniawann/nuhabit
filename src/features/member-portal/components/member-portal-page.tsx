@@ -153,8 +153,8 @@ export function MemberPortalPage() {
       <header className="mp-rise flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <Image
-            src="/logos/bcd-coffee-icon.png"
-            alt="BCD Coffee"
+            src="/brand/nuhabit-icon-180.png"
+            alt="NüHabit"
             width={40}
             height={40}
             className="size-10 object-contain"

@@ -18,14 +18,14 @@ import { PERIOD_KINDS, PERIOD_LABELS, type PeriodKind } from "@/lib/desktop/peri
  * Papan widget monitoring owner di desktop BCD Coffee OS (EPIC-019 Fase B).
  *
  * Revisi owner 2026-07-21: tanpa ikon sama sekali, dan permukaan kartu
- * disamakan dengan Calendar Widget (bg-slate-950/55 — lebih gelap daripada
+ * disamakan dengan Calendar Widget (bg-nh-ink/55 — lebih gelap daripada
  * glass putih sebelumnya).
  */
 
 const REFRESH_MS = 60_000; // keputusan owner: 60 detik
 
 /** Permukaan kartu — identik dengan WindowShell/Calendar Widget. */
-const CARD = "rounded-3xl border border-white/18 bg-slate-950/55 shadow-2xl backdrop-blur-2xl";
+const CARD = "rounded-3xl border border-white/18 bg-nh-ink/55 shadow-2xl backdrop-blur-2xl";
 
 // Daftar widget kini tinggal di @/lib/desktop/widgets supaya kode server
 // bisa memakainya tanpa menarik komponen klien ini. Re-export agar pemakai
@@ -646,7 +646,7 @@ export function DesktopMonitorBoard({
                         key={h.tanggal}
                         title={`${h.tanggal}: ${formatRupiah(h.omzet)}`}
                         style={{ height: `${Math.max(8, (h.omzet / max) * 100)}%` }}
-                        className={`min-w-[10px] flex-1 rounded-t-md ${i === 6 ? "bg-gradient-to-t from-pink-500 to-white shadow-[0_0_14px_rgba(236,72,153,.5)]" : "bg-gradient-to-t from-pink-500/40 to-pink-300/80"}`}
+                        className={`min-w-[10px] flex-1 rounded-t-md ${i === 6 ? "bg-gradient-to-t from-pink-500 to-white shadow-[0_0_14px_rgba(218,255,89,.45)]" : "bg-gradient-to-t from-pink-500/40 to-pink-300/80"}`}
                       />
                     ));
                   })()}
@@ -739,7 +739,7 @@ export function DesktopMonitorBoard({
                 >
                   <span className="min-w-0 flex-1 truncate text-xs">{r.t}</span>
                   <span
-                    className={`grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[11px] font-extrabold ${r.n > 0 ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white" : "bg-white/8 text-white/35"}`}
+                    className={`grid h-5 min-w-5 shrink-0 place-items-center rounded-full px-1.5 text-[11px] font-extrabold ${r.n > 0 ? "bg-gradient-to-br from-pink-500 to-pink-700 text-white" : "bg-white/8 text-white/35"}`}
                   >
                     {r.n}
                   </span>
@@ -881,7 +881,7 @@ function MobileMonitorSheet({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-[25] rounded-full border border-white/18 bg-slate-950/75 px-4 py-2.5 text-xs font-bold text-white shadow-2xl backdrop-blur-2xl lg:hidden"
+        className="fixed bottom-24 right-4 z-[25] rounded-full border border-white/18 bg-nh-ink/75 px-4 py-2.5 text-xs font-bold text-white shadow-2xl backdrop-blur-2xl lg:hidden"
       >
         Monitoring
       </button>
@@ -889,7 +889,7 @@ function MobileMonitorSheet({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-9 z-[25] overflow-y-auto overscroll-contain bg-[#0b1020]/85 backdrop-blur-xl lg:hidden">
+    <div className="fixed inset-x-0 bottom-0 top-9 z-[25] overflow-y-auto overscroll-contain bg-nh-ink/85 backdrop-blur-xl lg:hidden">
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/35 px-4 py-3 backdrop-blur-2xl">
         <div>
           <div className="text-sm font-bold">Monitoring</div>

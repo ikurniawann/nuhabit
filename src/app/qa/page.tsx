@@ -182,7 +182,7 @@ export default function QaReportPage() {
             <nav className="flex items-center justify-between">
               <Link href="/arkiv-os" className="inline-flex items-center gap-3">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-white shadow-sm">
-                  <Image src="/logos/bcd-coffee-icon.png" alt="BCD Coffee OS" width={30} height={30} className="h-8 w-auto object-contain" />
+                  <Image src="/brand/nuhabit-icon-180.png" alt="NüHabit" width={30} height={30} className="h-8 w-auto object-contain" />
                 </span>
                 <span>
                   <span className="block text-sm font-bold text-slate-950">BCD Coffee OS</span>

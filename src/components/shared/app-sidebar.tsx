@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { brandName } from "@/lib/branding";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Check, ChevronsUpDown, Loader2, Moon, Monitor, Sun } from "lucide-react";
@@ -264,9 +265,9 @@ function SidebarHeader({
       {collapsed ? (
         <div className="flex w-full flex-col items-center justify-center gap-1">
           <img
-            src="/logos/logo.png?v=bcd"
-            alt="BCD Coffee OS"
-            className="h-9 w-9 object-contain"
+            src="/brand/nuhabit-icon-180.png"
+            alt={brandName()}
+            className="h-9 w-9 rounded-lg object-contain"
           />
           <button
             type="button"
@@ -281,9 +282,9 @@ function SidebarHeader({
       ) : (
         <div className="flex w-full items-center gap-3">
           <img
-            src="/logos/logo.png?v=bcd"
-            alt="BCD Coffee OS"
-            className="h-16 w-auto max-w-[10rem] shrink-0 object-contain object-left"
+            src="/brand/logo-forest.png"
+            alt={brandName()}
+            className="h-3.5 w-auto max-w-[7rem] shrink-0 object-contain object-left"
           />
           <div className="min-w-0 flex-1 leading-tight">
             {canSwitchStall ? (

@@ -1,17 +1,29 @@
 {
-  "name": "BCD Coffee POS Kasir",
+  "name": "NüHabit POS Kasir",
   "short_name": "POS Kasir",
-  "description": "Mode tablet / kiosk untuk kasir BCD Coffee POS",
+  "description": "Mode tablet / kiosk untuk kasir NüHabit POS",
   "start_url": "/dashboard/pos/tablet",
   "scope": "/dashboard/pos/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#ffffff",
-  "theme_color": "#e11d48",
+  "background_color": "#f3ece2",
+  "theme_color": "#00281a",
   "lang": "id",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/brand/nuhabit-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/nuhabit-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg?v=nuhabit-nu",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

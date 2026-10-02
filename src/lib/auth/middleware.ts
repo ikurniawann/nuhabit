@@ -10,6 +10,7 @@ const PUBLIC_AUTH_PREFIXES = [
   // Aset branding statis: dibutuhkan halaman /login dan halaman publik
   // (favicon, logo, manifest PWA) sebelum user punya sesi.
   "/logos/",
+  "/brand/",
   "/logo.png",
   "/favicon.svg",
   "/manifest-pos.webmanifest",

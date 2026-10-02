@@ -426,7 +426,7 @@ export function NoxPortal() {
 
       <header className="topbar">
         <div className="brand">
-          <Image src="/member-nox/logo.webp?v=3" alt="BCD Coffee" width={139} height={115} unoptimized />
+          <Image src="/member-nox/logo.webp?v=3" alt="NüHabit" width={139} height={115} unoptimized />
         </div>
         <div className="hud">
           <div className="hud-chip">
@@ -921,7 +921,7 @@ export function NoxPortal() {
           <Image
             className="entry-logo"
             src="/member-nox/logo.webp?v=3"
-            alt="BCD Coffee"
+            alt="NüHabit"
             width={139}
             height={115}
             unoptimized

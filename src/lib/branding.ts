@@ -8,7 +8,7 @@
  * env NEXT_PUBLIC_APP_NAME → default di bawah.
  */
 
-export const DEFAULT_BRAND_NAME = "BCD Coffee";
+export const DEFAULT_BRAND_NAME = "NüHabit";
 
 /** Aman dipanggil di client & server (hanya membaca env build-time). */
 export function brandName(): string {

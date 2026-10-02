@@ -4,22 +4,38 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* Palet `pink-*` Tailwind ditimpa dengan skala biru BCD Coffee (warna logo
-   #1d1dcc). Ratusan komponen memakai kelas pink-* secara langsung; menimpa palet
-   di sini menyelaraskan semuanya tanpa menyentuh tiap file. Skala dibangun dengan
-   mempertahankan lightness OKLab skala lama, jadi kontras tiap shade tidak berubah. */
+/* Palet `pink-*` Tailwind ditimpa dengan skala hijau NüHabit (lihat DESIGN.md).
+   Ratusan komponen warisan memakai kelas pink-* langsung sebagai warna aksen;
+   menimpa palet di sini menyelaraskan semuanya tanpa menyentuh tiap file.
+   Ujung terang condong ke Pale Lime/Lettuce, ujung gelap ke Deep Forest Green;
+   pink-600 (aksen teks & tombol) kontras 7.3:1 di atas White Beige. */
 @theme {
-  --color-pink-50: #f2f6fe;
-  --color-pink-100: #e2eafd;
-  --color-pink-200: #c5d4f9;
-  --color-pink-300: #9cb4f3;
-  --color-pink-400: #6a8ae8;
-  --color-pink-500: #3d5edc;
-  --color-pink-600: #2941d3;
-  --color-pink-700: #1d1dcc;
-  --color-pink-800: #121296;
-  --color-pink-900: #0d0d7c;
-  --color-pink-950: #05054b;
+  --color-pink-50: #f4f8e4;
+  --color-pink-100: #e9f4c6;
+  --color-pink-200: #d3e9a0;
+  --color-pink-300: #b2d67a;
+  --color-pink-400: #7fb06a;
+  --color-pink-500: #3f7a5f;
+  --color-pink-600: #1e5640;
+  --color-pink-700: #00281a;
+  --color-pink-800: #001f14;
+  --color-pink-900: #00170f;
+  --color-pink-950: #000d08;
+
+  /* Token merek NüHabit — pakai langsung untuk halaman baru (member, coach):
+     bg-nh-forest, text-nh-lime, bg-nh-beige, dst. */
+  --color-nh-beige: #f3ece2;
+  --color-nh-forest: #00281a;
+  --color-nh-lime: #daff59;
+  --color-nh-jungle: #1c261b;
+  --color-nh-everglade: #203b32;
+  --color-nh-lettuce: #abde67;
+  --color-nh-lemon: #eeffb1;
+  --color-nh-mint: #fdfff2;
+  --color-nh-ochre: #c9a227;
+  --color-nh-ink: #131a1c;
+
+  --font-display: var(--font-outfit), Outfit, Manrope, system-ui, sans-serif;
 }
 
 /* Bind the `dark:` variant to our explicit theme attribute (manual + auto). */
@@ -60,9 +76,11 @@
 
 :root {
   /* Brand inputs — overridden at runtime by ThemeProvider. */
-  --brand-primary: #1d1dcc;
-  --brand-secondary: #2941d3;
-  --primary-foreground: #ffffff;
+  --brand-primary: #00281a;
+  --brand-secondary: #203b32;
+  --brand-accent: #daff59;
+  --brand-accent-foreground: #00281a;
+  --primary-foreground: #f3ece2;
 
   /* Derived brand scales (perceptual mix in OKLCH). */
   --primary-50: color-mix(in oklch, var(--brand-primary) 8%, white);
@@ -82,24 +100,24 @@
   --brand-secondary-600: color-mix(in oklch, var(--brand-secondary) 88%, black);
 
   /* Semantic — light. */
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: rgba(255, 255, 255, 0.72);
-  --card-foreground: #0f172a;
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  --background: #f3ece2;
+  --foreground: #131a1c;
+  --card: #fffdf9;
+  --card-foreground: #131a1c;
+  --popover: #fffdf9;
+  --popover-foreground: #131a1c;
   --primary: var(--primary-500);
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --secondary: #ebe3d6;
+  --secondary-foreground: #131a1c;
+  --muted: #ebe3d6;
+  --muted-foreground: #5b6b60;
+  --accent: #eeffb1;
+  --accent-foreground: #00281a;
   --destructive: #dc2626;
   --success: #16a34a;
   --warning: #d97706;
-  --border: rgba(209, 213, 219, 0.5);
-  --input: rgba(209, 213, 219, 0.6);
+  --border: #e2d8c8;
+  --input: #d6cab6;
   --ring: color-mix(in oklch, var(--brand-primary) 45%, white);
 
   /* Glass — light. */
@@ -111,15 +129,15 @@
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 
   /* Chrome — overridden by company appearance. */
-  --sidebar-background: #f4f6fe;
-  --sidebar-foreground: #0f172a;
-  --sidebar-active-background: #1d1dcc;
-  --sidebar-active-foreground: #ffffff;
-  --sidebar-border: #d9dffb;
-  --navbar-background: #ffffff;
-  --navbar-foreground: #0f172a;
-  --navbar-border: #f3f4f6;
-  --font-sans-stack: "Roundo", Inter, system-ui, sans-serif;
+  --sidebar-background: #ebe3d6;
+  --sidebar-foreground: #131a1c;
+  --sidebar-active-background: #00281a;
+  --sidebar-active-foreground: #daff59;
+  --sidebar-border: #ddd2c0;
+  --navbar-background: #f3ece2;
+  --navbar-foreground: #131a1c;
+  --navbar-border: #e2d8c8;
+  --font-sans-stack: var(--font-manrope), Manrope, Inter, system-ui, sans-serif;
   --font-size-base: 16px;
 
   /* Shape + motion. */
@@ -133,31 +151,30 @@
   /* Page mesh background (brand-tinted). */
   --page-mesh: linear-gradient(
     135deg,
-    color-mix(in oklch, var(--brand-primary) 6%, #fbf4ee) 0%,
-    #fdf8f3 40%,
-    #fff9f2 75%,
-    color-mix(in oklch, var(--brand-primary) 8%, #fbeeea) 100%
+    #f3ece2 0%,
+    #f6f0e7 55%,
+    color-mix(in oklch, #daff59 10%, #f3ece2) 100%
   );
 }
 
 [data-theme="dark"] {
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --card: rgba(15, 23, 42, 0.82);
-  --card-foreground: #e5e7eb;
-  --popover: #0f172a;
-  --popover-foreground: #e5e7eb;
-  --secondary: #1e293b;
-  --secondary-foreground: #e5e7eb;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #e5e7eb;
-  --border: rgba(148, 163, 184, 0.28);
-  --input: rgba(148, 163, 184, 0.36);
+  --background: #131a1c;
+  --foreground: #f3ece2;
+  --card: #1c261b;
+  --card-foreground: #f3ece2;
+  --popover: #1c261b;
+  --popover-foreground: #f3ece2;
+  --secondary: #203b32;
+  --secondary-foreground: #f3ece2;
+  --muted: #203b32;
+  --muted-foreground: #a9b5a7;
+  --accent: #203b32;
+  --accent-foreground: #daff59;
+  --border: rgba(171, 222, 103, 0.16);
+  --input: rgba(171, 222, 103, 0.24);
   --ring: color-mix(in oklch, var(--brand-primary) 55%, black);
 
-  --glass-bg: rgba(15, 23, 42, 0.72);
+  --glass-bg: rgba(28, 38, 27, 0.78);
   --glass-border: rgba(148, 163, 184, 0.24);
   --glass-shadow: 0 2px 24px rgba(0, 0, 0, 0.35), 0 1px 4px rgba(0, 0, 0, 0.3);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -167,31 +184,31 @@
   --surface-subtle: rgba(255, 255, 255, 0.06);
   --surface-hover: rgba(255, 255, 255, 0.1);
 
-  --page-mesh: linear-gradient(135deg, #020617 0%, #111827 42%, #1e1b4b 74%, #3b1235 100%);
+  --page-mesh: linear-gradient(135deg, #131a1c 0%, #1c261b 60%, #00281a 100%);
 }
 
 /* Auto mode follows the OS when nothing explicit is chosen. */
 @media (prefers-color-scheme: dark) {
   [data-theme="auto"] {
-    --background: #0b1220;
-    --foreground: #e5e7eb;
-    --card: rgba(15, 23, 42, 0.82);
-    --card-foreground: #e5e7eb;
-    --popover: #0f172a;
-    --popover-foreground: #e5e7eb;
-    --secondary: #1e293b;
-    --secondary-foreground: #e5e7eb;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #e5e7eb;
-    --border: rgba(148, 163, 184, 0.28);
-    --input: rgba(148, 163, 184, 0.36);
-    --glass-bg: rgba(15, 23, 42, 0.72);
+    --background: #131a1c;
+    --foreground: #f3ece2;
+    --card: #1c261b;
+    --card-foreground: #f3ece2;
+    --popover: #1c261b;
+    --popover-foreground: #f3ece2;
+    --secondary: #203b32;
+    --secondary-foreground: #f3ece2;
+    --muted: #203b32;
+    --muted-foreground: #a9b5a7;
+    --accent: #203b32;
+    --accent-foreground: #daff59;
+    --border: rgba(171, 222, 103, 0.16);
+    --input: rgba(171, 222, 103, 0.24);
+    --glass-bg: rgba(28, 38, 27, 0.78);
     --glass-border: rgba(148, 163, 184, 0.24);
     --surface-subtle: rgba(255, 255, 255, 0.06);
     --surface-hover: rgba(255, 255, 255, 0.1);
-    --page-mesh: linear-gradient(135deg, #020617 0%, #111827 42%, #1e1b4b 74%, #3b1235 100%);
+    --page-mesh: linear-gradient(135deg, #131a1c 0%, #1c261b 60%, #00281a 100%);
   }
 }
 
@@ -214,6 +231,17 @@ html {
 
 body {
   font-family: var(--font-sans-stack);
+}
+
+/* Tipografi NüHabit: Outfit untuk judul, Manrope untuk isi (DESIGN.md §3).
+   Di layer base supaya utilitas font-* di komponen tetap bisa menimpa. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

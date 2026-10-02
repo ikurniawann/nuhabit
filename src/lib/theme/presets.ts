@@ -6,9 +6,10 @@ export type ThemePreset = {
   secondary: string;
 };
 
-export const DEFAULT_PRESET_ID = "wonderland";
+export const DEFAULT_PRESET_ID = "nuhabit";
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
+  { id: "nuhabit", label: "NüHabit Forest", primary: "#00281a", secondary: "#203b32" },
   { id: "wonderland", label: "BCD Blue", primary: "#1d1dcc", secondary: "#2941d3" },
   { id: "ocean", label: "Ocean", primary: "#0ea5e9", secondary: "#6366f1" },
   { id: "emerald", label: "Emerald", primary: "#10b981", secondary: "#14b8a6" },
