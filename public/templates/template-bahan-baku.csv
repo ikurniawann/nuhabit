@@ -1,4 +1,0 @@
-kode,nama,nama_lain,kategori,satuan_pembelian,satuan_penggunaan,qty_per_unit,harga_rata_rata,stok_minimum,stok_maksimum,tanggal_mulai_produksi,masa_simpan,supplier_utama,deskripsi,status
-BB-001,Tepung Terigu,Tepung,Baking Material,KG,KG,1,5000,100,1000,2024-01-01,12,PT Supplier Utama,Tepung protein tinggi untuk roti,Active
-BB-002,Gula Pasir,Gula,Baking Material,KG,KG,1,12000,50,500,2024-01-01,24,CV Mitra Sejahtera,Gula pasir putih halus,Active
-BB-003,Mentega Butter,Butter,Dairy,KG,KG,1,45000,30,300,2024-01-01,6,PT Dairy Fresh,Mentega premium untuk pastry,Active

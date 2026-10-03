@@ -7,6 +7,7 @@ import { Activity, Bell, CalendarDays, Home, QrCode, Search, User } from "lucide
 import { OfflineBanner } from "@/features/member-portal/mobile/mobile-pwa";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
+import { initialsOf } from "../lib/initials";
 import { asset, m } from "../lib/links";
 import { useMe } from "../lib/queries";
 import { Spinner } from "../ui";
@@ -65,11 +66,6 @@ function Shell({ children }: { children: ReactNode }) {
   const t = useT();
   const pathname = usePathname();
   const isActive = (to: string) => (to === "/" ? pathname === m("/") : pathname.startsWith(m(to)));
-  const initials = me?.member.fullName
-    .split(" ")
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("");
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
@@ -86,7 +82,7 @@ function Shell({ children }: { children: ReactNode }) {
               <img src={me.member.avatarUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-sm font-black text-white">
-                {initials}
+                {me && initialsOf(me.member.fullName)}
               </span>
             )}
           </Link>

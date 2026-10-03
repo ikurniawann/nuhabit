@@ -1,7 +1,0 @@
-kode,nama,tipe,faktor_konversi,satuan_induk,deskripsi,status
-KG,Kilogram,Weight,1,KG,Satuan berat standar,Active
-GR,Gram,Weight,0.001,KG,Satuan berat kecil,Active
-LSCN,Lusin,Quantity,12,PCS,12 pieces,Active
-KRT,Karton,Quantity,24,PCS,24 pieces per karton,Active
-LTR,Liter,Volume,1,LTR,Satuan volume,Active
-ML,Milliliter,Volume,0.001,LTR,Satuan volume kecil,Active

@@ -1,4 +1,0 @@
-kode,nama,kategori,satuan_penjualan,satuan_produksi,qty_per_unit,harga_jual,harga_modal,stok_minimum,stok_maksimum,berat_murni,berat_kotor,panjang,lebar,tinggi,sku,barcode,deskripsi,status
-PRD-001,Roti Tawar,Roti,Buah,Buah,1,15000,10000,50,200,400,450,20,10,10,ROT-TAW-001,8991234567890,Roti tawar putih 400gr,Active
-PRD-002,Roti Gandum,Roti,Buah,Buah,1,18000,12000,50,200,420,470,20,10,10,ROT-GAN-001,8991234567891,Roti tawar gandum 420gr,Active
-PRD-003,Kue Coklat,Cake,Buah,Buah,1,25000,17000,30,150,500,550,25,15,12,CAK-COK-001,8991234567892,Cake coklat premium 500gr,Active

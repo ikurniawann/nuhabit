@@ -1,5 +1,0 @@
-supplier_kode,bahan_baku_kode,harga_satuan,mata_uang,satuan,minimal_order,berlaku_dari,berlaku_sampai,status
-SUP-001,BB-001,4800,IDR,KG,100,2024-01-01,2024-12-31,Active
-SUP-001,BB-002,11500,IDR,KG,50,2024-01-01,2024-12-31,Active
-SUP-002,BB-001,4900,IDR,KG,200,2024-01-01,2024-12-31,Active
-SUP-002,BB-003,44000,IDR,KG,20,2024-01-01,2024-12-31,Active

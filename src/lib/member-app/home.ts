@@ -1,5 +1,6 @@
 import { CHECKIN_EARLY_MIN, CHECKIN_LATE_MIN } from "@/lib/gym/booking";
 import type { PromoDiscountType } from "@/lib/promo/promo";
+import { raceImagePath } from "./workout";
 
 /**
  * Aturan murni layar beranda, QR, dan notifikasi aplikasi member
@@ -81,22 +82,11 @@ export function pickGateBooking<T extends GateBookingCandidate>(
   return next ? { booking: next, live: false } : null;
 }
 
-const RACE_CITY_IMAGES = new Set([
-  "bangkok",
-  "berlin",
-  "hongkong",
-  "jakarta",
-  "kualalumpur",
-  "newyork",
-  "singapore",
-  "sydney",
-]);
-
 /** Foto race: gambar dari admin, atau foto kota bawaan aplikasi. */
 export function raceImage(imageUrl: string | null, city: string): string | null {
   if (imageUrl) return imageUrl;
-  const key = city.toLowerCase().replace(/[^a-z]/g, "");
-  return RACE_CITY_IMAGES.has(key) ? `/member-assets/img/race-${key}.jpg` : null;
+  const path = raceImagePath(city);
+  return path && `/member-assets${path}`;
 }
 
 /** Versi teks waiver digital yang disetujui member saat mendaftar. */
