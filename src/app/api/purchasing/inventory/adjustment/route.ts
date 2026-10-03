@@ -17,6 +17,7 @@ import {
   listWarehouseInventoryForOpname,
 } from "@/lib/inventory/stock-opname";
 import { z } from "zod";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 
 const adjustmentSchema = z.object({
   raw_material_id: z.string().uuid("Bahan baku wajib dipilih"),
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     const { data: material } = await db
       .from("raw_materials")
-      .select("company_id, branch_id")
+      .select("company_id, branch_id, kode")
       .eq("id", validated.raw_material_id)
       .maybeSingle();
 
@@ -144,6 +145,23 @@ export async function POST(request: NextRequest) {
       });
 
       if (movementError) throw movementError;
+
+      await recordAuditAfterCommit({
+        actor: { id: user.id, name: user.full_name },
+        action: "stock.adjust",
+        entity: "inventory",
+        entityId: inventoryId,
+        entityLabel: material?.kode ?? null,
+        before: { qty_available: qtyBefore },
+        after: {
+          qty_available: validated.qty_actual,
+          qty_diff: qtyDiff,
+          raw_material_id: validated.raw_material_id,
+          warehouse_id: validated.warehouse_id,
+        },
+        reason: validated.notes ?? null,
+        ...requestMeta(request),
+      });
 
       let accountingNote: string | null = null;
       try {

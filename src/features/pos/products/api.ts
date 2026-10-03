@@ -72,6 +72,7 @@ export function mapApiPosProduct(product: ApiPosProduct): PosCatalogProduct {
       product.min_xp === null || product.min_xp === undefined
         ? null
         : toNumber(product.min_xp) || null,
+    bonusXp: Math.max(0, Math.floor(toNumber(product.bonus_xp))),
     productKind: product.product_kind || "regular",
     sourceProductId: product.source_product_id || null,
     inventoryTracking: product.inventory_tracking === true,

@@ -64,7 +64,8 @@ USER nextjs
 # 127.0.0.1, not localhost: HOSTNAME=0.0.0.0 binds IPv4 only, while Alpine
 # resolves localhost to ::1 first -- wget then gets ECONNREFUSED and the
 # container is marked unhealthy even though it is serving fine.
-# /login rather than /, which is a 307 redirect.
+# /api/ready answers 503 when the database is unreachable, so the container
+# is marked unhealthy when it cannot serve real requests.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD wget -q -O- http://127.0.0.1:3000/login >/dev/null || exit 1
+    CMD wget -q -O- http://127.0.0.1:3000/api/ready >/dev/null || exit 1
 CMD ["node", "server.js"]

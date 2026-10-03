@@ -144,3 +144,92 @@ export function parseCampaignConfig(raw: unknown): CampaignConfig {
       : DEFAULT_CAMPAIGN_CONFIG.daily_cap;
   return { enabled: obj.enabled === true, daily_cap: cap };
 }
+
+/* ── Kanal, jadwal, dan pembatalan otomatis ───────────────────────────── */
+
+export const CAMPAIGN_CHANNELS = ["wa", "in_app"] as const;
+export type CampaignChannel = (typeof CAMPAIGN_CHANNELS)[number];
+
+/** Kanal valid tanpa duplikat; input kosong/rusak jatuh ke WA (perilaku lama). */
+export function normalizeChannels(raw: unknown): CampaignChannel[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const picked = CAMPAIGN_CHANNELS.filter((c) => list.includes(c));
+  return picked.length > 0 ? [...picked] : ["wa"];
+}
+
+/** Jarak minimal jadwal dari sekarang, dan batas terjauhnya. */
+export const SCHEDULE_MIN_LEAD_MS = 5 * 60_000;
+export const SCHEDULE_MAX_LEAD_MS = 90 * 24 * 60 * 60_000;
+
+export type ScheduleIssue = "jadwal-tidak-valid" | "jadwal-terlalu-dekat" | "jadwal-terlalu-jauh";
+
+/** "Kirim nanti" minimal 5 menit dan maksimal 90 hari dari sekarang. */
+export function validateSchedule(
+  scheduledAt: string,
+  now: Date
+): { ok: true; at: Date } | { ok: false; reason: ScheduleIssue } {
+  const at = new Date(scheduledAt);
+  if (Number.isNaN(at.getTime())) return { ok: false, reason: "jadwal-tidak-valid" };
+  const lead = at.getTime() - now.getTime();
+  if (lead < SCHEDULE_MIN_LEAD_MS) return { ok: false, reason: "jadwal-terlalu-dekat" };
+  if (lead > SCHEDULE_MAX_LEAD_MS) return { ok: false, reason: "jadwal-terlalu-jauh" };
+  return { ok: true, at };
+}
+
+export const SCHEDULE_ISSUE_MESSAGES: Record<ScheduleIssue, string> = {
+  "jadwal-tidak-valid": "Waktu kirim tidak valid",
+  "jadwal-terlalu-dekat": "Waktu kirim minimal 5 menit dari sekarang",
+  "jadwal-terlalu-jauh": "Waktu kirim maksimal 90 hari dari sekarang",
+};
+
+/**
+ * Kampanye terjadwal yang sudah waktunya dimulai, urut paling lama menunggu.
+ * Status selain `scheduled` (mis. dibatalkan setelah dijadwalkan) diabaikan.
+ */
+export function selectDueCampaigns<T extends { status: string; scheduled_at: string | Date | null }>(
+  campaigns: T[],
+  now: Date
+): T[] {
+  return campaigns
+    .filter((c) => c.status === "scheduled" && c.scheduled_at !== null)
+    .filter((c) => new Date(c.scheduled_at as string | Date).getTime() <= now.getTime())
+    .sort(
+      (a, b) =>
+        new Date(a.scheduled_at as string | Date).getTime() -
+        new Date(b.scheduled_at as string | Date).getTime()
+    );
+}
+
+/** Kegagalan WA beruntun yang membuat kampanye dihentikan (status failed). */
+export const ABORT_AFTER_CONSECUTIVE_FAILURES = 10;
+
+/**
+ * Hentikan kampanye bila N percobaan kirim terakhir semuanya gagal: gateway
+ * mati atau nomor diblokir, dan mengirim terus hanya membakar antrean.
+ * `recent` = status percobaan terbaru lebih dulu.
+ */
+export function shouldAbortCampaign(
+  recent: Array<"sent" | "failed">,
+  threshold = ABORT_AFTER_CONSECUTIVE_FAILURES
+): boolean {
+  if (recent.length < threshold) return false;
+  return recent.slice(0, threshold).every((s) => s === "failed");
+}
+
+/** Isi notifikasi in-app: placeholder sama dengan WA, tanpa footer STOP. */
+export function renderInAppBody(
+  template: string,
+  data: { nama: string; kode: string | null }
+): string {
+  return renderCampaignMessage(template, data).slice(0, -OPTOUT_FOOTER.length);
+}
+
+/**
+ * Tautan notifikasi in-app: path portal ("/member/...") atau URL http(s).
+ * Protocol-relative ("//host") dan skema lain (javascript:) ditolak.
+ */
+export function isSafeLink(url: string): boolean {
+  const value = url.trim();
+  if (value.startsWith("/")) return !value.startsWith("//");
+  return /^https?:\/\/[^\s/]+/i.test(value);
+}

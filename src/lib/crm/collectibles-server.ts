@@ -1,4 +1,9 @@
 import type { Pool, PoolClient } from "pg";
+import { withTransaction } from "@/lib/db";
+import { createPgClient } from "@/lib/pg/create-client";
+import { awardBadgeBonusXp } from "./loyalty-engine";
+import { getCrmDefaultVenue } from "./server";
+import { isBadgeEarned, longestWeeklyStreak, type BadgeRule, type MemberBadgeStats } from "./badges";
 import {
   blockerMessage,
   entitlementQuota,
@@ -336,10 +341,54 @@ export interface AwardedBadge {
   name: string;
 }
 
+type BadgeCandidate = BadgeRule & { id: string; code: string; name: string; bonus_xp: number };
+
+/** Statistik order lunas member untuk badge non-XP (kunjungan per hari WIB). */
+async function loadOrderBadgeStats(
+  db: Pool | PoolClient,
+  customerId: string
+): Promise<Omit<MemberBadgeStats, "lifetimeXp">> {
+  const { rows } = await db.query(
+    `SELECT count(DISTINCT (o.created_at AT TIME ZONE 'Asia/Jakarta')::date)::int AS visits,
+            COALESCE(sum(o.total_amount), 0)::float AS spend,
+            COALESCE(array_agg(DISTINCT date_trunc('week', o.created_at AT TIME ZONE 'Asia/Jakarta')::date::text)
+                     FILTER (WHERE o.id IS NOT NULL), '{}') AS weeks
+       FROM pos.pos_orders o
+      WHERE o.customer_id = $1 AND o.payment_status = 'paid'
+        AND o.status NOT IN ('cancelled', 'voided', 'merged')`,
+    [customerId]
+  );
+  const row = rows[0] ?? {};
+  return {
+    visits: Number(row.visits ?? 0),
+    spendIdr: Number(row.spend ?? 0),
+    streakWeeks: longestWeeklyStreak((row.weeks as string[] | null) ?? []),
+  };
+}
+
+/** Bonus XP badge lewat ledger (idempoten per badge per member). */
+async function grantBadgeBonuses(customerId: string, badges: Array<{ id: string; name: string; bonus_xp: number }>) {
+  const withBonus = badges.filter((b) => Number(b.bonus_xp) > 0);
+  if (withBonus.length === 0) return;
+  const db = createPgClient();
+  const venue = await getCrmDefaultVenue(db);
+  for (const badge of withBonus) {
+    await awardBadgeBonusXp(db, {
+      customerId,
+      badgeId: badge.id,
+      badgeName: badge.name,
+      xpAmount: Number(badge.bonus_xp),
+      companyId: venue.companyId,
+      branchId: venue.branchId,
+    });
+  }
+}
+
 /**
- * Badge by XP (Task 6): berikan semua badge aktif yang ambangnya sudah
- * terlampaui tapi belum dimiliki. Idempotent lewat UNIQUE (customer, badge) +
- * ON CONFLICT DO NOTHING — dipanggil lazily saat portal dibaca; tanpa jatah.
+ * Badge per metrik: berikan semua badge aktif yang syaratnya terpenuhi tapi
+ * belum dimiliki dan tidak pernah dicabut admin. Idempoten lewat UNIQUE
+ * (customer, badge) + ON CONFLICT DO NOTHING; dipanggil lazily saat portal
+ * dibaca. Statistik order hanya dihitung bila ada kandidat non-XP.
  */
 export async function awardEligibleBadges(
   db: Pool | PoolClient,
@@ -347,24 +396,94 @@ export async function awardEligibleBadges(
   memberProfileId: string | null,
   totalXp: number
 ): Promise<AwardedBadge[]> {
-  const { rows } = await db.query(
-    `INSERT INTO crm.crm_member_badges (customer_id, member_id, badge_id)
-     SELECT $1, $2, b.id
+  const { rows: candidates } = await db.query<BadgeCandidate>(
+    `SELECT b.id, b.code, b.name, b.metric, b.threshold, b.min_lifetime_xp, b.bonus_xp
        FROM crm.crm_badges b
-      WHERE b.is_active AND b.min_lifetime_xp <= $3
-        AND NOT EXISTS (
-          SELECT 1 FROM crm.crm_member_badges mb
-           WHERE mb.customer_id = $1 AND mb.badge_id = b.id)
+      WHERE b.is_active AND b.metric <> 'manual'
+        AND NOT EXISTS (SELECT 1 FROM crm.crm_member_badges mb
+                         WHERE mb.customer_id = $1 AND mb.badge_id = b.id)
+        AND NOT EXISTS (SELECT 1 FROM crm.crm_member_badge_revocations rv
+                         WHERE rv.customer_id = $1 AND rv.badge_id = b.id)`,
+    [customerId]
+  );
+  if (candidates.length === 0) return [];
+
+  const needsOrders = candidates.some((b) => b.metric !== "lifetime_xp");
+  const stats: MemberBadgeStats = {
+    lifetimeXp: totalXp,
+    ...(needsOrders ? await loadOrderBadgeStats(db, customerId) : { visits: 0, spendIdr: 0, streakWeeks: 0 }),
+  };
+  const earned = candidates.filter((b) => isBadgeEarned(b, stats));
+  if (earned.length === 0) return [];
+
+  const { rows } = await db.query<{ badge_id: string }>(
+    `INSERT INTO crm.crm_member_badges (customer_id, member_id, badge_id)
+     SELECT $1, $2, unnest($3::uuid[])
      ON CONFLICT (customer_id, badge_id) DO NOTHING
      RETURNING badge_id`,
-    [customerId, memberProfileId, totalXp]
+    [customerId, memberProfileId, earned.map((b) => b.id)]
   );
-  if (rows.length === 0) return [];
-  const { rows: detail } = await db.query(
-    `SELECT id AS badge_id, code, name FROM crm.crm_badges WHERE id = ANY($1::uuid[])`,
-    [rows.map((r) => r.badge_id)]
-  );
-  return detail as AwardedBadge[];
+  const inserted = new Set(rows.map((r) => r.badge_id));
+  const awarded = earned.filter((b) => inserted.has(b.id));
+  await grantBadgeBonuses(customerId, awarded);
+  return awarded.map((b) => ({ badge_id: b.id, code: b.code, name: b.name }));
+}
+
+/**
+ * Admin memberi badge apa pun (termasuk metrik manual). Mencabut catatan
+ * pencabutan sebelumnya; bonus XP tetap sekali seumur hidup per badge.
+ */
+export async function awardBadgeManually(input: {
+  customerId: string;
+  badgeId: string;
+  actorId: string;
+}): Promise<{ awarded: boolean }> {
+  const badge = await withTransaction(async (client) => {
+    const { rows } = await client.query<{ id: string; name: string; bonus_xp: number }>(
+      `SELECT id, name, bonus_xp FROM crm.crm_badges WHERE id = $1`,
+      [input.badgeId]
+    );
+    if (!rows[0]) return null;
+    await client.query(
+      `DELETE FROM crm.crm_member_badge_revocations WHERE customer_id = $1 AND badge_id = $2`,
+      [input.customerId, input.badgeId]
+    );
+    const inserted = await client.query(
+      `INSERT INTO crm.crm_member_badges (customer_id, member_id, badge_id, source, awarded_by)
+       SELECT $1, (SELECT id FROM crm.crm_member_profiles WHERE customer_id = $1), $2, 'manual', $3
+       ON CONFLICT (customer_id, badge_id) DO NOTHING`,
+      [input.customerId, input.badgeId, input.actorId]
+    );
+    return (inserted.rowCount ?? 0) > 0 ? rows[0] : null;
+  });
+  if (badge) await grantBadgeBonuses(input.customerId, [badge]);
+  return { awarded: badge !== null };
+}
+
+/**
+ * Admin mencabut badge. Catatan pencabutan mencegah evaluasi otomatis
+ * memberikannya lagi; bonus XP yang sudah masuk tidak ditarik.
+ */
+export function revokeBadge(input: {
+  customerId: string;
+  badgeId: string;
+  actorId: string;
+  reason: string | null;
+}): Promise<{ revoked: boolean }> {
+  return withTransaction(async (client) => {
+    const removed = await client.query(
+      `DELETE FROM crm.crm_member_badges WHERE customer_id = $1 AND badge_id = $2`,
+      [input.customerId, input.badgeId]
+    );
+    await client.query(
+      `INSERT INTO crm.crm_member_badge_revocations (customer_id, badge_id, reason, revoked_by)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (customer_id, badge_id)
+       DO UPDATE SET reason = EXCLUDED.reason, revoked_by = EXCLUDED.revoked_by, revoked_at = now()`,
+      [input.customerId, input.badgeId, input.reason, input.actorId]
+    );
+    return { revoked: (removed.rowCount ?? 0) > 0 };
+  });
 }
 
 /** Dimiliki lebih dulu, lalu yang paling langka, lalu abjad. */

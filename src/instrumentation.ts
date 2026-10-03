@@ -25,6 +25,9 @@ export async function register() {
     // dikredit otomatis (rekonsiliasi ke Xendit tiap 2 menit).
     const { startQrisTopupReconciler } = await import("@/lib/pos/topup-qris-reconcile-watcher");
     startQrisTopupReconciler();
+    // Dompet member: kedaluwarsa saldo per lot, pengingat, saldo rendah (tiap jam).
+    const { startWalletSweepWatcher } = await import("@/lib/wallet/sweep-watcher");
+    startWalletSweepWatcher();
 
     const { startBookingForfeitWatcher } = await import(
       "@/lib/ticketing/booking-forfeit-watcher"

@@ -7,7 +7,7 @@ import { formatAmount } from "@/lib/purchasing/utils";
 import type { ProfitBucket } from "../types";
 import { ApexChart } from "./apex-chart";
 
-const BRAND_PRIMARY_FALLBACK = "#1d1dcc";
+const BRAND_PRIMARY_FALLBACK = "#00281a";
 const CHART_SECONDARY_COLORS = ["#9ca3af", "#6366f1", "#f59e0b", "#14b8a6", "#8b5cf6"];
 
 function useBrandPrimary() {

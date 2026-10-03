@@ -25,6 +25,7 @@ import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
 import { usePOFormData, usePurchaseOrder } from "../queries";
 import { useCreatePurchaseOrder } from "../mutations";
 import { formatAmount } from "@/lib/purchasing/utils";
+import { defaultPurchasePackFor, wholePacksFor } from "@/lib/purchasing/packs";
 
 interface POItemForm extends PurchaseOrderItemFormData {
   id: string;
@@ -415,7 +416,7 @@ export function NewPOPage({ poId }: NewPOPageProps = {}) {
     // Update material info
     if (field === "raw_material_id") {
       const material = materials.find((m) => m.id === value);
-      const unitId = material?.satuan_besar_id || "";
+      const unitId = (material && defaultPurchasePackFor(material)?.satuan_id) || material?.satuan_besar_id || "";
       newItems[index].raw_material_name = material?.nama;
       newItems[index].raw_material_unit = getUnitName(unitId) || material?.satuan_besar_nama || material?.satuan;
       newItems[index].satuan_id = unitId || undefined;
@@ -543,6 +544,16 @@ export function NewPOPage({ poId }: NewPOPageProps = {}) {
   }
 
   if (!canCreateFromPr) {
+    const reorderMaterial = materials.find((m) => m.id === searchParams.get("material_id"));
+    const reorderBaseQty = Number(searchParams.get("qty")) || 0;
+    const reorderPack = reorderMaterial ? defaultPurchasePackFor(reorderMaterial) : undefined;
+    const reorderPackQty = wholePacksFor(reorderBaseQty, reorderPack?.qty_in_base_unit ?? 1);
+    const reorderPrHref = reorderMaterial
+      ? `/dashboard/purchasing/pr/insert?${new URLSearchParams({
+          material_id: reorderMaterial.id,
+          qty: String(reorderBaseQty),
+        }).toString()}`
+      : null;
     return (
       <div className="space-y-6">
         <PurchasingFormHeader
@@ -556,6 +567,15 @@ export function NewPOPage({ poId }: NewPOPageProps = {}) {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink-50 text-pink-600">
               <ClipboardList className="h-6 w-6" />
             </div>
+            {reorderMaterial && reorderPackQty > 0 && (
+              <div className="w-full max-w-md rounded-xl bg-muted px-4 py-3 text-left text-sm">
+                <p className="font-medium text-gray-900">Saran pemesanan ulang dari laporan stok rendah</p>
+                <p className="mt-1 text-gray-600">
+                  {reorderMaterial.nama}: {reorderPackQty} {getUnitName(reorderPack?.satuan_id) || reorderMaterial.satuan_besar_nama}
+                  {" "}({reorderBaseQty} satuan dasar)
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <h2 className="text-lg font-semibold text-gray-900">Mulai dari Purchase Request</h2>
               <p className="max-w-md text-sm text-gray-500">
@@ -569,9 +589,9 @@ export function NewPOPage({ poId }: NewPOPageProps = {}) {
                   Kembali ke Purchase Order
                 </Button>
               </Link>
-              <Link href={RM_ROUTES.purchasingPr}>
+              <Link href={reorderPrHref ?? RM_ROUTES.purchasingPr}>
                 <Button className="h-10 w-full bg-pink-600 hover:bg-pink-700 sm:w-auto">
-                  Buka Purchase Request
+                  {reorderPrHref ? "Buat Purchase Request" : "Buka Purchase Request"}
                 </Button>
               </Link>
             </div>

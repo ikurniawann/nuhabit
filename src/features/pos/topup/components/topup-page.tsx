@@ -44,6 +44,9 @@ import { buildTopupQrImageUrl, fetchTopupStatus, listTopupCustomers } from '../a
 import { printTopupReceipt } from '../print-topup-receipt';
 import { useLoyaltySettings } from '@/features/pos/loyalty-settings';
 import { formatArkAmount } from '@/lib/pos/loyalty-settings';
+import { isCreditEntry } from '@/lib/wallet/ledger';
+import { TopupPackagePicker } from '@/features/wallet/components/topup-package-picker';
+import type { TopupPackage } from '@/features/wallet/api';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value || 0);
@@ -66,6 +69,8 @@ export function TopupPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [topupRp, setTopupRp] = useState(0);
   const [customRp, setCustomRp] = useState('');
+  // Paket top-up terpilih (harga = topupRp, saldo diterima = credit_idr).
+  const [topupPackage, setTopupPackage] = useState<TopupPackage | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('qris');
   // PIN supervisor utk metode FOC (topup gratis — marketing).
   const [focPin, setFocPin] = useState('');
@@ -127,7 +132,8 @@ export function TopupPage() {
   const minTopup = loyaltySettings?.topup_min_amount ?? 10000;
   const formatArk = (value: number) => formatArkAmount(value, arkRate);
 
-  const projectedBalance = customer ? Number(customer.ark_coin_balance || 0) + topupRp : 0;
+  const creditRp = topupPackage?.credit_idr ?? topupRp;
+  const projectedBalance = customer ? Number(customer.ark_coin_balance || 0) + creditRp : 0;
   const customersErrorMessage = customersError instanceof Error ? customersError.message : '';
 
   const modalCustomers: CustomerWithDiscount[] = useMemo(
@@ -255,13 +261,21 @@ export function TopupPage() {
     return () => window.removeEventListener(POS_NFC_CARD_EVENT, onBridgeCard);
   }, [resolveScannedCard]);
 
+  function selectPackage(pkg: TopupPackage) {
+    setTopupPackage(pkg);
+    setTopupRp(pkg.price_idr);
+    setCustomRp(formatCurrency(pkg.price_idr));
+  }
+
   function selectPreset(value: number) {
+    setTopupPackage(null);
     setTopupRp(value);
     setCustomRp(formatCurrency(value));
   }
 
   function handleCustom(value: string) {
     const amount = parseAmountInput(value);
+    setTopupPackage(null);
     setTopupRp(amount);
     setCustomRp(amount > 0 ? formatCurrency(amount) : '');
   }
@@ -373,6 +387,7 @@ export function TopupPage() {
       }
 
       const amount = Number(item.amount) || 0;
+      setTopupPackage(null);
       setTopupRp(amount);
       setCustomRp(amount > 0 ? formatCurrency(amount) : '');
       setPayment('qris');
@@ -414,8 +429,8 @@ export function TopupPage() {
     void refetchHistory();
     toast.success(
       data.xp_awarded
-        ? `Top-up successful. ${formatArk(topupRp)} added (+${data.xp_awarded} XP). New balance: ${formatArk(balanceAfter)}.`
-        : `Top-up successful. ${formatArk(topupRp)} added. New balance: ${formatArk(balanceAfter)}.`
+        ? `Top-up successful. ${formatArk(creditRp)} added (+${data.xp_awarded} XP). New balance: ${formatArk(balanceAfter)}.`
+        : `Top-up successful. ${formatArk(creditRp)} added. New balance: ${formatArk(balanceAfter)}.`
     );
   }
 
@@ -435,6 +450,7 @@ export function TopupPage() {
         amount: topupRp,
         payment_method: payment,
         supervisor_pin: payment === 'foc' ? focPin.trim() : undefined,
+        package_id: topupPackage?.id,
       });
       setFocPin('');
 
@@ -490,6 +506,7 @@ export function TopupPage() {
   }, [step, pendingTopupId]);
 
   function newTopup() {
+    setTopupPackage(null);
     setTopupRp(0);
     setCustomRp('');
     setResult(null);
@@ -505,7 +522,7 @@ export function TopupPage() {
         customerName: customer.name || customer.phone || 'Member',
         phone: customer.phone,
         amount: topupRp,
-        arkAmountLabel: formatArk(topupRp),
+        arkAmountLabel: formatArk(creditRp),
         amountLabel: formatCurrency(topupRp),
         paymentMethod: payment,
         balanceBeforeLabel: formatArk(result.balance_before),
@@ -590,6 +607,7 @@ export function TopupPage() {
             <div className="space-y-4 lg:col-span-7">
               {step === 'enter_amount' && (
                 <>
+                  <TopupPackagePicker selectedId={topupPackage?.id ?? null} onSelect={selectPackage} />
                   <section className="rounded-2xl border border-gray-200/70 bg-card p-4">
                     <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Top-up amount
@@ -632,7 +650,7 @@ export function TopupPage() {
                     <div className="rounded-2xl border border-amber-200/70 bg-amber-50/80 px-4 py-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">You will receive</span>
-                        <span className="font-semibold text-amber-700">{formatArk(topupRp)}</span>
+                        <span className="font-semibold text-amber-700">{formatArk(creditRp)}</span>
                       </div>
                       <div className="mt-1 flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Balance after top-up</span>
@@ -672,7 +690,7 @@ export function TopupPage() {
                       Top-up amount
                     </div>
                     <div className="mt-1 text-3xl font-bold text-foreground">{formatCurrency(topupRp)}</div>
-                    <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArk(topupRp)}</div>
+                    <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArk(creditRp)}</div>
                   </div>
 
                   <div className="grid gap-2 sm:grid-cols-3">
@@ -780,7 +798,7 @@ export function TopupPage() {
                   Waiting for payment
                 </div>
                 <div className="mt-1 text-3xl font-bold text-foreground">{formatCurrency(topupRp)}</div>
-                <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArk(topupRp)}</div>
+                <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArk(creditRp)}</div>
                 <p className="mt-3 text-sm text-muted-foreground">
                   Ask the customer to scan this QRIS. ARK is credited after payment is confirmed.
                 </p>
@@ -841,7 +859,7 @@ export function TopupPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Top-up successful</h2>
-                  <p className="text-sm text-muted-foreground">{formatArk(topupRp)} added to wallet</p>
+                  <p className="text-sm text-muted-foreground">{formatArk(creditRp)} added to wallet</p>
                 </div>
               </div>
               <WalletCard customer={customer} arkRate={arkRate} highlightBalance />
@@ -850,7 +868,7 @@ export function TopupPage() {
             <div className="space-y-4 lg:col-span-7">
               <div className="w-full rounded-2xl border border-gray-200/70 bg-muted/40 p-4 text-left text-sm">
                 <Line label="Amount paid" value={formatCurrency(topupRp)} />
-                <Line label="ARK received" value={formatArk(topupRp)} />
+                <Line label="ARK received" value={formatArk(creditRp)} />
                 <Line label="Previous balance" value={formatArk(result.balance_before)} />
                 <Line label="New balance" value={formatArk(result.balance_after)} strong />
               </div>
@@ -902,7 +920,7 @@ export function TopupPage() {
                 <Check className="h-6 w-6 text-emerald-600" />
               </div>
               <div className="text-xs text-muted-foreground">Success</div>
-              <div className="text-xl font-bold text-foreground">{formatArk(topupRp)}</div>
+              <div className="text-xl font-bold text-foreground">{formatArk(creditRp)}</div>
             </div>
             <Line label="Customer" value={customer?.name || customer?.phone || '-'} />
             <Line label="Amount" value={formatCurrency(topupRp)} />
@@ -996,12 +1014,6 @@ function paymentMethodLabel(method?: string | null) {
   return value.toUpperCase();
 }
 
-const WALLET_CREDIT_TYPES = new Set(['topup', 'topup_bonus', 'refund', 'bonus']);
-
-function isWalletCredit(type?: string | null) {
-  return WALLET_CREDIT_TYPES.has(String(type || 'topup').toLowerCase());
-}
-
 function walletTypeLabel(type?: string | null) {
   const value = String(type || 'topup').toLowerCase();
   if (value === 'topup') return 'Top-up';
@@ -1010,6 +1022,11 @@ function walletTypeLabel(type?: string | null) {
   if (value === 'refund') return 'Refund';
   if (value === 'bonus') return 'Bonus';
   if (value === 'redeem') return 'Redeem';
+  if (value === 'expiration') return 'Kedaluwarsa';
+  if (value === 'adjustment') return 'Penyesuaian';
+  if (value === 'reversal') return 'Pembatalan';
+  if (value === 'topup_refund') return 'Refund top-up';
+  if (value === 'withdrawal') return 'Penarikan';
   return value;
 }
 
@@ -1096,7 +1113,7 @@ function TopupHistoryCard({
         ) : (
           <div className="divide-y divide-gray-200/70">
             {items.map((item) => {
-              const credit = isWalletCredit(item.type);
+              const credit = isCreditEntry(String(item.type || 'topup').toLowerCase(), Number(item.amount) || 0);
               const amount = Math.abs(Number(item.amount) || 0);
               const signedLabel = `${credit ? '+' : '−'}${formatCurrency(amount)}`;
               const signedArk = `${credit ? '+' : '−'}${formatArkAmount(amount, arkRate)}`;

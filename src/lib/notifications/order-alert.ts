@@ -5,7 +5,7 @@
 
 export const ORDER_ALERT_SETTING_KEY = "order_alert_config";
 export const ORDER_ALERT_ROLE_OPTIONS = [
-  { code: "pos", label: "POS (kasir/barista)" },
+  { code: "pos", label: "POS (kasir/bar)" },
   { code: "pos_supervisor", label: "POS Supervisor" },
 ] as const;
 

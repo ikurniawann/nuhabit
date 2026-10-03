@@ -1,3 +1,4 @@
+import { isMemberQrToken } from "@/lib/crm/engagement/rules";
 import { buildTopupCardPath, shouldRedirectNfcScan } from "./resolve-topup-path";
 
 export const POS_NFC_CARD_EVENT = "arkiv-pos-nfc-card";
@@ -22,7 +23,8 @@ export function routePosNfcCard(input: {
   const card = input.card.trim();
   if (!card) return "ignored";
 
-  if (input.paymentNfcActive) {
+  // QR kartu member selalu ke kasir (pilih member), bukan ke halaman top-up.
+  if (input.paymentNfcActive || isMemberQrToken(card)) {
     dispatchPosNfcCard(card);
     return "dispatched";
   }

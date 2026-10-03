@@ -26,6 +26,7 @@ import { AP_PAYMENT_METHODS } from "@/lib/accounting/ap-types";
 import { useCreateApPayment } from "../mutations";
 import { useApInvoiceList, useApPaymentList } from "../queries";
 import type { ApInvoiceRow } from "../routes";
+import { ApPaymentVoidButton } from "@/features/purchasing/vendor-payments/components/ap-payment-void-button";
 
 export function ApPaymentsPage() {
   const searchParams = useSearchParams();
@@ -154,6 +155,7 @@ export function ApPaymentsPage() {
                   <th className="px-2 py-3 font-medium">Tanggal</th>
                   <th className="px-2 py-3 font-medium">Metode</th>
                   <th className="px-2 py-3 font-medium text-right">Amount</th>
+                  <th className="px-2 py-3 font-medium text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -171,6 +173,9 @@ export function ApPaymentsPage() {
                     <td className="px-2 py-3">{row.method}</td>
                     <td className="px-2 py-3 text-right">
                       {formatAmount(row.amount)}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <ApPaymentVoidButton payment={row} />
                     </td>
                   </tr>
                 ))}

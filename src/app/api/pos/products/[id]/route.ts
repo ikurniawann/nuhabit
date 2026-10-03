@@ -55,6 +55,9 @@ export async function PATCH(
     // Produk privilege member (EPIC-011 Fase C): null = produk umum
     const hasMinXpUpdate = (body as { min_xp?: unknown }).min_xp !== undefined;
     const rawMinXp = (body as { min_xp?: unknown }).min_xp;
+    // Bonus XP per unit saat order member lunas (0 = tanpa bonus)
+    const rawBonusXp = (body as { bonus_xp?: unknown }).bonus_xp;
+    const hasBonusXpUpdate = rawBonusXp !== undefined;
     const xpPoints = Math.max(0, Number(body.xp_points ?? body.xp ?? 0) || 0);
     const db = createPgClient();
     // Channel penjualan: null = semua channel; array kode = hanya di channel itu.
@@ -77,6 +80,13 @@ export async function PATCH(
     if (hasActiveUpdate) updatePayload.is_active = Boolean(body.is_active);
     if (hasAvailableUpdate) updatePayload.is_available = Boolean(body.is_available);
     if (hasSalesChannelsUpdate) updatePayload.sales_channels = normalizeSalesChannels(rawSalesChannels);
+    if (hasBonusXpUpdate) {
+      const bonusXp = Math.floor(Number(rawBonusXp));
+      if (!Number.isFinite(bonusXp) || bonusXp < 0 || bonusXp > 100_000) {
+        return NextResponse.json({ success: false, error: 'Bonus XP harus 0–100.000' }, { status: 400 });
+      }
+      updatePayload.bonus_xp = bonusXp;
+    }
     if (hasMinXpUpdate) {
       updatePayload.min_xp =
         rawMinXp === null || rawMinXp === "" || Number(rawMinXp) <= 0
@@ -96,7 +106,7 @@ export async function PATCH(
     const rawWebDistributed = (body as { web_distributed?: unknown }).web_distributed;
     const hasWebDistributedUpdate = rawWebDistributed !== undefined;
 
-    if (!hasXpUpdate && !hasStationUpdate && !hasActiveUpdate && !hasAvailableUpdate && !hasMinXpUpdate && !hasMerchUpdate && !hasWebDistributedUpdate && !hasSalesChannelsUpdate) {
+    if (!hasXpUpdate && !hasStationUpdate && !hasActiveUpdate && !hasAvailableUpdate && !hasMinXpUpdate && !hasBonusXpUpdate && !hasMerchUpdate && !hasWebDistributedUpdate && !hasSalesChannelsUpdate) {
       return NextResponse.json({ success: false, error: 'No product fields to update' }, { status: 400 });
     }
 

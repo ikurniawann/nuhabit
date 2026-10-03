@@ -4,6 +4,7 @@ import {
   todayJakarta,
   type DesktopOverview,
 } from "@/lib/desktop/overview";
+import { fetchGymPulse, type GymPulse } from "@/lib/dashboard/gym-pulse";
 
 /**
  * Data dashboard eksekutif /dashboard (EPIC-021) — untuk super_admin + direksi.
@@ -65,6 +66,7 @@ export interface ExecutiveDashboard {
   kontrakHabis30Hari: number | null;
   omzetPerOutlet: OutletSales[] | null;
   bulanBerjalan: MonthToDate | null;
+  gym: GymPulse | null;
   gagal: string[];
 }
 
@@ -248,7 +250,7 @@ async function safe<T>(name: string, gagal: string[], fn: () => Promise<T>): Pro
 
 export async function buildExecutiveDashboard(): Promise<ExecutiveDashboard> {
   const gagal: string[] = [];
-  const [overview, tren14Hari, topProduk7Hari, nilaiPersediaan, purchasingBulanIni, payrollTerakhir, kontrakHabis30Hari, omzetPerOutlet, bulanBerjalan] =
+  const [overview, tren14Hari, topProduk7Hari, nilaiPersediaan, purchasingBulanIni, payrollTerakhir, kontrakHabis30Hari, omzetPerOutlet, bulanBerjalan, gym] =
     await Promise.all([
       buildDesktopOverview(), // punya gagal-aman internalnya sendiri
       safe("tren14", gagal, fetchTrend14),
@@ -259,6 +261,7 @@ export async function buildExecutiveDashboard(): Promise<ExecutiveDashboard> {
       safe("kontrak", gagal, fetchExpiringContracts),
       safe("outlet", gagal, fetchOutletBreakdown),
       safe("bulanBerjalan", gagal, fetchMonthToDate),
+      safe("gym", gagal, fetchGymPulse),
     ]);
 
   return {
@@ -272,6 +275,7 @@ export async function buildExecutiveDashboard(): Promise<ExecutiveDashboard> {
     kontrakHabis30Hari,
     omzetPerOutlet,
     bulanBerjalan,
+    gym,
     gagal: [...gagal, ...overview.gagal.map((g) => `overview:${g}`)],
   };
 }

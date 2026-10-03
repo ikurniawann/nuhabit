@@ -227,3 +227,71 @@ export function resolveStatusAfterRefund(
   }
   return balanceAfter > 0 ? "active" : "exhausted";
 }
+
+// ── Reload (top up) kartu yang sudah ada ───────────────────────────────
+
+export type GiftCardReloadRejectReason =
+  | "nominal-tidak-valid"
+  | "nonaktif"
+  | "kedaluwarsa"
+  | "melebihi-plafon";
+
+export const GIFT_CARD_RELOAD_REJECT_MESSAGES: Record<GiftCardReloadRejectReason, string> = {
+  "nominal-tidak-valid": "Nominal reload harus rupiah bulat di atas 0",
+  nonaktif: "Kartu nonaktif atau belum dibayar — tidak bisa di-reload",
+  kedaluwarsa: "Kartu sudah kedaluwarsa — tidak bisa di-reload",
+  "melebihi-plafon": `Saldo setelah reload melebihi plafon Rp${MAX_GIFT_CARD_VALUE.toLocaleString("id-ID")}`,
+};
+
+export type GiftCardReloadResult =
+  | {
+      ok: true;
+      balanceAfter: number;
+      reloadedTotalAfter: number;
+      statusAfter: GiftCardStatus;
+    }
+  | { ok: false; reason: GiftCardReloadRejectReason };
+
+/**
+ * Reload menambah saldo kartu `active` atau `exhausted` (kartu habis hidup
+ * lagi). Kartu `disabled`/`pending`/`expired` ditolak: reload bukan jalan
+ * pintas mengaktifkan kartu yang dimatikan admin. `reloaded_total` ikut
+ * naik supaya batas saldo (nilai terbit + total reload) tetap terjaga.
+ */
+export function evaluateGiftCardReload(
+  card: GiftCardState & { reloadedTotal: number },
+  amount: number,
+  now: string
+): GiftCardReloadResult {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return { ok: false, reason: "nominal-tidak-valid" };
+  }
+  if (card.status !== "active" && card.status !== "exhausted") {
+    return { ok: false, reason: card.status === "expired" ? "kedaluwarsa" : "nonaktif" };
+  }
+  if (isGiftCardExpired(card.expiresAt, now)) {
+    return { ok: false, reason: "kedaluwarsa" };
+  }
+  const balanceAfter = computeBalanceAfterIssue(card.balance, amount);
+  if (balanceAfter > MAX_GIFT_CARD_VALUE) {
+    return { ok: false, reason: "melebihi-plafon" };
+  }
+  return {
+    ok: true,
+    balanceAfter,
+    reloadedTotalAfter: round2(card.reloadedTotal + amount),
+    statusAfter: "active",
+  };
+}
+
+// ── Pencocokan nomor HP (tautan kartu ↔ member) ────────────────────────
+
+/** Digit nomor HP tanpa awalan 0/62: "0812-3", "+62 8123", "628123" → "8123". */
+export function phoneMatchKey(phone: string): string {
+  return phone.replace(/\D/g, "").replace(/^(62|0)/, "");
+}
+
+/** Padanan SQL `phoneMatchKey` untuk kolom teks. */
+export function phoneMatchKeySql(column: string): string {
+  return `regexp_replace(regexp_replace(COALESCE(${column}, ''), '\\D', '', 'g'), '^(62|0)', '')`;
+}

@@ -70,6 +70,11 @@ import {
   type DiscountType,
 } from '@/lib/pos/manual-discount';
 import { evaluateActiveOffersForPosCart } from '@/lib/promo/offer-pos';
+import {
+  OfferCapReachedError,
+  captureOfferUsage,
+  recordOfferUsage,
+} from '@/lib/promo/offer-rules-server';
 import { parseReportDateRange } from '@/lib/pos/report-stall-filter';
 import { validateKolComp } from '@/lib/pos/comp-orders-server';
 import { rejectIfArkCoinDisabled } from '@/lib/crm/loyalty-features-server';
@@ -750,9 +755,13 @@ export async function POST(request: NextRequest) {
         ? null
         : Number(body.manual_discount_value);
 
+    // Kode kasir = kode pembuka penawaran ATAU kode campaign promo.
+    const enteredCode = String(body.promo_code || '').trim();
     const offerEval = await evaluateActiveOffersForPosCart({
       companyId: venue.companyId,
       branchId: body.branch_id || venue.branchId,
+      code: enteredCode || null,
+      customerId: customer_id || null,
       items: items.map((item: PosOrderItemRequest) => {
         const qty = Number(item.quantity) || 1;
         const unit = Number(item.unit_price) || 0;
@@ -772,7 +781,7 @@ export async function POST(request: NextRequest) {
     // eksplisit) supaya kuota terkunci sebelum uang diterima; diskon =
     // turunan SERVER (line + offer + membership + promo + manual), klien
     // hanya diverifikasi. Gagal lolos → 422 sebelum ada baris order.
-    const promoCode = String(body.promo_code || '').trim();
+    const promoCode = offerEval.unlocked_rule_id ? '' : enteredCode;
     let promoHold: PromoHold | null = null;
     let promoOrderId: string | null = null;
     let promoDiscountRaw = 0;
@@ -809,6 +818,10 @@ export async function POST(request: NextRequest) {
             subtotal: promoHoldSubtotal,
             phone: null,
             customerId: customer_id || null,
+            lines: items.map((item: PosOrderItemRequest, index: number) => ({
+              productId: String(item.product_id || ''),
+              amount: provisionalStack.line_results[index]?.total_amount ?? 0,
+            })),
           })
         );
         promoDiscountRaw = promoHold.discount;
@@ -846,6 +859,33 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Kuota penawaran dikunci sebelum order dibuat (held; lunas → captured).
+    const presetOrderId =
+      promoOrderId ?? (offerEval.applied.length > 0 ? randomUUID() : null);
+    if (presetOrderId && offerEval.applied.length > 0) {
+      try {
+        await withTransaction((client) =>
+          recordOfferUsage(client, {
+            companyId: venue.companyId,
+            branchId: body.branch_id || venue.branchId,
+            orderId: presetOrderId,
+            customerId: customer_id || null,
+            applied: offerEval.applied,
+            status: 'held',
+            enforce: true,
+          })
+        );
+      } catch (offerErr) {
+        if (!(offerErr instanceof OfferCapReachedError)) throw offerErr;
+        if (promoOrderId) {
+          await withTransaction((client) =>
+            releasePromoRedemption(client, 'pos_order', promoOrderId!)
+          ).catch(() => {});
+        }
+        return NextResponse.json({ success: false, error: offerErr.message }, { status: 422 });
+      }
     }
 
     discountReasonFinal = buildDiscountReason({
@@ -1082,7 +1122,7 @@ export async function POST(request: NextRequest) {
     const { data: insertedOrder, error: orderErr } = await db
       .from('pos_orders')
       .insert({
-        ...(promoOrderId ? { id: promoOrderId } : {}),
+        ...(presetOrderId ? { id: presetOrderId } : {}),
         order_number: orderNumber,
         queue_number: queueNumber,
         order_type,
@@ -1609,6 +1649,11 @@ export async function POST(request: NextRequest) {
       await withTransaction((client) =>
         capturePromoRedemption(client, 'pos_order', promoOrderId!)
       ).catch((err) => console.error('[pos] capture promo error:', err));
+    }
+    if (presetOrderId && offerEval.applied.length > 0) {
+      await withTransaction((client) => captureOfferUsage(client, presetOrderId)).catch(
+        (err) => console.error('[pos] capture offer usage error:', err)
+      );
     }
 
     const { data: completeOrder } = await db

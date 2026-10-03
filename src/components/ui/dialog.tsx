@@ -10,7 +10,7 @@ import { XIcon } from "lucide-react"
 
 /** Structured modal shell — use with DialogPanelHeader, DialogPanelBody, DialogFooter */
 const dialogPanelVariants = cva(
-  "flex w-full max-h-[min(var(--dialog-panel-max-height,88vh),900px)] flex-col gap-0 overflow-hidden rounded-xl border border-gray-200/70 bg-white p-0 text-sm text-foreground shadow-xl ring-1 ring-gray-200/60 outline-none",
+  "flex w-full max-h-[min(var(--dialog-panel-max-height,88vh),900px)] flex-col gap-0 overflow-hidden rounded-card bg-card p-0 text-sm text-foreground shadow-float outline-none",
   {
     variants: {
       size: {
@@ -52,7 +52,7 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-ink/50 backdrop-blur-[2px] duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -70,11 +70,11 @@ function DialogContent({
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className="bg-black/40" />
+      <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-white p-6 text-sm text-foreground ring-1 ring-black/5 shadow-2xl duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-card bg-card p-6 text-sm text-foreground shadow-float duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}
@@ -123,7 +123,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex w-full shrink-0 flex-col-reverse gap-3 border-t border-gray-200/70 bg-gray-50/60 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3",
+        "flex w-full shrink-0 flex-col-reverse gap-3 border-t border-border bg-surface-2 px-6 py-4 sm:flex-row sm:justify-end sm:gap-3",
         className
       )}
       {...props}
@@ -177,7 +177,7 @@ function DialogPanelHeader({ className, ...props }: React.ComponentProps<"div">)
 function DialogPanelTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogTitle
-      className={cn("text-base font-semibold leading-snug text-gray-900", className)}
+      className={cn("text-lg font-semibold leading-snug text-foreground", className)}
       {...props}
     />
   )
@@ -189,7 +189,7 @@ function DialogPanelDescription({
 }: DialogPrimitive.Description.Props) {
   return (
     <DialogDescription
-      className={cn("mt-1 text-sm leading-5 text-gray-500", className)}
+      className={cn("mt-1 text-sm leading-5 text-muted-foreground", className)}
       {...props}
     />
   )
@@ -199,7 +199,7 @@ function DialogPanelToolbar({ className, ...props }: React.ComponentProps<"div">
   return (
     <div
       data-slot="dialog-panel-toolbar"
-      className={cn("shrink-0 border-b border-gray-200/70 px-6 py-3", className)}
+      className={cn("shrink-0 border-b border-border px-6 py-3", className)}
       {...props}
     />
   )

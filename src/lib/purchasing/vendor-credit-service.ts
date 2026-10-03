@@ -385,7 +385,8 @@ export async function getVendorCreditsByGrnId(db: DbClient, grnId: string) {
 export async function approveVendorCredit(
   db: DbClient,
   creditId: string,
-  approverId: string
+  approverId: string,
+  options: { expiryDate?: string | null } = {}
 ) {
   const { data: credit, error } = await db
     .from("vendor_credits")
@@ -420,6 +421,7 @@ export async function approveVendorCredit(
       approved_by: approverId,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      ...(options.expiryDate ? { expiry_date: options.expiryDate } : {}),
     })
     .eq("id", creditId)
     .select(
@@ -439,34 +441,6 @@ export async function approveVendorCredit(
 
   if (updateError) throw updateError;
   return updated;
-}
-
-export async function getPoVendorCreditAmount(db: DbClient, poId: string): Promise<number> {
-  try {
-    const { data: grns, error: grnError } = await db
-      .from("grn")
-      .select("id")
-      .eq("purchase_order_id", poId)
-      .eq("is_active", true);
-
-    if (grnError) throw grnError;
-
-    const grnIds = (grns || []).map((row) => row.id).filter(Boolean) as string[];
-    if (!grnIds.length) return 0;
-
-    const { data: credits, error } = await db
-      .from("vendor_credits")
-      .select("total_amount")
-      .in("grn_id", grnIds)
-      .eq("status", "approved");
-
-    if (error) throw error;
-
-    return (credits || []).reduce((sum, row) => sum + toAmount(row.total_amount), 0);
-  } catch (error) {
-    if (isVendorCreditsUnavailable(error)) return 0;
-    throw error;
-  }
 }
 
 export async function getVendorCreditsByPoIds(
@@ -493,13 +467,18 @@ export async function getVendorCreditsByPoIds(
       grnIds.push(grn.id);
     }
 
-    if (!grnIds.length) return credits;
+    // Kredit mengurangi PO asalnya, kecuali bagian yang sudah dipakai ke PO
+    // lain (vendor_credit_applications); bagian itu mengurangi PO tujuan.
+    const add = (poId: string, amount: number) =>
+      credits.set(poId, roundAmount((credits.get(poId) || 0) + amount));
 
-    const { data: rows, error } = await db
-      .from("vendor_credits")
-      .select("grn_id, total_amount")
-      .in("grn_id", grnIds)
-      .eq("status", "approved");
+    const { data: rows, error } = grnIds.length
+      ? await db
+          .from("vendor_credits")
+          .select("grn_id, total_amount, applied_amount")
+          .in("grn_id", grnIds)
+          .eq("status", "approved")
+      : { data: [], error: null };
 
     if (error) throw error;
 
@@ -507,7 +486,19 @@ export async function getVendorCreditsByPoIds(
       if (!row.grn_id) continue;
       const poId = grnToPo.get(row.grn_id);
       if (!poId) continue;
-      credits.set(poId, (credits.get(poId) || 0) + toAmount(row.total_amount));
+      add(poId, toAmount(row.total_amount) - toAmount(row.applied_amount));
+    }
+
+    const { data: applications, error: applicationsError } = await db
+      .from("vendor_credit_applications")
+      .select("purchase_order_id, amount")
+      .in("purchase_order_id", poIds)
+      .is("voided_at", null);
+
+    if (applicationsError) throw applicationsError;
+
+    for (const row of applications || []) {
+      add(row.purchase_order_id, toAmount(row.amount));
     }
 
     return credits;

@@ -75,7 +75,7 @@ export const useUpdateCampaign = (
       values,
     }: {
       id: string;
-      values: Partial<PromoCampaignFormValues> & { is_active?: boolean };
+      values: Partial<PromoCampaignFormValues> & { is_active?: boolean; show_in_member_portal?: boolean };
     }) => updateCampaign(id, values),
     "Campaign diperbarui",
     onSuccess

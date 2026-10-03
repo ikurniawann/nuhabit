@@ -96,10 +96,10 @@ export async function GET() {
   const spec = {
     openapi: "3.0.3",
     info: {
-      title: "BCD Coffee OS API",
+      title: "NüHabit OS API",
       version: "1.0.0",
       description:
-        "Seluruh endpoint /api/* BCD Coffee OS. Autentikasi: header 'Authorization: Bearer arkiv_...' (Open API token, dikelola admin di dashboard) atau cookie sesi. Scope token: '*' atau '<modul>:read|write' (modul: pos, member, hris, inventory, crm, config, reports, other). Method GET=read, selainnya write.",
+        "Seluruh endpoint /api/* NüHabit OS. Autentikasi: header 'Authorization: Bearer arkiv_...' (Open API token, dikelola admin di dashboard) atau cookie sesi. Scope token: '*' atau '<modul>:read|write' (modul: pos, member, hris, inventory, crm, config, reports, other). Method GET=read, selainnya write.",
     },
     servers: [{ url: "https://dashboard.suluinwounderland.com" }],
     components: {

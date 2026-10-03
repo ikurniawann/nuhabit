@@ -11,7 +11,7 @@
  *  - selain itu (POST, halaman lain, API lain) → tidak disentuh
  * Respons hasil redirect (mis. ke /login) tidak pernah di-cache.
  */
-const VERSION = 'bcd-pos-v1';
+const VERSION = 'nuhabit-pos-v1';
 const CACHE_STATIC = `${VERSION}-static`;
 const CACHE_PAGES = `${VERSION}-pages`;
 const CACHE_API = `${VERSION}-api`;
@@ -32,7 +32,7 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys
-          .filter((key) => key.startsWith('bcd-pos-') && !key.startsWith(VERSION))
+          .filter((key) => (key.startsWith('bcd-pos-') || key.startsWith('nuhabit-pos-')) && !key.startsWith(VERSION))
           .map((key) => caches.delete(key))
       );
       await self.clients.claim();
@@ -125,7 +125,7 @@ self.addEventListener('fetch', (event) => {
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/products/') ||
-    url.pathname.startsWith('/logos/')
+    url.pathname.startsWith('/brand/')
   ) {
     event.respondWith(cacheFirst(request, CACHE_STATIC));
     return;

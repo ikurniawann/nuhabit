@@ -75,7 +75,7 @@ function Toggle({ on, onChange, label, offClass = "bg-white/16" }: { on: boolean
       aria-checked={on}
       aria-label={label}
       onClick={() => onChange(!on)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? "bg-gradient-to-r from-pink-500 to-rose-600" : offClass}`}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? "bg-pink-500" : offClass}`}
     >
       <span
         className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`}
@@ -423,7 +423,7 @@ export function WaNotifSettingsPanel({ tone = "dark" }: { tone?: WaNotifTone } =
           type="button"
           onClick={save}
           disabled={saving}
-          className="rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:from-pink-400 hover:to-rose-500 disabled:opacity-50"
+          className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground shadow-lg transition hover:brightness-105 disabled:opacity-50"
         >
           {saving ? "Menyimpan…" : "Simpan"}
         </button>

@@ -3,14 +3,19 @@ import { z } from "zod";
 import { successResponse } from "@/lib/api/auth";
 import { queryOne } from "@/lib/db";
 import { requirePromoContext } from "@/lib/giftcard/server";
+import { linkGiftCardToMember } from "@/lib/giftcard/giftcard-server";
 
-// EPIC-034 Fase A — nonaktifkan/aktifkan kembali satu gift card. Hanya
+// EPIC-034 Fase A — nonaktifkan/aktifkan kembali satu gift card, atau
+// tautkan ke member. Toggle status hanya
 // bolak-balik antara `active` <-> `disabled`; kartu `pending`/`exhausted`/
 // `expired` tidak bisa disentuh lewat toggle ini (siklus hidupnya beda).
 
-const patchSchema = z.object({
-  is_active: z.boolean(),
-});
+// Satu aksi per permintaan: toggle aktif ATAU tautkan/lepas member
+// (customer_id null = lepas).
+const patchSchema = z.union([
+  z.object({ is_active: z.boolean() }).strict(),
+  z.object({ customer_id: z.string().uuid().nullable() }).strict(),
+]);
 
 export async function PATCH(
   request: NextRequest,
@@ -26,6 +31,24 @@ export async function PATCH(
       return NextResponse.json(
         { success: false, error: "Validation failed", details: parsed.error.issues },
         { status: 400 }
+      );
+    }
+
+    if ("customer_id" in parsed.data) {
+      const linked = await linkGiftCardToMember({
+        scope: { companyId: ctx.companyId, branchId: ctx.branchId },
+        cardId: id,
+        customerId: parsed.data.customer_id,
+      });
+      if (!linked) {
+        return NextResponse.json(
+          { success: false, error: "Gift card atau member tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+      return successResponse(
+        { id, customer_id: parsed.data.customer_id },
+        parsed.data.customer_id ? "Gift card ditautkan ke member" : "Tautan member dilepas"
       );
     }
 

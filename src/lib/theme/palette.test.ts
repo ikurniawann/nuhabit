@@ -37,7 +37,7 @@ describe("pickForeground", () => {
     expect(pickForeground("#1d1dcc")).toBe("#ffffff");
   });
   it("uses dark text on a light brand color", () => {
-    expect(pickForeground("#fde68a")).toBe("#000000");
+    expect(pickForeground("#fde68a")).toBe("#00281a");
   });
   it("guarantees >= 4.5 contrast against the chosen brand", () => {
     for (const c of ["#1d1dcc", "#0ea5e9", "#10b981", "#fde68a", "#111827"]) {

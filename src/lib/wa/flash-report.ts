@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { brandName } from "@/lib/branding";
 
 /**
  * Daily Flash Report (permintaan owner 2026-08-23) — meniru laporan manual
@@ -205,7 +206,7 @@ export function buildFlashReportMessage(data: FlashReportData, dateWib: string):
 
   const lines: string[] = [
     `📊 *Daily Flash Report*`,
-    `BCD COFFEE`,
+    brandName().toUpperCase(),
     tanggal,
   ];
   if (data.operationHour) lines.push(`Jam operasional: ${data.operationHour}`);

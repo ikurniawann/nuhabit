@@ -502,6 +502,12 @@ OLLAMA_MODEL=
 FONNTE_API_KEY=
 RESEND_API_KEY=
 NEXT_PUBLIC_APP_URL=
+
+# Web push portal member /member (opsional; tanpa kunci, push diam).
+# Buat sepasang per lingkungan: npx web-push generate-vapid-keys
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=mailto:ops@example.com
 ```
 
 | Variabel | Dipakai oleh | Keterangan |

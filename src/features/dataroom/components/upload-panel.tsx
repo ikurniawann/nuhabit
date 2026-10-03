@@ -11,7 +11,7 @@ export function UploadPanel({ tasks, onClear }: { tasks: UploadTask[]; onClear: 
     <div className="fixed bottom-4 right-4 z-40 w-[340px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card shadow-2xl">
       <div className="flex items-center justify-between bg-muted/60 px-3 py-2 text-sm font-medium">
         <span>{running > 0 ? `Mengunggah ${running} file…` : `${tasks.length} unggahan selesai`}</span>
-        <button type="button" onClick={onClear} className="rounded p-1 hover:bg-accent" aria-label="Tutup">
+        <button type="button" onClick={onClear} className="rounded p-1 hover:bg-muted" aria-label="Tutup">
           <X className="h-4 w-4" />
         </button>
       </div>

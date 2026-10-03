@@ -9,6 +9,7 @@ import {
 } from "@/lib/member-portal/profile";
 import { dateColToIso } from "@/lib/payroll/period";
 import { DEFAULT_POS_LOYALTY_SETTINGS } from "@/lib/pos/loyalty-settings";
+import { readMarketingConsent } from "@/lib/member-portal/consent";
 
 /**
  * GET /api/member-portal/me — profil + saldo/XP/tier + progres tier
@@ -47,7 +48,9 @@ export async function GET() {
     // ark_coin_balance disimpan dalam Rupiah (kasir memotongnya 1:1 terhadap
     // total order), jadi portal butuh rate-nya untuk menampilkan ARK Coin.
     const { rows: loyalty } = await pool.query(
-      `SELECT ark_rate::float AS ark_rate FROM pos.pos_loyalty_settings
+      `SELECT ark_rate::float AS ark_rate,
+              COALESCE(low_balance_threshold_idr, 0)::float AS low_balance_threshold_idr
+       FROM pos.pos_loyalty_settings
        WHERE is_active ORDER BY updated_at DESC LIMIT 1`,
       []
     );
@@ -79,6 +82,9 @@ export async function GET() {
         member_type: customer.member_type,
         ark_coin_balance: Number(customer.ark_coin_balance) || 0,
         ark_rate: Number(loyalty[0]?.ark_rate) || DEFAULT_POS_LOYALTY_SETTINGS.ark_rate,
+        // Rupiah; 0 = peringatan saldo rendah di portal mati.
+        low_balance_threshold_idr: Number(loyalty[0]?.low_balance_threshold_idr) || 0,
+        marketing_opt_in: await readMarketingConsent(pool, session.customerId),
         total_xp: totalXp,
         visit_count: Number(customer.visit_count) || 0,
         tier: currentTier

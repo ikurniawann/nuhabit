@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Gift, Loader2, Package, Percent, Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,13 @@ import { TableRow } from "@/components/ui/table";
 import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
 import { formatIdrInput, parseIdrDigits } from "@/components/pos/idr-input";
 import { OFFER_TYPE_LABELS } from "@/lib/promo/offer-rules";
-import { listPosCatalogProducts } from "@/features/pos/products/api";
-import type { PosCatalogProduct } from "@/features/pos/products/types";
+import { usePromoCatalog } from "../../catalog";
+import {
+  EMPTY_OFFER_LIMITS,
+  OfferLimitsFields,
+  offerLimitsPayload,
+  type OfferLimitsDraft,
+} from "./offer-limits-fields";
 import {
   useCreateOfferRule,
   useDeleteOfferRule,
@@ -58,9 +63,14 @@ function numberFromApi(value: string | number | null | undefined): string {
 type DraftItem = {
   key: string;
   role: OfferItemRole;
+  kind: "product" | "category";
   product_id: string;
+  category_id: string;
   qty: string;
 };
+
+const draftTarget = (item: DraftItem) =>
+  item.kind === "category" ? item.category_id : item.product_id;
 
 type FormState = {
   name: string;
@@ -77,6 +87,7 @@ type FormState = {
   discount_type: OfferDiscountType;
   discount_value: string;
   items: DraftItem[];
+  limits: OfferLimitsDraft;
 };
 
 function emptyForm(type: OfferType): FormState {
@@ -95,6 +106,7 @@ function emptyForm(type: OfferType): FormState {
     discount_type: "percent",
     discount_value: "",
     items: [],
+    limits: EMPTY_OFFER_LIMITS,
   };
 }
 
@@ -114,13 +126,27 @@ function fromRule(rule: OfferRule): FormState {
     discount_type: rule.discount_type ?? "percent",
     discount_value: numberFromApi(rule.discount_value),
     items: rule.items.map((item, index) => ({
-      key: item.id ?? `${item.product_id}-${index}`,
+      key: item.id ?? `${item.product_id ?? item.category_id}-${index}`,
       role: item.role,
-      product_id: item.product_id,
+      kind: item.category_id ? "category" : "product",
+      product_id: item.product_id ?? "",
+      category_id: item.category_id ?? "",
       qty: numberFromApi(item.qty) || "1",
     })),
+    limits: {
+      sales_channels: rule.sales_channels ?? [],
+      max_uses: rule.max_uses != null ? String(rule.max_uses) : "",
+      max_uses_per_member:
+        rule.max_uses_per_member != null ? String(rule.max_uses_per_member) : "",
+      is_exclusive: rule.is_exclusive,
+      priority: String(rule.priority ?? 0),
+      unlock_code: rule.unlock_code ?? "",
+    },
   };
 }
+
+const itemLabel = (item: OfferRule["items"][number]) =>
+  item.category_id ? `Kategori ${item.category_name ?? "?"}` : item.product_name ?? "Produk";
 
 function formatWindow(rule: OfferRule) {
   if (!rule.valid_from && !rule.valid_until) return "Tanpa batas";
@@ -131,7 +157,7 @@ function summarize(rule: OfferRule) {
   if (rule.offer_type === "bundle") {
     const comps = rule.items
       .filter((i) => i.role === "component")
-      .map((i) => `${i.product_name ?? "Produk"}×${Number(i.qty)}`)
+      .map((i) => `${itemLabel(i)}×${Number(i.qty)}`)
       .join(" + ");
     return `${comps || "—"} → Rp ${Number(rule.bundle_price || 0).toLocaleString("id-ID")}`;
   }
@@ -179,34 +205,22 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<OfferRule | null>(null);
   const [form, setForm] = useState<FormState>(() => emptyForm(offerType));
-  const [products, setProducts] = useState<PosCatalogProduct[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setProductsLoading(true);
-    listPosCatalogProducts()
-      .then((rows) => {
-        if (!cancelled) setProducts(rows.filter((p) => p.status === "active"));
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Gagal memuat daftar produk");
-      })
-      .finally(() => {
-        if (!cancelled) setProductsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
+  const catalog = usePromoCatalog();
+  const productsLoading = catalog.isLoading;
+  const categoryOptions = useMemo(
+    () => (catalog.data?.categories ?? []).map((c) => ({ id: c.id, label: c.name })),
+    [catalog.data]
+  );
   const productOptions = useMemo(
     () =>
-      products.map((p) => ({
-        id: p.id,
-        label: `${p.name}${p.price ? ` · Rp ${p.price.toLocaleString("id-ID")}` : ""}`,
-      })),
-    [products]
+      (catalog.data?.products ?? []).map((p) => {
+        const price = Number(p.price);
+        return {
+          id: p.id,
+          label: `${p.name}${price ? ` · Rp ${price.toLocaleString("id-ID")}` : ""}`,
+        };
+      }),
+    [catalog.data]
   );
 
   const saving = createMutation.isPending || updateMutation.isPending;
@@ -235,7 +249,9 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
         {
           key: `${role}-${Date.now()}-${Math.random()}`,
           role,
+          kind: "product",
           product_id: "",
+          category_id: "",
           qty: "1",
         },
       ],
@@ -259,7 +275,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
   }
 
   function buildPayload(): OfferRulePayload {
-    let draftItems = form.items.filter((item) => item.product_id);
+    let draftItems = form.items.filter((item) => draftTarget(item));
     if (offerType === "bxgy" && form.get_mode === "same_as_buy") {
       draftItems = draftItems.filter((item) => item.role !== "get");
     }
@@ -277,7 +293,8 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
 
     const items = draftItems.map((item, index) => ({
       role: item.role,
-      product_id: item.product_id,
+      product_id: item.kind === "product" ? item.product_id : null,
+      category_id: item.kind === "category" ? item.category_id : null,
       qty: parseIdrDigits(item.qty) || 1,
       sort_order: index,
     }));
@@ -300,6 +317,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
       discount_type: offerType === "volume" ? form.discount_type : null,
       discount_value:
         offerType === "volume" ? parseIdrDigits(form.discount_value) || 0 : null,
+      ...offerLimitsPayload(form.limits),
       items,
     };
   }
@@ -373,6 +391,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                   <th className="py-3 font-medium">Nama</th>
                   <th className="py-3 font-medium">Aturan</th>
                   <th className="py-3 font-medium">Periode</th>
+                  <th className="py-3 font-medium">Batas</th>
                   <th className="py-3 font-medium">Status</th>
                   <th className="py-3 text-right font-medium">Aksi</th>
                 </tr>
@@ -383,6 +402,9 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                     <td className="py-3 font-medium text-foreground">{rule.name}</td>
                     <td className="py-3 text-muted-foreground">{summarize(rule)}</td>
                     <td className="py-3 text-muted-foreground">{formatWindow(rule)}</td>
+                    <td className="py-3">
+                      <OfferLimitBadges rule={rule} />
+                    </td>
                     <td className="py-3">
                       <Badge variant={rule.is_active ? "default" : "secondary"}>
                         {rule.is_active ? "Aktif" : "Nonaktif"}
@@ -499,6 +521,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                   role="component"
                   items={form.items.filter((i) => i.role === "component")}
                   productOptions={productOptions}
+                  categoryOptions={[]}
                   productsLoading={productsLoading}
                   showQty
                   onAdd={() => addItem("component")}
@@ -566,6 +589,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                   role="buy"
                   items={form.items.filter((i) => i.role === "buy")}
                   productOptions={productOptions}
+                  categoryOptions={categoryOptions}
                   productsLoading={productsLoading}
                   onAdd={() => addItem("buy")}
                   onPatch={patchItem}
@@ -577,6 +601,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                     role="get"
                     items={form.items.filter((i) => i.role === "get")}
                     productOptions={productOptions}
+                    categoryOptions={categoryOptions}
                     productsLoading={productsLoading}
                     onAdd={() => addItem("get")}
                     onPatch={patchItem}
@@ -669,6 +694,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                   role="eligible"
                   items={form.items.filter((i) => i.role === "eligible")}
                   productOptions={productOptions}
+                  categoryOptions={categoryOptions}
                   productsLoading={productsLoading}
                   onAdd={() => addItem("eligible")}
                   onPatch={patchItem}
@@ -676,6 +702,12 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                 />
               </div>
             )}
+            <OfferLimitsFields
+              value={form.limits}
+              onChange={(patch) =>
+                setForm((current) => ({ ...current, limits: { ...current.limits, ...patch } }))
+              }
+            />
           </DialogPanelBody>
           <DialogFooter>
             <Button
@@ -708,10 +740,51 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
   );
 }
 
+const SALES_CHANNEL_SHORT: Record<string, string> = {
+  pos: "Kasir",
+  self_order: "Self-order",
+  gofood: "GoFood",
+  grabfood: "GrabFood",
+  shopeefood: "ShopeeFood",
+};
+
+function OfferLimitBadges({ rule }: { rule: OfferRule }) {
+  const badges: Array<{ label: string; variant: "ink" | "info" | "warning" | "muted" }> = [];
+  if (rule.is_exclusive) badges.push({ label: "Eksklusif", variant: "ink" });
+  if (rule.priority > 0) badges.push({ label: `Prioritas ${rule.priority}`, variant: "muted" });
+  if (rule.unlock_code) badges.push({ label: `Kode ${rule.unlock_code}`, variant: "info" });
+  if (rule.max_uses != null) {
+    badges.push({
+      label: `Kuota ${rule.used_count}/${rule.max_uses}`,
+      variant: rule.used_count >= rule.max_uses ? "warning" : "muted",
+    });
+  }
+  if (rule.max_uses_per_member != null) {
+    badges.push({ label: `${rule.max_uses_per_member}×/member`, variant: "muted" });
+  }
+  if (rule.sales_channels?.length) {
+    badges.push({
+      label: rule.sales_channels.map((c) => SALES_CHANNEL_SHORT[c] ?? c).join(", "),
+      variant: "muted",
+    });
+  }
+  if (badges.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {badges.map((badge) => (
+        <Badge key={badge.label} variant={badge.variant}>
+          {badge.label}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 function ItemEditor({
   title,
   items,
   productOptions,
+  categoryOptions,
   productsLoading,
   showQty = false,
   onAdd,
@@ -722,79 +795,106 @@ function ItemEditor({
   role: OfferItemRole;
   items: DraftItem[];
   productOptions: Array<{ id: string; label: string }>;
+  /** Kosong = baris hanya boleh produk (komponen bundling). */
+  categoryOptions: Array<{ id: string; label: string }>;
   productsLoading: boolean;
   showQty?: boolean;
   onAdd: () => void;
   onPatch: (key: string, patch: Partial<DraftItem>) => void;
   onRemove: (key: string) => void;
 }) {
+  const allowCategory = categoryOptions.length > 0;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-medium text-foreground">{title}</div>
         <Button type="button" variant="outline" size="sm" onClick={onAdd}>
           <Plus className="mr-1 h-3.5 w-3.5" />
-          Produk
+          {allowCategory ? "Produk / kategori" : "Produk"}
         </Button>
       </div>
       {items.length === 0 ? (
         <p className="text-xs text-muted-foreground">Belum ada produk.</p>
       ) : (
         <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.key} className="flex flex-wrap items-center gap-2">
-              <Select
-                value={item.product_id || "__none__"}
-                onValueChange={(value) =>
-                  onPatch(item.key, {
-                    product_id: value === "__none__" ? "" : value,
-                  })
-                }
-              >
-                <SelectTrigger className="min-w-[220px] flex-1 border-gray-200/80">
-                  <SelectValue
-                    placeholder={productsLoading ? "Memuat…" : "Pilih produk"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__" disabled>
-                    {productsLoading ? "Memuat…" : "Pilih produk"}
-                  </SelectItem>
-                  {productOptions.map((option) => (
-                    <SelectItem key={option.id} value={option.id}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {showQty ? (
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    value={formatIdrInput(item.qty)}
-                    onChange={(e) =>
+          {items.map((item) => {
+            const isCategory = item.kind === "category";
+            const options = isCategory ? categoryOptions : productOptions;
+            const selected = draftTarget(item);
+            return (
+              <div key={item.key} className="flex flex-wrap items-center gap-2">
+                {allowCategory ? (
+                  <Select
+                    value={item.kind}
+                    onValueChange={(kind) =>
                       onPatch(item.key, {
-                        qty: String(parseIdrDigits(e.target.value) || ""),
+                        kind: kind as DraftItem["kind"],
+                        product_id: "",
+                        category_id: "",
                       })
                     }
-                    className="w-20 border-gray-200/80 tabular-nums"
-                    aria-label="Qty pcs"
-                  />
-                  <span className="text-xs text-muted-foreground">pcs</span>
-                </div>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-red-200 text-red-600"
-                onClick={() => onRemove(item.key)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          ))}
+                  >
+                    <SelectTrigger className="w-32 border-gray-200/80">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="product">Produk</SelectItem>
+                      <SelectItem value="category">Kategori</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <Select
+                  value={selected || "__none__"}
+                  onValueChange={(value) => {
+                    const id = value === "__none__" ? "" : value;
+                    onPatch(item.key, isCategory ? { category_id: id } : { product_id: id });
+                  }}
+                >
+                  <SelectTrigger className="min-w-[220px] flex-1 border-gray-200/80">
+                    <SelectValue
+                      placeholder={productsLoading ? "Memuat…" : isCategory ? "Pilih kategori" : "Pilih produk"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">
+                      {productsLoading ? "Memuat…" : isCategory ? "Pilih kategori" : "Pilih produk"}
+                    </SelectItem>
+                    {options.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {showQty ? (
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={formatIdrInput(item.qty)}
+                      onChange={(e) =>
+                        onPatch(item.key, {
+                          qty: String(parseIdrDigits(e.target.value) || ""),
+                        })
+                      }
+                      className="w-20 border-gray-200/80 tabular-nums"
+                      aria-label="Qty pcs"
+                    />
+                    <span className="text-xs text-muted-foreground">pcs</span>
+                  </div>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-red-200 text-red-600"
+                  onClick={() => onRemove(item.key)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

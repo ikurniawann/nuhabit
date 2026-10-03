@@ -13,6 +13,7 @@ import {
   fetchPromoCampaigns,
   removeOptout,
   updateCampaignConfig,
+  type CampaignActionName,
   type CreateCampaignInput,
 } from "./api";
 import type { CampaignConfig } from "./types";
@@ -68,15 +69,16 @@ function useCampaignMutation<TVariables, TResult = unknown>(
 export const useCreateCampaign = (onSuccess?: () => void) =>
   useCampaignMutation(
     (values: CreateCampaignInput) => createCampaign(values),
-    "Kampanye dibuat (draft)",
+    "Kampanye tersimpan",
     onSuccess
   );
 
 export const useCampaignAction = () =>
   useCampaignMutation(
-    ({ id, action }: { id: string; action: "start" | "pause" | "resume" | "cancel" }) =>
-      campaignAction(id, action),
-    null
+    ({ id, action, scheduledAt }: { id: string; action: CampaignActionName; scheduledAt?: string }) =>
+      campaignAction(id, action, scheduledAt),
+    null,
+    (result) => toast.success(result.message)
   );
 
 export const useUpdateCampaignConfig = () =>

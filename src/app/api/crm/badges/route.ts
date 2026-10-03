@@ -2,24 +2,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getPool } from "@/lib/db";
 import { requireCrmConfigRole } from "@/lib/crm/server";
+import { BADGE_METRICS } from "@/lib/crm/badges";
 
-/** Badge builder (EPIC-014 Task 6) — super_admin only. Ambang XP murni. */
+/**
+ * Badge builder (EPIC-014 Task 6) — gerbang menu crm.settings. Metrik
+ * lifetime_xp memakai min_lifetime_xp; metrik lain memakai threshold.
+ */
 
-const badgeSchema = z.object({
-  id: z.string().uuid().optional().nullable(),
-  code: z.string().min(2).max(60),
-  name: z.string().min(2).max(120),
-  image_url: z.string().max(500).optional().nullable(),
-  min_lifetime_xp: z.number().int().min(0),
-  is_active: z.boolean().default(true),
-});
+const badgeSchema = z
+  .object({
+    id: z.string().uuid().optional().nullable(),
+    code: z.string().min(2).max(60),
+    name: z.string().min(2).max(120),
+    image_url: z.string().max(500).optional().nullable(),
+    metric: z.enum(BADGE_METRICS).default("lifetime_xp"),
+    min_lifetime_xp: z.number().int().min(0).default(0),
+    threshold: z.number().positive().max(1_000_000_000).nullable().optional(),
+    bonus_xp: z.number().int().min(0).max(100_000).default(0),
+    is_active: z.boolean().default(true),
+  })
+  .refine((b) => b.metric === "lifetime_xp" || b.metric === "manual" || (b.threshold ?? 0) > 0, {
+    message: "Ambang wajib diisi untuk metrik ini",
+  });
 
 export async function GET() {
   const denied = await requireCrmConfigRole();
   if (denied) return denied;
   const { rows } = await getPool().query(
     `SELECT b.*, (SELECT count(*)::int FROM crm.crm_member_badges mb WHERE mb.badge_id = b.id) AS awarded_count
-       FROM crm.crm_badges b ORDER BY b.min_lifetime_xp`
+       FROM crm.crm_badges b ORDER BY b.metric, COALESCE(b.threshold, b.min_lifetime_xp)`
   );
   return NextResponse.json({ success: true, data: rows });
 }
@@ -30,16 +41,27 @@ export async function POST(request: NextRequest) {
   try {
     const payload = badgeSchema.parse(await request.json());
     const pool = getPool();
-    const params = [payload.code, payload.name, payload.image_url ?? null, payload.min_lifetime_xp, payload.is_active];
+    const usesXp = payload.metric === "lifetime_xp";
+    const params = [
+      payload.code,
+      payload.name,
+      payload.image_url ?? null,
+      usesXp ? payload.min_lifetime_xp : 0,
+      payload.is_active,
+      payload.metric,
+      usesXp || payload.metric === "manual" ? null : payload.threshold,
+      payload.bonus_xp,
+    ];
     const { rows } = payload.id
       ? await pool.query(
-          `UPDATE crm.crm_badges SET code=$1,name=$2,image_url=$3,min_lifetime_xp=$4,is_active=$5
-            WHERE id=$6 RETURNING *`,
+          `UPDATE crm.crm_badges SET code=$1,name=$2,image_url=$3,min_lifetime_xp=$4,is_active=$5,
+                  metric=$6,threshold=$7,bonus_xp=$8
+            WHERE id=$9 RETURNING *`,
           [...params, payload.id]
         )
       : await pool.query(
-          `INSERT INTO crm.crm_badges (code,name,image_url,min_lifetime_xp,is_active)
-           VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+          `INSERT INTO crm.crm_badges (code,name,image_url,min_lifetime_xp,is_active,metric,threshold,bonus_xp)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
           params
         );
     if (!rows[0]) return NextResponse.json({ success: false, error: "Badge tidak ditemukan" }, { status: 404 });

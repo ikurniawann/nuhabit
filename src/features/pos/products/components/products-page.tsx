@@ -714,6 +714,22 @@ export function ProductsPage() {
     }
   };
 
+  // Bonus XP per unit saat order member lunas; 0 = tanpa bonus
+  const updateProductBonusXp = async (id: string, raw: string) => {
+    if (savingProductId) return;
+    const bonusXp = Math.max(0, Math.floor(Number(raw)) || 0);
+
+    setSavingProductId(id);
+    try {
+      await patchProductMutation.mutateAsync({ id, payload: { bonus_xp: bonusXp } });
+      toast.success(bonusXp ? `Bonus ${bonusXp} XP per unit tersimpan` : 'Bonus XP dimatikan');
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Gagal menyimpan bonus XP'));
+    } finally {
+      setSavingProductId(null);
+    }
+  };
+
   const updateProductSalesChannels = async (product: PosCatalogProduct, presetKey: string) => {
     if (savingProductId) return;
     const preset = SALES_CHANNEL_PRESETS.find((item) => item.key === presetKey);
@@ -815,6 +831,7 @@ export function ProductsPage() {
                   <th className="px-4 py-3 text-left font-semibold">Station</th>
                   <th className="px-4 py-3 text-left font-semibold">Jenis</th>
                   <th className="px-4 py-3 text-right font-semibold">Min XP</th>
+                  <th className="px-4 py-3 text-right font-semibold">Bonus XP</th>
                   <th className="px-4 py-3 text-left font-semibold">Dijual di</th>
                   <th className="px-4 py-3 text-center font-semibold">Variants</th>
                   <th className="px-4 py-3 text-center font-semibold">Modifiers</th>
@@ -904,6 +921,21 @@ export function ProductsPage() {
                           const raw = event.target.value;
                           const current = product.minXp === null ? '' : String(product.minXp);
                           if (raw.trim() !== current) updateProductMinXp(product.id, raw);
+                        }}
+                        disabled={savingProductId === product.id}
+                        className="h-9 w-20 rounded-lg border border-gray-200/80 bg-white px-2 text-right text-xs font-medium text-gray-700 outline-none transition focus:border-pink-300 focus:ring-1 focus:ring-pink-100 disabled:opacity-50"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <input
+                        type="number"
+                        min={0}
+                        defaultValue={product.bonusXp || ''}
+                        placeholder="0"
+                        title="Bonus XP per unit untuk member saat order lunas (semua metode bayar)."
+                        onBlur={(event) => {
+                          const next = Math.max(0, Math.floor(Number(event.target.value)) || 0);
+                          if (next !== product.bonusXp) updateProductBonusXp(product.id, event.target.value);
                         }}
                         disabled={savingProductId === product.id}
                         className="h-9 w-20 rounded-lg border border-gray-200/80 bg-white px-2 text-right text-xs font-medium text-gray-700 outline-none transition focus:border-pink-300 focus:ring-1 focus:ring-pink-100 disabled:opacity-50"

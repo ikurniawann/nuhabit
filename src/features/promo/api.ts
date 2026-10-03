@@ -55,7 +55,7 @@ export const createCampaign = (values: PromoCampaignFormValues) =>
 
 export const updateCampaign = (
   id: string,
-  values: Partial<PromoCampaignFormValues> & { is_active?: boolean }
+  values: Partial<PromoCampaignFormValues> & { is_active?: boolean; show_in_member_portal?: boolean }
 ) =>
   sendJson<{ id: string }>(
     `/api/promo/campaigns/${id}`,

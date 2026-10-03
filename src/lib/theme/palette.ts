@@ -48,12 +48,16 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 const LIGHT_TEXT = "#ffffff";
+/** Teks gelap di atas warna terang: Deep Forest Green (brand), hitam bila forest kurang kontras. */
+const BRAND_DARK_TEXT = "#00281a";
 const DARK_TEXT = "#000000";
+const AA_MIN = 4.5;
 
-export function pickForeground(bg: string): typeof LIGHT_TEXT | typeof DARK_TEXT {
-  return contrastRatio(LIGHT_TEXT, bg) >= contrastRatio(DARK_TEXT, bg)
-    ? LIGHT_TEXT
-    : DARK_TEXT;
+export function pickForeground(
+  bg: string
+): typeof LIGHT_TEXT | typeof BRAND_DARK_TEXT | typeof DARK_TEXT {
+  if (contrastRatio(LIGHT_TEXT, bg) >= contrastRatio(DARK_TEXT, bg)) return LIGHT_TEXT;
+  return contrastRatio(BRAND_DARK_TEXT, bg) >= AA_MIN ? BRAND_DARK_TEXT : DARK_TEXT;
 }
 
 export type BrandVars = {

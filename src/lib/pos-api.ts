@@ -776,6 +776,7 @@ export async function processTopup(data: {
   amount: number;
   payment_method?: 'qris' | 'credit' | 'cash' | 'foc';
   supervisor_pin?: string;
+  package_id?: string;
 }) {
   return fetchAPI<{ success: boolean; data: any }>('/topup', {
     method: 'POST',

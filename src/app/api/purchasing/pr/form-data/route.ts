@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     const [{ data: materials }, { data: units }] = await Promise.all([
       db
         .from("v_raw_materials_stock")
-        .select("id, kode, nama, satuan_besar_id, satuan_besar_nama, avg_cost")
+        .select("id, kode, nama, satuan_besar_id, satuan_besar_nama, satuan_kecil_id, konversi_factor, avg_cost")
         .eq("is_active", true)
         .order("nama"),
       db.from("units").select("id, nama").eq("is_active", true).order("nama"),
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     const { data: conversions } = materialIds.length
       ? await db
           .from("raw_material_unit_conversions")
-          .select("raw_material_id, satuan_id, qty_in_base_unit, is_active")
+          .select("raw_material_id, satuan_id, qty_in_base_unit, is_base, is_purchase_default, is_active")
           .in("raw_material_id", materialIds)
           .eq("is_active", true)
       : { data: [] };

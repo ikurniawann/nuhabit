@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { NumericInput } from "@/components/ui/numeric-input";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
@@ -148,6 +149,8 @@ interface GrnItem {
   qty_accepted: number;
   qty_rejected: number;
   catatan: string;
+  batch_number: string;
+  expiry_date: string;
 }
 
 type CreateGrnPageProps = {
@@ -160,6 +163,7 @@ const GUIDELINES = [
   "Qty Diterima / QC tidak boleh melebihi sisa qty PO.",
   "Kekurangan vs sisa PO otomatis masuk kolom Tolak / QC Gagal.",
   "Stok diposting dari qty Diterima / QC.",
+  "Isi nomor batch dan tanggal kedaluwarsa dari label supplier. Tanggal kosong memakai umur simpan bahan baku.",
 ];
 
 export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProps) {
@@ -285,7 +289,7 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
       // Hanya item yang masih punya sisa — yang sudah terpenuhi tidak perlu di GRN.
       setGrnItems(
         simplifiedPoItems
-          .map((item) => {
+          .map((item): GrnItem | null => {
             const remaining = Math.max(0, item.qty_ordered - item.qty_received);
             if (remaining <= 0) return null;
             return {
@@ -299,6 +303,8 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
               qty_accepted: remaining,
               qty_rejected: 0,
               catatan: "",
+              batch_number: "",
+              expiry_date: "",
             };
           })
           .filter((item): item is GrnItem => item !== null)
@@ -408,6 +414,10 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
       .finally(() => setFetchingWarehouses(false));
   }, [selectedDelivery, userScope, warehouseBranchId, contextBranchResolved]);
 
+  const handleUpdateBatch = (id: string, field: "batch_number" | "expiry_date", value: string) => {
+    setGrnItems((items) => items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
+  };
+
   const handleUpdateAcceptedQty = (id: string, acceptQty: number) => {
     setGrnItems((items) =>
       items.map((item) => {
@@ -505,6 +515,12 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
           qty_rejected: Number(item.qty_rejected) || 0,
           kondisi: "baik" as const,
           catatan: item.catatan || undefined,
+          ...(isProduct
+            ? {}
+            : {
+                batch_number: item.batch_number.trim() || undefined,
+                expiry_date: item.expiry_date || undefined,
+              }),
         })),
       })) as { data?: { id?: string } };
 
@@ -759,7 +775,7 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
             ) : (
               <div className="px-4 pb-4 pt-3">
                 <div className="overflow-x-auto rounded-xl border border-gray-200/70">
-                  <table className="min-w-[720px] w-full border-collapse text-sm">
+                  <table className={`${isProduct ? "min-w-[720px]" : "min-w-[1040px]"} w-full border-collapse text-sm`}>
                     <thead>
                       <tr className="bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
                         <th className="min-w-[180px] border-b border-r border-gray-200/70 px-4 py-3 text-left font-semibold">
@@ -777,6 +793,16 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
                         <th className="min-w-[160px] w-[18%] whitespace-nowrap border-b border-r border-gray-200/70 px-3 py-3 text-center font-semibold">
                           Diterima / QC
                         </th>
+                        {!isProduct && (
+                          <>
+                            <th className="min-w-[150px] whitespace-nowrap border-b border-r border-gray-200/70 px-3 py-3 text-center font-semibold">
+                              No. Batch
+                            </th>
+                            <th className="min-w-[160px] whitespace-nowrap border-b border-r border-gray-200/70 px-3 py-3 text-center font-semibold">
+                              Kedaluwarsa
+                            </th>
+                          </>
+                        )}
                         <th className="min-w-[160px] w-[18%] whitespace-nowrap border-b border-gray-200/70 px-3 py-3 text-center font-semibold">
                           Tolak / QC Gagal
                         </th>
@@ -825,6 +851,29 @@ export function CreateGrnPage({ moduleType = "raw_material" }: CreateGrnPageProp
                                 className="h-10 w-full border-gray-200/80 bg-white px-3 text-center text-sm focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/30"
                               />
                             </td>
+                            {!isProduct && (
+                              <>
+                                <td className={`border-r border-gray-200/70 px-3 py-2 align-middle ${rowBorder}`}>
+                                  <Input
+                                    value={item.batch_number}
+                                    onChange={(e) => handleUpdateBatch(item.id, "batch_number", e.target.value)}
+                                    placeholder="LOT-..."
+                                    maxLength={100}
+                                    aria-label={`Nomor batch ${item.nama_bahan}`}
+                                    className="h-10 text-sm"
+                                  />
+                                </td>
+                                <td className={`border-r border-gray-200/70 px-3 py-2 align-middle ${rowBorder}`}>
+                                  <Input
+                                    type="date"
+                                    value={item.expiry_date}
+                                    onChange={(e) => handleUpdateBatch(item.id, "expiry_date", e.target.value)}
+                                    aria-label={`Tanggal kedaluwarsa ${item.nama_bahan}`}
+                                    className="h-10 text-sm"
+                                  />
+                                </td>
+                              </>
+                            )}
                             <td className={`px-3 py-2 align-middle ${rowBorder}`}>
                               <div
                                 className={`flex h-10 w-full items-center justify-center rounded-lg border border-gray-200/80 bg-gray-50 px-3 text-sm font-medium ${

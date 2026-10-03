@@ -12,7 +12,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#1d1dcc",
+  themeColor: "#00281a",
 };
 
 export default function TableOrderLayout({ children }: { children: React.ReactNode }) {

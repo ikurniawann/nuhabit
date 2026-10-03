@@ -202,7 +202,7 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
             {initial ? <p className="text-xs text-gray-500">Slug tidak bisa diubah agar tautan yang sudah disebar tetap hidup.</p> : null}
           </div>
         </div>
-        <div className="space-y-1.5"><Label>Judul di halaman</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Hubungi BCD Coffee" /></div>
+        <div className="space-y-1.5"><Label>Judul di halaman</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Hubungi NüHabit" /></div>
         <div className="space-y-1.5"><Label>Deskripsi</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Teks tombol</Label><Input value={submitLabel} onChange={(e) => setSubmitLabel(e.target.value)} /></div>

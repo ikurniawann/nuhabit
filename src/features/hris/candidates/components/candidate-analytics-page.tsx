@@ -36,7 +36,7 @@ import {
 import { useToast, ToastContainer } from "@/components/ui/toast";
 import { useCandidateAnalytics, useAnalyticsBrands } from "../queries";
 
-const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#2941d3"];
+const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32"];
 
 const EMPTY_SUMMARY = { thisMonth: 0, activePipeline: 0, talentPool: 0, openPositions: 0 };
 

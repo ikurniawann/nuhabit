@@ -31,6 +31,10 @@ export async function requireCrmConfigRole(): Promise<NextResponse | null> {
   return denyUnlessIam(IAM.crmSettings);
 }
 
+export async function requireCrmEngagementRole(): Promise<NextResponse | null> {
+  return denyUnlessIam(IAM.crmEngagement);
+}
+
 // Klaim/approve redeem reward adalah operasi harian di venue, bukan konfigurasi —
 // kasir & supervisor boleh, selain itu ditolak (EPIC-011 Fase F).
 export const CRM_OPERATOR_ROLES: UserRole[] = [

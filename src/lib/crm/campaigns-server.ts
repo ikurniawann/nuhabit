@@ -3,13 +3,18 @@
 // watcher. Keputusan owner 26 Jul: master switch default MATI — semua
 // jalur kirim riil berhenti di config.enabled sebelum menyentuh gateway.
 
-import type { PoolClient } from "pg";
-import { query, queryOne, withTransaction } from "@/lib/db";
+import type { Pool, PoolClient } from "pg";
+import { getPool, query, queryOne, withTransaction } from "@/lib/db";
 import { getSetting } from "@/lib/settings/app-settings";
 import { generateVoucherCode } from "@/lib/promo/server";
 import {
   buildSegmentFilter,
+  normalizeChannels,
+  normalizeSegment,
   parseCampaignConfig,
+  renderInAppBody,
+  selectDueCampaigns,
+  shouldAbortCampaign,
   type CampaignConfig,
   type CampaignSegment,
 } from "./campaigns";
@@ -17,6 +22,16 @@ import { buildSegmentWhere } from "./segments";
 import { parseStoredSegment, type SegmentRow } from "./segments-server";
 
 export const CAMPAIGN_CONFIG_KEY = "crm_campaign_config";
+
+/**
+ * Bandingkan dua kolom telepon dalam bentuk 62xxx: opt-out disimpan
+ * ternormalisasi (628…) sedangkan pos_customers memakai 08…, jadi
+ * perbandingan digit mentah tidak pernah cocok.
+ */
+export function samePhoneSql(a: string, b: string): string {
+  const norm = (col: string) => `regexp_replace(regexp_replace(${col}, '\\D', '', 'g'), '^0', '62')`;
+  return `${norm(a)} = ${norm(b)}`;
+}
 
 export interface CampaignVenueScope {
   companyId: string;
@@ -83,8 +98,7 @@ export async function previewSegment(
   const filter = await resolveCampaignFilter(segment, 2, segmentId);
   const optoutJoin = `LEFT JOIN crm.crm_marketing_optouts o
        ON o.branch_id = $1
-      AND regexp_replace(o.phone, '\\D', '', 'g')
-          = regexp_replace(c.phone, '\\D', '', 'g')`;
+      AND ${samePhoneSql("o.phone", "c.phone")}`;
   const rows = await query<{ total: string; opted: string }>(
     `SELECT COUNT(*) FILTER (WHERE o.id IS NULL) AS total,
             COUNT(*) FILTER (WHERE o.id IS NOT NULL) AS opted
@@ -141,8 +155,7 @@ export async function buildCampaignRecipients(
      FROM pos.pos_customers c
      LEFT JOIN crm.crm_marketing_optouts o
        ON o.branch_id = $2
-      AND regexp_replace(o.phone, '\\D', '', 'g')
-          = regexp_replace(c.phone, '\\D', '', 'g')
+      AND ${samePhoneSql("o.phone", "c.phone")}
      WHERE ${filter.where} AND o.id IS NULL
      ON CONFLICT (campaign_id, customer_id) DO NOTHING
      RETURNING id, customer_id`,
@@ -223,6 +236,7 @@ export async function claimNextRecipient(
      FROM crm.crm_campaign_recipients r
      JOIN crm.crm_campaigns k ON k.id = r.campaign_id
      WHERE r.branch_id = $1 AND r.status = 'pending' AND k.status = 'sending'
+       AND 'wa' = ANY(k.channels)
      ORDER BY r.created_at
      LIMIT 1
      FOR UPDATE OF r SKIP LOCKED`,
@@ -239,7 +253,7 @@ export async function markRecipient(
 ): Promise<void> {
   await client.query(
     `UPDATE crm.crm_campaign_recipients
-     SET status = $2, fail_reason = $3,
+     SET status = $2, fail_reason = $3, attempted_at = now(),
          sent_at = CASE WHEN $2 = 'sent' THEN now() ELSE sent_at END
      WHERE id = $1`,
     [
@@ -294,3 +308,164 @@ export async function countCampaignSentTodayWib(
 }
 
 export { withTransaction as campaignTransaction };
+
+/* ── Start kampanye (manual & terjadwal) ─────────────────────────────── */
+
+/** Kolom yang dibutuhkan untuk memulai kampanye. */
+export const STARTABLE_CAMPAIGN_COLUMNS = `id, company_id, branch_id, name, status, segment, segment_id,
+  promo_campaign_id, promo_mode, voucher_prefix, channels, message_template,
+  inapp_title, image_url, link_url`;
+
+export interface StartableCampaign {
+  id: string;
+  company_id: string;
+  branch_id: string;
+  name: string;
+  status: string;
+  segment: unknown;
+  segment_id: string | null;
+  promo_campaign_id: string | null;
+  promo_mode: "public" | "batch" | null;
+  voucher_prefix: string | null;
+  channels: string[];
+  message_template: string;
+  inapp_title: string | null;
+  image_url: string | null;
+  link_url: string | null;
+}
+
+/**
+ * Salin kampanye ke kotak masuk portal setiap penerima. Idempoten lewat
+ * indeks unik (campaign_id, customer_id): memulai ulang tidak mengirim dobel.
+ */
+async function deliverInApp(client: PoolClient, campaign: StartableCampaign): Promise<number> {
+  const { rows } = await client.query<{ customer_id: string; name: string; voucher_code: string | null }>(
+    `SELECT customer_id, name, voucher_code FROM crm.crm_campaign_recipients WHERE campaign_id = $1`,
+    [campaign.id]
+  );
+  if (rows.length === 0) return 0;
+  const bodies = rows.map((r) =>
+    renderInAppBody(campaign.message_template, { nama: r.name, kode: r.voucher_code })
+  );
+  const result = await client.query(
+    `INSERT INTO crm.member_notifications
+       (customer_id, type, title, body, image_url, link_url, campaign_id)
+     SELECT t.customer_id, 'campaign', $3, t.body, $4, $5, $1
+       FROM unnest($2::uuid[], $6::text[]) AS t(customer_id, body)
+     ON CONFLICT (campaign_id, customer_id) WHERE campaign_id IS NOT NULL DO NOTHING`,
+    [
+      campaign.id,
+      rows.map((r) => r.customer_id),
+      campaign.inapp_title || campaign.name,
+      campaign.image_url,
+      campaign.link_url,
+      bodies,
+    ]
+  );
+  return result.rowCount ?? 0;
+}
+
+/**
+ * Bangun antrean, kirim kanal in-app seketika, lalu serahkan WA ke watcher.
+ * Kampanye tanpa kanal WA langsung selesai; antreannya ditandai skipped agar
+ * watcher tidak pernah mengirim WA untuknya.
+ */
+export async function startCampaign(
+  client: PoolClient,
+  campaign: StartableCampaign
+): Promise<{ inserted: number; inApp: number; status: "sending" | "done" }> {
+  const { inserted } = await buildCampaignRecipients(client, {
+    id: campaign.id,
+    companyId: campaign.company_id,
+    branchId: campaign.branch_id,
+    segment: normalizeSegment(campaign.segment),
+    segmentId: campaign.segment_id,
+    promoCampaignId: campaign.promo_campaign_id,
+    promoMode: campaign.promo_mode,
+    voucherPrefix: campaign.voucher_prefix,
+  });
+  const channels = normalizeChannels(campaign.channels);
+  const inApp = channels.includes("in_app") ? await deliverInApp(client, campaign) : 0;
+  const waOn = channels.includes("wa");
+  if (!waOn) {
+    await client.query(
+      `UPDATE crm.crm_campaign_recipients SET status = 'skipped', fail_reason = 'kanal-wa-mati'
+        WHERE campaign_id = $1 AND status = 'pending'`,
+      [campaign.id]
+    );
+  }
+  const status = waOn ? "sending" : "done";
+  await client.query(
+    `UPDATE crm.crm_campaigns
+        SET status = $2, recipients_built = true, failure_reason = NULL,
+            started_at = COALESCE(started_at, now()), updated_at = now()
+      WHERE id = $1`,
+    [campaign.id, status]
+  );
+  return { inserted, inApp, status };
+}
+
+/** Tandai kampanye gagal (dengan alasan) bila masih berjalan/terjadwal. */
+async function markCampaignFailed(
+  db: Pool | PoolClient,
+  campaignId: string,
+  reason: string
+): Promise<void> {
+  await db.query(
+    `UPDATE crm.crm_campaigns SET status = 'failed', failure_reason = $2, updated_at = now()
+      WHERE id = $1 AND status IN ('scheduled', 'sending')`,
+    [campaignId, reason]
+  );
+}
+
+/**
+ * Mulai kampanye terjadwal yang sudah jatuh tempo. Dijalankan tiap tick
+ * watcher, terlepas dari master switch WA: kanal in-app tidak bergantung
+ * pada gateway, dan antrean WA tetap menunggu switch.
+ */
+export async function startDueScheduledCampaigns(now = new Date()): Promise<number> {
+  const scheduled = await query<{ id: string; status: string; scheduled_at: string }>(
+    `SELECT id, status, scheduled_at FROM crm.crm_campaigns WHERE status = 'scheduled'`,
+    []
+  );
+  let started = 0;
+  for (const due of selectDueCampaigns(scheduled, now)) {
+    try {
+      const ok = await withTransaction(async (client) => {
+        const { rows } = await client.query<StartableCampaign>(
+          `SELECT ${STARTABLE_CAMPAIGN_COLUMNS} FROM crm.crm_campaigns
+            WHERE id = $1 AND status = 'scheduled' FOR UPDATE SKIP LOCKED`,
+          [due.id]
+        );
+        if (!rows[0]) return false;
+        await startCampaign(client, rows[0]);
+        return true;
+      });
+      if (ok) started += 1;
+    } catch (err) {
+      console.error("[crm-campaign] start terjadwal gagal:", err);
+      await markCampaignFailed(getPool(), due.id, `Gagal memulai: ${(err as Error).message}`.slice(0, 300));
+    }
+  }
+  return started;
+}
+
+/**
+ * Setelah kirim WA gagal: hentikan kampanye bila percobaan terakhir gagal
+ * semua (lihat shouldAbortCampaign). Return true bila kampanye dihentikan.
+ */
+export async function abortIfFailing(client: PoolClient, campaignId: string): Promise<boolean> {
+  const { rows } = await client.query<{ status: "sent" | "failed" }>(
+    `SELECT status FROM crm.crm_campaign_recipients
+      WHERE campaign_id = $1 AND attempted_at IS NOT NULL
+      ORDER BY attempted_at DESC LIMIT 20`,
+    [campaignId]
+  );
+  if (!shouldAbortCampaign(rows.map((r) => r.status))) return false;
+  await markCampaignFailed(
+    client,
+    campaignId,
+    "Pengiriman WA gagal beruntun; periksa gateway lalu lanjutkan kampanye"
+  );
+  return true;
+}

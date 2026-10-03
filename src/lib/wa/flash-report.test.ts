@@ -34,7 +34,7 @@ describe("buildFlashReportMessage", () => {
   it("meniru struktur laporan manual Operations", () => {
     const msg = buildFlashReportMessage(contoh, "2026-08-22");
     expect(msg).toContain("*Daily Flash Report*");
-    expect(msg).toContain("BCD COFFEE");
+    expect(msg).toContain("NÜHABIT");
     expect(msg).toContain("Sabtu, 22 Agustus 2026");
     expect(msg).toContain("Revenue : Rp 8.892.000");
     expect(msg).toContain("Nett Sales : Rp 3.806.000");

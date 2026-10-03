@@ -72,19 +72,38 @@ export async function queryOne<T extends QueryResultRow = QueryResultRow>(
   return rows[0] ?? null;
 }
 
+/** Efek samping yang menunggu COMMIT, per client yang sedang di dalam withTransaction. */
+const pendingAfterCommit = new WeakMap<PoolClient, Array<() => void>>();
+
+/**
+ * Jalankan `effect` setelah transaksi `db` COMMIT (dibuang bila ROLLBACK).
+ * Di luar withTransaction (pool, atau client tanpa transaksi) langsung jalan.
+ * Untuk efek di luar database seperti push notification.
+ */
+export function afterCommit(db: Pool | PoolClient, effect: () => void) {
+  const queue = pendingAfterCommit.get(db as PoolClient);
+  if (queue) queue.push(effect);
+  else effect();
+}
+
 export async function withTransaction<T>(
   fn: (client: PoolClient) => Promise<T>
 ): Promise<T> {
   const client = await getPool().connect();
+  const effects: Array<() => void> = [];
+  pendingAfterCommit.set(client, effects);
   try {
     await client.query("BEGIN");
     const result = await fn(client);
     await client.query("COMMIT");
+    pendingAfterCommit.delete(client);
+    for (const effect of effects) effect();
     return result;
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     throw err;
   } finally {
+    pendingAfterCommit.delete(client);
     client.release();
   }
 }

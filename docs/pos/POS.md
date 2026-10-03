@@ -23,7 +23,7 @@ POS module for Arkiv OS restaurant app with cashier UI, product management, cust
 - All prices shown as: `Rp X (Y ARK)` - 1 ARK = Rp 1000
 - Default payment method: Kartu Member (NFC)
 - Payment modal: scrollable, compact spacing, max-w-[800px]
-- Logo: `/public/logo.png` (Prologue in Wonderland)
+- Logo: `/public/brand/` (NüHabit wordmark, mark, and app icons)
 
 ### Products (`/dashboard/pos/products`)
 - Product management with variants and modifiers

@@ -1,4 +1,5 @@
 import type {
+  CampaignChannel,
   CampaignConfig,
   CampaignReport,
   CampaignSegmentForm,
@@ -54,7 +55,15 @@ export interface CreateCampaignInput {
   promo_mode?: "public" | "batch" | null;
   voucher_prefix?: string | null;
   daily_cap?: number | null;
+  channels: CampaignChannel[];
+  inapp_title?: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
+  /** Diisi = kirim nanti (ISO); null = simpan sebagai draft. */
+  scheduled_at?: string | null;
 }
+
+export type CampaignActionName = "start" | "schedule" | "pause" | "resume" | "cancel";
 
 export const createCampaign = (values: CreateCampaignInput) =>
   sendJson<{ id: string }>(
@@ -72,16 +81,20 @@ export const previewSegment = (segment: CampaignSegmentForm, segmentId?: string 
     "Gagal menghitung segmen"
   );
 
-export const campaignAction = (
+export async function campaignAction(
   id: string,
-  action: "start" | "pause" | "resume" | "cancel"
-) =>
-  sendJson<{ id: string; inserted?: number }>(
-    `/api/crm/campaigns/${id}`,
-    "PATCH",
-    { action },
-    "Gagal memperbarui kampanye"
-  );
+  action: CampaignActionName,
+  scheduledAt?: string
+): Promise<{ message: string }> {
+  const res = await fetch(`/api/crm/campaigns/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, scheduled_at: scheduledAt }),
+  });
+  if (!res.ok) await parseError(res, "Gagal memperbarui kampanye");
+  const body = (await res.json()) as { message?: string };
+  return { message: body.message ?? "Kampanye diperbarui" };
+}
 
 export const fetchCampaignReport = (id: string) =>
   getJson<CampaignReport>(

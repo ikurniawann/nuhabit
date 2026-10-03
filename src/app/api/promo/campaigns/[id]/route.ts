@@ -4,6 +4,7 @@ import { successResponse } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
 import { isValidCalendarDate } from "@/lib/ticketing/pricing";
 import { requirePromoContext } from "@/lib/promo/server";
+import { campaignTargetFields } from "@/lib/promo/campaign-schema";
 
 // EPIC-032 A3 — edit campaign. Toggle aktif selalu boleh.
 // Edit aturan/diskon/kode-terkait hanya jika belum ada redemption captured.
@@ -27,7 +28,12 @@ const patchSchema = z.object({
   per_phone_limit: z.number().int().positive().max(100).nullable().optional(),
   scope: z.enum(["ticketing_online", "ticketing_loket", "pos", "semua"]).optional(),
   is_active: z.boolean().optional(),
+  show_in_member_portal: z.boolean().optional(),
+  ...campaignTargetFields,
 });
+
+// Saklar yang selalu boleh diubah, juga setelah ada voucher terpakai.
+const TOGGLE_KEYS = new Set(["is_active", "show_in_member_portal"]);
 
 export async function PATCH(
   request: NextRequest,
@@ -71,7 +77,7 @@ export async function PATCH(
     }
 
     const keys = Object.keys(body);
-    const onlyToggleActive = keys.length === 1 && body.is_active !== undefined;
+    const onlyToggleActive = keys.length > 0 && keys.every((key) => TOGGLE_KEYS.has(key));
     const captured = Number(current.captured_count) || 0;
     if (!onlyToggleActive && captured > 0) {
       return NextResponse.json(
@@ -129,7 +135,23 @@ export async function PATCH(
       add("per_phone_limit", body.per_phone_limit);
     }
     if (body.scope !== undefined) add("scope", body.scope);
+    if (body.target_product_ids !== undefined) {
+      add("target_product_ids", body.target_product_ids);
+    }
+    if (body.target_category_ids !== undefined) {
+      add("target_category_ids", body.target_category_ids);
+    }
+    if (body.eligibility !== undefined) {
+      add("eligibility", body.eligibility);
+      add(
+        "new_member_days",
+        body.eligibility === "member_baru" ? (body.new_member_days ?? null) : null
+      );
+    } else if (body.new_member_days !== undefined) {
+      add("new_member_days", body.new_member_days);
+    }
     if (body.is_active !== undefined) add("is_active", body.is_active);
+    if (body.show_in_member_portal !== undefined) add("show_in_member_portal", body.show_in_member_portal);
 
     values.push(id, ctx.branchId, ctx.companyId);
     await query(

@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { ApiError, requireIamAction, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 
 const APPROVE_ROLES = ["admin", "super_admin", "purchasing_admin", "purchasing_manager"] as const;
 
@@ -15,7 +16,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireIamAction(IAM.itemsApproval, "update");
+    const user = await requireIamAction(IAM.itemsApproval, "update");
     const { id } = await params;
     const db = await createServerPgClient();
 
@@ -68,6 +69,17 @@ export async function POST(
       .single();
 
     if (error) throw error;
+
+    await recordAuditAfterCommit({
+      actor: { id: user.id, name: user.full_name },
+      action: "po.approve",
+      entity: "purchase_order",
+      entityId: id,
+      entityLabel: po.nomor_po ?? null,
+      before: { status: po.status },
+      after: { status: "approved", grand_total: po.grand_total ?? null },
+      ...requestMeta(request),
+    });
 
     return Response.json({
       success: true,

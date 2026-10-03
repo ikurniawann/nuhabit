@@ -8,6 +8,7 @@
 
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import {
+  abortIfFailing,
   activeCampaignBranches,
   campaignTransaction,
   claimNextRecipient,
@@ -16,6 +17,7 @@ import {
   finishExhaustedCampaigns,
   getCampaignConfig,
   markRecipient,
+  startDueScheduledCampaigns,
 } from "./campaigns-server";
 import { isWithinSendWindow, renderCampaignMessage } from "./campaigns";
 
@@ -32,8 +34,15 @@ function hourWibNow(): number {
   );
 }
 
-/** Satu tick: kirim maksimal 1 pesan per venue aktif. Exported utk test. */
+/**
+ * Satu tick: mulai kampanye terjadwal yang jatuh tempo, lalu kirim maksimal
+ * 1 pesan WA per venue aktif. Exported utk test.
+ */
 export async function campaignTick(): Promise<{ sent: number }> {
+  await startDueScheduledCampaigns().catch((err) =>
+    console.error("[crm-campaign] jadwal error:", err)
+  );
+
   const config = await getCampaignConfig();
   if (!config.enabled) return { sent: 0 };
   if (!isWithinSendWindow(hourWibNow())) return { sent: 0 };
@@ -79,6 +88,7 @@ export async function campaignTick(): Promise<{ sent: number }> {
           : { status: "failed", reason: result.reason ?? "gagal-kirim" }
       );
       if (result.success) sent += 1;
+      else await abortIfFailing(client, claimed.campaign_id);
     }).catch((err) =>
       console.error("[crm-campaign] tick error:", err)
     );

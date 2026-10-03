@@ -27,4 +27,17 @@ describe("routePosNfcCard", () => {
     ).toBe("dispatched");
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("sends a member QR to the cashier even when payment is idle", () => {
+    const push = vi.fn();
+    expect(
+      routePosNfcCard({
+        card: "bcdqr_abcdefghijklmnop",
+        pathname: "/dashboard/pos/restaurant",
+        paymentNfcActive: false,
+        push,
+      })
+    ).toBe("dispatched");
+    expect(push).not.toHaveBeenCalled();
+  });
 });

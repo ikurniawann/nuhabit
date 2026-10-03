@@ -88,6 +88,7 @@ export function GiftCardLedgerDialog({
                     <td className="px-3 py-2 text-xs text-gray-500">
                       {entry.context_type ?? "—"}
                       {entry.note ? ` · ${entry.note}` : ""}
+                      {entry.payment_reference ? ` · ref ${entry.payment_reference}` : ""}
                     </td>
                   </TableRow>
                 ))}

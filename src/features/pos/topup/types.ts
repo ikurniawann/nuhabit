@@ -48,6 +48,8 @@ export interface ProcessTopupPayload {
   payment_method: string;
   /** Wajib bila payment_method = 'foc' (topup gratis, butuh persetujuan supervisor). */
   supervisor_pin?: string;
+  /** Paket top-up (harga & bonus dari paket; amount diabaikan server). */
+  package_id?: string;
 }
 
 export type TopupHistoryStatus = "pending" | "completed" | "expired" | "failed" | "cancelled" | string;

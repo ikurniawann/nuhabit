@@ -79,7 +79,7 @@ export function AppearancePreview({
               className="px-3 py-3 text-xs font-semibold"
               style={{ borderBottom: "1px solid var(--sidebar-border)" }}
             >
-              {companyName || "PT BCD Coffee"}
+              {companyName || "PT NüHabit"}
             </div>
             <nav className="space-y-1 p-2">
               {NAV.map((item) => (

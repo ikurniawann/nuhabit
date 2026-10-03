@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import type { CrmAvatarInventory, CrmMember } from "../types";
 import { useMemberDetail } from "../queries";
+import { MemberEngagementPanel } from "./member-engagement-panel";
 import {
   useEnrollMember,
   useEquipAvatar,
@@ -944,6 +945,10 @@ export function CrmMemberDetailPage() {
                 </div>
               </div>
             </section>
+
+            {member.customer_id && (
+              <MemberEngagementPanel customerId={member.customer_id} memberKey={memberId} />
+            )}
           </>
         ) : (
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-12 text-center text-sm text-slate-500 shadow-sm">

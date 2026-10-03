@@ -87,7 +87,7 @@ export function ResortReservationsPage() {
           <div className="flex flex-wrap gap-1.5">
             {REPORT_PERIOD_SHORTCUTS.map((k) => (
               <button key={k} type="button" onClick={() => setRange(resolveReportPeriod(k))}
-                className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-accent">
+                className="rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-muted">
                 {REPORT_PERIOD_LABELS[k]}
               </button>
             ))}
@@ -131,7 +131,7 @@ export function ResortReservationsPage() {
             </thead>
             <tbody className="divide-y">
               {rows.map((r) => (
-                <tr key={r.id} className="cursor-pointer hover:bg-accent/50" onClick={() => setDetailId(r.id)}>
+                <tr key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailId(r.id)}>
                   <td className="px-3 py-2">
                     <p className="font-medium">{r.guest_name}</p>
                     <p className="text-xs text-muted-foreground">{r.reservation_code} · {r.guest_phone} · {RESERVATION_SOURCE_LABELS[r.source]}</p>

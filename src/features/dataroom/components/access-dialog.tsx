@@ -74,11 +74,11 @@ export function AccessDialog({ open, node, onClose, onSaved }: {
         ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setMode("all")} className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm", mode === "all" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-accent")}>
+              <button type="button" onClick={() => setMode("all")} className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm", mode === "all" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted")}>
                 <Unlock className="mt-0.5 h-4 w-4 shrink-0" />
                 <span><span className="block font-medium">Semua departemen</span><span className="text-xs text-muted-foreground">Semua pengguna menu Dataroom</span></span>
               </button>
-              <button type="button" onClick={() => setMode("some")} className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm", mode === "some" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-accent")}>
+              <button type="button" onClick={() => setMode("some")} className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm", mode === "some" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted")}>
                 <Lock className="mt-0.5 h-4 w-4 shrink-0" />
                 <span><span className="block font-medium">Departemen tertentu</span><span className="text-xs text-muted-foreground">Hanya yang dicentang</span></span>
               </button>
@@ -88,7 +88,7 @@ export function AccessDialog({ open, node, onClose, onSaved }: {
                 {departments.length === 0 ? (
                   <p className="p-3 text-sm text-muted-foreground">Belum ada departemen di HRIS.</p>
                 ) : departments.map((d) => (
-                  <label key={d.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-accent">
+                  <label key={d.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
                     <input type="checkbox" className="h-4 w-4" checked={selected.has(d.id)} onChange={() => toggle(d.id)} />
                     <Building2 className="h-4 w-4 text-muted-foreground" />{d.name}
                   </label>

@@ -18,7 +18,7 @@ describe("useTheme", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe("light");
     expect(
       document.documentElement.style.getPropertyValue("--brand-primary")
-    ).toBe("#1d1dcc");
+    ).toBe("#daff59");
   });
 
   it("setMode persists and updates the attribute", () => {

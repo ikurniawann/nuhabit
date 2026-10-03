@@ -38,6 +38,8 @@ import {
   type DiscountType,
 } from '@/lib/pos/manual-discount';
 import { evaluateActiveOffersForPosCart } from '@/lib/promo/offer-pos';
+import { recordOfferUsage } from '@/lib/promo/offer-rules-server';
+import { withTransaction } from '@/lib/db';
 
 type OpenBillItem = {
   product_id?: string;
@@ -350,6 +352,8 @@ export async function POST(request: NextRequest) {
     const offerEval = await evaluateActiveOffersForPosCart({
       companyId: venue.companyId,
       branchId: venue.branchId,
+      code: body.promo_code || null,
+      customerId: customer_id || null,
       items: items.map((item) => {
         const qty = Number(item.quantity) || 1;
         const unit = Number(item.unit_price) || 0;
@@ -467,6 +471,22 @@ export async function POST(request: NextRequest) {
     if (orderErr || !orderData) {
       console.error('Open bill insert error:', orderErr);
       return NextResponse.json({ success: false, error: orderErr?.message || 'Failed to create order' }, { status: 500 });
+    }
+
+    // Diskon penawaran sudah terkunci di bill → pemakaian langsung dicatat
+    // (kuota dicek saat evaluasi di atas; void bill melepasnya).
+    if (offerEval.applied.length > 0) {
+      await withTransaction((client) =>
+        recordOfferUsage(client, {
+          companyId: venue.companyId,
+          branchId: venue.branchId,
+          orderId: orderData.id,
+          customerId: customer_id || null,
+          applied: offerEval.applied,
+          status: 'captured',
+          enforce: false,
+        })
+      ).catch((err) => console.error('[open-bill] record offer usage error:', err));
     }
 
     // Adding a new open bill for a table clears Pre Settlement (back to orange).

@@ -9,14 +9,11 @@ import {
 const PUBLIC_AUTH_PREFIXES = [
   // Aset branding statis: dibutuhkan halaman /login dan halaman publik
   // (favicon, logo, manifest PWA) sebelum user punya sesi.
-  "/logos/",
-  "/logo.png",
-  "/favicon.svg",
+  "/brand/",
   "/manifest-pos.webmanifest",
   // Service worker POS (public/sw.js) — didaftarkan dari halaman kasir; registrasi
   // harus dapat berkas JS-nya langsung, bukan redirect ke /login.
   "/sw.js",
-  "/bg",
   // Foto produk (public/products) & logo QRIS/GPN (public/qris) dipakai
   // halaman publik self-order meja (EPIC-048) sebelum ada sesi.
   "/products/",
@@ -43,6 +40,8 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/public/gofood-image/",
   // Webhook bot Telegram notifikasi pesanan — secret di path + header.
   "/api/integrations/telegram/webhook/",
+  // Event partner loyalty — autentikasi HMAC + timestamp per partner.
+  "/api/integrations/loyalty-events/",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/settings/appearance",
@@ -65,6 +64,9 @@ const PUBLIC_AUTH_PREFIXES = [
   // EPIC-050 T-5.3 — form publik CRM (web-to-lead)
   "/public",
   "/api/public/crm/forms",
+  // Probe liveness/readiness untuk Docker HEALTHCHECK & load balancer.
+  "/api/health",
+  "/api/ready",
 ];
 
 export function isPublicAuthPath(pathname: string): boolean {

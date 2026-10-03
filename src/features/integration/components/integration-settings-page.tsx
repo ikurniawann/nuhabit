@@ -113,7 +113,7 @@ export function IntegrationSettingsPage() {
             <div className="mx-auto max-w-4xl">
               <div className="mb-6">
                 <h1 className="text-4xl font-semibold tracking-tight">Integration</h1>
-                <p className="mt-2 text-sm text-black/50">Kelola integrasi BCD Coffee OS dengan layanan eksternal.</p>
+                <p className="mt-2 text-sm text-black/50">Kelola integrasi NüHabit OS dengan layanan eksternal.</p>
               </div>
 
               {/* Hero Card */}

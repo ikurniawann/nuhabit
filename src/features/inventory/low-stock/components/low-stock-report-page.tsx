@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useLowStock } from "../queries";
+import type { LowStockItem } from "../types";
 
 export function LowStockReportPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -216,6 +217,11 @@ export function LowStockReportPage() {
                         </td>
                         <td className="py-3 px-4 font-medium text-blue-700">
                           {item.suggested_order_qty} {item.satuan}
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            {item.suggestion_basis === "maximum"
+                              ? `s.d. maks ${item.qty_maximum}${item.qty_on_order > 0 ? `, ${item.qty_on_order} sudah dipesan` : ""}`
+                              : "kekurangan x 1,5"}
+                          </span>
                         </td>
                         <td className="py-3 px-4 font-semibold text-gray-800">
                           {formatRupiah(item.estimated_cost)}
@@ -224,7 +230,7 @@ export function LowStockReportPage() {
                           {item.supplier_name || "—"}
                         </td>
                         <td className="py-3 px-4">
-                          <Link href={`/dashboard/purchasing/purchase-orders/insert?material=${item.material_kode}&qty=${item.suggested_order_qty}&supplier=${encodeURIComponent(item.supplier_name || '')}`}>
+                          <Link href={buildPoInsertHref(item)}>
                             <Button variant="outline" size="sm" className="text-xs">
                               Buat PO
                             </Button>
@@ -241,4 +247,14 @@ export function LowStockReportPage() {
       </Card>
     </div>
   );
+}
+
+/** Prefill form PO baru: bahan baku, qty saran (satuan dasar), supplier terakhir. */
+function buildPoInsertHref(item: LowStockItem): string {
+  const params = new URLSearchParams({
+    material_id: item.raw_material_id,
+    qty: String(item.suggested_order_qty),
+  });
+  if (item.supplier_id) params.set("supplier_id", item.supplier_id);
+  return `/dashboard/purchasing/po/insert?${params.toString()}`;
 }

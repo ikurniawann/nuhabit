@@ -11,6 +11,7 @@ import {
   resolveCustomerStatsReversal,
 } from '@/lib/pos/void-order';
 import { releasePromoRedemption } from '@/lib/promo/promo-server';
+import { releaseOfferUsage } from '@/lib/promo/offer-rules-server';
 import {
   IssuedGiftCardAlreadyUsedError,
   refundGiftCardForPosOrder,
@@ -226,9 +227,10 @@ export async function POST(
 
     for (const row of voidable) {
       await restoreMerchandiseStockForOrder(db, row.id);
-      await withTransaction((client) =>
-        releasePromoRedemption(client, 'pos_order', row.id)
-      ).catch((err) => console.error('[pos] release promo error:', err));
+      await withTransaction(async (client) => {
+        await releasePromoRedemption(client, 'pos_order', row.id);
+        await releaseOfferUsage(client, row.id);
+      }).catch((err) => console.error('[pos] release promo error:', err));
       await db
         .from('pos_order_splits')
         .update({ status: 'cancelled', updated_at: now })

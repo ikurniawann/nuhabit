@@ -5,7 +5,7 @@ describe("dataroom watermark", () => {
   it("teks watermark: label + tanggal WIB, fallback nama bisnis", () => {
     const d = new Date("2026-09-04T03:05:00Z");
     expect(buildWatermarkText({ label: "budi@wit.id", date: d })).toBe("budi@wit.id - 04/09/2026 10.05");
-    expect(buildWatermarkText({ label: "", date: d })).toMatch(/^BCD Coffee - /);
+    expect(buildWatermarkText({ label: "", date: d })).toMatch(/^NüHabit - /);
   });
 
   it("SVG pola: ukuran sesuai gambar & teks di-escape", () => {

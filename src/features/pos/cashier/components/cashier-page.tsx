@@ -119,6 +119,7 @@ import {
 import { NFCModal } from '@/components/pos/NFCModal';
 import { CustomerSearchModal } from '@/components/pos/CustomerSearchModal';
 import { usePosNfcOptional, findCustomerByCard, POS_NFC_CARD_EVENT, buildTopupCardPath } from '@/features/pos/nfc';
+import { isMemberQrToken } from '@/lib/crm/engagement/rules';
 import { resolveCashierNfcAction } from '../nfc-scan-action';
 import {
   AlertDialog,
@@ -648,11 +649,13 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   }, [cart.items.length, returnToRestaurantPath, router]);
 
   /* EPIC-032 C2 — kode promo kasir (preview server; final di-hold saat order) */
-  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number } | null>(null);
+  // offerRuleId terisi = kode pembuka penawaran (diskonnya lewat offerEval)
+  const [promoApplied, setPromoApplied] = useState<{ code: string; discount: number; offerRuleId?: string } | null>(null);
   const [promoInput, setPromoInput] = useState('');
   const [promoBusy, setPromoBusy] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
-  const activeOffersQuery = usePosActiveOffers(true);
+  const activeOffersQuery = usePosActiveOffers(true, cart.selectedCustomerId ?? null);
+  const unlockedOfferRuleId = promoApplied?.offerRuleId ?? null;
 
   const offerEval = useMemo(() => {
     const rules = (activeOffersQuery.data ?? []).map((o) => o.eval).filter(Boolean);
@@ -665,9 +668,13 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         quantity: item.quantity,
         unitPrice: item.price,
       })),
-      rules
+      rules,
+      {
+        channel: 'pos',
+        unlockedRuleIds: unlockedOfferRuleId ? [unlockedOfferRuleId] : [],
+      }
     );
-  }, [activeOffersQuery.data, cart.items]);
+  }, [activeOffersQuery.data, cart.items, unlockedOfferRuleId]);
 
   /* Financials — item → offer → membership → promo → manual transaksi */
   const membershipDiscount = selectedCustomer ? selectedCustomer.discount : 0;
@@ -811,7 +818,7 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
   useEffect(() => {
     setPromoApplied(null);
     setPromoError(null);
-  }, [cart.itemsSubtotal]);
+  }, [cart.itemsSubtotal, cart.selectedCustomerId]);
 
   const applyPromo = useCallback(async () => {
     const code = promoInput.trim();
@@ -826,7 +833,16 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
       const res = await fetch('/api/pos/promo-check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, subtotal: cart.itemsSubtotal }),
+        body: JSON.stringify({
+          code,
+          subtotal: cart.itemsSubtotal,
+          // Nilai bersih per baris utk kode yang dibatasi produk/kategori
+          items: cart.items.map((item, index) => ({
+            product_id: item.productId,
+            amount: cart.buildDiscountStack(0, 0).line_results[index]?.total_amount ?? 0,
+          })),
+          customer_id: cart.selectedCustomerId || null,
+        }),
       });
       const body = await res.json();
       if (!res.ok || !body.success) {
@@ -837,14 +853,19 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
         setPromoError(body.data.message || 'Kode tidak berlaku');
         return;
       }
-      setPromoApplied({ code: code.toUpperCase(), discount: body.data.discount });
+      setPromoApplied(
+        body.data.kind === 'offer'
+          ? { code: code.toUpperCase(), discount: 0, offerRuleId: body.data.rule_id }
+          : { code: code.toUpperCase(), discount: body.data.discount }
+      );
+      if (body.data.kind === 'offer') toast.success(`Penawaran "${body.data.offer_name}" aktif`);
       setPromoInput('');
     } catch {
       setPromoError('Jaringan bermasalah — coba lagi');
     } finally {
       setPromoBusy(false);
     }
-  }, [promoInput, promoBusy, isOnline, cart.itemsSubtotal]);
+  }, [promoInput, promoBusy, isOnline, cart]);
 
   /* EPIC-024 — pancarkan state cart/pembayaran ke customer display
      (BroadcastChannel, satu arah). Publish adalah sinkronisasi ke sistem
@@ -1217,6 +1238,37 @@ function CashierPageNewContent({ variant }: { variant: CashierPageVariant }) {
     if (!trimmed) return;
     setNfcSearching(true);
     setNfcError('');
+
+    // QR kartu member (portal /member): token sekali pakai, diperiksa server,
+    // lalu member dipilih lewat ID-nya seperti kartu NFC biasa.
+    if (isMemberQrToken(trimmed)) {
+      void (async () => {
+        try {
+          const res = await fetch('/api/pos/member-qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: trimmed }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok || !json.success) throw new Error(json.error || 'QR member tidak valid');
+          const member = customers.find((c) => c.id === json.data.customer_id);
+          if (!member) throw new Error('Member belum ada di daftar kasir. Muat ulang halaman kasir.');
+          cart.setCustomer(member.id);
+          setShowNFC(false);
+          toast.success(`Member ${member.name || member.phone} dipilih lewat QR`, {
+            description: json.data.gym?.message ? `Gym: ${json.data.gym.message}` : undefined,
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'QR member tidak valid';
+          setNfcError(message);
+          toast.error(message);
+        } finally {
+          setNfcSearching(false);
+          setNfcInput('');
+        }
+      })();
+      return;
+    }
 
     const found = findCustomerByCard(customers, trimmed);
     const enforceArkBalance = showPayment || showNFC;

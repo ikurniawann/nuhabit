@@ -1,6 +1,11 @@
-import { redirect } from "next/navigation";
+import { NoxPortal } from "@/features/member-portal/nox/nox-portal";
+import { LegacyMemberShell } from "../legacy-shell";
 
-/** Rute pratinjau Fase A/B — kini portal Nox adalah /member itu sendiri. */
-export default function MemberNoxPreviewPage() {
-  redirect("/member");
+/** /member/nox — portal "Nox Lab" (tampilan desktop), sebelumnya di /member. */
+export default function Page() {
+  return (
+    <LegacyMemberShell>
+      <NoxPortal />
+    </LegacyMemberShell>
+  );
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { successResponse } from "@/lib/api/auth";
 import { getCrmDefaultVenue, requireCrmCampaign } from "@/lib/crm/server";
 import { createPgClient } from "@/lib/pg/create-client";
-import { query, queryOne } from "@/lib/db";
+import { queryOne } from "@/lib/db";
 
 // EPIC-033 Fase C — funnel kampanye: antrean → terkirim → voucher dipakai
 // (konversi GRATIS dari promo_redemptions EPIC-032, tanpa tracking baru).
@@ -25,8 +25,13 @@ export async function GET(
       status: string;
       promo_campaign_id: string | null;
       promo_mode: "public" | "batch" | null;
+      channels: string[];
+      scheduled_at: string | null;
+      started_at: string | null;
+      failure_reason: string | null;
     }>(
-      `SELECT id, name, status, promo_campaign_id, promo_mode
+      `SELECT id, name, status, promo_campaign_id, promo_mode, channels,
+              scheduled_at, started_at, failure_reason
        FROM crm.crm_campaigns WHERE id = $1 AND branch_id = $2`,
       [id, venue.branchId]
     );
@@ -50,6 +55,15 @@ export async function GET(
               COUNT(*) FILTER (WHERE status = 'failed') AS failed,
               COUNT(*) FILTER (WHERE status = 'skipped') AS skipped
        FROM crm.crm_campaign_recipients WHERE campaign_id = $1`,
+      [id]
+    );
+
+    // Kanal in-app: terkirim = baris notifikasi; buka/klik dari jejak portal.
+    const inApp = await queryOne<{ sent: string; opened: string; clicked: string }>(
+      `SELECT COUNT(*) AS sent,
+              COUNT(*) FILTER (WHERE opened_at IS NOT NULL OR clicked_at IS NOT NULL) AS opened,
+              COUNT(*) FILTER (WHERE clicked_at IS NOT NULL) AS clicked
+       FROM crm.member_notifications WHERE campaign_id = $1`,
       [id]
     );
 
@@ -88,7 +102,15 @@ export async function GET(
     }
 
     return successResponse({
-      campaign: { id: campaign.id, name: campaign.name, status: campaign.status },
+      campaign: {
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        channels: campaign.channels,
+        scheduled_at: campaign.scheduled_at,
+        started_at: campaign.started_at,
+        failure_reason: campaign.failure_reason,
+      },
       funnel: {
         total: Number(counts?.total ?? 0),
         pending: Number(counts?.pending ?? 0),
@@ -97,6 +119,11 @@ export async function GET(
         skipped: Number(counts?.skipped ?? 0),
         redeemed,
         redeemed_value: redeemedValue,
+      },
+      in_app: {
+        sent: Number(inApp?.sent ?? 0),
+        opened: Number(inApp?.opened ?? 0),
+        clicked: Number(inApp?.clicked ?? 0),
       },
     });
   } catch (err) {

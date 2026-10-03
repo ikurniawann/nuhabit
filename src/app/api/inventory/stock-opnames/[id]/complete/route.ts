@@ -3,6 +3,7 @@ import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
 import { queryOne, withTransaction } from "@/lib/db";
 import { fetchStockOpnameDetail } from "@/lib/inventory/stock-opname";
+import { recordAudit, requestMeta } from "@/lib/audit";
 import {
   AccountingPostError,
   postStockOpnameAccounting,
@@ -17,7 +18,7 @@ function toNumber(value: unknown) {
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(_request: NextRequest, context: RouteContext) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const user = await requireIamMenuPrefix(IAM.itemsInventory);
     const { id } = await context.params;
@@ -146,6 +147,29 @@ export async function POST(_request: NextRequest, context: RouteContext) {
           user.id,
         ]
       );
+
+      const varianceLines = detail.lines
+        .map((line) => ({
+          raw_material_id: line.raw_material_id,
+          inventory_id: line.inventory_id,
+          qty_system: line.qty_system,
+          qty_counted: toNumber(line.qty_counted),
+        }))
+        .filter((line) => line.qty_counted !== line.qty_system);
+      await recordAudit(client, {
+        actor: { id: user.id, name: user.full_name },
+        action: "stock.opname_complete",
+        entity: "stock_opname",
+        entityId: detail.id,
+        entityLabel: detail.opname_number,
+        before: { status: detail.status },
+        after: {
+          status: "completed",
+          lines_counted: detail.lines.length,
+          variances: varianceLines,
+        },
+        ...requestMeta(request),
+      });
     });
 
     let accountingNote: string | null = null;

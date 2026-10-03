@@ -19,6 +19,7 @@ export interface NoxMemberData {
     birthDate: string | null;
     gender: string | null;
     city: string | null;
+    photoUrl: string | null;
   };
   /** Tangga tier lengkap (urut rank) — untuk dialog progres XP. */
   tiers: Array<{ code: string; name: string; minLifetimeXp: number; discountPercent: number }>;
@@ -26,6 +27,10 @@ export interface NoxMemberData {
   coins: number;
   /** Saldo mentah dalam Rupiah — untuk baris "≈ Rp …" di kartu wallet. */
   coinsIdr: number;
+  /** Ambang peringatan saldo rendah (Rupiah); 0 = mati. */
+  lowBalanceThresholdIdr: number;
+  /** Setuju promo WA dan tidak ada di daftar opt-out kampanye. */
+  marketingOptIn: boolean;
   totalXp: number;
   visitCount: number;
   tier: { code: string; name: string; discountPercent: number } | null;
@@ -67,14 +72,16 @@ export type NoxMemberState =
       orders: NoxOrder[];
     };
 
-/** Tipe kredit menambah saldo; selain itu (payment dsb.) mengurangi. */
-export const CREDIT_TXN_TYPES = new Set(["topup", "topup_bonus", "refund", "bonus"]);
-
-export function useNoxMember(): { state: NoxMemberState; reload: () => void } {
+export function useNoxMember(): {
+  state: NoxMemberState;
+  reload: () => void;
+  /** Muat ulang tanpa layar memuat (setelah member mengubah profil dsb.). */
+  refresh: () => void;
+} {
   const [state, setState] = useState<NoxMemberState>({ status: "loading" });
 
-  const load = useCallback(async () => {
-    setState({ status: "loading" });
+  const load = useCallback(async (silent: boolean) => {
+    if (!silent) setState({ status: "loading" });
     try {
       const [meRes, txnRes] = await Promise.all([
         fetch("/api/member-portal/me", { cache: "no-store" }),
@@ -144,6 +151,7 @@ export function useNoxMember(): { state: NoxMemberState; reload: () => void } {
             birthDate: d.profile?.birth_date ?? null,
             gender: d.profile?.gender ?? null,
             city: d.profile?.city ?? null,
+            photoUrl: d.profile?.photo_url ?? null,
           },
           tiers: ((d.tiers ?? []) as Array<Record<string, unknown>>).map((t) => ({
             code: String(t.code ?? ""),
@@ -154,6 +162,8 @@ export function useNoxMember(): { state: NoxMemberState; reload: () => void } {
           memberType: d.member_type ?? null,
           coins: idrToArkDisplay(Number(d.ark_coin_balance) || 0, arkRate),
           coinsIdr: Number(d.ark_coin_balance) || 0,
+          lowBalanceThresholdIdr: Number(d.low_balance_threshold_idr) || 0,
+          marketingOptIn: d.marketing_opt_in === true,
           totalXp: Number(d.total_xp) || 0,
           visitCount: Number(d.visit_count) || 0,
           tier: d.tier
@@ -175,13 +185,15 @@ export function useNoxMember(): { state: NoxMemberState; reload: () => void } {
         orders,
       });
     } catch {
-      setState({ status: "error" });
+      if (!silent) setState({ status: "error" });
     }
   }, []);
 
   useEffect(() => {
-    void load();
+    void load(false);
   }, [load]);
 
-  return { state, reload: load };
+  const reload = useCallback(() => void load(false), [load]);
+  const refresh = useCallback(() => void load(true), [load]);
+  return { state, reload, refresh };
 }

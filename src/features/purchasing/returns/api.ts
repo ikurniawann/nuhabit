@@ -8,6 +8,7 @@ import {
   updateReturn,
   cancelReturn,
   shipReturn,
+  reviseReturn,
 } from "@/lib/purchasing/return";
 import { listSuppliers } from "@/lib/purchasing";
 import type {
@@ -27,6 +28,7 @@ export {
   updateReturn,
   cancelReturn,
   shipReturn,
+  reviseReturn,
 };
 
 export interface ReturnListResult {

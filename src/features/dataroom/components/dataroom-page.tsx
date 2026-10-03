@@ -305,7 +305,7 @@ export function DataroomPage() {
             onDragOver={(e) => allowDrop(e, "root")}
             onDragLeave={() => setDropTarget((t) => (t === "root" ? null : t))}
             onDrop={(e) => handleDrop(e, "root")}
-            className={cn("rounded-md px-2 py-1 font-medium hover:bg-accent", !folderId && "text-primary", dropTarget === "root" && "bg-primary/15 ring-2 ring-primary")}
+            className={cn("rounded-md px-2 py-1 font-medium hover:bg-muted", !folderId && "text-primary", dropTarget === "root" && "bg-primary/15 ring-2 ring-primary")}
           >
             Dataroom
           </button>
@@ -318,7 +318,7 @@ export function DataroomPage() {
                 onDragOver={(e) => allowDrop(e, a.id)}
                 onDragLeave={() => setDropTarget((t) => (t === a.id ? null : t))}
                 onDrop={(e) => handleDrop(e, a.id)}
-                className={cn("truncate rounded-md px-2 py-1 hover:bg-accent", idx === arr.length - 1 && "font-medium text-primary", dropTarget === a.id && "bg-primary/15 ring-2 ring-primary")}
+                className={cn("truncate rounded-md px-2 py-1 hover:bg-muted", idx === arr.length - 1 && "font-medium text-primary", dropTarget === a.id && "bg-primary/15 ring-2 ring-primary")}
               >
                 {a.name}
               </button>
@@ -330,8 +330,8 @@ export function DataroomPage() {
           <Input value={search} onChange={(e) => setSearch(e.target.value)} onClick={(e) => e.stopPropagation()} placeholder="Cari di folder ini" className="h-8 w-48 pl-8" />
         </div>
         <div className="flex rounded-md border p-0.5" onClick={(e) => e.stopPropagation()}>
-          <button type="button" onClick={() => changeView("grid")} className={cn("rounded p-1", view === "grid" ? "bg-accent" : "text-muted-foreground")} title="Tampilan kotak"><LayoutGrid className="h-4 w-4" /></button>
-          <button type="button" onClick={() => changeView("list")} className={cn("rounded p-1", view === "list" ? "bg-accent" : "text-muted-foreground")} title="Tampilan daftar"><List className="h-4 w-4" /></button>
+          <button type="button" onClick={() => changeView("grid")} className={cn("rounded p-1", view === "grid" ? "bg-muted" : "text-muted-foreground")} title="Tampilan kotak"><LayoutGrid className="h-4 w-4" /></button>
+          <button type="button" onClick={() => changeView("list")} className={cn("rounded p-1", view === "list" ? "bg-muted" : "text-muted-foreground")} title="Tampilan daftar"><List className="h-4 w-4" /></button>
         </div>
       </div>
 
@@ -377,7 +377,7 @@ export function DataroomPage() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onContextMenu(e, item); }}
-                    className="rounded-md p-1 text-muted-foreground opacity-0 hover:bg-accent group-hover:opacity-100 focus:opacity-100 sm:opacity-0 max-sm:opacity-100"
+                    className="rounded-md p-1 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus:opacity-100 sm:opacity-0 max-sm:opacity-100"
                     aria-label="Menu"
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -421,7 +421,7 @@ export function DataroomPage() {
                     onDoubleClick={() => openItem(item)}
                     onContextMenu={(e) => onContextMenu(e, item)}
                     className={cn(
-                      "cursor-default select-none border-t hover:bg-accent/50",
+                      "cursor-default select-none border-t hover:bg-muted/50",
                       selected.has(item.id) && "bg-primary/10",
                       dropTarget === item.id && "bg-primary/15 ring-2 ring-inset ring-primary"
                     )}
@@ -441,7 +441,7 @@ export function DataroomPage() {
                     <td className="px-3 py-2 text-muted-foreground">{tanggal(item.updated_at)}</td>
                     <td className="px-3 py-2 text-right text-muted-foreground">{item.kind === "file" ? formatBytes(item.size_bytes) : "—"}</td>
                     <td className="px-2 py-2">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); onContextMenu(e, item); }} className="rounded-md p-1 text-muted-foreground hover:bg-accent" aria-label="Menu"><MoreVertical className="h-4 w-4" /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); onContextMenu(e, item); }} className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Menu"><MoreVertical className="h-4 w-4" /></button>
                     </td>
                   </tr>
                 ))}

@@ -100,7 +100,7 @@ export function CustomerDisplayPage({
       <header className="flex items-center gap-4 border-b border-gray-100 px-8 py-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.png?v=bcd"
+          src="/brand/icon-192.png"
           alt={venueName ?? "Logo"}
           className="h-12 w-12 shrink-0 rounded-2xl object-contain"
         />

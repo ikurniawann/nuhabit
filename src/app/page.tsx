@@ -9,7 +9,7 @@ export default async function HomePage() {
   if (!user) {
     redirect("/login");
   }
-  // User ESS-only (per IAM) tidak punya desktop BCD Coffee OS → langsung ke Area Karyawan.
+  // User ESS-only (per IAM) tidak punya desktop NüHabit OS → langsung ke Area Karyawan.
   if (await isEssOnlyUser(user.id, user.role)) {
     redirect("/dashboard/me");
   }

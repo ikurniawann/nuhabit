@@ -7,6 +7,7 @@ import { createServerPgClient } from "@/lib/pg/create-client";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
 import { z } from "zod";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 
 const cancelSchema = z.object({
   reason: z.string().min(1, "Alasan pembatalan wajib diisi"),
@@ -24,7 +25,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireIamMenuPrefix(IAM.items);
+    const user = await requireIamMenuPrefix(IAM.items);
     const { id } = await params;
     const db = await createServerPgClient();
     const body = await request.json();
@@ -76,6 +77,18 @@ export async function POST(
       .single();
 
     if (error) throw error;
+
+    await recordAuditAfterCommit({
+      actor: { id: user.id, name: user.full_name },
+      action: "po.cancel",
+      entity: "purchase_order",
+      entityId: id,
+      entityLabel: po.nomor_po ?? null,
+      before: { status: po.status },
+      after: { status: "cancelled" },
+      reason,
+      ...requestMeta(request),
+    });
 
     // Release reserved stock jika ada
     // (Ini akan diimplementasikan saat inventory reservation)

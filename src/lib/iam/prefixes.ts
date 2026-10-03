@@ -34,6 +34,12 @@ export const IAM = {
   crmLoyalty: ["crm.loyalty"],
   crmReports: ["crm.reports"],
   crmPromo: ["crm.promo", "promo"],
+  /** CRM → Engagement: pengumuman, event, challenge, check-in (port NüHabit). */
+  crmEngagement: ["crm.engagement"],
+  /** CRM → Customer Care → Ulasan Member (ulasan order dari portal). */
+  crmMemberReviews: ["crm.members.member-reviews"],
+  /** CRM → Loyalty → Partner Loyalty (event eksternal bertanda tangan). */
+  crmPartners: ["crm.loyalty.partners"],
   settings: ["settings"],
   settingsUsers: ["settings.users"],
   settingsRoles: ["settings.roles"],
@@ -43,6 +49,8 @@ export const IAM = {
   settingsAppearance: ["settings.appearance"],
   settingsPaymentGateways: ["settings.payment-gateways"],
   settingsWaGateway: ["settings.wa_gateway"],
+  /** Settings → Audit Trail (jejak audit server-side). */
+  settingsAudit: ["settings.audit"],
   shop: ["shop"],
   ticketing: ["ticketing"],
   ticketingAdmin: [
@@ -63,6 +71,24 @@ export const IAM = {
   promo: ["promo", "crm.promo"],
   dataroom: ["dataroom"],
   resort: ["resort"],
+  /** POS → Member → Dompet: paket top-up, koreksi saldo, pembayaran online, aturan saldo. */
+  posWallet: ["pos.loyalty.wallet"],
+  /** Gym → Stasiun & Latihan (pustaka HYROX + substitusi). */
+  gymExercises: ["gym.exercises"],
+  /** Gym → Race HYROX (kalender race + peserta). */
+  gymRaces: ["gym.races"],
+  /** Gym → Insentif Coach (skema, statement, payout). */
+  gymIncentives: ["gym.incentives"],
+  /** Gym → Paket Kredit (katalog paket kelas). */
+  gymPackages: ["gym.packages"],
+  /** Gym → Kredit Member (saldo, lot, koreksi, jual paket di front desk). */
+  gymCredits: ["gym.credits"],
+  /** Gym → Aturan Gym (global + override cabang). */
+  gymRules: ["gym.rules"],
+  /** Gym → jadwal, sesi & absensi, booking, jenis kelas, coach. */
+  gymScheduling: ["gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"],
+  /** Gym → Check-in (scan QR front desk; juga dibuka dari Sesi & Absensi). */
+  gymCheckin: ["gym.checkin", "gym.sessions"],
 } as const;
 
 export type IamPrefixGroup = (typeof IAM)[keyof typeof IAM];

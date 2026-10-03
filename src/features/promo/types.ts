@@ -6,6 +6,14 @@ export type PromoScope =
 
 export type PromoDiscountType = "percent" | "fixed";
 
+export type PromoEligibility = "semua" | "member" | "member_baru";
+
+export const PROMO_ELIGIBILITY_LABELS: Record<PromoEligibility, string> = {
+  semua: "Semua pembeli",
+  member: "Khusus member",
+  member_baru: "Member baru (transaksi pertama)",
+};
+
 export const PROMO_SCOPE_LABELS: Record<PromoScope, string> = {
   ticketing_online: "Booking Online",
   ticketing_loket: "Loket Tiket",
@@ -35,6 +43,12 @@ export interface PromoCampaign {
   per_phone_limit: number | null;
   scope: PromoScope;
   is_active: boolean;
+  /** Tampil di daftar promo portal member /member. */
+  show_in_member_portal: boolean;
+  target_product_ids: string[];
+  target_category_ids: string[];
+  eligibility: PromoEligibility;
+  new_member_days: number | null;
   created_at: string;
   codes_count: string;
   held_count: string;
@@ -55,6 +69,10 @@ export interface PromoCampaignFormValues {
   per_phone_limit?: number | null;
   scope: PromoScope;
   public_code?: string;
+  target_product_ids?: string[];
+  target_category_ids?: string[];
+  eligibility?: PromoEligibility;
+  new_member_days?: number | null;
 }
 
 export interface PromoCode {

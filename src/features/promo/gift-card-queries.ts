@@ -8,6 +8,8 @@ import {
   fetchGiftCardLedger,
   fetchGiftCards,
   issueGiftCard,
+  linkGiftCardMember,
+  reloadGiftCard,
   saveGiftCardConfig,
   toggleGiftCard,
 } from "./gift-card-api";
@@ -15,16 +17,19 @@ import type {
   GiftCard,
   GiftCardConfigValues,
   GiftCardIssueValues,
+  GiftCardReloadValues,
 } from "./gift-card-types";
 
+type GiftCardListParams = { status?: string; q?: string; phone?: string };
+
 export const giftCardQueryKeys = {
-  list: (params?: { status?: string; q?: string }) =>
+  list: (params?: GiftCardListParams) =>
     ["giftcard", "list", params ?? {}] as const,
   ledger: (id: string) => ["giftcard", "ledger", id] as const,
   config: () => ["giftcard", "config"] as const,
 };
 
-export const useGiftCards = (params?: { status?: string; q?: string }) =>
+export const useGiftCards = (params?: GiftCardListParams) =>
   useQuery({
     queryKey: giftCardQueryKeys.list(params),
     queryFn: () => fetchGiftCards(params),
@@ -89,4 +94,20 @@ export const useToggleGiftCard = () =>
     ({ id, isActive }: { id: string; isActive: boolean }) =>
       toggleGiftCard(id, isActive),
     "Gift card diperbarui"
+  );
+
+export const useReloadGiftCard = (onSuccess?: () => void) =>
+  useGiftCardMutation(
+    ({ id, values }: { id: string; values: GiftCardReloadValues }) =>
+      reloadGiftCard(id, values),
+    "Saldo gift card bertambah",
+    onSuccess
+  );
+
+export const useLinkGiftCardMember = (onSuccess?: () => void) =>
+  useGiftCardMutation(
+    ({ id, customerId }: { id: string; customerId: string | null }) =>
+      linkGiftCardMember(id, customerId),
+    "Tautan member diperbarui",
+    onSuccess
   );

@@ -13,6 +13,8 @@ import {
 import { toQty } from "@/lib/purchasing/utils";
 import type { UserRole } from "@/types";
 import { syncReceiveRejectCredits } from "@/lib/purchasing/vendor-credit-service";
+import { grnBatchFields } from "@/lib/purchasing/grn-batch";
+import { toDateOnly } from "@/lib/inventory/batches";
 
 const GRN_VIEW_ROLES: UserRole[] = [
   "warehouse_staff",
@@ -36,6 +38,8 @@ const GRN_ITEM_DETAIL_SELECT = `
   kondisi,
   catatan,
   satuan_id,
+  batch_number,
+  expiry_date,
   is_active,
   created_at,
   updated_at,
@@ -66,6 +70,7 @@ const grnItemUpdateSchema = z.object({
   qty_ditolak: z.number().min(0),
   kondisi: z.enum(["baik", "rusak", "cacat"]).default("baik"),
   catatan: z.string().optional().nullable(),
+  ...grnBatchFields,
 });
 
 const updateGrnSchema = z.object({
@@ -398,6 +403,9 @@ export async function PATCH(
         const existingItem = existingItemsMap.get(
           item.purchase_order_item_id || item.raw_material_id
         );
+        const existingBatch = existingItem as
+          | { batch_number?: string | null; expiry_date?: string | Date | null }
+          | undefined;
         return {
           grn_id: id,
           delivery_id: currentGrn.delivery_id,
@@ -410,6 +418,8 @@ export async function PATCH(
           warehouse_id: existingItem?.warehouse_id ?? null,
           qc_status: "pending",
           qty_qc_posted: existingItem?.qty_qc_posted ?? 0,
+          batch_number: item.batch_number?.trim() || existingBatch?.batch_number || null,
+          expiry_date: item.expiry_date || toDateOnly(existingBatch?.expiry_date),
         };
       });
       

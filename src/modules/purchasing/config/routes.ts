@@ -154,27 +154,27 @@ export const ROUTES: RouteDefinition[] = [
   // ── Purchase Orders ────────────────────────────────────────
   {
     route: "purchase-orders.list",
-    path: "/dashboard/purchasing/purchase-orders",
+    path: "/dashboard/purchasing/po",
     meta: { label: "Purchase Order", icon: "ClipboardDocumentListIcon" },
   },
   {
     route: "purchase-orders.new",
-    path: "/dashboard/purchasing/purchase-orders/insert",
+    path: "/dashboard/purchasing/po/insert",
     meta: { label: "Buat PO", icon: "ClipboardDocumentListIcon" },
   },
   {
     route: "purchase-orders.edit",
-    path: "/dashboard/purchasing/purchase-orders/edit/[id]",
+    path: "/dashboard/purchasing/po/edit/[id]",
     meta: { label: "Edit PO", icon: "ClipboardDocumentListIcon" },
   },
   {
     route: "purchase-orders.detail",
-    path: "/dashboard/purchasing/purchase-orders/[id]",
+    path: "/dashboard/purchasing/po/[id]",
     meta: { label: "Detail PO", icon: "ClipboardDocumentListIcon" },
   },
   {
     route: "purchase-orders.approval",
-    path: "/dashboard/purchasing/purchase-orders/approval",
+    path: "/dashboard/purchasing/approval/po",
     meta: { label: "Approval PO", icon: "ClipboardDocumentCheckIcon", allowedRoles: ["purchasing_manager", "direksi"] },
   },
 

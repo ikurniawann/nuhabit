@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useReturn } from "../queries";
-import { useApproveReturn, useRejectReturn } from "../mutations";
+import { useApproveReturn, useRejectReturn, useReviseReturn } from "../mutations";
 import { getReturnsModuleConfig } from "../returns-module";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { Button } from "@/components/ui/button";
@@ -128,9 +128,21 @@ export function ReturnDetailPage({
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  const router = useRouter();
   const approveMutation = useApproveReturn();
   const rejectMutation = useRejectReturn();
-  const isProcessing = approveMutation.isPending || rejectMutation.isPending;
+  const reviseMutation = useReviseReturn();
+  const isProcessing = approveMutation.isPending || rejectMutation.isPending || reviseMutation.isPending;
+
+  const handleRevise = async () => {
+    try {
+      const revision = await reviseMutation.mutateAsync(returnId);
+      toast.success(`Revisi ${revision.return_number} dibuat sebagai draft`);
+      router.push(config.editRoute(revision.id));
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Gagal membuat revisi retur"));
+    }
+  };
 
   useEffect(() => {
     if (detailQuery.isError) {
@@ -196,6 +208,8 @@ export function ReturnDetailPage({
   const canApprove = status === "pending_approval";
   const canEdit = status === "draft" || status === "pending_approval";
   const isApproved = status === "approved" || status === "completed";
+  const revision = ret as { superseded_by?: string | null; revision_of?: string | null };
+  const canRevise = status === "rejected" && !revision.superseded_by;
   const totalQty =
     ret.items?.reduce((sum, item) => sum + Number(item.qty_returned || 0), 0) ?? 0;
 
@@ -240,6 +254,31 @@ export function ReturnDetailPage({
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Ubah
+              </Button>
+            </Link>
+          )}
+          {canRevise && (
+            <Button
+              variant="outline"
+              className="purchasing-secondary-button w-full sm:w-auto"
+              onClick={handleRevise}
+              disabled={isProcessing}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Revisi
+            </Button>
+          )}
+          {revision.superseded_by && (
+            <Link href={config.detailRoute(revision.superseded_by)}>
+              <Button variant="outline" className="purchasing-secondary-button w-full sm:w-auto">
+                Lihat revisi
+              </Button>
+            </Link>
+          )}
+          {revision.revision_of && (
+            <Link href={config.detailRoute(revision.revision_of)}>
+              <Button variant="ghost" className="w-full sm:w-auto">
+                Dokumen sebelumnya
               </Button>
             </Link>
           )}

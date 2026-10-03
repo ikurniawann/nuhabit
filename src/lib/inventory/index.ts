@@ -1,5 +1,6 @@
 import type { DbClient } from "@/lib/pg/types";
 import { updateRawMaterialLastPurchasePrice } from "@/lib/purchasing/purchase-price";
+import { toDateOnly } from "@/lib/inventory/batches";
 
 export interface InventoryLocation {
   branch_id: string | null;
@@ -135,11 +136,19 @@ export async function addInventoryFromGrn(
   grnId: string,
   grnNumber: string,
   userId: string,
-  warehouseId?: string | null
+  warehouseId?: string | null,
+  batch?: { batchNumber?: string | null; expiryDate?: string | Date | null }
 ): Promise<void> {
   const qty = toQty(qtyAdded);
   const cost = toQty(unitCost);
   if (qty <= 0) return;
+
+  // Trigger trg_inventory_movement_batches membuat batch dari kolom ini.
+  const expiryDate = toDateOnly(batch?.expiryDate);
+  const batchColumns = {
+    ...(batch?.batchNumber ? { batch_number: batch.batchNumber } : {}),
+    ...(expiryDate ? { expiry_date: expiryDate } : {}),
+  };
 
   let location: InventoryLocation;
   if (warehouseId) {
@@ -203,6 +212,7 @@ export async function addInventoryFromGrn(
       reference_number: grnNumber,
       alasan: `Penerimaan barang dari GRN ${grnNumber}`,
       created_by: userId,
+      ...batchColumns,
     });
 
     await updateRawMaterialLastPurchasePrice(db, {
@@ -240,6 +250,7 @@ export async function addInventoryFromGrn(
     reference_number: grnNumber,
     alasan: `Penerimaan barang dari GRN ${grnNumber}`,
     created_by: userId,
+    ...batchColumns,
   });
 
   await updateRawMaterialLastPurchasePrice(db, {

@@ -9,11 +9,17 @@ import { query } from "@/lib/db";
 import {
   PROMO_REJECT_MESSAGES,
   evaluatePromo,
+  hasPromoTargets,
   type PromoCampaignRule,
   type PromoCodeState,
+  type PromoEligibility,
+  type PromoLine,
+  type PromoMemberContext,
   type PromoRejectReason,
   type PromoScope,
 } from "./promo";
+
+type Runner = <T>(sql: string, params: unknown[]) => Promise<T[]>;
 
 export interface PromoVenueScope {
   companyId: string;
@@ -43,6 +49,16 @@ export interface PromoCodeRow {
   per_phone_limit: number | null;
   scope: PromoScope;
   campaign_is_active: boolean;
+  target_product_ids: string[];
+  target_category_ids: string[];
+  eligibility: PromoEligibility;
+  new_member_days: number | null;
+}
+
+/** Baris keranjang dari pemanggil — kategori dimuat ulang dari katalog. */
+export interface PromoLineInput {
+  productId: string;
+  amount: number;
 }
 
 /** Error ber-statusCode — pola staff-passes/CapacityFullError. */
@@ -69,7 +85,10 @@ const CODE_JOIN_SELECT = `
          c.min_purchase::float8 AS min_purchase,
          c.valid_from::text AS valid_from, c.valid_until::text AS valid_until,
          c.usage_limit, c.per_phone_limit, c.scope,
-         c.is_active AS campaign_is_active
+         c.is_active AS campaign_is_active,
+         c.target_product_ids::text[] AS target_product_ids,
+         c.target_category_ids::text[] AS target_category_ids,
+         c.eligibility, c.new_member_days
   FROM promo.promo_codes k
   JOIN promo.promo_campaigns c ON c.id = k.campaign_id`;
 
@@ -77,7 +96,7 @@ const CODE_JOIN_SELECT = `
 async function findCodeRows(
   scope: PromoVenueScope,
   code: string,
-  runner: <T>(sql: string, params: unknown[]) => Promise<T[]>
+  runner: Runner
 ): Promise<PromoCodeRow | null> {
   const rows = await runner<PromoCodeRow>(
     `${CODE_JOIN_SELECT}
@@ -99,7 +118,60 @@ const toRule = (row: PromoCodeRow): PromoCampaignRule => ({
   per_phone_limit: row.per_phone_limit,
   scope: row.scope,
   is_active: row.campaign_is_active,
+  target_product_ids: row.target_product_ids ?? [],
+  target_category_ids: row.target_category_ids ?? [],
+  eligibility: row.eligibility ?? "semua",
+  new_member_days: row.new_member_days,
 });
+
+/** Lengkapi baris dgn kategori katalog — hanya bila campaign punya target. */
+async function resolvePromoLines(
+  row: PromoCodeRow,
+  lines: PromoLineInput[] | undefined,
+  runner: Runner
+): Promise<PromoLine[] | undefined> {
+  if (!lines || !hasPromoTargets(toRule(row))) return undefined;
+  const ids = [...new Set(lines.map((l) => l.productId).filter(Boolean))];
+  const rows = ids.length
+    ? await runner<{ id: string; category_id: string | null }>(
+        `SELECT id, category_id FROM pos.pos_products WHERE id = ANY($1::uuid[])`,
+        [ids]
+      )
+    : [];
+  const categoryOf = new Map(rows.map((r) => [r.id, r.category_id]));
+  return lines.map((line) => ({
+    productId: line.productId,
+    categoryId: categoryOf.get(line.productId) ?? null,
+    amount: line.amount,
+  }));
+}
+
+/**
+ * Riwayat member utk syarat kelayakan. Order void/batal/merge tidak
+ * dihitung sebagai transaksi lunas. Hanya dimuat bila campaign memerlukan.
+ */
+async function loadPromoMemberContext(
+  row: PromoCodeRow,
+  customerId: string | null | undefined,
+  runner: Runner
+): Promise<PromoMemberContext | null> {
+  if (!customerId || row.eligibility === "semua") return null;
+  const rows = await runner<{ prior_paid: string; joined_days: string }>(
+    `SELECT
+       (SELECT COUNT(*) FROM pos.pos_orders o
+         WHERE o.customer_id = c.id AND o.payment_status = 'paid'
+           AND o.status NOT IN ('voided', 'cancelled', 'merged')) AS prior_paid,
+       FLOOR(EXTRACT(EPOCH FROM (now() - c.created_at)) / 86400) AS joined_days
+     FROM pos.pos_customers c WHERE c.id = $1`,
+    [customerId]
+  );
+  const found = rows[0];
+  if (!found) return null;
+  return {
+    priorPaidOrders: Number(found.prior_paid) || 0,
+    joinedDaysAgo: Number(found.joined_days) || 0,
+  };
+}
 
 const toCodeState = (row: PromoCodeRow): PromoCodeState => ({
   is_active: row.code_is_active,
@@ -111,7 +183,7 @@ const toCodeState = (row: PromoCodeRow): PromoCodeState => ({
 async function loadUsageCounts(
   campaignId: string,
   phone: string | null,
-  runner: <T>(sql: string, params: unknown[]) => Promise<T[]>
+  runner: Runner
 ): Promise<{ campaignUsed: number; phoneUsed: number }> {
   const rows = await runner<{ campaign_used: string; phone_used: string }>(
     `SELECT
@@ -148,6 +220,8 @@ export async function previewPromoCode(input: {
   channel: PromoChannel;
   subtotal: number;
   phone: string | null;
+  lines?: PromoLineInput[];
+  customerId?: string | null;
 }): Promise<PromoPreview> {
   const poolRunner = <T>(sql: string, params: unknown[]) =>
     query<T & Record<string, unknown>>(sql, params) as Promise<T[]>;
@@ -166,6 +240,8 @@ export async function previewPromoCode(input: {
     subtotal: input.subtotal,
     campaignUsedCount: counts.campaignUsed,
     phoneUsedCount: counts.phoneUsed,
+    lines: await resolvePromoLines(row, input.lines, poolRunner),
+    member: await loadPromoMemberContext(row, input.customerId, poolRunner),
   });
   if (!result.ok) {
     return {
@@ -206,6 +282,7 @@ export async function holdPromoRedemption(
     subtotal: number;
     phone: string | null;
     customerId?: string | null;
+    lines?: PromoLineInput[];
   }
 ): Promise<PromoHold> {
   const clientRunner = <T>(sql: string, params: unknown[]) =>
@@ -231,6 +308,8 @@ export async function holdPromoRedemption(
     subtotal: input.subtotal,
     campaignUsedCount: counts.campaignUsed,
     phoneUsedCount: counts.phoneUsed,
+    lines: await resolvePromoLines(row, input.lines, clientRunner),
+    member: await loadPromoMemberContext(row, input.customerId, clientRunner),
   });
   if (!result.ok) throw new PromoRejectedError(result.reason);
 
@@ -270,14 +349,14 @@ export async function holdPromoRedemption(
   };
 }
 
-type Runner = Pick<PoolClient, "query">;
+type QueryRunner = Pick<PoolClient, "query">;
 
 /**
  * Tandai pemakaian FINAL (mis. webhook PAID). Idempoten: hanya baris
  * `held` yang berubah. Return true bila ada yang berubah.
  */
 export async function capturePromoRedemption(
-  runner: Runner,
+  runner: QueryRunner,
   contextType: PromoContextType,
   contextId: string
 ): Promise<boolean> {
@@ -296,7 +375,7 @@ export async function capturePromoRedemption(
  * tidak minus (GREATEST). Return true bila ada yang dilepas.
  */
 export async function releasePromoRedemption(
-  runner: Runner,
+  runner: QueryRunner,
   contextType: PromoContextType,
   contextId: string
 ): Promise<boolean> {

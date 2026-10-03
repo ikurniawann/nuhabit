@@ -18,6 +18,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { BADGE_METRICS, BADGE_METRIC_LABELS, badgeThreshold, describeBadgeRule } from "@/lib/crm/badges";
 import type { Badge, BadgeForm } from "../types";
 import { useBadgesList } from "../queries";
 import { useDeleteBadge, useSaveBadge, useToggleBadge } from "../mutations";
@@ -29,7 +30,9 @@ const defaultForm: BadgeForm = {
   code: "",
   name: "",
   image_url: "",
-  min_lifetime_xp: "",
+  metric: "lifetime_xp",
+  threshold: "",
+  bonus_xp: "0",
   is_active: true,
 };
 
@@ -50,7 +53,7 @@ export function CrmBadgesPage() {
   const toggleMutation = useToggleBadge();
   const deleteMutation = useDeleteBadge();
 
-  const badges = data?.badges ?? [];
+  const badges = useMemo(() => data?.badges ?? [], [data]);
   const loading = isLoading || isFetching;
   const queryError = error instanceof Error ? error.message : null;
 
@@ -70,12 +73,16 @@ export function CrmBadgesPage() {
     setFeedback({ error: null, message: null });
 
     try {
+      const threshold = Math.max(0, Number(form.threshold) || 0);
       await saveMutation.mutateAsync({
         ...(form.id ? { id: form.id } : {}),
         code: form.code,
         name: form.name,
         image_url: form.image_url || null,
-        min_lifetime_xp: Math.max(0, Number(form.min_lifetime_xp) || 0),
+        metric: form.metric,
+        min_lifetime_xp: form.metric === "lifetime_xp" ? Math.floor(threshold) : 0,
+        threshold: form.metric === "lifetime_xp" || form.metric === "manual" ? null : threshold,
+        bonus_xp: Math.max(0, Math.floor(Number(form.bonus_xp) || 0)),
         is_active: form.is_active,
       });
 
@@ -95,7 +102,9 @@ export function CrmBadgesPage() {
       code: badge.code,
       name: badge.name,
       image_url: badge.image_url ?? "",
-      min_lifetime_xp: String(badge.min_lifetime_xp ?? 0),
+      metric: badge.metric,
+      threshold: String(badgeThreshold(badge) ?? ""),
+      bonus_xp: String(badge.bonus_xp ?? 0),
       is_active: badge.is_active,
     });
   }
@@ -147,9 +156,10 @@ export function CrmBadgesPage() {
               <ArrowLeft className="size-4" />
               CRM Dashboard
             </Link>
-            <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Badge by XP</h1>
+            <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Badge</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Badge diberikan otomatis saat lifetime XP member melewati ambang — tanpa jatah tukar.
+              Badge diberikan otomatis saat member mencapai ambang metriknya (lifetime XP, kunjungan,
+              total belanja, atau minggu berturut-turut). Badge manual diberikan dari detail member.
             </p>
           </div>
           <button
@@ -224,11 +234,36 @@ export function CrmBadgesPage() {
                 <TextField label="Nama" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} placeholder="First Explorer" />
               </div>
               <TextField label="Image URL (opsional)" value={form.image_url} onChange={(value) => setForm((current) => ({ ...current, image_url: value }))} placeholder="https://..." />
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-500">Metrik</span>
+                <select
+                  value={form.metric}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, metric: event.target.value as BadgeForm["metric"] }))
+                  }
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+                >
+                  {BADGE_METRICS.map((metric) => (
+                    <option key={metric} value={metric}>
+                      {BADGE_METRIC_LABELS[metric]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {form.metric !== "manual" && (
+                <TextField
+                  label={`Ambang ${BADGE_METRIC_LABELS[form.metric].toLowerCase()}`}
+                  type="number"
+                  value={form.threshold}
+                  onChange={(value) => setForm((current) => ({ ...current, threshold: value }))}
+                  placeholder={form.metric === "spend_idr" ? "1000000" : "10"}
+                />
+              )}
               <TextField
-                label="Ambang XP (min lifetime)"
+                label="Bonus XP saat badge diraih (sekali)"
                 type="number"
-                value={form.min_lifetime_xp}
-                onChange={(value) => setForm((current) => ({ ...current, min_lifetime_xp: value }))}
+                value={form.bonus_xp}
+                onChange={(value) => setForm((current) => ({ ...current, bonus_xp: value }))}
                 placeholder="0"
               />
               <label className="flex items-center gap-2 text-sm text-slate-700">
@@ -258,7 +293,13 @@ export function CrmBadgesPage() {
                 <button
                   type="button"
                   onClick={() => void saveBadgeHandler()}
-                  disabled={saveMutation.isPending || !form.code || !form.name || form.min_lifetime_xp === ""}
+                  disabled={
+                    saveMutation.isPending ||
+                    !form.code ||
+                    !form.name ||
+                    (form.metric !== "manual" && form.threshold === "") ||
+                    (form.metric !== "manual" && form.metric !== "lifetime_xp" && !(Number(form.threshold) > 0))
+                  }
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-60"
                 >
                   <Save className="size-4" />
@@ -307,8 +348,11 @@ export function CrmBadgesPage() {
                           </span>
                         </div>
                         <div className="mt-2 text-sm font-semibold text-violet-700">
-                          Ambang {formatNumber(badge.min_lifetime_xp)} XP
+                          {describeBadgeRule(badge)}
                         </div>
+                        {badge.bonus_xp > 0 && (
+                          <div className="text-xs text-slate-500">Bonus {formatNumber(badge.bonus_xp)} XP</div>
+                        )}
                         <div className="mt-1 text-xs text-slate-500">
                           Diraih {formatNumber(Number(badge.awarded_count ?? 0))} member
                         </div>

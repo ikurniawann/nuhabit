@@ -1,0 +1,58 @@
+{
+  "product": "BCD Coffee OS",
+  "client": "BCD Coffee",
+  "style": "wit-code-agent",
+  "base": null,
+  "checks": [
+    {
+      "name": "Lint",
+      "cmd": "pnpm lint"
+    },
+    {
+      "name": "Tes",
+      "cmd": "pnpm test"
+    },
+    {
+      "name": "Build",
+      "cmd": "pnpm build"
+    }
+  ],
+  "themes": [
+    "light"
+  ],
+  "themeKey": "wit-theme",
+  "apps": {
+    "web": {
+      "devices": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "dist": ".next",
+      "baseUrl": "http://localhost:3100",
+      "start": "pnpm start --port 3100",
+      "localStorage": {}
+    }
+  },
+  "screens": [
+    {
+      "app": "web",
+      "path": "/login",
+      "name": "Masuk"
+    },
+    {
+      "app": "web",
+      "path": "/dashboard",
+      "name": "Ringkasan Eksekutif"
+    },
+    {
+      "app": "web",
+      "path": "/dashboard/employees",
+      "name": "Karyawan"
+    }
+  ],
+  "budgets": {
+    "entryKb": 200,
+    "chunkKb": 100
+  }
+}

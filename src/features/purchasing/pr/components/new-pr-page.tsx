@@ -1,17 +1,54 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PRForm } from "@/components/purchasing/pr-form";
 import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
 import { usePRFormData } from "../queries";
 import { useCreatePurchaseRequest } from "../mutations";
-import type { PRFormInput } from "../types";
+import type { PRFormData, PRFormInput } from "../types";
+import { defaultPurchasePackFor, wholePacksFor } from "@/lib/purchasing/packs";
+
+/**
+ * Prefill dari laporan stok rendah (?material_id=&qty=, qty dalam satuan
+ * dasar): satu baris dengan pack beli bawaan, dibulatkan ke pack utuh.
+ */
+function reorderInitialData(
+  formData: PRFormData | undefined,
+  materialId: string | null,
+  baseQty: number
+): PRFormInput | undefined {
+  const material = formData?.materials.find((m) => m.id === materialId);
+  if (!formData || !material || !(baseQty > 0)) return undefined;
+  const pack = defaultPurchasePackFor(material);
+  const unitName =
+    formData.units.find((unit) => unit.id === pack?.satuan_id)?.nama || material.satuan_besar_nama || "";
+  return {
+    department_id: "",
+    priority: "high",
+    notes: `Saran pemesanan ulang dari laporan stok rendah (${baseQty} satuan dasar)`,
+    items: [
+      {
+        raw_material_id: material.id,
+        satuan_id: pack?.satuan_id ?? material.satuan_besar_id ?? "",
+        description: material.nama,
+        qty: Math.max(1, wholePacksFor(baseQty, pack?.qty_in_base_unit ?? 1)),
+        unit: unitName,
+        estimated_price: 0,
+      },
+    ],
+  };
+}
 
 export function NewPRPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: formData, isLoading, error, isError } = usePRFormData();
+  const initialData = useMemo(
+    () => reorderInitialData(formData, searchParams.get("material_id"), Number(searchParams.get("qty")) || 0),
+    [formData, searchParams]
+  );
   const createMutation = useCreatePurchaseRequest();
 
   useEffect(() => {
@@ -62,6 +99,7 @@ export function NewPRPage() {
         departments={formData.departments}
         materials={formData.materials}
         units={formData.units}
+        initialData={initialData}
         onSubmit={handleCreatePR}
         isLoading={createMutation.isPending}
         cancelHref="/dashboard/purchasing/pr"

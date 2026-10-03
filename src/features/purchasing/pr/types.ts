@@ -63,10 +63,14 @@ export interface PRFormMaterial {
   nama: string;
   satuan_besar_id?: string;
   satuan_besar_nama?: string;
+  satuan_kecil_id?: string | null;
+  konversi_factor?: number | null;
   avg_cost?: number;
   unit_conversions?: {
     satuan_id: string;
     qty_in_base_unit: number;
+    is_base?: boolean;
+    is_purchase_default?: boolean;
     is_active?: boolean;
   }[];
 }

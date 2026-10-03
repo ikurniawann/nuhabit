@@ -94,7 +94,7 @@ export function ResortRoomsPage() {
                       <p className="text-xs text-muted-foreground">{t.code}{t.zone ? ` · ${t.zone}` : ""} · {t.room_count} unit</p>
                     </div>
                     <div className="flex shrink-0 gap-1">
-                      <button type="button" onClick={() => setTypeDialog({ mode: "edit", row: t })} className="rounded-md p-1.5 hover:bg-accent" title="Ubah"><Pencil className="h-4 w-4" /></button>
+                      <button type="button" onClick={() => setTypeDialog({ mode: "edit", row: t })} className="rounded-md p-1.5 hover:bg-muted" title="Ubah"><Pencil className="h-4 w-4" /></button>
                       <button type="button" onClick={() => removeType(t)} className="rounded-md p-1.5 text-destructive hover:bg-destructive/10" title="Hapus"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ export function ResortRoomsPage() {
                     <td className="px-3 py-2 text-muted-foreground">{r.guest_name ?? "—"}</td>
                     <td className="px-3 py-2">
                       <div className="flex justify-end gap-1">
-                        <button type="button" onClick={() => setRoomDialog({ mode: "edit", row: r })} className="rounded-md p-1.5 hover:bg-accent" title="Ubah"><Pencil className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => setRoomDialog({ mode: "edit", row: r })} className="rounded-md p-1.5 hover:bg-muted" title="Ubah"><Pencil className="h-4 w-4" /></button>
                         <button type="button" onClick={() => removeRoom(r)} className="rounded-md p-1.5 text-destructive hover:bg-destructive/10" title="Hapus"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </td>

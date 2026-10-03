@@ -13,6 +13,7 @@ import {
   type QcOverallStatus,
 } from "@/lib/purchasing/grn-qc-utils";
 import { createBaseUnitResolver } from "@/lib/purchasing/raw-material-units";
+import { packPriceToBase, packToBase } from "@/lib/purchasing/packs";
 import { syncQcRejectCredits } from "@/lib/purchasing/vendor-credit-service";
 import { requiresSkuOnGrn } from "@/lib/purchasing/variant-po-lines";
 import { ApiError } from "@/lib/api/auth";
@@ -196,6 +197,8 @@ type GrnItemForQc = {
   purchase_order_item_id?: string | null;
   purchase_order_item?: { id?: string; harga_satuan?: number | null } | null;
   pos_sku_id?: string | null;
+  batch_number?: string | null;
+  expiry_date?: string | Date | null;
 };
 export async function submitGrnQcInspection(
   db: DbClient,
@@ -247,6 +250,8 @@ export async function submitGrnQcInspection(
       qty_qc_posted,
       purchase_order_item_id,
       pos_sku_id,
+      batch_number,
+      expiry_date,
       purchase_order_item:purchase_order_items!purchase_order_item_id(
         id,
         harga_satuan
@@ -420,12 +425,13 @@ export async function submitGrnQcInspection(
       await addInventoryFromGrn(
         db,
         rawMaterialId,
-        qtyToPost * baseUnitFactor,
-        baseUnitFactor > 0 ? unitCost / baseUnitFactor : unitCost,
+        packToBase(qtyToPost, baseUnitFactor),
+        packPriceToBase(unitCost, baseUnitFactor),
         grnId,
         grn.nomor_grn,
         userId,
-        warehouseId
+        warehouseId,
+        { batchNumber: grnItem.batch_number, expiryDate: grnItem.expiry_date }
       );
     } else if (productId) {
       if (grnItem.pos_sku_id) {

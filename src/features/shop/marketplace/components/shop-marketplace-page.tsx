@@ -230,7 +230,7 @@ export function ShopMarketplacePage() {
     <div className="space-y-6">
       <PurchasingPageHeader
         title="Marketplace"
-        description="Omnichannel Shopee: BCD Coffee sebagai master stok — push stok, tarik pesanan."
+        description="Omnichannel Shopee: NüHabit sebagai master stok — push stok, tarik pesanan."
       />
 
       <PurchasingListSection

@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { successResponse } from "@/lib/api/auth";
 import { query, withTransaction } from "@/lib/db";
-import { generateGiftCardCode } from "@/lib/giftcard/giftcard";
+import {
+  generateGiftCardCode,
+  phoneMatchKey,
+  phoneMatchKeySql,
+} from "@/lib/giftcard/giftcard";
 import { requirePromoContext } from "@/lib/giftcard/server";
 
 // EPIC-034 Fase A — terbit gift card (admin, langsung `active`; jual di
@@ -21,7 +25,13 @@ interface GiftCardRow {
   buyer_phone: string | null;
   note: string | null;
   created_at: string;
+  reloaded_total: string;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
 }
+
+const UUID = z.string().uuid();
 
 const MAX_BATCH = 500;
 
@@ -33,24 +43,46 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const q = searchParams.get("q")?.trim();
+    // Kartu milik satu member (dipakai detail member CRM) / cari per nomor HP
+    const customerId = searchParams.get("customer_id");
+    const phoneDigits = phoneMatchKey(searchParams.get("phone") ?? "");
 
-    const conditions = ["branch_id = $1", "company_id = $2"];
+    const conditions = ["g.branch_id = $1", "g.company_id = $2"];
     const params: unknown[] = [ctx.branchId, ctx.companyId];
     if (status) {
       params.push(status);
-      conditions.push(`status = $${params.length}`);
+      conditions.push(`g.status = $${params.length}`);
     }
     if (q) {
       params.push(`%${q.toUpperCase()}%`);
-      conditions.push(`code LIKE $${params.length}`);
+      conditions.push(`g.code LIKE $${params.length}`);
+    }
+    if (customerId) {
+      if (!UUID.safeParse(customerId).success) {
+        return NextResponse.json(
+          { success: false, error: "customer_id tidak valid" },
+          { status: 400 }
+        );
+      }
+      params.push(customerId);
+      conditions.push(`g.customer_id = $${params.length}`);
+    }
+    if (phoneDigits.length >= 6) {
+      params.push(`${phoneDigits}%`);
+      conditions.push(
+        `(${phoneMatchKeySql("c.phone")} LIKE $${params.length} OR ${phoneMatchKeySql("g.buyer_phone")} LIKE $${params.length})`
+      );
     }
 
     const rows = await query<GiftCardRow>(
-      `SELECT id, code, initial_value, balance, status, expires_at,
-              source_type, buyer_name, buyer_phone, note, created_at
-       FROM giftcard.gift_cards
+      `SELECT g.id, g.code, g.initial_value, g.balance, g.status, g.expires_at,
+              g.source_type, g.buyer_name, g.buyer_phone, g.note, g.created_at,
+              g.reloaded_total, g.customer_id,
+              c.name AS customer_name, c.phone AS customer_phone
+       FROM giftcard.gift_cards g
+       LEFT JOIN pos.pos_customers c ON c.id = g.customer_id
        WHERE ${conditions.join(" AND ")}
-       ORDER BY created_at DESC
+       ORDER BY g.created_at DESC
        LIMIT 500`,
       params
     );
@@ -72,6 +104,7 @@ const issueSchema = z.discriminatedUnion("mode", [
     buyer_name: z.string().trim().max(120).nullable().optional(),
     buyer_phone: z.string().trim().max(25).nullable().optional(),
     note: z.string().trim().max(500).nullable().optional(),
+    customer_id: z.string().uuid().nullable().optional(),
   }),
   z.object({
     mode: z.literal("batch"),
@@ -108,9 +141,10 @@ export async function POST(request: NextRequest) {
         const inserted = await client.query<{ id: string; code: string }>(
           `INSERT INTO giftcard.gift_cards
              (company_id, branch_id, code, initial_value, balance, status,
-              expires_at, source_type, buyer_name, buyer_phone, note, created_by)
+              expires_at, source_type, buyer_name, buyer_phone, note, created_by,
+              customer_id)
            SELECT $1, $2, unnest($3::text[]), $4, $4, 'active',
-                  $5, 'manual', $6, $7, $8, $9
+                  $5, 'manual', $6, $7, $8, $9, $10
            ON CONFLICT (branch_id, code) DO NOTHING
            RETURNING id, code`,
           [
@@ -123,6 +157,7 @@ export async function POST(request: NextRequest) {
             body.mode === "single" ? body.buyer_phone ?? null : null,
             body.mode === "single" ? body.note ?? null : null,
             ctx.user.id,
+            body.mode === "single" ? body.customer_id ?? null : null,
           ]
         );
         created.push(...inserted.rows);

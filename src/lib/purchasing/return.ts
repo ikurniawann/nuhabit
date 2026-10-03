@@ -197,3 +197,21 @@ export async function shipReturn(id: string, shippingDate: string, trackingNumbe
 
   return result;
 }
+
+/**
+ * Revisi retur yang ditolak: membuat dokumen draft baru, dokumen lama tetap
+ * tersimpan sebagai riwayat.
+ */
+export async function reviseReturn(id: string) {
+  const response = await fetch(`${API_BASE}/${id}/revise`, { method: "POST" });
+  const result = await parseJsonResponse<{
+    message?: string;
+    data?: { id: string; return_number: string; revision_no: number };
+  }>(response);
+
+  if (!response.ok || !result.data) {
+    throw new Error(result.message || "Gagal membuat revisi retur");
+  }
+
+  return result.data;
+}

@@ -23,6 +23,7 @@ export async function submitTopup(payload: ProcessTopupPayload): Promise<TopupRe
     amount: payload.amount,
     payment_method: payload.payment_method as "qris" | "cash" | "credit" | "foc",
     supervisor_pin: payload.supervisor_pin,
+    package_id: payload.package_id,
   });
   if (!res.success || !res.data) {
     throw new Error((res as { error?: string }).error || "Top-up failed");

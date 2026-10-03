@@ -16,7 +16,7 @@ export default function SwaggerClientWrapper({ url }: { url: string }) {
         }}
       >
         <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0 }}>
-          BCD Coffee OS — Purchasing Module API
+          NüHabit OS — Purchasing Module API
         </h1>
         <p style={{ fontSize: "14px", color: "#666", margin: "4px 0 0" }}>
           OpenAPI 3.0 / Swagger Documentation

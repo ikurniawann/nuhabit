@@ -298,6 +298,6 @@ export function buildDigestMessage(
   if (lines.length === 2) {
     lines.push("Belum ada data hari ini.");
   }
-  lines.push(``, `Buka desktop BCD Coffee OS untuk rinciannya.`);
+  lines.push(``, `Buka desktop NüHabit OS untuk rinciannya.`);
   return lines.filter((l): l is string => l !== null).join("\n");
 }

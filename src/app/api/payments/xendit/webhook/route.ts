@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPgClient } from "@/lib/pg/create-client";
+import { isGymPurchaseReference, settleGymPurchaseByReference } from "@/lib/gym/credit-payments-server";
 import {
   MixedCheckoutError,
   completeMixedCheckout,
@@ -53,6 +54,12 @@ export async function POST(request: NextRequest) {
         reason: "not_paid",
         status: parsed.status,
       });
+    }
+
+    // Pembelian paket kredit gym (reference_id berprefix gymcp_).
+    if (isGymPurchaseReference(parsed.referenceId)) {
+      const result = await settleGymPurchaseByReference(parsed.referenceId, parsed.paymentId || parsed.qrId || null);
+      return NextResponse.json({ success: true, data: { gym_purchase: result } });
     }
 
     // Resolve pending topup by QR id or merchant reference

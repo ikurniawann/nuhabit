@@ -1,8 +1,7 @@
 "use client";
 
-// EPIC-034 Fase A — tab Gift Card di menu Promo: terbit manual/batch, lihat
-// saldo & riwayat, disable. Jual di kasir (Fase B) & pakai bayar (Fase C)
-// menyusul.
+// EPIC-034 — tab Gift Card di menu Promo: terbit manual/batch, lihat saldo
+// & riwayat, disable, koreksi, reload, tautkan member, cetak QR.
 
 import { useState } from "react";
 import { GiftIcon } from "@heroicons/react/24/outline";
@@ -43,6 +42,11 @@ import {
   type GiftCardStatus,
 } from "../gift-card-types";
 import { GiftCardLedgerDialog } from "./gift-card-ledger-dialog";
+import {
+  GiftCardMemberDialog,
+  GiftCardPrintDialog,
+  GiftCardReloadDialog,
+} from "./gift-card-dialogs";
 
 const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
@@ -77,13 +81,18 @@ const EMPTY_FORM: IssueForm = {
 };
 
 export function GiftCardPage() {
-  const cardsQuery = useGiftCards();
+  const [phoneFilter, setPhoneFilter] = useState("");
+  const [phoneQuery, setPhoneQuery] = useState("");
+  const cardsQuery = useGiftCards(phoneQuery ? { phone: phoneQuery } : undefined);
   const toggleMutation = useToggleGiftCard();
   const configQuery = useGiftCardConfig();
   const saveConfigMutation = useSaveGiftCardConfig();
   const [issueOpen, setIssueOpen] = useState(false);
   const [form, setForm] = useState<IssueForm>(EMPTY_FORM);
   const [ledgerCard, setLedgerCard] = useState<GiftCard | null>(null);
+  const [reloadCard, setReloadCard] = useState<GiftCard | null>(null);
+  const [memberCard, setMemberCard] = useState<GiftCard | null>(null);
+  const [printCard, setPrintCard] = useState<GiftCard | null>(null);
   // EPIC-034 Fase C — koreksi saldo ber-audit
   const [adjustCard, setAdjustCard] = useState<GiftCard | null>(null);
   const [adjustDelta, setAdjustDelta] = useState("");
@@ -231,9 +240,32 @@ export function GiftCardPage() {
         title="Gift Card"
         description="Saldo prepaid — dibeli sekali (kasir/online), dipakai berkali-kali sampai habis. Beda dari voucher: gift card adalah uang titipan."
         toolbar={
-          <Button size="sm" onClick={() => setIssueOpen(true)}>
-            Terbitkan Gift Card
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setPhoneQuery(phoneFilter.replace(/\D/g, ""));
+              }}
+            >
+              <Input
+                inputMode="tel"
+                placeholder="Cari no. HP member/pembeli"
+                value={phoneFilter}
+                onChange={(e) => {
+                  setPhoneFilter(e.target.value);
+                  if (!e.target.value.trim()) setPhoneQuery("");
+                }}
+                className="h-9 w-56"
+              />
+              <Button size="sm" variant="outline" type="submit">
+                Cari
+              </Button>
+            </form>
+            <Button size="sm" onClick={() => setIssueOpen(true)}>
+              Terbitkan Gift Card
+            </Button>
+          </div>
         }
       >
         {cardsQuery.isLoading ? (
@@ -243,7 +275,9 @@ export function GiftCardPage() {
           </div>
         ) : cards.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-gray-500">
-            Belum ada gift card — mulai dari &quot;Terbitkan Gift Card&quot;.
+            {phoneQuery
+              ? "Tidak ada gift card untuk nomor itu."
+              : "Belum ada gift card — mulai dari \u201cTerbitkan Gift Card\u201d."}
           </p>
         ) : (
           <div className="overflow-x-auto px-4 pb-4">
@@ -255,7 +289,7 @@ export function GiftCardPage() {
                   <th className="px-4 py-3 text-right font-semibold">Saldo</th>
                   <th className="px-4 py-3 text-left font-semibold">Status</th>
                   <th className="px-4 py-3 text-left font-semibold">Kedaluwarsa</th>
-                  <th className="px-4 py-3 text-left font-semibold">Pembeli</th>
+                  <th className="px-4 py-3 text-left font-semibold">Pembeli / Member</th>
                   <th className="px-4 py-3 text-right font-semibold">Aksi</th>
                 </TableRow>
               </thead>
@@ -270,6 +304,11 @@ export function GiftCardPage() {
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900">
                       {formatRp(Number(card.balance))}
+                      {Number(card.reloaded_total) > 0 ? (
+                        <p className="text-xs font-normal text-muted-foreground">
+                          reload {formatRp(Number(card.reloaded_total))}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <Badge className={`border-0 font-normal ${STATUS_BADGE[card.status]}`}>
@@ -284,6 +323,11 @@ export function GiftCardPage() {
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {card.buyer_name ?? "—"}
                       {card.buyer_phone ? ` · ${card.buyer_phone}` : ""}
+                      {card.customer_id ? (
+                        <Badge variant="info" className="ml-2">
+                          {card.customer_name ?? "Member"}
+                        </Badge>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
@@ -294,6 +338,32 @@ export function GiftCardPage() {
                           onClick={() => setLedgerCard(card)}
                         >
                           Riwayat
+                        </Button>
+                        {(card.status === "active" || card.status === "exhausted") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-3"
+                            onClick={() => setReloadCard(card)}
+                          >
+                            Reload
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3"
+                          onClick={() => setMemberCard(card)}
+                        >
+                          Member
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3"
+                          onClick={() => setPrintCard(card)}
+                        >
+                          QR
                         </Button>
                         {card.status !== "pending" && (
                           <Button
@@ -356,7 +426,7 @@ export function GiftCardPage() {
               />
               <p className="text-xs text-gray-500">
                 Positif mengembalikan saldo, negatif menarik saldo. Tidak boleh
-                melebihi nilai terbit kartu.
+                melebihi total nilai yang pernah diisi (terbit + reload).
               </p>
             </div>
             <div className="space-y-1.5">
@@ -508,6 +578,9 @@ export function GiftCardPage() {
         card={ledgerCard}
         onOpenChange={(open) => !open && setLedgerCard(null)}
       />
+      <GiftCardReloadDialog card={reloadCard} onClose={() => setReloadCard(null)} />
+      <GiftCardMemberDialog card={memberCard} onClose={() => setMemberCard(null)} />
+      <GiftCardPrintDialog card={printCard} onClose={() => setPrintCard(null)} />
     </div>
   );
 }

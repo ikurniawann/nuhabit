@@ -13,6 +13,8 @@ interface LedgerRow {
   context_type: string | null;
   context_id: string | null;
   note: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
   created_at: string;
 }
 
@@ -38,7 +40,7 @@ export async function GET(
     }
     const rows = await query<LedgerRow>(
       `SELECT id, direction, amount, balance_after, context_type,
-              context_id, note, created_at
+              context_id, note, payment_method, payment_reference, created_at
        FROM giftcard.gift_card_ledger
        WHERE card_id = $1
        ORDER BY created_at DESC

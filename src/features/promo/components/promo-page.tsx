@@ -40,13 +40,16 @@ import {
   useUpdateCampaign,
 } from "../queries";
 import {
+  PROMO_ELIGIBILITY_LABELS,
   PROMO_SCOPE_LABELS,
   PROMO_SCOPE_PREFIX,
   type PromoCampaign,
   type PromoDiscountType,
+  type PromoEligibility,
   type PromoScope,
 } from "../types";
 import { CampaignDetailDialog } from "./campaign-detail-dialog";
+import { CampaignTargetFields, isValidNewMemberDays } from "./campaign-target-fields";
 import { GiftCardPage } from "./gift-card-page";
 
 const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
@@ -78,6 +81,10 @@ interface CampaignForm {
   public_code: string;
   batch_prefix: string;
   batch_count: string;
+  target_product_ids: string[];
+  target_category_ids: string[];
+  eligibility: PromoEligibility;
+  new_member_days: string;
 }
 
 const EMPTY_FORM: CampaignForm = {
@@ -95,6 +102,10 @@ const EMPTY_FORM: CampaignForm = {
   public_code: "",
   batch_prefix: "",
   batch_count: "10",
+  target_product_ids: [],
+  target_category_ids: [],
+  eligibility: "semua",
+  new_member_days: "",
 };
 
 export function PromoPage() {
@@ -177,7 +188,8 @@ export function PromoPage() {
       form.valid_until !== "" &&
       form.valid_until < form.valid_from) ||
     batchInvalid ||
-    publicInvalid;
+    publicInvalid ||
+    !isValidNewMemberDays(form);
 
   const campaignPayload = () => ({
     name: form.name.trim(),
@@ -194,6 +206,13 @@ export function PromoPage() {
     per_phone_limit:
       form.per_phone_limit.trim() === "" ? null : Number(form.per_phone_limit),
     scope: form.scope,
+    target_product_ids: form.target_product_ids,
+    target_category_ids: form.target_category_ids,
+    eligibility: form.eligibility,
+    new_member_days:
+      form.eligibility === "member_baru" && form.new_member_days.trim() !== ""
+        ? Number(form.new_member_days)
+        : null,
   });
 
   const openCreate = () => {
@@ -234,6 +253,11 @@ export function PromoPage() {
       public_code: "",
       batch_prefix: "",
       batch_count: String(codesCount),
+      target_product_ids: campaign.target_product_ids ?? [],
+      target_category_ids: campaign.target_category_ids ?? [],
+      eligibility: campaign.eligibility ?? "semua",
+      new_member_days:
+        campaign.new_member_days !== null ? String(campaign.new_member_days) : "",
     });
     setFormOpen(true);
   };
@@ -351,6 +375,7 @@ export function PromoPage() {
                       <th className="px-4 py-3 text-left font-semibold">Periode</th>
                       <th className="px-4 py-3 text-right font-semibold">Terpakai</th>
                       <th className="px-4 py-3 text-left font-semibold">Aktif</th>
+                      <th className="px-4 py-3 text-left font-semibold">Portal member</th>
                       <th className="px-4 py-3 text-right font-semibold">Aksi</th>
                     </TableRow>
                   </thead>
@@ -365,6 +390,18 @@ export function PromoPage() {
                               ? ` · min ${formatRp(Number(campaign.min_purchase))}`
                               : ""}
                           </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {campaign.target_product_ids.length +
+                              campaign.target_category_ids.length >
+                            0 ? (
+                              <Badge variant="info">Produk tertentu</Badge>
+                            ) : null}
+                            {campaign.eligibility !== "semua" ? (
+                              <Badge variant="accent">
+                                {PROMO_ELIGIBILITY_LABELS[campaign.eligibility]}
+                              </Badge>
+                            ) : null}
+                          </div>
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">
                           {formatDiscount(campaign)}
@@ -399,6 +436,19 @@ export function PromoPage() {
                               updateMutation.mutate({
                                 id: campaign.id,
                                 values: { is_active: checked },
+                              })
+                            }
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <Switch
+                            checked={campaign.show_in_member_portal}
+                            disabled={updateMutation.isPending}
+                            aria-label={`Tampilkan ${campaign.name} di portal member`}
+                            onCheckedChange={(checked) =>
+                              updateMutation.mutate({
+                                id: campaign.id,
+                                values: { show_in_member_portal: checked },
                               })
                             }
                           />
@@ -611,6 +661,12 @@ export function PromoPage() {
                 />
               </div>
             </div>
+
+            <CampaignTargetFields
+              value={form}
+              disabled={busy}
+              onChange={(patch) => set(patch)}
+            />
 
             {isEdit && (
               <div className="space-y-3 rounded-xl border border-gray-200/70 bg-muted/20 p-3">

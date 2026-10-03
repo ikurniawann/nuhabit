@@ -15,6 +15,12 @@ import {
 import { Loader2, Package, AlertCircle, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Combobox } from "@/components/ui/combobox";
+import { defaultPurchasePackFor } from "@/lib/purchasing/packs";
+import type { RawMaterialUnitConversion } from "@/types/purchasing";
+
+function purchasePackFlag(satuanId: string): RawMaterialUnitConversion & { is_purchase_default: boolean } {
+  return { satuan_id: satuanId, qty_in_base_unit: 1, is_purchase_default: true };
+}
 import { RawMaterialWithStock, MaterialCategory } from "@/types/purchasing";
 import {
   useRawMaterial,
@@ -69,6 +75,8 @@ export function EditRawMaterialPage() {
     coa_asset: "",
     unit_conversions: [] as NonNullable<RawMaterialWithStock["unit_conversions"]>,
   });
+  // Pack bawaan baris PO baru (item.raw_material_unit_conversions.is_purchase_default).
+  const [purchasePackId, setPurchasePackId] = useState("");
 
   useEffect(() => {
     const data = materialQuery.data;
@@ -92,6 +100,7 @@ export function EditRawMaterialPage() {
           conversion.satuan_id !== data.satuan_besar_id && conversion.satuan_id !== data.satuan_kecil_id
       ),
     });
+    setPurchasePackId(defaultPurchasePackFor(data)?.satuan_id ?? data.satuan_besar_id ?? "");
   }, [materialQuery.data]);
 
   useEffect(() => {
@@ -122,13 +131,17 @@ export function EditRawMaterialPage() {
           coa_production: formData.coa_production || null,
           coa_rnd: formData.coa_rnd || null,
           coa_asset: formData.coa_asset || null,
-          unit_conversions: (formData.unit_conversions || [])
-            .filter((conversion) => conversion.satuan_id && conversion.qty_in_base_unit > 0)
-            .map((conversion) => ({
-              satuan_id: conversion.satuan_id,
-              qty_in_base_unit: conversion.qty_in_base_unit,
-              is_base: false,
-            })),
+          unit_conversions: [
+            ...(formData.unit_conversions || [])
+              .filter((conversion) => conversion.satuan_id && conversion.qty_in_base_unit > 0)
+              .map((conversion) => ({
+                satuan_id: conversion.satuan_id,
+                qty_in_base_unit: conversion.qty_in_base_unit,
+                is_base: false,
+              })),
+            // Satuan besar/kecil disintesis ulang oleh API; baris ini hanya membawa flag bawaan.
+            ...(purchasePackId ? [purchasePackFlag(purchasePackId)] : []),
+          ],
         },
       });
       toast.success("Bahan baku berhasil diperbarui");
@@ -314,6 +327,27 @@ export function EditRawMaterialPage() {
                   )}
                   onChange={(unit_conversions) => setFormData({ ...formData, unit_conversions })}
                 />
+
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Pack bawaan pembelian</Label>
+                  <Combobox
+                    options={Array.from(
+                      new Set(
+                        [
+                          formData.satuan_besar_id,
+                          formData.satuan_kecil_id,
+                          ...(formData.unit_conversions || []).map((conversion) => conversion.satuan_id),
+                        ].filter(Boolean) as string[]
+                      )
+                    ).map((unitId) => ({ value: unitId, label: units.find((u) => u.id === unitId)?.nama || unitId }))}
+                    value={purchasePackId}
+                    onChange={setPurchasePackId}
+                    placeholder="Pilih pack untuk baris PO baru"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Baris purchase order baru memakai pack ini; GRN mengonversi qty-nya ke satuan dasar stok.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

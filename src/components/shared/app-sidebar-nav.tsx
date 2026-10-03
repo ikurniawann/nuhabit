@@ -1,14 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ChevronDown } from "lucide-react";
+import { CountBadge } from "@/components/ui/count-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { isNavLinkActive } from "@/lib/iam/nav-active";
+import { flattenNavLeaves } from "@/lib/iam/nav-leaves";
 import { useNavFrom } from "@/lib/iam/use-nav-from";
 import type { NavItem } from "@/lib/iam/types";
-import { needsCrossPosLayoutHardNav } from "@/features/pos/tablet-mode";
+import { cn } from "@/lib/utils";
 import { AppSidebarNavIcon } from "./app-sidebar-nav-icons";
+import { NavLink, useNavigate } from "./nav-link";
 
 interface AppSidebarNavProps {
   navItems: NavItem[];
@@ -30,19 +40,6 @@ const ESS_SEEN_ON_VISIT: Record<string, string> = {
 
 function navItemKey(item: NavItem): string {
   return `${item.href}::${item.label}`;
-}
-
-/** Flatten every leaf href so prefix active-checks can see cousins (e.g. /dashboard/pos vs /dashboard/pos/tables). */
-function collectLeafHrefs(items: NavItem[]): string[] {
-  const hrefs: string[] = [];
-  for (const item of items) {
-    if (item.children?.length) {
-      hrefs.push(...collectLeafHrefs(item.children));
-    } else if (item.href) {
-      hrefs.push(item.href);
-    }
-  }
-  return hrefs;
 }
 
 function collectActiveGroupKeys(
@@ -90,12 +87,11 @@ function isGroupActive(
 
   return (
     pathname === item.href ||
-    item.children.some((child) =>
-      isNavLinkActive(pathname, child.href, allLeafHrefs, navFrom)
-    )
+    item.children.some((child) => isGroupActive(child, pathname, navFrom, allLeafHrefs))
   );
 }
 
+/** Menu links on the ink rail: sections with their pages as sub-items. */
 export default function AppSidebarNav({
   navItems,
   collapsed = false,
@@ -103,8 +99,12 @@ export default function AppSidebarNav({
   className = "",
 }: AppSidebarNavProps) {
   const pathname = usePathname();
+  const navigate = useNavigate();
   const navFrom = useNavFrom();
-  const allLeafHrefs = useMemo(() => collectLeafHrefs(navItems), [navItems]);
+  const allLeafHrefs = useMemo(
+    () => flattenNavLeaves(navItems).map((leaf) => leaf.href),
+    [navItems]
+  );
   const autoExpanded = useMemo(
     () => [...new Set(collectActiveGroupKeys(navItems, pathname, navFrom, allLeafHrefs))],
     [navItems, pathname, navFrom, allLeafHrefs]
@@ -162,67 +162,6 @@ export default function AppSidebarNav({
     );
   };
 
-  const topLevelItemClass = (itemActive: boolean, extra = "") =>
-    [
-      "flex w-full items-center rounded-lg text-sm transition-colors",
-      collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-      itemActive
-        ? "bg-[var(--sidebar-active-background)] font-semibold text-[var(--sidebar-active-foreground)] shadow-sm"
-        : "text-[var(--sidebar-foreground)]/90 hover:bg-[color-mix(in_srgb,var(--sidebar-active-background)_10%,transparent)] hover:text-[var(--sidebar-active-background)]",
-      extra,
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-  const topLevelGroupClass = (itemActive: boolean, extra = "") =>
-    [
-      "flex w-full items-center rounded-lg text-sm transition-colors",
-      collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-      itemActive
-        ? "font-semibold text-[var(--sidebar-active-background)]"
-        : "text-[var(--sidebar-foreground)]/90 hover:bg-[color-mix(in_srgb,var(--sidebar-active-background)_10%,transparent)] hover:text-[var(--sidebar-active-background)]",
-      extra,
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-  const submenuItemClass = (
-    itemActive: boolean,
-    hasChildren: boolean,
-    extra = ""
-  ) => {
-    const base =
-      "relative flex w-full items-center rounded-md py-2 pl-3 pr-2 text-sm transition-colors";
-
-    if (hasChildren) {
-      return [
-        base,
-        "justify-between",
-        itemActive
-          ? "font-medium text-foreground"
-          : "font-normal text-foreground/75",
-        "hover:bg-[color-mix(in_srgb,var(--sidebar-active-background)_10%,transparent)] hover:text-[var(--sidebar-active-background)]",
-        extra,
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-
-    return [
-      base,
-      itemActive
-        ? [
-            "bg-[color-mix(in_srgb,var(--sidebar-active-background)_12%,transparent)] font-medium text-[var(--sidebar-active-background)]",
-            "before:absolute before:left-0 before:top-1/2 before:h-4 before:w-[3px]",
-            "before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--sidebar-active-background)]",
-          ].join(" ")
-        : "font-normal text-[var(--sidebar-foreground)]/70 hover:bg-[color-mix(in_srgb,var(--sidebar-active-background)_8%,transparent)] hover:text-[var(--sidebar-active-background)]",
-      extra,
-    ]
-      .filter(Boolean)
-      .join(" ");
-  };
-
   /**
    * Total badge sebuah cabang. Tanpa ini, notifikasi pada anak menu tidak
    * terlihat sama sekali selama grupnya masih tertutup.
@@ -234,60 +173,117 @@ export default function AppSidebarNav({
     return item.href ? (badges[item.href] ?? 0) : 0;
   };
 
-  const renderItem = (item: NavItem, depth = 0) => {
+  const leafActive = (href: string) => isNavLinkActive(pathname, href, allLeafHrefs, navFrom);
+
+  const go = (href: string) => {
+    onNavigate?.();
+    navigate(href);
+  };
+
+  const railRow =
+    "relative flex w-full items-center gap-3 rounded-2xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 [&_svg]:shrink-0";
+
+  /** Collapsed rail: one icon tile per section; a section opens its pages in a flyout. */
+  const renderCollapsed = (item: NavItem) => {
+    const active = isGroupActive(item, pathname, navFrom, allLeafHrefs);
+    const tileClass = cn(
+      railRow,
+      "size-11 justify-center",
+      active ? "bg-accent text-accent-foreground shadow-glow" : "text-on-ink-muted hover:bg-white/10 hover:text-white"
+    );
+    const total = branchBadgeTotal(item);
+    const badge = total > 0 && (
+      <CountBadge count={total} tone="white" className="absolute -top-1 -right-1" />
+    );
+
+    if (!item.children?.length) {
+      return (
+        <NavLink
+          key={navItemKey(item)}
+          href={item.href}
+          onClick={onNavigate}
+          aria-current={active ? "page" : undefined}
+          className={tileClass}
+          title={item.label}
+        >
+          <AppSidebarNavIcon name={item.icon} isActive={active} className="size-5" />
+          <span className="sr-only">{item.label}</span>
+          {badge}
+        </NavLink>
+      );
+    }
+
+    const renderFlyoutItems = (items: NavItem[]): React.ReactNode =>
+      items.map((child) =>
+        child.children?.length ? (
+          <DropdownMenuGroup key={navItemKey(child)}>
+            <DropdownMenuLabel>{child.label}</DropdownMenuLabel>
+            {renderFlyoutItems(child.children)}
+          </DropdownMenuGroup>
+        ) : (
+          <DropdownMenuItem
+            key={navItemKey(child)}
+            onClick={() => go(child.href)}
+            className={cn(leafActive(child.href) && "bg-surface font-semibold")}
+          >
+            <span className="flex-1 truncate">{child.label}</span>
+            <CountBadge count={badges[child.href] ?? 0} />
+          </DropdownMenuItem>
+        )
+      );
+
+    return (
+      <DropdownMenu key={navItemKey(item)}>
+        <DropdownMenuTrigger className={tileClass} title={item.label} aria-label={item.label}>
+          <AppSidebarNavIcon name={item.icon} isActive={active} className="size-5" />
+          {badge}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" align="start" sideOffset={14} className="w-64">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{item.label}</DropdownMenuLabel>
+            {renderFlyoutItems(item.children)}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
+  const renderItem = (item: NavItem, depth = 0): React.ReactNode => {
     const hasChildren = Boolean(item.children?.length);
-    const itemActive = hasChildren
-      ? isGroupActive(item, pathname, navFrom, allLeafHrefs)
-      : isNavLinkActive(pathname, item.href, allLeafHrefs, navFrom);
     const itemKey = navItemKey(item);
-    const isExpanded = expandedMenus.includes(itemKey);
-    const showIcon = depth === 0;
-    const isSubmenu = depth > 0;
 
     if (hasChildren) {
-      const groupShellClass = isSubmenu
-        ? submenuItemClass(itemActive, true)
-        : topLevelGroupClass(itemActive, collapsed ? "" : "justify-between");
-
+      const isExpanded = expandedMenus.includes(itemKey);
+      const active = isGroupActive(item, pathname, navFrom, allLeafHrefs);
+      const total = branchBadgeTotal(item);
       return (
         <div key={itemKey}>
           <button
             type="button"
             onClick={() => toggleMenu(itemKey)}
             aria-expanded={isExpanded}
-            className={`relative ${groupShellClass}`}
-            title={collapsed ? item.label : undefined}
+            className={cn(
+              railRow,
+              depth === 0 ? "h-11 px-3" : "h-9 px-3 text-[13px]",
+              active || isExpanded ? "text-white" : "text-on-ink-muted hover:bg-white/10 hover:text-white"
+            )}
           >
-            {collapsed && branchBadgeTotal(item) > 0 && (
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--sidebar-active-background)]" />
+            {depth === 0 && (
+              <AppSidebarNavIcon name={item.icon} isActive={active} className="size-5" />
             )}
-            {collapsed ? (
-              showIcon ? (
-                <AppSidebarNavIcon name={item.icon} isActive={false} />
-              ) : (
-                <span className="truncate text-xs font-normal">{item.label}</span>
-              )
-            ) : (
-              <>
-                <span
-                  className={`flex min-w-0 flex-1 items-center text-left ${showIcon ? "gap-3" : ""}`}
-                >
-                  {showIcon && <AppSidebarNavIcon name={item.icon} isActive={false} />}
-                  <span className="truncate">{item.label}</span>
-                </span>
-                {!isExpanded && branchBadgeTotal(item) > 0 && (
-                  <span className="ml-auto mr-1 min-w-5 rounded-full bg-[var(--sidebar-active-background)] px-1.5 text-center text-[11px] font-bold leading-5 text-[var(--sidebar-active-foreground)]">
-                    {branchBadgeTotal(item) > 99 ? "99+" : branchBadgeTotal(item)}
-                  </span>
-                )}
-                <ChevronDownIcon
-                  className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                />
-              </>
-            )}
+            <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
+            {!isExpanded && <CountBadge count={total} tone="white" />}
+            <ChevronDown
+              className={cn("size-4 opacity-60 transition-transform", isExpanded && "rotate-180")}
+            />
           </button>
-          {isExpanded && !collapsed && (
-            <div className="ml-3 mt-1 space-y-0.5 border-l border-gray-200/70 pl-3">
+          {isExpanded && (
+            <div
+              className={cn(
+                "mt-0.5 mb-1 space-y-0.5 border-l border-white/10",
+                depth === 0 ? "ml-[22px] pl-3" : "ml-3 pl-3"
+              )}
+            >
               {item.children!.map((child) => renderItem(child, depth + 1))}
             </div>
           )}
@@ -295,67 +291,50 @@ export default function AppSidebarNav({
       );
     }
 
-    const leafShellClass = isSubmenu
-      ? submenuItemClass(itemActive, false)
-      : topLevelItemClass(itemActive);
-
-    const badgeCount =
-      item.href && badges[item.href] > 0
-        ? badges[item.href]
-        : 0;
-
-    const leafClassName = `relative ${leafShellClass}`;
-    const leafTitle = collapsed ? item.label : undefined;
-    const leafInner = (
-      <>
-        {showIcon && <AppSidebarNavIcon name={item.icon} isActive={itemActive} />}
-        {!collapsed && <span className="flex-1">{item.label}</span>}
-        {badgeCount > 0 &&
-          (collapsed ? (
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--sidebar-active-background)]" />
-          ) : (
-            <span className="ml-auto min-w-5 rounded-full bg-[var(--sidebar-active-background)] px-1.5 text-center text-[11px] font-bold leading-5 text-[var(--sidebar-active-foreground)]">
-              {badgeCount > 99 ? "99+" : badgeCount}
-            </span>
-          ))}
-      </>
-    );
-
-    // /pos/* dan POS ↔ back-office: beda layout → <Link> RSC TypeError network error.
-    if (needsCrossPosLayoutHardNav(pathname, item.href)) {
-      return (
-        <a
-          key={itemKey}
-          href={item.href}
-          onClick={onNavigate}
-          className={leafClassName}
-          title={leafTitle}
-        >
-          {leafInner}
-        </a>
-      );
-    }
+    const active = leafActive(item.href);
+    const badgeCount = item.href ? (badges[item.href] ?? 0) : 0;
+    const rowClass =
+      depth === 0
+        ? cn(
+            railRow,
+            "h-11 px-3",
+            active
+              ? "bg-accent text-accent-foreground shadow-glow"
+              : "text-on-ink-muted hover:bg-white/10 hover:text-white"
+          )
+        : cn(
+            railRow,
+            "h-9 rounded-xl px-3 text-[13px]",
+            active
+              ? "bg-white/10 font-semibold text-white"
+              : "text-on-ink-muted hover:bg-white/5 hover:text-white"
+          );
 
     return (
-      <Link
+      <NavLink
         key={itemKey}
         href={item.href}
         onClick={onNavigate}
-        className={leafClassName}
-        title={leafTitle}
+        aria-current={active ? "page" : undefined}
+        className={rowClass}
       >
-        {leafInner}
-      </Link>
+        {depth === 0 && <AppSidebarNavIcon name={item.icon} isActive={active} className="size-5" />}
+        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+        <CountBadge count={badgeCount} tone="white" />
+      </NavLink>
     );
   };
 
   return (
     <nav
-      className={`flex-1 overflow-y-auto ${
-        collapsed ? "space-y-1 p-2" : "space-y-1 p-3"
-      } ${className}`}
+      aria-label="Menu utama"
+      className={cn(
+        "no-scrollbar min-h-0 flex-1 overflow-y-auto",
+        collapsed ? "flex flex-col items-center gap-1.5 px-2 py-2" : "space-y-1 px-3 py-2",
+        className
+      )}
     >
-      {navItems.map((item) => renderItem(item, 0))}
+      {collapsed ? navItems.map(renderCollapsed) : navItems.map((item) => renderItem(item, 0))}
     </nav>
   );
 }

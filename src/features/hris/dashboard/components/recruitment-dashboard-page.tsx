@@ -39,7 +39,7 @@ import { useToast, ToastContainer } from "@/components/ui/toast";
 import { useDashboardBrands, useDashboardData } from "../queries";
 import { fetchDashboardCandidatesForExport } from "../api";
 
-const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#2941d3"];
+const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32"];
 
 export function RecruitmentDashboardPage() {
   const router = useRouter();

@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import "./nox.css";
-import { CREDIT_TXN_TYPES, useNoxMember } from "./use-nox-member";
+import { isCreditEntry } from "@/lib/wallet/ledger";
+import { useNoxMember } from "./use-nox-member";
+import { angka, tanggal, TXN_LABELS } from "../format";
+import { useMemberDetails } from "../use-member-details";
+import { useMemberOtp } from "../use-member-otp";
 import { idrToArkDisplay, isArkCoinMethod } from "@/lib/pos/loyalty-settings";
 
 /**
@@ -29,13 +33,6 @@ const MODE_LABELS: Record<NoxMode, string> = {
   history: "History",
 };
 
-const TXN_LABELS: Record<string, string> = {
-  topup: "Top-up",
-  topup_bonus: "Bonus top-up",
-  payment: "Pembayaran",
-  refund: "Refund",
-};
-
 /** Teks lore hotspot — flavor dunia, disalin apa adanya dari prototipe. */
 const LORE: Record<string, { tag: string; title: string; text: string }> = {
   terminal: {
@@ -55,14 +52,6 @@ const LORE: Record<string, { tag: string; title: string; text: string }> = {
   },
 };
 
-const angka = (value: number) => value.toLocaleString("id-ID");
-const tanggal = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Jakarta",
-  });
-
 export function NoxPortal() {
   const { state, reload } = useNoxMember();
   const [mode, setMode] = useState<NoxMode>("dashboard");
@@ -80,84 +69,26 @@ export function NoxPortal() {
     | { type: "visits" }
     | null
   >(null);
-  const [orderDetail, setOrderDetail] = useState<{
-    order: {
-      order_number: string;
-      ordered_at: string;
-      total_amount: number;
-      discount_amount: number;
-      discount_reason: string | null;
-      payment_method: string | null;
-      ark_coins_used: number;
-      venue_name: string | null;
-      subtotal: number;
-    };
-    items: Array<{
-      product_name: string;
-      quantity: number;
-      unit_price: number;
-      discount_amount: number;
-      total_amount: number;
-    }>;
-    xp_earned: number;
-    ark_rate: number;
-  } | null>(null);
-  const [visitsData, setVisitsData] = useState<{
-    visit_count: number;
-    venues: Array<{
-      venue_name: string;
-      order_count: number;
-      day_count: number;
-      last_visit_at: string;
-    }>;
-  } | null>(null);
-  const [detailBusy, setDetailBusy] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const details = useMemberDetails();
+  const { order: orderDetail, visits: visitsData, busy: detailBusy, error: detailError } = details;
 
-  const openOrderDetail = useCallback(async (id: string, nomor: string) => {
-    setDetail({ type: "order", id, nomor });
-    setOrderDetail(null);
-    setDetailError(null);
-    setDetailBusy(true);
-    try {
-      const res = await fetch(`/api/member-portal/orders/${id}`, { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Gagal memuat detail");
-      setOrderDetail(json.data);
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Gagal memuat detail");
-    } finally {
-      setDetailBusy(false);
-    }
-  }, []);
+  const openOrderDetail = useCallback(
+    (id: string, nomor: string) => {
+      setDetail({ type: "order", id, nomor });
+      return details.loadOrder(id);
+    },
+    [details]
+  );
 
-  const openVisits = useCallback(async () => {
+  const openVisits = useCallback(() => {
     setDetail({ type: "visits" });
-    setDetailError(null);
-    if (visitsData) return;
-    setDetailBusy(true);
-    try {
-      const res = await fetch("/api/member-portal/visits", { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Gagal memuat kunjungan");
-      setVisitsData(json.data);
-    } catch (err) {
-      setDetailError(err instanceof Error ? err.message : "Gagal memuat kunjungan");
-    } finally {
-      setDetailBusy(false);
-    }
-  }, [visitsData]);
+    return details.loadVisits();
+  }, [details]);
 
   /* Login OTP di dalam Nox (Fase C) — memakai endpoint portal member yang
    * sudah ada: POST /otp {phone} lalu POST /verify {phone, code} yang
    * menanam cookie member_session. Setelah verifikasi, reload() menarik
    * profil dan layar entry berubah menjadi sapaan. */
-  const [loginStep, setLoginStep] = useState<"phone" | "code">("phone");
-  const [loginPhone, setLoginPhone] = useState("");
-  const [loginCode, setLoginCode] = useState("");
-  const [loginBusy, setLoginBusy] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-
   const appRef = useRef<HTMLDivElement>(null);
   const labBgRef = useRef<HTMLDivElement>(null);
   const charWrapRef = useRef<HTMLDivElement>(null);
@@ -203,70 +134,13 @@ export function NoxPortal() {
     [showToast]
   );
 
-  const requestOtp = useCallback(async () => {
-    if (!loginPhone.trim()) return;
-    setLoginBusy(true);
-    setLoginError(null);
-    try {
-      /* Dev lokal: coba verify tanpa kode lebih dulu. Server yang memutuskan
-       * (lib/member-portal/dev-bypass) — bila bypass mati, permintaan ini
-       * ditolak dan alur OTP normal di bawah tetap berjalan. Dicoba sebelum
-       * /otp supaya tidak terganjal rate limit endpoint itu. */
-      const bypassRes = await fetch("/api/member-portal/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: loginPhone }),
-      });
-      if (bypassRes.ok) {
-        const bypassJson = await bypassRes.json();
-        if (bypassJson.success) {
-          reload();
-          showToast("Masuk tanpa OTP (mode dev lokal)");
-          return;
-        }
-      }
-
-      const res = await fetch("/api/member-portal/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: loginPhone }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Gagal mengirim kode");
-      setLoginStep("code");
-      showToast("Kode OTP dikirim ke WhatsApp Anda");
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Gagal mengirim kode");
-    } finally {
-      setLoginBusy(false);
-    }
-  }, [loginPhone, reload, showToast]);
-
-  const verifyOtp = useCallback(async () => {
-    if (!/^\d{6}$/.test(loginCode.trim())) {
-      setLoginError("Kode harus 6 digit");
-      return;
-    }
-    setLoginBusy(true);
-    setLoginError(null);
-    try {
-      const res = await fetch("/api/member-portal/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: loginPhone, code: loginCode.trim() }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Kode salah");
-      setLoginCode("");
-      setLoginStep("phone");
+  const otp = useMemberOtp({
+    onSignedIn: (bypass) => {
       reload();
-      showToast("Selamat datang, Citizen");
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : "Kode salah");
-    } finally {
-      setLoginBusy(false);
-    }
-  }, [loginCode, loginPhone, reload, showToast]);
+      showToast(bypass ? "Masuk tanpa OTP (mode dev lokal)" : "Selamat datang, Citizen");
+    },
+    onCodeSent: () => showToast("Kode OTP dikirim ke WhatsApp Anda"),
+  });
 
   const logout = useCallback(async () => {
     await fetch("/api/member-portal/logout", { method: "POST" }).catch(() => {});
@@ -426,7 +300,7 @@ export function NoxPortal() {
 
       <header className="topbar">
         <div className="brand">
-          <Image src="/member-nox/logo.webp?v=3" alt="BCD Coffee" width={139} height={115} unoptimized />
+          <Image src="/member-nox/logo.webp?v=3" alt="NüHabit" width={139} height={115} unoptimized />
         </div>
         <div className="hud">
           <div className="hud-chip">
@@ -627,7 +501,7 @@ export function NoxPortal() {
               </div>
             )}
             {ready?.wallet.slice(0, 6).map((txn) => {
-              const kredit = CREDIT_TXN_TYPES.has(txn.type);
+              const kredit = isCreditEntry(txn.type, txn.amount);
               return (
                 <div className="list-row" key={txn.id}>
                   <div className="list-icon">{kredit ? "✦" : "A"}</div>
@@ -921,7 +795,7 @@ export function NoxPortal() {
           <Image
             className="entry-logo"
             src="/member-nox/logo.webp?v=3"
-            alt="BCD Coffee"
+            alt="NüHabit"
             width={139}
             height={115}
             unoptimized
@@ -945,7 +819,7 @@ export function NoxPortal() {
           ) : state.status === "unauthenticated" ? (
             <>
               <h1>WELCOME, CITIZEN.</h1>
-              {loginStep === "phone" ? (
+              {otp.step === "phone" ? (
                 <>
                   <p>Masukkan nomor WhatsApp member Anda — kode OTP dikirim ke sana.</p>
                   <div className="entry-form">
@@ -955,25 +829,22 @@ export function NoxPortal() {
                       inputMode="tel"
                       autoComplete="tel"
                       placeholder="08xxxxxxxxxx"
-                      value={loginPhone}
-                      onChange={(e) => {
-                        setLoginPhone(e.target.value);
-                        setLoginError(null);
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && void requestOtp()}
+                      value={otp.phone}
+                      onChange={(e) => otp.setPhone(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && void otp.requestOtp()}
                     />
                     <button
                       className="enter-btn interactive"
-                      disabled={loginBusy || !loginPhone.trim()}
-                      onClick={() => void requestOtp()}
+                      disabled={otp.busy || !otp.phone.trim()}
+                      onClick={() => void otp.requestOtp()}
                     >
-                      {loginBusy ? "Mengirim…" : "Kirim Kode OTP"}
+                      {otp.busy ? "Mengirim…" : "Kirim Kode OTP"}
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <p>Kode 6 digit sudah dikirim ke WhatsApp {loginPhone}.</p>
+                  <p>Kode 6 digit sudah dikirim ke WhatsApp {otp.phone}.</p>
                   <div className="entry-form">
                     <input
                       className="entry-input interactive"
@@ -982,29 +853,26 @@ export function NoxPortal() {
                       autoComplete="one-time-code"
                       maxLength={6}
                       placeholder="······"
-                      value={loginCode}
-                      onChange={(e) => {
-                        setLoginCode(e.target.value.replace(/\D/g, ""));
-                        setLoginError(null);
-                      }}
-                      onKeyDown={(e) => e.key === "Enter" && void verifyOtp()}
+                      value={otp.code}
+                      onChange={(e) => otp.setCode(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && void otp.verifyOtp()}
                     />
                     <button
                       className="enter-btn interactive"
-                      disabled={loginBusy || loginCode.trim().length !== 6}
-                      onClick={() => void verifyOtp()}
+                      disabled={otp.busy || otp.code.trim().length !== 6}
+                      onClick={() => void otp.verifyOtp()}
                     >
-                      {loginBusy ? "Memeriksa…" : "Verifikasi"}
+                      {otp.busy ? "Memeriksa…" : "Verifikasi"}
                     </button>
                   </div>
                   <div className="entry-alt">
-                    <button onClick={() => { setLoginStep("phone"); setLoginError(null); }}>
+                    <button onClick={otp.backToPhone}>
                       Ganti nomor / kirim ulang
                     </button>
                   </div>
                 </>
               )}
-              {loginError && <div className="entry-error">{loginError}</div>}
+              {otp.error && <div className="entry-error">{otp.error}</div>}
             </>
           ) : state.status === "error" ? (
             <>

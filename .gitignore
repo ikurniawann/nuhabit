@@ -55,3 +55,4 @@ storage/private/
 # cache OCR tesseract.js (diunduh runtime)
 *.traineddata
 .worktrees/
+reports/pengembangan/

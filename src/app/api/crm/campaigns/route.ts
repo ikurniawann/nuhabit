@@ -6,7 +6,11 @@ import { requireCrmCampaign } from "@/lib/crm/server";
 import { createPgClient } from "@/lib/pg/create-client";
 import { query } from "@/lib/db";
 import {
+  isSafeLink,
+  normalizeChannels,
   normalizeSegment,
+  SCHEDULE_ISSUE_MESSAGES,
+  validateSchedule,
   validateTemplate,
 } from "@/lib/crm/campaigns";
 
@@ -26,9 +30,17 @@ interface CampaignListRow {
   daily_cap: number | null;
   recipients_built: boolean;
   created_at: string;
+  channels: string[];
+  scheduled_at: string | null;
+  started_at: string | null;
+  failure_reason: string | null;
+  inapp_title: string | null;
+  image_url: string | null;
+  link_url: string | null;
   pending_count: string;
   sent_count: string;
   failed_count: string;
+  inapp_count: string;
 }
 
 export async function GET() {
@@ -46,13 +58,16 @@ export async function GET() {
     const rows = await query<CampaignListRow>(
       `SELECT k.id, k.name, k.message_template, k.segment, k.segment_id, sg.name AS segment_name,
               k.promo_campaign_id, k.promo_mode, k.voucher_prefix, k.status,
-              k.daily_cap, k.recipients_built, k.created_at,
+              k.daily_cap, k.recipients_built, k.created_at, k.channels, k.scheduled_at,
+              k.started_at, k.failure_reason, k.inapp_title, k.image_url, k.link_url,
               (SELECT COUNT(*) FROM crm.crm_campaign_recipients r
                 WHERE r.campaign_id = k.id AND r.status = 'pending') AS pending_count,
               (SELECT COUNT(*) FROM crm.crm_campaign_recipients r
                 WHERE r.campaign_id = k.id AND r.status = 'sent') AS sent_count,
               (SELECT COUNT(*) FROM crm.crm_campaign_recipients r
-                WHERE r.campaign_id = k.id AND r.status = 'failed') AS failed_count
+                WHERE r.campaign_id = k.id AND r.status = 'failed') AS failed_count,
+              (SELECT COUNT(*) FROM crm.member_notifications n
+                WHERE n.campaign_id = k.id) AS inapp_count
        FROM crm.crm_campaigns k
        LEFT JOIN crm.crm_segments sg ON sg.id = k.segment_id
        WHERE k.branch_id = $1
@@ -83,6 +98,12 @@ const createSchema = z.object({
     .nullable()
     .optional(),
   daily_cap: z.number().int().positive().max(2000).nullable().optional(),
+  channels: z.array(z.enum(["wa", "in_app"])).min(1).optional(),
+  inapp_title: z.string().trim().max(120).nullable().optional(),
+  image_url: z.string().trim().url().max(500).nullable().optional(),
+  link_url: z.string().trim().max(500).refine(isSafeLink, "Tautan tidak valid").nullable().optional(),
+  /** Diisi = "Kirim nanti": kampanye langsung berstatus scheduled. */
+  scheduled_at: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -119,6 +140,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let scheduledAt: Date | null = null;
+    if (body.scheduled_at) {
+      const schedule = validateSchedule(body.scheduled_at, new Date());
+      if (!schedule.ok) {
+        return NextResponse.json(
+          { success: false, error: SCHEDULE_ISSUE_MESSAGES[schedule.reason] },
+          { status: 400 }
+        );
+      }
+      scheduledAt = schedule.at;
+    }
+
     const venue = await getCrmDefaultVenue(createPgClient());
     if (!venue.companyId || !venue.branchId) {
       return NextResponse.json(
@@ -129,8 +162,9 @@ export async function POST(request: NextRequest) {
     const rows = await query<{ id: string }>(
       `INSERT INTO crm.crm_campaigns
          (company_id, branch_id, name, message_template, segment, segment_id,
-          promo_campaign_id, promo_mode, voucher_prefix, daily_cap, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          promo_campaign_id, promo_mode, voucher_prefix, daily_cap, created_by,
+          channels, inapp_title, image_url, link_url, scheduled_at, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id`,
       [
         venue.companyId,
@@ -144,9 +178,18 @@ export async function POST(request: NextRequest) {
         promoMode === "batch" ? body.voucher_prefix!.toUpperCase() : null,
         body.daily_cap ?? null,
         user.id,
+        normalizeChannels(body.channels),
+        body.inapp_title || null,
+        body.image_url || null,
+        body.link_url || null,
+        scheduledAt,
+        scheduledAt ? "scheduled" : "draft",
       ]
     );
-    return successResponse({ id: rows[0].id }, "Kampanye dibuat (draft)");
+    return successResponse(
+      { id: rows[0].id },
+      scheduledAt ? "Kampanye dijadwalkan" : "Kampanye dibuat (draft)"
+    );
   } catch (err) {
     console.error("[crm-campaign] create error:", err);
     return NextResponse.json(

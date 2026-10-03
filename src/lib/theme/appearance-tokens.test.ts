@@ -54,7 +54,7 @@ describe("appearanceFromPreset", () => {
     expect(next.presetId).toBe("ocean");
     expect(next.base.primary).toBe("#0ea5e9");
     expect(next.sidebar.activeBackground).toBe("#0ea5e9");
-    expect(next.sidebar.activeForeground).toBe("#000000");
+    expect(next.sidebar.activeForeground).toBe("#00281a");
   });
 });
 

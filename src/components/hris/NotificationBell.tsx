@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { BellIcon, CheckIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
-import { BellAlertIcon } from "@heroicons/react/24/solid";
+import { Bell, BellRing, Check, CheckCircle } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -126,16 +125,16 @@ export function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative p-2 rounded-lg hover:bg-pink-100 transition-colors"
-        aria-label="Notifikasi"
+        className="relative inline-flex size-11 items-center justify-center rounded-full bg-card text-foreground shadow-card transition-colors hover:bg-surface active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+        aria-label={unreadCount > 0 ? `Notifikasi, ${unreadCount} belum dibaca` : "Notifikasi"}
       >
         {unreadCount > 0 ? (
-          <BellAlertIcon className="w-5 h-5 text-pink-600" />
+          <BellRing className="w-5 h-5" />
         ) : (
-          <BellIcon className="w-5 h-5 text-gray-500" />
+          <Bell className="w-5 h-5" />
         )}
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+          <span className="absolute -top-1 -right-1 flex h-[19px] min-w-[19px] items-center justify-center rounded-full border-2 border-surface bg-accent px-1 text-[10.5px] font-bold text-accent-foreground">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -143,11 +142,11 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+        <div className="absolute right-0 z-50 mt-2 w-[min(400px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-float">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+          <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Notifikasi</h3>
+              <h3 className="text-base font-semibold text-foreground">Notifikasi</h3>
               <p className="text-xs text-gray-500">
                 {unreadCount > 0 ? `${unreadCount} belum dibaca` : "Semua sudah dibaca"}
               </p>
@@ -155,9 +154,9 @@ export function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded hover:bg-blue-50"
+                className="flex h-8 items-center gap-1 rounded-full px-3 text-xs font-semibold text-foreground hover:bg-black/5"
               >
-                <CheckCircleIcon className="w-3.5 h-3.5" />
+                <CheckCircle className="w-3.5 h-3.5" />
                 Tandai semua
               </button>
             )}
@@ -167,7 +166,7 @@ export function NotificationBell() {
           <div className="max-h-[360px] overflow-y-auto divide-y divide-gray-50">
             {sorted.length === 0 ? (
               <div className="py-12 text-center">
-                <BellIcon className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                 <p className="text-sm text-gray-400">Tidak ada notifikasi</p>
               </div>
             ) : (
@@ -206,7 +205,7 @@ export function NotificationBell() {
                           className="shrink-0 mt-0.5 p-1 rounded hover:bg-white/80 text-gray-400 hover:text-green-600"
                           title="Tandai sudah dibaca"
                         >
-                          <CheckIcon className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>

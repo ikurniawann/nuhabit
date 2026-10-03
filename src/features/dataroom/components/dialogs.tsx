@@ -102,7 +102,7 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
             onDoubleClick={() => setExpanded((s) => { const n = new Set(s); if (n.has(f.id)) n.delete(f.id); else n.add(f.id); return n; })}
             style={{ paddingLeft: 8 + depth * 18 }}
             className={cn(
-              "flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm hover:bg-accent disabled:opacity-40 disabled:hover:bg-transparent",
+              "flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent",
               selected === f.id && "bg-primary/10 text-primary"
             )}
           >
@@ -135,7 +135,7 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className={cn("flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent", selected === null && "bg-primary/10 text-primary")}
+                className={cn("flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted", selected === null && "bg-primary/10 text-primary")}
               >
                 <HardDrive className="h-4 w-4 text-muted-foreground" /> Dataroom (root)
                 {currentParent === null && <span className="ml-auto text-[10px] text-muted-foreground">lokasi saat ini</span>}

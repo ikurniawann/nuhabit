@@ -5,6 +5,7 @@ import {
   loanInstallmentLabel,
   type LoanInstallmentDetail,
 } from "@/lib/payroll/loans";
+import { brandOsName } from "@/lib/branding";
 
 interface PayslipData {
   employee: {
@@ -72,7 +73,7 @@ export function PayslipPDF({ data }: PayslipPDFProps) {
       <div className="border-b-2 border-pink-600 pb-4 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-pink-600">BCD COFFEE OS</h1>
+            <h1 className="text-2xl font-bold text-pink-600">{brandOsName().toUpperCase()}</h1>
             <p className="text-sm text-gray-500">Slip Gaji Karyawan</p>
           </div>
           <div className="text-right">

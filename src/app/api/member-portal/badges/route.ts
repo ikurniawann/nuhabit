@@ -42,6 +42,7 @@ export async function GET() {
 
     const { rows } = await pool.query(
       `SELECT b.id, b.code, b.name, b.image_url, b.min_lifetime_xp::int,
+              b.metric, b.threshold::float AS threshold,
               mb.id AS award_id, mb.awarded_at, mb.is_showcased
          FROM crm.crm_badges b
          LEFT JOIN crm.crm_member_badges mb
@@ -61,6 +62,9 @@ export async function GET() {
           name: r.name,
           image_url: r.image_url,
           min_lifetime_xp: Number(r.min_lifetime_xp ?? 0),
+          // Syarat badge: lifetime_xp | visits | spend_idr | streak_weeks | manual.
+          metric: r.metric ?? "lifetime_xp",
+          threshold: r.threshold === null || r.threshold === undefined ? null : Number(r.threshold),
           owned: r.award_id != null,
           awarded_at: r.awarded_at,
           is_showcased: r.is_showcased === true,

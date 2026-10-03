@@ -65,22 +65,22 @@ export function ActivityLogBell({ posShift }: { posShift?: PosShiftBellInfo }) {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         aria-label="Notifikasi"
-        className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-700 transition hover:bg-gray-100"
+        className="relative inline-flex size-11 items-center justify-center rounded-full bg-card text-foreground shadow-card transition-colors hover:bg-surface active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
       >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-medium">
+            <span className="absolute -top-1 -right-1 flex h-[19px] min-w-[19px] items-center justify-center rounded-full border-2 border-surface bg-accent px-1 text-[10.5px] font-bold text-accent-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         align="end" 
-        className="z-[10000] w-80 max-h-[500px] p-0 shadow-2xl border-gray-200 bg-white"
+        className="z-[10000] w-[min(400px,calc(100vw-1.5rem))] max-h-[500px] p-0"
         sideOffset={8}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b bg-gray-50 sticky top-0 z-10">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border bg-card px-4 pt-4 pb-3">
           <div>
             <h3 className="text-sm font-semibold">Activity Log</h3>
             <p className="text-xs text-muted-foreground">

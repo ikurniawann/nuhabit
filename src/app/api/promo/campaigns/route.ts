@@ -4,6 +4,7 @@ import { successResponse } from "@/lib/api/auth";
 import { query, withTransaction } from "@/lib/db";
 import { isValidCalendarDate } from "@/lib/ticketing/pricing";
 import { requirePromoContext } from "@/lib/promo/server";
+import { campaignTargetFields } from "@/lib/promo/campaign-schema";
 
 // EPIC-032 A3 — daftar + buat campaign promo. Pengelola: super_admin +
 // marketing (role marketing efektif setelah Task A4).
@@ -22,6 +23,11 @@ interface CampaignListRow {
   per_phone_limit: number | null;
   scope: string;
   is_active: boolean;
+  show_in_member_portal: boolean;
+  target_product_ids: string[];
+  target_category_ids: string[];
+  eligibility: string;
+  new_member_days: number | null;
   created_at: string;
   codes_count: string;
   held_count: string;
@@ -40,6 +46,10 @@ export async function GET() {
               c.valid_from::text AS valid_from,
               c.valid_until::text AS valid_until,
               c.usage_limit, c.per_phone_limit, c.scope, c.is_active,
+              c.show_in_member_portal,
+              c.target_product_ids::text[] AS target_product_ids,
+              c.target_category_ids::text[] AS target_category_ids,
+              c.eligibility, c.new_member_days,
               c.created_at,
               (SELECT COUNT(*) FROM promo.promo_codes k
                 WHERE k.campaign_id = c.id) AS codes_count,
@@ -86,6 +96,7 @@ const createSchema = z
     scope: z
       .enum(["ticketing_online", "ticketing_loket", "pos", "semua"])
       .default("ticketing_online"),
+    ...campaignTargetFields,
     // Opsional: langsung buat SATU kode publik utk campaign ini
     public_code: z
       .string()
@@ -121,8 +132,9 @@ export async function POST(request: NextRequest) {
         `INSERT INTO promo.promo_campaigns
            (company_id, branch_id, name, description, discount_type, value,
             max_discount, min_purchase, valid_from, valid_until, usage_limit,
-            per_phone_limit, scope, created_by)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+            per_phone_limit, scope, created_by, target_product_ids,
+            target_category_ids, eligibility, new_member_days)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          RETURNING id`,
         [
           ctx.companyId,
@@ -139,6 +151,10 @@ export async function POST(request: NextRequest) {
           body.per_phone_limit,
           body.scope,
           ctx.user.id,
+          body.target_product_ids ?? [],
+          body.target_category_ids ?? [],
+          body.eligibility ?? "semua",
+          body.eligibility === "member_baru" ? (body.new_member_days ?? null) : null,
         ]
       );
       const campaignId = campaign.rows[0].id;

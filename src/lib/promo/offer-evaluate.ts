@@ -8,7 +8,9 @@ export type OfferCartLine = {
 
 export type OfferEvalItem = {
   role: "component" | "buy" | "get" | "eligible";
+  /** Kosong bila target berupa kategori (lihat expandCategoryTargets). */
   product_id: string;
+  category_id?: string | null;
   qty: number;
 };
 
@@ -26,7 +28,30 @@ export type OfferEvalRule = {
   discount_type?: "percent" | "fixed" | null;
   discount_value?: number | null;
   items: OfferEvalItem[];
+  /** null/kosong = semua channel (kode SALES_CHANNEL_CODES). */
+  sales_channels?: string[] | null;
+  /** Hanya aktif bila kodenya diketik kasir (ctx.unlockedRuleIds). */
+  requires_code?: boolean;
+  /** Eksklusif = tidak bisa digabung; menang hanya bila >= gabungan lain. */
+  is_exclusive?: boolean;
+  /** Lebih tinggi = diproses lebih dulu (default 0). */
+  priority?: number;
+  max_uses?: number | null;
+  /** Pemakaian hidup (held segar + captured) lintas order. */
+  used_count?: number;
+  max_uses_per_member?: number | null;
+  /** Pemakaian hidup member transaksi ini (0 tanpa member). */
+  member_used_count?: number;
 };
+
+export type OfferEvalContext = {
+  /** Channel transaksi; undefined = abaikan batas channel. */
+  channel?: string;
+  /** Penawaran ber-kode yang sudah dibuka kasir. */
+  unlockedRuleIds?: string[];
+};
+
+export type OfferSkipReason = "channel" | "kode" | "kuota-habis" | "limit-member";
 
 export type AppliedOffer = {
   rule_id: string;
@@ -59,14 +84,12 @@ function priceByProduct(lines: OfferCartLine[]): Map<string, number> {
   for (const line of lines) {
     const id = String(line.productId || "");
     if (!id) continue;
-    // Weighted average if multiple lines of same product
-    const prevQty = map.has(id) ? 1 : 0; // just store latest unit for simplicity
-    void prevQty;
+    // Beberapa baris produk sama: simpan harga satuan tertinggi
+    // (konservatif utk nilai item gratis).
     const existing = map.get(id);
     if (existing == null) {
       map.set(id, Math.max(0, Number(line.unitPrice) || 0));
     } else {
-      // keep max unit price (conservative for free-item valuation)
       map.set(id, Math.max(existing, Math.max(0, Number(line.unitPrice) || 0)));
     }
   }
@@ -294,45 +317,115 @@ function evalOne(
 }
 
 /**
- * Apply active offer rules to cart lines.
- * Conflict: greedy by largest discount; reserved qty prevents double-use
- * (volume does not reserve).
+ * Syarat non-keranjang sebuah penawaran: channel, kode pembuka, kuota total
+ * dan kuota per member. null = boleh dievaluasi. Kuota per member tanpa
+ * member dihitung 0 (pola nuhabit promotions.go: MemberUses kosong).
  */
-export function evaluateOfferRules(
-  lines: OfferCartLine[],
-  rules: OfferEvalRule[]
-): OfferEvalResult {
+export function offerSkipReason(
+  rule: OfferEvalRule,
+  ctx: OfferEvalContext = {}
+): OfferSkipReason | null {
+  const channels = rule.sales_channels ?? [];
+  if (ctx.channel && channels.length > 0 && !channels.includes(ctx.channel)) {
+    return "channel";
+  }
+  if (rule.requires_code && !(ctx.unlockedRuleIds ?? []).includes(rule.id)) {
+    return "kode";
+  }
+  return offerCapReason(rule);
+}
+
+/** Kuota total & per member — dipakai evaluator dan klaim saat order. */
+export function offerCapReason(caps: {
+  max_uses?: number | null;
+  used_count?: number;
+  max_uses_per_member?: number | null;
+  member_used_count?: number;
+}): "kuota-habis" | "limit-member" | null {
+  if (caps.max_uses != null && (caps.used_count ?? 0) >= caps.max_uses) {
+    return "kuota-habis";
+  }
+  if (
+    caps.max_uses_per_member != null &&
+    (caps.member_used_count ?? 0) >= caps.max_uses_per_member
+  ) {
+    return "limit-member";
+  }
+  return null;
+}
+
+/**
+ * Ganti target kategori dgn produk anggotanya supaya evaluator cukup
+ * bekerja per produk. Dipakai server (order) DAN endpoint kasir dengan peta
+ * yang sama, sehingga hasil diskon klien = server.
+ */
+export function expandCategoryTargets(
+  rules: OfferEvalRule[],
+  productIdsByCategory: Map<string, string[]>
+): OfferEvalRule[] {
+  return rules.map((rule) => {
+    if (!rule.items.some((item) => item.category_id)) return rule;
+    const items: OfferEvalItem[] = [];
+    const seen = new Set<string>();
+    const push = (item: OfferEvalItem) => {
+      const key = `${item.role}:${item.product_id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push(item);
+    };
+    for (const item of rule.items) {
+      if (!item.category_id) {
+        push(item);
+        continue;
+      }
+      const members = productIdsByCategory.get(item.category_id) ?? [];
+      // Kategori kosong tetap jadi target yang tak cocok apa pun, supaya
+      // volume tidak jatuh ke "semua item" saat daftarnya habis.
+      if (members.length === 0) push({ ...item, product_id: "" });
+      for (const productId of members) {
+        push({ role: item.role, product_id: productId, qty: item.qty });
+      }
+    }
+    return { ...rule, items };
+  });
+}
+
+function byPriorityThenDiscount(
+  a: { rule: OfferEvalRule; discount: number },
+  b: { rule: OfferEvalRule; discount: number }
+) {
+  const priority = (b.rule.priority ?? 0) - (a.rule.priority ?? 0);
+  return priority !== 0 ? priority : b.discount - a.discount;
+}
+
+/**
+ * Greedy satu kelompok aturan yang boleh digabung: prioritas tertinggi
+ * dulu, lalu diskon terbesar (prioritas sama = perilaku lama). Qty yang
+ * sudah dipakai bundle/BXGY tidak dipakai ulang; volume tidak memesan qty
+ * dan hanya volume terbaik yang dipertahankan.
+ */
+function stackOffers(lines: OfferCartLine[], rules: OfferEvalRule[]): AppliedOffer[] {
   const priceMap = priceByProduct(lines);
-  let qtyMap = qtyByProduct(lines);
+  const qtyMap = qtyByProduct(lines);
   const applied: AppliedOffer[] = [];
 
   const scored = rules
-    .map((rule) => {
-      const trialQty = cloneQty(qtyMap);
-      const { discount } = evalOne(rule, lines, trialQty, priceMap);
-      return { rule, discount };
-    })
+    .map((rule) => ({
+      rule,
+      discount: evalOne(rule, lines, cloneQty(qtyMap), priceMap).discount,
+    }))
     .filter((r) => r.discount > 0)
-    .sort((a, b) => b.discount - a.discount);
+    .sort(byPriorityThenDiscount);
 
   for (const { rule } of scored) {
     const { discount, consume: used, free } = evalOne(rule, lines, qtyMap, priceMap);
     if (discount <= 0) continue;
-    // Re-check with current remaining map for non-volume
     if (rule.offer_type !== "volume") {
-      // ensure we can still consume
       const check = cloneQty(qtyMap);
-      let ok = true;
-      for (const u of used) {
-        if (consume(check, u.productId, u.qty) < u.qty - 1e-9) {
-          ok = false;
-          break;
-        }
-      }
-      if (!ok) continue;
+      const enough = used.every((u) => consume(check, u.productId, u.qty) >= u.qty - 1e-9);
+      if (!enough) continue;
       for (const u of used) consume(qtyMap, u.productId, u.qty);
     }
-
     applied.push({
       rule_id: rule.id,
       offer_type: rule.offer_type,
@@ -346,20 +439,51 @@ export function evaluateOfferRules(
     });
   }
 
-  // If multiple applied and user preference is "largest only" for conflicts,
-  // we already reserved qty. Volume can still add on top.
-  // Cap: if two volume rules, keep only best volume.
   const volumes = applied.filter((a) => a.offer_type === "volume");
-  let filtered = applied;
-  if (volumes.length > 1) {
-    const bestVol = volumes.reduce((a, b) => (a.discount >= b.discount ? a : b));
-    filtered = applied.filter(
-      (a) => a.offer_type !== "volume" || a.rule_id === bestVol.rule_id
-    );
-  }
+  if (volumes.length <= 1) return applied;
+  const bestVol = volumes.reduce((a, b) => (a.discount >= b.discount ? a : b));
+  return applied.filter((a) => a.offer_type !== "volume" || a.rule_id === bestVol.rule_id);
+}
 
-  const offer_discount = filtered.reduce((s, a) => s + a.discount, 0);
-  return { offer_discount, applied: filtered };
+const sumDiscount = (applied: AppliedOffer[]) =>
+  applied.reduce((s, a) => s + a.discount, 0);
+
+/**
+ * Terapkan penawaran aktif ke keranjang. Aturan penggabungan (port
+ * nuhabit promotions.go): penawaran eksklusif tidak bisa digabung, jadi
+ * engine menghitung penawaran eksklusif terpilih SENDIRIAN vs semua
+ * penawaran non-eksklusif DIGABUNG, lalu memberi yang lebih besar
+ * (seri = eksklusif). Eksklusif terpilih = prioritas tertinggi, lalu diskon
+ * terbesar. Total diskon tidak pernah melebihi subtotal.
+ */
+export function evaluateOfferRules(
+  lines: OfferCartLine[],
+  rules: OfferEvalRule[],
+  ctx: OfferEvalContext = {}
+): OfferEvalResult {
+  const usable = rules.filter((rule) => offerSkipReason(rule, ctx) === null);
+  const stacked = stackOffers(lines, usable.filter((rule) => !rule.is_exclusive));
+  const stackedTotal = sumDiscount(stacked);
+
+  const exclusive = usable
+    .filter((rule) => rule.is_exclusive)
+    .map((rule) => {
+      const applied = stackOffers(lines, [rule]);
+      return { rule, applied, discount: sumDiscount(applied) };
+    })
+    .filter((candidate) => candidate.discount > 0)
+    .sort(byPriorityThenDiscount)[0];
+
+  const applied =
+    exclusive && exclusive.discount >= stackedTotal ? exclusive.applied : stacked;
+
+  const subtotal = Math.floor(
+    lines.reduce(
+      (s, l) => s + Math.max(0, Number(l.quantity) || 0) * Math.max(0, Number(l.unitPrice) || 0),
+      0
+    )
+  );
+  return { offer_discount: Math.min(sumDiscount(applied), subtotal), applied };
 }
 
 /** Alokasi qty gratis ke baris cart (per productId, FIFO). */

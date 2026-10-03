@@ -1,7 +1,7 @@
 /**
  * Kebijakan akses area kerja.
  *
- * Role "full access" melihat desktop BCD Coffee OS + seluruh modul bisnis. Role
+ * Role "full access" melihat desktop NüHabit OS + seluruh modul bisnis. Role
  * lain dikunci ke Area Karyawan (ESS/HRIS) di /dashboard/me: login langsung
  * ke sana, sidebar hanya menu karyawan, dan URL modul lain dilempar balik.
  *

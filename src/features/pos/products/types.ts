@@ -59,6 +59,8 @@ export type PosCatalogProduct = {
   modifierGroups: PosProductModifierGroup[];
   /** Syarat privilege member: minimal lifetime XP; null = produk umum */
   minXp: number | null;
+  /** XP tambahan per unit saat order member lunas (0 = tanpa bonus) */
+  bonusXp: number;
   /** EPIC-039 Fase A — regular | gift_card | merchandise */
   productKind: string;
   /** Tautan master purchasing (item.products); null = tidak tertaut */
@@ -86,6 +88,7 @@ export type ApiPosProduct = {
   station?: string | null;
   is_active?: boolean | null;
   min_xp?: number | string | null;
+  bonus_xp?: number | string | null;
   product_kind?: string | null;
   source_product_id?: string | null;
   inventory_tracking?: boolean | null;
@@ -121,6 +124,7 @@ export interface PatchPosProductPayload {
   station?: string;
   /** null = hapus syarat (produk umum) */
   min_xp?: number | null;
+  bonus_xp?: number;
   /** EPIC-039 Fase A — regular | merchandise (gift_card diatur EPIC-034) */
   product_kind?: string;
   /** null = lepaskan tautan purchasing */

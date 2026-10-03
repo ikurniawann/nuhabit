@@ -148,7 +148,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                 ] as const).map((o) => (
                   <button
                     key={o.v} type="button" onClick={() => setAccessType(o.v)}
-                    className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm transition", accessType === o.v ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-accent")}
+                    className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm transition", accessType === o.v ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted")}
                   >
                     <o.icon className="mt-0.5 h-4 w-4 shrink-0" />
                     <span><span className="block font-medium">{o.t}</span><span className="text-xs text-muted-foreground">{o.d}</span></span>
@@ -177,7 +177,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                   <div className="flex items-center gap-1.5">
                     <Input type="number" min={1} max={DATAROOM_MAX_EXPIRY_DAYS} value={days} onChange={(e) => setDays(Math.max(1, Math.min(DATAROOM_MAX_EXPIRY_DAYS, Number(e.target.value) || 1)))} className="w-24" />
                     {[1, 7, 30, 90].map((d) => (
-                      <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-md border px-2 py-1 text-xs", days === d ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent")}>{d}h</button>
+                      <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-md border px-2 py-1 text-xs", days === d ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted")}>{d}h</button>
                     ))}
                   </div>
                 </div>

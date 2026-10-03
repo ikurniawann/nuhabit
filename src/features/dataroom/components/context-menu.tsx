@@ -65,7 +65,7 @@ export function ContextMenu({ x, y, entries, onClose }: { x: number; y: number; 
             onClick={() => { onClose(); entry.onSelect(); }}
             className={cn(
               "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left outline-none",
-              "hover:bg-accent focus:bg-accent disabled:opacity-40 disabled:hover:bg-transparent",
+              "hover:bg-muted focus:bg-muted disabled:opacity-40 disabled:hover:bg-transparent",
               entry.danger && "text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
             )}
           >

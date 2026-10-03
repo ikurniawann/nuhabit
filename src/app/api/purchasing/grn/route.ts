@@ -22,6 +22,8 @@ import {
 } from "@/lib/purchasing/grn-qc";
 import { parsePurchasingModuleType, type PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { resolveGrnItemSku } from "@/lib/purchasing/variant-po-lines";
+import { grnBatchFields, resolveGrnLineBatch } from "@/lib/purchasing/grn-batch";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 import { validatePOCanDelivery } from "@/lib/purchasing/delivery";
 import {
   getApiUserScope,
@@ -55,6 +57,7 @@ const grnItemSchema = z.object({
   satuan_id: z.string().uuid().optional(),
   kondisi: z.enum(["baik", "rusak", "cacat"]).default("baik"),
   catatan: z.string().optional().nullable(),
+  ...grnBatchFields,
 }).superRefine((item, ctx) => {
   if (!item.raw_material_id && !item.product_id && !item.supply_item_id) {
     ctx.addIssue({
@@ -603,6 +606,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Batch & kedaluwarsa bahan baku: tanggal kosong → tanggal terima + shelf life.
+    const receivedOn = String(insertData.tanggal_penerimaan);
+    const shelfMaterialIds = normalizedItems
+      .map((item) => item.raw_material_id)
+      .filter((id): id is string => Boolean(id));
+    const { data: shelfRows } = shelfMaterialIds.length
+      ? await adminDb.from("raw_materials").select("id, shelf_life_days").in("id", shelfMaterialIds)
+      : { data: [] as { id: string; shelf_life_days: number | null }[] };
+    const shelfLifeById = new Map(
+      ((shelfRows || []) as { id: string; shelf_life_days: number | null }[]).map((row) => [
+        row.id,
+        row.shelf_life_days,
+      ])
+    );
+
     // Create GRN items
     const grnItemsPayload = normalizedItems.map((item, index) => ({
       grn_id: grn.id,
@@ -619,6 +637,9 @@ export async function POST(request: NextRequest) {
       catatan: item.catatan || null,
       warehouse_id: validated.warehouse_id,
       qc_status: "pending",
+      ...(item.raw_material_id
+        ? resolveGrnLineBatch(item, shelfLifeById.get(item.raw_material_id), receivedOn)
+        : {}),
     }));
 
     const { data: insertedGrnItems, error: itemsError } = await adminDb
@@ -774,6 +795,29 @@ export async function POST(request: NextRequest) {
       });
       accountingNote = accounting.note;
     }
+
+    await recordAuditAfterCommit({
+      actor: { id: user.id, name: user.full_name },
+      action: "grn.post",
+      entity: "grn",
+      entityId: grn.id,
+      entityLabel: grnNumber,
+      after: {
+        status: finalizedStatus,
+        warehouse_id: validated.warehouse_id,
+        purchase_order_id: delivery.purchase_order_id,
+        items: grnItemsPayload.map((item) => ({
+          raw_material_id: item.raw_material_id,
+          product_id: item.product_id,
+          supply_item_id: item.supply_item_id,
+          qty_diterima: item.qty_diterima,
+          qty_ditolak: item.qty_ditolak,
+          batch_number: "batch_number" in item ? item.batch_number : null,
+          expiry_date: "expiry_date" in item ? item.expiry_date : null,
+        })),
+      },
+      ...requestMeta(request),
+    });
 
     const successMessage =
       finalizedStatus === "rejected"

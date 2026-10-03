@@ -25,6 +25,23 @@ export interface GiftCard {
   buyer_phone: string | null;
   note: string | null;
   created_at: string;
+  reloaded_total: string;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_phone: string | null;
+}
+
+export interface GiftCardMember {
+  id: string;
+  name: string | null;
+  phone: string | null;
+}
+
+export interface GiftCardReloadValues {
+  amount: number;
+  payment_method: string;
+  payment_reference?: string | null;
+  note?: string | null;
 }
 
 export interface GiftCardIssueSingleValues {
@@ -34,6 +51,7 @@ export interface GiftCardIssueSingleValues {
   buyer_name?: string | null;
   buyer_phone?: string | null;
   note?: string | null;
+  customer_id?: string | null;
 }
 
 export interface GiftCardIssueBatchValues {
@@ -63,5 +81,7 @@ export interface GiftCardLedgerEntry {
   context_type: string | null;
   context_id: string | null;
   note: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
   created_at: string;
 }

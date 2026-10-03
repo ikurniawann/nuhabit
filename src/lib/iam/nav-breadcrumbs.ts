@@ -29,6 +29,17 @@ function toCrumb(item: NavItem): NavBreadcrumbItem {
   };
 }
 
+/**
+ * The more specific link wins (/dashboard/crm/challenges over a prefix match on
+ * /dashboard/crm in another group); depth only breaks ties.
+ */
+function isBetterChain(candidate: NavBreadcrumbItem[], best: NavBreadcrumbItem[] | null): boolean {
+  if (!best) return true;
+  const hrefLength = (chain: NavBreadcrumbItem[]) => chain[chain.length - 1]?.href?.length ?? 0;
+  const diff = hrefLength(candidate) - hrefLength(best);
+  return diff !== 0 ? diff > 0 : candidate.length > best.length;
+}
+
 function findDeepestNavChain(
   items: NavItem[],
   pathname: string,
@@ -50,13 +61,13 @@ function findDeepestNavChain(
         chainHere,
         childHrefs
       );
-      if (fromChildren && (!best || fromChildren.length > best.length)) {
+      if (fromChildren && isBetterChain(fromChildren, best)) {
         best = fromChildren;
       }
     }
 
     if (isValidHref(item.href) && isNavLinkActive(pathname, item.href, peerHrefs, navFrom)) {
-      if (!best || chainHere.length > best.length) {
+      if (isBetterChain(chainHere, best)) {
         best = chainHere;
       }
     }

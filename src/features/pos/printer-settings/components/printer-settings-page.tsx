@@ -20,6 +20,7 @@ import {
   canUseRawBtPrint,
   printBytesViaRawBt,
 } from "@/lib/pos/rawbt-print";
+import { brandName } from "@/lib/branding";
 
 type PrinterMode = "browser" | "local_worker" | "network";
 
@@ -223,7 +224,7 @@ export function PrinterSettingsPage() {
                     if (testing) return;
                     setTesting(true);
                     try {
-                      const bytes = encodeEscPosText(["BCD COFFEE POS", "Test printer OK"]);
+                      const bytes = encodeEscPosText([`${brandName().toUpperCase()} POS`, "Test printer OK"]);
                       if (canUseRawBtPrint() && printBytesViaRawBt(bytes)) {
                         toast.success("Test print dikirim ke RawBT");
                         return;

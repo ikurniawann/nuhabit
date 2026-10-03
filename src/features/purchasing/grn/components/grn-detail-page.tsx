@@ -40,6 +40,8 @@ type GrnDetailItem = {
   qty_diterima?: number | null;
   qty_ditolak?: number | null;
   catatan?: string | null;
+  batch_number?: string | null;
+  expiry_date?: string | null;
 };
 
 type GrnDetail = {
@@ -438,6 +440,14 @@ export function GRNDetailPage({
                               <div className="text-xs text-gray-500">
                                 {item.raw_material?.kode || item.product?.kode || "-"}
                               </div>
+                              {(item.batch_number || item.expiry_date) && (
+                                <div className="mt-1 text-xs text-gray-500">
+                                  Batch {item.batch_number || "-"}
+                                  {item.expiry_date
+                                    ? ` · kedaluwarsa ${new Date(item.expiry_date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })}`
+                                    : ""}
+                                </div>
+                              )}
                             </td>
                             <td className="px-2 py-3 text-center align-middle text-gray-700">
                               {item.satuan?.nama ||

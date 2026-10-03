@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Hubungi BCD Coffee",
-  description: "Kirim permintaan penawaran acara, katering, atau kerja sama ke BCD Coffee.",
+  title: "Hubungi NüHabit",
+  description: "Kirim permintaan penawaran acara, katering, atau kerja sama ke NüHabit.",
 };
 
 export default function PublicFormLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -14,6 +14,7 @@ import {
   listStockTransfers,
   type StockTransferKind,
 } from "@/lib/inventory/stock-transfer";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 
 const TRANSFER_ROLES = [
   "admin",
@@ -128,6 +129,24 @@ export async function POST(request: NextRequest) {
       qty: validated.qty,
       notes: validated.notes,
       userId: user.id,
+    });
+
+    await recordAuditAfterCommit({
+      actor: { id: user.id, name: user.full_name },
+      action: "stock.transfer",
+      entity: "stock_transfer",
+      entityId: result.reference_id,
+      entityLabel: result.transfer_number,
+      after: {
+        raw_material_id: validated.raw_material_id,
+        qty: result.qty,
+        unit_cost: result.unit_cost,
+        source_warehouse_id: validated.source_warehouse_id,
+        dest_warehouse_id: validated.dest_warehouse_id,
+        transfer_kind: validated.transfer_kind,
+      },
+      reason: validated.notes ?? null,
+      ...requestMeta(request),
     });
 
     let accountingNote: string | null = null;

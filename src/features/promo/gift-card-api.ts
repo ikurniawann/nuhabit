@@ -3,6 +3,8 @@ import type {
   GiftCardConfigValues,
   GiftCardIssueValues,
   GiftCardLedgerEntry,
+  GiftCardMember,
+  GiftCardReloadValues,
 } from "./gift-card-types";
 
 async function parseError(res: Response, fallback: string): Promise<never> {
@@ -39,10 +41,16 @@ async function sendJson<T>(
   return body.data;
 }
 
-export const fetchGiftCards = (params?: { status?: string; q?: string }) => {
+export const fetchGiftCards = (params?: {
+  status?: string;
+  q?: string;
+  phone?: string;
+  customer_id?: string;
+}) => {
   const search = new URLSearchParams();
-  if (params?.status) search.set("status", params.status);
-  if (params?.q) search.set("q", params.q);
+  for (const [key, value] of Object.entries(params ?? {})) {
+    if (value) search.set(key, value);
+  }
   const qs = search.toString();
   return getJson<GiftCard[]>(
     `/api/promo/gift-cards${qs ? `?${qs}` : ""}`,
@@ -93,4 +101,27 @@ export const fetchGiftCardLedger = (id: string) =>
   getJson<GiftCardLedgerEntry[]>(
     `/api/promo/gift-cards/${id}/ledger`,
     "Gagal memuat riwayat"
+  );
+
+export const reloadGiftCard = (id: string, values: GiftCardReloadValues) =>
+  sendJson<{ balanceAfter: number; statusAfter: string }>(
+    `/api/promo/gift-cards/${id}/reload`,
+    "POST",
+    values,
+    "Gagal reload gift card"
+  );
+
+/** customer_id null = lepas tautan member. */
+export const linkGiftCardMember = (id: string, customerId: string | null) =>
+  sendJson<{ id: string; customer_id: string | null }>(
+    `/api/promo/gift-cards/${id}`,
+    "PATCH",
+    { customer_id: customerId },
+    "Gagal menautkan member"
+  );
+
+export const lookupMembersByPhone = (phone: string) =>
+  getJson<GiftCardMember[]>(
+    `/api/promo/gift-cards/member-lookup?phone=${encodeURIComponent(phone)}`,
+    "Gagal mencari member"
   );

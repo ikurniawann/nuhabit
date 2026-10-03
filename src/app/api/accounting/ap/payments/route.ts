@@ -9,6 +9,7 @@ import { AP_PAYMENT_METHODS } from "@/lib/accounting/ap-types";
 import { listApPayments, recordApPayment } from "@/lib/accounting/ap-store";
 import { createPgClient } from "@/lib/pg/create-client";
 import { AccountingPostError } from "@/lib/accounting/journal-mapping-posting";
+import { recordAuditAfterCommit, requestMeta } from "@/lib/audit";
 
 const createSchema = z.object({
   invoice_id: z.string().uuid(),
@@ -70,6 +71,23 @@ export async function POST(request: NextRequest) {
       method: body.method,
       referenceNumber: body.reference_number,
       notes: body.notes,
+    });
+
+    await recordAuditAfterCommit({
+      actor: { id: user.id, name: user.full_name },
+      action: "ap_payment.create",
+      entity: "ap_payment",
+      entityId: result.payment.id,
+      entityLabel: result.payment.payment_no,
+      after: {
+        status: result.payment.status,
+        amount: result.payment.amount,
+        invoice_id: body.invoice_id,
+        method: result.payment.method,
+        payment_date: result.payment.payment_date,
+        vendor_payment_id: result.payment.vendor_payment_id,
+      },
+      ...requestMeta(request),
     });
 
     const base = "Pembayaran AP berhasil dicatat";

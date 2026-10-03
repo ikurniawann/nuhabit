@@ -19,6 +19,9 @@ export type PosActiveOffer = {
   volume_min: number | null;
   discount_type: string | null;
   discount_value: number | null;
+  /** Hanya aktif setelah kode pembukanya diketik di kolom promo kasir. */
+  requires_code?: boolean;
+  is_exclusive?: boolean;
   items: Array<{
     role: string;
     product_id: string;
@@ -28,23 +31,30 @@ export type PosActiveOffer = {
   eval: OfferEvalRule;
 };
 
-async function fetchActiveOffers(): Promise<PosActiveOffer[]> {
-  const res = await fetch("/api/pos/offer-rules", { cache: "no-store" });
+async function fetchActiveOffers(customerId: string | null): Promise<PosActiveOffer[]> {
+  const qs = customerId ? `?customer_id=${encodeURIComponent(customerId)}` : "";
+  const res = await fetch(`/api/pos/offer-rules${qs}`, { cache: "no-store" });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.error || "Gagal memuat promo");
   return body.data ?? [];
 }
 
-export function usePosActiveOffers(enabled = true) {
+/** customerId mengisi kuota per member supaya pratinjau = hitungan server. */
+export function usePosActiveOffers(enabled = true, customerId: string | null = null) {
   return useQuery({
-    queryKey: ["pos", "offer-rules", "active"],
-    queryFn: fetchActiveOffers,
+    queryKey: ["pos", "offer-rules", "active", customerId],
+    queryFn: () => fetchActiveOffers(customerId),
     enabled,
     staleTime: 60_000,
   });
 }
 
 export function offerBannerBlurb(offer: PosActiveOffer): string {
+  const blurb = baseOfferBlurb(offer);
+  return offer.requires_code ? `Pakai kode · ${blurb}` : blurb;
+}
+
+function baseOfferBlurb(offer: PosActiveOffer): string {
   if (offer.description?.trim()) return offer.description.trim();
   if (offer.offer_type === "bundle") {
     const comps = offer.items

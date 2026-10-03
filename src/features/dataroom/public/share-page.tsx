@@ -233,7 +233,7 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
             <button
               type="button"
               onClick={() => (c.id === root.id ? onBackToRoot() : onOpenFolder(c.id))}
-              className={cn("rounded-md px-2 py-1 hover:bg-accent", idx === crumbs.length - 1 && "font-medium text-primary")}
+              className={cn("rounded-md px-2 py-1 hover:bg-muted", idx === crumbs.length - 1 && "font-medium text-primary")}
             >
               {c.name}
             </button>
@@ -245,7 +245,7 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
       ) : (
         <ul className="divide-y">
           {items.map((item) => (
-            <li key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-accent/40">
+            <li key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40">
               <ItemIcon kind={item.kind} mime={item.mime} name={item.name} className="h-7 w-7 shrink-0" />
               <button
                 type="button"

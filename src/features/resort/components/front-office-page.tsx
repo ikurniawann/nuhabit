@@ -119,7 +119,7 @@ export function ResortFrontOfficePage() {
                           .filter((s) => s !== room.status)
                           .map((s) => (
                             <button key={s} type="button" onClick={() => setRoomStatus(room, s)}
-                              className="rounded-md border px-2 py-1 text-[11px] hover:bg-accent">
+                              className="rounded-md border px-2 py-1 text-[11px] hover:bg-muted">
                               → {ROOM_STATUS_LABEL[s]}
                             </button>
                           ))}
@@ -160,7 +160,7 @@ function GuestList({ title, icon, rows, empty, onOpen, showRooms }: {
           <ul className="divide-y">
             {rows.map((r) => (
               <li key={r.id}>
-                <button type="button" onClick={() => onOpen(r.id)} className="w-full px-4 py-3 text-left hover:bg-accent/50">
+                <button type="button" onClick={() => onOpen(r.id)} className="w-full px-4 py-3 text-left hover:bg-muted/50">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate font-medium">{r.guest_name}</p>
                     <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium", STATUS_CLASS[r.status])}>

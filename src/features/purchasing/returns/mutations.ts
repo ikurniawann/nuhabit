@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { PurchaseReturnFormData } from "@/types/purchasing";
-import { createReturn, approveReturn, rejectReturn, updateReturn } from "./api";
+import { createReturn, approveReturn, rejectReturn, updateReturn, reviseReturn } from "./api";
 import { returnsQueryKeys } from "./query-keys";
 
 export const useCreateReturn = () => {
@@ -45,6 +45,16 @@ export const useUpdateReturn = () => {
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: returnsQueryKeys.all });
       queryClient.invalidateQueries({ queryKey: returnsQueryKeys.detail(id) });
+    },
+  });
+};
+
+export const useReviseReturn = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reviseReturn(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: returnsQueryKeys.all });
     },
   });
 };

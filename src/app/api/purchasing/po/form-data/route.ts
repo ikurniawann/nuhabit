@@ -152,17 +152,35 @@ export async function GET(request: NextRequest) {
       db.from("suppliers").select("id, kode, nama_supplier").eq("is_active", true).order("nama_supplier"),
       db
         .from("v_raw_materials_stock")
-        .select("id, kode, nama, satuan_besar_id, satuan_besar_nama, avg_cost")
+        .select("id, kode, nama, satuan_besar_id, satuan_besar_nama, satuan_kecil_id, konversi_factor, avg_cost")
         .eq("is_active", true)
         .order("nama"),
       db.from("units").select("id, nama, kode").eq("is_active", true).order("nama"),
     ]);
 
+    // Pack per bahan baku: baris PO baru memakai pack beli bawaan.
+    const materialRows = (materials || []) as { id: string }[];
+    const materialIds = materialRows.map((material) => material.id);
+    const { data: packs } = materialIds.length
+      ? await db
+          .from("raw_material_unit_conversions")
+          .select("raw_material_id, satuan_id, qty_in_base_unit, is_base, is_purchase_default, is_active")
+          .in("raw_material_id", materialIds)
+          .eq("is_active", true)
+      : { data: [] };
+    const packsByMaterial = new Map<string, NonNullable<typeof packs>>();
+    for (const pack of packs || []) {
+      packsByMaterial.set(pack.raw_material_id, [...(packsByMaterial.get(pack.raw_material_id) || []), pack]);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         suppliers: suppliers || [],
-        materials: materials || [],
+        materials: materialRows.map((material) => ({
+          ...material,
+          unit_conversions: packsByMaterial.get(material.id) || [],
+        })),
         units: units || [],
       },
     });

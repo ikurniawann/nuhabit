@@ -12,15 +12,8 @@ export const OTP_MAX_ATTEMPTS = 5;
 export const OTP_RATE_LIMIT_COUNT = 3;
 export const OTP_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 menit
 
-/** Normalisasi nomor HP ke digit 62xxx (selaras buildWaLink Fonnte). */
-export function normalizePhoneDigits(phone: string | null | undefined): string | null {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  if (!digits) return null;
-  const normalized = digits.startsWith("0") ? `62${digits.slice(1)}` : digits;
-  // panjang wajar nomor Indonesia: 10-15 digit
-  if (normalized.length < 10 || normalized.length > 15) return null;
-  return normalized;
-}
+// Dipindah ke ./phone supaya bisa dipakai komponen klien tanpa modul crypto.
+export { normalizePhoneDigits } from "./phone";
 
 export function generateOtpCode(): string {
   // randomInt crypto-safe; pad supaya selalu 6 digit

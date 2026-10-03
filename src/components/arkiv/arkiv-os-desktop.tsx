@@ -79,6 +79,7 @@ import {
   Bell,
   Bot,
   Boxes,
+  Dumbbell,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -159,7 +160,7 @@ type DesktopModule = {
 type DesktopIconPosition = { left: number; top: number };
 type WidgetVisibility = { calendar: boolean } & Record<MonitorWidgetKey, boolean>;
 
-const pinkAccent = "from-pink-300 via-pink-500 to-rose-600";
+const brandTile = "bg-accent text-accent-foreground";
 // Merek instance (multi-perusahaan) — jangan tulis nama langsung di JSX.
 const BRAND = brandName();
 const BRAND_OS = brandOsName();
@@ -172,6 +173,14 @@ const modules: DesktopModule[] = [
     loginHref: "/login?redirect=/dashboard&module=dashboard",
     dashboardHref: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    name: "Gym & Kelas",
+    subtitle: "HYROX & Membership",
+    description: "Jadwal kelas, booking, check-in member, paket kredit, coach, dan latihan HYROX.",
+    loginHref: "/login?redirect=/dashboard/gym/schedule&module=gym",
+    dashboardHref: "/dashboard/gym/schedule",
+    icon: Dumbbell,
   },
   {
     name: "Area Karyawan",
@@ -932,7 +941,7 @@ export default function ArkivOsDesktop() {
         setContextMenu({ x: event.clientX, y: event.clientY, desktop: true });
       }}
       style={motionStyle}
-      className="relative min-h-dvh overflow-hidden bg-[#0b1020] text-white"
+      className="relative min-h-dvh overflow-hidden bg-ink text-white"
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -1008,15 +1017,28 @@ export default function ArkivOsDesktop() {
         )}
       </section>
 
-      <nav className="fixed bottom-3 left-1/2 z-[75] flex max-w-[calc(100vw-12px)] -translate-x-1/2 items-end gap-1 overflow-x-auto rounded-3xl border border-white/18 bg-white/14 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,.38)] backdrop-blur-2xl sm:bottom-5 sm:gap-2 sm:rounded-[28px] sm:p-2">
-        <DockButton label="Launchpad" icon={MonitorDot} active={showLibrary} onClick={() => setShowLibrary((value) => !value)} />
+      <nav
+        aria-label="Dock"
+        className="fixed bottom-3 left-1/2 z-[75] flex max-w-[calc(100vw-12px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-[22px] border border-white/10 bg-ink/75 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,.08),0_24px_60px_rgba(0,0,0,.5)] backdrop-blur-2xl sm:bottom-5 sm:gap-1.5 sm:overflow-visible sm:rounded-[26px] sm:p-2"
+      >
+        {/* Tombol merek = Launchpad; dulu ada ikon "Apps" terpisah yang membuka panel yang sama. */}
+        <button
+          type="button"
+          aria-label="Applications"
+          title="Applications"
+          aria-pressed={showLibrary}
+          onClick={() => setShowLibrary((value) => !value)}
+          className={`group relative grid size-10 shrink-0 place-items-center rounded-xl bg-forest shadow-lg ring-1 transition duration-200 hover:-translate-y-1 sm:size-12 sm:rounded-2xl ${showLibrary ? "ring-accent" : "ring-white/10 hover:ring-accent/60"}`}
+        >
+          <Image src="/brand/mark-lime.png" alt="" width={28} height={28} className="w-6 transition group-hover:scale-110 sm:w-7" />
+          <DockTooltip label="Applications" />
+        </button>
         {/* Pintasan per-modul sengaja TIDAK ada di dock: daftar lengkapnya
             sudah di Launchpad / folder Applications, dan 14 ikon membuat dock
             penuh. Jendela yang sedang terbuka tetap muncul sebagai chip di
             ujung dock supaya bisa diraih meski tertimbun. */}
         <DockButton label="Do" icon={Bot} active={showAssistant} running={anyOpen(["Do"])} onClick={() => focusOrOpen(["Do"], () => setShowAssistant(true))} />
-        <DockButton label="Apps" icon={Grid3X3} active={showLibrary} onClick={() => setShowLibrary((value) => !value)} />
-        <div className="mx-0.5 h-7 w-px shrink-0 bg-white/18 sm:mx-1 sm:h-9" />
+        <div className="mx-0.5 h-6 w-px shrink-0 bg-white/12 sm:mx-1 sm:h-8" />
         {notifHistory.length > 0 && (
           <DockButton label={`Notifications (${notifHistory.length})`} icon={Bell} active={showNotifications} onClick={() => setShowNotifications((value) => !value)} />
         )}
@@ -1024,7 +1046,7 @@ export default function ArkivOsDesktop() {
         <DockButton label="Settings" icon={Settings} active={showSettings} running={anyOpen(["System Settings"])} onClick={() => focusOrOpen(["System Settings"], () => setShowSettings(true))} />
         {openWindowList.length > 0 && (
           <>
-            <div className="mx-0.5 h-7 w-px shrink-0 bg-white/18 sm:mx-1 sm:h-9" />
+            <div className="mx-0.5 h-6 w-px shrink-0 bg-white/12 sm:mx-1 sm:h-8" />
             {/* Daftar jendela terbuka (seperti dock macOS): yang dikecilkan
                 diredupkan, yang sedang aktif diberi cincin. */}
             {openWindowList.map((win) => {
@@ -1036,17 +1058,17 @@ export default function ArkivOsDesktop() {
                   title={win.minimized ? `Tampilkan ${win.title}` : `Ke ${win.title}`}
                   aria-label={win.minimized ? `Tampilkan ${win.title}` : `Ke ${win.title}`}
                   onClick={() => windowManager.api.focus(win.id)}
-                  className={`group relative grid h-10 shrink-0 place-items-center rounded-xl border px-2.5 text-[11px] font-semibold shadow-lg transition duration-200 hover:-translate-y-1 hover:bg-white/24 sm:h-12 sm:rounded-2xl sm:px-3 ${
+                  className={`group relative grid h-10 shrink-0 place-items-center rounded-xl border px-2.5 text-[11px] font-semibold transition duration-200 hover:-translate-y-1 hover:bg-white/12 sm:h-12 sm:rounded-2xl sm:px-3 ${
                     isActive
-                      ? "border-pink-200/50 bg-white/22 text-white"
+                      ? "border-accent/45 bg-white/10 text-white"
                       : win.minimized
-                        ? "border-white/10 bg-white/6 text-white/55"
-                        : "border-white/14 bg-white/10 text-white/85"
+                        ? "border-white/6 bg-white/[0.03] text-white/50"
+                        : "border-white/8 bg-white/[0.06] text-white/85"
                   }`}
                 >
                   <span className="max-w-[92px] truncate">{win.title}</span>
                   {!win.minimized && (
-                    <span className={`absolute -bottom-1 size-1.5 rounded-full ${isActive ? "bg-pink-200" : "bg-white/60"}`} />
+                    <span className={`absolute -bottom-1 h-1 rounded-full transition-all ${isActive ? "w-3 bg-accent" : "w-1 bg-white/55"}`} />
                   )}
                 </button>
               );
@@ -1057,14 +1079,14 @@ export default function ArkivOsDesktop() {
 
       {showAssistantShortcut && (
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-[92px]">
-          <div className="arkiv-assistant-shortcut-glow absolute bottom-[46px] h-36 w-[min(920px,calc(100vw-24px))] rounded-[48px] bg-gradient-to-r from-pink-400/26 via-orange-300/32 to-rose-400/26 blur-3xl" />
+          <div className="arkiv-assistant-shortcut-glow absolute bottom-[46px] h-36 w-[min(920px,calc(100vw-24px))] rounded-[48px] bg-gradient-to-r from-pink-300/18 via-pink-200/24 to-pink-400/18 blur-3xl" />
           <form
             ref={assistantShortcutRef}
             onSubmit={openAssistantFromShortcut}
             className="arkiv-assistant-shortcut-shell pointer-events-auto relative flex w-[min(720px,calc(100vw-32px))] items-center gap-3 rounded-[24px] border border-white/22 bg-white/12 px-4 py-3 shadow-[0_26px_90px_rgba(0,0,0,.48)] backdrop-blur-2xl focus-within:border-pink-200/55"
           >
-            <div className={`grid size-9 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}>
-              <Bot className="size-5 text-white" />
+            <div className={`grid size-9 shrink-0 place-items-center rounded-2xl ${brandTile}`}>
+              <Bot className="size-5" />
             </div>
             <label className="relative flex min-w-0 flex-1 cursor-text items-center">
               <span className="pointer-events-none min-w-0 truncate text-[15px] font-medium text-white">
@@ -1097,7 +1119,7 @@ export default function ArkivOsDesktop() {
             <button
               type="submit"
               disabled={!assistantShortcutInput.trim()}
-              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 to-rose-600 text-white shadow-lg transition hover:from-pink-300 hover:to-rose-500 disabled:cursor-not-allowed disabled:opacity-45"
+              className="grid size-10 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-lg transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
               title="Buka Do"
             >
               <Send className="size-4" />
@@ -1276,7 +1298,7 @@ function CalendarWidget({ date, onClose }: { date: Date; onClose: () => void }) 
               <div
                 key={`${cell ?? "blank"}-${index}`}
                 className={`grid aspect-square place-items-center rounded-xl text-sm ${
-                  cell ? (isToday ? "bg-pink-600 font-bold text-white shadow-lg shadow-pink-900/30" : "bg-black/14 text-white/78") : ""
+                  cell ? (isToday ? "bg-accent font-bold text-accent-foreground shadow-lg" : "bg-black/14 text-white/78") : ""
                 }`}
               >
                 {cell}
@@ -1294,16 +1316,28 @@ function DockButton({ label, icon: Icon, onClick, active = false, running = fals
     <button
       type="button"
       aria-label={label}
-      title={label}
+      aria-pressed={active}
       onClick={onClick}
-      className={`group relative grid size-10 shrink-0 place-items-center rounded-xl border border-white/14 text-white shadow-lg transition duration-200 hover:-translate-y-3 hover:scale-125 hover:bg-white/24 sm:size-12 sm:rounded-2xl ${active ? "bg-white/24 ring-1 ring-pink-200/50" : "bg-white/14"}`}
+      className={`group relative grid size-10 shrink-0 place-items-center rounded-xl transition duration-200 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none sm:size-12 sm:rounded-2xl ${
+        active
+          ? "bg-accent text-accent-foreground shadow-[0_8px_24px_rgba(218,255,89,.28)]"
+          : "border border-white/8 bg-white/[0.06] text-white/80 hover:bg-white/12 hover:text-white"
+      }`}
     >
       <Icon className="size-4 transition group-hover:scale-110 sm:size-5" />
-      {/* Titik = jendelanya memang terbuka (running), bukan sekadar sedang di-hover. */}
-      {(active || running) && (
-        <span className={`absolute -bottom-1 size-1.5 rounded-full ${active ? "bg-pink-200 shadow-[0_0_12px_rgba(244,114,182,.9)]" : "bg-white/70"}`} />
-      )}
+      <DockTooltip label={label} />
+      {/* Titik = jendelanya terbuka (running) tapi tidak sedang aktif. */}
+      {running && !active && <span className="absolute -bottom-1 size-1 rounded-full bg-white/60" />}
     </button>
+  );
+}
+
+/** Label di atas ikon saat hover/fokus (sm+; di ponsel dock bisa digulir dan memotongnya). */
+function DockTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute -top-10 left-1/2 hidden -translate-x-1/2 translate-y-1 rounded-lg bg-ink px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-white opacity-0 shadow-lg ring-1 ring-white/10 transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 sm:block">
+      {label}
+    </span>
   );
 }
 
@@ -1659,8 +1693,8 @@ function ModuleWindow({ module, isLoggedIn, onClose, onOpen }: { module: Desktop
       <div className="p-6">
         <div className="mb-5 flex items-center gap-4">
           <div className="relative grid size-16 place-items-center rounded-[22px] border border-white/25 bg-white/15">
-            <div className={`absolute inset-1 rounded-[18px] bg-gradient-to-br ${pinkAccent}`} />
-            <Icon className="relative size-8 text-white" />
+            <div className={`absolute inset-1 rounded-[18px] ${brandTile}`} />
+            <Icon className="relative size-8 text-accent-foreground" />
           </div>
           <div>
             <h2 className="text-2xl font-semibold tracking-tight">{module.name}</h2>
@@ -1704,8 +1738,8 @@ function ModuleOpenChoiceModal({
         <div className="flex items-start justify-between border-b border-white/10 p-5">
           <div className="flex items-center gap-4">
             <div className="relative grid size-14 place-items-center rounded-2xl border border-white/25 bg-white/12">
-              <div className={`absolute inset-1 rounded-[18px] bg-gradient-to-br ${pinkAccent}`} />
-              <Icon className="relative size-7 text-white" />
+              <div className={`absolute inset-1 rounded-[18px] ${brandTile}`} />
+              <Icon className="relative size-7 text-accent-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">{module.name}</h2>
@@ -1728,7 +1762,7 @@ function ModuleOpenChoiceModal({
             onClick={onOpenInside}
             className="group flex w-full items-center gap-4 rounded-2xl border border-pink-300/30 bg-pink-500/16 p-4 text-left transition hover:border-pink-200/50 hover:bg-pink-500/24"
           >
-            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-pink-500 text-white shadow-lg shadow-pink-950/30">
+            <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-lg">
               <MonitorDot className="size-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -1888,7 +1922,7 @@ function AppLibrary({ onClose, onOpen }: { onClose: () => void; onOpen: (module:
           const Icon = module.icon;
           return (
             <button key={module.name} disabled={module.disabled} onClick={() => onOpen(module)} className="rounded-3xl bg-white/8 p-4 text-center transition hover:bg-white/14 disabled:cursor-not-allowed disabled:opacity-60">
-              <div className={`mx-auto mb-3 grid size-14 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Icon className="size-7" /></div>
+              <div className={`mx-auto mb-3 grid size-14 place-items-center rounded-2xl ${brandTile}`}><Icon className="size-7" /></div>
               <div className="text-sm font-medium">{module.name}</div>
               <div className="text-[11px] text-white/45">{module.subtitle}</div>
             </button>
@@ -1932,8 +1966,8 @@ function ApplicationFolderModal({ onClose, onOpen, onComingSoon }: { onClose: ()
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition-all duration-200 hover:bg-white/10 hover:shadow-xl hover:shadow-pink-500/20"
               >
                 {/* Icon dengan shadow dan gradient */}
-                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
-                  <Icon className="size-8 text-white drop-shadow-lg" />
+                <div className="relative grid size-16 place-items-center rounded-3xl bg-accent text-accent-foreground shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
+                  <Icon className="size-8" />
                 </div>
                 
                 {/* Label */}
@@ -1955,8 +1989,8 @@ function ApplicationFolderModal({ onClose, onOpen, onComingSoon }: { onClose: ()
                 }}
                 className="group flex flex-col items-center gap-3 rounded-3xl p-4 transition-all duration-200 hover:bg-white/10 hover:shadow-xl hover:shadow-pink-500/20"
               >
-                <div className="relative grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
-                  <Icon className="size-8 text-white drop-shadow-lg" />
+                <div className="relative grid size-16 place-items-center rounded-3xl bg-accent text-accent-foreground shadow-lg transition-all duration-200 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-pink-500/40">
+                  <Icon className="size-8" />
                   <span className="absolute -right-1 -top-1 rounded-full border border-white/40 bg-amber-300 px-1.5 py-0.5 text-[9px] font-bold text-slate-950">Soon</span>
                 </div>
                 <div className="text-center">
@@ -2060,7 +2094,7 @@ function IntegrationSettingsNative() {
             const Icon = item.icon;
             return (
               <button key={item.name} className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/8 p-4 text-left transition hover:bg-white/12">
-                <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Icon className="size-5" /></div>
+                <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}><Icon className="size-5" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{item.name}</div>
                   <div className="mt-1 text-xs text-white/45">{item.note}</div>
@@ -2118,8 +2152,8 @@ function ApplicationWindow({ module, url, onClose }: { module: DesktopModule; ur
             {/* Loading Overlay */}
             {isLoading && (
               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <div className="mb-4 grid size-16 place-items-center rounded-2xl bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 shadow-xl">
-                  <Loader2 className="size-8 animate-spin text-white" />
+                <div className="mb-4 grid size-16 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-xl">
+                  <Loader2 className="size-8 animate-spin" />
                 </div>
                 <p className="text-sm font-medium text-gray-600">Loading {module.name}...</p>
               </div>
@@ -2325,7 +2359,7 @@ function ReportsExplorer({ isLoggedIn }: { isLoggedIn: boolean }) {
               onClick={() => { setSelected(key); setMessage(null); }}
               className={`flex items-center gap-3 rounded-3xl border p-4 text-left transition ${active ? "border-pink-300/70 bg-pink-500/20 ring-1 ring-pink-300/60" : "border-white/10 bg-white/8 hover:bg-white/12"}`}
             >
-              <div className={`grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><FileSpreadsheet className="size-5" /></div>
+              <div className={`grid size-11 shrink-0 place-items-center rounded-2xl ${brandTile}`}><FileSpreadsheet className="size-5" /></div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold">{meta.label}</div>
                 <div className="mt-1 line-clamp-2 text-xs text-white/45">{meta.description}</div>
@@ -2365,7 +2399,7 @@ function ReportsExplorer({ isLoggedIn }: { isLoggedIn: boolean }) {
               type="button"
               onClick={download}
               disabled={!isLoggedIn || busy}
-              className={`inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r ${pinkAccent} px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-500/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50`}
+              className={`inline-flex items-center gap-2 rounded-2xl ${brandTile} px-4 py-2.5 text-sm font-semibold shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               {busy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
               {busy ? "Menyiapkan Excel…" : "Download Excel"}
@@ -2966,7 +3000,7 @@ function AiAssistantWindow({
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="border-b border-white/10 p-3">
             <div className="flex items-center gap-3">
-              <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}>
+              <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}>
                 <Bot className="size-6" />
               </div>
               <div className="min-w-0 flex-1">
@@ -3010,8 +3044,8 @@ function AiAssistantWindow({
             </div>
           ) : view === "landing" ? (
             <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-              <div className="mb-5 grid size-16 place-items-center rounded-3xl bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 shadow-xl">
-                <Bot className="size-8 text-white" />
+              <div className="mb-5 grid size-16 place-items-center rounded-3xl bg-accent text-accent-foreground shadow-xl">
+                <Bot className="size-8" />
               </div>
               <h3 className="text-xl font-bold text-white/90">Do</h3>
               <p className="mt-2 max-w-sm text-sm leading-6 text-white/55">
@@ -3314,7 +3348,7 @@ function OsAccountPopup({
 
         <div className="p-5">
           <div className="rounded-3xl border border-white/10 bg-white/8 p-4 text-center">
-            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 text-lg font-bold text-white shadow-lg">
+            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-accent text-accent-foreground text-lg font-bold shadow-lg">
               {isLoggedIn ? account?.fullName.slice(0, 1).toUpperCase() : "G"}
             </div>
             <div className="font-semibold">{isLoggedIn ? account?.fullName : "Guest"}</div>
@@ -3534,14 +3568,14 @@ function SystemSettings({
     <WindowShell title="System Settings" onClose={onClose} className="left-1/2 top-16 w-[min(760px,calc(100vw-32px))] -translate-x-1/2">
       <div className="grid gap-4 p-5 md:grid-cols-[220px_1fr]">
         <aside className="rounded-3xl border border-white/10 bg-white/8 p-4">
-          <div className={`mb-4 grid size-12 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Settings className="size-6" /></div>
+          <div className={`mb-4 grid size-12 place-items-center rounded-2xl ${brandTile}`}><Settings className="size-6" /></div>
           <div className="font-semibold">{BRAND_OS} Settings</div>
           <div className="mt-1 text-xs leading-5 text-white/50">Theme, widgets, sound, Do, dan desktop preferences.</div>
         </aside>
         <section className="space-y-3">
           <div className="rounded-3xl border border-white/10 bg-white/8 p-4">
             <div className="mb-4 flex items-center gap-3">
-              <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Bot className="size-5" /></div>
+              <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}><Bot className="size-5" /></div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold">Do</div>
                 <div className="truncate text-xs leading-5 text-white/45">{assistantSettings.model}</div>
@@ -3615,7 +3649,7 @@ function SystemSettings({
             const Icon = item.icon;
             return (
               <button key={item.title} onClick={item.action} className="flex w-full items-center gap-3 rounded-3xl border border-white/10 bg-white/8 p-4 text-left transition hover:bg-white/12">
-                <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Icon className="size-5" /></div>
+                <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}><Icon className="size-5" /></div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold">{item.title}</div>
                   <div className="text-xs leading-5 text-white/45">{item.description}</div>
@@ -3625,7 +3659,7 @@ function SystemSettings({
             );
           })}
           <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/8 p-4">
-            <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><SoundIcon className="size-5" /></div>
+            <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}><SoundIcon className="size-5" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold">Sound Effects</div>
               <div className="text-xs leading-5 text-white/45">Subtle click sound ala desktop OS. Default off.</div>
@@ -3673,7 +3707,7 @@ function WidgetSettings({
           <div className="mt-1 text-xs leading-5 text-white/50">Calendar Widget aktif secara default. Widget monitoring bisa diaktifkan dan diatur urutannya dengan tombol panah — urutan tersimpan di perangkat ini.</div>
         </div>
         <div className="flex items-center gap-3 rounded-3xl border border-white/10 bg-white/8 p-4">
-          <div className={`grid size-11 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><CalendarDays className="size-5" /></div>
+          <div className={`grid size-11 place-items-center rounded-2xl ${brandTile}`}><CalendarDays className="size-5" /></div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold">{calendar.title}</div>
             <div className="text-xs leading-5 text-white/45">{calendar.description}</div>
@@ -3734,7 +3768,7 @@ function WidgetSettings({
                             <ChevronDown className="size-4" />
                           </button>
                         </div>
-                        <div className={`grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${pinkAccent}`}><Activity className="size-5" /></div>
+                        <div className={`grid size-11 shrink-0 place-items-center rounded-2xl ${brandTile}`}><Activity className="size-5" /></div>
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-semibold">{item.title}</div>
                           <div className="text-xs leading-5 text-white/45">{item.description}</div>
@@ -4035,7 +4069,7 @@ function LockScreen({
   return (
     <div className="fixed inset-0 z-[200] grid place-items-center bg-slate-950/80 backdrop-blur-2xl">
       <div className="w-[min(380px,calc(100vw-32px))] text-center text-white">
-        <div className="mx-auto mb-4 grid size-20 place-items-center rounded-full bg-gradient-to-br from-pink-300 via-pink-500 to-rose-600 text-2xl font-bold shadow-2xl">
+        <div className="mx-auto mb-4 grid size-20 place-items-center rounded-full bg-accent text-accent-foreground text-2xl font-bold shadow-2xl">
           {account.fullName.slice(0, 1).toUpperCase()}
         </div>
         <div className="text-lg font-semibold">{account.fullName}</div>
@@ -4094,7 +4128,7 @@ function AboutArkiv({ onClose }: { onClose: () => void }) {
   return (
     <WindowShell title={`About ${BRAND}`} onClose={onClose} className="left-1/2 top-24 w-[min(420px,calc(100vw-32px))] -translate-x-1/2">
       <div className="p-6 text-center">
-        <div className={`mx-auto mb-4 grid size-16 place-items-center rounded-3xl bg-gradient-to-br ${pinkAccent}`}><MonitorDot className="size-8" /></div>
+        <div className={`mx-auto mb-4 grid size-16 place-items-center rounded-3xl ${brandTile}`}><MonitorDot className="size-8" /></div>
         <h2 className="text-xl font-semibold">{BRAND}</h2>
         <p className="mt-2 text-sm leading-6 text-white/60">Desktop portal untuk HRIS, Procurement, POS, CRM, dan Do.</p>
         <div className="mt-5 rounded-2xl bg-white/8 p-3 text-xs text-white/50">Version 1.0 · macOS-inspired shell</div>

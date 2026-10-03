@@ -12,12 +12,16 @@ async function parseCrmResponse<T>(response: Response, fallbackError: string): P
 
 export function buildBadgePayload(badge: Badge, overrides: Partial<Badge> = {}): SaveBadgePayload {
   const next = { ...badge, ...overrides };
+  const threshold = Number(next.threshold);
   return {
     id: next.id,
     code: next.code,
     name: next.name,
     image_url: next.image_url || null,
+    metric: next.metric,
     min_lifetime_xp: Math.max(0, Number(next.min_lifetime_xp) || 0),
+    threshold: Number.isFinite(threshold) && threshold > 0 ? threshold : null,
+    bonus_xp: Math.max(0, Number(next.bonus_xp) || 0),
     is_active: next.is_active,
   };
 }

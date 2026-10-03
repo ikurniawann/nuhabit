@@ -44,24 +44,46 @@ import {
   useRemoveOptout,
   useUpdateCampaignConfig,
 } from "../queries";
-import type { CrmCampaign, SegmentPreview } from "../types";
+import type { CampaignChannel, CrmCampaign, SegmentPreview } from "../types";
 
 const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 const STATUS_BADGES: Record<CrmCampaign["status"], string> = {
   draft: "bg-gray-100 text-gray-600",
+  scheduled: "bg-violet-100 text-violet-700",
   sending: "bg-blue-100 text-blue-700",
   paused: "bg-amber-100 text-amber-700",
   done: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-red-100 text-red-600",
+  failed: "bg-red-100 text-red-700",
 };
 const STATUS_LABELS: Record<CrmCampaign["status"], string> = {
   draft: "Draft",
+  scheduled: "Terjadwal",
   sending: "Mengirim",
   paused: "Dijeda",
   done: "Selesai",
   cancelled: "Dibatalkan",
+  failed: "Gagal",
 };
+const CHANNEL_LABELS: Record<CampaignChannel, string> = { wa: "WhatsApp", in_app: "In-app" };
+
+const formatWaktu = (iso: string) =>
+  new Date(iso).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
+  });
+
+/** Nilai awal "Kirim nanti": besok pukul 10.00 waktu lokal. */
+function defaultSendAt(): string {
+  const d = new Date(Date.now() + 86_400_000);
+  d.setHours(10, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 interface CampaignForm {
   name: string;
@@ -75,6 +97,12 @@ interface CampaignForm {
   promo_mode: "public" | "batch";
   voucher_prefix: string;
   daily_cap: string;
+  channels: CampaignChannel[];
+  inapp_title: string;
+  image_url: string;
+  link_url: string;
+  /** "" = simpan draft; selain itu nilai datetime-local "Kirim nanti". */
+  send_at: string;
 }
 
 const EMPTY_FORM: CampaignForm = {
@@ -89,6 +117,11 @@ const EMPTY_FORM: CampaignForm = {
   promo_mode: "batch",
   voucher_prefix: "WIN",
   daily_cap: "",
+  channels: ["wa"],
+  inapp_title: "",
+  image_url: "",
+  link_url: "",
+  send_at: "",
 };
 
 const NO_PROMO = "tanpa-promo" as const;
@@ -100,6 +133,7 @@ export function CampaignsPage() {
   const promoOptionsQuery = usePromoOptions();
   const actionMutation = useCampaignAction();
   const updateConfig = useUpdateCampaignConfig();
+  const [optoutInput, setOptoutInput] = useState("");
   const addOptoutMutation = useAddOptout(() => setOptoutInput(""));
   const removeOptoutMutation = useRemoveOptout();
 
@@ -110,7 +144,6 @@ export function CampaignsPage() {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [reportId, setReportId] = useState<string | null>(null);
   const [capEdit, setCapEdit] = useState<string | null>(null);
-  const [optoutInput, setOptoutInput] = useState("");
 
   const createMutation = useCreateCampaign(() => {
     setCreateOpen(false);
@@ -145,7 +178,16 @@ export function CampaignsPage() {
   };
 
   const withPromo = form.promo_campaign_id !== "";
+  const inApp = form.channels.includes("in_app");
+  const toggleChannel = (channel: CampaignChannel, on: boolean) =>
+    set({
+      channels: on
+        ? [...new Set([...form.channels, channel])]
+        : form.channels.filter((c) => c !== channel),
+    });
   const formInvalid =
+    form.channels.length === 0 ||
+    (form.send_at !== "" && Number.isNaN(new Date(form.send_at).getTime())) ||
     form.name.trim().length < 2 ||
     form.message_template.trim().length < 10 ||
     (withPromo &&
@@ -168,6 +210,11 @@ export function CampaignsPage() {
           ? form.voucher_prefix.trim().toUpperCase()
           : null,
       daily_cap: form.daily_cap.trim() === "" ? null : Number(form.daily_cap),
+      channels: form.channels,
+      inapp_title: inApp ? form.inapp_title.trim() || null : null,
+      image_url: inApp ? form.image_url.trim() || null : null,
+      link_url: inApp ? form.link_url.trim() || null : null,
+      scheduled_at: form.send_at ? new Date(form.send_at).toISOString() : null,
     });
   };
 
@@ -179,10 +226,12 @@ export function CampaignsPage() {
   return (
     <div className="space-y-6">
       <div className="border-b border-gray-200/70 pb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Kampanye WA</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Kampanye</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Win-back & promo tersegmentasi ke member. Pengiriman berjalan pelan
-          (anti-ban), menghormati jam 8–21 WIB, plafon harian, dan opt-out.
+          Win-back & promo tersegmentasi ke member lewat WhatsApp, notifikasi
+          in-app, atau keduanya. WA berjalan pelan (anti-ban), menghormati jam
+          8–21 WIB, plafon harian, dan opt-out; in-app langsung masuk kotak
+          masuk portal.
         </p>
       </div>
 
@@ -244,7 +293,7 @@ export function CampaignsPage() {
       <PurchasingListSection
         icon={MegaphoneIcon}
         title="Kampanye"
-        description="Draft → Mulai (bangun antrean) → terkirim bertahap → laporan funnel."
+        description="Draft atau terjadwal → Mulai (bangun antrean) → terkirim → laporan. Kampanye terjadwal dimulai otomatis pada waktunya."
         toolbar={
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             Buat Kampanye
@@ -285,7 +334,17 @@ export function CampaignsPage() {
                         {campaign.daily_cap
                           ? ` · cap ${campaign.daily_cap}/hari`
                           : ""}
+                        {" · "}
+                        {(campaign.channels ?? ["wa"]).map((c) => CHANNEL_LABELS[c]).join(" + ")}
                       </p>
+                      {campaign.status === "scheduled" && campaign.scheduled_at && (
+                        <p className="text-xs text-violet-700">
+                          Dikirim {formatWaktu(campaign.scheduled_at)} WIB
+                        </p>
+                      )}
+                      {campaign.status === "failed" && campaign.failure_reason && (
+                        <p className="text-xs text-red-600">{campaign.failure_reason}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -304,11 +363,15 @@ export function CampaignsPage() {
                           ({campaign.failed_count} gagal)
                         </span>
                       ) : null}
+                      {Number(campaign.inapp_count) > 0 && (
+                        <span className="block text-xs text-gray-500">
+                          {campaign.inapp_count} in-app
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
-                        {(campaign.status === "draft" ||
-                          campaign.status === "paused") && (
+                        {["draft", "paused", "scheduled", "failed"].includes(campaign.status) && (
                           <Button
                             size="sm"
                             className="h-8 px-3"
@@ -317,13 +380,17 @@ export function CampaignsPage() {
                               actionMutation.mutate({
                                 id: campaign.id,
                                 action:
-                                  campaign.status === "paused"
+                                  campaign.status === "paused" || campaign.status === "failed"
                                     ? "resume"
                                     : "start",
                               })
                             }
                           >
-                            Mulai
+                            {campaign.status === "scheduled"
+                              ? "Kirim sekarang"
+                              : campaign.status === "draft"
+                                ? "Mulai"
+                                : "Lanjutkan"}
                           </Button>
                         )}
                         {campaign.status === "sending" && (
@@ -340,6 +407,21 @@ export function CampaignsPage() {
                             }
                           >
                             Jeda
+                          </Button>
+                        )}
+                        {["draft", "scheduled", "sending", "paused", "failed"].includes(campaign.status) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-3 text-red-600"
+                            disabled={actionMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`Batalkan kampanye "${campaign.name}"? Antrean yang belum terkirim tidak akan dikirim.`)) {
+                                actionMutation.mutate({ id: campaign.id, action: "cancel" });
+                              }
+                            }}
+                          >
+                            Batalkan
                           </Button>
                         )}
                         <Button
@@ -422,7 +504,7 @@ export function CampaignsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Buat Kampanye WA</DialogTitle>
+            <DialogTitle>Buat Kampanye</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
@@ -514,6 +596,59 @@ export function CampaignsPage() {
                 <p className="mt-1 truncate text-xs text-gray-400">
                   Sampel: {preview.sample.map((s) => s.name).join(", ")}
                 </p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-gray-200/70 p-3">
+              <Label>Kanal</Label>
+              <div className="mt-2 flex flex-wrap gap-4">
+                {(["wa", "in_app"] as const).map((channel) => (
+                  <label key={channel} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4"
+                      checked={form.channels.includes(channel)}
+                      onChange={(e) => toggleChannel(channel, e.target.checked)}
+                    />
+                    {channel === "wa" ? "WhatsApp" : "Notifikasi in-app (portal member)"}
+                  </label>
+                ))}
+              </div>
+              {form.channels.length === 0 && (
+                <p className="mt-1 text-xs text-red-600">Pilih minimal satu kanal.</p>
+              )}
+              {inApp && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs text-gray-500">Judul notifikasi</Label>
+                    <Input
+                      placeholder={form.name || "Kosong = nama kampanye"}
+                      value={form.inapp_title}
+                      maxLength={120}
+                      onChange={(e) => set({ inapp_title: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">URL gambar (opsional)</Label>
+                    <Input
+                      placeholder="https://…"
+                      value={form.image_url}
+                      onChange={(e) => set({ image_url: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-gray-500">Tautan saat diketuk (opsional)</Label>
+                    <Input
+                      placeholder="/member/promos atau https://…"
+                      value={form.link_url}
+                      onChange={(e) => set({ link_url: e.target.value })}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 sm:col-span-2">
+                    Isi notifikasi memakai template di bawah tanpa footer STOP.
+                    Laporan mencatat dibuka dan diklik.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -609,6 +744,43 @@ export function CampaignsPage() {
                 className="max-w-60"
               />
             </div>
+            <div className="rounded-xl border border-gray-200/70 p-3">
+              <Label>Waktu Kirim</Label>
+              <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="send_mode"
+                    checked={form.send_at === ""}
+                    onChange={() => set({ send_at: "" })}
+                  />
+                  Simpan draft, mulai manual
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="send_mode"
+                    checked={form.send_at !== ""}
+                    onChange={() => set({ send_at: defaultSendAt() })}
+                  />
+                  Kirim nanti
+                </label>
+              </div>
+              {form.send_at !== "" && (
+                <div className="mt-2 space-y-1">
+                  <Input
+                    type="datetime-local"
+                    value={form.send_at}
+                    onChange={(e) => set({ send_at: e.target.value })}
+                    className="max-w-64"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Minimal 5 menit dari sekarang. Antrean dibangun saat waktunya
+                    tiba; WA tetap mengikuti master switch dan jam kirim.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -618,7 +790,11 @@ export function CampaignsPage() {
               onClick={handleCreate}
               disabled={formInvalid || createMutation.isPending}
             >
-              {createMutation.isPending ? "Menyimpan…" : "Simpan Draft"}
+              {createMutation.isPending
+                ? "Menyimpan…"
+                : form.send_at
+                  ? "Jadwalkan"
+                  : "Simpan Draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -641,12 +817,35 @@ export function CampaignsPage() {
             </div>
           ) : (
             <div className="space-y-2 text-sm">
+              {reportQuery.data.campaign.failure_reason && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {reportQuery.data.campaign.failure_reason}
+                </p>
+              )}
+              {reportQuery.data.campaign.channels.includes("in_app") && (
+                <div className="grid grid-cols-3 gap-2">
+                  {(
+                    [
+                      ["In-app terkirim", reportQuery.data.in_app.sent],
+                      ["Dibuka", reportQuery.data.in_app.opened],
+                      ["Diklik", reportQuery.data.in_app.clicked],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <div key={label} className="rounded-lg border border-gray-200/70 px-3 py-2">
+                      <p className="text-xs text-gray-500">{label}</p>
+                      <p className="font-semibold tabular-nums text-gray-900">
+                        {value.toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
               {(
                 [
                   ["Total antrean", reportQuery.data.funnel.total],
                   ["Menunggu kirim", reportQuery.data.funnel.pending],
-                  ["Terkirim", reportQuery.data.funnel.sent],
-                  ["Gagal", reportQuery.data.funnel.failed],
+                  ["WA terkirim", reportQuery.data.funnel.sent],
+                  ["WA gagal", reportQuery.data.funnel.failed],
                   ["Voucher dipakai", reportQuery.data.funnel.redeemed],
                 ] as const
               ).map(([label, value]) => (

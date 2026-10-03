@@ -5,6 +5,7 @@ import {
   calculateTopupXp,
   loadPosLoyaltySettings,
 } from "@/lib/pos/loyalty-settings";
+import { computeProductBonusXp } from "@/lib/promo/product-bonus-xp";
 
 type PosOrderItemInput = {
   product_id?: string | null;
@@ -100,18 +101,95 @@ type PostXpEventInput = {
   metadata?: Record<string, unknown>;
   /** false = XP nominal apa adanya (mis. Free XP profil) — tanpa multiplier tier */
   applyTierMultiplier?: boolean;
+  /** Kanal ledger; default "pos". Partner eksternal memakai kanalnya sendiri. */
+  sourceChannel?: string;
 };
 
+type PosOrderXpPayload = {
+  orderId: string;
+  customerId?: string | null;
+  totalAmount: number;
+  items: PosOrderItemInput[];
+  outletId?: string | null;
+  paymentMethod?: string | null;
+};
+
+/**
+ * XP order POS = XP belanja (hanya bayar ARK Coin, EPIC-011) + bonus XP
+ * produk. Bonus XP berlaku untuk SEMUA metode bayar: ia hadiah promo tetap
+ * per produk yang diset admin, bukan imbalan rupiah belanja, jadi aturan
+ * "XP hanya utk ARK Coin" (yang mengatur XP belanja) tidak berlaku.
+ */
 export async function awardCrmXpForPosOrder(
   db: DbClient,
-  payload: {
-    orderId: string;
-    customerId?: string | null;
-    totalAmount: number;
-    items: PosOrderItemInput[];
-    outletId?: string | null;
-    paymentMethod?: string | null;
+  payload: PosOrderXpPayload
+): Promise<CrmXpAwardResult> {
+  if (!payload.customerId) {
+    return { status: "skipped", xpAwarded: 0, reason: "no_customer" };
   }
+  const bonus = await awardProductBonusXp(db, payload);
+  const spend = await awardSpendXpForPosOrder(db, payload);
+  if (bonus.xpAwarded <= 0) return spend;
+  return {
+    status: "posted",
+    xpAwarded: spend.xpAwarded + bonus.xpAwarded,
+    ledgerIds: [...(spend.ledgerIds ?? []), ...(bonus.ledgerIds ?? [])],
+  };
+}
+
+/** Bonus XP produk sekali per order (idempotency key per order). */
+async function awardProductBonusXp(
+  db: DbClient,
+  payload: PosOrderXpPayload
+): Promise<CrmXpAwardResult> {
+  const customerId = payload.customerId!;
+  try {
+    const productIds = [
+      ...new Set(
+        payload.items
+          .map((item) => item.product_id ?? item.productId)
+          .filter((id): id is string => Boolean(id))
+      ),
+    ];
+    if (productIds.length === 0) return { status: "skipped", xpAwarded: 0 };
+    const { data, error } = await db
+      .from("pos_products")
+      .select("id, bonus_xp")
+      .in("id", productIds);
+    if (error) {
+      if (error.code === "42703") return { status: "skipped", xpAwarded: 0 };
+      throw error;
+    }
+    const bonusByProduct = new Map(
+      ((data ?? []) as Array<{ id: string; bonus_xp?: number | string | null }>).map(
+        (row) => [row.id, toNumber(row.bonus_xp)]
+      )
+    );
+    const xpAmount = computeProductBonusXp(payload.items, bonusByProduct);
+    if (xpAmount <= 0) return { status: "skipped", xpAwarded: 0 };
+
+    const venue = await getCrmDefaultVenue(db);
+    return await awardFlatXp(db, {
+      customerId,
+      xpAmount,
+      companyId: venue.companyId,
+      branchId: payload.outletId ?? venue.branchId,
+      sourceType: "product_bonus",
+      sourceId: payload.orderId,
+      referenceTable: "pos_orders",
+      idempotencyKey: `pos:order:${payload.orderId}:product_bonus`,
+      description: `Bonus XP produk — order ${await orderLabel(db, payload.orderId)}`,
+    });
+  } catch (error) {
+    if (isMissingCrmSchema(error)) return { status: "skipped", xpAwarded: 0 };
+    console.error("CRM product bonus XP failed:", error);
+    return { status: "error", xpAwarded: 0 };
+  }
+}
+
+async function awardSpendXpForPosOrder(
+  db: DbClient,
+  payload: PosOrderXpPayload
 ): Promise<CrmXpAwardResult> {
   if (!payload.customerId) {
     return { status: "skipped", xpAwarded: 0, reason: "no_customer" };
@@ -545,7 +623,7 @@ async function postXpEvent(db: DbClient, input: PostXpEventInput): Promise<CrmXp
       member_id: member.id,
       customer_id: input.customerId,
       direction: "earn",
-      source_channel: "pos",
+      source_channel: input.sourceChannel ?? "pos",
       source_type: input.sourceType,
       source_id: input.sourceId ?? null,
       outlet_id: input.outletId ?? null,
@@ -901,12 +979,55 @@ export async function reverseCrmXpForVoidedOrders(
 }
 
 /**
+ * XP nominal (tanpa multiplier tier) untuk sumber non-order: Free XP profil,
+ * hadiah challenge. Idempoten lewat idempotency_key ledger; XP yang terposting
+ * disalin ke pos_customers.total_xp lalu tier dievaluasi ulang — sama seperti
+ * alur XP order (tanpa ini total_xp customer tidak bergerak).
+ */
+async function awardFlatXp(
+  db: DbClient,
+  input: {
+    customerId: string;
+    xpAmount: number;
+    companyId?: string | null;
+    branchId?: string | null;
+    sourceType: string;
+    sourceId: string;
+    referenceTable: string;
+    idempotencyKey: string;
+    description: string;
+    sourceChannel?: string;
+  }
+): Promise<CrmXpAwardResult> {
+  const result = await postXpEvent(db, {
+    sourceChannel: input.sourceChannel,
+    customerId: input.customerId,
+    sourceType: input.sourceType,
+    sourceId: input.sourceId,
+    companyId: input.companyId ?? null,
+    branchId: input.branchId ?? null,
+    xpAmount: Math.max(0, Math.floor(input.xpAmount)),
+    referenceTable: input.referenceTable,
+    referenceId: input.sourceId,
+    idempotencyKey: input.idempotencyKey,
+    description: input.description,
+    applyTierMultiplier: false,
+  });
+
+  if (result.status === "posted") {
+    await syncPosCustomerAfterEarn(db, input.customerId, result.xpAwarded);
+    await syncTierAfterEarn(db, input.customerId);
+  }
+  return result;
+}
+
+/**
  * Free XP kelengkapan profil 100% (EPIC-011 Fase D, keputusan owner #9):
  * berlaku SEMUA tipe member, sekali seumur hidup, TANPA multiplier tier
  * (nominal apa adanya dari crm_settings.profile_completion_free_xp).
  * Idempoten dua lapis: idempotency_key ledger + free_xp_granted_at customer.
  */
-export async function awardMemberFreeXp(
+export function awardMemberFreeXp(
   db: DbClient,
   input: {
     customerId: string;
@@ -915,25 +1036,166 @@ export async function awardMemberFreeXp(
     branchId?: string | null;
   }
 ): Promise<CrmXpAwardResult> {
-  const result = await postXpEvent(db, {
-    customerId: input.customerId,
+  return awardFlatXp(db, {
+    ...input,
     sourceType: "profile_completion",
     sourceId: input.customerId,
-    companyId: input.companyId ?? null,
-    branchId: input.branchId ?? null,
-    xpAmount: Math.max(0, Math.floor(input.xpAmount)),
     referenceTable: "pos_customers",
-    referenceId: input.customerId,
     idempotencyKey: `portal:profile-complete:${input.customerId}`,
     description: "Free XP profil lengkap (portal member)",
-    applyTierMultiplier: false,
   });
+}
 
-  if (result.status === "posted") {
-    // Salin lifetime XP ke pos_customers.total_xp + evaluasi kenaikan tier —
-    // sama seperti alur XP order (tanpa ini total_xp customer tidak bergerak).
-    await syncPosCustomerAfterEarn(db, input.customerId, result.xpAwarded);
-    await syncTierAfterEarn(db, input.customerId);
+/** Hadiah XP challenge selesai — sekali per member per challenge. */
+export function awardChallengeXp(
+  db: DbClient,
+  input: {
+    customerId: string;
+    challengeId: string;
+    challengeTitle: string;
+    xpAmount: number;
+    companyId?: string | null;
+    branchId?: string | null;
   }
-  return result;
+): Promise<CrmXpAwardResult> {
+  return awardFlatXp(db, {
+    customerId: input.customerId,
+    xpAmount: input.xpAmount,
+    companyId: input.companyId,
+    branchId: input.branchId,
+    sourceType: "challenge",
+    sourceId: input.challengeId,
+    referenceTable: "challenges",
+    idempotencyKey: `challenge:${input.challengeId}:${input.customerId}`,
+    description: `Hadiah challenge: ${input.challengeTitle}`,
+  });
+}
+
+/** Bonus XP badge — sekali per member per badge (idempotency key ledger). */
+export function awardBadgeBonusXp(
+  db: DbClient,
+  input: {
+    customerId: string;
+    badgeId: string;
+    badgeName: string;
+    xpAmount: number;
+    companyId?: string | null;
+    branchId?: string | null;
+  }
+): Promise<CrmXpAwardResult> {
+  return awardFlatXp(db, {
+    customerId: input.customerId,
+    xpAmount: input.xpAmount,
+    companyId: input.companyId,
+    branchId: input.branchId,
+    sourceType: "badge_bonus",
+    sourceId: input.badgeId,
+    referenceTable: "crm_badges",
+    idempotencyKey: `badge:${input.badgeId}:${input.customerId}`,
+    description: `Bonus badge: ${input.badgeName}`,
+  });
+}
+
+/** XP dari event partner loyalty — sekali per event (idempotency key ledger). */
+export function awardPartnerEventXp(
+  db: DbClient,
+  input: {
+    customerId: string;
+    eventId: string;
+    sourceChannel: string;
+    description: string;
+    xpAmount: number;
+    companyId?: string | null;
+    branchId?: string | null;
+  }
+): Promise<CrmXpAwardResult> {
+  return awardFlatXp(db, {
+    customerId: input.customerId,
+    xpAmount: input.xpAmount,
+    companyId: input.companyId,
+    branchId: input.branchId,
+    sourceChannel: input.sourceChannel,
+    sourceType: "partner_event",
+    sourceId: input.eventId,
+    referenceTable: "crm_external_events",
+    idempotencyKey: `partner-event:${input.eventId}`,
+    description: input.description,
+  });
+}
+
+/**
+ * Penyesuaian XP manual oleh admin (positif atau negatif) dengan alasan.
+ * Satu `requestId` = satu baris ledger, jadi klik ganda tidak menggandakan.
+ * Pengurangan dijepit agar XP tidak negatif; tier dievaluasi ulang (bisa turun).
+ */
+export async function adjustMemberXp(
+  db: DbClient,
+  input: {
+    customerId: string;
+    delta: number;
+    reason: string;
+    actorId: string;
+    requestId: string;
+    companyId?: string | null;
+    branchId?: string | null;
+  }
+): Promise<{ status: "posted" | "duplicate" | "skipped"; xpDelta: number; totalXp: number }> {
+  const idempotencyKey = `admin-adjust:${input.requestId}`;
+  const existing = await db
+    .from("crm_xp_ledger")
+    .select("id")
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+
+  const { data: customer, error: customerError } = await db
+    .from("pos_customers")
+    .select("total_xp")
+    .eq("id", input.customerId)
+    .maybeSingle();
+  if (customerError) throw customerError;
+  const before = toNumber((customer as PosCustomerLoyaltyRow | null)?.total_xp);
+  if (existing.data) return { status: "duplicate", xpDelta: 0, totalXp: before };
+
+  const requested = Math.trunc(input.delta);
+  const applied = requested < 0 ? -Math.min(-requested, before) : requested;
+  const member = applied !== 0 ? await ensureMemberProfile(db, input.customerId) : null;
+  if (!member || applied === 0) return { status: "skipped", xpDelta: 0, totalXp: before };
+  const after = before + applied;
+
+  const { error: ledgerError } = await db.from("crm_xp_ledger").insert({
+    member_id: member.id,
+    customer_id: input.customerId,
+    direction: "adjust",
+    source_channel: "manual",
+    source_type: "admin_adjustment",
+    source_id: input.actorId,
+    company_id: input.companyId ?? null,
+    branch_id: input.branchId ?? null,
+    xp_delta: applied,
+    balance_before: before,
+    balance_after: after,
+    lifetime_before: before,
+    lifetime_after: after,
+    reference_table: "pos_customers",
+    reference_id: input.customerId,
+    idempotency_key: idempotencyKey,
+    description: `Penyesuaian admin: ${input.reason}`,
+    metadata: { reason: input.reason, actor_id: input.actorId, requested_delta: requested },
+  });
+  if (ledgerError) {
+    if ((ledgerError as { code?: string }).code === "23505") {
+      return { status: "duplicate", xpDelta: 0, totalXp: before };
+    }
+    throw ledgerError;
+  }
+
+  const now = new Date().toISOString();
+  await db.from("pos_customers").update({ total_xp: after, updated_at: now }).eq("id", input.customerId);
+  await db
+    .from("crm_member_profiles")
+    .update({ lifetime_xp: after, loyalty_score: after, last_activity_at: now })
+    .eq("id", member.id);
+  await syncTierAfterEarn(db, input.customerId);
+  return { status: "posted", xpDelta: applied, totalXp: after };
 }

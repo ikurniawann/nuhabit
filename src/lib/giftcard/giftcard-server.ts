@@ -15,15 +15,23 @@ import { getSetting, setSetting } from "@/lib/settings/app-settings";
 import {
   computeBalanceAfterCorrection,
   evaluateGiftCardRedeem,
+  evaluateGiftCardReload,
+  GIFT_CARD_RELOAD_REJECT_MESSAGES,
   generateGiftCardCode,
   GIFT_CARD_REJECT_MESSAGES,
   isAllowedGiftCardNominal,
   parseGiftCardConfig,
+  phoneMatchKey,
+  phoneMatchKeySql,
   resolveGiftCardExpiry,
   resolveStatusAfterRefund,
   type GiftCardConfig,
   type GiftCardStatus,
 } from "./giftcard";
+import {
+  GIFT_CARD_RELOAD_PAYMENT_METHODS,
+  type GiftCardReloadPaymentMethod,
+} from "./reload-payment-methods";
 
 export const GIFT_CARD_CONFIG_KEY = "giftcard_config";
 
@@ -605,8 +613,8 @@ export async function adjustGiftCardBalance(input: {
   }
 
   return withTransaction(async (client) => {
-    const found = await client.query<CardRow & { initial_value: string }>(
-      `SELECT id, code, balance, status, expires_at, initial_value
+    const found = await client.query<CardRow & { initial_value: string; reloaded_total: string }>(
+      `SELECT id, code, balance, status, expires_at, initial_value, reloaded_total
          FROM giftcard.gift_cards
         WHERE id = $1 AND branch_id = $2 AND company_id = $3
         FOR UPDATE`,
@@ -627,11 +635,11 @@ export async function adjustGiftCardBalance(input: {
         status: 400 as const,
       };
     }
-    // Menambah saldo di atas nilai terbit = top-up, bukan koreksi (Fase E)
-    if (balanceAfter > Number(card.initial_value)) {
+    // Menambah saldo di atas total yang pernah diisi = reload, bukan koreksi
+    if (balanceAfter > Number(card.initial_value) + Number(card.reloaded_total)) {
       return {
         ok: false as const,
-        reason: "Koreksi tidak boleh melebihi nilai terbit kartu",
+        reason: "Koreksi tidak boleh melebihi total nilai yang pernah diisi — pakai Reload",
         status: 400 as const,
       };
     }
@@ -711,4 +719,135 @@ export async function previewGiftCardForPos(input: {
     covers: balance >= input.total,
     expires_at: card.expires_at,
   };
+}
+
+// ── Reload (top up) dgn pembayaran tercatat ────────────────────────────
+
+export type GiftCardReloadOutcome =
+  | { ok: true; ledgerId: string; balanceAfter: number; statusAfter: GiftCardStatus }
+  | { ok: false; reason: string; status: 400 | 404 };
+
+/**
+ * Isi ulang saldo kartu. Satu transaksi: kunci kartu FOR UPDATE → evaluasi
+ * murni → naikkan balance + reloaded_total → baris ledger `isi` ber-context
+ * `reload` yang menyimpan metode & referensi pembayaran. Kartu dicari per
+ * id (admin) atau per kode (kasir, hasil scan QR).
+ */
+export async function reloadGiftCard(input: {
+  scope: GiftCardScope;
+  card: { id: string } | { code: string };
+  amount: number;
+  paymentMethod: GiftCardReloadPaymentMethod;
+  paymentReference: string | null;
+  note: string | null;
+  createdBy: string | null;
+}): Promise<GiftCardReloadOutcome> {
+  return withTransaction(async (client) => {
+    const [column, key] =
+      "id" in input.card
+        ? ["id", input.card.id]
+        : ["code", input.card.code.trim().toUpperCase()];
+    const found = await client.query<CardRow & { reloaded_total: string }>(
+      `SELECT id, code, balance, status, expires_at, reloaded_total
+         FROM giftcard.gift_cards
+        WHERE ${column} = $1 AND branch_id = $2 AND company_id = $3
+        FOR UPDATE`,
+      [key, input.scope.branchId, input.scope.companyId]
+    );
+    const card = found.rows[0];
+    if (!card) {
+      return { ok: false as const, reason: "Gift card tidak ditemukan", status: 404 as const };
+    }
+
+    const evaluation = evaluateGiftCardReload(
+      {
+        status: card.status,
+        balance: Number(card.balance),
+        expiresAt: card.expires_at,
+        reloadedTotal: Number(card.reloaded_total),
+      },
+      input.amount,
+      new Date().toISOString()
+    );
+    if (!evaluation.ok) {
+      return {
+        ok: false as const,
+        reason: GIFT_CARD_RELOAD_REJECT_MESSAGES[evaluation.reason],
+        status: 400 as const,
+      };
+    }
+
+    await client.query(
+      `UPDATE giftcard.gift_cards
+          SET balance = $2, reloaded_total = $3, status = $4, updated_at = now()
+        WHERE id = $1`,
+      [card.id, evaluation.balanceAfter, evaluation.reloadedTotalAfter, evaluation.statusAfter]
+    );
+    const ledger = await client.query<{ id: string }>(
+      `INSERT INTO giftcard.gift_card_ledger
+         (company_id, branch_id, card_id, direction, amount, balance_after,
+          context_type, payment_method, payment_reference, note, created_by)
+       VALUES ($1, $2, $3, 'isi', $4, $5, 'reload', $6, $7, $8, $9)
+       RETURNING id`,
+      [
+        input.scope.companyId,
+        input.scope.branchId,
+        card.id,
+        input.amount,
+        evaluation.balanceAfter,
+        input.paymentMethod,
+        input.paymentReference,
+        input.note ??
+          `Reload saldo (${GIFT_CARD_RELOAD_PAYMENT_METHODS[input.paymentMethod]})`,
+        input.createdBy,
+      ]
+    );
+    return {
+      ok: true as const,
+      ledgerId: ledger.rows[0]!.id,
+      balanceAfter: evaluation.balanceAfter,
+      statusAfter: evaluation.statusAfter,
+    };
+  });
+}
+
+// ── Tautan kartu ↔ member ──────────────────────────────────────────────
+
+export interface GiftCardMemberMatch {
+  id: string;
+  name: string | null;
+  phone: string | null;
+}
+
+/**
+ * Cari member berdasarkan nomor HP. Nomor dinormalisasi ke digit saja dan
+ * awalan 0/62 disamakan, sehingga "0812…", "+62812…", "62812…" cocok.
+ */
+export async function findMembersByPhone(phone: string): Promise<GiftCardMemberMatch[]> {
+  const digits = phoneMatchKey(phone);
+  if (digits.length < 6) return [];
+  return query<GiftCardMemberMatch & Record<string, unknown>>(
+    `SELECT id, name, phone FROM pos.pos_customers
+      WHERE ${phoneMatchKeySql("phone")} LIKE $1
+      ORDER BY name
+      LIMIT 10`,
+    [`${digits}%`]
+  );
+}
+
+/** Tautkan / lepas kartu dari member (customer_id null = lepas). */
+export async function linkGiftCardToMember(input: {
+  scope: GiftCardScope;
+  cardId: string;
+  customerId: string | null;
+}): Promise<boolean> {
+  const rows = await query<{ id: string }>(
+    `UPDATE giftcard.gift_cards
+        SET customer_id = $1, updated_at = now()
+      WHERE id = $2 AND branch_id = $3 AND company_id = $4
+        AND ($1::uuid IS NULL OR EXISTS (SELECT 1 FROM pos.pos_customers WHERE id = $1::uuid))
+      RETURNING id`,
+    [input.customerId, input.cardId, input.scope.branchId, input.scope.companyId]
+  );
+  return rows.length > 0;
 }

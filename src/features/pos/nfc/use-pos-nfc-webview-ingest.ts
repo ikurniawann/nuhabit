@@ -60,7 +60,7 @@ export function usePosNfcWebViewIngest(onCard: (uid: string) => void) {
         },
         getReaderInfo() {
           const externalInfo = window.nfc?.getReaderInfo?.();
-          return externalInfo ?? { name: "BCD Coffee WebView NFC", source: "webview" };
+          return externalInfo ?? { name: "NüHabit WebView NFC", source: "webview" };
         },
       };
     } else {

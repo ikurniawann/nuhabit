@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { Check, ChevronsUpDown, Loader2, Moon, Monitor, Sun } from "lucide-react";
+import { Suspense, useMemo, useState, useSyncExternalStore } from "react";
 import {
-  ArrowRightStartOnRectangleIcon,
-  Bars3Icon,
-  BuildingStorefrontIcon,
-  ChevronDownIcon,
-  ComputerDesktopIcon,
-  KeyIcon,
-  UserCircleIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+  Check,
+  ChevronsUpDown,
+  CircleUser,
+  KeyRound,
+  Loader2,
+  LogOut,
+  Monitor,
+  MonitorSmartphone,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  Store,
+  Sun,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ActivityLogBell } from "@/components/layout/ActivityLogBell";
 import { NotificationBell } from "@/components/hris/NotificationBell";
@@ -45,10 +51,18 @@ import {
 import { PosNfcShell } from "@/features/pos/nfc";
 import { isPosImmersiveShell } from "@/features/pos/tablet-mode";
 import { PosTabletManifestLink } from "@/features/pos/components/pos-tablet-manifest-link";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { cn } from "@/lib/utils";
+import { brandOsName } from "@/lib/branding";
 import type { NavItem } from "@/lib/iam/types";
 import { isEssOnlyRole } from "@/lib/iam/access";
+import { buildNavBreadcrumbs } from "@/lib/iam/nav-breadcrumbs";
+import { flattenNavLeaves } from "@/lib/iam/nav-leaves";
+import { useNavFrom } from "@/lib/iam/use-nav-from";
 import AppSidebarNav from "./app-sidebar-nav";
 import { DashboardBreadcrumbs } from "./dashboard-breadcrumbs";
+import { GlobalSearch } from "./global-search";
+import { PhoneNav } from "./phone-nav";
 
 export interface SidebarUser {
   full_name: string;
@@ -72,8 +86,50 @@ export interface AppSidebarProps {
   children: React.ReactNode;
 }
 
-/** Tinggi bar atas desktop — sidebar header & navbar utama harus sama agar border sejajar */
-const DESKTOP_TOP_BAR_HEIGHT = "lg:h-[4.75rem]";
+const RAIL_PREF_KEY = "bcd.admin.rail";
+
+/** The only decorative light on the canvas, mixed from the brand token. */
+const CANVAS_GLOW = [
+  "radial-gradient(38% 34% at 72% 22%, color-mix(in srgb, var(--brand-primary) 9%, transparent), transparent 70%)", // wit-allow: ambient canvas glow (layouts.md)
+  "radial-gradient(28% 30% at 92% 48%, color-mix(in srgb, var(--brand-primary) 6%, transparent), transparent 70%)", // wit-allow: ambient canvas glow (layouts.md)
+  "radial-gradient(34% 30% at 55% 8%, color-mix(in srgb, var(--brand-primary) 10%, white), transparent 72%)", // wit-allow: ambient canvas glow (layouts.md)
+].join(", ");
+
+const railListeners = new Set<() => void>();
+// Fallback when storage is blocked: the choice then lasts for this visit.
+let railMemory: boolean | null = null;
+
+function readRailPref(): boolean {
+  try {
+    const saved = window.localStorage.getItem(RAIL_PREF_KEY);
+    if (saved) return saved !== "collapsed";
+  } catch {
+    // Storage blocked: fall through to the in-memory choice.
+  }
+  return railMemory ?? true;
+}
+
+function subscribeRailPref(onChange: () => void) {
+  railListeners.add(onChange);
+  return () => {
+    railListeners.delete(onChange);
+  };
+}
+
+/** Expanded-rail preference (default expanded), persisted per browser. */
+function useRailPreference() {
+  const expanded = useSyncExternalStore(subscribeRailPref, readRailPref, () => true);
+  const toggle = () => {
+    railMemory = !expanded;
+    try {
+      window.localStorage.setItem(RAIL_PREF_KEY, expanded ? "collapsed" : "expanded");
+    } catch {
+      // Storage blocked: railMemory carries the choice.
+    }
+    railListeners.forEach((listener) => listener());
+  };
+  return [expanded, toggle] as const;
+}
 
 function AppSidebarContent({
   user,
@@ -83,27 +139,25 @@ function AppSidebarContent({
   essOnly: essOnlyProp,
 }: AppSidebarProps & { posImmersive: boolean }) {
   const pathname = usePathname();
-  // ESS-only: sembunyikan seluruh jalan menuju desktop BCD Coffee OS.
+  // ESS-only: sembunyikan seluruh jalan menuju desktop NüHabit OS.
   // Nilai dari server (IAM) diutamakan; fallback kebijakan role di kode.
   const essOnly = essOnlyProp ?? isEssOnlyRole(user.role);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 1280px)");
+  const [railPref, toggleRail] = useRailPreference();
+  const railExpanded = railPref && isDesktop;
   const [accountOpen, setAccountOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const leaves = useMemo(() => flattenNavLeaves(navItems), [navItems]);
   const useActivityNotification = pathname.startsWith("/dashboard/purchasing");
   const canUseCentralCashier =
     user.has_central_cashier_menu === true && user.can_central_checkout === true;
-
-  const closeMobile = () => setMobileOpen(false);
 
   if (posImmersive) {
     return (
       <CanUseCentralCashierProvider value={canUseCentralCashier}>
         <PosNfcShell>
           <PosTabletManifestLink />
-          <div
-            className="arkiv-dashboard-theme min-h-screen"
-            style={{ background: "var(--page-mesh)" }}
-          >
+          <div className="arkiv-dashboard-theme min-h-screen bg-surface">
             <main className="min-h-[100dvh] overflow-auto p-2 sm:p-3 md:p-4">{children}</main>
           </div>
         </PosNfcShell>
@@ -114,32 +168,27 @@ function AppSidebarContent({
   return (
     <CanUseCentralCashierProvider value={canUseCentralCashier}>
     <PosNfcShell>
+    {/* overflow-clip, not hidden: a hidden box can still be scrolled by focus. */}
     <div
       data-dashboard-shell
-      className="arkiv-dashboard-theme flex min-h-screen print:block print:min-h-0 print:bg-white"
-      style={{ background: "var(--page-mesh)" }}
+      className="arkiv-dashboard-theme relative flex h-dvh gap-4 overflow-clip bg-surface p-3 lg:p-4 print:block print:h-auto print:overflow-visible print:bg-white print:p-0"
     >
-      {mobileOpen && (
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden print:hidden">
         <div
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-          onClick={closeMobile}
-          aria-hidden
+          className="absolute -top-[30%] -right-[8%] h-[120%] w-[70%] opacity-70 blur-xl"
+          style={{ background: CANVAS_GLOW }}
         />
-      )}
+      </div>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex transform flex-col shadow-xl transition-all duration-200 ease-in-out print:hidden lg:relative lg:z-0 lg:flex lg:shrink-0 lg:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } ${collapsed ? "lg:w-20" : "lg:w-64"}`}
-        style={{
-          background: "var(--sidebar-background)",
-          color: "var(--sidebar-foreground)",
-          borderRight: "1px solid var(--sidebar-border)",
-        }}
+        className={`relative hidden shrink-0 flex-col rounded-hero bg-ink text-on-ink shadow-float transition-[width] duration-200 md:flex print:hidden ${
+          railExpanded ? "w-60" : "w-[76px]"
+        }`}
       >
-        <SidebarHeader
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed((prev) => !prev)}
+        <RailHeader expanded={railExpanded} />
+        <AppSidebarNav navItems={navItems} collapsed={!railExpanded} />
+        <RailWorkspace
+          expanded={railExpanded}
           companyName={user.company_name}
           branchName={user.branch_name}
           warehouseName={user.warehouse_name}
@@ -147,62 +196,123 @@ function AppSidebarContent({
           canUseCentralCashier={canUseCentralCashier}
           activeStallId={user.active_stall_id ?? null}
         />
-
-        <AppSidebarNav navItems={navItems} collapsed={collapsed} onNavigate={closeMobile} />
+        {isDesktop && (
+          <button
+            type="button"
+            onClick={toggleRail}
+            aria-label={railExpanded ? "Ciutkan menu" : "Lebarkan menu"}
+            className={`mx-3 mb-3 flex h-9 items-center gap-2 rounded-full px-3 text-xs font-semibold text-on-ink-muted transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none ${
+              railExpanded ? "" : "justify-center px-0"
+            }`}
+          >
+            {railExpanded ? (
+              <>
+                <PanelLeftClose className="size-4" />
+                Ciutkan
+              </>
+            ) : (
+              <PanelLeftOpen className="size-4" />
+            )}
+          </button>
+        )}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col print:block">
-        <MobileHeader
-          navItems={navItems}
-          onMenuClick={() => setMobileOpen(true)}
-          userName={user.full_name}
-          onAccountClick={() => setAccountOpen(true)}
-          essOnly={essOnly}
-        />
-
-        <div
-          className={`hidden items-center justify-between gap-4 px-6 py-3 backdrop-blur-sm print:hidden lg:flex ${DESKTOP_TOP_BAR_HEIGHT} lg:py-0`}
-          style={{
-            background: "var(--navbar-background)",
-            color: "var(--navbar-foreground)",
-            borderBottom: "1px solid var(--navbar-border)",
-          }}
+      <div className="relative flex min-w-0 flex-1 flex-col gap-4 print:block">
+        <a
+          href="#main"
+          className="sr-only z-30 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-on-ink shadow-float focus:not-sr-only focus:absolute focus:top-3 focus:left-4"
         >
-          <DashboardBreadcrumbs navItems={navItems} className="max-w-[55%]" />
-          <div className="flex shrink-0 items-center gap-3">
+          Lewati ke konten
+        </a>
+
+        <header className="flex h-14 shrink-0 items-center gap-3 print:hidden">
+          <Link
+            href="/dashboard"
+            aria-label="Beranda"
+            className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-ink shadow-card md:hidden"
+          >
+            <img src="/brand/mark-lime.png" alt="" className="w-7 select-none" draggable={false} />
+          </Link>
+          <HeaderTitle navItems={navItems} branchName={user.branch_name ?? user.company_name} />
+          <GlobalSearch
+            leaves={leaves}
+            className="hidden min-w-0 flex-1 md:ml-4 md:block md:max-w-md"
+          />
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSearchOpen((open) => !open)}
+              aria-label="Cari halaman"
+              aria-expanded={searchOpen}
+              className={cn(ROUND_BUTTON, "md:hidden")}
+            >
+              <Search className="size-5" />
+            </button>
+            {!essOnly && (
+              <Link
+                href="/arkiv-os"
+                className={cn(ROUND_BUTTON, "hidden sm:inline-flex")}
+                title="Buka NüHabit OS desktop"
+                aria-label="Buka desktop"
+              >
+                <MonitorSmartphone className="size-5" />
+              </Link>
+            )}
             <ThemeToggle />
             {useActivityNotification ? <ActivityLogBell /> : <NotificationBell />}
-            <div className="h-6 w-px bg-gray-200" />
             <button
               type="button"
               onClick={() => setAccountOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-primary/20 bg-card px-3 py-2 text-left shadow-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
-              title="Klik untuk melihat akun login"
-              aria-label="Buka popup akun login"
+              className="flex h-11 items-center gap-2.5 rounded-full bg-card p-1.5 shadow-card transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none xl:pr-4"
+              aria-label={`Akun ${user.full_name}`}
             >
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold text-accent-foreground">
                 {user.full_name?.slice(0, 1).toUpperCase() || "A"}
               </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-gray-700">{user.full_name}</span>
-                {user.email && (
-                  <span className="block truncate text-xs text-gray-500">{user.email}</span>
-                )}
+              <span className="hidden min-w-0 text-left xl:block">
+                <span className="block max-w-[10rem] truncate text-sm leading-tight font-semibold text-foreground">
+                  {user.full_name}
+                </span>
+                <span className="block max-w-[10rem] truncate text-[11px] text-muted-foreground capitalize">
+                  {user.role.replace(/_/g, " ")}
+                </span>
               </span>
             </button>
           </div>
-        </div>
-
-        <main className="flex-1 overflow-auto p-4 transition-all duration-200 print:block print:overflow-visible print:p-0 lg:p-6">{children}</main>
-
-        {accountOpen && (
-          <AccountPopup
-            user={user}
-            essOnly={essOnly}
-            onClose={() => setAccountOpen(false)}
-          />
+        </header>
+        {searchOpen && (
+          <div className="-mt-2 md:hidden print:hidden">
+            <GlobalSearch leaves={leaves} autoFocus onNavigate={() => setSearchOpen(false)} />
+          </div>
         )}
+
+        <main
+          id="main"
+          tabIndex={-1}
+          className="relative min-h-0 flex-1 overflow-y-auto pr-0.5 pb-24 outline-none md:pb-2 print:block print:overflow-visible print:p-0"
+        >
+          <DashboardBreadcrumbs
+            navItems={navItems}
+            className="mb-4 hidden md:flex print:hidden"
+          />
+          {children}
+        </main>
       </div>
+
+      <PhoneNav
+        leaves={leaves}
+        userName={user.full_name}
+        userRole={user.role}
+        onAccount={() => setAccountOpen(true)}
+      />
+
+      {accountOpen && (
+        <AccountPopup
+          user={user}
+          essOnly={essOnly}
+          onClose={() => setAccountOpen(false)}
+        />
+      )}
     </div>
     </PosNfcShell>
     </CanUseCentralCashierProvider>
@@ -220,23 +330,71 @@ function AppSidebarWithSearch(props: AppSidebarProps) {
 export default function AppSidebar(props: AppSidebarProps) {
   return (
     <Suspense
-      fallback={
-        <div
-          data-dashboard-shell
-          className="min-h-dvh w-full"
-          style={{ background: "var(--page-mesh)" }}
-          aria-hidden
-        />
-      }
+      fallback={<div data-dashboard-shell className="min-h-dvh w-full bg-surface" aria-hidden />}
     >
       <AppSidebarWithSearch {...props} />
     </Suspense>
   );
 }
 
-function SidebarHeader({
-  collapsed,
-  onToggleCollapse,
+const ROUND_BUTTON =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-foreground shadow-card transition-colors hover:bg-surface active:scale-95 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none";
+
+function RailHeader({ expanded }: { expanded: boolean }) {
+  return (
+    <Link
+      href="/dashboard"
+      aria-label={`${brandOsName()} · Beranda`}
+      className={`flex shrink-0 flex-col rounded-2xl pt-5 pb-3 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none ${
+        expanded ? "px-5" : "items-center px-0"
+      }`}
+    >
+      {expanded ? (
+        <>
+          {/* Wordmark putih di permukaan gelap (Logo Colorways, brand guideline). */}
+          <img src="/brand/wordmark-white.png" alt="" className="h-auto w-32 select-none" draggable={false} />
+          <span className="mt-2 block truncate text-[11px] text-on-ink-muted">Operasional bisnis</span>
+        </>
+      ) : (
+        <img src="/brand/mark-lime.png" alt="" className="w-9 select-none" draggable={false} />
+      )}
+    </Link>
+  );
+}
+
+/** Page title and "branch · date" beside the search, from the menu trail. */
+function HeaderTitle({
+  navItems,
+  branchName,
+}: {
+  navItems: NavItem[];
+  branchName?: string | null;
+}) {
+  const pathname = usePathname();
+  const navFrom = useNavFrom();
+  const crumbs = useMemo(
+    () => buildNavBreadcrumbs(navItems, pathname, navFrom),
+    [navItems, pathname, navFrom]
+  );
+  const title = crumbs.at(-1)?.label ?? "Beranda";
+  const today = new Intl.DateTimeFormat("id-ID", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date());
+
+  return (
+    <div className="hidden min-w-0 shrink-0 md:block md:max-w-[14rem] lg:max-w-[18rem]">
+      <p className="truncate text-lg leading-tight font-bold text-foreground">{title}</p>
+      <p className="truncate text-xs text-muted-foreground" suppressHydrationWarning>
+        {[branchName?.trim(), today].filter(Boolean).join(" · ")}
+      </p>
+    </div>
+  );
+}
+
+function RailWorkspace({
+  expanded,
   companyName,
   branchName,
   warehouseName,
@@ -244,8 +402,7 @@ function SidebarHeader({
   canUseCentralCashier,
   activeStallId,
 }: {
-  collapsed: boolean;
-  onToggleCollapse: () => void;
+  expanded: boolean;
   companyName?: string | null;
   branchName?: string | null;
   warehouseName?: string | null;
@@ -253,102 +410,54 @@ function SidebarHeader({
   canUseCentralCashier: boolean;
   activeStallId: string | null;
 }) {
-  return (
-    <div
-      className={`group/header relative flex shrink-0 items-center backdrop-blur-sm ${
-        collapsed ? "justify-center px-2 py-3.5" : "px-3 py-4"
-      } ${DESKTOP_TOP_BAR_HEIGHT} lg:py-0`}
-      style={{ borderBottom: "1px solid var(--sidebar-border)" }}
-    >
-
-      {collapsed ? (
-        <div className="flex w-full flex-col items-center justify-center gap-1">
-          <img
-            src="/logos/logo.png?v=bcd"
-            alt="BCD Coffee OS"
-            className="h-9 w-9 object-contain"
-          />
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="hidden rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 lg:block"
-            title="Expand sidebar"
-            aria-label="Expand sidebar"
-          >
-            <ChevronDownIcon className="h-4 w-4 rotate-90" />
-          </button>
-        </div>
-      ) : (
-        <div className="flex w-full items-center gap-3">
-          <img
-            src="/logos/logo.png?v=bcd"
-            alt="BCD Coffee OS"
-            className="h-16 w-auto max-w-[10rem] shrink-0 object-contain object-left"
-          />
-          <div className="min-w-0 flex-1 leading-tight">
-            {canSwitchStall ? (
-              <StallSwitcher
-                activeStallId={activeStallId}
-                canUseCentralCashier={canUseCentralCashier}
-              >
-                <UserScopeLines
-                  companyName={companyName}
-                  branchName={branchName}
-                  warehouseName={warehouseName}
-                  variant="header"
-                />
-              </StallSwitcher>
-            ) : (
-              <UserScopeLines
-                companyName={companyName}
-                branchName={branchName}
-                warehouseName={warehouseName}
-                variant="header"
-              />
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+  const scope = (
+    <UserScopeLines
+      companyName={companyName}
+      branchName={branchName}
+      warehouseName={warehouseName}
+      variant="rail"
+    />
   );
-}
+  const scopeLabel = [branchName?.trim() || companyName?.trim(), warehouseName?.trim()]
+    .filter(Boolean)
+    .join(" · ");
 
-function MobileHeader({
-  navItems,
-  onMenuClick,
-  userName,
-  onAccountClick,
-  essOnly,
-}: {
-  navItems: NavItem[];
-  onMenuClick: () => void;
-  userName: string;
-  onAccountClick: () => void;
-  essOnly: boolean;
-}) {
-  return (
-    <header className="border-b border-gray-200 bg-white print:hidden lg:hidden">
-      <div className="flex items-center justify-between gap-2 px-4 py-3">
-        <button onClick={onMenuClick} className="shrink-0 rounded-lg p-2 hover:bg-gray-100">
-          <Bars3Icon className="h-6 w-6 text-gray-700" />
-        </button>
-        <button
-          onClick={onAccountClick}
-          className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-pink-50"
-        >
-          {userName}
-        </button>
-        <ThemeToggle />
-        {!essOnly && (
-          <Link href="/arkiv-os" className="shrink-0 font-semibold text-pink-600">
-            Desktop
-          </Link>
+  if (!expanded) {
+    const tile = (
+      <span className="flex size-11 items-center justify-center rounded-2xl bg-white/5 text-on-ink-muted">
+        <Store className="size-5" />
+      </span>
+    );
+    return (
+      <div className="flex shrink-0 justify-center px-2 pt-2 pb-2" title={scopeLabel}>
+        {canSwitchStall ? (
+          <StallSwitcher
+            activeStallId={activeStallId}
+            canUseCentralCashier={canUseCentralCashier}
+            triggerClassName="rounded-2xl hover:bg-white/10"
+          >
+            {tile}
+          </StallSwitcher>
+        ) : (
+          tile
         )}
       </div>
-      <div className="border-t border-gray-100 px-4 py-2">
-        <DashboardBreadcrumbs navItems={navItems} />
-      </div>
-    </header>
+    );
+  }
+
+  return (
+    <div className="mx-3 mt-2 mb-2 shrink-0 rounded-2xl bg-white/5 p-1.5">
+      <p className="px-2 pt-1 text-[11px] font-semibold tracking-wider text-on-ink-muted uppercase">
+        Lokasi aktif
+      </p>
+      {canSwitchStall ? (
+        <StallSwitcher activeStallId={activeStallId} canUseCentralCashier={canUseCentralCashier}>
+          {scope}
+        </StallSwitcher>
+      ) : (
+        <div className="px-2 py-1.5">{scope}</div>
+      )}
+    </div>
   );
 }
 
@@ -370,12 +479,12 @@ function ThemeToggle() {
   return (
     <button
       type="button"
-      className="arkiv-theme-toggle rounded-full p-2 text-gray-500 transition-colors hover:bg-pink-50 hover:text-gray-700"
-      title={`Tema: ${current.label} — klik untuk ganti`}
-      aria-label={`Tema: ${current.label} — klik untuk ganti`}
+      className={cn("arkiv-theme-toggle", ROUND_BUTTON, "hidden sm:inline-flex")}
+      title={`Tema: ${current.label}. Klik untuk ganti`}
+      aria-label={`Tema: ${current.label}. Klik untuk ganti`}
       onClick={() => setMode(next.value)}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="size-5" />
     </button>
   );
 }
@@ -391,10 +500,13 @@ type StallOption = { id: string; name: string; code: string };
 function StallSwitcher({
   activeStallId,
   canUseCentralCashier,
+  triggerClassName,
   children,
 }: {
   activeStallId: string | null;
   canUseCentralCashier: boolean;
+  /** Replaces the default full-width row trigger (collapsed rail tile). */
+  triggerClassName?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -438,17 +550,26 @@ function StallSwitcher({
     <>
     <DropdownMenu onOpenChange={(open) => open && loadStalls()}>
       <DropdownMenuTrigger
-        className="flex w-full min-w-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition hover:bg-pink-50/80"
-        aria-label="Switch stall"
+        className={
+          triggerClassName ??
+          "flex w-full min-w-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
+        }
+        aria-label="Ganti stall"
       >
-        <span className="min-w-0 flex-1">{children}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+        {triggerClassName ? (
+          children
+        ) : (
+          <>
+            <span className="min-w-0 flex-1">{children}</span>
+            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-on-ink-muted" />
+          </>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
         side="right"
-        align="start"
-        sideOffset={36}
-        className="!w-64 overflow-hidden rounded-xl p-1.5 shadow-xl"
+        align="end"
+        sideOffset={20}
+        className="!w-64 overflow-hidden p-1.5"
       >
         {/* Scroll di wrapper dalam (bukan popup) agar radius sudut tidak terpotong scrollbar */}
         <div className="max-h-[min(24rem,calc(100vh-96px))] overflow-y-auto pr-0.5 [scrollbar-width:thin]">
@@ -462,13 +583,13 @@ function StallSwitcher({
               onClick={() => selectStall(null)}
               className="gap-2.5 rounded-lg px-2 py-1.5"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200/70 bg-gray-50 text-gray-500">
-                <BuildingStorefrontIcon className="h-4 w-4" />
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-surface text-body">
+                <Store className="h-4 w-4" />
               </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 Semua Stall
               </span>
-              {activeStallId === null && <Check className="h-4 w-4 shrink-0 text-pink-600" />}
+              {activeStallId === null && <Check className="h-4 w-4 shrink-0 text-forest" />}
             </DropdownMenuItem>
           )}
           {hideAllStallsOption && (
@@ -478,7 +599,7 @@ function StallSwitcher({
           )}
           {stalls === null ? (
             <div className="flex justify-center py-3">
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-pink-500" />
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-border border-t-accent" />
             </div>
           ) : loadFailed ? (
             <p className="px-2 py-2 text-xs text-gray-400">Gagal memuat daftar stall</p>
@@ -490,17 +611,17 @@ function StallSwitcher({
                 onClick={() => selectStall(stall.id)}
                 className="gap-2.5 rounded-lg px-2 py-1.5"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-gray-200/70 bg-gray-50 text-gray-500">
-                  <BuildingStorefrontIcon className="h-4 w-4" />
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-surface text-body">
+                  <Store className="h-4 w-4" />
                 </span>
                 <span
-                  className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800"
+                  className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
                   title={`${stall.name} (${stall.code})`}
                 >
                   {stall.name}
                 </span>
                 {activeStallId === stall.id && (
-                  <Check className="h-4 w-4 shrink-0 text-pink-600" />
+                  <Check className="h-4 w-4 shrink-0 text-forest" />
                 )}
               </DropdownMenuItem>
             ))
@@ -518,35 +639,23 @@ function UserScopeLines({
   companyName,
   branchName,
   warehouseName,
-  compact = false,
   variant = "default",
 }: {
   companyName?: string | null;
   branchName?: string | null;
   warehouseName?: string | null;
-  compact?: boolean;
-  variant?: "default" | "header";
+  variant?: "default" | "rail";
 }) {
   // Baris utama: branch; fallback ke company (mis. super_admin tanpa branch).
   const primary = branchName?.trim() || companyName?.trim() || "—";
   const warehouse = warehouseName?.trim() || null;
 
-  if (compact) {
+  if (variant === "rail") {
     return (
-      <span className="mt-0.5 block text-[11px] leading-snug text-gray-500">
-        {warehouse ? `${primary} · ${warehouse}` : primary}
-      </span>
-    );
-  }
-
-  if (variant === "header") {
-    return (
-      <div className="space-y-1">
-        <p className="truncate text-[15px] font-bold tracking-tight text-gray-900">
-          {primary}
-        </p>
+      <div className="min-w-0 space-y-0.5">
+        <p className="truncate text-sm font-semibold text-white">{primary}</p>
         {warehouse && (
-          <p className="truncate text-xs font-medium text-gray-600" title={warehouse}>
+          <p className="truncate text-xs text-on-ink-muted" title={warehouse}>
             {warehouse}
           </p>
         )}
@@ -556,9 +665,9 @@ function UserScopeLines({
 
   return (
     <div className="space-y-1">
-      <p className="truncate text-sm font-semibold text-gray-900">{primary}</p>
+      <p className="truncate text-sm font-semibold text-foreground">{primary}</p>
       {warehouse && (
-        <p className="truncate text-xs text-gray-600" title={warehouse}>
+        <p className="truncate text-xs text-muted-foreground" title={warehouse}>
           {warehouse}
         </p>
       )}
@@ -591,51 +700,57 @@ function AccountPopup({
   }
 
   const actionClass =
-    "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50";
+    "flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-surface [&_svg]:size-5 [&_svg]:text-muted-foreground";
 
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-start justify-end bg-black/20 p-4 pt-16"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-3 backdrop-blur-[2px] md:items-start md:justify-end md:p-4 md:pt-20"
         onClick={onClose}
       >
         <div
-          className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200/70 bg-white shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="account-popup-title"
+          className="w-full max-w-sm overflow-hidden rounded-card bg-card shadow-float"
           onClick={(event) => event.stopPropagation()}
         >
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div className="flex items-center justify-between px-5 pt-5 pb-2">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Account</h2>
-              <p className="text-xs text-gray-500">Active BCD Coffee OS session</p>
+              <h2 id="account-popup-title" className="text-lg font-semibold text-foreground">
+                Akun
+              </h2>
+              <p className="text-xs text-muted-foreground">Sesi {brandOsName()} yang aktif</p>
             </div>
             <button
               onClick={onClose}
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label="Close"
+              className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface hover:text-foreground focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
+              aria-label="Tutup"
             >
-              <XMarkIcon className="h-5 w-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
 
           <div className="p-4">
-            <div className="flex items-center gap-3 rounded-xl border border-pink-100 bg-pink-50/70 p-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-pink-600 text-base font-bold text-white">
+            <div className="relative isolate flex items-center gap-3 overflow-hidden rounded-2xl bg-ink p-4 text-on-ink">
+              <div aria-hidden className="pointer-events-none absolute -top-16 -right-16 -z-10 size-40 rounded-full bg-accent/30 blur-3xl" />
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent text-base font-bold text-accent-foreground">
                 {user.full_name?.slice(0, 1).toUpperCase() || "A"}
               </div>
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-gray-900">
+                <div className="truncate text-sm font-semibold text-white">
                   {user.full_name}
                 </div>
                 {user.email && (
-                  <div className="truncate text-xs text-gray-600">{user.email}</div>
+                  <div className="truncate text-xs text-on-ink-muted">{user.email}</div>
                 )}
-                <div className="mt-1 inline-flex rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold capitalize text-pink-600 ring-1 ring-pink-100">
-                  {user.role.replace("_", " ")}
+                <div className="mt-1.5 inline-flex rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-semibold text-white capitalize">
+                  {user.role.replace(/_/g, " ")}
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 rounded-xl border border-gray-200/70 bg-gray-50/80 px-4 py-3">
+            <div className="mt-3 rounded-2xl bg-surface-2 px-4 py-3">
               <UserScopeLines
                 companyName={user.company_name}
                 branchName={user.branch_name}
@@ -645,38 +760,38 @@ function AccountPopup({
 
             <div className="mt-3 grid gap-0.5">
               <Link href="/dashboard/me" onClick={onClose} className={actionClass}>
-                <UserCircleIcon className="h-5 w-5 text-gray-400" />
-                Profile
+                <CircleUser />
+                Profil
               </Link>
               <button
                 type="button"
                 onClick={() => setPasswordOpen(true)}
                 className={actionClass}
               >
-                <KeyIcon className="h-5 w-5 text-gray-400" />
-                Change Password
+                <KeyRound />
+                Ganti kata sandi
               </button>
               {!essOnly && (
                 <Link href="/arkiv-os" onClick={onClose} className={actionClass}>
-                  <ComputerDesktopIcon className="h-5 w-5 text-gray-400" />
+                  <MonitorSmartphone />
                   Desktop
                 </Link>
               )}
             </div>
 
-            <div className="mt-2 border-t border-gray-100 pt-2">
+            <div className="mt-2 border-t border-border pt-2">
               <button
                 type="button"
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-danger transition-colors hover:bg-danger-soft disabled:opacity-60"
               >
                 {loggingOut ? (
-                  <Loader2 className="h-5 w-5 animate-spin text-red-400" />
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <ArrowRightStartOnRectangleIcon className="h-5 w-5 text-red-400" />
+                  <LogOut className="h-5 w-5" />
                 )}
-                {loggingOut ? "Logging out..." : "Logout"}
+                {loggingOut ? "Keluar…" : "Keluar"}
               </button>
             </div>
           </div>
@@ -757,7 +872,7 @@ function ChangePasswordDialog({
           </DialogPanelHeader>
           <DialogPanelBody className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Current Password
               </label>
               <Input
@@ -769,7 +884,7 @@ function ChangePasswordDialog({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
                 New Password
               </label>
               <Input
@@ -782,7 +897,7 @@ function ChangePasswordDialog({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              <label className="mb-1.5 block text-sm font-medium text-foreground">
                 Confirm New Password
               </label>
               <Input
@@ -800,14 +915,14 @@ function ChangePasswordDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={saving}
-              className="h-10 rounded-lg border-gray-200/80"
+              className="h-10"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={saving}
-              className="h-10 gap-2 rounded-lg bg-pink-600 px-4 text-white hover:bg-pink-700"
+              className="h-10 gap-2 px-4"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {saving ? "Saving..." : "Save Password"}

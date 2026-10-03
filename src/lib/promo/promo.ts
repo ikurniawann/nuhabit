@@ -12,6 +12,15 @@ export type PromoScope =
 
 export type PromoDiscountType = "percent" | "fixed";
 
+/**
+ * Kelayakan pemakai kode. `member_baru` = member yang BELUM pernah punya
+ * order lunas (transaksi ini yang pertama); bila `new_member_days` diisi,
+ * member juga harus terdaftar paling lama N hari. Dua syarat sekaligus
+ * (AND) supaya member lama yang belum pernah belanja tidak ikut lolos saat
+ * admin memang membatasi "pendaftar baru".
+ */
+export type PromoEligibility = "semua" | "member" | "member_baru";
+
 /** Aturan campaign (baris promo_campaigns yang relevan utk evaluasi). */
 export interface PromoCampaignRule {
   discount_type: PromoDiscountType;
@@ -27,6 +36,26 @@ export interface PromoCampaignRule {
   per_phone_limit: number | null;
   scope: PromoScope;
   is_active: boolean;
+  /** Kosong/undefined = semua produk. Diskon hanya dari baris yang cocok. */
+  target_product_ids?: string[];
+  target_category_ids?: string[];
+  eligibility?: PromoEligibility;
+  new_member_days?: number | null;
+}
+
+/** Satu baris keranjang (nilai bersih setelah diskon baris). */
+export interface PromoLine {
+  productId: string;
+  categoryId: string | null;
+  amount: number;
+}
+
+/** Riwayat member pemesan; null = transaksi tanpa member. */
+export interface PromoMemberContext {
+  /** Order lunas sebelum transaksi ini (void/batal tidak dihitung). */
+  priorPaidOrders: number;
+  /** Umur keanggotaan dalam hari (dibulatkan ke bawah). */
+  joinedDaysAgo: number;
 }
 
 /** Keadaan kode (baris promo_codes). */
@@ -46,6 +75,9 @@ export interface PromoUsageContext {
   campaignUsedCount: number;
   /** Redemption hidup campaign ini utk nomor WA pemesan. */
   phoneUsedCount: number;
+  /** Wajib bila campaign membatasi produk/kategori (kasir POS). */
+  lines?: PromoLine[];
+  member?: PromoMemberContext | null;
 }
 
 export type PromoRejectReason =
@@ -53,6 +85,9 @@ export type PromoRejectReason =
   | "belum-mulai"
   | "kedaluwarsa"
   | "scope"
+  | "khusus-member"
+  | "bukan-member-baru"
+  | "produk-tidak-sesuai"
   | "min-pembelian"
   | "kuota-habis"
   | "limit-nomor";
@@ -82,10 +117,60 @@ export function computeDiscount(
   return Math.min(discount, subtotal);
 }
 
+export function hasPromoTargets(
+  campaign: Pick<PromoCampaignRule, "target_product_ids" | "target_category_ids">
+): boolean {
+  return (
+    (campaign.target_product_ids?.length ?? 0) > 0 ||
+    (campaign.target_category_ids?.length ?? 0) > 0
+  );
+}
+
+/**
+ * Basis diskon: tanpa target = seluruh subtotal; dengan target = jumlah
+ * baris yang produknya ATAU kategorinya masuk daftar.
+ */
+export function promoEligibleSubtotal(
+  campaign: Pick<PromoCampaignRule, "target_product_ids" | "target_category_ids">,
+  subtotal: number,
+  lines: PromoLine[] | undefined
+): number {
+  if (!hasPromoTargets(campaign)) return subtotal;
+  const products = new Set(campaign.target_product_ids ?? []);
+  const categories = new Set(campaign.target_category_ids ?? []);
+  let base = 0;
+  for (const line of lines ?? []) {
+    const match =
+      products.has(line.productId) ||
+      (line.categoryId !== null && categories.has(line.categoryId));
+    if (match) base += Math.max(0, line.amount);
+  }
+  return Math.round(base * 100) / 100;
+}
+
+function eligibilityReject(
+  campaign: PromoCampaignRule,
+  member: PromoMemberContext | null | undefined
+): PromoRejectReason | null {
+  const eligibility = campaign.eligibility ?? "semua";
+  if (eligibility === "semua") return null;
+  if (!member) return "khusus-member";
+  if (eligibility === "member_baru") {
+    if (member.priorPaidOrders > 0) return "bukan-member-baru";
+    if (
+      campaign.new_member_days != null &&
+      member.joinedDaysAgo > campaign.new_member_days
+    ) {
+      return "bukan-member-baru";
+    }
+  }
+  return null;
+}
+
 /**
  * Evaluasi lengkap satu kode utk satu transaksi. Urutan cek deterministik
- * (aktif → window → scope → min pembelian → kuota → limit nomor) supaya
- * pesan penolakan stabil & mudah diuji.
+ * (aktif → window → scope → kelayakan member → produk → min pembelian →
+ * kuota → limit nomor) supaya pesan penolakan stabil & mudah diuji.
  */
 export function evaluatePromo(
   campaign: PromoCampaignRule,
@@ -103,6 +188,12 @@ export function evaluatePromo(
   }
   if (campaign.scope !== "semua" && campaign.scope !== ctx.channel) {
     return { ok: false, reason: "scope" };
+  }
+  const memberReject = eligibilityReject(campaign, ctx.member);
+  if (memberReject) return { ok: false, reason: memberReject };
+  const base = promoEligibleSubtotal(campaign, ctx.subtotal, ctx.lines);
+  if (hasPromoTargets(campaign) && base <= 0) {
+    return { ok: false, reason: "produk-tidak-sesuai" };
   }
   // Subtotal 0 tidak pernah layak didiskon (dan lolosnya membingungkan)
   if (ctx.subtotal <= 0 || ctx.subtotal < campaign.min_purchase) {
@@ -126,7 +217,7 @@ export function evaluatePromo(
   ) {
     return { ok: false, reason: "limit-nomor" };
   }
-  return { ok: true, discount: computeDiscount(campaign, ctx.subtotal) };
+  return { ok: true, discount: computeDiscount(campaign, base) };
 }
 
 /** Pesan penolakan ramah pengunjung (dipakai endpoint publik & wizard). */
@@ -135,7 +226,26 @@ export const PROMO_REJECT_MESSAGES: Record<PromoRejectReason, string> = {
   "belum-mulai": "Kode promo belum mulai berlaku",
   kedaluwarsa: "Kode promo sudah berakhir",
   scope: "Kode promo tidak berlaku untuk pembelian ini",
+  "khusus-member": "Kode ini khusus member — pilih member dulu",
+  "bukan-member-baru":
+    "Kode ini khusus member baru (transaksi pertama) — member ini tidak memenuhi syarat",
+  "produk-tidak-sesuai":
+    "Kode ini hanya untuk produk/kategori tertentu — belum ada di keranjang",
   "min-pembelian": "Belanja belum mencapai minimum untuk kode ini",
   "kuota-habis": "Kuota kode promo sudah habis",
   "limit-nomor": "Nomor ini sudah memakai kode promo ini",
+};
+
+/** Label pendek utk badge penolakan di kasir. */
+export const PROMO_REJECT_LABELS: Record<PromoRejectReason, string> = {
+  nonaktif: "Tidak berlaku",
+  "belum-mulai": "Belum mulai",
+  kedaluwarsa: "Kedaluwarsa",
+  scope: "Beda kanal",
+  "khusus-member": "Khusus member",
+  "bukan-member-baru": "Khusus member baru",
+  "produk-tidak-sesuai": "Produk tidak sesuai",
+  "min-pembelian": "Belum capai minimum",
+  "kuota-habis": "Kuota habis",
+  "limit-nomor": "Sudah dipakai",
 };

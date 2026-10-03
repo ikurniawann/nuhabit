@@ -389,7 +389,7 @@ export async function buildPipelineReportPdf(data: PipelineReportData): Promise<
       .fillColor(COLOR_MUTED)
       .text(
         sanitizeText(
-          `BCD Coffee HRIS · ${candidate.full_name} · Halaman ${i + 1} dari ${range.count}`
+          `NüHabit HRIS · ${candidate.full_name} · Halaman ${i + 1} dari ${range.count}`
         ),
         doc.page.margins.left,
         doc.page.height - 34,

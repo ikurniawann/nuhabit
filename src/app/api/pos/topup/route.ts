@@ -10,12 +10,17 @@ import {
   idrToArk,
   loadPosLoyaltySettings,
 } from "@/lib/pos/loyalty-settings";
-import {
-  buildQrImageUrl,
-  createXenditDynamicQr,
-  loadActiveXenditConfig,
-} from "@/lib/payments/xendit";
+import { buildQrImageUrl } from "@/lib/payments/xendit";
 import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
+import { expiresAtFor } from "@/lib/wallet/ledger";
+import { withTransaction } from "@/lib/db";
+import { WalletError } from "@/lib/wallet/server";
+import {
+  createPendingQrisTopup,
+  creditTopupBonus,
+  getPackageForSale,
+  packageTopupFields,
+} from "@/lib/wallet/topup";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -125,6 +130,7 @@ export async function POST(request: NextRequest) {
       payment_method: rawMethod = "qris",
       xendit_transaction_id,
       supervisor_pin,
+      package_id,
     } = body;
 
     const payment_method = resolvePaymentMethod(rawMethod);
@@ -149,7 +155,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!customer_id || !amount || amount <= 0) {
+    if (!customer_id || (!package_id && (!amount || amount <= 0))) {
       return NextResponse.json(
         { success: false, error: "Customer ID and valid amount are required" },
         { status: 400 }
@@ -157,10 +163,14 @@ export async function POST(request: NextRequest) {
     }
 
     const loyaltySettings = await loadPosLoyaltySettings(db);
-    const amountValue = Number(amount) || 0;
     // Venue topup (owner 2026-09-04): cabang kasir yang login, fallback venue
     // default CRM — supaya tidak ada lagi topup "tanpa venue" di rekonsiliasi.
     const venue = await resolveTopupVenue(db, sessionUserId);
+    // Paket top-up: harga paket menggantikan nominal; bonus & masa berlaku ikut paket.
+    const pkg = package_id
+      ? packageTopupFields(await getPackageForSale(String(package_id), { branchId: venue.branchId }))
+      : null;
+    const amountValue = pkg ? pkg.amount : Number(amount) || 0;
 
     if (amountValue < loyaltySettings.topup_min_amount) {
       return NextResponse.json(
@@ -188,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     // ── Cash / credit / FOC: credit wallet immediately ─────────────────────
     if (payment_method === "cash" || payment_method === "credit" || payment_method === "foc") {
-      const balanceAfter = balanceBefore + amountValue;
+      let balanceAfter = balanceBefore + amountValue;
 
       // Topup tidak menambah total_spent (CRM: dasar top spender = belanja order saja).
       const { error: updateError } = await db
@@ -214,6 +224,8 @@ export async function POST(request: NextRequest) {
           balance_after: balanceAfter,
           payment_method,
           status: "completed",
+          package_id: pkg?.metadata.package_id ?? null,
+          expires_at: pkg ? expiresAtFor(pkg.metadata.validity_days, new Date())?.toISOString() ?? null : null,
           xendit_transaction_id: xendit_transaction_id || null,
           notes:
             payment_method === "foc"
@@ -221,20 +233,38 @@ export async function POST(request: NextRequest) {
               : payment_method === "cash"
                 ? "Cash top-up"
                 : "Card top-up",
-          metadata:
-            payment_method === "foc"
+          metadata: {
+            ...(payment_method === "foc"
               ? {
                   settled_via: "foc",
                   approved_by_id: focApprover?.id ?? null,
                   approved_by_name: focApprover?.name ?? null,
                   xp_awarded: false,
                 }
-              : { settled_via: "cashier" },
+              : { settled_via: "cashier" }),
+            ...(pkg?.metadata ?? {}),
+          },
         })
         .select()
         .single();
 
       if (transactionError) throw transactionError;
+
+      if (pkg && pkg.bonus > 0 && transaction?.id) {
+        const bonus = await withTransaction((client) =>
+          creditTopupBonus(client, {
+            customerId: customer_id,
+            topupId: String(transaction.id),
+            bonusIdr: pkg.bonus,
+            expiresAt: transaction.expires_at ? new Date(String(transaction.expires_at)) : null,
+            packageMetadata: pkg.metadata,
+            arkRate: loyaltySettings.ark_rate,
+            companyId: venue.companyId,
+            branchId: venue.branchId,
+          })
+        );
+        balanceAfter = bonus.balanceAfter;
+      }
 
       // FOC: tanpa XP (XP adalah imbalan uang tunai), kabari owner.
       const xpPreview = payment_method === "foc" ? 0 : calculateTopupXp(amountValue, loyaltySettings);
@@ -284,46 +314,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const xendit = await loadActiveXenditConfig(db);
-    const referenceId = `topup_${crypto.randomUUID().replace(/-/g, "").slice(0, 24)}`;
-    const callbackUrl = resolveWebhookCallbackUrl(request, xendit.callbackUrl);
-
-    const qr = await createXenditDynamicQr({
-      secretKey: xendit.secretKey,
-      referenceId,
+    const pending = await createPendingQrisTopup({
+      customerId: customer_id,
       amount: amountValue,
-      callbackUrl,
-      description: `ARK topup ${amountValue}`,
+      balanceBefore,
+      arkRate: loyaltySettings.ark_rate,
+      companyId: venue.companyId,
+      branchId: venue.branchId,
+      callbackUrl: (configured) => resolveWebhookCallbackUrl(request, configured),
+      source: "cashier",
+      packageMetadata: pkg?.metadata ?? null,
     });
-
-    const { data: transaction, error: transactionError } = await db
-      .from("pos_wallet_transactions")
-      .insert({
-        customer_id,
-        type: "topup",
-        company_id: venue.companyId,
-        branch_id: venue.branchId,
-        amount: amountValue,
-        ark_coins: arkCoins,
-        balance_before: balanceBefore,
-        balance_after: balanceBefore,
-        payment_method: "qris",
-        status: "pending",
-        xendit_transaction_id: qr.id,
-        reference_id: referenceId,
-        notes: "Waiting for QRIS payment",
-        metadata: {
-          provider: "xendit",
-          environment: xendit.environment,
-          qr_string: qr.qr_string,
-          expires_at: qr.expires_at,
-          xendit_status: qr.status,
-        },
-      })
-      .select()
-      .single();
-
-    if (transactionError) throw transactionError;
+    const transaction = pending.transaction;
 
     return NextResponse.json(
       {
@@ -337,16 +339,19 @@ export async function POST(request: NextRequest) {
           ark_coins: arkCoins,
           ark_rate: loyaltySettings.ark_rate,
           xp_awarded: 0,
-          qr_code_url: buildQrImageUrl(qr.qr_string),
-          qr_string: qr.qr_string,
-          xendit_qr_id: qr.id,
-          reference_id: referenceId,
-          expires_at: qr.expires_at,
+          qr_code_url: buildQrImageUrl(pending.qr_string),
+          qr_string: pending.qr_string,
+          xendit_qr_id: pending.xendit_qr_id,
+          reference_id: pending.reference_id,
+          expires_at: pending.expires_at,
         },
       },
       { status: 201 }
     );
   } catch (error: unknown) {
+    if (error instanceof WalletError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+    }
     console.error("Error processing topup:", error);
     return NextResponse.json(
       { success: false, error: getErrorMessage(error) },

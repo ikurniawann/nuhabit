@@ -44,4 +44,35 @@ describe("buildNavBreadcrumbs", () => {
       { label: "New" },
     ]);
   });
+
+  it("prefers the specific page over a prefix match in a sibling group", () => {
+    const crm: NavItem[] = [
+      {
+        href: "/dashboard/crm",
+        label: "CRM",
+        icon: "star",
+        children: [
+          {
+            href: "#",
+            label: "Overview",
+            icon: "chart",
+            children: [{ href: "/dashboard/crm", label: "Dashboard", icon: "chart" }],
+          },
+          {
+            href: "#",
+            label: "Engagement",
+            icon: "megaphone",
+            children: [{ href: "/dashboard/crm/challenges", label: "Challenge", icon: "star" }],
+          },
+        ],
+      },
+    ];
+    expect(buildNavBreadcrumbs(crm, "/dashboard/crm/challenges").map((c) => c.label)).toEqual([
+      "Beranda",
+      "CRM",
+      "Engagement",
+      "Challenge",
+    ]);
+  });
 });
+

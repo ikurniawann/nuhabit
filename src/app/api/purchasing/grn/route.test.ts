@@ -328,6 +328,7 @@ describe("POST /api/purchasing/grn — module_type follows the parent PO (EPIC-0
 
     fakeDbRef = createFakeDb({
       purchase_orders: [{ data: { module_type: "raw_material" }, error: null }],
+      raw_materials: [{ data: [{ id: RAW_MATERIAL_ID, shelf_life_days: 10 }], error: null }],
       purchase_order_items: [
         {
           data: [
@@ -370,6 +371,7 @@ describe("POST /api/purchasing/grn — module_type follows the parent PO (EPIC-0
       makeRequest({
         delivery_id: RM_DELIVERY_ID,
         warehouse_id: WAREHOUSE_ID,
+        tanggal_penerimaan: "2026-10-03",
         items: [
           {
             purchase_order_item_id: RM_PO_ITEM_ID,
@@ -379,6 +381,7 @@ describe("POST /api/purchasing/grn — module_type follows the parent PO (EPIC-0
             qty_accepted: 2,
             qty_rejected: 0,
             kondisi: "baik",
+            batch_number: " LOT-77 ",
           },
         ],
       })
@@ -396,5 +399,11 @@ describe("POST /api/purchasing/grn — module_type follows the parent PO (EPIC-0
     };
     expect(insertedGrn.supplier_id).toBe(SUPPLIER_ID);
     expect(insertedGrn.vendor_id).toBeNull();
+
+    // Batch dari supplier disimpan; tanggal kosong → tanggal terima + shelf life.
+    const itemsInsert = fakeDbRef.calls.find((c) => c.table === "grn_items" && c.action === "insert");
+    expect(itemsInsert!.payload).toEqual([
+      expect.objectContaining({ batch_number: "LOT-77", expiry_date: "2026-10-13" }),
+    ]);
   });
 });

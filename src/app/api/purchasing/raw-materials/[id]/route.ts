@@ -58,6 +58,10 @@ const materialSchema = z.object({
     satuan_id: z.string().uuid(),
     qty_in_base_unit: z.number().min(0.000001),
     is_base: z.boolean().optional(),
+    // Pack: bawaan baris PO / pengeluaran stok, dan barcode kemasan.
+    is_purchase_default: z.boolean().optional(),
+    is_issue_default: z.boolean().optional(),
+    barcode: z.string().trim().max(64).optional().nullable(),
   })).optional(),
 });
 
@@ -238,13 +242,33 @@ export async function PUT(
           : []),
         ...unit_conversions.map((conversion) => ({ ...conversion, is_base: conversion.is_base ?? false })),
       ];
+      // Satuan besar/kecil menang atas isi pack; atribut pack (bawaan, barcode)
+      // dari payload tetap ikut.
       const conversionsByUnit = new Map<string, (typeof conversions)[number]>();
       for (const conversion of conversions) {
-        if (!conversionsByUnit.has(conversion.satuan_id)) {
-          conversionsByUnit.set(conversion.satuan_id, conversion);
-        }
+        const existing = conversionsByUnit.get(conversion.satuan_id);
+        conversionsByUnit.set(conversion.satuan_id, existing ? { ...conversion, ...existing } : conversion);
       }
       const uniqueConversions = Array.from(conversionsByUnit.values());
+      const packFlag = (conversion: (typeof conversions)[number], key: "is_purchase_default" | "is_issue_default") =>
+        key in conversion ? Boolean((conversion as Record<string, unknown>)[key]) : undefined;
+      for (const key of ["is_purchase_default", "is_issue_default"] as const) {
+        const flagged = unit_conversions.filter((conversion) => conversion[key]);
+        if (flagged.length > 1) {
+          return Response.json(
+            { success: false, message: "Hanya satu pack yang boleh menjadi bawaan pembelian/pengeluaran" },
+            { status: 400 }
+          );
+        }
+        // Indeks unik parsial: kosongkan flag lama sebelum flag baru ditulis.
+        if (flagged.length === 1) {
+          const { error: resetError } = await db
+            .from("raw_material_unit_conversions")
+            .update({ [key]: false })
+            .eq("raw_material_id", id);
+          if (resetError) throwIfDbError(resetError);
+        }
+      }
 
       const { data: existingConversions, error: existingError } = await db
         .from("raw_material_unit_conversions")
@@ -277,6 +301,13 @@ export async function PUT(
               qty_in_base_unit: conversion.qty_in_base_unit,
               is_base: conversion.is_base,
               is_active: true,
+              ...(packFlag(conversion, "is_purchase_default") !== undefined
+                ? { is_purchase_default: packFlag(conversion, "is_purchase_default") }
+                : {}),
+              ...(packFlag(conversion, "is_issue_default") !== undefined
+                ? { is_issue_default: packFlag(conversion, "is_issue_default") }
+                : {}),
+              ...("barcode" in conversion ? { barcode: (conversion as { barcode?: string | null }).barcode || null } : {}),
               updated_at: new Date().toISOString(),
             })),
             { onConflict: "raw_material_id,satuan_id" }

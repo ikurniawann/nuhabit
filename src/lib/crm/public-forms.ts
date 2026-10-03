@@ -81,7 +81,7 @@ export const DEFAULT_FORM_FIELDS: PublicFieldDef[] = [
     options: ["corporate", "sekolah", "komunitas", "travel-agent", "pemerintah", "perorangan", "lainnya"] },
   { key: "city", label: "Kota", type: "text", required: false, placeholder: "cth. Bandung", help_text: null, options: [], width: 1 },
   { key: "pic_email", label: "Email", type: "email", required: false, placeholder: "nama@perusahaan.com", help_text: null, options: [], width: 2 },
-  { key: "notes", label: "Kebutuhan Anda", type: "textarea", required: true, placeholder: "Ceritakan acara atau kebutuhan kopi Anda", help_text: null, options: [], width: 2 },
+  { key: "notes", label: "Kebutuhan Anda", type: "textarea", required: true, placeholder: "Ceritakan acara atau kebutuhan latihan tim Anda", help_text: null, options: [], width: 2 },
 ];
 
 // ── UTM / atribusi ─────────────────────────────────────────────────────────
