@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -276,9 +277,25 @@ func EnumCheck(options []string) func(string) (string, string, bool) {
 	}
 }
 
-// Enum is Str with EnumCheck.
+// Enum is z.enum(options).
+// zod answers invalid_value with the options for a missing, null or
+// non-string value too, so this does not go through Take.
 func (f *Form) Enum(key string, r Rule, options []string) *string {
-	return f.Str(key, r, StrOpts{Check: EnumCheck(options)})
+	if f.obj == nil {
+		return nil
+	}
+	v, sent := f.obj[key]
+	if (!sent && (r.Optional || r.HasDefault)) || (sent && v == nil && r.Nullable) {
+		return nil
+	}
+	s, isString := v.(string)
+	if code, msg, ok := EnumCheck(options)(s); !isString || !ok {
+		f.Fail(key, code, msg)
+	}
+	if !isString {
+		return nil
+	}
+	return &s
 }
 
 // DatetimeCheck is z.string().datetime({ offset: true }).
@@ -312,6 +329,17 @@ type NumOpts struct {
 	Min, Max *float64
 }
 
+// JSNumber formats x like JavaScript's Number#toString: plain decimals for
+// 1e-6 <= |x| < 1e21, otherwise exponent form such as 1e+21 or 1.5e-7.
+func JSNumber(x float64) string {
+	if abs := math.Abs(x); x == 0 || (abs >= 1e-6 && abs < 1e21) {
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	}
+	mant, exp, _ := strings.Cut(strconv.FormatFloat(x, 'e', -1, 64), "e")
+	sign, digits := exp[:1], strings.TrimLeft(exp[1:], "0")
+	return mant + "e" + sign + digits
+}
+
 // Bound returns &v for NumOpts.Min and Max.
 func Bound(v float64) *float64 { return &v }
 
@@ -336,10 +364,10 @@ func (f *Form) CheckNumber(key any, v any, o NumOpts) (float64, bool) {
 		f.Fail(key, "too_small", "Too small: expected number to be >0")
 		return x, false
 	case o.Min != nil && x < *o.Min:
-		f.Fail(key, "too_small", fmt.Sprintf("Too small: expected number to be >=%v", *o.Min))
+		f.Fail(key, "too_small", "Too small: expected number to be >="+JSNumber(*o.Min))
 		return x, false
 	case o.Max != nil && x > *o.Max:
-		f.Fail(key, "too_big", fmt.Sprintf("Too big: expected number to be <=%v", *o.Max))
+		f.Fail(key, "too_big", "Too big: expected number to be <="+JSNumber(*o.Max))
 		return x, false
 	}
 	return x, true

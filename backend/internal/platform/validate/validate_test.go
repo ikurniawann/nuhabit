@@ -96,3 +96,32 @@ func TestJSStringRules(t *testing.T) {
 		t.Fatal("IsUUID")
 	}
 }
+
+func TestZodWording(t *testing.T) {
+	for x, want := range map[float64]string{1000000000: "1000000000", 0.5: "0.5", 1e21: "1e+21", 1.5e-7: "1.5e-7", -2e22: "-2e+22", 0: "0"} {
+		if got := JSNumber(x); got != want {
+			t.Errorf("JSNumber(%v) = %q, want %q", x, got, want)
+		}
+	}
+	f := form(t, `{"amount":2000000000,"b":null,"c":5,"d":"x","e":"a"}`)
+	f.Num("amount", Rule{}, NumOpts{Max: Bound(1000000000)})
+	for _, k := range []string{"a", "b", "c", "d"} {
+		if v := f.Enum(k, Rule{}, []string{"a", "b"}); k == "d" && (v == nil || *v != "x") {
+			t.Fatalf("Enum keeps the string it rejected: %v", v)
+		}
+	}
+	if v := f.Enum("e", Rule{}, []string{"a", "b"}); v == nil || *v != "a" {
+		t.Fatalf("Enum e = %v", v)
+	}
+	f.Enum("missing", Rule{Optional: true}, []string{"a"})
+	f.Enum("b", Rule{Nullable: true}, []string{"a"})
+	got := []string{}
+	for _, is := range f.Issues() {
+		got = append(got, is.Code+" "+is.Message)
+	}
+	enum := `invalid_value Invalid option: expected one of "a"|"b"`
+	want := []string{"too_big Too big: expected number to be <=1000000000", enum, enum, enum, enum}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("issues = %q", got)
+	}
+}
