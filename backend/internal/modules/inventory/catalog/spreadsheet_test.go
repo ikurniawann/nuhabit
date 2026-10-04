@@ -2,7 +2,6 @@ package catalog
 
 import (
 	"encoding/json"
-	"math"
 	"reflect"
 	"testing"
 )
@@ -105,16 +104,5 @@ func TestProductRules(t *testing.T) {
 		`"markup_persen":30,"production_output_type":"FINISHED_GOOD","is_active":false}`
 	if string(b) != want {
 		t.Fatalf("productPayload = %s", b)
-	}
-}
-
-func TestParseFloat(t *testing.T) {
-	for in, want := range map[string]float64{"2.5kg": 2.5, " 12": 12, "-3e2x": -300, ".5": 0.5, "Infinity": math.Inf(1)} {
-		if got := parseFloat(in); got != want {
-			t.Errorf("parseFloat(%q) = %v, want %v", in, got, want)
-		}
-	}
-	if !math.IsNaN(parseFloat("abc")) || !math.IsNaN(parseFloat("")) {
-		t.Error("parseFloat without digits must be NaN")
 	}
 }

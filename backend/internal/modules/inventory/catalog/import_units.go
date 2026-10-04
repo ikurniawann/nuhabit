@@ -1,60 +1,41 @@
 package catalog
 
 import (
-	"math"
 	"net/http"
-	"regexp"
-	"strconv"
+	"slices"
 	"strings"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/storage"
 	"nuhabit/backend/internal/platform/xlsx"
 )
 
-// Port of POST /api/purchasing/import/units (route.ts inline logic): CSV
-// only, existing codes are skipped.
+// POST /api/purchasing/import/units: CSV only, codes already used in the
+// caller's company are skipped. A unit row holds kode, nama, tipe and
+// deskripsi; conversion factors live per raw material
+// (raw_materials.konversi_factor and raw_material_unit_conversions), so
+// faktor_konversi and satuan_induk columns in the file are ignored.
 
-var floatPrefix = regexp.MustCompile(`^[+-]?(Infinity|(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)`)
+var unitTypes = []string{"BESAR", "KECIL", "KONVERSI"}
 
-// parseFloat is JavaScript's parseFloat: the longest numeric prefix after
-// leading whitespace, NaN when there is none.
-func parseFloat(s string) float64 {
-	m := floatPrefix.FindString(strings.TrimLeftFunc(s, func(r rune) bool { return jsTrim(string(r)) == "" }))
-	switch strings.TrimLeft(m, "+-") {
-	case "":
-		return math.NaN()
-	case "Infinity":
-		if strings.HasPrefix(m, "-") {
-			return math.Inf(-1)
-		}
-		return math.Inf(1)
+// unitPayload is buildUnitPayload: tipe is case-insensitive and only
+// status "active" is active. It returns the problem when tipe is invalid.
+func unitPayload(data map[string]string, companyID *string) (*kit.Row, string) {
+	tipe := strings.ToUpper(jsTrim(data["tipe"]))
+	if !slices.Contains(unitTypes, tipe) {
+		return nil, "Tipe satuan harus BESAR, KECIL atau KONVERSI"
 	}
-	f, _ := strconv.ParseFloat(m, 64)
-	return f
-}
-
-// unitPayload is buildUnitPayload: only status "active" is active. The
-// TS writes faktor_konversi and satuan_induk, which item.units does not
-// have, so every insert fails with PostgreSQL's message; the port keeps
-// that until the route itself is fixed.
-func unitPayload(data map[string]string) *kit.Row {
-	faktor := parseFloat(data["faktor_konversi"])
-	if math.IsNaN(faktor) || faktor == 0 {
-		faktor = 1
-	}
-	orNil := func(key string) *string { return kit.OrNil(kit.Ptr(data[key])) }
 	return kit.Obj(
-		"kode", data["kode"],
-		"nama", data["nama"],
-		"tipe", orNil("tipe"),
-		"faktor_konversi", faktor,
-		"satuan_induk", orNil("satuan_induk"),
-		"deskripsi", orNil("deskripsi"),
+		"kode", jsTrim(data["kode"]),
+		"nama", jsTrim(data["nama"]),
+		"tipe", tipe,
+		"deskripsi", emptyToNull(data["deskripsi"]),
 		"is_active", strings.ToLower(data["status"]) == "active",
-	)
+		"company_id", companyID,
+	), ""
 }
 
 // unitImportSummary is the units route's own summary (no `updated`).
@@ -67,7 +48,8 @@ type unitImportSummary struct {
 
 /* POST /api/purchasing/import/units: form-data `file` (CSV) */
 func (h *handler) importUnits(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	_, scope, err := h.staffScope(r, h.itemsStaff)
+	if err != nil {
 		return err
 	}
 	form, err := storage.ReadForm(r, storage.MaxRequestBytes)
@@ -84,6 +66,7 @@ func (h *handler) importUnits(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("File CSV harus memiliki header dan minimal 1 data")
 	}
 	ctx := r.Context()
+	companyID := ps.EffectiveCompanyID(scope)
 	sum := newImportSummary()
 	for _, row := range xlsx.MatrixToRows(matrix, xlsx.HeaderNormalizer(nil)) {
 		var missing []string
@@ -96,16 +79,20 @@ func (h *handler) importUnits(w http.ResponseWriter, r *http.Request) error {
 			sum.skip(row.RowNumber, "Field wajib kosong: "+strings.Join(missing, ", "))
 			continue
 		}
-		existing, err := kit.QueryOne(ctx, h.env.DB, `SELECT id FROM units WHERE kode = $1 LIMIT 1`, row.Data["kode"])
-		if err != nil {
-			return err
+		payload, problem := unitPayload(row.Data, companyID)
+		if problem != "" {
+			sum.skip(row.RowNumber, problem)
+			continue
 		}
-		if existing != nil {
-			sum.skip(row.RowNumber, "Kode satuan "+row.Data["kode"]+" sudah ada")
+		kode := payload.Str("kode")
+		if taken, err := h.unitExists(ctx, kode, companyID, ""); err != nil {
+			return err
+		} else if taken {
+			sum.skip(row.RowNumber, "Kode satuan "+kode+" sudah ada")
 			continue
 		}
 		failed, err := h.importRow(ctx, func(q database.Querier) error {
-			if _, err := kit.Insert(ctx, q, "units", []*kit.Row{unitPayload(row.Data)}, "", false); err != nil {
+			if _, err := kit.Insert(ctx, q, "units", []*kit.Row{payload}, "", false); err != nil {
 				return dbFailure(err)
 			}
 			return nil

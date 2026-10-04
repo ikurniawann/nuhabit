@@ -13,6 +13,7 @@ import {
   normalizePaymentTerms,
   normalizeSupplierStatus,
 } from "./import-suppliers";
+import { buildUnitPayload } from "./import-units";
 
 describe("raw material import rules", () => {
   it("reads a row and validates the COA", () => {
@@ -113,5 +114,28 @@ describe("supplier import rules", () => {
       payment_terms: "TOP30",
       currency: "IDR",
     });
+  });
+});
+
+describe("unit import rules", () => {
+  it("writes only item.units columns and ignores conversion columns", () => {
+    const payload = buildUnitPayload(
+      { kode: " BOX ", nama: "Box", tipe: "kecil", faktor_konversi: "12", satuan_induk: "PCS", status: "Active" },
+      "company-1"
+    );
+    expect(payload).toEqual({
+      kode: "BOX",
+      nama: "Box",
+      tipe: "KECIL",
+      deskripsi: null,
+      is_active: true,
+      company_id: "company-1",
+    });
+  });
+
+  it("rejects a tipe outside BESAR, KECIL and KONVERSI", () => {
+    expect(buildUnitPayload({ kode: "L", nama: "Liter", tipe: "" }, null)).toBe(
+      "Tipe satuan harus BESAR, KECIL atau KONVERSI"
+    );
   });
 });

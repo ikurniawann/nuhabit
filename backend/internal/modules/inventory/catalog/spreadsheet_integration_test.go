@@ -208,17 +208,28 @@ func TestImportUnits(t *testing.T) {
 		out["error"] != "File CSV harus memiliki header dan minimal 1 data" {
 		t.Fatalf("header only: %d %v", rec.Code, out)
 	}
-	csv := "\ufeffKode,Nama,Tipe,Status\n,Tanpa Kode,BESAR,active\n" + taken + ",Dobel,BESAR,active\nNEW1,Baru,BESAR,active\n"
+	e.ScopeStaff("company", e.org)
+	csv := "\ufeffKode,Nama,Tipe,Faktor_Konversi,Satuan_Induk,Status\n" +
+		",Tanpa Kode,BESAR,,,active\n" +
+		taken + ",Dobel,BESAR,,,active\n" +
+		"NEW1,Baru,kecil,1000,KG,active\n" +
+		"NEW2,Salah,LITER,,,active\n"
 	rec, out := e.upload("/api/purchasing/import/units", "satuan.csv", []byte(csv))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("import: %d %s", rec.Code, rec.Body)
 	}
-	// item.units has no faktor_konversi column: the TS insert fails on every
-	// new code and the port reports the same database message.
-	e.jsonIs(out, `{"success":true,"imported":0,"skipped":3,"errors":[
+	// Units carry no factor: conversions live per raw material in
+	// raw_material_unit_conversions, so faktor_konversi and satuan_induk
+	// are ignored here.
+	e.jsonIs(out, `{"success":true,"imported":1,"skipped":3,"errors":[
 		{"row":2,"message":"Field wajib kosong: kode"},
 		{"row":3,"message":"Kode satuan `+taken+` sudah ada"},
-		{"row":4,"message":"column \"faktor_konversi\" of relation \"units\" does not exist"}]}`)
+		{"row":5,"message":"Tipe satuan harus BESAR, KECIL atau KONVERSI"}]}`)
+	var saved string
+	e.Scalar(&saved, `SELECT nama || ' ' || tipe || ' ' || is_active::text || ' ' || company_id::text FROM item.units WHERE kode = 'NEW1'`)
+	if saved != "Baru KECIL true "+e.org.CompanyID {
+		t.Fatalf("saved unit %q", saved)
+	}
 }
 
 // download serves a GET and parses the workbook back.

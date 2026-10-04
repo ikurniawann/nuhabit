@@ -59,6 +59,13 @@ export async function listUnits(
   };
 }
 
+/** Kode sudah dipakai satuan aktif di company ini (null = template global)? */
+export async function unitCodeTaken(db: DbClient, kode: string, companyId: string | null) {
+  const query = db.from("units").select("id").eq("kode", kode).is("deleted_at", null);
+  const { data } = await (companyId ? query.eq("company_id", companyId) : query.is("company_id", null)).maybeSingle();
+  return Boolean(data);
+}
+
 /** Kode unik dalam scope company (null = template global). */
 export async function createUnit(
   db: DbClient,
@@ -66,16 +73,7 @@ export async function createUnit(
   input: z.infer<typeof unitCreateSchema>
 ) {
   const companyId = effectiveCompanyId(scope);
-  let existingQuery = db
-    .from("units")
-    .select("id")
-    .eq("kode", input.kode)
-    .is("deleted_at", null);
-  existingQuery = companyId
-    ? existingQuery.eq("company_id", companyId)
-    : existingQuery.is("company_id", null);
-  const { data: existing } = await existingQuery.maybeSingle();
-  if (existing) throw ApiError.badRequest(DUPLICATE_CODE);
+  if (await unitCodeTaken(db, input.kode, companyId)) throw ApiError.badRequest(DUPLICATE_CODE);
 
   const { data, error } = await db
     .from("units")
