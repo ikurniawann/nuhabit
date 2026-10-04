@@ -308,7 +308,7 @@ export function TalentPoolPage() {
           <p className="text-sm text-gray-600">
             {actionDialog === "activate"
               ? `Kandidat "${selectedCandidate?.full_name}" akan dikembalikan ke stage "Baru"?`
-              : `Kandidat "${selectedCandidate?.full_name}" akan dipindahkan ke archived?`}
+              : `Arsipkan kandidat "${selectedCandidate?.full_name}"? Kandidat keluar dari talent pool tanpa ditolak.`}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActionDialog(null)}>

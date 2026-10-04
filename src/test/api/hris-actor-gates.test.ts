@@ -198,32 +198,43 @@ describe("payroll-settings: tulis khusus super_admin/HRD", () => {
 });
 
 describe("POST /api/hris/promote", () => {
-  it("insert karyawan lengkap (NIP, jabatan, atasan) dan tautkan kandidat, tanpa RPC", async () => {
+  it("memanggil fungsi DB promosi (NIP, jabatan, atasan, tautan kandidat dalam satu transaksi)", async () => {
     resolveRow = (c) => {
       if (c.table === "candidates" && c.op === "select") {
         return { id: CAND_ID, full_name: "Budi", email: "budi@x.id", phone: null, status: "hired", position: { id: "pos-1" } };
       }
-      if (c.table === "employees" && c.op === "insert") return { id: EMP_ID };
       if (c.table === "employees" && c.filters.id === EMP_ID) return { id: EMP_ID, nip: "EMP-2026-00001" };
       return null;
     };
+    queryOne.mockImplementation(async (sql: string) =>
+      sql.includes("promote_candidate_to_employee") ? { id: EMP_ID } : null
+    );
     const { POST } = await import("@/app/api/hris/promote/route");
     const res = await POST(
       req("POST", { candidate_id: CAND_ID, join_date: "2026-10-01", department_id: DEPT_ID, reporting_to: BOSS_ID })
     );
     await expectStatus(res, 200);
-    expect(rpc).not.toHaveBeenCalled();
-    const insert = calls.find((c) => c.table === "employees" && c.op === "insert");
-    expect(insert?.payload).toMatchObject({
-      nip: expect.stringMatching(/^EMP-\d{4}-00001$/),
-      full_name: "Budi",
-      phone: "",
-      job_title_id: "pos-1",
-      department_id: DEPT_ID,
-      reporting_to: BOSS_ID,
-      employment_status: "probation",
+    const [sql, values] = queryOne.mock.calls.find(([q]) => String(q).includes("promote_candidate_to_employee")) as [
+      string,
+      unknown[],
+    ];
+    expect(sql).toContain("public.promote_candidate_to_employee($1, $2::date, $3, $4, $5)");
+    expect(values).toEqual([CAND_ID, "2026-10-01", "probation", DEPT_ID, BOSS_ID]);
+    // Insert & tautan kandidat terjadi di dalam fungsi DB, bukan lewat shim.
+    expect(calls.some((c) => c.table === "employees" && c.op === "insert")).toBe(false);
+    expect(calls.some((c) => c.table === "candidates" && c.op === "update")).toBe(false);
+  });
+
+  it("promosi ganda serentak (unique_violation dari fungsi) → 409", async () => {
+    resolveRow = (c) =>
+      c.table === "candidates" && c.op === "select"
+        ? { id: CAND_ID, full_name: "Budi", email: "budi@x.id", phone: null, status: "hired", position: { id: "pos-1" } }
+        : null;
+    queryOne.mockImplementation(async (sql: string) => {
+      if (sql.includes("promote_candidate_to_employee")) throw Object.assign(new Error("dup"), { code: "23505" });
+      return null;
     });
-    const link = calls.find((c) => c.table === "candidates" && c.op === "update");
-    expect(link).toMatchObject({ payload: { promoted_to_employee_id: EMP_ID }, filters: { id: CAND_ID } });
+    const { POST } = await import("@/app/api/hris/promote/route");
+    await expectStatus(await POST(req("POST", { candidate_id: CAND_ID })), 409);
   });
 });

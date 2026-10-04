@@ -1,6 +1,7 @@
 /**
- * Promosi kandidat rekrutmen (hired/talent pool) menjadi karyawan: insert
- * karyawan (NIP EMP-<tahun>-<urut>), tautkan kandidat, lalu buat draft
+ * Promosi kandidat rekrutmen (hired/talent pool) menjadi karyawan lewat
+ * fungsi DB public.promote_candidate_to_employee (satu transaksi: NIP
+ * EMP-<tahun>-<urut>, insert karyawan, tautkan kandidat), lalu buat draft
  * kontrak dari offer yang diterima (Fase D modul kontrak).
  */
 
@@ -25,16 +26,6 @@ export const promotionSchema = z.object({
 });
 
 type PromotionInput = z.infer<typeof promotionSchema>;
-
-/** NIP kandidat berikutnya yang belum dipakai: EMP-<tahun>-00001, …00002, … */
-async function nextFreeNip(db: PgClient, year: number): Promise<string> {
-  for (let seq = 1; seq < 99999; seq++) {
-    const nip = `EMP-${year}-${String(seq).padStart(5, "0")}`;
-    const { data: existing } = await db.from("employees").select("id").eq("nip", nip).maybeSingle();
-    if (!existing) return nip;
-  }
-  throw new Error("Nomor NIP habis untuk tahun ini");
-}
 
 /**
  * Draft kontrak otomatis: tipe dari employment_status (contract → PKWT 12
@@ -108,29 +99,20 @@ export async function promoteCandidate(db: PgClient, input: PromotionInput) {
   const joinDate = input.join_date || new Date().toISOString().split("T")[0];
   const employmentStatus = input.employment_status || "probation";
 
-  // Fungsi DB public.promote_candidate_to_employee tidak dipakai: ia membaca
-  // kolom candidates.name yang tidak ada, tidak mengisi NIP (NOT NULL),
-  // reporting_to, maupun candidates.promoted_to_employee_id.
-  const { data: newEmployee, error: insertError } = await db
-    .from("employees")
-    .insert({
-      nip: await nextFreeNip(db, new Date().getFullYear()),
-      full_name: candidate.full_name,
-      email: candidate.email,
-      phone: candidate.phone || "",
-      join_date: joinDate,
-      employment_status: employmentStatus,
-      department_id: input.department_id || null,
-      job_title_id: candidate.position?.id || null,
-      reporting_to: input.reporting_to || null,
-      is_active: true,
-    })
-    .select()
-    .single();
-  if (insertError) throw new Error(`Gagal membuat karyawan: ${insertError.message}`);
-  const employeeId: string | null = newEmployee?.id ?? null;
-  if (employeeId) {
-    await db.from("candidates").update({ promoted_to_employee_id: employeeId }).eq("id", candidate.id);
+  let employeeId: string;
+  try {
+    const promoted = await queryOne<{ id: string }>(
+      "SELECT public.promote_candidate_to_employee($1, $2::date, $3, $4, $5) AS id",
+      [candidate.id, joinDate, employmentStatus, input.department_id || null, input.reporting_to || null]
+    );
+    if (!promoted?.id) throw new Error("promote_candidate_to_employee tidak mengembalikan id karyawan");
+    employeeId = promoted.id;
+  } catch (error) {
+    // Promosi serentak untuk kandidat yang sama: yang kalah mendapat 409.
+    if ((error as { code?: unknown }).code === "23505") {
+      throw ApiError.conflict("Kandidat sudah dipromosikan menjadi employee");
+    }
+    throw error;
   }
 
   const { data: employee, error: employeeError } = await db
@@ -140,9 +122,7 @@ export async function promoteCandidate(db: PgClient, input: PromotionInput) {
     .single();
   if (employeeError) console.error("[promote] gagal memuat karyawan baru:", employeeError);
 
-  const contractDraft = employeeId
-    ? await autoDraftContract(employeeId, candidate.id, joinDate, employmentStatus)
-    : { contractNumber: null, warning: null };
+  const contractDraft = await autoDraftContract(employeeId, candidate.id, joinDate, employmentStatus);
   const contractInfo = contractDraft.contractNumber
     ? ` — draft kontrak ${contractDraft.contractNumber} dibuat otomatis`
     : contractDraft.warning
