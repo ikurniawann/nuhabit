@@ -248,9 +248,10 @@ func (s *Service) touchShare(ctx context.Context, id string) error {
 
 // accessEvent is one logShareAccess call.
 type accessEvent struct {
-	shareID, action string
-	email           *string
-	ip, userAgent   string
+	shareID, action  string
+	nodeID, fileName *string
+	email            *string
+	ip, userAgent    string
 }
 
 // logAccess is logShareAccess: a failed write is only logged.
@@ -260,8 +261,13 @@ func (s *Service) logAccess(ctx context.Context, e accessEvent) {
 		v := domain.JSSlice(strings.ToLower(*e.email), 255)
 		email = &v
 	}
+	var fileName *string
+	if e.fileName != nil {
+		v := domain.JSSlice(*e.fileName, 255)
+		fileName = &v
+	}
 	if _, err := s.db.Exec(ctx, `INSERT INTO dataroom.share_access_logs (share_id, node_id, action, file_name, email, ip, user_agent)
-	 VALUES ($1, NULL, $2, NULL, $3, $4, $5)`, e.shareID, e.action, email, domain.JSSlice(e.ip, 64), orNull(domain.JSSlice(e.userAgent, 255))); err != nil {
+	 VALUES ($1, $2, $3, $4, $5, $6, $7)`, e.shareID, e.nodeID, e.action, fileName, email, domain.JSSlice(e.ip, 64), orNull(domain.JSSlice(e.userAgent, 255))); err != nil {
 		s.log.Warn("[dataroom] gagal tulis log akses", "error", err)
 	}
 }

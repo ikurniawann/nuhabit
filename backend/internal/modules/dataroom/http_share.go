@@ -234,8 +234,8 @@ func (h *handler) requestCode(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("Link ini tidak memerlukan verifikasi email")
 	}
 	ip, ua := clientIP(r.Header), r.Header.Get("User-Agent")
-	if !h.limiter.Allow("dataroom-code:"+token+":"+ip, 5, h.now()) {
-		return httpx.TooManyRequests("Terlalu banyak permintaan. Coba lagi sebentar.")
+	if err := h.rateLimit(r, "dataroom-code:"+token+":"+ip, 5, "Terlalu banyak permintaan. Coba lagi sebentar."); err != nil {
+		return err
 	}
 	email := strings.ToLower(validate.JSTrim(jsString(jsonBody(r)["email"])))
 	if !domain.IsValidEmail(email) {
@@ -289,8 +289,8 @@ func (h *handler) verify(w http.ResponseWriter, r *http.Request) error {
 	}
 	sh, session, steps := sc.share, sc.session, sc.steps
 	ip, ua := clientIP(r.Header), r.Header.Get("User-Agent")
-	if !h.limiter.Allow("dataroom-verify:"+token+":"+ip, 10, h.now()) {
-		return httpx.TooManyRequests("Terlalu banyak percobaan. Coba lagi sebentar.")
+	if err := h.rateLimit(r, "dataroom-verify:"+token+":"+ip, 10, "Terlalu banyak percobaan. Coba lagi sebentar."); err != nil {
+		return err
 	}
 	ctx := r.Context()
 	body := jsonBody(r)

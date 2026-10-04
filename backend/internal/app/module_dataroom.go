@@ -7,8 +7,8 @@ import (
 	"nuhabit/backend/internal/platform/module"
 )
 
-// dataroom: folders, department access and share links (/api/dataroom/**,
-// /api/share/**) minus the routes that touch file bytes in Next's storage.
+// dataroom: folders, files, department access and share links
+// (/api/dataroom/**, /api/share/**); files live in STORAGE_DIR.
 // HRIS departments and employees are read through adapters_dataroom.go;
 // emails go out through Resend's HTTP API.
 func init() {

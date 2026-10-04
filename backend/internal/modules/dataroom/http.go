@@ -13,6 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -26,14 +27,11 @@ type Guard interface {
 type handler struct {
 	svc     *Service
 	guard   Guard
-	limiter *domain.RateLimiter
+	limiter *ratelimit.Limiter
 }
 
-// Routes lists the /api/dataroom and /api/share routes that need no file
-// bytes. POST /api/dataroom/upload, GET /api/dataroom/nodes/{id}/download,
-// DELETE /api/dataroom/nodes/{id} (it unlinks the files) and
-// GET /api/share/{token}/files/{nodeId} read or write Next's local storage
-// and stay in TS.
+// Routes lists every /api/dataroom and /api/share route; the ones that
+// move file bytes live in http_files.go.
 func (h *handler) Routes() []module.Route {
 	route := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
@@ -44,6 +42,9 @@ func (h *handler) Routes() []module.Route {
 		route("GET /api/dataroom/nodes", h.listNodes),
 		route("POST /api/dataroom/nodes", h.createFolder),
 		route("PATCH /api/dataroom/nodes/{id}", h.updateNode),
+		route("DELETE /api/dataroom/nodes/{id}", h.deleteNode),
+		route("GET /api/dataroom/nodes/{id}/download", h.download),
+		route("POST /api/dataroom/upload", h.upload),
 		route("GET /api/dataroom/nodes/{id}/access", h.getAccess),
 		route("PUT /api/dataroom/nodes/{id}/access", h.putAccess),
 		route("GET /api/dataroom/shares", h.listShares),
@@ -55,6 +56,7 @@ func (h *handler) Routes() []module.Route {
 		route("GET /api/share/{token}/list", h.shareList),
 		route("POST /api/share/{token}/request-code", h.requestCode),
 		route("POST /api/share/{token}/verify", h.verify),
+		route("GET /api/share/{token}/files/{nodeId}", h.shareFile),
 	}
 }
 
@@ -482,3 +484,16 @@ func (h *handler) revokeShare(w http.ResponseWriter, r *http.Request) error {
 
 // now is the service clock (rate limit windows).
 func (h *handler) now() time.Time { return h.svc.now() }
+
+// rateLimit is checkRateLimit(key, limit) answered with a 429 msg: a
+// one-minute fixed window shared by every replica.
+func (h *handler) rateLimit(r *http.Request, key string, limit int, msg string) error {
+	w, err := h.limiter.Fixed(r.Context(), key, limit, time.Minute, h.now())
+	if err != nil {
+		return err
+	}
+	if !w.Allowed {
+		return httpx.TooManyRequests(msg)
+	}
+	return nil
+}

@@ -13,7 +13,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"nuhabit/backend/internal/modules/dataroom/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -115,7 +114,7 @@ func newFixture(t *testing.T) *fixture {
 	f.dir = testDirectory{q: tx, dept: map[string]string{}}
 	f.svc = NewService(tx, Ports{Directory: f.dir, Mailer: f.mail, AppOrigin: "https://app.example", Brand: "NüHabit",
 		MailFrom: "Dataroom <x@y.id>", QuotaBytes: 50 * 1024 * 1024 * 1024, MaxFileBytes: 100 * 1024 * 1024}, nil, nil, false)
-	f.mux = testutil.Mux(mod{h: &handler{svc: f.svc, guard: headerGuard{}, limiter: domain.NewRateLimiter()}})
+	f.mux = testutil.Mux(mod{h: newHandler(f.svc, headerGuard{})})
 	return f
 }
 
@@ -495,6 +494,9 @@ func TestVerifyEmailCode(t *testing.T) {
 	for range 4 {
 		post("/request-code", map[string]any{"email": "budi@wit.id"}, nil)
 	}
+	f.fail(post("/request-code", map[string]any{"email": "budi@wit.id"}, nil), 429, "Terlalu banyak permintaan. Coba lagi sebentar.")
+	// A second replica on the same database counts against the same window.
+	f.mux = testutil.Mux(mod{h: newHandler(f.svc, headerGuard{})})
 	f.fail(post("/request-code", map[string]any{"email": "budi@wit.id"}, nil), 429, "Terlalu banyak permintaan. Coba lagi sebentar.")
 }
 

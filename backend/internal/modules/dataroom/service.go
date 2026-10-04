@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // DepartmentRef is a department id and name.
@@ -55,6 +56,8 @@ type Service struct {
 	log        *slog.Logger
 	production bool
 	warnOnce   sync.Once
+	// store holds the uploaded files (STORAGE_DIR, shared with Next).
+	store *storage.Store
 }
 
 // NewService builds the service on db (a pool, or a tx in tests).
@@ -65,7 +68,7 @@ func NewService(db database.DB, ports Ports, now func() time.Time, log *slog.Log
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{db: db, ports: ports, now: now, log: log, production: production}
+	return &Service{db: db, ports: ports, now: now, log: log, production: production, store: storage.FromEnv()}
 }
 
 // missingConfigTable is selectConfigs' fallback: an instance without

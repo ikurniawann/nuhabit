@@ -122,14 +122,4 @@ func TestAttemptPolicyAndRateLimit(t *testing.T) {
 	if fresh := ApplyFailure(s, now.Add(31*time.Minute), SharePinPolicy); fresh.Failures != 1 || fresh.LockedUntil != nil {
 		t.Fatalf("expired lock restarts: %+v", fresh)
 	}
-
-	l := NewRateLimiter()
-	for i := range 5 {
-		if !l.Allow("k", 5, now) {
-			t.Fatalf("hit %d refused", i)
-		}
-	}
-	if l.Allow("k", 5, now) || !l.Allow("other", 5, now) || !l.Allow("k", 5, now.Add(61*time.Second)) {
-		t.Fatal("rate window")
-	}
 }
