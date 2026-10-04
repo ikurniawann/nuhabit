@@ -149,11 +149,24 @@ func (h *Handler) session() http.Handler {
 	})
 }
 
+// limited counts a hit for key and, when the window is full or the count
+// fails, writes the answer and reports true.
+func (h *Handler) limited(w http.ResponseWriter, r *http.Request, key string, limit int, msg string) bool {
+	ok, err := h.limiter.Allow(r.Context(), key, limit)
+	switch {
+	case err != nil:
+		h.log.ErrorContext(r.Context(), "Table order rate limit error:", "error", err)
+		_ = kit.Fail(w, http.StatusInternalServerError, errMessage(err))
+	case !ok:
+		_ = kit.Fail(w, http.StatusTooManyRequests, msg)
+	}
+	return err != nil || !ok
+}
+
 // createOrder is POST /api/table-order/orders (20 per minute per client).
 func (h *Handler) createOrder() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !h.limiter.Allow("table-order:create:"+clientIdentifier(r), 20) {
-			_ = kit.Fail(w, http.StatusTooManyRequests, "Terlalu banyak pesanan dalam waktu singkat — coba lagi sebentar")
+		if h.limited(w, r, "table-order:create:"+clientIdentifier(r), 20, "Terlalu banyak pesanan dalam waktu singkat — coba lagi sebentar") {
 			return
 		}
 		in, ok := parseCreate(r)
@@ -244,8 +257,7 @@ func (h *Handler) orderStatus() http.Handler {
 			_ = kit.Fail(w, http.StatusBadRequest, "Order tidak valid")
 			return
 		}
-		if !h.limiter.Allow("table-order:status:"+clientIdentifier(r), 90) {
-			_ = kit.Fail(w, http.StatusTooManyRequests, "Terlalu sering — tunggu sebentar")
+		if h.limited(w, r, "table-order:status:"+clientIdentifier(r), 90, "Terlalu sering — tunggu sebentar") {
 			return
 		}
 		out, err := h.svc.orderStatus(r.Context(), id, r.URL.Query().Get("qr") == "1")

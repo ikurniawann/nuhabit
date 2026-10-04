@@ -34,6 +34,10 @@ func TestPromoCheckGuards(t *testing.T) {
 		t.Fatal(err)
 	}
 	kasir := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.operations": nil}})
+	// The limiter counts on the pool, as every replica does.
+	t.Cleanup(func() {
+		_, _ = testutil.DB(t).Exec(context.Background(), `DELETE FROM platform.rate_limits WHERE key = $1`, "pos-promo-check:"+kasir.UserID)
+	})
 	outsider := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"crm.members": nil}})
 	post := func(body any, staff *testutil.Staff) (int, string) {
 		r := testutil.Request("POST", "/api/pos/promo-check", body)
@@ -76,8 +80,14 @@ func TestPromoCheckGuards(t *testing.T) {
 	expect(code, body, 400, `{"success":false,"error":"Venue belum dikonfigurasi"}`)
 
 	for range 30 {
-		h.limiter.Allow("pos-promo-check:"+kasir.UserID, 30)
+		post(map[string]any{"code": "ABC", "subtotal": 1}, &kasir)
 	}
+	code, body = post(map[string]any{"code": "ABC", "subtotal": 1}, &kasir)
+	expect(code, body, 429, `{"success":false,"error":"Terlalu banyak percobaan — tunggu sebentar"}`)
+	// A second replica counts against the same window.
+	replica := NewWithBackend(testutil.Deps(t, time.Now), nil, CrmSettingsVenue{})
+	replica.db = tx
+	mux = testutil.Mux(testModule{replica})
 	code, body = post(map[string]any{"code": "ABC", "subtotal": 1}, &kasir)
 	expect(code, body, 429, `{"success":false,"error":"Terlalu banyak percobaan — tunggu sebentar"}`)
 }

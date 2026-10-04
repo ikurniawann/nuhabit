@@ -65,7 +65,7 @@ func newHandler(db database.DB, deps module.Deps, p Ports) *Handler {
 	if p.GofoodReady == nil {
 		p.GofoodReady = func(context.Context, string) {}
 	}
-	h := &Handler{db: db, auth: deps.Auth, log: log, now: now, events: deps.Events, p: p, limiter: kit.NewRateLimiter(now),
+	h := &Handler{db: db, auth: deps.Auth, log: log, now: now, events: deps.Events, p: p, limiter: kit.NewRateLimiter(db, now),
 		pins: NewSupervisors(db, p.Directory, now)}
 	h.subscribe()
 	return h

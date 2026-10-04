@@ -30,7 +30,7 @@ func NewWithBackend(deps module.Deps, backend Backend, venues Venues) *Handler {
 	return &Handler{
 		db:      deps.DB,
 		auth:    deps.Auth,
-		limiter: kit.NewRateLimiter(deps.Now),
+		limiter: kit.NewRateLimiter(deps.DB, deps.Now),
 		backend: backend,
 		venues:  venues,
 	}
@@ -87,7 +87,9 @@ func (h *Handler) promoCheck(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !h.limiter.Allow("pos-promo-check:"+user.ID, 30) {
+	if ok, err := h.limiter.Allow(r.Context(), "pos-promo-check:"+user.ID, 30); err != nil {
+		return err
+	} else if !ok {
 		return httpx.TooManyRequests("Terlalu banyak percobaan — tunggu sebentar")
 	}
 

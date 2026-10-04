@@ -6,7 +6,7 @@ import (
 )
 
 // Routes lists the sale routes. GET /api/pos/orders/{id}/payment-proof
-// stays in TS (it reads Next's local private storage).
+// lives in tableorder, next to the guest upload it serves.
 func (h *Handler) Routes() []module.Route {
 	r := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}

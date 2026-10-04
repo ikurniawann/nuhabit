@@ -2,7 +2,8 @@
 // on the table): frontend/src/app/api/table-order/{products,session,orders}
 // and frontend/src/lib/table-order. The routes are public (guests and
 // member-portal sessions); /api/table-order is in auth.PublicAuthPrefixes.
-// orders/{id}/payment-proof stays in TS (Next private storage).
+// orders/{id}/payment-proof (and the cashier's /api/pos/orders/{id}/
+// payment-proof) read and write the shared private storage.
 package tableorder
 
 import (
@@ -14,6 +15,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Handler serves the routes of this package.
@@ -22,6 +24,7 @@ type Handler struct {
 	auth    *auth.Service
 	limiter *kit.RateLimiter
 	log     *slog.Logger
+	files   *storage.Store
 }
 
 // New builds the handler on the pool; nil ports get this package's stopgap
@@ -64,8 +67,9 @@ func newHandler(deps module.Deps, p Ports, db database.DB) *Handler {
 	return &Handler{
 		svc:     &service{db: db, p: p, now: deps.Now, log: log},
 		auth:    deps.Auth,
-		limiter: kit.NewRateLimiter(deps.Now),
+		limiter: kit.NewRateLimiter(db, deps.Now),
 		log:     log,
+		files:   storage.FromEnv(),
 	}
 }
 
@@ -90,5 +94,8 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "GET /api/table-order/session/{tableCode}", Handler: h.session()},
 		{Pattern: "POST /api/table-order/orders", Handler: h.createOrder()},
 		{Pattern: "GET /api/table-order/orders/{id}", Handler: h.orderStatus()},
+		{Pattern: "POST /api/table-order/orders/{id}/payment-proof", Handler: h.uploadPaymentProof()},
+		{Pattern: "GET /api/table-order/orders/{id}/payment-proof", Handler: h.viewPaymentProof()},
+		{Pattern: "GET /api/pos/orders/{id}/payment-proof", Handler: h.posPaymentProof()},
 	}
 }

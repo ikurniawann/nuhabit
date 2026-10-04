@@ -46,6 +46,16 @@ func failBody(msg string) any {
 
 func fail(status int, msg string) *response { return &response{status: status, body: failBody(msg)} }
 
+// limit is checkRateLimit(key, 30) for the balance payments: a 429 msg
+// once the user's window is full.
+func (h *Handler) limit(ctx context.Context, key, msg string) (*response, error) {
+	ok, err := h.limiter.Allow(ctx, key, 30)
+	if err != nil || ok {
+		return nil, err
+	}
+	return fail(429, msg), nil
+}
+
 // arkDisabled is the 409 of rejectIfArkCoinDisabled.
 func arkDisabled() *response {
 	return &response{status: 409, body: struct {
@@ -544,11 +554,15 @@ func (h *Handler) placeSingleOrder(ctx context.Context, tx pgx.Tx, oc orderCtx, 
 	giftCode := strings.ToUpper(domain.Trim(req.Str("gift_card_code")))
 	isNfc, payGift := method == "nfc_tab", method == "gift_card"
 
-	if isNfc && !h.limiter.Allow("pos-nfc-tab:"+oc.user.ID, 30) {
-		return nil, fail(429, "Terlalu banyak percobaan NFC Tab — tunggu sebentar")
+	if isNfc {
+		if res, err := h.limit(ctx, "pos-nfc-tab:"+oc.user.ID, "Terlalu banyak percobaan NFC Tab — tunggu sebentar"); res != nil || err != nil {
+			return res, err
+		}
 	}
-	if payGift && !h.limiter.Allow("pos-gift-card:"+oc.user.ID, 30) {
-		return nil, fail(429, "Terlalu banyak percobaan gift card — tunggu sebentar")
+	if payGift {
+		if res, err := h.limit(ctx, "pos-gift-card:"+oc.user.ID, "Terlalu banyak percobaan gift card — tunggu sebentar"); res != nil || err != nil {
+			return res, err
+		}
 	}
 	if rej := domain.GuardBalancePayment(domain.BalancePaymentInput{
 		PaymentMethod: method, NfcTabUID: nfcUID, GiftCardCode: giftCode, ArkUsed: ark,

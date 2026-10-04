@@ -108,6 +108,7 @@ type env struct {
 	alerts  *fakeAlerts
 	xendit  *fakeXendit
 	member  testutil.Member
+	replica func() http.Handler // a second API process on the same database
 
 	latte, off, shot, double, oat string
 }
@@ -130,8 +131,11 @@ func setup(t *testing.T) *env {
 	e := &env{t: t, ctx: ctx, tx: tx, loyalty: &fakeLoyalty{}, crm: &fakeCRM{}, alerts: &fakeAlerts{}, xendit: &fakeXendit{}, member: member}
 	srv := httptest.NewServer(e.xendit)
 	t.Cleanup(srv.Close)
-	h := newHandler(deps, Ports{Loyalty: e.loyalty, CRM: e.crm, Alerts: e.alerts, Xendit: &Xendit{BaseURL: srv.URL, Client: srv.Client()}}, tx)
-	e.mux = testutil.Mux(mod{h.Routes()})
+	ports := Ports{Loyalty: e.loyalty, CRM: e.crm, Alerts: e.alerts, Xendit: &Xendit{BaseURL: srv.URL, Client: srv.Client()}}
+	e.mux = testutil.Mux(mod{newHandler(deps, ports, tx).Routes()})
+	replicaDeps := deps
+	replicaDeps.Events = nil // the outbox subscriptions are registered once
+	e.replica = func() http.Handler { return testutil.Mux(mod{newHandler(replicaDeps, ports, tx).Routes()}) }
 
 	// Venue billing: the system profile with PB1 10% always on.
 	e.exec(`UPDATE pos.pos_billing_profiles SET is_active = false WHERE id <> 'b0000000-0000-4000-8000-000000000001'`)
@@ -549,5 +553,9 @@ func TestStatusRateLimit(t *testing.T) {
 	}
 	if out := e.call(http.MethodGet, path, nil, false, 429); out["error"] != "Terlalu sering — tunggu sebentar" {
 		t.Fatal(out)
+	}
+	e.mux = e.replica()
+	if out := e.call(http.MethodGet, path, nil, false, 429); out["error"] != "Terlalu sering — tunggu sebentar" {
+		t.Fatalf("the other replica: %v", out)
 	}
 }

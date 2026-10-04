@@ -77,7 +77,9 @@ func (h *Handler) createQris(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !h.limiter.Allow("pos-qris:"+user.ID, 30) {
+	if ok, err := h.limiter.Allow(r.Context(), "pos-qris:"+user.ID, 30); err != nil {
+		return err
+	} else if !ok {
 		return kit.Fail(w, 429, "Terlalu banyak permintaan QR — tunggu sebentar")
 	}
 	ctx := r.Context()

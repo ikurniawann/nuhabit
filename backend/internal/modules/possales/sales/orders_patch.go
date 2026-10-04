@@ -239,8 +239,8 @@ func (h *Handler) patchOrderTx(ctx context.Context, tx pgx.Tx, user *auth.User, 
 
 	company, branch := existing.Str("company_id"), existing.Str("branch_id")
 	if effective == "nfc_tab" && settling {
-		if !h.limiter.Allow("pos-nfc-tab:"+user.ID, 30) {
-			return nil, fail(429, "Terlalu banyak percobaan NFC Tab — tunggu sebentar")
+		if res, err := h.limit(ctx, "pos-nfc-tab:"+user.ID, "Terlalu banyak percobaan NFC Tab — tunggu sebentar"); res != nil || err != nil {
+			return res, err
 		}
 		if existing.Str("payment_status") == "partial" {
 			return nil, fail(400, "Order sudah terbayar sebagian — NFC Tab hanya untuk order yang belum terbayar")
@@ -277,8 +277,8 @@ func (h *Handler) patchOrderTx(ctx context.Context, tx pgx.Tx, user *auth.User, 
 		upd.set("amount_paid", 0)
 	}
 	if effective == "gift_card" && settling {
-		if !h.limiter.Allow("pos-gift-card:"+user.ID, 30) {
-			return nil, fail(429, "Terlalu banyak percobaan gift card — tunggu sebentar")
+		if res, err := h.limit(ctx, "pos-gift-card:"+user.ID, "Terlalu banyak percobaan gift card — tunggu sebentar"); res != nil || err != nil {
+			return res, err
 		}
 		if existing.Str("payment_status") == "partial" {
 			return nil, fail(400, "Order sudah terbayar sebagian — gift card hanya untuk order yang belum terbayar")

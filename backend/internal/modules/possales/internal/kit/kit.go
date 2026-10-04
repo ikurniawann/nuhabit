@@ -1,20 +1,22 @@
 // Package kit holds the small transport helpers every pos-sales handler
-// shares: the POS session guard, the in-memory rate limiter of
+// shares: the POS session guard, the shared rate limiter of
 // lib/rate-limit.ts and the `{ success:false, error }` bodies the TS routes
 // write by hand.
 package kit
 
 import (
+	"context"
 	"errors"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // PosUser mirrors getPosSession: a staff session with a grant under the "pos"
@@ -54,53 +56,27 @@ func ErrorMessage(err error) string {
 	return err.Error()
 }
 
-// RateLimiter is the fixed-window limiter of lib/rate-limit.ts: per process,
-// a window of one minute starting at the first hit of a key.
+// RateLimiter is the fixed-window limiter of lib/rate-limit.ts: a window of
+// one minute starting at the first hit of a key, counted in
+// platform.rate_limits so every replica shares it.
 type RateLimiter struct {
-	mu      sync.Mutex
-	now     func() time.Time
-	entries map[string]*rateEntry
-}
-
-type rateEntry struct {
-	count int
-	reset time.Time
+	l   *ratelimit.Limiter
+	now func() time.Time
 }
 
 // rateWindow is RATE_LIMIT_WINDOW.
 const rateWindow = time.Minute
 
-// maxEntries bounds the map; expired entries are swept when it fills.
-const maxEntries = 10_000
-
-// NewRateLimiter builds a limiter on the given clock (nil = time.Now).
-func NewRateLimiter(now func() time.Time) *RateLimiter {
+// NewRateLimiter builds a limiter on db and the given clock (nil = time.Now).
+func NewRateLimiter(db database.Querier, now func() time.Time) *RateLimiter {
 	if now == nil {
 		now = time.Now
 	}
-	return &RateLimiter{now: now, entries: map[string]*rateEntry{}}
+	return &RateLimiter{l: ratelimit.New(db), now: now}
 }
 
 // Allow is checkRateLimit(key, limit).allowed.
-func (l *RateLimiter) Allow(key string, limit int) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	now := l.now()
-	e, ok := l.entries[key]
-	if !ok || now.After(e.reset) {
-		if !ok && len(l.entries) >= maxEntries {
-			for k, v := range l.entries {
-				if now.After(v.reset) {
-					delete(l.entries, k)
-				}
-			}
-		}
-		l.entries[key] = &rateEntry{count: 1, reset: now.Add(rateWindow)}
-		return true
-	}
-	if e.count >= limit {
-		return false
-	}
-	e.count++
-	return true
+func (l *RateLimiter) Allow(ctx context.Context, key string, limit int) (bool, error) {
+	w, err := l.l.Fixed(ctx, key, limit, rateWindow, l.now())
+	return w.Allowed, err
 }
