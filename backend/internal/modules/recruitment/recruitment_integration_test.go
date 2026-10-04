@@ -435,6 +435,9 @@ func TestPortalExpiryAndLive(t *testing.T) {
 	if c.status != 201 || c.data()["message"] != "halo HR" || c.data()["sender_name"] != "Sari Ayu" {
 		t.Fatal(c.raw)
 	}
+	// Requests share the test transaction, so now() is equal for both
+	// messages; age the first one so "oldest first" has an order.
+	h.exec(`UPDATE recruitment.live_chat_messages SET created_at = created_at - interval '1 second' WHERE id = $1`, c.data()["id"])
 	c = h.as(h.hr, "POST", "/api/recruitment/live-monitoring/psikotes/"+sessionID+"/chat", map[string]any{"message": "halo"})
 	if c.status != 201 || c.data()["sender"] != "hr" || c.data()["sender_name"] != "Rina HR" {
 		t.Fatal(c.raw)
