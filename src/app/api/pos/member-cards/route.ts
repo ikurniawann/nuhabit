@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPosSession } from "@/lib/api/auth";
 import { query } from "@/lib/db";
-import { normalizeNfcUid } from "@/features/pos/nfc/normalize-nfc-uid";
+import { normalizeNfcUid } from "@/lib/pos/nfc-uid";
 
 /**
  * GET /api/pos/member-cards?search=&nfc_uid=

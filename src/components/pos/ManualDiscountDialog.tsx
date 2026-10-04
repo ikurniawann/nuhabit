@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -43,8 +43,13 @@ function displayValue(
   return formatIdrInput(value);
 }
 
-export function ManualDiscountDialog({
-  open,
+/** Dirender hanya saat terbuka; key dari nilai awal → draf selalu mulai dari diskon yang berlaku. */
+export function ManualDiscountDialog(props: ManualDiscountDialogProps) {
+  if (!props.open) return null;
+  return <ManualDiscountBody key={`${props.initialType ?? ""}:${props.initialValue ?? ""}`} {...props} />;
+}
+
+function ManualDiscountBody({
   title,
   description,
   basis,
@@ -56,18 +61,8 @@ export function ManualDiscountDialog({
   onClear,
 }: ManualDiscountDialogProps) {
   const [type, setType] = useState<DiscountType>(initialType ?? "percent");
-  const [valueStr, setValueStr] = useState(
-    displayValue(initialType ?? "percent", initialValue)
-  );
+  const [valueStr, setValueStr] = useState(() => displayValue(initialType ?? "percent", initialValue));
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const nextType = initialType ?? "percent";
-    setType(nextType);
-    setValueStr(displayValue(nextType, initialValue));
-    setBusy(false);
-  }, [open, initialType, initialValue]);
 
   const parsedValue = useMemo(() => {
     if (type === "percent") {
@@ -148,7 +143,7 @@ export function ManualDiscountDialog({
   const hasExisting = Boolean(initialType && initialValue && initialValue > 0);
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+    <Dialog open onOpenChange={(next) => !next && !busy && onClose()}>
       <DialogPanel size="sm">
         <DialogPanelHeader>
           <DialogPanelTitle>{title}</DialogPanelTitle>
@@ -164,7 +159,7 @@ export function ManualDiscountDialog({
               onClick={() => handleTypeChange("percent")}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
                 type === "percent"
-                  ? "border-primary/40 bg-primary/10 text-primary"
+                  ? "border-primary/40 bg-primary/10 text-brand-text"
                   : "border-gray-200/80 bg-white text-gray-700 hover:border-primary/30"
               }`}
             >
@@ -176,7 +171,7 @@ export function ManualDiscountDialog({
               onClick={() => handleTypeChange("fixed")}
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
                 type === "fixed"
-                  ? "border-primary/40 bg-primary/10 text-primary"
+                  ? "border-primary/40 bg-primary/10 text-brand-text"
                   : "border-gray-200/80 bg-white text-gray-700 hover:border-primary/30"
               }`}
             >

@@ -15,8 +15,11 @@ let mockProduct: MockProduct = {
   product_kind: "merchandise",
 };
 
-vi.mock("@/lib/api/auth", () => ({
+vi.mock("@/lib/api/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/api/auth")>()),
   getPosSession: vi.fn(async () => "user-1"),
+  // Matriks SKU = tulis katalog → gerbang izin aksi IAM (create pos.catalog.products).
+  requireIamAction: vi.fn(async () => ({ id: "user-1" })),
 }));
 
 vi.mock("@/lib/pg/create-client", () => ({

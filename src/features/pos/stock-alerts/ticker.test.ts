@@ -4,7 +4,7 @@ import type {
   PosProductStockAlert,
   ProductAtRiskAlert,
   RawMaterialAlert,
-} from "./types";
+} from "@/lib/pos/stock-alerts-types";
 
 function raw(
   partial: Partial<RawMaterialAlert> & Pick<RawMaterialAlert, "id" | "nama" | "status_stok" | "alert_level">

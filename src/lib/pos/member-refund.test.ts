@@ -17,7 +17,7 @@ describe("member-refund helpers", () => {
   it("catatan wallet & pesan sukses", () => {
     expect(buildRefundWalletNotes({ approverName: "Budi", requestId: "abcdef12-0000" })).toContain("disetujui Budi");
     expect(buildRefundWalletNotes({ approverName: null, requestId: "abcdef12-0000" })).toContain("supervisor");
-    expect(refundCompletedMessage({ name: "Ani", amount: 67350 })).toBe("Refund Ani selesai — Rp 67.350 dikembalikan, saldo member kini Rp 0");
+    expect(refundCompletedMessage({ name: "Ani", amount: 67350 })).toBe("Refund Ani selesai — Rp67.350 dikembalikan, saldo member kini Rp0");
     expect(refundCompletedMessage({ name: null, phone: "0812", amount: 0 })).toContain("Refund 0812 selesai");
   });
 });

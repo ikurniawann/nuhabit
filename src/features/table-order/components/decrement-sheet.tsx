@@ -1,9 +1,9 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import { formatRupiah } from "@/lib/table-order/menu";
 import type { CartLine } from "@/lib/table-order/pricing";
 import { BottomSheet } from "./sheet";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * Produk dengan >1 varian di keranjang: pemesan memilih varian mana yang
@@ -29,7 +29,7 @@ export function DecrementSheet({
         <button
           type="button"
           onClick={onClose}
-          className="h-11 w-full rounded-xl bg-primary text-sm font-bold text-white"
+          className="h-11 w-full rounded-xl bg-primary text-sm font-bold text-primary-foreground"
         >
           Selesai
         </button>
@@ -50,7 +50,7 @@ export function DecrementSheet({
                 <button
                   type="button"
                   onClick={() => onQuantity(line.cartId, -1)}
-                  className="flex size-9 items-center justify-center text-primary"
+                  className="flex size-9 items-center justify-center text-brand-text"
                   aria-label={`Kurangi ${label}`}
                 >
                   <Minus className="size-4" />
@@ -59,7 +59,7 @@ export function DecrementSheet({
                 <button
                   type="button"
                   onClick={() => onQuantity(line.cartId, 1)}
-                  className="flex size-9 items-center justify-center text-primary"
+                  className="flex size-9 items-center justify-center text-brand-text"
                   aria-label={`Tambah ${label}`}
                 >
                   <Plus className="size-4" />

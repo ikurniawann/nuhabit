@@ -1,4 +1,3 @@
-import { Toaster } from "sonner";
 import { requireUser } from "@/lib/auth/require-user";
 import { KdsPage } from "@/features/pos/kds";
 
@@ -9,7 +8,6 @@ export default async function Page() {
   return (
     <>
       <KdsPage />
-      <Toaster position="bottom-right" />
     </>
   );
 }

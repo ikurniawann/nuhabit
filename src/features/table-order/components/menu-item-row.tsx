@@ -4,7 +4,8 @@
 
 import { useState } from "react";
 import { Lock, Minus, Plus, Sparkles } from "lucide-react";
-import { formatMenuPrice, type TableOrderProduct } from "@/lib/table-order/menu";
+import { formatNumber } from "@/lib/format";
+import type { TableOrderProduct } from "@/lib/table-order/menu";
 import { memberPrice } from "@/lib/table-order/pricing";
 
 /**
@@ -66,19 +67,19 @@ export function MenuItemRow({
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {hasMemberPrice ? (
             <>
-              <span className="text-[15px] font-bold text-primary">{formatMenuPrice(discounted)}</span>
-              <span className="text-xs text-gray-400 line-through">{formatMenuPrice(product.price)}</span>
-              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+              <span className="text-[15px] font-bold text-brand-text">{formatNumber(discounted)}</span>
+              <span className="text-xs text-gray-400 line-through">{formatNumber(product.price)}</span>
+              <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-brand-text">
                 Member −{memberDiscountPercent}%
               </span>
             </>
           ) : (
-            <span className="text-[15px] font-bold text-gray-900">{formatMenuPrice(product.price)}</span>
+            <span className="text-[15px] font-bold text-gray-900">{formatNumber(product.price)}</span>
           )}
           {product.minXp > 0 && (
             <span
               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${
-                locked ? "bg-gray-100 text-gray-500" : "bg-primary/10 text-primary"
+                locked ? "bg-gray-100 text-gray-500" : "bg-primary/10 text-brand-text"
               }`}
             >
               <Lock className="size-3" />
@@ -99,7 +100,7 @@ export function MenuItemRow({
               className="aspect-square w-full rounded-xl object-cover"
             />
           ) : (
-            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-3xl font-black text-primary/50">
+            <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-3xl font-black text-brand-text/50">
               {product.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -110,7 +111,7 @@ export function MenuItemRow({
                 <button
                   type="button"
                   onClick={onDecrement}
-                  className="flex size-8 items-center justify-center rounded-full text-primary"
+                  className="flex size-8 items-center justify-center rounded-full text-brand-text"
                   aria-label={`Kurangi ${product.name}`}
                 >
                   <Minus className="size-4" />
@@ -119,7 +120,7 @@ export function MenuItemRow({
                 <button
                   type="button"
                   onClick={onIncrement}
-                  className="flex size-8 items-center justify-center rounded-full text-primary"
+                  className="flex size-8 items-center justify-center rounded-full text-brand-text"
                   aria-label={`Tambah ${product.name}`}
                 >
                   <Plus className="size-4" />
@@ -130,7 +131,7 @@ export function MenuItemRow({
                 type="button"
                 onClick={onAdd}
                 disabled={locked}
-                className="h-9 rounded-full border-2 border-primary bg-white px-6 text-sm font-bold text-primary shadow-sm transition active:scale-95 disabled:border-gray-200 disabled:text-gray-400"
+                className="h-9 rounded-full border-2 border-primary bg-white px-6 text-sm font-bold text-brand-text shadow-sm transition active:scale-95 disabled:border-gray-200 disabled:text-gray-400"
               >
                 {locked ? "Terkunci" : "Tambah"}
               </button>

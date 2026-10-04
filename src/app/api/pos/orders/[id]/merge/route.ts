@@ -39,7 +39,7 @@ async function orderHasUnpaidSplits(
     .neq("status", "cancelled");
 
   if (error) throw error;
-  return (data || []).some(
+  return ((data || []) as Array<{ status?: string | null }>).some(
     (split) => String(split.status || "").toLowerCase() !== "paid"
   );
 }
@@ -207,11 +207,11 @@ export async function POST(
 
     if (aggErr) throw aggErr;
 
-    const newSubtotal = (itemsAgg || []).reduce(
+    const newSubtotal = ((itemsAgg || []) as Array<{ subtotal?: unknown; total_amount?: unknown }>).reduce(
       (s, it) => s + Number(it.subtotal || 0),
       0
     );
-    const newTotal = (itemsAgg || []).reduce(
+    const newTotal = ((itemsAgg || []) as Array<{ subtotal?: unknown; total_amount?: unknown }>).reduce(
       (s, it) => s + Number(it.total_amount || 0),
       0
     );

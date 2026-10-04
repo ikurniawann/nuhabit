@@ -1,3 +1,4 @@
+import "server-only";
 import { query, queryOne } from "@/lib/db";
 import {
   DEFAULT_BILLING_PROFILE,

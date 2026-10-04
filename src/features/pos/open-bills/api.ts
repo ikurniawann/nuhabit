@@ -1,6 +1,6 @@
-import { createOrderSplits, getOrders, updateOrderPayment } from "@/lib/pos-api";
+import { createOrderSplits, getOrders } from "@/lib/pos-api";
 import type { Order } from "@/lib/pos-api";
-import type { OpenBillsListParams, UpdateOrderPaymentPayload } from "./types";
+import type { OpenBillsListParams } from "./types";
 
 export type * from "./types";
 
@@ -12,11 +12,7 @@ export async function listOpenBills(params: OpenBillsListParams = {}): Promise<O
   if (!res.success) {
     throw new Error("Gagal memuat open bill");
   }
-  return (res.data ?? []) as Order[];
-}
-
-export async function patchOrderPayment(orderId: string, payload: UpdateOrderPaymentPayload) {
-  return updateOrderPayment(orderId, payload);
+  return res.data ?? [];
 }
 
 export async function saveOrderSplits(

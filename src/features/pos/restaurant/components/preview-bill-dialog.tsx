@@ -14,12 +14,9 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { printThermalReceipt, type ReceiptPayload } from "@/components/pos/PrintReceipt";
+import { formatRupiah } from "@/lib/format";
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(Number(value)) ? Math.abs(Number(value)) : 0);
+const formatCurrency = (value: number) => formatRupiah(Math.abs(Number(value) || 0));
 
 export interface PreviewBillDialogProps {
   open: boolean;

@@ -1,5 +1,5 @@
+import "server-only";
 import { query, queryOne } from "@/lib/db";
-import { createPgClient } from "@/lib/pg/create-client";
 import { isOperationalRowInBusinessScope, type UserScope } from "@/lib/api/scope";
 import type { BusinessScopeLevel } from "@/lib/configuration/business-scope";
 import {
@@ -16,33 +16,10 @@ export interface ApprovedSupervisor {
   name: string;
 }
 
-/**
- * Verifikasi PIN supervisor POS di sisi server — dipakai gerbang yang
- * membutuhkan persetujuan supervisor (Void/Merge/Owner Comp/metode FOC).
- * Mengembalikan identitas supervisor yang cocok, atau null bila PIN salah.
- */
-export async function verifySupervisorPinServer(
-  pin: string
-): Promise<ApprovedSupervisor | null> {
-  const trimmed = String(pin || "").trim();
-  if (!trimmed) return null;
-  const db = createPgClient();
-  const { data } = await db
-    .from("users")
-    .select("id, full_name, role, pos_pin")
-    .eq("role", "pos_supervisor");
-  const supervisor = await findSupervisorByPin(
-    (data ?? []) as Array<{ id: string; full_name: string | null; pos_pin: string | null }>,
-    trimmed
-  );
-  if (!supervisor) return null;
-  return { id: supervisor.id, name: supervisor.full_name || "Supervisor" };
-}
-
-// ── Persetujuan PIN untuk SATU order (void / merge) ─────────────────────────
+// ── Batas percobaan PIN supervisor ──────────────────────────────────────────
 
 export const SUPERVISOR_PIN_SCOPE = "pos_supervisor_pin";
-/** 5 PIN salah dalam 15 menit → kasir dan order itu terkunci 15 menit. */
+/** 5 PIN salah dalam 15 menit → kasir (dan order, bila ada) terkunci 15 menit. */
 export const SUPERVISOR_PIN_POLICY: AttemptPolicy = {
   maxFailures: 5,
   windowMs: 15 * 60_000,
@@ -89,10 +66,40 @@ export function supervisorsForOrder<T extends ScopedUserRow>(supervisors: T[], o
   return supervisors.filter((supervisor) => isOperationalRowInBusinessScope(toUserScope(supervisor), order));
 }
 
-export type OrderPinApproval =
+export type SupervisorPinApproval =
   | { ok: true; supervisor: ApprovedSupervisor }
   | { ok: false; reason: "invalid" }
   | { ok: false; reason: "locked"; retryMinutes: number };
+
+type SupervisorCandidate = ScopedUserRow & SupervisorPinRow;
+
+async function activeSupervisors(): Promise<SupervisorCandidate[]> {
+  return query<SupervisorCandidate>(
+    `SELECT ${SCOPE_COLUMNS}, full_name, pos_pin
+       FROM configuration.users
+      WHERE role = 'pos_supervisor' AND status = 'active' AND pos_pin IS NOT NULL`
+  );
+}
+
+/**
+ * Kerangka bersama: tolak bila subject terkunci, cari supervisor, catat gagal
+ * atau bersihkan hitungan. `find` mengembalikan null untuk PIN salah.
+ */
+async function approveWithAttemptLimit(
+  subjects: string[],
+  find: () => Promise<SupervisorCandidate | null>
+): Promise<SupervisorPinApproval> {
+  const existingLock = await findActiveLock(SUPERVISOR_PIN_SCOPE, subjects);
+  if (existingLock) return { ok: false, reason: "locked", retryMinutes: minutesUntil(existingLock, new Date()) };
+
+  const supervisor = await find();
+  if (!supervisor) {
+    const lock = await recordFailure(SUPERVISOR_PIN_SCOPE, subjects, SUPERVISOR_PIN_POLICY);
+    return lock ? { ok: false, reason: "locked", retryMinutes: minutesUntil(lock, new Date()) } : { ok: false, reason: "invalid" };
+  }
+  await clearFailures(SUPERVISOR_PIN_SCOPE, subjects);
+  return { ok: true, supervisor: { id: supervisor.id, name: supervisor.full_name || "Supervisor" } };
+}
 
 /**
  * Verifikasi PIN supervisor untuk satu order. `order` = null bila order tidak
@@ -105,29 +112,42 @@ export async function approveOrderWithSupervisorPin(input: {
   orderId: string;
   order: OrderScopeRow | null;
   pin: string;
-}): Promise<OrderPinApproval> {
-  const subjects = [`user:${input.callerId}`, `order:${input.orderId}`];
-  const now = new Date();
-  const existingLock = await findActiveLock(SUPERVISOR_PIN_SCOPE, subjects);
-  if (existingLock) return { ok: false, reason: "locked", retryMinutes: minutesUntil(existingLock, now) };
-
+}): Promise<SupervisorPinApproval> {
   const pin = String(input.pin || "").trim();
-  let supervisor: (ScopedUserRow & SupervisorPinRow) | null = null;
-  if (input.order && pin && (await isOrderInUserScope(input.callerId, input.order))) {
-    const rows = await query<ScopedUserRow & SupervisorPinRow>(
-      `SELECT ${SCOPE_COLUMNS}, full_name, pos_pin
-         FROM configuration.users
-        WHERE role = 'pos_supervisor' AND status = 'active' AND pos_pin IS NOT NULL`
-    );
-    supervisor = await findSupervisorByPin(supervisorsForOrder(rows, input.order), pin);
-  }
+  const order = input.order;
+  return approveWithAttemptLimit([`user:${input.callerId}`, `order:${input.orderId}`], async () => {
+    if (!order || !pin || !(await isOrderInUserScope(input.callerId, order))) return null;
+    return findSupervisorByPin(supervisorsForOrder(await activeSupervisors(), order), pin);
+  });
+}
 
-  if (!supervisor) {
-    const lock = await recordFailure(SUPERVISOR_PIN_SCOPE, subjects, SUPERVISOR_PIN_POLICY);
-    return lock ? { ok: false, reason: "locked", retryMinutes: minutesUntil(lock, new Date()) } : { ok: false, reason: "invalid" };
-  }
-  await clearFailures(SUPERVISOR_PIN_SCOPE, subjects);
-  return { ok: true, supervisor: { id: supervisor.id, name: supervisor.full_name || "Supervisor" } };
+/**
+ * Verifikasi PIN supervisor tanpa order (FOC, top-up FOC, refund member):
+ * hanya supervisor aktif yang scope-nya mencakup company/cabang kasir.
+ * Kegagalan dihitung per kasir di DB (anggaran sama dengan void/merge).
+ */
+export async function approveWithSupervisorPin(input: {
+  callerId: string;
+  pin: string;
+}): Promise<SupervisorPinApproval> {
+  const pin = String(input.pin || "").trim();
+  return approveWithAttemptLimit([`user:${input.callerId}`], async () => {
+    if (!pin) return null;
+    const caller = await queryOne<ScopedUserRow>(
+      `SELECT ${SCOPE_COLUMNS} FROM configuration.users WHERE id = $1`,
+      [input.callerId]
+    );
+    if (!caller) return null;
+    const callerUnit = { company_id: caller.company_id, branch_id: caller.branch_id };
+    return findSupervisorByPin(supervisorsForOrder(await activeSupervisors(), callerUnit), pin);
+  });
+}
+
+/** Respons tolak standar: 429 saat terkunci, 403 untuk PIN salah. */
+export function supervisorPinRejection(approval: Exclude<SupervisorPinApproval, { ok: true }>): Response {
+  return approval.reason === "locked"
+    ? Response.json({ success: false, error: supervisorPinLockedMessage(approval.retryMinutes) }, { status: 429 })
+    : Response.json({ success: false, error: "PIN supervisor tidak valid" }, { status: 403 });
 }
 
 /** Pesan 429 yang sama untuk void & merge. */

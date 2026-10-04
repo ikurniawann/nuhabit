@@ -1,4 +1,3 @@
-import { Toaster } from "sonner";
 import { requireUser } from "@/lib/auth/require-user";
 import { getSettings, SETTING_KEYS } from "@/lib/settings/app-settings";
 import { QueueBoardPage } from "@/features/pos/queue-board";
@@ -10,7 +9,6 @@ export default async function Page() {
   return (
     <>
       <QueueBoardPage venueName={settings[SETTING_KEYS.COMPANY_LEGAL_NAME]} />
-      <Toaster position="bottom-right" />
     </>
   );
 }

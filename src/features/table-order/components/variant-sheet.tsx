@@ -4,8 +4,8 @@
 
 import { useState } from "react";
 import { Check, Minus, Plus } from "lucide-react";
+import { formatRupiah } from "@/lib/format";
 import {
-  formatRupiah,
   resolveModifiers,
   resolveVariant,
   unitPriceFor,
@@ -118,7 +118,7 @@ function VariantSheetBody({
               type="button"
               disabled={!modifiers.ok}
               onClick={() => modifiers.ok && onAdd(product, variant, quantity, modifiers.selected)}
-              className="flex h-11 min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-bold tabular-nums text-white shadow-sm transition active:scale-[0.99] disabled:bg-gray-300"
+              className="flex h-11 min-w-0 flex-1 items-center justify-between gap-2 whitespace-nowrap rounded-xl bg-primary px-4 text-sm font-bold tabular-nums text-primary-foreground shadow-sm transition active:scale-[0.99] disabled:bg-gray-300"
             >
               {/* Label singkat (revisi owner 2026-10-01): harga ratusan ribu +
                   harga coret member tidak muat bersama "Tambah ke keranjang". */}
@@ -166,7 +166,7 @@ function VariantSheetBody({
                   <span className="flex items-center gap-3">
                     <span
                       className={`flex size-5 items-center justify-center rounded-full border-2 ${
-                        isSelected ? "border-primary bg-primary text-white" : "border-gray-300"
+                        isSelected ? "border-primary bg-primary text-primary-foreground" : "border-gray-300"
                       }`}
                     >
                       {isSelected && <Check className="size-3" />}
@@ -211,7 +211,7 @@ function VariantSheetBody({
                     <span className="flex items-center gap-3">
                       <span
                         className={`flex size-5 items-center justify-center rounded-md border-2 ${
-                          isSelected ? "border-primary bg-primary text-white" : "border-gray-300"
+                          isSelected ? "border-primary bg-primary text-primary-foreground" : "border-gray-300"
                         }`}
                       >
                         {isSelected && <Check className="size-3" />}

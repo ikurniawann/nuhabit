@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { ApexOptions } from "apexcharts";
 import {
   AlertCircle,
   Clock,
@@ -15,8 +16,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { cn } from "@/lib/utils";
 import {
   RUSH_HOUR_HEATMAP_HOURS,
@@ -28,14 +29,8 @@ import {
 import { ApexChart } from "./apex-chart";
 import { useRushHourReport } from "../queries";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+import { stallFilterValue } from "../utils/stall-filter";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 function heatClass(intensity: number) {
   if (intensity <= 0) return "bg-muted/40 text-muted-foreground";
@@ -48,7 +43,7 @@ function heatClass(intensity: number) {
 export function RushHourReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
   const [dateTo, setDateTo] = useState(todayWib);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [pickedWarehouseId, setWarehouseId] = useState("");
   const [applied, setApplied] = useState({
     date_from: firstDayOfMonthWib(),
     date_to: todayWib(),
@@ -74,12 +69,7 @@ export function RushHourReportPage() {
     return buildHourRangeContribution(hourly, summary, rangeFrom, rangeTo);
   }, [data, rangeFrom, rangeTo]);
 
-  useEffect(() => {
-    if (!data) return;
-    if (data.stall_locked && data.filters.warehouse_id && !warehouseId) {
-      setWarehouseId(data.filters.warehouse_id);
-    }
-  }, [data, warehouseId]);
+  const warehouseId = stallFilterValue(pickedWarehouseId, data);
 
   const stallOptions = data?.stall_options ?? [];
   const stallLocked = Boolean(data?.stall_locked);
@@ -89,7 +79,7 @@ export function RushHourReportPage() {
   );
 
   const chartOptions = useMemo(
-    () => ({
+    (): ApexOptions => ({
       chart: { toolbar: { show: false }, fontFamily: "inherit" },
       stroke: { width: [0, 3], curve: "smooth" as const },
       dataLabels: { enabled: false },
@@ -103,7 +93,7 @@ export function RushHourReportPage() {
         {
           opposite: true,
           title: { text: "Omzet" },
-          labels: { formatter: (v: number) => formatCurrency(v) },
+          labels: { formatter: (v: number) => formatRupiah(v) },
         },
       ],
       legend: { position: "top" as const },
@@ -111,8 +101,8 @@ export function RushHourReportPage() {
       tooltip: {
         shared: true,
         y: {
-          formatter: (value: number, opts: { seriesIndex: number }) =>
-            opts.seriesIndex === 1 ? formatCurrency(value) : String(value),
+          formatter: (value: number, opts?: { seriesIndex: number }) =>
+            opts?.seriesIndex === 1 ? formatRupiah(value) : String(value),
         },
       },
     }),
@@ -227,7 +217,7 @@ export function RushHourReportPage() {
           <Metric
             title="Omzet jam tertinggi"
             value={data?.peak_revenue_hour.hour_label ?? "—"}
-            helper={formatCurrency(data?.peak_revenue_hour.revenue ?? 0)}
+            helper={formatRupiah(data?.peak_revenue_hour.revenue ?? 0)}
             icon={TrendingUp}
           />
           <Metric
@@ -242,7 +232,7 @@ export function RushHourReportPage() {
           />
           <Metric
             title="Rata-rata bill"
-            value={formatCurrency(data?.summary.average_ticket ?? 0)}
+            value={formatRupiah(data?.summary.average_ticket ?? 0)}
             helper={`${data?.summary.transactions ?? 0} transaksi`}
             icon={Wallet}
           />
@@ -325,7 +315,7 @@ export function RushHourReportPage() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   <Card className="border-primary/30 bg-primary/5 shadow-xs">
                     <CardContent className="p-4">
-                      <div className="text-3xl font-bold text-primary">
+                      <div className="text-3xl font-bold text-brand-text">
                         {rangeMode === "amount"
                           ? rangeContribution.share_revenue
                           : rangeContribution.share_quantity}
@@ -338,8 +328,8 @@ export function RushHourReportPage() {
                       </div>
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {rangeMode === "amount"
-                          ? `${formatCurrency(rangeContribution.revenue)} dari ${formatCurrency(data?.summary.revenue ?? 0)}`
-                          : `${rangeContribution.quantity.toLocaleString("id-ID")} item dari ${(data?.summary.quantity ?? 0).toLocaleString("id-ID")} item`}
+                          ? `${formatRupiah(rangeContribution.revenue)} dari ${formatRupiah(data?.summary.revenue ?? 0)}`
+                          : `${formatNumber(rangeContribution.quantity)} item dari ${formatNumber(data?.summary.quantity ?? 0)} item`}
                       </div>
                     </CardContent>
                   </Card>
@@ -347,8 +337,8 @@ export function RushHourReportPage() {
                     <CardContent className="p-4">
                       <div className="text-3xl font-bold text-foreground">
                         {rangeMode === "amount"
-                          ? formatCurrency(rangeContribution.revenue)
-                          : rangeContribution.quantity.toLocaleString("id-ID")}
+                          ? formatRupiah(rangeContribution.revenue)
+                          : formatNumber(rangeContribution.quantity)}
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         {rangeMode === "amount" ? "Omzet dalam rentang" : "Item terjual dalam rentang"}
@@ -408,8 +398,8 @@ export function RushHourReportPage() {
                             <td className="px-3 py-2 font-medium">{row.label}</td>
                             <td className="px-3 py-2 text-right tabular-nums">
                               {rangeMode === "amount"
-                                ? formatCurrency(row.revenue)
-                                : row.quantity.toLocaleString("id-ID")}
+                                ? formatRupiah(row.revenue)
+                                : formatNumber(row.quantity)}
                             </td>
                             <td className="px-3 py-2 text-right tabular-nums">{row.transactions}</td>
                             <td className="px-3 py-2">
@@ -470,7 +460,7 @@ export function RushHourReportPage() {
                     return (
                       <div
                         key={`${day.dow}-${hour}`}
-                        title={`${day.label} ${formatHourLabel(hour)} · ${count} trx · ${formatCurrency(cell?.revenue ?? 0)}`}
+                        title={`${day.label} ${formatHourLabel(hour)} · ${count} trx · ${formatRupiah(cell?.revenue ?? 0)}`}
                         className={cn(
                           "grid h-9 place-items-center rounded-md text-[11px] font-medium",
                           heatClass(rushHourHeatIntensity(count, maxHeat))
@@ -553,15 +543,15 @@ export function RushHourReportPage() {
                       <td className="px-3 py-2.5 font-medium">
                         {row.label}
                         {isPeak ? (
-                          <span className="ml-2 text-xs font-medium text-primary">Puncak</span>
+                          <span className="ml-2 text-xs font-medium text-brand-text">Puncak</span>
                         ) : null}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{row.transactions}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">
-                        {formatCurrency(row.revenue)}
+                        {formatRupiah(row.revenue)}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums">
-                        {formatCurrency(row.average_ticket)}
+                        {formatRupiah(row.average_ticket)}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
                         {share}%
@@ -592,7 +582,7 @@ function Metric({
   return (
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
-        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-primary">
+        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-brand-text">
           <Icon className="h-4 w-4" />
         </div>
         <div className="text-xl font-bold text-foreground">{value}</div>

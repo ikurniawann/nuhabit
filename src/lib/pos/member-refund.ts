@@ -1,3 +1,4 @@
+import { formatRupiah } from "@/lib/format";
 /**
  * Refund saldo member (owner 2026-09-04): dari halaman Unlink Card, tombol
  * "Refund" = kartu dilepas + permintaan refund dicatat. Setelah Finance
@@ -37,5 +38,5 @@ export function buildRefundWalletNotes(input: { approverName?: string | null; re
 /** Pure: pesan sukses untuk kasir. */
 export function refundCompletedMessage(input: { name?: string | null; phone?: string | null; amount: number }): string {
   const who = input.name || input.phone || "member";
-  return `Refund ${who} selesai — Rp ${Math.round(input.amount).toLocaleString("id-ID")} dikembalikan, saldo member kini Rp 0`;
+  return `Refund ${who} selesai — ${formatRupiah(input.amount)} dikembalikan, saldo member kini Rp0`;
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Check, Copy, Link2, Loader2, RefreshCw, Send, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format";
 
 type GobizSettings = {
   enabled: boolean;
@@ -353,7 +354,7 @@ export function GobizSettingsPanel() {
         </Button>
         {data?.last_catalog_sync && (
           <span className="ml-auto text-xs text-black/50">
-            Sinkron terakhir: {new Date(data.last_catalog_sync.created_at).toLocaleString("id-ID")} ·{" "}
+            Sinkron terakhir: {formatDateTime(data.last_catalog_sync.created_at)} ·{" "}
             {data.last_catalog_sync.status === "success"
               ? `${data.last_catalog_sync.item_count} item`
               : data.last_catalog_sync.status === "failed"

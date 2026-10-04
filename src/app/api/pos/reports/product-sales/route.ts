@@ -10,7 +10,7 @@ import { posReportXlsxResponse } from "@/lib/pos/report-xlsx";
 import {
   buildProductSalesExportSheets,
   productSalesExportFileName,
-} from "@/features/pos/reports/utils/product-sales-export";
+} from "@/lib/pos/reports/product-sales-export";
 
 type ProductSalesRow = {
   product_id: string | null;

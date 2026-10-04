@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPosSession } from "@/lib/api/auth";
 import { validateKolComp } from "@/lib/pos/comp-orders-server";
 import { isFocPaymentMethod } from "@/lib/pos/payment-methods";
-import { verifySupervisorPinServer } from "@/lib/pos/supervisor-pin-server";
+import { approveWithSupervisorPin, supervisorPinRejection } from "@/lib/pos/supervisor-pin-server";
 import { notifyCompTransaction } from "@/lib/wa/comp-notification";
 import { getApiUserScope } from "@/lib/api/scope";
 import { checkProductPrivileges } from "@/lib/crm/product-privilege";
@@ -183,13 +183,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      compApproved = await verifySupervisorPinServer(pin);
-      if (!compApproved) {
-        return NextResponse.json(
-          { success: false, error: "PIN supervisor tidak valid" },
-          { status: 403 }
-        );
-      }
+      const approval = await approveWithSupervisorPin({ callerId: sessionUserId, pin });
+      if (!approval.ok) return supervisorPinRejection(approval);
+      compApproved = approval.supervisor;
     }
 
     // FOC = komplimen: pendapatan diakui 0 — diskon 100% dari gross item,

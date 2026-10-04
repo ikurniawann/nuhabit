@@ -299,16 +299,3 @@ export function groupBySection(
     .filter((category) => byCategory.has(category.id))
     .map((category) => ({ category, products: byCategory.get(category.id) ?? [] }));
 }
-
-/** Tampilan harga gaya daftar menu ("32.500") — tanpa "Rp" seperti referensi. */
-export function formatMenuPrice(value: number) {
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Math.round(value));
-}
-
-export function formatRupiah(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(Math.round(value));
-}

@@ -5,6 +5,8 @@ import {
   buildPerItemSplits,
   countUnassignedQty,
   guestLabel,
+  normalizeAssignments,
+  resizeLabels,
 } from "./split-bill-calc";
 
 describe("guestLabel", () => {
@@ -84,5 +86,19 @@ describe("countUnassignedQty", () => {
         { a: [1, 1] }
       )
     ).toBe(0);
+  });
+});
+
+describe("normalizeAssignments / resizeLabels", () => {
+  it("menyesuaikan panjang, item belum dibagi jatuh ke tamu pertama", () => {
+    const items = [
+      { id: "a", quantity: 3 },
+      { id: "b", quantity: 1 },
+    ];
+    expect(normalizeAssignments({}, items, 2)).toEqual({ a: [3, 0], b: [1, 0] });
+    expect(normalizeAssignments({ a: [1, 1, 1], b: [0, 1] }, items, 2)).toEqual({ a: [1, 1], b: [0, 1] });
+    expect(normalizeAssignments({ a: [0, 0, 3] }, items, 2)).toEqual({ a: [3, 0], b: [1, 0] });
+    expect(resizeLabels(["Ana"], 3)).toEqual(["Ana", "", ""]);
+    expect(resizeLabels(["Ana", "Budi", "Cici"], 2)).toEqual(["Ana", "Budi"]);
   });
 });

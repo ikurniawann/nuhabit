@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 
 import {
@@ -35,8 +35,12 @@ interface MoveItemsDialogProps {
   onContinue: (items: MoveItemsSelection[]) => void;
 }
 
-export function MoveItemsDialog({
-  open,
+/** Dirender hanya saat terbuka → qty pilihan selalu mulai dari nol. */
+export function MoveItemsDialog(props: MoveItemsDialogProps) {
+  return props.open ? <MoveItemsBody {...props} /> : null;
+}
+
+function MoveItemsBody({
   lines,
   formatCurrency,
   onClose,
@@ -44,17 +48,12 @@ export function MoveItemsDialog({
 }: MoveItemsDialogProps) {
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
 
-  useEffect(() => {
-    if (!open) {
-      setQtyById({});
-      return;
-    }
-    const next: Record<string, number> = {};
-    for (const line of lines) {
-      next[line.id] = 0;
-    }
-    setQtyById(next);
-  }, [open, lines]);
+  // Baris bill berubah saat dialog terbuka → pilihan direset (pola adjust-state-on-prop-change).
+  const [seenLines, setSeenLines] = useState(lines);
+  if (seenLines !== lines) {
+    setSeenLines(lines);
+    setQtyById({});
+  }
 
   const selected = useMemo(() => {
     return lines
@@ -78,7 +77,7 @@ export function MoveItemsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogPanel size="md">
         <DialogPanelHeader>
           <DialogPanelTitle>Move Items</DialogPanelTitle>
@@ -122,7 +121,7 @@ export function MoveItemsDialog({
                     <span
                       className={cn(
                         "w-8 text-center text-sm font-semibold tabular-nums",
-                        qty > 0 ? "text-primary" : "text-muted-foreground"
+                        qty > 0 ? "text-brand-text" : "text-muted-foreground"
                       )}
                     >
                       {qty}

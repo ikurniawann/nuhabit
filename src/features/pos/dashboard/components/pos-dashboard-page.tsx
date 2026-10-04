@@ -19,9 +19,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HelpHint } from "@/components/ui/help-hint";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { usePosDashboard } from "../queries";
 import type { DashboardPeriod } from "../types";
 import {
@@ -31,6 +30,7 @@ import {
   PosRevenueTrendChart,
   PosTopProductsChart,
 } from "./pos-dashboard-charts";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
   { value: "today", label: "Today" },
@@ -70,13 +70,13 @@ function MetricCard({
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <div className="rounded-lg bg-primary/10 p-2 text-brand-text">
             <Icon className="h-5 w-5" />
           </div>
           {change !== undefined && (
             <div
               className={`flex items-center text-xs font-semibold ${
-                change >= 0 ? "text-primary" : "text-red-600"
+                change >= 0 ? "text-brand-text" : "text-red-600"
               }`}
             >
               {change >= 0 ? (
@@ -152,7 +152,7 @@ export function PosDashboardPage() {
                 onClick={() => pickPeriod(option.value)}
                 className={
                   selectedPeriod === option.value && !activeRange
-                    ? "h-9 rounded-lg border-primary bg-primary px-3 text-sm font-semibold text-white shadow-sm hover:border-primary/90 hover:bg-primary/90"
+                    ? "h-9 rounded-lg border-primary bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm hover:border-primary/90 hover:bg-primary/90"
                     : "purchasing-secondary-button h-9 px-3 text-sm"
                 }
               >
@@ -196,7 +196,7 @@ export function PosDashboardPage() {
 
       {loading && !stats ? (
         <div className="flex items-center justify-center gap-2 py-20 text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 className="h-5 w-5 animate-spin text-brand-text" />
           <span className="text-sm">Loading dashboard...</span>
         </div>
       ) : (
@@ -205,7 +205,7 @@ export function PosDashboardPage() {
             <FadeIn delay={0}>
               <MetricCard
                 title="Revenue"
-                value={formatAmount(stats?.todayRevenue || 0)}
+                value={formatRupiah(stats?.todayRevenue || 0)}
                 helper={`Total revenue ${periodLabel}`}
                 icon={WalletCards}
                 change={stats?.revenueChange}
@@ -223,7 +223,7 @@ export function PosDashboardPage() {
             <FadeIn delay={0.10}>
               <MetricCard
                 title="Average Order Value"
-                value={formatAmount(stats?.averageOrderValue || 0)}
+                value={formatRupiah(stats?.averageOrderValue || 0)}
                 helper="Revenue per completed order"
                 icon={TrendingUp}
                 helpId="pos.dashboard.aov"
@@ -260,7 +260,7 @@ export function PosDashboardPage() {
             <FadeIn delay={0.25}>
               <MetricCard
                 title="XP Earned"
-                value={`${(arkXp?.totalXpEarned || 0).toLocaleString("en-US")} XP`}
+                value={`${formatNumber(arkXp?.totalXpEarned || 0)} XP`}
                 helper="Experience points issued in period"
                 icon={Sparkles}
               />
@@ -306,7 +306,7 @@ export function PosDashboardPage() {
                       className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-brand-text">
                           {index + 1}
                         </div>
                         <div className="min-w-0">
@@ -316,7 +316,7 @@ export function PosDashboardPage() {
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-semibold text-indigo-600">
-                          {member.totalXp.toLocaleString("en-US")} XP
+                          {formatNumber(member.totalXp)} XP
                         </p>
                         <p className="text-xs font-medium text-amber-600">{formatArk(member.arkBalance)}</p>
                       </div>
@@ -343,14 +343,14 @@ export function PosDashboardPage() {
                       className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-gray-50"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-brand-text">
                           {index + 1}
                         </div>
                         <p className="truncate font-medium text-gray-900">{product.name}</p>
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-semibold text-gray-900">{product.sold} sold</p>
-                        <p className="text-xs text-gray-500">{formatAmount(product.revenue)}</p>
+                        <p className="text-xs text-gray-500">{formatRupiah(product.revenue)}</p>
                       </div>
                     </div>
                   ))
@@ -388,7 +388,7 @@ export function PosDashboardPage() {
                           <td className="px-4 py-3 font-medium text-gray-900">{order.id}</td>
                           <td className="px-4 py-3 text-gray-700">{order.cashier}</td>
                           <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                            {formatAmount(order.total)}
+                            {formatRupiah(order.total)}
                           </td>
                           <td className="px-4 py-3">
                             <span

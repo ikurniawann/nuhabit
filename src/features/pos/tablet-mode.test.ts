@@ -73,10 +73,6 @@ describe("isPosImmersiveShell", () => {
     expect(isPosImmersiveShell("/pos/kds", new URLSearchParams())).toBe(true);
   });
 
-  it("is true for POS Classic (kasir layar sentuh tanpa sidebar)", () => {
-    expect(isPosImmersiveShell("/dashboard/pos/classic", new URLSearchParams())).toBe(true);
-  });
-
   it("is true for cashier tablet shortcut", () => {
     expect(
       isPosImmersiveShell("/dashboard/pos/tablet", new URLSearchParams())

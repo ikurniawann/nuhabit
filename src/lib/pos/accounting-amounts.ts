@@ -120,7 +120,7 @@ export async function buildPosAccountingAmounts(
 
   if (itemsError) throw itemsError;
 
-  const cogs = (items || []).reduce(
+  const cogs = ((items || []) as Array<{ cost_total?: number | string | null }>).reduce(
     (sum, item) => sum + Math.max(0, Number(item.cost_total) || 0),
     0
   );

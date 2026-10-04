@@ -1,3 +1,4 @@
+import { formatRupiah } from "@/lib/format";
 /**
  * Harga per channel penjualan (GoFood/GrabFood/ShopeeFood) — fungsi murni,
  * dipakai server (sinkron katalog) dan halaman pengaturan (pratinjau).
@@ -73,7 +74,7 @@ export function markupPercentOf(base: number, final: number): number | null {
 
 export function roundingLabel(step: RoundingStep, mode: RoundingMode): string {
   if (step === 1) return "Tanpa pembulatan";
-  const nominal = `Rp${step.toLocaleString("id-ID")}`;
+  const nominal = formatRupiah(step);
   const direction = mode === "up" ? "ke atas" : mode === "down" ? "ke bawah" : "terdekat";
   return `Kelipatan ${nominal} ${direction}`;
 }

@@ -69,10 +69,6 @@ export function CashierStallGate({ reason }: { reason: string }) {
     };
   }, [isNoStall, skipOverlay]);
 
-  useEffect(() => {
-    if (!dialogOpen && !switching) setSwitchingId(null);
-  }, [dialogOpen, switching]);
-
   async function selectStall(warehouseId: string) {
     if (stallBusy) return;
     setSwitchingId(warehouseId);
@@ -118,7 +114,7 @@ export function CashierStallGate({ reason }: { reason: string }) {
                       >
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200/70 bg-muted/50 text-muted-foreground">
                           {busy ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            <Loader2 className="h-4 w-4 animate-spin text-brand-text" />
                           ) : (
                             <BuildingStorefrontIcon className="h-4 w-4" />
                           )}
@@ -131,7 +127,7 @@ export function CashierStallGate({ reason }: { reason: string }) {
                             {stall.code}
                           </span>
                         </span>
-                        <span className="shrink-0 text-xs font-medium text-primary">
+                        <span className="shrink-0 text-xs font-medium text-brand-text">
                           {busy ? "Mengganti…" : "Pilih"}
                         </span>
                       </button>

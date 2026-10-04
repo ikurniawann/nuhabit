@@ -16,8 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { TableRow } from "@/components/ui/table";
 import type { ManualPaymentHandler, PosPaymentMethod } from "@/lib/pos/payment-methods";
 import {
@@ -31,6 +31,8 @@ import {
   usePaymentMethods,
   useUpdatePaymentMethod,
 } from "../queries";
+
+const NO_METHODS: PosPaymentMethod[] = [];
 
 export function PaymentMethodsPage() {
   const listQuery = usePaymentMethods(false);
@@ -48,7 +50,7 @@ export function PaymentMethodsPage() {
     Record<string, { name: string; description: string; sort_order: string; code: string }>
   >({});
 
-  const methods = listQuery.data ?? [];
+  const methods = listQuery.data ?? NO_METHODS;
 
   const rows = useMemo(() => {
     return methods.map((method) => {
@@ -121,7 +123,7 @@ export function PaymentMethodsPage() {
       >
         {listQuery.isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">Memuat metode…</p>
           </div>
         ) : rows.length === 0 ? (

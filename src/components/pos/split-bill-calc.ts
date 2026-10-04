@@ -116,3 +116,30 @@ export function countUnassignedQty(
   }
   return unassigned;
 }
+
+/**
+ * Sesuaikan pembagian qty per item ke jumlah tamu: potong/isi nol sampai
+ * `count`, dan item yang belum dibagi sama sekali jatuh ke tamu pertama.
+ */
+export function normalizeAssignments(
+  prev: Record<string, number[]>,
+  cartItems: Array<{ id: string; quantity: number }>,
+  count: number
+): Record<string, number[]> {
+  const next: Record<string, number[]> = {};
+  for (const item of cartItems) {
+    const arr = [...(prev[item.id] || [])];
+    while (arr.length < count) arr.push(0);
+    while (arr.length > count) arr.pop();
+    if (arr.reduce((a, b) => a + b, 0) === 0) arr[0] = item.quantity;
+    next[item.id] = arr;
+  }
+  return next;
+}
+
+/** Label tamu sepanjang `count` (label kosong = "Guest N" saat ditampilkan). */
+export function resizeLabels(labels: string[], count: number): string[] {
+  const next = labels.slice(0, count);
+  while (next.length < count) next.push("");
+  return next;
+}

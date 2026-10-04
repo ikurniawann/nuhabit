@@ -102,7 +102,14 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: itemsError.message }, { status: 500 });
   }
 
-  const normalizedItems = (items || []).map((item) => ({
+  type KitchenItemRow = {
+    id: string;
+    station?: string | null;
+    kitchen_status?: string | null;
+    product_name?: string | null;
+    kitchen_notes?: string | null;
+  };
+  const normalizedItems = ((items || []) as KitchenItemRow[]).map((item) => ({
     ...item,
     station: normalizeStation(item.station, item.product_name || '', item.kitchen_notes || ''),
   }));

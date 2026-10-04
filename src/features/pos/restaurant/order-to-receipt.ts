@@ -17,7 +17,8 @@ type OrderLine = {
   notes?: string | null;
 };
 
-function toCartItems(order: Order): PosCartItem[] {
+/** Item order (jsonb list) → baris keranjang untuk struk thermal. */
+export function orderItemsToCartItems(order: Order): PosCartItem[] {
   return ((order.items || []) as OrderLine[]).map((item, index) => {
     const quantity = Number(item.quantity) || 1;
     const lineTotal = Number(item.total_amount || item.subtotal || 0);
@@ -55,7 +56,7 @@ export function orderToPreviewReceipt(
     orderNumber: order.order_number,
     orderType: order.order_type || "dine_in",
     table: tableLabel,
-    items: toCartItems(order),
+    items: orderItemsToCartItems(order),
     notes: order.notes || "",
     total: Number(order.total_amount) || 0,
     change: 0,

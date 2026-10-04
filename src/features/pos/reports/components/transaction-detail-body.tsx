@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { compReceiptLabel } from "@/lib/pos/comp-orders";
 import { idrToArk } from "@/lib/pos/loyalty-settings";
 import { useLoyaltySettings } from "@/features/pos/loyalty-settings";
-import type { TransactionReportRow } from "../types";
+import type { TransactionReportRow } from "@/lib/pos/reports/types";
 import { orderCustomerLabel, orderCustomerPhone } from "@/lib/pos/order-customer";
 import {
   formatKitchenStatusLabel,
@@ -16,7 +16,10 @@ import {
   isPaidPaymentStatus,
   isQrisPaymentMethod,
   resolveXenditExternalId,
-} from "../utils/transaction-labels";
+} from "@/lib/pos/reports/transaction-labels";
+import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+
+const formatQty = (value: number) => formatNumber(value, 2);
 
 type OrderItemDetail = {
   id: string;
@@ -95,25 +98,6 @@ export function discountLabel(
   return "Diskon";
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-
-const formatQty = (value: number) =>
-  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(value || 0);
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
-
 function toNumber(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -178,7 +162,7 @@ export function TransactionDetailBody({
   const { data: loyaltySettings } = useLoyaltySettings(isArkPayment);
   const arkRate = loyaltySettings?.ark_rate || 1000;
   const arkText = (idr: number) =>
-    `${idrToArk(idr, arkRate).toLocaleString("id-ID", { maximumFractionDigits: 2 })} ARK`;
+    `${formatNumber(idrToArk(idr, arkRate), 2)} ARK`;
   const showXendit = isQrisPaymentMethod(paymentMethod);
   const externalId = resolveXenditExternalId({
     storedExternalId: detail?.xendit_external_id || row?.xendit_external_id,
@@ -302,50 +286,50 @@ export function TransactionDetailBody({
             value={
               isArkPayment ? (
                 <span>
-                  {formatCurrency(toNumber(detail?.total_amount ?? row?.total_amount))}
+                  {formatRupiah(toNumber(detail?.total_amount ?? row?.total_amount))}
                   <span className="ml-2 text-xs font-semibold text-amber-700">
                     {arkText(toNumber(detail?.total_amount ?? row?.total_amount))}
                   </span>
                 </span>
               ) : (
-                formatCurrency(toNumber(detail?.total_amount ?? row?.total_amount))
+                formatRupiah(toNumber(detail?.total_amount ?? row?.total_amount))
               )
             }
           />
           <DetailField
             label="Subtotal"
-            value={formatCurrency(toNumber(detail?.subtotal))}
+            value={formatRupiah(toNumber(detail?.subtotal))}
           />
           <DetailField
             label={discountLabel(detail?.manual_discount_type, detail?.manual_discount_value)}
-            value={formatCurrency(toNumber(detail?.discount_amount))}
+            value={formatRupiah(toNumber(detail?.discount_amount))}
           />
           <DetailField
             label="Pajak"
-            value={formatCurrency(toNumber(detail?.tax_amount))}
+            value={formatRupiah(toNumber(detail?.tax_amount))}
           />
           <DetailField
             label="Service"
-            value={formatCurrency(toNumber(detail?.service_charge_amount))}
+            value={formatRupiah(toNumber(detail?.service_charge_amount))}
           />
           <DetailField
             label="Dibayar"
-            value={formatCurrency(toNumber(detail?.amount_paid))}
+            value={formatRupiah(toNumber(detail?.amount_paid))}
           />
           <DetailField
             label="Kembalian"
-            value={formatCurrency(toNumber(detail?.change_amount))}
+            value={formatRupiah(toNumber(detail?.change_amount))}
           />
           <DetailField
             label="ARK digunakan"
             value={
               arkUsed > 0 ? (
                 <span>
-                  {formatCurrency(arkUsed)}
+                  {formatRupiah(arkUsed)}
                   <span className="ml-2 text-xs font-semibold text-amber-700">{arkText(arkUsed)}</span>
                 </span>
               ) : (
-                formatCurrency(arkUsed)
+                formatRupiah(arkUsed)
               )
             }
             className="sm:col-span-3"
@@ -426,7 +410,7 @@ export function TransactionDetailBody({
                               <Badge
                                 key={`v-${index}`}
                                 variant="secondary"
-                                className="bg-primary/10 text-xs text-primary"
+                                className="bg-primary/10 text-xs text-brand-text"
                               >
                                 {variant.name}
                               </Badge>
@@ -451,7 +435,7 @@ export function TransactionDetailBody({
                     </td>
                     <td className="px-3 py-2.5 text-right">{formatQty(toNumber(item.quantity))}</td>
                     <td className="px-3 py-2.5 text-right text-muted-foreground">
-                      <div>{formatCurrency(toNumber(item.unit_price))}</div>
+                      <div>{formatRupiah(toNumber(item.unit_price))}</div>
                       {isArkPayment ? (
                         <div className="text-xs text-amber-700">{arkText(toNumber(item.unit_price))}</div>
                       ) : null}
@@ -460,12 +444,12 @@ export function TransactionDetailBody({
                           {item.discount_type === "percent" &&
                           toNumber(item.discount_value) > 0
                             ? `diskon ${toNumber(item.discount_value)}%`
-                            : `diskon ${formatCurrency(toNumber(item.discount_amount))}`}
+                            : `diskon ${formatRupiah(toNumber(item.discount_amount))}`}
                         </div>
                       ) : null}
                     </td>
                     <td className="px-3 py-2.5 text-right font-medium">
-                      <div>{formatCurrency(toNumber(item.total_amount))}</div>
+                      <div>{formatRupiah(toNumber(item.total_amount))}</div>
                       {isArkPayment ? (
                         <div className="text-xs font-normal text-amber-700">{arkText(toNumber(item.total_amount))}</div>
                       ) : null}

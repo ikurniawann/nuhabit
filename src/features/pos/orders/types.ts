@@ -16,17 +16,3 @@ export interface OrderListParams {
   active_only?: boolean;
   limit?: number;
 }
-
-export interface UpdateOrderStatusPayload {
-  status: string;
-  payment_status?: string;
-  payment_method?: string;
-  amount_paid?: number;
-  ark_coins_used?: number;
-  cancelled_reason?: string;
-}
-
-export interface CustomerListParams {
-  search?: string;
-  phone?: string;
-}

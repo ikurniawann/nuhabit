@@ -36,7 +36,8 @@ export async function POST(
     if (arkBlocked) return arkBlocked;
 
     const db = createPgClient();
-    const cashierId = await resolveCashierId();
+    // Kasir = user sesi POS (dulu ID sistem tetap 0000…0001, jejak audit hilang).
+    const cashierId = sessionUserId;
 
     const { data: split, error: splitError } = await db
       .from('pos_order_splits')
@@ -200,7 +201,7 @@ export async function POST(
         .from('pos_order_items')
         .select('cost_total')
         .eq('order_id', orderId);
-      const orderCogs = (costItems || []).reduce(
+      const orderCogs = ((costItems || []) as Array<{ cost_total?: unknown }>).reduce(
         (sum, item) => sum + Math.max(0, Number(item.cost_total) || 0),
         0
       );
@@ -261,8 +262,4 @@ export async function POST(
     console.error('Error paying split:', error);
     return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
   }
-}
-
-async function resolveCashierId(): Promise<string> {
-  return '00000000-0000-0000-0000-000000000001';
 }

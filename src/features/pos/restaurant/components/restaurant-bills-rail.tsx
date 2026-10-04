@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, Loader2, ReceiptText, Table2 } from "lucide-react";
 
@@ -20,19 +20,16 @@ import {
   listTableBoardBills,
   tableBillSourceLabel,
   type TableBoardBill,
-} from "../table-board-bills";
+} from "@/lib/pos/tables/table-board-bills";
 import {
   billSelection,
   isBillSelected,
   type NullableRestaurantSelection,
   type RestaurantSelection,
 } from "../selection";
+import { formatRupiah } from "@/lib/format";
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(Number(value)) ? Math.abs(Number(value)) : 0);
+const formatCurrency = (value: number) => formatRupiah(Math.abs(Number(value) || 0));
 
 function formatRelativeTime(value?: string) {
   if (!value) return "-";
@@ -55,18 +52,14 @@ function formatRelativeTime(value?: string) {
   return formatter.format(Math.round(diffHours / 24), "day");
 }
 
-/** Avoid SSR/client Date.now() drift during hydration. */
+const subscribeMinute = (onTick: () => void) => {
+  const timer = window.setInterval(onTick, 60_000);
+  return () => window.clearInterval(timer);
+};
+
+/** "-" saat SSR supaya Date.now() server/klien tidak bentrok saat hidrasi; diperbarui per menit. */
 function RelativeTime({ value }: { value?: string }) {
-  const [label, setLabel] = useState("-");
-
-  useEffect(() => {
-    setLabel(formatRelativeTime(value));
-    const timer = window.setInterval(() => {
-      setLabel(formatRelativeTime(value));
-    }, 60_000);
-    return () => window.clearInterval(timer);
-  }, [value]);
-
+  const label = useSyncExternalStore(subscribeMinute, () => formatRelativeTime(value), () => "-");
   return <span suppressHydrationWarning>{label}</span>;
 }
 
@@ -175,7 +168,7 @@ export function RestaurantBillsRail({
               : "Select a bill to use restaurant actions."}
           </p>
         </div>
-        <Badge variant="outline" className="border-primary/20 text-primary">
+        <Badge variant="outline" className="border-primary/20 text-brand-text">
           {bills.length}
         </Badge>
       </div>
@@ -263,7 +256,7 @@ export function RestaurantBillsRail({
                   {splitSummary ? (
                     <Badge
                       variant="outline"
-                      className="mt-2 ml-1 border-primary/20 bg-primary/5 text-[10px] text-primary"
+                      className="mt-2 ml-1 border-primary/20 bg-primary/5 text-[10px] text-brand-text"
                     >
                       Split · {splitSummary.paid}/{splitSummary.total}
                     </Badge>
@@ -284,7 +277,7 @@ export function RestaurantBillsRail({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-7 border-primary/20 px-2 text-xs text-primary hover:bg-primary/5"
+                  className="h-7 border-primary/20 px-2 text-xs text-brand-text hover:bg-primary/5"
                   onClick={(event) => {
                     event.stopPropagation();
                     openBill(bill);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPosSession } from "@/lib/api/auth";
 import { queryOne, withTransaction } from "@/lib/db";
 import { normalizeNotes } from "@/lib/pos/member-refund";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * POST /api/pos/member-cards/[id]/refund  { notes? }
@@ -93,7 +94,7 @@ export async function POST(
     const c = result.data.customer;
     return NextResponse.json({
       success: true,
-      message: `Kartu ${result.data.previous_nfc_uid} dilepas & refund Rp ${Math.round(c.ark_coin_balance).toLocaleString("id-ID")} untuk ${c.name || c.phone} diajukan ke Finance`,
+      message: `Kartu ${result.data.previous_nfc_uid} dilepas & refund ${formatRupiah(c.ark_coin_balance)} untuk ${c.name || c.phone} diajukan ke Finance`,
       data: result.data,
     });
   } catch (error) {

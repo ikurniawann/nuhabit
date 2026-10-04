@@ -12,6 +12,7 @@ import {
   type MemberProfile,
 } from "../api";
 import { BottomSheet } from "./sheet";
+import { formatNumber } from "@/lib/format";
 
 /**
  * Masuk member via OTP WhatsApp — memakai endpoint portal member yang sudah
@@ -128,7 +129,7 @@ export function MemberSheet({
       {member ? (
         <div>
           <div className="flex items-center gap-3 rounded-2xl bg-primary/5 p-4">
-            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-white">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <UserRound className="size-6" />
             </div>
             <div className="min-w-0">
@@ -157,7 +158,7 @@ export function MemberSheet({
                 <Sparkles className="size-3.5 text-amber-500" /> Total XP
               </div>
               <div className="mt-1 text-lg font-bold text-gray-900">
-                {new Intl.NumberFormat("id-ID").format(member.total_xp)}
+                {formatNumber(member.total_xp)}
               </div>
             </div>
             )}
@@ -223,7 +224,7 @@ export function MemberSheet({
             type="button"
             onClick={sendCode}
             disabled={busy}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white disabled:opacity-60"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-60"
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
             Kirim kode OTP
@@ -254,7 +255,7 @@ export function MemberSheet({
             type="button"
             onClick={submitCode}
             disabled={busy}
-            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white disabled:opacity-60"
+            className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground disabled:opacity-60"
           >
             {busy && <Loader2 className="size-4 animate-spin" />}
             Masuk

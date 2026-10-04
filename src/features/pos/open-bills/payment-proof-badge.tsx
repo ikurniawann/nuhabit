@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { paymentFlowFrom } from "@/lib/table-order/order-status";
 import type { Order } from "./types";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 
 /**
  * Penanda order self-order yang dibayar lewat Static QRIS. Bila pemesan sudah
@@ -48,11 +49,9 @@ export function PaymentProofBadge({ order }: { order: Order | null | undefined }
             <DialogTitle>Bukti bayar Static QRIS</DialogTitle>
             <DialogDescription>
               {order.order_number || order.id.slice(0, 8)} · total{" "}
-              {new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(
-                Number(order.total_amount) || 0
-              )}{" "}
+              {formatRupiah(order.total_amount)}{" "}
               · diunggah{" "}
-              {new Date(uploadedAt).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })}. Cocokkan
+              {formatDateTime(uploadedAt)}. Cocokkan
               nominal & waktu, lalu lunasi bill dengan metode QRIS.
             </DialogDescription>
           </DialogHeader>

@@ -5,8 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, Bike, CheckCircle2, Clock, Loader2, RefreshCw, Utensils, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { formatRupiah } from "@/lib/table-order/menu";
 import type { GofoodOrderStatus, MappedGofoodLine, UnmappedGofoodLine } from "@/lib/gobiz/types";
+import { formatRupiah, formatTime } from "@/lib/format";
 
 type GofoodOrder = {
   id: string;
@@ -222,7 +222,7 @@ export function GofoodOrdersPage() {
                       </span>
                     </div>
                     <div className="mt-0.5 text-xs text-gray-500">
-                      {new Date(order.created_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                      {formatTime(order.created_at)}
                       {order.customer_name ? ` · ${order.customer_name}` : ""}
                       {order.pin ? ` · PIN ${order.pin}` : ""}
                       {order.driver_name ? ` · Driver: ${order.driver_name}` : ""}

@@ -10,25 +10,17 @@ import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
 import { HelpHint } from "@/components/ui/help-hint";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useClosingReport } from "../queries";
 import { todayWib } from "@/lib/pos/report-dates";
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 const formatVariance = (value: number) => {
-  const formatted = formatCurrency(Math.abs(value));
+  const formatted = formatRupiah(Math.abs(value));
   return value < 0 ? `(${formatted})` : formatted;
 };
 
-const formatQty = (value: number) =>
-  value > 0 ? new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value) : "-";
+const formatQty = (value: number) => (value > 0 ? formatNumber(value) : "-");
 
 function line(label: string, value: string, className = "") {
   return (
@@ -178,9 +170,9 @@ export function ClosingReportPage() {
                   <div className="mt-2 space-y-1">
                     {line(
                       `${report.transaction_totals?.transactions ?? 0} transaksi`,
-                      formatCurrency(report.transaction_totals?.sales ?? 0)
+                      formatRupiah(report.transaction_totals?.sales ?? 0)
                     )}
-                    {line("Diskon", formatCurrency(report.transaction_totals?.discount ?? 0))}
+                    {line("Diskon", formatRupiah(report.transaction_totals?.discount ?? 0))}
                   </div>
 
                   <div className="mt-4">
@@ -188,7 +180,7 @@ export function ClosingReportPage() {
                     <div className="mt-2 space-y-1">
                       {line(
                         `${report.transaction_totals?.full_discount_transactions ?? 0} transaksi`,
-                        formatCurrency(report.transaction_totals?.full_discount_amount ?? 0)
+                        formatRupiah(report.transaction_totals?.full_discount_amount ?? 0)
                       )}
                     </div>
                   </div>
@@ -208,18 +200,18 @@ export function ClosingReportPage() {
                         />
                       </span>
                       <span className="text-right font-medium text-gray-900">
-                        {formatCurrency(report.sales_summary.net_sales)}
+                        {formatRupiah(report.sales_summary.net_sales)}
                       </span>
                     </div>
-                    {line("Service", formatCurrency(report.sales_summary.service))}
-                    {line("Tax", formatCurrency(report.sales_summary.tax))}
-                    {line("Discount", formatCurrency(report.sales_summary.discount))}
-                    {line("Gross", formatCurrency(report.sales_summary.gross), "font-semibold")}
+                    {line("Service", formatRupiah(report.sales_summary.service))}
+                    {line("Tax", formatRupiah(report.sales_summary.tax))}
+                    {line("Discount", formatRupiah(report.sales_summary.discount))}
+                    {line("Gross", formatRupiah(report.sales_summary.gross), "font-semibold")}
                   </div>
 
                   <div className="mt-4 space-y-1">
                     {line("No of Guest", `${report.guests.count} pax`)}
-                    {line("Average/Pax", formatCurrency(report.guests.average_per_pax))}
+                    {line("Average/Pax", formatRupiah(report.guests.average_per_pax))}
                   </div>
 
                   {report.categories_by_segment.map((section) => (
@@ -232,7 +224,7 @@ export function ClosingReportPage() {
                               {row.name}
                               <span className="text-gray-500">
                                 {" "}
-                                : {formatCurrency(row.amount)}
+                                : {formatRupiah(row.amount)}
                               </span>
                             </span>
                             <span className="shrink-0 text-gray-600">({row.percentage}%)</span>
@@ -253,8 +245,8 @@ export function ClosingReportPage() {
                         />
                       </p>
                       <div className="mt-2 space-y-1">
-                        {line("Target", formatCurrency(report.targets.daily.target))}
-                        {line("Actual", formatCurrency(report.targets.daily.actual))}
+                        {line("Target", formatRupiah(report.targets.daily.target))}
+                        {line("Actual", formatRupiah(report.targets.daily.actual))}
                         {line("Variance", formatVariance(report.targets.daily.variance))}
                       </div>
                     </div>
@@ -268,8 +260,8 @@ export function ClosingReportPage() {
                         />
                       </p>
                       <div className="mt-2 space-y-1">
-                        {line("Target", formatCurrency(report.targets.monthly.target))}
-                        {line("Actual", formatCurrency(report.targets.monthly.actual))}
+                        {line("Target", formatRupiah(report.targets.monthly.target))}
+                        {line("Actual", formatRupiah(report.targets.monthly.actual))}
                         {line("Variance", formatVariance(report.targets.monthly.variance))}
                       </div>
                     </div>
@@ -283,8 +275,8 @@ export function ClosingReportPage() {
                         />
                       </p>
                       <div className="mt-2 space-y-1">
-                        {line("Target", formatCurrency(report.targets.month_to_date.target))}
-                        {line("Actual", formatCurrency(report.targets.month_to_date.actual))}
+                        {line("Target", formatRupiah(report.targets.month_to_date.target))}
+                        {line("Actual", formatRupiah(report.targets.month_to_date.actual))}
                         {line("Variance", formatVariance(report.targets.month_to_date.variance))}
                       </div>
                     </div>

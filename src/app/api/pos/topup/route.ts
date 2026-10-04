@@ -3,7 +3,11 @@ import { appOrigin } from "@/lib/app-origin";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from "@/lib/api/auth";
 import { awardCrmXpForTopup } from "@/lib/crm/loyalty-engine";
-import { verifySupervisorPinServer, type ApprovedSupervisor } from "@/lib/pos/supervisor-pin-server";
+import {
+  approveWithSupervisorPin,
+  supervisorPinRejection,
+  type ApprovedSupervisor,
+} from "@/lib/pos/supervisor-pin-server";
 import { notifyFocTopup } from "@/lib/wa/comp-notification";
 import { resolveTopupVenue } from "@/lib/pos/topup-venue";
 import {
@@ -22,6 +26,7 @@ import {
   getPackageForSale,
   packageTopupFields,
 } from "@/lib/wallet/topup";
+import { formatRupiah } from "@/lib/format";
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown error";
@@ -144,13 +149,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      focApprover = await verifySupervisorPinServer(pin);
-      if (!focApprover) {
-        return NextResponse.json(
-          { success: false, error: "PIN supervisor tidak valid" },
-          { status: 403 }
-        );
-      }
+      const approval = await approveWithSupervisorPin({ callerId: sessionUserId, pin });
+      if (!approval.ok) return supervisorPinRejection(approval);
+      focApprover = approval.supervisor;
     }
 
     if (!customer_id || (!package_id && (!amount || amount <= 0))) {
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Minimum top-up is Rp ${loyaltySettings.topup_min_amount.toLocaleString("id-ID")}`,
+          error: `Minimum top-up is ${formatRupiah(loyaltySettings.topup_min_amount)}`,
         },
         { status: 400 }
       );

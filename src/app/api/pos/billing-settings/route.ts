@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPosSession } from "@/lib/api/auth";
+import { ApiError, requireIamAction } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { IAM } from "@/lib/iam/prefixes";
+import { parseJsonBody, requirePosSession } from "@/lib/pos/route-guards";
 import { getApiUserScope } from "@/lib/api/scope";
 import { resolveActiveStallFromCookies } from "@/lib/auth/active-stall";
 import { loadUserWarehouses } from "@/lib/users/user-warehouses";
@@ -12,10 +15,6 @@ import {
   resolveBillingProfile,
   upsertBillingProfile,
 } from "@/lib/pos/billing-settings-server";
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown error";
-}
 
 async function resolveSessionScope(userId: string) {
   const [scope, warehouses, activeStall] = await Promise.all([
@@ -56,108 +55,64 @@ const upsertSchema = z.object({
   charges: z.array(chargeSchema).min(1),
 });
 
-export async function GET(request: NextRequest) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+/**
+ * GET ?mode=resolve (default) | options | list — profil billing untuk kasir.
+ * resolve: branch/warehouse eksplisit, atau scope sesi (cabang + stall aktif).
+ */
+export const GET = apiHandler(async (request: NextRequest) => {
+  const sessionUserId = await requirePosSession();
+  const { searchParams } = request.nextUrl;
+  const mode = searchParams.get("mode") || "resolve";
+  const branchId = searchParams.get("branch_id");
+  const warehouseId = searchParams.get("warehouse_id");
+
+  if (mode === "options") {
+    const [branches, warehouses, profiles] = await Promise.all([
+      listBranchesForBilling(),
+      listWarehousesForBilling(branchId),
+      listBillingProfiles(),
+    ]);
+    return NextResponse.json({ success: true, data: { branches, warehouses, profiles } });
+  }
+  if (mode === "list") {
+    return NextResponse.json({ success: true, data: await listBillingProfiles() });
   }
 
-  try {
-    const { searchParams } = request.nextUrl;
-    const mode = searchParams.get("mode") || "resolve";
-    const branchId = searchParams.get("branch_id");
-    const warehouseId = searchParams.get("warehouse_id");
-    const subtotal = Number(searchParams.get("subtotal") || 0);
-    const enabledCodes = (searchParams.get("enabled_codes") || "")
-      .split(",")
-      .map((code) => code.trim())
-      .filter(Boolean);
+  // Parameter eksplisit diutamakan; selain itu scope sesi (cabang + stall aktif).
+  const useSession = !branchId && !warehouseId;
+  const sessionScope = useSession ? await resolveSessionScope(sessionUserId) : null;
+  const profile = await resolveBillingProfile({
+    branchId: branchId || sessionScope?.branchId,
+    warehouseId: warehouseId || (useSession ? sessionScope?.warehouseId : null),
+  });
 
-    if (mode === "options") {
-      const [branches, warehouses, profiles] = await Promise.all([
-        listBranchesForBilling(),
-        listWarehousesForBilling(branchId),
-        listBillingProfiles(),
-      ]);
-      return NextResponse.json({
-        success: true,
-        data: { branches, warehouses, profiles },
-      });
-    }
+  const subtotal = Number(searchParams.get("subtotal") || 0);
+  const enabledCodes = (searchParams.get("enabled_codes") || "")
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean);
+  const preview =
+    subtotal > 0
+      ? calculateBillCharges({ subtotalAfterDiscount: subtotal, charges: profile.charges, enabledOptionalCodes: enabledCodes })
+      : null;
+  return NextResponse.json({ success: true, data: { profile, preview } });
+}, "pos/billing-settings");
 
-    if (mode === "list") {
-      const profiles = await listBillingProfiles();
-      return NextResponse.json({ success: true, data: profiles });
-    }
-
-    // Prefer explicit query params; otherwise session scope (branch + active stall).
-    const useSession = !branchId && !warehouseId;
-    const sessionScope = useSession ? await resolveSessionScope(sessionUserId) : null;
-    const profile = await resolveBillingProfile({
-      branchId: branchId || sessionScope?.branchId,
-      warehouseId: warehouseId || (useSession ? sessionScope?.warehouseId : null),
-    });
-
-    const preview =
-      subtotal > 0
-        ? calculateBillCharges({
-            subtotalAfterDiscount: subtotal,
-            charges: profile.charges,
-            enabledOptionalCodes: enabledCodes,
-          })
-        : null;
-
-    return NextResponse.json({
-      success: true,
-      data: { profile, preview },
-    });
-  } catch (error: unknown) {
-    console.error("[pos/billing-settings] GET failed:", error);
-    return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
+/** PUT: ubah profil Tax & Service → izin update menu settings.billing (bukan sekadar sesi kasir). */
+export const PUT = apiHandler(async (request: NextRequest) => {
+  const user = await requireIamAction(IAM.settingsBilling, "update");
+  const body = await parseJsonBody(request, upsertSchema, "Invalid payload");
+  const codes = body.charges.map((c) => c.code.trim().toUpperCase());
+  if (new Set(codes).size !== codes.length) {
+    throw ApiError.badRequest("Charge codes must be unique within a profile");
   }
-}
-
-export async function PUT(request: NextRequest) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
-
-  try {
-    const body = upsertSchema.parse(await request.json());
-    const codes = body.charges.map((c) => c.code.trim().toUpperCase());
-    if (new Set(codes).size !== codes.length) {
-      return NextResponse.json(
-        { success: false, error: "Charge codes must be unique within a profile" },
-        { status: 400 }
-      );
-    }
-
-    const profile = await upsertBillingProfile({
-      id: body.id,
-      branchId: body.branch_id,
-      warehouseId: body.warehouse_id,
-      name: body.name,
-      updatedBy: sessionUserId,
-      charges: body.charges.map((charge) => ({
-        ...charge,
-        code: charge.code.trim().toUpperCase(),
-      })),
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: profile,
-      message: "Billing settings saved",
-    });
-  } catch (error: unknown) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, error: error.issues[0]?.message || "Invalid payload" },
-        { status: 400 }
-      );
-    }
-    console.error("[pos/billing-settings] PUT failed:", error);
-    return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 500 });
-  }
-}
+  const profile = await upsertBillingProfile({
+    id: body.id,
+    branchId: body.branch_id,
+    warehouseId: body.warehouse_id,
+    name: body.name,
+    updatedBy: user.id,
+    charges: body.charges.map((charge) => ({ ...charge, code: charge.code.trim().toUpperCase() })),
+  });
+  return NextResponse.json({ success: true, data: profile, message: "Billing settings saved" });
+}, "pos/billing-settings");

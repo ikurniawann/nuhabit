@@ -2,7 +2,7 @@ import type ExcelJS from "exceljs";
 import type {
   PaymentMethodsReport, ProductSalesReport, ProfitBucket, ProfitReport, RevenueCompositionReport,
   RushHourReport, TransactionReport, VoidReport,
-} from "@/features/pos/reports/types";
+} from "@/lib/pos/reports/types";
 import { formatPeriodLabel } from "@/lib/pos/report-period";
 import {
   addKeyValues, addSectionTitle, addTable, addTitleBlock, newWorkbook, printedLine, round0, round2, wibDateTime,

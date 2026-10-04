@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buildFloorNodePositions, clampPercent } from "../floor-layout";
+import { buildFloorNodePositions, clampPercent } from "@/lib/pos/tables/floor-layout";
 import { TableSilhouette } from "./table-silhouette";
 
 // Ukuran node meja. Diperbesar (96 → 136) supaya nomor meja terbaca dari
@@ -36,6 +36,12 @@ type DragState = {
   startY: number;
   moved: boolean;
 };
+
+function withoutKey<T>(record: Record<string, T>, key: string): Record<string, T> {
+  const next = { ...record };
+  delete next[key];
+  return next;
+}
 
 export function statusNodeTone(status: string) {
   switch (status) {
@@ -102,6 +108,8 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [dragging, setDragging] = useState<Record<string, Point>>({});
+  // Meja yang sedang di-drag (state, bukan ref, karena dipakai saat render).
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
   const basePositions = useMemo(
     () => buildFloorNodePositions(tables, 5),
@@ -151,6 +159,7 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
     if (mode !== "edit") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const start = resolvePosition(table.id);
+    setActiveDragId(table.id);
     dragStateRef.current = {
       id: table.id,
       pointerId: e.pointerId,
@@ -199,12 +208,10 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
       // already released
     }
     dragStateRef.current = null;
+    setActiveDragId(null);
 
     if (!ds.moved) {
-      setDragging((prev) => {
-        const { [table.id]: _omit, ...rest } = prev;
-        return rest;
-      });
+      setDragging((prev) => withoutKey(prev, table.id));
       props.onEdit(table);
       return;
     }
@@ -213,10 +220,7 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
     try {
       await props.onSavePosition(table, finalPos);
     } finally {
-      setDragging((prev) => {
-        const { [table.id]: _omit, ...rest } = prev;
-        return rest;
-      });
+      setDragging((prev) => withoutKey(prev, table.id));
     }
   }
 
@@ -233,10 +237,8 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
       // already released
     }
     dragStateRef.current = null;
-    setDragging((prev) => {
-      const { [table.id]: _omit, ...rest } = prev;
-      return rest;
-    });
+    setActiveDragId(null);
+    setDragging((prev) => withoutKey(prev, table.id));
   }
 
   const canvasHeight = Math.max(260, Math.ceil(tables.length / 5) * (FLOOR_NODE_H + 40) + 40);
@@ -251,8 +253,7 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
       {tables.map((table, index) => {
         const pos = resolvePosition(table.id);
         const isSaving = savingId === table.id;
-        const isDragging =
-          mode === "edit" && dragStateRef.current?.id === table.id;
+        const isDragging = mode === "edit" && activeDragId === table.id;
         const disabled =
           mode === "operate"
             ? Boolean(props.isDisabled?.(table))
@@ -330,14 +331,14 @@ export function FloorPlanCanvas(props: FloorPlanCanvasProps) {
             )}
           >
             {isSaving ? (
-              <Loader2 className="absolute right-1.5 top-1.5 z-10 h-3.5 w-3.5 animate-spin text-primary" />
+              <Loader2 className="absolute right-1.5 top-1.5 z-10 h-3.5 w-3.5 animate-spin text-brand-text" />
             ) : null}
             <TableSilhouette
               capacity={table.capacity}
               label={table.table_number}
             />
             {mode === "operate" && (table.billCount ?? 0) > 1 ? (
-              <span className="absolute right-1 top-1 z-10 rounded-md bg-primary/15 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+              <span className="absolute right-1 top-1 z-10 rounded-md bg-primary/15 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-brand-text">
                 {table.billCount}
               </span>
             ) : null}

@@ -19,10 +19,11 @@ import {
 } from "@/lib/pos/channel-pricing";
 import { salesChannelSummary } from "@/lib/pos/sales-channels";
 import { cn } from "@/lib/utils";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { fetchChannelPrices, saveChannelPrices, saveChannelRule, type ChannelPriceProduct } from "../api";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
-const rupiah = (value: number) => `Rp${Math.round(value).toLocaleString("id-ID")}`;
+const rupiah = formatRupiah;
 /** "30.000" / "Rp 30000" → 30000; kosong → null. */
 const parseRupiah = (value: string) => {
   const digits = value.replace(/\D/g, "");
@@ -30,7 +31,7 @@ const parseRupiah = (value: string) => {
 };
 const formatDigits = (value: string) => {
   const parsed = parseRupiah(value);
-  return parsed === null ? "" : parsed.toLocaleString("id-ID");
+  return parsed === null ? "" : formatNumber(parsed);
 };
 
 /** Integrasi otomatis baru tersedia untuk GoFood; channel lain dipakai sebagai referensi harga. */
@@ -93,7 +94,7 @@ export function ChannelPricesPage() {
               className={cn(
                 "rounded-lg border px-4 py-2 text-sm font-semibold transition-colors",
                 channel?.code === item.code
-                  ? "border-primary/40 bg-primary/10 text-primary"
+                  ? "border-primary/40 bg-primary/10 text-brand-text"
                   : "border-border bg-card text-muted-foreground hover:bg-muted/40"
               )}
             >
@@ -239,7 +240,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
             >
               {ROUNDING_STEPS.map((step) => (
                 <option key={step} value={step}>
-                  {step === 1 ? "Tanpa pembulatan" : `Kelipatan Rp${step.toLocaleString("id-ID")}`}
+                  {step === 1 ? "Tanpa pembulatan" : `Kelipatan ${formatRupiah(step)}`}
                 </option>
               ))}
             </select>
@@ -298,7 +299,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
               onClick={() => setManualOnly((value) => !value)}
               className={cn(
                 "rounded-md border px-3 py-1.5",
-                manualOnly ? "border-primary/40 bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                manualOnly ? "border-primary/40 bg-primary/10 text-brand-text" : "border-border text-muted-foreground"
               )}
             >
               Harga manual ({manualCount})
@@ -338,7 +339,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                 const text = drafted
                   ? priceDraft[product.id]
                   : product.override_price !== null
-                    ? product.override_price.toLocaleString("id-ID")
+                    ? formatNumber(product.override_price)
                     : "";
                 const override = drafted ? parseRupiah(priceDraft[product.id]) : product.override_price;
                 const resolved = resolveChannelPrice(product.base_price, previewRule, override);
@@ -364,7 +365,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                           inputMode="numeric"
                           disabled={!previewRule.isActive}
                           value={text}
-                          placeholder={resolved.auto.toLocaleString("id-ID")}
+                          placeholder={formatNumber(resolved.auto)}
                           onChange={(event) =>
                             setPriceDraft((draft) => ({ ...draft, [product.id]: formatDigits(event.target.value) }))
                           }
@@ -372,7 +373,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                         />
                         {resolved.isManual ? (
                           <>
-                            <Badge variant="outline" className="border-primary/30 bg-primary/5 text-[10px] text-primary">
+                            <Badge variant="outline" className="border-primary/30 bg-primary/5 text-[10px] text-brand-text">
                               Manual
                             </Badge>
                             <button
@@ -389,7 +390,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                       {belowBase || unround ? (
                         <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-700">
                           <AlertTriangle className="size-3" />
-                          {belowBase ? "Di bawah harga dasar" : `Tidak kelipatan Rp${previewRule.roundingStep.toLocaleString("id-ID")}`}
+                          {belowBase ? "Di bawah harga dasar" : `Tidak kelipatan ${formatRupiah(previewRule.roundingStep)}`}
                         </div>
                       ) : null}
                     </td>
@@ -399,7 +400,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                         belowBase ? "text-amber-700" : "text-muted-foreground"
                       )}
                     >
-                      {diff === null ? "—" : `${diff > 0 ? "+" : ""}${diff.toLocaleString("id-ID")}%`}
+                      {diff === null ? "—" : `${diff > 0 ? "+" : ""}${formatNumber(diff, 2)}%`}
                     </td>
                   </tr>
                 );

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
-import type { UserRole } from "@/lib/api/auth";
 import { createPgClient } from "@/lib/pg/create-client";
 import { hashPosPin, isValidPosPin } from "@/lib/pos/supervisor-pin";
 
@@ -14,8 +13,6 @@ import { hashPosPin, isValidPosPin } from "@/lib/pos/supervisor-pin";
  * lama tetap diterima oleh void/merge (lihat lib/pos/supervisor-pin) sampai
  * di-reset dari sini.
  */
-
-const ALLOWED_ROLES: UserRole[] = ["super_admin", "admin"];
 
 /** Role yang TIDAK boleh diubah dari halaman ini — akun berkuasa. */
 const PROTECTED_ROLES = new Set(["super_admin", "admin"]);

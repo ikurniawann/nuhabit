@@ -258,7 +258,7 @@ export function RestaurantActionRail({
   ];
 
   const actionButtonClass =
-    "h-auto w-full flex-col items-center justify-center gap-1.5 whitespace-normal rounded-lg border-gray-200/70 px-2 py-2.5 text-center text-[11px] font-medium leading-tight text-gray-700 hover:border-primary/30 hover:bg-primary/5 hover:text-primary";
+    "h-auto w-full flex-col items-center justify-center gap-1.5 whitespace-normal rounded-lg border-gray-200/70 px-2 py-2.5 text-center text-[11px] font-medium leading-tight text-gray-700 hover:border-primary/30 hover:bg-primary/5 hover:text-brand-text";
 
   return (
     <aside className="flex h-fit flex-col gap-2 rounded-xl border border-gray-200/70 bg-white p-2.5 shadow-xs max-[799px]:grid max-[799px]:grid-cols-2 sm:max-[799px]:grid-cols-4">
@@ -300,7 +300,7 @@ export function RestaurantActionRail({
         variant="outline"
         className={cn(
           actionButtonClass,
-          "border-primary/25 text-primary hover:border-primary/40 hover:bg-primary/10 hover:text-primary",
+          "border-primary/25 text-brand-text hover:border-primary/40 hover:bg-primary/10 hover:text-brand-text",
           "max-[799px]:col-span-2 sm:max-[799px]:col-span-4"
         )}
         onClick={onViewOrders}
@@ -309,7 +309,7 @@ export function RestaurantActionRail({
         <span className="flex min-w-0 items-center gap-1.5">
           <span className="truncate">View Orders</span>
           {typeof openBillsCount === "number" ? (
-            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+            <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-brand-text">
               {openBillsCount}
             </span>
           ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, Ban, Eye, Loader2, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,37 +17,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
 import { useVoidReport } from "../queries";
-import type { VoidReportRow } from "../types";
+import type { VoidReportRow } from "@/lib/pos/reports/types";
 import {
   TransactionDetailBody,
   type TransactionOrderDetail,
 } from "./transaction-detail-body";
 import { loadOrderTransactionDetail } from "../utils/load-order-detail";
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
+import { stallFilterValue } from "../utils/stall-filter";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 
 export function VoidReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
   const [dateTo, setDateTo] = useState(todayWib);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [pickedWarehouseId, setWarehouseId] = useState("");
   const [applied, setApplied] = useState({
     date_from: firstDayOfMonthWib(),
     date_to: todayWib(),
@@ -60,12 +46,7 @@ export function VoidReportPage() {
 
   const { data, isLoading, isFetching, error } = useVoidReport(applied);
 
-  useEffect(() => {
-    if (!data) return;
-    if (data.stall_locked && data.filters.warehouse_id && !warehouseId) {
-      setWarehouseId(data.filters.warehouse_id);
-    }
-  }, [data, warehouseId]);
+  const warehouseId = stallFilterValue(pickedWarehouseId, data);
 
   const stallOptions = data?.stall_options ?? [];
   const stallLocked = Boolean(data?.stall_locked);
@@ -187,7 +168,7 @@ export function VoidReportPage() {
           <Metric title="Transaksi void" value={String(data?.summary.voids ?? 0)} icon={Ban} />
           <Metric
             title="Nilai void"
-            value={formatCurrency(data?.summary.amount ?? 0)}
+            value={formatRupiah(data?.summary.amount ?? 0)}
             icon={ReceiptText}
           />
         </div>
@@ -243,7 +224,7 @@ export function VoidReportPage() {
                         <span className="line-clamp-2">{row.void_reason || "—"}</span>
                       </td>
                       <td className="px-3 py-3 text-right font-medium">
-                        {formatCurrency(row.total_amount)}
+                        {formatRupiah(row.total_amount)}
                       </td>
                       <td className="px-3 py-3 text-right">
                         <Button
@@ -333,7 +314,7 @@ function Metric({
   return (
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
-        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-primary">
+        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-brand-text">
           <Icon className="h-4 w-4" />
         </div>
         <div className="text-xl font-bold text-foreground">{value}</div>

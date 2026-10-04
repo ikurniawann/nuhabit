@@ -19,7 +19,7 @@ export const useSaveRecipe = () => {
 export const useDeleteBomItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, productId }: { id: string; productId: string }) => deleteBomItem(id),
+    mutationFn: ({ id }: { id: string; productId: string }) => deleteBomItem(id),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: recipeBuilderQueryKeys.bom(variables.productId) });
     },

@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertCircle, Beaker, Loader2, Plus, Save, Search, Trash2 } from 'lucide-react';
-import type { BomRow, RecipeRawMaterial } from '../types';
+import { formatNumber, formatRupiah as formatCurrency } from '@/lib/format';
+import type { BomRow, RecipeProduct, RecipeRawMaterial } from '../types';
 import { useProductBom, useRecipeCatalog } from '../queries';
 import { useDeleteBomItem, useSaveRecipe } from '../mutations';
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value || 0);
+const NO_PRODUCTS: RecipeProduct[] = [];
+const NO_MATERIALS: RecipeRawMaterial[] = [];
 
 function toNumber(value: unknown) {
   const numeric = Number(value);
@@ -16,10 +17,12 @@ function toNumber(value: unknown) {
 
 export function RecipeBuilderPage() {
   const { data: catalog, isLoading: loading, error: catalogError } = useRecipeCatalog();
-  const products = catalog?.products ?? [];
-  const materials = catalog?.materials ?? [];
+  const products = catalog?.products ?? NO_PRODUCTS;
+  const materials = catalog?.materials ?? NO_MATERIALS;
 
-  const [selectedProductId, setSelectedProductId] = useState('');
+  const [pickedProductId, setSelectedProductId] = useState('');
+  // Belum memilih → produk pertama di katalog.
+  const selectedProductId = pickedProductId || products[0]?.id || '';
   const [ingredients, setIngredients] = useState<BomRow[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMaterialPicker, setShowMaterialPicker] = useState(false);
@@ -32,17 +35,13 @@ export function RecipeBuilderPage() {
 
   const queryError = catalogError instanceof Error ? catalogError.message : '';
 
-  useEffect(() => {
-    if (!selectedProductId && products.length > 0) {
-      setSelectedProductId(products[0].id);
-    }
-  }, [products, selectedProductId]);
-
-  const { data: bomRows = [], error: bomError } = useProductBom(selectedProductId);
-
-  useEffect(() => {
+  const { data: bomRows, error: bomError } = useProductBom(selectedProductId);
+  // BOM server baru (ganti produk / setelah simpan) → draf bahan direset saat render.
+  const [syncedBom, setSyncedBom] = useState<BomRow[] | undefined>(undefined);
+  if (bomRows && bomRows !== syncedBom) {
+    setSyncedBom(bomRows);
     setIngredients(bomRows);
-  }, [bomRows]);
+  }
 
   const selectedProduct = useMemo(
     () => products.find((product) => product.id === selectedProductId) || null,
@@ -260,7 +259,7 @@ export function RecipeBuilderPage() {
                   <button key={material.id} onClick={() => addIngredient(material)} className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-pink-50">
                     <div>
                       <div className="font-medium text-gray-900">{material.nama || material.name || 'Bahan'}</div>
-                      <div className="text-xs text-gray-500">{material.kode || '-'} · Stock {toNumber(material.qty_onhand).toLocaleString('id-ID')}</div>
+                      <div className="text-xs text-gray-500">{material.kode || '-'} · Stock {formatNumber(toNumber(material.qty_onhand), 3)}</div>
                     </div>
                     <div className="text-right text-xs font-semibold text-gray-700">{formatCurrency(toNumber(material.avg_cost))}</div>
                   </button>

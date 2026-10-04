@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Check, CheckCircle2, ChevronLeft, Clock, Download, ImageUp, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { QrisCard } from "@/components/pos/QrisCard";
-import { formatRupiah } from "@/lib/table-order/menu";
 import {
   isOrderActive,
   ORDER_PROGRESS_STEPS,
@@ -18,6 +17,7 @@ import {
 } from "@/lib/table-order/order-status";
 import { fetchOrder, paymentProofUrl, uploadPaymentProof, type OrderData } from "../api";
 import { compressProofImage } from "../proof-image";
+import { formatRupiah, formatTime } from "@/lib/format";
 
 const POLL_UNPAID_MS = 5_000;
 const POLL_ACTIVE_MS = 12_000;
@@ -144,7 +144,7 @@ export function OrderTracking({
 
   return (
     <div className="pb-28">
-      <div className="bg-primary px-5 pb-16 pt-6 text-white">
+      <div className="bg-primary px-5 pb-16 pt-6 text-primary-foreground">
         {onShowAll ? (
           <button
             type="button"
@@ -178,7 +178,7 @@ export function OrderTracking({
               type="button"
               onClick={() => void refresh(unpaidQris)}
               disabled={refreshing}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-text"
             >
               <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
               Perbarui
@@ -200,9 +200,9 @@ export function OrderTracking({
                       <div
                         className={`flex size-7 items-center justify-center rounded-full border-2 text-xs font-bold ${
                           done
-                            ? "border-primary bg-primary text-white"
+                            ? "border-primary bg-primary text-primary-foreground"
                             : current
-                              ? "border-primary bg-white text-primary"
+                              ? "border-primary bg-white text-brand-text"
                               : "border-gray-200 bg-white text-gray-400"
                         }`}
                       >
@@ -210,7 +210,7 @@ export function OrderTracking({
                       </div>
                       <div className={`h-0.5 flex-1 ${index === ORDER_PROGRESS_STEPS.length - 1 ? "bg-transparent" : done ? "bg-primary" : "bg-gray-200"}`} />
                     </div>
-                    <div className={`mt-1.5 text-[10px] font-semibold ${current ? "text-primary" : done ? "text-gray-700" : "text-gray-400"}`}>
+                    <div className={`mt-1.5 text-[10px] font-semibold ${current ? "text-brand-text" : done ? "text-gray-700" : "text-gray-400"}`}>
                       {item.label}
                     </div>
                   </li>
@@ -267,10 +267,7 @@ export function OrderTracking({
                       <>
                         {" "}
                         Berlaku sampai{" "}
-                        {new Date(qris.expires_at).toLocaleTimeString("id-ID", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatTime(qris.expires_at)}
                         .
                       </>
                     )}
@@ -290,7 +287,7 @@ export function OrderTracking({
                 <div className="flex flex-col items-center">
                   <div className="w-full rounded-xl bg-primary/5 px-3 py-2 text-center">
                     <div className="text-xs text-gray-600">Bayar tepat sebesar</div>
-                    <div className="text-2xl font-black text-primary">{formatRupiah(order.total_amount)}</div>
+                    <div className="text-2xl font-black text-brand-text">{formatRupiah(order.total_amount)}</div>
                   </div>
                   <a href={staticQrisImageUrl} target="_blank" rel="noreferrer" className="mt-3 block w-full">
                     <img
@@ -355,7 +352,7 @@ export function OrderTracking({
                   className={`mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-60 ${
                     order.payment_proof_uploaded_at
                       ? "border border-gray-200 text-gray-700"
-                      : "bg-primary text-white shadow-sm"
+                      : "bg-primary text-primary-foreground shadow-sm"
                   }`}
                 >
                   {uploadingProof ? <Loader2 className="size-4 animate-spin" /> : <ImageUp className="size-4" />}
@@ -408,7 +405,7 @@ export function OrderTracking({
               <span className="font-semibold text-gray-900">{formatRupiah(order.subtotal)}</span>
             </div>
             {(order.discount_amount ?? 0) > 0 && (
-              <div className="flex justify-between text-primary">
+              <div className="flex justify-between text-brand-text">
                 <span>
                   Diskon member
                   {order.subtotal > 0 ? ` (${Math.round(((order.discount_amount ?? 0) * 100) / order.subtotal)}%)` : ""}
@@ -448,7 +445,7 @@ export function OrderTracking({
           <button
             type="button"
             onClick={onNewOrder}
-            className="h-12 w-full rounded-xl border-2 border-primary text-sm font-bold text-primary"
+            className="h-12 w-full rounded-xl border-2 border-primary text-sm font-bold text-brand-text"
           >
             Pesan lagi
           </button>

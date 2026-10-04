@@ -4,7 +4,7 @@ import { queryOne, withTransaction } from "@/lib/db";
 import {
   REFUND_WALLET_METHOD, REFUND_WALLET_TYPE, buildRefundWalletNotes, normalizeNotes, refundCompletedMessage,
 } from "@/lib/pos/member-refund";
-import { verifySupervisorPinServer } from "@/lib/pos/supervisor-pin-server";
+import { approveWithSupervisorPin, supervisorPinRejection } from "@/lib/pos/supervisor-pin-server";
 
 /**
  * POST /api/pos/member-refunds/[id]/complete  { supervisor_pin, notes? }
@@ -37,10 +37,9 @@ export async function POST(
     if (!pin) {
       return NextResponse.json({ success: false, error: "Refund Completed membutuhkan PIN supervisor" }, { status: 400 });
     }
-    const approver = await verifySupervisorPinServer(pin);
-    if (!approver) {
-      return NextResponse.json({ success: false, error: "PIN supervisor tidak valid" }, { status: 403 });
-    }
+    const approval = await approveWithSupervisorPin({ callerId: sessionUserId, pin });
+    if (!approval.ok) return supervisorPinRejection(approval);
+    const approver = approval.supervisor;
 
     const actor = await queryOne<{ full_name: string | null }>(
       `SELECT full_name FROM configuration.users WHERE id = $1`,

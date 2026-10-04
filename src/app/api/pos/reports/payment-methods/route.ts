@@ -14,7 +14,7 @@ import {
   parseReportDateRange,
   resolveReportStallFilter,
 } from "@/lib/pos/report-stall-filter";
-import { formatPaymentMethodLabel } from "@/features/pos/reports/utils/transaction-labels";
+import { formatPaymentMethodLabel } from "@/lib/pos/reports/transaction-labels";
 
 type PaymentLegRow = {
   order_id: string;

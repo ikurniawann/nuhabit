@@ -1,3 +1,4 @@
+import "server-only";
 import { query, queryOne } from "@/lib/db";
 import type { UserRole } from "@/types";
 import { resolveActiveStallFromCookies } from "@/lib/auth/active-stall";

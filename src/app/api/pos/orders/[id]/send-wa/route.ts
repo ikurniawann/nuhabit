@@ -7,7 +7,7 @@ import {
   buildOrderReceiptMessage,
   normalizeWaPhone,
 } from "@/lib/pos/receipt-wa";
-import { formatPaymentMethodLabel } from "@/features/pos/reports/utils/transaction-labels";
+import { formatPaymentMethodLabel } from "@/lib/pos/reports/transaction-labels";
 import {
   loadPosReceiptSettingsRows,
   resolveReceiptSettings,

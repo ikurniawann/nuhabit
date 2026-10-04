@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 const HOME_HREF = "/dashboard";
 
 export const POS_CHROME_BUTTON_CLASS =
-  "border-gray-200/80 text-gray-700 hover:border-primary/30 hover:bg-primary/10 hover:text-primary";
+  "border-gray-200/80 text-gray-700 hover:border-primary/30 hover:bg-primary/10 hover:text-brand-text";
 
 type Props = {
   className?: string;
@@ -47,7 +47,7 @@ export function PosTabletChromeControls({
       // ignore
     }
     // POS layout → (dashboard) layout: soft router.push memicu RSC TypeError.
-    window.location.assign(HOME_HREF);
+    window.location.assign(new URL(HOME_HREF, window.location.origin).href);
   }, []);
 
   const toggle = useCallback(async () => {

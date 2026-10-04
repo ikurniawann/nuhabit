@@ -76,7 +76,7 @@ export function CustomizationModal({
                   price={basePrice}
                   memberDiscountPercent={memberDiscountPercent}
                   format={formatCurrency}
-                  className="font-bold text-primary"
+                  className="font-bold text-brand-text"
                   strikeClassName="text-gray-500"
                 />
                 {showArk && <span className="text-xs font-medium text-amber-600">{formatArk(basePrice)}</span>}
@@ -90,7 +90,7 @@ export function CustomizationModal({
           {variants.length > 0 && (
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <Sparkles className="h-3.5 w-3.5 text-brand-text" />
                 Pilih Varian
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -119,7 +119,7 @@ export function CustomizationModal({
             return (
               <div key={group.modifier_group.id} className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-600">
-                  <Utensils className="h-3.5 w-3.5 text-primary" />
+                  <Utensils className="h-3.5 w-3.5 text-brand-text" />
                   {groupName}
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -194,13 +194,13 @@ export function CustomizationModal({
             {memberLineTotal < lineTotal && (
               <div className="text-xs tabular-nums text-gray-400 line-through">{formatCurrency(lineTotal)}</div>
             )}
-            <div className="truncate text-xl font-bold tabular-nums text-primary">{formatCurrency(memberLineTotal)}</div>
+            <div className="truncate text-xl font-bold tabular-nums text-brand-text">{formatCurrency(memberLineTotal)}</div>
             {showArk && <div className="text-[11px] font-medium text-amber-600">{formatArk(memberLineTotal)}</div>}
           </div>
           <button
             type="button"
             onClick={onConfirm}
-            className="h-12 shrink-0 rounded-lg bg-primary px-5 font-semibold text-white transition-colors hover:bg-primary/90"
+            className="h-12 shrink-0 rounded-lg bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Tambah ke Keranjang
           </button>

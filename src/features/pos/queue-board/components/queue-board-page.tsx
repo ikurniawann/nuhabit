@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
   Volume2,
   VolumeX,
@@ -14,13 +14,14 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { KDSOrder } from "@/features/pos/kds/types";
+import type { KDSOrder } from "@/lib/pos/kds-types";
 import {
   activeQueueItems,
   itemIsReady,
   queueItemProgress,
 } from "@/lib/pos/queue-board";
 import { unlockQueueBoardSound, useQueueBoard } from "../queries";
+import { todayWib } from "@/lib/pos/report-dates";
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
   dine_in: "Dine In",
@@ -31,12 +32,7 @@ const ORDER_TYPE_LABELS: Record<string, string> = {
 
 function getTodayRange() {
   // Samakan SSR (UTC) & browser: hari operasional Asia/Jakarta.
-  const day = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
+  const day = todayWib();
   const start = new Date(`${day}T00:00:00+07:00`);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
@@ -184,10 +180,22 @@ type QueueBoardPageProps = {
   venueName?: string | null;
 };
 
+const subscribeClock = (onTick: () => void) => {
+  const timer = window.setInterval(onTick, 1000);
+  return () => window.clearInterval(timer);
+};
+const clockSeconds = () => Math.floor(Date.now() / 1000);
+
+/** Jam dinding per detik; null saat SSR supaya tidak ada selisih hidrasi. */
+function useClock(): Date | null {
+  const seconds = useSyncExternalStore(subscribeClock, clockSeconds, () => null);
+  return seconds === null ? null : new Date(seconds * 1000);
+}
+
 export function QueueBoardPage({ venueName }: QueueBoardPageProps) {
   const todayRange = getTodayRange();
   // Jam hidup: jangan render waktu di SSR — `new Date()` / locale beda → hydration mismatch.
-  const [now, setNow] = useState<Date | null>(null);
+  const now = useClock();
   const [isBrowserFullscreen, setIsBrowserFullscreen] = useState(false);
   const { preparing, ready, loading, error, soundEnabled, setSoundEnabled, refresh } =
     useQueueBoard({
@@ -195,12 +203,6 @@ export function QueueBoardPage({ venueName }: QueueBoardPageProps) {
       dateTo: todayRange.dateTo,
       pollInterval: 3000,
     });
-
-  useEffect(() => {
-    setNow(new Date());
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     const sync = () => setIsBrowserFullscreen(Boolean(document.fullscreenElement));

@@ -317,7 +317,8 @@ export type AllocatedCheckoutSlice = CheckoutChargeSlice & {
   total: number;
 };
 
-function allocateAmount(total: number, weights: number[]): number[] {
+/** Bagi `total` pro-rata `weights` (bulat ke bawah), sisa ke bobot terbesar. */
+export function allocateAmount(total: number, weights: number[]): number[] {
   const sum = weights.reduce((a, b) => a + b, 0);
   if (sum <= 0 || total === 0) return weights.map(() => 0);
   const raw = weights.map((w) => Math.floor((total * w) / sum));

@@ -12,8 +12,9 @@ import { selfOrderPaymentFlow, selfOrderTableCode, splitByRecency, timeAgoText }
 import { orderTypeText, paymentMethodText } from "@/lib/table-order/order-status";
 import { cn } from "@/lib/utils";
 import { acceptSelfOrder, fetchIncomingSelfOrders, selfOrdersQueryKey } from "../api";
+import { formatRupiah } from "@/lib/format";
 
-const rupiah = (value: unknown) => `Rp${Math.round(Number(value) || 0).toLocaleString("id-ID")}`;
+const rupiah = (value: unknown) => formatRupiah(Number(value) || 0);
 
 type OrderItemLike = {
   id?: string;
@@ -140,7 +141,7 @@ export function SelfOrderQueue({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-primary px-2 py-0.5 text-lg font-black tabular-nums text-white">
+                  <span className="rounded-lg bg-primary px-2 py-0.5 text-lg font-black tabular-nums text-primary-foreground">
                     {order.queue_number || "—"}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{order.order_number}</span>
@@ -186,7 +187,7 @@ export function SelfOrderQueue({
               type="button"
               disabled={busy}
               onClick={() => accept.mutate(order)}
-              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-white shadow-sm transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-60"
+              className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.99] disabled:opacity-60"
             >
               {busy ? <Loader2 className="size-4 animate-spin" /> : <ChefHat className="size-5" />}
               Dibuat

@@ -1,6 +1,6 @@
-import type { KDSOrder, KdsListParams, KdsStallOption } from "./types";
+import type { KDSOrder, KdsListParams, KdsStallOption } from "@/lib/pos/kds-types";
 
-export type * from "./types";
+export type * from "@/lib/pos/kds-types";
 
 export async function listKdsOrders(params: KdsListParams = {}): Promise<KDSOrder[]> {
   const sp = new URLSearchParams();

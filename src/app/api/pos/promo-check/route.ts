@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPosSession } from "@/lib/api/auth";
-import { getCrmDefaultVenue } from "@/lib/crm/server";
-import { createPgClient } from "@/lib/pg/create-client";
+import { apiHandler } from "@/lib/api/handler";
 import { PROMO_REJECT_LABELS } from "@/lib/promo/promo";
 import { previewPromoCode } from "@/lib/promo/promo-server";
 import { findOfferByUnlockCode } from "@/lib/promo/offer-rules-server";
 import { todayJakartaIso } from "@/lib/promo/offer-pos";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { enforceRateLimit, parseJsonBody, requireDefaultVenue, requirePosSession } from "@/lib/pos/route-guards";
 
 // EPIC-032 C1 — validasi kode untuk kasir (channel 'pos'). INDIKATIF:
 // kebenaran final tetap di server saat order dibuat (422 bila keburu habis).
@@ -31,72 +29,31 @@ const checkSchema = z.object({
   customer_id: z.string().uuid().nullable().optional(),
 });
 
-export async function POST(request: NextRequest) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-  const rate = checkRateLimit(`pos-promo-check:${sessionUserId}`, 30);
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { success: false, error: "Terlalu banyak percobaan — tunggu sebentar" },
-      { status: 429 }
-    );
-  }
+export const POST = apiHandler(async (request: NextRequest) => {
+  const sessionUserId = await requirePosSession();
+  enforceRateLimit(`pos-promo-check:${sessionUserId}`, 30);
+  const body = await parseJsonBody(request, checkSchema);
+  const venue = await requireDefaultVenue();
 
-  try {
-    const parsed = checkSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed" },
-        { status: 400 }
-      );
-    }
-    const venue = await getCrmDefaultVenue(createPgClient());
-    if (!venue.companyId || !venue.branchId) {
-      return NextResponse.json(
-        { success: false, error: "Venue belum dikonfigurasi" },
-        { status: 400 }
-      );
-    }
-
-    const offer = await findOfferByUnlockCode({
-      companyId: venue.companyId,
-      branchId: venue.branchId,
-      code: parsed.data.code,
-      todayIsoDate: todayJakartaIso(),
+  const offer = await findOfferByUnlockCode({ ...venue, code: body.code, todayIsoDate: todayJakartaIso() });
+  if (offer) {
+    return NextResponse.json({
+      success: true,
+      data: { ok: true, kind: "offer", rule_id: offer.id, offer_name: offer.name, discount: 0 },
     });
-    if (offer) {
-      return NextResponse.json({
-        success: true,
-        data: { ok: true, kind: "offer", rule_id: offer.id, offer_name: offer.name, discount: 0 },
-      });
-    }
-
-    const preview = await previewPromoCode({
-      scope: { companyId: venue.companyId, branchId: venue.branchId },
-      code: parsed.data.code,
-      channel: "pos",
-      subtotal: parsed.data.subtotal,
-      phone: null,
-      customerId: parsed.data.customer_id ?? null,
-      lines: parsed.data.items?.map((item) => ({
-        productId: item.product_id,
-        amount: item.amount,
-      })),
-    });
-    const data = preview.ok
-      ? { ...preview, kind: "promo" as const }
-      : { ...preview, kind: "promo" as const, label: PROMO_REJECT_LABELS[preview.reason] };
-    return NextResponse.json({ success: true, data });
-  } catch (err) {
-    console.error("[pos] promo check error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memeriksa kode promo" },
-      { status: 500 }
-    );
   }
-}
+
+  const preview = await previewPromoCode({
+    scope: venue,
+    code: body.code,
+    channel: "pos",
+    subtotal: body.subtotal,
+    phone: null,
+    customerId: body.customer_id ?? null,
+    lines: body.items?.map((item) => ({ productId: item.product_id, amount: item.amount })),
+  });
+  const data = preview.ok
+    ? { ...preview, kind: "promo" as const }
+    : { ...preview, kind: "promo" as const, label: PROMO_REJECT_LABELS[preview.reason] };
+  return NextResponse.json({ success: true, data });
+}, "pos/promo-check");

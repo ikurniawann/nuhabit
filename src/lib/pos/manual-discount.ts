@@ -1,3 +1,4 @@
+import { formatRupiah } from "@/lib/format";
 export type DiscountType = "percent" | "fixed";
 
 export type ManualDiscountInput = {
@@ -179,7 +180,7 @@ export function formatDiscountLabel(
   if (!type || value == null || Number(value) <= 0) return null;
   if (type === "percent") return `−${Number(value)}%`;
   const n = Math.floor(Number(value));
-  return `−Rp ${n.toLocaleString("id-ID")}`;
+  return `−${formatRupiah(n)}`;
 }
 
 export type ParsedDiscountReason = {

@@ -3,7 +3,7 @@ import type {
   ProductAtRiskAlert,
   RawMaterialAlert,
   StockAlertLevel,
-} from "./types";
+} from "@/lib/pos/stock-alerts-types";
 
 export type StockAlertTickerInput = {
   raw_materials: RawMaterialAlert[];

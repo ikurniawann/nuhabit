@@ -7,7 +7,7 @@ import type {
   RushHourReportParams,
   VoidReportParams,
   PaymentMethodsReportParams,
-} from "./types";
+} from "@/lib/pos/reports/types";
 
 export const reportsQueryKeys = {
   all: ["pos", "reports"] as const,

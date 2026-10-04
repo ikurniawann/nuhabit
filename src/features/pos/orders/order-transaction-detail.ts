@@ -2,7 +2,7 @@ import type { Order } from "@/lib/pos-api";
 import type {
   TransactionOrderDetail,
 } from "@/features/pos/reports/components/transaction-detail-body";
-import type { TransactionReportRow } from "@/features/pos/reports/types";
+import type { TransactionReportRow } from "@/lib/pos/reports/types";
 
 function toNumber(value: unknown) {
   const n = Number(value);
@@ -94,7 +94,21 @@ export function mergeBillTransactionDetail(
   };
 }
 
-export function flattenOrderItems(orders: Order[]) {
+type ItemNames = Array<{ name?: string | null }>;
+type FlattenableItem = {
+  id?: string;
+  product_id?: string;
+  product_name?: string | null;
+  product_sku?: string | null;
+  quantity?: number | string | null;
+  unit_price?: number | string | null;
+  total_amount?: number | string | null;
+  variants?: unknown;
+  modifiers?: unknown;
+};
+
+/** Item order list (jsonb) atau detail transaksi → baris tabel item detail. */
+export function flattenOrderItems(orders: Array<{ id: string; items?: FlattenableItem[] | null }>) {
   return orders.flatMap((order) =>
     (order.items || []).map((item, index) => ({
       id: String(item.id || `${order.id}-${item.product_id || index}`),
@@ -103,8 +117,8 @@ export function flattenOrderItems(orders: Order[]) {
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_amount: item.total_amount,
-      variants: item.variants,
-      modifiers: item.modifiers,
+      variants: Array.isArray(item.variants) ? (item.variants as ItemNames) : undefined,
+      modifiers: Array.isArray(item.modifiers) ? (item.modifiers as ItemNames) : undefined,
     }))
   );
 }

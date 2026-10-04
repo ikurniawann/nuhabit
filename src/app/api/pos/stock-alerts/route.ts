@@ -8,7 +8,7 @@ import type {
   PosProductStockAlert,
   StockAlertLevel,
   StockAlertsResponse,
-} from "@/features/pos/stock-alerts/types";
+} from "@/lib/pos/stock-alerts-types";
 
 type RawMaterialRow = {
   id: string;

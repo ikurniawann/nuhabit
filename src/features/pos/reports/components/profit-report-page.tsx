@@ -22,10 +22,9 @@ import { Label } from "@/components/ui/label";
 import { FadeIn, PageTransition } from "@/components/motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import type { ProfitBucket } from "../types";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import type { ProfitBucket } from "@/lib/pos/reports/types";
 import { useProfitReport } from "../queries";
 import { isPosGroupCategory } from "@/lib/pos/profit-category";
 import {
@@ -34,9 +33,9 @@ import {
   ProfitDailyTrendChart,
   ProfitMarginBarChart,
 } from "./profit-report-charts";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value || 0);
+const formatQty = (value: number) => formatNumber(value, 2);
 
 function MetricCard({
   title,
@@ -53,7 +52,7 @@ function MetricCard({
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
         <div className="mb-3 flex items-center justify-between">
-          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <div className="rounded-lg bg-primary/10 p-2 text-brand-text">
             <Icon className="h-5 w-5" />
           </div>
         </div>
@@ -104,9 +103,9 @@ function BreakdownTableSection({
   function sortIcon(key: BreakdownSortKey) {
     if (sortKey !== key) return <ChevronsUpDown className="h-3.5 w-3.5 text-gray-300" />;
     return sortDir === "asc" ? (
-      <ChevronUp className="h-3.5 w-3.5 text-primary" />
+      <ChevronUp className="h-3.5 w-3.5 text-brand-text" />
     ) : (
-      <ChevronDown className="h-3.5 w-3.5 text-primary" />
+      <ChevronDown className="h-3.5 w-3.5 text-brand-text" />
     );
   }
 
@@ -153,14 +152,14 @@ function BreakdownTableSection({
               sortedRows.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{row.label}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{formatNumber(row.quantity)}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{formatAmount(row.revenue)}</td>
-                  <td className="px-4 py-3 text-right text-gray-700">{formatAmount(row.cogs)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{formatQty(row.quantity)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{formatRupiah(row.revenue)}</td>
+                  <td className="px-4 py-3 text-right text-gray-700">{formatRupiah(row.cogs)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                    {formatAmount(row.gross_profit)}
+                    {formatRupiah(row.gross_profit)}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-primary">
-                    {formatNumber(row.gross_margin_pct)}%
+                  <td className="px-4 py-3 text-right font-semibold text-brand-text">
+                    {formatQty(row.gross_margin_pct)}%
                   </td>
                 </tr>
               ))
@@ -248,7 +247,7 @@ export function ProfitReportPage() {
 
           {loading && !report ? (
             <div className="flex items-center justify-center gap-2 py-20 text-gray-500">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-brand-text" />
               <span className="text-sm">Loading profit report...</span>
             </div>
           ) : (
@@ -257,7 +256,7 @@ export function ProfitReportPage() {
                 <FadeIn delay={0}>
                   <MetricCard
                     title="Revenue"
-                    value={formatAmount(summary?.revenue || 0)}
+                    value={formatRupiah(summary?.revenue || 0)}
                     helper={`${summary?.orders || 0} paid/completed orders`}
                     icon={WalletCards}
                   />
@@ -265,7 +264,7 @@ export function ProfitReportPage() {
                 <FadeIn delay={0.05}>
                   <MetricCard
                     title="COGS"
-                    value={formatAmount(summary?.cogs || 0)}
+                    value={formatRupiah(summary?.cogs || 0)}
                     helper={`${summary?.items || 0} items with cost snapshot`}
                     icon={ReceiptText}
                   />
@@ -273,15 +272,15 @@ export function ProfitReportPage() {
                 <FadeIn delay={0.1}>
                   <MetricCard
                     title="Gross Profit"
-                    value={formatAmount(summary?.gross_profit || 0)}
-                    helper={`${formatNumber(summary?.gross_margin_pct || 0)}% gross margin`}
+                    value={formatRupiah(summary?.gross_profit || 0)}
+                    helper={`${formatQty(summary?.gross_margin_pct || 0)}% gross margin`}
                     icon={TrendingUp}
                   />
                 </FadeIn>
                 <FadeIn delay={0.15}>
                   <MetricCard
                     title="Zero Cost Items"
-                    value={formatNumber(summary?.zero_cost_items || 0)}
+                    value={formatQty(summary?.zero_cost_items || 0)}
                     helper="Revenue items with zero cost price"
                     icon={CalendarDays}
                   />

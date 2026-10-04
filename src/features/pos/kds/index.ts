@@ -1,4 +1,4 @@
-export * from "./types";
+export * from "@/lib/pos/kds-types";
 export * from "./query-keys";
 export * from "./api";
 export * from "./queries";

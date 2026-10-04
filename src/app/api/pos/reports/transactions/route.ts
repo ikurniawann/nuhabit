@@ -7,12 +7,11 @@ import {
   resolveReportStallFilter,
 } from "@/lib/pos/report-stall-filter";
 import { posReportXlsxResponse } from "@/lib/pos/report-xlsx";
-import { isRevenueOrder } from "@/lib/pos/revenue-order";
 import { summarizeSales } from "@/lib/pos/sales-summary";
 import {
   buildTransactionExportSheets,
   transactionExportFileName,
-} from "@/features/pos/reports/utils/transaction-export";
+} from "@/lib/pos/reports/transaction-export";
 
 type TransactionRow = {
   id: string;
@@ -181,7 +180,8 @@ export async function GET(request: NextRequest) {
       [range.startIso, range.endIso, stallFilter.warehouseIds]
     );
 
-    const revenueRows = rows.filter(isRevenueOrder);
+    // Setiap baris pos_orders = pendapatan stall; total pos_checkouts tidak pernah ditambahkan.
+    const revenueRows = rows;
     const summary = summarizeSales(revenueRows);
 
     // Tren harian (hari WIB): nett + jumlah transaksi per tanggal — bahan

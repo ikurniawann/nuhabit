@@ -18,19 +18,15 @@ import { Label } from "@/components/ui/label";
 import { FadeIn, PageTransition } from "@/components/motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import type { RevenueCompositionBucket, RevenueCompositionGroup } from "../types";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import type { RevenueCompositionBucket, RevenueCompositionGroup } from "@/lib/pos/reports/types";
 import { useRevenueCompositionReport } from "../queries";
+import { formatNumber, formatRupiah } from "@/lib/format";
+
+const formatPct = (value: number) => `${formatNumber(value, 1)}%`;
 
 /** Dua cara membaca komposisi: nilai rupiah, atau jumlah porsi terjual. */
 type Measure = "amount" | "qty";
-
-const formatQty = (value: number) =>
-  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(value || 0);
-
-const formatPct = (value: number) =>
-  `${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 1 }).format(value || 0)}%`;
 
 const GROUP_ICON = {
   food: UtensilsCrossed,
@@ -52,7 +48,7 @@ function MetricCard({
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
         <div className="mb-3 flex items-center justify-between">
-          <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <div className="rounded-lg bg-primary/10 p-2 text-brand-text">
             <Icon className="h-5 w-5" />
           </div>
         </div>
@@ -92,7 +88,7 @@ function GroupSection({
   const Icon = GROUP_ICON[group.id as keyof typeof GROUP_ICON] || UtensilsCrossed;
   const isAmount = measure === "amount";
 
-  const primary = isAmount ? formatAmount(group.sales) : `${formatQty(group.quantity)} porsi`;
+  const primary = isAmount ? formatRupiah(group.sales) : `${formatNumber(group.quantity)} porsi`;
   const share = isAmount ? group.sales_share_pct : group.qty_share_pct;
 
   return (
@@ -129,7 +125,7 @@ function GroupSection({
           <div className="hidden w-28 text-right md:block">
             <div className="text-xs text-gray-500">Cost</div>
             <div className="text-sm tabular-nums text-gray-700">
-              {isAmount ? formatAmount(group.cost) : "—"}
+              {isAmount ? formatRupiah(group.cost) : "—"}
             </div>
           </div>
           <div className="w-20 text-right">
@@ -166,16 +162,16 @@ function GroupSection({
                     <tr key={row.id} className="border-t border-gray-100">
                       <td className="px-4 py-2.5 text-gray-900">{row.label}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-gray-700">
-                        {formatQty(row.quantity)}
+                        {formatNumber(row.quantity)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-gray-900">
-                        {formatAmount(row.sales)}
+                        {formatRupiah(row.sales)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-gray-700">
-                        {formatAmount(row.cost)}
+                        {formatRupiah(row.cost)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-gray-700">
-                        {formatAmount(row.margin)}
+                        {formatRupiah(row.margin)}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-gray-900">
                         {formatPct(row.cost_pct)}
@@ -268,7 +264,7 @@ export function RevenueCompositionReportPage() {
 
           {isFetching && !report ? (
             <div className="flex items-center justify-center gap-2 py-20 text-gray-500">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Loader2 className="h-5 w-5 animate-spin text-brand-text" />
               <span className="text-sm">Memuat komposisi pendapatan...</span>
             </div>
           ) : (
@@ -277,15 +273,15 @@ export function RevenueCompositionReportPage() {
                 <FadeIn delay={0}>
                   <MetricCard
                     title="Total Sales"
-                    value={formatAmount(summary?.sales || 0)}
-                    helper={`${summary?.orders || 0} order dibayar · ${formatQty(summary?.quantity || 0)} porsi`}
+                    value={formatRupiah(summary?.sales || 0)}
+                    helper={`${summary?.orders || 0} order dibayar · ${formatNumber(summary?.quantity || 0)} porsi`}
                     icon={WalletCards}
                   />
                 </FadeIn>
                 <FadeIn delay={0.05}>
                   <MetricCard
                     title="Food Sales"
-                    value={isAmount ? formatAmount(food?.sales || 0) : `${formatQty(food?.quantity || 0)} porsi`}
+                    value={isAmount ? formatRupiah(food?.sales || 0) : `${formatNumber(food?.quantity || 0)} porsi`}
                     helper={`Food cost ${formatPct(food?.cost_pct || 0)} · ${formatPct(
                       isAmount ? food?.sales_share_pct || 0 : food?.qty_share_pct || 0
                     )} dari total`}
@@ -297,8 +293,8 @@ export function RevenueCompositionReportPage() {
                     title="Beverage Sales"
                     value={
                       isAmount
-                        ? formatAmount(beverage?.sales || 0)
-                        : `${formatQty(beverage?.quantity || 0)} porsi`
+                        ? formatRupiah(beverage?.sales || 0)
+                        : `${formatNumber(beverage?.quantity || 0)} porsi`
                     }
                     helper={`Beverage cost ${formatPct(beverage?.cost_pct || 0)} · ${formatPct(
                       isAmount ? beverage?.sales_share_pct || 0 : beverage?.qty_share_pct || 0
@@ -309,7 +305,7 @@ export function RevenueCompositionReportPage() {
                 <FadeIn delay={0.15}>
                   <MetricCard
                     title="Total Cost"
-                    value={formatAmount(summary?.cost || 0)}
+                    value={formatRupiah(summary?.cost || 0)}
                     helper={`${formatPct(summary?.cost_pct || 0)} dari penjualan`}
                     icon={Percent}
                   />

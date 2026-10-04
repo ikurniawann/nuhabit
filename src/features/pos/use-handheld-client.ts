@@ -3,7 +3,8 @@
 import { useSyncExternalStore } from "react";
 import { isHandheldClient } from "@/lib/pos/thermal-serial";
 
-function subscribe(_onStoreChange: () => void): () => void {
+/** User agent tidak berubah selama sesi → tidak perlu berlangganan apa pun. */
+function subscribe(): () => void {
   return () => {};
 }
 

@@ -4,7 +4,8 @@
 // (409 sebelum tulisan apa pun terjadi).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPosSession } from '@/lib/api/auth';
+import { IAM } from '@/lib/iam/prefixes';
+import { iamActionOrResponse } from '@/lib/pos/route-guards';
 import { createPgClient } from '@/lib/pg/create-client';
 import { withTransaction } from '@/lib/db';
 import {
@@ -56,10 +57,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-  }
+  // Mengubah data master → izin aksi IAM, bukan sekadar sesi kasir POS.
+  const user = await iamActionOrResponse(IAM.posCatalogProducts, "create");
+  if (user instanceof Response) return user;
 
   try {
     const { id } = await params;

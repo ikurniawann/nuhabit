@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
-  ArrowLeft, CheckCircle, Clock, XCircle, CreditCard, Coins, User, Printer,
+  ArrowLeft, CheckCircle, Clock, XCircle, CreditCard, Coins, Printer,
 } from 'lucide-react';
-import type { SplitDetail, Customer } from '@/lib/pos-api';
+import type { SplitDetail } from '@/lib/pos-api';
 import { getOrderSplits, paySplit } from '@/lib/pos-api';
-import { PaymentModal } from './PaymentModal';
+import type { PosCartItem } from '@/hooks/use-pos-cart';
+import { PaymentModal } from '@/features/pos/cashier/payment';
 import { printThermalReceipt, type ReceiptPayload } from './PrintReceipt';
 
 interface SplitPaymentScreenProps {
@@ -14,11 +16,9 @@ interface SplitPaymentScreenProps {
   orderNumber?: string;
   orderType?: string;
   table?: string | null;
-  items?: any[];
+  items?: PosCartItem[];
   notes?: string;
   total: number;
-  taxAmount: number;
-  discountAmount: number;
   customerName?: string;
   onBack: () => void;
   onComplete: () => void;
@@ -34,51 +34,38 @@ export function SplitPaymentScreen({
   items,
   notes,
   total,
-  taxAmount,
-  discountAmount,
   customerName,
   onBack,
   onComplete,
   formatCurrency,
   formatArk,
 }: SplitPaymentScreenProps) {
-  const [splits, setSplits] = useState<SplitDetail[]>([]);
-  const [summary, setSummary] = useState({ total_paid: 0, total_remaining: total, split_count: 0, paid_count: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const splitsQuery = useQuery({
+    queryKey: ['pos', 'orders', orderId, 'splits'],
+    queryFn: async () => {
+      const res = await getOrderSplits(orderId);
+      if (!res.success || !res.data) throw new Error('Failed to load splits');
+      return res.data;
+    },
+  });
+  const splits = splitsQuery.data?.splits ?? [];
+  const summary = {
+    total_paid: splitsQuery.data?.total_paid || 0,
+    total_remaining: splitsQuery.data ? splitsQuery.data.total_remaining || 0 : total,
+    split_count: splitsQuery.data?.split_count || 0,
+    paid_count: splitsQuery.data?.paid_count || 0,
+  };
+  const loading = splitsQuery.isLoading;
+  const [payError, setPayError] = useState('');
+  const error =
+    payError || (splitsQuery.error ? (splitsQuery.error instanceof Error ? splitsQuery.error.message : 'Failed to load') : '');
+  const refetchSplits = splitsQuery.refetch;
   const [payingSplit, setPayingSplit] = useState<SplitDetail | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [resultPayload, setResultPayload] = useState<ReceiptPayload | null>(null);
   const [paidSplitLabel, setPaidSplitLabel] = useState<string | null>(null);
 
-  const fetchSplits = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const res = await getOrderSplits(orderId);
-      if (res.success && res.data) {
-        setSplits(res.data.splits || []);
-        setSummary({
-          total_paid: res.data.total_paid || 0,
-          total_remaining: res.data.total_remaining || 0,
-          split_count: res.data.split_count || 0,
-          paid_count: res.data.paid_count || 0,
-        });
-      } else {
-        setError('Failed to load splits');
-      }
-    } catch (e: any) {
-      setError(e.message || 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, [orderId]);
-
-  useEffect(() => {
-    fetchSplits();
-  }, [fetchSplits]);
-
-  const handlePay = useCallback(async (payload: {
+  const handlePay = async (payload: {
     method: string;
     amount_paid: number;
     ark_coins_used: number;
@@ -111,25 +98,25 @@ export function SplitPaymentScreen({
         setResultPayload(receipt);
         setShowPayment(false);
         setPayingSplit(null);
-        // refresh list
-        await fetchSplits();
+        setPayError('');
+        await refetchSplits();
 
         // If all paid, auto complete
         if (res.data?.paid_splits >= res.data?.total_splits) {
           setTimeout(() => onComplete(), 1500);
         }
       } else {
-        setError(res.data?.error || 'Payment failed');
+        setPayError(res.data?.error || 'Payment failed');
       }
-    } catch (e: any) {
-      setError(e.message || 'Payment failed');
+    } catch (e: unknown) {
+      setPayError(e instanceof Error ? e.message : 'Payment failed');
     }
-  }, [payingSplit, orderId, orderNumber, orderType, table, items, notes, customerName, fetchSplits, onComplete]);
+  };
 
-  const handlePrint = useCallback((label: 'KITCHEN' | 'BAR' | 'CUSTOMER') => {
+  const handlePrint = (label: 'KITCHEN' | 'BAR' | 'CUSTOMER') => {
     if (!resultPayload) return;
     printThermalReceipt(resultPayload, label);
-  }, [resultPayload]);
+  };
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -283,7 +270,7 @@ export function SplitPaymentScreen({
               <button
                 type="button"
                 onClick={() => handlePrint("CUSTOMER")}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200/80 bg-white px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-brand-text"
               >
                 <Printer className="h-4 w-4" />
                 Print receipt

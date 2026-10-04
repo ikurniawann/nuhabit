@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   CheckCircle,
@@ -31,6 +31,8 @@ import {
   buildPerItemSplits,
   countUnassignedQty,
   guestLabel,
+  normalizeAssignments,
+  resizeLabels,
 } from "./split-bill-calc";
 
 export interface SplitItemMapping {
@@ -70,8 +72,13 @@ interface SplitBillModalProps {
   confirming?: boolean;
 }
 
-export function SplitBillModal({
-  open,
+/** Isi modal di-mount ulang tiap dibuka → mode, jumlah tamu & label kembali ke awal. */
+export function SplitBillModal(props: SplitBillModalProps) {
+  if (!props.open) return null;
+  return <SplitBillBody {...props} />;
+}
+
+function SplitBillBody({
   total,
   taxAmount,
   discountAmount,
@@ -84,38 +91,20 @@ export function SplitBillModal({
   const [mode, setMode] = useState<SplitMode>("equal");
   const [count, setCount] = useState(2);
   const [labels, setLabels] = useState<string[]>(["", ""]);
-  const [assignments, setAssignments] = useState<Record<string, number[]>>({});
+  const [assignments, setAssignments] = useState(() => normalizeAssignments({}, cartItems, 2));
 
-  useEffect(() => {
-    if (!open) return;
-    setMode("equal");
-    setCount(2);
-    setLabels(["", ""]);
-  }, [open]);
+  // Keranjang berubah saat modal terbuka → sesuaikan pembagian (pola "adjust state on prop change").
+  const [seenCartItems, setSeenCartItems] = useState(cartItems);
+  if (seenCartItems !== cartItems) {
+    setSeenCartItems(cartItems);
+    setAssignments(normalizeAssignments(assignments, cartItems, count));
+  }
 
-  useEffect(() => {
-    setAssignments((prev) => {
-      const next: Record<string, number[]> = {};
-      for (const item of cartItems) {
-        const existing = prev[item.id] || [];
-        const arr = [...existing];
-        while (arr.length < count) arr.push(0);
-        while (arr.length > count) arr.pop();
-        const assignedQty = arr.reduce((a, b) => a + b, 0);
-        if (assignedQty === 0) {
-          arr[0] = item.quantity;
-        }
-        next[item.id] = arr;
-      }
-      return next;
-    });
-    setLabels((prev) => {
-      const next = [...prev];
-      while (next.length < count) next.push("");
-      while (next.length > count) next.pop();
-      return next;
-    });
-  }, [cartItems, count]);
+  const changeCount = (next: number) => {
+    setCount(next);
+    setAssignments(normalizeAssignments(assignments, cartItems, next));
+    setLabels(resizeLabels(labels, next));
+  };
 
   const equalSplits = useMemo(
     () =>
@@ -166,8 +155,8 @@ export function SplitBillModal({
     return unassignedTotal === 0 && cartItems.length > 0;
   }, [mode, equalSplits, total, unassignedTotal, cartItems.length]);
 
-  const handleDecrease = () => setCount((c) => Math.max(2, c - 1));
-  const handleIncrease = () => setCount((c) => c + 1);
+  const handleDecrease = () => changeCount(Math.max(2, count - 1));
+  const handleIncrease = () => changeCount(count + 1);
 
   const handleLabelChange = (idx: number, val: string) => {
     setLabels((prev) => {
@@ -251,11 +240,11 @@ export function SplitBillModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && !confirming && onClose()}>
+    <Dialog open onOpenChange={(v) => !v && !confirming && onClose()}>
       <DialogPanel size="lg">
         <DialogPanelHeader>
           <DialogPanelTitle className="flex items-center gap-2">
-            <Split className="h-5 w-5 text-primary" />
+            <Split className="h-5 w-5 text-brand-text" />
             Split Bill
           </DialogPanelTitle>
           <DialogPanelDescription>
@@ -271,7 +260,7 @@ export function SplitBillModal({
               className={cn(
                 "flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors",
                 mode === "equal"
-                  ? "bg-white text-primary shadow-xs"
+                  ? "bg-white text-brand-text shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -284,7 +273,7 @@ export function SplitBillModal({
               className={cn(
                 "flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors",
                 mode === "per-item"
-                  ? "bg-white text-primary shadow-xs"
+                  ? "bg-white text-brand-text shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -472,7 +461,7 @@ export function SplitBillModal({
                     />
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-bold text-primary">
+                    <p className="text-sm font-bold text-brand-text">
                       {formatCurrency(s?.total || 0)}
                     </p>
                     <p className="text-[10px] text-muted-foreground">

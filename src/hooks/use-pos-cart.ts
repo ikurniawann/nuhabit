@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useCallback, useEffect, useMemo, useState } from "react";
+import { useReducer, useCallback, useEffect, useMemo } from "react";
 import {
   calculateBillCharges,
   DEFAULT_BILLING_CHARGES,
@@ -80,7 +80,7 @@ type CartAction =
 
 const STORAGE_KEY = POS_CART_STORAGE_KEY;
 
-const DEFAULT_CART_STATE: CartState = {
+export const DEFAULT_CART_STATE: CartState = {
   items: [],
   orderType: "dine_in",
   selectedTable: null,
@@ -117,7 +117,7 @@ function readStoredCartState(): CartState {
   return DEFAULT_CART_STATE;
 }
 
-function cartReducer(state: CartState, action: CartAction): CartState {
+export function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case "ADD_ITEM": {
       const existing = state.items.find(
@@ -222,13 +222,24 @@ export function lineDiscountAmount(item: PosCartItem): number {
   return computeDiscountAmount(lineGross(item), item.discount_type, item.discount_value);
 }
 
-export function usePosCart() {
-  const [state, dispatch] = useReducer(cartReducer, DEFAULT_CART_STATE);
-  const [hydrated, setHydrated] = useState(false);
+/** Keranjang + penanda sudah dimuat dari localStorage (HYDRATE pertama). */
+type HydratingCart = { cart: CartState; hydrated: boolean };
 
+function hydratingCartReducer(current: HydratingCart, action: CartAction): HydratingCart {
+  const cart = cartReducer(current.cart, action);
+  const hydrated = current.hydrated || action.type === "HYDRATE";
+  return cart === current.cart && hydrated === current.hydrated ? current : { cart, hydrated };
+}
+
+export function usePosCart() {
+  const [{ cart: state, hydrated }, dispatch] = useReducer(hydratingCartReducer, {
+    cart: DEFAULT_CART_STATE,
+    hydrated: false,
+  });
+
+  // Muat dari localStorage setelah mount (SSR & render pertama klien tetap kosong).
   useEffect(() => {
     dispatch({ type: "HYDRATE", state: readStoredCartState() });
-    setHydrated(true);
   }, []);
 
   useEffect(() => {

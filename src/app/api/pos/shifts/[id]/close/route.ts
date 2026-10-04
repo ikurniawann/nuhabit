@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
-import { isDrawerCashMethod } from '@/lib/pos/payment-methods';
-import { isRevenueOrder } from '@/lib/pos/revenue-order';
+import { summarizeShiftOrders } from '@/lib/pos/shift-totals';
 import { summarizeMemberBillShiftPayments } from '@/lib/pos/member-bill';
 
 /** PATCH /api/pos/shifts/{id}/close
@@ -59,39 +58,15 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: aggError.message }, { status: 500 });
   }
 
-  const rows = (agg || []).filter(isRevenueOrder);
-  let totalCash = 0;
-  let totalQris = 0;
-  let totalDebit = 0;
-  let totalCredit = 0;
-  let totalArk = 0;
-  // Volume F&B yang pindah ke tab ticketing (EPIC-023) — bukan uang masuk
-  // shift (ditagih saat settlement kasir keluar), tampil hanya utk laporan
-  let totalNfcTab = 0;
-
-  rows.forEach((r: any) => {
-    const amt = Number(r.total_amount) || 0;
-    const method = (r.payment_method || 'cash').toLowerCase();
-    const ark = Number(r.ark_coins_used) || 0;
-    if (
-      method === 'cash' &&
-      !isDrawerCashMethod({
-        paymentMethod: method,
-        paymentMethodCode: r.payment_method_code,
-      })
-    ) {
-      totalCredit += amt;
-      return;
-    }
-    switch (method) {
-      case 'cash': totalCash += amt; break;
-      case 'qris': totalQris += amt; break;
-      case 'debit': totalDebit += amt; break;
-      case 'credit': totalCredit += amt; break;
-      case 'ark_coin': totalArk += ark; break;
-      case 'nfc_tab': totalNfcTab += amt; break;
-    }
-  });
+  const rows = agg || [];
+  const {
+    cash: totalCash,
+    qris: totalQris,
+    debit: totalDebit,
+    credit: totalCredit,
+    arkCoin: totalArk,
+    nfcTab: totalNfcTab,
+  } = summarizeShiftOrders(rows);
 
   // Cicilan Tagihan Member yang diterima di shift ini — tunainya ada di laci
   // (owner 2026-10-01). Bukan penjualan: order-nya ditutup dgn metode

@@ -1,4 +1,4 @@
-import { computeMarginPercentage } from "@/lib/pos/purchasing-sync";
+import { computeMarginPercentage } from "@/lib/pos/margin";
 import type { ApiPosProduct, PatchPosProductPayload, PosCatalogProduct } from "./types";
 import { normalizeSalesChannels } from "@/lib/pos/sales-channels";
 
@@ -239,4 +239,29 @@ export async function patchPosProduct(
   });
   const json = await parsePosResponse<{ data?: ApiPosProduct }>(response, "Gagal menyimpan produk");
   return json.data ? mapApiPosProduct(json.data) : null;
+}
+
+/** EPIC-039 Fase A — pilihan tautan master purchasing (item barang jadi). */
+export type PurchasingProductOption = { id: string; kode?: string | null; nama?: string | null };
+
+export async function listPurchasingProductOptions(): Promise<PurchasingProductOption[]> {
+  const response = await fetch("/api/purchasing/products?is_active=true&limit=200", { cache: "no-store" });
+  const json = (await response.json()) as { data?: unknown };
+  const rows = Array.isArray(json?.data) ? (json.data as PurchasingProductOption[]) : [];
+  return rows.map((row) => ({ id: row.id, kode: row.kode, nama: row.nama }));
+}
+
+/** Sinkronkan varian SKU: hapus dulu, lalu ubah/buat (urutan aman untuk kode unik). */
+export async function syncMerchSkus(
+  productId: string,
+  rows: Array<{ id?: string; deleted?: boolean; payload: SkuWritePayload }>
+) {
+  for (const row of rows) {
+    if (row.deleted && row.id) await deleteProductSku(productId, row.id);
+  }
+  for (const row of rows) {
+    if (row.deleted) continue;
+    if (row.id) await patchProductSku(productId, row.id, row.payload);
+    else await createProductSku(productId, row.payload);
+  }
 }

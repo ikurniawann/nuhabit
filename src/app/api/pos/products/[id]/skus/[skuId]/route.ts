@@ -3,7 +3,8 @@
 // (riwayat order aman — FK pos_order_items.sku_id ON DELETE SET NULL).
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPosSession } from '@/lib/api/auth';
+import { IAM } from '@/lib/iam/prefixes';
+import { iamActionOrResponse } from '@/lib/pos/route-guards';
 import { createPgClient } from '@/lib/pg/create-client';
 import { normalizeSkuPayload, isUniqueViolation } from '@/lib/pos/merchandise-sku-payload';
 
@@ -15,10 +16,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; skuId: string }> }
 ) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-  }
+  // Mengubah data master → izin aksi IAM, bukan sekadar sesi kasir POS.
+  const user = await iamActionOrResponse(IAM.posCatalogProducts, "update");
+  if (user instanceof Response) return user;
 
   try {
     const { id, skuId } = await params;
@@ -61,10 +61,9 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; skuId: string }> }
 ) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-  }
+  // Mengubah data master → izin aksi IAM, bukan sekadar sesi kasir POS.
+  const user = await iamActionOrResponse(IAM.posCatalogProducts, "delete");
+  if (user instanceof Response) return user;
 
   try {
     const { id, skuId } = await params;

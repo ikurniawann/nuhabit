@@ -55,12 +55,17 @@ export async function GET(
 
     if (ordersErr) throw ordersErr;
 
-    const children = orders || [];
+    const children = (orders || []) as Array<{
+      id: string;
+      order_type?: string | null;
+      warehouse_id?: string | null;
+      items?: Array<Record<string, unknown>> | null;
+    }>;
     const items = children.flatMap((order) =>
-      ((order.items || []) as Array<Record<string, unknown>>).map((item) => ({
+      (order.items || []).map((item) => ({
         ...item,
         order_id: order.id,
-        warehouse_id: (order as { warehouse_id?: string | null }).warehouse_id,
+        warehouse_id: order.warehouse_id,
       }))
     );
 

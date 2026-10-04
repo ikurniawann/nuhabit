@@ -1,4 +1,4 @@
-import type { KdsListParams } from "./types";
+import type { KdsListParams } from "@/lib/pos/kds-types";
 
 export const kdsQueryKeys = {
   all: ["pos", "kds"] as const,

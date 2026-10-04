@@ -144,7 +144,7 @@ export function StallSwitchButton() {
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200/70 bg-muted/50 text-muted-foreground">
                       {switchingId === "__all__" ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <Loader2 className="h-4 w-4 animate-spin text-brand-text" />
                       ) : (
                         <BuildingStorefrontIcon className="h-4 w-4" />
                       )}
@@ -156,11 +156,11 @@ export function StallSwitchButton() {
                       </span>
                     </span>
                     {active === null ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-text">
                         <Check className="h-3.5 w-3.5" /> Aktif
                       </span>
                     ) : (
-                      <span className="shrink-0 text-xs font-medium text-primary">Pilih</span>
+                      <span className="shrink-0 text-xs font-medium text-brand-text">Pilih</span>
                     )}
                   </button>
                 </li>
@@ -182,7 +182,7 @@ export function StallSwitchButton() {
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200/70 bg-muted/50 text-muted-foreground">
                         {busy ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          <Loader2 className="h-4 w-4 animate-spin text-brand-text" />
                         ) : (
                           <BuildingStorefrontIcon className="h-4 w-4" />
                         )}
@@ -196,11 +196,11 @@ export function StallSwitchButton() {
                         </span>
                       </span>
                       {isActive ? (
-                        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-primary">
+                        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-brand-text">
                           <Check className="h-3.5 w-3.5" /> Aktif
                         </span>
                       ) : (
-                        <span className="shrink-0 text-xs font-medium text-primary">
+                        <span className="shrink-0 text-xs font-medium text-brand-text">
                           {busy ? "Pindah…" : "Pilih"}
                         </span>
                       )}

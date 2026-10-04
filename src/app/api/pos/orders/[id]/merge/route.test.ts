@@ -7,7 +7,10 @@ const approve = vi.fn();
 const inScope = vi.fn();
 const orders: Record<string, Record<string, unknown>> = {};
 
-vi.mock("@/lib/api/auth", () => ({ getPosSession: vi.fn(async () => "kasir-1") }));
+vi.mock("@/lib/api/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/api/auth")>()),
+  getPosSession: vi.fn(async () => "kasir-1"),
+}));
 vi.mock("@/lib/db", () => ({ getPool: vi.fn() }));
 vi.mock("@/lib/pg/create-client", () => ({
   createPgClient: () => ({

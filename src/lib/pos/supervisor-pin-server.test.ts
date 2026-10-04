@@ -18,8 +18,14 @@ vi.mock("@/lib/security/attempt-limit", async (orig) => ({
   clearFailures: (...a: unknown[]) => clearFailures(...(a as [])),
 }));
 
+
 import type { BusinessScopeLevel } from "@/lib/configuration/business-scope";
-import { approveOrderWithSupervisorPin, supervisorsForOrder } from "./supervisor-pin-server";
+import {
+  approveOrderWithSupervisorPin,
+  approveWithSupervisorPin,
+  supervisorPinRejection,
+  supervisorsForOrder,
+} from "./supervisor-pin-server";
 
 const branchA = { company_id: "co-1", branch_id: "br-a" };
 const branchB = { company_id: "co-1", branch_id: "br-b" };
@@ -82,5 +88,52 @@ describe("approveOrderWithSupervisorPin", () => {
     lock.until = new Date(Date.now() + 10 * 60_000);
     expect(await approve("1111")).toEqual({ ok: false, reason: "locked", retryMinutes: 10 });
     expect(clearFailures).not.toHaveBeenCalled();
+  });
+});
+
+// FOC, top-up FOC dan refund member: tanpa order, dibatasi per kasir.
+describe("approveWithSupervisorPin", () => {
+  const approve = (pin: string, callerId = "kasir-a") => approveWithSupervisorPin({ callerId, pin });
+
+  it("PIN supervisor cabang kasir → disetujui, hitungan kasir dibersihkan", async () => {
+    expect(await approve("1111")).toEqual({ ok: true, supervisor: { id: "spv-a", name: "spv-a" } });
+    expect(clearFailures).toHaveBeenCalledWith("pos_supervisor_pin", ["user:kasir-a"]);
+  });
+
+  it("PIN supervisor cabang lain ditolak dan dihitung gagal per kasir", async () => {
+    expect(await approve("2222")).toEqual({ ok: false, reason: "invalid" });
+    expect(recordFailure).toHaveBeenCalledWith(
+      "pos_supervisor_pin",
+      ["user:kasir-a"],
+      expect.objectContaining({ maxFailures: 5, lockoutMs: 15 * 60_000 })
+    );
+  });
+
+  it("PIN kosong atau kasir tidak dikenal = gagal", async () => {
+    expect(await approve("  ")).toEqual({ ok: false, reason: "invalid" });
+    expect(await approve("1111", "hantu")).toEqual({ ok: false, reason: "invalid" });
+    expect(recordFailure).toHaveBeenCalledTimes(2);
+  });
+
+  it("kegagalan kelima mengunci kasir", async () => {
+    recordFailure.mockImplementationOnce(async () => new Date(Date.now() + 15 * 60_000));
+    expect(await approve("9999")).toEqual({ ok: false, reason: "locked", retryMinutes: 15 });
+  });
+
+  it("terkunci → PIN benar pun ditolak tanpa dicek", async () => {
+    lock.until = new Date(Date.now() + 3 * 60_000);
+    expect(await approve("1111")).toEqual({ ok: false, reason: "locked", retryMinutes: 3 });
+    expect(clearFailures).not.toHaveBeenCalled();
+  });
+});
+
+describe("supervisorPinRejection", () => {
+  it("terkunci → 429 dengan sisa menit, salah → 403", async () => {
+    const locked = supervisorPinRejection({ ok: false, reason: "locked", retryMinutes: 7 });
+    expect(locked.status).toBe(429);
+    expect((await locked.json()).error).toContain("7 menit");
+    const invalid = supervisorPinRejection({ ok: false, reason: "invalid" });
+    expect(invalid.status).toBe(403);
+    expect(await invalid.json()).toEqual({ success: false, error: "PIN supervisor tidak valid" });
   });
 });

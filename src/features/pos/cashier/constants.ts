@@ -1,5 +1,8 @@
 export type CashierPageVariant = "embedded" | "fullscreen";
 
+/** Kasir placeholder; server memakai karyawan dari sesi login (resolveCashierId). */
+export const CASHIER_ID = "00000000-0000-0000-0000-000000000001";
+
 export const CASHIER_ROUTES = {
   embedded: "/dashboard/pos/cashier-new",
   fullscreen: "/dashboard/pos/cashier-fullscreen",

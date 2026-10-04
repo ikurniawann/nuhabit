@@ -4,13 +4,12 @@ import { RefreshCw, AlertTriangle, Package, Beaker } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useStockAlerts } from '../queries';
 import { buildStockAlertTickerSegments, hasCriticalStockAlert } from '../ticker';
-import type { ProductAtRiskAlert, RawMaterialAlert, StockAlertsResponse } from '../types';
+import type { ProductAtRiskAlert, RawMaterialAlert, StockAlertsResponse } from '@/lib/pos/stock-alerts-types';
 import { VerticalMarqueeList } from './vertical-marquee-list';
+import { formatNumber, formatTime } from "@/lib/format";
 
 function formatQty(value: number, unit?: string) {
-  const formatted = new Intl.NumberFormat('id-ID', {
-    maximumFractionDigits: 2,
-  }).format(value);
+  const formatted = formatNumber(value, 2);
   return unit ? `${formatted} ${unit}` : formatted;
 }
 
@@ -240,7 +239,7 @@ export function StockAlertsPage() {
         <span>
           Auto-refresh 15 detik
           {data?.updated_at
-            ? ` · Terakhir ${new Date(data.updated_at).toLocaleTimeString('id-ID')}`
+            ? ` · Terakhir ${formatTime(data.updated_at)}`
             : ''}
         </span>
         <span className="font-mono">NüHabit POS · Stok Alert</span>

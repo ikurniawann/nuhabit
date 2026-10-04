@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Lock, Unlock, Loader2, Banknote, Printer, Receipt, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { formatAmount } from '@/lib/purchasing/utils';
+import { formatNumber, formatRupiah, formatTime } from '@/lib/format';
 import type { PosShift } from '@/lib/pos-api';
 
 interface ShiftSummary {
@@ -37,21 +37,12 @@ interface ShiftModalProps {
     error?: string;
     summary?: ShiftSummary;
   }>;
-  /** @deprecated Use internal formatAmount — kept for backward compatibility */
+  /** @deprecated Tidak dipakai lagi (format rupiah bersama) — tetap ada demi kompatibilitas */
   formatCurrency?: (n: number) => string;
 }
 
-function formatMoney(value: number) {
-  return formatAmount(value);
-}
-
-function formatShiftTime(value?: string | null) {
-  if (!value) return '—';
-  return new Date(value).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+const formatMoney = formatRupiah;
+const formatShiftTime = (value?: string | null) => formatTime(value, '—');
 
 function parseCashInput(value: string) {
   return parseInt(value.replace(/\D/g, '') || '0', 10);
@@ -62,21 +53,21 @@ function formatCashInputDisplay(raw: string) {
   if (!digits) return '';
   const num = Number.parseInt(digits, 10);
   if (!Number.isFinite(num)) return '';
-  return formatAmount(num);
+  return formatNumber(num);
 }
 
 function hasCashInput(value: string) {
   return value.replace(/\D/g, '').length > 0;
 }
 
-export function ShiftModal({
-  open,
-  shift,
-  onClose,
-  onOpenShift,
-  onCloseShift,
-}: ShiftModalProps) {
-  const [view, setView] = useState<'open' | 'close' | 'summary'>('open');
+/** Isi modal di-mount ulang tiap dibuka atau saat shift berganti → form selalu bersih. */
+export function ShiftModal(props: ShiftModalProps) {
+  if (!props.open) return null;
+  return <ShiftModalBody key={props.shift?.id ?? 'no-shift'} {...props} />;
+}
+
+function ShiftModalBody({ shift, onClose, onOpenShift, onCloseShift }: ShiftModalProps) {
+  const [view, setView] = useState<'open' | 'close' | 'summary'>(shift ? 'close' : 'open');
   const [openingCash, setOpeningCash] = useState('');
   const [closingCash, setClosingCash] = useState('');
   const [notes, setNotes] = useState('');
@@ -89,25 +80,8 @@ export function ShiftModal({
   const [sendingReport, setSendingReport] = useState(false);
   const [reportSent, setReportSent] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    setView(shift ? 'close' : 'open');
-    setOpeningCash('');
-    setClosingCash('');
-    setNotes('');
-    setSummary(null);
-    setBusy(false);
-  }, [open, shift]);
-
-  const handleDismiss = () => {
-    setView(shift ? 'close' : 'open');
-    setOpeningCash('');
-    setClosingCash('');
-    setNotes('');
-    setSummary(null);
-    setBusy(false);
-    onClose();
-  };
+  // Modal di-unmount saat ditutup, jadi state form ikut bersih.
+  const handleDismiss = onClose;
 
   const handleOpen = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +172,7 @@ export function ShiftModal({
   const isSummary = view === 'summary' && summary;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleDismiss(); }}>
+    <Dialog open onOpenChange={(v) => { if (!v) handleDismiss(); }}>
       <DialogPanel size={isSummary ? 'sm' : 'md'}>
         {isSummary ? (
           <>
@@ -342,7 +316,7 @@ export function ShiftModal({
           <DialogPanelForm onSubmit={handleOpen}>
             <DialogPanelHeader>
               <DialogPanelTitle className="flex items-center gap-2">
-                <Lock className="h-4 w-4 text-primary" />
+                <Lock className="h-4 w-4 text-brand-text" />
                 Open Shift
               </DialogPanelTitle>
               <DialogPanelDescription>

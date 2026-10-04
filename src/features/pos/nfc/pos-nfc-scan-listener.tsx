@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { usePosNfc } from "./pos-nfc-context";
 import { routePosNfcCard } from "./route-card-scan";
-import { normalizeNfcUid } from "./normalize-nfc-uid";
+import { normalizeNfcUid } from "@/lib/pos/nfc-uid";
 import { createWedgeBuffer, reduceWedgeKey } from "./wedge-buffer";
 import { shouldIgnoreWedgeKeydown } from "./wedge-target";
 import { usePosNfcBridge } from "./use-pos-nfc-bridge";

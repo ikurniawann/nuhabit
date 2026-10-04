@@ -1,3 +1,4 @@
+import "server-only";
 import { queryOne } from "@/lib/db";
 import { KOL_COMP, kolQuotaAllows, monthStartWibIso } from "./comp-orders";
 

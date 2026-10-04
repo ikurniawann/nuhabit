@@ -1,4 +1,3 @@
-import { createPgClient } from "@/lib/pg/create-client";
 import { resolvePosStation } from "@/lib/pos/kitchen-station";
 
 type PgServiceClient = import("@/lib/pg/types").DbClient;
@@ -21,7 +20,7 @@ type PosCategory = {
   name?: string | null;
 };
 
-type PosProductCostRow = {
+export type PosProductCostRow = {
   id: string;
   sku?: string | null;
   name?: string | null;
@@ -192,11 +191,6 @@ export async function loadPosProductCostMap(
   return new Map(
     ((data || []) as PosProductCostRow[]).map((product) => [product.id, product])
   );
-}
-
-export function computeMarginPercentage(price: number, cost: number) {
-  if (price <= 0) return 0;
-  return Math.round(((price - cost) / price) * 10000) / 100;
 }
 
 export async function enrichPosProductsWithPurchasingCogs(

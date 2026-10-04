@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from "@/lib/api/auth";
-import { parsePositionPayload } from "@/features/pos/tables/position-payload";
+import { parsePositionPayload } from "@/lib/pos/tables/position-payload";
 
 export async function PATCH(
   request: NextRequest,

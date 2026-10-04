@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   CalendarDays,
@@ -14,20 +14,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
 import { ApexChart } from "./apex-chart";
 import { usePaymentMethodsReport } from "../queries";
-import type { PaymentMethodsReportGranularity } from "../types";
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
+import type { PaymentMethodsReportGranularity } from "@/lib/pos/reports/types";
+import { stallFilterValue } from "../utils/stall-filter";
+import { formatRupiah, formatRupiahCompact } from "@/lib/format";
 
 const GRANULARITY_OPTIONS: Array<{
   value: PaymentMethodsReportGranularity;
@@ -52,7 +46,7 @@ const CHART_COLORS = [
 export function PaymentMethodsReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
   const [dateTo, setDateTo] = useState(todayWib);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [pickedWarehouseId, setWarehouseId] = useState("");
   const [granularity, setGranularity] =
     useState<PaymentMethodsReportGranularity>("day");
   const [applied, setApplied] = useState({
@@ -64,12 +58,7 @@ export function PaymentMethodsReportPage() {
 
   const { data, isLoading, isFetching, error } = usePaymentMethodsReport(applied);
 
-  useEffect(() => {
-    if (!data) return;
-    if (data.stall_locked && data.filters.warehouse_id && !warehouseId) {
-      setWarehouseId(data.filters.warehouse_id);
-    }
-  }, [data, warehouseId]);
+  const warehouseId = stallFilterValue(pickedWarehouseId, data);
 
   const stallOptions = data?.stall_options ?? [];
   const stallLocked = Boolean(data?.stall_locked);
@@ -191,7 +180,7 @@ export function PaymentMethodsReportPage() {
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <Metric
             title="Total pembayaran"
-            value={formatCurrency(data?.summary.total_amount ?? 0)}
+            value={formatRupiah(data?.summary.total_amount ?? 0)}
             icon={Wallet}
           />
           <Metric
@@ -252,7 +241,7 @@ export function PaymentMethodsReportPage() {
                           {row.order_count}
                         </td>
                         <td className="px-3 py-3 text-right font-medium">
-                          {formatCurrency(row.amount)}
+                          {formatRupiah(row.amount)}
                         </td>
                         <td className="px-3 py-3 text-right text-muted-foreground">
                           {row.pct}%
@@ -292,17 +281,13 @@ export function PaymentMethodsReportPage() {
                     xaxis: { type: "category" },
                     yaxis: {
                       labels: {
-                        formatter: (v: number) =>
-                          new Intl.NumberFormat("id-ID", {
-                            notation: "compact",
-                            maximumFractionDigits: 1,
-                          }).format(v || 0),
+                        formatter: (v: number) => formatRupiahCompact(v),
                       },
                     },
                     legend: { position: "bottom" },
                     tooltip: {
                       y: {
-                        formatter: (v: number) => formatCurrency(v || 0),
+                        formatter: (v: number) => formatRupiah(v || 0),
                       },
                     },
                   }}
@@ -366,12 +351,12 @@ export function PaymentMethodsReportPage() {
                             key={col.method_key}
                             className="px-3 py-3 text-right text-muted-foreground"
                           >
-                            {formatCurrency(cell?.amount ?? 0)}
+                            {formatRupiah(cell?.amount ?? 0)}
                           </td>
                         );
                       })}
                       <td className="px-3 py-3 text-right font-medium">
-                        {formatCurrency(row.total_amount)}
+                        {formatRupiah(row.total_amount)}
                       </td>
                     </tr>
                   ))
@@ -397,7 +382,7 @@ function Metric({
   return (
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
-        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-primary">
+        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-brand-text">
           <Icon className="h-4 w-4" />
         </div>
         <div className="text-xl font-bold text-foreground">{value}</div>

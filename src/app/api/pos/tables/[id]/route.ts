@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from "@/lib/api/auth";
-import { generateTableQrCode } from "@/features/pos/tables/qr-code";
+import { generateTableQrCode } from "@/lib/pos/tables/qr-code";
 
 type TableRow = {
   id: string;

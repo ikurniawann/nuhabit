@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Coins, Loader2, Save, Sparkles, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,9 @@ import { DEFAULT_POS_LOYALTY_SETTINGS, normalizeTopupPresets } from "@/lib/pos/l
 import { useUpdateLoyaltySettings } from "../mutations";
 import { useLoyaltySettings } from "../queries";
 import type { PosLoyaltySettings, TopupXpMode } from "../types";
+import { formatNumber } from "@/lib/format";
 
-function formatIdr(value: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-}
+const formatIdr = (value: number) => formatNumber(value);
 
 function parseAmountInput(raw: string) {
   const digits = raw.replace(/\D/g, "");
@@ -62,11 +58,13 @@ export function LoyaltySettingsPage() {
     formatPresetsText(DEFAULT_POS_LOYALTY_SETTINGS.topup_presets)
   );
 
-  useEffect(() => {
-    if (!settingsQuery.data) return;
+  // Data server baru (muat awal / setelah simpan) → reset draf saat render.
+  const [syncedData, setSyncedData] = useState<PosLoyaltySettings | undefined>(undefined);
+  if (settingsQuery.data && settingsQuery.data !== syncedData) {
+    setSyncedData(settingsQuery.data);
     setDraft(settingsQuery.data);
     setPresetsText(formatPresetsText(settingsQuery.data.topup_presets));
-  }, [settingsQuery.data]);
+  }
 
   const sampleArk = useMemo(() => {
     const rate = Math.max(1, draft.ark_rate || 1000);
@@ -131,7 +129,7 @@ export function LoyaltySettingsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
-            <Wallet className="size-5 text-primary" />
+            <Wallet className="size-5 text-brand-text" />
             <h2 className="text-base font-semibold text-foreground">ARK Topup</h2>
           </div>
 
@@ -176,7 +174,7 @@ export function LoyaltySettingsPage() {
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center gap-2">
-            <Sparkles className="size-5 text-primary" />
+            <Sparkles className="size-5 text-brand-text" />
             <h2 className="text-base font-semibold text-foreground">XP dari Topup</h2>
           </div>
 
@@ -197,7 +195,7 @@ export function LoyaltySettingsPage() {
                     className={cn(
                       "rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
                       draft.topup_xp_mode === mode
-                        ? "border-primary/30 bg-primary/10 text-primary"
+                        ? "border-primary/30 bg-primary/10 text-brand-text"
                         : "border-border bg-muted/40 text-muted-foreground hover:bg-muted/70"
                     )}
                   >
@@ -237,7 +235,7 @@ export function LoyaltySettingsPage() {
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
           <div className="mb-4 flex items-center gap-2">
-            <Coins className="size-5 text-primary" />
+            <Coins className="size-5 text-brand-text" />
             <h2 className="text-base font-semibold text-foreground">XP dari Belanja POS</h2>
           </div>
 

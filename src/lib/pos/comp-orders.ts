@@ -1,3 +1,4 @@
+import { formatRupiah } from "@/lib/format";
 /**
  * EPIC-043: Complimentary orders — KOL (gratis otomatis, tercatat penuh)
  * dan Owner Comp (open bill diselesaikan gratis dengan PIN supervisor).
@@ -45,7 +46,7 @@ export function kolQuotaAllows(input: {
   if (input.monthlyLimitIdr == null) return { ok: true };
   const after = input.usedThisMonthIdr + input.orderGrossIdr;
   if (after <= input.monthlyLimitIdr + 0.5) return { ok: true };
-  const fmt = (n: number) => Math.round(n).toLocaleString("id-ID");
+  const fmt = formatRupiah;
   return {
     ok: false,
     reason: `Kuota komplimen KOL bulan ini terlampaui (terpakai ${fmt(input.usedThisMonthIdr)} dari ${fmt(input.monthlyLimitIdr)}, order ini ${fmt(input.orderGrossIdr)})`,

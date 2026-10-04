@@ -24,7 +24,7 @@ import {
   formComboboxClassName,
   formInputClassName,
 } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterDeleteDialog } from "@/features/master-data/components/master-delete-dialog";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ import {
   useDeletePosTable,
   useUpdatePosTable,
 } from "../mutations";
-import { generateTableQrCode } from "../qr-code";
+import { generateTableQrCode } from "@/lib/pos/tables/qr-code";
 import { FLOOR_LABEL, FLOOR_PRESETS } from "../floor-options";
 import type { PosTablePayload, PosTableRow, PosTableStatus } from "../types";
 import { TablesFloorPlan } from "./tables-floor-plan";
@@ -248,7 +248,7 @@ export function TablesPage() {
               className={cn(
                 "h-10 flex-1 rounded-lg border-gray-200/80 px-3 text-sm sm:flex-none",
                 view === "list" &&
-                  "border-primary/40 bg-primary/10 font-semibold text-primary hover:bg-primary/15"
+                  "border-primary/40 bg-primary/10 font-semibold text-brand-text hover:bg-primary/15"
               )}
             >
               List
@@ -260,7 +260,7 @@ export function TablesPage() {
               className={cn(
                 "h-10 flex-1 rounded-lg border-gray-200/80 px-3 text-sm sm:flex-none",
                 view === "denah" &&
-                  "border-primary/40 bg-primary/10 font-semibold text-primary hover:bg-primary/15"
+                  "border-primary/40 bg-primary/10 font-semibold text-brand-text hover:bg-primary/15"
               )}
             >
               Floor Plan
@@ -306,7 +306,7 @@ export function TablesPage() {
         >
           {isLoading ? (
             <div className="py-14 text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
               <p className="mt-2 text-sm text-gray-500">Loading tables…</p>
             </div>
           ) : error ? (
@@ -324,7 +324,7 @@ export function TablesPage() {
                   type="button"
                   variant="outline"
                   onClick={openAdd}
-                  className="mt-4 h-10 rounded-lg border-primary/30 text-primary hover:bg-primary/10"
+                  className="mt-4 h-10 rounded-lg border-primary/30 text-brand-text hover:bg-primary/10"
                 >
                   Add First Table
                 </Button>
@@ -397,7 +397,7 @@ export function TablesPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => setQrTable(table)}
-                            className="h-8 w-8 p-0 text-gray-600 hover:bg-gray-100 hover:text-primary"
+                            className="h-8 w-8 p-0 text-gray-600 hover:bg-gray-100 hover:text-brand-text"
                             aria-label="QR self-order"
                             title="QR self-order"
                           >
@@ -418,7 +418,7 @@ export function TablesPage() {
         </PurchasingListSection>
       ) : isLoading ? (
         <div className="py-14 text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           <p className="mt-2 text-sm text-gray-500">Loading floor plan…</p>
         </div>
       ) : error ? (

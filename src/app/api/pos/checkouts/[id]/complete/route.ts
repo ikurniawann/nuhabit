@@ -5,7 +5,7 @@ import {
   completeMixedCheckout,
 } from "@/lib/pos/create-mixed-checkout";
 import { isFocPaymentMethod } from "@/lib/pos/payment-methods";
-import { verifySupervisorPinServer } from "@/lib/pos/supervisor-pin-server";
+import { approveWithSupervisorPin, supervisorPinRejection } from "@/lib/pos/supervisor-pin-server";
 import { notifyCompTransaction } from "@/lib/wa/comp-notification";
 
 function getErrorMessage(error: unknown) {
@@ -72,13 +72,9 @@ export async function POST(
           { status: 400 }
         );
       }
-      compApproved = await verifySupervisorPinServer(pin);
-      if (!compApproved) {
-        return NextResponse.json(
-          { success: false, error: "PIN supervisor tidak valid" },
-          { status: 403 }
-        );
-      }
+      const approval = await approveWithSupervisorPin({ callerId: sessionUserId, pin });
+      if (!approval.ok) return supervisorPinRejection(approval);
+      compApproved = approval.supervisor;
     }
 
     const result = await completeMixedCheckout(checkoutId, {

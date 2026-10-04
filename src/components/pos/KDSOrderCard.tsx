@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isTerminalKitchenStatus } from '@/lib/pos/kds-status';
 
-import type { KDSOrder, KDSOrderItem } from "@/features/pos/kds/types";
+import type { KDSOrder, KDSOrderItem } from "@/lib/pos/kds-types";
 
 interface KDSOrderCardProps {
   order: KDSOrder;

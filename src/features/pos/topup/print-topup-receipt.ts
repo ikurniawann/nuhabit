@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/format";
 import { toast } from "sonner";
 import { printBytesViaRawBt, canUseRawBtPrint } from "@/lib/pos/rawbt-print";
 import { encodeEscPosLines, formatReceiptRow } from "@/lib/pos/thermal-escpos";
@@ -18,7 +19,7 @@ export type TopupReceiptPrintPayload = {
 
 /** ESC/POS layout matching the HTML topup ticket. */
 export function buildTopupReceiptEscPosBytes(payload: TopupReceiptPrintPayload): Uint8Array {
-  const when = new Date().toLocaleString("id-ID");
+  const when = formatDateTime(new Date());
   const lines: Array<{ text: string; align: "left" | "center" }> = [
     { text: "--- TOPUP ---", align: "center" },
     { text: "ARK E-MONEY", align: "center" },
@@ -124,7 +125,7 @@ function printTopupViaPopup(payload: TopupReceiptPrintPayload) {
     throw new Error("Allow popups to print the receipt.");
   }
 
-  win.document.write(buildTopupReceiptHtml(payload, new Date().toLocaleString("id-ID")));
+  win.document.write(buildTopupReceiptHtml(payload, formatDateTime(new Date())));
 
   win.document.close();
   win.focus();

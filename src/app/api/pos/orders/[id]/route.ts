@@ -14,10 +14,11 @@ import {
 import { ensureQueueNumber } from '@/lib/pos/queue-number';
 import { AccountingPostError } from '@/lib/pos/accounting-posting';
 import { isFocPaymentMethod, resolvePaymentCatalogStamp } from '@/lib/pos/payment-methods';
-import { verifySupervisorPinServer } from '@/lib/pos/supervisor-pin-server';
+import { approveWithSupervisorPin, supervisorPinRejection } from '@/lib/pos/supervisor-pin-server';
 import { notifyCompTransaction } from '@/lib/wa/comp-notification';
 import { sanitizeXenditRef } from '@/lib/pos/xendit-ids';
 import { assertQrisSaleMaySettle } from '@/lib/pos/qris-settle-guard';
+import { formatRupiah } from "@/lib/format";
 
 type OrderPatchBody = {
   status?: string;
@@ -261,13 +262,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
           { status: 400 }
         );
       }
-      const approver = await verifySupervisorPinServer(pin);
-      if (!approver) {
-        return NextResponse.json(
-          { success: false, error: 'PIN supervisor tidak valid' },
-          { status: 403 }
-        );
-      }
+      const approval = await approveWithSupervisorPin({ callerId: sessionUserId, pin });
+      if (!approval.ok) return supervisorPinRejection(approval);
+      const approver = approval.supervisor;
       focComp = true;
       const gross = Number(existing.subtotal) || Number(existing.total_amount) || 0;
       updateData.discount_amount = gross;
@@ -283,7 +280,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     // ownerComp/focComp: total baru saja di-nol-kan di updateData — guard
     // nominal membandingkan ke total LAMA sehingga wajib dilewati utk komplimen.
     if (settlingNow && !methodHandlesOwnAmount && !ownerComp && !focComp && amount_paid !== undefined) {
-      const fmt = (n: number) => Math.round(n).toLocaleString('id-ID');
+      const fmt = formatRupiah;
       if (numericAmountPaid + numericArkUsed < orderTotal - 0.5) {
         return NextResponse.json(
           {

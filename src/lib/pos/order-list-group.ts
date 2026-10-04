@@ -87,9 +87,12 @@ export function groupOrdersByCheckout<T extends OrderListGroupInput>(
     })),
   ];
 
-  return rows
-    .sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0))
-    .map(({ sortAt: _sortAt, ...row }) => row);
+  rows.sort((a, b) => (a.sortAt < b.sortAt ? 1 : a.sortAt > b.sortAt ? -1 : 0));
+  return rows.map((row) => {
+    const { sortAt, ...group } = row;
+    void sortAt;
+    return group as OrderListGroup<T>;
+  });
 }
 
 /** Mixed unpaid bill must open as one checkout — never the first child order. */

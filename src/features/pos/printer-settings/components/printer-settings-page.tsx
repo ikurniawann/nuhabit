@@ -122,7 +122,7 @@ export function PrinterSettingsPage() {
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-200/70 px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-brand-text">
                 <Bluetooth className="h-4 w-4" />
               </span>
               <h2 className="text-base font-semibold text-foreground">Printer Bluetooth kasir</h2>

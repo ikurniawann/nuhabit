@@ -378,7 +378,7 @@ export function RestaurantTableBoard({
                         "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition",
                         active
                           ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                          : "border-gray-200 bg-white text-gray-700 hover:border-primary/40 hover:text-primary dark:bg-transparent dark:text-gray-200"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-primary/40 hover:text-brand-text dark:bg-transparent dark:text-gray-200"
                       )}
                     >
                       {group.label}
@@ -506,7 +506,7 @@ export function RestaurantTableBoard({
                   key={n}
                   type="button"
                   onClick={() => lanjutKeKasir(tableMenungguPax, n)}
-                  className="min-w-11 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary"
+                  className="min-w-11 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:border-primary hover:text-brand-text"
                 >
                   {n}
                 </button>

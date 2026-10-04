@@ -15,9 +15,9 @@ import type {
   VoidReportParams,
   PaymentMethodsReport,
   PaymentMethodsReportParams,
-} from "./types";
+} from "@/lib/pos/reports/types";
 
-export type * from "./types";
+export type * from "@/lib/pos/reports/types";
 
 export async function getProfitReport(params: ProfitReportParams): Promise<ProfitReport> {
   const sp = new URLSearchParams({

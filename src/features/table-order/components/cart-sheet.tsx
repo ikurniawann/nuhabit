@@ -2,11 +2,11 @@
 
 import { Coins, Loader2, Minus, Plus, QrCode, ScanLine, ShoppingBag, WalletCards } from "lucide-react";
 import { idrToArkDisplay } from "@/lib/pos/loyalty-settings";
-import { formatRupiah } from "@/lib/table-order/menu";
 import type { TableOrderPaymentMethod, TableOrderType } from "@/lib/table-order/order-status";
 import { memberPrice, type CartLine, type CartSummary } from "@/lib/table-order/pricing";
 import type { MemberProfile, TableSession } from "../api";
 import { BottomSheet } from "./sheet";
+import { formatRupiah } from "@/lib/format";
 
 export function CartSheet({
   open,
@@ -76,7 +76,7 @@ export function CartSheet({
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="flex h-12 w-full items-center justify-between rounded-xl bg-primary px-4 text-sm font-bold text-white shadow-sm disabled:bg-gray-300"
+          className="flex h-12 w-full items-center justify-between rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm disabled:bg-gray-300"
         >
           <span className="flex items-center gap-2">
             {submitting && <Loader2 className="size-4 animate-spin" />}
@@ -110,7 +110,7 @@ export function CartSheet({
                 type="button"
                 onClick={() => onOrderType(value)}
                 className={`h-9 rounded-full transition ${
-                  orderType === value ? "bg-primary text-white shadow" : "text-gray-600"
+                  orderType === value ? "bg-primary text-primary-foreground shadow" : "text-gray-600"
                 }`}
               >
                 {label}
@@ -136,7 +136,7 @@ export function CartSheet({
                   <button
                     type="button"
                     onClick={() => onQuantity(line.cartId, -1)}
-                    className="flex size-8 items-center justify-center text-primary"
+                    className="flex size-8 items-center justify-center text-brand-text"
                     aria-label={`Kurangi ${line.name}`}
                   >
                     <Minus className="size-3.5" />
@@ -145,7 +145,7 @@ export function CartSheet({
                   <button
                     type="button"
                     onClick={() => onQuantity(line.cartId, 1)}
-                    className="flex size-8 items-center justify-center text-primary"
+                    className="flex size-8 items-center justify-center text-brand-text"
                     aria-label={`Tambah ${line.name}`}
                   >
                     <Plus className="size-3.5" />
@@ -157,7 +157,7 @@ export function CartSheet({
                       <div className="text-[11px] font-medium text-gray-400 line-through">
                         {formatRupiah(line.unitPrice * line.quantity)}
                       </div>
-                      <div className="text-primary">
+                      <div className="text-brand-text">
                         {formatRupiah(memberPrice(line.unitPrice, summary.memberDiscountPercent) * line.quantity)}
                       </div>
                     </>
@@ -182,7 +182,7 @@ export function CartSheet({
                 </div>
               </div>
               {!member && (
-                <button type="button" onClick={onEditContact} className="shrink-0 text-xs font-semibold text-primary">
+                <button type="button" onClick={onEditContact} className="shrink-0 text-xs font-semibold text-brand-text">
                   {contactLabel ? "Ubah" : "Isi sekarang"}
                 </button>
               )}
@@ -205,7 +205,7 @@ export function CartSheet({
               <span className="font-semibold text-gray-900">{formatRupiah(summary.subtotal)}</span>
             </div>
             {summary.memberDiscount > 0 && (
-              <div className="mt-1.5 flex justify-between text-primary">
+              <div className="mt-1.5 flex justify-between text-brand-text">
                 <span>
                   Diskon member{member?.tier?.name ? ` ${member.tier.name}` : ""} ({summary.memberDiscountPercent}%)
                 </span>
@@ -323,7 +323,7 @@ function PaymentOption({
     >
       <div
         className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
-          active ? "bg-primary text-white" : "bg-gray-100 text-gray-600"
+          active ? "bg-primary text-primary-foreground" : "bg-gray-100 text-gray-600"
         }`}
       >
         <Icon className="size-5" />

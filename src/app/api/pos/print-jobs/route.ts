@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
@@ -35,7 +36,11 @@ async function authorizePrintQueueRequest(request: NextRequest) {
 
   const workerToken = process.env.POS_PRINT_WORKER_TOKEN?.trim();
   const requestToken = request.headers.get('x-pos-print-worker-token')?.trim();
-  return Boolean(workerToken && requestToken && workerToken === requestToken);
+  if (!workerToken || !requestToken) return false;
+  // Bandingkan waktu-konstan supaya token worker tidak bisa ditebak per karakter.
+  const expected = Buffer.from(workerToken);
+  const given = Buffer.from(requestToken);
+  return expected.length === given.length && timingSafeEqual(expected, given);
 }
 
 export async function GET(request: NextRequest) {

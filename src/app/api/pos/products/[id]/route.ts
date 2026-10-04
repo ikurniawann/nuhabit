@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPosSession } from '@/lib/api/auth';
+import { IAM } from '@/lib/iam/prefixes';
+import { iamActionOrResponse } from '@/lib/pos/route-guards';
 import { createPgClient } from "@/lib/pg/create-client";
 import { query } from '@/lib/db';
 import { normalizeSalesChannels, SALES_CHANNEL_CODES } from '@/lib/pos/sales-channels';
@@ -40,10 +41,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
-  }
+  // Mengubah data master → izin aksi IAM, bukan sekadar sesi kasir POS.
+  const user = await iamActionOrResponse(IAM.posCatalogProducts, "update");
+  if (user instanceof Response) return user;
 
   try {
     const { id } = await params;

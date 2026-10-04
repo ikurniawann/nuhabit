@@ -57,7 +57,6 @@ describe("flattenOrderItems", () => {
               product_sku: "KOPI",
               quantity: 2,
               unit_price: 15_000,
-              subtotal: 30_000,
               total_amount: 30_000,
             },
           ],

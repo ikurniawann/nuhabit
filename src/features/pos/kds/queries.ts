@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listKdsOrders, listKdsStalls, updateKdsOrderStatus } from "./api";
 import { kdsQueryKeys } from "./query-keys";
-import type { KdsListParams } from "./types";
+import type { KdsListParams } from "@/lib/pos/kds-types";
 
 export interface UseKdsOptions extends KdsListParams {
   pollInterval?: number;

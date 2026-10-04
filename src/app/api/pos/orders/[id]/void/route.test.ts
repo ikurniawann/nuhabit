@@ -6,7 +6,10 @@ import type { NextRequest } from "next/server";
 const approve = vi.fn();
 let orderRow: Record<string, unknown> | null = null;
 
-vi.mock("@/lib/api/auth", () => ({ getPosSession: vi.fn(async () => "kasir-1") }));
+vi.mock("@/lib/api/auth", async (orig) => ({
+  ...(await orig<typeof import("@/lib/api/auth")>()),
+  getPosSession: vi.fn(async () => "kasir-1"),
+}));
 vi.mock("@/lib/pg/create-client", () => ({
   createPgClient: () => ({
     from: () => {

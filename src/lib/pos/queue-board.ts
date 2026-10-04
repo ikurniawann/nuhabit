@@ -1,4 +1,4 @@
-import type { KDSOrder, KDSOrderItem } from "@/features/pos/kds/types";
+import type { KDSOrder, KDSOrderItem } from "@/lib/pos/kds-types";
 import { isTerminalKitchenStatus } from "@/lib/pos/kds-status";
 import { uniqueQueueRows } from "@/lib/pos/queue-board-rows";
 

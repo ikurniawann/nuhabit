@@ -6,12 +6,13 @@ import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, Loader2, MessageCircle, Phone, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatKitchenStatusLabel } from "@/features/pos/reports/utils/transaction-labels";
+import { formatKitchenStatusLabel } from "@/lib/pos/reports/transaction-labels";
 import { cn } from "@/lib/utils";
 import { fetchMemberBillDetail, memberBillKeys, settleMemberBill } from "../api";
-import { formatDateTimeWib, formatIdr, orderTypeLabel } from "../format";
+import { orderTypeLabel } from "../format";
 import { PayMemberBillDialog } from "./pay-member-bill-dialog";
 import { SendBillWaDialog } from "./send-bill-wa-dialog";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 
 type Tab = "open" | "payments" | "settled";
 
@@ -22,7 +23,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "pr
       <div
         className={cn(
           "mt-1 text-lg font-bold tabular-nums",
-          tone === "primary" ? "text-primary sm:text-2xl" : "text-foreground"
+          tone === "primary" ? "text-brand-text sm:text-2xl" : "text-foreground"
         )}
       >
         {value}
@@ -121,13 +122,13 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label={`Total order belum lunas (${detail.open_orders.length})`} value={formatIdr(balance.openTotal)} />
-        <Stat label="Sudah dibayar (saldo cicilan)" value={formatIdr(balance.credit)} />
-        <Stat label="Sisa tagihan" value={formatIdr(balance.outstanding)} tone="primary" />
+        <Stat label={`Total order belum lunas (${detail.open_orders.length})`} value={formatRupiah(balance.openTotal)} />
+        <Stat label="Sudah dibayar (saldo cicilan)" value={formatRupiah(balance.credit)} />
+        <Stat label="Sisa tagihan" value={formatRupiah(balance.outstanding)} tone="primary" />
       </div>
       {balance.surplus > 0 ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-          Saldo cicilan lebih {formatIdr(balance.surplus)} dari order terbuka — akan dipakai untuk order berikutnya.
+          Saldo cicilan lebih {formatRupiah(balance.surplus)} dari order terbuka — akan dipakai untuk order berikutnya.
         </p>
       ) : null}
 
@@ -166,15 +167,15 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
                     <div className="font-mono text-sm font-semibold text-foreground">
                       {order.order_number || order.id.slice(0, 8)}
                       {order.queue_number ? (
-                        <span className="ml-2 font-sans text-xs font-medium text-primary">Antrian {order.queue_number}</span>
+                        <span className="ml-2 font-sans text-xs font-medium text-brand-text">Antrian {order.queue_number}</span>
                       ) : null}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {formatDateTimeWib(order.ordered_at)} · {orderTypeLabel(order.order_type)} ·{" "}
+                      {formatDateTime(order.ordered_at, "—")} · {orderTypeLabel(order.order_type)} ·{" "}
                       {formatKitchenStatusLabel(order.status)}
                     </div>
                   </div>
-                  <div className="text-base font-bold tabular-nums text-foreground">{formatIdr(order.total_amount)}</div>
+                  <div className="text-base font-bold tabular-nums text-foreground">{formatRupiah(order.total_amount)}</div>
                 </div>
                 {order.items.length ? (
                   <ul className="mt-2 space-y-0.5 border-t border-gray-100 pt-2 text-sm dark:border-gray-800">
@@ -186,7 +187,7 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
                             <span className="text-xs text-muted-foreground"> ({item.options.join(", ")})</span>
                           ) : null}
                         </span>
-                        <span className="shrink-0 tabular-nums text-muted-foreground">{formatIdr(item.total_amount)}</span>
+                        <span className="shrink-0 tabular-nums text-muted-foreground">{formatRupiah(item.total_amount)}</span>
                       </li>
                     ))}
                   </ul>
@@ -214,14 +215,14 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
                     ) : null}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {formatDateTimeWib(payment.created_at)}
+                    {formatDateTime(payment.created_at, "—")}
                     {payment.received_by_name ? ` · ${payment.received_by_name}` : ""}
                     {payment.reference_number ? ` · Ref ${payment.reference_number}` : ""}
                     {payment.notes ? ` · ${payment.notes}` : ""}
                   </div>
                 </div>
                 <div className="text-base font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
-                  +{formatIdr(payment.amount)}
+                  +{formatRupiah(payment.amount)}
                 </div>
               </li>
             ))}
@@ -239,10 +240,10 @@ export function MemberBillDetailPanel({ customerId, onBack }: { customerId: stri
                 <div className="min-w-0">
                   <div className="font-mono text-sm font-semibold text-foreground">{order.order_number || order.id.slice(0, 8)}</div>
                   <div className="text-xs text-muted-foreground">
-                    Order {formatDateTimeWib(order.ordered_at)} · Lunas {formatDateTimeWib(order.settled_at)}
+                    Order {formatDateTime(order.ordered_at, "—")} · Lunas {formatDateTime(order.settled_at, "—")}
                   </div>
                 </div>
-                <div className="text-sm font-semibold tabular-nums text-foreground">{formatIdr(order.total_amount)}</div>
+                <div className="text-sm font-semibold tabular-nums text-foreground">{formatRupiah(order.total_amount)}</div>
               </li>
             ))}
           </ul>

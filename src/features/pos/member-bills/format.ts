@@ -1,22 +1,4 @@
-/** Format tampilan halaman Tagihan (WIB, Rupiah). */
-
-export function formatIdr(value: number) {
-  return `Rp ${Math.round(Number(value) || 0).toLocaleString("id-ID")}`;
-}
-
-export function formatDateTimeWib(iso: string | null | undefined) {
-  if (!iso) return "—";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+/** Label tampilan halaman Tagihan Member (Rupiah & tanggal: @/lib/format). */
 
 /** "hari ini" / "N hari" sejak order terlama — untuk daftar tagihan. */
 export function ageText(iso: string | null | undefined, now = new Date()) {

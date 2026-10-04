@@ -4,7 +4,7 @@ import {
   readyItemKeys,
   splitQueueBoardOrders,
 } from "@/lib/pos/queue-board";
-import type { KDSOrder } from "@/features/pos/kds/types";
+import type { KDSOrder } from "@/lib/pos/kds-types";
 
 function order(partial: Partial<KDSOrder> & { id: string }): KDSOrder {
   return {

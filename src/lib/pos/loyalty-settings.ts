@@ -1,3 +1,5 @@
+import type { DbClient } from "@/lib/pg/types";
+
 export type TopupXpMode = "fixed" | "per_amount";
 
 export type PosLoyaltySettings = {
@@ -161,9 +163,7 @@ export function calculateSpendXp(
   return Math.max(settings.spend_xp_min, raw);
 }
 
-export async function loadPosLoyaltySettings(db: {
-  from: (table: string) => any;
-}): Promise<PosLoyaltySettings> {
+export async function loadPosLoyaltySettings(db: Pick<DbClient, "from">): Promise<PosLoyaltySettings> {
   try {
     const { data, error } = await db
       .from("pos_loyalty_settings")
@@ -192,4 +192,40 @@ export async function loadPosLoyaltySettings(db: {
     }
     throw error;
   }
+}
+
+export type PosLoyaltySettingsInput = Omit<PosLoyaltySettings, "id" | "updated_at">;
+
+/** Simpan baris singleton pengaturan ARK & XP (update bila ada, insert bila belum). */
+export async function savePosLoyaltySettings(
+  db: Pick<DbClient, "from">,
+  input: PosLoyaltySettingsInput,
+  userId: string
+): Promise<PosLoyaltySettings> {
+  const payload = {
+    id: POS_LOYALTY_SETTINGS_SINGLETON_ID,
+    ...input,
+    topup_presets: JSON.stringify(normalizeTopupPresets(input.topup_presets)),
+    is_active: true,
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
+  };
+
+  const existing = await db
+    .from("pos_loyalty_settings")
+    .select("id")
+    .eq("id", POS_LOYALTY_SETTINGS_SINGLETON_ID)
+    .maybeSingle();
+  if (existing.error && existing.error.code !== "42P01") throw existing.error;
+
+  const { data, error } = existing.data
+    ? await db
+        .from("pos_loyalty_settings")
+        .update(payload)
+        .eq("id", POS_LOYALTY_SETTINGS_SINGLETON_ID)
+        .select("*")
+        .single()
+    : await db.from("pos_loyalty_settings").insert(payload).select("*").single();
+  if (error) throw new Error(error.message || "Failed to save loyalty settings");
+  return normalizeLoyaltySettings(data as Record<string, unknown>);
 }

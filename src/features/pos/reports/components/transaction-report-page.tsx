@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertCircle,
   CalendarDays,
@@ -25,14 +25,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { ApexChart } from "./apex-chart";
 import { downloadTransactionReportXlsx } from "../api";
 import { useTransactionReport } from "../queries";
-import type { TransactionReportRow } from "../types";
+import type { TransactionReportRow } from "@/lib/pos/reports/types";
 import {
   TransactionDetailBody,
   type TransactionOrderDetail,
@@ -44,7 +44,7 @@ import {
   formatPaymentStatusLabel,
   formatReportStallLabel,
   isPaidPaymentStatus,
-} from "../utils/transaction-labels";
+} from "@/lib/pos/reports/transaction-labels";
 import {
   sortTopProducts,
   topProductBarValue,
@@ -52,30 +52,15 @@ import {
 } from "../utils/top-products";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
 import { ReportExportActions, ReportPrintStyles } from "./report-export-actions";
+import { stallFilterValue } from "../utils/stall-filter";
+import { formatDateTime, formatNumber, formatRupiah, formatRupiahCompact } from "@/lib/format";
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-
-const formatQty = (value: number) =>
-  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(value || 0);
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-};
+const formatQty = (value: number) => formatNumber(value, 2);
 
 export function TransactionReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
   const [dateTo, setDateTo] = useState(todayWib);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [pickedWarehouseId, setWarehouseId] = useState("");
   const [applied, setApplied] = useState({
     date_from: firstDayOfMonthWib(),
     date_to: todayWib(),
@@ -90,12 +75,7 @@ export function TransactionReportPage() {
   const { data, isLoading, isFetching, error } = useTransactionReport(applied);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (!data) return;
-    if (data.stall_locked && data.filters.warehouse_id && !warehouseId) {
-      setWarehouseId(data.filters.warehouse_id);
-    }
-  }, [data, warehouseId]);
+  const warehouseId = stallFilterValue(pickedWarehouseId, data);
 
   const stallOptions = data?.stall_options ?? [];
   const stallLocked = Boolean(data?.stall_locked);
@@ -240,11 +220,11 @@ export function TransactionReportPage() {
             Service = Nett — identitasnya bisa diperiksa pembaca sendiri. */}
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
           <Metric title="Transaksi" value={String(data?.summary.transactions ?? 0)} icon={ReceiptText} />
-          <Metric title="Revenue (kotor)" value={formatCurrency(data?.summary.revenue ?? 0)} icon={Wallet} />
-          <Metric title="Diskon" value={`− ${formatCurrency(data?.summary.discount ?? 0)}`} icon={Wallet} />
-          <Metric title="Pajak" value={formatCurrency(data?.summary.tax ?? 0)} icon={Wallet} />
-          <Metric title="Service" value={formatCurrency(data?.summary.service ?? 0)} icon={Wallet} />
-          <Metric title="Nett" value={formatCurrency(data?.summary.nett ?? 0)} icon={Store} />
+          <Metric title="Revenue (kotor)" value={formatRupiah(data?.summary.revenue ?? 0)} icon={Wallet} />
+          <Metric title="Diskon" value={`− ${formatRupiah(data?.summary.discount ?? 0)}`} icon={Wallet} />
+          <Metric title="Pajak" value={formatRupiah(data?.summary.tax ?? 0)} icon={Wallet} />
+          <Metric title="Service" value={formatRupiah(data?.summary.service ?? 0)} icon={Wallet} />
+          <Metric title="Nett" value={formatRupiah(data?.summary.nett ?? 0)} icon={Store} />
         </div>
 
         {/* Tren nett harian + top produk pada filter yang sama */}
@@ -273,10 +253,10 @@ export function TransactionReportPage() {
                     xaxis: { type: "category" },
                     yaxis: {
                       labels: {
-                        formatter: (v: number) => new Intl.NumberFormat("id-ID", { notation: "compact" }).format(v),
+                        formatter: (v: number) => formatRupiahCompact(v),
                       },
                     },
-                    tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
+                    tooltip: { y: { formatter: (v: number) => formatRupiah(v) } },
                   }}
                 />
               )}
@@ -302,7 +282,7 @@ export function TransactionReportPage() {
                       className={cn(
                         "border-gray-200/80",
                         topProductSort === key &&
-                          "border-primary/40 bg-primary/5 text-primary"
+                          "border-primary/40 bg-primary/5 text-brand-text"
                       )}
                       onClick={() => setTopProductSort(key)}
                     >
@@ -327,7 +307,7 @@ export function TransactionReportPage() {
                             {index + 1}. {prod.product_name}
                           </span>
                           <span className="shrink-0 text-muted-foreground">
-                            {formatQty(prod.quantity)} pcs · {formatCurrency(prod.revenue)}
+                            {formatQty(prod.quantity)} pcs · {formatRupiah(prod.revenue)}
                           </span>
                         </div>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -376,7 +356,7 @@ export function TransactionReportPage() {
                       </td>
                       <td className="px-3 py-3 text-right">{stall.transactions}</td>
                       <td className="px-3 py-3 text-right">{stall.quantity}</td>
-                      <td className="px-3 py-3 text-right font-semibold">{formatCurrency(stall.sales)}</td>
+                      <td className="px-3 py-3 text-right font-semibold">{formatRupiah(stall.sales)}</td>
                     </tr>
                   ))
                 )}
@@ -466,10 +446,10 @@ export function TransactionReportPage() {
                         )}
                       </td>
                       <td className="px-3 py-3 text-right font-medium">
-                        {formatCurrency(row.total_amount)}
+                        {formatRupiah(row.total_amount)}
                       </td>
                       <td className="px-3 py-3 text-right text-amber-700">
-                        {formatCurrency(row.ark_coins_used)}
+                        {formatRupiah(row.ark_coins_used)}
                       </td>
                       <td className="px-3 py-3 text-right print:hidden">
                         <Button
@@ -561,7 +541,7 @@ function Metric({
   return (
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
-        <div className="mb-2 rounded-lg bg-primary/10 p-2 text-primary w-fit">
+        <div className="mb-2 rounded-lg bg-primary/10 p-2 text-brand-text w-fit">
           <Icon className="h-4 w-4" />
         </div>
         <div className="text-xl font-bold text-foreground">{value}</div>

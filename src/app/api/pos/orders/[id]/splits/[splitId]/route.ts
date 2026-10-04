@@ -18,7 +18,7 @@ export async function PATCH(
 
     const { data, error } = await db.rpc('pos_cancel_split', {
       p_split_id: splitId,
-      p_cashier_id: await resolveCashierId(sessionUserId),
+      p_cashier_id: sessionUserId,
     });
 
     if (error) {
@@ -32,12 +32,8 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error cancelling split:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Cancel failed' }, { status: 500 });
   }
-}
-
-async function resolveCashierId(sessionUserId: string): Promise<string> {
-  return '00000000-0000-0000-0000-000000000001';
 }

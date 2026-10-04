@@ -73,7 +73,7 @@ vi.mock("@/lib/pg/create-client", () => ({
 vi.mock("@/lib/member-portal/session", () => ({
   getMemberSession: () => memberSession(),
 }));
-const memberDiscountPct = vi.fn(async (_customerId: string) => 0);
+const memberDiscountPct = vi.fn<(customerId: string) => Promise<number>>(async () => 0);
 vi.mock("@/lib/member-portal/tier", () => ({
   loadMemberDiscountPercent: (customerId: string) => memberDiscountPct(customerId),
 }));

@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * Tagihan Member — akses DB (owner 2026-10-01). Lihat lib/pos/member-bill.ts
  * untuk model deposit & aturan saldo.

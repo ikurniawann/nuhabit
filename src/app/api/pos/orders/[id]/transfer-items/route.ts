@@ -48,7 +48,7 @@ async function orderHasUnpaidSplits(
     .neq("status", "cancelled");
 
   if (error) throw error;
-  const unpaid = (data || []).filter(
+  const unpaid = ((data || []) as Array<{ status?: string | null }>).filter(
     (split) => String(split.status || "").toLowerCase() !== "paid"
   );
   return unpaid.length > 0;
@@ -65,11 +65,11 @@ async function recalculateOrderTotals(
 
   if (error) throw error;
 
-  const newSubtotal = (items || []).reduce(
+  const newSubtotal = ((items || []) as Array<{ subtotal?: unknown; total_amount?: unknown }>).reduce(
     (sum, item) => sum + Number(item.subtotal || 0),
     0
   );
-  const newTotal = (items || []).reduce(
+  const newTotal = ((items || []) as Array<{ subtotal?: unknown; total_amount?: unknown }>).reduce(
     (sum, item) => sum + Number(item.total_amount || 0),
     0
   );

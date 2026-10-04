@@ -9,6 +9,7 @@ import {
   subscribeCfdState,
   type CfdState,
 } from "@/lib/pos/cfd";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * EPIC-024 — layar menghadap customer (monitor kedua PC kasir).
@@ -18,7 +19,7 @@ import {
  * bg putih, teks gray-900, panel kanan gray-50, aksen rose.
  */
 
-const formatRp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+const formatRp = formatRupiah;
 
 /**
  * Persentase pajak dihitung dari angka transaksi (tax ÷ dasar pengenaan),

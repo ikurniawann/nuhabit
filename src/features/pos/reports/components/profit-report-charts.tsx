@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ApexOptions } from "apexcharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAmount } from "@/lib/purchasing/utils";
-import type { ProfitBucket } from "../types";
+import { formatRupiah } from "@/lib/format";
+import type { ProfitBucket } from "@/lib/pos/reports/types";
 import { ApexChart } from "./apex-chart";
+import { useBrandPrimary } from "../use-brand-primary";
 
-const BRAND_PRIMARY_FALLBACK = "#00281a";
 const CHART_SECONDARY_COLORS = ["#9ca3af", "#6366f1", "#f59e0b", "#14b8a6", "#8b5cf6"];
-
-function useBrandPrimary() {
-  const [color, setColor] = useState(BRAND_PRIMARY_FALLBACK);
-  useEffect(() => {
-    const v = getComputedStyle(document.documentElement)
-      .getPropertyValue("--brand-primary")
-      .trim();
-    if (v) setColor(v);
-  }, []);
-  return color;
-}
 
 const baseChartOptions: ApexOptions = {
   chart: {
@@ -39,7 +28,7 @@ const baseChartOptions: ApexOptions = {
   tooltip: {
     theme: "light",
     y: {
-      formatter: (value) => formatAmount(value),
+      formatter: (value) => formatRupiah(value),
     },
   },
 };
@@ -79,7 +68,7 @@ export function ProfitDailyTrendChart({ rows }: { rows: ProfitBucket[] }) {
       yaxis: {
         labels: {
           style: { colors: "#9ca3af", fontSize: "11px" },
-          formatter: (value) => formatAmount(value),
+          formatter: (value) => formatRupiah(value),
         },
       },
     }),
@@ -138,13 +127,13 @@ export function ProfitCompositionChart({
               total: {
                 show: true,
                 label: "Revenue",
-                formatter: () => formatAmount(revenue),
+                formatter: () => formatRupiah(revenue),
                 color: "#111827",
                 fontSize: "14px",
                 fontWeight: 600,
               },
               value: {
-                formatter: (value) => formatAmount(Number(value)),
+                formatter: (value) => formatRupiah(Number(value)),
               },
             },
           },
@@ -152,7 +141,7 @@ export function ProfitCompositionChart({
       },
       tooltip: {
         ...baseChartOptions.tooltip,
-        y: { formatter: (value) => formatAmount(value) },
+        y: { formatter: (value) => formatRupiah(value) },
       },
     }),
     [revenue, brandPrimary]
@@ -200,7 +189,7 @@ export function ProfitCategoryBarChart({ rows, title }: { rows: ProfitBucket[]; 
         categories: top.map((row) => truncateLabel(row.label)),
         labels: {
           style: { colors: "#9ca3af", fontSize: "11px" },
-          formatter: (value) => formatAmount(Number(value)),
+          formatter: (value) => formatRupiah(Number(value)),
         },
         axisBorder: { show: false },
         axisTicks: { show: false },
@@ -210,7 +199,7 @@ export function ProfitCategoryBarChart({ rows, title }: { rows: ProfitBucket[]; 
       },
       tooltip: {
         ...baseChartOptions.tooltip,
-        y: { formatter: (value) => formatAmount(value) },
+        y: { formatter: (value) => formatRupiah(value) },
       },
     }),
     [top, chartColors]

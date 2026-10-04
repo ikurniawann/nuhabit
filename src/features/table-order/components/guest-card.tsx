@@ -104,7 +104,7 @@ export const GuestCard = forwardRef<
             <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
               Isi nomor WhatsApp & nama dulu sebelum memesan — dipakai untuk memanggil & mengonfirmasi pesanan Anda.
             </p>
-            <button type="button" onClick={onDismissCoach} className="mt-1.5 text-xs font-semibold text-primary">
+            <button type="button" onClick={onDismissCoach} className="mt-1.5 text-xs font-semibold text-brand-text">
               Lihat menu dulu
             </button>
           </div>
@@ -115,7 +115,7 @@ export const GuestCard = forwardRef<
       <div className={`rounded-2xl bg-white p-4 shadow-sm ${coach ? "ring-4 ring-primary/60" : "ring-1 ring-gray-200"}`}>
         {member ? (
           <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-brand-text">
               <UserRound className="size-4" />
             </div>
             <div className="min-w-0 text-sm">
@@ -126,7 +126,7 @@ export const GuestCard = forwardRef<
         ) : otpFor ? (
           <div>
             <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-              <KeyRound className="size-4 text-primary" /> Masuk sebagai member
+              <KeyRound className="size-4 text-brand-text" /> Masuk sebagai member
             </div>
             <p className="mt-1 text-xs leading-relaxed text-gray-600">{info}</p>
             <p className="mt-1 text-xs text-gray-500">WA {displayGuestPhone(otpFor.phone)}</p>
@@ -145,7 +145,7 @@ export const GuestCard = forwardRef<
               type="button"
               disabled={busy}
               onClick={() => void submitCode()}
-              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm disabled:opacity-60"
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm disabled:opacity-60"
             >
               {busy && <Loader2 className="size-4 animate-spin" />} Verifikasi & masuk
             </button>
@@ -153,7 +153,7 @@ export const GuestCard = forwardRef<
               <button type="button" onClick={() => setOtpFor(null)} className="text-gray-500">
                 Ganti nomor
               </button>
-              <button type="button" onClick={() => continueAsGuest(otpFor)} className="text-primary">
+              <button type="button" onClick={() => continueAsGuest(otpFor)} className="text-brand-text">
                 Lanjut sebagai tamu
               </button>
             </div>
@@ -192,19 +192,19 @@ export const GuestCard = forwardRef<
               type="button"
               onClick={() => void save()}
               disabled={busy}
-              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm active:scale-[0.99] disabled:opacity-60"
+              className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-primary-foreground shadow-sm active:scale-[0.99] disabled:opacity-60"
             >
               {busy && <Loader2 className="size-4 animate-spin" />}
               Simpan & mulai pesan
             </button>
-            <button type="button" onClick={onOpenMember} className="mt-2 w-full text-center text-xs font-semibold text-primary">
+            <button type="button" onClick={onOpenMember} className="mt-2 w-full text-center text-xs font-semibold text-brand-text">
               Sudah member? Masuk dengan OTP
             </button>
           </div>
         ) : guest ? (
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-brand-text">
                 <UserRound className="size-4" />
               </div>
               <div className="min-w-0 text-sm">
@@ -219,7 +219,7 @@ export const GuestCard = forwardRef<
                 setPhone(`0${guest.phone.slice(2)}`);
                 setEditing(true);
               }}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-primary"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-text"
             >
               <Pencil className="size-3.5" /> Ubah
             </button>

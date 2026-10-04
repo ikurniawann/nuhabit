@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { updateOrderStatus } from '@/lib/pos-api';
 import type { Order } from '@/lib/pos-api';
+import { formatRupiah } from "@/lib/format";
 
 /**
  * EPIC-043 — Owner Comp: open bill diselesaikan GRATIS dengan persetujuan
@@ -128,8 +129,7 @@ export function OwnerCompModal({ open, order, siblings = [], onClose, onSuccess 
                           : order.order_number}
                       </p>
                       <p>
-                        <span className="font-medium">Nilai bill:</span> Rp{' '}
-                        {gross.toLocaleString('id-ID')}
+                        <span className="font-medium">Nilai bill:</span> {formatRupiah(gross)}
                       </p>
                     </>
                   );

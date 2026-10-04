@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { voidOrder } from '@/lib/pos-api';
 import { isPaidPosOrder } from '@/lib/pos/void-order';
 import type { Order } from '@/lib/pos-api';
+import { formatRupiah } from "@/lib/format";
 
 const VOID_REASONS = [
   { value: 'salah_pesan', label: 'Salah pesan' },
@@ -132,8 +133,7 @@ export function VoidModal({ open, order, siblings = [], onClose, onSuccess }: Vo
                     : order.order_number}
                 </p>
                 <p>
-                  <span className="font-medium">Total:</span> Rp{' '}
-                  {familyTotal.toLocaleString('id-ID')}
+                  <span className="font-medium">Total:</span> {formatRupiah(familyTotal)}
                 </p>
                 <p>
                   <span className="font-medium">Status:</span>{' '}

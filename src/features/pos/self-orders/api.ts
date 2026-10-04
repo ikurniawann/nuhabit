@@ -7,7 +7,7 @@ export const selfOrdersQueryKey = ["pos", "incoming-self-orders"] as const;
 export async function fetchIncomingSelfOrders(): Promise<Order[]> {
   const res = await getOrders({ status: "pending", limit: 100 });
   if (!res.success) throw new Error("Gagal memuat pesanan self-order");
-  return pickIncomingSelfOrders((res.data ?? []) as Order[]);
+  return pickIncomingSelfOrders(res.data ?? []);
 }
 
 /** Kasir menekan "Dibuat": pending → confirmed, status bayar tetap. */

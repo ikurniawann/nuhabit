@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from "@/lib/api/auth";
 import { getApiUserScope } from "@/lib/api/scope";
-import { generateTableQrCode } from "@/features/pos/tables/qr-code";
-import { resolveTableBoardStatus } from "@/features/pos/restaurant/table-board-status";
-import { listTableBoardBills } from "@/features/pos/restaurant/table-board-bills";
+import { generateTableQrCode } from "@/lib/pos/tables/qr-code";
+import { resolveTableBoardStatus } from "@/lib/pos/tables/table-board-status";
+import { listTableBoardBills } from "@/lib/pos/tables/table-board-bills";
 
 type TableRow = {
   id: string;

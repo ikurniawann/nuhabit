@@ -143,8 +143,9 @@ export async function POST(
         .from('pos_wallet_transactions')
         .select('order_id, type, amount')
         .in('order_id', voidable.map((row) => row.id));
-      const payments = (walletRows ?? []).filter((row) => row.type === 'payment');
-      const alreadyRefunded = (walletRows ?? []).some((row) => row.type === 'refund');
+      const wallet = (walletRows ?? []) as Array<{ order_id: string; type: string; amount: unknown }>;
+      const payments = wallet.filter((row) => row.type === 'payment');
+      const alreadyRefunded = wallet.some((row) => row.type === 'refund');
       const walletPaymentAmount = payments.reduce(
         (max, row) => Math.max(max, Number(row.amount) || 0),
         0

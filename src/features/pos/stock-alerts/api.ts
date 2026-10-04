@@ -1,4 +1,4 @@
-import type { StockAlertsResponse } from "./types";
+import type { StockAlertsResponse } from "@/lib/pos/stock-alerts-types";
 
 export async function fetchStockAlerts(): Promise<StockAlertsResponse> {
   const res = await fetch("/api/pos/stock-alerts", { cache: "no-store" });

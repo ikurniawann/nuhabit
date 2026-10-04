@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { ImageOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -45,9 +46,13 @@ export function PosProductThumbnail({
   }
 
   return (
-    <img
+    // URL foto bisa dari host mana saja (belum ada images.remotePatterns) → tanpa optimasi.
+    <Image
       src={src}
       alt={alt}
+      width={96}
+      height={96}
+      unoptimized
       className={cn('h-full w-full object-cover', className)}
       onError={() => setFailed(true)}
     />

@@ -12,6 +12,7 @@ import {
 } from "@/lib/payments/xendit";
 import { resolveCheckoutQrisAction } from "@/lib/pos/create-mixed-checkout";
 import { getSettings, SETTING_KEYS } from "@/lib/settings/app-settings";
+import { formatRupiah } from "@/lib/format";
 
 // QRIS dinamis utk customer display: QR per transaksi dengan nominal terkunci.
 // Secret diambil dari Settings → Payment Gateways (configuration.payment_gateways),
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: `Total di layar (${Math.round(amount).toLocaleString("id-ID")}) tidak sama dengan bill tersimpan ${order.order_number || ""} (${Math.round(orderTotal).toLocaleString("id-ID")}) — muat ulang bill sebelum menagih QRIS`,
+            error: `Total di layar (${formatRupiah(amount)}) tidak sama dengan bill tersimpan ${order.order_number || ""} (${formatRupiah(orderTotal)}) — muat ulang bill sebelum menagih QRIS`,
           },
           { status: 409 }
         );

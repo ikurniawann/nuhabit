@@ -19,13 +19,13 @@ import { idrToArkDisplay } from "@/lib/pos/loyalty-settings";
 import {
   buildCategories,
   filterProducts,
-  formatRupiah,
   groupBySection,
   UNCATEGORIZED_ID,
   type SelectedModifier,
   type TableOrderProduct,
   type TableOrderVariant,
 } from "@/lib/table-order/menu";
+import { formatRupiah } from "@/lib/format";
 import { type TableOrderPaymentMethod, type TableOrderType } from "@/lib/table-order/order-status";
 import {
   addToCart,
@@ -55,7 +55,8 @@ import { BottomSheet } from "./sheet";
 import { CartSheet } from "./cart-sheet";
 import { MemberSheet } from "./member-sheet";
 import { GuestCard } from "./guest-card";
-import { displayGuestPhone, GUEST_STORAGE_KEY, parseStoredGuest, type GuestIdentity } from "@/lib/table-order/guest";
+import { displayGuestPhone, parseStoredGuest, type GuestIdentity } from "@/lib/table-order/guest";
+import { STORAGE_KEYS, readStorage, writeStorage } from "@/lib/storage-keys";
 import { MenuItemRow } from "./menu-item-row";
 import { OrderTracking } from "./order-tracking";
 import { VariantSheet } from "./variant-sheet";
@@ -167,12 +168,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
 
         if (!restored.current) {
           restored.current = true;
-          let storedGuest: GuestIdentity | null = null;
-          try {
-            storedGuest = parseStoredGuest(window.localStorage.getItem(GUEST_STORAGE_KEY));
-          } catch {
-            storedGuest = null;
-          }
+          const storedGuest = parseStoredGuest(readStorage(STORAGE_KEYS.tableOrderGuest));
           setGuest(storedGuest);
           // Pertama kali buka (belum ada data & bukan member) → sorot kartu data pemesan.
           if (!storedGuest && !sessionData.member_logged_in) setCoachOpen(true);
@@ -245,11 +241,8 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
   function saveGuest(next: GuestIdentity) {
     setGuest(next);
     setCoachOpen(false);
-    try {
-      window.localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // Mode privat / storage penuh — data tetap dipakai utk sesi ini.
-    }
+    // Mode privat / storage penuh: data tetap dipakai utk sesi ini.
+    writeStorage(STORAGE_KEYS.tableOrderGuest, JSON.stringify(next));
     showToast("Data tersimpan — silakan pilih menu");
   }
 
@@ -477,7 +470,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                 <button
                   type="button"
                   onClick={openMyOrders}
-                  className="flex size-11 items-center justify-center rounded-full bg-white/95 text-primary shadow"
+                  className="flex size-11 items-center justify-center rounded-full bg-white/95 text-brand-text shadow"
                   aria-label="Pesanan saya"
                 >
                   <Receipt className="size-5" />
@@ -509,7 +502,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   )}
                   <span className="text-gray-300">·</span>
                   <span className="inline-flex items-center gap-1">
-                    <MapPin className="size-3.5 text-primary" />
+                    <MapPin className="size-3.5 text-brand-text" />
                     {session?.table_area || "Antar ke meja"}
                   </span>
                 </div>
@@ -532,7 +525,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   type="button"
                   onClick={() => setOrderType(value)}
                   className={`h-9 rounded-full transition ${
-                    orderType === value ? "bg-primary text-white shadow" : "text-gray-600"
+                    orderType === value ? "bg-primary text-primary-foreground shadow" : "text-gray-600"
                   }`}
                 >
                   {label}
@@ -546,13 +539,13 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                   type="button"
                   onClick={() => setMemberOpen(true)}
                   className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-bold ${
-                    member ? "border-primary bg-primary/5 text-primary" : "border-primary text-primary"
+                    member ? "border-primary bg-primary/5 text-brand-text" : "border-primary text-brand-text"
                   }`}
                 >
                   <UserRound className="size-4" />
                   {member ? member.name : "Masuk Member"}
                   {!member && xpEnabled && (
-                    <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-black text-white">
+                    <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-black text-primary-foreground">
                       XP
                     </span>
                   )}
@@ -638,7 +631,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
                     type="button"
                     onClick={() => scrollToCategory(category.id)}
                     className={`h-9 shrink-0 whitespace-nowrap rounded-full px-4 text-sm font-semibold transition ${
-                      active ? "bg-primary text-white shadow" : "bg-white text-gray-700 ring-1 ring-gray-200"
+                      active ? "bg-primary text-primary-foreground shadow" : "bg-white text-gray-700 ring-1 ring-gray-200"
                     }`}
                   >
                     {category.name}
@@ -661,7 +654,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-4 h-10 rounded-full bg-primary px-5 text-sm font-bold text-white"
+                className="mt-4 h-10 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground"
               >
                 Muat ulang
               </button>
@@ -709,7 +702,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
         <button
           type="button"
           onClick={() => setMenuJumpOpen(true)}
-          className={`fixed left-1/2 z-30 inline-flex h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-white shadow-xl shadow-black/20 ${
+          className={`fixed left-1/2 z-30 inline-flex h-11 -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-5 text-sm font-bold text-primary-foreground shadow-xl shadow-black/20 ${
             cart.length > 0 ? "bottom-24" : "bottom-6"
           }`}
         >
@@ -723,7 +716,7 @@ export function TableOrderApp({ tableCode }: { tableCode: string }) {
           <button
             type="button"
             onClick={() => setCartOpen(true)}
-            className="mx-auto flex h-13 w-full max-w-md items-center justify-between rounded-2xl bg-primary px-4 py-3 text-left text-white shadow-lg shadow-black/10"
+            className="mx-auto flex h-13 w-full max-w-md items-center justify-between rounded-2xl bg-primary px-4 py-3 text-left text-primary-foreground shadow-lg shadow-black/10"
           >
             <span>
               <span className="block text-xs text-white/75">{summary.totalItems} item · Meja {tableLabel}</span>
@@ -824,7 +817,7 @@ function InfoCard({
 }) {
   return (
     <div className="flex w-56 shrink-0 items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-sm ring-1 ring-gray-100">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-brand-text">
         <Icon className="size-4" />
       </div>
       <div className="min-w-0">

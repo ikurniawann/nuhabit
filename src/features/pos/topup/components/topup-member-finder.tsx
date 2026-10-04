@@ -159,7 +159,7 @@ export function TopupMemberFinder({
               <button
                 type="button"
                 onClick={() => onCreateNew(search)}
-                className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                className="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-semibold text-brand-text transition hover:bg-primary/10"
               >
                 <UserPlus className="h-4 w-4" />
                 Daftarkan member baru
@@ -184,7 +184,7 @@ export function TopupMemberFinder({
         <button
           type="button"
           onClick={() => onCreateNew(input.trim())}
-          className="inline-flex items-center gap-2 self-start text-sm font-medium text-muted-foreground transition hover:text-primary"
+          className="inline-flex items-center gap-2 self-start text-sm font-medium text-muted-foreground transition hover:text-brand-text"
         >
           <UserPlus className="h-4 w-4" />
           Member belum terdaftar? Daftarkan baru
@@ -229,7 +229,7 @@ function MemberRow({
       onClick={onSelect}
       className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-primary/5"
     >
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-brand-text">
         {initialsOf(customer.name, customer.phone)}
       </span>
       <span className="min-w-0 flex-1">

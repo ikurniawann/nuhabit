@@ -24,7 +24,7 @@ import {
   payMemberBill,
   type MemberBillDetail,
 } from "../api";
-import { formatIdr } from "../format";
+import { formatRupiah } from "@/lib/format";
 
 /** Kasir default (sama dengan halaman Kasir) — shift aktif bila manajemen shift menyala. */
 const CASHIER_ID = "00000000-0000-0000-0000-000000000001";
@@ -72,7 +72,7 @@ export function PayMemberBillDialog({
   const quickAmounts = [
     { label: "Lunas", value: outstanding },
     { label: "50%", value: Math.ceil(outstanding / 2 / 1000) * 1000 },
-    ...[100_000, 200_000, 500_000].map((value) => ({ label: formatIdr(value), value })),
+    ...[100_000, 200_000, 500_000].map((value) => ({ label: formatRupiah(value), value })),
   ].filter((option, index, list) =>
     option.value > 0 &&
     option.value <= outstanding &&
@@ -99,7 +99,7 @@ export function PayMemberBillDialog({
       if (result.settled_order_count > 0) {
         toast.success(`Tagihan lunas — ${result.settled_order_count} order ditutup`);
       } else {
-        toast.success(`Pembayaran ${formatIdr(amount)} diterima. Sisa ${formatIdr(result.balance.outstanding)}`);
+        toast.success(`Pembayaran ${formatRupiah(amount)} diterima. Sisa ${formatRupiah(result.balance.outstanding)}`);
       }
       if (result.notes.length) toast.message(`Akuntansi: ${result.notes.join("; ")}`);
       void queryClient.invalidateQueries({ queryKey: memberBillKeys.all });
@@ -122,7 +122,7 @@ export function PayMemberBillDialog({
         <DialogPanelHeader>
           <DialogPanelTitle>Bayar tagihan {detail.customer.name}</DialogPanelTitle>
           <DialogPanelDescription>
-            Sisa tagihan {formatIdr(outstanding)} · bisa dibayar sebagian
+            Sisa tagihan {formatRupiah(outstanding)} · bisa dibayar sebagian
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-5">
@@ -156,11 +156,11 @@ export function PayMemberBillDialog({
                   className={cn(
                     "h-9 rounded-lg border px-3 text-sm font-semibold transition",
                     amount === option.value
-                      ? "border-primary bg-primary/10 text-primary"
+                      ? "border-primary bg-primary/10 text-brand-text"
                       : "border-gray-200 text-gray-700 hover:border-primary/40 dark:text-gray-200"
                   )}
                 >
-                  {option.label === "Lunas" ? `Lunas ${formatIdr(option.value)}` : option.label}
+                  {option.label === "Lunas" ? `Lunas ${formatRupiah(option.value)}` : option.label}
                 </button>
               ))}
             </div>
@@ -187,7 +187,7 @@ export function PayMemberBillDialog({
                     className={cn(
                       "flex min-h-14 items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm font-semibold transition",
                       entry.code === methodCode
-                        ? "border-primary bg-primary/10 text-primary ring-1 ring-primary/30"
+                        ? "border-primary bg-primary/10 text-brand-text ring-1 ring-primary/30"
                         : "border-gray-200 text-gray-800 hover:border-primary/40 dark:text-gray-100"
                     )}
                   >
@@ -237,7 +237,7 @@ export function PayMemberBillDialog({
             >
               {remaining === 0
                 ? `Tagihan lunas — ${detail.open_orders.length} order akan ditutup.`
-                : `Setelah dibayar, sisa tagihan ${formatIdr(remaining)}. Order tetap terbuka sampai lunas.`}
+                : `Setelah dibayar, sisa tagihan ${formatRupiah(remaining)}. Order tetap terbuka sampai lunas.`}
             </div>
           ) : null}
         </DialogPanelBody>
@@ -255,7 +255,7 @@ export function PayMemberBillDialog({
           </Button>
           <Button type="button" disabled={!canSubmit || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {amount > 0 ? `Terima ${formatIdr(amount)}` : "Terima pembayaran"}
+            {amount > 0 ? `Terima ${formatRupiah(amount)}` : "Terima pembayaran"}
           </Button>
         </DialogFooter>
       </DialogPanel>

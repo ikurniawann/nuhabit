@@ -4,7 +4,6 @@
  */
 
 import { CASHIER_ROUTES, CASHIER_TABLET_ROUTE } from "@/features/pos/cashier/constants";
-import { POS_CLASSIC_ROUTE } from "@/features/pos/classic/constants";
 import { KDS_ROUTES } from "@/features/pos/kds/constants";
 import {
   POS_TABLET_PARAM,
@@ -65,7 +64,6 @@ export function isPosImmersiveShell(
 ): boolean {
   if (pathname === CASHIER_ROUTES.fullscreen) return true;
   if (pathname === CASHIER_TABLET_ROUTE) return true;
-  if (pathname === POS_CLASSIC_ROUTE) return true;
   if (pathname === KDS_ROUTES.fullscreen) return true;
   if (isRestaurantTabletPath(pathname)) return true;
 

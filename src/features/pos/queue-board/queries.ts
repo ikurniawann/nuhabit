@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listKdsOrders } from "@/features/pos/kds/api";
 import { readyItemKeys, splitQueueBoardOrders } from "@/lib/pos/queue-board";
-import type { KdsListParams } from "@/features/pos/kds/types";
+import type { KdsListParams } from "@/lib/pos/kds-types";
 
 let queueAudioCtx: AudioContext | null = null;
 

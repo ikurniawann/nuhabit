@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ChevronRight, RefreshCw } from "lucide-react";
-import { formatRupiah } from "@/lib/table-order/menu";
 import { orderNeedsAttention, unpaidTotal } from "@/lib/table-order/my-orders";
 import {
   orderProgressStep,
@@ -11,6 +10,7 @@ import {
   paymentStatusText,
 } from "@/lib/table-order/order-status";
 import { fetchOrder, type OrderData } from "../api";
+import { formatRupiah } from "@/lib/format";
 
 const POLL_MS = 20_000;
 
@@ -63,7 +63,7 @@ export function MyOrdersList({
 
   return (
     <div className="pb-28">
-      <div className="bg-primary px-5 pb-14 pt-6 text-white">
+      <div className="bg-primary px-5 pb-14 pt-6 text-primary-foreground">
         <div className="text-xs font-semibold uppercase tracking-wide text-white/70">{brandName}</div>
         <div className="mt-1 text-sm text-white/80">Meja {tableLabel}</div>
         <div className="mt-4 flex items-end justify-between gap-3">
@@ -83,7 +83,7 @@ export function MyOrdersList({
             type="button"
             onClick={() => void refresh()}
             disabled={refreshing}
-            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-primary shadow"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-brand-text shadow"
           >
             <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
             Perbarui
@@ -134,7 +134,7 @@ export function MyOrdersList({
           <button
             type="button"
             onClick={onNewOrder}
-            className="h-12 w-full rounded-xl border-2 border-primary text-sm font-bold text-primary"
+            className="h-12 w-full rounded-xl border-2 border-primary text-sm font-bold text-brand-text"
           >
             Pesan lagi
           </button>

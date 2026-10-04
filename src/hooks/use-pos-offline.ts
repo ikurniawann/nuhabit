@@ -8,6 +8,7 @@ import {
   getPendingQueue,
   updateQueueItem,
   removeFromQueue,
+  type OfflineOrderPayload,
   type OfflineOrderRequest,
 } from '@/lib/pos-db';
 import { createOrder, createSplitOrder } from '@/lib/pos-api';
@@ -50,7 +51,7 @@ export function usePosOfflineQueue() {
 
   // Enqueue a single order or split order payload
   const enqueue = useCallback(async (payload: object, type: 'order' | 'split') => {
-    const id = await queueOfflineOrder({ ...payload, _offlineType: type });
+    const id = await queueOfflineOrder({ ...payload, _offlineType: type } as OfflineOrderPayload);
     await refreshCount();
     return id;
   }, [refreshCount]);
@@ -68,14 +69,9 @@ export function usePosOfflineQueue() {
     for (const item of pending) {
       try {
         await updateQueueItem({ ...item, status: 'syncing' });
-        const type = item.orderPayload._offlineType || 'order';
-        let res: { success: boolean; error?: string };
-
-        if (type === 'split') {
-          res = await createSplitOrder(item.orderPayload);
-        } else {
-          res = await createOrder(item.orderPayload);
-        }
+        const payload = item.orderPayload;
+        const res: { success: boolean; error?: string } =
+          payload._offlineType === 'split' ? await createSplitOrder(payload) : await createOrder(payload);
 
         if (res.success) {
           await removeFromQueue(item.queueId!);

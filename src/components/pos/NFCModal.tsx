@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useEffectEvent } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Wifi, AlertCircle } from 'lucide-react';
 
@@ -17,9 +17,16 @@ interface Props {
 export function NFCModal({ open, input, searching, error, onInputChange, onSubmit, onCancel }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const clearInput = useEffectEvent(() => onInputChange(''));
+
+  // Buka: fokus ke input tersembunyi (reader NFC mengetik ke sana). Tutup: kosongkan.
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 100);
-    else onInputChange('');
+    if (!open) {
+      clearInput();
+      return;
+    }
+    const timer = setTimeout(() => inputRef.current?.focus(), 100);
+    return () => clearTimeout(timer);
   }, [open]);
 
   return (

@@ -28,6 +28,7 @@ import type { PrintJob, PrintJobAction } from "../types";
 import { usePrintJobs } from "../queries";
 import { useUpdatePrintJob } from "../mutations";
 import { brandName } from "@/lib/branding";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 const STATIONS = [
   { value: "all", label: "Semua" },
@@ -52,16 +53,6 @@ const statusTone: Record<PrintJob["status"], string> = {
   failed: "bg-red-100 text-red-700 hover:bg-red-100",
   cancelled: "bg-gray-100 text-gray-700 hover:bg-gray-100",
 };
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
 
 function stationLabel(value: string) {
   return STATIONS.find((station) => station.value === value)?.label || value;
@@ -518,7 +509,7 @@ function Metric({
         </div>
         <div>
           <div className="text-sm text-gray-500">{label}</div>
-          <div className="text-xl font-bold text-gray-950">{value.toLocaleString("id-ID")}</div>
+          <div className="text-xl font-bold text-gray-950">{formatNumber(value)}</div>
         </div>
       </div>
     </div>

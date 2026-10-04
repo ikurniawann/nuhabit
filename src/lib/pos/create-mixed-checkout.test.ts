@@ -126,7 +126,7 @@ describe("guardMixedCheckoutCart", () => {
     }
   });
 
-  it("allows a transaction discount on mixed checkout", () => {
+  it("never rejects on a transaction discount (the guard has no discount input)", () => {
     const withDiscount = guardMixedCheckoutCart({
       productIds: ["p1", "p2"],
       warehouseByProduct: new Map([
@@ -134,7 +134,6 @@ describe("guardMixedCheckoutCart", () => {
         ["p2", "w-b"],
       ]),
       canSellMixed: true,
-      discountAmount: 5000,
     });
     expect(withDiscount.ok).toBe(true);
     if (withDiscount.ok) {
@@ -498,7 +497,7 @@ describe("unpaid childless checkout cancel", () => {
       notes: CHECKOUT_CANCELLED_NOTE,
     });
     expect(isCancelledCheckout({ notes: CHECKOUT_CANCELLED_NOTE })).toBe(true);
-    expect(isCancelledCheckout({ notes: null, table_id: "t1" })).toBe(false);
+    expect(isCancelledCheckout({ notes: null })).toBe(false);
   });
 });
 

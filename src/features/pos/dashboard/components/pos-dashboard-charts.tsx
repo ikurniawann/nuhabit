@@ -1,24 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ApexOptions } from "apexcharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { ApexChart } from "@/features/pos/reports/components/apex-chart";
+import { useBrandPrimary } from "@/features/pos/reports/use-brand-primary";
 import type { TopProduct, TrendPoint } from "../types";
-
-function useBrandPrimary(fallback = "#00281a") {
-  const [color, setColor] = useState(fallback);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const v = getComputedStyle(document.documentElement)
-        .getPropertyValue("--brand-primary")
-        .trim();
-      if (v) setColor(v);
-    }
-  }, []);
-  return color;
-}
 
 const baseChartOptions: ApexOptions = {
   chart: {
@@ -72,12 +60,12 @@ export function PosRevenueTrendChart({ points }: { points: TrendPoint[] }) {
       yaxis: {
         labels: {
           style: { colors: "#9ca3af", fontSize: "11px" },
-          formatter: (value) => formatAmount(value),
+          formatter: (value) => formatRupiah(value),
         },
       },
       tooltip: {
         ...baseChartOptions.tooltip,
-        y: { formatter: (value) => formatAmount(value) },
+        y: { formatter: (value) => formatRupiah(value) },
       },
     }),
     [points, brandPrimary]
@@ -250,7 +238,7 @@ export function PosArkPaymentShareChart({
                 show: true,
                 label: "Orders",
                 formatter: (w) => {
-                  const total = w.globals.seriesTotals.reduce((sum, value) => sum + value, 0);
+                  const total = (w.globals.seriesTotals as number[]).reduce((sum, value) => sum + value, 0);
                   return String(Math.round(total));
                 },
                 color: "#111827",
@@ -292,9 +280,9 @@ export function PosArkPaymentShareChart({
 }
 
 export function formatArk(value: number) {
-  return `${(value / 1000).toLocaleString("en-US", { maximumFractionDigits: 1 })} ARK`;
+  return `${formatNumber(value / 1000, 1)} ARK`;
 }
 
 function formatArkAxis(value: number) {
-  return `${(value / 1000).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  return formatNumber(value / 1000);
 }

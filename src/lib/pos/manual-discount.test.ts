@@ -109,7 +109,7 @@ describe("buildDiscountReason", () => {
 describe("formatDiscountLabel", () => {
   it("formats badge text", () => {
     expect(formatDiscountLabel("percent", 10)).toBe("−10%");
-    expect(formatDiscountLabel("fixed", 5000)).toBe("−Rp 5.000");
+    expect(formatDiscountLabel("fixed", 5000)).toBe("−Rp5.000");
   });
 });
 

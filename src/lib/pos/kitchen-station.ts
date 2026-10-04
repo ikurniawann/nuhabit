@@ -127,7 +127,15 @@ export async function backfillMissingItemStations(db: DbClient, orderId: string)
 
   if (error || !items?.length) return;
 
-  const missing = items.filter((item) => !String(item.station || "").trim());
+  type ItemRow = {
+    id: string;
+    product_id: string | null;
+    product_name: string | null;
+    kitchen_notes: string | null;
+    station: string | null;
+    kitchen_status: string | null;
+  };
+  const missing = (items as ItemRow[]).filter((item) => !String(item.station || "").trim());
   if (missing.length === 0) return;
 
   const productIds = missing

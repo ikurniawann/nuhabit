@@ -148,9 +148,8 @@ export async function GET(request: NextRequest) {
 
     // Daftar jual kasir: sembunyikan produk yang tidak dijual di kasir
     // (mis. bundling "hanya GoFood"). Halaman Produk (include_inactive) tetap lihat semua.
-    const visibleRows = includeInactive
-      ? (data ?? [])
-      : (data ?? []).filter((product: { sales_channels?: unknown }) => isSoldIn(product.sales_channels, "pos"));
+    const rows = (data ?? []) as Array<Record<string, unknown> & { sales_channels?: unknown }>;
+    const visibleRows = includeInactive ? rows : rows.filter((product) => isSoldIn(product.sales_channels, "pos"));
     const normalizedProducts = visibleRows.map((product) =>
       withProductXpAlias(product as Record<string, unknown>)
     );

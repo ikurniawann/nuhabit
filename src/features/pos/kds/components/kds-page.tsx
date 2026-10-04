@@ -260,7 +260,8 @@ function KdsPageContent() {
                     } catch {
                       // ignore
                     }
-                    window.location.assign("/dashboard");
+                    // Layout KDS → (dashboard): navigasi penuh, bukan router.push.
+                    window.location.assign(new URL("/dashboard", window.location.origin).href);
                   })();
                 }}
                 className="h-8 gap-1.5 px-2 text-xs text-gray-400 hover:text-white"

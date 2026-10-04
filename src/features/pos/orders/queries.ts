@@ -1,9 +1,10 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { listCustomers, listOrders } from "./api";
+import { loadOrderTransactionDetail } from "@/features/pos/reports/utils/load-order-detail";
+import { listOrders } from "./api";
 import { ordersQueryKeys } from "./query-keys";
-import type { CustomerListParams, OrderListParams } from "./types";
+import type { OrderListParams } from "./types";
 
 export const useOrderList = (params: OrderListParams = { limit: 100 }) =>
   useQuery({
@@ -12,10 +13,10 @@ export const useOrderList = (params: OrderListParams = { limit: 100 }) =>
     placeholderData: keepPreviousData,
   });
 
-export const useCustomerList = (params: CustomerListParams, enabled = true) =>
+/** Detail transaksi satu order (plus cap checkout bila ada). */
+export const useOrderTransactionDetail = (order: { id: string; checkout_id?: string | null } | null) =>
   useQuery({
-    queryKey: ordersQueryKeys.customers(params),
-    queryFn: () => listCustomers(params),
-    enabled,
-    placeholderData: keepPreviousData,
+    queryKey: ordersQueryKeys.detail(order?.id ?? ""),
+    queryFn: () => loadOrderTransactionDetail(order!.id, order!.checkout_id),
+    enabled: Boolean(order),
   });

@@ -9,7 +9,6 @@ import {
   unitPriceFor,
   UNCATEGORIZED_ID,
   UNCATEGORIZED_LABEL,
-  formatMenuPrice,
 } from "./menu";
 
 const baseRow = {
@@ -126,13 +125,6 @@ describe("buildCategories / filterProducts / groupBySection", () => {
     expect(sections).toHaveLength(1);
     expect(sections[0].category.id).toBe("c-drink");
     expect(sections[0].products.map((p) => p.id)).toEqual(["d"]);
-  });
-});
-
-describe("formatMenuPrice", () => {
-  it("format id-ID tanpa simbol mata uang seperti referensi daftar menu", () => {
-    expect(formatMenuPrice(32500)).toBe("32.500");
-    expect(formatMenuPrice(1234567.6)).toBe("1.234.568");
   });
 });
 

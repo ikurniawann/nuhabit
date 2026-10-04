@@ -1,36 +1,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { memberPrice } from '@/lib/pos/member-price';
-import {
-  Minus,
-  Plus,
-  Trash2,
-  ShoppingBag,
-  Utensils,
-  Truck,
-  Check,
-  Loader2,
-  Percent,
-  ChevronRight,
-  ChevronDown,
-  SlidersHorizontal,
-  Gift,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronDown, Gift, ShoppingBag, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { ManualDiscountDialog } from '@/components/pos/ManualDiscountDialog';
 import type { PosCartItem } from '@/hooks/use-pos-cart';
-import { lineDiscountAmount, lineGross } from '@/hooks/use-pos-cart';
-import { HelpHint } from '@/components/ui/help-hint';
+import { lineGross } from '@/hooks/use-pos-cart';
 import { cn } from '@/lib/utils';
-import {
-  formatDiscountLabel,
-  type DiscountType,
-} from '@/lib/pos/manual-discount';
-import {
-  allocateFreeUnitsToCartLines,
-  type AppliedOffer,
-} from '@/lib/promo/offer-evaluate';
+import { formatDiscountLabel, type DiscountType } from '@/lib/pos/manual-discount';
+import { allocateFreeUnitsToCartLines, type AppliedOffer } from '@/lib/promo/offer-evaluate';
+import { CartExtras } from './cart-panel/cart-extras';
+import { CartLine } from './cart-panel/cart-line';
+import { CartActions, CartHeader } from './cart-panel/cart-chrome';
+import { DiscountRow, SummaryRow } from './cart-panel/money';
 
 interface CartPanelProps {
   cart: PosCartItem[];
@@ -106,32 +87,6 @@ interface CartPanelProps {
   lockedItemIds?: string[];
 }
 
-function MoneyPair({
-  amount,
-  formatCurrency,
-  formatArk,
-  className,
-  arkClassName,
-}: {
-  amount: number;
-  formatCurrency: (value: number) => string;
-  /** Kosong = baris ARK tidak ditampilkan (fitur ARK Coin nonaktif). */
-  formatArk?: (value: number) => string;
-  className?: string;
-  arkClassName?: string;
-}) {
-  return (
-    <div className={cn('text-right leading-tight', className)}>
-      <div className="font-medium text-foreground">{formatCurrency(amount)}</div>
-      {formatArk && (
-        <div className={cn('text-[11px] font-medium text-amber-600/90', arkClassName)}>
-          {formatArk(amount)}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function CartPanel({
   cart,
   orderType,
@@ -192,6 +147,7 @@ export function CartPanel({
 }: CartPanelProps) {
   // ARK Coin nonaktif → semua angka ARK di keranjang disembunyikan.
   const arkFormatter = showArk ? formatArk : undefined;
+  const money = { formatCurrency, formatArk: arkFormatter };
   const lockedItemIdSet = useMemo(() => new Set(lockedItemIds), [lockedItemIds]);
   const hasNewItems = cart.some((item) => !lockedItemIdSet.has(item.id));
   const membershipAmt = membershipDiscountAmount ?? discountAmount;
@@ -246,61 +202,13 @@ export function CartPanel({
         className
       )}
     >
-      <div className="border-b border-gray-200/70 px-3 py-2">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-foreground">Order</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              {cart.reduce((sum, i) => sum + i.quantity, 0)} items
-            </span>
-            {onClearCart && (
-              <button
-                type="button"
-                disabled={cart.length === 0}
-                onClick={onClearCart}
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition',
-                  cart.length === 0
-                    ? 'cursor-not-allowed border-gray-200/70 text-muted-foreground/50'
-                    : 'border-red-200/80 text-red-600 hover:bg-red-50'
-                )}
-                title="Kosongkan keranjang"
-                aria-label="Kosongkan keranjang"
-              >
-                <Trash2 className="h-3 w-3" />
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {orderType === 'dine_in' && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-              <Utensils className="h-3 w-3" /> Dine-in
-            </span>
-          )}
-          {orderType === 'takeaway' && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
-              <ShoppingBag className="h-3 w-3" /> Takeaway
-            </span>
-          )}
-          {orderType === 'delivery' && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700">
-              <Truck className="h-3 w-3" /> Delivery
-            </span>
-          )}
-          {orderType === 'dine_in' && selectedTable ? (
-            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-              Table {selectedTable}
-            </span>
-          ) : null}
-          {continuingCheckoutNumber ? (
-            <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-              Open bill {continuingCheckoutNumber}
-            </span>
-          ) : null}
-        </div>
-      </div>
+      <CartHeader
+        itemCount={cart.reduce((sum, i) => sum + i.quantity, 0)}
+        orderType={orderType}
+        selectedTable={selectedTable}
+        continuingCheckoutNumber={continuingCheckoutNumber}
+        onClearCart={onClearCart}
+      />
 
       <div className="min-h-[7rem] flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
         {cart.length === 0 ? (
@@ -309,184 +217,23 @@ export function CartPanel({
             <p className="text-sm">No items yet</p>
           </div>
         ) : (
-          cart.map((item) => {
-            const discAmt = lineDiscountAmount(item);
-            const label = formatDiscountLabel(item.discount_type, item.discount_value);
-            const netUnit = Math.max(0, item.price - (discAmt > 0 ? discAmt / item.quantity : 0));
-            // Member terpilih (owner 2026-10-01): harga reguler dicoret + harga member.
-            const memberUnit = memberPrice(netUnit, membershipDiscountPct);
-            const showMemberPrice = memberUnit < netUnit;
-            const freeInfo = freeByLine.get(item.id);
-            const freeQty = freeInfo?.freeQty ?? 0;
-            const paidQty = Math.max(0, item.quantity - freeQty);
-            const showPaid = paidQty > 0 || freeQty === 0;
-            const locked = lockedItemIdSet.has(item.id);
-
-            return (
-              <div key={item.id} className="space-y-1.5">
-                {showPaid && (
-                  <div className="rounded-lg border border-gray-200/60 bg-muted/30 px-2.5 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {item.name}
-                          {showStallBadges && item.stallName ? (
-                            <span className="ml-1.5 rounded bg-sky-50 px-1.5 py-0.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-sky-700">
-                              {item.stallName}
-                            </span>
-                          ) : null}
-                        </div>
-                        {(item.variantName ||
-                          (item.modifierNames && item.modifierNames.length > 0)) && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {item.variantName && (
-                              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                                {item.variantName}
-                              </span>
-                            )}
-                            {item.modifierNames?.map((mod, idx) => (
-                              <span
-                                key={idx}
-                                className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-                              >
-                                {mod}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {item.notes && (
-                          <div className="mt-0.5 truncate text-[11px] italic text-muted-foreground">
-                            {item.notes}
-                          </div>
-                        )}
-                        <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                          {showMemberPrice ? (
-                            <>
-                              <span className="text-[11px] text-muted-foreground line-through">
-                                {formatCurrency(item.price)}
-                              </span>
-                              <span className="text-xs font-semibold text-primary">
-                                {formatCurrency(memberUnit)}
-                              </span>
-                            </>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              {formatCurrency(discAmt > 0 ? netUnit : item.price)}
-                            </span>
-                          )}
-                          {showArk && (
-                            <span className="text-[11px] font-medium text-amber-600/90">
-                              {formatArk(showMemberPrice ? memberUnit : discAmt > 0 ? netUnit : item.price)}
-                            </span>
-                          )}
-                          {label && (
-                            <span className="text-[11px] font-medium text-green-700">
-                              {label}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-center justify-center gap-1 self-center">
-                        <div className="flex items-center rounded-md border border-gray-200/80 bg-white">
-                          <button
-                            type="button"
-                            disabled={locked}
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
-                            aria-label="Kurangi qty"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="w-5 text-center text-xs font-semibold tabular-nums">
-                            {paidQty > 0 ? paidQty : item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={locked}
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
-                            aria-label="Tambah qty"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        {showItemDiscountUi && (
-                          <button
-                            type="button"
-                            onClick={() => setItemDialogId(item.id)}
-                            title="Diskon item"
-                            aria-label="Diskon item"
-                            className={cn(
-                              'flex h-7 w-7 items-center justify-center rounded-md border transition',
-                              label
-                                ? 'border-primary/30 bg-primary/10 text-primary'
-                                : 'border-gray-200/80 bg-white text-muted-foreground hover:border-primary/30 hover:text-primary'
-                            )}
-                          >
-                            <Percent className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          disabled={locked}
-                          onClick={() => removeFromCart(item.id)}
-                          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                          aria-label="Hapus item"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {freeQty > 0 && (
-                  <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/80 px-2.5 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                            Free
-                          </span>
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
-                            <Gift className="h-3 w-3" />
-                            {freeInfo?.offerName || 'Promo'}
-                          </span>
-                        </div>
-                        <div className="truncate text-sm font-medium text-foreground">
-                          {item.name}
-                          {showStallBadges && item.stallName ? (
-                            <span className="ml-1.5 rounded bg-sky-50 px-1.5 py-0.5 align-middle text-[9px] font-semibold uppercase tracking-wide text-sky-700">
-                              {item.stallName}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="mt-1 text-xs font-medium text-emerald-700">
-                          {formatCurrency(0)}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <div className="flex h-7 min-w-8 items-center justify-center rounded-md border border-emerald-200/80 bg-white px-2 text-xs font-semibold tabular-nums text-emerald-800">
-                          {freeQty}
-                        </div>
-                        {paidQty === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.id)}
-                            className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                            aria-label="Hapus item gratis"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
+          cart.map((item) => (
+            <CartLine
+              key={item.id}
+              item={item}
+              freeInfo={freeByLine.get(item.id)}
+              locked={lockedItemIdSet.has(item.id)}
+              membershipDiscountPct={membershipDiscountPct}
+              showStallBadges={showStallBadges}
+              showArk={showArk}
+              showItemDiscountUi={showItemDiscountUi}
+              formatCurrency={formatCurrency}
+              formatArk={formatArk}
+              updateQuantity={updateQuantity}
+              removeFromCart={removeFromCart}
+              onOpenItemDiscount={setItemDialogId}
+            />
+          ))
         )}
 
         {freeItemCount > 0 && (
@@ -500,44 +247,21 @@ export function CartPanel({
       </div>
 
       <div className="space-y-1.5 border-t border-gray-200/70 bg-muted/20 px-3 py-2">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted-foreground">Subtotal</span>
-          <MoneyPair
-            amount={displaySubtotal}
-            formatCurrency={formatCurrency}
-            formatArk={arkFormatter}
-          />
-        </div>
-
-        {itemDiscountTotal > 0 && (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-green-700">Diskon item</span>
-            <span className="font-medium tabular-nums text-green-700">
-              -{formatCurrency(itemDiscountTotal)}
-            </span>
-          </div>
-        )}
-
+        <SummaryRow label="Subtotal" amount={displaySubtotal} money={money} />
+        {itemDiscountTotal > 0 && <DiscountRow label="Diskon item" amount={itemDiscountTotal} formatCurrency={formatCurrency} />}
         {summaryOfferDiscount > 0 && (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="truncate text-green-700">
-              {summaryOffers.length === 1
-                ? summaryOffers[0]!.name
-                : `Promo paket (${summaryOffers.length})`}
-            </span>
-            <span className="font-medium tabular-nums text-green-700">
-              -{formatCurrency(summaryOfferDiscount)}
-            </span>
-          </div>
+          <DiscountRow
+            label={summaryOffers.length === 1 ? summaryOffers[0]!.name : `Promo paket (${summaryOffers.length})`}
+            amount={summaryOfferDiscount}
+            formatCurrency={formatCurrency}
+          />
         )}
-
         {membershipAmt > 0 && selectedCustomer && (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-green-700">Member ({selectedCustomer.discount}%)</span>
-            <span className="font-medium tabular-nums text-green-700">
-              -{formatCurrency(membershipAmt)}
-            </span>
-          </div>
+          <DiscountRow
+            label={`Member (${selectedCustomer.discount}%)`}
+            amount={membershipAmt}
+            formatCurrency={formatCurrency}
+          />
         )}
 
         {promoApplied && promoDiscount > 0 ? (
@@ -556,31 +280,21 @@ export function CartPanel({
                 </button>
               )}
             </div>
-            <span className="font-medium tabular-nums text-green-700">
-              -{formatCurrency(promoDiscount)}
-            </span>
+            <span className="font-medium tabular-nums text-green-700">-{formatCurrency(promoDiscount)}</span>
           </div>
         ) : null}
 
         {/* Tablet-friendly (owner 2026-09-29): opsi yang jarang dipakai dilipat
             supaya daftar item mendapat ruang; nilai pajak/service tetap tampil. */}
-        {!extrasOpen && tax > 0 ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">{taxToggleLabel || 'Tax'}</span>
-            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={arkFormatter} />
-          </div>
-        ) : null}
+        {!extrasOpen && tax > 0 ? <SummaryRow label={taxToggleLabel || 'Tax'} amount={tax} money={money} /> : null}
         {!extrasOpen && serviceCharge > 0 ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">{serviceToggleLabel || 'Service Charge'}</span>
-            <MoneyPair amount={serviceCharge} formatCurrency={formatCurrency} formatArk={arkFormatter} />
-          </div>
+          <SummaryRow label={serviceToggleLabel || 'Service Charge'} amount={serviceCharge} money={money} />
         ) : null}
         <button
           type="button"
           onClick={() => setExtrasOpen((open) => !open)}
           aria-expanded={extrasOpen}
-          className="flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-gray-300/80 bg-white px-2 py-1.5 text-left text-xs font-medium text-gray-600 transition hover:border-primary/40 hover:text-primary"
+          className="flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-gray-300/80 bg-white px-2 py-1.5 text-left text-xs font-medium text-gray-600 transition hover:border-primary/40 hover:text-brand-text"
         >
           <span className="inline-flex min-w-0 items-center gap-1.5">
             <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
@@ -588,7 +302,7 @@ export function CartPanel({
           </span>
           <span className="inline-flex shrink-0 items-center gap-1">
             {extrasActive.map((label) => (
-              <span key={label} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+              <span key={label} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-text">
                 {label}
               </span>
             ))}
@@ -596,138 +310,40 @@ export function CartPanel({
           </span>
         </button>
         {extrasOpen ? (
-          <div className="space-y-2">
-        {showManualUi && (
-          <button
-            type="button"
-            disabled={cart.length === 0 || (manualDiscountBasis <= 0 && manualDiscountAmount <= 0)}
-            onClick={() => setTxDialogOpen(true)}
-            className={cn(
-              'flex w-full items-center justify-between gap-3 rounded-md px-1 py-0.5 text-sm transition',
-              'hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent',
-              manualDiscountAmount > 0 ? 'text-green-700' : 'text-primary'
-            )}
-          >
-            <span className="inline-flex items-center gap-1 text-left font-medium underline decoration-primary/40 underline-offset-2">
-              <Percent className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                Diskon transaksi
-                {manualDiscountAmount > 0 && manualLabel ? ` (${manualLabel.replace(/^−/, '')})` : ''}
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            </span>
-            <span
-              className={cn(
-                'tabular-nums',
-                manualDiscountAmount > 0 ? 'font-medium' : 'text-muted-foreground'
-              )}
-            >
-              {manualDiscountAmount > 0 ? `-${formatCurrency(manualDiscountAmount)}` : 'Atur'}
-            </span>
-          </button>
-        )}
-
-        {!(promoApplied && promoDiscount > 0) && showPromoUi ? (
-          <div>
-            <div className="flex gap-1.5">
-              <input
-                type="text"
-                value={promoInput}
-                onChange={(e) => onPromoInputChange?.(e.target.value)}
-                placeholder={promoDisabled ? 'Promo offline' : 'Kode promo'}
-                disabled={promoDisabled}
-                className="h-8 w-full rounded-md border border-gray-200/80 bg-white px-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:bg-muted/40"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 shrink-0 px-2.5"
-                disabled={promoDisabled || promoBusy || promoInput.trim().length < 3}
-                onClick={onApplyPromo}
-              >
-                {promoBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Pakai'}
-              </Button>
-            </div>
-            {promoError && <p className="mt-1 text-[11px] text-red-600">{promoError}</p>}
-          </div>
-        ) : null}
-        {onOrderNotesChange ? (
-          <input
-            type="text"
-            value={orderNotes}
-            onChange={(e) => onOrderNotesChange(e.target.value)}
-            maxLength={200}
-            placeholder="Catatan transaksi — tercetak di CO & struk"
-            className="h-8 w-full rounded-md border border-gray-200/80 bg-white px-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
+          <CartExtras
+            money={money}
+            manualDiscount={
+              showManualUi
+                ? {
+                    amount: manualDiscountAmount,
+                    label: manualLabel,
+                    disabled: cart.length === 0 || (manualDiscountBasis <= 0 && manualDiscountAmount <= 0),
+                  }
+                : null
+            }
+            onOpenManualDiscount={() => setTxDialogOpen(true)}
+            promo={
+              !(promoApplied && promoDiscount > 0) && showPromoUi
+                ? {
+                    input: promoInput,
+                    busy: promoBusy,
+                    error: promoError,
+                    disabled: promoDisabled,
+                    onInputChange: onPromoInputChange,
+                    onApply: onApplyPromo,
+                  }
+                : null
+            }
+            orderNotes={orderNotes}
+            onOrderNotesChange={onOrderNotesChange}
+            tax={{ label: taxToggleLabel, amount: tax, included: includeTax, onToggle: () => setIncludeTax(!includeTax) }}
+            service={{
+              label: serviceToggleLabel,
+              amount: serviceCharge,
+              included: includeService,
+              onToggle: setIncludeService ? () => setIncludeService(!includeService) : undefined,
+            }}
           />
-        ) : null}
-
-        {taxToggleLabel ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setIncludeTax(!includeTax)}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <div
-                  className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    includeTax ? 'border-primary bg-primary' : 'border-gray-300'
-                  }`}
-                >
-                  {includeTax && <Check className="h-3 w-3 text-white" />}
-                </div>
-                <span>{taxToggleLabel}</span>
-              </button>
-              <HelpHint helpId="pos.tax-toggle" role="default" />
-            </div>
-            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={arkFormatter} />
-          </div>
-        ) : tax > 0 ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Tax</span>
-            <MoneyPair amount={tax} formatCurrency={formatCurrency} formatArk={arkFormatter} />
-          </div>
-        ) : null}
-
-        {serviceToggleLabel && setIncludeService ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setIncludeService(!includeService)}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <div
-                  className={`flex h-4 w-4 items-center justify-center rounded border ${
-                    includeService ? 'border-primary bg-primary' : 'border-gray-300'
-                  }`}
-                >
-                  {includeService && <Check className="h-3 w-3 text-white" />}
-                </div>
-                <span>{serviceToggleLabel}</span>
-              </button>
-              <HelpHint helpId="pos.service-toggle" role="default" />
-            </div>
-            <MoneyPair
-              amount={serviceCharge}
-              formatCurrency={formatCurrency}
-              formatArk={arkFormatter}
-            />
-          </div>
-        ) : serviceCharge > 0 ? (
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-muted-foreground">Service Charge</span>
-            <MoneyPair
-              amount={serviceCharge}
-              formatCurrency={formatCurrency}
-              formatArk={arkFormatter}
-            />
-          </div>
-        ) : null}
-
-          </div>
         ) : null}
 
         {otherChargeLines.map((line) => (
@@ -759,55 +375,23 @@ export function CartPanel({
               <div className="text-sm font-semibold text-foreground">Total</div>
               {showArk && <div className="text-xs font-medium text-amber-600">{formatArk(totalAfterArk)}</div>}
             </div>
-            <div className="text-xl font-bold tabular-nums text-primary">
+            <div className="text-xl font-bold tabular-nums text-brand-text">
               {formatCurrency(totalAfterArk)}
             </div>
           </div>
         )}
       </div>
 
-      <div className="space-y-1.5 border-t border-gray-200/70 px-3 py-2">
-        {!canTransact && (
-          <div className="rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-800">
-            Open a shift to pay or save orders.{' '}
-            {onOpenShift && (
-              <button
-                type="button"
-                onClick={onOpenShift}
-                className="font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
-              >
-                Open shift
-              </button>
-            )}
-          </div>
-        )}
-        <div className="flex gap-2">
-        <Button
-            type="button"
-            variant="outline"
-            onClick={onOpenBill}
-            disabled={cart.length === 0 || isSavingBill || !canTransact}
-            className="h-11 w-[38%] shrink-0 border-amber-200/80 font-semibold text-amber-700 hover:bg-amber-50/80"
-          >
-            {isSavingBill ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              continuingCheckoutNumber && hasNewItems ? 'Order lagi' : 'Order'
-            )}
-          </Button>
-        <Button
-            type="button"
-            onClick={setShowPaymentModal}
-            disabled={cart.length === 0 || !canTransact}
-            className="h-11 min-w-0 flex-1 bg-primary text-base font-semibold hover:bg-primary/90"
-          >
-            Pay {formatCurrency(total)}
-          </Button>
-        </div>
-      </div>
+      <CartActions
+        canTransact={canTransact}
+        onOpenShift={onOpenShift}
+        empty={cart.length === 0}
+        isSavingBill={isSavingBill}
+        orderLabel={continuingCheckoutNumber && hasNewItems ? 'Order lagi' : 'Order'}
+        payLabel={`Pay ${formatCurrency(total)}`}
+        onOpenBill={onOpenBill}
+        onPay={setShowPaymentModal}
+      />
 
       {showItemDiscountUi && itemForDialog && (
         <ManualDiscountDialog

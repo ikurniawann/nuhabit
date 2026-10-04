@@ -6,8 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, ReceiptText, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetchMemberBills, memberBillKeys } from "../api";
-import { ageText, formatIdr } from "../format";
+import { ageText } from "../format";
 import { MemberBillDetailPanel } from "./member-bill-detail";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * POS → Operasional → Tagihan (owner 2026-10-01): pilih member → lihat order
@@ -47,7 +48,7 @@ export function MemberBillsPage() {
         </div>
         <div className="rounded-xl border border-gray-200/70 bg-white px-4 py-2 text-right dark:bg-card">
           <div className="text-xs text-muted-foreground">Total sisa tagihan ({members.length} member)</div>
-          <div className="text-lg font-bold tabular-nums text-primary">{formatIdr(totalOutstanding)}</div>
+          <div className="text-lg font-bold tabular-nums text-brand-text">{formatRupiah(totalOutstanding)}</div>
         </div>
       </div>
 
@@ -91,7 +92,7 @@ export function MemberBillsPage() {
                           : "border-gray-200/70 bg-white hover:border-primary/40 dark:bg-card"
                       )}
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-brand-text">
                         {member.name.charAt(0).toUpperCase()}
                       </span>
                       <span className="min-w-0 flex-1">
@@ -104,11 +105,11 @@ export function MemberBillsPage() {
                       </span>
                       <span className="shrink-0 text-right">
                         <span className="block text-sm font-bold tabular-nums text-foreground">
-                          {formatIdr(member.balance.outstanding)}
+                          {formatRupiah(member.balance.outstanding)}
                         </span>
                         {member.balance.credit > 0 ? (
                           <span className="block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                            dicicil {formatIdr(member.balance.credit)}
+                            dicicil {formatRupiah(member.balance.credit)}
                           </span>
                         ) : null}
                       </span>

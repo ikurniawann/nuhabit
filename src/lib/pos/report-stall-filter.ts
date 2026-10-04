@@ -52,7 +52,8 @@ export async function resolveReportStallFilter(
     canCentralCheckout: gate?.canCentralCheckout === true,
   });
 
-  if (expandToBranch) {
+  // !scope sudah tercakup expandToBranch; ditulis eksplisit supaya scope ter-narrow di bawah.
+  if (!scope || expandToBranch) {
     const stalls = await query<ReportStallOption>(
       `SELECT id, code, name
        FROM configuration.warehouses

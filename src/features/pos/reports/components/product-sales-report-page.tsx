@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, Loader2, Package, Store, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -8,29 +8,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/motion";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { downloadProductSalesReportXlsx } from "../api";
 import { useProductSalesReport } from "../queries";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
-import { formatReportStallLabel } from "../utils/transaction-labels";
+import { formatReportStallLabel } from "@/lib/pos/reports/transaction-labels";
 import { ReportExportActions, ReportPrintStyles } from "./report-export-actions";
+import { stallFilterValue } from "../utils/stall-filter";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value || 0);
-
-const formatQty = (value: number) =>
-  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(value || 0);
+const formatQty = (value: number) => formatNumber(value, 2);
 
 export function ProductSalesReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
   const [dateTo, setDateTo] = useState(todayWib);
-  const [warehouseId, setWarehouseId] = useState("");
+  const [pickedWarehouseId, setWarehouseId] = useState("");
   const [applied, setApplied] = useState({
     date_from: firstDayOfMonthWib(),
     date_to: todayWib(),
@@ -40,12 +33,7 @@ export function ProductSalesReportPage() {
   const { data, isLoading, isFetching, error } = useProductSalesReport(applied);
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (!data) return;
-    if (data.stall_locked && data.filters.warehouse_id && !warehouseId) {
-      setWarehouseId(data.filters.warehouse_id);
-    }
-  }, [data, warehouseId]);
+  const warehouseId = stallFilterValue(pickedWarehouseId, data);
 
   const stallOptions = data?.stall_options ?? [];
   const stallLocked = Boolean(data?.stall_locked);
@@ -172,7 +160,7 @@ export function ProductSalesReportPage() {
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric title="Produk terjual" value={String(data?.summary.products ?? 0)} icon={Package} />
           <Metric title="Total qty" value={formatQty(data?.summary.quantity ?? 0)} icon={Store} />
-          <Metric title="Total Omzet" value={formatCurrency(data?.summary.revenue ?? 0)} icon={TrendingUp} />
+          <Metric title="Total Omzet" value={formatRupiah(data?.summary.revenue ?? 0)} icon={TrendingUp} />
         </div>
 
         <PurchasingListSection
@@ -263,7 +251,7 @@ export function ProductSalesReportPage() {
                         {formatQty(row.order_count)}
                       </td>
                       <td className="px-3 py-3 text-right font-medium">
-                        {formatCurrency(row.revenue)}
+                        {formatRupiah(row.revenue)}
                       </td>
                     </tr>
                   ))
@@ -290,7 +278,7 @@ function Metric({
   return (
     <Card className="border-gray-200/70 shadow-xs">
       <CardContent className="p-4">
-        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-primary">
+        <div className="mb-2 w-fit rounded-lg bg-primary/10 p-2 text-brand-text">
           <Icon className="h-4 w-4" />
         </div>
         <div className="text-xl font-bold text-foreground">{value}</div>
