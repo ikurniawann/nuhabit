@@ -17,6 +17,7 @@ import (
 	"nuhabit/backend/internal/modules/recruitment/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Service holds the recruitment use cases.
@@ -26,8 +27,7 @@ type Service struct {
 	ports   Ports
 	now     func() time.Time
 	log     *slog.Logger
-	limiter *domain.RateLimiter
-	signals *domain.Signaling
+	limiter *ratelimit.Limiter
 }
 
 // NewService builds the service on a pool (or a test transaction).
@@ -38,7 +38,7 @@ func NewService(db database.DB, ports Ports, now func() time.Time, log *slog.Log
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{db: db, ports: ports, now: now, log: log, limiter: domain.NewRateLimiter(), signals: domain.NewSignaling()}
+	return &Service{db: db, ports: ports, now: now, log: log, limiter: ratelimit.New(db)}
 }
 
 // Actor is the staff member a change is attributed to.
@@ -52,17 +52,19 @@ func (s *Service) inTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	return database.WithTx(ctx, s.db, fn)
 }
 
-// allow is checkRateLimit(key, limit).allowed.
-func (s *Service) allow(key string, limit int) bool {
-	return s.limiter.Allow(key, limit, s.now())
+// allow is checkRateLimit(key, limit).allowed, counted across replicas.
+func (s *Service) allow(ctx context.Context, key string, limit int) (bool, error) {
+	w, err := s.limiter.Fixed(ctx, key, limit, domain.RateWindow, s.now())
+	return w.Allowed, err
 }
 
 // enforce is enforceRateLimit: 429 with the given message.
-func (s *Service) enforce(key string, limit int, message string) error {
-	if !s.allow(key, limit) {
+func (s *Service) enforce(ctx context.Context, key string, limit int, message string) error {
+	allowed, err := s.allow(ctx, key, limit)
+	if err == nil && !allowed {
 		return httpx.TooManyRequests(message)
 	}
-	return nil
+	return err
 }
 
 // newPortalToken is crypto.randomBytes(32).toString("hex").

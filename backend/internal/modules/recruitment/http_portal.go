@@ -193,7 +193,11 @@ func (h *handler) portalOffers(kind portalKind) httpx.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return reply(w, http.StatusOK, "data", object("offers", h.svc.PendingOffers(session, kind.sessionType)))
+		offers, err := h.svc.PendingOffers(r.Context(), session, kind.sessionType)
+		if err != nil {
+			return err
+		}
+		return reply(w, http.StatusOK, "data", object("offers", offers))
 	}
 }
 
@@ -210,7 +214,11 @@ func (h *handler) portalAnswer(kind portalKind) httpx.HandlerFunc {
 		if !ok {
 			return httpx.BadRequest("Payload tidak valid")
 		}
-		return reply(w, http.StatusOK, "data", object("ok", h.svc.AnswerOffer(kind.sessionType, session.Str("id"), offerID, sdp)))
+		answered, err := h.svc.AnswerOffer(r.Context(), kind.sessionType, session.Str("id"), offerID, sdp)
+		if err != nil {
+			return err
+		}
+		return reply(w, http.StatusOK, "data", object("ok", answered))
 	}
 }
 
@@ -275,7 +283,10 @@ func (h *handler) manualOfferResponse(w http.ResponseWriter, r *http.Request) {
 		fail(http.StatusBadRequest, "ID offer tidak valid")
 		return
 	}
-	if !h.svc.allow("offer_response_put_"+u.ID, 100) {
+	if allowed, err := h.svc.allow(r.Context(), "offer_response_put_"+u.ID, 100); err != nil {
+		fail(http.StatusInternalServerError, "Internal server error")
+		return
+	} else if !allowed {
 		fail(http.StatusTooManyRequests, "Terlalu banyak permintaan, coba lagi sebentar lagi")
 		return
 	}

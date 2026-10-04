@@ -86,7 +86,7 @@ func (s *Service) requirePortal(ctx context.Context, kind portalKind, token, buc
 	if !ok {
 		limit = domain.DefaultRateLimit
 	}
-	if err := s.enforce(kind.keyPrefix+bucket+"_"+row.Str("id"), limit, domain.TooManyRequests); err != nil {
+	if err := s.enforce(ctx, kind.keyPrefix+bucket+"_"+row.Str("id"), limit, domain.TooManyRequests); err != nil {
 		return nil, err
 	}
 	return row, nil
@@ -516,16 +516,16 @@ func (s *Service) SaveFrame(ctx context.Context, sessionType, sessionID, frame s
 }
 
 // PendingOffers lists the HR WebRTC offers waiting for the candidate.
-func (s *Service) PendingOffers(session *Row, sessionType string) []domain.PendingOffer {
+func (s *Service) PendingOffers(ctx context.Context, session *Row, sessionType string) ([]domain.PendingOffer, error) {
 	if session.Str("status") != "in_progress" {
-		return []domain.PendingOffer{}
+		return []domain.PendingOffer{}, nil
 	}
-	return s.signals.PendingOffers(sessionType, session.Str("id"), s.now())
+	return s.repo.PendingOffers(ctx, s.db, sessionType, session.Str("id"), s.now())
 }
 
 // AnswerOffer stores the candidate's SDP answer.
-func (s *Service) AnswerOffer(sessionType, sessionID, offerID, sdp string) bool {
-	return s.signals.PutAnswer(sessionType, sessionID, offerID, sdp, s.now())
+func (s *Service) AnswerOffer(ctx context.Context, sessionType, sessionID, offerID, sdp string) (bool, error) {
+	return s.repo.AnswerOffer(ctx, s.db, sessionType, sessionID, offerID, sdp, s.now())
 }
 
 // ── offer portal ────────────────────────────────────────────────────────────

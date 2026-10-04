@@ -240,7 +240,9 @@ func (h *handler) livePutOffer(w http.ResponseWriter, r *http.Request, _ Actor) 
 	if !ok {
 		return httpx.BadRequest("Payload tidak valid")
 	}
-	h.svc.signals.PutOffer(t, id, offerID, sdp, h.svc.now())
+	if err := h.svc.repo.PutOffer(r.Context(), h.svc.db, t, id, offerID, sdp, h.svc.now()); err != nil {
+		return err
+	}
 	return reply(w, http.StatusCreated, "data", object("ok", true))
 }
 
@@ -253,9 +255,9 @@ func (h *handler) liveAnswer(w http.ResponseWriter, r *http.Request, _ Actor) er
 	if !domain.IsOfferID(offerID) {
 		return httpx.BadRequest("offer_id tidak valid")
 	}
-	var sdp any
-	if answer := h.svc.signals.Answer(t, id, offerID, h.svc.now()); answer != nil {
-		sdp = *answer
+	answer, err := h.svc.repo.OfferAnswer(r.Context(), h.svc.db, t, id, offerID, h.svc.now())
+	if err != nil {
+		return err
 	}
-	return reply(w, http.StatusOK, "data", object("sdp", sdp))
+	return reply(w, http.StatusOK, "data", object("sdp", answer))
 }

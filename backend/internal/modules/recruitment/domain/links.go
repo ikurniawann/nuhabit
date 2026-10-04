@@ -2,7 +2,6 @@ package domain
 
 import (
 	"regexp"
-	"sync"
 	"time"
 )
 
@@ -37,58 +36,9 @@ func IsLinkExpired(expiresAt, issuedAt *time.Time, maxLifetime time.Duration, no
 // TooManyRequests is TOO_MANY_REQUESTS of route-helpers.ts.
 const TooManyRequests = "Terlalu banyak permintaan, coba lagi sebentar lagi"
 
-// Rate limit defaults of lib/rate-limit.ts.
+// Rate limit defaults of lib/rate-limit.ts: a fixed window that resets one
+// minute after its first hit.
 const (
 	DefaultRateLimit = 100
-	rateWindow       = time.Minute
+	RateWindow       = time.Minute
 )
-
-type rateEntry struct {
-	count int
-	reset time.Time
-}
-
-// RateLimiter is the fixed one-minute window of lib/rate-limit.ts, per
-// process. Expired entries are swept when the map grows.
-type RateLimiter struct {
-	mu      sync.Mutex
-	entries map[string]*rateEntry
-}
-
-// NewRateLimiter builds an empty limiter.
-func NewRateLimiter() *RateLimiter { return &RateLimiter{entries: map[string]*rateEntry{}} }
-
-// Allow is checkRateLimit(key, limit).allowed.
-func (l *RateLimiter) Allow(key string, limit int, now time.Time) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	e, ok := l.entries[key]
-	if !ok || now.After(e.reset) {
-		if len(l.entries) > 10_000 {
-			for k, v := range l.entries {
-				if now.After(v.reset) {
-					delete(l.entries, k)
-				}
-			}
-		}
-		l.entries[key] = &rateEntry{count: 1, reset: now.Add(rateWindow)}
-		return true
-	}
-	if e.count >= limit {
-		return false
-	}
-	e.count++
-	return true
-}
-
-// Headers is getRateLimitHeaders: limit and remaining always against the
-// default 100, reset in epoch milliseconds.
-func (l *RateLimiter) Headers(key string, now time.Time) (limit, remaining int, reset int64) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	e, ok := l.entries[key]
-	if !ok {
-		return DefaultRateLimit, DefaultRateLimit, now.Add(rateWindow).UnixMilli()
-	}
-	return DefaultRateLimit, max(0, DefaultRateLimit-e.count), e.reset.UnixMilli()
-}

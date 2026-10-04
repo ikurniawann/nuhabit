@@ -27,7 +27,11 @@ func candidateID(r *http.Request) (string, error) {
 func (h *handler) listCandidates(w http.ResponseWriter, r *http.Request, a Actor) error {
 	// keyed to the user: X-Forwarded-For can be forged
 	key := "candidates_get_" + a.ID
-	if !h.svc.allow(key, domain.DefaultRateLimit) {
+	allowed, err := h.svc.allow(r.Context(), key, domain.DefaultRateLimit)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return httpx.TooManyRequests("")
 	}
 	q, f := parseCandidateListQuery(r)
@@ -42,13 +46,19 @@ func (h *handler) listCandidates(w http.ResponseWriter, r *http.Request, a Actor
 	if err != nil {
 		return err
 	}
-	h.rateHeaders(w, key)
+	if err := h.rateHeaders(w, r, key); err != nil {
+		return err
+	}
 	return httpx.JSON(w, http.StatusOK, page)
 }
 
 func (h *handler) createCandidate(w http.ResponseWriter, r *http.Request, a Actor) error {
 	key := "candidates_post_" + a.ID
-	if !h.svc.allow(key, domain.DefaultRateLimit) {
+	allowed, err := h.svc.allow(r.Context(), key, domain.DefaultRateLimit)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return httpx.TooManyRequests("")
 	}
 	f := form(r)
@@ -60,7 +70,9 @@ func (h *handler) createCandidate(w http.ResponseWriter, r *http.Request, a Acto
 	if err != nil {
 		return err
 	}
-	h.rateHeaders(w, key)
+	if err := h.rateHeaders(w, r, key); err != nil {
+		return err
+	}
 	return reply(w, http.StatusCreated, "data", orNull(row), "message", "Kandidat berhasil ditambahkan")
 }
 
@@ -133,7 +145,7 @@ func (h *handler) listActivities(w http.ResponseWriter, r *http.Request, _ Actor
 // logTemplate records that HR opened a WhatsApp template (the only manual
 // activity the whitelist allows).
 func (h *handler) logTemplate(w http.ResponseWriter, r *http.Request, a Actor) error {
-	if err := h.svc.enforce("candidate_activities_post_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "candidate_activities_post_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	template, _ := form(r).Fields()["template"].(string)
@@ -183,7 +195,7 @@ func (h *handler) saveScreening(w http.ResponseWriter, r *http.Request, a Actor)
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("candidate_screening_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "candidate_screening_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
@@ -218,7 +230,7 @@ func (h *handler) invitePsikotes(w http.ResponseWriter, r *http.Request, a Actor
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_session_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_session_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
@@ -238,7 +250,7 @@ func (h *handler) savePsikotesSummary(w http.ResponseWriter, r *http.Request, a 
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_summary_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_summary_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
@@ -273,7 +285,7 @@ func (h *handler) inviteInterview(w http.ResponseWriter, r *http.Request, a Acto
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("interview_session_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "interview_session_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
@@ -305,7 +317,7 @@ func (h *handler) createOffer(w http.ResponseWriter, r *http.Request, a Actor) e
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("offer_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "offer_create_"+a.ID, 20, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)

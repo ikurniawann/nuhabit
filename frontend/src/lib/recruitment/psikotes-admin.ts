@@ -130,7 +130,7 @@ export async function deleteQuestion(id: string) {
 
 interface AnswerDetailTest {
   id: string;
-  answers: Record<string, string> | null;
+  answers: { answers?: Record<string, string> } | null;
   score_detail: {
     per_question?: { id: string; given: string | null; correct_key: string; is_correct: boolean }[];
   } | null;
@@ -178,8 +178,9 @@ export async function getTestAnswerDetail(id: string) {
     return { kind: "mcq", items };
   }
 
-  // forced_choice (PAPI): seluruh pasangan aktif urut bank soal
-  const answers = test.answers ?? {};
+  // forced_choice (PAPI): seluruh pasangan aktif urut bank soal; pilihan
+  // kandidat disimpan di answers.answers.
+  const answers = test.answers?.answers ?? {};
   const rows = await query<QuestionRow>(
     `SELECT id, body, options FROM recruitment.psikotes_questions
      WHERE instrument_id = $1 AND is_active = true

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"nuhabit/backend/internal/modules/recruitment/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
@@ -113,10 +114,19 @@ func reply(w http.ResponseWriter, status int, kv ...any) error {
 	return httpx.JSON(w, status, object(kv...))
 }
 
-// rateHeaders sets getRateLimitHeaders for key.
-func (h *handler) rateHeaders(w http.ResponseWriter, key string) {
-	limit, remaining, reset := h.svc.limiter.Headers(key, h.svc.now())
-	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(limit))
+// rateHeaders sets getRateLimitHeaders for key: limit and remaining always
+// against the default 100, reset in epoch milliseconds.
+func (h *handler) rateHeaders(w http.ResponseWriter, r *http.Request, key string) error {
+	win, err := h.svc.limiter.Peek(r.Context(), key)
+	if err != nil {
+		return err
+	}
+	remaining, reset := domain.DefaultRateLimit, h.svc.now().Add(domain.RateWindow)
+	if win != nil {
+		remaining, reset = max(0, domain.DefaultRateLimit-win.Count), win.ResetAt
+	}
+	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(domain.DefaultRateLimit))
 	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
-	w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(reset, 10))
+	w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(reset.UnixMilli(), 10))
+	return nil
 }

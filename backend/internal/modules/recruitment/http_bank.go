@@ -17,7 +17,7 @@ func pathUUID(r *http.Request, message string) (string, error) {
 }
 
 func (h *handler) listInstruments(w http.ResponseWriter, r *http.Request, a Actor) error {
-	if err := h.svc.enforce("psikotes_instruments_get_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_instruments_get_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	rows, err := h.svc.repo.ListInstruments(r.Context(), h.svc.db)
@@ -32,7 +32,7 @@ func (h *handler) updateInstrument(w http.ResponseWriter, r *http.Request, a Act
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_instrument_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_instrument_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
@@ -52,7 +52,7 @@ func (h *handler) listQuestions(w http.ResponseWriter, r *http.Request, a Actor)
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_questions_get_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_questions_get_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	rows, err := h.svc.ListQuestions(r.Context(), id)
@@ -81,7 +81,7 @@ func (h *handler) createQuestion(w http.ResponseWriter, r *http.Request, a Actor
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_question_post_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_question_post_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	row, err := h.svc.CreateQuestion(r.Context(), id, questionParser(r))
@@ -96,7 +96,7 @@ func (h *handler) updateQuestion(w http.ResponseWriter, r *http.Request, a Actor
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_question_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_question_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	row, err := h.svc.UpdateQuestion(r.Context(), id, questionParser(r))
@@ -111,7 +111,7 @@ func (h *handler) deleteQuestion(w http.ResponseWriter, r *http.Request, a Actor
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_question_delete_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_question_delete_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	row, err := h.svc.DeleteQuestion(r.Context(), id)
@@ -138,7 +138,7 @@ func (h *handler) reviewTest(w http.ResponseWriter, r *http.Request, a Actor) er
 	if err != nil {
 		return err
 	}
-	if err := h.svc.enforce("psikotes_review_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
+	if err := h.svc.enforce(r.Context(), "psikotes_review_put_"+a.ID, domain.DefaultRateLimit, domain.TooManyRequests); err != nil {
 		return err
 	}
 	f := form(r)
