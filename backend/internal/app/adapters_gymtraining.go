@@ -25,18 +25,18 @@ func (a gymTrainingScheduling) CompletedSessionsForCoachMonth(ctx context.Contex
 }
 
 func (a gymTrainingScheduling) Coaches(ctx context.Context, coachID *string) ([]gymtraining.CatalogEntry, error) {
-	return catalog(a.r.Coaches(ctx, coachID))
+	return gymCatalog(a.r.Coaches(ctx, coachID))
 }
 
 func (a gymTrainingScheduling) ClassTypes(ctx context.Context) ([]gymtraining.CatalogEntry, error) {
-	return catalog(a.r.ClassTypes(ctx))
+	return gymCatalog(a.r.ClassTypes(ctx))
 }
 
 func (a gymTrainingScheduling) AttendedClassTimes(ctx context.Context, customerID string, since time.Time) ([]time.Time, error) {
 	return a.r.AttendedClassTimes(ctx, customerID, since)
 }
 
-func catalog(entries []gymscheduling.CatalogEntry, err error) ([]gymtraining.CatalogEntry, error) {
+func gymCatalog(entries []gymscheduling.CatalogEntry, err error) ([]gymtraining.CatalogEntry, error) {
 	out := make([]gymtraining.CatalogEntry, len(entries))
 	for i, e := range entries {
 		out[i] = gymtraining.CatalogEntry(e)
