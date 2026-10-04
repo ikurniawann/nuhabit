@@ -4,13 +4,23 @@
     {
       "name": "Next.js Dev Server",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
     },
     {
       "name": "Next.js Verify",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:next"],
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "frontend",
+        "run",
+        "dev:next",
+        "--port",
+        "3100"
+      ],
       "port": 3100,
       "autoPort": true
     }
