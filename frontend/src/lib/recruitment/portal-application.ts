@@ -160,7 +160,7 @@ export async function getPortalOptions(openingId: string | null) {
     ),
     openingId && isUuid(openingId)
       ? queryOne<{ brand_id: string | null; position_id: string | null }>(
-          "SELECT brand_id, position_id FROM hris.job_openings WHERE id = $1",
+          "SELECT brand_id, position_id FROM recruitment.job_openings WHERE id = $1",
           [openingId]
         )
       : null,

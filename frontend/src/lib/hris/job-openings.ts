@@ -3,7 +3,7 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { slugify } from "@/lib/recruitment/job-portal-form";
 import { unwrap } from "./workforce-route";
 
-/** Lowongan kerja (hris.job_openings) untuk modul rekrutmen. */
+/** Lowongan kerja (recruitment.job_openings) untuk modul rekrutmen. */
 
 export const JOB_OPENING_STATUSES = ["draft", "published", "closed"] as const;
 

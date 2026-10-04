@@ -65,7 +65,7 @@ export const POST = apiHandler(async (_req: Request, { params }: RouteParams) =>
   const [job, position] = await Promise.all([
     candidate.job_opening_id
       ? queryOne<JobOpeningContext>(
-          "SELECT title, description, requirements FROM hris.job_openings WHERE id = $1",
+          "SELECT title, description, requirements FROM recruitment.job_openings WHERE id = $1",
           [candidate.job_opening_id]
         )
       : null,
