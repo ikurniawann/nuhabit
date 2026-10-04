@@ -112,7 +112,7 @@ export async function resolvePosSellStallForUser(
   const canSwitchStall = flags?.can_switch_stall === true;
 
   let activeMode = activeStall.mode;
-  let activeStallId: string | null =
+  const activeStallId: string | null =
     activeStall.mode === "stall" ? activeStall.stall.id : null;
 
   if (activeStall.mode === "unset" && assignedIds.length === 0 && isUnscoped) {

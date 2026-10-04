@@ -43,7 +43,8 @@ export const DsTextbox = React.forwardRef<HTMLInputElement, DsTextboxProps>(
     },
     ref
   ) => {
-    const inputId = id ?? React.useId();
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;
     const hasError = Boolean(error);
 
     const input = (

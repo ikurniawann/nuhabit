@@ -66,7 +66,8 @@ export function DsDateTimePicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const fpInstance = useRef<flatpickr.Instance | null>(null);
   const [displayValue, setDisplayValue] = useState(value ?? "");
-  const inputId = id ?? React.useId();
+  const generatedId = React.useId();
+  const inputId = id ?? generatedId;
 
   useEffect(() => {
     if (!inputRef.current || fpInstance.current) return;

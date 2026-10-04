@@ -523,7 +523,7 @@ export function UserDetailPage({ params }: { params: Promise<{ id: string }> }) 
                               )}
                             </div>
                             {(h.reason || h.notes) && (
-                              <p className="mt-2 text-xs text-gray-500 italic">"{h.reason || h.notes}"</p>
+                              <p className="mt-2 text-xs text-gray-500 italic">&ldquo;{h.reason || h.notes}&rdquo;</p>
                             )}
                           </CardContent>
                         </Card>

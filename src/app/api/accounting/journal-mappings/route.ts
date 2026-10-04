@@ -80,8 +80,8 @@ export async function POST(request: NextRequest) {
     const eventCode = body.event_code.trim().toUpperCase();
     const meta =
       JOURNAL_EVENT_META[eventCode as (typeof JOURNAL_EVENT_CODES)[number]];
-    const module = (body.module || meta?.module) as (typeof JOURNAL_MODULES)[number];
-    if (!(JOURNAL_MODULES as readonly string[]).includes(module)) {
+    const journalModule = (body.module || meta?.module) as (typeof JOURNAL_MODULES)[number];
+    if (!(JOURNAL_MODULES as readonly string[]).includes(journalModule)) {
       throw ApiError.badRequest("Module tidak valid");
     }
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         event_code: eventCode,
         name: body.name.trim() || meta?.name || eventCode,
         description: body.description?.trim() || meta?.description || null,
-        module,
+        module: journalModule,
         is_active: body.is_active ?? true,
         lines: body.lines,
       });

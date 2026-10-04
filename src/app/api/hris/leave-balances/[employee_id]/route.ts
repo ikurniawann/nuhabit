@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get leave balance
-    let query = db
+    const query = db
       .from('leave_balances')
       .select(`
         *,
@@ -139,7 +139,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get or create balance record
-    let { data: balance } = await db
+    const { data: balance } = await db
       .from('leave_balances')
       .select('id')
       .eq('employee_id', employee_id)

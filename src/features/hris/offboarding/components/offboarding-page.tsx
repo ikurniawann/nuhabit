@@ -551,7 +551,7 @@ export function OffboardingPage({ params }: OffboardingPageProps) {
                     )}
                   </Button>
                   <p className="text-xs text-gray-500 mt-2 text-center">
-                    ⚠️ Setelah diselesaikan, status karyawan akan otomatis berubah menjadi "resigned"
+                    ⚠️ Setelah diselesaikan, status karyawan akan otomatis berubah menjadi &quot;resigned&quot;
                   </p>
                 </div>
               )}

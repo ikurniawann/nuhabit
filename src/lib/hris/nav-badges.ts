@@ -135,8 +135,8 @@ export async function buildNavBadges(actor: WorkforceActor): Promise<Record<stri
 
   if (actor.isHr) {
     const pending = await countPendingApprovals();
-    for (const module of ESS_MODULES) {
-      badges[APPROVAL_HREFS[module]] = pending[module];
+    for (const essModule of ESS_MODULES) {
+      badges[APPROVAL_HREFS[essModule]] = pending[essModule];
     }
   }
 
@@ -145,8 +145,8 @@ export async function buildNavBadges(actor: WorkforceActor): Promise<Record<stri
       countEssUpdates(actor.employeeId),
       countUnreadAnnouncements(actor.employeeId),
     ]);
-    for (const module of ESS_MODULES) {
-      badges[ESS_HREFS[module]] = updates[module];
+    for (const essModule of ESS_MODULES) {
+      badges[ESS_HREFS[essModule]] = updates[essModule];
     }
     badges[ANNOUNCEMENTS_HREF] = announcements;
   }

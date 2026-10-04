@@ -72,7 +72,7 @@ export function SalaryPage() {
                 {salaries.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-gray-500">
-                      Belum ada salary structure. Klik "Tambah Salary" untuk membuat.
+                      Belum ada salary structure. Klik &quot;Tambah Salary&quot; untuk membuat.
                     </td>
                   </tr>
                 ) : (

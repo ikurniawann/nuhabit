@@ -188,6 +188,8 @@ export function getQr() {
 }
 
 export async function connect() {
+  // Fungsi Baileys, bukan React hook; namanya saja diawali "use".
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { state: authState, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion();
 

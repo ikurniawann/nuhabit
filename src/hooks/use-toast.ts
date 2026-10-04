@@ -41,7 +41,7 @@ export function useToast(): UseToastReturn {
 }
 
 // Global toast context (optional, for advanced usage)
-let globalToastFn: ((props: Omit<Toast, "id">) => void) | null = null;
+const globalToastFn: ((props: Omit<Toast, "id">) => void) | null = null;
 
 export const toast = (props: Omit<Toast, "id">) => {
   if (globalToastFn) {

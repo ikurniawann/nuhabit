@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const scope = await getApiUserScope();
     const moduleType = new URL(request.url).searchParams.get("module_type") || "raw_material";
 
-    let query = db
+    const query = db
       .from("purchase_requests")
       .select(
         `

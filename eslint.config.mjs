@@ -12,7 +12,19 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Aplikasi Expo terpisah dengan konfigurasi lint sendiri.
+    "mobile/**",
   ]),
+  {
+    // Skrip Node CommonJS (migrasi, seeder, worker, layanan WA): require() memang benar di sini.
+    files: ["database/**/*.{js,cjs}", "scripts/**/*.{js,cjs}", "services/**/*.{js,cjs}", "tools/**/*.{js,cjs}"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
+  {
+    // Deklarasi ambient memperluas tipe modul lewat interface kosong (`interface X extends Y {}`).
+    files: ["**/*.d.ts"],
+    rules: { "@typescript-eslint/no-empty-object-type": "off" },
+  },
 ]);
 
 export default eslintConfig;

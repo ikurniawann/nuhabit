@@ -321,7 +321,7 @@ function allocateAmount(total: number, weights: number[]): number[] {
   const sum = weights.reduce((a, b) => a + b, 0);
   if (sum <= 0 || total === 0) return weights.map(() => 0);
   const raw = weights.map((w) => Math.floor((total * w) / sum));
-  let remainder = total - raw.reduce((a, b) => a + b, 0);
+  const remainder = total - raw.reduce((a, b) => a + b, 0);
   const largest = weights.indexOf(Math.max(...weights));
   if (remainder !== 0 && largest >= 0) raw[largest] += remainder;
   return raw;

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const includeAssigned = searchParams.get("include_cancelled") === "true";
     const moduleType = parsePurchasingModuleType(searchParams.get("module_type"));
 
-    let poQuery = db
+    const poQuery = db
       .from("purchase_orders")
       .select("id, nomor_po, supplier_id, vendor_id, status, company_id, branch_id, created_at, module_type")
       .eq("is_active", true)

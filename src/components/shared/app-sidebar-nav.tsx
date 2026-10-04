@@ -139,13 +139,13 @@ export default function AppSidebarNav({
 
   // Membuka halaman ESS berarti karyawan sudah melihat pembaruannya.
   useEffect(() => {
-    const module = ESS_SEEN_ON_VISIT[pathname];
-    if (!module) return;
+    const essModule = ESS_SEEN_ON_VISIT[pathname];
+    if (!essModule) return;
     let active = true;
     fetch("/api/hris/nav-badges", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ module }),
+      body: JSON.stringify({ module: essModule }),
     })
       .then(() => {
         if (active) void loadBadges();
