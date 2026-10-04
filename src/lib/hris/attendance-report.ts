@@ -68,18 +68,24 @@ export function formatJamWib(iso: string | null): string {
 }
 
 /** "2026-08-01".."2026-08-31" → "1–31 Agustus 2026" (label periode manusiawi). */
+function parseCalendarDate(value: string): { y: number; m: number; d: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const m = Number(match[2]) - 1;
+  const d = Number(match[3]);
+  return m >= 0 && m < 12 && d >= 1 && d <= 31 ? { y: Number(match[1]), m, d } : null;
+}
+
 export function buildPeriodLabel(startDate: string, endDate: string): string {
-  const s = new Date(`${startDate}T00:00:00+07:00`);
-  const e = new Date(`${endDate}T00:00:00+07:00`);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
-    return `${startDate} s.d. ${endDate}`;
-  }
-  const sd = s.getDate();
-  const ed = e.getDate();
-  const sm = MONTHS[s.getMonth()];
-  const em = MONTHS[e.getMonth()];
-  const sy = s.getFullYear();
-  const ey = e.getFullYear();
+  // Tanggal kalender dibaca langsung dari string: lewat Date, getDate() memakai
+  // zona waktu mesin dan bergeser sehari di server UTC.
+  const s = parseCalendarDate(startDate);
+  const e = parseCalendarDate(endDate);
+  if (!s || !e) return `${startDate} s.d. ${endDate}`;
+  const { d: sd, m: smi, y: sy } = s;
+  const { d: ed, m: emi, y: ey } = e;
+  const sm = MONTHS[smi];
+  const em = MONTHS[emi];
   if (sy === ey && sm === em) return `${sd}–${ed} ${sm} ${sy}`;
   if (sy === ey) return `${sd} ${sm} – ${ed} ${em} ${sy}`;
   return `${sd} ${sm} ${sy} – ${ed} ${em} ${ey}`;
