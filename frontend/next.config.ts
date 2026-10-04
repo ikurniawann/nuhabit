@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
     // AI assistant SSE streams and slow reports; EventSource reconnects
     // after the hour.
     proxyTimeout: 60 * 60 * 1000,
+    // proxy.ts makes Next buffer every request body, and only the first
+    // 10 MB by default; data room files go up to 100 MB (plus multipart
+    // overhead), whether Next or the Go service handles the route.
+    proxyClientMaxBodySize: "110mb",
   },
   async rewrites() {
     return {
