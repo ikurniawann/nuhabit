@@ -2,7 +2,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const mocks = vi.hoisted(() => ({ getUser: vi.fn(), single: vi.fn(), update: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  single: vi.fn(),
+  update: vi.fn(),
+  insert: vi.fn(),
+  generateAnswer: vi.fn(),
+}));
 
 /** Rantai shim minimal: select().eq().eq().single() dan update().eq().eq(). */
 function chain(result: () => unknown) {
@@ -14,19 +20,28 @@ function chain(result: () => unknown) {
 }
 
 vi.mock("@/lib/pg/create-client", () => ({
-  createServerPgClient: async () => ({ auth: { getUser: mocks.getUser } }),
+  createServerPgClient: async () => ({
+    auth: { getUser: mocks.getUser },
+    from: () => ({ select: () => chain(() => ({ data: { role: "pos", full_name: "Kasir" } })) }),
+  }),
   createPgClient: () => ({
-    from: () => ({
+    from: (table: string) => ({
       select: () => chain(mocks.single),
       update: (values: unknown) => {
         mocks.update(values);
         return chain(() => ({ error: null }));
       },
+      insert: (values: unknown) => {
+        mocks.insert(table, values);
+        return chain(() => ({ data: { id: "s-baru" }, error: null }));
+      },
     }),
   }),
 }));
+vi.mock("@/lib/iam/has-menu", () => ({ loadGrantedMenuCodesForUser: async () => [] }));
+vi.mock("@/lib/assistant/llm", () => ({ generateAnswer: mocks.generateAnswer }));
 
-import { GET, PATCH } from "./route";
+import { GET, PATCH, POST } from "./route";
 
 const url = (qs: string) => `http://localhost/api/ai/assistant${qs}`;
 
@@ -45,6 +60,21 @@ describe("/api/ai/assistant", () => {
     mocks.single.mockReturnValue({ data: null });
     const res = await GET(new NextRequest(url("?session_id=s-lain")));
     expect(res.status).toBe(404);
+  });
+
+  it.each([false, true])("POST ke sesi milik orang lain → 404 tanpa membaca atau menambah riwayat (stream=%s)", async (stream) => {
+    mocks.single.mockReturnValue({ data: null });
+    const res = await POST(
+      new NextRequest(url(""), {
+        method: "POST",
+        body: JSON.stringify({ message: "ulangi", scope: "general", session_id: "s-lain", stream }),
+      })
+    );
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Session tidak ditemukan" });
+    expect(mocks.generateAnswer).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 
   it("PATCH judul kosong → 400 tanpa update", async () => {

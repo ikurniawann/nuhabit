@@ -45,11 +45,17 @@ export function sanitizeAttachments(input: unknown): SafeAttachment[] {
   return out;
 }
 
+/**
+ * Riwayat dari klien hanya boleh berisi giliran user dan assistant. Peran lain
+ * (system, tool, developer) dibuang supaya klien tidak bisa menyisipkan
+ * instruksi sistem: satu-satunya prompt sistem adalah milik server.
+ */
 export function compactChatHistory(history: ChatMessage[]): ChatMessage[] {
   const compacted: ChatMessage[] = [];
   let budget = 5000;
 
   for (const item of history.slice(-12).reverse()) {
+    if (item.role !== "user" && item.role !== "assistant") continue;
     const maxLength = item.role === "assistant" ? 900 : 700;
     const content = item.content.replace(/\s+/g, " ").trim().slice(0, maxLength);
     if (!content) continue;
@@ -160,7 +166,9 @@ async function appendAssistantMarkdown(payload: {
   if (process.env.VERCEL === "1") return;
 
   try {
-    const logsDir = path.join(process.cwd(), "assistant-memory");
+    // Di dalam storage/ (volume yang bisa ditulis, sama dengan unggahan) dan
+    // folder yang sama dengan yang ditulis Go API: $STORAGE_DIR/assistant-memory.
+    const logsDir = path.join(process.cwd(), "storage", "assistant-memory");
     await mkdir(logsDir, { recursive: true });
     const safeUser = payload.userEmail.replace(/[^a-zA-Z0-9._-]/g, "_");
     const filePath = path.join(logsDir, `${safeUser}.assistant.md`);

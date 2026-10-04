@@ -63,6 +63,9 @@ export function detectIntent(message: string): Intent {
   return "all";
 }
 
+/** PO yang belum selesai (purchase_orders_status_check): belum dikirim atau belum diterima penuh. */
+const OPEN_PO_STATUSES = ["draft", "approved", "sent", "partially_received"];
+
 async function safeCount(
   admin: DbAdmin,
   table: string,
@@ -162,11 +165,11 @@ export async function buildSystemSummary(admin: DbAdmin, intent: Intent): Promis
     safeCount(admin, "loans"),
     safeCount(admin, "purchase_requests"),
     safeCount(admin, "purchase_orders"),
-    safeCount(admin, "purchase_orders", (q) => q.in("status", ["draft", "pending", "pending_approval", "sent", "pending_head", "pending_finance", "pending_direksi"])),
+    safeCount(admin, "purchase_orders", (q) => q.in("status", OPEN_PO_STATUSES)),
     safeCount(admin, "suppliers"),
     safeCount(admin, "raw_materials"),
     safeCount(admin, "inventory"),
-    safeCount(admin, "inventory", (q) => q.lt("current_stock", 1)),
+    safeCount(admin, "inventory", (q) => q.lt("qty_available", 1)),
     safeCount(admin, "inventory_movements"),
     safeCount(admin, "products"),
     safeCount(admin, "pos_orders"),
@@ -195,21 +198,21 @@ export async function buildSystemSummary(admin: DbAdmin, intent: Intent): Promis
     });
   }
   if (intent === "all" || intent === "payroll") {
-    details.payroll = await safeRows(admin, "payroll_runs", "id, period_start, period_end, status, created_at", {
+    details.payroll = await safeRows(admin, "payroll_runs", "id, run_name, period_month, period_year, status, created_at", {
       order: { column: "created_at", ascending: false },
       limit: 5,
     });
   }
   if (intent === "all" || intent === "procurement") {
-    details.procurement = await safeRows(admin, "purchase_orders", "id, po_number, status, total_amount, created_at", {
-      filter: (q) => q.in("status", ["draft", "pending", "pending_approval", "sent", "pending_head", "pending_finance", "pending_direksi"]),
+    details.procurement = await safeRows(admin, "purchase_orders", "id, nomor_po, status, total, created_at", {
+      filter: (q) => q.in("status", OPEN_PO_STATUSES),
       order: { column: "created_at", ascending: false },
       limit: 5,
     });
   }
   if (intent === "all" || intent === "inventory") {
-    details.inventory = await safeRows(admin, "inventory", "id, current_stock, minimum_stock, raw_material_id, updated_at", {
-      filter: (q) => q.lt("current_stock", 1),
+    details.inventory = await safeRows(admin, "inventory", "id, qty_available, qty_minimum, raw_material_id, updated_at", {
+      filter: (q) => q.lt("qty_available", 1),
       order: { column: "updated_at", ascending: false },
       limit: 5,
     });

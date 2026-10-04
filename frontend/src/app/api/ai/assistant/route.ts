@@ -23,6 +23,23 @@ import {
 
 type Intent = AssistantIntent;
 
+/**
+ * Admin client melewati RLS, jadi kepemilikan sesi diperiksa di sini sebelum
+ * riwayatnya dibaca atau ditambah. Sesi orang lain, id yang tidak ada, dan id
+ * yang bukan uuid sama-sama "tidak ditemukan".
+ */
+async function ownsSession(admin: ReturnType<typeof createPgClient>, sessionId: string, userId: string) {
+  const { data } = await admin
+    .from("ai_assistant_sessions")
+    .select("id")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .single();
+  return Boolean(data);
+}
+
+const sessionNotFound = () => NextResponse.json({ error: "Session tidak ditemukan" }, { status: 404 });
+
 export async function GET(request: NextRequest) {
   try {
     const db = await createServerPgClient();
@@ -46,17 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ sessions: sessions ?? [] });
     }
 
-    // Verify the session belongs to the requesting user before returning its
-    // messages — admin client bypasses RLS, so ownership must be checked here.
-    const { data: ownedSession } = await admin
-      .from("ai_assistant_sessions")
-      .select("id")
-      .eq("id", sessionId)
-      .eq("user_id", user.id)
-      .single();
-    if (!ownedSession) {
-      return NextResponse.json({ error: "Session tidak ditemukan" }, { status: 404 });
-    }
+    if (!(await ownsSession(admin, sessionId, user.id))) return sessionNotFound();
 
     const { data: messages, error } = await admin
       .from("ai_assistant_messages")
@@ -143,14 +150,14 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       message?: string;
       history?: ChatMessage[];
-      session_id?: string;
+      session_id?: unknown;
       model?: string;
       scope?: string;
       stream?: boolean;
       attachments?: Array<{ name?: unknown; text?: unknown }>;
     };
     prompt = body.message ?? "Summary semua module";
-    let sessionId = body.session_id;
+    let sessionId = typeof body.session_id === "string" && body.session_id ? body.session_id : undefined;
     const history = (body.history ?? []).slice(-8);
     const model = resolveAiAssistantModel(body.model);
     const scope = resolveAiAssistantScope(body.scope);
@@ -181,6 +188,7 @@ export async function POST(request: NextRequest) {
     const toolAllowList = allowedToolNames(profile?.role, grantedMenus);
 
     const admin = createPgClient();
+    if (sessionId && !(await ownsSession(admin, sessionId, user.id))) return sessionNotFound();
 
     intent = includeProjectData ? detectIntent(prompt) : "all";
     const summary = includeProjectData
@@ -201,8 +209,6 @@ export async function POST(request: NextRequest) {
         .single();
       if (!se && typeof newSession?.id === "string") sessionId = newSession.id;
     } else {
-      // Update session timestamp on activity — scope to the owner so one user
-      // cannot touch another user's session by passing a stolen session_id.
       await admin
         .from("ai_assistant_sessions")
         .update({ updated_at: new Date().toISOString() })
