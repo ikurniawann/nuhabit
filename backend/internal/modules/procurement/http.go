@@ -24,6 +24,7 @@ func (h *Handler) Routes() []module.Route {
 	h.payableRoutes(add)
 	h.reportRoutes(add)
 	h.dashboardRoutes(add)
+	h.fileRoutes(add)
 	return routes
 }
 

@@ -12,6 +12,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Name is the MODULES key.
@@ -31,7 +32,7 @@ func New(deps module.Deps, ports Ports) module.Module {
 // NewOn mounts the module on db: the pool in production, a rolled-back
 // transaction in tests. Auth still resolves sessions on deps.Auth.
 func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
-	return procurementModule{h: &Handler{svc: NewService(db, ports, deps.Now, deps.Log, Location(deps.Config.TimeZone)), auth: deps.Auth}}
+	return procurementModule{h: &Handler{svc: NewService(db, ports, deps.Now, deps.Log, Location(deps.Config.TimeZone)), auth: deps.Auth, files: storage.FromEnv()}}
 }
 
 // Location loads the process time zone, falling back to Asia/Jakarta.
@@ -74,4 +75,6 @@ func NewService(db database.DB, ports Ports, now func() time.Time, log *slog.Log
 type Handler struct {
 	svc  *Service
 	auth *auth.Service
+	// files is STORAGE_DIR (receipt archive).
+	files *storage.Store
 }
