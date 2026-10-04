@@ -152,6 +152,9 @@ const (
 	AlignLeft   Align = "left"
 	AlignCenter Align = "center"
 	AlignRight  Align = "right"
+	// AlignJustify stretches every line but the last of a paragraph to the
+	// width by widening its spaces, like pdfkit's align: "justify".
+	AlignJustify Align = "justify"
 )
 
 // TextOpts are doc.text options.
@@ -165,6 +168,8 @@ type TextOpts struct {
 	// in "…" when text was cut.
 	Height   float64
 	Ellipsis bool
+	// LineGap is pdfkit's lineGap: extra points below every line.
+	LineGap float64
 }
 
 // Text is doc.text(s, x, y, opts): y is the top of the first line. Lines
@@ -176,9 +181,9 @@ func (d *Doc) Text(s string, x, y float64, o TextOpts) float64 {
 	if width <= 0 {
 		width = d.PageWidth() - d.margin - x
 	}
-	lines := []string{s}
+	lines, paraEnds := []string{s}, []bool{true}
 	if !o.NoWrap {
-		lines = d.Wrap(s, width)
+		lines, paraEnds = d.wrap(s, width)
 	}
 	lh := d.LineHeight()
 	if o.Height > 0 {
@@ -190,20 +195,30 @@ func (d *Doc) Text(s string, x, y float64, o TextOpts) float64 {
 			}
 		}
 	}
-	for _, line := range lines {
+	for i, line := range lines {
 		if o.Height == 0 && !d.footer && y+lh > d.Bottom() && y > d.margin {
 			d.AddPage()
 			y = d.margin
 		}
-		lx := x
+		lx, spacing := x, 0.0
 		switch o.Align {
 		case AlignRight:
 			lx = x + width - d.StringWidth(line)
 		case AlignCenter:
 			lx = x + (width-d.StringWidth(line))/2
+		case AlignJustify:
+			if spaces := strings.Count(line, " "); spaces > 0 && !paraEnds[i] {
+				spacing = (width - d.StringWidth(line)) / float64(spaces)
+			}
+		}
+		if spacing > 0 {
+			d.pdf.SetWordSpacing(spacing)
 		}
 		d.pdf.Text(lx, y+metrics[d.font].ascent*d.size, d.tr(line))
-		y += lh
+		if spacing > 0 {
+			d.pdf.SetWordSpacing(0)
+		}
+		y += lh + o.LineGap
 	}
 	d.X, d.Y = x, y
 	return y
@@ -224,7 +239,15 @@ func (d *Doc) StringWidth(s string) float64 { return d.pdf.GetStringWidth(d.tr(s
 // Wrap splits s into lines no wider than width, breaking at "\n", after
 // spaces and hyphens, and inside words longer than the width.
 func (d *Doc) Wrap(s string, width float64) []string {
-	var out []string
+	lines, _ := d.wrap(s, width)
+	return lines
+}
+
+// wrap is Wrap that also marks the last line of each paragraph.
+func (d *Doc) wrap(s string, width float64) (lines []string, paraEnds []bool) {
+	add := func(line string, end bool) {
+		lines, paraEnds = append(lines, line), append(paraEnds, end)
+	}
 	for _, para := range strings.Split(strings.ReplaceAll(s, "\r\n", "\n"), "\n") {
 		line := ""
 		for _, tok := range breakTokens(para) {
@@ -233,18 +256,18 @@ func (d *Doc) Wrap(s string, width float64) []string {
 				continue
 			}
 			if line != "" {
-				out = append(out, strings.TrimRight(line, " "))
+				add(strings.TrimRight(line, " "), false)
 			}
 			for d.StringWidth(strings.TrimRight(tok, " ")) > width {
 				n := d.fitRunes(tok, width)
-				out = append(out, tok[:n])
+				add(tok[:n], false)
 				tok = tok[n:]
 			}
 			line = tok
 		}
-		out = append(out, strings.TrimRight(line, " "))
+		add(strings.TrimRight(line, " "), true)
 	}
-	return out
+	return lines, paraEnds
 }
 
 // breakTokens splits after every run of spaces and after each hyphen.

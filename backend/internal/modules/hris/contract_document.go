@@ -101,33 +101,31 @@ func idr(raw *string) string {
 	return "Rp " + pdfgen.Thousands(v) + ",- (" + pdfgen.Terbilang(v) + ")"
 }
 
-// contractWriter lays the agreement out like the pdfkit flow: paragraphs
-// at the margin with 2.5pt line gaps, centered article headings.
+// contractWriter lays the agreement out like the pdfkit flow: justified
+// paragraphs at the margin with 2.5pt line gaps, centered article headings.
 type contractWriter struct{ d *pdfgen.Doc }
 
-// flow writes text at the current position, line by line with gap points
-// between lines, moving to a new page at the bottom margin.
-func (w contractWriter) flow(text string, align pdfgen.Align, gap float64) {
-	d := w.d
-	for _, line := range d.Wrap(text, d.ContentWidth()) {
-		d.EnsureSpace(d.LineHeight())
-		d.Text(line, d.Left(), d.Y, pdfgen.TextOpts{Align: align, NoWrap: true})
-		d.Y += gap
-	}
-	d.X = d.Left()
+// justified is doc.text(text, { align: "justify", lineGap: 2.5 }).
+func (w contractWriter) justified(text string) {
+	w.d.Para(text, pdfgen.TextOpts{Align: pdfgen.AlignJustify, LineGap: 2.5})
+}
+
+// aligned is doc.text(text, { align }) for headings and the signing place.
+func (w contractWriter) aligned(text string, align pdfgen.Align) {
+	w.d.Para(text, pdfgen.TextOpts{Align: align})
 }
 
 func (w contractWriter) para(text string) {
 	w.d.Font(pdfgen.Helvetica, 10).Color("#111827")
-	w.flow(text, pdfgen.AlignLeft, 2.5)
+	w.justified(text)
 	w.d.MoveDown(0.3)
 }
 
 func (w contractWriter) pasal(n int, title string) {
 	w.d.MoveDown(0.9)
 	w.d.Font(pdfgen.HelveticaBold, 10.5)
-	w.flow("PASAL "+strconv.Itoa(n), pdfgen.AlignCenter, 0)
-	w.flow(strings.ToUpper(title), pdfgen.AlignCenter, 0)
+	w.aligned("PASAL "+strconv.Itoa(n), pdfgen.AlignCenter)
+	w.aligned(strings.ToUpper(title), pdfgen.AlignCenter)
 	w.d.MoveDown(0.35)
 	w.d.Font(pdfgen.Helvetica, 10)
 }
@@ -135,7 +133,7 @@ func (w contractWriter) pasal(n int, title string) {
 func (w contractWriter) numbered(items ...string) {
 	for i, item := range items {
 		w.d.Font(pdfgen.Helvetica, 10)
-		w.flow(strconv.Itoa(i+1)+". "+item, pdfgen.AlignLeft, 2.5)
+		w.justified(strconv.Itoa(i+1) + ". " + item)
 		w.d.MoveDown(0.2)
 	}
 	w.d.MoveDown(0.1)
@@ -153,8 +151,7 @@ func (w contractWriter) party(label, value string) {
 }
 
 // buildContractPDF is buildContractPdf (A4, 56pt margins) from the company
-// settings and the contract row joined with its employee. pdfkit's
-// justified paragraphs are set flush left; the text and order are the same.
+// settings and the contract row joined with its employee.
 func buildContractPDF(co map[string]*string, c *Row) ([]byte, error) {
 	d := pdfgen.New(pdfgen.Options{Size: "A4", Margin: 56})
 	w := contractWriter{d}
@@ -172,10 +169,10 @@ func buildContractPDF(co map[string]*string, c *Row) ([]byte, error) {
 	city := val(co["company_city"])
 
 	d.Font(pdfgen.HelveticaBold, 13).Color("#111827")
-	w.flow(judul, pdfgen.AlignCenter, 0)
+	w.aligned(judul, pdfgen.AlignCenter)
 	d.MoveDown(0.2)
 	d.Font(pdfgen.Helvetica, 10.5)
-	w.flow("Nomor: "+c.Str("contract_number"), pdfgen.AlignCenter, 0)
+	w.aligned("Nomor: "+c.Str("contract_number"), pdfgen.AlignCenter)
 	d.MoveDown(1)
 
 	w.para("Pada hari ini, tanggal " + tanggalTtd + ", bertempat di " + city + ", " +
@@ -311,7 +308,7 @@ func buildContractPDF(co map[string]*string, c *Row) ([]byte, error) {
 	d.EnsureSpace(150)
 	d.MoveDown(1.2)
 	d.Font(pdfgen.Helvetica, 10)
-	w.flow(city+", "+tanggalTtd, pdfgen.AlignRight, 0)
+	w.aligned(city+", "+tanggalTtd, pdfgen.AlignRight)
 	d.MoveDown(0.8)
 	colW := d.ContentWidth() / 2
 	left, right := d.Left(), d.Left()+colW

@@ -19,6 +19,8 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"nuhabit/backend/internal/platform/extract"
 )
 
 func TestMoney(t *testing.T) {
@@ -249,4 +251,48 @@ func abs(v float64) float64 {
 		return -v
 	}
 	return v
+}
+
+func TestJustify(t *testing.T) {
+	const para = "Pihak Kedua bersedia ditempatkan di lokasi kerja yang ditentukan oleh Pihak Pertama dan menjalankan " +
+		"tugas sesuai uraian jabatan, peraturan perusahaan serta arahan atasan langsung.\nBaris baru tetap rata kiri."
+	build := func(align Align) (*Doc, []byte) {
+		d := New(Options{Margin: 56, Now: time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)})
+		d.pdf.SetCompression(false)
+		d.Font(Helvetica, 10)
+		d.Para(para, TextOpts{Width: 300, Align: align})
+		data, err := d.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d, data
+	}
+	d, justified := build(AlignJustify)
+	_, left := build(AlignLeft)
+
+	// Every wrapped line but the last of each paragraph gets word spacing
+	// that stretches it to the width; paragraph ends stay flush left.
+	lines := d.Wrap(para, 300)
+	spaced := regexp.MustCompile(`([0-9.]+) Tw`).FindAllStringSubmatch(string(justified), -1)
+	var set int
+	for _, m := range spaced {
+		if v, _ := strconv.ParseFloat(m[1], 64); v > 0 {
+			set++
+		}
+	}
+	if paragraphEnds := 2; set != len(lines)-paragraphEnds || set == 0 {
+		t.Fatalf("%d lines, %d justified", len(lines), set)
+	}
+	if strings.Contains(string(left), " Tw") {
+		t.Fatal("left-aligned text sets word spacing")
+	}
+
+	gotJustified, err := extract.PDFText(justified)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotLeft, _ := extract.PDFText(left)
+	if gotJustified != gotLeft || !strings.Contains(gotJustified, "uraian jabatan, peraturan perusahaan") {
+		t.Fatalf("text order changed:\n%s\n%s", gotJustified, gotLeft)
+	}
 }
