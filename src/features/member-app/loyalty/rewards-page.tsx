@@ -2,7 +2,8 @@
 
 import { Gift, Lock } from "lucide-react";
 import { useState } from "react";
-import { formatNumber, tierProgressPct } from "@/lib/member-app/loyalty";
+import { tierProgressPct } from "@/lib/member-app/loyalty";
+import { formatNumber } from "@/lib/format";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { loyaltyKeys, redeemReward, useLoyaltyMe, useRefresh, useRewards } from "../lib/queries-loyalty";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { readStorage, STORAGE_KEYS, writeStorage } from "@/lib/storage-keys";
 
 /**
  * Bahasa aplikasi member, disimpan per perangkat di localStorage. Semua
@@ -9,7 +10,6 @@ import { useSyncExternalStore } from "react";
  */
 export type Lang = "id" | "en";
 
-const STORAGE_KEY = "bcd-member-lang";
 const listeners = new Set<() => void>();
 /** Cadangan bila localStorage tidak bisa dipakai (mode privat dsb.). */
 let memoryLang: Lang = "id";
@@ -17,11 +17,7 @@ let memoryLang: Lang = "id";
 const parseLang = (value: unknown): Lang => (value === "en" ? "en" : "id");
 
 function readLang(): Lang {
-  try {
-    return parseLang(window.localStorage.getItem(STORAGE_KEY) ?? memoryLang);
-  } catch {
-    return memoryLang;
-  }
+  return parseLang(readStorage(STORAGE_KEYS.memberLang) ?? memoryLang);
 }
 
 function subscribe(listener: () => void) {
@@ -35,11 +31,7 @@ function subscribe(listener: () => void) {
 
 export function setLang(lang: Lang) {
   memoryLang = lang;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, lang);
-  } catch {
-    /* mode privat: bahasa berganti untuk halaman ini saja */
-  }
+  writeStorage(STORAGE_KEYS.memberLang, lang);
   document.documentElement.lang = lang;
   listeners.forEach((listener) => listener());
 }

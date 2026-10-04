@@ -2,7 +2,7 @@
 
 import { CheckCircle2, ImageIcon, Lock, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { formatNumber } from "@/lib/member-app/loyalty";
+import { formatNumber } from "@/lib/format";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import {

@@ -2,7 +2,8 @@
 
 import { QrCode } from "lucide-react";
 import { useState } from "react";
-import { formatNumber, formatRp, topupAmountError } from "@/lib/member-app/loyalty";
+import { topupAmountError } from "@/lib/member-app/loyalty";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { createArkTopup, loyaltyKeys, useRefresh, useTopupOptions, type TopupChoice } from "../lib/queries-loyalty";
@@ -75,7 +76,7 @@ export function CoinsTopupPage() {
         <p className="nh-display mt-1 text-4xl tabular-nums">
           {formatNumber(Math.floor(data.balance / Math.max(1, data.ark_rate)))} ARK
         </p>
-        <p className="mt-1 text-xs font-semibold text-white/45">≈ {formatRp(data.balance)}</p>
+        <p className="mt-1 text-xs font-semibold text-white/45">≈ {formatRupiah(data.balance)}</p>
       </div>
 
       {data.packages.length > 0 ? (
@@ -97,14 +98,14 @@ export function CoinsTopupPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-extrabold">{p.name}</p>
                   <p className="text-xs text-nh-muted">
-                    {t("Get {amount}", { amount: formatRp(p.credit_idr) })}
+                    {t("Get {amount}", { amount: formatRupiah(p.credit_idr) })}
                     {p.validity_days ? ` · ${t("valid {n} days", { n: p.validity_days })}` : ""}
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="nh-display text-lg tabular-nums">{formatRp(p.price_idr)}</p>
+                  <p className="nh-display text-lg tabular-nums">{formatRupiah(p.price_idr)}</p>
                   {p.bonus_idr > 0 ? (
-                    <span className="nh-chip bg-nh-lime text-nh-ink">+{formatRp(p.bonus_idr)}</span>
+                    <span className="nh-chip bg-nh-lime text-nh-ink">+{formatRupiah(p.bonus_idr)}</span>
                   ) : null}
                 </div>
               </button>
@@ -131,7 +132,7 @@ export function CoinsTopupPage() {
                     : "bg-nh-raised text-nh-ink"
                 }`}
               >
-                {formatRp(v)}
+                {formatRupiah(v)}
               </button>
             ))}
           </div>
@@ -143,7 +144,7 @@ export function CoinsTopupPage() {
           id="topup-amount"
           className="nh-input"
           inputMode="numeric"
-          placeholder={t("Minimum {amount}", { amount: formatRp(data.min_amount) })}
+          placeholder={t("Minimum {amount}", { amount: formatRupiah(data.min_amount) })}
           value={custom}
           onChange={(e) => {
             const digits = Number(e.target.value.replace(/\D/g, "")) || 0;
@@ -163,7 +164,7 @@ export function CoinsTopupPage() {
       <div className="nh-card flex items-center justify-between gap-3 !p-4">
         <div>
           <p className="text-xs text-nh-muted">{t("You receive")}</p>
-          <p className="nh-display text-2xl tabular-nums">{formatRp(credit)}</p>
+          <p className="nh-display text-2xl tabular-nums">{formatRupiah(credit)}</p>
         </div>
         <button
           type="button"
@@ -171,7 +172,7 @@ export function CoinsTopupPage() {
           disabled={!choice || pay <= 0 || Boolean(amountError) || busy}
           onClick={() => void create()}
         >
-          <QrCode size={18} /> {busy ? t("Creating QR…") : t("Pay {amount}", { amount: formatRp(pay) })}
+          <QrCode size={18} /> {busy ? t("Creating QR…") : t("Pay {amount}", { amount: formatRupiah(pay) })}
         </button>
       </div>
     </div>

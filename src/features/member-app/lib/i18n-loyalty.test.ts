@@ -55,7 +55,7 @@ describe("loyalty screens dictionary", () => {
     "Rp {n}",
     "{n}-week streak",
     "{n} XP",
-    "ARK worth Rp {n}",
+    "ARK worth {amount}",
     "Minimum {amount}",
     "Maximum {amount}",
     "Could not turn on notifications",

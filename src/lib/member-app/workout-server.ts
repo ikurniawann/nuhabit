@@ -1,3 +1,4 @@
+import "server-only";
 import { getPool, withTransaction } from "@/lib/db";
 import { listSubstitutes, replaceBlockExercise, type Division, type WorkoutBlock } from "@/lib/gym/hyrox";
 import type { MemberRaceStatus } from "@/lib/gym/races";

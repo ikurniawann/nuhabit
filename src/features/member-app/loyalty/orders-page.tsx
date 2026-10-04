@@ -2,7 +2,7 @@
 
 import { ReceiptText } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { formatNumber, formatRp } from "@/lib/member-app/loyalty";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { idrToArkDisplay, isArkCoinMethod } from "@/lib/pos/loyalty-settings";
 import { BottomSheet } from "../components/bottom-sheet";
 import { useT } from "../lib/i18n";
@@ -49,7 +49,7 @@ export function OrdersPage() {
                 <span className="block text-xs text-nh-muted">{formatDayTime(order.createdAt)}</span>
               </span>
               <span className="shrink-0 text-right text-sm font-bold tabular-nums">
-                {formatRp(order.totalIdr)}
+                {formatRupiah(order.totalIdr)}
                 {order.paidWithArk && me ? (
                   <span className="block text-[11px] font-semibold text-nh-muted">
                     {formatNumber(idrToArkDisplay(order.totalIdr, me.arkRate))} ARK
@@ -119,8 +119,8 @@ function OrderSheet({ order, onClose }: { order: OrderSummary; onClose: () => vo
   const paidWithArk = detail ? isArkCoinMethod(detail.order.payment_method) : false;
   const price = (idr: number) =>
     detail && paidWithArk
-      ? `${formatRp(idr)} / ${formatNumber(idrToArkDisplay(idr, detail.ark_rate))} ARK`
-      : formatRp(idr);
+      ? `${formatRupiah(idr)} / ${formatNumber(idrToArkDisplay(idr, detail.ark_rate))} ARK`
+      : formatRupiah(idr);
 
   return (
     <BottomSheet kicker={t("Receipt")} title={order.orderNumber} onClose={onClose}>
@@ -137,9 +137,9 @@ function OrderSheet({ order, onClose }: { order: OrderSummary; onClose: () => vo
               <Row
                 key={i}
                 label={`${formatNumber(item.quantity)}× ${item.product_name}`}
-                hint={`@ ${formatRp(item.unit_price)}${
+                hint={`@ ${formatRupiah(item.unit_price)}${
                   item.discount_amount > 0
-                    ? ` · ${t("discount {amount}", { amount: formatRp(item.discount_amount) })}`
+                    ? ` · ${t("discount {amount}", { amount: formatRupiah(item.discount_amount) })}`
                     : ""
                 }`}
                 value={price(item.total_amount)}
@@ -149,7 +149,7 @@ function OrderSheet({ order, onClose }: { order: OrderSummary; onClose: () => vo
             {detail.order.discount_amount > 0 ? (
               <Row
                 label={`${t("Discount")}${detail.order.discount_reason ? ` (${detail.order.discount_reason})` : ""}`}
-                value={`−${formatRp(detail.order.discount_amount)}`}
+                value={`−${formatRupiah(detail.order.discount_amount)}`}
                 tone="danger"
               />
             ) : null}

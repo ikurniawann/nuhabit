@@ -178,7 +178,7 @@ export const LOYALTY_ID: Record<string, string> = {
   "Target {target}": "Target {target}",
   "reward {reward}": "hadiah {reward}",
   "Reward {reward}": "Hadiah {reward}",
-  "ARK worth Rp {n}": "ARK senilai Rp {n}",
+  "ARK worth {amount}": "ARK senilai {amount}",
   "{value} logged": "{value} tercatat",
   "rank #{rank} of {total}": "peringkat #{rank} dari {total}",
   Leaderboard: "Papan peringkat",

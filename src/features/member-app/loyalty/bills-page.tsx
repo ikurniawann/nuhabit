@@ -1,6 +1,6 @@
 "use client";
 
-import { formatNumber, formatRp } from "@/lib/member-app/loyalty";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { useT } from "../lib/i18n";
 import { useMemberBill } from "../lib/queries-loyalty";
 import { EmptyState, Spinner, formatDayTime } from "../ui";
@@ -24,15 +24,15 @@ export function BillsPage() {
           <div className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-nh-lime/20 blur-3xl" />
           <p className="relative text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Left to pay")}</p>
           <p className="nh-display relative mt-1 text-5xl leading-none tabular-nums">
-            {formatRp(bill.balance.outstanding)}
+            {formatRupiah(bill.balance.outstanding)}
           </p>
           <div className="relative mt-4 flex flex-wrap gap-2 text-xs font-semibold">
             <span className="nh-chip bg-white/10 text-white/80">
-              {t("Open orders {amount}", { amount: formatRp(bill.balance.openTotal) })}
+              {t("Open orders {amount}", { amount: formatRupiah(bill.balance.openTotal) })}
             </span>
             {bill.balance.credit > 0 ? (
               <span className="nh-chip bg-nh-lime text-nh-ink">
-                {t("Paid so far {amount}", { amount: formatRp(bill.balance.credit) })}
+                {t("Paid so far {amount}", { amount: formatRupiah(bill.balance.credit) })}
               </span>
             ) : null}
           </div>
@@ -51,7 +51,7 @@ export function BillsPage() {
               <div key={order.id} className="nh-card">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="truncate text-sm font-extrabold">{order.order_number ?? "-"}</p>
-                  <p className="nh-display shrink-0 text-lg tabular-nums">{formatRp(order.total_amount)}</p>
+                  <p className="nh-display shrink-0 text-lg tabular-nums">{formatRupiah(order.total_amount)}</p>
                 </div>
                 <p className="text-xs text-nh-muted">{formatDayTime(order.ordered_at)}</p>
                 {order.items.length > 0 ? (
@@ -66,7 +66,7 @@ export function BillsPage() {
                             <span className="block truncate text-xs text-nh-muted">{item.options.join(", ")}</span>
                           ) : null}
                         </span>
-                        <span className="shrink-0 font-bold tabular-nums">{formatRp(item.total_amount)}</span>
+                        <span className="shrink-0 font-bold tabular-nums">{formatRupiah(item.total_amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -87,7 +87,7 @@ export function BillsPage() {
                   <span className="block truncate font-bold">{payment.method}</span>
                   <span className="block text-xs text-nh-muted">{formatDayTime(payment.created_at)}</span>
                 </span>
-                <span className="nh-display shrink-0 text-lg text-nh-ok tabular-nums">+{formatRp(payment.amount)}</span>
+                <span className="nh-display shrink-0 text-lg text-nh-ok tabular-nums">+{formatRupiah(payment.amount)}</span>
               </div>
             ))}
           </div>

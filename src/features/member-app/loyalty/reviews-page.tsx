@@ -2,7 +2,7 @@
 
 import { MessageCircle, Star } from "lucide-react";
 import { useState } from "react";
-import { formatRp } from "@/lib/member-app/loyalty";
+import { formatRupiah } from "@/lib/format";
 import { BottomSheet } from "../components/bottom-sheet";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
@@ -55,7 +55,7 @@ export function ReviewsPage() {
                     </p>
                     <p className="mt-1 truncate text-sm font-extrabold">{order.order_number}</p>
                     <p className="text-xs text-nh-muted">
-                      {formatRp(order.total_amount)} · {t("review by {date}", { date: formatDay(order.review_until) })}
+                      {formatRupiah(order.total_amount)} · {t("review by {date}", { date: formatDay(order.review_until) })}
                     </p>
                   </div>
                   <button

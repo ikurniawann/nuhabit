@@ -2,7 +2,8 @@
 
 import { CalendarDays, Clock, MapPin, User } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { eventSeat, formatNumber, formatRp, type EventSeat } from "@/lib/member-app/loyalty";
+import { eventSeat, type EventSeat } from "@/lib/member-app/loyalty";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { BottomSheet } from "../components/bottom-sheet";
 import { ApiError } from "../lib/api";
 import { useT, type T } from "../lib/i18n";
@@ -74,7 +75,7 @@ export function EventsPage() {
                 <User size={13} /> {seatsLeft > 0 ? t("{n} spots left", { n: seatsLeft }) : t("Full")}
               </span>
               <span className="font-bold text-nh-ink">
-                {event.price_idr > 0 ? formatRp(event.price_idr) : t("Free")}
+                {event.price_idr > 0 ? formatRupiah(event.price_idr) : t("Free")}
               </span>
             </div>
           </button>
@@ -143,7 +144,7 @@ function EventSheet({ event, onClose }: { event: CrmEvent; onClose: () => void }
             n: formatNumber(event.confirmed_count),
             total: formatNumber(event.capacity),
           })}{" "}
-          · {event.price_idr > 0 ? t("{amount}, pay at the outlet", { amount: formatRp(event.price_idr) }) : t("Free")}
+          · {event.price_idr > 0 ? t("{amount}, pay at the outlet", { amount: formatRupiah(event.price_idr) }) : t("Free")}
         </Detail>
       </div>
       {event.description ? (

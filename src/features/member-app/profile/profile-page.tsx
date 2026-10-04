@@ -26,7 +26,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { formatNumber } from "@/lib/member-app/loyalty";
+import { formatNumber } from "@/lib/format";
 import { MemberCardSheet } from "../components/member-card";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";

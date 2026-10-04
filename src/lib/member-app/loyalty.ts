@@ -1,3 +1,4 @@
+import { formatNumber, formatRupiah } from "@/lib/format";
 /**
  * Aturan tampilan fitur member (ARK Coin, event, challenge, reward) yang dulu
  * hidup di portal tab lama. Murni: teks lewat `t` (kunci Inggris aplikasi
@@ -7,21 +8,17 @@
 export type Translate = (key: string, vars?: Record<string, string | number>) => string;
 
 /** Angka gaya Indonesia: 12.500 */
-export const formatNumber = (value: number) => Math.round(value).toLocaleString("id-ID");
-
-export const formatRp = (value: number) => `Rp ${formatNumber(value)}`;
-
 export type ChallengeMetric = "visits" | "spend";
 
 export function challengeMetricText(t: Translate, metric: ChallengeMetric, value: number): string {
-  return metric === "spend" ? formatRp(value) : t("{n} visits", { n: formatNumber(value) });
+  return metric === "spend" ? formatRupiah(value) : t("{n} visits", { n: formatNumber(value) });
 }
 
-/** "500 XP + ARK worth Rp 10.000"; kosong bila challenge tanpa hadiah. */
+/** "500 XP + ARK worth Rp10.000"; kosong bila challenge tanpa hadiah. */
 export function challengeRewardText(t: Translate, reward: { reward_xp: number; reward_ark_idr: number }): string {
   const parts: string[] = [];
   if (reward.reward_xp > 0) parts.push(`${formatNumber(reward.reward_xp)} XP`);
-  if (reward.reward_ark_idr > 0) parts.push(t("ARK worth Rp {n}", { n: formatNumber(reward.reward_ark_idr) }));
+  if (reward.reward_ark_idr > 0) parts.push(t("ARK worth {amount}", { amount: formatRupiah(reward.reward_ark_idr) }));
   return parts.join(" + ");
 }
 
@@ -40,8 +37,8 @@ export function eventSeat(event: {
 
 /** Galat nominal top-up bebas; null bila nominal sah. max 0 = tanpa batas atas. */
 export function topupAmountError(t: Translate, amount: number, min: number, max: number): string | null {
-  if (amount < min) return t("Minimum {amount}", { amount: formatRp(min) });
-  if (max > 0 && amount > max) return t("Maximum {amount}", { amount: formatRp(max) });
+  if (amount < min) return t("Minimum {amount}", { amount: formatRupiah(min) });
+  if (max > 0 && amount > max) return t("Maximum {amount}", { amount: formatRupiah(max) });
   return null;
 }
 

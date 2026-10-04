@@ -3,7 +3,7 @@
 import { AlertTriangle, ChevronRight, Coins } from "lucide-react";
 import Link from "next/link";
 import { isLowBalance } from "@/lib/member-portal/balance";
-import { formatNumber, formatRp } from "@/lib/member-app/loyalty";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { idrToArkDisplay } from "@/lib/pos/loyalty-settings";
 import { isCreditEntry } from "@/lib/wallet/ledger";
 import { useT } from "../lib/i18n";
@@ -46,7 +46,7 @@ export function CoinsPage() {
           {t("ARK Coin balance")}
         </p>
         <p className="nh-display relative mt-1 text-7xl leading-none tabular-nums">{formatNumber(me.coins)}</p>
-        <p className="relative mt-2 text-xs font-semibold text-white/45">≈ {formatRp(me.coinsIdr)}</p>
+        <p className="relative mt-2 text-xs font-semibold text-white/45">≈ {formatRupiah(me.coinsIdr)}</p>
         <div className="relative mt-5 flex items-center justify-between gap-3">
           <p className="truncate text-xs font-semibold text-white/45">{me.profile.name ?? "Member"}</p>
           {me.tier ? <span className="nh-chip shrink-0 bg-white/10 text-white/80">{me.tier.name}</span> : null}

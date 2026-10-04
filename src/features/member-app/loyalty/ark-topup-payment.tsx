@@ -4,7 +4,7 @@ import { CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
-import { formatRp } from "@/lib/member-app/loyalty";
+import { formatRupiah } from "@/lib/format";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
@@ -55,9 +55,9 @@ export function ArkTopupPayment({
         <div className="nh-card nh-surface-brand !border-0 !p-6 text-nh-ink">
           <CheckCircle2 size={36} strokeWidth={2.4} />
           <p className="nh-display mt-3 text-3xl font-black">{t("Balance added")}</p>
-          <p className="nh-display mt-1 text-5xl tabular-nums">+{formatRp(topup.credit_idr)}</p>
+          <p className="nh-display mt-1 text-5xl tabular-nums">+{formatRupiah(topup.credit_idr)}</p>
           <p className="mt-3 text-sm font-semibold">
-            {t("Balance now {amount}", { amount: formatRp(topup.balance_after) })}
+            {t("Balance now {amount}", { amount: formatRupiah(topup.balance_after) })}
           </p>
         </div>
         <Link href={m("/coins")} className="nh-btn-brand">
@@ -99,10 +99,10 @@ export function ArkTopupPayment({
       </div>
 
       <div className="nh-card flex flex-col items-center gap-3 !p-6">
-        <p className="nh-display text-4xl tabular-nums">{formatRp(topup.amount)}</p>
+        <p className="nh-display text-4xl tabular-nums">{formatRupiah(topup.amount)}</p>
         {topup.credit_idr > topup.amount ? (
           <span className="nh-chip bg-nh-lime text-nh-ink">
-            {t("You receive {amount}", { amount: formatRp(topup.credit_idr) })}
+            {t("You receive {amount}", { amount: formatRupiah(topup.credit_idr) })}
           </span>
         ) : null}
         <div className={`rounded-2xl bg-white p-4 ${expired ? "opacity-30" : ""}`}>
