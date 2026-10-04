@@ -219,6 +219,8 @@ func (svBillOrders) SettledOrders(ctx context.Context, q database.Querier, custo
 
 // SettleOrders marks the orders paid by member bill and closes multi-stall
 // checkouts whose child orders are all paid, on the caller's transaction.
+// pos_checkouts.payment_method is an enum and payment_method_code text, so
+// $2 is cast for each or Postgres cannot type it (42P08).
 func (svBillOrders) SettleOrders(ctx context.Context, q database.Querier, orderIDs, checkoutIDs []string, settlementID string) error {
 	if _, err := q.Exec(ctx,
 		`UPDATE pos.pos_orders
@@ -232,7 +234,7 @@ func (svBillOrders) SettleOrders(ctx context.Context, q database.Querier, orderI
 	}
 	_, err := q.Exec(ctx,
 		`UPDATE pos.pos_checkouts c
-		    SET payment_status = 'paid', payment_method = $2, payment_method_code = $2,
+		    SET payment_status = 'paid', payment_method = $2::text::pos_payment_method, payment_method_code = $2::text,
 		        payment_method_name = $3, amount_paid = c.total_amount, change_amount = 0, updated_at = now()
 		  WHERE c.id = ANY($1::uuid[])
 		    AND NOT EXISTS (

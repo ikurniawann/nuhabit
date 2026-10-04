@@ -311,7 +311,7 @@ async function settleOpenOrders(
   if (checkoutIds.length) {
     await client.query(
       `UPDATE pos.pos_checkouts c
-       SET payment_status = 'paid', payment_method = $2, payment_method_code = $2,
+       SET payment_status = 'paid', payment_method = $2::text::public.pos_payment_method, payment_method_code = $2::text,
            payment_method_name = $3, amount_paid = c.total_amount, change_amount = 0, updated_at = now()
        WHERE c.id = ANY($1::uuid[])
          AND NOT EXISTS (

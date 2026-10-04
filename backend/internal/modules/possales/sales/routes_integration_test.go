@@ -142,14 +142,85 @@ func TestSplitBillFlow(t *testing.T) {
 	if out := e.call(true, "POST", base+"/"+first+"/pay", map[string]any{"payment_method": "cash", "amount_paid": 30000}, 400); errorOf(out) != "Split already paid" {
 		t.Fatalf("%v", out)
 	}
-	// The DB function pos_cancel_split writes status/reason columns that
-	// pos_order_status_history does not have: TS and Go both answer 500.
-	if out := e.call(true, "PATCH", base+"/"+second, nil, 500); errorOf(out) != `column "status" of relation "pos_order_status_history" does not exist` {
-		t.Fatalf("cancel %v", out)
+	if out := e.call(true, "PATCH", base+"/"+first, nil, 400); errorOf(out) != "Cannot cancel paid split" {
+		t.Fatalf("cancel paid %v", out)
 	}
-	list := e.call(true, "GET", base, nil, 200)
-	if list["data"] == nil {
+	if out := e.call(true, "PATCH", base+"/00000000-0000-4000-8000-000000000000", nil, 400); errorOf(out) != "Split not found" {
+		t.Fatalf("cancel unknown %v", out)
+	}
+	if out := e.raw("PATCH", base+"/"+second, nil, 200); out != `{"success":true,"data":{"success":true,"split_id":"`+second+`"}}` {
+		t.Fatalf("cancel %s", out)
+	}
+	if out := e.call(true, "PATCH", base+"/"+second, nil, 400); errorOf(out) != "Split already cancelled" {
+		t.Fatalf("cancel twice %v", out)
+	}
+	var notes string
+	e.scalar(&notes, `SELECT notes FROM pos.pos_order_status_history
+		WHERE order_id = $1 AND changed_by = $2 AND from_status = to_status`, order["id"], e.staff.UserID)
+	if notes != "Split Split 2 cancelled" {
+		t.Fatalf("history %q", notes)
+	}
+	list := e.call(true, "GET", base, nil, 200)["data"].(map[string]any)
+	listed := list["splits"].([]any)
+	if list["paid_count"] != float64(1) || listed[1].(map[string]any)["status"] != "cancelled" {
 		t.Fatalf("list %v", list)
+	}
+}
+
+// POST /api/pos/orders with splits runs pos_create_split_order_transaction:
+// one unpaid order, its lines, the splits and their item mapping.
+func TestCreateSplitOrder(t *testing.T) {
+	e := setup(t)
+	body := e.cashOrder(map[string]any{
+		"order_type": "dine_in", "table_id": "T9", "guest_count": 3, "notes": "pisah", "subtotal": 48000,
+		"splits": []any{
+			map[string]any{"total_amount": 1}, map[string]any{"total_amount": 1},
+		},
+	})
+	if out := e.call(true, "POST", "/api/pos/orders", body, 400); errorOf(out) != "Total split 2 tidak sama dengan total order 48000" {
+		t.Fatalf("mismatch %v", out)
+	}
+	body["splits"] = []any{
+		map[string]any{"label": "Andi", "subtotal": 20000, "total_amount": 20000,
+			"items": []any{map[string]any{"order_item_index": 0, "quantity": 1, "unit_price": 20000}}},
+		map[string]any{"total_amount": 28000, "customer_id": e.fx.customer,
+			"items": []any{map[string]any{"order_item_index": 0, "quantity": 1}, map[string]any{"order_item_index": 1, "quantity": 1}}},
+	}
+	order := e.call(true, "POST", "/api/pos/orders", body, 201)["data"].(map[string]any)
+	if order["status"] != "pending" || order["payment_status"] != "unpaid" || order["order_type"] != "dine_in" ||
+		order["table_id"] != "T9" || order["guest_count"] != float64(3) || order["total_amount"] != "48000.00" ||
+		order["queue_number"] == nil {
+		t.Fatalf("order %v", order)
+	}
+	items := order["items"].([]any)
+	splits := order["splits"].([]any)
+	if len(items) != 2 || len(splits) != 2 {
+		t.Fatalf("items %v splits %v", items, splits)
+	}
+	for _, raw := range items {
+		it := raw.(map[string]any)
+		if it["product_sku"] == "" || it["station"] == nil || it["kitchen_status"] != "pending" {
+			t.Fatalf("item %v", it)
+		}
+	}
+	var mapped float64
+	e.scalar(&mapped, `SELECT COALESCE(sum(si.total_amount), 0)::float8 FROM pos.pos_order_split_items si
+		JOIN pos.pos_order_splits s ON s.id = si.split_id WHERE s.order_id = $1`, order["id"])
+	if mapped != 48000 {
+		t.Fatalf("split items total %v", mapped)
+	}
+	var labels string
+	e.scalar(&labels, `SELECT string_agg(label || ':' || COALESCE(customer_id::text, '-'), ',' ORDER BY split_index)
+		FROM pos.pos_order_splits WHERE order_id = $1`, order["id"])
+	if labels != "Andi:-,Split 2:"+e.fx.customer {
+		t.Fatalf("labels %q", labels)
+	}
+	var history int
+	e.scalar(&history, `SELECT count(*)::int FROM pos.pos_order_status_history
+		WHERE order_id = $1 AND to_status = 'pending' AND changed_by = $2 AND notes = 'Split bill order created: 2 bill(s)'`,
+		order["id"], order["cashier_id"])
+	if history != 1 {
+		t.Fatalf("history rows %d", history)
 	}
 }
 

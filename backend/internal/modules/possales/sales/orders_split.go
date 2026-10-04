@@ -11,14 +11,10 @@ import (
 	"nuhabit/backend/internal/platform/database"
 )
 
-// createSplitOrder is orders/split-order.ts: the legacy DB function
+// createSplitOrder is orders/split-order.ts: the DB function
 // pos_create_split_order_transaction, then the columns it does not set.
-//
-// Parity note: that function inserts columns pos_order_items does not have
-// (variant_info, modifier_info, notes), so it fails on every database built
-// from the current migrations, in TS and here alike (500 with the database
-// message). The TS also sends p_items/p_splits as Postgres array literals;
-// here they are JSON, as the jsonb parameters expect.
+// Its p_items/p_splits are jsonb[] because node-postgres sends JS arrays as
+// Postgres array literals; Go unnests its JSON arrays into jsonb[].
 func (h *Handler) createSplitOrder(ctx context.Context, oc orderCtx, splits []any) (*response, error) {
 	req := oc.req
 	if len(oc.giftNominals) > 0 {
@@ -53,7 +49,7 @@ func (h *Handler) placeSplitOrder(ctx context.Context, tx pgx.Tx, oc orderCtx, s
 			"p_order_type" := $1, "p_customer_id" := $2, "p_cashier_id" := $3, "p_server_id" := $4, "p_table_id" := $5,
 			"p_subtotal" := $6, "p_discount_amount" := $7, "p_discount_reason" := $8, "p_tax_amount" := $9,
 			"p_service_charge_amount" := $10, "p_total_amount" := $11, "p_notes" := $12, "p_special_requests" := $13,
-			"p_items" := $14::jsonb, "p_splits" := $15::jsonb, "p_branch_id" := $16)`,
+			"p_items" := ARRAY(SELECT jsonb_array_elements($14::jsonb)), "p_splits" := ARRAY(SELECT jsonb_array_elements($15::jsonb)), "p_branch_id" := $16)`,
 			jsonScalar(req.Get("order_type")), truthyScalar(req.Get("customer_id")), oc.cashierID, truthyScalar(req.Get("server_id")),
 			truthyScalar(req.Get("table_id")), req.NumOr0("subtotal"), req.NumOr0("discount_amount"), truthyScalar(req.Get("discount_reason")),
 			tax, req.NumOr0("service_charge_amount"), req.NumOr0("total_amount"), truthyScalar(req.Get("notes")),
