@@ -16,6 +16,7 @@ type Ports struct {
 	// AppOrigin prefixes the booking status links sent over WhatsApp
 	// (appOrigin() without a request: NEXT_PUBLIC_APP_URL or "").
 	AppOrigin string
+	Public    PublicPorts // the public booking flow (public_ports.go)
 }
 
 // Venues resolves the caller's ticketing venue: the user's business scope

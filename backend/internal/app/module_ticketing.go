@@ -23,6 +23,7 @@ func init() {
 			Employees: ticketingEmployees{},
 			Messenger: ticketingMessenger{db: d.DB, wa: whatsapp.New(d.Log)},
 			AppOrigin: ticketingAppOrigin(os.Getenv),
+			Public:    ticketingPublicPorts(d),
 		})
 	})
 }
