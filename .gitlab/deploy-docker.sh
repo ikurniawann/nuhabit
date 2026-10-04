@@ -124,7 +124,7 @@ if [ "${BACKEND_ENABLED:-0}" = "1" ]; then
     -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e STORAGE_DIR=/app/storage \
     "$DOCKER_IMAGE-api:latest"
-  # Image distroless tanpa shell: tunggu HEALTHCHECK bawaan menjadi healthy.
+  # Tunggu HEALTHCHECK bawaan image (api -healthcheck) menjadi healthy.
   api_ready=""
   for attempt in $(seq 1 30); do
     if [ "$(docker inspect --format '{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null)" = "healthy" ]; then

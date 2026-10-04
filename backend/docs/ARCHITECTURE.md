@@ -210,3 +210,55 @@ the leading digits of the basename then the name, one transaction per file,
 recorded in `public.schema_migrations(filename, applied_at, checksum)`. The dry
 run is read-only. Non-local targets need `-allow-remote` or `ALLOW_REMOTE_DB=1`.
 The Node runner and the Go runner share the table, so either can be used.
+
+## Files, documents and images
+
+The routes still in Next (`NEXT_ONLY_ROUTES`) upload and serve files, render
+PDFs and spreadsheets, extract text and run OCR. These platform packages port
+the TS helpers so a module can move those routes; each has tests, and the
+`*Parity` tests run the real TS libraries under Node (skipped without `node`
+or `frontend/node_modules`).
+
+- **`platform/storage`**: `lib/storage.ts` and `lib/storage-private.ts`
+  rooted at `STORAGE_DIR` (`/app/storage` in both containers, else
+  `../frontend/storage`). `Upload` writes `uploads/<bucket>/[<folder>/]<ms>-<32
+  hex>.<ext>` with the extension from the MIME type and returns the
+  `/api/files/...` URL; `SavePrivateImage`/`Document`/`Audio` sniff magic bytes
+  and write `private/<folder>/<ms>-<16 hex>.<ext>`; `WritePrivate` takes a
+  caller-chosen path (the data room's `dataroom/YYYY/MM/...`). Every path is
+  contained under its root, and `SafeSegments(Under)` is `lib/security/safe-path`.
+  `ServeUpload` is the `/api/files` handler's headers and Range handling;
+  `WritePrivateFile` and `ContentDisposition` cover the authed file routes.
+  `ReadForm` parses multipart bodies like `request.formData()` (File.type
+  rules included) under a byte limit; `MaxRequestBytes` is the proxy's 10 MB.
+  A round-trip test writes with the TS helpers and reads in Go, and back.
+- **`platform/xlsx`** (excelize): `Build` is `buildXlsxBuffer` (widths,
+  merges); `Report` is `lib/pos/report-excel/workbook.ts` (title blocks, dark
+  header tables, Rupiah/percent formats, totals, frozen header). `ParseMatrix`
+  and `ParseCSVParts` read cells as ExcelJS values (JS number strings, ISO
+  dates, booleans, formula results). `ToCSV`/`CSVCell` quote every cell and
+  prefix `= + - @` tab and CR with `'`. Import helpers: `SpreadsheetMatrix`,
+  `HeaderNormalizer`, `MatrixToRows`.
+- **`platform/pdfgen`** (go-pdf/fpdf, pdfcpu): `Doc` follows pdfkit's text
+  model in points with the standard Helvetica fonts (top-anchored text, AFM
+  line heights, wrapping, alignment, flow onto new pages), plus `Rect`,
+  `Line`, `Image` (any format, EXIF-rotated), `DrawTable` and `EachPage` for
+  "Halaman x dari y" footers. Money: `Rupiah` (`formatRupiah`),
+  `RupiahSpaced` (payslip), `Thousands` (id-ID), `Terbilang`. `Watermark` and
+  `WatermarkText` are the data room's PDF stamp. fpdf does not kern, so text
+  sits up to about 1 pt off pdfkit's on a long line.
+- **`platform/extract`**: `Attachment` and `CV` are `extractAttachmentText`
+  and `extractCvText` (after the file is read). PDF text matches unpdf's
+  merged single line (ledongthuc/pdf), DOCX matches `mammoth.extractRawText`,
+  spreadsheets are CSV per sheet. OCR comes in through the `OCR` interface.
+- **`platform/ocr`**: `ocr.New()` runs `tesseract <file> stdout -l ind+eng
+  --oem 1` with a 120 s timeout and a temp file it always removes;
+  `ErrNotInstalled` when the binary is missing (`TESSERACT_BIN` overrides the
+  path). The runtime image installs `tesseract-ocr` with the eng and ind
+  packs; locally `brew install tesseract tesseract-lang`.
+- **`platform/imageproc`** (golang.org/x/image): `Decode` with EXIF
+  orientation, `FitInside`, `Flatten`, `JPEGThumbnail` (the gofood-image and
+  attendance-photo sharp pipelines) and `Watermark` (the data room's image
+  stamp). Pure Go cannot encode WebP, so a WebP watermark comes out as JPEG
+  and returns `image/jpeg`; JPEGs are larger than mozjpeg's, and resizing is
+  Catmull-Rom where sharp uses Lanczos3.

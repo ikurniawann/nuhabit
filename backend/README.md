@@ -122,7 +122,7 @@ docker run --rm -p 8080:8080 -e DATABASE_URL=... nuhabit-api
 docker run --rm -e MIGRATE_DATABASE_URL=... -e ALLOW_REMOTE_DB=1 --entrypoint /usr/local/bin/migrate nuhabit-api -apply
 ```
 
-The runtime image is distroless static running as `nonroot`. It has no shell
-or curl, so the Docker `HEALTHCHECK` runs `api -healthcheck`, which calls the
-local `/health`. Kubernetes and load balancers should probe `/health` and
+The runtime image is Debian slim with the `tesseract` CLI (eng and ind) for
+OCR, running as `nonroot`. It has no curl, so the Docker `HEALTHCHECK` runs
+`api -healthcheck`, which calls the local `/health`. Kubernetes and load balancers should probe `/health` and
 `/ready` over HTTP instead.

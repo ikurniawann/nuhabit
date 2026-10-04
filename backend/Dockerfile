@@ -14,9 +14,19 @@ COPY internal ./internal
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
  && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
-# Runtime: distroless static, non-root (uid 65532). It ships CA certificates
-# and the tz database (Asia/Jakarta) and nothing else: no shell, no curl.
-FROM gcr.io/distroless/static-debian12:nonroot
+# Runtime: Debian slim, because OCR shells out to the tesseract CLI
+# (internal/platform/ocr) with the eng and ind language packs. It also
+# carries CA certificates and the tz database (Asia/Jakarta). Non-root
+# (uid 65532, as distroless nonroot was); the deploy script overrides it with
+# 1001 to match the shared storage volume. The image grows from about 30 MB
+# (distroless static + binaries) to about 150 MB.
+FROM debian:trixie-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates tzdata tesseract-ocr tesseract-ocr-eng tesseract-ocr-ind \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd --system --gid 65532 nonroot \
+ && useradd --system --uid 65532 --gid nonroot --no-create-home --shell /usr/sbin/nologin nonroot
 WORKDIR /app
 COPY --from=build /out/api /out/migrate /usr/local/bin/
 # The migrate binary reads the SQL from here (MIGRATIONS_DIR).
@@ -29,8 +39,8 @@ ENV PORT=8080 \
     MIGRATIONS_DIR=/app/database/migrations
 EXPOSE 8080
 USER nonroot:nonroot
-# No shell or curl here, so the binary probes its own /health. Orchestrators
-# should probe HTTP directly: liveness GET /health, readiness GET /ready.
+# No curl here, so the binary probes its own /health. Orchestrators should
+# probe HTTP directly: liveness GET /health, readiness GET /ready.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=4 \
     CMD ["/usr/local/bin/api", "-healthcheck"]
 ENTRYPOINT ["/usr/local/bin/api"]
