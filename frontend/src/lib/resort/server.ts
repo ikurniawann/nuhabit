@@ -1,5 +1,6 @@
 import { ApiError, requireIamAction, requireIamMenuPrefix, type ApiUser } from "@/lib/api/auth";
 import { getApiUserScope } from "@/lib/api/scope";
+import type { PoolClient } from "pg";
 import { query, queryOne } from "@/lib/db";
 import { IAM } from "@/lib/iam/prefixes";
 import type { BookedRow } from "./planning";
@@ -73,17 +74,23 @@ export async function loadSeasons(branchId: string, from?: string, to?: string):
 }
 
 /** Kamar terpakai pada rentang tanggal (status yang masih memblokir stok). */
-export async function loadBookedRooms(branchId: string, from: string, to: string, excludeReservationId?: string | null): Promise<BookedRow[]> {
-  return query<BookedRow>(
-    `SELECT rr.room_type_id, rr.room_id, r.check_in::text AS check_in, r.check_out::text AS check_out, r.id AS reservation_id
+export async function loadBookedRooms(
+  branchId: string,
+  from: string,
+  to: string,
+  excludeReservationId?: string | null,
+  client?: Pick<PoolClient, "query">
+): Promise<BookedRow[]> {
+  const sql = `SELECT rr.room_type_id, rr.room_id, r.check_in::text AS check_in, r.check_out::text AS check_out, r.id AS reservation_id
      FROM resort.reservation_rooms rr
      JOIN resort.reservations r ON r.id = rr.reservation_id
      WHERE r.branch_id = $1
        AND r.status = ANY($2::text[])
        AND r.check_in < $4::date AND r.check_out > $3::date
-       AND ($5::uuid IS NULL OR r.id <> $5::uuid)`,
-    [branchId, INVENTORY_BLOCKING_STATUSES, from, to, excludeReservationId ?? null]
-  );
+       AND ($5::uuid IS NULL OR r.id <> $5::uuid)`;
+  const params = [branchId, INVENTORY_BLOCKING_STATUSES, from, to, excludeReservationId ?? null];
+  if (client) return (await client.query<BookedRow>(sql, params)).rows;
+  return query<BookedRow>(sql, params);
 }
 
 /** Nama staf untuk jejak folio/catatan; kosong → "Front Office". */

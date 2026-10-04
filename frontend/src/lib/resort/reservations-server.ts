@@ -71,28 +71,30 @@ export async function loadAvailability(branchId: string, checkIn: string, checkO
 /** Buat reservasi: cek stok per tipe, snapshot tarif per malam, catat tagihan kamar ke folio. */
 export async function createReservation(ctx: ResortContext, body: ReservationCreateInput) {
   assertStayDates(body.check_in, body.check_out);
-  const [types, seasons, booked, unitCounts] = await Promise.all([
+  const [types, seasons, unitCounts] = await Promise.all([
     loadRoomTypes(ctx.branchId),
     loadSeasons(ctx.branchId, body.check_in, body.check_out),
-    loadBookedRooms(ctx.branchId, body.check_in, body.check_out),
     query<{ room_type_id: string; total: number }>(
       `SELECT room_type_id, COUNT(*)::int AS total FROM resort.rooms
        WHERE branch_id = $1 AND is_active AND status <> 'ditutup' GROUP BY room_type_id`,
       [ctx.branchId]
     ),
   ]);
-  const plan = planReservation({
-    body, types, booked, seasons,
-    unitsByType: new Map(unitCounts.map((u) => [u.room_type_id, u.total])),
-  });
-  const { lines, roomTotal, extraTotal, total, nights } = plan;
+  const unitsByType = new Map(unitCounts.map((u) => [u.room_type_id, u.total]));
   const actorName = await loadActorName(ctx.user.id);
 
   const result = await withTransaction(async (client) => {
+    // Same lock key as the Go service: bookings for one branch serialize, so
+    // the stock check below sees every committed reservation.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('resort-booking:' || $1))`, [ctx.branchId]);
+    const booked = await loadBookedRooms(ctx.branchId, body.check_in, body.check_out, null, client);
+    const { lines, roomTotal, extraTotal, total, nights } = planReservation({ body, types, booked, seasons, unitsByType });
     let reservationId = "";
     let code = "";
     for (let attempt = 0; attempt < 5 && !reservationId; attempt += 1) {
       code = generateReservationCode();
+      // A savepoint keeps the transaction usable when the code collides.
+      await client.query("SAVEPOINT reservation_code");
       try {
         const { rows } = await client.query<{ id: string }>(
           `INSERT INTO resort.reservations
@@ -107,9 +109,11 @@ export async function createReservation(ctx: ResortContext, body: ReservationCre
            body.discount_amount, total, body.notes ?? null, body.special_request ?? null, ctx.user.id, actorName]
         );
         reservationId = rows[0].id;
+        await client.query("RELEASE SAVEPOINT reservation_code");
       } catch (err) {
         // 23505 = kode reservasi bentrok → coba kode lain
         if ((err as { code?: string }).code !== "23505") throw err;
+        await client.query("ROLLBACK TO SAVEPOINT reservation_code");
       }
     }
     if (!reservationId) throw new Error("Gagal membuat kode reservasi unik");
@@ -142,12 +146,18 @@ export async function createReservation(ctx: ResortContext, body: ReservationCre
     if (extraTotal > 0) await addCharge("extra-bed", "debit", `Extra bed × ${nights} malam`, extraTotal);
     if (body.discount_amount > 0) await addCharge("diskon", "kredit", "Diskon reservasi", body.discount_amount);
 
-    return { id: reservationId, code };
+    return { id: reservationId, code, nights, total, rooms: lines.length };
   });
 
   return {
-    data: { id: result.id, reservation_code: result.code, nights, total },
-    message: reservationSummary({ code: result.code, guest: body.guest_name, nights, rooms: lines.length, total }),
+    data: { id: result.id, reservation_code: result.code, nights: result.nights, total: result.total },
+    message: reservationSummary({
+      code: result.code,
+      guest: body.guest_name,
+      nights: result.nights,
+      rooms: result.rooms,
+      total: result.total,
+    }),
   };
 }
 
