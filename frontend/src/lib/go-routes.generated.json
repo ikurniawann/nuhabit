@@ -141,6 +141,11 @@
   },
   {
     "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/chart-of-accounts/import"
+  },
+  {
+    "module": "accounting",
     "method": "DELETE",
     "path": "/api/accounting/chart-of-accounts/{id}"
   },
@@ -336,6 +341,11 @@
   },
   {
     "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant/attachment"
+  },
+  {
+    "module": "insights",
     "method": "GET",
     "path": "/api/analytics/brands"
   },
@@ -426,6 +436,16 @@
   },
   {
     "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/cv-extract"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/candidates/{id}"
+  },
+  {
+    "module": "recruitment",
     "method": "GET",
     "path": "/api/candidates/{id}"
   },
@@ -443,6 +463,26 @@
     "module": "recruitment",
     "method": "POST",
     "path": "/api/candidates/{id}/activities"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/ai-analysis"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/ai-analysis"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/candidates/{id}/cv-upload"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/cv-upload"
   },
   {
     "module": "recruitment",
@@ -488,6 +528,11 @@
     "module": "recruitment",
     "method": "PUT",
     "path": "/api/candidates/{id}/psikotes/summary"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/report"
   },
   {
     "module": "recruitment",
@@ -563,6 +608,11 @@
     "module": "crm",
     "method": "POST",
     "path": "/api/crm/avatars"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/avatars/upload"
   },
   {
     "module": "crm",
@@ -693,6 +743,11 @@
     "module": "crm",
     "method": "POST",
     "path": "/api/crm/engagement/announcements"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/announcements/image"
   },
   {
     "module": "crm",
@@ -952,6 +1007,11 @@
   {
     "module": "crm",
     "method": "GET",
+    "path": "/api/crm/report-builder/{id}/export"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
     "path": "/api/crm/report-schedules"
   },
   {
@@ -978,6 +1038,11 @@
     "module": "crm",
     "method": "GET",
     "path": "/api/crm/reports"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/reports/conversations"
   },
   {
     "module": "crm",
@@ -1191,6 +1256,11 @@
   },
   {
     "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}"
+  },
+  {
+    "module": "dataroom",
     "method": "PATCH",
     "path": "/api/dataroom/nodes/{id}"
   },
@@ -1203,6 +1273,11 @@
     "module": "dataroom",
     "method": "PUT",
     "path": "/api/dataroom/nodes/{id}/access"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/download"
   },
   {
     "module": "dataroom",
@@ -1228,6 +1303,11 @@
     "module": "dataroom",
     "method": "GET",
     "path": "/api/dataroom/tree"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/upload"
   },
   {
     "module": "desktop",
@@ -1266,7 +1346,17 @@
   },
   {
     "module": "desktop",
+    "method": "DELETE",
+    "path": "/api/desktop/wallpapers"
+  },
+  {
+    "module": "desktop",
     "method": "GET",
+    "path": "/api/desktop/wallpapers"
+  },
+  {
+    "module": "desktop",
+    "method": "POST",
     "path": "/api/desktop/wallpapers"
   },
   {
@@ -1283,6 +1373,21 @@
     "module": "accounting",
     "method": "PATCH",
     "path": "/api/finance/invoices/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
   },
   {
     "module": "accounting",
@@ -1556,6 +1661,16 @@
   },
   {
     "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/announcements/cover"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements/cover/{path...}"
+  },
+  {
+    "module": "hris",
     "method": "GET",
     "path": "/api/hris/announcements/feed"
   },
@@ -1591,8 +1706,23 @@
   },
   {
     "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/attendance"
+  },
+  {
+    "module": "hris",
     "method": "GET",
     "path": "/api/hris/attendance/daily-roster"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/export"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/photo/{path...}"
   },
   {
     "module": "hris",
@@ -1638,6 +1768,26 @@
     "module": "hris",
     "method": "PATCH",
     "path": "/api/hris/contracts/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts/{id}/document"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/contracts/{id}/signed-document"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts/{id}/signed-document"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/contracts/{id}/signed-document"
   },
   {
     "module": "hris",
@@ -1946,6 +2096,11 @@
   },
   {
     "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/kpi/snapshot"
+  },
+  {
+    "module": "payroll",
     "method": "DELETE",
     "path": "/api/hris/kpi/targets"
   },
@@ -1983,6 +2138,16 @@
     "module": "hris",
     "method": "POST",
     "path": "/api/hris/leaves/approve"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/leaves/attachment"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leaves/attachment/{path...}"
   },
   {
     "module": "hris",
@@ -2172,6 +2337,11 @@
   {
     "module": "payroll",
     "method": "GET",
+    "path": "/api/hris/payslips/{id}/pdf"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
     "path": "/api/hris/performance/cycles"
   },
   {
@@ -2247,6 +2417,21 @@
   {
     "module": "recruitment",
     "method": "GET",
+    "path": "/api/interview/files/{path...}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/session/{token}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/answer"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
     "path": "/api/interview/session/{token}/chat"
   },
   {
@@ -2258,6 +2443,21 @@
     "module": "recruitment",
     "method": "POST",
     "path": "/api/interview/session/{token}/live-frame"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/proctor-event"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/recording-chunk"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/start"
   },
   {
     "module": "recruitment",
@@ -2273,6 +2473,11 @@
     "module": "recruitment",
     "method": "GET",
     "path": "/api/interview/sessions/{id}/proctor-events"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/sessions/{id}/recordings"
   },
   {
     "module": "inventory",
@@ -2876,6 +3081,11 @@
   },
   {
     "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/profile/photo"
+  },
+  {
+    "module": "member-portal",
     "method": "GET",
     "path": "/api/member-portal/promos"
   },
@@ -3008,6 +3218,11 @@
     "module": "recruitment",
     "method": "GET",
     "path": "/api/portal/options"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/portal/submit"
   },
   {
     "module": "pos-ops",
@@ -3201,6 +3416,11 @@
   },
   {
     "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/orders/{id}/payment-proof"
+  },
+  {
+    "module": "pos-sales",
     "method": "POST",
     "path": "/api/pos/orders/{id}/pre-settle"
   },
@@ -3362,7 +3582,17 @@
   {
     "module": "pos-ops",
     "method": "GET",
+    "path": "/api/pos/reports/export"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
     "path": "/api/pos/reports/payment-methods"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/product-sales"
   },
   {
     "module": "pos-ops",
@@ -3378,6 +3608,16 @@
     "module": "pos-ops",
     "method": "GET",
     "path": "/api/pos/reports/rush-hour"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/rush-hour/export"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/transactions"
   },
   {
     "module": "pos-ops",
@@ -3637,6 +3877,11 @@
   {
     "module": "recruitment",
     "method": "GET",
+    "path": "/api/psikotes/files/{path...}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
     "path": "/api/psikotes/instruments"
   },
   {
@@ -3663,6 +3908,11 @@
     "module": "recruitment",
     "method": "PUT",
     "path": "/api/psikotes/questions/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session-tests/{id}/ai-insight"
   },
   {
     "module": "recruitment",
@@ -3702,6 +3952,11 @@
   {
     "module": "recruitment",
     "method": "POST",
+    "path": "/api/psikotes/session/{token}/proctor-event"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
     "path": "/api/psikotes/session/{token}/start"
   },
   {
@@ -3718,6 +3973,11 @@
     "module": "recruitment",
     "method": "POST",
     "path": "/api/psikotes/session/{token}/tests/{testId}/start"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/tests/{testId}/upload"
   },
   {
     "module": "recruitment",
@@ -3768,6 +4028,11 @@
     "module": "crm",
     "method": "POST",
     "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/public/gofood-image/{file}"
   },
   {
     "module": "shop",
@@ -3910,6 +4175,21 @@
     "path": "/api/purchasing/docs/spec"
   },
   {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/export/products"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/export/raw-materials"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/export/suppliers"
+  },
+  {
     "module": "procurement",
     "method": "GET",
     "path": "/api/purchasing/grn"
@@ -3968,6 +4248,26 @@
     "module": "procurement",
     "method": "GET",
     "path": "/api/purchasing/grn/{id}/vendor-credits"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/products"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/raw-materials"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/import/suppliers"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/units"
   },
   {
     "module": "inventory",
@@ -4383,6 +4683,16 @@
     "module": "inventory",
     "method": "GET",
     "path": "/api/purchasing/raw-materials/{id}/purchase-price"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/receipt-scan"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/receipts/{path...}"
   },
   {
     "module": "procurement",
@@ -4922,6 +5232,11 @@
   {
     "module": "sales-funnel",
     "method": "GET",
+    "path": "/api/sales-funnel/invoices/{id}/pdf"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
     "path": "/api/sales-funnel/leads"
   },
   {
@@ -4933,6 +5248,11 @@
     "module": "sales-funnel",
     "method": "GET",
     "path": "/api/sales-funnel/leads/by-phone"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads/import"
   },
   {
     "module": "sales-funnel",
@@ -4998,6 +5318,11 @@
     "module": "sales-funnel",
     "method": "PATCH",
     "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/quotations/{id}/pdf"
   },
   {
     "module": "sales-funnel",
@@ -5296,7 +5621,17 @@
   },
   {
     "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
     "method": "GET",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
     "path": "/api/settings/static-qris"
   },
   {
@@ -5358,6 +5693,11 @@
     "module": "dataroom",
     "method": "GET",
     "path": "/api/share/{token}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}/files/{nodeId}"
   },
   {
     "module": "dataroom",
@@ -5473,6 +5813,16 @@
     "module": "pos-sales",
     "method": "GET",
     "path": "/api/table-order/orders/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/table-order/orders/{id}/payment-proof"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/table-order/orders/{id}/payment-proof"
   },
   {
     "module": "pos-sales",
@@ -5648,6 +5998,11 @@
     "module": "ticketing",
     "method": "DELETE",
     "path": "/api/ticketing/products/{id}/dates/{dateId}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/products/{id}/thumbnail"
   },
   {
     "module": "ticketing",

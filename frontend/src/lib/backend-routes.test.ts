@@ -210,18 +210,19 @@ describe("routes kept in Next", () => {
   const allNext = nextApiRoutes();
 
   it("keeps a Go wildcard from taking a Next-only route", () => {
+    const nextOnly = ["GET /api/hris/attendance/export"];
     expect(
-      goBackendTarget("/api/hris/attendance/export", "GET", { env }),
+      goBackendTarget("/api/hris/attendance/export", "GET", { env, nextOnly }),
     ).toBeNull();
-    expect(goBackendTarget("/api/hris/attendance/7", "GET", { env })).toBe(
-      "http://go-api:8080/api/hris/attendance/7",
+    expect(
+      goBackendTarget("/api/hris/attendance/export", "HEAD", { env, nextOnly }),
+    ).toBeNull();
+    expect(
+      goBackendTarget("/api/hris/attendance/7", "GET", { env, nextOnly }),
+    ).toBe("http://go-api:8080/api/hris/attendance/7");
+    expect(goBackendTarget("/api/hris/attendance/export", "GET", { env })).toBe(
+      "http://go-api:8080/api/hris/attendance/export",
     );
-    expect(
-      goBackendTarget("/api/member-portal/profile/photo", "POST", { env }),
-    ).toBeNull();
-    expect(
-      goBackendTarget("/api/member-portal/profile", "PUT", { env }),
-    ).not.toBeNull();
   });
 
   it("lists only routes that exist in Next", () => {

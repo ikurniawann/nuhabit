@@ -115,7 +115,7 @@ describe("proxy: Go backend prefixes", () => {
         ),
       ).toBe("http://go-api:8080/api/member-portal/profile");
       expect(
-        (await at("POST", "/api/member-portal/profile/photo")).headers.get(
+        (await at("DELETE", "/api/member-portal/profile")).headers.get(
           "x-middleware-rewrite",
         ),
       ).toBeNull();

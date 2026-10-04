@@ -71,86 +71,13 @@ export const GO_BACKEND_PREFIXES: readonly string[] = [
 ];
 
 /**
- * Routes under a switched prefix that stay in Next: uploads and files in
- * Next's storage, xlsx/pdf output, OCR and AI extraction, and routes that
- * follow the sidebar's active stall. Listed explicitly because a Go wildcard
- * can match them (GET /api/hris/attendance/{id} would take .../export). This
- * is also the remaining work list for the Go port. Next-style segments:
- * "[id]" is one segment, "[...path]" the rest.
+ * Routes under a switched prefix that must stay in Next even though a Go
+ * pattern matches them (a Go wildcard such as /x/{id} would otherwise take
+ * /x/export). Empty since every API route runs in Go; keep it for future
+ * exceptions. Next-style segments: "[id]" is one segment, "[...path]" the
+ * rest.
  */
-export const NEXT_ONLY_ROUTES: readonly string[] = [
-  "POST /api/accounting/chart-of-accounts/import",
-  "POST /api/ai/assistant/attachment",
-  "DELETE /api/candidates/[id]",
-  "GET /api/candidates/[id]/ai-analysis",
-  "POST /api/candidates/[id]/ai-analysis",
-  "DELETE /api/candidates/[id]/cv-upload",
-  "POST /api/candidates/[id]/cv-upload",
-  "GET /api/candidates/[id]/report",
-  "POST /api/candidates/cv-extract",
-  "POST /api/crm/avatars/upload",
-  "POST /api/crm/engagement/announcements/image",
-  "GET /api/crm/report-builder/[id]/export",
-  "GET /api/crm/reports/conversations",
-  "DELETE /api/dataroom/nodes/[id]",
-  "GET /api/dataroom/nodes/[id]/download",
-  "POST /api/dataroom/upload",
-  "DELETE /api/desktop/wallpapers",
-  "POST /api/desktop/wallpapers",
-  "DELETE /api/finance/invoices/[id]/faktur-pajak",
-  "GET /api/finance/invoices/[id]/faktur-pajak",
-  "POST /api/finance/invoices/[id]/faktur-pajak",
-  "POST /api/hris/announcements/cover",
-  "GET /api/hris/announcements/cover/[...path]",
-  "POST /api/hris/attendance",
-  "GET /api/hris/attendance/export",
-  "GET /api/hris/attendance/photo/[...path]",
-  "GET /api/hris/contracts/[id]/document",
-  "DELETE /api/hris/contracts/[id]/signed-document",
-  "GET /api/hris/contracts/[id]/signed-document",
-  "POST /api/hris/contracts/[id]/signed-document",
-  "POST /api/hris/kpi/snapshot",
-  "POST /api/hris/leaves/attachment",
-  "GET /api/hris/leaves/attachment/[...path]",
-  "GET /api/hris/payslips/[id]/pdf",
-  "GET /api/interview/files/[...path]",
-  "GET /api/interview/session/[token]",
-  "POST /api/interview/session/[token]/answer",
-  "POST /api/interview/session/[token]/proctor-event",
-  "POST /api/interview/session/[token]/recording-chunk",
-  "POST /api/interview/session/[token]/start",
-  "GET /api/interview/sessions/[id]/recordings",
-  "POST /api/member-portal/profile/photo",
-  "POST /api/portal/submit",
-  "GET /api/pos/orders/[id]/payment-proof",
-  "GET /api/pos/reports/export",
-  "GET /api/pos/reports/product-sales",
-  "GET /api/pos/reports/rush-hour/export",
-  "GET /api/pos/reports/transactions",
-  "GET /api/psikotes/files/[...path]",
-  "POST /api/psikotes/session-tests/[id]/ai-insight",
-  "POST /api/psikotes/session/[token]/proctor-event",
-  "POST /api/psikotes/session/[token]/tests/[testId]/upload",
-  "GET /api/public/gofood-image/[file]",
-  "GET /api/purchasing/export/products",
-  "GET /api/purchasing/export/raw-materials",
-  "GET /api/purchasing/export/suppliers",
-  "POST /api/purchasing/import/products",
-  "POST /api/purchasing/import/raw-materials",
-  "POST /api/purchasing/import/suppliers",
-  "POST /api/purchasing/import/units",
-  "POST /api/purchasing/receipt-scan",
-  "GET /api/purchasing/receipts/[...path]",
-  "GET /api/sales-funnel/invoices/[id]/pdf",
-  "POST /api/sales-funnel/leads/import",
-  "GET /api/sales-funnel/quotations/[id]/pdf",
-  "DELETE /api/settings/static-qris",
-  "POST /api/settings/static-qris",
-  "GET /api/share/[token]/files/[nodeId]",
-  "GET /api/table-order/orders/[id]/payment-proof",
-  "POST /api/table-order/orders/[id]/payment-proof",
-  "POST /api/ticketing/products/[id]/thumbnail",
-];
+export const NEXT_ONLY_ROUTES: readonly string[] = [];
 
 export type GoRoute = { module: string; method: string; path: string };
 
@@ -200,8 +127,12 @@ export function matchesNextRoute(route: string, pathname: string): boolean {
   return want.length === got.length;
 }
 
-function keptInNext(method: string, pathname: string): boolean {
-  return NEXT_ONLY_ROUTES.some((entry) => {
+function keptInNext(
+  nextOnly: readonly string[],
+  method: string,
+  pathname: string,
+): boolean {
+  return nextOnly.some((entry) => {
     const [m, route] = entry.split(" ");
     return (
       (m === method || (method === "HEAD" && m === "GET")) &&
@@ -236,6 +167,7 @@ export function goBackendTarget(
   options: {
     prefixes?: readonly string[];
     routes?: readonly GoRoute[];
+    nextOnly?: readonly string[];
     env?: Env;
   } = {},
 ): string | null {
@@ -243,7 +175,14 @@ export function goBackendTarget(
   if (!base || !pathname.startsWith("/api/")) return null;
   const prefixes = options.prefixes ?? GO_BACKEND_PREFIXES;
   if (!prefixes.some((prefix) => matchesPrefix(pathname, prefix))) return null;
-  if (keptInNext(method.toUpperCase(), pathname)) return null;
+  if (
+    keptInNext(
+      options.nextOnly ?? NEXT_ONLY_ROUTES,
+      method.toUpperCase(),
+      pathname,
+    )
+  )
+    return null;
   if (!servedByGo(options.routes ?? (goRoutes as GoRoute[]), method, pathname))
     return null;
   return `${base}${pathname}`;
