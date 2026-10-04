@@ -5,12 +5,16 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 // registry maps module names to constructors. Register runs from init(),
@@ -33,6 +37,37 @@ func Names() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// RouteInfo is one registered route, as the Next proxy's manifest lists it.
+type RouteInfo struct {
+	Module string `json:"module"`
+	Method string `json:"method"`
+	Path   string `json:"path"`
+}
+
+// Routes lists every registered module's routes, sorted by path then method.
+// It builds each module without a database, so constructors must not query.
+func Routes() []RouteInfo {
+	deps := module.Deps{
+		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Now:    time.Now,
+		Events: outbox.NewBus(nil, nil),
+	}
+	var out []RouteInfo
+	for _, name := range Names() {
+		for _, rt := range registry[name](deps).Routes() {
+			method, path, _ := strings.Cut(rt.Pattern, " ")
+			out = append(out, RouteInfo{Module: name, Method: method, Path: path})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Path != out[j].Path {
+			return out[i].Path < out[j].Path
+		}
+		return out[i].Method < out[j].Method
+	})
+	return out
 }
 
 // Mount builds the modules selected by MODULES and registers their routes

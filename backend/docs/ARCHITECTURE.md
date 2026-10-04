@@ -98,9 +98,13 @@ Dependencies point inward: `http.go -> service.go -> domain`, and
 3. Write `*_integration_test.go` with `testutil.Deps`, `testutil.Mux`,
    `testutil.CreateStaff` (grants IAM menus through a throwaway role) and
    `testutil.CreateMember`. Assert the exact TS bodies.
-4. Add the path prefix to `GO_BACKEND_PREFIXES` once every route under it is
-   ported. A prefix matches whole segments, so `/api/gym` does not catch
-   `/api/gymnastics`.
+4. Run `make generate` to refresh `frontend/src/lib/go-routes.generated.json`
+   (CI fails when it is stale), then add the path prefix to
+   `GO_BACKEND_PREFIXES`. The proxy forwards a request only when its path is
+   under a switched prefix and Go registers that method and path, so a route
+   left in Next (an upload that writes Next storage, a PDF) keeps working
+   under a switched prefix. A prefix matches whole segments, so `/api/gym`
+   does not catch `/api/gymnastics`.
 
 `internal/modules/identity` (`GET /api/auth/me`) is the smallest worked example.
 

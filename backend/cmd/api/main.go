@@ -2,11 +2,13 @@
 // /health and /ready.
 //
 //	go -C backend run ./cmd/api
+//	api -routes        # print the route manifest for frontend/src/lib/go-routes.generated.json
 //	api -healthcheck   # probe the local /health and exit 0/1 (container HEALTHCHECK)
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -27,7 +29,17 @@ import (
 
 func main() {
 	healthcheck := flag.Bool("healthcheck", false, "GET http://127.0.0.1:$PORT/health and exit 0 when it answers 200")
+	routes := flag.Bool("routes", false, "print every module route as JSON (the Next proxy manifest) and exit")
 	flag.Parse()
+
+	if *routes {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(app.Routes()); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
 
 	// Shell env wins, then backend/.env.local, then backend/.env.
 	config.LoadDotenv(".env.local", ".env")

@@ -1,0 +1,767 @@
+[
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/me"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/bookings/members"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/checkin"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/checkin"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/class-types"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/class-types"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/gym/class-types/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/class-types/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/coaches/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/purchases/{id}/refund"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/reverse"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits/{customerId}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/adjust"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/sell"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/exercises/substitutions"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/exercises/substitutions"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/payouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/payouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/payouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/payouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/statements"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "DELETE",
+    "path": "/api/gym/packages/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PATCH",
+    "path": "/api/gym/packages/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/races/{id}/entrants"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/rules"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PUT",
+    "path": "/api/gym/rules"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions/duplicate-week"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/app/classes/catalog"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/announcements/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/bookings"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/me"
+  },
+  {
+    "module": "member-portal",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/home/me"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/home/settings"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/visits"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/activities"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities/{id}/comments"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities/{id}/kudos"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/athletes/{memberId}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/challenges"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/challenges/{id}/join"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/challenges/{id}/join"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/clubs"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/clubs/{id}/toggle"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/feed"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/follow/{memberId}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/gear"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/gear"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/train/gear/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/heatmap"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/routes"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/routes"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/routes/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/segments"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/segments/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "PUT",
+    "path": "/api/member-portal/app/train/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/social"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/stats"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races/mine"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/workouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/workout/workouts/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/badges"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/badges"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/bills"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/challenges"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/challenges"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/collectibles"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/collectibles/equip"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/collectibles/redeem"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/member-portal/consent"
+  },
+  {
+    "module": "member-portal",
+    "method": "DELETE",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/member-portal/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/member-portal/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/member-portal/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/coaches/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/purchases"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits/purchases/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/purchases/{id}/simulate-paid"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "PATCH",
+    "path": "/api/member-portal/gym/races/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/workouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/workouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/workouts/sessions/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/workouts/{a}/{b}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/logout"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/me"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/notifications"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/notifications"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/notifications/track"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/orders/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/otp"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/member-portal/profile"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/promos"
+  },
+  {
+    "module": "member-portal",
+    "method": "DELETE",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/qr"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/register"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/register/otp"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/reviews"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/reviews"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/rewards"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/rewards"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/topup"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/topup"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/topup/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/topup/{id}/simulate-paid"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/transactions"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/verify"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/visits"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/wallpapers"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/wallpapers/redeem"
+  }
+]

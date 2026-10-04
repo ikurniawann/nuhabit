@@ -78,10 +78,11 @@ docs/ARCHITECTURE.md
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |
 
-The Next app forwards these paths to Go when `BACKEND_URL` is set; the list
-lives in `frontend/src/lib/backend-routes.ts`. `POST
-/api/member-portal/profile/photo` and `PUT /api/member-portal/profile` stay in
-Next because the photo upload writes to Next's storage directory.
+The Next app forwards a request to Go when `BACKEND_URL` is set, its path is
+under a prefix in `frontend/src/lib/backend-routes.ts`, and Go registers that
+method and path (`frontend/src/lib/go-routes.generated.json`, refreshed by
+`make generate`). Other routes under a prefix, such as `POST
+/api/member-portal/profile/photo`, which writes Next's storage, stay in Next.
 
 ## Tests
 

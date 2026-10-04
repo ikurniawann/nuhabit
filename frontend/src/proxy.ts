@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
   // Strangler migration: /api prefixes ported to the Go backend go there
   // first, on every host. Method, query, body and cookies travel with the
   // rewrite; the Go service applies the same auth gate as updateSession.
-  const goTarget = goBackendTarget(request.nextUrl.pathname);
+  const goTarget = goBackendTarget(request.nextUrl.pathname, request.method);
   if (goTarget) {
     return NextResponse.rewrite(new URL(`${goTarget}${request.nextUrl.search}`));
   }

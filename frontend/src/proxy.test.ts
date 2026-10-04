@@ -68,8 +68,8 @@ describe("proxy: Go backend prefixes", () => {
       const mod = await importOriginal<typeof import("@/lib/backend-routes")>();
       return {
         ...mod,
-        goBackendTarget: (pathname: string) =>
-          mod.goBackendTarget(pathname, { prefixes: ["/api/auth/me"] }),
+        goBackendTarget: (pathname: string, method: string) =>
+          mod.goBackendTarget(pathname, method, { prefixes: ["/api/auth/me"] }),
       };
     });
     try {
@@ -90,6 +90,23 @@ describe("proxy: Go backend prefixes", () => {
       );
     } finally {
       vi.doUnmock("@/lib/backend-routes");
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  test("sends a route Go does not serve to Next even under a switched prefix", async () => {
+    vi.stubEnv("BACKEND_URL", "http://go-api:8080");
+    vi.resetModules();
+    try {
+      const { proxy: proxyWithGo } = await import("./proxy");
+      const at = (method: string, path: string) =>
+        proxyWithGo(new NextRequest(new URL(`https://${MEMBER}${path}`), { method, headers: { host: MEMBER } }));
+      expect((await at("PUT", "/api/member-portal/profile")).headers.get("x-middleware-rewrite")).toBe(
+        "http://go-api:8080/api/member-portal/profile"
+      );
+      expect((await at("POST", "/api/member-portal/profile/photo")).headers.get("x-middleware-rewrite")).toBeNull();
+    } finally {
       vi.unstubAllEnvs();
       vi.resetModules();
     }

@@ -125,6 +125,14 @@ jobs:
           unformatted=$(gofmt -l .)
           if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
 
+      # The Next proxy forwards only routes listed in this manifest.
+      - name: Route manifest is current
+        run: |
+          go run ./cmd/api -routes > "$RUNNER_TEMP/go-routes.json"
+          if ! diff -u ../frontend/src/lib/go-routes.generated.json "$RUNNER_TEMP/go-routes.json"; then
+            echo "Run: make -C backend generate"; exit 1
+          fi
+
       # Some migrations GRANT to the Supabase-era roles; a fresh server lacks them.
       - name: Prepare fresh database
         run: |

@@ -31,8 +31,9 @@ migrate: ## Dry run: list pending migrations
 migrate-apply: ## Apply pending migrations
 	go run ./cmd/migrate -apply
 
-generate: ## Regenerate IAM prefixes from frontend/src/lib/iam/prefixes.ts
+generate: ## Regenerate IAM prefixes and the Next proxy route manifest
 	go generate ./internal/platform/iam
+	go run ./cmd/api -routes > ../frontend/src/lib/go-routes.generated.json
 
 build: ## Build bin/api and bin/migrate
 	go build -trimpath -o bin/api ./cmd/api
