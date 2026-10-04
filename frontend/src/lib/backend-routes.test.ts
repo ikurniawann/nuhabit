@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   GO_BACKEND_PREFIXES,
+  NEXT_ONLY_ROUTES,
   goBackendTarget,
   matchesGoPattern,
   type GoRoute,
@@ -155,14 +156,89 @@ describe("Go route manifest", () => {
         (p) => r.path === p || r.path.startsWith(`${p}/`),
       ),
     );
-    // gym-training serves workouts/{id}/start and workouts/sessions/{id} with
-    // one pattern, because ServeMux rejects the two as overlapping.
-    const sharedPatterns = ["/api/member-portal/gym/workouts/{a}/{b}"];
+    // Dispatchers: one pattern serving several Next routes whose separate
+    // patterns ServeMux rejects as overlapping (workouts/{id}/start next to
+    // workouts/sessions/{id}, employees/{id}/contracts next to
+    // employees/documents/{doc_id}).
+    const sharedPatterns = [
+      "/api/member-portal/gym/workouts/{a}/{b}",
+      "/api/hris/employees/{id}/{sub}",
+      "/api/inventory/{id}/{sub}",
+      "/api/purchasing/inventory/{id}/{sub}",
+    ];
     const missing = switched
       .filter(
         (r) => !sharedPatterns.includes(r.path) && !dirExists(tsPath(r.path)),
       )
       .map((r) => `${r.method} ${r.path}`);
     expect(missing).toEqual([]);
+  });
+});
+
+/** Every exported HTTP method of every Next API route, as "METHOD /api/x/[id]". */
+function nextApiRoutes(): string[] {
+  const root = path.join(process.cwd(), "src/app");
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === "route.ts") {
+        const src = fs.readFileSync(full, "utf8");
+        const route = "/" + path.relative(root, dir).split(path.sep).join("/");
+        for (const m of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
+          const exported =
+            new RegExp(
+              `export\\s+(const|async function|function)\\s+${m}\\b`,
+            ).test(src) || new RegExp(`export\\s*\\{[^}]*\\b${m}\\b`).test(src);
+          if (exported) out.push(`${m} ${route}`);
+        }
+      }
+    }
+  };
+  walk(path.join(root, "api"));
+  return out;
+}
+
+/** A concrete path for a Next route: "[id]" -> "x1", "[...path]" -> "a/b". */
+const samplePath = (route: string) =>
+  route.replace(/\[\.\.\.\w+\]/g, "a/b").replace(/\[\w+\]/g, "x1");
+
+describe("routes kept in Next", () => {
+  const allNext = nextApiRoutes();
+
+  it("keeps a Go wildcard from taking a Next-only route", () => {
+    expect(
+      goBackendTarget("/api/hris/attendance/export", "GET", { env }),
+    ).toBeNull();
+    expect(goBackendTarget("/api/hris/attendance/7", "GET", { env })).toBe(
+      "http://go-api:8080/api/hris/attendance/7",
+    );
+    expect(
+      goBackendTarget("/api/member-portal/profile/photo", "POST", { env }),
+    ).toBeNull();
+    expect(
+      goBackendTarget("/api/member-portal/profile", "PUT", { env }),
+    ).not.toBeNull();
+  });
+
+  it("lists only routes that exist in Next", () => {
+    const existing = new Set(allNext);
+    expect(NEXT_ONLY_ROUTES.filter((r) => !existing.has(r))).toEqual([]);
+  });
+
+  it("decides every Next route under a switched prefix: Go or NEXT_ONLY_ROUTES", () => {
+    const undecided = allNext.filter((entry) => {
+      const [method, route] = entry.split(" ");
+      const switched = GO_BACKEND_PREFIXES.some(
+        (p) => route === p || route.startsWith(`${p}/`),
+      );
+      return (
+        switched &&
+        !NEXT_ONLY_ROUTES.includes(entry) &&
+        goBackendTarget(samplePath(route), method, { env }) === null
+      );
+    });
+    expect(undecided).toEqual([]);
   });
 });

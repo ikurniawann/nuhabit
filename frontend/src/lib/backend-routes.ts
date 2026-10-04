@@ -4,8 +4,9 @@ import goRoutes from "@/lib/go-routes.generated.json";
 /**
  * API path prefixes switched over to the Go backend (backend/). The Next
  * proxy rewrites a request to BACKEND_URL when its path sits under one of
- * these prefixes AND the Go service registers a route for that method and
- * path (go-routes.generated.json, written by `make -C backend generate`).
+ * these prefixes, is not in NEXT_ONLY_ROUTES, and the Go service registers a
+ * route for that method and path (go-routes.generated.json, written by
+ * `make -C backend generate`).
  * Anything Go does not serve, such as an upload that writes Next's storage,
  * falls through to the TypeScript route. Removing a prefix (or unsetting
  * BACKEND_URL) sends the whole prefix back to Next.
@@ -16,55 +17,104 @@ import goRoutes from "@/lib/go-routes.generated.json";
 export const GO_BACKEND_PREFIXES: readonly string[] = [
   // identity
   "/api/auth/me",
-  // gym-credits
-  "/api/gym/packages",
-  "/api/gym/credits",
-  "/api/gym/rules",
-  "/api/member-portal/gym/credits",
-  // gym-scheduling
-  "/api/gym/class-types",
-  "/api/gym/coaches",
-  "/api/gym/sessions",
-  "/api/gym/bookings",
-  "/api/gym/checkin",
-  "/api/member-portal/gym/sessions",
-  "/api/member-portal/gym/bookings",
-  "/api/member-portal/gym/coaches",
-  "/api/member-portal/app/classes",
-  // gym-training
-  "/api/gym/exercises",
-  "/api/gym/races",
-  "/api/gym/incentives",
-  "/api/member-portal/gym/workouts",
-  "/api/member-portal/gym/races",
-  "/api/member-portal/app/workout",
-  // athlete (app/home/settings rides on member-portal's app/home)
-  "/api/member-portal/app/train",
-  // member-portal (POST profile/photo stays in Next: it writes Next storage)
-  "/api/member-portal/otp",
-  "/api/member-portal/register",
-  "/api/member-portal/verify",
-  "/api/member-portal/logout",
-  "/api/member-portal/me",
-  "/api/member-portal/profile",
-  "/api/member-portal/consent",
-  "/api/member-portal/push",
-  "/api/member-portal/notifications",
-  "/api/member-portal/qr",
-  "/api/member-portal/visits",
-  "/api/member-portal/promos",
-  "/api/member-portal/orders",
-  "/api/member-portal/transactions",
-  "/api/member-portal/topup",
-  "/api/member-portal/events",
-  "/api/member-portal/challenges",
-  "/api/member-portal/reviews",
-  "/api/member-portal/bills",
-  "/api/member-portal/badges",
-  "/api/member-portal/rewards",
-  "/api/member-portal/collectibles",
-  "/api/member-portal/wallpapers",
-  "/api/member-portal/app/home",
+  // gym-credits, gym-scheduling, gym-training, athlete, member-portal
+  "/api/gym",
+  "/api/member-portal",
+  // ERP wave: pos-sales, pos-ops, stored-value
+  "/api/pos",
+  "/api/table-order",
+  "/api/wallet",
+  "/api/promo",
+  // procurement, inventory
+  "/api/purchasing",
+  "/api/inventory",
+  // hris, payroll, recruitment
+  "/api/hris",
+  "/api/master",
+  "/api/candidates",
+  "/api/interview",
+  "/api/psikotes",
+  "/api/recruitment",
+  "/api/job-openings",
+  "/api/positions",
+  "/api/offers",
+  "/api/offer",
+  // crm, accounting, ticketing
+  "/api/crm",
+  "/api/accounting",
+  "/api/finance",
+  "/api/ticketing",
+];
+
+/**
+ * Routes under a switched prefix that stay in Next: uploads and files in
+ * Next's storage, xlsx/pdf output, OCR and AI extraction, and routes that
+ * follow the sidebar's active stall. Listed explicitly because a Go wildcard
+ * can match them (GET /api/hris/attendance/{id} would take .../export). This
+ * is also the remaining work list for the Go port. Next-style segments:
+ * "[id]" is one segment, "[...path]" the rest.
+ */
+export const NEXT_ONLY_ROUTES: readonly string[] = [
+  "POST /api/accounting/chart-of-accounts/import",
+  "DELETE /api/candidates/[id]",
+  "GET /api/candidates/[id]/ai-analysis",
+  "POST /api/candidates/[id]/ai-analysis",
+  "DELETE /api/candidates/[id]/cv-upload",
+  "POST /api/candidates/[id]/cv-upload",
+  "GET /api/candidates/[id]/report",
+  "POST /api/candidates/cv-extract",
+  "POST /api/crm/avatars/upload",
+  "POST /api/crm/engagement/announcements/image",
+  "GET /api/crm/report-builder/[id]/export",
+  "GET /api/crm/reports/conversations",
+  "DELETE /api/finance/invoices/[id]/faktur-pajak",
+  "GET /api/finance/invoices/[id]/faktur-pajak",
+  "POST /api/finance/invoices/[id]/faktur-pajak",
+  "POST /api/hris/announcements/cover",
+  "GET /api/hris/announcements/cover/[...path]",
+  "POST /api/hris/attendance",
+  "GET /api/hris/attendance/export",
+  "GET /api/hris/attendance/photo/[...path]",
+  "GET /api/hris/contracts/[id]/document",
+  "DELETE /api/hris/contracts/[id]/signed-document",
+  "GET /api/hris/contracts/[id]/signed-document",
+  "POST /api/hris/contracts/[id]/signed-document",
+  "POST /api/hris/kpi/snapshot",
+  "POST /api/hris/leaves/attachment",
+  "GET /api/hris/leaves/attachment/[...path]",
+  "GET /api/hris/payslips/[id]/pdf",
+  "GET /api/interview/files/[...path]",
+  "GET /api/interview/session/[token]",
+  "POST /api/interview/session/[token]/answer",
+  "POST /api/interview/session/[token]/proctor-event",
+  "POST /api/interview/session/[token]/recording-chunk",
+  "POST /api/interview/session/[token]/start",
+  "GET /api/interview/sessions/[id]/recordings",
+  "POST /api/member-portal/profile/photo",
+  "GET /api/pos/orders/[id]/payment-proof",
+  "GET /api/pos/reports/export",
+  "GET /api/pos/reports/product-sales",
+  "GET /api/pos/reports/rush-hour/export",
+  "GET /api/pos/reports/transactions",
+  "GET /api/psikotes/files/[...path]",
+  "POST /api/psikotes/session-tests/[id]/ai-insight",
+  "POST /api/psikotes/session/[token]/proctor-event",
+  "POST /api/psikotes/session/[token]/tests/[testId]/upload",
+  "GET /api/purchasing/dashboard",
+  "GET /api/purchasing/export/products",
+  "GET /api/purchasing/export/raw-materials",
+  "GET /api/purchasing/export/suppliers",
+  "POST /api/purchasing/import/products",
+  "POST /api/purchasing/import/raw-materials",
+  "POST /api/purchasing/import/suppliers",
+  "POST /api/purchasing/import/units",
+  "POST /api/purchasing/receipt-scan",
+  "GET /api/purchasing/receipts/[...path]",
+  "GET /api/purchasing/reports/inventory-valuation",
+  "GET /api/purchasing/reports/stock-card",
+  "GET /api/table-order/orders/[id]/payment-proof",
+  "POST /api/table-order/orders/[id]/payment-proof",
+  "POST /api/ticketing/products/[id]/thumbnail",
 ];
 
 export type GoRoute = { module: string; method: string; path: string };
@@ -97,6 +147,32 @@ export function matchesGoPattern(pattern: string, pathname: string): boolean {
     if (seg !== got[i]) return false;
   }
   return want.length === got.length;
+}
+
+/** Whether a Next route path ("/api/x/[id]/[...path]") matches pathname. */
+export function matchesNextRoute(route: string, pathname: string): boolean {
+  const want = route.split("/");
+  const got = pathname.split("/");
+  for (let i = 0; i < want.length; i++) {
+    if (/^\[\.\.\.\w+\]$/.test(want[i])) return got.length > i;
+    if (i >= got.length) return false;
+    if (/^\[\w+\]$/.test(want[i])) {
+      if (got[i] === "") return false;
+      continue;
+    }
+    if (want[i] !== got[i]) return false;
+  }
+  return want.length === got.length;
+}
+
+function keptInNext(method: string, pathname: string): boolean {
+  return NEXT_ONLY_ROUTES.some((entry) => {
+    const [m, route] = entry.split(" ");
+    return (
+      (m === method || (method === "HEAD" && m === "GET")) &&
+      matchesNextRoute(route, pathname)
+    );
+  });
 }
 
 function servedByGo(
@@ -132,6 +208,7 @@ export function goBackendTarget(
   if (!base || !pathname.startsWith("/api/")) return null;
   const prefixes = options.prefixes ?? GO_BACKEND_PREFIXES;
   if (!prefixes.some((prefix) => matchesPrefix(pathname, prefix))) return null;
+  if (keptInNext(method.toUpperCase(), pathname)) return null;
   if (!servedByGo(options.routes ?? (goRoutes as GoRoute[]), method, pathname))
     return null;
   return `${base}${pathname}`;
