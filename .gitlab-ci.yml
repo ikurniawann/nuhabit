@@ -96,3 +96,30 @@ build-development:
 
 build-production:
   script: *cached_build_script
+
+# ---------------------------------------------------------------------------
+# Go API image (backend/), pushed next to the Next image as
+# $CI_REGISTRY_IMAGE_PUSH/api:<tag|channel>. It runs on the same host as the
+# Next container; see backend/docs/DEPLOY.md for the compose service and the
+# BACKEND_URL switch. `extends` keeps the template build job's stage, rules
+# and runner settings; only the script differs (no Next build secret).
+.api_build_script: &api_build_script
+  - |
+    if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+      export DOCKER_HOST=unix:///var/run/docker.sock
+    else
+      export DOCKER_HOST=tcp://docker:2375
+      until docker info >/dev/null 2>&1; do sleep 1; done
+    fi
+  - echo "$REGISTRY_DEPLOY_TOKEN" | docker login -u "$REGISTRY_DEPLOY_USER" --password-stdin "$DOCKER_REGISTRY_PUSH"
+  - DOCKER_BUILDKIT=1 docker build --cache-from "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL" -t "$CI_REGISTRY_IMAGE_PUSH/api:$CI_COMMIT_TAG" -t "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL" backend
+  - docker push "$CI_REGISTRY_IMAGE_PUSH/api:$CI_COMMIT_TAG"
+  - docker push "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL"
+
+build-api-development:
+  extends: build-development
+  script: *api_build_script
+
+build-api-production:
+  extends: build-production
+  script: *api_build_script

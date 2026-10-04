@@ -96,18 +96,65 @@ if [ ! -d "$STORAGE_DIR" ]; then
   exit 1
 fi
 
+DATABASE_URL_RUNTIME="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}"
+
+# Go API (backend/) jalan di host yang sama, satu Docker network dengan Next.
+# Opt-in: BACKEND_ENABLED=1 membangun dan menjalankan container API lalu
+# mengarahkan proxy Next ke sana (BACKEND_URL). Tanpa itu container API
+# dihentikan dan Next melayani semua route seperti sebelumnya, jadi cutover
+# dan rollback cukup dengan mengubah satu variabel.
+NETWORK="${CONTAINER_NAME}-net"
+API_CONTAINER="${CONTAINER_NAME}-api"
+BACKEND_ENV=()
+docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create "$NETWORK"
+docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
+docker rm "$API_CONTAINER" >/dev/null 2>&1 || true
+if [ "${BACKEND_ENABLED:-0}" = "1" ]; then
+  DOCKER_BUILDKIT=1 docker build --network=host -t "$DOCKER_IMAGE-api:latest" backend
+  # uid 1001 sama dengan user nextjs: STORAGE_DIR milik 1001 dengan mode 750.
+  docker run -d \
+    --name "$API_CONTAINER" \
+    --restart unless-stopped \
+    --network "$NETWORK" \
+    --user 1001:65533 \
+    --add-host host.docker.internal:host-gateway \
+    -v "${STORAGE_DIR}:/app/storage" \
+    --env-file "$ENV_FILE" \
+    -e DATABASE_URL="$DATABASE_URL_RUNTIME" \
+    -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
+    -e STORAGE_DIR=/app/storage \
+    "$DOCKER_IMAGE-api:latest"
+  # Image distroless tanpa shell: tunggu HEALTHCHECK bawaan menjadi healthy.
+  api_ready=""
+  for attempt in $(seq 1 30); do
+    if [ "$(docker inspect --format '{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null)" = "healthy" ]; then
+      api_ready=1
+      break
+    fi
+    sleep 2
+  done
+  if [ -z "$api_ready" ]; then
+    echo "Go API tidak sehat; Next tetap dijalankan tanpa BACKEND_URL." >&2
+    docker logs --tail 100 "$API_CONTAINER" >&2 || true
+  else
+    BACKEND_ENV=(-e "BACKEND_URL=http://${API_CONTAINER}:8080")
+  fi
+fi
+
 # NEXT_PUBLIC_* sudah di-inline saat build, jadi tidak diteruskan lagi lewat
 # -e. DATABASE_URL di bawah menimpa nilai yang sama di ENV_FILE (bila ada).
 docker run -d \
   --name "$CONTAINER_NAME" \
   --restart unless-stopped \
+  --network "$NETWORK" \
   -p "${BIND_ADDRESS}:${HOST_PORT}:${CONTAINER_PORT}" \
   --add-host host.docker.internal:host-gateway \
   -v "${STORAGE_DIR}:/app/storage" \
   --env-file "$ENV_FILE" \
-  -e DATABASE_URL="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}" \
-  -e MIGRATE_DATABASE_URL="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}" \
+  -e DATABASE_URL="$DATABASE_URL_RUNTIME" \
+  -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
   -e NODE_ENV=production \
+  ${BACKEND_ENV[@]+"${BACKEND_ENV[@]}"} \
   "$DOCKER_IMAGE:latest"
 
 for attempt in $(seq 1 30); do
