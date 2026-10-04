@@ -38,11 +38,17 @@ internal/platform   shared kernel, no business rules
   config            env + dotenv loading
   database          pgxpool with the TS search_path and timezone, Querier,
                     WithTx (pool or tx; nested = savepoint), pg error helpers
+  gobiz             GoBiz client and settings, shared by integrations and
+                    pos-sales
   httpx             Handle, JSON, Data, DecodeJSON, Error, middleware
   auth              staff session, API token, IAM guards, gate, member session
   iam               generated menu prefixes + pure matchers
   members           shared read of member display fields (pos.pos_customers)
   module            Deps, Route, Module
+  ratelimit         fixed and sliding windows in platform.rate_limits, shared
+                    by every replica (never an in-memory limiter)
+  safehttp          client for URLs from users or settings: https only, no
+                    private, loopback, link-local or metadata addresses
   stall             the sidebar's active stall (cookie + getUser rules)
   testutil          DB, Tx, Deps, CreateStaff, CreateMember, Request, Do
   whatsapp          lib/whatsapp: Meta/gateway/Fonnte send, crm.wa_messages

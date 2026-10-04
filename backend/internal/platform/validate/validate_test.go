@@ -125,3 +125,28 @@ func TestZodWording(t *testing.T) {
 		t.Fatalf("issues = %q", got)
 	}
 }
+
+// The zod v4 string formats: datetime with offset, UUID and URL.
+func TestZodFormatChecks(t *testing.T) {
+	for s, want := range map[string]bool{
+		"2026-10-05T18:00:00+07:00": true, "2026-10-05T18:00+07:00": true, "2026-10-05T11:00:00.123456789Z": true,
+		"2026-10-05T18:00:00+0700": false, "2026-10-05 18:00:00Z": false, "2026-02-29T00:00:00Z": false,
+	} {
+		if got := datetimePattern.MatchString(s); got != want {
+			t.Errorf("datetime %q = %v", s, got)
+		}
+	}
+	for s, want := range map[string]bool{
+		"6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11": true, "00000000-0000-0000-0000-000000000000": true,
+		"6f1c2a1e-0d7b-9c55-9a43-1b0b6a0f5e11": false, "6f1c2a1e-0d7b-4c55-1a43-1b0b6a0f5e11": false,
+	} {
+		if IsUUID(s) != want {
+			t.Errorf("uuid %q", s)
+		}
+	}
+	for s, want := range map[string]bool{"https://cdn.test/a.png": true, "mailto:a@b": true, "abc": false, "http://": false} {
+		if ValidURL(s) != want {
+			t.Errorf("url %q", s)
+		}
+	}
+}
