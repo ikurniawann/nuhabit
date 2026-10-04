@@ -20,12 +20,9 @@ import (
 // performance.feedback_* tables belong to this module. The module has no UI
 // yet; every route needs the KPI admin menus.
 //
-// The TS resolves embeds through the query-builder shim, which falls back
-// to the first foreign key (by column name) when a hint names a constraint
-// instead of a column. On feedback_assignments that first key is
-// approved_by, so `employee:employees!feedback_assignments_employee_id_fkey`
-// and the unhinted `employees(...)` embeds show the approver. The port keeps
-// that, column by column, below.
+// Assignment embeds follow employee_id and reviewer_id. (The TS shim fell
+// back to approved_by for constraint-name hints and unhinted embeds, so it
+// showed the approver there; the Go routes fix that.)
 
 /* ── shared pieces ───────────────────────────────────────────────────── */
 
@@ -207,15 +204,6 @@ func (h *handler) requireFeedbackAdmin(r *http.Request) error {
 	_, err := h.auth.RequireMenuPrefix(r, iam.HrisPerformanceAdmin...)
 	return err
 }
-
-// errNoFKRelation and errUnknownColumn reproduce TS list routes that always
-// fail: the summaries select embeds development_plans, which has no foreign
-// key to feedback_summaries, and the cycles select asks feedback_assignments
-// for a "count" column.
-var (
-	errNoFKRelation  = errors.New("feedback-summaries: no foreign key between feedback_summaries and development_plans")
-	errUnknownColumn = errors.New(`feedback-cycles: column "count" does not exist`)
-)
 
 /* ── body parsing ────────────────────────────────────────────────────── */
 
@@ -516,8 +504,8 @@ func (h *handler) listApprovals(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if err := h.svc.stitch(r.Context(), h.svc.db, rows,
-		embed{"employee", "approved_by", []string{"id", "nip", "full_name", "email", "department", "position"}},
-		embed{"reviewer", "approved_by", []string{"id", "nip", "full_name"}}); err != nil {
+		embed{"employee", "employee_id", []string{"id", "nip", "full_name", "email", "department", "position"}},
+		embed{"reviewer", "reviewer_id", []string{"id", "nip", "full_name"}}); err != nil {
 		return err
 	}
 	stats := approvalStats{Total: total}
@@ -870,14 +858,33 @@ func (h *handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 	return httpx.JSON(w, http.StatusCreated, dataBody{rows[0]})
 }
 
-// GET /api/hris/feedback-cycles: the TS select asks feedback_assignments for
-// a "count" column (PostgREST aggregate syntax the shim does not support),
-// so the route always fails with a 500.
+// cycleListSelect renders the PostgREST aggregate embeds the TS asked for
+// (`assignments_count:feedback_assignments(count)`) as [{"count": n}].
+const cycleListSelect = `SELECT x.*,
+	(SELECT json_build_array(json_build_object('count', count(*))) FROM performance.feedback_assignments a WHERE a.cycle_id = x.id) AS assignments_count,
+	(SELECT json_build_array(json_build_object('count', count(*))) FROM performance.feedback_summaries s WHERE s.cycle_id = x.id) AS summaries_count
+	FROM performance.feedback_cycles x`
+
+// GET /api/hris/feedback-cycles?status&period_label&page&limit
 func (h *handler) listFeedbackCycles(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireFeedbackAdmin(r); err != nil {
 		return err
 	}
-	return errUnknownColumn
+	p := parsePagination(r, 20)
+	var wh where
+	for _, key := range []string{"status", "period_label"} {
+		if v := r.URL.Query().Get(key); v != "" {
+			wh.eq("x."+key, v)
+		}
+	}
+	rows, total, err := h.svc.page(r.Context(), "performance.feedback_cycles", cycleListSelect, wh, "x.created_at DESC", p)
+	if err != nil {
+		return err
+	}
+	if err := h.svc.stitch(r.Context(), h.svc.db, rows, embed{"created_by", "created_by", []string{"id", "full_name"}}); err != nil {
+		return err
+	}
+	return writeJSON(w, pageBody{rows, p.meta(total)})
 }
 
 // POST /api/hris/feedback-cycles
@@ -1060,7 +1067,7 @@ func (h *handler) createResponses(w http.ResponseWriter, r *http.Request) error 
 
 const responseDetailSelect = `SELECT x.*,
 	(SELECT json_build_object('id', a.id, 'status', a.status, 'relationship_type', a.relationship_type,
-	        'employee', a.approved_by, 'reviewer', a.approved_by,
+	        'employee', a.employee_id, 'reviewer', a.reviewer_id,
 	        'cycle', (SELECT row_to_json(e) FROM (SELECT id, name, period_label FROM performance.feedback_cycles WHERE id = a.cycle_id) e))
 	   FROM performance.feedback_assignments a WHERE a.id = x.assignment_id) AS assignment,
 	(SELECT row_to_json(e) FROM (SELECT id, name, category_id FROM performance.feedback_criteria WHERE id = x.criteria_id) e) AS criteria
@@ -1173,13 +1180,51 @@ func (h *handler) rejectViaResponse(w http.ResponseWriter, r *http.Request) erro
 	return writeJSON(w, decisionBody{true, row, "Feedback rejected. Employee has been notified."})
 }
 
-// GET /api/hris/feedback-summaries: the TS select embeds development_plans,
-// which has no foreign key to feedback_summaries, so it always fails (500).
+// summaryListSelect embeds the summarised employee's development plans:
+// hris.development_plans has no key to feedback_summaries, so they join on
+// employee_id, with the TS field names (goal, progress).
+const summaryListSelect = `SELECT x.*,
+	(SELECT row_to_json(e) FROM (SELECT id, name, period_label, status FROM performance.feedback_cycles WHERE id = x.cycle_id) e) AS cycle,
+	NULL AS employee,
+	COALESCE((SELECT json_agg(e) FROM (
+	   SELECT id, development_action AS goal, status, progress_percentage AS progress
+	     FROM hris.development_plans WHERE employee_id = x.employee_id ORDER BY created_at) e), '[]'::json) AS development_plans
+	FROM performance.feedback_summaries x`
+
+// GET /api/hris/feedback-summaries?cycle_id&employee_id&min_score&max_score&page&limit
 func (h *handler) listSummaries(w http.ResponseWriter, r *http.Request) error {
 	if err := h.requireFeedbackAdmin(r); err != nil {
 		return err
 	}
-	return errNoFKRelation
+	p := parsePagination(r, 50)
+	q := r.URL.Query()
+	var wh where
+	for _, key := range []string{"cycle_id", "employee_id"} {
+		if v := q.Get(key); v != "" {
+			wh.eq("x."+key, v)
+		}
+	}
+	for _, bound := range []struct{ key, op string }{{"min_score", ">="}, {"max_score", "<="}} {
+		v := q.Get(bound.key)
+		if v == "" {
+			continue
+		}
+		score, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		if err != nil {
+			return httpx.BadRequest(bound.key + " harus berupa angka")
+		}
+		wh.args = append(wh.args, score)
+		wh.clauses = append(wh.clauses, "x.final_score "+bound.op+" $"+itoa(len(wh.args)))
+	}
+	rows, total, err := h.svc.page(r.Context(), "performance.feedback_summaries", summaryListSelect, wh, "x.final_score DESC", p)
+	if err != nil {
+		return err
+	}
+	if err := h.svc.stitch(r.Context(), h.svc.db, rows,
+		embed{"employee", "employee_id", []string{"id", "full_name", "nip", "email", "department", "position"}}); err != nil {
+		return err
+	}
+	return writeJSON(w, pageBody{rows, p.meta(total)})
 }
 
 // POST /api/hris/feedback-summaries: final score and grade are computed

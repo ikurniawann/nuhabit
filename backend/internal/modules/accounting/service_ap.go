@@ -19,8 +19,8 @@ import (
 // lib/purchasing/ap-void.ts). The list joins purchasing tables for party,
 // PO and GRN labels, as the TS does, so search and paging stay in SQL.
 
-// ApInvoice is ApInvoiceRow. Date columns come from `i.*`, so they carry
-// the TS String(date).slice(0, 10) form ("Sun Aug 09").
+// ApInvoice is ApInvoiceRow. Dates are "YYYY-MM-DD"; payment_status and
+// aging count days against the Asia/Jakarta calendar date.
 type ApInvoice struct {
 	ID                string  `json:"id"`
 	CompanyID         *string `json:"company_id"`
@@ -52,8 +52,8 @@ type apInvoiceRow struct {
 	ID              string
 	CompanyID       *string
 	InvoiceNo       string
-	InvoiceDate     jsDate
-	DueDate         *jsDate
+	InvoiceDate     isoDate
+	DueDate         *isoDate
 	VendorID        *string
 	SupplierID      *string
 	PurchaseOrderID *string
@@ -112,7 +112,7 @@ func (s *Service) mapApInvoice(r apInvoiceRow) ApInvoice {
 		Subtotal: domain.ToNumber(r.Subtotal), TaxAmount: domain.ToNumber(r.TaxAmount), TotalAmount: total, Status: r.Status,
 		Description: r.Description, PostedAt: r.PostedAt, PostedBy: r.PostedBy, CreatedAt: r.CreatedAt,
 		AllocatedAmount: allocated, OutstandingAmount: domain.InvoiceOutstanding(total, allocated),
-		PaymentStatus: domain.PaymentStatus(total, allocated, due, s.today()),
+		PaymentStatus: domain.PaymentStatus(total, allocated, due, s.jakartaToday()),
 		PartyName:     r.PartyName, PoNumber: r.PoNumber, GrnNumber: r.GrnNumber}
 }
 
@@ -233,7 +233,7 @@ type ApAging struct {
 // ApAging is listApAging.
 func (s *Service) ApAging(ctx context.Context, companyID, asOf string) (*ApAging, error) {
 	if asOf == "" {
-		asOf = s.today()
+		asOf = s.jakartaToday()
 	}
 	open, err := s.ApPayable(ctx, companyID)
 	if err != nil {
@@ -451,7 +451,7 @@ func (s *Service) ListApPayments(ctx context.Context, companyID, search string, 
 		ID              string
 		CompanyID       *string
 		PaymentNo       string
-		PaymentDate     jsDate
+		PaymentDate     isoDate
 		Amount          string
 		Method          string
 		ReferenceNumber *string

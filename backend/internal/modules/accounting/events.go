@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/contracts/inventory"
+	"nuhabit/backend/internal/contracts/payroll"
 	"nuhabit/backend/internal/contracts/possales"
 	"nuhabit/backend/internal/contracts/procurement"
 	"nuhabit/backend/internal/contracts/storedvalue"
@@ -17,7 +18,8 @@ import (
 )
 
 // Outbox subscribers: the journals the TS posted inline after POS sales,
-// member bill instalments, GRNs, purchase returns and stock movements.
+// member bill instalments, GRNs, purchase returns and stock movements, plus
+// the payroll journals of a paid run (new in Go).
 // Subscriber names are contracts; renaming one drops its pending deliveries.
 
 // subscribe registers every journal subscriber on bus.
@@ -55,6 +57,9 @@ func (s *Service) subscribe(bus *outbox.Bus) {
 	bus.Subscribe(inventory.TopicStockTransferred, "accounting.journal-stock-transfer", handle(s, func(ctx context.Context, tx pgx.Tx, in inventory.StockTransferred) ([]domain.PostResult, error) {
 		r, err := s.PostStockTransfer(ctx, tx, in)
 		return []domain.PostResult{r}, err
+	}))
+	bus.Subscribe(payroll.TopicRunPaid, "accounting.journal-payroll-run", handle(s, func(ctx context.Context, tx pgx.Tx, in payroll.RunPaid) ([]domain.PostResult, error) {
+		return s.PostPayrollRun(ctx, tx, in)
 	}))
 }
 

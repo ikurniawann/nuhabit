@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math"
 	"testing"
-	"time"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -319,9 +318,6 @@ func TestReceivableStatus(t *testing.T) {
 	}
 	if DaysPastDue(ptr("2026-08-01"), today) != 11 || DaysPastDue(ptr("2026-08-20"), today) != -8 {
 		t.Fatal("daysPastDue")
-	}
-	if JSDateString(time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)) != "Sun Aug 09" {
-		t.Fatal("JSDateString")
 	}
 }
 

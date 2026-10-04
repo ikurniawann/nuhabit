@@ -5,8 +5,10 @@ import "time"
 
 // TopicRunPaid fires when a payroll run is marked paid, in the transaction
 // that set the run to paid and settled the loan installments on its slips.
-// Accounting posts the payroll journals from it (PAYROLL_ACCRUAL,
-// PAYROLL_PAYMENT, PAYROLL_PPH21_WITHHOLDING, PAYROLL_LOAN_DEDUCTION).
+// Accounting posts the payroll journals from it (PAYROLL_ACCRUAL from
+// TotalGross, PAYROLL_PPH21_WITHHOLDING from TotalPph21,
+// PAYROLL_LOAN_DEDUCTION from TotalLoanDeduction, PAYROLL_PAYMENT from
+// TotalNet), dated PaidAt in Asia/Jakarta.
 const TopicRunPaid = "payroll.run.paid"
 
 // RunPaid is the TopicRunPaid payload. Amounts are the payroll_runs numeric
@@ -27,4 +29,6 @@ type RunPaid struct {
 	TotalLoanDeduction float64 `json:"total_loan_deduction"`
 	// SettledLoans counts the loan rows the settlement touched.
 	SettledLoans int `json:"settled_loans"`
+	// UserID is the staff user who marked the run paid (journal created_by).
+	UserID string `json:"user_id"`
 }

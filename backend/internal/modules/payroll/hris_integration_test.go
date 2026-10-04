@@ -1,6 +1,7 @@
 package payroll
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -305,9 +306,6 @@ func TestFeedback360(t *testing.T) {
 		t.Fatalf("cycle creator must be the employee: %v", cycle)
 	}
 	cycleID := cycle["id"].(string)
-	if rec := e.raw(&e.hr, "GET", "/api/hris/feedback-cycles", nil); rec.Code != 500 {
-		t.Fatalf("cycle list = %d (TS always fails)", rec.Code)
-	}
 
 	wantErr(t, e.call(&e.hr, "POST", "/api/hris/feedback-assignments", []any{}, 400), "Data tidak valid")
 	assigned := e.call(&e.hr, "POST", "/api/hris/feedback-assignments", []any{
@@ -349,14 +347,19 @@ func TestFeedback360(t *testing.T) {
 	if stats := approvals["stats"].(map[string]any); stats["pending"] != 1.0 || stats["total"] != 1.0 {
 		t.Fatalf("approvals %v", approvals)
 	}
+	if row := approvals["data"].([]any)[0].(map[string]any); row["employee"].(map[string]any)["full_name"] != "Dinilai" ||
+		row["reviewer"].(map[string]any)["full_name"] != "Dinilai" {
+		t.Fatalf("approval embeds the assessed employee and reviewer: %v", row)
+	}
 	wantErr(t, e.call(&e.hr, "POST", "/api/hris/feedback-approvals/approve", map[string]any{"assignment_id": "x"}, 400), "assignment_id is required")
 	ok := e.call(&e.hr, "POST", "/api/hris/feedback-approvals/approve", map[string]any{"assignment_id": selfID, "manager_comments": ""}, 200)
 	if ok["success"] != true || ok["data"].(map[string]any)["approved_by"] != approver || ok["data"].(map[string]any)["manager_comments"] != nil {
 		t.Fatalf("approve %v", ok)
 	}
-	// The TS embeds the approver as "employee" (first FK by column name).
+	// The embeds follow employee_id and reviewer_id, not approved_by.
 	detail := e.call(&e.hr, "GET", "/api/hris/feedback-responses/"+resp["id"].(string), nil, 200)["data"].(map[string]any)
-	if detail["assignment"].(map[string]any)["employee"].(map[string]any)["full_name"] != "Penyetuju" {
+	if a := detail["assignment"].(map[string]any); a["employee"].(map[string]any)["full_name"] != "Dinilai" ||
+		a["reviewer"].(map[string]any)["full_name"] != "Dinilai" {
 		t.Fatalf("response detail %v", detail)
 	}
 	wantErr(t, e.call(&e.hr, "POST", "/api/hris/feedback-approvals/reject", map[string]any{"assignment_id": selfID, "rejection_reason": " "}, 400),
@@ -373,8 +376,26 @@ func TestFeedback360(t *testing.T) {
 	if summary["final_score"] != "88.00" || summary["final_grade"] != "B" || summary["strengths"].([]any)[0] != "rapi" {
 		t.Fatalf("summary %v", summary)
 	}
-	if rec := e.raw(&e.hr, "GET", "/api/hris/feedback-summaries", nil); rec.Code != 500 {
-		t.Fatalf("summary list = %d (TS always fails)", rec.Code)
+	var summaries int
+	e.scalar(&summaries, `SELECT count(*)::int FROM performance.feedback_summaries WHERE cycle_id = $1`, cycleID)
+	list := e.call(&e.hr, "GET", "/api/hris/feedback-summaries?cycle_id="+cycleID+"&employee_id="+peer, nil, 200)
+	if rows := list["data"].([]any); list["pagination"].(map[string]any)["total"] != 1.0 || len(rows) != 1 ||
+		rows[0].(map[string]any)["employee"].(map[string]any)["full_name"] != "Rekan" ||
+		rows[0].(map[string]any)["cycle"].(map[string]any)["name"] != "Siklus 1" ||
+		len(rows[0].(map[string]any)["development_plans"].([]any)) != 0 {
+		t.Fatalf("summary list %v", list)
+	}
+	cycles := e.call(&e.hr, "GET", "/api/hris/feedback-cycles?status=draft", nil, 200)
+	var listed map[string]any
+	for _, c := range cycles["data"].([]any) {
+		if c.(map[string]any)["id"] == cycleID {
+			listed = c.(map[string]any)
+		}
+	}
+	if listed == nil || listed["created_by"].(map[string]any)["full_name"] != "Penyetuju" ||
+		fmt.Sprint(listed["assignments_count"]) != "[map[count:2]]" ||
+		fmt.Sprint(listed["summaries_count"]) != fmt.Sprintf("[map[count:%d]]", summaries) {
+		t.Fatalf("cycle list %v", cycles)
 	}
 	full := e.call(&e.hr, "GET", "/api/hris/feedback-cycles/"+cycleID, nil, 200)["data"].(map[string]any)
 	if full["created_by"].(map[string]any)["full_name"] != "Penyetuju" || len(full["assignments"].([]any)) != 2 ||

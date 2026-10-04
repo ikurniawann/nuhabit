@@ -16,7 +16,7 @@ import (
 // invoices, receipts with allocations, the receivable register and aging
 // (ar-store.ts, ar-posting.ts).
 
-// ArInvoice is ArInvoiceRow (dates in the TS "Sun Aug 09" form, see ApInvoice).
+// ArInvoice is ArInvoiceRow (dates as in ApInvoice).
 type ArInvoice struct {
 	ID                string  `json:"id"`
 	CompanyID         *string `json:"company_id"`
@@ -45,8 +45,8 @@ type arInvoiceRow struct {
 	ID             string
 	CompanyID      *string
 	InvoiceNo      string
-	InvoiceDate    jsDate
-	DueDate        *jsDate
+	InvoiceDate    isoDate
+	DueDate        *isoDate
 	CustomerName   *string
 	SalesInvoiceID *string
 	DealID         *string
@@ -97,7 +97,7 @@ func (s *Service) mapArInvoice(r arInvoiceRow) ArInvoice {
 		Subtotal: domain.ToNumber(r.Subtotal), TaxAmount: domain.ToNumber(r.TaxAmount), TotalAmount: total, Status: r.Status,
 		Description: r.Description, PostedAt: r.PostedAt, PostedBy: r.PostedBy, CreatedAt: r.CreatedAt,
 		AllocatedAmount: allocated, OutstandingAmount: domain.InvoiceOutstanding(total, allocated),
-		PaymentStatus: domain.PaymentStatus(total, allocated, due, s.today()), DealTitle: r.DealTitle}
+		PaymentStatus: domain.PaymentStatus(total, allocated, due, s.jakartaToday()), DealTitle: r.DealTitle}
 }
 
 func (s *Service) arInvoiceWhere(ctx context.Context, q database.Querier, where string, args ...any) (*ArInvoice, error) {
@@ -180,7 +180,7 @@ type ArAging struct {
 // ArAging is listArAging.
 func (s *Service) ArAging(ctx context.Context, companyID, asOf string) (*ArAging, error) {
 	if asOf == "" {
-		asOf = s.today()
+		asOf = s.jakartaToday()
 	}
 	open, err := s.ArReceivable(ctx, companyID)
 	if err != nil {
@@ -195,10 +195,9 @@ func (s *Service) ArAging(ctx context.Context, companyID, asOf string) (*ArAging
 }
 
 // CreateArFromSalesInvoice is createArInvoiceFromSalesInvoice: one POSTED
-// AR invoice per B2B invoice, then SALE_AR_INVOICE. Both dates keep the TS
-// String(date).slice(0, 10) form ("Sun Aug 09"), which PostgreSQL rejects:
-// a sent invoice (sent_at set) fails on insert, and a ready SALE_AR_INVOICE
-// mapping fails the journal after the invoice is stored, as in the TS.
+// AR invoice per B2B invoice, dated the day it was sent (Asia/Jakarta), and
+// its SALE_AR_INVOICE journal in the same transaction. A journal that fails
+// (closed period, bad account) leaves no AR row, so the next sync retries.
 func (s *Service) CreateArFromSalesInvoice(ctx context.Context, db database.DB, salesInvoiceID, userID string) (*ArInvoice, error) {
 	existing, err := s.arInvoiceWhere(ctx, db, `i.sales_invoice_id = $1 AND i.deleted_at IS NULL`, salesInvoiceID)
 	if err != nil || existing != nil {
@@ -218,7 +217,7 @@ func (s *Service) CreateArFromSalesInvoice(ctx context.Context, db database.DB, 
 	if total <= 0 {
 		return nil, httpx.BadRequest("Nilai invoice 0")
 	}
-	invoiceDate := s.today()
+	invoiceDate := s.jakartaToday()
 	if src.SentAt != nil {
 		invoiceDate = *src.SentAt
 	}
@@ -229,14 +228,14 @@ func (s *Service) CreateArFromSalesInvoice(ctx context.Context, db database.DB, 
 	case src.DealTitle != nil && *src.DealTitle != "":
 		customer = *src.DealTitle
 	}
-	var row *arInvoiceRow
+	var invoice ArInvoice
 	err = database.WithTx(ctx, db, func(tx pgx.Tx) error {
 		invoiceNo, err := s.nextDailyNo(ctx, tx, "ar_invoices", "invoice_no", "AR", true)
 		if err != nil {
 			return err
 		}
 		// RETURNING * has no deal title; the TS maps it with allocated 0.
-		row, err = one[arInvoiceRow](ctx, tx, `
+		row, err := one[arInvoiceRow](ctx, tx, `
 INSERT INTO accounting.ar_invoices (
   company_id, invoice_no, invoice_date, due_date, customer_name, sales_invoice_id, deal_id, currency,
   subtotal, tax_amount, total_amount, status, description, posted_at, posted_by, created_by, updated_by)
@@ -246,33 +245,34 @@ RETURNING id::text, company_id::text, invoice_no, invoice_date, due_date, custom
           posted_at, posted_by::text, created_at, '0', NULL::text, 0`,
 			src.CompanyID, invoiceNo, invoiceDate, src.DueDate, customer, src.ID, src.DealID, total,
 			"AR dari B2B "+src.InvoiceNumber, s.now(), userID)
+		if err != nil {
+			return err
+		}
+		invoice = s.mapArInvoice(*row)
+		_, err = PostFromMapping(ctx, tx, MappingPost{CompanyID: &src.CompanyID, UserID: userID, EventCode: "SALE_AR_INVOICE",
+			DocumentType: "ar_invoice", DocumentID: invoice.ID, EntryDate: invoice.InvoiceDate,
+			Amounts:     domain.Amounts{"SUBTOTAL": invoice.Subtotal, "TAX": invoice.TaxAmount, "TOTAL": invoice.TotalAmount},
+			Description: "B2B " + src.InvoiceNumber + " / " + invoice.InvoiceNo + " — piutang", SourceModule: "SALES"})
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	invoice := s.mapArInvoice(*row)
-	amounts := domain.Amounts{"SUBTOTAL": invoice.Subtotal, "TAX": invoice.TaxAmount, "TOTAL": invoice.TotalAmount}
-	if amounts["TOTAL"] > 0 {
-		if _, err := PostFromMapping(ctx, db, MappingPost{CompanyID: &src.CompanyID, UserID: userID, EventCode: "SALE_AR_INVOICE",
-			DocumentType: "ar_invoice", DocumentID: invoice.ID, EntryDate: invoice.InvoiceDate, Amounts: amounts,
-			Description: "B2B " + src.InvoiceNumber + " / " + invoice.InvoiceNo + " — piutang", SourceModule: "SALES"}); err != nil {
-			return nil, err
-		}
-	}
 	return &invoice, nil
 }
 
 // SyncArFromSales is syncArFromOpenSalesInvoices: lazily create AR rows for
-// sent B2B invoices, skipping individual failures (each write commits on its
-// own, like the TS autocommit calls).
+// sent B2B invoices. Each invoice commits on its own; one that fails is
+// logged and retried on the next sync.
 func (s *Service) SyncArFromSales(ctx context.Context, companyID, userID string, limit int) error {
 	ids, err := s.ports.Sales.UnsyncedSentInvoices(ctx, s.db, companyID, limit)
 	if err != nil {
 		return err
 	}
 	for _, id := range ids {
-		_, _ = s.CreateArFromSalesInvoice(ctx, s.db, id, userID)
+		if _, err := s.CreateArFromSalesInvoice(ctx, s.db, id, userID); err != nil {
+			s.log.WarnContext(ctx, "accounting: AR sync skipped invoice", "sales_invoice_id", id, "error", errMessage(err))
+		}
 	}
 	return nil
 }
@@ -429,7 +429,7 @@ func (s *Service) ListArReceipts(ctx context.Context, companyID, search string, 
 		ID              string
 		CompanyID       *string
 		ReceiptNo       string
-		ReceiptDate     jsDate
+		ReceiptDate     isoDate
 		Amount          string
 		Method          string
 		ReferenceNumber *string

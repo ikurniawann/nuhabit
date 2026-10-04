@@ -367,7 +367,8 @@ func TestRunLifecycle(t *testing.T) {
 	}
 	var payload string
 	e.scalar(&payload, `SELECT payload::text FROM platform.outbox_events WHERE topic = 'payroll.run.paid' AND key = $1`, runID)
-	if !strings.Contains(payload, `"total_net": "10361155.00"`) || !strings.Contains(payload, `"total_loan_deduction": 500000`) {
+	if !strings.Contains(payload, `"total_net": "10361155.00"`) || !strings.Contains(payload, `"total_loan_deduction": 500000`) ||
+		!strings.Contains(payload, `"user_id": "`+e.hr.UserID+`"`) {
 		t.Fatalf("event %s", payload)
 	}
 	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 400), "Payroll yang sudah dibayar tidak bisa dihapus")
@@ -380,6 +381,13 @@ func TestRunLifecycle(t *testing.T) {
 	}
 	if !strings.Contains(e.raw(&e.hr, "GET", "/api/hris/payslips?employee_id="+worker, nil).Body.String(), `"employee":{"id":"`+worker) {
 		t.Fatal("employee embed precedes payroll_run")
+	}
+	// year and month filter on the run's period.
+	if got := e.call(&e.hr, "GET", "/api/hris/payslips?employee_id="+worker+"&year=2099&month=6", nil, 200)["data"].([]any); len(got) != 1 {
+		t.Fatalf("payslips of June 2099: %v", got)
+	}
+	if got := e.call(&e.hr, "GET", "/api/hris/payslips?employee_id="+worker+"&year=2099&month=7", nil, 200)["data"].([]any); len(got) != 0 {
+		t.Fatalf("payslips of July 2099: %v", got)
 	}
 	if mine := e.call(&e.staff, "GET", "/api/hris/payslips", nil, 200)["data"].([]any); len(mine) != 0 {
 		t.Fatalf("staff without employee %v", mine)
@@ -581,12 +589,6 @@ func TestDatabaseErrorMapping(t *testing.T) {
 			wantErr(t, e.call(&e.hr, c.method, c.path, c.body, c.status), c.msg)
 		})
 	}
-	t.Run("payslip period filter", func(t *testing.T) {
-		e := setup(t)
-		if rec := e.raw(&e.hr, "GET", "/api/hris/payslips?year=2099", nil); rec.Code != 500 {
-			t.Fatalf("period filter = %d", rec.Code)
-		}
-	})
 	t.Run("duplicate salary version", func(t *testing.T) {
 		e := setup(t)
 		emp := e.employee("Dup", "", true)

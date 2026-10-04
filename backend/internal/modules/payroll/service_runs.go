@@ -101,7 +101,7 @@ func (s *service) updateRun(ctx context.Context, userID, id string, in runUpdate
 			return nil, httpx.BadRequest(fmt.Sprintf("Transisi status '%s' → '%s' tidak diizinkan", existing.Status, in.Status))
 		}
 		if in.Status == "paid" {
-			settled, err := s.markRunPaid(ctx, existing, in.Notes)
+			settled, err := s.markRunPaid(ctx, userID, existing, in.Notes)
 			if err != nil {
 				return nil, err
 			}
@@ -149,7 +149,7 @@ type shortfall struct {
 // markRunPaid sets the run paid and settles the loan installments on its
 // slips in one transaction (the status guard makes a repeat a 409 instead
 // of a double deduction), then publishes payroll.run.paid in it.
-func (s *service) markRunPaid(ctx context.Context, run *runHead, notes *string) (int, error) {
+func (s *service) markRunPaid(ctx context.Context, userID string, run *runHead, notes *string) (int, error) {
 	settled := 0
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		paid, err := markPaid(ctx, tx, run.ID, notes)
@@ -204,7 +204,7 @@ func (s *service) markRunPaid(ctx context.Context, run *runHead, notes *string) 
 			RunID: paid.ID, PeriodMonth: paid.PeriodMonth, PeriodYear: paid.PeriodYear, PaidAt: paid.PaidAt,
 			TotalEmployees: paid.TotalEmployees, TotalGross: paid.TotalGross, TotalDeductions: paid.TotalDeductions,
 			TotalNet: paid.TotalNet, TotalPph21: paid.TotalPph21, TotalBjtkEmployee: paid.TotalBjtkEmployee,
-			TotalBjtkEmployer: paid.TotalBjtkEmployer, TotalLoanDeduction: totalDeducted, SettledLoans: settled,
+			TotalBjtkEmployer: paid.TotalBjtkEmployer, TotalLoanDeduction: totalDeducted, SettledLoans: settled, UserID: userID,
 		})
 	})
 	return settled, err

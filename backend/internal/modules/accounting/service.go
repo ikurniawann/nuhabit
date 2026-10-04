@@ -40,6 +40,18 @@ func NewService(db database.DB, ports Ports, log *slog.Logger, now func() time.T
 // which is what the TS stores use for default dates and document numbers.
 func (s *Service) today() string { return s.now().UTC().Format("2006-01-02") }
 
+// jakartaToday is the Asia/Jakarta calendar date, the "today" AP/AR
+// payment status and aging count overdue days against.
+func (s *Service) jakartaToday() string { return s.now().In(jakarta).Format(time.DateOnly) }
+
+var jakarta = func() *time.Location {
+	loc, err := time.LoadLocation(database.TimeZone)
+	if err != nil {
+		panic(err)
+	}
+	return loc
+}()
+
 // todayCompact is the YYYYMMDD of the server-local (UTC) date, used by the
 // AP/AR document numbers (getFullYear/getMonth/getDate).
 func (s *Service) todayCompact() string { return s.now().UTC().Format("20060102") }

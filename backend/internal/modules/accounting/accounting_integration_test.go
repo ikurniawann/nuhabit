@@ -13,6 +13,7 @@ import (
 
 	"nuhabit/backend/internal/app"
 	"nuhabit/backend/internal/contracts/inventory"
+	"nuhabit/backend/internal/contracts/payroll"
 	"nuhabit/backend/internal/contracts/possales"
 	"nuhabit/backend/internal/contracts/storedvalue"
 	acct "nuhabit/backend/internal/modules/accounting"
@@ -335,8 +336,8 @@ func TestApPaymentAndVoid(t *testing.T) {
 VALUES ($1, 'AP-TEST-1', '2026-08-09', '2026-08-01', $2, 1000, 1000, 'POSTED') RETURNING id::text`, e.company, e.vendor())
 
 	inv := e.do("GET", "/api/accounting/ap/invoices/"+invoice, nil, 200)
-	if d := data(inv); d["invoice_date"] != "Sun Aug 09" || d["due_date"] != "Sat Aug 01" || d["payment_status"] != "unpaid" || d["party_name"] != "Go Vendor" {
-		t.Fatalf("invoice (TS date strings): %v", inv)
+	if d := data(inv); d["invoice_date"] != "2026-08-09" || d["due_date"] != "2026-08-01" || d["payment_status"] != "overdue" || d["party_name"] != "Go Vendor" {
+		t.Fatalf("invoice: %v", inv)
 	}
 	wantError(t, e.do("POST", "/api/accounting/ap/payments", map[string]any{"invoice_id": invoice, "amount": 2000}, 400),
 		"Amount pembayaran tidak boleh melebihi outstanding")
@@ -347,7 +348,7 @@ VALUES ($1, 'AP-TEST-1', '2026-08-09', '2026-08-01', $2, 1000, 1000, 'POSTED') R
 		payment["method"] != "bank_transfer" || payment["payment_date"] != "2026-10-04" {
 		t.Fatalf("payment: %v", paid)
 	}
-	if invAfter := paid["invoice"].(map[string]any); invAfter["outstanding_amount"] != float64(600) || invAfter["payment_status"] != "partial" {
+	if invAfter := paid["invoice"].(map[string]any); invAfter["outstanding_amount"] != float64(600) || invAfter["payment_status"] != "overdue" {
 		t.Fatalf("invoice after payment: %v", invAfter)
 	}
 	payID := payment["id"].(string)
@@ -358,12 +359,12 @@ VALUES ($1, 'AP-TEST-1', '2026-08-09', '2026-08-01', $2, 1000, 1000, 'POSTED') R
 	}
 
 	payments := e.do("GET", "/api/accounting/ap/payments", nil, 200)
-	if first := payments["data"].([]any)[0].(map[string]any); first["invoice_nos"].([]any)[0] != "AP-TEST-1" || first["party_name"] != "Go Vendor" {
+	if first := payments["data"].([]any)[0].(map[string]any); first["invoice_nos"].([]any)[0] != "AP-TEST-1" || first["party_name"] != "Go Vendor" || first["payment_date"] != "2026-10-04" {
 		t.Fatalf("payments list: %v", payments)
 	}
 	aging := data(e.do("GET", "/api/accounting/ap/aging?as_of=2026-10-04", nil, 200))
-	if b := aging["buckets"].([]any)[0].(map[string]any); b["bucket"] != "current" || b["amount"] != float64(600) {
-		t.Fatalf("aging (TS date strings bucket as current): %v", aging)
+	if b := aging["buckets"].([]any)[3].(map[string]any); b["bucket"] != "61_90" || b["amount"] != float64(600) {
+		t.Fatalf("aging (due 2026-08-01 is 64 days past): %v", aging)
 	}
 
 	wantError(t, e.do("POST", "/api/accounting/ap/payments/"+payID+"/void", map[string]any{"reason": "abc"}, 400),
@@ -691,4 +692,121 @@ VALUES ($1, 'AR-TEST-1', '2026-10-01', 'PT Contoh', 1000, 1000, 'POSTED') RETURN
 		t.Fatalf("AR ledger: %v", ledger)
 	}
 	wantError(t, e.do("GET", "/api/accounting/ledger/subsidiary?kind=XX", nil, 400), "kind harus AP atau AR")
+}
+
+// salesInvoice inserts a sent B2B invoice of the test company.
+func (e *env) salesInvoice(branch, deal, number, sentAt, dueDate string, amount float64) string {
+	e.t.Helper()
+	var id string
+	e.scalar(&id, `INSERT INTO crm.crm_sales_invoices (company_id, branch_id, deal_id, invoice_number, label, amount, status, sent_at, due_date)
+VALUES ($1, $2, $3, $4, 'DP', $5, 'terkirim', $6::timestamptz, $7::date) RETURNING id::text`, e.company, branch, deal, number, amount, sentAt, dueDate)
+	return id
+}
+
+func TestArSyncFromSalesInvoices(t *testing.T) {
+	e := setup(t)
+	ar := e.account("1201001", "Piutang", "ASSET", false)
+	revenue := e.account("4101001", "Penjualan", "REVENUE", false)
+	e.fiscal2026()
+	e.mapping("SALE_AR_INVOICE", "SALES", mline("DEBIT", "AR", ar, "TOTAL"), mline("CREDIT", "REVENUE", revenue, "TOTAL"))
+
+	sfx := testutil.RandomHex(3)
+	var branch, lead, deal string
+	e.scalar(&branch, `INSERT INTO configuration.branches (company_id, name, code) VALUES ($1, 'Br '||$2, 'GAB'||$2) RETURNING id::text`, e.company, sfx)
+	e.scalar(&lead, `INSERT INTO crm.crm_sales_leads (company_id, branch_id, org_name, pic_name, pic_phone)
+VALUES ($1, $2, 'PT Sinar', 'Budi', '0812') RETURNING id::text`, e.company, branch)
+	e.scalar(&deal, `INSERT INTO crm.crm_sales_deals (company_id, branch_id, lead_id, title, stage_id)
+VALUES ($1, $2, $3, 'Gathering', (SELECT id FROM crm.crm_sales_stages ORDER BY sort_order LIMIT 1)) RETURNING id::text`, e.company, branch, lead)
+	// Sent at 03:00 WIB on 4 October: the AR date is the Jakarta calendar date.
+	open := e.salesInvoice(branch, deal, "INV-GO-"+sfx+"-1", "2026-10-03T20:00:00Z", "2026-10-02", 1500000)
+	// Sent in August, a CLOSED period: the journal cannot post, so no AR row.
+	closed := e.salesInvoice(branch, deal, "INV-GO-"+sfx+"-2", "2026-08-15T03:00:00Z", "2026-08-30", 700000)
+
+	list := e.do("GET", "/api/accounting/ar/invoices", nil, 200)
+	rows := list["data"].([]any)
+	if list["meta"].(map[string]any)["total"] != float64(1) || len(rows) != 1 {
+		t.Fatalf("ar list: %v", list)
+	}
+	inv := rows[0].(map[string]any)
+	if inv["sales_invoice_id"] != open || inv["invoice_date"] != "2026-10-04" || inv["due_date"] != "2026-10-02" ||
+		inv["payment_status"] != "overdue" || inv["customer_name"] != "PT Sinar" || inv["deal_title"] != "Gathering" {
+		t.Fatalf("ar invoice: %v", inv)
+	}
+	if got := e.journals(inv["id"].(string)); len(got) != 1 || got[0] != "SALE_AR_INVOICE:DEBIT=1500000.00,CREDIT=1500000.00" {
+		t.Fatalf("AR journal: %v", got)
+	}
+	var stored int
+	e.scalar(&stored, `SELECT count(*)::int FROM accounting.ar_invoices WHERE sales_invoice_id = $1`, closed)
+	if stored != 0 {
+		t.Fatal("an AR whose journal failed must not be stored")
+	}
+	aging := data(e.do("GET", "/api/accounting/ar/aging?as_of=2026-10-04", nil, 200))
+	if b := aging["buckets"].([]any)[1].(map[string]any); b["bucket"] != "1_30" || b["amount"] != float64(1500000) {
+		t.Fatalf("ar aging: %v", aging)
+	}
+
+	e.do("POST", "/api/accounting/ar/receipts", map[string]any{"invoice_id": inv["id"], "amount": 500000, "receipt_date": "2026-10-04"}, 201)
+	receipts := e.do("GET", "/api/accounting/ar/receipts", nil, 200)["data"].([]any)
+	if r := receipts[0].(map[string]any); r["receipt_date"] != "2026-10-04" {
+		t.Fatalf("receipt list date: %v", r)
+	}
+}
+
+func TestPayrollJournals(t *testing.T) {
+	e := setup(t)
+	expense := e.account("6401012", "Beban Gaji", "EXPENSE", false)
+	payable := e.account("2104001", "Hutang Gaji", "LIABILITY", false)
+	pph21 := e.account("2102002", "Hutang PPh 21", "LIABILITY", false)
+	loans := e.account("1203001", "Piutang Karyawan", "ASSET", false)
+	bank := e.account("1102001", "Bank", "ASSET", true)
+	e.fiscal2026()
+	// Payroll runs have no company: the journal goes to the one company with
+	// ready payroll mappings, so other companies' mappings are switched off.
+	e.exec(`UPDATE accounting.journal_mappings SET is_active = false WHERE event_code LIKE 'PAYROLL\_%' AND company_id IS DISTINCT FROM $1`, e.company)
+
+	str := func(s string) *string { return &s }
+	run := "6f1d5c2e-2222-4a1b-9c1d-000000000001"
+	paidRun := payroll.RunPaid{RunID: run, PeriodMonth: 9, PeriodYear: 2026, UserID: e.staff.UserID,
+		PaidAt: time.Date(2026, 10, 4, 2, 0, 0, 0, time.UTC), TotalGross: str("10000000.00"), TotalDeductions: str("1000000.00"),
+		TotalNet: str("9000000.00"), TotalPph21: str("250000.00"), TotalBjtkEmployee: str("250000.00"), TotalLoanDeduction: 500000}
+
+	e.publish(payroll.TopicRunPaid, run, paidRun)
+	e.dispatch()
+	if got := e.journals(run); len(got) != 0 {
+		t.Fatalf("no ready mapping posts nothing: %v", got)
+	}
+
+	e.mapping("PAYROLL_ACCRUAL", "PAYROLL", mline("DEBIT", "SALARY_EXPENSE", expense, "TOTAL"), mline("CREDIT", "SALARY_PAYABLE", payable, "TOTAL"))
+	e.mapping("PAYROLL_PAYMENT", "PAYROLL", mline("DEBIT", "SALARY_PAYABLE", payable, "PAID"), mline("CREDIT", "BANK", bank, "PAID"))
+	e.mapping("PAYROLL_PPH21_WITHHOLDING", "PAYROLL", mline("DEBIT", "SALARY_PAYABLE", payable, "TAX"), mline("CREDIT", "TAX", pph21, "TAX"))
+	e.mapping("PAYROLL_LOAN_DEDUCTION", "PAYROLL", mline("DEBIT", "SALARY_PAYABLE", payable, "PAID"), mline("CREDIT", "LOAN_RECEIVABLE", loans, "PAID"))
+
+	e.publish(payroll.TopicRunPaid, run, paidRun)
+	e.publish(payroll.TopicRunPaid, run, paidRun)
+	e.dispatch()
+	want := []string{
+		"PAYROLL_ACCRUAL:DEBIT=10000000.00,CREDIT=10000000.00",
+		"PAYROLL_LOAN_DEDUCTION:DEBIT=500000.00,CREDIT=500000.00",
+		"PAYROLL_PAYMENT:DEBIT=9000000.00,CREDIT=9000000.00",
+		"PAYROLL_PPH21_WITHHOLDING:DEBIT=250000.00,CREDIT=250000.00",
+	}
+	if got := e.journals(run); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("payroll journals posted once each:\n got %v\nwant %v", got, want)
+	}
+	var date, company, module string
+	e.scalar(&date, `SELECT DISTINCT entry_date::text FROM accounting.journal_entries WHERE source_document_id = $1`, run)
+	e.scalar(&company, `SELECT DISTINCT company_id::text FROM accounting.journal_entries WHERE source_document_id = $1`, run)
+	e.scalar(&module, `SELECT DISTINCT source_module FROM accounting.journal_entries WHERE source_document_id = $1`, run)
+	if date != "2026-10-04" || company != e.company || module != "PAYROLL" {
+		t.Fatalf("payroll journal header: %s %s %s", date, company, module)
+	}
+
+	// Paid on a date inside a CLOSED period: nothing posts, not even part of it.
+	closed := "6f1d5c2e-2222-4a1b-9c1d-000000000002"
+	paidRun.RunID, paidRun.PaidAt = closed, time.Date(2026, 9, 30, 3, 0, 0, 0, time.UTC)
+	e.publish(payroll.TopicRunPaid, closed, paidRun)
+	e.dispatch()
+	if got := e.journals(closed); len(got) != 0 {
+		t.Fatalf("closed period posts nothing: %v", got)
+	}
 }

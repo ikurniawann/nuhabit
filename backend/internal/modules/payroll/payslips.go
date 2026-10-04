@@ -2,7 +2,6 @@ package payroll
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,10 +22,6 @@ const payslipRunEmbed = `NULL AS employee,
 	(SELECT row_to_json(e) FROM (SELECT id, run_name, period_month, period_year, status, paid_at
 	   FROM hris.payroll_runs WHERE id = d.payroll_run_id) e) AS payroll_run`
 
-// errNoPeriodColumns reproduces the TS 500: the list filters
-// hris.payroll_details by period_year/period_month, which it does not have.
-var errNoPeriodColumns = errors.New("payslips: hris.payroll_details has no period_year/period_month column")
-
 func (s *service) listPayslips(ctx context.Context, a *actor, employeeParam, runID *string, year, month *int) ([]*obj, error) {
 	scope := domain.ResolvePayslipScope(a.Role, a.EmployeeID, employeeParam)
 	if scope.Skip {
@@ -41,8 +36,15 @@ func (s *service) listPayslips(ctx context.Context, a *actor, employeeParam, run
 		args = append(args, *runID)
 		where = append(where, "d.payroll_run_id = $"+itoa(len(args)))
 	}
-	if (year != nil && *year != 0) || (month != nil && *month != 0) {
-		return nil, errNoPeriodColumns
+	// The period lives on the run (payroll_details has no period columns).
+	for _, period := range []struct {
+		col string
+		v   *int
+	}{{"period_year", year}, {"period_month", month}} {
+		if period.v != nil && *period.v != 0 {
+			args = append(args, *period.v)
+			where = append(where, "d.payroll_run_id IN (SELECT id FROM hris.payroll_runs WHERE "+period.col+" = $"+itoa(len(args))+")")
+		}
 	}
 	sql := `SELECT d.*, ` + payslipRunEmbed + ` FROM hris.payroll_details d`
 	if len(where) > 0 {

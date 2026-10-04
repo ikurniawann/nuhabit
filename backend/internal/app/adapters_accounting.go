@@ -218,27 +218,18 @@ const paidSubquery = `COALESCE((SELECT SUM(p.amount) FROM crm.crm_sales_deal_pay
 
 func (accountingSales) SalesInvoice(ctx context.Context, q database.Querier, id string) (*accounting.SalesInvoiceSource, error) {
 	var s accounting.SalesInvoiceSource
-	var sentAt *time.Time
 	err := q.QueryRow(ctx, `
 SELECT i.id::text, i.company_id::text, i.branch_id::text, i.invoice_number, i.amount::float8, i.due_date::text,
-       i.deal_id::text, i.sent_at, i.status, l.org_name, d.title
+       i.deal_id::text, to_char(i.sent_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD'), i.status, l.org_name, d.title
   FROM crm.crm_sales_invoices i
   JOIN crm.crm_sales_deals d ON d.id = i.deal_id
   JOIN crm.crm_sales_leads l ON l.id = d.lead_id
  WHERE i.id = $1 AND i.deleted_at IS NULL`, id).Scan(&s.ID, &s.CompanyID, &s.BranchID, &s.InvoiceNumber, &s.Amount, &s.DueDate,
-		&s.DealID, &sentAt, &s.Status, &s.OrgName, &s.DealTitle)
+		&s.DealID, &s.SentAt, &s.Status, &s.OrgName, &s.DealTitle)
 	if noRow(err) {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	if sentAt != nil {
-		// String(sent_at).slice(0, 10) on a UTC server.
-		v := acctdomain.JSDateString(sentAt.UTC())
-		s.SentAt = &v
-	}
-	return &s, nil
+	return &s, err
 }
 
 func (accountingSales) UnsyncedSentInvoices(ctx context.Context, q database.Querier, companyID string, limit int) ([]string, error) {

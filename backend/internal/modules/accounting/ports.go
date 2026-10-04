@@ -131,7 +131,7 @@ type SalesInvoiceSource struct {
 	Amount        float64
 	DueDate       *string
 	DealID        string
-	SentAt        *string // String(sent_at).slice(0, 10) as the TS computes it
+	SentAt        *string // sent_at as an Asia/Jakarta calendar date (YYYY-MM-DD)
 	Status        string
 	OrgName       *string
 	DealTitle     *string

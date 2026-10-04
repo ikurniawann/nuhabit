@@ -19,8 +19,8 @@ func InvoiceOutstanding(total, allocated float64) float64 {
 	return v
 }
 
-// PaymentStatus is resolvePaymentStatus. Dates compare as strings, exactly
-// like the TS (a non-ISO due date never counts as past due).
+// PaymentStatus is resolvePaymentStatus. Dates are "YYYY-MM-DD", so they
+// compare as strings.
 func PaymentStatus(total, allocated float64, dueDate *string, today string) string {
 	if InvoiceOutstanding(total, allocated) <= 0.009 {
 		return "paid"
@@ -118,8 +118,3 @@ func InvoicePaymentSummary(amount, paid float64) (status string, outstanding flo
 	}
 	return status, outstanding
 }
-
-// JSDateString is String(date).slice(0, 10) for a node-pg date column:
-// "Sun Aug 09". The AP/AR stores apply it to `i.*` rows, whose date
-// columns arrive as Date objects, so the TS responses carry this form.
-func JSDateString(t time.Time) string { return t.Format("Mon Jan 02") }

@@ -30,17 +30,17 @@ func (t *ts) Scan(src any) error {
 	return nil
 }
 
-// jsDate is a date column read through `i.*`, which the AP/AR stores
-// stringify with String(date).slice(0, 10) ("Sun Aug 09").
-type jsDate string
+// isoDate is a date column as "YYYY-MM-DD", the form the AP/AR pages show
+// and the payment status and aging compare.
+type isoDate string
 
 // Scan reads a date value.
-func (d *jsDate) Scan(src any) error {
+func (d *isoDate) Scan(src any) error {
 	v, ok := src.(time.Time)
 	if !ok {
-		return fmt.Errorf("accounting.jsDate: cannot scan %T", src)
+		return fmt.Errorf("accounting.isoDate: cannot scan %T", src)
 	}
-	*d = jsDate(domain.JSDateString(v))
+	*d = isoDate(v.Format(time.DateOnly))
 	return nil
 }
 
