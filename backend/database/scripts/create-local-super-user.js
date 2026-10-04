@@ -13,7 +13,7 @@ const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
-const { seedPassword, passwordSource, assertLocalOrAllowed } = require("../database/seeders/lib/seed-password");
+const { seedPassword, passwordSource, assertLocalOrAllowed } = require("../seeders/lib/seed-password");
 
 const ROOT = path.join(__dirname, "..");
 for (const name of [".env", ".env.local"]) {
@@ -73,7 +73,7 @@ const password = seedPassword("SUPER_USER_PASSWORD");
   }
 
   await c.query(
-    `INSERT INTO public.users (id, full_name, role, brand_id, email, status)
+    `INSERT INTO configuration.users (id, full_name, role, brand_id, email, status)
      VALUES ($1,$2,'super_admin',NULL,$3,'active')
      ON CONFLICT (id) DO UPDATE SET full_name=EXCLUDED.full_name, role='super_admin', email=EXCLUDED.email, status='active'`,
     [userId, fullName, email]
