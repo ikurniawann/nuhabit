@@ -1,5 +1,5 @@
 import { apiGet } from "@/lib/api-client";
-import type { HRISReportData } from "./types";
+import type { HrisReport } from "@/lib/hris/hris-reports-csv";
 
 export const fetchHRISReport = (month: number, year: number) =>
-  apiGet<HRISReportData>(`/api/hris/reports?month=${month}&year=${year}`);
+  apiGet<HrisReport>(`/api/hris/reports?month=${month}&year=${year}`);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,69 +13,30 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
+import { useApproveLeave } from "@/features/hris/leaves/mutations";
 
-interface ApprovalButtonsProps {
-  leaveId: string;
-  currentStatus: string;
-  onApprove?: (data: any) => void;
-  onReject?: (data: any) => void;
-  disabled?: boolean;
-}
+const WA_NOTICE = "Membuka WhatsApp untuk memberi tahu karyawan…";
 
-export function ApprovalButtons({
-  leaveId,
-  currentStatus,
-  onApprove,
-  onReject,
-  disabled = false,
-}: ApprovalButtonsProps) {
-  const [isLoading, setIsLoading] = useState(false);
+/** Tombol setujui/tolak untuk pengajuan cuti yang masih pending. */
+export function ApprovalButtons({ leaveId }: { leaveId: string }) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
-  const { toast } = useToast();
+  const approve = useApproveLeave();
+  const isLoading = approve.isPending;
 
-  const isProcessed = currentStatus !== "pending";
-
-  const handleApprove = async () => {
-    try {
-      setIsLoading(true);
-
-      const response = await fetch("/api/hris/leaves/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leave_id: leaveId,
-          action: "approve",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to approve");
+  const handleApprove = () => {
+    approve.mutate(
+      { leave_id: leaveId, action: "approve" },
+      {
+        onSuccess: (result) => {
+          toast.success("✅ Pengajuan Disetujui", {
+            description: result.wa_link ? WA_NOTICE : "Leave request telah disetujui",
+          });
+          if (result.wa_link) window.open(result.wa_link, "_blank");
+        },
+        onError: () => toast.error("Gagal menyetujui pengajuan."),
       }
-
-      toast({
-        title: "✅ Pengajuan Disetujui",
-        description: result.wa_link
-          ? "Membuka WhatsApp untuk memberi tahu karyawan…"
-          : "Leave request telah disetujui",
-      });
-      if (result.wa_link) window.open(result.wa_link, "_blank");
-
-      onApprove?.(result.data);
-    } catch (error) {
-      console.error("Approve error:", error);
-      toast({
-        title: "Error",
-        description: "Gagal menyetujui pengajuan.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   const handleRejectClick = () => {
@@ -82,89 +44,34 @@ export function ApprovalButtons({
     setRejectionReason("");
   };
 
-  const handleReject = async () => {
-    if (!rejectionReason.trim()) {
-      toast({
-        title: "⚠️ Alasan Ditolak",
-        description: "Mohon isi alasan penolakan",
-        variant: "destructive",
-      });
+  const handleReject = () => {
+    const reason = rejectionReason.trim();
+    if (!reason) {
+      toast.error("⚠️ Alasan Ditolak", { description: "Mohon isi alasan penolakan" });
       return;
     }
-
-    try {
-      setIsLoading(true);
-
-      const response = await fetch("/api/hris/leaves/approve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          leave_id: leaveId,
-          action: "reject",
-          rejection_reason: rejectionReason.trim(),
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to reject");
+    approve.mutate(
+      { leave_id: leaveId, action: "reject", rejection_reason: reason },
+      {
+        onSuccess: (result) => {
+          toast.success("❌ Pengajuan Ditolak", {
+            description: result.wa_link ? WA_NOTICE : reason,
+          });
+          if (result.wa_link) window.open(result.wa_link, "_blank");
+          setShowRejectDialog(false);
+          setRejectionReason("");
+        },
+        onError: () => toast.error("Gagal menolak pengajuan."),
       }
-
-      toast({
-        title: "❌ Pengajuan Ditolak",
-        description: result.wa_link
-          ? "Membuka WhatsApp untuk memberi tahu karyawan…"
-          : rejectionReason.trim(),
-      });
-      if (result.wa_link) window.open(result.wa_link, "_blank");
-
-      onReject?.(result.data);
-      setShowRejectDialog(false);
-      setRejectionReason("");
-    } catch (error) {
-      console.error("Reject error:", error);
-      toast({
-        title: "Error",
-        description: "Gagal menolak pengajuan.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isProcessed) {
-    return (
-      <Badge
-        variant="outline"
-        className={
-          currentStatus === "approved"
-            ? "bg-green-100 text-green-800 border-green-300"
-            : "bg-red-100 text-red-800 border-red-300"
-        }
-      >
-        {currentStatus === "approved" ? (
-          <>
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Disetujui
-          </>
-        ) : (
-          <>
-            <XCircle className="w-3 h-3 mr-1" />
-            Ditolak
-          </>
-        )}
-      </Badge>
     );
-  }
+  };
 
   return (
     <>
       <div className="flex gap-2">
         <Button
           onClick={handleApprove}
-          disabled={isLoading || disabled}
+          disabled={isLoading}
           className="bg-green-600 hover:bg-green-700"
           size="sm"
         >
@@ -180,7 +87,7 @@ export function ApprovalButtons({
 
         <Button
           onClick={handleRejectClick}
-          disabled={isLoading || disabled}
+          disabled={isLoading}
           variant="outline"
           size="sm"
           className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -196,7 +103,6 @@ export function ApprovalButtons({
         </Button>
       </div>
 
-      {/* Rejection Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
@@ -215,11 +121,7 @@ export function ApprovalButtons({
           />
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowRejectDialog(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setShowRejectDialog(false)}>
               Batal
             </Button>
             <Button

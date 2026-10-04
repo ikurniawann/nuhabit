@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { formatDateTime, formatTime } from "@/lib/format";
 import { buildXlsxBuffer } from "@/lib/spreadsheet/exceljs-safe";
 
 /**
@@ -56,16 +57,7 @@ export function formatTanggalId(iso: string): string {
   });
 }
 
-export function formatJamWib(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
-}
+const jamWib = (iso: string | null) => formatTime(iso, "—");
 
 /** "2026-08-01".."2026-08-31" → "1–31 Agustus 2026" (label periode manusiawi). */
 function parseCalendarDate(value: string): { y: number; m: number; d: number } | null {
@@ -138,8 +130,8 @@ export async function buildAttendanceXlsx(
       row.nip ?? "-",
       row.department ?? "-",
       row.position ?? "-",
-      formatJamWib(row.clockIn),
-      formatJamWib(row.clockOut),
+      jamWib(row.clockIn),
+      jamWib(row.clockOut),
       row.workHours ?? 0,
       statusLabel(row.status),
       row.isLate ? row.lateMinutes : 0,
@@ -314,8 +306,8 @@ export async function buildAttendancePdf(
       bold: true,
       sub: [row.nip, row.department].filter(Boolean).join(" · ") || null,
     });
-    put(formatJamWib(row.clockIn), COLS[2].w);
-    put(formatJamWib(row.clockOut), COLS[3].w);
+    put(jamWib(row.clockIn), COLS[2].w);
+    put(jamWib(row.clockOut), COLS[3].w);
     put(row.workHours != null ? `${row.workHours}` : "—", COLS[4].w);
     put(
       row.isLate ? `${statusLabel(row.status)} +${row.lateMinutes}m` : statusLabel(row.status),
@@ -351,4 +343,125 @@ export async function buildAttendancePdf(
 
   doc.end();
   return done;
+}
+
+/* ================================================================== */
+/* Sumber data ekspor + CSV                                            */
+/* ================================================================== */
+
+interface AttendanceLocation {
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+}
+
+/** Baris hris.attendance + join karyawan seperti dipilih route ekspor. */
+export interface AttendanceExportRecord {
+  date: string | Date;
+  clock_in: string | null;
+  clock_out: string | null;
+  clock_in_location: AttendanceLocation | null;
+  clock_out_location: AttendanceLocation | null;
+  work_hours: string | number | null;
+  break_minutes: number | null;
+  status: string | null;
+  is_late: boolean | null;
+  late_minutes: number | null;
+  notes: string | null;
+  clock_in_photo_url: string | null;
+  clock_out_photo_url: string | null;
+  employee: {
+    full_name?: string;
+    nip?: string | null;
+    department?: { name?: string | null } | null;
+    job_title?: { title?: string | null } | null;
+  } | null;
+}
+
+/**
+ * Driver pg bisa mengembalikan kolom date sebagai objek Date: normalkan ke
+ * YYYY-MM-DD memakai komponen lokal (toISOString bisa mundur sehari).
+ */
+export function toDateString(value: string | Date): string {
+  if (value instanceof Date) {
+    const m = String(value.getMonth() + 1).padStart(2, "0");
+    const d = String(value.getDate()).padStart(2, "0");
+    return `${value.getFullYear()}-${m}-${d}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+/** Baris ekspor → baris laporan, urut per karyawan lalu tanggal. */
+export function toReportRows(records: readonly AttendanceExportRecord[]): AttendanceReportRow[] {
+  const rows = records.map((r) => ({
+    date: toDateString(r.date),
+    employeeName: r.employee?.full_name || "-",
+    nip: r.employee?.nip ?? null,
+    department: r.employee?.department?.name ?? null,
+    position: r.employee?.job_title?.title ?? null,
+    clockIn: r.clock_in ?? null,
+    clockOut: r.clock_out ?? null,
+    workHours: r.work_hours == null ? null : Number(r.work_hours),
+    status: r.status ?? null,
+    isLate: Boolean(r.is_late),
+    lateMinutes: Number(r.late_minutes) || 0,
+    notes: r.notes ?? null,
+    clockInPhotoPath: r.clock_in_photo_url ?? null,
+    clockOutPhotoPath: r.clock_out_photo_url ?? null,
+  }));
+  return rows.sort((a, b) =>
+    a.employeeName === b.employeeName
+      ? a.date.localeCompare(b.date)
+      : a.employeeName.localeCompare(b.employeeName)
+  );
+}
+
+const CSV_HEADERS = [
+  "NIP",
+  "Nama Karyawan",
+  "Departemen",
+  "Jabatan",
+  "Tanggal",
+  "Clock In",
+  "Clock Out",
+  "Lokasi Clock In",
+  "Lokasi Clock Out",
+  "Jam Kerja (jam)",
+  "Istirahat (menit)",
+  "Status",
+  "Terlambat",
+  "Keterlambatan (menit)",
+  "Catatan",
+];
+
+function csvLocation(location: AttendanceLocation | null): string {
+  if (!location) return "-";
+  const address = location.address ? ` (${location.address})` : "";
+  return `${location.latitude},${location.longitude}${address}`;
+}
+
+/** CSV ekspor absensi (urutan baris mengikuti query, terbaru dulu). */
+export function buildAttendanceCsv(records: readonly AttendanceExportRecord[]): string {
+  const lines = records.map((record) =>
+    [
+      record.employee?.nip || "-",
+      record.employee?.full_name || "-",
+      record.employee?.department?.name || "-",
+      record.employee?.job_title?.title || "-",
+      toDateString(record.date),
+      formatDateTime(record.clock_in),
+      formatDateTime(record.clock_out),
+      csvLocation(record.clock_in_location),
+      csvLocation(record.clock_out_location),
+      record.work_hours || 0,
+      record.break_minutes || 0,
+      record.status || "-",
+      record.is_late ? "Ya" : "Tidak",
+      record.late_minutes || 0,
+      record.notes || "-",
+    ]
+      .map((field) => `"${String(field).replace(/"/g, '""')}"`)
+      .join(",")
+  );
+  return [CSV_HEADERS.join(","), ...lines].join("\n");
 }

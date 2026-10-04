@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Check, Copy, Loader2, MessageCircle, Send } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,12 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildWaLink } from "@/lib/recruitment/wa";
+import { parseExpiresDays } from "@/lib/recruitment/pipeline-stage-rules";
 import { usePsikotesInstruments } from "@/features/hris/psikotes/queries";
-import { useCreatePsikotesSession, useLogWaTemplate } from "../mutations";
+import { useCreatePsikotesSession } from "../mutations";
+import { InviteLinkResult } from "./invite-link-result";
+import type { StagePanelCandidate } from "./stage-panel-parts";
 
 interface PsikotesSendDialogProps {
-  candidate: { id: string; full_name: string; phone?: string | null };
+  candidate: StagePanelCandidate;
   positionTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -31,53 +33,33 @@ const DEFAULT_EXPIRES_DAYS = 3;
 
 /**
  * Dialog "Kirim / jadwalkan tes": pilih instrumen aktif (default semua),
- * masa berlaku → buat sesi + token → tampilkan link (salin / kirim via
- * template WA undangan_psikotes, tercatat di aktivitas).
+ * masa berlaku → buat sesi + token → tampilkan link (salin / kirim via WA).
+ * Di-mount kondisional oleh panel, jadi state segar tiap kali dibuka.
  */
-export function PsikotesSendDialog({
-  candidate,
-  positionTitle,
-  open,
-  onOpenChange,
-}: PsikotesSendDialogProps) {
+export function PsikotesSendDialog({ candidate, positionTitle, open, onOpenChange }: PsikotesSendDialogProps) {
   const instrumentsQuery = usePsikotesInstruments(open);
   const createSession = useCreatePsikotesSession();
-  const logWa = useLogWaTemplate();
 
-  const activeInstruments = useMemo(
-    () => (instrumentsQuery.data ?? []).filter((i) => i.is_active),
-    [instrumentsQuery.data]
-  );
-  // di-mount kondisional oleh panel (spt dialog detail/proctor) — state
-  // otomatis segar tiap kali dibuka, undangan kedua tidak terjebak di
-  // layar hasil undangan pertama
+  const activeInstruments = (instrumentsQuery.data ?? []).filter((i) => i.is_active);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [expiresDays, setExpiresDays] = useState(String(DEFAULT_EXPIRES_DAYS));
   const [createdLink, setCreatedLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const selectedIds = activeInstruments.filter((i) => !excluded.has(i.id)).map((i) => i.id);
 
   const toggle = (id: string) =>
     setExcluded((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (!next.delete(id)) next.add(id);
       return next;
     });
 
   const handleCreate = () => {
-    const days = Number(expiresDays);
-    if (!Number.isInteger(days) || days < 1 || days > 30) {
-      toast.error("Masa berlaku harus 1–30 hari");
-      return;
-    }
-    if (selectedIds.length === 0) {
-      toast.error("Pilih minimal satu instrumen");
-      return;
-    }
+    const days = parseExpiresDays(expiresDays);
+    if (!days.ok) return void toast.error(days.error);
+    if (selectedIds.length === 0) return void toast.error("Pilih minimal satu instrumen");
     createSession.mutate(
-      { id: candidate.id, payload: { instrument_ids: selectedIds, expires_days: days } },
+      { id: candidate.id, payload: { instrument_ids: selectedIds, expires_days: days.value } },
       {
         onSuccess: (session) => {
           setCreatedLink(`${window.location.origin}/psikotes/${session.token}`);
@@ -86,28 +68,6 @@ export function PsikotesSendDialog({
         onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal membuat undangan"),
       }
     );
-  };
-
-  const handleCopy = async () => {
-    if (!createdLink) return;
-    await navigator.clipboard.writeText(createdLink).catch(() => undefined);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleWa = () => {
-    if (!createdLink) return;
-    const message =
-      `Halo ${candidate.full_name}, selamat! Anda diundang mengikuti psikotes online ` +
-      `untuk posisi ${positionTitle}. Silakan kerjakan melalui link berikut: ${createdLink} ` +
-      `(berlaku ${expiresDays} hari). Kerjakan di tempat tenang dengan koneksi stabil. Terima kasih.`;
-    const link = buildWaLink(candidate.phone, message);
-    if (!link) {
-      toast.error("Nomor HP kandidat belum diisi");
-      return;
-    }
-    window.open(link, "_blank", "noopener,noreferrer");
-    logWa.mutate({ id: candidate.id, template: "undangan_psikotes" });
   };
 
   return (
@@ -121,25 +81,14 @@ export function PsikotesSendDialog({
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-4">
           {createdLink ? (
-            <div className="space-y-3">
-              <p className="text-sm text-emerald-700">
-                Undangan dibuat. Bagikan link berikut ke kandidat:
-              </p>
-              <div className="flex items-center gap-2">
-                <Input readOnly value={createdLink} className="text-xs" />
-                <Button type="button" variant="outline" size="icon" onClick={handleCopy} aria-label="Salin link">
-                  {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-                </Button>
-              </div>
-              <Button type="button" className="w-full" onClick={handleWa} disabled={!candidate.phone}>
-                <MessageCircle className="size-4" /> Kirim via WhatsApp
-              </Button>
-              {!candidate.phone && (
-                <p className="text-xs text-amber-700">
-                  Nomor HP kandidat belum diisi — salin link secara manual.
-                </p>
-              )}
-            </div>
+            <InviteLinkResult
+              intro="Undangan dibuat. Bagikan link berikut ke kandidat:"
+              link={createdLink}
+              template="undangan_psikotes"
+              candidate={candidate}
+              positionTitle={positionTitle}
+              expiresDays={expiresDays}
+            />
           ) : instrumentsQuery.isLoading ? (
             <div className="flex justify-center py-8 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
@@ -150,10 +99,7 @@ export function PsikotesSendDialog({
                 <Label className="text-xs font-medium">Instrumen Tes</Label>
                 <div className="divide-y divide-border rounded-lg border border-border">
                   {activeInstruments.map((instrument) => (
-                    <label
-                      key={instrument.id}
-                      className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm"
-                    >
+                    <label key={instrument.id} className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm">
                       <Checkbox
                         checked={!excluded.has(instrument.id)}
                         onCheckedChange={() => toggle(instrument.id)}
@@ -190,16 +136,8 @@ export function PsikotesSendDialog({
             {createdLink ? "Tutup" : "Batal"}
           </Button>
           {!createdLink && (
-            <Button
-              type="button"
-              onClick={handleCreate}
-              disabled={createSession.isPending || selectedIds.length === 0}
-            >
-              {createSession.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
+            <Button type="button" onClick={handleCreate} disabled={createSession.isPending || selectedIds.length === 0}>
+              {createSession.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Buat Undangan
             </Button>
           )}

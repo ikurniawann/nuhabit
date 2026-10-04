@@ -1,17 +1,13 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api-client";
 import type {
-  JobOpening,
-  JobBrandOption,
-  JobPositionOption,
   JobDepartmentOption,
+  JobOpening,
   JobOpeningPayload,
-} from "./types";
+  JobPositionOption,
+} from "@/lib/recruitment/job-portal-form";
 
 export const fetchJobOpenings = () =>
   apiGet<{ data: JobOpening[] }>("/api/hris/job-openings").then((res) => res.data || []);
-
-export const fetchJobBrands = () =>
-  apiGet<{ data: JobBrandOption[] }>("/api/brands").then((res) => res.data || []);
 
 export const fetchJobPositions = () =>
   apiGet<{ data: JobPositionOption[] }>("/api/master/positions").then((res) => res.data || []);

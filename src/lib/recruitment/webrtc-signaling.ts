@@ -1,3 +1,6 @@
+import { z } from "zod";
+import type { LiveSessionType } from "./live-monitor";
+
 /**
  * Signaling WebRTC Live Monitoring (EPIC-005): video smooth real-time
  * langsung dari kamera kandidat → browser HRD (P2P, STUN publik, vanilla
@@ -10,8 +13,6 @@
  * Bila P2P gagal (NAT simetris dua sisi tanpa TURN), HRD fallback otomatis
  * ke mode frame polling yang lama.
  */
-
-export type LiveSessionType = "psikotes" | "interview";
 
 interface SignalEntry {
   offerId: string;
@@ -34,9 +35,7 @@ function pruneExpired(entries: SignalEntry[]): SignalEntry[] {
   return entries.filter((e) => now - e.createdAt < TTL_MS);
 }
 
-export function isValidSdp(sdp: unknown): sdp is string {
-  return typeof sdp === "string" && sdp.length > 0 && sdp.length <= MAX_SDP_CHARS;
-}
+export const sdpSchema = z.string().min(1).max(MAX_SDP_CHARS);
 
 /** HRD menaruh offer baru; offer terlama dibuang bila melewati kuota. */
 export function putOffer(

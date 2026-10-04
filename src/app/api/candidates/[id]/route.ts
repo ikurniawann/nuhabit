@@ -1,105 +1,59 @@
-import { createServerPgClient } from "@/lib/pg/create-client";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
+import { query } from "@/lib/db";
 import { deletePrivateFolder } from "@/lib/storage-private";
+import { candidateUpdateSchema, isUuid } from "@/lib/recruitment/candidate-query";
+import { getCandidate, parseBody, requireCandidate, updateCandidate } from "@/lib/recruitment/candidates-repo";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
 
 // GET /api/candidates/[id]
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const db = await createServerPgClient();
+export const GET = apiHandler(async (_request: NextRequest, { params }: RouteParams) => {
+  await requireIamMenuPrefix(IAM.hrisRecruitment);
   const { id } = await params;
-
-  const { data, error } = await db
-    .from("candidates")
-    .select("*, brands(name), positions(title)")
-    .eq("id", id)
-    .single();
-
-  if (error || !data) {
-    return NextResponse.json({ error: "Kandidat tidak ditemukan" }, { status: 404 });
-  }
-
+  const data = isUuid(id) ? await getCandidate(id) : null;
+  if (!data) throw ApiError.notFound("Kandidat tidak ditemukan");
   return NextResponse.json({ data });
-}
+}, "api/candidates/[id]");
 
-// PUT /api/candidates/[id]
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const db = await createServerPgClient();
+// PUT /api/candidates/[id]: ubah profil kandidat (field yang dikirim saja)
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteParams) => {
+  await requireIamMenuPrefix(IAM.hrisRecruitment);
   const { id } = await params;
-  const body = await request.json();
-
-  const { data, error } = await db
-    .from("candidates")
-    .update({
-      full_name: body.full_name,
-      email: body.email,
-      phone: body.phone,
-      domicile: body.domicile,
-      source: body.source,
-      position_id: body.position_id,
-      brand_id: body.brand_id,
-      status: body.status,
-      notes: body.notes,
-      cv_url: body.cv_url,
-      photo_url: body.photo_url,
-    })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
+  await requireCandidate(id);
+  const patch = await parseBody(request, candidateUpdateSchema);
+  const data = await updateCandidate(id, patch);
   return NextResponse.json({ data });
-}
+}, "api/candidates/[id]");
 
 // DELETE /api/candidates/[id]
-// Destruktif & ireversibel (termasuk purge bukti psikotes di storage) —
-// wajib role eksplisit; penghapus dicatat di log server karena
-// candidate_activities ikut ter-CASCADE.
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.hrisRecruitment);
-    const db = await createServerPgClient();
-    const { id } = await params;
+// Destruktif & ireversibel (termasuk purge bukti psikotes di storage), jadi
+// penghapus dicatat di log server karena candidate_activities ikut ter-CASCADE.
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteParams) => {
+  const user = await requireIamMenuPrefix(IAM.hrisRecruitment);
+  const { id } = await params;
+  await requireCandidate(id);
 
-    // retensi psikotes: baris DB terhapus via CASCADE, tapi file di
-    // storage/private (gambar tes + snapshot proctoring) harus dibersihkan manual
-    const { data: psikotesSessions } = await db
-      .from("psikotes_sessions")
-      .select("id")
-      .eq("candidate_id", id);
+  // retensi psikotes: baris DB terhapus via CASCADE, tapi file di
+  // storage/private (gambar tes + snapshot proctoring) harus dibersihkan manual
+  const sessions = await query<{ id: string }>(
+    "SELECT id FROM recruitment.psikotes_sessions WHERE candidate_id = $1",
+    [id]
+  );
+  await query("DELETE FROM recruitment.candidates WHERE id = $1", [id]);
 
-    const { error } = await db.from("candidates").delete().eq("id", id);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    const sessions = (psikotesSessions as { id: string }[] | null) ?? [];
-    if (sessions.length > 0) {
-      console.info(
-        `[candidates] DELETE ${id} oleh ${user.full_name} (${user.id}) — purge ${sessions.length} folder bukti psikotes`
-      );
-    }
-    for (const session of sessions) {
-      await deletePrivateFolder(`psikotes/${session.id}`);
-    }
-
-    return NextResponse.json({ message: "Kandidat dihapus" });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[candidates] DELETE failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  if (sessions.length > 0) {
+    console.info(
+      `[candidates] DELETE ${id} oleh ${user.full_name} (${user.id}): purge ${sessions.length} folder bukti psikotes`
+    );
   }
-}
+  for (const session of sessions) {
+    await deletePrivateFolder(`psikotes/${session.id}`);
+  }
+
+  return NextResponse.json({ message: "Kandidat dihapus" });
+}, "api/candidates/[id]");

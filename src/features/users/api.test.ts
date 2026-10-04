@@ -7,7 +7,8 @@ import {
   updateUser,
 } from "./api";
 
-vi.mock("@/lib/api-client", () => ({
+vi.mock("@/lib/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api-client")>()),
   apiGet: vi.fn(),
   apiPost: vi.fn(),
   apiPut: vi.fn(),

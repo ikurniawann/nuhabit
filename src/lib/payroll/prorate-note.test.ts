@@ -72,7 +72,7 @@ describe("prorateNote", () => {
     expect(
       prorateNote({ factor: "0.516129", fullBase: "4750000.00", paidBase: "2451613.00" })
     ).toBe(
-      "Prorata dari gaji pokok penuh Rp 4.750.000 — dibayar 51,6%, dipotong 48,4% (cakupan kontrak tidak satu periode penuh)"
+      "Prorata dari gaji pokok penuh Rp4.750.000 — dibayar 51,6%, dipotong 48,4% (cakupan kontrak tidak satu periode penuh)"
     );
   });
 });

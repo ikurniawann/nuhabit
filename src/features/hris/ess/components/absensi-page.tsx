@@ -1,61 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { AttendanceCalendar } from "@/components/hris/AttendanceCalendar";
+import { useEssMe } from "../queries";
 import { EssClockPanel } from "./ess-clock-panel";
+import { EssLoading, EssNotLinked } from "./ess-states";
 
 /**
  * ESS → Absensi (/dashboard/me/absensi): shift hari ini, clock-in/out
  * dengan selfie + GPS, dan kalender absensi milik sendiri.
  */
 
-interface MeData {
-  employee: { id: string; full_name: string; position_title: string | null } | null;
-  today_shift: {
-    name: string;
-    start_time: string | null;
-    end_time: string | null;
-    late_tolerance_minutes: number;
-  } | null;
-  has_schedule: boolean;
-}
-
 export function EssAbsensiPage() {
-  const [me, setMe] = useState<MeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [calendarKey, setCalendarKey] = useState(0);
+  const { data: me, isLoading } = useEssMe();
 
-  useEffect(() => {
-    fetch("/api/hris/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setMe(json?.data ?? null))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (!me?.employee) {
-    return (
-      <div className="mx-auto max-w-md py-20 text-center">
-        <p className="text-lg font-semibold text-gray-800">
-          Akun ini tidak terhubung ke data karyawan
-        </p>
-        <p className="mt-2 text-sm text-gray-500">
-          Absensi hanya tersedia untuk akun yang tertaut ke record karyawan HRIS.
-          Hubungi HRD bila menurut Anda ini keliru.
-        </p>
-      </div>
-    );
-  }
+  if (isLoading) return <EssLoading />;
+  if (!me?.employee) return <EssNotLinked feature="Absensi" />;
 
   const shift = me.today_shift;
 
@@ -79,11 +39,11 @@ export function EssAbsensiPage() {
           </p>
         </div>
         <div className="mt-4">
-          <EssClockPanel onChanged={() => setCalendarKey((key) => key + 1)} />
+          <EssClockPanel />
         </div>
       </div>
 
-      <AttendanceCalendar employeeId="me" refreshKey={calendarKey} />
+      <AttendanceCalendar employeeId="me" />
     </div>
   );
 }

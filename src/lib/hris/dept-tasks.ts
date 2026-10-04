@@ -84,3 +84,83 @@ export async function ensureOccurrences(
     params
   );
 }
+
+const RECURRENCES: readonly TaskRecurrence[] = ["once", "daily", "weekly", "monthly"];
+const MAX_SUBTASKS = 50;
+
+/** Rentang tanggal satu bulan "YYYY-MM" → awal & akhir bulan (ISO). */
+export function monthRange(month: string): { start: string; end: string } {
+  const [y, m] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { start: `${month}-01`, end: `${month}-${String(lastDay).padStart(2, "0")}` };
+}
+
+/**
+ * Sub-task (owner 2026-08-31): 100% task dibagi RATA otomatis tanpa input
+ * bobot. Sisa pembulatan ditempel ke sub-task terakhir supaya totalnya
+ * persis 100.00.
+ */
+export function splitSubtaskWeights(titles: readonly string[]): { title: string; weight: number }[] {
+  if (titles.length === 0) return [];
+  const rata = Math.floor((100 / titles.length) * 100) / 100;
+  return titles.map((title, index) => ({
+    title,
+    weight:
+      index === titles.length - 1
+        ? Math.round((100 - rata * (titles.length - 1)) * 100) / 100
+        : rata,
+  }));
+}
+
+export interface DeptTaskInput {
+  title?: string;
+  description?: string | null;
+  recurrence?: string;
+  weekly_day?: number | string | null;
+  monthly_day?: number | string | null;
+  due_date?: string | null;
+  subtasks?: { title?: string }[];
+}
+
+export interface NormalizedDeptTask {
+  title: string;
+  description: string | null;
+  recurrence: TaskRecurrence;
+  weeklyDay: number | null;
+  monthlyDay: number | null;
+  dueDate: string | null;
+  subtasks: { title: string; weight: number }[];
+}
+
+/** Validasi + normalisasi isi task baru; return pesan galat (Indonesia) bila tidak valid. */
+export function normalizeDeptTask(body: DeptTaskInput): NormalizedDeptTask | string {
+  const title = String(body.title || "").trim();
+  if (title.length < 3) return "Judul task minimal 3 karakter";
+  const recurrence = String(body.recurrence || "once") as TaskRecurrence;
+  if (!RECURRENCES.includes(recurrence)) return "Jenis pengulangan tidak dikenal";
+  if (recurrence === "once" && !/^\d{4}-\d{2}-\d{2}$/.test(String(body.due_date || ""))) {
+    return "Task sekali jalan membutuhkan tanggal jatuh tempo";
+  }
+  const weeklyDay = Number(body.weekly_day);
+  if (recurrence === "weekly" && (!Number.isInteger(weeklyDay) || weeklyDay < 1 || weeklyDay > 7)) {
+    return "Task mingguan membutuhkan hari (Senin–Minggu)";
+  }
+  const monthlyDay = Number(body.monthly_day);
+  if (recurrence === "monthly" && (!Number.isInteger(monthlyDay) || monthlyDay < 1 || monthlyDay > 28)) {
+    return "Task bulanan membutuhkan tanggal 1–28";
+  }
+  const subtitles = (body.subtasks ?? [])
+    .map((subtask) => String(subtask.title || "").trim())
+    .filter((subtitle) => subtitle.length > 0);
+  if (subtitles.length > MAX_SUBTASKS) return `Maksimal ${MAX_SUBTASKS} sub-task`;
+
+  return {
+    title,
+    description: body.description?.trim() || null,
+    recurrence,
+    weeklyDay: recurrence === "weekly" ? weeklyDay : null,
+    monthlyDay: recurrence === "monthly" ? monthlyDay : null,
+    dueDate: recurrence === "once" ? (body.due_date ?? null) : null,
+    subtasks: splitSubtaskWeights(subtitles),
+  };
+}

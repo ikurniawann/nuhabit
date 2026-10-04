@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { BanknotesIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,32 +14,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ToastContainer, useToast } from "@/components/ui/toast";
+import { formatRupiah } from "@/lib/format";
+import { installmentPreview, loanPaidPercent } from "@/lib/hris/ess-view";
+import { useEssMe, useMyLoans } from "../queries";
+import { useSubmitLoan } from "../mutations";
+import { EssLoading, EssNotLinked } from "./ess-states";
 
 /**
  * ESS → Pinjaman (/dashboard/me/pinjaman): karyawan mengajukan
  * pinjaman/kasbon utk dirinya sendiri + memantau status & pelunasan.
  * Server memaksa employee_id = diri sendiri, bunga 0, status pending.
  */
-
-interface MeData {
-  employee: { id: string; full_name: string } | null;
-}
-
-interface LoanRow {
-  id: string;
-  loan_type: string;
-  principal_amount: string | number;
-  monthly_installment: string | number;
-  remaining_balance: string | number;
-  paid_amount: string | number;
-  tenor_months: number;
-  first_installment_month: number | null;
-  first_installment_year: number | null;
-  status: string;
-  purpose: string | null;
-  rejection_reason: string | null;
-}
 
 const LOAN_TYPE_OPTIONS = [
   { value: "kasbon", label: "Kasbon (Salary Advance)" },
@@ -53,14 +39,6 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   paid_off: { label: "Lunas", className: "bg-sky-100 text-sky-700" },
 };
 
-function formatCurrency(amount: string | number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(Number(amount) || 0);
-}
-
 function loanTypeLabel(value: string): string {
   return LOAN_TYPE_OPTIONS.find((o) => o.value === value)?.label ?? value;
 }
@@ -73,93 +51,41 @@ const EMPTY_FORM = {
 };
 
 export function EssPinjamanPage() {
-  const { toasts, showToast, removeToast } = useToast();
-  const [me, setMe] = useState<MeData | null>(null);
-  const [loadingMe, setLoadingMe] = useState(true);
-  const [loans, setLoans] = useState<LoanRow[]>([]);
+  const { data: me, isLoading } = useEssMe();
+  const loans = useMyLoans().data ?? [];
+  const submitMutation = useSubmitLoan();
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
+  const previewInstallment = installmentPreview(form.principal_amount, form.tenor_months);
 
-  const loadLoans = useCallback(() => {
-    fetch("/api/hris/loans?employee_id=me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setLoans(json?.data ?? []))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/hris/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setMe(json?.data ?? null))
-      .catch(() => {})
-      .finally(() => setLoadingMe(false));
-    loadLoans();
-  }, [loadLoans]);
-
-  const previewInstallment = (() => {
-    const principal = Number(form.principal_amount);
-    const tenor = Number(form.tenor_months);
-    if (!principal || !tenor) return null;
-    return Math.round(principal / tenor);
-  })();
-
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!Number(form.principal_amount) || !Number(form.tenor_months)) {
-      showToast("Jumlah pinjaman dan tenor wajib diisi", "error");
+      toast.error("Jumlah pinjaman dan tenor wajib diisi");
       return;
     }
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/hris/loans", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          loan_type: form.loan_type,
-          principal_amount: Number(form.principal_amount),
-          tenor_months: Number(form.tenor_months),
-          purpose: form.purpose || undefined,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal mengajukan pinjaman");
-      showToast("Pengajuan pinjaman terkirim — menunggu persetujuan");
-      setDialog(false);
-      setForm(EMPTY_FORM);
-      loadLoans();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal mengajukan pinjaman", "error");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (loadingMe) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
+    submitMutation.mutate(
+      {
+        loan_type: form.loan_type,
+        principal_amount: Number(form.principal_amount),
+        tenor_months: Number(form.tenor_months),
+        purpose: form.purpose || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success("Pengajuan pinjaman terkirim — menunggu persetujuan");
+          setDialog(false);
+          setForm(EMPTY_FORM);
+        },
+        onError: (error) => toast.error(error.message || "Gagal mengajukan pinjaman"),
+      }
     );
   }
 
-  if (!me?.employee) {
-    return (
-      <div className="mx-auto max-w-md py-20 text-center">
-        <p className="text-lg font-semibold text-gray-800">
-          Akun ini tidak terhubung ke data karyawan
-        </p>
-        <p className="mt-2 text-sm text-gray-500">
-          Pengajuan pinjaman hanya tersedia untuk akun yang tertaut ke record
-          karyawan HRIS. Hubungi HRD bila menurut Anda ini keliru.
-        </p>
-      </div>
-    );
-  }
+  if (isLoading) return <EssLoading />;
+  if (!me?.employee) return <EssNotLinked feature="Pengajuan pinjaman" />;
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex items-center justify-between border-b border-gray-200/70 pb-4">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
@@ -184,17 +110,16 @@ export function EssPinjamanPage() {
           <ul className="mt-3 divide-y divide-gray-100">
             {loans.map((loan) => {
               const badge = STATUS_BADGES[loan.status] ?? STATUS_BADGES.pending;
-              const total = Number(loan.paid_amount) + Number(loan.remaining_balance);
-              const paidPct = total > 0 ? Math.round((Number(loan.paid_amount) / total) * 100) : 0;
+              const paidPct = loanPaidPercent(loan.paid_amount, loan.remaining_balance);
               return (
                 <li key={loan.id} className="py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900">
-                        {loanTypeLabel(loan.loan_type)} · {formatCurrency(loan.principal_amount)}
+                        {loanTypeLabel(loan.loan_type)} · {formatRupiah(loan.principal_amount)}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Cicilan {formatCurrency(loan.monthly_installment)}/bln × {loan.tenor_months} bln
+                        Cicilan {formatRupiah(loan.monthly_installment)}/bln × {loan.tenor_months} bln
                         {loan.purpose ? ` · ${loan.purpose}` : ""}
                       </p>
                       {loan.status === "rejected" && loan.rejection_reason && (
@@ -212,13 +137,13 @@ export function EssPinjamanPage() {
                   {(loan.status === "approved" || loan.status === "paid_off") && (
                     <div className="mt-2">
                       <div className="mb-1 flex justify-between text-xs text-gray-500">
-                        <span>Terbayar {formatCurrency(loan.paid_amount)}</span>
-                        <span>Sisa {formatCurrency(loan.remaining_balance)}</span>
+                        <span>Terbayar {formatRupiah(loan.paid_amount)}</span>
+                        <span>Sisa {formatRupiah(loan.remaining_balance)}</span>
                       </div>
                       <div className="h-1.5 w-full rounded-full bg-gray-100">
                         <div
                           className="h-1.5 rounded-full bg-green-500"
-                          style={{ width: `${Math.min(100, paidPct)}%` }}
+                          style={{ width: `${paidPct}%` }}
                         />
                       </div>
                     </div>
@@ -276,7 +201,7 @@ export function EssPinjamanPage() {
             </div>
             {previewInstallment !== null && (
               <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-700">
-                Perkiraan cicilan: <strong>{formatCurrency(previewInstallment)}</strong>/bulan ×{" "}
+                Perkiraan cicilan: <strong>{formatRupiah(previewInstallment)}</strong>/bulan ×{" "}
                 {form.tenor_months} bulan (tanpa bunga). Cicilan otomatis
                 terpotong dari gaji setelah disetujui HRD.
               </p>
@@ -286,8 +211,8 @@ export function EssPinjamanPage() {
             <Button variant="outline" onClick={() => setDialog(false)}>
               Batal
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kirim Pengajuan"}
+            <Button onClick={handleSubmit} disabled={submitMutation.isPending}>
+              {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kirim Pengajuan"}
             </Button>
           </DialogFooter>
         </DialogContent>

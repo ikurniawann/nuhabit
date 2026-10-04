@@ -1,80 +1,36 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { use } from "react";
+import { toast } from "sonner";
 import { OnboardingChecklist } from "@/components/hris/OnboardingChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Calendar, Briefcase, Mail, Phone, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { formatDate } from "@/lib/format";
+import { EMPLOYMENT_STATUS_BADGES, tenureDays } from "@/lib/hris/onboarding-view";
 import { useOnboardingEmployee } from "../queries";
 
 interface OnboardingPageProps {
   params: Promise<{ employee_id: string }>;
 }
 
+function EmploymentStatusBadge({ status }: { status: string }) {
+  const badge = EMPLOYMENT_STATUS_BADGES[status];
+  return (
+    <Badge variant="outline" className={badge?.className ?? "bg-gray-100 text-gray-800"}>
+      {badge?.label ?? status}
+    </Badge>
+  );
+}
+
+const handleTaskComplete = () =>
+  toast.success("✅ Task Selesai", { description: "Progress onboarding telah diupdate" });
+
 export function OnboardingPage({ params }: OnboardingPageProps) {
-  const [resolvedParams] = useState(params);
-  const [employeeId, setEmployeeId] = useState<string>("");
-  const { toast } = useToast();
-  const router = useRouter();
-
-  useEffect(() => {
-    resolvedParams.then(({ employee_id }) => setEmployeeId(employee_id));
-  }, [resolvedParams]);
-
-  const { data: employee, isLoading: queryLoading, isError } = useOnboardingEmployee(employeeId);
-  const isLoading = !employeeId || queryLoading;
-
-  useEffect(() => {
-    if (isError) {
-      toast({
-        title: "Error",
-        description: "Gagal memuat data karyawan.",
-        variant: "destructive",
-      });
-    }
-  }, [isError, toast]);
-
-  const handleTaskComplete = (task: any) => {
-    console.log("Task completed:", task);
-    toast({
-      title: "✅ Task Selesai",
-      description: "Progress onboarding telah diupdate",
-    });
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, string> = {
-      probation: "bg-yellow-100 text-yellow-800",
-      contract: "bg-blue-100 text-blue-800",
-      permanent: "bg-green-100 text-green-800",
-      internship: "bg-purple-100 text-purple-800",
-    };
-    
-    const labels: Record<string, string> = {
-      probation: "Probation",
-      contract: "Kontrak",
-      permanent: "Tetap",
-      internship: "Magang",
-    };
-
-    return (
-      <Badge variant="outline" className={badges[status] || "bg-gray-100 text-gray-800"}>
-        {labels[status] || status}
-      </Badge>
-    );
-  };
+  const { employee_id: employeeId } = use(params);
+  const { data: employee, isLoading } = useOnboardingEmployee(employeeId);
 
   if (isLoading) {
     return (
@@ -104,9 +60,9 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <button onClick={() => router.push("/dashboard/employees")} className="hover:text-gray-900">
+        <Link href="/dashboard/employees" className="hover:text-gray-900">
           Direktori Karyawan
-        </button>
+        </Link>
         <span>/</span>
         <span className="text-gray-900 font-medium">Onboarding</span>
       </div>
@@ -133,7 +89,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
             </div>
             <div>
               {employee.full_name}
-              {getStatusBadge(employee.employment_status)}
+              <EmploymentStatusBadge status={employee.employment_status} />
             </div>
             <span className="text-sm text-gray-500 font-normal ml-2">Informasi karyawan dan detail onboarding</span>
           </CardTitle>
@@ -194,7 +150,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
               <p className="text-sm font-medium text-gray-700">Status Kepegawaian</p>
               <div className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-gray-400" />
-                {getStatusBadge(employee.employment_status)}
+                <EmploymentStatusBadge status={employee.employment_status} />
               </div>
             </div>
 
@@ -202,7 +158,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-700">Masa Kerja</p>
               <p className="text-base text-gray-900">
-                {Math.floor((new Date().getTime() - new Date(employee.join_date).getTime()) / (1000 * 60 * 60 * 24))} hari
+                {tenureDays(employee.join_date, new Date())} hari
               </p>
             </div>
           </div>

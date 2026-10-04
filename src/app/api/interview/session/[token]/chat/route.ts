@@ -1,35 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  loadInterviewSessionByToken,
-  invalidInterviewTokenResponse,
-  interviewRateLimitedResponse,
-  interviewSessionRateLimited,
-} from "@/lib/recruitment/interview-session";
-import { handleCandidateChat } from "@/lib/recruitment/live-monitor";
+import { NextResponse, type NextRequest } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
+import { requireInterviewSession } from "@/lib/recruitment/interview-session";
+import { fetchChatMessages, sendCandidateChat } from "@/lib/recruitment/live-monitor";
 
-/** GET/POST /api/interview/session/[token]/chat — live chat kandidat ↔ HRD. */
+/** GET/POST /api/interview/session/[token]/chat: live chat kandidat ↔ HRD. */
 
-async function handle(req: NextRequest, params: Promise<{ token: string }>) {
-  try {
-    const { token } = await params;
-    const session = await loadInterviewSessionByToken(token);
-    if (!session) return invalidInterviewTokenResponse();
-    if (interviewSessionRateLimited(session.id, "chat")) return interviewRateLimitedResponse();
-    return await handleCandidateChat(req, "interview", {
-      id: session.id,
-      candidate_name: session.candidate_name,
-      status: session.status,
-    });
-  } catch (error) {
-    console.error("[interview-chat] failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+type Ctx = { params: Promise<{ token: string }> };
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  return handle(req, params);
-}
+export const GET = apiHandler(async (req: NextRequest, { params }: Ctx) => {
+  const session = await requireInterviewSession((await params).token, "chat");
+  const messages = await fetchChatMessages("interview", session.id, req.nextUrl.searchParams.get("after"));
+  return NextResponse.json({ data: messages });
+}, "interview-chat");
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  return handle(req, params);
-}
+export const POST = apiHandler(async (req: NextRequest, { params }: Ctx) => {
+  const session = await requireInterviewSession((await params).token, "chat");
+  const saved = await sendCandidateChat("interview", session, req);
+  return NextResponse.json({ data: saved }, { status: 201 });
+}, "interview-chat");

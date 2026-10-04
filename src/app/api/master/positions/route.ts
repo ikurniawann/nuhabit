@@ -1,45 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createPgClient } from "@/lib/pg/create-client";
-import { requireIamGuard } from "@/lib/api/auth";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
+import { createPosition, positionSchema, listPositions } from "@/lib/hris/master-data";
 
 const READERS = [...IAM.hris, ...IAM.settingsUsers];
 
-export async function GET() {
-  const guard = await requireIamGuard(READERS);
-  if (guard.error) return guard.error;
-  const db = createPgClient();
-  const { data, error } = await db
-    .from('positions')
-    .select('id, title, department, level, is_active, created_at, brand_id, brands(name)')
-    .order('title');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data: data || [] });
-}
+export const GET = apiHandler(async () => {
+  await requireIamMenuPrefix(READERS);
+  return NextResponse.json({ data: await listPositions() });
+}, "master/positions");
 
-export async function POST(request: NextRequest) {
-  const guard = await requireIamGuard(IAM.hrisMaster);
-  if (guard.error) return guard.error;
-  const db = createPgClient();
-  const body = await request.json();
-  const { title, department = 'Operations', level = 'Staff', is_active = true, brand_id } = body;
-
-  if (!title) {
-    return NextResponse.json({ error: 'Nama jabatan wajib diisi' }, { status: 400 });
-  }
-
-  const { data, error } = await db
-    .from('positions')
-    .insert({
-      title,
-      department: department || 'Operations',
-      level: level || 'Staff',
-      is_active,
-      brand_id: brand_id || null,
-    })
-    .select('id, title, department, level, is_active, created_at, brand_id, brands(name)')
-    .single();
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ data, message: 'Jabatan berhasil ditambahkan' }, { status: 201 });
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.hrisMaster);
+  const data = await createPosition(await validateBody(request, positionSchema));
+  return NextResponse.json({ data, message: "Jabatan berhasil ditambahkan" }, { status: 201 });
+}, "master/positions");

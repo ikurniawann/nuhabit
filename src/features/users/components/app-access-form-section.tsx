@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { PlusIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { KeyRound, Loader2 } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
@@ -14,11 +13,9 @@ import {
   formInputClassName,
 } from "@/components/layout/form-field";
 import type { UserEmployeeFormValues } from "../types";
+import { APPROVAL_LEVELS, APPROVAL_MODULES } from "@/lib/admin/user-management";
 import {
-  ADMIN_USER_ROLES,
-  APPROVAL_LEVELS,
-  APPROVAL_MODULES,
-  ROLE_LABELS,
+  ROLE_OPTIONS,
   emptyApprovalPermission,
   formatCurrency,
   levelLabel,
@@ -42,13 +39,21 @@ interface AppAccessFormSectionProps {
   hasExistingAppAccount?: boolean;
   onChange: (patch: Partial<UserEmployeeFormValues>) => void;
   onResetPassword?: () => void;
-  isResettingPassword?: boolean;
 }
 
 const ACCOUNT_STATUS_OPTIONS = [
   { value: "active", label: "Active" },
   { value: "inactive", label: "Inactive" },
 ];
+
+const MODULE_OPTIONS = APPROVAL_MODULES.map((m) => ({
+  value: m.value,
+  label: m.label,
+}));
+const LEVEL_OPTIONS = APPROVAL_LEVELS.map((l) => ({
+  value: l.value,
+  label: l.label,
+}));
 
 export function AppAccessFormSection({
   form,
@@ -57,21 +62,7 @@ export function AppAccessFormSection({
   hasExistingAppAccount = false,
   onChange,
   onResetPassword,
-  isResettingPassword = false,
 }: AppAccessFormSectionProps) {
-  const roleOptions = useMemo(
-    () => ADMIN_USER_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
-    []
-  );
-  const moduleOptions = useMemo(
-    () => APPROVAL_MODULES.map((module) => ({ value: module.value, label: module.label })),
-    []
-  );
-  const levelOptions = useMemo(
-    () => APPROVAL_LEVELS.map((level) => ({ value: level.value, label: level.label })),
-    []
-  );
-
   function updatePermission(
     index: number,
     patch: Partial<UserEmployeeFormValues["approval_permissions"][number]>
@@ -115,14 +106,7 @@ export function AppAccessFormSection({
     isEdit,
   });
 
-  const branchStalls = useMemo(() => {
-    if (!form.branch_id) return [];
-    return findBranchStallsFromTree(businessTree, form.branch_id).map((stall) => ({
-      id: stall.id,
-      name: stall.name,
-      code: stall.code,
-    }));
-  }, [businessTree, form.branch_id]);
+  const branchStalls = form.branch_id ? findBranchStallsFromTree(businessTree, form.branch_id) : [];
 
   const requiresNewPassword = form.is_access_app && (!isEdit || !hasExistingAppAccount);
 
@@ -142,13 +126,8 @@ export function AppAccessFormSection({
             size="sm"
             className="h-9 shrink-0 gap-1.5 rounded-lg border-gray-200/80"
             onClick={onResetPassword}
-            disabled={isResettingPassword}
           >
-            {isResettingPassword ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <KeyRound className="h-4 w-4" />
-            )}
+            <KeyRound className="h-4 w-4" />
             Reset Password
           </Button>
         </div>
@@ -202,7 +181,7 @@ export function AppAccessFormSection({
             <div>
               <FormFieldLabel required>Role</FormFieldLabel>
               <Combobox
-                options={roleOptions}
+                options={ROLE_OPTIONS}
                 value={form.role}
                 onChange={handleRoleChange}
                 placeholder="Select role"
@@ -216,9 +195,7 @@ export function AppAccessFormSection({
               <Combobox
                 options={ACCOUNT_STATUS_OPTIONS}
                 value={form.account_status}
-                onChange={(value) =>
-                  onChange({ account_status: value as "active" | "inactive" })
-                }
+                onChange={(value) => onChange({ account_status: value as "active" | "inactive" })}
                 placeholder="Select status"
                 searchPlaceholder="Search status..."
                 emptyMessage="No status found"
@@ -227,7 +204,12 @@ export function AppAccessFormSection({
             </div>
           </div>
 
-          <BusinessScopePicker form={form} tree={businessTree} isEdit={isEdit} onChange={onChange} />
+          <BusinessScopePicker
+            form={form}
+            tree={businessTree}
+            isEdit={isEdit}
+            onChange={onChange}
+          />
 
           {showStallPicker ? (
             <div className="space-y-3">
@@ -283,13 +265,10 @@ export function AppAccessFormSection({
                   }));
 
                   return (
-                    <div
-                      key={index}
-                      className="rounded-lg border border-gray-200/70 bg-white p-3"
-                    >
+                    <div key={index} className="rounded-lg border border-gray-200/70 bg-white p-3">
                       <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
                         <Combobox
-                          options={moduleOptions}
+                          options={MODULE_OPTIONS}
                           value={permission.module}
                           onChange={(value) => updatePermission(index, { module: value })}
                           placeholder="Module"
@@ -307,7 +286,7 @@ export function AppAccessFormSection({
                           className={formComboboxClassName}
                         />
                         <Combobox
-                          options={levelOptions}
+                          options={LEVEL_OPTIONS}
                           value={permission.approval_level}
                           onChange={(value) =>
                             updatePermission(index, {
@@ -326,8 +305,7 @@ export function AppAccessFormSection({
                           value={permission.approval_limit ?? ""}
                           onChange={(e) =>
                             updatePermission(index, {
-                              approval_limit:
-                                e.target.value === "" ? null : Number(e.target.value),
+                              approval_limit: e.target.value === "" ? null : Number(e.target.value),
                             })
                           }
                           className={formInputClassName}

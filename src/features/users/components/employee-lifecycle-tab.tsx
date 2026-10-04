@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,6 +12,8 @@ import {
   RocketLaunchIcon,
   UserPlusIcon,
 } from "@heroicons/react/24/outline";
+import { formatDate } from "@/lib/format";
+import { STATUS_LABELS } from "../constants";
 import { useEmployeeLifecycle } from "../queries";
 import type { EmployeeLifecycleData } from "../api";
 
@@ -23,16 +26,6 @@ const HISTORY_TYPE_LABELS: Record<string, string> = {
   salary_change: "Perubahan Gaji",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  probation: "Probation",
-  contract: "Contract",
-  permanent: "Permanent",
-  internship: "Internship",
-  resigned: "Resigned",
-  terminated: "Terminated",
-  suspended: "Suspended",
-};
-
 const SOURCE_LABELS: Record<string, string> = {
   portal: "Portal Karier",
   internal: "Internal",
@@ -43,24 +36,15 @@ const SOURCE_LABELS: Record<string, string> = {
   other: "Lainnya",
 };
 
-function formatDate(d: string | null | undefined) {
-  if (!d) return null;
-  return new Date(d).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 type PhaseStatus = "done" | "current" | "upcoming" | "attention";
 
 interface Phase {
   key: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   date: string | null;
   status: PhaseStatus;
-  lines: React.ReactNode[];
+  lines: ReactNode[];
 }
 
 const PHASE_DOT: Record<PhaseStatus, string> = {
@@ -74,8 +58,8 @@ const PHASE_DOT: Record<PhaseStatus, string> = {
 function buildPhases(data: EmployeeLifecycleData): Phase[] {
   const phases: Phase[] = [];
   const { employee, recruitment, account, onboarding, history, offboarding } = data;
-  const isEnded = Boolean(employee.end_date) ||
-    ["resigned", "terminated"].includes(employee.employment_status);
+  const isEnded =
+    Boolean(employee.end_date) || ["resigned", "terminated"].includes(employee.employment_status);
 
   // 1. Rekrutmen
   phases.push({
@@ -88,7 +72,9 @@ function buildPhases(data: EmployeeLifecycleData): Phase[] {
       ? [
           <span key="a">
             Melamar {formatDate(recruitment.applied_at)}
-            {recruitment.source ? ` via ${SOURCE_LABELS[recruitment.source] ?? recruitment.source}` : ""}
+            {recruitment.source
+              ? ` via ${SOURCE_LABELS[recruitment.source] ?? recruitment.source}`
+              : ""}
             {recruitment.position_title ? ` — posisi ${recruitment.position_title}` : ""}
           </span>,
           recruitment.offer_accepted_at ? (
@@ -110,8 +96,10 @@ function buildPhases(data: EmployeeLifecycleData): Phase[] {
     status: employee.join_date ? "done" : "upcoming",
     lines: [
       <span key="a">
-        Mulai bekerja {formatDate(employee.join_date) ?? "—"} · status awal{" "}
-        {STATUS_LABELS[history.find((h) => h.change_type === "hire")?.new_employment_status ?? ""] ??
+        Mulai bekerja {formatDate(employee.join_date, "—")} · status awal{" "}
+        {STATUS_LABELS[
+          history.find((h) => h.change_type === "hire")?.new_employment_status ?? ""
+        ] ??
           STATUS_LABELS[employee.employment_status] ??
           employee.employment_status}
       </span>,
@@ -125,12 +113,7 @@ function buildPhases(data: EmployeeLifecycleData): Phase[] {
     icon: <ClipboardDocumentCheckIcon className="w-4 h-4" />,
     title: "Onboarding",
     date: onboardingDone ? onboarding.last_completed_at : null,
-    status:
-      onboarding.total === 0
-        ? "upcoming"
-        : onboardingDone
-          ? "done"
-          : "attention",
+    status: onboarding.total === 0 ? "upcoming" : onboardingDone ? "done" : "attention",
     lines: [
       onboarding.total === 0 ? (
         <span key="a">Checklist onboarding belum dibuat</span>
@@ -161,7 +144,11 @@ function buildPhases(data: EmployeeLifecycleData): Phase[] {
               : " · belum pernah login"}
           </span>,
         ]
-      : [<span key="a">Belum punya akun login — buat lewat tombol &quot;Buat Akun Login&quot;</span>],
+      : [
+          <span key="a">
+            Belum punya akun login — buat lewat tombol &quot;Buat Akun Login&quot;
+          </span>,
+        ],
   });
 
   // 5. Perjalanan kepegawaian (selain hire)
@@ -214,20 +201,18 @@ function buildPhases(data: EmployeeLifecycleData): Phase[] {
         offboarding ? (
           <span key="a">
             {offboarding.resignation_type ?? "Berakhir"} · pengajuan{" "}
-            {formatDate(offboarding.resignation_date) ?? "—"} · hari terakhir{" "}
-            {formatDate(offboarding.last_working_day) ?? formatDate(employee.end_date) ?? "—"}
+            {formatDate(offboarding.resignation_date, "—")} · hari terakhir{" "}
+            {formatDate(offboarding.last_working_day ?? employee.end_date, "—")}
           </span>
         ) : (
-          <span key="a">Berakhir {formatDate(employee.end_date) ?? "—"}</span>
+          <span key="a">Berakhir {formatDate(employee.end_date, "—")}</span>
         ),
         clearances.length > 0 ? (
           <span key="b" className="flex flex-wrap gap-1.5">
             {clearances.map(([label, done]) => (
               <Badge
                 key={String(label)}
-                className={
-                  done ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
-                }
+                className={done ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}
               >
                 {done ? "✓" : "•"} Clearance {label}
               </Badge>
@@ -296,7 +281,9 @@ export function EmployeeLifecycleTab({ employeeId }: { employeeId: string }) {
                       <Badge className="bg-amber-100 text-amber-700">perlu perhatian</Badge>
                     )}
                     {phase.date && (
-                      <span className="ml-auto text-xs text-gray-400">{formatDate(phase.date)}</span>
+                      <span className="ml-auto text-xs text-gray-400">
+                        {formatDate(phase.date)}
+                      </span>
                     )}
                   </div>
                   <div className="mt-1.5 space-y-1 text-sm text-gray-600">

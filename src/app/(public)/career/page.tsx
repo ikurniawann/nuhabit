@@ -2,8 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
   ArrowUp,
@@ -40,30 +41,20 @@ interface JobOpening {
   department_ref?: { id: string; name: string; code: string } | null;
 }
 
+async function fetchPublicJobs(): Promise<JobOpening[]> {
+  const res = await fetch("/api/job-openings/public");
+  const json: { data?: unknown } = await res.json();
+  return Array.isArray(json.data) ? (json.data as JobOpening[]) : [];
+}
+
 export default function CareerPage() {
   const [showNotice, setShowNotice] = useState(true);
-  const [jobs, setJobs] = useState<JobOpening[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await fetch("/api/job-openings/public");
-        const json = await res.json();
-        setJobs(Array.isArray(json.data) ? json.data : []);
-      } catch {
-        setJobs([]);
-      } finally {
-        setJobsLoading(false);
-      }
-    };
-
-    fetchJobs();
-  }, []);
+  // gagal muat = daftar kosong ("No open positions"), sama seperti sebelumnya
+  const { data: jobs, isPending: jobsLoading } = useQuery({ queryKey: ["career-jobs"], queryFn: fetchPublicJobs });
 
   const departments = useMemo(() => {
     const groups = new Map<string, JobOpening[]>();
-    jobs.forEach((job) => {
+    (jobs ?? []).forEach((job) => {
       const key = job.department_ref?.name || job.department || "Operations";
       groups.set(key, [...(groups.get(key) || []), job]);
     });

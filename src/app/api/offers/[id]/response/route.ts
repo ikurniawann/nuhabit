@@ -10,7 +10,6 @@ import { offerManualResponseSchema } from "@/lib/validations/offer";
  * manual (mis. kandidat membalas via WA/telepon, bukan portal).
  */
 
-const ALLOWED_ROLES = ["super_admin", "admin", "hrd", "hiring_manager"] as const;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const STATUS_LABELS: Record<string, string> = {

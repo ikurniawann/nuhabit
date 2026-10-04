@@ -6,7 +6,6 @@ import { useSalary } from "../queries";
 import { useUpdateSalary } from "../mutations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -17,37 +16,10 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CheckIcon } from "@heroicons/react/24/solid";
-import { useToast, ToastContainer } from "@/components/ui/toast";
-
-interface EmployeeSalary {
-  id: string;
-  employee_id: string;
-  base_salary: number;
-  fixed_allowance: number;
-  variable_allowance: number;
-  transport_allowance: number;
-  meal_allowance: number;
-  housing_allowance: number;
-  loan_deduction: number;
-  other_deduction: number;
-  ptkp_status: string;
-  is_taxable: boolean;
-  bpjs_tk_enrolled: boolean;
-  bpjs_kes_enrolled: boolean;
-  tapera_enrolled: boolean;
-  notes?: string;
-  employee?: {
-    id: string;
-    full_name: string;
-    nip: string;
-    position?: {
-      title: string;
-    };
-    department?: {
-      name: string;
-    };
-  };
-}
+import { toast } from "sonner";
+import { formToSalaryPayload, salaryToForm } from "@/lib/hris/salary-form";
+import type { EmployeeSalary } from "../types";
+import { SalaryAmountFields } from "./salary-amount-fields";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -56,107 +28,13 @@ interface PageProps {
 export function EditSalaryPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-
   const salaryQuery = useSalary(id);
-  const salary = (salaryQuery.data as EmployeeSalary | undefined) ?? null;
-  const loading = salaryQuery.isLoading;
-  const updateMutation = useUpdateSalary();
-  const saving = updateMutation.isPending;
-
-  const [formData, setFormData] = useState({
-    base_salary: "",
-    fixed_allowance: "",
-    variable_allowance: "",
-    transport_allowance: "",
-    meal_allowance: "",
-    housing_allowance: "",
-    loan_deduction: "",
-    other_deduction: "",
-    ptkp_status: "TK/0",
-    is_taxable: true,
-    bpjs_tk_enrolled: true,
-    bpjs_kes_enrolled: true,
-    tapera_enrolled: true,
-    notes: "",
-  });
-
-  // Helper function to format number to IDR string
-  const formatToIDR = (value: string): string => {
-    const num = parseInt(value.replace(/[^0-9]/g, '')) || 0;
-    return num.toLocaleString('id-ID');
-  };
-
-  // Helper function to parse IDR string to number
-  const parseFromIDR = (value: string): number => {
-    return parseInt(value.replace(/[^0-9]/g, '')) || 0;
-  };
-
-  // Handle change for currency inputs
-  const handleCurrencyChange = (field: string, value: string) => {
-    const formatted = formatToIDR(value);
-    setFormData({ ...formData, [field]: formatted });
-  };
 
   useEffect(() => {
-    const data = salaryQuery.data;
-    if (!data) return;
-    setFormData({
-      base_salary: String(data.base_salary || ""),
-      fixed_allowance: String(data.fixed_allowance || 0),
-      variable_allowance: String(data.variable_allowance || 0),
-      transport_allowance: String(data.transport_allowance || 0),
-      meal_allowance: String(data.meal_allowance || 0),
-      housing_allowance: String(data.housing_allowance || 0),
-      loan_deduction: String(data.loan_deduction || 0),
-      other_deduction: String(data.other_deduction || 0),
-      ptkp_status: data.ptkp_status || "TK/0",
-      is_taxable: data.is_taxable ?? true,
-      bpjs_tk_enrolled: data.bpjs_tk_enrolled ?? true,
-      bpjs_kes_enrolled: data.bpjs_kes_enrolled ?? true,
-      tapera_enrolled: data.tapera_enrolled ?? true,
-      notes: data.notes || "",
-    });
-  }, [salaryQuery.data]);
+    if (salaryQuery.isError) toast.error("Gagal memuat data salary");
+  }, [salaryQuery.isError]);
 
-  useEffect(() => {
-    if (salaryQuery.isError) {
-      showToast("Gagal memuat data salary", "error");
-    }
-  }, [salaryQuery.isError, showToast]);
-
-  async function handleSave() {
-    try {
-      await updateMutation.mutateAsync({
-        id,
-        payload: {
-          base_salary: parseFromIDR(formData.base_salary),
-          fixed_allowance: parseFromIDR(formData.fixed_allowance),
-          variable_allowance: parseFromIDR(formData.variable_allowance),
-          transport_allowance: parseFromIDR(formData.transport_allowance),
-          meal_allowance: parseFromIDR(formData.meal_allowance),
-          housing_allowance: parseFromIDR(formData.housing_allowance),
-          loan_deduction: parseFromIDR(formData.loan_deduction),
-          other_deduction: parseFromIDR(formData.other_deduction),
-          ptkp_status: formData.ptkp_status,
-          is_taxable: formData.is_taxable,
-          bpjs_tk_enrolled: formData.bpjs_tk_enrolled,
-          bpjs_kes_enrolled: formData.bpjs_kes_enrolled,
-          tapera_enrolled: formData.tapera_enrolled,
-          notes: formData.notes,
-        },
-      });
-
-      showToast("Data salary berhasil diupdate", "success");
-      setTimeout(() => {
-        router.push("/dashboard/hris/salary");
-      }, 1000);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Terjadi kesalahan", "error");
-    }
-  }
-
-  if (loading) {
+  if (salaryQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600" />
@@ -164,7 +42,7 @@ export function EditSalaryPage({ params }: PageProps) {
     );
   }
 
-  if (!salary) {
+  if (!salaryQuery.data) {
     return (
       <div className="container mx-auto py-8">
         <Card>
@@ -179,12 +57,31 @@ export function EditSalaryPage({ params }: PageProps) {
     );
   }
 
+  return <EditSalaryForm key={salaryQuery.data.id} salary={salaryQuery.data} />;
+}
+
+function EditSalaryForm({ salary }: { salary: EmployeeSalary }) {
+  const router = useRouter();
+  const updateMutation = useUpdateSalary();
+  const saving = updateMutation.isPending;
+  const [formData, setFormData] = useState(() => salaryToForm(salary));
+
+  async function handleSave() {
+    try {
+      await updateMutation.mutateAsync({ id: salary.id, payload: formToSalaryPayload(formData) });
+      toast.success("Data salary berhasil diupdate");
+      setTimeout(() => {
+        router.push("/dashboard/hris/salary");
+      }, 1000);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Terjadi kesalahan");
+    }
+  }
+
   const employee = salary.employee;
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <Button
@@ -235,107 +132,10 @@ export function EditSalaryPage({ params }: PageProps) {
           <CardTitle className="text-lg">Salary Structure</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Penghasilan */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Penghasilan</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="base_salary">Gaji Pokok (Rp)</Label>
-                <Input
-                  id="base_salary"
-                  type="text"
-                  value={formData.base_salary}
-                  onChange={(e) => handleCurrencyChange('base_salary', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="fixed_allowance">Tunjangan Tetap (Rp)</Label>
-                <Input
-                  id="fixed_allowance"
-                  type="text"
-                  value={formData.fixed_allowance}
-                  onChange={(e) => handleCurrencyChange('fixed_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="variable_allowance">Tunjangan Variabel (Rp)</Label>
-                <Input
-                  id="variable_allowance"
-                  type="text"
-                  value={formData.variable_allowance}
-                  onChange={(e) => handleCurrencyChange('variable_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="transport_allowance">Tunjangan Transport (Rp)</Label>
-                <Input
-                  id="transport_allowance"
-                  type="text"
-                  value={formData.transport_allowance}
-                  onChange={(e) => handleCurrencyChange('transport_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="meal_allowance">Tunjangan Makan (Rp)</Label>
-                <Input
-                  id="meal_allowance"
-                  type="text"
-                  value={formData.meal_allowance}
-                  onChange={(e) => handleCurrencyChange('meal_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="housing_allowance">Tunjangan Rumah (Rp)</Label>
-                <Input
-                  id="housing_allowance"
-                  type="text"
-                  value={formData.housing_allowance}
-                  onChange={(e) => handleCurrencyChange('housing_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Potongan */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Potongan</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="loan_deduction">Cicilan Pinjaman (Rp)</Label>
-                <Input
-                  id="loan_deduction"
-                  type="text"
-                  value={formData.loan_deduction}
-                  onChange={(e) => handleCurrencyChange('loan_deduction', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="other_deduction">Potongan Lain (Rp)</Label>
-                <Input
-                  id="other_deduction"
-                  type="text"
-                  value={formData.other_deduction}
-                  onChange={(e) => handleCurrencyChange('other_deduction', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
+          <SalaryAmountFields
+            values={formData}
+            onChange={(field, value) => setFormData((prev) => ({ ...prev, [field]: value }))}
+          />
 
           {/* Tax & Benefits */}
           <div>

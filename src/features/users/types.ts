@@ -2,70 +2,14 @@ export type { UserEmployeeItem } from "@/lib/users/user-mapper";
 export type { CreateUserEmployeeInput, UpdateUserEmployeeInput } from "@/lib/users/schemas";
 
 import type { UserEmployeeItem } from "@/lib/users/user-mapper";
-import type { UserRole } from "@/types";
 
-export type AccountStatus = "active" | "inactive";
+export type {
+  AccountStatus,
+  ApprovalPermission,
+  UserEmployeeFormValues,
+} from "@/lib/hris/users-form";
 
-export interface ApprovalPermission {
-  id?: string;
-  module: string;
-  workflow: string;
-  approval_level: "checker" | "approver" | "final_approver";
-  approval_limit: number | null;
-  is_active: boolean;
-}
-
-export interface UserEmployeeFormValues {
-  full_name: string;
-  email: string;
-  phone: string;
-  join_date: string;
-  employment_status: string;
-  ktp: string;
-  npwp: string;
-  birth_date: string;
-  gender: string;
-  marital_status: string;
-  address: string;
-  city: string;
-  province: string;
-  postal_code: string;
-  department_id: string;
-  section_id: string;
-  job_title_id: string;
-  reporting_to: string;
-  bank_name: string;
-  bank_account: string;
-  bpjs_tk: string;
-  bpjs_kesehatan: string;
-  emergency_contact_name: string;
-  emergency_contact_phone: string;
-  emergency_contact_relationship: string;
-  notes: string;
-  nip: string;
-  is_active: boolean;
-  end_date: string;
-  is_access_app: boolean;
-  password: string;
-  role: UserRole;
-  business_scope: "" | "holding" | "company" | "branch";
-  holding_id: string;
-  company_id: string;
-  branch_id: string;
-  warehouse_ids: string[];
-  default_warehouse_id: string;
-  can_switch_stall: boolean;
-  can_central_checkout: boolean;
-  account_status: AccountStatus;
-  approval_permissions: ApprovalPermission[];
-}
-
-export interface BrandOption {
-  id: string;
-  name: string;
-}
-
-export interface UserListParams {
+export type UserListParams = {
   search?: string;
   department_id?: string;
   employment_status?: string;
@@ -76,7 +20,7 @@ export interface UserListParams {
   limit?: number;
   sort_by?: string;
   sort_order?: "asc" | "desc";
-}
+};
 
 export interface UserListResponse {
   data: UserEmployeeItem[];
@@ -96,7 +40,11 @@ export interface UserFormLookups {
   sections: Array<{ id: string; name: string }>;
   positions: Array<{ id: string; title: string; department: string }>;
   managers: Array<{ id: string; full_name: string; nip: string }>;
-  employmentStatuses: Array<{ code: string; name: string; is_active?: boolean }>;
+  employmentStatuses: Array<{
+    code: string;
+    name: string;
+    is_active?: boolean;
+  }>;
 }
 
 export interface EmployeeDocumentInput {

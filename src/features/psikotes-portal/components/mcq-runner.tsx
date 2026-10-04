@@ -22,9 +22,8 @@ export function McqRunner({ token, data, onFinished }: McqRunnerProps) {
   const [answers, setAnswers] = useState<Record<string, string>>(data.saved_answers);
   const [index, setIndex] = useState(0);
   const [finishing, setFinishing] = useState(false);
-  const remaining = useCountdown(data.ends_at);
+  // jawaban terbaru utk auto-submit dari tick timer (state bisa basi di closure)
   const answersRef = useRef(answers);
-  answersRef.current = answers;
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -49,17 +48,15 @@ export function McqRunner({ token, data, onFinished }: McqRunnerProps) {
     }
   };
 
+  const remaining = useCountdown(data.ends_at, () => void handleFinish());
   const timeUp = remaining !== null && remaining <= 0;
-  useEffect(() => {
-    if (timeUp) void handleFinish();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeUp]);
 
   const locked = finishing || timeUp;
 
   const choose = (key: string) => {
     if (locked) return;
     const next = { ...answers, [question.id]: key };
+    answersRef.current = next;
     setAnswers(next);
     void savePortalAnswers(token, data.test.id, { [question.id]: key }).catch(() => undefined);
     if (index < questions.length - 1) {

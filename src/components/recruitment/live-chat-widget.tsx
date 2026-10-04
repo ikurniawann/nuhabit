@@ -35,7 +35,9 @@ export function LiveChatWidget({ fetchMessages, sendMessage, enabled }: LiveChat
   const [unread, setUnread] = useState(0);
   const listRef = useRef<HTMLDivElement | null>(null);
   const openRef = useRef(open);
-  openRef.current = open;
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   const mergeMessages = useCallback((incoming: LiveChatWidgetMessage[]) => {
     if (incoming.length === 0) return;

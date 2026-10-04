@@ -1,177 +1,26 @@
 "use client";
 
-import {
-  loanInstallmentLabel,
-  type LoanInstallmentDetail,
-} from "@/lib/payroll/loans";
-import { useEffect, useState } from "react";
-import {
-  ArrowDownTrayIcon,
-  BanknotesIcon,
-  DocumentTextIcon,
-} from "@heroicons/react/24/outline";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { formatShareOfGross } from "@/lib/payroll/share";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { prorateNote } from "@/lib/payroll/prorate-note";
+import { useState } from "react";
+import { BanknotesIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { formatRupiah } from "@/lib/format";
+import { useEssMe, useMyPayslips } from "../queries";
+import type { EssPayslip } from "../types";
+import { EssLoading, EssNotLinked } from "./ess-states";
+import { PayslipDetailDialog, payslipPeriodLabel } from "./payslip-detail-dialog";
 
 /**
  * ESS → Slip Gaji (/dashboard/me/slip-gaji): karyawan melihat slip gajinya
  * SENDIRI dari run payroll yang sudah dibayar (di-enforce server di
  * /api/hris/payslips). EPIC-008 Fase E.
  */
-
-interface MeData {
-  employee: { id: string; full_name: string } | null;
-}
-
-interface PayslipRow {
-  id: string;
-  base_salary: number;
-  fixed_allowance: number;
-  variable_allowance: number;
-  transport_allowance: number;
-  meal_allowance: number;
-  housing_allowance: number;
-  overtime_pay: number;
-  thr: number;
-  bonus: number;
-  gross_salary: number;
-  bpjs_tk_jht_deduction: number;
-  bpjs_tk_jp_deduction: number;
-  bpjs_kes_deduction: number;
-  tapera_deduction: number;
-  pph21_deduction: number;
-  unpaid_leave_deduction: number;
-  late_deduction?: number;
-  loan_deduction?: number;
-  loan_details?: LoanInstallmentDetail[];
-  other_deduction: number;
-  total_deductions: number;
-  net_salary: number;
-  working_days: number;
-  present_days: number;
-  late_days: number;
-  overtime_hours?: number;
-  /** Faktor proraté cakupan kontrak (0..1); pg numeric datang sebagai string */
-  prorate_factor?: number | string;
-  /** Snapshot gaji pokok penuh sebelum proraté (null utk baris lama) */
-  full_base_salary?: number | string | null;
-  payroll_run?: {
-    id: string;
-    period_month: number;
-    period_year: number;
-    status: string;
-    paid_at: string | null;
-  } | null;
-}
-
-const MONTHS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-function formatCurrency(amount: number | undefined): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(Number(amount) || 0);
-}
-
-function periodLabel(slip: PayslipRow): string {
-  const run = slip.payroll_run;
-  if (!run) return "—";
-  return `${MONTHS[(run.period_month ?? 1) - 1]} ${run.period_year}`;
-}
-
-interface RowProps {
-  label: string;
-  amount: number | undefined;
-  bold?: boolean;
-  negative?: boolean;
-  /** Porsi terhadap bruto, mis. "1,8%". Kosong = tidak ditampilkan. */
-  share?: string | null;
-}
-
-function AmountRow({ label, amount, bold, negative, share }: RowProps) {
-  if (!bold && !(Number(amount) > 0)) return null;
-  return (
-    <div className={`flex items-baseline justify-between gap-2 py-1 text-sm ${bold ? "font-semibold" : ""}`}>
-      <span className="text-gray-600">{label}</span>
-      <span className="flex items-baseline gap-2">
-        {/* Porsi terhadap bruto — makna yang sama untuk semua potongan. */}
-        {share && <span className="text-xs font-normal text-gray-400">{share}</span>}
-        <span className={negative ? "text-red-600" : "text-gray-900"}>
-          {negative ? "− " : ""}
-          {formatCurrency(amount)}
-        </span>
-      </span>
-    </div>
-  );
-}
-
 export function EssSlipGajiPage() {
-  const [me, setMe] = useState<MeData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [slips, setSlips] = useState<PayslipRow[]>([]);
-  const [selected, setSelected] = useState<PayslipRow | null>(null);
-  const selectedProrateNote = selected
-    ? prorateNote({
-        factor: selected.prorate_factor,
-        fullBase: selected.full_base_salary,
-        paidBase: selected.base_salary,
-      })
-    : null;
+  const meQuery = useEssMe();
+  const slipsQuery = useMyPayslips();
+  const slips = slipsQuery.data ?? [];
+  const [selected, setSelected] = useState<EssPayslip | null>(null);
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/hris/me").then((res) => (res.ok ? res.json() : null)),
-      fetch("/api/hris/payslips?employee_id=me").then((res) => (res.ok ? res.json() : null)),
-    ])
-      .then(([meJson, slipJson]) => {
-        setMe(meJson?.data ?? null);
-        setSlips(slipJson?.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  /**
-   * Porsi potongan terhadap bruto slip yang sedang dibuka. Makna yang sama
-   * dipakai untuk semua baris, termasuk yang tidak punya tarif resmi.
-   */
-  const bagian = (amount: number | undefined) =>
-    formatShareOfGross(Number(amount) || 0, Number(selected?.gross_salary) || 0);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (!me?.employee) {
-    return (
-      <div className="mx-auto max-w-md py-20 text-center">
-        <p className="text-lg font-semibold text-gray-800">
-          Akun ini tidak terhubung ke data karyawan
-        </p>
-        <p className="mt-2 text-sm text-gray-500">
-          Slip gaji hanya tersedia untuk akun yang tertaut ke record karyawan
-          HRIS. Hubungi HRD bila menurut Anda ini keliru.
-        </p>
-      </div>
-    );
-  }
+  if (meQuery.isLoading || slipsQuery.isLoading) return <EssLoading />;
+  if (!meQuery.data?.employee) return <EssNotLinked feature="Slip gaji" />;
 
   return (
     <div className="space-y-6">
@@ -201,12 +50,12 @@ export function EssSlipGajiPage() {
                 onClick={() => setSelected(slip)}
                 className="w-full rounded-xl border border-gray-200/70 bg-white p-5 text-left shadow-sm transition hover:border-pink-300 hover:shadow"
               >
-                <p className="text-sm font-semibold text-gray-800">{periodLabel(slip)}</p>
+                <p className="text-sm font-semibold text-gray-800">{payslipPeriodLabel(slip)}</p>
                 <p className="mt-2 text-2xl font-bold text-gray-900">
-                  {formatCurrency(slip.net_salary)}
+                  {formatRupiah(slip.net_salary)}
                 </p>
                 <p className="mt-1 text-xs text-gray-500">
-                  Take home pay · bruto {formatCurrency(slip.gross_salary)}
+                  Take home pay · bruto {formatRupiah(slip.gross_salary)}
                 </p>
                 <p className="mt-2 text-xs text-gray-400">
                   {slip.present_days}/{slip.working_days} hari hadir
@@ -218,117 +67,7 @@ export function EssSlipGajiPage() {
         </ul>
       )}
 
-      <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-h-[85vh] max-w-md overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Slip Gaji — {selected ? periodLabel(selected) : ""}</DialogTitle>
-          </DialogHeader>
-          {selected && (
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                  Penghasilan
-                </p>
-                <AmountRow label="Gaji Pokok" amount={selected.base_salary} />
-                {selectedProrateNote && (
-                  <p className="text-xs italic text-amber-700">
-                    {selectedProrateNote}
-                  </p>
-                )}
-                <AmountRow label="Tunjangan Tetap" amount={selected.fixed_allowance} />
-                <AmountRow label="Tunjangan Variabel" amount={selected.variable_allowance} />
-                <AmountRow label="Tunjangan Transport" amount={selected.transport_allowance} />
-                <AmountRow label="Tunjangan Makan" amount={selected.meal_allowance} />
-                <AmountRow label="Tunjangan Perumahan" amount={selected.housing_allowance} />
-                <AmountRow label="Lembur" amount={selected.overtime_pay} />
-                <AmountRow label="THR" amount={selected.thr} />
-                <AmountRow label="Bonus" amount={selected.bonus} />
-                <div className="border-t pt-1">
-                  <AmountRow label="Total Bruto" amount={selected.gross_salary} bold />
-                </div>
-              </div>
-
-              <div>
-                <div className="mb-1 flex items-baseline justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                    Potongan
-                  </p>
-                  <p className="text-[11px] text-gray-400">% dari bruto</p>
-                </div>
-                <AmountRow label="BPJS TK (JHT)" amount={selected.bpjs_tk_jht_deduction} share={bagian(selected.bpjs_tk_jht_deduction)} negative />
-                <AmountRow label="BPJS TK (JP)" amount={selected.bpjs_tk_jp_deduction} share={bagian(selected.bpjs_tk_jp_deduction)} negative />
-                <AmountRow label="BPJS Kesehatan" amount={selected.bpjs_kes_deduction} share={bagian(selected.bpjs_kes_deduction)} negative />
-                <AmountRow label="Tapera" amount={selected.tapera_deduction} share={bagian(selected.tapera_deduction)} negative />
-                <AmountRow label="PPh 21" amount={selected.pph21_deduction} share={bagian(selected.pph21_deduction)} negative />
-                <AmountRow label="Cuti Tanpa Bayaran" amount={selected.unpaid_leave_deduction} share={bagian(selected.unpaid_leave_deduction)} negative />
-                <AmountRow label="Potongan Keterlambatan" amount={selected.late_deduction} share={bagian(selected.late_deduction)} negative />
-                {(selected.loan_details?.length ?? 0) > 0 ? (
-                  selected.loan_details!.map((loan) => (
-                    <AmountRow
-                      key={loan.loan_id}
-                      label={loanInstallmentLabel(loan)}
-                      amount={loan.amount}
-                      share={bagian(loan.amount)}
-                      negative
-                    />
-                  ))
-                ) : (
-                  <AmountRow label="Cicilan Pinjaman" amount={selected.loan_deduction} share={bagian(selected.loan_deduction)} negative />
-                )}
-                <AmountRow label="Potongan Lain" amount={selected.other_deduction} share={bagian(selected.other_deduction)} negative />
-                <div className="border-t pt-1">
-                  <AmountRow
-                    label="Total Potongan"
-                    amount={selected.total_deductions}
-                    share={bagian(selected.total_deductions)}
-                    bold
-                    negative
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-pink-50 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-700">
-                    Gaji Diterima (Take Home Pay)
-                  </span>
-                  <span className="text-lg font-bold text-pink-700">
-                    {formatCurrency(selected.net_salary)}
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-400">
-                Kehadiran: {selected.present_days}/{selected.working_days} hari
-                {selected.late_days > 0 ? ` · terlambat ${selected.late_days}×` : ""}
-                {Number(selected.overtime_hours) > 0
-                  ? ` · lembur ${Number(selected.overtime_hours)} jam`
-                  : ""}
-                . Ada pertanyaan tentang slip ini? Hubungi HRD.
-              </p>
-            </div>
-          )}
-          <DialogFooter>
-            {selected && (
-              /* Tautan unduh, bukan <Button asChild> — Button di repo ini
-                 tidak mendukung asChild, sehingga <a> akan bersarang di dalam
-                 <button> dan tampilannya rusak. Gaya ditulis eksplisit agar
-                 tidak bergantung pada buttonVariants, yang tipenya bermasalah
-                 di seluruh repo. */
-              <a
-                href={`/api/hris/payslips/${selected.id}/pdf`}
-                download
-                className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:translate-y-px"
-              >
-                <ArrowDownTrayIcon className="h-4 w-4" /> Unduh PDF
-              </a>
-            )}
-            <Button variant="outline" onClick={() => setSelected(null)}>
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PayslipDetailDialog selected={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

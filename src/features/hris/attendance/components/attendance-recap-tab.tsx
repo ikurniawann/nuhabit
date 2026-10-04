@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AttendanceCalendar } from "@/components/hris/AttendanceCalendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,128 +16,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Clock, Download } from "lucide-react";
+import { formatDate, formatTime } from "@/lib/format";
+import { currentMonthWib, monthRange } from "@/lib/hris/attendance-calendar";
 import { SelfiePhotoDialog } from "./selfie-photo-dialog";
-import {
-  exportAttendanceCsv,
-  fetchActiveEmployees,
-  type AttendanceExportFormat,
-  fetchAttendanceList,
-  type EmployeeOption,
-} from "../api";
-import type { AttendanceListRow } from "../types";
+import { exportAttendanceCsv, type AttendanceExportFormat } from "../api";
+import { useActiveEmployees, useAttendanceList, useAttendanceMonthStats } from "../queries";
 
 /**
- * Tab "Rekap" absensi HRD — tabel absensi berpagination dengan filter
+ * Tab "Rekap" absensi HRD: tabel absensi berpagination dengan filter
  * karyawan/bulan/keterlambatan + export CSV. Saat satu karyawan dipilih,
  * kalender bulanan per-karyawan ikut ditampilkan.
  */
 
-interface MonthStats {
-  month_records: number;
-  month_late: number;
-  month_off_schedule: number;
-  avg_work_hours: number | null;
-}
-
 const PAGE_LIMIT = 20;
 
-function currentMonthWib(): string {
-  return new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7); // YYYY-MM
-}
-
-/** "YYYY-MM" → rentang tanggal satu bulan penuh. */
-function monthRange(month: string): { start: string; end: string } {
-  const [year, mon] = month.split("-").map(Number);
-  const lastDay = new Date(Date.UTC(year, mon, 0)).getUTCDate();
-  const pad = String(mon).padStart(2, "0");
-  return { start: `${year}-${pad}-01`, end: `${year}-${pad}-${lastDay}` };
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("id-ID", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTimeWib(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
-}
-
 export function AttendanceRecapTab() {
-  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [filterEmployee, setFilterEmployee] = useState("all");
-  const [month, setMonth] = useState(currentMonthWib);
+  const [month, setMonth] = useState(() => currentMonthWib());
   const [lateOnly, setLateOnly] = useState(false);
   const [page, setPage] = useState(1);
-
-  const [rows, setRows] = useState<AttendanceListRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [stats, setStats] = useState<MonthStats | null>(null);
   const [exporting, setExporting] = useState<AttendanceExportFormat | null>(null);
 
-  useEffect(() => {
-    fetchActiveEmployees()
-      .then(setEmployees)
-      .catch(() => setEmployees([]));
-  }, []);
-
+  const employees = useActiveEmployees().data;
+  const stats = useAttendanceMonthStats(month).data ?? null;
   const range = useMemo(() => monthRange(month), [month]);
+  const listQuery = useAttendanceList({
+    employee_id: filterEmployee === "all" ? undefined : filterEmployee,
+    start_date: range.start,
+    end_date: range.end,
+    is_late: lateOnly || undefined,
+    page,
+    limit: PAGE_LIMIT,
+  });
+  const rows = listQuery.data?.data ?? [];
+  const total = listQuery.data?.pagination.total ?? 0;
+  const totalPages = Math.max(1, listQuery.data?.pagination.totalPages ?? 1);
+  const loading = listQuery.isLoading;
+  const error = listQuery.error ? listQuery.error.message || "Gagal memuat data absensi" : null;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchAttendanceList({
-        employee_id: filterEmployee === "all" ? undefined : filterEmployee,
-        start_date: range.start,
-        end_date: range.end,
-        is_late: lateOnly || undefined,
-        page,
-        limit: PAGE_LIMIT,
-      });
-      setRows(res.data);
-      setTotal(res.pagination.total);
-      setTotalPages(Math.max(1, res.pagination.totalPages));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat data absensi");
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filterEmployee, range.start, range.end, lateOnly, page]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // statistik bulan terpilih
-  useEffect(() => {
-    const [year, mon] = month.split("-").map(Number);
-    fetch(`/api/hris/attendance/stats?month=${mon}&year=${year}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setStats(json?.data ?? null))
-      .catch(() => setStats(null));
-  }, [month]);
-
-  // reset ke halaman 1 saat filter berubah
-  useEffect(() => {
+  // Filter berubah → kembali ke halaman 1.
+  const changeFilter = <T,>(setter: (value: T) => void) => (value: T) => {
+    setter(value);
     setPage(1);
-  }, [filterEmployee, month, lateOnly]);
+  };
 
   // Permintaan owner 2026-08-28: HR kesulitan membaca CSV — sediakan juga
   // Excel yang rapi dan PDF ber-foto selfie. Ketiganya mengikuti filter
@@ -161,7 +83,7 @@ export function AttendanceRecapTab() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      alert("Export gagal: " + (err instanceof Error ? err.message : "unknown"));
+      toast.error("Export gagal: " + (err instanceof Error ? err.message : "unknown"));
     } finally {
       setExporting(null);
     }
@@ -170,7 +92,7 @@ export function AttendanceRecapTab() {
   const employeeOptions = useMemo(
     () => [
       { value: "all", label: "Semua Karyawan" },
-      ...employees.map((emp) => ({
+      ...(employees ?? []).map((emp) => ({
         value: emp.id,
         label: emp.nip ? `${emp.full_name} (${emp.nip})` : emp.full_name,
       })),
@@ -189,7 +111,7 @@ export function AttendanceRecapTab() {
               <Combobox
                 options={employeeOptions}
                 value={filterEmployee}
-                onChange={setFilterEmployee}
+                onChange={changeFilter(setFilterEmployee)}
                 placeholder="Semua karyawan"
                 searchPlaceholder="Cari nama/NIP…"
                 emptyMessage="Karyawan tidak ditemukan"
@@ -198,7 +120,7 @@ export function AttendanceRecapTab() {
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">Bulan</label>
-              <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+              <Input type="month" value={month} onChange={(e) => changeFilter(setMonth)(e.target.value)} />
             </div>
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -206,7 +128,7 @@ export function AttendanceRecapTab() {
               </label>
               <Select
                 value={lateOnly ? "late" : "all"}
-                onValueChange={(value) => setLateOnly(value === "late")}
+                onValueChange={(value) => changeFilter(setLateOnly)(value === "late")}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -327,8 +249,8 @@ export function AttendanceRecapTab() {
                           <span className="text-orange-600 text-xs">Di luar jadwal</span>
                         )}
                       </td>
-                      <td className="p-3 text-gray-600">{formatTimeWib(row.clock_in)}</td>
-                      <td className="p-3 text-gray-600">{formatTimeWib(row.clock_out)}</td>
+                      <td className="p-3 text-gray-600">{formatTime(row.clock_in, "—")}</td>
+                      <td className="p-3 text-gray-600">{formatTime(row.clock_out, "—")}</td>
                       <td className="p-3 text-gray-600">
                         {row.work_hours != null ? `${Number(row.work_hours).toFixed(1)} jam` : "—"}
                       </td>
@@ -347,13 +269,13 @@ export function AttendanceRecapTab() {
                             path={row.clock_in_photo_url}
                             label="masuk"
                             employeeName={row.employee?.full_name ?? null}
-                            time={formatTimeWib(row.clock_in)}
+                            time={formatTime(row.clock_in, "—")}
                           />
                           <SelfiePhotoDialog
                             path={row.clock_out_photo_url}
                             label="pulang"
                             employeeName={row.employee?.full_name ?? null}
-                            time={formatTimeWib(row.clock_out)}
+                            time={formatTime(row.clock_out, "—")}
                           />
                         </div>
                       </td>

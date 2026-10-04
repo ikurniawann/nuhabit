@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,54 +12,50 @@ import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/hris/RichTextEditor";
 import type { LogbookEntryItem } from "../types";
 
-/**
- * Dialog catatan per item checklist — pengganti overlay Quill fullscreen.
- * HTML dirender di tempat lain lewat <SafeHtml> (sanitasi DOMPurify).
- */
-export function LogbookNoteDialog({
-  item,
-  saving,
-  onClose,
-  onSave,
-}: {
+interface NoteDialogProps {
   item: LogbookEntryItem | null;
   saving: boolean;
   onClose: () => void;
   onSave: (itemId: string, notes: string) => void;
-}) {
-  const [draft, setDraft] = useState("");
+}
 
-  // Reset draft tiap ganti item agar catatan item lain tidak terbawa.
-  useEffect(() => {
-    setDraft(item?.notes || "");
-  }, [item?.id, item?.notes]);
-
+/**
+ * Dialog catatan per item checklist, pengganti overlay Quill fullscreen.
+ * HTML dirender di tempat lain lewat <SafeHtml> (sanitasi DOMPurify).
+ */
+export function LogbookNoteDialog({ item, saving, onClose, onSave }: NoteDialogProps) {
   return (
     <Dialog open={!!item} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Catatan — {item?.title}</DialogTitle>
         </DialogHeader>
+        {/* key per item: draft mulai dari catatan item ini, tidak terbawa ke item lain. */}
         {item && (
-          <RichTextEditor
-            key={item.id}
-            value={item.notes || ""}
-            onChange={setDraft}
-            placeholder="Tulis catatan checklist di sini..."
-          />
+          <NoteEditor key={item.id} item={item} saving={saving} onClose={onClose} onSave={onSave} />
         )}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            Batal
-          </Button>
-          <Button
-            onClick={() => item && onSave(item.id, draft)}
-            disabled={saving}
-          >
-            {saving ? "Menyimpan..." : "Simpan Catatan"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function NoteEditor({ item, saving, onClose, onSave }: NoteDialogProps & { item: LogbookEntryItem }) {
+  const [draft, setDraft] = useState(item.notes || "");
+  return (
+    <>
+      <RichTextEditor
+        value={item.notes || ""}
+        onChange={setDraft}
+        placeholder="Tulis catatan checklist di sini..."
+      />
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={saving}>
+          Batal
+        </Button>
+        <Button onClick={() => onSave(item.id, draft)} disabled={saving}>
+          {saving ? "Menyimpan..." : "Simpan Catatan"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

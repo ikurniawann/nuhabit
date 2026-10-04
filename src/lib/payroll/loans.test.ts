@@ -5,6 +5,8 @@ import {
   loanInstallmentDetails,
   allocateLoanPayment,
   validateLoanLimits,
+  computeLoanTerms,
+  firstInstallmentPeriod,
   type LoanDeductionRow,
 } from "./loans";
 
@@ -182,7 +184,7 @@ describe("loanInstallmentDetails", () => {
 
   it("tetap benar walau satu periode terlewat (payroll telat dijalankan)", () => {
     // Sisa 1jt dari pokok 3jt berarti 2 angsuran sudah terbayar, sehingga
-    // periode ini adalah angsuran ke-3 — bukan ke-4 meski bulannya lompat.
+    // periode ini adalah angsuran ke-3: bukan ke-4 meski bulannya lompat.
     const detail = loanInstallmentDetails([{ ...base, remaining_balance: 1_000_000 }], 6, 2026);
     expect(detail[0].installment_no).toBe(3);
   });
@@ -198,5 +200,38 @@ describe("loanInstallmentDetails", () => {
     );
     expect(detail).toHaveLength(2);
     expect(detail.map((d) => d.loan_id)).toEqual(["loan-1", "loan-2"]);
+  });
+});
+
+describe("computeLoanTerms (rumus lama dari route pengajuan pinjaman)", () => {
+  it("tanpa bunga: pokok dibagi tenor", () => {
+    expect(computeLoanTerms({ principal: 3_000_000, ratePercent: 0, tenorMonths: 3 })).toEqual({
+      rawInstallment: 1_000_000,
+      monthlyInstallment: 1_000_000,
+      totalRepayment: 3_000_000,
+    });
+  });
+
+  it("bunga flat: total = cicilan bulat × tenor", () => {
+    const terms = computeLoanTerms({ principal: 1_000_000, ratePercent: 2, tenorMonths: 3 });
+    // 1.000.000 × (1 + 0,02 × 3) / 3 = 353.333,33…
+    expect(terms.rawInstallment).toBeCloseTo(353_333.333, 2);
+    expect(terms.monthlyInstallment).toBe(353_333);
+    expect(terms.totalRepayment).toBe(1_059_999);
+  });
+
+  it("pembulatan cicilan tanpa bunga", () => {
+    const terms = computeLoanTerms({ principal: 1_000_000, ratePercent: 0, tenorMonths: 3 });
+    expect(terms.monthlyInstallment).toBe(333_333);
+    expect(terms.totalRepayment).toBe(999_999);
+  });
+});
+
+describe("firstInstallmentPeriod", () => {
+  it("bulan berikutnya", () => {
+    expect(firstInstallmentPeriod(new Date(2026, 4, 20))).toEqual({ month: 6, year: 2026 });
+  });
+  it("Desember → Januari tahun depan", () => {
+    expect(firstInstallmentPeriod(new Date(2026, 11, 31))).toEqual({ month: 1, year: 2027 });
   });
 });

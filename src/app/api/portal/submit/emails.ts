@@ -1,3 +1,4 @@
+import { Resend } from "resend";
 import { escapeHtml } from "@/lib/security/escape-html";
 
 /**
@@ -68,4 +69,36 @@ export function hrdNotificationHtml(d: ApplicationEmailData): string {
               <p style="color: #888; font-size: 12px;">Pesan ini dikirim otomatis dari sistem Talent Pool.</p>
             </div>
           `;
+}
+
+/**
+ * Konfirmasi ke pelamar + notifikasi ke HRD lewat Resend. Best-effort:
+ * kegagalan email tidak membatalkan lamaran yang sudah tersimpan.
+ */
+export async function sendApplicationEmails(d: ApplicationEmailData): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const from = process.env.FROM_EMAIL ?? "noreply@aapextechnology.com";
+  const hrdEmail = process.env.HRD_EMAIL;
+  const messages = [
+    { label: "Candidate", to: d.email, subject: "Lamaran Kamu Sudah Kami Terima", html: candidateConfirmationHtml(d) },
+    ...(hrdEmail
+      ? [
+          {
+            label: "HRD",
+            to: hrdEmail,
+            subject: emailSubject(`[Talent Pool] Lamaran Baru: ${d.fullName} untuk ${d.positionTitle}`),
+            html: hrdNotificationHtml(d),
+          },
+        ]
+      : []),
+  ];
+  for (const { label, ...message } of messages) {
+    try {
+      await resend.emails.send({ from, ...message });
+    } catch (error) {
+      console.error(`${label} email error:`, error);
+    }
+  }
 }

@@ -8,6 +8,7 @@ import {
   updatePayrollStatus,
   deletePayrollRun,
   savePayrollSettings,
+  notifyPayslip,
   type SavePayrollSettingsPayload,
 } from "./api";
 import type { CreatePayrollPayload } from "./types";
@@ -52,5 +53,14 @@ export function useSavePayrollSettings() {
     mutationFn: (payload: SavePayrollSettingsPayload) =>
       savePayrollSettings(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: payrollQueryKeys.all }),
+  });
+}
+
+/** Kirim notifikasi WA slip terbit; segarkan run agar tanda terkirim muncul. */
+export function useNotifyPayslip(runId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payrollDetailId: string) => notifyPayslip(payrollDetailId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: payrollQueryKeys.run(runId) }),
   });
 }

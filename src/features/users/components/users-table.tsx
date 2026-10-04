@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   ArrowRightEndOnRectangleIcon,
   BuildingOfficeIcon,
@@ -15,17 +16,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableRow } from "@/components/ui/table";
+import { formatDate } from "@/lib/format";
 import type { UserEmployeeItem } from "@/lib/users/user-mapper";
 import { ROLE_LABELS, STATUS_COLORS, STATUS_LABELS } from "../constants";
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 interface UsersTableProps {
   rows: UserEmployeeItem[];
@@ -38,7 +31,6 @@ interface UsersTableProps {
   onLoginAs?: (row: UserEmployeeItem) => void;
   loginAsEmployeeId?: string | null;
   showAppActions?: boolean;
-  resettingEmployeeId?: string | null;
 }
 
 export function UsersTable({
@@ -50,7 +42,6 @@ export function UsersTable({
   onLoginAs,
   loginAsEmployeeId = null,
   showAppActions = false,
-  resettingEmployeeId = null,
 }: UsersTableProps) {
   return (
     <div className="overflow-x-auto">
@@ -62,9 +53,7 @@ export function UsersTable({
             <th className="px-4 py-3 text-left font-semibold">Department</th>
             <th className="px-4 py-3 text-left font-semibold">Status</th>
             <th className="px-4 py-3 text-left font-semibold">App Access</th>
-            {showAppActions ? (
-              <th className="px-4 py-3 text-left font-semibold">Stall</th>
-            ) : null}
+            {showAppActions ? <th className="px-4 py-3 text-left font-semibold">Stall</th> : null}
             <th className="px-4 py-3 text-left font-semibold">Contact</th>
             <th className="px-4 py-3 text-right font-semibold">Actions</th>
           </TableRow>
@@ -79,9 +68,12 @@ export function UsersTable({
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   {emp.photoUrl ? (
-                    <img
+                    <Image
                       src={emp.photoUrl}
                       alt={emp.fullName}
+                      width={32}
+                      height={32}
+                      unoptimized
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   ) : (
@@ -153,8 +145,6 @@ export function UsersTable({
                     </div>
                   ) : emp.isAccessApp && emp.appAccount?.businessScope === "branch" ? (
                     <span className="text-xs text-amber-600">Not assigned</span>
-                  ) : emp.isAccessApp ? (
-                    <span className="text-xs text-gray-400">-</span>
                   ) : (
                     <span className="text-xs text-gray-400">-</span>
                   )}
@@ -202,7 +192,10 @@ export function UsersTable({
                   >
                     <PencilIcon className="h-4 w-4" />
                   </Button>
-                  {onLoginAs && emp.isAccessApp && emp.userId && emp.appAccount?.role !== "super_admin" ? (
+                  {onLoginAs &&
+                  emp.isAccessApp &&
+                  emp.userId &&
+                  emp.appAccount?.role !== "super_admin" ? (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -237,15 +230,10 @@ export function UsersTable({
                       variant="ghost"
                       className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                       onClick={() => onResetPassword(emp)}
-                      disabled={resettingEmployeeId === emp.id}
                       aria-label={`Reset password ${emp.fullName}`}
                       title="Reset password"
                     >
-                      {resettingEmployeeId === emp.id ? (
-                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-pink-500" />
-                      ) : (
-                        <KeyIcon className="h-4 w-4" />
-                      )}
+                      <KeyIcon className="h-4 w-4" />
                     </Button>
                   ) : null}
                 </div>

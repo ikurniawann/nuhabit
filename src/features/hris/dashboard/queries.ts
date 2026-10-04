@@ -2,12 +2,13 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { dashboardQueryKeys } from "./query-keys";
-import { fetchDashboardBrands, fetchDashboardData } from "./api";
+import { fetchActiveBrands } from "../candidates/api";
+import { fetchDashboardData } from "./api";
 
 export const useDashboardBrands = () =>
   useQuery({
     queryKey: dashboardQueryKeys.brands(),
-    queryFn: fetchDashboardBrands,
+    queryFn: fetchActiveBrands,
   });
 
 export const useDashboardData = (brandFilter: string, period: string) =>

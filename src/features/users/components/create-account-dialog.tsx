@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { CheckIcon, ClipboardIcon, KeyIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
@@ -20,20 +21,20 @@ import {
   requiresStallAssignment,
   shouldShowStallPicker,
 } from "@/lib/users/stall-assignment";
+import type { BusinessTree } from "@/features/configuration/business/types";
 import type { UserRole } from "@/types";
 import type { UserEmployeeFormValues } from "../types";
-import { ADMIN_USER_ROLES, ROLE_LABELS, emptyUserForm } from "../constants";
+import { ROLE_OPTIONS, emptyUserForm } from "../constants";
 import { useUpdateUser } from "../mutations";
 import { BusinessScopePicker } from "./business-scope-picker";
 import { StallAssignmentPicker } from "./stall-assignment-picker";
 
 interface CreateAccountDialogProps {
   employee: { id: string; full_name: string; email: string };
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: (message: string) => void;
-  onError: (message: string) => void;
+  onClose: () => void;
 }
+
+const EMPTY_TREE: BusinessTree = { holdings: [] };
 
 function generatePassword() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
@@ -51,16 +52,10 @@ function generatePassword() {
  * (PUT /api/users/[id] dgn is_access_app: true); kredensial ditampilkan
  * sekali utk disalin & dibagikan ke karyawan.
  */
-export function CreateAccountDialog({
-  employee,
-  open,
-  onOpenChange,
-  onSuccess,
-  onError,
-}: CreateAccountDialogProps) {
+export function CreateAccountDialog({ employee, onClose }: CreateAccountDialogProps) {
   const updateUser = useUpdateUser();
   const { data: businessTreeData } = useBusinessTree();
-  const businessTree = useMemo(() => businessTreeData ?? { holdings: [] }, [businessTreeData]);
+  const businessTree = businessTreeData ?? EMPTY_TREE;
 
   const [form, setForm] = useState<UserEmployeeFormValues>({
     ...emptyUserForm,
@@ -75,13 +70,7 @@ export function CreateAccountDialog({
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const setField = (patch: Partial<UserEmployeeFormValues>) =>
-    setForm((f) => ({ ...f, ...patch }));
-
-  const roleOptions = useMemo(
-    () => ADMIN_USER_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
-    []
-  );
+  const setField = (patch: Partial<UserEmployeeFormValues>) => setForm((f) => ({ ...f, ...patch }));
 
   const showStalls = shouldShowStallPicker({
     isAccessApp: true,
@@ -89,23 +78,20 @@ export function CreateAccountDialog({
     businessScope: form.business_scope || null,
     branchId: form.branch_id || null,
   });
-  const stallOptions = useMemo(
-    () => (form.branch_id ? findBranchStallsFromTree(businessTree, form.branch_id) : []),
-    [businessTree, form.branch_id]
-  );
+  const stallOptions = form.branch_id ? findBranchStallsFromTree(businessTree, form.branch_id) : [];
 
   const handleSubmit = () => {
     const email = loginEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      onError("Format email login tidak valid");
+      toast.error("Format email login tidak valid");
       return;
     }
     if (!form.password || form.password.length < 8) {
-      onError("Password minimal 8 karakter");
+      toast.error("Password minimal 8 karakter");
       return;
     }
     if (!form.role) {
-      onError("Pilih role akun");
+      toast.error("Pilih role akun");
       return;
     }
     const scope = normalizeBusinessScopePayload(
@@ -115,14 +101,14 @@ export function CreateAccountDialog({
       form.branch_id || null
     );
     if (form.role !== "super_admin" && !scope.business_scope) {
-      onError("Scope akses data wajib dipilih untuk role ini");
+      toast.error("Scope akses data wajib dipilih untuk role ini");
       return;
     }
     if (
       requiresStallAssignment(form.role, scope.business_scope ?? null, true) &&
       !form.default_warehouse_id
     ) {
-      onError("Pilih stall default untuk scope branch");
+      toast.error("Pilih stall default untuk scope branch");
       return;
     }
 
@@ -144,9 +130,9 @@ export function CreateAccountDialog({
       {
         onSuccess: () => {
           setCreatedCredentials({ email, password: form.password });
-          onSuccess(`Akun login untuk ${employee.full_name} berhasil dibuat`);
+          toast.success(`Akun login untuk ${employee.full_name} berhasil dibuat`);
         },
-        onError: (e) => onError(e instanceof Error ? e.message : "Gagal membuat akun"),
+        onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal membuat akun"),
       }
     );
   };
@@ -161,7 +147,7 @@ export function CreateAccountDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onOpenChange(false)}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -183,7 +169,12 @@ export function CreateAccountDialog({
                 <span className="text-gray-500">Password:</span> {createdCredentials.password}
               </p>
             </div>
-            <Button type="button" variant="outline" className="gap-1" onClick={handleCopyCredentials}>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1"
+              onClick={handleCopyCredentials}
+            >
               {copied ? (
                 <CheckIcon className="h-4 w-4 text-emerald-600" />
               ) : (
@@ -228,7 +219,7 @@ export function CreateAccountDialog({
             <div>
               <label className="text-xs font-medium text-gray-600">Role</label>
               <Combobox
-                options={roleOptions}
+                options={ROLE_OPTIONS}
                 value={form.role}
                 onChange={(value) =>
                   setField({
@@ -260,14 +251,14 @@ export function CreateAccountDialog({
               />
             )}
             <p className="text-xs text-gray-400">
-              Pengaturan lanjutan (izin approval, status nonaktif) tersedia di halaman Edit
-              karyawan setelah akun dibuat.
+              Pengaturan lanjutan (izin approval, status nonaktif) tersedia di halaman Edit karyawan
+              setelah akun dibuat.
             </p>
           </div>
         )}
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" onClick={onClose}>
             {createdCredentials ? "Tutup" : "Batal"}
           </Button>
           {!createdCredentials && (

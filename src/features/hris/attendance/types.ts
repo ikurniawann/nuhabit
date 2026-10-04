@@ -105,3 +105,33 @@ export interface AttendanceListResponse {
   data: AttendanceListRow[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
+
+// ── Statistik bulan & kalender ──────────────────────────────────────────
+export interface AttendanceMonthStats {
+  month_records: number;
+  month_late: number;
+  month_off_schedule: number;
+  avg_work_hours: number | null;
+}
+
+export interface CalendarAttendance {
+  id: string;
+  date: string;
+  clock_in: string | null;
+  clock_out: string | null;
+  work_hours: number | null;
+  status: string;
+  is_late: boolean;
+}
+
+/** Baris pola jadwal + detail shift dari /api/hris/attendance/schedule. */
+export interface CalendarScheduleRow {
+  day_of_week: number;
+  shift_id: string | null;
+  effective_from: string;
+  effective_to: string | null;
+  shift_name: string | null;
+  start_time: string | null; // "HH:MM:SS"
+  end_time: string | null;
+  is_overnight: boolean | null;
+}

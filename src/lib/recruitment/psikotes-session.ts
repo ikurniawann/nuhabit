@@ -1,18 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { ApiError } from "@/lib/api/auth";
 import { queryOne } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { isUuid } from "./candidate-query";
+import { enforceRateLimit, isLinkExpired, isPortalToken } from "./route-helpers";
 
 /**
  * Helper bersama endpoint publik sesi psikotes (/api/psikotes/session/[token]).
- * Kandidat anonim — identitas = token sesi (>=32 byte, unik). Rate limit
- * di-key ke token supaya satu sesi tidak bisa membanjiri; token tak valid
+ * Kandidat anonim: identitas = token sesi (>=32 byte, unik). Rate limit
+ * di-key ke sesi supaya satu sesi tidak bisa membanjiri; token tak valid
  * ditolak murah lewat regex sebelum menyentuh DB.
  */
 
-export const SESSION_TOKEN_RE = /^[a-f0-9]{48,128}$/i;
-
 /** Grace penulisan jawaban setelah deadline tes (kompensasi latensi client). */
-export const ANSWER_GRACE_MS = 30_000;
+const ANSWER_GRACE_MS = 30_000;
 
 /** Fallback masa hidup sesi bila expires_at NULL (jangan pernah abadi). */
 const MAX_SESSION_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
@@ -25,9 +24,6 @@ const BUCKET_LIMITS: Record<string, number> = {
   upload: 6,
   proctor: 12,
 };
-
-/** Batas maksimum snapshot webcam tersimpan per sesi (kuota storage). */
-export const MAX_SNAPSHOTS_PER_SESSION = 300;
 
 export interface PsikotesSessionRow {
   id: string;
@@ -64,41 +60,20 @@ export interface PsikotesSessionTestRow {
   };
 }
 
-export function invalidTokenResponse() {
-  return NextResponse.json({ error: "Link tes tidak berlaku" }, { status: 404 });
-}
-
-export function rateLimitedResponse() {
-  return NextResponse.json(
-    { error: "Terlalu banyak permintaan, coba lagi sebentar lagi" },
-    { status: 429 }
-  );
-}
-
-export function sessionRateLimited(token: string, bucket: string): boolean {
-  return !checkRateLimit(`psikotes_session_${bucket}_${token}`, BUCKET_LIMITS[bucket]).allowed;
-}
-
-/**
- * Tolak body yang mengaku terlalu besar SEBELUM di-parse/buffer (temuan
- * review: req.json()/req.formData() buffer penuh dulu baru dicek).
- * Content-Length bisa absen (chunked) — zod/cek ukuran tetap lapis kedua.
- */
-export function bodyTooLarge(req: NextRequest, maxBytes: number): boolean {
-  const len = Number(req.headers.get("content-length"));
-  return Number.isFinite(len) && len > maxBytes;
-}
-
-export function payloadTooLargeResponse() {
-  return NextResponse.json({ error: "Ukuran permintaan terlalu besar" }, { status: 413 });
+/** 404 untuk token salah/tidak ada, 429 bila kuota `bucket` sesi habis. */
+export async function requirePsikotesSession(token: string, bucket: string) {
+  const session = await loadSessionByToken(token);
+  if (!session) throw ApiError.notFound("Link tes tidak berlaku");
+  enforceRateLimit(`psikotes_session_${bucket}_${session.id}`, BUCKET_LIMITS[bucket]);
+  return session;
 }
 
 /**
  * Muat sesi via token + auto-expire bila lewat masa berlaku.
  * Return null utk token salah format / tidak ada.
  */
-export async function loadSessionByToken(token: string): Promise<PsikotesSessionRow | null> {
-  if (!SESSION_TOKEN_RE.test(token)) return null;
+async function loadSessionByToken(token: string): Promise<PsikotesSessionRow | null> {
+  if (!isPortalToken(token)) return null;
   const session = await queryOne<PsikotesSessionRow>(
     `SELECT s.id, s.candidate_id, s.token, s.status, s.webcam_consent,
             s.invited_at, s.expires_at, s.started_at, s.completed_at,
@@ -112,11 +87,7 @@ export async function loadSessionByToken(token: string): Promise<PsikotesSession
   if (!session) return null;
 
   const isExpirable = session.status === "draft" || session.status === "sent" || session.status === "in_progress";
-  // expires_at NULL tidak boleh berarti abadi — fallback umur maksimum
-  const expiresAtMs = session.expires_at
-    ? new Date(session.expires_at).getTime()
-    : new Date(session.invited_at ?? 0).getTime() + MAX_SESSION_LIFETIME_MS;
-  if (isExpirable && expiresAtMs < Date.now()) {
+  if (isExpirable && isLinkExpired({ expires_at: session.expires_at, issued_at: session.invited_at }, MAX_SESSION_LIFETIME_MS)) {
     await queryOne(
       `UPDATE recruitment.psikotes_sessions SET status = 'expired' WHERE id = $1 RETURNING id`,
       [session.id]
@@ -131,7 +102,7 @@ export async function loadSessionTest(
   sessionId: string,
   testId: string
 ): Promise<PsikotesSessionTestRow | null> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(testId)) return null;
+  if (!isUuid(testId)) return null;
   return queryOne<PsikotesSessionTestRow>(
     `SELECT t.id, t.session_id, t.instrument_id, t.status, t.answers,
             t.attachment_path, t.sort_order, t.started_at, t.completed_at,
@@ -144,11 +115,24 @@ export async function loadSessionTest(
   );
 }
 
+/** Tes milik sesi atau 404. */
+export async function requireSessionTest(sessionId: string, testId: string) {
+  const test = await loadSessionTest(sessionId, testId);
+  if (!test) throw ApiError.notFound("Tes tidak ditemukan");
+  return test;
+}
+
 /** Deadline tes = started_at + durasi instrumen (default 10 menit). */
 export function testDeadlineMs(test: PsikotesSessionTestRow): number | null {
   if (!test.started_at) return null;
   const duration = (test.instrument_config.duration_seconds ?? 600) * 1000;
   return new Date(test.started_at).getTime() + duration;
+}
+
+/** True bila deadline + grace sudah lewat. */
+export function isPastAnswerGrace(test: PsikotesSessionTestRow, now = Date.now()): boolean {
+  const deadline = testDeadlineMs(test);
+  return deadline !== null && now > deadline + ANSWER_GRACE_MS;
 }
 
 /** Bentuk tes yang aman dikirim ke kandidat (tanpa jawaban tersimpan). */

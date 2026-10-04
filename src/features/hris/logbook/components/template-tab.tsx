@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,12 +48,10 @@ export function LogbookTemplateTab({
   me,
   departmentId,
   departments,
-  showToast,
 }: {
   me: LogbookCurrentUser | null;
   departmentId: string;
   departments: LogbookDepartment[];
-  showToast: (message: string, type?: "success" | "error") => void;
 }) {
   const isFullAccess = me?.is_full_access ?? false;
   const [formDepartment, setFormDepartment] = useState("");
@@ -89,16 +88,16 @@ export function LogbookTemplateTab({
 
   async function createTemplate() {
     if (!targetDepartment) {
-      showToast("Pilih department untuk template ini", "error");
+      toast.error("Pilih department untuk template ini");
       return;
     }
     if (!form.name.trim()) {
-      showToast("Isi nama template", "error");
+      toast.error("Isi nama template");
       return;
     }
     const items = form.items.filter((item) => item.title.trim());
     if (!items.length) {
-      showToast("Minimal satu checklist item harus diisi", "error");
+      toast.error("Minimal satu checklist item harus diisi");
       return;
     }
     try {
@@ -108,12 +107,9 @@ export function LogbookTemplateTab({
         items,
       });
       setForm({ name: "", description: "", frequency: "daily", items: [defaultItem()] });
-      showToast("Template berhasil dibuat", "success");
+      toast.success("Template berhasil dibuat");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal membuat template",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal membuat template");
     }
   }
 
@@ -122,17 +118,11 @@ export function LogbookTemplateTab({
     try {
       const res = await deleteMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
-      showToast(
-        res.archived
+      toast.success(res.archived
           ? "Template diarsipkan (sudah dipakai logbook)"
-          : "Template dihapus",
-        "success"
-      );
+          : "Template dihapus");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menghapus template",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus template");
     }
   }
 

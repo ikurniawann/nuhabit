@@ -1,7 +1,7 @@
 /**
  * Payroll Input Loader
  *
- * Satu-satunya tempat pemuatan data karyawan untuk kalkulasi payroll —
+ * Satu-satunya tempat pemuatan data karyawan untuk kalkulasi payroll , 
  * dipakai baik oleh batch calculate (semua karyawan dalam satu run)
  * maupun perhitungan per-karyawan.
  *
@@ -30,6 +30,7 @@ import {
   dateColToIso,
   eachDateOfPeriod,
   mergeDateRanges,
+  periodBounds,
   periodCoverage,
   splitOvertimeHours,
   type AttendancePeriodRow,
@@ -49,20 +50,11 @@ export interface EmployeeRow {
 
 /**
  * Fallback saat karyawan TIDAK punya pola shift sama sekali dan tidak ada
- * baris absensi pada periode — dilaporkan eksplisit via workingDaysSource.
+ * baris absensi pada periode: dilaporkan eksplisit via workingDaysSource.
  */
 const FALLBACK_WORKING_DAYS = 20;
 
 export type WorkingDaysSource = "shift_schedule" | "attendance" | "fallback";
-
-function periodRange(periodMonth: number, periodYear: number) {
-  const month = String(periodMonth).padStart(2, "0");
-  const lastDay = new Date(periodYear, periodMonth, 0).getDate();
-  return {
-    startDate: `${periodYear}-${month}-01`,
-    endDate: `${periodYear}-${month}-${String(lastDay).padStart(2, "0")}`,
-  };
-}
 
 /**
  * Muat PayrollInput seorang karyawan untuk satu periode.
@@ -75,9 +67,9 @@ export async function loadEmployeePayrollInput(
   periodYear: number,
   options: { includeThr?: boolean; holidays?: HolidayIndex } = {}
 ): Promise<(PayrollInput & { workingDaysSource: WorkingDaysSource }) | null> {
-  const { startDate, endDate } = periodRange(periodMonth, periodYear);
+  const { start: startDate, end: endDate } = periodBounds(periodMonth, periodYear);
 
-  // Hari libur periode ini (EPIC-036 Fase F) — dipakai memisahkan jam lembur.
+  // Hari libur periode ini (EPIC-036 Fase F): dipakai memisahkan jam lembur.
   // Pemanggil yang menghitung banyak karyawan sekaligus WAJIB memuatnya sekali
   // lalu mengoper lewat options, supaya tidak menjadi query per karyawan.
   const holidays = options.holidays ?? (await loadHolidayIndex(startDate, endDate));
@@ -120,7 +112,7 @@ export async function loadEmployeePayrollInput(
       .gte("date", startDate)
       .lte("date", endDate),
     // Semua cuti approved yang BERSINGGUNGAN dengan periode (lintas bulan
-    // dihitung porsinya saja) — sebelumnya hanya yang mulai di periode.
+    // dihitung porsinya saja): sebelumnya hanya yang mulai di periode.
     db
       .from("leaves")
       .select("start_date, end_date, leave_type")
@@ -155,7 +147,7 @@ export async function loadEmployeePayrollInput(
   ]);
 
   // PENTING: kolom `date` Postgres top-level kembali sebagai objek Date JS
-  // (driver pg tanpa type parser khusus) — SEMUA tanggal dinormalisasi ke
+  // (driver pg tanpa type parser khusus): SEMUA tanggal dinormalisasi ke
   // string ISO di sini sebelum masuk fungsi murni yang membandingkan string.
   const attendanceRows: AttendancePeriodRow[] = (attendance ?? []).map(
     (row: AttendancePeriodRow) => ({
@@ -208,7 +200,7 @@ export async function loadEmployeePayrollInput(
 
   // Hari kerja: pola shift (utama) → hitungan absensi → fallback 20.
   // Bila cakupan kontrak parsial, hari kerja & gaji diproraté ke porsi
-  // cakupan (basis hari terjadwal — keputusan owner; kalender bila tanpa pola).
+  // cakupan (basis hari terjadwal: keputusan owner; kalender bila tanpa pola).
   const { scheduledDays, hasSchedule } = countScheduledDays(
     schedule,
     startDate,
@@ -244,7 +236,7 @@ export async function loadEmployeePayrollInput(
     }
   } else if (attendanceWorkingDays > 0) {
     // Tanpa pola shift: denominator = hari hadir DALAM cakupan, proraté
-    // berbasis hari kalender cakupan — keduanya se-basis agar tarif harian
+    // berbasis hari kalender cakupan: keduanya se-basis agar tarif harian
     // (gaji proraté / hari kerja) tetap konsisten.
     workingDays = attendanceWorkingDays;
     workingDaysSource = "attendance";

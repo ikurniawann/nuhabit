@@ -1,67 +1,49 @@
-import { createBrowserClient } from "@/lib/pg/browser-client";
-import type {
-  DashboardBrand,
-  DashboardData,
-  DashboardCandidate,
-} from "./types";
+import { apiGet, buildListUrl } from "@/lib/api-client";
+import type { DashboardData } from "./types";
 
-export async function fetchDashboardBrands(): Promise<DashboardBrand[]> {
-  const db = createBrowserClient();
-  const { data } = await db
-    .from("brands")
-    .select("id, name")
-    .eq("is_active", true)
-    .order("name");
-  return (data as DashboardBrand[]) || [];
+interface WeeklyRow {
+  label?: string;
+  week?: string;
+  count: number;
 }
 
-export async function fetchDashboardData(
-  brandFilter: string,
-  period: string
-): Promise<DashboardData> {
-  const brandParam = brandFilter !== "all" ? `&brand_id=${brandFilter}` : "";
+interface FunnelRow {
+  stage: string;
+  count: number;
+}
 
-  const [statsRes, weeklyRes, sourcesRes, funnelRes, attentionRes] = await Promise.all([
-    fetch(`/api/dashboard/stats?${brandParam.slice(1)}`),
-    fetch(`/api/dashboard/weekly?period=${period}${brandParam}`),
-    fetch(`/api/dashboard/sources?${brandParam.slice(1)}`),
-    fetch(`/api/dashboard/funnel?${brandParam.slice(1)}`),
-    fetch(`/api/dashboard/attention?${brandParam.slice(1)}`),
+/** Endpoint dashboard lama tidak seragam; galat satu kartu tidak menggagalkan halaman. */
+const getOr = <T,>(url: string, fallback: T) => apiGet<T>(url).catch(() => fallback);
+
+export async function fetchDashboardData(brandFilter: string, period: string): Promise<DashboardData> {
+  const brand_id = brandFilter !== "all" ? brandFilter : undefined;
+  const url = (path: string, extra?: Record<string, string>) =>
+    buildListUrl(`/api/dashboard/${path}`, { ...extra, brand_id });
+
+  const [stats, weekly, sources, funnel, attention] = await Promise.all([
+    getOr<Partial<Record<"candidates_this_month" | "active_pipeline" | "talent_pool" | "open_positions", number>>>(
+      url("stats"),
+      {}
+    ),
+    getOr<WeeklyRow[]>(url("weekly", { period }), []),
+    getOr<DashboardData["sourceDist"]>(url("sources"), []),
+    getOr<FunnelRow[]>(url("funnel"), []),
+    getOr<{ data?: DashboardData["needsAttention"] }>(url("attention"), {}),
   ]);
-
-  const statsData = await statsRes.json().catch(() => ({}));
-  const weeklyData = await weeklyRes.json().catch(() => []);
-  const sourcesData = await sourcesRes.json().catch(() => []);
-  const funnelData = await funnelRes.json().catch(() => []);
-  const attentionData = await attentionRes.json().catch(() => ({}));
 
   return {
     summary: {
-      thisMonth: statsData.candidates_this_month || 0,
-      activePipeline: statsData.active_pipeline || 0,
-      talentPool: statsData.talent_pool || 0,
-      openPositions: statsData.open_positions || 0,
+      thisMonth: stats.candidates_this_month || 0,
+      activePipeline: stats.active_pipeline || 0,
+      talentPool: stats.talent_pool || 0,
+      openPositions: stats.open_positions || 0,
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    weeklyApps: (Array.isArray(weeklyData) ? weeklyData : []).map((w: any) => ({
-      week: w.label || w.week,
+    weeklyApps: (Array.isArray(weekly) ? weekly : []).map((w) => ({
+      week: w.label || w.week || "",
       candidates: w.count,
     })),
-    sourceDist: Array.isArray(sourcesData) ? sourcesData : [],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pipelineFunnel: (Array.isArray(funnelData) ? funnelData : []).map((f: any) => ({
-      name: f.stage,
-      value: f.count,
-    })),
-    needsAttention: attentionData.data || [],
+    sourceDist: Array.isArray(sources) ? sources : [],
+    pipelineFunnel: (Array.isArray(funnel) ? funnel : []).map((f) => ({ name: f.stage, value: f.count })),
+    needsAttention: attention.data || [],
   };
-}
-
-export async function fetchDashboardCandidatesForExport(
-  brandFilter: string
-): Promise<DashboardCandidate[]> {
-  const brandParam = brandFilter !== "all" ? `brand_id=${brandFilter}` : "";
-  const res = await fetch(`/api/candidates?${brandParam}&limit=1000`);
-  const data = await res.json().catch(() => ({}));
-  return data.data || [];
 }

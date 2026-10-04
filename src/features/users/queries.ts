@@ -15,7 +15,8 @@ import {
   fetchUserDirectoryStats,
   fetchUserFormLookups,
   fetchUserList,
-  fetchBranchStalls,
+  fetchShiftOptions,
+  fetchEmployeeShiftSchedule,
 } from "./api";
 import { usersQueryKeys } from "./query-keys";
 import type { UserListParams } from "./types";
@@ -45,21 +46,14 @@ export const useUserFormLookups = () =>
     queryFn: fetchUserFormLookups,
   });
 
-export const useBranchStalls = (branchId: string | null) =>
-  useQuery({
-    queryKey: usersQueryKeys.branchStalls(branchId ?? ""),
-    queryFn: () => fetchBranchStalls(branchId!),
-    enabled: !!branchId,
-  });
-
-export const useEmployeeContracts = (employeeId: string, enabled = true) =>
+export const useEmployeeContracts = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.contracts(employeeId),
     queryFn: async () => {
       const res = await fetchEmployeeContracts(employeeId);
       return res.data ?? [];
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
 export const useExpiringContracts = (days = 30) =>
@@ -81,51 +75,50 @@ export const useHRISEmployeeDetail = (id: string) =>
     enabled: !!id,
   });
 
-export const useEmployeeDocuments = (employeeId: string, enabled = true) =>
+export const useEmployeeDocuments = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.documents(employeeId),
     queryFn: async () => {
       const res = await fetchEmployeeDocuments(employeeId);
       return res.data ?? [];
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
-export const useEmployeeRecruitmentDocs = (employeeId: string, enabled = true) =>
+export const useEmployeeRecruitmentDocs = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.recruitmentDocs(employeeId),
     queryFn: async () => {
       const res = await fetchEmployeeRecruitmentDocs(employeeId);
       return res.data ?? null;
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
-export const useEmployeeLifecycle = (employeeId: string, enabled = true) =>
+export const useEmployeeLifecycle = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.lifecycle(employeeId),
     queryFn: async () => {
       const res = await fetchEmployeeLifecycle(employeeId);
       return res.data;
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
-export const useEmploymentHistory = (employeeId: string, enabled = true) =>
+export const useEmploymentHistory = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.employmentHistory(employeeId),
     queryFn: async () => {
       const res = await fetchEmploymentHistory(employeeId);
       return res.data ?? [];
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
 export const useEmployeeAttendance = (
   employeeId: string,
   month: number,
-  year: number,
-  enabled = true
+  year: number
 ) =>
   useQuery({
     queryKey: usersQueryKeys.attendance(employeeId, month, year),
@@ -133,15 +126,34 @@ export const useEmployeeAttendance = (
       const res = await fetchEmployeeAttendance(employeeId, month, year);
       return res.data ?? [];
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
   });
 
-export const useEmployeeLeaveBalances = (employeeId: string, enabled = true) =>
+export const useEmployeeLeaveBalances = (employeeId: string) =>
   useQuery({
     queryKey: usersQueryKeys.leaveBalances(employeeId),
     queryFn: async () => {
       const res = await fetchEmployeeLeaveBalances(employeeId);
       return res.data ?? [];
     },
-    enabled: enabled && !!employeeId,
+    enabled: !!employeeId,
+  });
+
+export const useActiveShiftOptions = () =>
+  useQuery({
+    queryKey: usersQueryKeys.shiftOptions(),
+    queryFn: async () => {
+      const res = await fetchShiftOptions();
+      return (res.data ?? []).filter((s) => s.is_active);
+    },
+  });
+
+export const useEmployeeShiftSchedule = (employeeId: string) =>
+  useQuery({
+    queryKey: usersQueryKeys.shiftSchedule(employeeId),
+    queryFn: async () => {
+      const res = await fetchEmployeeShiftSchedule(employeeId);
+      return res.data ?? [];
+    },
+    enabled: !!employeeId,
   });

@@ -1,36 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  BuildingOfficeIcon,
-  PlusIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+import { BuildingOfficeIcon, PlusIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { Filter, Search, Users, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, useToast } from "@/components/ui/toast";
-import { filterComboboxClassName } from "@/components/layout/form-field";
 import { useDepartmentList } from "@/features/master-data/departments";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { useAuth } from "@/hooks/use-auth";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { useIamAccess } from "@/components/iam/iam-access-provider";
 import { IAM } from "@/lib/iam/prefixes";
+import { OS_PATH } from "@/lib/desktop/deep-link";
 import { impersonateUser } from "../api";
 import { useUserDirectoryStats, useUserList } from "../queries";
-import {
-  ADMIN_USER_ROLES,
-  EMPLOYEES_ROUTES,
-  ROLE_LABELS,
-  STATUS_LABELS,
-} from "../constants";
+import { EMPLOYEES_ROUTES } from "../constants";
 import { ContractExpiryBanner } from "./contract-expiry-banner";
 import { ResetPasswordDialog, type ResetPasswordTarget } from "./reset-password-dialog";
 import { CreateAccountDialog } from "./create-account-dialog";
+import {
+  DEFAULT_USER_LIST_FILTERS,
+  UsersListFiltersPanel,
+  countActiveFilters,
+  type UserListFilters,
+} from "./users-list-filters";
 import { UsersTable } from "./users-table";
 import type { UserEmployeeItem } from "@/lib/users/user-mapper";
 
@@ -47,8 +42,6 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
   const isAccountsView = variant === "accounts";
   const showAppActions = isAccountsView;
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-  const { user } = useAuth();
   const { hasPrefix } = useIamAccess();
   const canManageUsers = hasPrefix(IAM.settingsUsers);
   const canResetPassword = canManageUsers;
@@ -57,11 +50,7 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [accessFilter, setAccessFilter] = useState("all");
-  const [roleFilter, setRoleFilter] = useState("");
+  const [filters, setFilters] = useState<UserListFilters>(DEFAULT_USER_LIST_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [resetTarget, setResetTarget] = useState<ResetPasswordTarget | null>(null);
@@ -71,21 +60,18 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
 
   const perPage = 15;
 
-  const listParams = useMemo(
-    () => ({
-      search: search.trim() || undefined,
-      department_id: departmentFilter !== "all" ? departmentFilter : undefined,
-      employment_status: statusFilter !== "all" ? statusFilter : undefined,
-      is_active: activeFilter !== "all" ? activeFilter : undefined,
-      is_access_app: accessFilter !== "all" ? accessFilter : undefined,
-      role: roleFilter || undefined,
-      page,
-      limit: perPage,
-      sort_by: "full_name",
-      sort_order: "asc" as const,
-    }),
-    [search, departmentFilter, statusFilter, activeFilter, accessFilter, roleFilter, page]
-  );
+  const listParams = {
+    search: search.trim() || undefined,
+    department_id: filters.department !== "all" ? filters.department : undefined,
+    employment_status: filters.status !== "all" ? filters.status : undefined,
+    is_active: filters.active !== "all" ? filters.active : undefined,
+    is_access_app: filters.access !== "all" ? filters.access : undefined,
+    role: filters.role || undefined,
+    page,
+    limit: perPage,
+    sort_by: "full_name",
+    sort_order: "asc" as const,
+  };
 
   const { data, isLoading, isError } = useUserList(listParams);
   const { data: departments = [] } = useDepartmentList();
@@ -94,53 +80,8 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
-  const activeFilterCount = [
-    departmentFilter !== "all",
-    statusFilter !== "all",
-    activeFilter !== "all",
-    accessFilter !== "all",
-    !!roleFilter,
-  ].filter(Boolean).length;
-
+  const activeFilterCount = countActiveFilters(filters);
   const isFilterActive = activeFilterCount > 0;
-
-  const departmentFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "All Departments" },
-      ...departments.map((d) => ({ value: d.id, label: d.name })),
-    ],
-    [departments]
-  );
-  const statusFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "All Statuses" },
-      ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
-    ],
-    []
-  );
-  const activeFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "All" },
-      { value: "true", label: "Active" },
-      { value: "false", label: "Inactive" },
-    ],
-    []
-  );
-  const accessFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "All Access" },
-      { value: "true", label: "With App Access" },
-      { value: "false", label: "Without App Access" },
-    ],
-    []
-  );
-  const roleFilterOptions = useMemo(
-    () => [
-      { value: "all", label: "All Roles" },
-      ...ADMIN_USER_ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] })),
-    ],
-    []
-  );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -150,18 +91,15 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
     return () => window.clearTimeout(timeout);
   }, [searchQuery]);
 
-  useEffect(() => {
+  function handleFilterChange(patch: Partial<UserListFilters>) {
+    setFilters((prev) => ({ ...prev, ...patch }));
     setPage(1);
-  }, [departmentFilter, statusFilter, activeFilter, accessFilter, roleFilter]);
+  }
 
   function handleResetFilters() {
     setSearchQuery("");
     setSearch("");
-    setDepartmentFilter("all");
-    setStatusFilter("all");
-    setActiveFilter("all");
-    setAccessFilter("all");
-    setRoleFilter("");
+    setFilters(DEFAULT_USER_LIST_FILTERS);
     setPage(1);
   }
 
@@ -175,20 +113,17 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
     setLoginAsEmployeeId(row.id);
     try {
       const result = await impersonateUser(row.userId);
-      showToast(result.message || `Logged in as ${row.fullName}`);
+      toast.success(result.message || `Logged in as ${row.fullName}`);
       // Full reload agar seluruh state (session, layout, menu) mengikuti user baru.
-      window.location.href =
-        result.data.role === "super_admin" ? "/arkiv-os" : "/dashboard/me";
+      window.location.href = result.data.role === "super_admin" ? OS_PATH : "/dashboard/me";
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Failed to login as user", "error");
+      toast.error(error instanceof Error ? error.message : "Failed to login as user");
       setLoginAsEmployeeId(null);
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -218,7 +153,11 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
           { label: "Total Employees", value: stats.total, icon: UserGroupIcon },
           { label: "Active", value: stats.active, icon: UserGroupIcon },
           { label: "App Access", value: stats.withAccess, icon: UserGroupIcon },
-          { label: "Departments", value: departments.length, icon: BuildingOfficeIcon },
+          {
+            label: "Departments",
+            value: departments.length,
+            icon: BuildingOfficeIcon,
+          },
         ].map((item) => (
           <div
             key={item.label}
@@ -295,78 +234,12 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
         }
       >
         {filterOpen ? (
-          <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-4">
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Department
-                </p>
-                <Combobox
-                  options={departmentFilterOptions}
-                  value={departmentFilter}
-                  onChange={setDepartmentFilter}
-                  placeholder="Department"
-                  searchPlaceholder="Search department..."
-                  emptyMessage="No department found"
-                  className={filterComboboxClassName}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Status</p>
-                <Combobox
-                  options={statusFilterOptions}
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  placeholder="Status"
-                  searchPlaceholder="Search status..."
-                  emptyMessage="No status found"
-                  className={filterComboboxClassName}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Activity
-                </p>
-                <Combobox
-                  options={activeFilterOptions}
-                  value={activeFilter}
-                  onChange={setActiveFilter}
-                  placeholder="Active"
-                  searchPlaceholder="Search..."
-                  emptyMessage="Not found"
-                  className={filterComboboxClassName}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  App Access
-                </p>
-                <Combobox
-                  options={accessFilterOptions}
-                  value={accessFilter}
-                  onChange={setAccessFilter}
-                  placeholder="App Access"
-                  searchPlaceholder="Search..."
-                  emptyMessage="Not found"
-                  className={filterComboboxClassName}
-                />
-              </div>
-              {showAppActions ? (
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Role</p>
-                  <Combobox
-                    options={roleFilterOptions}
-                    value={roleFilter || "all"}
-                    onChange={(value) => setRoleFilter(value === "all" ? "" : value)}
-                    placeholder="Role"
-                    searchPlaceholder="Search role..."
-                    emptyMessage="No role found"
-                    className={filterComboboxClassName}
-                  />
-                </div>
-              ) : null}
-            </div>
-          </div>
+          <UsersListFiltersPanel
+            filters={filters}
+            departments={departments}
+            showRole={showAppActions}
+            onChange={handleFilterChange}
+          />
         ) : null}
 
         {isLoading ? (
@@ -397,8 +270,12 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
                 rows={rows}
                 onView={(id) => router.push(EMPLOYEES_ROUTES.detail(id))}
                 onEdit={(id) => router.push(EMPLOYEES_ROUTES.edit(id))}
-                onResetPassword={showAppActions && canResetPassword ? handleResetPassword : undefined}
-                onCreateAccount={showAppActions && canCreateAccount ? setCreateAccountTarget : undefined}
+                onResetPassword={
+                  showAppActions && canResetPassword ? handleResetPassword : undefined
+                }
+                onCreateAccount={
+                  showAppActions && canCreateAccount ? setCreateAccountTarget : undefined
+                }
                 onLoginAs={canLoginAs ? handleLoginAs : undefined}
                 loginAsEmployeeId={loginAsEmployeeId}
                 showAppActions={showAppActions}
@@ -422,7 +299,6 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
           setResetDialogOpen(open);
           if (!open) setResetTarget(null);
         }}
-        onError={(message) => showToast(message, "error")}
       />
 
       {createAccountTarget && (
@@ -432,12 +308,7 @@ export function UsersListPage({ variant = "directory" }: UsersListPageProps) {
             full_name: createAccountTarget.fullName,
             email: createAccountTarget.email ?? "",
           }}
-          open
-          onOpenChange={(open) => {
-            if (!open) setCreateAccountTarget(null);
-          }}
-          onSuccess={(message) => showToast(message)}
-          onError={(message) => showToast(message, "error")}
+          onClose={() => setCreateAccountTarget(null)}
         />
       )}
     </div>

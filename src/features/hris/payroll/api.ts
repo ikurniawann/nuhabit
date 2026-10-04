@@ -27,10 +27,15 @@ export const updatePayrollStatus = (runId: string, status: string) =>
 export const deletePayrollRun = (runId: string) =>
   apiDelete(`/api/hris/payroll/${runId}`);
 
+export const notifyPayslip = (payrollDetailId: string) =>
+  apiPost<{ message?: string; data?: { wa_link?: string | null } }>("/api/hris/payslips/notify", {
+    payroll_detail_id: payrollDetailId,
+  });
+
 export const fetchPayslip = (payrollRunId: string, employeeId: string) =>
   apiGet<{ data: PayslipDetail[] }>(
     `/api/hris/payslips?payroll_run_id=${payrollRunId}&employee_id=${employeeId}`
-  ).then((res) => (res.data && res.data.length > 0 ? res.data[0] : null));
+  ).then((res) => res.data?.[0] ?? null);
 
 // ---- Pengaturan payroll (payroll_settings + payroll_tax_config) ----
 

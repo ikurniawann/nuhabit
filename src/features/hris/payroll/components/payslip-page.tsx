@@ -1,92 +1,16 @@
 "use client";
 
-import {
-  loanInstallmentLabel,
-  type LoanInstallmentDetail,
-} from "@/lib/payroll/loans";
 import { useParams, useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatShareOfGross } from "@/lib/payroll/share";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDownTrayIcon,
-  PrinterIcon, ArrowDownOnSquareIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { usePayslip } from "../queries";
+import { ArrowDownTrayIcon, PrinterIcon, ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { formatDateLong, formatRupiah } from "@/lib/format";
+import { monthName } from "@/lib/hris/month-label";
+import { loanInstallmentLabel } from "@/lib/payroll/loans";
+import { formatShareOfGross } from "@/lib/payroll/share";
 import { prorateNote } from "@/lib/payroll/prorate-note";
-
-interface PayrollDetail {
-  id: string;
-  employee_id: string;
-  payroll_run_id: string;
-  base_salary: number;
-  fixed_allowance: number;
-  variable_allowance: number;
-  transport_allowance: number;
-  meal_allowance: number;
-  housing_allowance: number;
-  overtime_pay: number;
-  thr: number;
-  bonus: number;
-  other_earning: number;
-  gross_salary: number;
-  bpjs_tk_jht_deduction: number;
-  bpjs_tk_jp_deduction: number;
-  bpjs_kes_deduction: number;
-  tapera_deduction: number;
-  pph21_deduction: number;
-  unpaid_leave_deduction: number;
-  late_deduction?: number;
-  loan_deduction?: number;
-  loan_details?: LoanInstallmentDetail[];
-  other_deduction: number;
-  total_deductions: number;
-  net_salary: number;
-  working_days: number;
-  present_days: number;
-  late_days: number;
-  unpaid_leave_days: number;
-  /** Faktor proraté cakupan kontrak (0..1); pg numeric datang sebagai string */
-  prorate_factor?: number | string;
-  /** Snapshot gaji pokok penuh sebelum proraté (null utk baris lama) */
-  full_base_salary?: number | string | null;
-  status: string;
-  created_at: string;
-  employee?: {
-    id: string;
-    full_name: string;
-    nip: string;
-    email: string;
-    phone: string;
-    position?: {
-      title: string;
-    };
-    department?: {
-      name: string;
-    };
-  };
-  payroll_run?: {
-    id: string;
-    period_month: number;
-    period_year: number;
-    run_name: string;
-  };
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
-function getMonthName(month: number): string {
-  const months = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-  ];
-  return months[month - 1] || "";
-}
+import { usePayslip } from "../queries";
 
 export function PayslipPage() {
   const params = useParams();
@@ -96,7 +20,7 @@ export function PayslipPage() {
   const employeeId = params.employeeId as string;
 
   const payslipQuery = usePayslip(payrollRunId, employeeId);
-  const detail = (payslipQuery.data as PayrollDetail | null) ?? null;
+  const detail = payslipQuery.data ?? null;
   const slipProrateNote = detail
     ? prorateNote({
         factor: detail.prorate_factor,
@@ -177,7 +101,7 @@ export function PayslipPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Slip Gaji</h1>
               <p className="text-sm text-gray-500 mt-1">
-                Periode: {getMonthName(payrollRun?.period_month || 0)} {payrollRun?.period_year}
+                Periode: {monthName(payrollRun?.period_month)} {payrollRun?.period_year}
               </p>
             </div>
             <Badge className="bg-blue-100 text-blue-700">
@@ -261,7 +185,7 @@ export function PayslipPage() {
                 <DeductionRow label="Potongan Keterlambatan" amount={detail.late_deduction ?? 0} share={bagian(detail.late_deduction ?? 0)} />
               )}
               {(detail.loan_details?.length ?? 0) > 0
-                ? detail.loan_details!.map((loan) => (
+                ? detail.loan_details?.map((loan) => (
                     <DeductionRow
                       key={loan.loan_id}
                       label={loanInstallmentLabel(loan)}
@@ -290,16 +214,12 @@ export function PayslipPage() {
               <div>
                 <p className="text-sm text-gray-600">Take Home Pay (Gaji Bersih)</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {formatCurrency(detail.net_salary)}
+                  {formatRupiah(detail.net_salary)}
                 </p>
               </div>
               <div className="text-right text-sm text-gray-500">
                 <p>Tanggal Cetak</p>
-                <p>{new Date().toLocaleDateString('id-ID', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</p>
+                <p>{formatDateLong(new Date())}</p>
               </div>
             </div>
           </div>
@@ -352,7 +272,7 @@ function EarningRow({ label, amount, bold = false }: { label: string; amount: nu
     <div className="flex items-center justify-between">
       <span className={`text-gray-700 ${bold ? 'font-semibold' : ''}`}>{label}</span>
       <span className={`text-gray-900 ${bold ? 'font-bold' : ''}`}>
-        {amount > 0 ? formatCurrency(amount) : '-'}
+        {amount > 0 ? formatRupiah(amount) : '-'}
       </span>
     </div>
   );
@@ -376,7 +296,7 @@ function DeductionRow({
       <span className="flex items-baseline gap-2">
         {share && <span className="text-xs font-normal text-gray-400">{share}</span>}
         <span className={`text-red-600 ${bold ? 'font-bold' : ''}`}>
-          {amount > 0 ? `- ${formatCurrency(amount)}` : '-'}
+          {amount > 0 ? `- ${formatRupiah(amount)}` : '-'}
         </span>
       </span>
     </div>

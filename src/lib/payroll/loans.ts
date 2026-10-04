@@ -7,6 +7,8 @@
  *   pinjaman maksimal min(cicilan, sisa), total dibatasi nominal terpotong.
  */
 
+import { formatRupiah } from "@/lib/format";
+
 export interface LoanDeductionRow {
   id: string;
   monthly_installment: number;
@@ -77,7 +79,7 @@ export function loanDeductionForPeriod(
 /**
  * Alokasikan nominal yang terpotong di slip ke pinjaman-pinjaman due
  * (urutan pemanggil: tertua dulu). Nominal bisa berbeda dari hitungan
- * terkini bila run dihitung sebelum data pinjaman berubah — karena itu
+ * terkini bila run dihitung sebelum data pinjaman berubah: karena itu
  * dibatasi `amount` DAN sisa masing-masing pinjaman.
  */
 export function allocateLoanPayment(
@@ -134,8 +136,8 @@ export function validateLoanLimits(params: {
   const maxInstallment = (baseSalary * maxInstallmentPercent) / 100;
   if (monthlyInstallment > maxInstallment) {
     return (
-      `Cicilan Rp ${Math.round(monthlyInstallment).toLocaleString("id-ID")}/bulan melebihi batas ` +
-      `${maxInstallmentPercent}% dari gaji pokok (maks Rp ${Math.round(maxInstallment).toLocaleString("id-ID")})`
+      `Cicilan ${formatRupiah(monthlyInstallment)}/bulan melebihi batas ` +
+      `${maxInstallmentPercent}% dari gaji pokok (maks ${formatRupiah(maxInstallment)})`
     );
   }
   return null;
@@ -188,7 +190,7 @@ export const LOAN_TYPE_LABELS: Record<string, string> = {
 /**
  * Label baris potongan di slip, mis. "Cicilan Kasbon (2/3)".
  * Tenor bisa kosong pada data lama, jadi nomor angsuran hanya ditampilkan
- * bila tenornya diketahui — lebih baik tanpa keterangan daripada menyesatkan.
+ * bila tenornya diketahui: lebih baik tanpa keterangan daripada menyesatkan.
  */
 export function loanInstallmentLabel(detail: LoanInstallmentDetail): string {
   const jenis = detail.loan_type
@@ -197,4 +199,29 @@ export function loanInstallmentLabel(detail: LoanInstallmentDetail): string {
   return detail.tenor_months
     ? `Cicilan ${jenis} (${detail.installment_no}/${detail.tenor_months})`
     : `Cicilan ${jenis}`;
+}
+
+/**
+ * Cicilan & total kewajiban pinjaman baru (bunga flat sederhana).
+ * `rawInstallment` tidak dibulatkan dan dipakai validasi limit; yang
+ * disimpan adalah `monthlyInstallment` (dibulatkan) dan `totalRepayment` =
+ * cicilan bulat × tenor, sehingga cicilan mengikis saldo tepat ke 0.
+ */
+export function computeLoanTerms(params: {
+  principal: number;
+  ratePercent: number;
+  tenorMonths: number;
+}): { rawInstallment: number; monthlyInstallment: number; totalRepayment: number } {
+  const { principal, ratePercent, tenorMonths } = params;
+  const rawInstallment = ratePercent
+    ? (principal * (1 + (ratePercent / 100) * tenorMonths)) / tenorMonths
+    : principal / tenorMonths;
+  const monthlyInstallment = Math.round(rawInstallment);
+  return { rawInstallment, monthlyInstallment, totalRepayment: monthlyInstallment * tenorMonths };
+}
+
+/** Cicilan pertama mulai BULAN DEPAN dari tanggal persetujuan (waktu lokal server). */
+export function firstInstallmentPeriod(approvedAt: Date): { month: number; year: number } {
+  const next = new Date(approvedAt.getFullYear(), approvedAt.getMonth() + 1, 1);
+  return { month: next.getMonth() + 1, year: next.getFullYear() };
 }

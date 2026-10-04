@@ -22,12 +22,19 @@ export const updateLeave = (id: string, body: UpdateLeavePayload) =>
 export const deleteLeave = (id: string) => apiDelete(`${BASE}/${id}`);
 
 export const approveLeave = (body: ApproveLeavePayload) =>
-  apiPost<{ data: LeaveItem }>(`${BASE}/approve`, body);
+  apiPost<{ data: LeaveItem; wa_link?: string | null }>(`${BASE}/approve`, body);
 
 export const fetchLeaveEmployees = () =>
   apiGet<{ data: LeaveEmployeeLite[] }>("/api/hris/employees?limit=100").then(
     (res) => res.data
   );
+
+/** Unggah foto lampiran (data URL); balikan path privat untuk attachment_url. */
+export const uploadLeaveAttachment = (photo: string, employeeId: string) =>
+  apiPost<{ data: { path: string } }>(`${BASE}/attachment`, {
+    photo,
+    employee_id: employeeId,
+  }).then((res) => res.data.path);
 
 export async function downloadLeavesCsv(params?: LeaveListParams) {
   const res = await fetch(buildListUrl(`${BASE}/export`, params));

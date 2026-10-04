@@ -2,13 +2,7 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { candidatesQueryKeys } from "./query-keys";
-import {
-  fetchCandidateList,
-  fetchCandidateBrands,
-  fetchCandidateDetail,
-  fetchCandidateAnalytics,
-  fetchAnalyticsBrands,
-} from "./api";
+import { fetchCandidateList, fetchActiveBrands, fetchCandidateDetail } from "./api";
 import type { CandidateListParams } from "./types";
 
 export const useCandidateList = (params: CandidateListParams) =>
@@ -21,7 +15,7 @@ export const useCandidateList = (params: CandidateListParams) =>
 export const useCandidateBrands = () =>
   useQuery({
     queryKey: candidatesQueryKeys.brands(),
-    queryFn: fetchCandidateBrands,
+    queryFn: fetchActiveBrands,
   });
 
 export const useCandidateDetail = (id: string) =>
@@ -29,16 +23,4 @@ export const useCandidateDetail = (id: string) =>
     queryKey: candidatesQueryKeys.detail(id),
     queryFn: () => fetchCandidateDetail(id),
     enabled: !!id,
-  });
-
-export const useCandidateAnalytics = (brandFilter: string) =>
-  useQuery({
-    queryKey: candidatesQueryKeys.analytics(brandFilter),
-    queryFn: () => fetchCandidateAnalytics(brandFilter),
-  });
-
-export const useAnalyticsBrands = () =>
-  useQuery({
-    queryKey: candidatesQueryKeys.analyticsBrands(),
-    queryFn: fetchAnalyticsBrands,
   });

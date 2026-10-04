@@ -2,13 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Candidate } from "@/types";
+import { toast } from "sonner";
 import { useTalentPool, useActiveBrands } from "../queries";
-import {
-  useUpdateCandidateStatus,
-  useTouchCandidateContact,
-  useSendCandidateNotification,
-} from "../mutations";
+import { useUpdateCandidateStatus, useSendCandidateNotification } from "../mutations";
+import type { TalentPoolCandidate } from "../types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,8 +42,8 @@ function CandidateRow({
   candidate,
   onAction,
 }: {
-  candidate: Candidate & { brands?: { name: string }; positions?: { title: string } };
-  onAction: (action: string, c: Candidate) => void;
+  candidate: TalentPoolCandidate;
+  onAction: (action: string, c: TalentPoolCandidate) => void;
 }) {
   const daysAgo = getDaysAgo(candidate.last_contacted_at);
   const needsContact = daysAgo > 30;
@@ -69,8 +66,8 @@ function CandidateRow({
               )}
             </div>
             <p className="text-sm text-gray-500">
-              {(candidate as any).positions?.title || "Tanpa Posisi"} ·{" "}
-              {(candidate as any).brands?.name || "Semua Outlet"}
+              {candidate.positions?.title || "Tanpa Posisi"} ·{" "}
+              {candidate.brands?.name || "Semua Outlet"}
             </p>
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
               <span>{candidate.phone}</span>
@@ -134,7 +131,7 @@ export function TalentPoolPage() {
 
   const [search, setSearch] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<TalentPoolCandidate | null>(null);
   const [actionDialog, setActionDialog] = useState<string | null>(null);
   const [whatsappMsg, setWhatsappMsg] = useState("");
 
@@ -143,12 +140,8 @@ export function TalentPoolPage() {
   const brands = brandsData ?? [];
 
   const updateStatusMutation = useUpdateCandidateStatus();
-  const touchContactMutation = useTouchCandidateContact();
   const sendNotificationMutation = useSendCandidateNotification();
-  const saving =
-    updateStatusMutation.isPending ||
-    touchContactMutation.isPending ||
-    sendNotificationMutation.isPending;
+  const saving = updateStatusMutation.isPending || sendNotificationMutation.isPending;
 
   const candidates = useMemo(() => {
     let results = [...(rawCandidates ?? [])];
@@ -171,10 +164,10 @@ export function TalentPoolPage() {
     return results;
   }, [rawCandidates, search]);
 
-  function handleAction(action: string, candidate: Candidate) {
+  function handleAction(action: string, candidate: TalentPoolCandidate) {
     setSelectedCandidate(candidate);
-    if (action === "view") {
-      router.push(`/dashboard/candidates/${candidate.id}`);
+    if (action === "view" || action === "interview") {
+      router.push(`/dashboard/hris/candidates/${candidate.id}`);
     } else if (action === "whatsapp") {
       setWhatsappMsg(
         `Halo ${candidate.full_name}! Kami dari Tim Rekrutmen ingin mengupdate status lamaran Anda.`
@@ -184,8 +177,6 @@ export function TalentPoolPage() {
       setActionDialog("activate");
     } else if (action === "archive") {
       setActionDialog("archive");
-    } else if (action === "interview") {
-      router.push(`/dashboard/candidates/${candidate.id}`);
     }
   }
 
@@ -202,11 +193,9 @@ export function TalentPoolPage() {
           channel: "whatsapp",
           message: whatsappMsg,
         });
-      } else if (actionDialog === "contact") {
-        await touchContactMutation.mutateAsync(selectedCandidate.id);
       }
     } catch (error) {
-      console.error("Talent pool action failed:", error);
+      toast.error(error instanceof Error ? error.message : "Aksi gagal");
     } finally {
       setActionDialog(null);
       setSelectedCandidate(null);
@@ -246,12 +235,14 @@ export function TalentPoolPage() {
         </div>
         <Select value={selectedBrand} onValueChange={(v) => setSelectedBrand(v ?? "all")}>
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder={selectedBrand !== "all" ? (brands.find(b => String(b.id) === selectedBrand)?.name ?? 'Semua Outlet') : "Semua Outlet"} />
+            <SelectValue
+              placeholder={brands.find((b) => b.id === selectedBrand)?.name ?? "Semua Outlet"}
+            />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Outlet</SelectItem>
             {brands.map((b) => (
-              <SelectItem key={b.id} value={String(b.id)}>
+              <SelectItem key={b.id} value={b.id}>
                 {b.name}
               </SelectItem>
             ))}
@@ -275,7 +266,7 @@ export function TalentPoolPage() {
       ) : (
         <div className="space-y-3">
           {candidates.map((c) => (
-            <CandidateRow key={c.id} candidate={c as any} onAction={handleAction} />
+            <CandidateRow key={c.id} candidate={c} onAction={handleAction} />
           ))}
         </div>
       )}

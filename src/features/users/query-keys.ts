@@ -6,7 +6,6 @@ export const usersQueryKeys = {
   detail: (id: string) => ["users", "detail", id] as const,
   directoryStats: () => ["users", "directory-stats"] as const,
   formLookups: () => ["users", "form-lookups"] as const,
-  branchStalls: (branchId: string) => ["users", "branch-stalls", branchId] as const,
   hrisEmployee: (id: string) => ["users", "hris-employee", id] as const,
   documents: (employeeId: string) => ["users", "documents", employeeId] as const,
   recruitmentDocs: (employeeId: string) => ["users", "recruitment-docs", employeeId] as const,
@@ -17,4 +16,6 @@ export const usersQueryKeys = {
   lifecycle: (employeeId: string) => ["users", "lifecycle", employeeId] as const,
   contracts: (employeeId: string) => ["users", "contracts", employeeId] as const,
   expiringContracts: (days: number) => ["users", "expiring-contracts", days] as const,
+  shiftOptions: () => ["users", "shift-options"] as const,
+  shiftSchedule: (employeeId: string) => ["users", "shift-schedule", employeeId] as const,
 };

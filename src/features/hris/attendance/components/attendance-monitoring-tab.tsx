@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,150 +12,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertTriangle, CalendarOff, Clock, RefreshCw, Users } from "lucide-react";
-import { SelfiePhotoDialog } from "./selfie-photo-dialog";
-import { LEAVE_TYPE_LABELS } from "@/types/hris";
-import { fetchDailyRoster } from "../api";
-import type { DailyRosterData, RosterEmployee, RosterStatus } from "../types";
+import { CalendarOff, Clock, RefreshCw, Users } from "lucide-react";
+import { todayWib } from "@/lib/dates";
+import { shiftClock } from "@/lib/hris/attendance-calendar";
+import { useDailyRoster } from "../queries";
+import type { RosterStatus } from "../types";
+import { RosterRow, STATUS_META } from "./roster-row";
 
 /**
- * Tab "Monitoring" absensi HRD — roster satu hari: siapa sudah/belum absen
+ * Tab "Monitoring" absensi HRD: roster satu hari, siapa sudah/belum absen
  * per shift, plus cuti/libur/tanpa jadwal. Karyawan terjadwal yang melewati
  * jam mulai + toleransi tanpa clock-in ditonjolkan (is_overdue).
  */
 
-const STATUS_META: Record<RosterStatus, { label: string; className: string }> = {
-  hadir: { label: "Hadir", className: "bg-green-100 text-green-700" },
-  terlambat: { label: "Terlambat", className: "bg-yellow-100 text-yellow-700" },
-  belum_absen: { label: "Belum Absen", className: "bg-gray-100 text-gray-600" },
-  absen: { label: "Tidak Hadir", className: "bg-red-100 text-red-700" },
-  cuti: { label: "Cuti/Izin", className: "bg-blue-100 text-blue-700" },
-  libur_nasional: { label: "Libur Nasional", className: "bg-red-100 text-red-600" },
-  libur: { label: "Libur", className: "bg-slate-100 text-slate-500" },
-  tanpa_jadwal: { label: "Tanpa Jadwal", className: "bg-orange-100 text-orange-700" },
-};
-
-function todayWib(): string {
-  return new Date(Date.now() + 7 * 3600_000).toISOString().split("T")[0];
-}
-
-function formatTimeWib(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
-}
-
-/** "08:00:00" → "08.00" utk header shift. */
-function formatShiftTime(time: string): string {
-  return time.slice(0, 5).replace(":", ".");
-}
-
-function RosterRow({ emp, isToday }: { emp: RosterEmployee; isToday: boolean }) {
-  const meta = STATUS_META[emp.status];
-  const overdue = emp.is_overdue && isToday;
-  return (
-    <div
-      className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${
-        overdue ? "border-red-300 bg-red-50" : "border-gray-100 bg-white"
-      }`}
-    >
-      {emp.photo_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={emp.photo_url}
-          alt={emp.full_name}
-          className="w-9 h-9 rounded-full object-cover shrink-0"
-        />
-      ) : (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
-          {emp.full_name.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-gray-900">{emp.full_name}</p>
-        <p className="truncate text-xs text-gray-500">
-          {[emp.nip, emp.department_name, emp.job_title].filter(Boolean).join(" · ") || "—"}
-        </p>
-      </div>
-      {emp.attendance ? (
-        <div className="text-right text-xs text-gray-600">
-          <p>
-            Masuk <span className="font-medium">{formatTimeWib(emp.attendance.clock_in)}</span>
-            {emp.attendance.is_late && (
-              <span className="ml-1 text-yellow-700">(+{emp.attendance.late_minutes} mnt)</span>
-            )}
-          </p>
-          <p>
-            Pulang <span className="font-medium">{formatTimeWib(emp.attendance.clock_out)}</span>
-          </p>
-          <div className="mt-0.5 flex justify-end gap-2">
-            <SelfiePhotoDialog
-              path={emp.attendance.clock_in_photo_url}
-              label="masuk"
-              employeeName={emp.full_name}
-              time={formatTimeWib(emp.attendance.clock_in)}
-              showLabel
-              emptyFallback={null}
-            />
-            <SelfiePhotoDialog
-              path={emp.attendance.clock_out_photo_url}
-              label="pulang"
-              employeeName={emp.full_name}
-              time={formatTimeWib(emp.attendance.clock_out)}
-              showLabel
-              emptyFallback={null}
-            />
-          </div>
-        </div>
-      ) : emp.leave ? (
-        <p className="text-xs text-gray-500">
-          {(emp.leave.leave_type &&
-            LEAVE_TYPE_LABELS[emp.leave.leave_type as keyof typeof LEAVE_TYPE_LABELS]) ||
-            "Cuti"}
-        </p>
-      ) : null}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {overdue && (
-          <Badge className="bg-red-100 text-red-700">
-            <AlertTriangle className="w-3 h-3" /> Lewat toleransi
-          </Badge>
-        )}
-        <Badge className={meta.className}>{meta.label}</Badge>
-      </div>
-    </div>
-  );
-}
-
 export function AttendanceMonitoringTab() {
-  const [date, setDate] = useState(todayWib);
-  const [data, setData] = useState<DailyRosterData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [date, setDate] = useState(() => todayWib());
+  const rosterQuery = useDailyRoster(date);
+  const data = rosterQuery.data ?? null;
+  const loading = rosterQuery.isLoading || rosterQuery.isFetching;
+  const error = rosterQuery.error ? rosterQuery.error.message || "Gagal memuat roster" : null;
   const [filterStatus, setFilterStatus] = useState<"all" | RosterStatus>("all");
   const [filterShift, setFilterShift] = useState<string>("all");
   const [search, setSearch] = useState("");
-
-  const load = useCallback(async (targetDate: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setData(await fetchDailyRoster(targetDate));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat roster");
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load(date);
-  }, [date, load]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -175,7 +53,7 @@ export function AttendanceMonitoringTab() {
     if (!data) return [];
     const byShift = data.shifts.map((shift) => ({
       key: shift.id,
-      title: `${shift.name} (${formatShiftTime(shift.start_time)}–${formatShiftTime(shift.end_time)}${shift.is_overnight ? " +1 hari" : ""})`,
+      title: `${shift.name} (${shiftClock(shift.start_time)}–${shiftClock(shift.end_time)}${shift.is_overnight ? " +1 hari" : ""})`,
       employees: filtered.filter((emp) => emp.shift?.id === shift.id),
     }));
     const offSchedule = {
@@ -210,7 +88,7 @@ export function AttendanceMonitoringTab() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => void load(date)}
+                  onClick={() => void rosterQuery.refetch()}
                   title="Muat ulang"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -302,7 +180,7 @@ export function AttendanceMonitoringTab() {
       )}
 
       {/* Isi roster */}
-      {loading ? (
+      {rosterQuery.isLoading ? (
         <div className="flex justify-center py-12">
           <div className="animate-spin w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full" />
         </div>

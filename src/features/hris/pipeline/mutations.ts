@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Candidate } from "@/types";
 import { pipelineQueryKeys } from "./query-keys";
 import { candidatesQueryKeys } from "@/features/hris/candidates/query-keys";
 import {
@@ -17,13 +16,18 @@ import {
   savePsikotesSummary,
   reviewPsikotesTest,
   requestPsikotesAiInsight,
-  type CandidateNote,
-  type ScreeningPayload,
-  type PsikotesSummaryPayload,
-  type CandidatePsikotesData,
-  type WaTemplateKey,
 } from "./api";
-import type { UpdateCandidateStagePayload } from "./types";
+import type {
+  Candidate,
+  CandidateNote,
+  CandidatePsikotesData,
+  OfferCreatePayload,
+  OfferResponseStatus,
+  PsikotesSummaryPayload,
+  ScreeningPayload,
+  UpdateCandidateStagePayload,
+  WaTemplateKey,
+} from "./types";
 
 export function useUpdateCandidateStage() {
   const qc = useQueryClient();
@@ -173,13 +177,7 @@ export function useCreateOffer() {
       payload,
     }: {
       id: string;
-      payload: {
-        base_salary: number;
-        benefits: string[];
-        start_date?: string | null;
-        notes?: string | null;
-        expires_days: number;
-      };
+      payload: OfferCreatePayload;
     }) => createCandidateOffer(id, payload),
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: pipelineQueryKeys.offers(id) });
@@ -197,7 +195,7 @@ export function useRecordOfferResponse() {
     }: {
       offerId: string;
       candidateId: string;
-      payload: { status: "negotiating" | "accepted" | "declined"; note?: string | null };
+      payload: { status: OfferResponseStatus; note?: string | null };
     }) => recordOfferResponse(offerId, payload),
     onSuccess: (_data, { candidateId }) => {
       qc.invalidateQueries({ queryKey: pipelineQueryKeys.offers(candidateId) });

@@ -26,17 +26,16 @@ export function DrawingRunner({ token, data, onFinished }: DrawingRunnerProps) {
   const [uploading, setUploading] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const remaining = useCountdown(data.ends_at);
 
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  // object URL lama dilepas saat diganti atau komponen dilepas
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
+
+  const pickFile = (next: File | null) => {
+    setFile(next);
+    setPreviewUrl(next ? URL.createObjectURL(next) : null);
+  };
 
   const handleUpload = async () => {
     if (!file || uploading) return;
@@ -66,11 +65,8 @@ export function DrawingRunner({ token, data, onFinished }: DrawingRunnerProps) {
   };
 
   // waktu habis → server menolak upload baru; selesaikan otomatis
+  const remaining = useCountdown(data.ends_at, () => void handleFinish());
   const timeUp = remaining !== null && remaining <= 0;
-  useEffect(() => {
-    if (timeUp) void handleFinish();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timeUp]);
 
   return (
     <Card className="flex flex-col gap-4 p-5">
@@ -98,12 +94,12 @@ export function DrawingRunner({ token, data, onFinished }: DrawingRunnerProps) {
             accept="image/jpeg,image/png,image/webp"
             capture="environment"
             className="hidden"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
           />
         </label>
 
         {previewUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
+          // eslint-disable-next-line @next/next/no-img-element -- pratinjau blob: lokal, next/image tidak mendukung
           <img
             src={previewUrl}
             alt="Pratinjau hasil gambar"

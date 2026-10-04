@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { todayWib } from "@/lib/dates";
 import { CalendarPlus, ClipboardList, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,8 +30,6 @@ import { LogbookNoteDialog } from "./note-dialog";
 import { LogbookStatusBadge } from "./logbook-status";
 import { LogbookQueryError } from "./query-error";
 
-const today = new Date().toISOString().slice(0, 10);
-
 /**
  * Tab Checklist — alur template-first sesuai keputusan owner:
  * 1) pilih template (atau buat baru via tab Template), 2) generate logbook
@@ -37,15 +37,13 @@ const today = new Date().toISOString().slice(0, 10);
  */
 export function LogbookChecklistTab({
   departmentId,
-  showToast,
   onGoToTemplates,
 }: {
   departmentId: string;
-  showToast: (message: string, type?: "success" | "error") => void;
   onGoToTemplates: () => void;
 }) {
   const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [entryDate, setEntryDate] = useState(today);
+  const [entryDate, setEntryDate] = useState(() => todayWib());
   const [selectedEntryId, setSelectedEntryId] = useState("");
   const [noteItem, setNoteItem] = useState<LogbookEntryItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LogbookEntry | null>(null);
@@ -74,7 +72,7 @@ export function LogbookChecklistTab({
 
   async function createEntry() {
     if (!selectedTemplate) {
-      showToast("Pilih template terlebih dulu", "error");
+      toast.error("Pilih template terlebih dulu");
       return;
     }
     try {
@@ -83,12 +81,9 @@ export function LogbookChecklistTab({
         entry_date: entryDate,
       });
       setSelectedEntryId(res.data?.id || "");
-      showToast("Logbook berhasil dibuat dari template", "success");
+      toast.success("Logbook berhasil dibuat dari template");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal membuat logbook",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal membuat logbook");
     }
   }
 
@@ -96,10 +91,7 @@ export function LogbookChecklistTab({
     try {
       await updateItemMutation.mutateAsync({ item_id: item.id, is_checked: checked });
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal update checklist",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal update checklist");
     }
   }
 
@@ -107,24 +99,18 @@ export function LogbookChecklistTab({
     try {
       await updateItemMutation.mutateAsync({ item_id: itemId, notes });
       setNoteItem(null);
-      showToast("Catatan tersimpan", "success");
+      toast.success("Catatan tersimpan");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menyimpan catatan",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan catatan");
     }
   }
 
   async function submitEntry(entryId: string) {
     try {
       await updateStatusMutation.mutateAsync({ action: "submit-entry", entry_id: entryId });
-      showToast("Logbook disubmit — menunggu review", "success");
+      toast.success("Logbook disubmit — menunggu review");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal submit logbook",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal submit logbook");
     }
   }
 
@@ -134,12 +120,9 @@ export function LogbookChecklistTab({
       await deleteEntryMutation.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
       setSelectedEntryId("");
-      showToast("Logbook draft dihapus", "success");
+      toast.success("Logbook draft dihapus");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menghapus logbook",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus logbook");
     }
   }
 

@@ -30,7 +30,10 @@ import {
 } from "@/components/ui/table";
 import { SkeletonTable } from "@/components/ui/skeleton-table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { useToast, ToastContainer } from "@/components/ui/toast";
+import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
+import { MONTH_NAMES_ID, monthName } from "@/lib/hris/month-label";
+import { toScore } from "@/lib/kpi/ui-performance";
 import { useKpiScorecards } from "../queries";
 import {
   useRunKpiSnapshot,
@@ -43,20 +46,8 @@ import { KpiTargetsDialog } from "./targets-dialog";
 import { KPI_SCORECARD_ROLES } from "@/lib/kpi/roles";
 import { useLogbookDepartments } from "@/features/hris/logbook";
 
-const MONTH_LABELS = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-const num = (value: number | string | null | undefined): number | null => {
-  if (value === null || value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
 /** Halaman HRD: KPI Scorecard per periode (EPIC-010 Fase C). */
 export function KpiScorecardPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -88,18 +79,15 @@ export function KpiScorecardPage() {
         period_month: month,
         period_year: year,
       });
-      showToast(res.message || "Snapshot selesai", "success");
+      toast.success(res.message || "Snapshot selesai");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menjalankan snapshot",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menjalankan snapshot");
     }
   }
 
   async function saveRubric(scorecard: KpiScorecardRow) {
     if (!rubricValue) {
-      showToast("Pilih nilai rubrik 1-5", "error");
+      toast.error("Pilih nilai rubrik 1-5");
       return;
     }
     try {
@@ -112,12 +100,9 @@ export function KpiScorecardPage() {
       });
       setRubricValue("");
       setRubricNotes("");
-      showToast("Rubrik tersimpan — skor diperbarui", "success");
+      toast.success("Rubrik tersimpan — skor diperbarui");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menyimpan rubrik",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan rubrik");
     }
   }
 
@@ -128,19 +113,13 @@ export function KpiScorecardPage() {
         action,
         scorecard_id: scorecard.id,
       });
-      showToast(
-        action === "finalize" ? "Scorecard difinalkan" : "Scorecard dibuka kembali",
-        "success"
-      );
+      toast.success(action === "finalize" ? "Scorecard difinalkan" : "Scorecard dibuka kembali");
       // Fase E: buka WhatsApp pemberitahuan skor final (bila ada no. HP)
       if (action === "finalize" && res.wa_link) {
         window.open(res.wa_link, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal mengubah status",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal mengubah status");
     }
   }
 
@@ -168,7 +147,7 @@ export function KpiScorecardPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MONTH_LABELS.map((label, index) => (
+                {MONTH_NAMES_ID.map((label, index) => (
                   <SelectItem key={label} value={String(index + 1)}>
                     {label}
                   </SelectItem>
@@ -209,7 +188,7 @@ export function KpiScorecardPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Scorecard {MONTH_LABELS[month - 1]} {year}
+            Scorecard {monthName(month)} {year}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -233,7 +212,7 @@ export function KpiScorecardPage() {
               </TableHeader>
               <TableBody>
                 {rows.map((row) => {
-                  const score = num(row.score);
+                  const score = toScore(row.score);
                   return (
                     <TableRow key={row.id}>
                       <TableCell className="font-medium">
@@ -249,7 +228,7 @@ export function KpiScorecardPage() {
                           <span className="text-muted-foreground">tanpa data</span>
                         ) : (
                           <span className="font-semibold">
-                            {score.toLocaleString("id-ID")}
+                            {formatNumber(score, 3)}
                           </span>
                         )}
                       </TableCell>
@@ -287,7 +266,7 @@ export function KpiScorecardPage() {
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              {detail?.employee?.full_name} — {MONTH_LABELS[month - 1]} {year}
+              {detail?.employee?.full_name} — {monthName(month)} {year}
             </DialogTitle>
           </DialogHeader>
           {detail && (
@@ -300,7 +279,7 @@ export function KpiScorecardPage() {
                     Penilaian Atasan (rubrik 1–5)
                     {rubricSnapshot?.attainment != null && (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
-                        tersimpan: {(rubricSnapshot.attainment * 5).toLocaleString("id-ID")}/5
+                        tersimpan: {formatNumber(rubricSnapshot.attainment * 5, 3)}/5
                       </span>
                     )}
                   </Label>
@@ -352,7 +331,7 @@ export function KpiScorecardPage() {
       <ConfirmDialog
         open={showRunConfirm}
         onOpenChange={setShowRunConfirm}
-        title={`Jalankan snapshot ${MONTH_LABELS[month - 1]} ${year}?`}
+        title={`Jalankan snapshot ${monthName(month)} ${year}?`}
         description="Angka aktual ditarik ulang dari data operasional. Scorecard berstatus FINAL tidak akan tersentuh."
         confirmLabel="Jalankan"
         loadingLabel="Menghitung..."
@@ -366,10 +345,8 @@ export function KpiScorecardPage() {
         indicators={indicators}
         roleCodes={[...KPI_SCORECARD_ROLES]}
         departments={departments}
-        showToast={showToast}
       />
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

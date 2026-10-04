@@ -1,6 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { apiPost } from '@/lib/api-client';
+import { todayWib } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,45 +40,34 @@ interface PromoteCandidateButtonProps {
 
 export function PromoteCandidateButton({ candidate, onSuccess }: PromoteCandidateButtonProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [joinDate, setJoinDate] = useState(new Date().toISOString().split('T')[0]);
+  const [joinDate, setJoinDate] = useState(todayWib);
   const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus>('probation');
+  const promote = useMutation({
+    mutationFn: () =>
+      apiPost<{ nip?: string; contract_number?: string | null }>('/api/hris/promote', {
+        candidate_id: candidate.id,
+        join_date: joinDate,
+        employment_status: employmentStatus,
+      }),
+    retry: false,
+  });
+  const loading = promote.isPending;
 
-  const handlePromote = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/hris/promote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          candidate_id: candidate.id,
-          join_date: joinDate,
-          employment_status: employmentStatus,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Promote error response:', result);
-        throw new Error(result.details || result.error || 'Gagal mempromosikan kandidat');
-      }
-
-      // Success!
-      alert(
-        `Berhasil mempromosikan ${candidate.full_name} menjadi karyawan!\nNIP: ${result.nip}` +
-          (result.contract_number
-            ? `\nDraft kontrak ${result.contract_number} dibuat otomatis — cek tab Kontrak.`
-            : '')
-      );
-      setOpen(false);
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error promoting candidate:', error);
-      alert(error instanceof Error ? error.message : 'Gagal mempromosikan kandidat');
-    } finally {
-      setLoading(false);
-    }
+  const handlePromote = () => {
+    promote.mutate(undefined, {
+      onSuccess: (result) => {
+        toast.success(`Berhasil mempromosikan ${candidate.full_name} menjadi karyawan!`, {
+          description:
+            `NIP: ${result.nip}` +
+            (result.contract_number
+              ? `. Draft kontrak ${result.contract_number} dibuat otomatis — cek tab Kontrak.`
+              : ''),
+        });
+        setOpen(false);
+        onSuccess?.();
+      },
+      onError: (error) => toast.error(error.message || 'Gagal mempromosikan kandidat'),
+    });
   };
 
   // Don't show button if already promoted

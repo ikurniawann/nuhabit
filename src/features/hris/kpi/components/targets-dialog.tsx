@@ -26,17 +26,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
+import { MONTH_SHORT_ID } from "@/lib/hris/month-label";
 import { useKpiTargets } from "../queries";
 import { useCreateKpiTarget, useDeleteKpiTarget } from "../mutations";
 import type { KpiIndicatorInfo, KpiTargetRowUI } from "../types";
 
 const SCOPE_GLOBAL = "global";
 const PERIOD_ALL = "all";
-
-const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-];
 
 function scopeLabel(row: KpiTargetRowUI): string {
   if (row.employee) return `Karyawan: ${row.employee.full_name}`;
@@ -47,9 +45,9 @@ function scopeLabel(row: KpiTargetRowUI): string {
 
 function periodLabelOf(row: KpiTargetRowUI): string {
   if (row.period_year && row.period_month)
-    return `${MONTH_LABELS[row.period_month - 1]} ${row.period_year}`;
+    return `${MONTH_SHORT_ID[row.period_month]} ${row.period_year}`;
   if (row.period_year) return String(row.period_year);
-  if (row.period_month) return `${MONTH_LABELS[row.period_month - 1]} (tiap tahun)`;
+  if (row.period_month) return `${MONTH_SHORT_ID[row.period_month]} (tiap tahun)`;
   return "Berlaku umum";
 }
 
@@ -64,14 +62,12 @@ export function KpiTargetsDialog({
   indicators,
   roleCodes,
   departments,
-  showToast,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   indicators: KpiIndicatorInfo[];
   roleCodes: string[];
   departments: { id: string; name: string }[];
-  showToast: (message: string, type?: "success" | "error") => void;
 }) {
   const [indicatorCode, setIndicatorCode] = useState("");
   const [scopeType, setScopeType] = useState<string>(SCOPE_GLOBAL);
@@ -102,11 +98,11 @@ export function KpiTargetsDialog({
   async function submit() {
     const indicator = selectedIndicator;
     if (!indicator) {
-      showToast("Pilih indikator", "error");
+      toast.error("Pilih indikator");
       return;
     }
     if (normalizedPreview === null) {
-      showToast("Isi nilai target yang valid", "error");
+      toast.error("Isi nilai target yang valid");
       return;
     }
     const normalized = normalizedPreview;
@@ -123,24 +119,18 @@ export function KpiTargetsDialog({
         department_id: scopeType === "department" ? scopeValue || null : null,
       });
       setTargetValue("");
-      showToast("Target tersimpan", "success");
+      toast.success("Target tersimpan");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menyimpan target",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan target");
     }
   }
 
   async function remove(id: string) {
     try {
       await deleteMutation.mutateAsync(id);
-      showToast("Target dihapus", "success");
+      toast.success("Target dihapus");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menghapus target",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus target");
     }
   }
 
@@ -251,7 +241,7 @@ export function KpiTargetsDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTH_LABELS.map((label, index) => (
+                    {MONTH_SHORT_ID.slice(1).map((label, index) => (
                       <SelectItem key={label} value={String(index + 1)}>
                         {label}
                       </SelectItem>
@@ -283,8 +273,8 @@ export function KpiTargetsDialog({
                   Disimpan sebagai:{" "}
                   <span className="font-medium">
                     {isPercentUnit
-                      ? `${parsedInput.toLocaleString("id-ID")}% (rasio ${normalizedPreview.toLocaleString("id-ID", { maximumFractionDigits: 4 })})`
-                      : normalizedPreview.toLocaleString("id-ID")}
+                      ? `${formatNumber(parsedInput, 3)}% (rasio ${formatNumber(normalizedPreview, 4)})`
+                      : formatNumber(normalizedPreview, 3)}
                   </span>
                 </p>
               )}
@@ -325,8 +315,8 @@ export function KpiTargetsDialog({
                   <TableCell>{periodLabelOf(row)}</TableCell>
                   <TableCell className="text-right">
                     {row.indicator?.unit === "%" || row.indicator?.unit === "rasio"
-                      ? `${(Number(row.target) * 100).toLocaleString("id-ID", { maximumFractionDigits: 2 })}%`
-                      : Number(row.target).toLocaleString("id-ID")}
+                      ? `${formatNumber(Number(row.target) * 100, 2)}%`
+                      : formatNumber(row.target, 3)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

@@ -1,79 +1,38 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
-import { queryOne } from "@/lib/db";
-import {
-  putOffer,
-  getAnswer,
-  isValidSdp,
-  type LiveSessionType,
-} from "@/lib/recruitment/webrtc-signaling";
+import { isUuid } from "@/lib/recruitment/candidate-query";
+import { isLiveSessionRunning, isLiveSessionType } from "@/lib/recruitment/live-monitor";
+import { parseJsonBody } from "@/lib/recruitment/route-helpers";
+import { getAnswer, putOffer, sdpSchema } from "@/lib/recruitment/webrtc-signaling";
 
 /**
  * Signaling WebRTC sisi HRD:
- * POST /api/recruitment/live-monitoring/[type]/[id]/webrtc  {offer_id, sdp}
- * GET  ...?offer_id=xxx → {sdp: answer|null}
+ * POST {offer_id, sdp} → simpan offer; GET ?offer_id=xxx → {sdp: answer|null}.
  */
 
-const MONITOR_ROLES = ["super_admin", "admin", "hrd"] as const;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+type Ctx = { params: Promise<{ type: string; id: string }> };
 const OFFER_ID_RE = /^[a-z0-9-]{8,64}$/i;
+const offerSchema = z.object({ offer_id: z.string().regex(OFFER_ID_RE), sdp: sdpSchema });
 
-async function sessionExists(type: string, id: string): Promise<boolean> {
-  if ((type !== "psikotes" && type !== "interview") || !UUID_RE.test(id)) return false;
-  const table =
-    type === "psikotes" ? "recruitment.psikotes_sessions" : "recruitment.interview_ai_sessions";
-  const row = await queryOne<{ id: string }>(
-    `SELECT id FROM ${table} WHERE id = $1 AND status = 'in_progress'`,
-    [id]
-  );
-  return Boolean(row);
-}
-
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ type: string; id: string }> }
-) {
-  try {
-    await requireIamMenuPrefix(IAM.hrisRecruitment);
-    const { type, id } = await params;
-    if (!(await sessionExists(type, id))) {
-      return NextResponse.json({ error: "Sesi tidak sedang berjalan" }, { status: 404 });
-    }
-    const body = await req.json().catch(() => null);
-    const offerId = (body as { offer_id?: unknown })?.offer_id;
-    const sdp = (body as { sdp?: unknown })?.sdp;
-    if (typeof offerId !== "string" || !OFFER_ID_RE.test(offerId) || !isValidSdp(sdp)) {
-      return NextResponse.json({ error: "Payload tidak valid" }, { status: 400 });
-    }
-    putOffer(type as LiveSessionType, id, offerId, sdp);
-    return NextResponse.json({ data: { ok: true } }, { status: 201 });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[live-webrtc] POST failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+export const POST = apiHandler(async (req: NextRequest, { params }: Ctx) => {
+  await requireIamMenuPrefix(IAM.hrisRecruitment);
+  const { type, id } = await params;
+  if (!isLiveSessionType(type) || !(await isLiveSessionRunning(type, id))) {
+    throw ApiError.notFound("Sesi tidak sedang berjalan");
   }
-}
+  const { offer_id, sdp } = await parseJsonBody(req, offerSchema, "Payload tidak valid");
+  putOffer(type, id, offer_id, sdp);
+  return NextResponse.json({ data: { ok: true } }, { status: 201 });
+}, "live-webrtc");
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ type: string; id: string }> }
-) {
-  try {
-    await requireIamMenuPrefix(IAM.hrisRecruitment);
-    const { type, id } = await params;
-    if ((type !== "psikotes" && type !== "interview") || !UUID_RE.test(id)) {
-      return NextResponse.json({ error: "Sesi tidak valid" }, { status: 400 });
-    }
-    const offerId = req.nextUrl.searchParams.get("offer_id") ?? "";
-    if (!OFFER_ID_RE.test(offerId)) {
-      return NextResponse.json({ error: "offer_id tidak valid" }, { status: 400 });
-    }
-    const sdp = getAnswer(type as LiveSessionType, id, offerId);
-    return NextResponse.json({ data: { sdp } });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[live-webrtc] GET failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+export const GET = apiHandler(async (req: NextRequest, { params }: Ctx) => {
+  await requireIamMenuPrefix(IAM.hrisRecruitment);
+  const { type, id } = await params;
+  if (!isLiveSessionType(type) || !isUuid(id)) throw ApiError.badRequest("Sesi tidak valid");
+  const offerId = req.nextUrl.searchParams.get("offer_id") ?? "";
+  if (!OFFER_ID_RE.test(offerId)) throw ApiError.badRequest("offer_id tidak valid");
+  return NextResponse.json({ data: { sdp: getAnswer(type, id, offerId) } });
+}, "live-webrtc");

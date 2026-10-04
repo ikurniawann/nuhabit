@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BrainCircuit, BotMessageSquare, Loader2, MessageCircle, Video, VideoOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { elapsedLabel, isFrameStale } from "@/lib/recruitment/live-monitoring-view";
 import { useLiveSessions } from "../queries";
-import { liveFrameUrl } from "../api";
-import type { LiveMonitorSession } from "../api";
+import { liveFrameUrl, type LiveMonitorSession } from "../api";
 
 const TYPE_META = {
   psikotes: {
@@ -21,13 +21,6 @@ const TYPE_META = {
   },
 } as const;
 
-function elapsed(startedAt: string | null): string {
-  if (!startedAt) return "";
-  const mins = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 60_000));
-  if (mins < 60) return `${mins} mnt`;
-  return `${Math.floor(mins / 60)} jam ${mins % 60} mnt`;
-}
-
 /** Frame live yang refresh sendiri; onError → tampilkan placeholder. */
 function LiveThumbnail({
   session,
@@ -40,11 +33,7 @@ function LiveThumbnail({
 }) {
   const [failed, setFailed] = useState(false);
   const hasFrame = Boolean(session.frame_updated_at) && !failed;
-  // frame dianggap basi bila > 30 detik tidak diperbarui
-  const stale =
-    now > 0 &&
-    session.frame_updated_at != null &&
-    now - new Date(session.frame_updated_at).getTime() > 30_000;
+  const stale = isFrameStale(session.frame_updated_at, now);
 
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-gray-900">
@@ -161,7 +150,7 @@ export function LiveMonitoringPage() {
                         {meta.icon} {meta.label}
                       </span>
                       {session.position_title && <span>{session.position_title}</span>}
-                      {session.started_at && <span>· {elapsed(session.started_at)}</span>}
+                      {session.started_at && now > 0 && <span>· {elapsedLabel(session.started_at, now)}</span>}
                     </div>
                   </div>
                 </Card>

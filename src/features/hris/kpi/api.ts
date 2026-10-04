@@ -1,26 +1,23 @@
-import { apiGet, buildListUrl } from "@/lib/api-client";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, buildListUrl } from "@/lib/api-client";
 import type {
+  CreateDeptTaskPayload,
+  CreateKpiTargetPayload,
+  DeptOccurrenceAction,
+  DeptTasksData,
+  KpiConfigData,
   KpiScorecardsResult,
+  KpiTargetRowUI,
+  PerfCycleRow,
+  PerfRealtimeData,
+  PerfReviewDetail,
+  PerfReviewPatch,
+  PerfReviewsData,
+  SaveKpiConfigPayload,
   SaveRubricPayload,
   SnapshotSummaryResult,
 } from "./types";
 
 const BASE = "/api/hris/kpi";
-
-async function mutateKpi(
-  method: "POST" | "PATCH",
-  path: string,
-  body: Record<string, unknown>
-) {
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error || "Request failed");
-  return json;
-}
 
 export const fetchKpiScorecards = (params: {
   period_year: number;
@@ -39,23 +36,19 @@ export const runKpiSnapshotApi = (payload: {
   period_month: number;
   period_year: number;
 }) =>
-  mutateKpi("POST", "/snapshot", payload) as Promise<{
-    data: SnapshotSummaryResult;
-    message?: string;
-  }>;
+  apiPost<{ data: SnapshotSummaryResult; message?: string }>(`${BASE}/snapshot`, payload);
 
 export const saveKpiRubric = (payload: SaveRubricPayload) =>
-  mutateKpi("POST", "/rubric", { ...payload });
+  apiPost<{ data: unknown }>(`${BASE}/rubric`, payload);
 
 export const updateScorecardStatus = (payload: {
   action: "finalize" | "reopen";
   scorecard_id: string;
 }) =>
-  mutateKpi("PATCH", "/scorecards", payload) as Promise<{
-    data: unknown;
-    wa_link?: string | null;
-    message?: string;
-  }>;
+  apiPatch<{ data: unknown; wa_link?: string | null; message?: string }>(
+    `${BASE}/scorecards`,
+    payload
+  );
 
 export const fetchKpiTeam = (params: {
   period_year: number;
@@ -66,16 +59,64 @@ export const fetchKpiTeam = (params: {
   );
 
 export const fetchKpiTargets = () =>
-  apiGet<{ data: import("./types").KpiTargetRowUI[] }>(`${BASE}/targets`).then(
+  apiGet<{ data: KpiTargetRowUI[] }>(`${BASE}/targets`).then(
     (res) => res.data
   );
 
-export const createKpiTarget = (payload: import("./types").CreateKpiTargetPayload) =>
-  mutateKpi("POST", "/targets", { ...payload });
+export const createKpiTarget = (payload: CreateKpiTargetPayload) =>
+  apiPost<{ data: unknown }>(`${BASE}/targets`, payload);
 
-export const deleteKpiTarget = async (id: string) => {
-  const res = await fetch(`${BASE}/targets?id=${id}`, { method: "DELETE" });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error || "Request failed");
-  return json;
-};
+export const deleteKpiTarget = (id: string) =>
+  apiDelete(buildListUrl(`${BASE}/targets`, { id }));
+
+// ── Task Departemen ──
+const DEPT_TASKS = "/api/hris/dept-tasks";
+
+export const fetchDeptTasks = (month: string, departmentId?: string) =>
+  apiGet<{ data: DeptTasksData }>(
+    buildListUrl(DEPT_TASKS, { month, department_id: departmentId })
+  ).then((res) => res.data);
+
+export const updateDeptOccurrence = (occurrenceId: string, body: DeptOccurrenceAction) =>
+  apiPatch<{ message?: string }>(`${DEPT_TASKS}/occurrences/${occurrenceId}`, body);
+
+export const createDeptTask = (payload: CreateDeptTaskPayload) =>
+  apiPost<{ message?: string }>(DEPT_TASKS, payload);
+
+// ── Performance Review ──
+const PERF = "/api/hris/performance";
+
+/** Tanpa year/quarter: server memakai kuartal berjalan. */
+export const fetchPerfRealtime = (year?: number, quarter?: number) =>
+  apiGet<{ data: PerfRealtimeData }>(buildListUrl(`${PERF}/realtime`, { year, quarter })).then(
+    (res) => res.data
+  );
+
+export const fetchPerfCycles = () =>
+  apiGet<{ data: { cycles: PerfCycleRow[]; is_hr: boolean } }>(`${PERF}/cycles`).then(
+    (res) => res.data
+  );
+
+export const createPerfCycle = (periodYear: number, periodQuarter: number) =>
+  apiPost<{ message?: string }>(`${PERF}/cycles`, {
+    period_year: periodYear,
+    period_quarter: periodQuarter,
+  });
+
+export const fetchPerfReviews = (cycleId: string) =>
+  apiGet<{ data: PerfReviewsData }>(
+    buildListUrl(`${PERF}/reviews`, { cycle_id: cycleId })
+  ).then((res) => res.data);
+
+export const fetchPerfReview = (id: string) =>
+  apiGet<{ data: PerfReviewDetail }>(`${PERF}/reviews/${id}`).then((res) => res.data);
+
+export const patchPerfReview = (id: string, payload: PerfReviewPatch) =>
+  apiPatch<{ message?: string }>(`${PERF}/reviews/${id}`, payload);
+
+// ── Konfigurasi KPI per departemen ──
+export const fetchKpiConfig = () =>
+  apiGet<{ data: KpiConfigData }>("/api/hris/kpi-config").then((res) => res.data);
+
+export const saveKpiConfig = (payload: SaveKpiConfigPayload) =>
+  apiPut<{ message?: string }>("/api/hris/kpi-config", payload);

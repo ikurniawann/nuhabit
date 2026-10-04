@@ -1,4 +1,4 @@
-import type { PsikotesSessionTest } from "../api";
+import type { PsikotesSessionTest } from "../types";
 
 /** Label & badge status tes psikotes utk panel HRD (bahasa HR, bukan enum). */
 export const PSIKOTES_TEST_STATUS: Record<
@@ -26,10 +26,3 @@ export const PSIKOTES_TEST_STATUS: Record<
     badge: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300",
   },
 };
-
-/** Status tes yang dianggap tuntas dari sisi kandidat. */
-export const PSIKOTES_TERMINAL_STATUSES: PsikotesSessionTest["status"][] = [
-  "selesai",
-  "perlu_review",
-  "reviewed",
-];

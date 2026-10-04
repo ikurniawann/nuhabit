@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Loader2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { apiGet } from "@/lib/api-client";
 import { EmployeeShiftsTab } from "@/features/users/components/employee-shifts-tab";
+import { essQueryKeys } from "../query-keys";
+import { useMyTeam } from "../queries";
+import type { EssTeamMember } from "../types";
 
 /**
  * Area Karyawan → Shift Tim (permintaan owner 2026-08-29): supervisor /
@@ -23,45 +26,20 @@ import { EmployeeShiftsTab } from "@/features/users/components/employee-shifts-t
  * halaman ini hanya menampilkan.
  */
 
-interface TeamMemberRow {
-  id: string;
-  full_name: string;
-  nip: string | null;
-  position_title: string | null;
-  department_name: string | null;
-  photo_url: string | null;
-  schedule_summary: string | null;
-  schedule_since: string | null;
-}
-
 export function EssShiftTimPage() {
-  const [members, setMembers] = useState<TeamMemberRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<TeamMemberRow | null>(null);
-  // Penanda utk memuat ulang ringkasan setelah dialog jadwal ditutup.
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    apiGet<{ data: { members: TeamMemberRow[] } }>("/api/hris/me/team")
-      .then((res) => {
-        if (!cancelled) setMembers(res.data.members);
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Gagal memuat anggota tim");
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
+  const qc = useQueryClient();
+  const teamQuery = useMyTeam();
+  const members = teamQuery.data ?? null;
+  const error = teamQuery.error
+    ? teamQuery.error.message || "Gagal memuat anggota tim"
+    : null;
+  const [editing, setEditing] = useState<EssTeamMember | null>(null);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-          <CalendarDays className="h-6 w-6 text-primary" />
+          <CalendarDays className="h-6 w-6 text-brand-text" />
           Shift Tim
         </h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -109,7 +87,7 @@ export function EssShiftTimPage() {
                     className="h-10 w-10 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-brand-text">
                     {member.full_name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -161,7 +139,7 @@ export function EssShiftTimPage() {
         onOpenChange={(open) => {
           if (!open) {
             setEditing(null);
-            setRefreshKey((k) => k + 1); // segarkan ringkasan jadwal
+            void qc.invalidateQueries({ queryKey: essQueryKeys.team() }); // segarkan ringkasan jadwal
           }
         }}
       >

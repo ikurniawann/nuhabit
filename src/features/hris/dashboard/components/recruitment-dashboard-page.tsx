@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { createBrowserClient } from "@/lib/pg/browser-client";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -32,39 +33,37 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
-import { useToast, ToastContainer } from "@/components/ui/toast";
+import { useAuth } from "@/hooks/use-auth";
+import { downloadCSV } from "@/lib/utils/csv-export";
+import { recruitmentDashboardCsv } from "@/lib/recruitment/candidate-csv";
+import { fetchAllCandidates } from "../../candidates/api";
 import { useDashboardBrands, useDashboardData } from "../queries";
-import { fetchDashboardCandidatesForExport } from "../api";
-import { buildRecruitmentReportHtml, csvCell } from "../recruitment-report";
+import { buildRecruitmentReportHtml } from "../recruitment-report";
+import type { DashboardSummary } from "../types";
 
 const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32"];
+const PURCHASING_ROLES = ["purchasing_manager", "purchasing_staff", "purchasing_admin", "warehouse_staff", "qc_staff"];
+const EMPTY_SUMMARY: DashboardSummary = { thisMonth: 0, activePipeline: 0, talentPool: 0, openPositions: 0 };
+
+const SUMMARY_CARDS = [
+  { key: "thisMonth", label: "Kandidat Bulan Ini", Icon: UserGroupIcon, tint: "bg-blue-100", ink: "text-blue-600" },
+  { key: "activePipeline", label: "Pipeline Aktif", Icon: ChartBarIcon, tint: "bg-indigo-100", ink: "text-indigo-600" },
+  { key: "talentPool", label: "Talent Pool", Icon: TrophyIcon, tint: "bg-green-100", ink: "text-green-600" },
+  { key: "openPositions", label: "Lowongan Terbuka", Icon: BriefcaseIcon, tint: "bg-amber-100", ink: "text-amber-600" },
+] as const;
 
 export function RecruitmentDashboardPage() {
   const router = useRouter();
-  const db = useMemo(() => createBrowserClient(), []);
-  const { toasts, showToast: toast, removeToast: dismiss } = useToast();
+  const { user } = useAuth();
 
-  // Redirect purchasing users to /dashboard/purchasing
+  // user POS & purchasing punya beranda sendiri
   useEffect(() => {
-    const checkRole = async () => {
-      const { data: { user } } = await db.auth.getUser();
-      if (user) {
-        const { data: profile } = await db.from("users").select("role").eq("id", user.id).single();
-        if (profile?.role === "super_admin") {
-          return;
-        }
-        if (profile?.role === "pos") {
-          router.replace("/dashboard/pos/cashier-new");
-        } else if (profile && ["purchasing_manager", "purchasing_staff", "purchasing_admin", "warehouse_staff", "qc_staff"].includes(profile.role)) {
-          router.replace("/dashboard/purchasing");
-        }
-      }
-    };
-    checkRole();
-  }, [router]);
+    if (!user || user.role === "super_admin") return;
+    if (user.role === "pos") router.replace("/dashboard/pos/cashier-new");
+    else if (PURCHASING_ROLES.includes(user.role)) router.replace("/dashboard/purchasing");
+  }, [user, router]);
 
   const [brandFilter, setBrandFilter] = useState("all");
   const [period, setPeriod] = useState("month"); // week, month, 3month, 6month
@@ -74,50 +73,32 @@ export function RecruitmentDashboardPage() {
 
   const brands = brandsQuery.data ?? [];
   const loading = dataQuery.isLoading;
-  const summary = dataQuery.data?.summary ?? { thisMonth: 0, activePipeline: 0, talentPool: 0, openPositions: 0 };
+  const summary = dataQuery.data?.summary ?? EMPTY_SUMMARY;
   const weeklyApps = dataQuery.data?.weeklyApps ?? [];
   const sourceDist = dataQuery.data?.sourceDist ?? [];
   const pipelineFunnel = dataQuery.data?.pipelineFunnel ?? [];
   const needsAttention = dataQuery.data?.needsAttention ?? [];
 
-  const fetchData = () => dataQuery.refetch();
-
   const exportCSV = async () => {
     try {
-      const candidates = await fetchDashboardCandidatesForExport(brandFilter);
-
-      const rows = [["Nama", "Posisi", "Brand", "Status", "Sumber", "Tanggal Lamar"]];
-      candidates.forEach((c: any) => {
-        rows.push([
-          c.full_name || "",
-          c.position_title || "",
-          c.brand_name || "",
-          c.status || "",
-          c.source || "",
-          c.created_at ? new Date(c.created_at).toLocaleDateString("id-ID") : "",
-        ]);
-      });
-      const csv = rows.map(r => r.map(csvCell).join(",")).join("\n");
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = "kandidat.csv"; a.click();
-      URL.revokeObjectURL(url);
-      toast("Export CSV berhasil");
-    } catch (err) {
-      toast("Gagal export CSV");
+      const candidates = await fetchAllCandidates({ brand_id: brandFilter === "all" ? undefined : brandFilter });
+      downloadCSV(recruitmentDashboardCsv(candidates), "kandidat.csv");
+      toast.success("Export CSV berhasil");
+    } catch {
+      toast.error("Gagal export CSV");
     }
   };
 
   const exportPDF = () => {
     const printContent = buildRecruitmentReportHtml({
-      periodLabel: new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+      periodLabel: new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric", timeZone: "Asia/Jakarta" }),
       summary,
       pipelineFunnel,
       needsAttention,
     });
     const w = window.open("", "_blank");
     if (w) { w.document.write(printContent); w.document.close(); w.print(); }
-    toast("PDF siap di print");
+    toast.success("PDF siap di print");
   };
 
   return (
@@ -146,7 +127,7 @@ export function RecruitmentDashboardPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Outlet</SelectItem>
-            {brands.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+            {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={period} onValueChange={(v) => setPeriod(v ?? "month")}>
@@ -160,7 +141,7 @@ export function RecruitmentDashboardPage() {
             <SelectItem value="6month">6 Bulan</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline" onClick={fetchData} className="text-sm">Refresh</Button>
+        <Button variant="outline" onClick={() => dataQuery.refetch()} className="text-sm">Refresh</Button>
       </div>
 
       {/* Summary Cards */}
@@ -172,58 +153,21 @@ export function RecruitmentDashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <UserGroupIcon className="w-5 h-5 text-blue-600" />
+          {SUMMARY_CARDS.map(({ key, label, Icon, tint, ink }) => (
+            <Card key={key}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg ${tint} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${ink}`} />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <p className="text-2xl font-bold text-gray-900">{summary[key]}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Kandidat Bulan Ini</p>
-                  <p className="text-2xl font-bold text-gray-900">{summary.thisMonth}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                  <ChartBarIcon className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Pipeline Aktif</p>
-                  <p className="text-2xl font-bold text-gray-900">{summary.activePipeline}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                  <TrophyIcon className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Talent Pool</p>
-                  <p className="text-2xl font-bold text-gray-900">{summary.talentPool}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <BriefcaseIcon className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Lowongan Terbuka</p>
-                  <p className="text-2xl font-bold text-gray-900">{summary.openPositions}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -329,7 +273,7 @@ export function RecruitmentDashboardPage() {
               <div className="py-8 text-center text-gray-400 text-sm">Semua kandidat berjalan lancar</div>
             ) : (
               <div className="space-y-2">
-                {needsAttention.map((a: any) => {
+                {needsAttention.map((a) => {
                   const days = a.days_in_current_status || 0;
                   return (
                     <div key={a.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
@@ -352,16 +296,6 @@ export function RecruitmentDashboardPage() {
         </Card>
       </div>
 
-      <ToastContainer toasts={toasts} removeToast={dismiss} />
     </div>
   );
-}
-
-function Button({ variant, onClick, className, children, ...props }: any) {
-  const base = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus:outline-none disabled:opacity-50 px-3 py-1.5";
-  const variants: Record<string, string> = {
-    outline: "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
-    ghost: "text-gray-600 hover:bg-gray-100",
-  };
-  return <button className={`${base} ${variants[variant || "outline"]} ${className || ""}`} onClick={onClick} {...props}>{children}</button>;
 }

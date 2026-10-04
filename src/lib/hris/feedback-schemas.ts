@@ -90,12 +90,6 @@ export const feedbackSummarySchema = z
   })
   .strip();
 
-/** Ringkasan + nilai akhir yang dihitung server (bukan dari body). */
-export type FeedbackSummaryInsert = z.infer<typeof feedbackSummarySchema> & {
-  final_score?: number;
-  final_grade?: string;
-};
-
 /** Satu objek atau array objek (bulk insert), divalidasi per item. */
 export function oneOrMany<T extends z.ZodTypeAny>(schema: T) {
   return z.union([schema, z.array(schema).min(1).max(500)]);

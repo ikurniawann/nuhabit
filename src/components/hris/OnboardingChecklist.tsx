@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  CheckCircle2,
-  Circle,
-  Clock,
-  User,
-  Calendar,
-  Flag,
-  Loader2,
-  Plus,
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { CheckCircle2, Circle, Clock, User, Calendar, Flag, Loader2 } from "lucide-react";
+import { formatDate } from "@/lib/format";
 import { ONBOARDING_CATEGORY_LABELS, ONBOARDING_PRIORITY_LABELS } from "@/types/hris";
 import {
   Select,
@@ -25,19 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-
-interface OnboardingTask {
-  id: string;
-  task_name: string;
-  category: string;
-  priority: number;
-  due_date: string | null;
-  completed: boolean;
-  completed_at: string | null;
-  assigned_to: string | null;
-  description: string | null;
-}
+import {
+  useCompleteOnboardingTask,
+  useOnboardingTasks,
+  type OnboardingTask,
+} from "./use-onboarding-checklist";
 
 interface OnboardingChecklistProps {
   employeeId: string;
@@ -50,83 +33,25 @@ export function OnboardingChecklist({
   canEdit = false,
   onTaskComplete,
 }: OnboardingChecklistProps) {
-  const [tasks, setTasks] = useState<OnboardingTask[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const { toast } = useToast();
+  const tasksQuery = useOnboardingTasks(employeeId, {
+    category: filterCategory !== "all" ? filterCategory : undefined,
+    completed: filterStatus !== "all" ? filterStatus : undefined,
+  });
+  const tasks = tasksQuery.data ?? [];
+  const isLoading = tasksQuery.isLoading;
+  const complete = useCompleteOnboardingTask(employeeId);
+  const completingTaskId = complete.isPending ? complete.variables : null;
 
-  useEffect(() => {
-    fetchTasks();
-  }, [employeeId]);
-
-  const fetchTasks = async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filterCategory !== "all") params.append("category", filterCategory);
-      if (filterStatus !== "all") params.append("completed", filterStatus);
-
-      const response = await fetch(`/api/hris/onboarding/${employeeId}?${params}`);
-      const result = await response.json();
-
-      if (result.data) {
-        setTasks(result.data);
-      }
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat checklist.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCompleteTask = async (taskId: string) => {
-    try {
-      setCompletingTaskId(taskId);
-
-      const response = await fetch(`/api/hris/onboarding/${employeeId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "complete",
-          task_id: taskId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to complete task");
-      }
-
-      toast({
-        title: "✅ Task Selesai",
-        description: "Onboarding task telah diselesaikan",
-      });
-
-      // Update local state
-      setTasks(tasks.map(t => 
-        t.id === taskId ? { ...t, completed: true, completed_at: new Date().toISOString() } : t
-      ));
-
-      onTaskComplete?.(result.data);
-      fetchTasks(); // Refresh to get updated summary
-    } catch (error) {
-      console.error("Complete task error:", error);
-      toast({
-        title: "Error",
-        description: "Gagal menyelesaikan task.",
-        variant: "destructive",
-      });
-    } finally {
-      setCompletingTaskId(null);
-    }
+  const handleCompleteTask = (taskId: string) => {
+    complete.mutate(taskId, {
+      onSuccess: (result) => {
+        toast.success("✅ Task Selesai", { description: "Onboarding task telah diselesaikan" });
+        onTaskComplete?.(result.data);
+      },
+      onError: () => toast.error("Gagal menyelesaikan task."),
+    });
   };
 
   const groupedTasks = tasks.reduce((acc, task) => {
@@ -147,15 +72,6 @@ export function OnboardingChecklist({
       case 2: return "text-yellow-600 bg-yellow-50 border-yellow-200";
       default: return "text-gray-600 bg-gray-50 border-gray-200";
     }
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
   };
 
   if (isLoading) {
@@ -188,10 +104,7 @@ export function OnboardingChecklist({
           
           {/* Filters */}
           <div className="flex gap-4 mt-4 pt-4 border-t">
-            <Select value={filterCategory} onValueChange={(val) => {
-              setFilterCategory(val);
-              fetchTasks();
-            }}>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter kategori" />
               </SelectTrigger>
@@ -205,10 +118,7 @@ export function OnboardingChecklist({
               </SelectContent>
             </Select>
 
-            <Select value={filterStatus} onValueChange={(val) => {
-              setFilterStatus(val);
-              fetchTasks();
-            }}>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>

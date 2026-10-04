@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { jobPortalQueryKeys } from "./query-keys";
 import { saveJobOpening, deleteJobOpening } from "./api";
-import type { JobOpeningPayload } from "./types";
+import type { JobOpeningPayload } from "@/lib/recruitment/job-portal-form";
 
 export function useSaveJobOpening() {
   const qc = useQueryClient();

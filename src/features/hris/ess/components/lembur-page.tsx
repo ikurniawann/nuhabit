@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { ClockIcon, PaperAirplaneIcon, BellAlertIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,30 +13,18 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ToastContainer, useToast } from "@/components/ui/toast";
+import { formatDate } from "@/lib/format";
+import { splitOvertime } from "@/lib/hris/ess-view";
+import { useEssMe, useMyOvertime } from "../queries";
+import { useDecideOvertime, useSubmitOvertime } from "../mutations";
+import type { EssOvertimeDecision, EssOvertimeForm } from "../types";
+import { EssLoading, EssNotLinked } from "./ess-states";
 
 /**
  * ESS → Lembur (/dashboard/me/lembur): pengajuan lembur mandiri +
  * konfirmasi penugasan lembur dari perusahaan (dibuat HRD).
  * Jam lembur approved yang terealisasi (ada clock-out) otomatis masuk payroll.
  */
-
-interface MeData {
-  employee: { id: string; full_name: string } | null;
-}
-
-interface OvertimeRow {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  hours: string | number;
-  source: "employee" | "company";
-  status: string;
-  reason: string | null;
-  rejection_reason: string | null;
-  requester?: { full_name: string } | null;
-}
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   pending: { label: "Menunggu", className: "bg-amber-100 text-amber-700" },
@@ -44,131 +33,63 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   cancelled: { label: "Dibatalkan", className: "bg-gray-100 text-gray-600" },
 };
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function formatTime(value: string): string {
+/** "17:30:00" → "17:30" */
+function clockLabel(value: string): string {
   return value?.slice(0, 5) ?? "—";
 }
 
-const EMPTY_FORM = { date: "", start_time: "", end_time: "", reason: "" };
+const EMPTY_FORM: EssOvertimeForm = { date: "", start_time: "", end_time: "", reason: "" };
 
 export function EssLemburPage() {
-  const { toasts, showToast, removeToast } = useToast();
-  const [me, setMe] = useState<MeData | null>(null);
-  const [loadingMe, setLoadingMe] = useState(true);
-  const [rows, setRows] = useState<OvertimeRow[]>([]);
+  const { data: me, isLoading } = useEssMe();
+  const rows = useMyOvertime().data ?? [];
+  const submitMutation = useSubmitOvertime();
+  const decideMutation = useDecideOvertime();
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const decidingId = decideMutation.isPending ? decideMutation.variables?.id : null;
 
-  const loadRows = useCallback(() => {
-    fetch("/api/hris/overtime")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setRows(json?.data ?? []))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/hris/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => setMe(json?.data ?? null))
-      .catch(() => {})
-      .finally(() => setLoadingMe(false));
-    loadRows();
-  }, [loadRows]);
-
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!form.date || !form.start_time || !form.end_time) {
-      showToast("Tanggal dan jam lembur wajib diisi", "error");
+      toast.error("Tanggal dan jam lembur wajib diisi");
       return;
     }
     if (form.reason.trim().length < 5) {
-      showToast("Alasan minimal 5 karakter", "error");
+      toast.error("Alasan minimal 5 karakter");
       return;
     }
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/hris/overtime", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal mengajukan lembur");
-      showToast("Pengajuan lembur terkirim — menunggu persetujuan");
-      setDialog(false);
-      setForm(EMPTY_FORM);
-      loadRows();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal mengajukan lembur", "error");
-    } finally {
-      setSubmitting(false);
-    }
+    submitMutation.mutate(form, {
+      onSuccess: () => {
+        toast.success("Pengajuan lembur terkirim — menunggu persetujuan");
+        setDialog(false);
+        setForm(EMPTY_FORM);
+      },
+      onError: (error) => toast.error(error.message || "Gagal mengajukan lembur"),
+    });
   }
 
-  async function handleDecide(id: string, action: "approve" | "reject" | "cancel") {
-    let rejection_reason: string | undefined;
+  function handleDecide(id: string, action: EssOvertimeDecision) {
+    let rejectionReason: string | undefined;
     if (action === "reject") {
-      rejection_reason = window.prompt("Alasan menolak penugasan ini?") ?? undefined;
-      if (!rejection_reason?.trim()) return;
+      rejectionReason = window.prompt("Alasan menolak penugasan ini?") ?? undefined;
+      if (!rejectionReason?.trim()) return;
     }
-    setDecidingId(id);
-    try {
-      const res = await fetch("/api/hris/overtime/decide", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ overtime_id: id, action, rejection_reason }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal memproses");
-      showToast(json.message || "Berhasil diproses");
-      loadRows();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal memproses", "error");
-    } finally {
-      setDecidingId(null);
-    }
-  }
-
-  if (loadingMe) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
+    decideMutation.mutate(
+      { id, action, rejectionReason },
+      {
+        onSuccess: (json) => toast.success(json.message || "Berhasil diproses"),
+        onError: (error) => toast.error(error.message || "Gagal memproses"),
+      }
     );
   }
 
-  if (!me?.employee) {
-    return (
-      <div className="mx-auto max-w-md py-20 text-center">
-        <p className="text-lg font-semibold text-gray-800">
-          Akun ini tidak terhubung ke data karyawan
-        </p>
-        <p className="mt-2 text-sm text-gray-500">
-          Pengajuan lembur hanya tersedia untuk akun yang tertaut ke record
-          karyawan HRIS. Hubungi HRD bila menurut Anda ini keliru.
-        </p>
-      </div>
-    );
-  }
+  if (isLoading) return <EssLoading />;
+  if (!me?.employee) return <EssNotLinked feature="Pengajuan lembur" />;
 
-  const companyAssignments = rows.filter(
-    (row) => row.source === "company" && row.status === "pending"
-  );
-  const history = rows.filter(
-    (row) => !(row.source === "company" && row.status === "pending")
-  );
+  const { assignments: companyAssignments, history } = splitOvertime(rows);
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex items-center justify-between border-b border-gray-200/70 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Lembur</h1>
@@ -192,7 +113,7 @@ export function EssLemburPage() {
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-900">
-                    {formatDate(row.date)} · {formatTime(row.start_time)}–{formatTime(row.end_time)}{" "}
+                    {formatDate(row.date, "—")} · {clockLabel(row.start_time)}–{clockLabel(row.end_time)}{" "}
                     ({Number(row.hours)} jam)
                   </p>
                   <p className="truncate text-xs text-gray-600">
@@ -237,7 +158,7 @@ export function EssLemburPage() {
                 <li key={row.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900">
-                      {formatDate(row.date)} · {formatTime(row.start_time)}–{formatTime(row.end_time)}{" "}
+                      {formatDate(row.date, "—")} · {clockLabel(row.start_time)}–{clockLabel(row.end_time)}{" "}
                       ({Number(row.hours)} jam)
                       {row.source === "company" && (
                         <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700">
@@ -328,8 +249,8 @@ export function EssLemburPage() {
             <Button variant="outline" onClick={() => setDialog(false)}>
               Batal
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kirim Pengajuan"}
+            <Button onClick={handleSubmit} disabled={submitMutation.isPending}>
+              {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Kirim Pengajuan"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,55 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import {
-  loadInterviewSessionByToken,
-  invalidInterviewTokenResponse,
-  interviewRateLimitedResponse,
-  interviewSessionRateLimited,
-} from "@/lib/recruitment/interview-session";
-import {
-  getPendingOffers,
-  putAnswer,
-  isValidSdp,
-} from "@/lib/recruitment/webrtc-signaling";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { apiHandler } from "@/lib/api/handler";
+import { requireInterviewSession } from "@/lib/recruitment/interview-session";
+import { assertInProgress, parseJsonBody } from "@/lib/recruitment/route-helpers";
+import { getPendingOffers, putAnswer, sdpSchema } from "@/lib/recruitment/webrtc-signaling";
 
 /**
  * Signaling WebRTC sisi kandidat (interview AI):
- * GET  /api/interview/session/[token]/webrtc → offer pending dari HRD
- * POST {offer_id, sdp} → answer kandidat
+ * GET  → offer pending dari HRD; POST {offer_id, sdp} → answer kandidat.
  */
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  try {
-    const { token } = await params;
-    const session = await loadInterviewSessionByToken(token);
-    if (!session) return invalidInterviewTokenResponse();
-    if (interviewSessionRateLimited(session.id, "webrtc")) return interviewRateLimitedResponse();
-    if (session.status !== "in_progress") return NextResponse.json({ data: { offers: [] } });
-    return NextResponse.json({ data: { offers: getPendingOffers("interview", session.id) } });
-  } catch (error) {
-    console.error("[interview-webrtc] GET failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+type Ctx = { params: Promise<{ token: string }> };
+const answerSchema = z.object({ offer_id: z.string(), sdp: sdpSchema });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
-  try {
-    const { token } = await params;
-    const session = await loadInterviewSessionByToken(token);
-    if (!session) return invalidInterviewTokenResponse();
-    if (interviewSessionRateLimited(session.id, "webrtc")) return interviewRateLimitedResponse();
-    if (session.status !== "in_progress") {
-      return NextResponse.json({ error: "Sesi tidak sedang berjalan" }, { status: 409 });
-    }
-    const body = await req.json().catch(() => null);
-    const offerId = (body as { offer_id?: unknown })?.offer_id;
-    const sdp = (body as { sdp?: unknown })?.sdp;
-    if (typeof offerId !== "string" || !isValidSdp(sdp)) {
-      return NextResponse.json({ error: "Payload tidak valid" }, { status: 400 });
-    }
-    const ok = putAnswer("interview", session.id, offerId, sdp);
-    return NextResponse.json({ data: { ok } });
-  } catch (error) {
-    console.error("[interview-webrtc] POST failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+export const GET = apiHandler(async (_req: NextRequest, { params }: Ctx) => {
+  const session = await requireInterviewSession((await params).token, "webrtc");
+  const offers = session.status === "in_progress" ? getPendingOffers("interview", session.id) : [];
+  return NextResponse.json({ data: { offers } });
+}, "interview-webrtc");
+
+export const POST = apiHandler(async (req: NextRequest, { params }: Ctx) => {
+  const session = await requireInterviewSession((await params).token, "webrtc");
+  assertInProgress(session, "Sesi tidak sedang berjalan");
+  const { offer_id, sdp } = await parseJsonBody(req, answerSchema, "Payload tidak valid");
+  return NextResponse.json({ data: { ok: putAnswer("interview", session.id, offer_id, sdp) } });
+}, "interview-webrtc");

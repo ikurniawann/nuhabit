@@ -1,71 +1,20 @@
 "use client";
 
-import { use, useState } from "react";
+import { use } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeftIcon,
-  BanknotesIcon,
   DocumentTextIcon,
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
-import { useToast, ToastContainer } from "@/components/ui/toast";
+import { toast } from "sonner";
+import { formatRupiah } from "@/lib/format";
+import { monthName } from "@/lib/hris/month-label";
+import { buildPayrollRunCsv } from "@/lib/payroll/ui-run-csv";
 import { usePayrollRun } from "../queries";
-
-interface PayrollDetail {
-  id: string;
-  employee_id: string;
-  gross_salary: number;
-  total_deductions: number;
-  net_salary: number;
-  pph21_deduction: number;
-  bpjs_tk_jht_deduction: number;
-  bpjs_kes_deduction: number;
-  status: string;
-  payslip_sent?: boolean;
-  employee?: {
-    id: string;
-    full_name: string;
-    nip: string;
-    department?: {
-      name: string;
-    };
-  };
-}
-
-interface PayrollRun {
-  id: string;
-  run_name: string;
-  period_month: number;
-  period_year: number;
-  status: string;
-  total_employees: number;
-  total_gross: number;
-  total_net: number;
-  total_deductions: number;
-  total_pph21: number;
-  total_bjtk_employee: number;
-  total_bjtk_employer: number;
-  notes?: string;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
-
-function getMonthName(month: number): string {
-  const months = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-  ];
-  return months[month - 1] || "";
-}
+import { useNotifyPayslip } from "../mutations";
 
 interface PayrollPageProps {
   params: Promise<{ id: string }>;
@@ -74,73 +23,30 @@ interface PayrollPageProps {
 export function PayrollDetailPage({ params }: PayrollPageProps) {
   const { id } = use(params);
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-
-  const [notifyingId, setNotifyingId] = useState<string | null>(null);
-
   const runQuery = usePayrollRun(id);
-  const payrollRun = (runQuery.data as PayrollRun | undefined) ?? null;
-  const details: PayrollDetail[] = runQuery.data?.payroll_details ?? [];
+  const payrollRun = runQuery.data ?? null;
+  const details = payrollRun?.payroll_details ?? [];
   const loading = runQuery.isLoading;
+  const notify = useNotifyPayslip(id);
+  const notifyingId = notify.isPending ? notify.variables : null;
 
-
-  async function handleNotify(detailId: string) {
-    setNotifyingId(detailId);
-    try {
-      const res = await fetch("/api/hris/payslips/notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payroll_detail_id: detailId }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Gagal mengirim notifikasi");
-      if (json.data?.wa_link) {
-        window.open(json.data.wa_link, "_blank");
-      }
-      showToast(json.message || "Slip ditandai terkirim");
-      runQuery.refetch();
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal mengirim notifikasi", "error");
-    } finally {
-      setNotifyingId(null);
-    }
+  function handleNotify(detailId: string) {
+    notify.mutate(detailId, {
+      onSuccess: (json) => {
+        if (json.data?.wa_link) window.open(json.data.wa_link, "_blank");
+        toast.success(json.message || "Slip ditandai terkirim");
+      },
+      onError: (error) => toast.error(error.message || "Gagal mengirim notifikasi"),
+    });
   }
 
-  async function handleExportCSV() {
-    if (!details || details.length === 0) {
-      showToast("Tidak ada data untuk diekspor", "error");
+  function handleExportCSV() {
+    if (details.length === 0) {
+      toast.error("Tidak ada data untuk diekspor");
       return;
     }
 
-    const headers = [
-      "NIP",
-      "Nama Karyawan",
-      "Departemen",
-      "Gaji Kotor",
-      "Total Potongan",
-      "Gaji Bersih",
-      "PPh 21",
-      "BPJS TK",
-      "BPJS Kes",
-    ];
-
-    const rows = details.map((d) => [
-      d.employee?.nip || "",
-      d.employee?.full_name || "",
-      d.employee?.department?.name || "",
-      d.gross_salary,
-      d.total_deductions,
-      d.net_salary,
-      d.pph21_deduction,
-      d.bpjs_tk_jht_deduction,
-      d.bpjs_kes_deduction,
-    ]);
-
-    const csv = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
+    const csv = buildPayrollRunCsv(details);
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -149,7 +55,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
     a.click();
     URL.revokeObjectURL(url);
 
-    showToast("CSV berhasil diunduh", "success");
+    toast.success("CSV berhasil diunduh");
   }
 
   if (loading) {
@@ -174,8 +80,6 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
 
   return (
     <div className="space-y-6 pb-12">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/hris/payroll")}>
@@ -185,7 +89,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">{payrollRun.run_name}</h1>
           <p className="text-sm text-gray-500">
-            {getMonthName(payrollRun.period_month)} {payrollRun.period_year} • {payrollRun.total_employees} karyawan
+            {monthName(payrollRun.period_month)} {payrollRun.period_year} • {payrollRun.total_employees} karyawan
           </p>
         </div>
         <Button onClick={handleExportCSV} variant="outline">
@@ -202,7 +106,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              {formatCurrency(payrollRun.total_gross)}
+              {formatRupiah(payrollRun.total_gross)}
             </div>
           </CardContent>
         </Card>
@@ -212,10 +116,10 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(payrollRun.total_deductions)}
+              {formatRupiah(payrollRun.total_deductions)}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              PPh 21: {formatCurrency(payrollRun.total_pph21)}
+              PPh 21: {formatRupiah(payrollRun.total_pph21)}
             </div>
           </CardContent>
         </Card>
@@ -225,7 +129,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(payrollRun.total_net)}
+              {formatRupiah(payrollRun.total_net)}
             </div>
           </CardContent>
         </Card>
@@ -235,10 +139,10 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-blue-600">
-              {formatCurrency(payrollRun.total_bjtk_employer)}
+              {formatRupiah(payrollRun.total_bjtk_employer)}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Employee: {formatCurrency(payrollRun.total_bjtk_employee)}
+              Employee: {formatRupiah(payrollRun.total_bjtk_employee)}
             </div>
           </CardContent>
         </Card>
@@ -282,13 +186,13 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
                         {detail.employee?.department?.name || "-"}
                       </td>
                       <td className="text-right py-3 px-4 font-medium">
-                        {formatCurrency(detail.gross_salary)}
+                        {formatRupiah(detail.gross_salary)}
                       </td>
                       <td className="text-right py-3 px-4 text-red-600">
-                        {formatCurrency(detail.total_deductions)}
+                        {formatRupiah(detail.total_deductions)}
                       </td>
                       <td className="text-right py-3 px-4 font-medium text-green-600">
-                        {formatCurrency(detail.net_salary)}
+                        {formatRupiah(detail.net_salary)}
                       </td>
                       <td className="text-right py-3 px-4">
                         <div className="flex items-center justify-end gap-2">

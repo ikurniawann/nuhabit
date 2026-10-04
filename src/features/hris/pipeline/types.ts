@@ -6,3 +6,4 @@ export interface UpdateCandidateStagePayload {
 }
 
 export type { Candidate, PipelineStage };
+export type * from "@/lib/recruitment/pipeline-types";

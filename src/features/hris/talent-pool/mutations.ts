@@ -2,11 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { talentPoolQueryKeys } from "./query-keys";
-import {
-  updateCandidateStatus,
-  touchCandidateContact,
-  sendCandidateNotification,
-} from "./api";
+import { updateCandidateStatus, sendCandidateNotification } from "./api";
 import type { SendCandidateNotificationPayload } from "./types";
 
 function useInvalidateTalentPool() {
@@ -19,14 +15,6 @@ export function useUpdateCandidateStatus() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       updateCandidateStatus(id, status),
-    onSuccess: invalidate,
-  });
-}
-
-export function useTouchCandidateContact() {
-  const invalidate = useInvalidateTalentPool();
-  return useMutation({
-    mutationFn: (id: string) => touchCandidateContact(id),
     onSuccess: invalidate,
   });
 }

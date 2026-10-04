@@ -3,7 +3,7 @@ import { query, queryOne } from "@/lib/db";
 /**
  * Relasi tim berbasis hris.employees.reporting_to (permintaan owner
  * 2026-08-29): supervisor/kepala divisi mengelola jadwal shift anggota
- * TIM-NYA SENDIRI dari Area Karyawan — bukan hanya HRD. Sumber
+ * TIM-NYA SENDIRI dari Area Karyawan: bukan hanya HRD. Sumber
  * kebenarannya kolom reporting_to (dipakai juga struktur organisasi),
  * bukan role IAM, sehingga siapa pun yang tercatat sebagai atasan
  * otomatis mendapat kemampuannya.
@@ -45,4 +45,44 @@ export async function isDirectSubordinate(
     [employeeId, managerEmployeeId]
   );
   return Boolean(row);
+}
+
+/**
+ * Anggota tim + ringkasan pola shift aktif hari ini per anggota (jumlah hari
+ * kerja/minggu + nama shift unik). Karyawan tanpa bawahan → daftar kosong.
+ */
+export async function listTeamWithSchedule(managerEmployeeId: string) {
+  const members = await listDirectSubordinates(managerEmployeeId);
+  if (members.length === 0) return [];
+
+  const summary = await query<{
+    employee_id: string;
+    shift_names: string | null;
+    work_days: number;
+    effective_from: string | null;
+  }>(
+    `SELECT es.employee_id,
+            string_agg(DISTINCT s.name, ', ' ORDER BY s.name) AS shift_names,
+            count(*) FILTER (WHERE es.shift_id IS NOT NULL)::int AS work_days,
+            max(es.effective_from)::text AS effective_from
+     FROM hris.employee_shifts es
+     LEFT JOIN hris.shifts s ON s.id = es.shift_id
+     WHERE es.employee_id = ANY($1::uuid[])
+       AND es.effective_from <= CURRENT_DATE
+       AND (es.effective_to IS NULL OR es.effective_to >= CURRENT_DATE)
+     GROUP BY es.employee_id`,
+    [members.map((m) => m.id)]
+  );
+  const byEmployee = new Map(summary.map((row) => [row.employee_id, row]));
+
+  return members.map((m) => {
+    const s = byEmployee.get(m.id);
+    return {
+      ...m,
+      schedule_summary: s
+        ? `${s.work_days} hari kerja/minggu${s.shift_names ? ` — ${s.shift_names}` : ""}`
+        : null,
+      schedule_since: s?.effective_from ?? null,
+    };
+  });
 }

@@ -1,18 +1,11 @@
 import { apiGet } from "@/lib/api-client";
-import { createBrowserClient } from "@/lib/pg/browser-client";
-import type { OrgDepartment, OrgEmployee } from "./types";
+import type { OrgEmployee } from "@/lib/hris/org-chart";
+import type { OrgDepartment } from "./types";
 
 export const fetchOrgEmployees = () =>
-  apiGet<{ data: OrgEmployee[] }>(
-    "/api/hris/employees?limit=200&is_active=true"
-  ).then((res) => res.data || []);
+  apiGet<{ data: OrgEmployee[] }>("/api/hris/employees?limit=200&is_active=true").then((res) => res.data || []);
 
-export async function fetchOrgDepartments(): Promise<OrgDepartment[]> {
-  const db = createBrowserClient();
-  const { data } = await db
-    .from("departments")
-    .select("id, name")
-    .eq("is_active", true)
-    .order("name");
-  return (data as OrgDepartment[]) || [];
-}
+export const fetchOrgDepartments = () =>
+  apiGet<{ data: (OrgDepartment & { is_active: boolean })[] }>("/api/master/departments").then((res) =>
+    (res.data ?? []).filter((d) => d.is_active)
+  );

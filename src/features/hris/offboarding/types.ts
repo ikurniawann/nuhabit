@@ -1,3 +1,5 @@
+import type { ClearanceKey } from "@/lib/hris/offboarding-view";
+
 export interface OffboardingEmployee {
   id: string;
   full_name: string;
@@ -37,7 +39,7 @@ export interface InitiateOffboardingPayload {
 }
 
 export interface UpdateOffboardingPayload {
-  clearance_type?: string;
+  clearance_type?: ClearanceKey;
   cleared?: boolean;
   notes?: string;
   asset_updates?: Record<string, boolean>;

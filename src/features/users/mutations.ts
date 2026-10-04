@@ -11,6 +11,7 @@ import {
   deleteEmployeeDocument,
   patchEmployeeContract,
   resetUserPassword,
+  saveEmployeeShiftPattern,
   updateUser,
   uploadContractSignedDocument,
   type ContractActionInput,
@@ -42,8 +43,12 @@ export function useContractAction(employeeId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: usersQueryKeys.contracts(employeeId) });
       // aktivasi kontrak mengubah employment_status karyawan
-      qc.invalidateQueries({ queryKey: usersQueryKeys.hrisEmployee(employeeId) });
-      qc.invalidateQueries({ queryKey: usersQueryKeys.employmentHistory(employeeId) });
+      qc.invalidateQueries({
+        queryKey: usersQueryKeys.hrisEmployee(employeeId),
+      });
+      qc.invalidateQueries({
+        queryKey: usersQueryKeys.employmentHistory(employeeId),
+      });
     },
   });
 }
@@ -119,6 +124,19 @@ export function useDeleteEmployeeDocument(employeeId: string) {
     mutationFn: (docId: string) => deleteEmployeeDocument(docId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: usersQueryKeys.documents(employeeId) });
+    },
+  });
+}
+
+export function useSaveEmployeeShiftPattern(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof saveEmployeeShiftPattern>[1]) =>
+      saveEmployeeShiftPattern(employeeId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: usersQueryKeys.shiftSchedule(employeeId),
+      });
     },
   });
 }

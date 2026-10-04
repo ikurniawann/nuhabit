@@ -1,18 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BellRing, Check, CheckCircle } from "lucide-react";
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: "approval" | "status_change" | "reminder" | "alert";
-  link: string | null;
-  is_read: boolean;
-  created_at: string;
-}
+import { sortNotifications, timeAgo } from "@/lib/hris/notification-time";
+import {
+  useHrisNotifications,
+  useMarkNotificationsRead,
+  type HrisNotification,
+} from "./use-hris-notifications";
 
 const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
   approval: { dot: "bg-blue-500", bg: "bg-blue-50" },
@@ -21,48 +17,15 @@ const TYPE_STYLES: Record<string, { dot: string; bg: string }> = {
   alert: { dot: "bg-red-500", bg: "bg-red-50" },
 };
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Baru saja";
-  if (mins < 60) return `${mins} menit lalu`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} jam lalu`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days} hari lalu`;
-  return new Date(dateStr).toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-}
-
 export function NotificationBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [marking, setMarking] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/hris/notifications?limit=30");
-      if (!res.ok) return;
-      const json = await res.json();
-      const data: Notification[] = json.data || [];
-      setNotifications(data);
-      setUnreadCount(data.filter((n) => !n.is_read).length);
-    } catch {
-      // Silent fail - notifications are non-critical
-    }
-  }, []);
-
-  // Initial fetch + polling every 30s
-  useEffect(() => {
-    fetchNotifications();
-    intervalRef.current = setInterval(fetchNotifications, 30000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [fetchNotifications]);
+  const notificationsQuery = useHrisNotifications();
+  const notifications = notificationsQuery.data ?? [];
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const markMutation = useMarkNotificationsRead();
+  const marking = markMutation.isPending ? markMutation.variables : null;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -75,38 +38,10 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  async function markRead(id: string) {
-    setMarking(id);
-    try {
-      await fetch("/api/hris/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notification_id: id }),
-      });
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((c) => Math.max(0, c - 1));
-    } finally {
-      setMarking(null);
-    }
-  }
+  const markRead = (id: string) => markMutation.mutate(id);
+  const markAllRead = () => markMutation.mutate(null);
 
-  async function markAllRead() {
-    try {
-      await fetch("/api/hris/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mark_all: true }),
-      });
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch {
-      // Silent fail
-    }
-  }
-
-  function handleNotificationClick(n: Notification) {
+  function handleNotificationClick(n: HrisNotification) {
     if (!n.is_read) markRead(n.id);
     if (n.link) {
       setOpen(false);
@@ -114,11 +49,7 @@ export function NotificationBell() {
     }
   }
 
-  // Sort: unread first, then by date
-  const sorted = [...notifications].sort((a, b) => {
-    if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  const sorted = sortNotifications(notifications);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -219,7 +150,7 @@ export function NotificationBell() {
           {notifications.length > 0 && (
             <div className="px-4 py-2.5 border-t border-gray-100 bg-gray-50 text-center">
               <button
-                onClick={() => { setOpen(false); fetchNotifications(); }}
+                onClick={() => { setOpen(false); void notificationsQuery.refetch(); }}
                 className="text-xs text-gray-500 hover:text-gray-700"
               >
                 Refresh

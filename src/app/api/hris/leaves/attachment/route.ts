@@ -1,57 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkforceActor } from "@/lib/hris/workforce-auth";
+import { z } from "zod";
+import { ApiError } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { readJson, requireWorkforceActor, UUID_RE } from "@/lib/hris/workforce-route";
 import { savePrivateImage } from "@/lib/storage-private";
 
-/**
- * POST /api/hris/leaves/attachment — upload lampiran pengajuan cuti (foto
- * surat dokter dsb., JPG/PNG/WebP maks 5 MB) ke storage private. Return path
- * untuk disimpan di leaves.attachment_url; file disajikan via
- * GET /api/hris/leaves/attachment/[...path] (ber-auth).
- * HR boleh meng-upload atas nama karyawan lain (employee_id di body).
- */
-
 const MAX_BYTES = 5 * 1024 * 1024;
+const IMAGE_DATA_URL = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/;
 
-export async function POST(req: NextRequest) {
-  try {
-    const actor = await getWorkforceActor();
-    if (!actor) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+const uploadSchema = z.object({
+  photo: z.string().optional(),
+  // Dipakai sebagai segmen folder: wajib UUID agar tidak bisa keluar folder
+  employee_id: z.string().regex(UUID_RE, "ID karyawan tidak valid").optional(),
+});
 
-    const body = (await req.json()) as { photo?: string; employee_id?: string };
-    const ownerId =
-      actor.isHr && body.employee_id ? body.employee_id : actor.employeeId;
-    if (!ownerId) {
-      return NextResponse.json(
-        { error: "Akun ini tidak terhubung ke data karyawan" },
-        { status: 403 }
-      );
-    }
+/**
+ * POST /api/hris/leaves/attachment: upload lampiran cuti (JPG/PNG/WebP maks
+ * 5 MB) ke storage private; path disimpan di leaves.attachment_url dan
+ * disajikan via GET /api/hris/leaves/attachment/[...path]. HR boleh
+ * meng-upload atas nama karyawan lain (employee_id).
+ */
+export const POST = apiHandler(async (request: NextRequest) => {
+  const actor = await requireWorkforceActor();
+  const body = await readJson(request, uploadSchema);
+  const ownerId = actor.isHr && body.employee_id ? body.employee_id : actor.employeeId;
+  if (!ownerId) throw ApiError.forbidden("Akun ini tidak terhubung ke data karyawan");
 
-    const match = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(body.photo ?? "");
-    if (!match) {
-      return NextResponse.json(
-        { error: "Lampiran harus berupa gambar JPG/PNG/WebP" },
-        { status: 400 }
-      );
-    }
-    const buffer = Buffer.from(match[2], "base64");
-    if (buffer.length > MAX_BYTES) {
-      return NextResponse.json({ error: "Ukuran lampiran maksimal 5 MB" }, { status: 400 });
-    }
+  const match = IMAGE_DATA_URL.exec(body.photo ?? "");
+  if (!match) throw ApiError.badRequest("Lampiran harus berupa gambar JPG/PNG/WebP");
+  const buffer = Buffer.from(match[2], "base64");
+  if (buffer.length > MAX_BYTES) throw ApiError.badRequest("Ukuran lampiran maksimal 5 MB");
 
-    const saved = await savePrivateImage(buffer, match[1], `leave-attachments/${ownerId}`);
-    if (!saved.path) {
-      return NextResponse.json(
-        { error: saved.error ?? "Gagal menyimpan lampiran" },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ data: { path: saved.path }, message: "Lampiran tersimpan" });
-  } catch (error) {
-    console.error("[leaves/attachment] POST failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  const saved = await savePrivateImage(buffer, match[1], `leave-attachments/${ownerId}`);
+  if (!saved.path) throw ApiError.badRequest(saved.error ?? "Gagal menyimpan lampiran");
+  return NextResponse.json({ data: { path: saved.path }, message: "Lampiran tersimpan" });
+}, "hris/leaves/attachment.POST");

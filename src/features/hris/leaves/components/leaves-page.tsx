@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/format";
 import { ApprovalButtons } from "@/components/hris/ApprovalButtons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,22 +47,14 @@ export function LeavesPage() {
     [filterStatus, filterType]
   );
 
-  const { data, isLoading, refetch } = useLeaveList(listParams);
+  const { data, isLoading } = useLeaveList(listParams);
   const leaves = useMemo(() => data ?? [], [data]);
-
-  const handleApprove = () => {
-    refetch();
-  };
-
-  const handleReject = () => {
-    refetch();
-  };
 
   const handleExport = async () => {
     try {
       const blob = await downloadLeavesCsv({
-        status: filterStatus !== "all" ? filterStatus : undefined,
-        leave_type: filterType !== "all" ? filterType : undefined,
+        status: listParams.status,
+        leave_type: listParams.leave_type,
       });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -71,8 +65,7 @@ export function LeavesPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export gagal: ' + (error as Error).message);
+      toast.error('Export gagal: ' + (error as Error).message);
     }
   };
 
@@ -93,14 +86,6 @@ export function LeavesPage() {
         {LEAVE_STATUS_LABELS[status as keyof typeof LEAVE_STATUS_LABELS] || status}
       </Badge>
     );
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
   };
 
   return (
@@ -256,14 +241,9 @@ export function LeavesPage() {
                 {leave.status === "pending" && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <p className="text-xs text-gray-500">
-                      Diajukan: {new Date(leave.created_at).toLocaleDateString("id-ID")}
+                      Diajukan: {formatDate(leave.created_at)}
                     </p>
-                    <ApprovalButtons
-                      leaveId={leave.id}
-                      currentStatus={leave.status}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                    />
+                    <ApprovalButtons leaveId={leave.id} />
                   </div>
                 )}
               </CardContent>

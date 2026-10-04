@@ -2,6 +2,8 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { queryOne } from "@/lib/db";
 import type { DbClient } from "@/lib/pg/types";
 import { normalizeBusinessScopePayload } from "@/lib/configuration/business-scope";
+import { ApiError } from "@/lib/api/auth";
+import { EMAIL_IN_USE_MESSAGE, emailConflictOr } from "./email-conflict";
 import type { CreateUserEmployeeInput, UpdateUserEmployeeInput } from "./schemas";
 import {
   resolveDefaultWarehouseId,
@@ -298,7 +300,7 @@ async function provisionAppAccount(
       app_metadata: { role: input.role },
     });
 
-    if (authError) throw new Error(authError.message);
+    if (authError) throw emailConflictOr(authError);
     if (!authData.user) throw new Error("Failed to create auth user");
     authUserId = authData.user.id;
 
@@ -317,7 +319,7 @@ async function provisionAppAccount(
       ...scopeFields,
     });
 
-    if (profileError) throw profileError;
+    if (profileError) throw emailConflictOr(profileError);
 
     if (status === "inactive") {
       await db.auth.admin.updateUserById(
@@ -402,7 +404,7 @@ async function syncAppAccount(
       userId,
       authUpdates as Parameters<typeof db.auth.admin.updateUserById>[1]
     );
-    if (authError) throw new Error(authError.message);
+    if (authError) throw emailConflictOr(authError);
   }
 
   if (input.password) {
@@ -473,7 +475,7 @@ async function syncAppAccount(
       .from("users")
       .update(profileUpdates)
       .eq("id", userId);
-    if (profileError) throw profileError;
+    if (profileError) throw emailConflictOr(profileError);
   }
 
   if (input.approval_permissions) {
@@ -570,7 +572,7 @@ export async function createUserEmployee(
     .select("id")
     .eq("email", input.email)
     .maybeSingle();
-  if (existingEmail) throw new Error("Email is already in use");
+  if (existingEmail) throw ApiError.conflict(EMAIL_IN_USE_MESSAGE);
 
   const nip = input.nip?.trim() ? input.nip.trim() : await generateNip(db);
 
@@ -609,7 +611,7 @@ export async function createUserEmployee(
     .select("id")
     .single();
 
-  if (error) throw error;
+  if (error) throw emailConflictOr(error);
 
   if (input.is_access_app && input.password && input.role) {
     await provisionAppAccount(db, actorId, employee.id, {
@@ -657,7 +659,7 @@ export async function updateUserEmployee(
       .eq("email", input.email)
       .neq("id", id)
       .maybeSingle();
-    if (dup) throw new Error("Email is already in use");
+    if (dup) throw ApiError.conflict(EMAIL_IN_USE_MESSAGE);
   }
 
   const employeePatch: Record<string, unknown> = {
@@ -711,7 +713,7 @@ export async function updateUserEmployee(
     .update(employeePatch)
     .eq("id", id);
 
-  if (updateError) throw updateError;
+  if (updateError) throw emailConflictOr(updateError);
 
   const wantsAccess = input.is_access_app ?? existing.is_access_app;
   const email = input.email ?? existing.email;

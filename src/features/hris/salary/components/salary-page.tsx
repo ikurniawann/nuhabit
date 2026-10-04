@@ -5,20 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlusIcon, PencilIcon } from "@heroicons/react/24/outline";
-import { useToast, ToastContainer } from "@/components/ui/toast";
+import { formatDate, formatRupiah } from "@/lib/format";
 import { useSalaryList } from "../queries";
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-  }).format(amount);
-}
 
 export function SalaryPage() {
   const router = useRouter();
-  const { toasts, removeToast } = useToast();
 
   const salaryQuery = useSalaryList();
   const salaries = salaryQuery.data ?? [];
@@ -34,8 +25,6 @@ export function SalaryPage() {
 
   return (
     <div className="space-y-6 pb-12">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -85,22 +74,22 @@ export function SalaryPage() {
                         </div>
                       </td>
                       <td className="text-right py-3 px-4 font-medium">
-                        {formatCurrency(salary.base_salary)}
+                        {formatRupiah(salary.base_salary)}
                       </td>
                       <td className="text-right py-3 px-4">
-                        {formatCurrency(salary.fixed_allowance)}
+                        {formatRupiah(salary.fixed_allowance)}
                       </td>
                       <td className="text-right py-3 px-4">
-                        {formatCurrency(salary.transport_allowance)}
+                        {formatRupiah(salary.transport_allowance)}
                       </td>
                       <td className="text-right py-3 px-4">
-                        {formatCurrency(salary.meal_allowance)}
+                        {formatRupiah(salary.meal_allowance)}
                       </td>
                       <td className="py-3 px-4">
                         <Badge>{salary.ptkp_status}</Badge>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-500">
-                        {new Date(salary.effective_date).toLocaleDateString("id-ID")}
+                        {formatDate(salary.effective_date)}
                       </td>
                       <td className="text-right py-3 px-4">
                         <Button

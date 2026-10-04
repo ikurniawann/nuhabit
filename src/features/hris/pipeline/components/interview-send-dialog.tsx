@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Loader2, MessageCircle, Send } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildWaLink } from "@/lib/recruitment/wa";
-import { useCreateInterviewSession, useLogWaTemplate } from "../mutations";
+import { parseExpiresDays, parseMaxQuestions } from "@/lib/recruitment/pipeline-stage-rules";
+import { useCreateInterviewSession } from "../mutations";
+import { InviteLinkResult } from "./invite-link-result";
+import type { StagePanelCandidate } from "./stage-panel-parts";
 
 interface InterviewSendDialogProps {
-  candidate: { id: string; full_name: string; phone?: string | null };
+  candidate: StagePanelCandidate;
   positionTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,37 +31,23 @@ const DEFAULT_EXPIRES_DAYS = 3;
 const DEFAULT_MAX_QUESTIONS = 8;
 
 /**
- * Dialog "Kirim undangan interview AI": atur jumlah pertanyaan & masa
- * berlaku → buat sesi + token → tampilkan link (salin / kirim via WA,
- * tercatat di aktivitas). Kandidat interview via /interview/[token].
+ * Dialog "Kirim undangan interview AI": jumlah pertanyaan & masa berlaku →
+ * buat sesi + token → link (salin / kirim via WA). Kandidat interview via
+ * /interview/[token].
  */
-export function InterviewSendDialog({
-  candidate,
-  positionTitle,
-  open,
-  onOpenChange,
-}: InterviewSendDialogProps) {
+export function InterviewSendDialog({ candidate, positionTitle, open, onOpenChange }: InterviewSendDialogProps) {
   const createSession = useCreateInterviewSession();
-  const logWa = useLogWaTemplate();
-
   const [expiresDays, setExpiresDays] = useState(String(DEFAULT_EXPIRES_DAYS));
   const [maxQuestions, setMaxQuestions] = useState(String(DEFAULT_MAX_QUESTIONS));
   const [createdLink, setCreatedLink] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const handleCreate = () => {
-    const days = Number(expiresDays);
-    const questions = Number(maxQuestions);
-    if (!Number.isInteger(days) || days < 1 || days > 30) {
-      toast.error("Masa berlaku harus 1–30 hari");
-      return;
-    }
-    if (!Number.isInteger(questions) || questions < 3 || questions > 15) {
-      toast.error("Jumlah pertanyaan harus 3–15");
-      return;
-    }
+    const days = parseExpiresDays(expiresDays);
+    if (!days.ok) return void toast.error(days.error);
+    const questions = parseMaxQuestions(maxQuestions);
+    if (!questions.ok) return void toast.error(questions.error);
     createSession.mutate(
-      { id: candidate.id, payload: { expires_days: days, max_questions: questions } },
+      { id: candidate.id, payload: { expires_days: days.value, max_questions: questions.value } },
       {
         onSuccess: (session) => {
           setCreatedLink(`${window.location.origin}/interview/${session.token}`);
@@ -68,29 +56,6 @@ export function InterviewSendDialog({
         onError: (e) => toast.error(e instanceof Error ? e.message : "Gagal membuat undangan"),
       }
     );
-  };
-
-  const handleCopy = async () => {
-    if (!createdLink) return;
-    await navigator.clipboard.writeText(createdLink).catch(() => undefined);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleWa = () => {
-    if (!createdLink) return;
-    const message =
-      `Halo ${candidate.full_name}, selamat! Anda diundang mengikuti interview online ` +
-      `untuk posisi ${positionTitle}. Interview dipandu AI interviewer kami dengan suara — ` +
-      `wajib menggunakan kamera & mikrofon. Silakan mulai melalui link berikut: ${createdLink} ` +
-      `(berlaku ${expiresDays} hari). Siapkan tempat tenang dengan koneksi stabil. Terima kasih.`;
-    const link = buildWaLink(candidate.phone, message);
-    if (!link) {
-      toast.error("Nomor HP kandidat belum diisi");
-      return;
-    }
-    window.open(link, "_blank", "noopener,noreferrer");
-    logWa.mutate({ id: candidate.id, template: "undangan_interview" });
   };
 
   return (
@@ -105,31 +70,14 @@ export function InterviewSendDialog({
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-4">
           {createdLink ? (
-            <div className="space-y-3">
-              <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                Undangan dibuat. Bagikan link berikut ke kandidat:
-              </p>
-              <div className="flex items-center gap-2">
-                <Input readOnly value={createdLink} className="text-xs" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopy}
-                  aria-label="Salin link"
-                >
-                  {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-                </Button>
-              </div>
-              <Button type="button" className="w-full" onClick={handleWa} disabled={!candidate.phone}>
-                <MessageCircle className="size-4" /> Kirim via WhatsApp
-              </Button>
-              {!candidate.phone && (
-                <p className="text-xs text-amber-700 dark:text-amber-400">
-                  Nomor HP kandidat belum diisi — salin link secara manual.
-                </p>
-              )}
-            </div>
+            <InviteLinkResult
+              intro="Undangan dibuat. Bagikan link berikut ke kandidat:"
+              link={createdLink}
+              template="undangan_interview"
+              candidate={candidate}
+              positionTitle={positionTitle}
+              expiresDays={expiresDays}
+            />
           ) : (
             <div className="flex flex-wrap gap-4">
               <div className="space-y-1.5">
@@ -167,11 +115,7 @@ export function InterviewSendDialog({
           </Button>
           {!createdLink && (
             <Button type="button" onClick={handleCreate} disabled={createSession.isPending}>
-              {createSession.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Send className="size-4" />
-              )}
+              {createSession.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               Buat Undangan
             </Button>
           )}

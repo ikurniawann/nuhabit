@@ -1,7 +1,4 @@
-export interface DashboardBrand {
-  id: string;
-  name: string;
-}
+import type { AttentionRow } from "./recruitment-report";
 
 export interface DashboardSummary {
   thisMonth: number;
@@ -25,8 +22,7 @@ export interface FunnelDatum {
   value: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AttentionItem = any;
+export type AttentionItem = AttentionRow & { id: string };
 
 export interface DashboardData {
   summary: DashboardSummary;
@@ -35,6 +31,3 @@ export interface DashboardData {
   pipelineFunnel: FunnelDatum[];
   needsAttention: AttentionItem[];
 }
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type DashboardCandidate = any;

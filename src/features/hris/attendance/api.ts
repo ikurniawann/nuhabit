@@ -1,7 +1,11 @@
+import { apiGet, buildListUrl } from "@/lib/api-client";
 import type {
   AttendanceExportParams,
   AttendanceListParams,
   AttendanceListResponse,
+  AttendanceMonthStats,
+  CalendarAttendance,
+  CalendarScheduleRow,
   DailyRosterData,
 } from "./types";
 
@@ -30,35 +34,22 @@ export async function exportAttendanceCsv(
   return response.blob();
 }
 
-export async function fetchDailyRoster(date?: string): Promise<DailyRosterData> {
-  const search = new URLSearchParams();
-  if (date) search.set("date", date);
-  const response = await fetch(`/api/hris/attendance/daily-roster?${search.toString()}`);
-  const json = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(json.error || "Gagal memuat roster harian");
-  }
-  return json.data as DailyRosterData;
-}
+export const fetchDailyRoster = (date?: string) =>
+  apiGet<{ data: DailyRosterData }>(
+    buildListUrl("/api/hris/attendance/daily-roster", { date })
+  ).then((res) => res.data);
 
-export async function fetchAttendanceList(
-  params: AttendanceListParams
-): Promise<AttendanceListResponse> {
-  const search = new URLSearchParams();
-  if (params.employee_id) search.set("employee_id", params.employee_id);
-  if (params.start_date) search.set("start_date", params.start_date);
-  if (params.end_date) search.set("end_date", params.end_date);
-  if (params.is_late) search.set("is_late", "true");
-  search.set("page", String(params.page ?? 1));
-  search.set("limit", String(params.limit ?? 20));
-
-  const response = await fetch(`/api/hris/attendance?${search.toString()}`);
-  const json = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(json.error || "Gagal memuat data absensi");
-  }
-  return json as AttendanceListResponse;
-}
+export const fetchAttendanceList = (params: AttendanceListParams) =>
+  apiGet<AttendanceListResponse>(
+    buildListUrl("/api/hris/attendance", {
+      employee_id: params.employee_id,
+      start_date: params.start_date,
+      end_date: params.end_date,
+      is_late: params.is_late ? "true" : undefined,
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+    })
+  );
 
 export interface EmployeeOption {
   id: string;
@@ -66,13 +57,36 @@ export interface EmployeeOption {
   nip?: string | null;
 }
 
-export async function fetchActiveEmployees(): Promise<EmployeeOption[]> {
-  const response = await fetch(
+export const fetchActiveEmployees = () =>
+  apiGet<{ data?: EmployeeOption[] }>(
     "/api/hris/employees?is_active=true&limit=500&sort_by=full_name&sort_order=asc"
-  );
-  const json = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(json.error || "Gagal memuat daftar karyawan");
-  }
-  return (json.data ?? []) as EmployeeOption[];
+  ).then((res) => res.data ?? []);
+
+/** Statistik bulan (year + month 1-12); null bila endpoint gagal. */
+export function fetchAttendanceMonthStats(year: number, month: number) {
+  return apiGet<{ data: AttendanceMonthStats | null }>(
+    `/api/hris/attendance/stats?month=${month}&year=${year}`
+  )
+    .then((res) => res.data ?? null)
+    .catch(() => null);
+}
+
+/** Absensi satu rentang untuk kalender ("me" = karyawan yang login). */
+export function fetchCalendarAttendances(params: {
+  start_date: string;
+  end_date: string;
+  employee_id?: string;
+}) {
+  return apiGet<{ data?: CalendarAttendance[] }>(
+    buildListUrl("/api/hris/attendance", { ...params, limit: 100 })
+  ).then((res) => res.data ?? []);
+}
+
+/** Pola jadwal shift karyawan; kosong bila gagal (kalender tetap tampil). */
+export function fetchEmployeeSchedule(employeeId: string) {
+  return apiGet<{ data?: CalendarScheduleRow[] }>(
+    buildListUrl("/api/hris/attendance/schedule", { employee_id: employeeId })
+  )
+    .then((res) => res.data ?? [])
+    .catch(() => [] as CalendarScheduleRow[]);
 }

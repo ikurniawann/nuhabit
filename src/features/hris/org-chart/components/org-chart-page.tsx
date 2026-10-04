@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -13,18 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BuildingOfficeIcon, UserGroupIcon, ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { buildOrgTree, type OrgEmployee, type OrgNode } from "@/lib/hris/org-chart";
 import { useOrgEmployees, useOrgDepartments } from "../queries";
-
-interface OrgNode {
-  id: string;
-  full_name: string;
-  nip: string;
-  job_title?: { title: string };
-  department?: { name: string };
-  photo_url?: string;
-  employment_status: string;
-  direct_reports?: OrgNode[];
-}
+import type { OrgDepartment } from "../types";
 
 const STATUS_COLORS: Record<string, string> = {
   permanent: "bg-green-100 text-green-700",
@@ -33,9 +24,12 @@ const STATUS_COLORS: Record<string, string> = {
   internship: "bg-purple-100 text-purple-700",
 };
 
-function EmployeeCard({ node, depth, router }: { node: OrgNode; depth: number; router: ReturnType<typeof useRouter> }) {
+const STATUS_LABELS: Record<string, string> = { permanent: "Tetap", contract: "Kontrak", probation: "Probasi" };
+
+function EmployeeCard({ node, depth }: { node: OrgNode; depth: number }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(depth < 2);
-  const hasReports = (node.direct_reports?.length ?? 0) > 0;
+  const hasReports = node.direct_reports.length > 0;
 
   return (
     <div className="flex flex-col items-center">
@@ -47,9 +41,12 @@ function EmployeeCard({ node, depth, router }: { node: OrgNode; depth: number; r
         <div className="w-44 bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md hover:border-blue-300 transition-all">
           <div className="flex flex-col items-center text-center">
             {node.photo_url ? (
-              <img
+              <Image
                 src={node.photo_url}
                 alt={node.full_name}
+                width={40}
+                height={40}
+                unoptimized
                 className="w-10 h-10 rounded-full object-cover mb-2"
               />
             ) : (
@@ -61,9 +58,7 @@ function EmployeeCard({ node, depth, router }: { node: OrgNode; depth: number; r
             <p className="text-xs text-gray-500 mt-0.5 leading-tight">{node.job_title?.title || "—"}</p>
             {node.employment_status && (
               <Badge className={`mt-1 text-xs px-1.5 py-0 ${STATUS_COLORS[node.employment_status] || "bg-gray-100 text-gray-600"}`}>
-                {node.employment_status === "permanent" ? "Tetap" :
-                  node.employment_status === "contract" ? "Kontrak" :
-                  node.employment_status === "probation" ? "Probasi" : node.employment_status}
+                {STATUS_LABELS[node.employment_status] ?? node.employment_status}
               </Badge>
             )}
           </div>
@@ -93,14 +88,14 @@ function EmployeeCard({ node, depth, router }: { node: OrgNode; depth: number; r
 
           <div className="flex gap-6 relative">
             {/* Horizontal connector */}
-            {(node.direct_reports?.length ?? 0) > 1 && (
+            {node.direct_reports.length > 1 && (
               <div className="absolute top-0 left-0 right-0 h-0.5 bg-gray-300" style={{ top: 0 }} />
             )}
-            {node.direct_reports!.map((child, i) => (
+            {node.direct_reports.map((child) => (
               <div key={child.id} className="relative flex flex-col items-center">
                 {/* Vertical connector to child */}
                 <div className="w-0.5 h-4 bg-gray-300 mb-2" />
-                <EmployeeCard node={child} depth={depth + 1} router={router} />
+                <EmployeeCard node={child} depth={depth + 1} />
               </div>
             ))}
           </div>
@@ -110,26 +105,9 @@ function EmployeeCard({ node, depth, router }: { node: OrgNode; depth: number; r
   );
 }
 
-function DepartmentSection({ dept, employees, router }: {
-  dept: any;
-  employees: any[];
-  router: ReturnType<typeof useRouter>;
-}) {
+function DepartmentSection({ dept, employees }: { dept: OrgDepartment; employees: OrgEmployee[] }) {
   const [collapsed, setCollapsed] = useState(false);
-
-  // Find top-level in this dept (no reporting_to within dept or reporting_to is null)
-  const deptEmployeeIds = new Set(employees.map((e) => e.id));
-  const roots = employees.filter((e) => !e.reporting_to || !deptEmployeeIds.has(e.reporting_to));
-  const employeeMap = new Map(employees.map((e) => [e.id, { ...e, direct_reports: [] as any[] }]));
-
-  // Build tree within department
-  employees.forEach((e) => {
-    if (e.reporting_to && employeeMap.has(e.reporting_to)) {
-      employeeMap.get(e.reporting_to)!.direct_reports.push(employeeMap.get(e.id)!);
-    }
-  });
-
-  const rootNodes = roots.map((r) => employeeMap.get(r.id)!);
+  const rootNodes = buildOrgTree(employees);
 
   return (
     <div className="mb-10">
@@ -148,7 +126,7 @@ function DepartmentSection({ dept, employees, router }: {
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-8 min-w-max px-4">
             {rootNodes.map((node) => (
-              <EmployeeCard key={node.id} node={node} depth={0} router={router} />
+              <EmployeeCard key={node.id} node={node} depth={0} />
             ))}
           </div>
         </div>
@@ -158,8 +136,6 @@ function DepartmentSection({ dept, employees, router }: {
 }
 
 export function OrgChartPage() {
-  const router = useRouter();
-
   const [selectedDept, setSelectedDept] = useState("all");
 
   const employeesQuery = useOrgEmployees();
@@ -234,13 +210,12 @@ export function OrgChartPage() {
       ) : (
         <div className="bg-gray-50 rounded-xl p-6 min-h-96 overflow-auto">
           {deptGroups.map(({ dept, employees: deptEmps }) => (
-            <DepartmentSection key={dept.id} dept={dept} employees={deptEmps} router={router} />
+            <DepartmentSection key={dept.id} dept={dept} employees={deptEmps} />
           ))}
           {noDeptEmployees.length > 0 && (
             <DepartmentSection
               dept={{ id: "none", name: "Tanpa Departemen" }}
               employees={noDeptEmployees}
-              router={router}
             />
           )}
         </div>

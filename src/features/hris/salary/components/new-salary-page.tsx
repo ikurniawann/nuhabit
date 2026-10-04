@@ -4,18 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CheckIcon } from "@heroicons/react/24/solid";
-import { useToast, ToastContainer } from "@/components/ui/toast";
+import { toast } from "sonner";
+import { EMPTY_SALARY_FORM, formToSalaryPayload } from "@/lib/hris/salary-form";
 import { useSalaryEmployees } from "../queries";
 import { useCreateSalary } from "../mutations";
+import { SalaryAmountFields } from "./salary-amount-fields";
 
 export function NewSalaryPage() {
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
 
   const employeesQuery = useSalaryEmployees();
   const employees = employeesQuery.data ?? [];
@@ -28,77 +28,32 @@ export function NewSalaryPage() {
   const createMutation = useCreateSalary();
   const saving = createMutation.isPending;
 
-  const [formData, setFormData] = useState({
-    employee_id: "",
-    base_salary: "",
-    fixed_allowance: "0",
-    variable_allowance: "0",
-    transport_allowance: "0",
-    meal_allowance: "0",
-    housing_allowance: "0",
-    loan_deduction: "0",
-    other_deduction: "0",
-    ptkp_status: "TK/0",
-    is_taxable: true,
-    bpjs_tk_enrolled: true,
-    bpjs_kes_enrolled: true,
-    tapera_enrolled: true,
-  });
-
-  // Helper function to format number to IDR string
-  const formatToIDR = (value: string): string => {
-    const num = parseInt(value.replace(/[^0-9]/g, '')) || 0;
-    return num.toLocaleString('id-ID');
-  };
-
-  // Helper function to parse IDR string to number
-  const parseFromIDR = (value: string): number => {
-    return parseInt(value.replace(/[^0-9]/g, '')) || 0;
-  };
-
-  // Handle change for currency inputs
-  const handleCurrencyChange = (field: string, value: string) => {
-    const formatted = formatToIDR(value);
-    setFormData({ ...formData, [field]: formatted });
-  };
+  const [formData, setFormData] = useState({ ...EMPTY_SALARY_FORM, employee_id: "" });
 
   async function handleSave() {
     if (!formData.employee_id || !formData.base_salary) {
-      showToast("Karyawan dan gaji pokok wajib diisi", "error");
+      toast.error("Karyawan dan gaji pokok wajib diisi");
       return;
     }
 
     try {
       await createMutation.mutateAsync({
+        ...formToSalaryPayload(formData),
         employee_id: formData.employee_id,
-        base_salary: parseFromIDR(formData.base_salary),
-        fixed_allowance: parseFromIDR(formData.fixed_allowance),
-        variable_allowance: parseFromIDR(formData.variable_allowance),
-        transport_allowance: parseFromIDR(formData.transport_allowance),
-        meal_allowance: parseFromIDR(formData.meal_allowance),
-        housing_allowance: parseFromIDR(formData.housing_allowance),
-        loan_deduction: parseFromIDR(formData.loan_deduction),
-        other_deduction: parseFromIDR(formData.other_deduction),
-        ptkp_status: formData.ptkp_status,
-        is_taxable: formData.is_taxable,
-        bpjs_tk_enrolled: formData.bpjs_tk_enrolled,
-        bpjs_kes_enrolled: formData.bpjs_kes_enrolled,
-        tapera_enrolled: formData.tapera_enrolled,
+        notes: undefined,
       });
 
-      showToast("Salary structure berhasil dibuat", "success");
+      toast.success("Salary structure berhasil dibuat");
       setTimeout(() => {
         router.push("/dashboard/hris/salary");
       }, 1000);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Terjadi kesalahan", "error");
+      toast.error(error instanceof Error ? error.message : "Terjadi kesalahan");
     }
   }
 
   return (
     <div className="container mx-auto py-8 max-w-4xl">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <Button
@@ -139,107 +94,11 @@ export function NewSalaryPage() {
             </div>
           </div>
 
-          {/* Penghasilan */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Penghasilan</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="base_salary">Gaji Pokok (Rp) *</Label>
-                <Input
-                  id="base_salary"
-                  type="text"
-                  value={formData.base_salary}
-                  onChange={(e) => handleCurrencyChange('base_salary', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="fixed_allowance">Tunjangan Tetap (Rp)</Label>
-                <Input
-                  id="fixed_allowance"
-                  type="text"
-                  value={formData.fixed_allowance}
-                  onChange={(e) => handleCurrencyChange('fixed_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="variable_allowance">Tunjangan Variabel (Rp)</Label>
-                <Input
-                  id="variable_allowance"
-                  type="text"
-                  value={formData.variable_allowance}
-                  onChange={(e) => handleCurrencyChange('variable_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="transport_allowance">Tunjangan Transport (Rp)</Label>
-                <Input
-                  id="transport_allowance"
-                  type="text"
-                  value={formData.transport_allowance}
-                  onChange={(e) => handleCurrencyChange('transport_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="meal_allowance">Tunjangan Makan (Rp)</Label>
-                <Input
-                  id="meal_allowance"
-                  type="text"
-                  value={formData.meal_allowance}
-                  onChange={(e) => handleCurrencyChange('meal_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="housing_allowance">Tunjangan Rumah (Rp)</Label>
-                <Input
-                  id="housing_allowance"
-                  type="text"
-                  value={formData.housing_allowance}
-                  onChange={(e) => handleCurrencyChange('housing_allowance', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Potongan */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Potongan</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="loan_deduction">Cicilan Pinjaman (Rp)</Label>
-                <Input
-                  id="loan_deduction"
-                  type="text"
-                  value={formData.loan_deduction}
-                  onChange={(e) => handleCurrencyChange('loan_deduction', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="other_deduction">Potongan Lain (Rp)</Label>
-                <Input
-                  id="other_deduction"
-                  type="text"
-                  value={formData.other_deduction}
-                  onChange={(e) => handleCurrencyChange('other_deduction', e.target.value)}
-                  className="mt-1"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
+          <SalaryAmountFields
+            values={formData}
+            onChange={(field, value) => setFormData((prev) => ({ ...prev, [field]: value }))}
+            baseSalaryRequired
+          />
 
           {/* Tax & Benefits */}
           <div>

@@ -39,3 +39,14 @@ export const fetchContractList = (params: ContractListParams) =>
   apiGet<ContractListResponse>(
     buildListUrl("/api/hris/contracts", params as Record<string, string | number | undefined>)
   );
+
+/** Rata-rata skor KPI 3 bulan terakhir per employee_id (rekomendasi PKWT). */
+export type KpiRecommendation = Record<
+  string,
+  { avg_score: number; periods: number; has_final: boolean }
+>;
+
+export const fetchKpiRecommendation = (employeeIds: string[]) =>
+  apiGet<{ data: KpiRecommendation }>(
+    buildListUrl("/api/hris/kpi/recommendation", { employee_ids: employeeIds.join(",") })
+  ).then((res) => res.data);

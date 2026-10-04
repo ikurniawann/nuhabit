@@ -9,148 +9,55 @@ import {
   DocumentTextIcon,
   IdentificationIcon,
   TrashIcon,
-  UserPlusIcon,
 } from "@heroicons/react/24/outline";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Combobox } from "@/components/ui/combobox";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { formatDate } from "@/lib/format";
+import { useEmployeeContracts, useEmployeeDocuments, useEmployeeRecruitmentDocs } from "../queries";
+import { useDeleteEmployeeDocument } from "../mutations";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { useToast, ToastContainer } from "@/components/ui/toast";
-import {
-  useEmployeeContracts,
-  useEmployeeDocuments,
-  useEmployeeRecruitmentDocs,
-} from "../queries";
-import {
-  useCreateEmployeeDocument,
-  useDeleteEmployeeDocument,
-} from "../mutations";
+  CONTRACT_STATUS_BADGES,
+  contractDocumentUrl,
+  contractSignedDocumentUrl,
+} from "./contracts/contract-labels";
+import { DocumentRow } from "./documents/document-row";
+import { DOC_TYPE_LABELS, DocumentUploadDialog } from "./documents/document-upload-dialog";
+import { RecruitmentDocumentsSection } from "./documents/recruitment-documents-section";
 
 /**
- * Tab "Dokumen" di detail karyawan (HRD/super admin) — menampilkan SEMUA
- * lampiran milik karyawan dalam satu tempat: dokumen asal rekrutmen
- * (CV, Laporan Pipeline), dokumen kontrak (draft PDF + kontrak bertanda
- * tangan per kontrak), dan dokumen kepegawaian yang diupload manual.
+ * Tab "Dokumen" di detail karyawan (HRD/super admin): SEMUA lampiran milik
+ * karyawan dalam satu tempat: dokumen asal rekrutmen (CV, Laporan Pipeline),
+ * dokumen kontrak (draft PDF + kontrak bertanda tangan per kontrak), dan
+ * dokumen kepegawaian yang diupload manual.
  */
-
-const DOC_TYPE_LABELS: Record<string, string> = {
-  ktp: "National ID (KTP)",
-  npwp: "Tax ID (NPWP)",
-  ijazah: "Diploma",
-  cv: "CV / Resume",
-  kontrak: "Employment Contract",
-  bpjs_tk: "BPJS Employment",
-  bpjs_kes: "BPJS Health",
-  sertifikat: "Certificate",
-  other: "Other",
-};
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = {
   pkwtt: "PKWTT",
   pkwt: "PKWT",
 };
 
-const CONTRACT_STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-gray-100 text-gray-700" },
-  active: { label: "Aktif", className: "bg-green-100 text-green-700" },
-  ended: { label: "Berakhir", className: "bg-blue-100 text-blue-700" },
-  terminated: { label: "Diputus", className: "bg-red-100 text-red-700" },
-  converted: { label: "Konversi ke Tetap", className: "bg-purple-100 text-purple-700" },
-};
-
-function formatDate(d: string | null | undefined) {
-  if (!d) return "-";
-  const date = new Date(d);
-  if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-}
-
-const EMPTY_DOC_FORM = {
-  document_type: "ktp",
-  document_name: "",
-  file_url: "",
-  issue_date: "",
-  expiry_date: "",
-  notes: "",
-};
-
-function DocumentRow({
-  icon,
-  title,
-  subtitle,
-  action,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle?: React.ReactNode;
-  action: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 p-3">
-      <div className="flex min-w-0 items-center gap-3">
-        {icon}
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-gray-900">{title}</p>
-          {subtitle ? <p className="text-xs text-gray-500">{subtitle}</p> : null}
-        </div>
-      </div>
-      <div className="shrink-0">{action}</div>
-    </div>
-  );
-}
-
 export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
-  const { toasts, showToast, removeToast } = useToast();
-
-  const { data: documents = [], isLoading: documentsLoading } =
-    useEmployeeDocuments(employeeId);
-  const { data: contracts = [], isLoading: contractsLoading } =
-    useEmployeeContracts(employeeId);
+  const { data: documents = [], isLoading: documentsLoading } = useEmployeeDocuments(employeeId);
+  const { data: contracts = [], isLoading: contractsLoading } = useEmployeeContracts(employeeId);
   const { data: recruitmentDocs, isLoading: recruitmentLoading } =
     useEmployeeRecruitmentDocs(employeeId);
-
-  const createDocumentMutation = useCreateEmployeeDocument(employeeId);
   const deleteDocumentMutation = useDeleteEmployeeDocument(employeeId);
 
-  const [docDialog, setDocDialog] = useState(false);
-  const [docForm, setDocForm] = useState(EMPTY_DOC_FORM);
-  const [savingDoc, setSavingDoc] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
 
   const loading = documentsLoading || contractsLoading || recruitmentLoading;
 
-  async function handleSaveDocument() {
-    if (!docForm.document_name || !docForm.file_url) {
-      showToast("Nama dokumen dan URL file wajib diisi", "error");
-      return;
-    }
-    setSavingDoc(true);
-    try {
-      await createDocumentMutation.mutateAsync(docForm);
-      showToast("Dokumen berhasil disimpan");
-      setDocDialog(false);
-      setDocForm(EMPTY_DOC_FORM);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal menyimpan dokumen", "error");
-    } finally {
-      setSavingDoc(false);
-    }
-  }
-
   async function handleDeleteDocument(docId: string) {
-    if (!confirm("Hapus dokumen ini?")) return;
     try {
       await deleteDocumentMutation.mutateAsync(docId);
-      showToast("Dokumen dihapus");
+      toast.success("Dokumen dihapus");
+      setDeleteDocId(null);
     } catch {
-      showToast("Gagal menghapus dokumen", "error");
+      toast.error("Gagal menghapus dokumen");
     }
   }
 
@@ -164,69 +71,7 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
 
   return (
     <div className="space-y-6">
-      {/* ── Dokumen rekrutmen: CV + Laporan Pipeline ── */}
-      <div className="space-y-3">
-        <h3 className="flex items-center gap-2 font-semibold text-gray-700">
-          <UserPlusIcon className="w-4 h-4 text-gray-400" /> Dokumen Rekrutmen
-        </h3>
-        {recruitmentDocs ? (
-          <div className="space-y-2">
-            {recruitmentDocs.cv_url ? (
-              <DocumentRow
-                icon={<DocumentTextIcon className="w-7 h-7 shrink-0 text-red-500" />}
-                title="CV / Resume"
-                subtitle={
-                  <>
-                    {recruitmentDocs.cv_url.split(".").pop()?.toUpperCase()}
-                    {recruitmentDocs.position_title
-                      ? ` · Lamaran: ${recruitmentDocs.position_title}`
-                      : ""}
-                    {` · ${formatDate(recruitmentDocs.applied_at)}`}
-                  </>
-                }
-                action={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(recruitmentDocs.cv_url!, "_blank")}
-                    className="gap-1"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4" /> Unduh
-                  </Button>
-                }
-              />
-            ) : (
-              <p className="text-sm text-gray-400">CV belum diupload saat rekrutmen.</p>
-            )}
-            {recruitmentDocs.report_available && (
-              <DocumentRow
-                icon={<DocumentTextIcon className="w-7 h-7 shrink-0 text-sky-600" />}
-                title="Laporan Pipeline"
-                subtitle="PDF · seluruh tahapan rekrutmen yang dilalui kandidat"
-                action={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      window.open(
-                        `/api/candidates/${recruitmentDocs.candidate_id}/report`,
-                        "_blank"
-                      )
-                    }
-                    className="gap-1"
-                  >
-                    <ArrowDownTrayIcon className="w-4 h-4" /> Unduh
-                  </Button>
-                }
-              />
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-400">
-            Karyawan ini tidak berasal dari modul rekrutmen — tidak ada CV/laporan pipeline.
-          </p>
-        )}
-      </div>
+      <RecruitmentDocumentsSection docs={recruitmentDocs ?? null} />
 
       {/* ── Dokumen kontrak: draft PDF + kontrak bertanda tangan ── */}
       <div className="space-y-3">
@@ -238,11 +83,10 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
         ) : (
           <div className="space-y-2">
             {contracts.map((contract) => {
-              const statusBadge =
-                CONTRACT_STATUS_BADGES[contract.status] ?? {
-                  label: contract.status,
-                  className: "bg-gray-100 text-gray-600",
-                };
+              const statusBadge = CONTRACT_STATUS_BADGES[contract.status] ?? {
+                label: contract.status,
+                className: "bg-gray-100 text-gray-600",
+              };
               return (
                 <div key={contract.id} className="space-y-2">
                   <DocumentRow
@@ -260,9 +104,7 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          window.open(`/api/hris/contracts/${contract.id}/document`, "_blank")
-                        }
+                        onClick={() => window.open(contractDocumentUrl(contract.id), "_blank")}
                         className="gap-1"
                       >
                         <ArrowDownTrayIcon className="w-4 h-4" /> PDF
@@ -283,10 +125,7 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            window.open(
-                              `/api/hris/contracts/${contract.id}/signed-document`,
-                              "_blank"
-                            )
+                            window.open(contractSignedDocumentUrl(contract.id), "_blank")
                           }
                           className="gap-1"
                         >
@@ -312,7 +151,7 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
           <h3 className="flex items-center gap-2 font-semibold text-gray-700">
             <IdentificationIcon className="w-4 h-4 text-gray-400" /> Dokumen Kepegawaian
           </h3>
-          <Button size="sm" onClick={() => setDocDialog(true)} className="gap-1">
+          <Button size="sm" onClick={() => setUploadOpen(true)} className="gap-1">
             <ArrowUpTrayIcon className="w-4 h-4" /> Upload Dokumen
           </Button>
         </div>
@@ -362,7 +201,7 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleDeleteDocument(doc.id)}
+                        onClick={() => setDeleteDocId(doc.id)}
                         className="text-red-500 hover:bg-red-50 p-1.5"
                         title="Hapus"
                       >
@@ -382,86 +221,17 @@ export function EmployeeDocumentsTab({ employeeId }: { employeeId: string }) {
         )}
       </div>
 
-      {/* Dialog upload dokumen manual */}
-      <Dialog open={docDialog} onOpenChange={(o) => !o && setDocDialog(false)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload Dokumen</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div>
-              <label className="text-xs font-medium text-gray-600">Jenis Dokumen *</label>
-              <Combobox
-                options={Object.entries(DOC_TYPE_LABELS).map(([value, label]) => ({
-                  value,
-                  label,
-                }))}
-                value={docForm.document_type}
-                onChange={(value) => setDocForm((f) => ({ ...f, document_type: value }))}
-                placeholder="Pilih jenis dokumen"
-                searchPlaceholder="Cari jenis..."
-                emptyMessage="Jenis tidak ditemukan"
-                className="!w-full h-9 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Nama Dokumen *</label>
-              <Input
-                value={docForm.document_name}
-                onChange={(e) => setDocForm((f) => ({ ...f, document_name: e.target.value }))}
-                placeholder="cth. KTP - Budi Santoso"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">URL File *</label>
-              <Input
-                value={docForm.file_url}
-                onChange={(e) => setDocForm((f) => ({ ...f, file_url: e.target.value }))}
-                placeholder="https://... atau path file"
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Upload file ke storage, lalu tempel URL-nya di sini
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600">Tanggal Terbit</label>
-                <Input
-                  type="date"
-                  value={docForm.issue_date}
-                  onChange={(e) => setDocForm((f) => ({ ...f, issue_date: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600">Tanggal Kedaluwarsa</label>
-                <Input
-                  type="date"
-                  value={docForm.expiry_date}
-                  onChange={(e) => setDocForm((f) => ({ ...f, expiry_date: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-600">Catatan</label>
-              <Input
-                value={docForm.notes}
-                onChange={(e) => setDocForm((f) => ({ ...f, notes: e.target.value }))}
-                placeholder="Opsional"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDocDialog(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleSaveDocument} disabled={savingDoc}>
-              {savingDoc ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      {uploadOpen && (
+        <DocumentUploadDialog employeeId={employeeId} onClose={() => setUploadOpen(false)} />
+      )}
+      <ConfirmDialog
+        open={deleteDocId !== null}
+        onOpenChange={(open) => !open && setDeleteDocId(null)}
+        title="Hapus dokumen ini?"
+        confirmLabel="Hapus"
+        loading={deleteDocumentMutation.isPending}
+        onConfirm={() => deleteDocId && handleDeleteDocument(deleteDocId)}
+      />
     </div>
   );
 }

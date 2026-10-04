@@ -1,14 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { SlidersHorizontal, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, useToast } from "@/components/ui/toast";
-import { apiGet, apiPut } from "@/lib/api-client";
+import {
+  activeWeightTotal,
+  buildConfigDraft,
+  configPayloadItems,
+  type ConfigDraftItem,
+} from "@/lib/kpi/ui-config";
+import { useKpiConfig } from "../queries";
+import { useSaveKpiConfig } from "../mutations";
 
 /**
  * Konfigurasi KPI per DEPARTEMEN (owner 2026-08-31): HRD menceklis
@@ -19,79 +26,28 @@ import { apiGet, apiPut } from "@/lib/api-client";
  * final tidak pernah dihitung ulang.
  */
 
-interface Indicator {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  unit: string | null;
-  direction: string;
-}
-interface Mapping {
-  department_id: string;
-  indicator_id: string;
-  weight: number | string;
-  updated_by: string | null;
-}
-interface Department {
-  id: string;
-  name: string;
-}
-
 export function KpiConfigPage() {
-  const { toasts, showToast, removeToast } = useToast();
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [indicators, setIndicators] = useState<Indicator[]>([]);
-  const [mappings, setMappings] = useState<Mapping[]>([]);
-  const [activeDept, setActiveDept] = useState<string>("");
-  // Suntingan per peran menimpa baseline dari mapping tersimpan — tanpa
-  // effect sinkronisasi, pindah peran tidak kehilangan suntingan.
-  const [edits, setEdits] = useState<
-    Record<string, Record<string, { enabled: boolean; weight: string }>>
-  >({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const configQuery = useKpiConfig();
+  const departments = useMemo(() => configQuery.data?.departments ?? [], [configQuery.data]);
+  const indicators = useMemo(() => configQuery.data?.indicators ?? [], [configQuery.data]);
+  const mappings = useMemo(() => configQuery.data?.mappings ?? [], [configQuery.data]);
+  const loading = configQuery.isLoading;
+  const [selectedDept, setSelectedDept] = useState<string>("");
+  const activeDept = selectedDept || departments[0]?.id || "";
+  // Suntingan per departemen menimpa baseline dari mapping tersimpan; tanpa
+  // effect sinkronisasi, pindah departemen tidak kehilangan suntingan.
+  const [edits, setEdits] = useState<Record<string, Record<string, ConfigDraftItem>>>({});
+  const saveMutation = useSaveKpiConfig();
 
-  useEffect(() => {
-    apiGet<{
-      data: { departments: Department[]; indicators: Indicator[]; mappings: Mapping[] };
-    }>("/api/hris/kpi-config")
-      .then((res) => {
-        setDepartments(res.data.departments);
-        setIndicators(res.data.indicators);
-        setMappings(res.data.mappings);
-        setActiveDept((prev) => prev || res.data.departments[0]?.id || "");
-      })
-      .catch((err) =>
-        showToast(err instanceof Error ? err.message : "Gagal memuat konfigurasi", "error")
-      )
-      .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const deptConfigured = useMemo(
-    () => mappings.some((m) => m.department_id === activeDept),
-    [mappings, activeDept]
+  const indicatorIds = useMemo(() => indicators.map((ind) => ind.id), [indicators]);
+  const deptConfigured = mappings.some((m) => m.department_id === activeDept);
+  const draft = useMemo(
+    () => buildConfigDraft(indicatorIds, mappings, activeDept, edits[activeDept]),
+    [indicatorIds, mappings, activeDept, edits]
   );
-  const draft = useMemo(() => {
-    const next: Record<string, { enabled: boolean; weight: string }> = {};
-    for (const ind of indicators) {
-      const found = mappings.find(
-        (m) => m.department_id === activeDept && m.indicator_id === ind.id
-      );
-      next[ind.id] =
-        edits[activeDept]?.[ind.id] ??
-        (found
-          ? { enabled: true, weight: String(Math.round(Number(found.weight))) }
-          : { enabled: false, weight: "10" });
-    }
-    return next;
-  }, [activeDept, indicators, mappings, edits]);
+  const totalWeight = activeWeightTotal(draft);
 
-  const setDraftItem = (
-    indicatorId: string,
-    patch: Partial<{ enabled: boolean; weight: string }>
-  ) =>
+  const setDraftItem = (indicatorId: string, patch: Partial<ConfigDraftItem>) =>
     setEdits((prev) => ({
       ...prev,
       [activeDept]: {
@@ -100,43 +56,24 @@ export function KpiConfigPage() {
       },
     }));
 
-  const totalWeight = useMemo(
-    () =>
-      Object.values(draft)
-        .filter((d) => d.enabled)
-        .reduce((sum, d) => sum + (Number(d.weight) || 0), 0),
-    [draft]
-  );
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await apiPut<{ message: string }>("/api/hris/kpi-config", {
-        department_id: activeDept,
-        items: indicators.map((ind) => ({
-          indicator_id: ind.id,
-          enabled: draft[ind.id]?.enabled ?? false,
-          weight: Number(draft[ind.id]?.weight) || 0,
-        })),
-      });
-      showToast(res.message ?? "Tersimpan");
-      // muat ulang mapping supaya pindah-pindah peran konsisten
-      const fresh = await apiGet<{ data: { mappings: Mapping[] } }>("/api/hris/kpi-config");
-      setMappings(fresh.data.mappings);
-      setEdits((prev) => ({ ...prev, [activeDept]: {} }));
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan", "error");
-    } finally {
-      setSaving(false);
-    }
+  function handleSave() {
+    saveMutation.mutate(
+      { department_id: activeDept, items: configPayloadItems(indicatorIds, draft) },
+      {
+        onSuccess: (res) => {
+          toast.success(res.message ?? "Tersimpan");
+          setEdits((prev) => ({ ...prev, [activeDept]: {} }));
+        },
+        onError: (err) => toast.error(err.message || "Gagal menyimpan"),
+      }
+    );
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900">
-          <SlidersHorizontal className="h-6 w-6 text-primary" />
+          <SlidersHorizontal className="h-6 w-6 text-brand-text" />
           Konfigurasi KPI Department
         </h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -152,7 +89,7 @@ export function KpiConfigPage() {
             key={dept.id}
             size="sm"
             variant={dept.id === activeDept ? "default" : "outline"}
-            onClick={() => setActiveDept(dept.id)}
+            onClick={() => setSelectedDept(dept.id)}
           >
             {dept.name}
           </Button>
@@ -171,6 +108,12 @@ export function KpiConfigPage() {
         <Card>
           <CardContent className="flex items-center gap-2 p-6 text-sm text-gray-500">
             <Loader2 className="h-4 w-4 animate-spin" /> Memuat…
+          </CardContent>
+        </Card>
+      ) : configQuery.error ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-red-600">
+            {configQuery.error.message || "Gagal memuat konfigurasi"}
           </CardContent>
         </Card>
       ) : (
@@ -235,8 +178,8 @@ export function KpiConfigPage() {
             </span>
           ) : null}
         </p>
-        <Button onClick={handleSave} disabled={saving || loading || !activeDept}>
-          {saving
+        <Button onClick={handleSave} disabled={saveMutation.isPending || loading || !activeDept}>
+          {saveMutation.isPending
             ? "Menyimpan…"
             : `Simpan ${departments.find((d) => d.id === activeDept)?.name ?? ""}`}
         </Button>

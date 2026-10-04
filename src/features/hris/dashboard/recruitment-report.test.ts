@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRecruitmentReportHtml, csvCell } from "./recruitment-report";
+import { buildRecruitmentReportHtml } from "./recruitment-report";
 
 describe("buildRecruitmentReportHtml", () => {
   it("escapes candidate fields from the public career form", () => {
@@ -22,14 +22,5 @@ describe("buildRecruitmentReportHtml", () => {
     expect(html).toContain("&lt;img src=x onerror=&quot;opener.location=&#39;//evil&#39;&quot;&gt;");
     expect(html).toContain("<td>9 hari</td>");
     expect(html).toContain("Oktober 2026");
-  });
-});
-
-describe("csvCell", () => {
-  it("doubles quotes and neutralises spreadsheet formulas", () => {
-    expect(csvCell('Budi "B"')).toBe('"Budi ""B"""');
-    expect(csvCell("=HYPERLINK(\"http://x\")")).toBe('"\'=HYPERLINK(""http://x"")"');
-    expect(csvCell("+62812")).toBe("\"'+62812\"");
-    expect(csvCell(null)).toBe('""');
   });
 });

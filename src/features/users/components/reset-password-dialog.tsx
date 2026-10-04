@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Copy, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,28 +25,17 @@ interface ResetPasswordDialogProps {
   target: ResetPasswordTarget | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onError?: (message: string) => void;
 }
 
-export function ResetPasswordDialog({
-  target,
-  open,
-  onOpenChange,
-  onError,
-}: ResetPasswordDialogProps) {
+export function ResetPasswordDialog({ target, open, onOpenChange }: ResetPasswordDialogProps) {
   const mutation = useResetUserPassword();
   const [tempPassword, setTempPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setTempPassword(null);
-      setCopied(false);
-    }
-  }, [open]);
-
   function handleClose() {
     if (mutation.isPending) return;
+    setTempPassword(null);
+    setCopied(false);
     onOpenChange(false);
   }
 
@@ -55,7 +45,7 @@ export function ResetPasswordDialog({
       const res = await mutation.mutateAsync(target.id);
       setTempPassword(res.tempPassword);
     } catch (error) {
-      onError?.(error instanceof Error ? error.message : "Failed to reset password");
+      toast.error(error instanceof Error ? error.message : "Failed to reset password");
       onOpenChange(false);
     }
   }
@@ -79,9 +69,7 @@ export function ResetPasswordDialog({
     >
       <DialogPanel size="xs">
         <DialogPanelHeader>
-          <DialogPanelTitle>
-            {isSuccess ? "Password Reset" : "Reset Password?"}
-          </DialogPanelTitle>
+          <DialogPanelTitle>{isSuccess ? "Password Reset" : "Reset Password?"}</DialogPanelTitle>
           <DialogPanelDescription>
             {isSuccess ? (
               <>
@@ -92,8 +80,8 @@ export function ResetPasswordDialog({
             ) : (
               <>
                 Generate a new temporary password for{" "}
-                <span className="font-medium text-gray-900">{target?.fullName}</span>? Their
-                current password will stop working immediately.
+                <span className="font-medium text-gray-900">{target?.fullName}</span>? Their current
+                password will stop working immediately.
               </>
             )}
           </DialogPanelDescription>
@@ -104,11 +92,7 @@ export function ResetPasswordDialog({
             <div>
               <p className="mb-1.5 text-xs font-medium text-gray-600">Temporary password</p>
               <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={tempPassword ?? ""}
-                  className="h-10 font-mono text-sm"
-                />
+                <Input readOnly value={tempPassword ?? ""} className="h-10 font-mono text-sm" />
                 <Button
                   type="button"
                   variant="outline"

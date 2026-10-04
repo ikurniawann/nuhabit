@@ -25,11 +25,11 @@ export interface LeaveItem {
   };
 }
 
-export interface LeaveListParams {
+export type LeaveListParams = {
   status?: string;
   leave_type?: string;
   limit?: number;
-}
+};
 
 export interface CreateLeavePayload {
   employee_id: string;

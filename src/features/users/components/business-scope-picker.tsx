@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { Combobox } from "@/components/ui/combobox";
 import type { BusinessTree } from "@/features/configuration/business/types";
 import { FormFieldLabel, formComboboxClassName } from "@/components/layout/form-field";
@@ -38,23 +37,21 @@ export function BusinessScopePicker({
   const showScopePickers = !isSuperAdmin || isEdit;
 
   const holdings = tree.holdings;
-  const companies =
-    holdings.find((h) => h.id === form.holding_id)?.companies ?? [];
-  const branches =
-    companies.find((c) => c.id === form.company_id)?.branches ?? [];
+  const companies = holdings.find((h) => h.id === form.holding_id)?.companies ?? [];
+  const branches = companies.find((c) => c.id === form.company_id)?.branches ?? [];
 
-  const holdingOptions = useMemo(
-    () => holdings.map((holding) => ({ value: holding.id, label: holding.name })),
-    [holdings]
-  );
-  const companyOptions = useMemo(
-    () => companies.map((company) => ({ value: company.id, label: company.name })),
-    [companies]
-  );
-  const branchOptions = useMemo(
-    () => branches.map((branch) => ({ value: branch.id, label: branch.name })),
-    [branches]
-  );
+  const holdingOptions = holdings.map((holding) => ({
+    value: holding.id,
+    label: holding.name,
+  }));
+  const companyOptions = companies.map((company) => ({
+    value: company.id,
+    label: company.name,
+  }));
+  const branchOptions = branches.map((branch) => ({
+    value: branch.id,
+    label: branch.name,
+  }));
 
   function handleScopeChange(value: string) {
     const nextScope = value as BusinessScopeLevel;
@@ -92,8 +89,8 @@ export function BusinessScopePicker({
       <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 p-4">
         <p className="text-sm font-medium text-gray-900">Data Access Scope</p>
         <p className="mt-1 text-xs text-gray-500">
-          Super Admin has full access across all holdings, companies, and branches.
-          Change the role first if you want to limit data scope.
+          Super Admin has full access across all holdings, companies, and branches. Change the role
+          first if you want to limit data scope.
         </p>
       </div>
     );
@@ -105,8 +102,8 @@ export function BusinessScopePicker({
         <div className="rounded-lg border border-amber-200/80 bg-amber-50/60 p-4">
           <p className="text-sm font-medium text-amber-900">Data Access Scope</p>
           <p className="mt-1 text-xs text-amber-800">
-            Current role is Super Admin. Scope below is only saved when the role is
-            changed to something other than Super Admin.
+            Current role is Super Admin. Scope below is only saved when the role is changed to
+            something other than Super Admin.
           </p>
         </div>
         {renderScopeFields()}
@@ -131,9 +128,7 @@ export function BusinessScopePicker({
             className={formComboboxClassName}
           />
           {scope ? (
-            <p className="mt-1.5 text-xs text-gray-500">
-              {BUSINESS_SCOPE_DESCRIPTIONS[scope]}
-            </p>
+            <p className="mt-1.5 text-xs text-gray-500">{BUSINESS_SCOPE_DESCRIPTIONS[scope]}</p>
           ) : null}
         </div>
 

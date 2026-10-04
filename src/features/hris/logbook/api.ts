@@ -1,4 +1,4 @@
-import { apiGet, buildListUrl } from "@/lib/api-client";
+import { apiDelete, apiGet, apiPatch, apiPost, buildListUrl } from "@/lib/api-client";
 import type {
   LogbookCurrentUser,
   LogbookDepartment,
@@ -14,21 +14,6 @@ import type {
 } from "./types";
 
 const BASE = "/api/hris/logbook";
-
-async function mutateLogbook(
-  method: "POST" | "PATCH" | "DELETE",
-  body?: Record<string, unknown>,
-  url: string = BASE
-) {
-  const res = await fetch(url, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((json as { error?: string }).error || "Request failed");
-  return json;
-}
 
 export const fetchLogbookMe = () =>
   apiGet<{ data: LogbookCurrentUser | null }>(`${BASE}?resource=me`).then(
@@ -60,25 +45,22 @@ export const fetchLogbookSummary = (params?: { department_id?: string }) =>
   ).then((res) => res.data);
 
 export const createLogbookTemplate = (payload: CreateLogbookTemplatePayload) =>
-  mutateLogbook("POST", { action: "create-template", ...payload });
+  apiPost<{ data?: unknown }>(BASE, { action: "create-template", ...payload });
 
 export const createLogbookEntry = (payload: CreateLogbookEntryPayload) =>
-  mutateLogbook("POST", { action: "create-entry", ...payload }) as Promise<{
-    data?: { id?: string };
-  }>;
+  apiPost<{ data?: { id?: string } }>(BASE, { action: "create-entry", ...payload });
 
 export const updateLogbookItem = (payload: UpdateLogbookItemPayload) =>
-  mutateLogbook("PATCH", { action: "update-item", ...payload });
+  apiPatch<{ data?: unknown }>(BASE, { action: "update-item", ...payload });
 
 export const updateLogbookEntryStatus = (payload: UpdateLogbookEntryStatusPayload) =>
-  mutateLogbook("PATCH", payload as unknown as Record<string, unknown>);
+  apiPatch<{ data?: unknown }>(BASE, payload);
 
 export const deleteLogbookEntry = (entryId: string) =>
-  mutateLogbook("DELETE", undefined, `${BASE}?resource=entry&id=${entryId}`);
+  apiDelete(buildListUrl(BASE, { resource: "entry", id: entryId }));
 
 export const deleteLogbookTemplate = (templateId: string) =>
-  mutateLogbook(
-    "DELETE",
-    undefined,
-    `${BASE}?resource=template&id=${templateId}`
-  ) as Promise<{ message?: string; archived?: boolean }>;
+  apiDelete(buildListUrl(BASE, { resource: "template", id: templateId })) as Promise<{
+    message?: string;
+    archived?: boolean;
+  }>;

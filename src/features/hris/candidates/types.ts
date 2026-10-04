@@ -11,31 +11,15 @@ export interface CandidateListParams {
   perPage: number;
 }
 
+/** Baris GET /api/candidates: kolom kandidat + relasi brand/posisi bersarang. */
+export type CandidateRow = Candidate & {
+  brands: { name: string } | null;
+  positions: { title: string } | null;
+};
+
 export interface CandidateListResult {
-  data: Candidate[];
+  data: CandidateRow[];
   count: number;
-}
-
-export interface CandidateBrand {
-  id: string | number;
-  name: string;
-  is_active?: boolean;
-}
-
-export interface CreateCandidatePayload {
-  full_name: string;
-  email: string;
-  phone: string;
-  domicile: string;
-  source: string;
-  brand_id?: string | null;
-  position_id?: string | null;
-  status: string;
-  notes?: string | null;
-  last_experience?: string | null;
-  last_education?: string | null;
-  availability?: string | null;
-  expected_salary?: number | null;
 }
 
 export interface CandidateView {
@@ -57,6 +41,10 @@ export interface CandidateView {
   brands?: { name: string } | null;
   positions?: { title: string } | null;
   promoted_to_employee_id?: string | null;
+  last_experience?: string | null;
+  last_education?: string | null;
+  expected_salary?: number | null;
+  availability?: string | null;
 }
 
 export interface CandidateActivity {
@@ -82,23 +70,4 @@ export interface CandidateDetailResult {
   candidate: CandidateView | null;
   activities: CandidateActivity[];
   notes: CandidateNote[];
-}
-
-export interface ChartDatum {
-  name: string;
-  value: number;
-}
-
-export interface CandidateAnalyticsResult {
-  summary: {
-    thisMonth: number;
-    activePipeline: number;
-    talentPool: number;
-    openPositions: number;
-  };
-  weeklyData: { name: string; candidates: number }[];
-  sourceData: ChartDatum[];
-  funnelData: { stage: string; count: number }[];
-  brandData: ChartDatum[];
-  positionData: ChartDatum[];
 }

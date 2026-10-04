@@ -1,4 +1,4 @@
-import { queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import type { WorkforceActor } from "@/lib/hris/workforce-auth";
 
 /**
@@ -6,11 +6,11 @@ import type { WorkforceActor } from "@/lib/hris/workforce-auth";
  *
  * Dua arah, dengan arti yang sengaja berbeda:
  *
- * - **Sisi admin/HRD** — ada pengajuan karyawan yang MENUNGGU KEPUTUSAN.
+ * - **Sisi admin/HRD**: ada pengajuan karyawan yang MENUNGGU KEPUTUSAN.
  *   Cukup dihitung dari status 'pending', tanpa perlu penanda baca: badge
  *   hilang dengan sendirinya begitu pengajuan diputuskan.
  *
- * - **Sisi karyawan (ESS)** — ada PEMBARUAN pada pengajuan miliknya sejak
+ * - **Sisi karyawan (ESS)**: ada PEMBARUAN pada pengajuan miliknya sejak
  *   terakhir ia membuka halaman itu. Perlu penanda baca
  *   (`hris.ess_module_reads`) karena "sudah dilihat" tidak bisa disimpulkan
  *   dari status mana pun.
@@ -126,8 +126,8 @@ async function countEssUpdates(employeeId: string): Promise<Record<EssModule, nu
 /**
  * Susun seluruh badge untuk satu aktor.
  *
- * Hitungan antrean persetujuan hanya dikembalikan kepada role HR — bukan
- * sekadar disembunyikan di UI — supaya endpoint ini tidak membocorkan keadaan
+ * Hitungan antrean persetujuan hanya dikembalikan kepada role HR: bukan
+ * sekadar disembunyikan di UI: supaya endpoint ini tidak membocorkan keadaan
  * modul yang memang tidak boleh diakses karyawan biasa.
  */
 export async function buildNavBadges(actor: WorkforceActor): Promise<Record<string, number>> {
@@ -152,4 +152,15 @@ export async function buildNavBadges(actor: WorkforceActor): Promise<Record<stri
   }
 
   return badges;
+}
+
+/** Tandai satu modul ESS sudah dilihat karyawan (badge pembaruan hilang). */
+export async function markEssModuleSeen(employeeId: string, module: EssModule): Promise<void> {
+  await query(
+    `INSERT INTO hris.ess_module_reads (employee_id, module, last_seen_at)
+     VALUES ($1, $2, now())
+     ON CONFLICT (employee_id, module)
+     DO UPDATE SET last_seen_at = now()`,
+    [employeeId, module]
+  );
 }

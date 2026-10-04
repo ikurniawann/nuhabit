@@ -53,3 +53,8 @@ export type ProctorEventType =
   | "paste"
   | "disconnect"
   | "webcam_snapshot";
+
+const TERMINAL_TEST_STATUSES: ReadonlySet<PortalTestStatus> = new Set(["selesai", "perlu_review", "reviewed"]);
+
+/** Tes sudah selesai dikerjakan (terskor atau menunggu/sudah review HR). */
+export const isTerminalTest = (test: PortalTest) => TERMINAL_TEST_STATUSES.has(test.status);

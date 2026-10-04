@@ -1,64 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { UUID_RE } from "@/lib/hris/workforce-route";
 import { IAM } from "@/lib/iam/prefixes";
-import { getPool } from "@/lib/db";
-import { KPI_MANAGE_ROLES } from "@/lib/kpi/roles";
+import { loadKpiRecommendations, parseEmployeeIds } from "@/lib/kpi/recommendation";
+import { searchParamsOf } from "@/lib/payroll/request-input";
 
-/**
- * GET /api/hris/kpi/recommendation?employee_ids=a,b,c
- * Rata-rata skor scorecard 3 periode terakhir per karyawan — decision
- * support perpanjangan kontrak PKWT (EPIC-010 Fase D). Keputusan tetap
- * di manusia; endpoint hanya menyajikan angka.
- */
-export async function GET(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.hrisPerformance);
-    const { searchParams } = new URL(request.url);
-    const ids = (searchParams.get("employee_ids") || "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .slice(0, 200);
-    if (ids.length === 0) return NextResponse.json({ data: {} });
-
-    const pool = getPool();
-    const { rows } = await pool.query(
-      `WITH ranked AS (
-         SELECT employee_id, score::float AS score, status,
-                ROW_NUMBER() OVER (
-                  PARTITION BY employee_id
-                  ORDER BY period_year DESC, period_month DESC
-                ) AS rn
-         FROM performance.kpi_scorecards
-         WHERE employee_id = ANY($1::uuid[]) AND score IS NOT NULL
-       )
-       SELECT employee_id,
-              AVG(score)::float AS avg_score,
-              COUNT(*)::int AS periods,
-              BOOL_OR(status = 'final') AS has_final
-       FROM ranked WHERE rn <= 3
-       GROUP BY employee_id`,
-      [ids]
-    );
-
-    const data: Record<
-      string,
-      { avg_score: number; periods: number; has_final: boolean }
-    > = {};
-    for (const row of rows) {
-      data[row.employee_id] = {
-        avg_score: Math.round(row.avg_score * 100) / 100,
-        periods: row.periods,
-        has_final: row.has_final,
-      };
-    }
-    return NextResponse.json({ data });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error fetching KPI recommendation:", error);
-    return NextResponse.json(
-      { error: "Gagal mengambil rekomendasi KPI" },
-      { status: 500 }
-    );
-  }
-}
+/** GET ?employee_ids=a,b,c: rata-rata skor KPI 3 periode terakhir per karyawan. */
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.hrisPerformance);
+  // Id bukan UUID diabaikan agar cast ::uuid[] tidak menggagalkan seluruh query
+  const ids = parseEmployeeIds(searchParamsOf(request).employee_ids).filter((id) =>
+    UUID_RE.test(id)
+  );
+  return NextResponse.json({ data: await loadKpiRecommendations(ids) });
+}, "hris/kpi/recommendation.GET");

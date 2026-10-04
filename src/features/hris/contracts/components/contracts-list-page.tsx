@@ -2,15 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { ChevronUpDownIcon, ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { ContractExpiryBanner } from "@/features/users/components/contract-expiry-banner";
-import { fetchContractList, type ContractListItem } from "../api";
-import { apiGet, buildListUrl } from "@/lib/api-client";
+import { formatDate, formatNumber } from "@/lib/format";
+import type { ContractListItem, KpiRecommendation } from "../api";
+import { useContractList, useKpiRecommendation } from "../queries";
 
 /**
  * HRIS → Kontrak: daftar kontrak karyawan lintas karyawan, default menampilkan
@@ -68,18 +68,6 @@ const SORT_HEADERS: { key: SortKey; label: string }[] = [
   { key: "end_date", label: "Berakhir" },
 ];
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
-
-type KpiRecommendation = Record<
-  string,
-  { avg_score: number; periods: number; has_final: boolean }
->;
-
 /**
  * Badge rata-rata skor KPI 3 bulan terakhir (EPIC-010 Fase D) — decision
  * support perpanjangan PKWT; keputusan tetap di HRD.
@@ -107,7 +95,7 @@ function KpiScoreBadge({
       className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}
       title={`Rata-rata ${entry.periods} periode terakhir${entry.has_final ? " (ada yang final)" : " (draft)"}`}
     >
-      {score.toLocaleString("id-ID", { maximumFractionDigits: 1 })}
+      {formatNumber(score, 1)}
     </span>
   );
 }
@@ -156,12 +144,9 @@ export function ContractsListPage() {
     [search, daysFilter, typeFilter, statusFilter, sortBy, sortOrder, page]
   );
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["hris", "contracts", params],
-    queryFn: () => fetchContractList(params),
-  });
+  const { data, isLoading, isError } = useContractList(params);
 
-  const rows = data?.data ?? [];
+  const rows = useMemo(() => data?.data ?? [], [data]);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -170,16 +155,7 @@ export function ContractsListPage() {
     () => [...new Set(rows.map((row) => row.employee_id))].sort(),
     [rows]
   );
-  const { data: kpiRecommendation } = useQuery({
-    queryKey: ["hris", "kpi", "recommendation", employeeIds],
-    enabled: employeeIds.length > 0,
-    queryFn: () =>
-      apiGet<{ data: KpiRecommendation }>(
-        buildListUrl("/api/hris/kpi/recommendation", {
-          employee_ids: employeeIds.join(","),
-        })
-      ).then((res) => res.data),
-  });
+  const { data: kpiRecommendation } = useKpiRecommendation(employeeIds);
 
   function applySearch() {
     setSearch(searchInput.trim());
@@ -316,11 +292,11 @@ export function ContractsListPage() {
                 <tr key={item.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50/60">
                   <td className="px-4 py-3 font-medium text-gray-900">{item.employee_name}</td>
                   <td className="px-4 py-3 font-mono text-xs">{item.contract_number}</td>
-                  <td className="px-4 py-3">{formatDate(item.start_date)}</td>
+                  <td className="px-4 py-3">{formatDate(item.start_date, "—")}</td>
                   <td className="px-4 py-3">
                     {item.contract_type === "pkwtt" && !item.end_date
                       ? "Tanpa batas"
-                      : formatDate(item.end_date)}
+                      : formatDate(item.end_date, "—")}
                   </td>
                   <td className="px-4 py-3">
                     <DaysLeftBadge item={item} />

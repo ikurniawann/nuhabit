@@ -1,15 +1,13 @@
-import { NextResponse } from "next/server";
+import { ApiError } from "@/lib/api/auth";
 import { queryOne, query } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { INTERVIEW_MAX_QUESTIONS_DEFAULT, INTERVIEW_MAX_QUESTIONS_LIMIT } from "./interview-ai";
+import { enforceRateLimit, isLinkExpired, isPortalToken } from "./route-helpers";
 
 /**
  * Helper bersama endpoint publik sesi interview AI
- * (/api/interview/session/[token]) — pola sama dgn psikotes-session:
+ * (/api/interview/session/[token]), pola sama dgn psikotes-session:
  * kandidat anonim, identitas = token sesi; rate limit di-key ke token.
  */
-
-export const INTERVIEW_TOKEN_RE = /^[a-f0-9]{48,128}$/i;
 
 /** Fallback masa hidup sesi bila expires_at NULL (jangan pernah abadi). */
 const MAX_SESSION_LIFETIME_MS = 14 * 24 * 60 * 60 * 1000;
@@ -19,9 +17,6 @@ const BUCKET_LIMITS: Record<string, number> = {
   answer: 6,
   proctor: 12,
 };
-
-/** Batas snapshot webcam tersimpan per sesi (kuota storage). */
-export const MAX_INTERVIEW_SNAPSHOTS_PER_SESSION = 300;
 
 export interface InterviewSessionRow {
   id: string;
@@ -53,26 +48,19 @@ export interface InterviewTurnRow {
   answered_at: string | null;
 }
 
-export function invalidInterviewTokenResponse() {
-  return NextResponse.json({ error: "Link interview tidak berlaku" }, { status: 404 });
-}
-
-export function interviewRateLimitedResponse() {
-  return NextResponse.json(
-    { error: "Terlalu banyak permintaan, coba lagi sebentar lagi" },
-    { status: 429 }
-  );
-}
-
-export function interviewSessionRateLimited(sessionId: string, bucket: string): boolean {
-  return !checkRateLimit(`interview_session_${bucket}_${sessionId}`, BUCKET_LIMITS[bucket]).allowed;
+/** 404 untuk token salah/tidak ada, 429 bila kuota `bucket` sesi habis. */
+export async function requireInterviewSession(token: string, bucket: string) {
+  const session = await loadInterviewSessionByToken(token);
+  if (!session) throw ApiError.notFound("Link interview tidak berlaku");
+  enforceRateLimit(`interview_session_${bucket}_${session.id}`, BUCKET_LIMITS[bucket]);
+  return session;
 }
 
 /** Muat sesi via token + auto-expire bila lewat masa berlaku. */
-export async function loadInterviewSessionByToken(
+async function loadInterviewSessionByToken(
   token: string
 ): Promise<InterviewSessionRow | null> {
-  if (!INTERVIEW_TOKEN_RE.test(token)) return null;
+  if (!isPortalToken(token)) return null;
   const session = await queryOne<InterviewSessionRow>(
     `SELECT s.id, s.candidate_id, s.token, s.status, s.webcam_consent, s.config,
             s.ai_summary, s.invited_at, s.expires_at, s.started_at, s.completed_at,
@@ -86,10 +74,7 @@ export async function loadInterviewSessionByToken(
   if (!session) return null;
 
   const isExpirable = session.status === "sent" || session.status === "in_progress";
-  const expiresAtMs = session.expires_at
-    ? new Date(session.expires_at).getTime()
-    : new Date(session.invited_at ?? 0).getTime() + MAX_SESSION_LIFETIME_MS;
-  if (isExpirable && expiresAtMs < Date.now()) {
+  if (isExpirable && isLinkExpired({ expires_at: session.expires_at, issued_at: session.invited_at }, MAX_SESSION_LIFETIME_MS)) {
     await queryOne(
       `UPDATE recruitment.interview_ai_sessions SET status = 'expired' WHERE id = $1 RETURNING id`,
       [session.id]
@@ -99,14 +84,25 @@ export async function loadInterviewSessionByToken(
   return session;
 }
 
+export const TURN_COLUMNS = `id, session_id, turn_no, topic, question, question_audio_path,
+  answer_audio_path, answer_transcript, answer_mode, asked_at, answered_at`;
+
 /** Semua turn satu sesi, urut nomor. */
 export async function loadInterviewTurns(sessionId: string): Promise<InterviewTurnRow[]> {
   return query<InterviewTurnRow>(
-    `SELECT id, session_id, turn_no, topic, question, question_audio_path,
-            answer_audio_path, answer_transcript, answer_mode, asked_at, answered_at
-     FROM recruitment.interview_ai_turns
+    `SELECT ${TURN_COLUMNS} FROM recruitment.interview_ai_turns
      WHERE session_id = $1
      ORDER BY turn_no`,
+    [sessionId]
+  );
+}
+
+/** Turn aktif (belum dijawab) dengan nomor terkecil, atau null. */
+export function loadActiveTurn(sessionId: string) {
+  return queryOne<InterviewTurnRow>(
+    `SELECT ${TURN_COLUMNS} FROM recruitment.interview_ai_turns
+     WHERE session_id = $1 AND answered_at IS NULL
+     ORDER BY turn_no LIMIT 1`,
     [sessionId]
   );
 }

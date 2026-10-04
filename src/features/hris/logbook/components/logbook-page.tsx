@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast, ToastContainer } from "@/components/ui/toast";
 import { useLogbookDepartments, useLogbookMe } from "../queries";
 import { LogbookChecklistTab } from "./checklist-tab";
 import { LogbookRiwayatTab } from "./riwayat-tab";
@@ -27,7 +26,6 @@ const ALL_DEPARTMENTS = "all";
  * untuk akun full-access.
  */
 export function LogbookPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const [tab, setTab] = useState("checklist");
   const [selectedDepartment, setSelectedDepartment] = useState(ALL_DEPARTMENTS);
 
@@ -104,7 +102,6 @@ export function LogbookPage() {
         <TabsContent value="checklist" className="mt-4">
           <LogbookChecklistTab
             departmentId={departmentId}
-            showToast={showToast}
             onGoToTemplates={() => setTab("template")}
           />
         </TabsContent>
@@ -112,7 +109,6 @@ export function LogbookPage() {
           <LogbookRiwayatTab
             me={me}
             departmentId={departmentId}
-            showToast={showToast}
           />
         </TabsContent>
         <TabsContent value="template" className="mt-4">
@@ -120,15 +116,12 @@ export function LogbookPage() {
             me={me}
             departmentId={departmentId}
             departments={departments}
-            showToast={showToast}
           />
         </TabsContent>
         <TabsContent value="kpi" className="mt-4">
           <LogbookKpiSummaryTab departmentId={departmentId} />
         </TabsContent>
       </Tabs>
-
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

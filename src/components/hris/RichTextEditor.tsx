@@ -17,7 +17,9 @@ interface RichTextEditorProps {
 export function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
   // Simpan nilai awal sekali; update berikutnya dikendalikan Quill sendiri
   const initialRef = useRef(value);
 

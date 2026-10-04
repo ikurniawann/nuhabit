@@ -4,9 +4,12 @@ import {
   buildAttendancePdf,
   buildAttendanceXlsx,
   buildPeriodLabel,
-  formatJamWib,
   statusLabel,
   type AttendanceReportRow,
+  buildAttendanceCsv,
+  toDateString,
+  toReportRows,
+  type AttendanceExportRecord,
 } from "./attendance-report";
 
 const contoh = (over: Partial<AttendanceReportRow> = {}): AttendanceReportRow => ({
@@ -36,16 +39,12 @@ describe("buildPeriodLabel", () => {
   });
 });
 
-describe("statusLabel & formatJamWib", () => {
+describe("statusLabel", () => {
   it("status dikenal diterjemahkan; tak dikenal apa adanya", () => {
     expect(statusLabel("present")).toBe("Hadir");
     expect(statusLabel("late")).toBe("Terlambat");
     expect(statusLabel("custom")).toBe("custom");
     expect(statusLabel(null)).toBe("—");
-  });
-  it("jam WIB dari UTC", () => {
-    expect(formatJamWib("2026-08-27T01:58:00Z")).toMatch(/08[.:]58/);
-    expect(formatJamWib(null)).toBe("—");
   });
 });
 
@@ -98,5 +97,53 @@ describe("buildAttendancePdf", () => {
     );
     expect(denganFoto.subarray(0, 5).toString()).toBe("%PDF-");
     expect(denganFoto.length).toBeGreaterThan(tanpaFoto.length);
+  });
+});
+
+describe("ekspor dari baris query", () => {
+  const record = (overrides: Partial<AttendanceExportRecord> = {}): AttendanceExportRecord => ({
+    date: "2026-08-27",
+    clock_in: "2026-08-27T01:58:00Z",
+    clock_out: null,
+    clock_in_location: { latitude: -6.2, longitude: 106.8, address: "Kantor" },
+    clock_out_location: null,
+    work_hours: "8.5",
+    break_minutes: null,
+    status: "present",
+    is_late: true,
+    late_minutes: 5,
+    notes: 'kata "kutip"',
+    clock_in_photo_url: null,
+    clock_out_photo_url: null,
+    employee: { full_name: "Budi", nip: "EMP-1", department: { name: "Ops" }, job_title: null },
+    ...overrides,
+  });
+
+  it("toDateString membaca objek Date dengan komponen lokal", () => {
+    expect(toDateString(new Date(2026, 7, 27))).toBe("2026-08-27");
+    expect(toDateString("2026-08-27T00:00:00Z")).toBe("2026-08-27");
+  });
+
+  it("toReportRows urut per karyawan lalu tanggal", () => {
+    const rows = toReportRows([
+      record({ date: "2026-08-28", employee: { full_name: "Budi" } }),
+      record({ date: "2026-08-27", employee: { full_name: "Ani" } }),
+      record({ date: "2026-08-27", employee: { full_name: "Budi" } }),
+    ]);
+    expect(rows.map((r) => `${r.employeeName} ${r.date}`)).toEqual([
+      "Ani 2026-08-27",
+      "Budi 2026-08-27",
+      "Budi 2026-08-28",
+    ]);
+    expect(rows[0].workHours).toBe(8.5);
+  });
+
+  it("CSV: kolom berkutip, jam WIB, lokasi dengan alamat", () => {
+    const [header, line] = buildAttendanceCsv([record()]).split("\n");
+    expect(header.startsWith("NIP,Nama Karyawan")).toBe(true);
+    expect(line).toContain('"EMP-1","Budi","Ops","-","2026-08-27"');
+    expect(line).toMatch(/08[.:]58/);
+    expect(line).toContain('"-6.2,106.8 (Kantor)"');
+    expect(line).toContain('"Ya","5","kata ""kutip"""');
   });
 });

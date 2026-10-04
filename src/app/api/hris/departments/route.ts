@@ -1,25 +1,13 @@
-// ============================================================
-// API Route: Departments (daftar ringkas untuk selektor)
-// GET — daftar departemen aktif (id, name, code). Dipakai a.l. selektor
-//       target pengumuman & filter lain. Butuh login.
-// ============================================================
-
 import { NextResponse } from "next/server";
-import { ApiError, requireApiUser } from "@/lib/api/auth";
-import { query } from "@/lib/db";
+import { requireApiUser } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { listDepartments } from "@/lib/hris/employees-profile";
 
-export async function GET() {
-  try {
-    await requireApiUser();
-    const rows = await query(
-      `SELECT id, name, code, parent_department_id
-       FROM hris.departments
-       ORDER BY name ASC`
-    );
-    return NextResponse.json({ data: rows });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error listing departments:", error);
-    return NextResponse.json({ error: "Gagal mengambil departemen" }, { status: 500 });
-  }
-}
+/**
+ * GET /api/hris/departments — daftar departemen (id, name, code) untuk
+ * selektor, a.l. target pengumuman. Cukup login.
+ */
+export const GET = apiHandler(async () => {
+  await requireApiUser();
+  return NextResponse.json({ data: await listDepartments() });
+}, "hris/departments GET");

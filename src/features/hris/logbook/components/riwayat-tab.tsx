@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { CheckCircle2, ChevronLeft, ChevronRight, Eye, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,11 +43,9 @@ const PAGE_SIZE = 20;
 export function LogbookRiwayatTab({
   me,
   departmentId,
-  showToast,
 }: {
   me: LogbookCurrentUser | null;
   departmentId: string;
-  showToast: (message: string, type?: "success" | "error") => void;
 }) {
   const [status, setStatus] = useState("all");
   const [from, setFrom] = useState("");
@@ -83,15 +82,9 @@ export function LogbookRiwayatTab({
         review_notes: reviewNotes || undefined,
       });
       setReviewNotes("");
-      showToast(
-        verdict === "reviewed" ? "Logbook ditandai direview" : "Logbook ditolak",
-        "success"
-      );
+      toast.success(verdict === "reviewed" ? "Logbook ditandai direview" : "Logbook ditolak");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Gagal menyimpan review",
-        "error"
-      );
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan review");
     }
   }
 

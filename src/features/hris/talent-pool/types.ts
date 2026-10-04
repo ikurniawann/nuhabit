@@ -1,11 +1,4 @@
-import type { Candidate, Brand } from "@/types";
-
-export type TalentPoolCandidate = Candidate & {
-  brands?: { name: string };
-  positions?: { title: string };
-};
-
-export type { Brand };
+export type { CandidateRow as TalentPoolCandidate } from "../candidates/types";
 
 export interface SendCandidateNotificationPayload {
   candidate_id: string;

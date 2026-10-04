@@ -5,7 +5,7 @@
  * - realisasi jam lembur dari pengajuan approved yang dicocokkan absensi,
  * - statistik keterlambatan dari baris absensi.
  *
- * Tanpa akses DB — mudah diuji unit. Pemuatan data ada di inputs.ts.
+ * Tanpa akses DB: mudah diuji unit. Pemuatan data ada di inputs.ts.
  */
 
 import {
@@ -36,7 +36,7 @@ export interface LeaveRangeRow {
 /**
  * Normalisasi nilai kolom `date` Postgres → "YYYY-MM-DD".
  * Driver pg TIDAK memasang type parser khusus, jadi kolom date top-level
- * kembali sebagai objek Date JS di TENGAH MALAM WAKTU LOKAL server —
+ * kembali sebagai objek Date JS di TENGAH MALAM WAKTU LOKAL server , 
  * jangan pakai toISOString() (geser -1 hari utk timezone timur/WIB);
  * ambil komponen lokal. Nilai string (embed row_to_json) dipotong 10 char.
  */
@@ -50,6 +50,23 @@ export function dateColToIso(value: unknown): string | null {
   }
   const s = String(value).slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+export const MONTH_NAMES_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+] as const;
+
+/** "Januari 2026"; bulan di luar 1–12 tetap aman (pakai Januari). */
+export function periodLabelId(month: number | null | undefined, year: number): string {
+  return `${MONTH_NAMES_ID[(month ?? 1) - 1] ?? MONTH_NAMES_ID[0]} ${year}`;
+}
+
+/** Tanggal pertama dan terakhir satu bulan periode (ISO, inklusif). */
+export function periodBounds(month: number, year: number): { start: string; end: string } {
+  const mm = String(month).padStart(2, "0");
+  const lastDay = new Date(year, month, 0).getDate();
+  return { start: `${year}-${mm}-01`, end: `${year}-${mm}-${String(lastDay).padStart(2, "0")}` };
 }
 
 /** Tambah n hari ke tanggal ISO (kalender polos, aman lintas bulan). */
@@ -74,7 +91,7 @@ export function eachDateOfPeriod(startIso: string, endIso: string): string[] {
 /**
  * Hari kerja terjadwal dalam periode menurut pola shift karyawan.
  * hasSchedule=false bila karyawan tidak punya pola sama sekali yang
- * menyentuh periode — pemanggil WAJIB menangani fallback secara eksplisit.
+ * menyentuh periode: pemanggil WAJIB menangani fallback secara eksplisit.
  */
 export function countScheduledDays(
   scheduleRows: EmployeeShiftRow[],
@@ -93,7 +110,7 @@ export function countScheduledDays(
 
 /**
  * Jumlah hari sebuah rentang cuti yang jatuh DI DALAM periode (inklusif).
- * Cuti lintas bulan hanya dihitung porsinya di periode berjalan —
+ * Cuti lintas bulan hanya dihitung porsinya di periode berjalan , 
  * sebelumnya seluruh durasi terpotong di bulan pengajuan.
  */
 export function clampedLeaveDays(
@@ -126,9 +143,9 @@ export function realizedOvertimeHours(
 const EMPTY_HOLIDAYS: HolidayIndex = indexHolidays([]);
 
 export interface OvertimeSplit {
-  /** Jam lembur pada hari kerja biasa — tarif `overtimeMultiplier`. */
+  /** Jam lembur pada hari kerja biasa: tarif `overtimeMultiplier`. */
   regularHours: number;
-  /** Jam lembur pada hari libur resmi — tarif `overtimeHolidayMultiplier`. */
+  /** Jam lembur pada hari libur resmi: tarif `overtimeHolidayMultiplier`. */
   holidayHours: number;
   totalHours: number;
 }
@@ -136,7 +153,7 @@ export interface OvertimeSplit {
 /**
  * Realisasi jam lembur, dipisah hari kerja vs hari libur resmi
  * (EPIC-036 Fase F). Aturan realisasinya sama persis dengan
- * `realizedOvertimeHours` — yang ditambahkan hanya pemisahan bucket-nya.
+ * `realizedOvertimeHours`: yang ditambahkan hanya pemisahan bucket-nya.
  *
  * Ketiga tipe libur (nasional, cuti bersama, perusahaan) sama-sama berarti
  * kantor tutup, jadi ketiganya masuk bucket hari libur. `deducts_leave` murni
@@ -214,7 +231,7 @@ export interface DateRange {
  * Gabungkan rentang-rentang tanggal yang tumpang tindih ATAU bersambungan
  * (end + 1 hari = start berikutnya) menjadi rentang kontinu. Dipakai untuk
  * cakupan kontrak: PKWT yang berakhir tgl 15 lalu diperpanjang mulai tgl 16
- * harus terhitung SATU cakupan penuh — bukan proraté setengah bulan.
+ * harus terhitung SATU cakupan penuh: bukan proraté setengah bulan.
  */
 export function mergeDateRanges(ranges: DateRange[]): DateRange[] {
   if (ranges.length === 0) return [];

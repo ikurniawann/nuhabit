@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { BriefcaseIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,13 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TableRow } from "@/components/ui/table";
-import { ToastContainer, useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import {
   FormFieldLabel,
   formComboboxClassName,
   formInputClassName,
 } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useDepartmentList } from "@/features/master-data/departments";
 import { MasterDeleteDialog } from "../../components/master-delete-dialog";
 import { MasterTableActions } from "../../components/master-table-actions";
@@ -52,9 +52,7 @@ const LEVEL_OPTIONS = [
 const EMPTY_FORM = { title: "", department_name: "", level: "Staff", is_active: true };
 
 export function PositionsPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<"add" | "edit" | null>(null);
   const [selected, setSelected] = useState<PositionItem | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -74,10 +72,7 @@ export function PositionsPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(timeout);
-  }, [searchQuery]);
+  const search = useDeferredValue(searchQuery.trim());
 
   const filtered = useMemo(() => {
     if (!search) return rows;
@@ -111,7 +106,7 @@ export function PositionsPage() {
     e.preventDefault();
     if (isSaving) return;
     if (!form.title.trim()) {
-      showToast("Nama jabatan wajib diisi", "error");
+      toast.error("Nama jabatan wajib diisi");
       return;
     }
     const payload = {
@@ -123,14 +118,14 @@ export function PositionsPage() {
     try {
       if (dialog === "edit" && selected) {
         const res = await updateMutation.mutateAsync({ id: selected.id, ...payload });
-        showToast(res.message || "Jabatan berhasil diperbarui", "success");
+        toast.success(res.message || "Jabatan berhasil diperbarui");
       } else {
         const res = await createMutation.mutateAsync(payload);
-        showToast(res.message || "Jabatan berhasil ditambahkan", "success");
+        toast.success(res.message || "Jabatan berhasil ditambahkan");
       }
       setDialog(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
     }
   }
 
@@ -138,17 +133,15 @@ export function PositionsPage() {
     if (!deleteId || isDeleting) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      showToast("Jabatan berhasil dihapus", "success");
+      toast.success("Jabatan berhasil dihapus");
       setDeleteId(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menghapus", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Master Jabatan</h1>

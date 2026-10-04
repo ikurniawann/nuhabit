@@ -8,18 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatNumber } from "@/lib/format";
+import { toScore } from "@/lib/kpi/ui-performance";
 import type { KpiBreakdownRow, KpiIndicatorInfo, KpiScorecardRow } from "../types";
 
-const num = (value: number | string | null | undefined): number | null => {
-  if (value === null || value === undefined) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
 const fmtPct = (fraction: number | null): string =>
-  fraction === null
-    ? "—"
-    : `${(fraction * 100).toLocaleString("id-ID", { maximumFractionDigits: 1 })}%`;
+  fraction === null ? "—" : `${formatNumber(fraction * 100, 1)}%`;
 
 /** Rincian komposisi skor satu scorecard — dipakai dialog HRD & ESS. */
 export function ScorecardBreakdown({
@@ -32,20 +26,21 @@ export function ScorecardBreakdown({
   const nameByCode = new Map(indicators.map((i) => [i.code, i.name]));
   const rows: KpiBreakdownRow[] = scorecard.breakdown ?? [];
   const excluded = rows.filter((row) => row.attainment === null);
+  const score = toScore(scorecard.score);
+  const rawScore = toScore(scorecard.raw_score);
 
   return (
     <div className="space-y-3">
       <div className="flex items-baseline gap-3">
         <span className="text-3xl font-bold">
-          {num(scorecard.score)?.toLocaleString("id-ID") ?? "—"}
+          {score === null ? "—" : formatNumber(score, 3)}
         </span>
         <span className="text-sm text-muted-foreground">/ 100</span>
-        {num(scorecard.raw_score) !== null &&
-          num(scorecard.raw_score)! > 100 && (
-            <span className="text-xs text-muted-foreground">
-              (raw {num(scorecard.raw_score)?.toLocaleString("id-ID")} — over-achievement)
-            </span>
-          )}
+        {rawScore !== null && rawScore > 100 && (
+          <span className="text-xs text-muted-foreground">
+            (raw {formatNumber(rawScore, 3)} — over-achievement)
+          </span>
+        )}
       </div>
 
       <Table>
@@ -69,7 +64,7 @@ export function ScorecardBreakdown({
               <TableCell className="text-right">{row.effectiveWeight}</TableCell>
               <TableCell className="text-right">{fmtPct(row.attainment)}</TableCell>
               <TableCell className="text-right">
-                {row.attainment === null ? "—" : row.contribution.toLocaleString("id-ID")}
+                {row.attainment === null ? "—" : formatNumber(row.contribution, 3)}
               </TableCell>
             </TableRow>
           ))}

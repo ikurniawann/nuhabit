@@ -118,7 +118,7 @@ export interface EmployeeWithRelations extends Employee {
 // EXISTING TYPES (Re-export dari index.ts)
 // ============================================================
 
-import type { Brand, Position, User, Candidate } from './index';
+import type { Brand, Position, User } from './index';
 
 // Section dari staff module (existing table)
 export interface Section {

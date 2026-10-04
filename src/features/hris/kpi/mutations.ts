@@ -3,13 +3,25 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { kpiQueryKeys } from "./query-keys";
 import {
+  createDeptTask,
+  createPerfCycle,
+  patchPerfReview,
+  saveKpiConfig,
   createKpiTarget,
   deleteKpiTarget,
   runKpiSnapshotApi,
   saveKpiRubric,
+  updateDeptOccurrence,
   updateScorecardStatus,
 } from "./api";
-import type { CreateKpiTargetPayload, SaveRubricPayload } from "./types";
+import type {
+  CreateDeptTaskPayload,
+  CreateKpiTargetPayload,
+  DeptOccurrenceAction,
+  PerfReviewPatch,
+  SaveKpiConfigPayload,
+  SaveRubricPayload,
+} from "./types";
 
 function useInvalidateKpi() {
   const qc = useQueryClient();
@@ -54,6 +66,51 @@ export function useDeleteKpiTarget() {
   const invalidate = useInvalidateKpi();
   return useMutation({
     mutationFn: (id: string) => deleteKpiTarget(id),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeptOccurrenceAction() {
+  const invalidate = useInvalidateKpi();
+  return useMutation({
+    mutationFn: ({ occurrenceId, body }: { occurrenceId: string; body: DeptOccurrenceAction }) =>
+      updateDeptOccurrence(occurrenceId, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateDeptTask() {
+  const invalidate = useInvalidateKpi();
+  return useMutation({
+    mutationFn: (payload: CreateDeptTaskPayload) => createDeptTask(payload),
+    onSuccess: invalidate,
+    retry: false,
+  });
+}
+
+export function useCreatePerfCycle() {
+  const invalidate = useInvalidateKpi();
+  return useMutation({
+    mutationFn: ({ year, quarter }: { year: number; quarter: number }) =>
+      createPerfCycle(year, quarter),
+    onSuccess: invalidate,
+    retry: false,
+  });
+}
+
+export function usePatchPerfReview() {
+  const invalidate = useInvalidateKpi();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: PerfReviewPatch }) =>
+      patchPerfReview(id, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSaveKpiConfig() {
+  const invalidate = useInvalidateKpi();
+  return useMutation({
+    mutationFn: (payload: SaveKpiConfigPayload) => saveKpiConfig(payload),
     onSuccess: invalidate,
   });
 }

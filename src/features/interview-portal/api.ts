@@ -1,3 +1,5 @@
+import type { LiveChatWidgetMessage } from "@/components/recruitment/live-chat-widget";
+import { jsonBody, portalRequest } from "@/lib/recruitment/portal-client";
 import type {
   InterviewAnswerResult,
   InterviewPortalCurrentTurn,
@@ -7,109 +9,73 @@ import type {
 
 const base = (token: string) => `/api/interview/session/${token}`;
 
-async function parse<T>(res: Response): Promise<T> {
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const message =
-      typeof json === "object" && json && "error" in json
-        ? String((json as { error?: string }).error)
-        : `Permintaan gagal (${res.status})`;
-    throw new Error(message);
-  }
-  return json as T;
-}
-
 export const fetchInterviewSession = (token: string) =>
-  fetch(base(token))
-    .then((r) => parse<{ data: InterviewPortalData }>(r))
-    .then((r) => r.data);
+  portalRequest<{ data: InterviewPortalData }>(base(token)).then((r) => r.data);
 
 export const startInterviewSession = (token: string) =>
-  fetch(`${base(token)}/start`, {
+  portalRequest<{ data: { turn: InterviewPortalCurrentTurn | null } }>(
+    `${base(token)}/start`,
+    jsonBody("POST", { webcam_consent: true })
+  ).then((r) => r.data);
+
+function postAnswer(token: string, turnId: string, fill: (form: FormData) => void) {
+  const form = new FormData();
+  form.append("turn_id", turnId);
+  fill(form);
+  return portalRequest<{ data: InterviewAnswerResult }>(`${base(token)}/answer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ webcam_consent: true }),
-  })
-    .then((r) => parse<{ data: { turn: InterviewPortalCurrentTurn | null } }>(r))
-    .then((r) => r.data);
+    body: form,
+  }).then((r) => r.data);
+}
 
 /** Kirim jawaban suara (rekaman MediaRecorder). */
-export const answerInterviewVoice = (token: string, turnId: string, audio: Blob) => {
-  const form = new FormData();
-  form.append("turn_id", turnId);
-  form.append("mode", "voice");
-  form.append("audio", audio, "answer.webm");
-  return fetch(`${base(token)}/answer`, { method: "POST", body: form })
-    .then((r) => parse<{ data: InterviewAnswerResult }>(r))
-    .then((r) => r.data);
-};
+export const answerInterviewVoice = (token: string, turnId: string, audio: Blob) =>
+  postAnswer(token, turnId, (form) => {
+    form.append("mode", "voice");
+    form.append("audio", audio, "answer.webm");
+  });
 
 /** Kirim jawaban ketik (fallback bila mikrofon bermasalah). */
-export const answerInterviewText = (token: string, turnId: string, text: string) => {
-  const form = new FormData();
-  form.append("turn_id", turnId);
-  form.append("mode", "text");
-  form.append("answer_text", text);
-  return fetch(`${base(token)}/answer`, { method: "POST", body: form })
-    .then((r) => parse<{ data: InterviewAnswerResult }>(r))
-    .then((r) => r.data);
-};
+export const answerInterviewText = (token: string, turnId: string, text: string) =>
+  postAnswer(token, turnId, (form) => {
+    form.append("mode", "text");
+    form.append("answer_text", text);
+  });
 
-/** Fire-and-forget — kegagalan proctoring tidak boleh mengganggu interview. */
+/** Fire-and-forget: kegagalan proctoring tidak boleh mengganggu interview. */
 export const postInterviewProctorEvent = (
   token: string,
   eventType: InterviewProctorEventType,
   extra?: { meta?: Record<string, string | number | boolean>; snapshot?: string }
 ) =>
-  fetch(`${base(token)}/proctor-event`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ event_type: eventType, ...extra }),
-    keepalive: true,
-  }).catch(() => undefined);
+  fetch(`${base(token)}/proctor-event`, jsonBody("POST", { event_type: eventType, ...extra }, { keepalive: true })).catch(
+    () => undefined
+  );
 
-/** Frame near-live utk Live Monitoring HRD — fire-and-forget. */
+/** Frame near-live utk Live Monitoring HRD, fire-and-forget. */
 export const postInterviewLiveFrame = (token: string, frame: string) =>
-  fetch(`${base(token)}/live-frame`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ frame }),
-  }).catch(() => undefined);
-
-export interface LiveChatMessage {
-  id: string;
-  sender: "candidate" | "hr";
-  sender_name: string | null;
-  message: string;
-  created_at: string;
-}
+  fetch(`${base(token)}/live-frame`, jsonBody("POST", { frame })).catch(() => undefined);
 
 export const fetchInterviewLiveChat = (token: string, after?: string) =>
-  fetch(`${base(token)}/chat${after ? `?after=${encodeURIComponent(after)}` : ""}`)
-    .then((r) => parse<{ data: LiveChatMessage[] }>(r))
-    .then((r) => r.data);
+  portalRequest<{ data: LiveChatWidgetMessage[] }>(
+    `${base(token)}/chat${after ? `?after=${encodeURIComponent(after)}` : ""}`
+  ).then((r) => r.data);
 
 export const sendInterviewLiveChat = (token: string, message: string) =>
-  fetch(`${base(token)}/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
-  }).then((r) => parse<{ data: LiveChatMessage }>(r)).then((r) => r.data);
+  portalRequest<{ data: LiveChatWidgetMessage }>(`${base(token)}/chat`, jsonBody("POST", { message })).then(
+    (r) => r.data
+  );
 
-/** Signaling WebRTC live monitoring — sisi kandidat. */
+/** Signaling WebRTC live monitoring, sisi kandidat. */
 export const fetchInterviewWebrtcOffers = (token: string) =>
-  fetch(`${base(token)}/webrtc`)
-    .then((r) => parse<{ data: { offers: { offer_id: string; sdp: string }[] } }>(r))
-    .then((r) => r.data.offers);
+  portalRequest<{ data: { offers: { offer_id: string; sdp: string }[] } }>(`${base(token)}/webrtc`).then(
+    (r) => r.data.offers
+  );
 
 export const postInterviewWebrtcAnswer = (token: string, offerId: string, sdp: string) =>
-  fetch(`${base(token)}/webrtc`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ offer_id: offerId, sdp }),
-  }).then((r) => parse(r));
+  portalRequest(`${base(token)}/webrtc`, jsonBody("POST", { offer_id: offerId, sdp }));
 
-/** Unggah potongan rekaman video interview — dipanggil berurutan tiap 10 dtk. */
+/** Unggah potongan rekaman video interview; dipanggil berurutan tiap 10 dtk. */
 export const postRecordingChunk = (token: string, part: string, chunk: Blob) => {
   const form = new FormData();
   form.append("part", part);

@@ -1,4 +1,5 @@
-import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/lib/api-client";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, buildListUrl } from "@/lib/api-client";
+import type { ShiftScheduleRowLike } from "@/lib/hris/employee-profile-shifts";
 import type { CreateUserEmployeeInput, UpdateUserEmployeeInput } from "@/lib/users/schemas";
 import type { UserEmployeeItem } from "@/lib/users/user-mapper";
 import type { Employee } from "@/types/hris";
@@ -14,33 +15,12 @@ import type {
   UserListResponse,
 } from "./types";
 
-export type BranchStallOption = {
-  id: string;
-  name: string;
-  code: string;
-  branch_id: string;
-  is_default: boolean;
-};
-
 const BASE = "/api/users";
 
-function buildListUrl(params?: UserListParams) {
-  if (!params) return BASE;
-  const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      searchParams.set(key, String(value));
-    }
-  });
-  const query = searchParams.toString();
-  return query ? `${BASE}?${query}` : BASE;
-}
-
 export const fetchUserList = (params?: UserListParams) =>
-  apiGet<UserListResponse>(buildListUrl(params));
+  apiGet<UserListResponse>(buildListUrl(BASE, params));
 
-export const fetchUserDetail = (id: string) =>
-  apiGet<{ data: UserEmployeeItem }>(`${BASE}/${id}`);
+export const fetchUserDetail = (id: string) => apiGet<{ data: UserEmployeeItem }>(`${BASE}/${id}`);
 
 export const fetchUserDirectoryStats = async (): Promise<UserDirectoryStats> => {
   const [all, active, withAccess] = await Promise.all([
@@ -67,7 +47,9 @@ export const impersonateUser = (userId: string) =>
   }>("/api/auth/impersonate", { user_id: userId });
 
 export const fetchEmployeeDocuments = (employeeId: string) =>
-  apiGet<{ data: EmployeeDocumentRow[] }>(`/api/hris/employees/documents?employee_id=${employeeId}`);
+  apiGet<{ data: EmployeeDocumentRow[] }>(
+    `/api/hris/employees/documents?employee_id=${employeeId}`
+  );
 
 export interface EmployeeLifecycleData {
   employee: {
@@ -91,7 +73,11 @@ export interface EmployeeLifecycleData {
     created_at: string;
     last_sign_in_at: string | null;
   } | null;
-  onboarding: { total: number; completed: number; last_completed_at: string | null };
+  onboarding: {
+    total: number;
+    completed: number;
+    last_completed_at: string | null;
+  };
   history: {
     id: string;
     change_type: string;
@@ -138,7 +124,9 @@ export const fetchEmployeeRecruitmentDocs = (employeeId: string) =>
   );
 
 export const fetchEmploymentHistory = (employeeId: string) =>
-  apiGet<{ data: EmploymentHistoryRow[] }>(`/api/hris/employment-history?employee_id=${employeeId}`);
+  apiGet<{ data: EmploymentHistoryRow[] }>(
+    `/api/hris/employment-history?employee_id=${employeeId}`
+  );
 
 export const fetchEmployeeAttendance = (employeeId: string, month: number, year: number) => {
   const params = new URLSearchParams({
@@ -266,7 +254,10 @@ export async function uploadContractSignedDocument(contractId: string, file: Fil
     method: "POST",
     body: formData,
   });
-  const json = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+  const json = (await res.json().catch(() => ({}))) as {
+    message?: string;
+    error?: string;
+  };
   if (!res.ok) {
     throw new Error(json.error ?? `Upload gagal (${res.status})`);
   }
@@ -311,12 +302,30 @@ export const updateUser = (id: string, body: UpdateUserEmployeeInput) =>
 export const resetUserPassword = (id: string) =>
   apiPost<{ message: string; tempPassword: string }>(`${BASE}/${id}/reset-password`, {});
 
-export const fetchBranchStalls = async (branchId: string): Promise<BranchStallOption[]> => {
-  const params = new URLSearchParams({ branch_id: branchId });
-  const res = await fetch(`/api/purchasing/warehouses?${params.toString()}`);
-  const json = (await res.json()) as { success?: boolean; data?: BranchStallOption[]; error?: string };
-  if (!res.ok) {
-    throw new Error(json.error ?? "Failed to load stalls");
+// ── Jadwal shift mingguan karyawan ───────────────────────────────────────
+export interface ShiftOption {
+  id: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+}
+
+export interface EmployeeShiftScheduleRow extends ShiftScheduleRowLike {
+  id: string;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+export const fetchShiftOptions = () => apiGet<{ data: ShiftOption[] }>("/api/hris/shifts");
+
+export const fetchEmployeeShiftSchedule = (employeeId: string) =>
+  apiGet<{ data: EmployeeShiftScheduleRow[] }>(`/api/hris/employees/${employeeId}/shifts`);
+
+export const saveEmployeeShiftPattern = (
+  employeeId: string,
+  payload: {
+    effective_from: string;
+    days: { day_of_week: number; shift_id: string | null }[];
   }
-  return json.data ?? [];
-};
+) => apiPut<{ message: string }>(`/api/hris/employees/${employeeId}/shifts`, payload);

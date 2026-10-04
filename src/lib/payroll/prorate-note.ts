@@ -1,6 +1,9 @@
-// Keterangan prorata utk slip gaji — dari kolom payroll_details.prorate_factor
+
+// Keterangan prorata utk slip gaji: dari kolom payroll_details.prorate_factor
 // + full_base_salary. pg numeric datang sebagai string; 1 (atau nyaris 1) =
 // periode penuh → tanpa nota.
+
+import { formatRupiah } from "@/lib/format";
 
 const FULL_PERIOD_EPSILON = 0.0005;
 
@@ -68,6 +71,5 @@ export function prorateBreakdown(input: ProrateInput): ProrateBreakdown | null {
 export function prorateNote(input: ProrateInput): string | null {
   const b = prorateBreakdown(input);
   if (b === null) return null;
-  const fullRp = `Rp ${b.fullBase.toLocaleString("id-ID")}`;
-  return `Prorata dari gaji pokok penuh ${fullRp} — dibayar ${b.paidPct}%, dipotong ${b.cutPct}% (cakupan kontrak tidak satu periode penuh)`;
+  return `Prorata dari gaji pokok penuh ${formatRupiah(b.fullBase)} — dibayar ${b.paidPct}%, dipotong ${b.cutPct}% (cakupan kontrak tidak satu periode penuh)`;
 }
