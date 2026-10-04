@@ -73,6 +73,9 @@ func TestEmployeeDirectoryAndCRUD(t *testing.T) {
 	if dep := row["department"].(map[string]any); dep["name"] != "Bar Test" {
 		t.Fatalf("department embed = %v", row["department"])
 	}
+	if m, _ := row["manager"].(map[string]any); m["full_name"] != "Bos Test" {
+		t.Fatalf("manager embed = %v", row["manager"])
+	}
 	if got := keys(t, list.raw, "data")[:3]; !slices.Equal(got, []string{"id", "user_id", "full_name"}) {
 		t.Fatalf("directory key order %v", got)
 	}
@@ -81,6 +84,10 @@ func TestEmployeeDirectoryAndCRUD(t *testing.T) {
 	expect(t, detail, 200, "")
 	if m := detail.data()["manager"].(map[string]any); m["full_name"] != "Bos Test" {
 		t.Fatalf("manager = %v", detail.data()["manager"])
+	}
+	bossDetail := h.do(&hr, "GET", "/api/hris/employees/"+boss, nil)
+	if reports, _ := bossDetail.data()["direct_reports"].([]any); len(reports) != 1 || reports[0].(map[string]any)["id"] != id {
+		t.Fatalf("direct_reports = %v", bossDetail.data()["direct_reports"])
 	}
 	expect(t, h.do(&hr, "GET", "/api/hris/employees/00000000-0000-0000-0000-000000000000", nil), 404, "Karyawan tidak ditemukan")
 

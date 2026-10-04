@@ -21,9 +21,7 @@ var directoryColumns = `id, user_id, full_name, nip, email, phone, photo_url,
 	embedOne("department", "id, name, code", "hris.departments", "id = employees.department_id") + ", " +
 	embedOne("section", "id, name, code", "hris.sections", "id = employees.section_id") + ", " +
 	embedOne("job_title", "id, title, department", "hris.positions", "id = employees.job_title_id") + ", " +
-	// The query builder correlates the self embed with the inner table, so
-	// "manager" only matches an employee reporting to themself. Kept as is.
-	embedOne("manager", "id, full_name, nip", "hris.employees", "id = employees.reporting_to")
+	embedOne("manager", "id, full_name, nip", "hris.employees m", "m.id = employees.reporting_to")
 
 func (s *store) DirectoryPage(ctx context.Context, p domain.DirectoryParams) ([]*Row, int64, error) {
 	var where []string
@@ -97,7 +95,7 @@ func (s *store) EmployeeDetail(ctx context.Context, id string) (*Row, error) {
 		embedOne("department", "id, name, code, description", "hris.departments", "id = employees.department_id")+", "+
 		embedOne("section", "id, name, code, color", "hris.sections", "id = employees.section_id")+", "+
 		embedOne("job_title", "id, title, department, level", "hris.positions", "id = employees.job_title_id")+", "+
-		embedOne("direct_reports", "id, full_name, nip", "hris.employees", "id = employees.reporting_to")+`
+		embedMany("direct_reports", "id, full_name, nip", "hris.employees r", "r.reporting_to = employees.id ORDER BY r.full_name")+`
 		FROM hris.employees WHERE id = $1`, id)
 }
 

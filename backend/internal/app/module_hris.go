@@ -22,5 +22,6 @@ func HrisPorts(d module.Deps) hris.Ports {
 		Recruitment: hrisRecruitmentSQL{},
 		Directory:   hrisDirectorySQL{},
 		WhatsApp:    &hrisWhatsApp{db: d.DB, wa: whatsapp.New(d.Log)},
+		Company:     hrisCompany{},
 	}
 }

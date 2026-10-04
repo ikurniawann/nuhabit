@@ -19,6 +19,8 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Name is the MODULES key.
@@ -38,6 +40,10 @@ type Ports struct {
 	WhatsApp WhatsAppSender
 	// HolidayCalendar fetches the public holiday ICS feed; nil uses net/http.
 	HolidayCalendar HolidayCalendar
+	// Company reads the company profile printed on contracts and recaps.
+	Company CompanyProfile
+	// Files is the storage shared with Next; nil is STORAGE_DIR.
+	Files *storage.Store
 }
 
 // Service holds the HRIS use cases.
@@ -49,6 +55,9 @@ type Service struct {
 	directory   Directory
 	whatsapp    WhatsAppSender
 	calendar    HolidayCalendar
+	company     CompanyProfile
+	files       *storage.Store
+	limiter     *ratelimit.Limiter
 	log         *slog.Logger
 	now         func() time.Time
 }
@@ -56,7 +65,7 @@ type Service struct {
 type mod struct{ h handlers }
 
 func (m mod) Name() string           { return Name }
-func (m mod) Routes() []module.Route { return m.h.routes() }
+func (m mod) Routes() []module.Route { return append(m.h.routes(), m.h.fileRoutes()...) }
 
 // New builds the module. It subscribes the leave notification handler to
 // the outbox so the WhatsApp send runs after the leave is committed.
@@ -79,9 +88,13 @@ func NewService(repo Repository, ports Ports, log *slog.Logger, now func() time.
 	if ports.HolidayCalendar == nil {
 		ports.HolidayCalendar = httpCalendar{client: &http.Client{Timeout: 12 * time.Second}}
 	}
+	if ports.Files == nil {
+		ports.Files = storage.FromEnv()
+	}
 	return &Service{
 		repo: repo, payroll: ports.Payroll, salary: ports.Salary, recruitment: ports.Recruitment,
-		directory: ports.Directory, whatsapp: ports.WhatsApp, calendar: ports.HolidayCalendar, log: log, now: now,
+		directory: ports.Directory, whatsapp: ports.WhatsApp, calendar: ports.HolidayCalendar,
+		company: ports.Company, files: ports.Files, limiter: ratelimit.New(repo.querier()), log: log, now: now,
 	}
 }
 

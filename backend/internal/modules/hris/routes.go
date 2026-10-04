@@ -28,7 +28,7 @@ func (h handlers) routes() []module.Route {
 		// would reject as conflicting; Next prefers the static segment.
 		r("/api/hris/employees/{id}/{sub}", h.employeeSubroutes()),
 
-		// attendance (clock-in/out, export and photos stay in TS)
+		// attendance (clock-in/out, export and photos: fileRoutes)
 		r("GET /api/hris/attendance", h.withActor(h.listAttendance)),
 		r("GET /api/hris/attendance/daily-roster", h.withActor(h.dailyRoster)),
 		r("GET /api/hris/attendance/schedule", h.withActor(h.attendanceSchedule)),
@@ -37,7 +37,7 @@ func (h handlers) routes() []module.Route {
 		r("PUT /api/hris/attendance/{id}", h.withActor(h.updateAttendance)),
 		r("DELETE /api/hris/attendance/{id}", h.withActor(h.deleteAttendance)),
 
-		// leaves (attachments stay in TS)
+		// leaves (attachments: fileRoutes)
 		r("GET /api/hris/leaves", h.withActor(h.listLeaves)),
 		r("POST /api/hris/leaves", h.withActor(h.createLeave)),
 		r("POST /api/hris/leaves/approve", h.withActor(h.decideLeave)),
@@ -65,7 +65,7 @@ func (h handlers) routes() []module.Route {
 		r("PATCH /api/hris/holidays/{id}", h.withMenu(kepegawaian, h.updateHoliday)),
 		r("DELETE /api/hris/holidays/{id}", h.withMenu(kepegawaian, h.deleteHoliday)),
 
-		// contracts (document PDF and signed scans stay in TS)
+		// contracts (document PDF and signed scans: fileRoutes)
 		r("GET /api/hris/contracts", h.withMenu(kepegawaian, h.listContracts)),
 		r("GET /api/hris/contracts/expiring", h.withMenu(kepegawaian, h.expiringContracts)),
 		r("PATCH /api/hris/contracts/{id}", h.withMenu(kepegawaian, h.patchContract)),
@@ -87,7 +87,7 @@ func (h handlers) routes() []module.Route {
 		r("GET /api/hris/me/beranda", h.withActor(h.beranda)),
 		r("GET /api/hris/me/team", h.withActor(h.team)),
 
-		// announcements (cover upload and files stay in TS)
+		// announcements (cover upload and files: fileRoutes)
 		r("GET /api/hris/announcements", h.withMenu(kepegawaian, h.listAnnouncements)),
 		r("POST /api/hris/announcements", h.withMenu(kepegawaian, h.createAnnouncement)),
 		r("GET /api/hris/announcements/feed", h.withActor(h.announcementFeed)),

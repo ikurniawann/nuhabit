@@ -162,15 +162,24 @@ export async function getEmployee(id: string): Promise<Employee> {
         `*,
           department:departments (id, name, code, description),
           section:sections (id, name, code, color),
-          job_title:positions (id, title, department, level),
-          direct_reports:employees!reporting_to (id, full_name, nip)`
+          job_title:positions (id, title, department, level)`
       )
       .eq("id", id)
       .single(),
     "Karyawan tidak ditemukan"
   );
-  // manager dimuat terpisah agar join self-reference tidak ambigu
-  return { ...employee, manager: await loadManager(employee.reporting_to) } as Employee;
+  // Bawahan dan atasan dimuat terpisah: embed employees!reporting_to dari
+  // employees selalu berarah ke atasan, sedangkan direct_reports adalah daftar.
+  const { data: directReports } = await createPgClient()
+    .from("employees")
+    .select("id, full_name, nip")
+    .eq("reporting_to", id)
+    .order("full_name");
+  return {
+    ...employee,
+    direct_reports: directReports ?? [],
+    manager: await loadManager(employee.reporting_to),
+  } as Employee;
 }
 
 type TrackedKey = "employment_status" | "department_id" | "section_id" | "job_title_id";

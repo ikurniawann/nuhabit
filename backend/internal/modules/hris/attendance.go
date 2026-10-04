@@ -10,8 +10,7 @@ import (
 )
 
 // Attendance: lib/hris/attendance-repo, attendance-roster, daily-roster.
-// Clock-in/out (POST /api/hris/attendance) stays in TS: it writes selfies
-// to the Next server's private storage.
+// Clock-in/out is in attendance_clock.go.
 
 // AttendanceRepo is the attendance storage.
 type AttendanceRepo interface {
