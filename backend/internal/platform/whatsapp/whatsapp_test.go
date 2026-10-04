@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -222,6 +223,38 @@ func TestGatewayTimeoutAndCache(t *testing.T) {
 	// A dead endpoint is fetch failed.
 	if res := (&Gateway{BaseURL: "http://127.0.0.1:1", Token: "t", Timeout: time.Second}).SendText(ctx, "62811", "x"); res.TimedOut || res.Reason != "fetch failed" {
 		t.Fatalf("dead = %+v", res)
+	}
+}
+
+// The gateway client reaches only the configured gateway: a redirect to any
+// other private address is refused before the token leaves.
+func TestGatewayStaysOnTheConfiguredHost(t *testing.T) {
+	ctx := context.Background()
+	other := &stub{status: 200, body: `{"messageId":"m"}`}
+	otherURL := other.start(t)
+	gw := httptest.NewServer(http.RedirectHandler(otherURL+"/send", http.StatusTemporaryRedirect))
+	t.Cleanup(gw.Close)
+	g := &Gateway{BaseURL: gw.URL, Token: "t", Timeout: time.Second}
+	if res := g.SendText(ctx, "62811", "x"); res.Success || res.Reason != "fetch failed" {
+		t.Fatalf("redirected send = %+v", res)
+	}
+	if len(other.paths) != 0 {
+		t.Fatalf("the redirect reached %v", other.paths)
+	}
+	direct := &stub{status: 200, body: `{"messageId":"m"}`}
+	if res := (&Gateway{BaseURL: direct.start(t), Token: "t", Timeout: time.Second}).SendText(ctx, "62811", "x"); !res.Success {
+		t.Fatalf("configured gateway = %+v", res)
+	}
+	// The default gateway is an explicit entry, whatever else is allowed.
+	policy := GatewayPolicy("https://wa.example.com")
+	for _, raw := range []string{DefaultGatewayURL + "/send", "https://wa.example.com/send"} {
+		u, _ := url.Parse(raw)
+		if err := policy.CheckURL(u); err != nil {
+			t.Errorf("%s refused: %v", raw, err)
+		}
+	}
+	if u, _ := url.Parse("http://127.0.0.1:8080/send"); policy.CheckURL(u) == nil {
+		t.Error("another loopback port is allowed")
 	}
 }
 

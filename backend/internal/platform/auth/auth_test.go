@@ -174,3 +174,16 @@ func TestPublicAuthPrefixesMatchMiddleware(t *testing.T) {
 		t.Fatalf("PublicAuthPrefixes drifted from middleware.ts\nTS: %q\nGo: %q", ts, PublicAuthPrefixes)
 	}
 }
+
+// Every module a path can map to is a scope module a token may name.
+func TestAPIScopeModulesCoverPathMap(t *testing.T) {
+	want := []string{"pos", "member", "hris", "inventory", "crm", "config", "reports", "other"}
+	if strings.Join(APIScopeModules, ",") != strings.Join(want, ",") {
+		t.Fatalf("APIScopeModules = %v, want %v", APIScopeModules, want)
+	}
+	for seg, mod := range pathModuleMap {
+		if !contains(APIScopeModules, mod) {
+			t.Errorf("pathModuleMap[%q] = %q is not in APIScopeModules", seg, mod)
+		}
+	}
+}

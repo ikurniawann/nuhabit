@@ -79,6 +79,29 @@ func TestSlidingWindowIsSharedAcrossReplicas(t *testing.T) {
 	}
 }
 
+func TestSlidingCountReadsWithoutRecording(t *testing.T) {
+	a, b := replicas(t)
+	ctx := context.Background()
+	k := key(t)
+	start := time.Now()
+	if n, err := a.SlidingCount(ctx, k, time.Minute, start); err != nil || n != 0 {
+		t.Fatalf("unknown key: %d %v", n, err)
+	}
+	for i := range 2 {
+		if ok, _, err := b.Sliding(ctx, k, 5, time.Minute, start.Add(time.Duration(i)*30*time.Second)); err != nil || !ok {
+			t.Fatalf("hit %d: %v %v", i, ok, err)
+		}
+	}
+	for range 2 { // reading twice records nothing
+		if n, err := a.SlidingCount(ctx, k, time.Minute, start.Add(40*time.Second)); err != nil || n != 2 {
+			t.Fatalf("count: %d %v", n, err)
+		}
+	}
+	if n, _ := a.SlidingCount(ctx, k, time.Minute, start.Add(61*time.Second)); n != 1 {
+		t.Fatalf("the first hit left the window: %d", n)
+	}
+}
+
 func TestConcurrentHitsNeverExceedTheLimit(t *testing.T) {
 	a, b := replicas(t)
 	ctx := context.Background()

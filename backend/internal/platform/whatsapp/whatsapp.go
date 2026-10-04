@@ -39,8 +39,8 @@ type Result struct {
 // NotConfigured is the reason when no provider has credentials.
 const NotConfigured = "WhatsApp provider belum dikonfigurasi"
 
-// httpClient bounds Meta and Fonnte calls, which the TS leaves unbounded;
-// gateway calls also carry their own WA_GATEWAY_TIMEOUT_MS deadline.
+// httpClient bounds Meta and Fonnte calls, which the TS leaves unbounded.
+// Gateway calls go through GatewayClient.
 var httpClient = &http.Client{Timeout: 60 * time.Second}
 
 // Client resolves the provider and sends. The zero value is not usable;
@@ -170,7 +170,7 @@ func (c *Client) SendOTP(ctx context.Context, q database.Querier, target, code, 
 }
 
 func (c *Client) postMeta(ctx context.Context, cfg *metaConfig, payload map[string]any) Result {
-	status, data, err := postJSON(ctx, c.MetaBase+"/"+cfg.graphVersion+"/"+cfg.phoneNumberID+"/messages", payload,
+	status, data, err := postJSON(ctx, httpClient, c.MetaBase+"/"+cfg.graphVersion+"/"+cfg.phoneNumberID+"/messages", payload,
 		map[string]string{"Authorization": "Bearer " + cfg.accessToken})
 	if err != nil && !errors.Is(err, errNotJSON) { // a reply that is not JSON reads as null
 		return Result{Provider: "meta", Reason: fetchFailed}
@@ -212,7 +212,7 @@ func (c *Client) sendFonnte(ctx context.Context, target, message string) Result 
 	if key == "" {
 		return Result{Provider: "fonnte", Reason: "API key not configured"}
 	}
-	status, data, err := postJSON(ctx, c.FonnteURL, map[string]string{"target": target, "message": message},
+	status, data, err := postJSON(ctx, httpClient, c.FonnteURL, map[string]string{"target": target, "message": message},
 		map[string]string{"Authorization": key})
 	switch {
 	case errors.Is(err, errNotJSON):
@@ -233,7 +233,7 @@ var errNotJSON = errors.New("response is not JSON")
 
 // postJSON posts payload as JSON and decodes the reply. A reply that is not
 // JSON comes back with errNotJSON and its status.
-func postJSON(ctx context.Context, url string, payload any, headers map[string]string) (int, any, error) {
+func postJSON(ctx context.Context, client *http.Client, url string, payload any, headers map[string]string) (int, any, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return 0, nil, err
@@ -246,7 +246,7 @@ func postJSON(ctx context.Context, url string, payload any, headers map[string]s
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := httpClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, nil, err
 	}

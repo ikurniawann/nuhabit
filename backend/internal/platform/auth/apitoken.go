@@ -37,6 +37,10 @@ func ExtractBearerToken(authorization string) string {
 	return ""
 }
 
+// APIScopeModules is API_SCOPE_MODULES (lib/auth/api-token.ts), in order:
+// the scope modules a token may name. Error messages list them.
+var APIScopeModules = []string{"pos", "member", "hris", "inventory", "crm", "config", "reports", "other"}
+
 var pathModuleMap = map[string]string{
 	"pos":           "pos",
 	"member-portal": "member",

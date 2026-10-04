@@ -97,6 +97,16 @@ RETURNING last_allowed, (SELECT min(h) FROM unnest(hits) h)`,
 	return false, oldest.Add(window).Sub(now), nil
 }
 
+// SlidingCount reads how many of key's hits fall inside the trailing
+// window without recording one, for limits that count only failures.
+func (l *Limiter) SlidingCount(ctx context.Context, key string, window time.Duration, now time.Time) (int, error) {
+	var n int
+	err := l.db.QueryRow(ctx, `
+SELECT count(*) FROM platform.rate_limits r, unnest(r.hits) h
+WHERE r.key = $1 AND h > $2`, key, now.Add(-window)).Scan(&n)
+	return n, err
+}
+
 // Prune deletes rows whose window ended before now, skipping rows another
 // hit holds.
 func (l *Limiter) Prune(ctx context.Context, now time.Time) error {
