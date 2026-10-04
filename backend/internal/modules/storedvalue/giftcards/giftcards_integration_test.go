@@ -618,6 +618,25 @@ func TestIssueRedeemRefundVoid(t *testing.T) {
 	e.scalar(&note, `SELECT 'ok'`)
 }
 
+// Cards issued in one transaction share now(); a retry of the sale must
+// still list them in issue order after a card row moved in the heap.
+func TestReissueKeepsIssueOrder(t *testing.T) {
+	e := setup(t)
+	order := e.uuid()
+	in := IssueInput{Scope: e.scope, OrderID: order, Nominals: []float64{10000, 20000, 30000, 40000}}
+	cards, err := e.svc.IssueGiftCardsForPosOrder(e.ctx, e.tx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.tx.Exec(e.ctx, `UPDATE giftcard.gift_cards SET balance = balance WHERE id = $1`, cards[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	again, err := e.svc.IssueGiftCardsForPosOrder(e.ctx, e.tx, in)
+	if err != nil || mustJSON(t, again) != mustJSON(t, cards) {
+		t.Fatalf("reissue order:\n got %s\nwant %s", mustJSON(t, again), mustJSON(t, cards))
+	}
+}
+
 /* ── helpers ─────────────────────────────────────────────────────────── */
 
 func mustJSON(t *testing.T, v any) string {

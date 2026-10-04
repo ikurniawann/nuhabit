@@ -187,7 +187,7 @@ export async function issueGiftCardsForPosOrder(
       `SELECT id, code, initial_value, expires_at
          FROM giftcard.gift_cards
         WHERE source_type = 'pos_order' AND source_id = $1
-        ORDER BY created_at`,
+        ORDER BY created_at, id`,
       [input.orderId]
     );
     if (existing.rows.length > 0) {
@@ -235,8 +235,8 @@ async function insertGiftCardWithUniqueCode(
       `INSERT INTO giftcard.gift_cards
          (company_id, branch_id, code, initial_value, balance, status,
           expires_at, source_type, source_id, buyer_name, buyer_phone,
-          note, created_by)
-       VALUES ($1, $2, $3, $4, $4, 'active', $5, $6, $7, $8, $9, $10, $11)
+          note, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $4, 'active', $5, $6, $7, $8, $9, $10, $11, clock_timestamp())
        ON CONFLICT (branch_id, code) DO NOTHING
        RETURNING id, code, initial_value, expires_at`,
       [
@@ -554,6 +554,7 @@ export async function voidIssuedGiftCardsForPosOrder(input: {
       `SELECT id, code, status
          FROM giftcard.gift_cards
         WHERE source_type = 'pos_order' AND source_id = $1
+        ORDER BY created_at, id
         FOR UPDATE`,
       [input.orderId]
     );

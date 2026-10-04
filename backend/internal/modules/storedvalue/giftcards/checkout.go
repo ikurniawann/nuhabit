@@ -134,7 +134,7 @@ func (s *Service) IssueGiftCardsForPosOrder(ctx context.Context, q database.Quer
 		existing, err := scanIssued(tx.Query(ctx, `SELECT id, code, initial_value::float8, expires_at
 			FROM giftcard.gift_cards
 			WHERE source_type = 'pos_order' AND source_id = $1
-			ORDER BY created_at`, in.OrderID))
+			ORDER BY created_at, id`, in.OrderID))
 		if err != nil || len(existing) > 0 {
 			cards = existing
 			return err
@@ -157,8 +157,8 @@ func (s *Service) insertSoldCard(ctx context.Context, tx database.Querier, in Is
 		rows, err := scanIssued(tx.Query(ctx, `INSERT INTO giftcard.gift_cards
 			  (company_id, branch_id, code, initial_value, balance, status,
 			   expires_at, source_type, source_id, buyer_name, buyer_phone,
-			   note, created_by)
-			VALUES ($1, $2, $3, $4, $4, 'active', $5, 'pos_order', $6, $7, $8, $9, $10)
+			   note, created_by, created_at)
+			VALUES ($1, $2, $3, $4, $4, 'active', $5, 'pos_order', $6, $7, $8, $9, $10, clock_timestamp())
 			ON CONFLICT (branch_id, code) DO NOTHING
 			RETURNING id, code, initial_value::float8, expires_at`,
 			in.Scope.CompanyID, in.Scope.BranchID, domain.GenerateCode(), nominal, expiresAt,
@@ -371,6 +371,7 @@ func (s *Service) VoidIssuedGiftCardsForPosOrder(ctx context.Context, q database
 	err := atomic(ctx, q, func(tx database.Querier) error {
 		rows, err := tx.Query(ctx, `SELECT id, code, status FROM giftcard.gift_cards
 			WHERE source_type = 'pos_order' AND source_id = $1
+			ORDER BY created_at, id
 			FOR UPDATE`, in.OrderID)
 		if err != nil {
 			return err
