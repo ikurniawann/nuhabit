@@ -112,10 +112,11 @@ func (h *Handler) createReturn(w http.ResponseWriter, r *http.Request) error {
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}
-	if err := h.svc.CreatePurchaseReturn(r.Context(), in, scope); err != nil {
+	data, err := h.svc.CreatePurchaseReturn(r.Context(), in, scope)
+	if err != nil {
 		return err
 	}
-	return writeOKMessage(w, http.StatusOK, nil, "Purchase return created and pending approval")
+	return writeOKMessage(w, http.StatusOK, data, "Purchase return created and pending approval")
 }
 
 func (h *Handler) returnGrnOptions(w http.ResponseWriter, r *http.Request) error {

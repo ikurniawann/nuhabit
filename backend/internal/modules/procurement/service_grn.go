@@ -694,6 +694,11 @@ func (s *Service) submitQc(ctx context.Context, tx pgx.Tx, in QcInput) (*QcResul
 		}
 	}
 
+	// Mark the inspection posted first so the PO quantities below count
+	// this QC's accepted quantity.
+	if _, err := tx.Exec(ctx, `UPDATE grn_qc_inspections SET inventory_posted = true, updated_by = $2, updated_at = $3 WHERE id = $1`, inspectionID, in.UserID, s.now()); err != nil {
+		return nil, err
+	}
 	grnStatus := domain.GrnRejected
 	poID := grn.Str("purchase_order_id")
 	if totalAccepted > 0 {
@@ -707,9 +712,6 @@ func (s *Service) submitQc(ctx context.Context, tx pgx.Tx, in QcInput) (*QcResul
 		grnStatus = domain.GrnStatusAfterQc(totalAccepted, ordered, received, lines > 0)
 	}
 	if _, err := tx.Exec(ctx, `UPDATE grn SET status = $2, updated_by = $3, updated_at = $4 WHERE id = $1`, grn.Str("id"), grnStatus, in.UserID, s.now()); err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE grn_qc_inspections SET inventory_posted = true, updated_by = $2, updated_at = $3 WHERE id = $1`, inspectionID, in.UserID, s.now()); err != nil {
 		return nil, err
 	}
 	if d := grn.Str("delivery_id"); d != "" {

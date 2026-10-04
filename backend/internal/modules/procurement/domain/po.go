@@ -207,6 +207,17 @@ func ShortageAmount(lines []PoLine, received []float64) float64 {
 	return RoundMoney(sum)
 }
 
+// ShortageCredit is the unreceived value credited against the payable. An
+// open PO still expects its remaining quantity, so the shortage counts only
+// once the PO stops receiving (closed or cancelled).
+func ShortageCredit(poStatus string, lines []PoLine, received []float64) float64 {
+	switch strings.ToLower(poStatus) {
+	case PoClosed, PoCancelled:
+		return ShortageAmount(lines, received)
+	}
+	return 0
+}
+
 // OrderProgress is computeOrderProgress.
 func OrderProgress(status string) float64 {
 	switch strings.ToLower(status) {

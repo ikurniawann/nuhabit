@@ -500,9 +500,8 @@ func (s *Service) embedPriceRefs(ctx context.Context, rows []*Row, vendorCols st
 	return nil
 }
 
-// ListPriceLists is listPriceLists. A search that matches any vendor or
-// product makes the TS .or(`vendor_id.in.(…)`) compile to vendor_id =
-// '(…)', which PostgreSQL rejects (22P02 → 400).
+// ListPriceLists is listPriceLists: a search matches vendor name or code
+// and active product name or code.
 func (s *Service) ListPriceLists(ctx context.Context, p PriceListParams, scope *pscope.Scope) (any, error) {
 	w := scopeFilters(newWhere(), scope)
 	switch deref(p.Status) {
@@ -519,18 +518,11 @@ func (s *Service) ListPriceLists(ctx context.Context, p PriceListParams, scope *
 	}
 	if set(p.Search) {
 		term := strings.ReplaceAll("%"+*p.Search+"%", "*", "%")
-		var vendorMatch bool
-		if err := s.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM vendors WHERE name ILIKE $1 OR code ILIKE $1)`, term).Scan(&vendorMatch); err != nil {
-			vendorMatch = false
-		}
-		productMatch, err := s.ports.Catalog.ProductsMatch(ctx, s.db, term)
+		products, err := s.ports.Catalog.ProductIDsMatching(ctx, s.db, term)
 		if err != nil {
-			productMatch = false
+			return nil, err
 		}
-		if !vendorMatch && !productMatch {
-			return listBody{[]*Row{}, minOnePage(p.Page, p.Limit, 0)}, nil
-		}
-		return nil, httpx.BadRequest("Format data tidak valid")
+		w.add("(vendor_id IN (SELECT id FROM vendors WHERE name ILIKE %s OR code ILIKE %s) OR product_id = ANY(%s::uuid[]))", term, term, products)
 	}
 	rows, total, err := s.pageOf(ctx, "vendor_price_lists", "*", w, "is_preferred DESC, created_at DESC", p.Page, p.Limit)
 	if err != nil {

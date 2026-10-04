@@ -15,6 +15,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/outbox"
 	pscope "nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Port of lib/purchasing/po-queries.ts, po-create.ts, po-lifecycle.ts,
@@ -293,7 +294,7 @@ func (s *Service) PurchaseOrderDetail(ctx context.Context, id string) (*Row, err
 	if err != nil {
 		return nil, err
 	}
-	credits, err := s.poCreditBreakdown(ctx, s.db, po.Str("id"))
+	credits, err := s.poCreditBreakdown(ctx, s.db, po.Str("id"), po.Str("status"))
 	if err != nil {
 		return nil, err
 	}
@@ -410,8 +411,8 @@ func (s *Service) embedPoDetailRefs(ctx context.Context, items []*Row) error {
 type creditBreakdown struct{ Return, Reject float64 }
 
 // poCreditBreakdown sums approved/completed purchase returns of the PO's
-// active GRNs and the open-quantity shortage.
-func (s *Service) poCreditBreakdown(ctx context.Context, q database.Querier, poID string) (creditBreakdown, error) {
+// active GRNs and the shortage credit of a PO in poStatus.
+func (s *Service) poCreditBreakdown(ctx context.Context, q database.Querier, poID, poStatus string) (creditBreakdown, error) {
 	var ret float64
 	if err := q.QueryRow(ctx, `SELECT COALESCE(SUM(r.total_amount), 0)::float8 FROM purchase_returns r
 		WHERE r.grn_id IN (SELECT id FROM grn WHERE purchase_order_id = $1 AND is_active = true)
@@ -423,7 +424,7 @@ func (s *Service) poCreditBreakdown(ctx context.Context, q database.Querier, poI
 		s.log.ErrorContext(ctx, "[getPoCreditBreakdown] falling back to return credits only", "error", err)
 		return creditBreakdown{Return: ret}, nil
 	}
-	return creditBreakdown{Return: ret, Reject: domain.ShortageAmount(lines, received)}, nil
+	return creditBreakdown{Return: ret, Reject: domain.ShortageCredit(poStatus, lines, received)}, nil
 }
 
 func (s *Service) poShortageLines(ctx context.Context, q database.Querier, poID string) ([]domain.PoLine, []float64, error) {
@@ -981,6 +982,40 @@ func (s *Service) AddPurchaseOrderItem(ctx context.Context, poID string, in *poI
 		in.RawMaterialID, in.PrItemID, in.Qty, in.SatuanID, in.Price, in.Diskon, in.Catatan, po.Str("id"))
 }
 
+// findDraftPoItem loads the item and requires its PO to be a draft.
+func (s *Service) findDraftPoItem(ctx context.Context, itemID, verb string) error {
+	if !validate.IsUUID(itemID) {
+		return notFound("Item tidak ditemukan")
+	}
+	item, err := s.rows.One(ctx, s.db, `SELECT i.id, po.status FROM purchase_order_items i
+		LEFT JOIN purchase_orders po ON po.id = i.purchase_order_id WHERE i.id = $1::uuid`, itemID)
+	if err != nil || item == nil {
+		return notFound("Item tidak ditemukan")
+	}
+	if item.Str("status") != domain.PoDraft {
+		return badRequest("Item hanya bisa " + verb + " saat PO status draft")
+	}
+	return nil
+}
+
+// UpdatePurchaseOrderItem is updatePurchaseOrderItem.
+func (s *Service) UpdatePurchaseOrderItem(ctx context.Context, itemID string, in *fields) (*Row, error) {
+	if err := s.findDraftPoItem(ctx, itemID, "diedit"); err != nil {
+		return nil, err
+	}
+	sql, args := in.set("updated_at", s.now(), "").updateSQL("purchase_order_items", "id = $1::uuid", itemID)
+	return s.rows.One(ctx, s.db, sql, args...)
+}
+
+// RemovePurchaseOrderItem is removePurchaseOrderItem: a soft delete.
+func (s *Service) RemovePurchaseOrderItem(ctx context.Context, itemID string) error {
+	if err := s.findDraftPoItem(ctx, itemID, "dihapus"); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(ctx, `UPDATE purchase_order_items SET is_active = false WHERE id = $1::uuid`, itemID)
+	return err
+}
+
 /* ── Payment terms ───────────────────────────────────────────────────── */
 
 // PoPaymentTerms is listPoPaymentTerms.
@@ -1006,7 +1041,7 @@ type payableContext struct {
 }
 
 func (s *Service) poPayableContext(ctx context.Context, q database.Querier, poID string) (*payableContext, error) {
-	po, err := s.rows.One(ctx, q, `SELECT id, supplier_id, vendor_id, total, subtotal, diskon_nominal, ppn_nominal FROM purchase_orders WHERE id = $1::text::uuid`, poID)
+	po, err := s.rows.One(ctx, q, `SELECT id, status, supplier_id, vendor_id, total, subtotal, diskon_nominal, ppn_nominal FROM purchase_orders WHERE id = $1::text::uuid`, poID)
 	if err != nil || po == nil {
 		return nil, err
 	}
@@ -1021,7 +1056,7 @@ func (s *Service) poPayableContext(ctx context.Context, q database.Querier, poID
 	if view.Get("payable_amount") == nil {
 		gross = firstNumber(po, "total", "subtotal")
 	}
-	credits, err := s.poCreditBreakdown(ctx, q, po.Str("id"))
+	credits, err := s.poCreditBreakdown(ctx, q, po.Str("id"), po.Str("status"))
 	if err != nil {
 		return nil, err
 	}

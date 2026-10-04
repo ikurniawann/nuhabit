@@ -189,6 +189,13 @@ func TestInvoiceAndShortage(t *testing.T) {
 	if ShortageAmount([]PoLine{{Qty: 5, Price: 100}}, []float64{8}) != 0 {
 		t.Fatal("over-received")
 	}
+	// An open PO still expects its remaining quantity: no credit until it closes.
+	nothing := []PoLine{{Qty: 4, Price: 2500}}
+	for status, want := range map[string]float64{PoSent: 0, PoPartiallyReceived: 0, PoClosed: 10000, PoCancelled: 10000} {
+		if got := ShortageCredit(status, nothing, []float64{0}); got != want {
+			t.Fatalf("shortage credit %s = %v, want %v", status, got, want)
+		}
+	}
 	today := time.Date(2026, 10, 4, 0, 0, 0, 0, time.UTC)
 	got := ComputePoInvoiceAmounts(1000, 100, 50, 300, "2026-10-01", today)
 	if got.Payable != 850 || got.Outstanding != 550 || got.PaymentStatus != "partial" || got.PaymentProgress != 35.29 {

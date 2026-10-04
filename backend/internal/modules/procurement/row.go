@@ -126,6 +126,8 @@ func toNum(v any) float64 {
 			return 0
 		}
 		return f
+	case json.RawMessage:
+		return jsNumber(string(x))
 	case string:
 		return jsNumber(x)
 	case bool:

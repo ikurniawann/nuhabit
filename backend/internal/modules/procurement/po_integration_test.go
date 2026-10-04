@@ -82,10 +82,9 @@ func TestPurchaseOrderCreateAndTotals(t *testing.T) {
 	r = e.do(&staff, "GET", "/api/purchasing/po/"+poID, nil)
 	e.expect(r, 200, "")
 	d := r.data()
-	// Unreceived quantity counts as a reject credit (computePoShortageAmount),
-	// so a PO with nothing received owes nothing yet.
-	if d["gross_payable_amount"] != float64(9000) || d["reject_credit_amount"] != float64(10000) || d["payable_amount"] != float64(0) ||
-		d["payment_status"] != "paid" || d["payment_progress_pct"] != float64(100) || d["fulfillment_progress_pct"] != float64(0) {
+	// An open PO with nothing received owes its full total.
+	if d["gross_payable_amount"] != float64(9000) || d["reject_credit_amount"] != float64(0) || d["payable_amount"] != float64(9000) ||
+		d["payment_status"] != "unpaid" || d["payment_progress_pct"] != float64(0) || d["fulfillment_progress_pct"] != float64(0) {
 		t.Fatalf("detail = %v", d)
 	}
 	item := d["items"].([]any)[0].(map[string]any)
@@ -114,8 +113,6 @@ func TestPurchaseOrderCreateAndTotals(t *testing.T) {
 	e.expect(e.do(&staff, "GET", "/api/purchasing/po-items", nil), 400, "po_id parameter required")
 	itemID := item["id"].(string)
 	e.expect(e.do(&staff, "PUT", "/api/purchasing/po/items/"+itemID, map[string]any{"qty_ordered": 0}), 400, "Validation failed")
-	e.expect(e.do(&staff, "PUT", "/api/purchasing/po/items/"+itemID, map[string]any{"qty_ordered": 2}), 404, "Item tidak ditemukan")
-	e.expect(e.do(&staff, "DELETE", "/api/purchasing/po/items/"+itemID, nil), 404, "Item tidak ditemukan")
 
 	r = e.do(&staff, "POST", "/api/purchasing/po/"+poID+"/items", map[string]any{"raw_material_id": f.Material, "qty_ordered": 1, "harga_satuan": 10})
 	e.expect(r, 201, "")
@@ -136,6 +133,34 @@ func TestPurchaseOrderCreateAndTotals(t *testing.T) {
 	if r.Body["next_step"] != "/dashboard/purchasing/grn/insert?po_id="+poID {
 		t.Fatalf("receive = %s", r.Raw)
 	}
+}
+
+func TestPurchaseOrderItemUpdateAndRemove(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixtures()
+	staff := e.staff(itemsAll)
+	po := e.generalPo(&staff, f, e.supplyItem(), nil)
+	itemID := e.id(`SELECT id::text FROM purchasing.purchase_order_items WHERE purchase_order_id = $1`, po["id"])
+	path := "/api/purchasing/po/items/" + itemID
+
+	r := e.do(&staff, "PUT", path, map[string]any{"qty_ordered": 2, "harga_satuan": 3000, "catatan": nil})
+	e.expect(r, 200, "")
+	if r.Body["message"] != "Item berhasil diupdate" || r.data()["id"] != itemID || r.data()["qty_ordered"] != "2.0000" ||
+		r.data()["subtotal"] != "6000.00" || r.data()["catatan"] != nil {
+		t.Fatalf("update = %s", r.Raw)
+	}
+	e.expect(e.do(&staff, "PUT", "/api/purchasing/po/items/11111111-1111-4111-8111-111111111111", map[string]any{"qty_ordered": 2}), 404, "Item tidak ditemukan")
+	e.expect(e.do(&staff, "DELETE", "/api/purchasing/po/items/nope", nil), 404, "Item tidak ditemukan")
+
+	r = e.do(&staff, "DELETE", path, nil)
+	e.expect(r, 200, "")
+	if r.Body["message"] != "Item berhasil dihapus dari PO" || e.scalar(`SELECT is_active FROM purchasing.purchase_order_items WHERE id = $1`, itemID) != false {
+		t.Fatalf("remove = %s", r.Raw)
+	}
+
+	e.exec(`UPDATE purchasing.purchase_orders SET status = 'approved' WHERE id = $1`, po["id"])
+	e.expect(e.do(&staff, "PUT", path, map[string]any{"qty_ordered": 3}), 400, "Item hanya bisa diedit saat PO status draft")
+	e.expect(e.do(&staff, "DELETE", path, nil), 400, "Item hanya bisa dihapus saat PO status draft")
 }
 
 func TestPurchaseOrderLifecycle(t *testing.T) {
@@ -227,8 +252,11 @@ func TestPurchaseOrderPaymentTerms(t *testing.T) {
 	po := e.generalPo(&staff, f, e.supplyItem(), map[string]any{"ppn_persen": 0})
 	poID := po["id"].(string)
 	base := "/api/purchasing/po/" + poID + "/payment-terms"
+	// A closed PO with nothing received owes nothing: the shortage is credited.
+	e.exec(`UPDATE purchasing.purchase_orders SET status = 'closed' WHERE id = $1`, poID)
 	e.expect(e.do(&staff, "POST", base, map[string]any{"due_date": "2026-11-01", "amount": 1}), 400,
 		"Payment term amount cannot exceed remaining schedulable amount (0)")
+	e.exec(`UPDATE purchasing.purchase_orders SET status = 'sent' WHERE id = $1`, poID)
 	e.exec(`UPDATE purchasing.purchase_order_items SET qty_received = qty_ordered WHERE purchase_order_id = $1`, poID)
 
 	e.expect(e.do(&staff, "POST", base, map[string]any{"due_date": "2026-11-01", "amount": 20000}), 400,

@@ -104,33 +104,65 @@ func (h *handler) purchasingMaterialMovements(w http.ResponseWriter, r *http.Req
 	return kit.Data(w, rows)
 }
 
-// errBrokenMovementsEmbed is the failure the TS route always hits: its
-// select embeds `inventory:inventory_id(id)` and `creator:created_by(...)`,
-// which the query builder shim cannot resolve (no table named inventory_id;
-// created_by has no foreign key), so every valid request answers 500.
-var errBrokenMovementsEmbed = errors.New("purchasing inventory movements: TS embed inventory:inventory_id has no foreign key")
-
 /*
-GET /api/purchasing/inventory/movements — validated like TS, then the same
+GET /api/purchasing/inventory/movements — the movement card of the caller's
 
-	500 the TS route returns (see errBrokenMovementsEmbed).
+	effective branch, newest first, with the inventory, raw_material and
+	creator embeds.
 */
 func (h *handler) purchasingMovements(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
+	_, scope, err := h.staffScope(r, h.itemsStaff)
+	if err != nil {
 		return err
 	}
 	f := kit.NewQueryForm(r.URL.Query())
-	f.UUID("bahan_id", validate.Rule{Optional: true})
-	f.Coerce("page", kit.Ptr(1.0), validate.NumOpts{Min: validate.Bound(1)})
-	f.Coerce("limit", kit.Ptr(20.0), validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(100)})
-	f.Enum("tipe", validate.Rule{Optional: true}, []string{"in", "out", "adjustment", "transfer", "return"})
-	f.Str("date_from", validate.Rule{Optional: true}, validate.StrOpts{})
-	f.Str("date_to", validate.Rule{Optional: true}, validate.StrOpts{})
-	f.Str("reference_type", validate.Rule{Optional: true}, validate.StrOpts{})
+	bahan := f.UUID("bahan_id", validate.Rule{Optional: true})
+	page := f.Coerce("page", kit.Ptr(1.0), validate.NumOpts{Min: validate.Bound(1)})
+	limit := f.Coerce("limit", kit.Ptr(20.0), validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(100)})
+	tipe := f.Enum("tipe", validate.Rule{Optional: true}, []string{"in", "out", "adjustment", "transfer", "return"})
+	dateFrom := f.Str("date_from", validate.Rule{Optional: true}, validate.StrOpts{})
+	dateTo := f.Str("date_to", validate.Rule{Optional: true}, validate.StrOpts{})
+	refType := f.Str("reference_type", validate.Rule{Optional: true}, validate.StrOpts{})
 	if err := kit.FirstIssueErr(f.Form); err != nil {
 		return err
 	}
-	return errBrokenMovementsEmbed
+	a := &kit.Args{}
+	where := []string{"true"}
+	for _, c := range []struct {
+		clause string
+		v      *string
+	}{
+		{`m.branch_id = %s`, ps.EffectiveBranchID(scope)},
+		{`m.raw_material_id = %s`, bahan},
+		{`m.tipe = %s`, tipe},
+		{`m.reference_type = %s`, refType},
+		{`m.created_at >= %s::text::timestamptz`, dateFrom},
+		{`m.created_at <= %s::text::timestamptz`, dateTo},
+	} {
+		if c.v != nil && *c.v != "" {
+			where = append(where, fmt.Sprintf(c.clause, a.Add(*c.v)))
+		}
+	}
+	cond := strings.Join(where, " AND ")
+	var total int
+	if err := h.env.DB.QueryRow(r.Context(), `SELECT count(*)::int FROM inventory_movements m WHERE `+cond, a.Values...).Scan(&total); err != nil {
+		return err
+	}
+	lim, off := a.Add(kit.N(*limit)), a.Add(kit.N((*page-1)**limit))
+	rows, err := kit.Query(r.Context(), h.env.DB, `SELECT m.*,
+		`+kit.EmbedColsSQL("inventory", "inventory", "id", "m", "inventory_id", "id")+`,
+		`+kit.EmbedColsSQL("raw_material", `"item"."raw_materials"`, "id", "m", "raw_material_id", "id", "kode", "nama")+`,
+		`+kit.EmbedColsSQL("creator", `"configuration"."users"`, "id", "m", "created_by", "full_name")+`
+		FROM inventory_movements m WHERE `+cond+` ORDER BY m.created_at DESC LIMIT `+lim+` OFFSET `+off, a.Values...)
+	if err != nil {
+		return err
+	}
+	return kit.Paginated(w, rows, struct {
+		Page       float64 `json:"page"`
+		Limit      float64 `json:"limit"`
+		Total      int     `json:"total"`
+		TotalPages float64 `json:"totalPages"`
+	}{*page, *limit, total, math.Ceil(float64(total) / *limit)}, "")
 }
 
 // requireWarehouseInScope is the 400 wrapper around ValidateWarehouse.

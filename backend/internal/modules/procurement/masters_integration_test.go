@@ -1,6 +1,7 @@
 package procurement_test
 
 import (
+	"net/url"
 	"regexp"
 	"testing"
 )
@@ -108,7 +109,14 @@ func TestVendorsAndPriceLists(t *testing.T) {
 	if row := r.list()[0].(map[string]any); row["vendor"].(map[string]any)["code"] != v["code"] || row["product"] == nil || row["unit"] == nil {
 		t.Fatalf("price lists = %s", r.Raw)
 	}
-	e.expect(e.do(&staff, "GET", "/api/purchasing/vendor-price-list?search="+v["code"].(string), nil), 400, "Format data tidak valid")
+	productName := e.scalar(`SELECT nama FROM item.products WHERE id = $1`, product).(string)
+	for _, term := range []string{v["code"].(string), productName} {
+		r = e.do(&staff, "GET", "/api/purchasing/vendor-price-list?search="+url.QueryEscape(term), nil)
+		e.expect(r, 200, "")
+		if len(r.list()) != 1 || r.list()[0].(map[string]any)["id"] != plID {
+			t.Fatalf("price list search %q = %s", term, r.Raw)
+		}
+	}
 	r = e.do(&staff, "GET", "/api/purchasing/vendor-price-list/"+plID, nil)
 	e.expect(r, 200, "")
 	if r.data()["vendor"].(map[string]any)["email"] != "ani@test.local" {

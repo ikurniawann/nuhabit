@@ -300,11 +300,6 @@ func (h *Handler) addPoItem(w http.ResponseWriter, r *http.Request) error {
 	return writeOKMessage(w, http.StatusCreated, data, "Item berhasil ditambahkan ke PO")
 }
 
-// errPoItemLookup: findDraftPoItem embeds `purchase_order:purchase_order_id (*)`,
-// which the TS query builder cannot resolve (no table named
-// purchase_order_id), so the lookup always fails into this 404.
-var errPoItemLookup = httpx.NotFound("Item tidak ditemukan")
-
 func (h *Handler) updatePoItem(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
 		return err
@@ -313,17 +308,25 @@ func (h *Handler) updatePoItem(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := parsePoItemUpdate(f); err != nil {
+	in, err := parsePoItemUpdate(f)
+	if err != nil {
 		return err
 	}
-	return errPoItemLookup
+	data, err := h.svc.UpdatePurchaseOrderItem(r.Context(), r.PathValue("item_id"), in)
+	if err != nil {
+		return err
+	}
+	return writeOKMessage(w, http.StatusOK, data, "Item berhasil diupdate")
 }
 
 func (h *Handler) removePoItem(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
 		return err
 	}
-	return errPoItemLookup
+	if err := h.svc.RemovePurchaseOrderItem(r.Context(), r.PathValue("item_id")); err != nil {
+		return err
+	}
+	return httpx.JSON(w, http.StatusOK, okMessage{Success: true, Message: "Item berhasil dihapus dari PO"})
 }
 
 func (h *Handler) poPaymentTerms(w http.ResponseWriter, r *http.Request) error {

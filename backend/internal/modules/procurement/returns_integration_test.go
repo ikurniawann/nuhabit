@@ -27,10 +27,16 @@ func TestPurchaseReturnLifecycle(t *testing.T) {
 	line["qty_returned"] = 4
 	r := e.do(&staff, "POST", "/api/purchasing/returns", body)
 	e.expect(r, 200, "")
-	if r.Body["data"] != nil || r.Body["message"] != "Purchase return created and pending approval" {
+	created := r.data()
+	retID := e.id(`SELECT id::text FROM purchasing.purchase_returns WHERE grn_id = $1`, grnID)
+	if r.Body["message"] != "Purchase return created and pending approval" || created["id"] != retID || created["status"] != "pending_approval" ||
+		created["supplier"].(map[string]any)["nama_supplier"] == nil || created["vendor"] != nil {
 		t.Fatalf("create = %s", r.Raw)
 	}
-	retID := e.id(`SELECT id::text FROM purchasing.purchase_returns WHERE grn_id = $1`, grnID)
+	if items := created["items"].([]any); len(items) != 1 || items[0].(map[string]any)["qty_returned"] != float64(4) ||
+		items[0].(map[string]any)["raw_material"].(map[string]any)["kode"] == nil || items[0].(map[string]any)["product"] != nil {
+		t.Fatalf("create items = %s", r.Raw)
+	}
 
 	r = e.do(&staff, "GET", "/api/purchasing/returns", nil)
 	e.expect(r, 200, "")
@@ -46,7 +52,18 @@ func TestPurchaseReturnLifecycle(t *testing.T) {
 	if !found || r.Body["pagination"].(map[string]any)["total_pages"] == nil {
 		t.Fatalf("list = %s", r.Raw)
 	}
-	e.expect(e.do(&staff, "GET", "/api/purchasing/returns?search=GT-GRN", nil), 400, "Format data tidak valid")
+	// Search reads the return number, the notes and the GRN number.
+	grnNumber := e.scalar(`SELECT nomor_grn FROM purchasing.grn WHERE id = $1`, grnID).(string)
+	r = e.do(&staff, "GET", "/api/purchasing/returns?search="+grnNumber, nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 1 || r.list()[0].(map[string]any)["id"] != retID {
+		t.Fatalf("search by grn = %s", r.Raw)
+	}
+	r = e.do(&staff, "GET", "/api/purchasing/returns?search=tidak-ada-"+suffix(), nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 0 {
+		t.Fatalf("search miss = %s", r.Raw)
+	}
 
 	r = e.do(&staff, "GET", "/api/purchasing/returns/"+retID, nil)
 	e.expect(r, 200, "")

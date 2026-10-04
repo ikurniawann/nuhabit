@@ -2,7 +2,6 @@ package procurement
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"nuhabit/backend/internal/modules/procurement/domain"
@@ -21,14 +20,14 @@ func (h *Handler) receivingRoutes(add addRoute) {
 	add("DELETE /api/purchasing/grn/{id}", h.deleteGrn)
 	add("GET /api/purchasing/grn/{id}/items", h.grnItems)
 	add("POST /api/purchasing/grn/{id}/items", h.addGrnItem)
-	add("GET /api/purchasing/grn/{id}/qc", h.brokenEmbed)
+	add("GET /api/purchasing/grn/{id}/qc", h.grnQc)
 	add("POST /api/purchasing/grn/{id}/qc", h.submitGrnQc)
 	add("GET /api/purchasing/grn/{id}/returnable-items", h.returnableItems)
 	add("GET /api/purchasing/grn/{id}/vendor-credits", h.grnVendorCredits)
 
-	add("GET /api/purchasing/qc", h.brokenEmbed)
+	add("GET /api/purchasing/qc", h.listQc)
 	add("POST /api/purchasing/qc", h.submitLegacyQc)
-	add("GET /api/purchasing/qc/{id}", h.brokenEmbed)
+	add("GET /api/purchasing/qc/{id}", h.qcDetail)
 
 	add("GET /api/purchasing/receiving-workspace", h.receivingWorkspace)
 
@@ -41,23 +40,11 @@ func (h *Handler) receivingRoutes(add addRoute) {
 	add("DELETE /api/purchasing/delivery/{id}", h.deleteDelivery)
 	add("POST /api/purchasing/delivery/{id}/arrive", h.arriveDelivery)
 
-	add("GET /api/purchasing/deliveries", h.brokenEmbed)
+	add("GET /api/purchasing/deliveries", h.listLegacyDeliveries)
 	add("POST /api/purchasing/deliveries", h.createLegacyDelivery)
-	add("GET /api/purchasing/deliveries/{id}", h.brokenEmbed)
+	add("GET /api/purchasing/deliveries/{id}", h.legacyDeliveryDetail)
 	add("PUT /api/purchasing/deliveries/{id}", h.updateLegacyDelivery)
 	add("DELETE /api/purchasing/deliveries/{id}", h.cancelLegacyDelivery)
-}
-
-// errBrokenEmbed: these TS reads select embeds the query builder cannot
-// resolve (`grn:grn_id(...)`, `inspector:inspector_id(...)`,
-// `supplier:supplier_id(...)`), so they always fail into apiHandler's 500.
-var errBrokenEmbed = errors.New("query builder: no FK relation for embed")
-
-func (h *Handler) brokenEmbed(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
-		return err
-	}
-	return errBrokenEmbed
 }
 
 // paginated is paginatedResponse: { success, data, message?, pagination }.
@@ -497,7 +484,93 @@ func (h *Handler) arriveDelivery(w http.ResponseWriter, r *http.Request) error {
 	return writeOKMessage(w, http.StatusOK, res, "Barang arrived — GRN "+grn.Str("nomor_grn")+" berhasil dibuat")
 }
 
+/* ── QC reads ────────────────────────────────────────────────────────── */
+
+func (h *Handler) listQc(w http.ResponseWriter, r *http.Request) error {
+	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	if err != nil {
+		return err
+	}
+	page, ok := queryInt(r, "page", 1)
+	if !ok || page < 1 {
+		page = 1
+	}
+	limit, ok := queryInt(r, "limit", 15)
+	if !ok || limit < 1 {
+		limit = 15
+	}
+	scope, err := h.svc.Scope(r.Context(), user.ID)
+	if err != nil {
+		return err
+	}
+	p := QcListParams{Page: float64(page), Limit: float64(limit), Search: r.URL.Query().Get("search")}
+	data, total, err := h.svc.ListQcInspections(r.Context(), p, scope)
+	if err != nil {
+		return err
+	}
+	return httpx.JSON(w, http.StatusOK, paginated{Success: true, Data: data, Pagination: meta(p.Page, p.Limit, total)})
+}
+
+func (h *Handler) qcDetail(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+		return err
+	}
+	data, err := h.svc.QcInspection(r.Context(), r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return notFound("QC inspection tidak ditemukan")
+	}
+	return writeOK(w, http.StatusOK, data)
+}
+
+func (h *Handler) grnQc(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+		return err
+	}
+	data, err := h.svc.GrnQcInspection(r.Context(), r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return writeOKMessage(w, http.StatusOK, nil, "No QC inspection yet")
+	}
+	return writeOKMessage(w, http.StatusOK, data, "QC inspection retrieved")
+}
+
 /* ── Legacy /deliveries ──────────────────────────────────────────────── */
+
+func (h *Handler) listLegacyDeliveries(w http.ResponseWriter, r *http.Request) error {
+	user, err := h.auth.RequireMenuPrefix(r, iam.Items...)
+	if err != nil {
+		return err
+	}
+	scope, err := h.svc.Scope(r.Context(), user.ID)
+	if err != nil {
+		return err
+	}
+	q := r.URL.Query()
+	data, err := h.svc.ListLegacyDeliveries(r.Context(), q.Get("po_id"), q.Get("status"), scope)
+	if err != nil {
+		return err
+	}
+	return writeData(w, http.StatusOK, data)
+}
+
+func (h *Handler) legacyDeliveryDetail(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {
+		return err
+	}
+	data, err := h.svc.LegacyDelivery(r.Context(), r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	if data == nil {
+		return notFound("Delivery not found")
+	}
+	return writeData(w, http.StatusOK, data)
+}
 
 func (h *Handler) createLegacyDelivery(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.auth.RequireMenuPrefix(r, iam.Items...); err != nil {

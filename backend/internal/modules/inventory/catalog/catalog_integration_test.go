@@ -128,10 +128,24 @@ func TestRawMaterialCreateUpdateDelete(t *testing.T) {
 	e.Fail("POST", "/api/purchasing/raw-materials", map[string]any{"nama": "x", "kategori": "y", "satuan_besar_id": e.kg, "coa_rnd": "12"},
 		http.StatusBadRequest, "Kode Chart of Accounts tidak valid (gunakan 7 digit, mis. 1301001)")
 
-	// As in TS, a default flag on one pack sends NULL for the others (one
-	// multi-row upsert), which the NOT NULL column refuses.
-	e.Fail("PATCH", "/api/purchasing/raw-materials/"+id, map[string]any{"unit_conversions": []any{
-		map[string]any{"satuan_id": e.kg, "qty_in_base_unit": 1000, "is_purchase_default": true}}}, http.StatusBadRequest, "Data wajib diisi")
+	// A default flag on one pack leaves the other packs' flags false.
+	e.Call("PATCH", "/api/purchasing/raw-materials/"+id, map[string]any{"unit_conversions": []any{
+		map[string]any{"satuan_id": e.kg, "qty_in_base_unit": 1000, "is_purchase_default": true}}}, http.StatusOK)
+	flags := func() string {
+		var got string
+		e.Scalar(&got, `SELECT string_agg(CASE WHEN satuan_id = $2 THEN 'KG' ELSE 'GR' END||'='||is_purchase_default||'/'||is_issue_default, ','
+			ORDER BY satuan_id = $2) FROM item.raw_material_unit_conversions WHERE raw_material_id = $1`, id, e.kg)
+		return got
+	}
+	if got := flags(); got != "GR=false/false,KG=true/false" {
+		t.Fatalf("pack flags %s", got)
+	}
+	// A pack that sends only is_issue_default keeps the stored purchase default.
+	e.Call("PATCH", "/api/purchasing/raw-materials/"+id, map[string]any{"unit_conversions": []any{
+		map[string]any{"satuan_id": e.gr, "qty_in_base_unit": 1, "is_issue_default": false}}}, http.StatusOK)
+	if got := flags(); got != "GR=false/false,KG=true/false" {
+		t.Fatalf("pack flags kept %s", got)
+	}
 	out = e.Call("PATCH", "/api/purchasing/raw-materials/"+id, map[string]any{"nama": "Tepung 2", "unit_conversions": []any{
 		map[string]any{"satuan_id": e.kg, "qty_in_base_unit": 1000}}}, http.StatusOK)
 	if out["message"] != "Bahan baku berhasil diupdate" || obj(out["data"])["nama"] != "Tepung 2" {
@@ -142,6 +156,10 @@ func TestRawMaterialCreateUpdateDelete(t *testing.T) {
 	if convs := obj(out["data"])["unit_conversions"].([]any); len(convs) != 2 {
 		t.Fatalf("active packs %v", convs)
 	}
+	// Stock on hand blocks the delete.
+	stock := e.Stock(e.org, id, e.org.MainID, 4, 1000)
+	e.Fail("DELETE", "/api/purchasing/raw-materials/"+id, nil, http.StatusBadRequest, "Bahan baku tidak bisa dihapus karena masih ada stok 4 Kilogram")
+	e.Exec(`UPDATE inventory.inventory SET qty_available = 0 WHERE id = $1`, stock)
 	out = e.Call("DELETE", "/api/purchasing/raw-materials/"+id, nil, http.StatusOK)
 	if out["message"] != "Bahan baku berhasil dihapus" {
 		t.Fatal(out)

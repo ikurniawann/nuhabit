@@ -176,7 +176,6 @@ func TestRawMaterialReceivingFlow(t *testing.T) {
 	}
 	r = e.do(&staff, "GET", "/api/purchasing/grn/"+grnID+"/vendor-credits", nil)
 	e.expect(r, 200, "")
-	e.expect(e.do(&staff, "GET", "/api/purchasing/grn/"+grnID+"/qc", nil), 500, "Terjadi kesalahan server")
 	e.expect(e.do(&staff, "POST", "/api/purchasing/grn/"+grnID+"/qc", map[string]any{"items": []any{map[string]any{"grn_item_id": item["id"], "raw_material_id": f.Material, "qty_inspected": 1, "qty_accepted": 1, "qty_rejected": 0}}}),
 		400, "GRN is not awaiting quality control")
 	e.expect(e.do(&staff, "POST", "/api/purchasing/grn/"+grnID+"/items", map[string]any{"qty_diterima": 1}), 400, "Cannot add items to GRN that is not pending")
@@ -256,12 +255,9 @@ func TestGeneralReceiptAndDeliveryArrival(t *testing.T) {
 		}
 	}
 
-	// Legacy /deliveries and /qc reads.
-	e.expect(e.do(&staff, "GET", "/api/purchasing/deliveries", nil), 500, "Terjadi kesalahan server")
-	e.expect(e.do(&staff, "GET", "/api/purchasing/qc", nil), 500, "Terjadi kesalahan server")
+	// Legacy /deliveries writes.
 	e.expect(e.do(&staff, "POST", "/api/purchasing/deliveries", map[string]any{}), 400, "Validation failed")
 	e.expect(e.do(&staff, "POST", "/api/purchasing/deliveries", map[string]any{"po_id": "nope"}), 404, "Purchase order not found")
-	e.expect(e.do(&staff, "POST", "/api/purchasing/deliveries", map[string]any{"po_id": po2}), 500, "Terjadi kesalahan server")
 	r = e.do(&staff, "PUT", "/api/purchasing/deliveries/"+delivery, map[string]any{"kurir": "SiCepat"})
 	e.expect(r, 200, "")
 	if r.data()["kurir"] != "SiCepat" {
@@ -289,13 +285,13 @@ func TestLegacyQcSubmit(t *testing.T) {
 		400, "raw_material_id atau bahan_baku_id wajib diisi per item")
 	r := e.do(&staff, "POST", "/api/purchasing/qc", map[string]any{"grn_id": grnID, "items": []any{map[string]any{"grn_item_id": itemID, "bahan_baku_id": f.Material, "jumlah_diterima": 5}}})
 	e.expect(r, 201, "")
-	// computeGrnStatusAfterQc rebuilds PO quantities before the inspection is
-	// marked posted, so a first QC reads 0 received: partially_received.
-	if r.Body["message"] != "QC submitted successfully" || r.data()["grn_status"] != "partially_received" || r.data()["total_accepted"] != float64(5) {
+	// Accepting the full order on the first QC receives the GRN.
+	if r.Body["message"] != "QC submitted successfully" || r.data()["grn_status"] != "received" || r.data()["total_accepted"] != float64(5) {
 		t.Fatalf("legacy qc = %s", r.Raw)
 	}
 	if e.scalar(`SELECT status FROM purchasing.grn_qc_inspections WHERE grn_id = $1`, grnID) != "approved" ||
-		e.scalar(`SELECT status FROM purchasing.purchase_orders WHERE id = $1`, poID) != "received" {
+		e.scalar(`SELECT status FROM purchasing.purchase_orders WHERE id = $1`, poID) != "received" ||
+		e.scalar(`SELECT status FROM purchasing.grn WHERE id = $1`, grnID) != "received" {
 		t.Fatal("inspection status")
 	}
 }
@@ -326,5 +322,112 @@ func TestApPaymentVoidedVoidsVendorPayment(t *testing.T) {
 	if n := e.scalar(`SELECT count(*)::int FROM platform.outbox_deliveries d JOIN platform.outbox_events ev ON ev.id = d.event_id
 		WHERE ev.key = $1 AND d.subscriber = 'procurement.void-vendor-payment' AND d.dead_at IS NULL AND d.delivered_at IS NOT NULL`, vp); n != int32(2) {
 		t.Fatalf("deliveries = %v", n)
+	}
+}
+
+func TestQcInspectionReads(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixtures()
+	staff := e.staff(itemsAll)
+	_, _, wh := e.warehouse()
+	poID := e.id(`INSERT INTO purchasing.purchase_orders (nomor_po, supplier_id, status) VALUES ('GT-PO-'||$1, $2, 'sent') RETURNING id::text`, suffix(), f.Supplier)
+	poItem := e.id(`INSERT INTO purchasing.purchase_order_items (purchase_order_id, raw_material_id, qty_ordered, harga_satuan) VALUES ($1, $2, 5, 100) RETURNING id::text`, poID, f.Material)
+	nomor := "GT-GRN-" + suffix()
+	grnID := e.id(`INSERT INTO purchasing.grn (nomor_grn, purchase_order_id, supplier_id, status) VALUES ($1, $2, $3, 'pending') RETURNING id::text`, nomor, poID, f.Supplier)
+	itemID := e.id(`INSERT INTO purchasing.grn_items (grn_id, purchase_order_item_id, raw_material_id, qty_diterima, warehouse_id) VALUES ($1, $2, $3, 5, $4) RETURNING id::text`, grnID, poItem, f.Material, wh)
+
+	r := e.do(&staff, "GET", "/api/purchasing/grn/"+grnID+"/qc", nil)
+	e.expect(r, 200, "")
+	if r.Body["data"] != nil || r.Body["message"] != "No QC inspection yet" {
+		t.Fatalf("grn qc before = %s", r.Raw)
+	}
+	r = e.do(&staff, "POST", "/api/purchasing/qc", map[string]any{"grn_id": grnID, "items": []any{map[string]any{"grn_item_id": itemID, "bahan_baku_id": f.Material, "jumlah_diterima": 4, "jumlah_ditolak": 1}}})
+	e.expect(r, 201, "")
+	inspection := r.data()["inspection_id"].(string)
+
+	r = e.do(&staff, "GET", "/api/purchasing/qc?search="+nomor, nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 1 || r.Body["pagination"].(map[string]any)["total"] != float64(1) {
+		t.Fatalf("qc list = %s", r.Raw)
+	}
+	row := r.list()[0].(map[string]any)
+	inspector, _ := row["inspector"].(map[string]any)
+	item := row["items"].([]any)[0].(map[string]any)
+	if row["id"] != inspection || row["qc_number"] != inspection || row["grn_number"] != nomor || row["goods_receipt_id"] != grnID ||
+		row["jumlah_diperiksa"] != float64(5) || row["jumlah_diterima"] != float64(4) || row["jumlah_ditolak"] != float64(1) ||
+		row["hasil"] != "partial" || row["status"] != "PARTIAL" || row["rekomendasi"] != "REWORK" || row["bahan_baku_id"] != f.Material ||
+		inspector["name"] != staff.FullName || inspector["email"] != staff.Email ||
+		item["jumlah_diterima"] != float64(4) || item["raw_material"].(map[string]any)["id"] != f.Material {
+		t.Fatalf("qc row = %s", r.Raw)
+	}
+	r = e.do(&staff, "GET", "/api/purchasing/qc?search=tidak-ada-"+suffix(), nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 0 {
+		t.Fatalf("qc search = %s", r.Raw)
+	}
+
+	r = e.do(&staff, "GET", "/api/purchasing/qc/"+inspection, nil)
+	e.expect(r, 200, "")
+	d := r.data()
+	if d["id"] != inspection || d["grn_number"] != nomor || d["grn"].(map[string]any)["nomor_grn"] != nomor || d["status"] != "PARTIAL" ||
+		d["rekomendasi"] != "REWORK" || d["bahan_baku"].(map[string]any)["id"] != f.Material || d["jumlah_diterima"] != float64(4) ||
+		d["items"].([]any)[0].(map[string]any)["qty_accepted"] != float64(4) {
+		t.Fatalf("qc detail = %s", r.Raw)
+	}
+	e.expect(e.do(&staff, "GET", "/api/purchasing/qc/11111111-1111-4111-8111-111111111111", nil), 404, "QC inspection tidak ditemukan")
+
+	r = e.do(&staff, "GET", "/api/purchasing/grn/"+grnID+"/qc", nil)
+	e.expect(r, 200, "")
+	d = r.data()
+	item = d["items"].([]any)[0].(map[string]any)
+	if r.Body["message"] != "QC inspection retrieved" || d["id"] != inspection || d["status"] != "partial" ||
+		d["inspector"].(map[string]any)["id"] != staff.UserID || item["item_status"] != "partially_rejected" ||
+		item["raw_material"].(map[string]any)["kode"] == nil {
+		t.Fatalf("grn qc = %s", r.Raw)
+	}
+}
+
+func TestLegacyDeliveries(t *testing.T) {
+	e := newEnv(t)
+	f := e.fixtures()
+	staff := e.staff(itemsAll)
+	nomor := "GT-PO-" + suffix()
+	poID := e.id(`INSERT INTO purchasing.purchase_orders (nomor_po, supplier_id, status) VALUES ($1, $2, 'sent') RETURNING id::text`, nomor, f.Supplier)
+
+	r := e.do(&staff, "POST", "/api/purchasing/deliveries", map[string]any{"po_id": poID, "no_surat_jalan": "SJ-L"})
+	e.expect(r, 200, "")
+	d := r.data()
+	if d["purchase_order_id"] != poID || d["supplier_id"] != f.Supplier || d["status"] != "IN_TRANSIT" || d["no_surat_jalan"] != "SJ-L" ||
+		d["po"].(map[string]any)["nomor_po"] != nomor || d["supplier"].(map[string]any)["id"] != f.Supplier {
+		t.Fatalf("legacy create = %s", r.Raw)
+	}
+	if _, ok := d["po_id"]; ok {
+		t.Fatalf("po_id leaked into the row: %s", r.Raw)
+	}
+	id := d["id"].(string)
+
+	r = e.do(&staff, "GET", "/api/purchasing/deliveries?po_id="+poID, nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 1 || r.list()[0].(map[string]any)["id"] != id || r.list()[0].(map[string]any)["po"].(map[string]any)["status"] != "sent" {
+		t.Fatalf("legacy list = %s", r.Raw)
+	}
+	r = e.do(&staff, "GET", "/api/purchasing/deliveries?status=delivered&po_id="+poID, nil)
+	e.expect(r, 200, "")
+	if len(r.list()) != 0 {
+		t.Fatalf("legacy status filter = %s", r.Raw)
+	}
+	r = e.do(&staff, "GET", "/api/purchasing/deliveries/"+id, nil)
+	e.expect(r, 200, "")
+	if r.data()["id"] != id || r.data()["po"].(map[string]any)["tanggal_po"] == nil || r.data()["supplier"].(map[string]any)["nama_supplier"] == nil {
+		t.Fatalf("legacy detail = %s", r.Raw)
+	}
+	e.expect(e.do(&staff, "GET", "/api/purchasing/deliveries/11111111-1111-4111-8111-111111111111", nil), 404, "Delivery not found")
+
+	// A vendor PO hands its vendor to the delivery.
+	vendorPo := e.id(`INSERT INTO purchasing.purchase_orders (nomor_po, vendor_id, status, module_type) VALUES ('GT-PO-'||$1, $2, 'sent', 'general') RETURNING id::text`, suffix(), f.Vendor)
+	r = e.do(&staff, "POST", "/api/purchasing/deliveries", map[string]any{"po_id": vendorPo})
+	e.expect(r, 200, "")
+	if r.data()["vendor_id"] != f.Vendor || r.data()["supplier"] != nil {
+		t.Fatalf("vendor delivery = %s", r.Raw)
 	}
 }

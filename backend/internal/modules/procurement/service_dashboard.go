@@ -170,10 +170,10 @@ func parseJSDate(s string, loc *time.Location) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-// alertLevel is `qty_onhand === 0 ? "critical" : "warning"`. node-postgres
-// hands numeric over as a string, so in practice every alert is a warning.
+// alertLevel is "critical" when nothing is on hand (qty_onhand arrives as a
+// numeric string), else "warning".
 func alertLevel(qty any) string {
-	if qty == 0.0 {
+	if toNum(qty) <= 0 {
 		return "critical"
 	}
 	return "warning"

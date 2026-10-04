@@ -41,10 +41,11 @@ type OwnerNotifier interface {
 	Notify(ctx context.Context, tx database.Querier, notifType, dedupKey, message string) error
 }
 
-// UserRef is the configuration.users slice the PR screens read.
+// UserRef is the configuration.users slice the PR and QC screens read.
 type UserRef struct {
 	ID        string
 	FullName  *string
+	Email     *string
 	CompanyID *string
 	BranchID  *string
 }
@@ -98,9 +99,9 @@ type Catalog interface {
 	// packs) of raw materials, for converting purchase units to base units
 	// (createBaseUnitResolver).
 	MaterialUnits(ctx context.Context, q database.Querier, ids []string) (map[string]MaterialUnits, error)
-	// ProductsMatch reports whether an active product's nama or kode is
+	// ProductIDsMatching lists the active products whose nama or kode is
 	// ILIKE term.
-	ProductsMatch(ctx context.Context, q database.Querier, term string) (bool, error)
+	ProductIDsMatching(ctx context.Context, q database.Querier, term string) ([]string, error)
 	// ProductUnit is the base unit of an active product (found=false when
 	// the product does not exist or is deleted).
 	ProductUnit(ctx context.Context, q database.Querier, productID string) (found bool, satuanID *string, err error)

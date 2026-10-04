@@ -477,9 +477,14 @@ func (h *handler) updateRawMaterial(w http.ResponseWriter, r *http.Request) erro
 				return err
 			}
 		}
-		current, err := kit.Query(ctx, q, `SELECT id::text AS id, satuan_id::text AS satuan_id FROM raw_material_unit_conversions WHERE raw_material_id = $1`, id)
+		current, err := kit.Query(ctx, q, `SELECT id::text AS id, satuan_id::text AS satuan_id, is_purchase_default, is_issue_default
+			FROM raw_material_unit_conversions WHERE raw_material_id = $1`, id)
 		if err != nil {
 			return err
+		}
+		stored := map[string]*kit.Row{}
+		for _, c := range current {
+			stored[c.Str("satuan_id")] = c
 		}
 		next := map[string]bool{}
 		for _, p := range planned {
@@ -500,15 +505,22 @@ func (h *handler) updateRawMaterial(w http.ResponseWriter, r *http.Request) erro
 		if len(planned) == 0 {
 			return nil
 		}
+		// The packs go in one multi-row upsert, so a flag one pack sends is
+		// a column for all: the others keep their stored flag (false when new).
+		flag := func(sent *bool, satuanID, key string) bool {
+			if sent != nil {
+				return *sent
+			}
+			if c, ok := stored[satuanID]; ok {
+				return c.Bool(key)
+			}
+			return false
+		}
 		rows = make(kit.Rows, len(planned))
 		for i, p := range planned {
-			row := kit.Obj("raw_material_id", id, "satuan_id", p.SatuanID, "qty_in_base_unit", p.QtyInBaseUnit, "is_base", p.IsBase, "is_active", true)
-			if p.IsPurchaseDefault != nil {
-				row.Set("is_purchase_default", *p.IsPurchaseDefault)
-			}
-			if p.IsIssueDefault != nil {
-				row.Set("is_issue_default", *p.IsIssueDefault)
-			}
+			row := kit.Obj("raw_material_id", id, "satuan_id", p.SatuanID, "qty_in_base_unit", p.QtyInBaseUnit, "is_base", p.IsBase, "is_active", true,
+				"is_purchase_default", flag(p.IsPurchaseDefault, p.SatuanID, "is_purchase_default"),
+				"is_issue_default", flag(p.IsIssueDefault, p.SatuanID, "is_issue_default"))
 			if p.HasBarcode {
 				var b any
 				if p.Barcode != nil && *p.Barcode != "" {
@@ -528,10 +540,9 @@ func (h *handler) updateRawMaterial(w http.ResponseWriter, r *http.Request) erro
 }
 
 /*
-DELETE /api/purchasing/raw-materials/{id} — refused while a product BOM
+DELETE /api/purchasing/raw-materials/{id} — refused while stock is on hand
 
-	uses it. (The TS stock check reads inventory.qty_onhand, a column that
-	does not exist, so it never blocks; it is left out.)
+	(summed over its active inventory rows) or a product BOM uses it.
 */
 func (h *handler) deleteRawMaterial(w http.ResponseWriter, r *http.Request) error {
 	u, err := h.itemsStaff(r)
@@ -540,8 +551,18 @@ func (h *handler) deleteRawMaterial(w http.ResponseWriter, r *http.Request) erro
 	}
 	ctx := r.Context()
 	id := r.PathValue("id")
-	if _, err := h.activeMaterial(ctx, id); err != nil {
+	material, err := h.activeMaterial(ctx, id)
+	if err != nil {
 		return err
+	}
+	stock, err := kit.QueryOne(ctx, h.env.DB, `SELECT COALESCE(SUM(qty_available), 0)::float8 AS qty,
+		(SELECT nama FROM units WHERE id = $2) AS unit
+		FROM inventory WHERE raw_material_id = $1 AND is_active = true`, id, material.Get("satuan_besar_id"))
+	if err != nil {
+		return err
+	}
+	if qty := stock.Num("qty"); qty > 0 {
+		return httpx.BadRequest("Bahan baku tidak bisa dihapus karena masih ada stok " + kit.JSNum(qty) + " " + kit.FirstNonEmpty(stock.Str("unit"), "unit"))
 	}
 	used, err := kit.QueryOne(ctx, h.env.DB, `SELECT id FROM bom_items WHERE raw_material_id = $1 AND is_active = true LIMIT 1`, id)
 	if err == nil && used != nil {

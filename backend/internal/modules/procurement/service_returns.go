@@ -170,18 +170,8 @@ func (s *Service) ListPurchaseReturns(ctx context.Context, p ReturnListParams, s
 		w.add("return_date <= %s::text::date", *p.DateTo)
 	}
 	if set(p.Search) {
-		// The TS appends `grn_id.in.(…)` to its .or() when any GRN number
-		// matches; the query builder compiles that to grn_id = '(…)', which
-		// PostgreSQL rejects (22P02 → 400).
-		var matches bool
-		if err := s.db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM grn WHERE nomor_grn ILIKE $1)`, "%"+*p.Search+"%").Scan(&matches); err != nil {
-			return nil, err
-		}
-		if matches {
-			return nil, httpx.BadRequest("Format data tidak valid")
-		}
 		like := strings.ReplaceAll("%"+*p.Search+"%", "*", "%")
-		w.add("(return_number ILIKE %s OR reason_notes ILIKE %s)", like, like)
+		w.add("(return_number ILIKE %s OR reason_notes ILIKE %s OR grn_id IN (SELECT id FROM grn WHERE nomor_grn ILIKE %s))", like, like, like)
 	}
 	sortBy := "return_date"
 	if contains(returnSortColumns, p.SortBy) {
@@ -222,6 +212,19 @@ func (s *Service) ReturnableGrns(ctx context.Context, scope *pscope.Scope, modul
 		FROM grn WHERE id = ANY($1::uuid[]) AND is_active = true ORDER BY tanggal_penerimaan DESC`, ids)
 }
 
+// codeName is a { kode, nama } embed from an id, kode, nama ref.
+func codeName(m map[string]json.RawMessage, id string) (any, error) {
+	raw, ok := m[id]
+	if !ok || id == "" {
+		return nil, nil
+	}
+	r, err := decodeRow(raw)
+	if err != nil {
+		return nil, err
+	}
+	return obj("kode", r.Get("kode"), "nama", r.Get("nama")), nil
+}
+
 // returnItems loads purchase_return_items of returnIDs with the embeds the
 // detail (full=true) or the update response read.
 func (s *Service) returnItems(ctx context.Context, q database.Querier, returnID string, full bool) ([]*Row, error) {
@@ -249,17 +252,6 @@ func (s *Service) returnItems(ctx context.Context, q database.Querier, returnID 
 		if warehouses, err = s.ports.Locations.WarehouseNames(ctx, q, uniqueStrings(column(rows, "wh"))); err != nil {
 			return nil, err
 		}
-	}
-	codeName := func(m map[string]json.RawMessage, id string) (any, error) {
-		raw, ok := m[id]
-		if !ok || id == "" {
-			return nil, nil
-		}
-		r, err := decodeRow(raw)
-		if err != nil {
-			return nil, err
-		}
-		return obj("kode", r.Get("kode"), "nama", r.Get("nama")), nil
 	}
 	out := make([]*Row, len(rows))
 	for i, r := range rows {
@@ -419,39 +411,38 @@ type ReturnCreate struct {
 	Items                                   []ReturnLine
 }
 
-// CreatePurchaseReturn is createPurchaseReturn. Its final read embeds a
-// raw_materials column that does not exist (satuan); the TS ignores that
-// error, so the response data is always null.
-func (s *Service) CreatePurchaseReturn(ctx context.Context, in *ReturnCreate, scope *pscope.Scope) error {
+// CreatePurchaseReturn is createPurchaseReturn; it answers the created
+// return with supplier, vendor and items.
+func (s *Service) CreatePurchaseReturn(ctx context.Context, in *ReturnCreate, scope *pscope.Scope) (*Row, error) {
 	moduleType := domainModule(in.ModuleType)
 	if deref(in.ReturnDate) == "" || deref(in.ReasonType) == "" || len(in.Items) == 0 {
-		return badRequest("Required fields are incomplete")
+		return nil, badRequest("Required fields are incomplete")
 	}
 	if moduleType == "product" && deref(in.VendorID) == "" {
-		return badRequest("Vendor is required for product returns")
+		return nil, badRequest("Vendor is required for product returns")
 	}
 	if moduleType == "raw_material" && deref(in.SupplierID) == "" {
-		return badRequest("Supplier is required for purchase returns")
+		return nil, badRequest("Supplier is required for purchase returns")
 	}
 	if deref(in.GrnID) == "" {
-		return badRequest("Goods receipt is required for purchase returns")
+		return nil, badRequest("Goods receipt is required for purchase returns")
 	}
 	ids, err := s.scopedQcGrnIDs(ctx, scope, moduleType)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !contains(ids, *in.GrnID) {
-		return badRequest("Goods receipt is not eligible for return (QC incomplete or out of scope)")
+		return nil, badRequest("Goods receipt is not eligible for return (QC incomplete or out of scope)")
 	}
 	grn, err := s.rows.One(ctx, s.db, `SELECT id, company_id, branch_id, supplier_id, vendor_id FROM grn WHERE id = $1::text::uuid AND is_active = true`, *in.GrnID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if grn == nil {
-		return notFound("Goods receipt not found")
+		return nil, notFound("Goods receipt not found")
 	}
 	if err := s.validateReturnLines(ctx, s.db, grn.Str("id"), in.Items, ""); err != nil {
-		return err
+		return nil, err
 	}
 	var supplier, vendor *string
 	if moduleType == "product" {
@@ -459,8 +450,8 @@ func (s *Service) CreatePurchaseReturn(ctx context.Context, in *ReturnCreate, sc
 	} else {
 		supplier = firstNonNil(nonEmpty(in.SupplierID), grn.StrPtr("supplier_id"))
 	}
-	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		var id string
+	var id string
+	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `INSERT INTO purchase_returns
 			(grn_id, supplier_id, vendor_id, return_date, reason_type, reason_notes, status, total_amount, notes, company_id, branch_id)
 			VALUES ($1, $2::text::uuid, $3::text::uuid, $4::text::date, $5, $6, 'pending_approval', $7, $8, $9, $10) RETURNING id::text`,
@@ -470,6 +461,53 @@ func (s *Service) CreatePurchaseReturn(ctx context.Context, in *ReturnCreate, sc
 		}
 		return insertReturnItems(ctx, tx, id, in.Items)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return s.createdReturn(ctx, id)
+}
+
+// createdReturn is createPurchaseReturn's final read. The TS also asked for
+// raw_materials.satuan, a column that does not exist, so the material
+// carries kode and nama.
+func (s *Service) createdReturn(ctx context.Context, id string) (*Row, error) {
+	ret, err := s.rows.One(ctx, s.db, `SELECT *,
+		(SELECT row_to_json(e) FROM (SELECT nama_supplier FROM purchasing.suppliers WHERE id = purchase_returns.supplier_id) e) AS supplier,
+		(SELECT row_to_json(e) FROM (SELECT name FROM purchasing.vendors WHERE id = purchase_returns.vendor_id) e) AS vendor
+		FROM purchase_returns WHERE id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	list, err := s.rows.Query(ctx, s.db, `SELECT row_to_json(i) AS item FROM purchase_return_items i WHERE return_id = $1 ORDER BY created_at, id`, id)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*Row, len(list))
+	for i, it := range list {
+		if items[i], err = decodeRow(it.Get("item").(json.RawMessage)); err != nil {
+			return nil, err
+		}
+	}
+	materials, err := s.ports.Catalog.Refs(ctx, s.db, EntityRawMaterial, "id, kode, nama", uniqueStrings(column(items, "raw_material_id")))
+	if err != nil {
+		return nil, err
+	}
+	products, err := s.ports.Catalog.Refs(ctx, s.db, EntityProduct, "id, kode, nama", uniqueStrings(column(items, "product_id")))
+	if err != nil {
+		return nil, err
+	}
+	for _, it := range items {
+		rm, err := codeName(materials, it.Str("raw_material_id"))
+		if err != nil {
+			return nil, err
+		}
+		product, err := codeName(products, it.Str("product_id"))
+		if err != nil {
+			return nil, err
+		}
+		it.Set("raw_material", rm).Set("product", product)
+	}
+	return ret.Set("items", items), nil
 }
 
 func domainModule(v *string) string {

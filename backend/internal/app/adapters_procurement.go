@@ -46,14 +46,14 @@ func (procurementDirectory) Users(ctx context.Context, q database.Querier, ids [
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := q.Query(ctx, `SELECT id::text, full_name, company_id::text, branch_id::text FROM configuration.users WHERE id = ANY($1::uuid[])`, ids)
+	rows, err := q.Query(ctx, `SELECT id::text, full_name, email, company_id::text, branch_id::text FROM configuration.users WHERE id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var u procurement.UserRef
-		if err := rows.Scan(&u.ID, &u.FullName, &u.CompanyID, &u.BranchID); err != nil {
+		if err := rows.Scan(&u.ID, &u.FullName, &u.Email, &u.CompanyID, &u.BranchID); err != nil {
 			return nil, err
 		}
 		out[u.ID] = u
@@ -509,10 +509,12 @@ func (a procurementReturnStock) Reduce(ctx context.Context, q database.Querier, 
 	return ledger.ReduceForPurchaseReturn(ctx, q, in, a.now())
 }
 
-func (procurementCatalog) ProductsMatch(ctx context.Context, q database.Querier, term string) (bool, error) {
-	var ok bool
-	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM item.products WHERE (nama ILIKE $1 OR kode ILIKE $1) AND deleted_at IS NULL)`, term).Scan(&ok)
-	return ok, err
+func (procurementCatalog) ProductIDsMatching(ctx context.Context, q database.Querier, term string) ([]string, error) {
+	rows, err := q.Query(ctx, `SELECT id::text FROM item.products WHERE (nama ILIKE $1 OR kode ILIKE $1) AND deleted_at IS NULL`, term)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
 func (procurementCatalog) ProductUnit(ctx context.Context, q database.Querier, productID string) (bool, *string, error) {

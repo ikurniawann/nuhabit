@@ -56,8 +56,21 @@ func TestPurchasingStockReads(t *testing.T) {
 		t.Fatalf("unknown sub-route: %d", rec.Code)
 	}
 
-	// The TS movements list always fails after validation (broken embed).
-	e.Fail("GET", "/api/purchasing/inventory/movements", nil, http.StatusInternalServerError, "Terjadi kesalahan server")
+	// The movement card lists the branch's movements with their embeds.
+	out = e.Call("GET", "/api/purchasing/inventory/movements?bahan_id="+rm, nil, http.StatusOK)
+	list := e.list(out, "data")
+	if len(list) != 1 || obj(out["pagination"])["total"] != 1.0 || obj(out["pagination"])["totalPages"] != 1.0 {
+		t.Fatalf("movements %v", out)
+	}
+	mv = obj(list[0])
+	if mv["reference_type"] != "adjustment" || mv["jumlah"] != "5.000" || obj(mv["inventory"])["id"] != mv["inventory_id"] ||
+		obj(mv["raw_material"])["nama"] != "Garam Purch" || obj(mv["creator"])["full_name"] != e.Staff.FullName {
+		t.Fatalf("movement %v", mv)
+	}
+	out = e.Call("GET", "/api/purchasing/inventory/movements?tipe=out&bahan_id="+rm, nil, http.StatusOK)
+	if len(e.list(out, "data")) != 0 {
+		t.Fatalf("tipe filter %v", out)
+	}
 	out = e.Fail("GET", "/api/purchasing/inventory/movements?page=0", nil, http.StatusBadRequest, "Too small: expected number to be >=1")
 	if len(e.list(out, "details")) != 1 {
 		t.Fatalf("details %v", out["details"])

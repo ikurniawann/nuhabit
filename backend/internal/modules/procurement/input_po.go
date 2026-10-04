@@ -178,13 +178,27 @@ func parsePoItemCreate(f *validate.Form) (*poItemCreateInput, error) {
 
 // parsePoItemUpdate is poItemUpdateSchema (validated only: the TS lookup of
 // the item always fails before the values are used).
-func parsePoItemUpdate(f *validate.Form) error {
-	f.Num("qty_ordered", optional, validate.NumOpts{Min: validate.Bound(0.0001)})
-	f.Str("satuan_id", optionalNullable, uuidOpts)
-	f.Num("harga_satuan", optional, nonNegative)
-	f.Num("diskon_item", optional, nonNegative)
-	f.Str("catatan", optionalNullable, validate.StrOpts{})
-	return f.Err("Validation failed")
+// parsePoItemUpdate is poItemUpdateSchema: the sent fields become the
+// update's columns, a sent null clears the column.
+func parsePoItemUpdate(f *validate.Form) (*fields, error) {
+	out := &fields{}
+	num := func(key string, o validate.NumOpts) {
+		if v := f.Num(key, optional, o); v != nil {
+			out.set(key, *v, "::numeric")
+		}
+	}
+	str := func(key string, o validate.StrOpts, cast string) {
+		v := f.Str(key, optionalNullable, o)
+		if _, sent := f.Fields()[key]; sent {
+			out.set(key, v, cast)
+		}
+	}
+	num("qty_ordered", validate.NumOpts{Min: validate.Bound(0.0001)})
+	str("satuan_id", uuidOpts, "::text::uuid")
+	num("harga_satuan", nonNegative)
+	num("diskon_item", nonNegative)
+	str("catatan", validate.StrOpts{}, "")
+	return out, f.Err("Validation failed")
 }
 
 // poPaymentTermInput is poPaymentTermSchema.

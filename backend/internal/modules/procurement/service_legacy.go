@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/platform/database"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Legacy routes that pass the request body straight to a table, and the
@@ -74,11 +75,43 @@ func (s *Service) updateBody(ctx context.Context, q database.Querier, table, id 
 
 /* ── Legacy /deliveries ──────────────────────────────────────────────── */
 
-// CreateLegacyDelivery: the delivery inherits supplier and scope from the
-// PO; the whole body (po_id included) goes to the insert.
+// legacyDeliveryQuery selects deliveries d with the po (poCols) and
+// supplier embeds.
+func legacyDeliveryQuery(poCols string) string {
+	return `d.*,
+		(SELECT row_to_json(e) FROM (SELECT ` + poCols + ` FROM purchasing.purchase_orders WHERE id = d.purchase_order_id) e) AS po,
+		(SELECT row_to_json(e) FROM (SELECT id, kode, nama_supplier FROM purchasing.suppliers WHERE id = d.supplier_id) e) AS supplier
+		FROM deliveries d`
+}
+
+// ListLegacyDeliveries is GET /deliveries: active rows, newest first.
+func (s *Service) ListLegacyDeliveries(ctx context.Context, poID, status string, scope *pscope.Scope) ([]*Row, error) {
+	w := newWhere().add("d.is_active = true")
+	if c := pscope.CompanyFilter(scope); c != nil {
+		w.add("d.company_id = %s::text::uuid", *c)
+	}
+	if b := pscope.BranchFilter(scope); b != nil {
+		w.add("d.branch_id = %s::text::uuid", *b)
+	}
+	if poID != "" {
+		w.add("d.purchase_order_id = %s::text::uuid", poID)
+	}
+	if status != "" {
+		w.add("d.status = %s", status)
+	}
+	return s.rows.Query(ctx, s.db, `SELECT `+legacyDeliveryQuery("nomor_po, status")+` `+w.sql()+` ORDER BY d.created_at DESC`, w.args...)
+}
+
+// LegacyDelivery is GET /deliveries/[id]; nil when missing.
+func (s *Service) LegacyDelivery(ctx context.Context, id string) (*Row, error) {
+	return s.rows.One(ctx, s.db, `SELECT `+legacyDeliveryQuery("nomor_po, status, tanggal_po")+` WHERE d.id = $1::text::uuid`, id)
+}
+
+// CreateLegacyDelivery: the body goes to the insert with po_id as
+// purchase_order_id; the delivery inherits the PO's party and scope.
 func (s *Service) CreateLegacyDelivery(ctx context.Context, body map[string]any) (*Row, error) {
 	poID, _ := body["po_id"].(string)
-	po, err := s.rows.One(ctx, s.db, `SELECT supplier_id, company_id, branch_id FROM purchase_orders WHERE id = $1::text::uuid`, poID)
+	po, err := s.rows.One(ctx, s.db, `SELECT supplier_id, vendor_id, company_id, branch_id FROM purchase_orders WHERE id = $1::text::uuid`, poID)
 	if err != nil || po == nil {
 		return nil, notFound("Purchase order not found")
 	}
@@ -86,9 +119,11 @@ func (s *Service) CreateLegacyDelivery(ctx context.Context, body map[string]any)
 	for k, v := range body {
 		values[k] = v
 	}
-	values["supplier_id"] = po.Get("supplier_id")
-	values["company_id"] = po.Get("company_id")
-	values["branch_id"] = po.Get("branch_id")
+	delete(values, "po_id")
+	values["purchase_order_id"] = poID
+	for _, k := range []string{"supplier_id", "vendor_id", "company_id", "branch_id"} {
+		values[k] = po.Get(k)
+	}
 	values["status"] = "IN_TRANSIT"
 	row, err := s.insertBody(ctx, s.db, "deliveries", values)
 	if err != nil {
@@ -97,7 +132,7 @@ func (s *Service) CreateLegacyDelivery(ctx context.Context, body map[string]any)
 	if row == nil {
 		return nil, errNoRows
 	}
-	return row, nil
+	return s.LegacyDelivery(ctx, row.Str("id"))
 }
 
 // UpdateLegacyDelivery writes the body as columns.

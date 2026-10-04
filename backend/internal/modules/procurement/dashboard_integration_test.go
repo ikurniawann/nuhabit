@@ -2,6 +2,7 @@ package procurement_test
 
 import (
 	"math"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -42,10 +43,22 @@ func TestPurchasingDashboard(t *testing.T) {
 		action["expected_date"] != "1989-12-31T17:00:00.000Z" || action["status"] != "sent" || math.Abs(action["days_overdue"].(float64)-overdue) > 1 {
 		t.Fatalf("actionPOs[0] = %v", action)
 	}
+	// Out of stock is critical, low stock a warning.
+	sawMaterial := false
 	for _, a := range r.Body["stockAlerts"].([]any) {
-		if a.(map[string]any)["alert_level"] != "warning" {
+		alert := a.(map[string]any)
+		qty, _ := strconv.ParseFloat(alert["qty_on_hand"].(string), 64)
+		want := "warning"
+		if qty <= 0 {
+			want = "critical"
+		}
+		sawMaterial = sawMaterial || alert["id"] == f.Material
+		if alert["alert_level"] != want {
 			t.Fatalf("stock alert = %v", a)
 		}
+	}
+	if !sawMaterial {
+		t.Fatalf("stockAlerts miss the empty material: %v", r.Body["stockAlerts"])
 	}
 	if !strings.Contains(r.Raw, `"monthlyTrends":[{"month":"Des","manual":200000},{"month":"Jan","low_stock":300000,"manual":100000}`) {
 		t.Fatalf("monthlyTrends = %v", r.Body["monthlyTrends"])
