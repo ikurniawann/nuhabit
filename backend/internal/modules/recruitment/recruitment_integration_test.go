@@ -327,12 +327,18 @@ func TestPsikotesFlow(t *testing.T) {
 	c = h.anon("GET", "/api/psikotes/session/"+token, nil)
 	expect(t, c, 200, "")
 	tests := c.data()["tests"].([]any)
-	t0 := tests[0].(map[string]any)
-	if c.data()["session"].(map[string]any)["status"] != "sent" || t0["has_attachment"] != false || t0["instrument"].(map[string]any)["duration_seconds"] != float64(600) {
+	// Both tests share sort_order, so the list order is arbitrary: pick by kind.
+	byKind := map[string]map[string]any{}
+	for _, raw := range tests {
+		st := raw.(map[string]any)
+		byKind[st["instrument"].(map[string]any)["kind"].(string)] = st
+	}
+	t0 := byKind["mcq"]
+	if c.data()["session"].(map[string]any)["status"] != "sent" || t0 == nil || t0["has_attachment"] != false || t0["instrument"].(map[string]any)["duration_seconds"] != float64(600) {
 		t.Fatal(c.raw)
 	}
 	mcqTest := t0["id"].(string)
-	papiTest := tests[1].(map[string]any)["id"].(string)
+	papiTest := byKind["forced_choice"]["id"].(string)
 
 	expect(t, h.anon("POST", "/api/psikotes/session/"+token+"/tests/"+mcqTest+"/start", nil), 409, "Sesi belum dimulai atau sudah berakhir")
 	expect(t, h.anon("POST", "/api/psikotes/session/"+token+"/start", map[string]any{}), 400, "Payload tidak valid")
