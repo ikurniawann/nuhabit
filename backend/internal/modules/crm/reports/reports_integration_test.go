@@ -44,10 +44,36 @@ func TestLoyaltyReport(t *testing.T) {
 			t.Fatalf("reconciliation.%s missing: %v", k, rec)
 		}
 	}
-	for _, s := range data["topSpenders"].([]any) {
-		if s.(map[string]any)["last_order_at"] != nil {
-			t.Fatal("last_order_at stays null for parity")
+}
+
+func TestLoyaltyReportLastOrderAndVisit(t *testing.T) {
+	tx := testutil.Tx(t)
+	mux := crmtest.Mux(newHandler(tx, testutil.Deps(t, nil), Ports{}).routes())
+	staff := crmtest.Staff(t, "crm.reports")
+	customer := crmtest.Scalar[string](t, tx, `INSERT INTO pos.pos_customers (phone, name) VALUES ('0899' || lpad((random() * 1e8)::int::text, 8, '0'), 'Go Loyal') RETURNING id::text`)
+	for _, at := range []string{"2019-02-03T02:00:00Z", "2019-02-04T05:06:07.890Z"} {
+		crmtest.MustExec(t, tx, `INSERT INTO pos.pos_orders (order_number, cashier_id, customer_id, status, payment_status, subtotal, total_amount, created_at)
+			VALUES ($1, $2, $3, 'completed', 'paid', 50000, 50000, $4)`, "GL"+testutil.RandomHex(6), staff.UserID, customer, at)
+	}
+	code, body := crmtest.Call(t, mux, "GET", "/api/crm/reports?from=2019-02-03&to=2019-02-04", nil, &staff)
+	if code != 200 {
+		t.Fatalf("report: %d %v", code, body)
+	}
+	data := body["data"].(map[string]any)
+	find := func(list string) map[string]any {
+		for _, r := range data[list].([]any) {
+			if row := r.(map[string]any); row["id"] == customer {
+				return row
+			}
 		}
+		t.Fatalf("%s has no %s: %v", list, customer, data[list])
+		return nil
+	}
+	if got := find("topSpenders")["last_order_at"]; got != "2019-02-04T05:06:07.890Z" {
+		t.Fatalf("last_order_at %v", got)
+	}
+	if got := find("frequentVisitors")["last_visit_at"]; got != "2019-02-04T05:06:07.890Z" {
+		t.Fatalf("last_visit_at %v", got)
 	}
 }
 

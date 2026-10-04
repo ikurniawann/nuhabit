@@ -168,12 +168,19 @@ func TestDetailSyntheticAndPatch(t *testing.T) {
 		t.Fatalf("email issue %v", issue)
 	}
 
-	// Name only: the TS writes the absent email as NULL.
+	// Name only: an absent email keeps the stored one.
 	status, body = f.call("PATCH", "/api/crm/members/pos-"+customerID, map[string]any{"customer": map[string]any{"name": " Renamed "}}, &f.pos)
 	expect(t, status, body, 200, "")
 	member = data(t, body)["member"].(map[string]any)
-	if member["customer"].(map[string]any)["name"] != "Renamed" || member["customer"].(map[string]any)["email"] != "" {
+	if member["customer"].(map[string]any)["name"] != "Renamed" || member["customer"].(map[string]any)["email"] != "old@example.com" {
 		t.Fatalf("patched %v", member)
+	}
+
+	// An explicit null clears it (the edit form sends null for an empty field).
+	status, body = f.call("PATCH", "/api/crm/members/pos-"+customerID, map[string]any{"customer": map[string]any{"email": nil}}, &f.pos)
+	expect(t, status, body, 200, "")
+	if email := data(t, body)["member"].(map[string]any)["customer"].(map[string]any)["email"]; email != "" {
+		t.Fatalf("cleared email %v", email)
 	}
 
 	status, body = f.call("POST", "/api/crm/members", map[string]any{"customer_id": customerID}, &f.pos)

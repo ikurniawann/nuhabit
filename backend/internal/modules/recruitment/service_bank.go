@@ -138,10 +138,12 @@ func (s *Service) AnswerDetail(ctx context.Context, id string) (*Row, error) {
 		}
 		return object("kind", "mcq", "items", items), nil
 	}
-	// forced choice (PAPI): every active pair in bank order. The TS reads the
-	// choice at the top level of t.answers, so it is kept that way.
-	var answers map[string]any
-	_ = test.JSON("answers", &answers)
+	// forced choice (PAPI): every active pair in bank order, with the choice
+	// stored under answers.answers.
+	var stored struct {
+		Answers map[string]any `json:"answers"`
+	}
+	_ = test.JSON("answers", &stored)
 	rows, err := s.repo.ActiveBank(ctx, s.db, test.Str("instrument_id"))
 	if err != nil {
 		return nil, err
@@ -149,7 +151,7 @@ func (s *Service) AnswerDetail(ctx context.Context, id string) (*Row, error) {
 	items := make([]*Row, len(rows))
 	for i, r := range rows {
 		var given any
-		if g, ok := answers[r.Str("id")].(string); ok && (g == "a" || g == "b") {
+		if g, ok := stored.Answers[r.Str("id")].(string); ok && (g == "a" || g == "b") {
 			given = g
 		}
 		items[i] = object("id", r.Get("id"), "body", r.Get("body"), "options", r.Get("options"), "given", given)

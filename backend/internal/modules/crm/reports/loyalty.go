@@ -13,29 +13,27 @@ type periodLabel struct {
 }
 
 type topSpender struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Phone          string  `json:"phone"`
-	MembershipTier string  `json:"membership_tier"`
-	MemberType     string  `json:"member_type"`
-	OrderCount     float64 `json:"order_count"`
-	TotalSpend     float64 `json:"total_spend"`
-	ArkSpend       float64 `json:"ark_spend"`
-	// LastOrderAt is always null: the TS mapper's asText drops the Date
-	// node-postgres returns. Kept for parity.
-	LastOrderAt *string `json:"last_order_at"`
+	ID             string      `json:"id"`
+	Name           string      `json:"name"`
+	Phone          string      `json:"phone"`
+	MembershipTier string      `json:"membership_tier"`
+	MemberType     string      `json:"member_type"`
+	OrderCount     float64     `json:"order_count"`
+	TotalSpend     float64     `json:"total_spend"`
+	ArkSpend       float64     `json:"ark_spend"`
+	LastOrderAt    *kit.JSTime `json:"last_order_at"`
 }
 
 type frequentVisitor struct {
-	ID             string  `json:"id"`
-	Name           string  `json:"name"`
-	Phone          string  `json:"phone"`
-	MembershipTier string  `json:"membership_tier"`
-	MemberType     string  `json:"member_type"`
-	OrderCount     float64 `json:"order_count"`
-	VisitDays      float64 `json:"visit_days"`
-	LifetimeVisits float64 `json:"lifetime_visits"`
-	LastVisitAt    *string `json:"last_visit_at"` // always null, as LastOrderAt
+	ID             string      `json:"id"`
+	Name           string      `json:"name"`
+	Phone          string      `json:"phone"`
+	MembershipTier string      `json:"membership_tier"`
+	MemberType     string      `json:"member_type"`
+	OrderCount     float64     `json:"order_count"`
+	VisitDays      float64     `json:"visit_days"`
+	LifetimeVisits float64     `json:"lifetime_visits"`
+	LastVisitAt    *kit.JSTime `json:"last_visit_at"`
 }
 
 type reconciliation struct {
@@ -62,6 +60,13 @@ type loyaltyReport struct {
 func textOrNil(v any) *string {
 	if s := domain.AsText(v, ""); s != "" {
 		return &s
+	}
+	return nil
+}
+
+func timeOrNil(row *kit.Row, key string) *kit.JSTime {
+	if t, ok := row.Get(key).(kit.JSTime); ok {
+		return &t
 	}
 	return nil
 }
@@ -113,7 +118,7 @@ func (h *handler) loyalty(w http.ResponseWriter, r *http.Request) error {
 			ID: domain.AsText(row.Get("id"), ""), Name: domain.AsText(row.Get("name"), "Customer"),
 			Phone: domain.AsText(row.Get("phone"), ""), MembershipTier: domain.AsText(row.Get("membership_tier"), "regular"),
 			MemberType: domain.AsText(row.Get("member_type"), "registered"), OrderCount: row.Num("order_count"),
-			TotalSpend: row.Num("total_spend"), ArkSpend: row.Num("ark_spend"), LastOrderAt: textOrNil(row.Get("last_order_at")),
+			TotalSpend: row.Num("total_spend"), ArkSpend: row.Num("ark_spend"), LastOrderAt: timeOrNil(row, "last_order_at"),
 		})
 	}
 	for _, row := range visitors {
@@ -121,7 +126,7 @@ func (h *handler) loyalty(w http.ResponseWriter, r *http.Request) error {
 			ID: domain.AsText(row.Get("id"), ""), Name: domain.AsText(row.Get("name"), "Customer"),
 			Phone: domain.AsText(row.Get("phone"), ""), MembershipTier: domain.AsText(row.Get("membership_tier"), "regular"),
 			MemberType: domain.AsText(row.Get("member_type"), "registered"), OrderCount: row.Num("order_count"),
-			VisitDays: row.Num("visit_days"), LifetimeVisits: row.Num("lifetime_visits"), LastVisitAt: textOrNil(row.Get("last_visit_at")),
+			VisitDays: row.Num("visit_days"), LifetimeVisits: row.Num("lifetime_visits"), LastVisitAt: timeOrNil(row, "last_visit_at"),
 		})
 	}
 	out.Reconciliation.Venues = []domain.Reconciliation{}

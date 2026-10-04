@@ -171,7 +171,6 @@ func optChild(f *validate.Form, key string) *validate.Form {
 // order, plus whether each object was sent.
 type memberUpdate struct {
 	customer   []kit.Col
-	emailSent  bool
 	memberSent bool
 	member     []kit.Col
 	tierID     *string
@@ -191,8 +190,7 @@ func parseMemberUpdate(f *validate.Form) memberUpdate {
 			u.customer = append(u.customer, kit.Col{Name: "phone", Value: s})
 		}
 		if sent("email") {
-			u.emailSent = true
-			// The TS writes "" as NULL; its position follows the schema.
+			// "" and null clear the email; an absent key leaves it alone.
 			var v any
 			if email := parseEmail(c); email != nil && *email != "" {
 				v = *email
@@ -289,13 +287,7 @@ func (h *handler) updateMemberDetail(ctx context.Context, tx pgx.Tx, id string, 
 	}
 
 	if len(u.customer) > 0 {
-		cols := u.customer
-		if !u.emailSent {
-			// `{ ...payload.customer, email: undefined }`: the shim writes
-			// the absent email as NULL (a TS quirk kept for parity).
-			cols = append(cols, kit.Col{Name: "email", Value: nil})
-		}
-		if err := updateCustomer(ctx, tx, cols, customerID); err != nil {
+		if err := updateCustomer(ctx, tx, u.customer, customerID); err != nil {
 			return nil, err
 		}
 	}

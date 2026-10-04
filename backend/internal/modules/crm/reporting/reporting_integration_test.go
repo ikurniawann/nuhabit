@@ -175,6 +175,20 @@ func TestRunReport(t *testing.T) {
 		t.Fatal(code, body)
 	}
 
+	// not_in binds its list as one array parameter.
+	for _, c := range []struct {
+		stages []any
+		want   float64
+	}{{[]any{"Prospek Baru"}, 0}, {[]any{"Tahap Lain", ""}, 2}} {
+		code, body = e.call(t, "POST", "/api/crm/report-builder/run", map[string]any{
+			"dataset": "deal",
+			"filters": append([]any{map[string]any{"field": "stage_name", "op": "not_in", "value": c.stages}}, contains...),
+		}, &e.admin)
+		if code != 200 || data(body)["row_count"] != c.want {
+			t.Fatal(c.stages, code, body)
+		}
+	}
+
 	rec := httptest.NewRecorder()
 	e.mux.ServeHTTP(rec, testutil.AsStaff(testutil.Request("POST", "/api/crm/report-builder/run",
 		map[string]any{"dataset": "deal", "columns": []any{"title", "value"}, "filters": contains}), e.admin))

@@ -292,6 +292,15 @@ func TestSegmentPreview(t *testing.T) {
 	}
 
 	status, body = e.call("POST", "/api/crm/segments/preview", map[string]any{
+		"source": "member", "filters": []any{tierFilter,
+			map[string]any{"field": "name", "op": "not_in", "value": []any{"Ani", "Tanpa HP"}}},
+	})
+	expect(t, status, body, 200, "")
+	if got := data(body); got["total"] != 2.0 {
+		t.Fatalf("not_in preview %v", got)
+	}
+
+	status, body = e.call("POST", "/api/crm/segments/preview", map[string]any{
 		"source": "member", "filters": []any{tierFilter},
 		"rfm": map[string]any{"enabled": true, "monetary": map[string]any{"min": 2}},
 	})

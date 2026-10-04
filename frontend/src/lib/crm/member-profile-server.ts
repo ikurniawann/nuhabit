@@ -145,6 +145,13 @@ export const updateMemberSchema = z.object({
   }).optional(),
 });
 
+type CustomerPayload = NonNullable<z.infer<typeof updateMemberSchema>["customer"]>;
+
+/** Kolom pos_customers yang diubah: email yang tidak dikirim tetap, "" atau null mengosongkannya. */
+export function customerPatch({ email, ...rest }: CustomerPayload) {
+  return email === undefined ? rest : { ...rest, email: email === "" ? null : email };
+}
+
 /**
  * Ubah data customer dan/atau profil member; ganti tier ikut menyalin kode
  * tier ke pos_customers. Mengembalikan member terbaru (tanpa ledger/order).
@@ -157,7 +164,7 @@ export async function updateMemberDetail(id: string, payload: z.infer<typeof upd
   if (payload.customer && Object.keys(payload.customer).length > 0) {
     const { error } = await db
       .from("pos_customers")
-      .update({ ...payload.customer, email: payload.customer.email === "" ? null : payload.customer.email })
+      .update(customerPatch(payload.customer))
       .eq("id", customerId);
     if (error) throw error;
   }

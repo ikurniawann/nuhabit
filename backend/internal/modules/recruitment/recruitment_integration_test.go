@@ -406,7 +406,7 @@ func TestPsikotesFlow(t *testing.T) {
 		t.Fatal(c.raw)
 	}
 	c = h.as(h.hr, "GET", "/api/psikotes/session-tests/"+papiTest+"/answers", nil)
-	if c.data()["kind"] != "forced_choice" || c.data()["items"].([]any)[0].(map[string]any)["given"] != nil {
+	if c.data()["kind"] != "forced_choice" || c.data()["items"].([]any)[0].(map[string]any)["given"] != "b" {
 		t.Fatal(c.raw)
 	}
 	expect(t, h.as(h.hr, "PUT", "/api/psikotes/session-tests/"+mcqTest+"/review", map[string]any{"review_notes": "ok"}), 409, "Tes ini tidak dalam antrian review manual")

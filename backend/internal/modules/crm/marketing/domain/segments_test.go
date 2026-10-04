@@ -123,7 +123,7 @@ func TestFilterOps(t *testing.T) {
 		{Filter{Field: "city", Op: "is_empty"}, "(t.city IS NULL OR t.city = '')", []any{}},
 		{Filter{Field: "visit_count", Op: "not_empty"}, "(COALESCE(t.visit_count, 0) IS NOT NULL)", []any{}},
 		{Filter{Field: "gender", Op: "in", Value: []any{"male", "", nil, "female"}}, "t.gender = ANY($1)", []any{[]string{"male", "female"}}},
-		{Filter{Field: "total_xp", Op: "not_in", Value: "5"}, "COALESCE(t.total_xp, 0) NOT = ANY($1)", []any{[]float64{5}}},
+		{Filter{Field: "total_xp", Op: "not_in", Value: "5"}, "COALESCE(t.total_xp, 0) <> ALL($1)", []any{[]float64{5}}},
 		{Filter{Field: "wa_consent", Op: "eq", Value: "1"}, "COALESCE(t.wa_consent, false) = $1", []any{true}},
 		{Filter{Field: "total_xp", Op: "between", Value: "abc", Value2: 10.0}, "COALESCE(t.total_xp, 0) BETWEEN $1 AND $2", []any{0.0, 10.0}},
 		{Filter{Field: "city", Op: "eq", Value: ""}, "t.city IS NULL", []any{}},

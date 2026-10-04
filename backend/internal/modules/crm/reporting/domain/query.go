@@ -178,11 +178,10 @@ func filterSQL(dataset string, f Filter, params *[]any) string {
 		if len(arr) == 0 {
 			return ""
 		}
-		not := ""
 		if f.Op == "not_in" {
-			not = " NOT"
+			return col + " <> ALL(" + push(arr) + ")"
 		}
-		return col + not + " = ANY(" + push(arr) + ")"
+		return col + " = ANY(" + push(arr) + ")"
 	case "between":
 		if f.Value == nil || f.Value2 == nil {
 			return ""

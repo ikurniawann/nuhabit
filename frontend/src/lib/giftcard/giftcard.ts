@@ -38,8 +38,8 @@ export type GiftCardStatus =
 export interface GiftCardState {
   status: GiftCardStatus;
   balance: number;
-  /** ISO date/timestamp; null = tanpa kedaluwarsa (configurable per kartu). */
-  expiresAt: string | null;
+  /** ISO date/timestamp atau Date dari node-postgres; null = tanpa kedaluwarsa. */
+  expiresAt: string | Date | null;
 }
 
 export type GiftCardRejectReason =
@@ -61,13 +61,13 @@ export const GIFT_CARD_REJECT_MESSAGES: Record<GiftCardRejectReason, string> = {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** ISO string compare cukup krn format YYYY-MM-DD / timestamptz konsisten. */
+/** Bandingkan sebagai waktu: node-postgres mengembalikan timestamptz sebagai Date. */
 export function isGiftCardExpired(
-  expiresAt: string | null,
+  expiresAt: string | Date | null,
   now: string
 ): boolean {
   if (expiresAt === null) return false;
-  return now > expiresAt;
+  return new Date(now).getTime() > new Date(expiresAt).getTime();
 }
 
 /**

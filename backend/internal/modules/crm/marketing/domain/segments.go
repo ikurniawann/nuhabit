@@ -283,11 +283,10 @@ func filterSQL(src SourceDef, f Filter, params *[]any) (string, bool) {
 		if arr == nil {
 			return "", false
 		}
-		not := ""
 		if f.Op == "not_in" {
-			not = " NOT"
+			return fmt.Sprintf("%s <> ALL(%s)", col, push(arr)), true
 		}
-		return fmt.Sprintf("%s%s = ANY(%s)", col, not, push(arr)), true
+		return fmt.Sprintf("%s = ANY(%s)", col, push(arr)), true
 	case "between":
 		if f.Value == nil || f.Value2 == nil {
 			return "", false

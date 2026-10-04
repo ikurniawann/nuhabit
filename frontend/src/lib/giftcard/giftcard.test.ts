@@ -5,6 +5,7 @@ import {
   DEFAULT_GIFT_CARD_CONFIG,
   evaluateGiftCardRedeem,
   generateGiftCardCode,
+  GIFT_CARD_REJECT_MESSAGES,
   isAllowedGiftCardNominal,
   isGiftCardExpired,
   isValidGiftCardCodeFormat,
@@ -106,6 +107,19 @@ describe("evaluateGiftCardRedeem", () => {
         "2026-08-01"
       )
     ).toEqual({ ok: false, reason: "kedaluwarsa" });
+  });
+
+  test("menolak kartu kedaluwarsa saat expires_at berupa Date dari node-postgres", () => {
+    const result = evaluateGiftCardRedeem(
+      card({ expiresAt: new Date("2026-07-01T00:00:00.000Z") }),
+      10_000,
+      "2026-08-01T00:00:00.000Z"
+    );
+    expect(result).toEqual({ ok: false, reason: "kedaluwarsa" });
+    expect(GIFT_CARD_REJECT_MESSAGES.kedaluwarsa).toBe("Gift card sudah kedaluwarsa");
+    expect(
+      evaluateGiftCardRedeem(card({ expiresAt: new Date("2026-09-01T00:00:00.000Z") }), 10_000, "2026-08-01T00:00:00.000Z").ok
+    ).toBe(true);
   });
 });
 
