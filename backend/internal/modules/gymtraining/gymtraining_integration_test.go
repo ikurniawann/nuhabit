@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"nuhabit/backend/internal/app"
 	"nuhabit/backend/internal/modules/gymtraining"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
@@ -25,10 +26,7 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
-	m := gymtraining.New(deps, gymtraining.Ports{
-		Scheduling: gymtraining.SchedulingSQL{DB: deps.DB},
-		Customers:  gymtraining.CustomersSQL{DB: deps.DB},
-	})
+	m := gymtraining.New(deps, app.GymTrainingPorts(deps))
 	return &harness{
 		t:    t,
 		deps: deps,
