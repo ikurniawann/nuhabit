@@ -139,6 +139,10 @@ func TestSplitBillFlow(t *testing.T) {
 	if paid["change"] != float64(5000) || paid["payment_status"] != "partial" || paid["paid_splits"] != float64(1) || paid["total_splits"] != float64(2) {
 		t.Fatalf("pay %v", paid)
 	}
+	// Cash tendered 30000 with 5000 change applies 25000: the change is not paid toward the order.
+	if list := e.call(true, "GET", base, nil, 200)["data"].(map[string]any); list["total_paid"] != float64(25000) || list["total_remaining"] != float64(15000) {
+		t.Fatalf("after pay: paid %v remaining %v", list["total_paid"], list["total_remaining"])
+	}
 	if out := e.call(true, "POST", base+"/"+first+"/pay", map[string]any{"payment_method": "cash", "amount_paid": 30000}, 400); errorOf(out) != "Split already paid" {
 		t.Fatalf("%v", out)
 	}
@@ -162,7 +166,7 @@ func TestSplitBillFlow(t *testing.T) {
 	}
 	list := e.call(true, "GET", base, nil, 200)["data"].(map[string]any)
 	listed := list["splits"].([]any)
-	if list["paid_count"] != float64(1) || listed[1].(map[string]any)["status"] != "cancelled" {
+	if list["paid_count"] != float64(1) || listed[1].(map[string]any)["status"] != "cancelled" || list["total_remaining"] != float64(0) {
 		t.Fatalf("list %v", list)
 	}
 }

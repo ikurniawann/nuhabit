@@ -57,13 +57,18 @@ var (
 	errTooManyFromIP    = fail(429, domain.TooManyFromIP)
 )
 
-// ipAllowed applies the per-IP brake for kind "otp" or "verify".
-func (s *Service) ipAllowed(kind, ip string) bool {
+// ipBrake applies the per-IP brake for kind "otp" or "verify", shared by
+// every replica.
+func (s *Service) ipBrake(ctx context.Context, kind, ip string) error {
 	rule := domain.IPRuleOTP
 	if kind == "verify" {
 		rule = domain.IPRuleVerify
 	}
-	return s.ipLimiter.Allow("member-"+kind+":"+ip, rule, s.now())
+	allowed, _, err := s.limits.Sliding(ctx, "member-"+kind+":"+ip, rule.Limit, rule.Window, s.now())
+	if err == nil && !allowed {
+		return errTooManyFromIP
+	}
+	return err
 }
 
 // OTPIssued is the result of sending a code.
@@ -76,8 +81,8 @@ type OTPIssued struct {
 // 404 not_registered: the table-order sheet uses it to offer guest checkout,
 // and the per-IP brake limits enumeration through it.
 func (s *Service) RequestLoginOTP(ctx context.Context, ip string, rawPhone any) (*OTPIssued, error) {
-	if !s.ipAllowed("otp", ip) {
-		return nil, errTooManyFromIP
+	if err := s.ipBrake(ctx, "otp", ip); err != nil {
+		return nil, err
 	}
 	phone, err := phoneArg(rawPhone)
 	if err != nil {
@@ -103,8 +108,8 @@ func (s *Service) RequestLoginOTP(ctx context.Context, ip string, rawPhone any) 
 // RequestRegisterOTP sends a code for self registration. The answer is the
 // same for members and non-members so it never reveals who is registered.
 func (s *Service) RequestRegisterOTP(ctx context.Context, ip string, rawPhone any) (*OTPIssued, error) {
-	if !s.ipAllowed("otp", ip) {
-		return nil, errTooManyFromIP
+	if err := s.ipBrake(ctx, "otp", ip); err != nil {
+		return nil, err
 	}
 	phone, err := phoneArg(rawPhone)
 	if err != nil {
@@ -215,8 +220,8 @@ func (s *Service) Verify(ctx context.Context, ip string, rawPhone any, code stri
 	if devBypass {
 		s.log.Warn("[member-portal] OTP dev bypass dipakai", "phone", phone)
 	} else {
-		if !s.ipAllowed("verify", ip) {
-			return nil, errTooManyFromIP
+		if err := s.ipBrake(ctx, "verify", ip); err != nil {
+			return nil, err
 		}
 		if err := consumeOTP(ctx, s.repo, phone, code, s.now()); err != nil {
 			return nil, err
@@ -255,8 +260,12 @@ func (s *Service) Register(ctx context.Context, ip string, body map[string]any) 
 	if !devBypass && !domain.IsOTPCode(code) {
 		return nil, &failure{Status: 400, Message: "Kode harus 6 digit", Field: "code"}
 	}
-	if !devBypass && !s.ipAllowed("verify", ip) {
-		return nil, &failure{Status: 429, Message: domain.TooManyFromIP, Field: "code"}
+	if !devBypass {
+		if err := s.ipBrake(ctx, "verify", ip); errors.Is(err, errTooManyFromIP) {
+			return nil, &failure{Status: 429, Message: domain.TooManyFromIP, Field: "code"}
+		} else if err != nil {
+			return nil, err
+		}
 	}
 
 	var member *MemberRef

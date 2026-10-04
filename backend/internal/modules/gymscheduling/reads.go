@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Read side: session lists, roster, cancel preview, bookings, gate log, and
@@ -44,7 +45,7 @@ func (s *Service) AccessLog(ctx context.Context) (*Row, error) {
 
 // SearchBookableMembers finds members by name or phone, with their balance.
 func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]MemberHit, error) {
-	if utf16Len(term) < 2 {
+	if validate.UTF16Len(term) < 2 {
 		return []MemberHit{}, nil
 	}
 	hits, err := s.Members.Search(ctx, s.db, term)

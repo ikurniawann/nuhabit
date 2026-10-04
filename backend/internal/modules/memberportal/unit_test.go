@@ -16,6 +16,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"nuhabit/backend/internal/platform/httpx"
 )
 
 // decryptAES128GCM is the user-agent side of RFC 8291, to check the sender.
@@ -119,21 +121,21 @@ func TestClientIPAndSecureCookie(t *testing.T) {
 	if clientIP(r.Header) != "1.1.1.1" {
 		t.Fatal("cloudflare wins")
 	}
-	if isSecureRequest(r) {
+	if httpx.SecureRequest(r) {
 		t.Fatal("IP host is plain HTTP")
 	}
 	r.Header.Set("x-forwarded-proto", "https")
-	if !isSecureRequest(r) {
+	if !httpx.SecureRequest(r) {
 		t.Fatal("forwarded https")
 	}
 	d := httptest.NewRequest("GET", "http://member.example.com/", nil)
 	d.Header.Set("x-forwarded-proto", "http")
-	if !isSecureRequest(d) {
+	if !httpx.SecureRequest(d) {
 		t.Fatal("domain hosts are always behind TLS")
 	}
 	for _, host := range []string{"localhost:3000", "[::1]:3000"} {
 		l := httptest.NewRequest("GET", "http://"+host+"/", nil)
-		if isSecureRequest(l) {
+		if httpx.SecureRequest(l) {
 			t.Fatalf("%s must not be secure", host)
 		}
 	}

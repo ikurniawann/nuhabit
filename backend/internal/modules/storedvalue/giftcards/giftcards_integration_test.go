@@ -18,9 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	svdomain "nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -66,6 +66,7 @@ type env struct {
 	t        *testing.T
 	ctx      context.Context
 	tx       pgx.Tx
+	kit      *kit.Kit
 	mux      *http.ServeMux
 	svc      *Service
 	settings fakeSettings
@@ -93,14 +94,28 @@ func setup(t *testing.T) *env {
 	now := func() time.Time { return e.now }
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	e.svc = NewService(e.tx, Ports{Settings: e.settings, Catalog: e.catalog}, now, log)
-	k := &kit.Kit{Auth: deps.Auth, Log: log, Now: now, DB: e.tx,
+	e.kit = &kit.Kit{Auth: deps.Auth, Log: log, Now: now, DB: e.tx,
 		Dir:     fakeDir{venue: kit.Venue{CompanyID: &e.scope.CompanyID, BranchID: &e.scope.BranchID}},
-		Limiter: svdomain.NewRateLimiter()}
-	e.mux = http.NewServeMux()
-	for _, rt := range Routes(k, e.svc) {
-		e.mux.Handle(rt.Pattern, rt.Handler)
-	}
+		Limiter: ratelimit.New(e.tx)}
+	e.mux = e.serve(e.kit)
 	return e
+}
+
+func (e *env) serve(k *kit.Kit) *http.ServeMux {
+	mux := http.NewServeMux()
+	for _, rt := range Routes(k, e.svc) {
+		mux.Handle(rt.Pattern, rt.Handler)
+	}
+	return mux
+}
+
+// replica is a second API process on the same database.
+func (e *env) replica() *env {
+	k := *e.kit
+	k.Limiter = ratelimit.New(e.tx)
+	other := *e
+	other.mux = e.serve(&k)
+	return &other
 }
 
 func (e *env) scalar(dst any, sql string, args ...any) {
@@ -190,6 +205,21 @@ func (e *env) cardState(id string) (balance float64, status string) {
 const unauthorized = `{"success":false,"error":"Authentication required"}`
 
 /* ── POST /api/pos/gift-card-check ───────────────────────────────────── */
+
+func TestPosGiftCardRateLimitIsSharedAcrossReplicas(t *testing.T) {
+	e := setup(t)
+	other := e.replica()
+	for i := range 20 {
+		on := e
+		if i%2 == 1 {
+			on = other
+		}
+		on.expect(&e.pos, "POST", "/api/pos/gift-card-check", map[string]any{"code": "GC-12", "total": 0}, 400,
+			`{"success":false,"error":"Format kode gift card tidak valid"}`)
+	}
+	other.expect(&e.pos, "POST", "/api/pos/gift-card-check", map[string]any{"code": "GC-12", "total": 0}, 429,
+		`{"success":false,"error":"Terlalu banyak percobaan — tunggu sebentar"}`)
+}
 
 func TestPosGiftCardCheck(t *testing.T) {
 	e := setup(t)

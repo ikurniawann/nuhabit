@@ -83,7 +83,7 @@ func (h *Handler) memberBillPayment(w http.ResponseWriter, r *http.Request) erro
 	if err != nil {
 		return err
 	}
-	if err := h.kit.RateLimit("pos-member-bill:"+u.ID, 30, "Terlalu banyak percobaan, coba lagi sebentar"); err != nil {
+	if err := h.kit.RateLimit(r.Context(), "pos-member-bill:"+u.ID, 30, "Terlalu banyak percobaan, coba lagi sebentar"); err != nil {
 		return err
 	}
 	v, present := validate.ReadBody(r)
@@ -172,10 +172,10 @@ func (h *Handler) sendMemberBillWa(w http.ResponseWriter, r *http.Request) error
 	}
 	// No double send (double click or spam), per member and per cashier.
 	busy := "Tagihan baru saja dikirim — tunggu sebentar sebelum kirim lagi"
-	if err := h.kit.RateLimit("pos-member-bill-wa:"+id, 3, busy); err != nil {
+	if err := h.kit.RateLimit(r.Context(), "pos-member-bill-wa:"+id, 3, busy); err != nil {
 		return err
 	}
-	if err := h.kit.RateLimit("pos-member-bill-wa-user:"+u.ID, 20, busy); err != nil {
+	if err := h.kit.RateLimit(r.Context(), "pos-member-bill-wa-user:"+u.ID, 20, busy); err != nil {
 		return err
 	}
 	sent := h.wallet.ports.WhatsApp.SendText(ctx, *phone, message, "notification", &u.ID)

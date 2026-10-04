@@ -1,13 +1,14 @@
 package memberportal
 
 import (
-	"net/http"
 	"os"
 	"strings"
 	"time"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
+	"nuhabit/backend/internal/platform/safehttp"
 )
 
 // Name is the MODULES key of this module.
@@ -36,7 +37,7 @@ func New(deps module.Deps, opts Options) *Module {
 		loyalty:    opts.Loyalty,
 		log:        deps.Log,
 		now:        deps.Now,
-		ipLimiter:  domain.NewRateLimiter(),
+		limits:     ratelimit.New(deps.DB),
 		bypass:     bypassFromEnv(deps.Config.IsProduction(), getenv, deps.Config.DatabaseURL),
 		brand:      domain.BrandName(getenv("NEXT_PUBLIC_APP_NAME")),
 		production: deps.Config.IsProduction(),
@@ -44,7 +45,7 @@ func New(deps module.Deps, opts Options) *Module {
 	}
 	svc.wallet = &sqlWallet{pool: deps.DB, now: deps.Now}
 	svc.payments = newXenditPayments(deps.DB, getenv)
-	svc.pusher = &webPusher{db: deps.DB, getenv: getenv, client: &http.Client{Timeout: 30 * time.Second}, log: deps.Log, now: deps.Now}
+	svc.pusher = &webPusher{db: deps.DB, getenv: getenv, client: safehttp.NewClient(30 * time.Second), log: deps.Log, now: deps.Now}
 	return &Module{handler: &Handler{svc: svc, auth: deps.Auth, log: deps.Log, credits: opts.Credits}}
 }
 

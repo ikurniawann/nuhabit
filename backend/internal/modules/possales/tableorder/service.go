@@ -617,39 +617,43 @@ func (s *service) checkAndSettle(ctx context.Context, orderID, qrID string, cfg 
 // publishes the journal, member stats and XP events. Child orders of a
 // checkout are left to the checkout.
 func (s *service) settle(ctx context.Context, orderID string) error {
-	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		o, err := lockSettleRow(ctx, tx, orderID)
-		if err != nil || o == nil || o.PaymentStatus == "paid" || o.CheckoutID != nil {
+	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error { return settleOrderQris(ctx, tx, orderID) })
+}
+
+// settleOrderQris is settle on the caller's transaction (the status poll
+// and the Xendit webhook subscriber).
+func settleOrderQris(ctx context.Context, tx pgx.Tx, orderID string) error {
+	o, err := lockSettleRow(ctx, tx, orderID)
+	if err != nil || o == nil || o.PaymentStatus == "paid" || o.CheckoutID != nil {
+		return err
+	}
+	if err := markPaidByQris(ctx, tx, orderID, o.Total); err != nil {
+		return err
+	}
+	if o.QueueNumber == nil || strings.TrimSpace(*o.QueueNumber) == "" {
+		if q := allocateQueueNumber(ctx, tx, deref(o.CompanyID), deref(o.BranchID)); q != nil {
+			setQueueNumber(ctx, tx, orderID, *q)
+		}
+	}
+	// The webhook has no cashier session: the journal's actor is the
+	// order's cashier_id, and no journal is posted without one (TS).
+	if o.CashierID != "" {
+		if err := publishJournal(ctx, tx, orderID, o.CashierID, "qris"); err != nil {
 			return err
 		}
-		if err := markPaidByQris(ctx, tx, orderID, o.Total); err != nil {
-			return err
-		}
-		if o.QueueNumber == nil || strings.TrimSpace(*o.QueueNumber) == "" {
-			if q := allocateQueueNumber(ctx, tx, deref(o.CompanyID), deref(o.BranchID)); q != nil {
-				setQueueNumber(ctx, tx, orderID, *q)
-			}
-		}
-		// The webhook has no cashier session: the journal's actor is the
-		// order's cashier_id, and no journal is posted without one (TS).
-		if o.CashierID != "" {
-			if err := publishJournal(ctx, tx, orderID, o.CashierID, "qris"); err != nil {
-				return err
-			}
-		}
-		if o.CustomerID == nil {
-			return nil
-		}
-		if err := outbox.Publish(ctx, tx, contracts.TopicCustomerOrderRecorded, orderID,
-			contracts.CustomerOrderRecorded{CustomerID: *o.CustomerID, OrderID: orderID, Amount: o.Total}); err != nil {
-			return err
-		}
-		items, err := xpItems(ctx, tx, orderID)
-		if err != nil {
-			return err
-		}
-		return publishSaleCompleted(ctx, tx, orderID, *o.CustomerID, o.Total, "qris", deref(o.BranchID), o.CashierID, items)
-	})
+	}
+	if o.CustomerID == nil {
+		return nil
+	}
+	if err := outbox.Publish(ctx, tx, contracts.TopicCustomerOrderRecorded, orderID,
+		contracts.CustomerOrderRecorded{CustomerID: *o.CustomerID, OrderID: orderID, Amount: o.Total}); err != nil {
+		return err
+	}
+	items, err := xpItems(ctx, tx, orderID)
+	if err != nil {
+		return err
+	}
+	return publishSaleCompleted(ctx, tx, orderID, *o.CustomerID, o.Total, "qris", deref(o.BranchID), o.CashierID, items)
 }
 
 func deref(s *string) string {

@@ -13,12 +13,12 @@ import (
 	"os"
 	"strings"
 
-	"nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/modules/storedvalue/giftcards"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/modules/storedvalue/promo"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Name is the MODULES key.
@@ -45,7 +45,7 @@ func New(deps module.Deps, ports Ports) module.Module { return newModule(deps, p
 func newModule(deps module.Deps, ports Ports, db database.DB) module.Module {
 	k := &kit.Kit{
 		Auth: deps.Auth, Log: deps.Log, Now: deps.Now, DB: db, Dir: ports.Directory,
-		Limiter: domain.NewRateLimiter(), AppOrigin: appOriginFromEnv(),
+		Limiter: ratelimit.New(db), AppOrigin: appOriginFromEnv(),
 	}
 	h := &Handler{
 		kit:    k,
@@ -62,6 +62,7 @@ func newModule(deps module.Deps, ports Ports, db database.DB) module.Module {
 	promoSvc := promo.NewService(db, ports.Promo, deps.Now, deps.Log)
 	if deps.Events != nil {
 		promo.Subscribe(deps.Events, promoSvc)
+		subscribeQrisTopups(deps.Events, h.wallet)
 	}
 	routes = append(routes, promo.Routes(k, promoSvc)...)
 	return storedValueModule{routes: routes}

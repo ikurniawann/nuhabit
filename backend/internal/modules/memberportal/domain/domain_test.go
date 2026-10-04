@@ -344,18 +344,6 @@ func TestChallengeAndReviewRules(t *testing.T) {
 	}
 }
 
-func TestRateLimiter(t *testing.T) {
-	l := NewRateLimiter()
-	rule := RateRule{Limit: 2, Window: time.Minute}
-	now := time.Now()
-	if !l.Allow("k", rule, now) || !l.Allow("k", rule, now) || l.Allow("k", rule, now) {
-		t.Fatal("limit not enforced")
-	}
-	if !l.Allow("k", rule, now.Add(61*time.Second)) {
-		t.Fatal("window did not slide")
-	}
-}
-
 func TestWalletRules(t *testing.T) {
 	if FormatRupiah(10000) != "Rp10.000" || FormatRupiah(-1500) != "-Rp1.500" || FormatRupiah(999) != "Rp999" {
 		t.Fatal(FormatRupiah(10000))

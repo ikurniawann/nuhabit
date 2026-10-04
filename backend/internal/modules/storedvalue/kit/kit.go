@@ -1,6 +1,6 @@
 // Package kit is the transport toolkit shared by the stored-value
 // sub-packages (wallet, gift cards, promo): the POS and promo guards, the
-// per-process rate limiter, the handler wrappers and the response helpers
+// shared rate limiter, the handler wrappers and the response helpers
 // whose envelopes the TS routes use.
 package kit
 
@@ -19,6 +19,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -61,7 +62,7 @@ type Kit struct {
 	Now     func() time.Time
 	DB      database.DB
 	Dir     Directory
-	Limiter *domain.RateLimiter
+	Limiter *ratelimit.Limiter
 	// AppOrigin is NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_BASE_URL ("" = request).
 	AppOrigin string
 }
@@ -80,17 +81,22 @@ func (k *Kit) PosUser(r *http.Request) (*auth.User, error) {
 	return u, err
 }
 
-// RateLimit mirrors checkRateLimit + a 429 with msg.
-func (k *Kit) RateLimit(key string, limit int, msg string) error {
-	if !k.Limiter.Allow(key, limit, k.Now()) {
+// RateLimit mirrors checkRateLimit + a 429 with msg; every replica counts
+// against the same window.
+func (k *Kit) RateLimit(ctx context.Context, key string, limit int, msg string) error {
+	w, err := k.Limiter.Fixed(ctx, key, limit, domain.RateWindow, k.Now())
+	if err != nil {
+		return err
+	}
+	if !w.Allowed {
 		return httpx.TooManyRequests(msg)
 	}
 	return nil
 }
 
 // EnforceRateLimit is enforceRateLimit in lib/pos/route-guards.ts.
-func (k *Kit) EnforceRateLimit(key string, limit int) error {
-	return k.RateLimit(key, limit, "Terlalu banyak percobaan — tunggu sebentar")
+func (k *Kit) EnforceRateLimit(ctx context.Context, key string, limit int) error {
+	return k.RateLimit(ctx, key, limit, "Terlalu banyak percobaan — tunggu sebentar")
 }
 
 // RequireDefaultVenue is requireDefaultVenue in lib/pos/route-guards.ts.

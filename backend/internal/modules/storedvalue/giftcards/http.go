@@ -48,7 +48,7 @@ func (h *handler) posCheck(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := h.k.EnforceRateLimit("pos-gift-card-check:"+u.ID, 20); err != nil {
+	if err := h.k.EnforceRateLimit(r.Context(), "pos-gift-card-check:"+u.ID, 20); err != nil {
 		return err
 	}
 	f := posForm(r)
@@ -82,7 +82,7 @@ func (h *handler) posReload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := h.k.EnforceRateLimit("pos-gift-card-reload:"+u.ID, 20); err != nil {
+	if err := h.k.EnforceRateLimit(r.Context(), "pos-gift-card-reload:"+u.ID, 20); err != nil {
 		return err
 	}
 	f := posForm(r)

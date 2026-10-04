@@ -14,28 +14,6 @@ func TestPosOrderNotes(t *testing.T) {
 	}
 }
 
-func str(s string) *string { return &s }
-
-func TestConfigFromSettings(t *testing.T) {
-	c := ConfigFromSettings(map[string]*string{})
-	if c.Enabled || c.Environment != Sandbox || c.IsConfigured() ||
-		c.APIBase != "https://api.partner-sandbox.gobiz.co.id" || c.OAuthURL != "https://integration-goauth.gojekapi.com/oauth2/token" {
-		t.Fatalf("defaults: %+v", c)
-	}
-	c = ConfigFromSettings(map[string]*string{
-		"gobiz_enabled": str("true"), "gobiz_environment": str("production"),
-		"gobiz_client_id": str(" cid "), "gobiz_client_secret": str("sec"), "gobiz_outlet_id": str("G1"),
-		"gobiz_auto_accept": str("TRUE"), "gobiz_api_base_url": str(" https://x.test/ "), "gobiz_oauth_url": str("  "),
-	})
-	if !c.Enabled || c.Environment != Production || !c.IsConfigured() || c.ClientID != "cid" || c.AutoAccept ||
-		c.APIBase != "https://x.test" || c.OAuthURL != "https://accounts.go-jek.com/oauth2/token" {
-		t.Fatalf("overrides: %+v", c)
-	}
-	if NormalizeEnvironment("staging") != Sandbox {
-		t.Fatal("unknown environment should be sandbox")
-	}
-}
-
 func TestStatusRules(t *testing.T) {
 	cases := []struct {
 		status                       string
@@ -56,14 +34,6 @@ func TestStatusRules(t *testing.T) {
 	}
 	if !TerminalPosStatus("voided") || !TerminalPosStatus("merged") {
 		t.Error("voided/merged are terminal for pos_orders")
-	}
-}
-
-func TestPadReason(t *testing.T) {
-	for in, want := range map[string]string{" Habis ": "Habis", "a": "a..", "": "...", "ok ": "ok."} {
-		if got := PadReason(in); got != want {
-			t.Errorf("PadReason(%q) = %q, want %q", in, got, want)
-		}
 	}
 }
 

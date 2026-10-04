@@ -3,8 +3,8 @@ package gofood
 import (
 	"context"
 
-	"nuhabit/backend/internal/modules/possales/gofood/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/gobiz"
 )
 
 // Stopgap adapters for data pos-sales reads from contexts that no wave owns
@@ -15,10 +15,10 @@ import (
 type SettingsSQL struct{}
 
 // LoadConfig reads the gobiz_* settings.
-func (SettingsSQL) LoadConfig(ctx context.Context, q database.Querier) (domain.Config, error) {
-	rows, err := q.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`, domain.SettingKeys)
+func (SettingsSQL) LoadConfig(ctx context.Context, q database.Querier) (gobiz.Config, error) {
+	rows, err := q.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`, gobiz.SettingKeys)
 	if err != nil {
-		return domain.Config{}, err
+		return gobiz.Config{}, err
 	}
 	defer rows.Close()
 	values := map[string]*string{}
@@ -26,14 +26,14 @@ func (SettingsSQL) LoadConfig(ctx context.Context, q database.Querier) (domain.C
 		var key string
 		var value *string
 		if err := rows.Scan(&key, &value); err != nil {
-			return domain.Config{}, err
+			return gobiz.Config{}, err
 		}
 		values[key] = value
 	}
 	if err := rows.Err(); err != nil {
-		return domain.Config{}, err
+		return gobiz.Config{}, err
 	}
-	return domain.ConfigFromSettings(values), nil
+	return gobiz.ConfigFromSettings(values), nil
 }
 
 // CrmVenueSQL is getCrmDefaultVenue: crm_settings default_company_id and

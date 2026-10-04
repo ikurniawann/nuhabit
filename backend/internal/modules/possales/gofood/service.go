@@ -13,12 +13,13 @@ import (
 	"nuhabit/backend/internal/modules/possales/gofood/domain"
 	"nuhabit/backend/internal/modules/possales/internal/jsrow"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/gobiz"
 )
 
 // ConfigSource loads the GoBiz settings (loadGobizConfig). Settings belong
 // to no wave yet; SettingsSQL is the stopgap.
 type ConfigSource interface {
-	LoadConfig(ctx context.Context, q database.Querier) (domain.Config, error)
+	LoadConfig(ctx context.Context, q database.Querier) (gobiz.Config, error)
 }
 
 // Venue is the CRM default company/branch stamped on POS orders.
@@ -54,13 +55,13 @@ const fallbackCashierID = "00000000-0000-0000-0000-000000000001"
 type Service struct {
 	db    database.DB
 	ports Ports
-	api   *Client
+	api   *gobiz.Client
 	now   func() time.Time
 	log   *slog.Logger
 }
 
 // NewService builds the service; nil now/log take time.Now and slog.Default.
-func NewService(db database.DB, ports Ports, api *Client, now func() time.Time, log *slog.Logger) *Service {
+func NewService(db database.DB, ports Ports, api *gobiz.Client, now func() time.Time, log *slog.Logger) *Service {
 	if now == nil {
 		now = time.Now
 	}
@@ -71,11 +72,11 @@ func NewService(db database.DB, ports Ports, api *Client, now func() time.Time, 
 }
 
 // Config is loadGobizConfig.
-func (s *Service) Config(ctx context.Context) (domain.Config, error) {
+func (s *Service) Config(ctx context.Context) (gobiz.Config, error) {
 	return s.ports.Config.LoadConfig(ctx, s.db)
 }
 
-func (s *Service) requireConfig(ctx context.Context) (domain.Config, error) {
+func (s *Service) requireConfig(ctx context.Context) (gobiz.Config, error) {
 	cfg, err := s.Config(ctx)
 	if err != nil {
 		return cfg, err
@@ -97,7 +98,7 @@ func (s *Service) Get(ctx context.Context, id string) (*jsrow.Row, error) {
 }
 
 // loadForAction is requireConfig + getGofoodOrder with the TS "not found".
-func (s *Service) loadForAction(ctx context.Context, id string) (domain.Config, *jsrow.Row, error) {
+func (s *Service) loadForAction(ctx context.Context, id string) (gobiz.Config, *jsrow.Row, error) {
 	cfg, err := s.requireConfig(ctx)
 	if err != nil {
 		return cfg, nil, err
@@ -157,7 +158,7 @@ func (s *Service) Reject(ctx context.Context, id, code, description string) (*js
 		return nil, err
 	}
 	if posOrderID := row.StrPtr("pos_order_id"); posOrderID != nil {
-		if err := s.setPosOrderStatus(ctx, *posOrderID, "cancelled", "GoFood "+row.Str("gofood_order_id")+" ditolak: "+description); err != nil {
+		if err := SetPosOrderStatus(ctx, s.db, *posOrderID, "cancelled", "GoFood "+row.Str("gofood_order_id")+" ditolak: "+description, s.now()); err != nil {
 			return nil, err
 		}
 	}
@@ -197,7 +198,7 @@ func (s *Service) NotifyFoodReadyForPosOrder(ctx context.Context, posOrderID str
 		return
 	}
 	message := errorMessage(err)
-	var apiErr *APIError
+	var apiErr *gobiz.APIError
 	if errors.As(err, &apiErr) {
 		message = fmt.Sprintf("%d %s", apiErr.Status, apiErr.Message)
 	}
@@ -281,38 +282,6 @@ func (s *Service) EnsurePosOrder(ctx context.Context, row *jsrow.Row) (*string, 
 		return nil, err
 	}
 	return orderID, nil
-}
-
-// setPosOrderStatus cancels or completes the linked POS order unless it is
-// already final, with a status-history row (one transaction).
-func (s *Service) setPosOrderStatus(ctx context.Context, posOrderID, status, note string) error {
-	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		var current string
-		err := tx.QueryRow(ctx, `SELECT status::text FROM pos.pos_orders WHERE id = $1 FOR UPDATE`, posOrderID).Scan(&current)
-		if database.IsNoRows(err) {
-			return nil
-		}
-		if err != nil || domain.TerminalPosStatus(current) {
-			return err
-		}
-		stamp := "completed_at"
-		if status == "cancelled" {
-			stamp = "cancelled_at"
-		}
-		if _, err := tx.Exec(ctx, `UPDATE pos.pos_orders SET status = $2::pos_order_status, `+stamp+` = now(), updated_at = now() WHERE id = $1`,
-			posOrderID, status); err != nil {
-			return err
-		}
-		if status == "cancelled" {
-			if _, err := tx.Exec(ctx, `UPDATE pos.pos_order_items SET kitchen_status = 'cancelled', updated_at = now() WHERE order_id = $1`, posOrderID); err != nil {
-				return err
-			}
-		}
-		_, err = tx.Exec(ctx, `INSERT INTO pos.pos_order_status_history (order_id, from_status, to_status, changed_by, notes, changed_at)
-			VALUES ($1, $2::pos_order_status, $3::pos_order_status, $4, $5, $6)`,
-			posOrderID, current, status, fallbackCashierID, note, s.now())
-		return err
-	})
 }
 
 // rawJSON returns a json/jsonb column ("[]" when NULL).

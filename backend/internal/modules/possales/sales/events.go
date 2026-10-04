@@ -41,6 +41,7 @@ func (h *Handler) subscribe() {
 		h.ensureQueueNumber(ctx, tx, p.OrderID, deref(queue), deref(company), deref(branch))
 		return nil
 	})
+	h.subscribeQrisCheckouts()
 	if h.p.Notifier == nil {
 		return
 	}

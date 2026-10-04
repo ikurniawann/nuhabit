@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Repository is the module's storage. InTx runs fn against a transaction.
@@ -32,7 +33,7 @@ type Service struct {
 	loyalty    Loyalty
 	log        *slog.Logger
 	now        func() time.Time
-	ipLimiter  *domain.RateLimiter
+	limits     *ratelimit.Limiter
 	bypass     func() domain.DevBypass
 	brand      string
 	production bool

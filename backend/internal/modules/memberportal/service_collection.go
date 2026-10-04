@@ -395,15 +395,12 @@ func (s *Service) Rewards(ctx context.Context, customerID string) (*RewardsView,
 	return &RewardsView{Member: member.summary(), Rewards: views, History: rows}, nil
 }
 
-// redeemLimiter is the per-process brake on portal redeem attempts, like the
-// module-level map in rewards.ts.
-var redeemLimiter = domain.NewRedeemLimiter()
-
-// AllowRedeemAttempt counts one redeem attempt; when refused it returns the
-// Retry-After value in seconds.
-func (s *Service) AllowRedeemAttempt(customerID string) (bool, string) {
-	allowed, retry := redeemLimiter.Check(customerID, s.now())
-	return allowed, domain.RetryAfterSeconds(retry)
+// AllowRedeemAttempt counts one redeem attempt against the member's brake,
+// shared by every replica; when refused it returns the Retry-After value in
+// seconds.
+func (s *Service) AllowRedeemAttempt(ctx context.Context, customerID string) (bool, string, error) {
+	allowed, retry, err := s.limits.Sliding(ctx, "member-redeem:"+customerID, domain.RedeemRateLimitCount, domain.RedeemRateLimitWindow, s.now())
+	return allowed, domain.RetryAfterSeconds(retry), err
 }
 
 // NewRedemption is the crm_redemptions row a portal request inserts.

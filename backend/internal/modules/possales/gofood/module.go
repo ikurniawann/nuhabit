@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/gobiz"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -31,12 +32,12 @@ type Handler struct {
 // adapters and a process-wide GoBiz client (one token cache per process,
 // like the TS module).
 func New(deps module.Deps) *Handler {
-	return NewHandler(deps.DB, deps.Auth, Ports{Config: SettingsSQL{}, Venues: CrmVenueSQL{}}, NewClient(nil, nil), deps.Now, deps.Log)
+	return NewHandler(deps.DB, deps.Auth, Ports{Config: SettingsSQL{}, Venues: CrmVenueSQL{}}, gobiz.NewClient(nil, nil), deps.Now, deps.Log)
 }
 
 // NewHandler builds the handler on any pool or transaction; tests pass a
 // rolled-back transaction and a client aimed at an httptest.Server.
-func NewHandler(db database.DB, guard Guard, ports Ports, api *Client, now func() time.Time, log *slog.Logger) *Handler {
+func NewHandler(db database.DB, guard Guard, ports Ports, api *gobiz.Client, now func() time.Time, log *slog.Logger) *Handler {
 	svc := NewService(db, ports, api, now, log)
 	return &Handler{svc: svc, guard: guard, log: svc.log}
 }

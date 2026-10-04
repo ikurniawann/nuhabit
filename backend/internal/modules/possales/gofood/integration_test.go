@@ -13,9 +13,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"nuhabit/backend/internal/modules/possales/gofood/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/gobiz"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
@@ -33,9 +33,9 @@ func (headerGuard) RequireMenuPrefix(r *http.Request, _ ...string) (*auth.User, 
 	return &auth.User{ID: "kasir-1"}, nil
 }
 
-type staticConfig struct{ cfg *domain.Config }
+type staticConfig struct{ cfg *gobiz.Config }
 
-func (s staticConfig) LoadConfig(context.Context, database.Querier) (domain.Config, error) {
+func (s staticConfig) LoadConfig(context.Context, database.Querier) (gobiz.Config, error) {
 	return *s.cfg, nil
 }
 
@@ -49,7 +49,7 @@ type fixture struct {
 	ctx     context.Context
 	tx      pgx.Tx
 	gobiz   *fakeGobiz
-	cfg     *domain.Config
+	cfg     *gobiz.Config
 	h       *Handler
 	mux     *http.ServeMux
 	sku     string
@@ -59,10 +59,10 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	tx := testutil.Tx(t)
-	gobiz := newFakeGobiz(t)
-	cfg := gobiz.config()
-	f := &fixture{t: t, ctx: context.Background(), tx: tx, gobiz: gobiz, cfg: &cfg}
-	f.h = NewHandler(tx, headerGuard{}, Ports{Config: staticConfig{f.cfg}, Venues: CrmVenueSQL{}}, NewClient(nil, nil), nil,
+	fake := newFakeGobiz(t)
+	cfg := fake.config()
+	f := &fixture{t: t, ctx: context.Background(), tx: tx, gobiz: fake, cfg: &cfg}
+	f.h = NewHandler(tx, headerGuard{}, Ports{Config: staticConfig{f.cfg}, Venues: CrmVenueSQL{}}, gobiz.NewClient(nil, nil), nil,
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 	f.mux = testutil.Mux(routes(f.h.Routes()))
 	f.sku = "GF-" + testutil.RandomHex(4)

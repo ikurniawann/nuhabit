@@ -7,6 +7,7 @@ import (
 
 	"nuhabit/backend/internal/modules/possales/internal/jsrow"
 	"nuhabit/backend/internal/modules/possales/internal/kit"
+	"nuhabit/backend/internal/platform/gobiz"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
@@ -108,7 +109,7 @@ func (h *Handler) actionFailed(w http.ResponseWriter, err error) error {
 	if errors.Is(err, ErrNotConfigured) {
 		return kit.Fail(w, http.StatusBadRequest, err.Error())
 	}
-	var apiErr *APIError
+	var apiErr *gobiz.APIError
 	if errors.As(err, &apiErr) {
 		return httpx.JSON(w, http.StatusBadGateway, struct {
 			Success bool            `json:"success"`

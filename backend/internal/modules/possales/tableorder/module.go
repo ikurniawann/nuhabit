@@ -58,6 +58,9 @@ func newHandler(deps module.Deps, p Ports, db database.DB) *Handler {
 	if p.Xendit == nil {
 		p.Xendit = NewXendit()
 	}
+	if deps.Events != nil {
+		subscribeQrisOrders(deps.Events)
+	}
 	return &Handler{
 		svc:     &service{db: db, p: p, now: deps.Now, log: log},
 		auth:    deps.Auth,

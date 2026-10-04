@@ -89,7 +89,11 @@ func (h *Handler) rewards(w http.ResponseWriter, r *http.Request, customerID str
 }
 
 func (h *Handler) redeemReward(w http.ResponseWriter, r *http.Request, customerID string) error {
-	if allowed, retryAfter := h.svc.AllowRedeemAttempt(customerID); !allowed {
+	allowed, retryAfter, err := h.svc.AllowRedeemAttempt(r.Context(), customerID)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		w.Header().Set("Retry-After", retryAfter)
 		return fail(http.StatusTooManyRequests, "Terlalu banyak percobaan. Coba lagi sebentar lagi.")
 	}

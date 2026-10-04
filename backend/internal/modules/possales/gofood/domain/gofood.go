@@ -1,7 +1,6 @@
-// Package domain holds the pure GoBiz/GoFood rules the cashier routes use:
-// the integration config (lib/gobiz/config.ts), the POS note of a GoFood
-// order (lib/gobiz/mapping.ts posOrderNotes) and which cashier action a
-// gofood_orders status allows (lib/gobiz/service.ts).
+// Package domain holds the pure GoFood rules the cashier routes use: the
+// POS note of a GoFood order (lib/gobiz/mapping.ts posOrderNotes) and which
+// cashier action a gofood_orders status allows (lib/gobiz/service.ts).
 package domain
 
 import (
@@ -11,98 +10,6 @@ import (
 	"strings"
 	"unicode"
 )
-
-// Environment is GobizEnvironment.
-const (
-	Sandbox    = "sandbox"
-	Production = "production"
-)
-
-// Scopes is GOBIZ_SCOPES, sent with every client_credentials token request.
-const Scopes = "gofood:catalog:write gofood:catalog:read gofood:order:write gofood:order:read gofood:outlet:write promo:food_promo:read promo:food_promo:write"
-
-// defaults is GOBIZ_DEFAULTS.
-var defaults = map[string]struct{ apiBase, oauthURL string }{
-	Sandbox:    {"https://api.partner-sandbox.gobiz.co.id", "https://integration-goauth.gojekapi.com/oauth2/token"},
-	Production: {"https://api.gobiz.co.id", "https://accounts.go-jek.com/oauth2/token"},
-}
-
-// Config is GobizConfig: what Settings → Integrasi stores in app_settings.
-type Config struct {
-	Enabled          bool
-	Environment      string
-	ClientID         string
-	ClientSecret     string
-	OutletID         string
-	WebhookToken     string
-	AutoAccept       bool
-	PartnerID        string
-	RelaySecret      string
-	EnforceSignature bool
-	APIBase          string
-	OAuthURL         string
-}
-
-// IsConfigured is isGobizConfigured: client id, secret and outlet are set.
-func (c Config) IsConfigured() bool {
-	return c.ClientID != "" && c.ClientSecret != "" && c.OutletID != ""
-}
-
-// NormalizeEnvironment is normalizeEnvironment: anything but "production"
-// is the sandbox.
-func NormalizeEnvironment(v string) string {
-	if v == Production {
-		return Production
-	}
-	return Sandbox
-}
-
-// ResolveURLs is resolveGobizUrls: a non-blank override wins, the API base
-// loses one trailing slash.
-func ResolveURLs(environment, apiBase, oauthURL string) (string, string) {
-	d := defaults[environment]
-	if s := jsTrim(apiBase); s != "" {
-		d.apiBase = s
-	}
-	if s := jsTrim(oauthURL); s != "" {
-		d.oauthURL = s
-	}
-	return strings.TrimSuffix(d.apiBase, "/"), d.oauthURL
-}
-
-// ConfigFromSettings is loadGobizConfig over the app_settings values
-// (nil = row missing or NULL), keyed by setting key.
-func ConfigFromSettings(s map[string]*string) Config {
-	get := func(key string) string {
-		if v := s[key]; v != nil {
-			return *v
-		}
-		return ""
-	}
-	env := NormalizeEnvironment(get("gobiz_environment"))
-	apiBase, oauthURL := ResolveURLs(env, get("gobiz_api_base_url"), get("gobiz_oauth_url"))
-	return Config{
-		Enabled:          get("gobiz_enabled") == "true",
-		Environment:      env,
-		ClientID:         jsTrim(get("gobiz_client_id")),
-		ClientSecret:     jsTrim(get("gobiz_client_secret")),
-		OutletID:         jsTrim(get("gobiz_outlet_id")),
-		WebhookToken:     jsTrim(get("gobiz_webhook_token")),
-		AutoAccept:       get("gobiz_auto_accept") == "true",
-		PartnerID:        jsTrim(get("gobiz_partner_id")),
-		RelaySecret:      jsTrim(get("gobiz_relay_secret")),
-		EnforceSignature: get("gobiz_signature_enforce") == "true",
-		APIBase:          apiBase,
-		OAuthURL:         oauthURL,
-	}
-}
-
-// SettingKeys are the app_settings keys loadGobizConfig reads.
-var SettingKeys = []string{
-	"gobiz_enabled", "gobiz_environment", "gobiz_client_id", "gobiz_client_secret", "gobiz_outlet_id",
-	"gobiz_webhook_token", "gobiz_auto_accept", "gobiz_oauth_url", "gobiz_api_base_url",
-	"gobiz_partner_id", "gobiz_relay_secret", "gobiz_signature_enforce",
-}
 
 // NotesInput is the argument of posOrderNotes.
 type NotesInput struct {
@@ -154,16 +61,6 @@ func NotifiesFoodReady(status string) bool {
 // TerminalPosStatus: setPosOrderStatus leaves these pos_orders alone.
 func TerminalPosStatus(status string) bool {
 	return slices.Contains([]string{"cancelled", "voided", "completed", "merged"}, status)
-}
-
-// PadReason is `description.trim().padEnd(3, ".")`: GoBiz wants at least
-// three characters.
-func PadReason(description string) string {
-	s := jsTrim(description)
-	for n := len([]rune(s)); n < 3; n++ {
-		s += "."
-	}
-	return s
 }
 
 // ListLimit is `Math.min(200, Math.max(1, Number(raw || 50)))` rendered the

@@ -147,29 +147,6 @@ func clientIP(h http.Header) string {
 	return "unknown"
 }
 
-var ipv4Re = regexp.MustCompile(`^\d{1,3}(\.\d{1,3}){3}$`)
-
-// isSecureRequest mirrors lib/auth/secure-cookie: HTTPS per
-// X-Forwarded-Proto, otherwise any host that is not localhost or an IP
-// literal (domains only reach the app through the TLS tunnel).
-func isSecureRequest(r *http.Request) bool {
-	if proto := r.Header.Get("x-forwarded-proto"); strings.ToLower(strings.TrimSpace(strings.Split(proto, ",")[0])) == "https" {
-		return true
-	}
-	host := r.Host
-	if host == "" {
-		host = r.Header.Get("host")
-	}
-	hostname := strings.ToLower(strings.Split(host, ":")[0])
-	if strings.HasPrefix(host, "[") {
-		return false
-	}
-	if hostname == "localhost" || hostname == "::1" || ipv4Re.MatchString(hostname) {
-		return false
-	}
-	return true
-}
-
 // sessionCookie is the member_session cookie set by verify and register.
 func sessionCookie(r *http.Request, token string, now time.Time, ttl time.Duration) *http.Cookie {
 	return &http.Cookie{
@@ -179,7 +156,7 @@ func sessionCookie(r *http.Request, token string, now time.Time, ttl time.Durati
 		MaxAge:   int(ttl / time.Second),
 		Expires:  now.Add(ttl),
 		HttpOnly: true,
-		Secure:   isSecureRequest(r),
+		Secure:   httpx.SecureRequest(r),
 		SameSite: http.SameSiteLaxMode,
 	}
 }

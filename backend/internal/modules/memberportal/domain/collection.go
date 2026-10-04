@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -151,60 +150,13 @@ func QuotaWindowStart(period string, now time.Time) *time.Time {
 	return &start
 }
 
-// Per-member redeem brake (checkRedeemRateLimit): attempts count even when
-// they fail, so a flood never reaches a pooled transaction.
+// Per-member redeem brake (checkRedeemRateLimit): a sliding window in which
+// attempts count even when they fail, so a flood never reaches a pooled
+// transaction.
 const (
 	RedeemRateLimitCount  = 10
 	RedeemRateLimitWindow = time.Minute
-	redeemLimiterPruneAt  = 1000
 )
-
-// RedeemLimiter is the in-memory sliding window of rewards.ts. The caller
-// passes the clock reading.
-type RedeemLimiter struct {
-	mu       sync.Mutex
-	attempts map[string][]time.Time
-}
-
-// NewRedeemLimiter builds an empty limiter.
-func NewRedeemLimiter() *RedeemLimiter {
-	return &RedeemLimiter{attempts: map[string][]time.Time{}}
-}
-
-// Check records an attempt for customerID at now. When the window is full it
-// records nothing and returns how long until the oldest attempt expires.
-func (l *RedeemLimiter) Check(customerID string, now time.Time) (allowed bool, retryAfter time.Duration) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	windowStart := now.Add(-RedeemRateLimitWindow)
-	var recent []time.Time
-	for _, at := range l.attempts[customerID] {
-		if at.After(windowStart) {
-			recent = append(recent, at)
-		}
-	}
-	if len(recent) >= RedeemRateLimitCount {
-		l.attempts[customerID] = recent
-		return false, recent[0].Add(RedeemRateLimitWindow).Sub(now)
-	}
-	l.attempts[customerID] = append(recent, now)
-
-	if len(l.attempts) > redeemLimiterPruneAt {
-		for key, stamps := range l.attempts {
-			expired := true
-			for _, at := range stamps {
-				if at.After(windowStart) {
-					expired = false
-					break
-				}
-			}
-			if expired {
-				delete(l.attempts, key)
-			}
-		}
-	}
-	return true, 0
-}
 
 // RetryAfterSeconds is String(Math.ceil(retryAfterMs / 1000)).
 func RetryAfterSeconds(d time.Duration) string {

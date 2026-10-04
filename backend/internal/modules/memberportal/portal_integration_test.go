@@ -66,6 +66,7 @@ type harness struct {
 	mux      http.Handler
 	notifier *fakeNotifier
 	devCode  string
+	ip       string // X-Forwarded-For of every request, so runs never share a per-IP brake
 }
 
 func newHarness(t *testing.T) *harness {
@@ -73,7 +74,10 @@ func newHarness(t *testing.T) *harness {
 	deps := testutil.Deps(t, nil)
 	deps.Log = slog.New(slog.NewTextHandler(testLog{t}, &slog.HandlerOptions{Level: slog.LevelError}))
 	m := New(deps, Options{Loyalty: &collLoyalty{}})
-	h := &harness{t: t, mod: m, mux: testutil.Mux(m), notifier: &fakeNotifier{codes: map[string]string{}}}
+	h := &harness{t: t, mod: m, mux: testutil.Mux(m), notifier: &fakeNotifier{codes: map[string]string{}}, ip: "go-test-" + testutil.RandomHex(6)}
+	t.Cleanup(func() {
+		_, _ = testutil.DB(t).Exec(context.Background(), `DELETE FROM platform.rate_limits WHERE key LIKE 'member-%:' || $1`, h.ip)
+	})
 	m.handler.svc.notifier = h.notifier
 	m.handler.svc.payments = noGateway{}
 	m.handler.svc.pusher = nil
@@ -85,6 +89,7 @@ func newHarness(t *testing.T) *harness {
 
 func (h *harness) do(r *http.Request) (int, map[string]any, *http.Response) {
 	h.t.Helper()
+	r.Header.Set("X-Forwarded-For", h.ip)
 	rec, body := testutil.Do(h.t, h.mux, r)
 	return rec.Code, body, rec.Result()
 }

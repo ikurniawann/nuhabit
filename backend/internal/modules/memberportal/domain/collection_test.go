@@ -133,26 +133,11 @@ func TestQuotaWindowStartWIB(t *testing.T) {
 	}
 }
 
-func TestRedeemLimiter(t *testing.T) {
-	now := time.UnixMilli(1_000_000)
-	l := NewRedeemLimiter()
-	for i := 0; i < RedeemRateLimitCount; i++ {
-		if ok, _ := l.Check("cust-1", now); !ok {
-			t.Fatalf("attempt %d blocked", i+1)
+func TestRetryAfterSeconds(t *testing.T) {
+	for d, want := range map[time.Duration]string{time.Minute: "60", 59*time.Second + time.Millisecond: "60", time.Millisecond: "1"} {
+		if got := RetryAfterSeconds(d); got != want {
+			t.Errorf("RetryAfterSeconds(%v) = %s, want %s", d, got, want)
 		}
-	}
-	ok, retry := l.Check("cust-1", now)
-	if ok || retry <= 0 {
-		t.Fatalf("11th attempt: ok=%v retry=%v", ok, retry)
-	}
-	if RetryAfterSeconds(retry) != "60" {
-		t.Fatalf("Retry-After = %s", RetryAfterSeconds(retry))
-	}
-	if ok, _ := l.Check("cust-2", now); !ok {
-		t.Fatal("limits are per member")
-	}
-	if ok, _ := l.Check("cust-1", now.Add(61*time.Second)); !ok {
-		t.Fatal("window slides after a minute")
 	}
 }
 

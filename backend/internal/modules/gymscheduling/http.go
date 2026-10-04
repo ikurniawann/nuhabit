@@ -14,6 +14,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Guard is the slice of platform/auth the handlers use; tests swap it.
@@ -90,7 +91,7 @@ func ok(w http.ResponseWriter, data any) error {
 
 // requireUUID is requireUuid: anything but a UUID is 400 "ID tidak valid".
 func requireUUID(value string) (string, error) {
-	if !isUUID(value) {
+	if !validate.IsUUID(value) {
 		return "", httpx.BadRequest("ID tidak valid")
 	}
 	return value, nil
@@ -109,7 +110,7 @@ func rangeParams(query url.Values, now time.Time, defaultDays int) (time.Time, t
 		if dateOnlyPattern.MatchString(raw) {
 			return wibMidnight(raw)
 		}
-		return parseJSDate(raw)
+		return validate.ParseJSDate(raw)
 	}
 	from, ok := parse("from")
 	if !ok {
@@ -123,7 +124,7 @@ func rangeParams(query url.Values, now time.Time, defaultDays int) (time.Time, t
 }
 
 func optionalUUID(query url.Values, key string) *string {
-	if raw := query.Get(key); raw != "" && isUUID(raw) {
+	if raw := query.Get(key); raw != "" && validate.IsUUID(raw) {
 		return &raw
 	}
 	return nil
@@ -135,23 +136,66 @@ var (
 	classColors      = []string{"lime", "info", "warning", "danger", "success", "ink"}
 	classTypeStatus  = []string{"active", "archived"}
 	coachStatuses    = []string{"active", "inactive"}
-	nullableOptional = rule{optional: true, nullable: true}
-	optional         = rule{optional: true}
+	nullableOptional = validate.Rule{Optional: true, Nullable: true}
+	optional         = validate.Rule{Optional: true}
 )
 
 func ptr[T any](v T) *T { return &v }
 
+// Body validation is parseInput in staff-route.ts over the zod schemas of
+// scheduling-schemas.ts: fields in schema order, and the first failing
+// field names the 400 ("Data tidak valid: <field>").
+
+func form(r *http.Request) *validate.Form { return validate.New(validate.ReadBody(r)) }
+
+func invalid(f *validate.Form) error { return f.ErrAtPath("Data tidak valid") }
+
+// sent reports whether the body carried key (null included).
+func sent(f *validate.Form, key string) bool {
+	_, ok := f.Fields()[key]
+	return ok
+}
+
+// between is z.number().int().min(lo).max(hi).
+func between(lo, hi float64) validate.NumOpts {
+	return validate.NumOpts{Min: validate.Bound(lo), Max: validate.Bound(hi)}
+}
+
+// enumDefault is z.enum(options).default(def).
+func enumDefault(f *validate.Form, key, def string, options []string) *string {
+	if v := f.Enum(key, validate.Rule{HasDefault: true}, options); v != nil {
+		return v
+	}
+	return &def
+}
+
+// datetime is z.string().datetime({ offset: true }) read as an instant.
+func datetime(f *validate.Form, key string, r validate.Rule) *time.Time {
+	s := f.Str(key, r, validate.StrOpts{Check: validate.DatetimeCheck})
+	if s == nil {
+		return nil
+	}
+	if _, _, ok := validate.DatetimeCheck(*s); !ok {
+		return nil
+	}
+	t, ok := validate.ParseJSDate(*s)
+	if !ok {
+		return nil
+	}
+	return &t
+}
+
 // classTypeFields reads classTypeSchema; partial makes the required fields optional.
-func classTypeFields(f *fields, partial bool) ClassTypePatch {
-	req := rule{optional: partial}
+func classTypeFields(f *validate.Form, partial bool) ClassTypePatch {
+	req := validate.Rule{Optional: partial}
 	var p ClassTypePatch
-	p.Name, _ = f.str("name", strOpts{rule: req, trim: true, min: 3, max: 80})
-	p.Description, _ = f.str("description", strOpts{trim: true, max: 500, def: ptr("")})
-	p.DefaultDurationMin = f.int("default_duration_min", intOpts{rule: req, min: 15, max: 240})
-	p.DefaultCreditCost = f.int("default_credit_cost", intOpts{rule: req, min: 1, max: 20})
-	p.DefaultCapacity = f.int("default_capacity", intOpts{rule: req, min: 1, max: 200})
-	p.Color = f.enum("color", rule{}, "lime", classColors...)
-	p.Status = f.enum("status", rule{}, "active", classTypeStatus...)
+	p.Name = f.Str("name", req, validate.StrOpts{Trim: true, Min: 3, Max: 80})
+	p.Description = ptr(f.StrDefault("description", "", validate.StrOpts{Trim: true, Max: 500}))
+	p.DefaultDurationMin = f.Int("default_duration_min", req, between(15, 240))
+	p.DefaultCreditCost = f.Int("default_credit_cost", req, between(1, 20))
+	p.DefaultCapacity = f.Int("default_capacity", req, between(1, 200))
+	p.Color = enumDefault(f, "color", "lime", classColors)
+	p.Status = enumDefault(f, "status", "active", classTypeStatus)
 	return p
 }
 
@@ -172,9 +216,9 @@ func (h *handler) listClassTypes(w http.ResponseWriter, r *http.Request, _ *auth
 }
 
 func (h *handler) createClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	f := newFields(readBody(r))
+	f := form(r)
 	in := classTypeFields(f, false)
-	if err := f.err(); err != nil {
+	if err := invalid(f); err != nil {
 		return err
 	}
 	id, err := h.svc.CreateClassType(r.Context(), ClassTypeInput{
@@ -192,9 +236,9 @@ func (h *handler) updateClassType(w http.ResponseWriter, r *http.Request, _ *aut
 	if err != nil {
 		return err
 	}
-	f := newFields(readBody(r))
+	f := form(r)
 	in := classTypeFields(f, true)
-	if err := f.err(); err != nil {
+	if err := invalid(f); err != nil {
 		return err
 	}
 	if err := h.svc.UpdateClassType(r.Context(), id, in); err != nil {
@@ -216,20 +260,18 @@ func (h *handler) archiveClassType(w http.ResponseWriter, r *http.Request, _ *au
 
 // coachFields reads coachSchema; the bool results say whether photo_url and
 // branch_id were sent.
-func coachFields(f *fields, partial bool) (CoachInput, bool, bool) {
-	name, _ := f.str("name", strOpts{rule: rule{optional: partial}, trim: true, min: 3, max: 80})
-	bio, _ := f.str("bio", strOpts{trim: true, max: 1000, def: ptr("")})
-	spec, _ := f.str("specialization", strOpts{trim: true, max: 120, def: ptr("")})
-	photo, photoSent := f.str("photo_url", strOpts{rule: nullableOptional, trim: true, max: 500,
-		check: func(s string) (string, string, bool) { return "invalid_format", "Invalid URL", validURL(s) }})
-	userID := f.uuid("user_id", nullableOptional)
-	_, branchSent := f.lookup("branch_id")
-	branchID := f.uuid("branch_id", nullableOptional)
-	status := f.enum("status", rule{}, "active", coachStatuses...)
+func coachFields(f *validate.Form, partial bool) (CoachInput, bool, bool) {
+	name := f.Str("name", validate.Rule{Optional: partial}, validate.StrOpts{Trim: true, Min: 3, Max: 80})
+	bio := f.StrDefault("bio", "", validate.StrOpts{Trim: true, Max: 1000})
+	spec := f.StrDefault("specialization", "", validate.StrOpts{Trim: true, Max: 120})
+	photo := f.Str("photo_url", nullableOptional, validate.StrOpts{Trim: true, Max: 500, Check: validate.URLCheck})
+	userID := f.UUID("user_id", nullableOptional)
+	branchID := f.UUID("branch_id", nullableOptional)
+	status := enumDefault(f, "status", "active", coachStatuses)
 	return CoachInput{
-		Name: deref(name), Bio: deref(bio), Specialization: deref(spec),
-		PhotoURL: photo, UserID: userID, BranchID: branchID, Status: deref(status),
-	}, photoSent, branchSent
+		Name: deref(name), Bio: bio, Specialization: spec,
+		PhotoURL: photo, UserID: userID, BranchID: branchID, Status: *status,
+	}, sent(f, "photo_url"), sent(f, "branch_id")
 }
 
 func (h *handler) listCoaches(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -241,9 +283,9 @@ func (h *handler) listCoaches(w http.ResponseWriter, r *http.Request, _ *auth.Us
 }
 
 func (h *handler) createCoach(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	f := newFields(readBody(r))
+	f := form(r)
 	in, _, _ := coachFields(f, false)
-	if err := f.err(); err != nil {
+	if err := invalid(f); err != nil {
 		return err
 	}
 	id, err := h.svc.CreateCoach(r.Context(), in)
@@ -258,9 +300,9 @@ func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	f := newFields(readBody(r))
+	f := form(r)
 	in, photoSent, branchSent := coachFields(f, true)
-	if err := f.err(); err != nil {
+	if err := invalid(f); err != nil {
 		return err
 	}
 	var name *string // absent in a partial body; when sent it has >= 3 characters
@@ -303,20 +345,20 @@ func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.U
 }
 
 func (h *handler) createSession(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	f := newFields(readBody(r))
+	f := form(r)
 	in := SessionInput{
-		ClassTypeID: deref(f.uuid("class_type_id", rule{})),
-		CoachID:     f.uuid("coach_id", nullableOptional),
-		BranchID:    f.uuid("branch_id", nullableOptional),
+		ClassTypeID: deref(f.UUID("class_type_id", validate.Rule{})),
+		CoachID:     f.UUID("coach_id", nullableOptional),
+		BranchID:    f.UUID("branch_id", nullableOptional),
 	}
-	in.Area, _ = f.str("area", strOpts{rule: nullableOptional, trim: true, max: 80})
-	startsAt := f.datetime("starts_at", rule{})
-	in.DurationMin = f.int("duration_min", intOpts{rule: nullableOptional, min: 15, max: 240})
-	in.Capacity = f.int("capacity", intOpts{rule: nullableOptional, min: 1, max: 200})
-	in.CreditCost = f.int("credit_cost", intOpts{rule: nullableOptional, min: 1, max: 20})
-	in.Notes, _ = f.str("notes", strOpts{rule: nullableOptional, trim: true, max: 500})
-	in.Publish = f.boolean("publish", true)
-	if err := f.err(); err != nil {
+	in.Area = f.Str("area", nullableOptional, validate.StrOpts{Trim: true, Max: 80})
+	startsAt := datetime(f, "starts_at", validate.Rule{})
+	in.DurationMin = f.Int("duration_min", nullableOptional, between(15, 240))
+	in.Capacity = f.Int("capacity", nullableOptional, between(1, 200))
+	in.CreditCost = f.Int("credit_cost", nullableOptional, between(1, 20))
+	in.Notes = f.Str("notes", nullableOptional, validate.StrOpts{Trim: true, Max: 500})
+	in.Publish = f.BoolDefault("publish", true)
+	if err := invalid(f); err != nil {
 		return err
 	}
 	in.StartsAt = *startsAt
@@ -328,14 +370,14 @@ func (h *handler) createSession(w http.ResponseWriter, r *http.Request, user *au
 }
 
 func (h *handler) duplicateWeek(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	f := newFields(readBody(r))
-	week := strOpts{check: func(s string) (string, string, bool) {
+	f := form(r)
+	week := validate.StrOpts{Check: func(s string) (string, string, bool) {
 		return "invalid_format", `Invalid string: must match pattern /^\d{4}-\d{2}-\d{2}$/`, dateOnlyPattern.MatchString(s)
 	}}
-	source, _ := f.str("source_week", week)
-	target, _ := f.str("target_week", week)
-	publish := f.boolean("publish", false)
-	if err := f.err(); err != nil {
+	source := f.Str("source_week", validate.Rule{}, week)
+	target := f.Str("target_week", validate.Rule{}, week)
+	publish := f.BoolDefault("publish", false)
+	if err := invalid(f); err != nil {
 		return err
 	}
 	out, err := h.svc.DuplicateWeek(r.Context(), *source, *target, publish, &user.ID)
@@ -364,9 +406,8 @@ func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	return ok(w, object("session", session, "roster", roster))
 }
 
-func optionalField(f *fields, key string, value *string) Optional[string] {
-	_, sent := f.lookup(key)
-	return Optional[string]{Set: sent, Value: value}
+func optionalField(f *validate.Form, key string, value *string) Optional[string] {
+	return Optional[string]{Set: sent(f, key), Value: value}
 }
 
 func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -374,17 +415,15 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	f := newFields(readBody(r))
+	f := form(r)
 	var patch SessionPatch
-	patch.CoachID = optionalField(f, "coach_id", f.uuid("coach_id", nullableOptional))
-	area, _ := f.str("area", strOpts{rule: nullableOptional, trim: true, max: 80})
-	patch.Area = optionalField(f, "area", area)
-	patch.StartsAt = f.datetime("starts_at", optional)
-	patch.DurationMin = f.int("duration_min", intOpts{rule: optional, min: 15, max: 240})
-	patch.Capacity = f.int("capacity", intOpts{rule: optional, min: 1, max: 200})
-	notes, _ := f.str("notes", strOpts{rule: nullableOptional, trim: true, max: 500})
-	patch.Notes = optionalField(f, "notes", notes)
-	if err := f.err(); err != nil {
+	patch.CoachID = optionalField(f, "coach_id", f.UUID("coach_id", nullableOptional))
+	patch.Area = optionalField(f, "area", f.Str("area", nullableOptional, validate.StrOpts{Trim: true, Max: 80}))
+	patch.StartsAt = datetime(f, "starts_at", optional)
+	patch.DurationMin = f.Int("duration_min", optional, between(15, 240))
+	patch.Capacity = f.Int("capacity", optional, between(1, 200))
+	patch.Notes = optionalField(f, "notes", f.Str("notes", nullableOptional, validate.StrOpts{Trim: true, Max: 500}))
+	if err := invalid(f); err != nil {
 		return err
 	}
 	if err := h.svc.UpdateSession(r.Context(), id, patch); err != nil {
@@ -398,9 +437,9 @@ func (h *handler) sessionAction(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	f := newFields(readBody(r))
-	action := f.enum("action", rule{}, "", "publish", "cancel", "complete")
-	if err := f.err(); err != nil {
+	f := form(r)
+	action := f.Enum("action", validate.Rule{}, []string{"publish", "cancel", "complete"})
+	if err := invalid(f); err != nil {
 		return err
 	}
 	out, err := h.svc.SessionAction(r.Context(), id, *action)
@@ -441,10 +480,10 @@ func (h *handler) listBookings(w http.ResponseWriter, r *http.Request, _ *auth.U
 }
 
 func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	f := newFields(readBody(r))
-	sessionID := f.uuid("session_id", rule{})
-	customerID := f.uuid("customer_id", rule{})
-	if err := f.err(); err != nil {
+	f := form(r)
+	sessionID := f.UUID("session_id", validate.Rule{})
+	customerID := f.UUID("customer_id", validate.Rule{})
+	if err := invalid(f); err != nil {
 		return err
 	}
 	out, err := h.svc.BookSession(r.Context(), *customerID, *sessionID, "admin")
@@ -467,9 +506,9 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	f := newFields(readBody(r))
-	action := f.enum("action", rule{}, "", "cancel", "no_show", "check_in")
-	if err := f.err(); err != nil {
+	f := form(r)
+	action := f.Enum("action", validate.Rule{}, []string{"cancel", "no_show", "check_in"})
+	if err := invalid(f); err != nil {
 		return err
 	}
 	var out any
@@ -496,10 +535,10 @@ func (h *handler) accessLog(w http.ResponseWriter, r *http.Request, _ *auth.User
 }
 
 func (h *handler) scan(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	f := newFields(readBody(r))
-	token, _ := f.str("token", strOpts{trim: true, min: 8, max: 120})
-	branchID := f.uuid("branch_id", nullableOptional)
-	if err := f.err(); err != nil {
+	f := form(r)
+	token := f.Str("token", validate.Rule{}, validate.StrOpts{Trim: true, Min: 8, Max: 120})
+	branchID := f.UUID("branch_id", nullableOptional)
+	if err := invalid(f); err != nil {
 		return err
 	}
 	out, err := h.svc.ScanQr(r.Context(), *token, branchID, &user.ID)
@@ -553,7 +592,7 @@ func memberError(w http.ResponseWriter, msg string, status int) error {
 var errBodyNotJSON = errors.New("member route: request body is not JSON")
 
 func memberBody(r *http.Request) (map[string]any, error) {
-	body, present := readBody(r)
+	body, present := validate.ReadBody(r)
 	if !present {
 		return nil, errBodyNotJSON
 	}
@@ -586,7 +625,7 @@ func (h *handler) memberSessions(w http.ResponseWriter, r *http.Request, custome
 
 func (h *handler) memberSession(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return memberError(w, "ID kelas tidak valid", http.StatusBadRequest)
 	}
 	session, err := h.svc.MemberSession(r.Context(), customerID, id)
@@ -613,7 +652,7 @@ func (h *handler) memberBook(w http.ResponseWriter, r *http.Request, customerID 
 		return err
 	}
 	sessionID, isStr := body["session_id"].(string)
-	if !isStr || !isUUID(sessionID) {
+	if !isStr || !validate.IsUUID(sessionID) {
 		return errInvalidData
 	}
 	out, err := h.svc.BookSession(r.Context(), customerID, sessionID, "member")
@@ -625,7 +664,7 @@ func (h *handler) memberBook(w http.ResponseWriter, r *http.Request, customerID 
 
 func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return errInvalidData
 	}
 	out, err := h.svc.CancelBooking(r.Context(), id, customerID)
@@ -637,7 +676,7 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 
 func (h *handler) memberConfirmOffer(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return errInvalidData
 	}
 	body, err := memberBody(r)
@@ -663,7 +702,7 @@ func (h *handler) memberCoaches(w http.ResponseWriter, r *http.Request, _ string
 
 func (h *handler) memberCoach(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return memberError(w, "ID coach tidak valid", http.StatusBadRequest)
 	}
 	coach, err := h.svc.MemberCoach(r.Context(), customerID, id)

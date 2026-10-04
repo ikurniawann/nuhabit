@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -272,6 +273,8 @@ type DuplicateWeekResult struct {
 }
 
 var errInvalidWeek = errors.New("gymscheduling: invalid week start")
+
+var dateOnlyPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
 // wibMidnight reads YYYY-MM-DD as 00:00 WIB the way `new Date("…T00:00:00+07:00")`
 // does: month 1-12, day 1-31, and a day past the month's end rolls over.
