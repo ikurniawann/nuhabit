@@ -1,11 +1,15 @@
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
+  const guard = await requireIamGuard(IAM.settingsBusiness);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { id } = await params;
   const body = await request.json();

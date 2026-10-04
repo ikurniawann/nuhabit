@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
-# ^ required for the `RUN --mount=type=cache` lines below (BuildKit Dockerfile
-# frontend directive, must be the first line). See docs/ci-cache.md for why
+# ^ required for the `RUN --mount=type=cache|secret` lines below (BuildKit
+# Dockerfile frontend directive, must be the first line). This file needs
+# BuildKit: DOCKER_BUILDKIT=0 cannot parse --mount. See docs/ci-cache.md for why
 # these two mounts exist: the fleet's `docker build --cache-from <tag>` can
 # only ever pull layers from the FINAL stage (the only one pushed to the
 # registry) -- deps/builder here never get a cache hit through --cache-from,
@@ -26,11 +27,20 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
-# NEXT_PUBLIC_* are read from the .env the CI build job renders out of
-# RUNTIME_CONFIG_CONTENT and inlined into the client bundle right here — see
-# the note in .dockerignore about why .env must NOT be excluded.
+# `next build` inlines NEXT_PUBLIC_* into the bundles, so the build needs the
+# env. CI passes it as a BuildKit secret (`--secret id=dotenv,src=<file>`):
+# a secret never lands in a layer, the registry build cache, or the image.
+# The copy to .env exists only for the duration of this RUN, and Next's
+# standalone output copies .env into .next/standalone, so both are removed
+# before the layer is committed. Runtime secrets reach the container at
+# `docker run --env-file` (see .gitlab/deploy-docker.sh). Without the secret
+# (plain local build) NEXT_PUBLIC_* bake in empty.
 RUN --mount=type=cache,target=/app/.next/cache \
-    pnpm build
+    --mount=type=secret,id=dotenv \
+    if [ -f /run/secrets/dotenv ]; then cp /run/secrets/dotenv .env; fi; \
+    pnpm build; status=$?; \
+    rm -f .env .next/standalone/.env*; \
+    exit $status
 
 FROM node:22-alpine AS runner
 WORKDIR /app

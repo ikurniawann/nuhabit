@@ -15,7 +15,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const body = (await req.json()) as { image?: string };
 
     const match = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(body.image ?? "");

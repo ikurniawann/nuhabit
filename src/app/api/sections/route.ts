@@ -1,8 +1,14 @@
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+
+const READERS = [...IAM.hris, ...IAM.settingsUsers];
 
 // GET /api/sections - List sections
 export async function GET(request: Request) {
+  const guard = await requireIamGuard(READERS);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { searchParams } = new URL(request.url);
 
@@ -26,6 +32,8 @@ export async function GET(request: Request) {
 
 // POST /api/sections - Create section
 export async function POST(request: Request) {
+  const guard = await requireIamGuard(IAM.hrisOrganization);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const body = await request.json();
 

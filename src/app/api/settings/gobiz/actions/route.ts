@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
@@ -24,10 +25,6 @@ const schema = z.object({
   action: z.enum(["test", "register_webhooks", "sync_catalog", "regenerate_token"]),
 });
 
-function appUrl(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || request.nextUrl.origin;
-}
-
 export async function POST(request: NextRequest) {
   try {
     await requireIamMenuPrefix(IAM.settingsIntegrations);
@@ -38,13 +35,13 @@ export async function POST(request: NextRequest) {
       case "test":
         return NextResponse.json({ success: true, data: await testGobizConnection() });
       case "register_webhooks":
-        return NextResponse.json({ success: true, data: await registerGobizWebhooks(appUrl(request)) });
+        return NextResponse.json({ success: true, data: await registerGobizWebhooks(appOrigin(request)) });
       case "sync_catalog":
-        return NextResponse.json({ success: true, data: await syncCatalogToGobiz(appUrl(request)) });
+        return NextResponse.json({ success: true, data: await syncCatalogToGobiz(appOrigin(request)) });
       case "regenerate_token": {
         const token = generateWebhookToken();
         await setSetting(SETTING_KEYS.GOBIZ_WEBHOOK_TOKEN, token);
-        return NextResponse.json({ success: true, data: { webhook_url: gobizWebhookUrl(appUrl(request), token) } });
+        return NextResponse.json({ success: true, data: { webhook_url: gobizWebhookUrl(appOrigin(request), token) } });
       }
     }
   } catch (error) {

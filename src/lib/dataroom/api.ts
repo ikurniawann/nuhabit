@@ -25,11 +25,6 @@ export async function getDataroomPermissions(user: ApiUser): Promise<DataroomPer
   };
 }
 
-export function clientIp(request: NextRequest): string | null {
-  const fwd = request.headers.get("x-forwarded-for");
-  return (fwd?.split(",")[0] ?? request.headers.get("x-real-ip") ?? "").trim() || null;
-}
-
 /** Content-Disposition dengan nama file UTF-8 (RFC 5987) + fallback ASCII. */
 export function contentDisposition(name: string, inline: boolean): string {
   const ascii = name.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");

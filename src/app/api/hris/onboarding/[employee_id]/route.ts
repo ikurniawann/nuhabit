@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError } from "@/lib/api/auth";
+import { EMPLOYEE_RECORD_MANAGERS, requireEmployeeAccess } from "@/lib/hris/employee-access";
+import { IAM } from "@/lib/iam/prefixes";
 
 interface RouteParams {
   params: Promise<{ employee_id: string }>;
@@ -11,8 +14,10 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const db = await createServerPgClient();
     const { employee_id } = await params;
+    // Pengelola karyawan / rekrutmen, atau karyawan itu sendiri
+    await requireEmployeeAccess(employee_id, [...EMPLOYEE_RECORD_MANAGERS, ...IAM.hrisRecruitment]);
+    const db = await createServerPgClient();
     
     // Get query params
     const searchParams = request.nextUrl.searchParams;
@@ -87,6 +92,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in onboarding GET:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

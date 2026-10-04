@@ -49,7 +49,7 @@ export interface ContractRow {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID karyawan tidak valid" }, { status: 400 });
@@ -84,7 +84,7 @@ interface CreateContractBody {
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID karyawan tidak valid" }, { status: 400 });

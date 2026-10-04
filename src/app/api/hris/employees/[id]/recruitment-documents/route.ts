@@ -19,7 +19,7 @@ interface RouteParams {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID karyawan tidak valid" }, { status: 400 });

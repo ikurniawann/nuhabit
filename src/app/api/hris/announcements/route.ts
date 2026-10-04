@@ -45,7 +45,7 @@ export function resolveVideo(videoUrl: string | null | undefined) {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const actor = await getWorkforceActor();
     const body = upsertSchema.parse(await request.json());
 

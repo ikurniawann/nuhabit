@@ -4,7 +4,7 @@
  *
  * Setiap stall mendapat 1 akun:
  *   Email   : <slug>@sulu.id
- *   Password: sulu123456
+ *   Password: SULU_STALL_PASSWORD, atau acak (dicetak sekali) bila kosong
  *   Role    : purchasing_admin
  *   Approval: purchasing PR + PO sebagai approver
  *   Stall   : ditempatkan di warehouse masing-masing
@@ -19,10 +19,10 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
 const { sslForUrl, assertLocalTarget } = require("../scripts/pg-utils");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 
 const ROOT = path.join(__dirname, "..", "..");
 
-const PASSWORD = process.env.SULU_STALL_PASSWORD || "sulu123456";
 const EMAIL_DOMAIN = process.env.SULU_STALL_EMAIL_DOMAIN || "sulu.id";
 const PROFILE_ROLE = "purchasing_admin";
 const IAM_ROLE = "purchasing_admin";
@@ -308,6 +308,8 @@ async function main() {
     process.exit(1);
   }
 
+  const password = seedPassword("SULU_STALL_PASSWORD");
+
   const client = new Client({ connectionString: url, ssl: sslForUrl(url) });
   await client.connect();
 
@@ -333,7 +335,7 @@ async function main() {
     }
     const iamRoleId = iamRole.rows[0].id;
 
-    const passwordHash = await bcrypt.hash(PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
     const summary = [];
 
     for (let index = 0; index < STALL_SEEDS.length; index += 1) {
@@ -376,7 +378,7 @@ async function main() {
     await client.query("COMMIT");
 
     console.log("\nSeeder selesai.");
-    console.log(`  Password : ${PASSWORD}`);
+    console.log(`  Password : ${passwordSource("SULU_STALL_PASSWORD")}`);
     console.log(`  Role     : ${PROFILE_ROLE}`);
     console.log("  Approval : purchasing PR + PO (approver)");
     console.log(`  Accounts : ${summary.length}`);

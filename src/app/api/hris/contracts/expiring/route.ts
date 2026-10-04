@@ -49,7 +49,7 @@ export interface NoActiveContractRow {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const daysParam = Number(req.nextUrl.searchParams.get("days") ?? DEFAULT_DAYS);
     const days = Number.isFinite(daysParam)
       ? Math.min(Math.max(Math.trunc(daysParam), 1), MAX_DAYS)

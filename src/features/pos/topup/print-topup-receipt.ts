@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { printBytesViaRawBt, canUseRawBtPrint } from "@/lib/pos/rawbt-print";
 import { encodeEscPosLines, formatReceiptRow } from "@/lib/pos/thermal-escpos";
 import { printBytesToPairedThermal } from "@/lib/pos/thermal-serial";
+import { escapeHtml } from "@/lib/security/escape-html";
 
 export type TopupReceiptPrintPayload = {
   customerName: string;
@@ -48,24 +49,9 @@ export function buildTopupReceiptEscPosBytes(payload: TopupReceiptPrintPayload):
   return encodeEscPosLines(lines);
 }
 
-function printTopupViaPopup(payload: TopupReceiptPrintPayload) {
-  const popupWidth = Math.min(720, Math.max(480, window.screen.availWidth - 80));
-  const popupHeight = Math.min(900, Math.max(640, window.screen.availHeight - 80));
-  const left = Math.max(0, Math.round((window.screen.availWidth - popupWidth) / 2));
-  const top = Math.max(0, Math.round((window.screen.availHeight - popupHeight) / 2));
-  const win = window.open(
-    "",
-    "_blank",
-    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
-  );
-
-  if (!win) {
-    throw new Error("Allow popups to print the receipt.");
-  }
-
-  const when = new Date().toLocaleString("id-ID");
-
-  win.document.write(`<!DOCTYPE html>
+/** HTML tiket topup untuk jendela print; setiap nilai di-escape (nama/HP dari data member). */
+export function buildTopupReceiptHtml(payload: TopupReceiptPrintPayload, when: string): string {
+  return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
@@ -104,23 +90,41 @@ function printTopupViaPopup(payload: TopupReceiptPrintPayload) {
     <div class="ticket">
       <h1>--- TOPUP ---</h1>
       <div class="center">ARK E-MONEY</div>
-      <div class="center">${when}</div>
+      <div class="center">${escapeHtml(when)}</div>
       <div class="divider"></div>
-      <div class="center">${payload.customerName}</div>
-      ${payload.phone ? `<div class="center">${payload.phone}</div>` : ""}
-      ${payload.cardId ? `<div class="center">Card ${payload.cardId}</div>` : ""}
+      <div class="center">${escapeHtml(payload.customerName)}</div>
+      ${payload.phone ? `<div class="center">${escapeHtml(payload.phone)}</div>` : ""}
+      ${payload.cardId ? `<div class="center">Card ${escapeHtml(payload.cardId)}</div>` : ""}
       <div class="divider"></div>
-      <div class="big">${payload.arkAmountLabel}</div>
-      <div class="center">${payload.amountLabel}</div>
+      <div class="big">${escapeHtml(payload.arkAmountLabel)}</div>
+      <div class="center">${escapeHtml(payload.amountLabel)}</div>
       <div class="divider"></div>
-      <div class="row"><span>Method</span><span>${payload.paymentMethod.toUpperCase()}</span></div>
-      <div class="row"><span>Before</span><span>${payload.balanceBeforeLabel}</span></div>
-      <div class="row total"><span>Balance</span><span>${payload.balanceAfterLabel}</span></div>
+      <div class="row"><span>Method</span><span>${escapeHtml(payload.paymentMethod.toUpperCase())}</span></div>
+      <div class="row"><span>Before</span><span>${escapeHtml(payload.balanceBeforeLabel)}</span></div>
+      <div class="row total"><span>Balance</span><span>${escapeHtml(payload.balanceAfterLabel)}</span></div>
       <div class="divider"></div>
       <div class="center">--- TOPUP COPY ---</div>
     </div>
   </body>
-</html>`);
+</html>`;
+}
+
+function printTopupViaPopup(payload: TopupReceiptPrintPayload) {
+  const popupWidth = Math.min(720, Math.max(480, window.screen.availWidth - 80));
+  const popupHeight = Math.min(900, Math.max(640, window.screen.availHeight - 80));
+  const left = Math.max(0, Math.round((window.screen.availWidth - popupWidth) / 2));
+  const top = Math.max(0, Math.round((window.screen.availHeight - popupHeight) / 2));
+  const win = window.open(
+    "",
+    "_blank",
+    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},scrollbars=yes,resizable=yes`,
+  );
+
+  if (!win) {
+    throw new Error("Allow popups to print the receipt.");
+  }
+
+  win.document.write(buildTopupReceiptHtml(payload, new Date().toLocaleString("id-ID")));
 
   win.document.close();
   win.focus();

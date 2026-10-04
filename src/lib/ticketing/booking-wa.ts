@@ -4,6 +4,7 @@
 // transaksi pemanggil — pemanggil memutus sendiri apa arti hasil false.
 
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
+import { appOrigin } from "@/lib/app-origin";
 
 export interface PaidBookingWaInput {
   booking_code: string;
@@ -44,7 +45,7 @@ export async function sendBookingPaidWa(
     );
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = appOrigin();
   const statusUrl = `${baseUrl}/booking/status/${booking.access_token}`;
   const message =
     `*Pembayaran diterima* ✅\n\n` +
@@ -86,7 +87,7 @@ export async function sendBookingGiftWa(
     );
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = appOrigin();
   const statusUrl = `${baseUrl}/booking/status/${booking.access_token}`;
   const message =
     `*Kamu menerima hadiah tiket!* 🎁

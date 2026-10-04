@@ -1,9 +1,14 @@
 /**
  * Next.js instrumentation — berjalan sekali saat server boot.
- * Dipakai utk job internal ringan (auto-snapshot KPI bulanan, pengawas SLA CS).
+ * Validasi env server (src/lib/env.ts), lalu job internal ringan
+ * (auto-snapshot KPI bulanan, pengawas SLA CS, dst.).
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // Gagal cepat bila env wajib kosong, sebelum watcher mana pun menyentuh DB.
+    const { assertServerEnv } = await import("@/lib/env");
+    assertServerEnv();
+
     const { startKpiAutoSnapshot } = await import("@/lib/kpi/auto-snapshot");
     startKpiAutoSnapshot();
 

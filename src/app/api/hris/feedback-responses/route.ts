@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+import { feedbackResponseSchema, oneOrMany } from "@/lib/hris/feedback-schemas";
+
+// Modul 360 feedback belum punya UI; semua handler khusus pengelola kinerja.
 
 export async function GET(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const db = createPgClient();
     const searchParams = request.nextUrl.searchParams;
     const assignmentId = searchParams.get('assignment_id');
@@ -44,6 +50,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit) },
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error fetching feedback responses:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -51,14 +58,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const authClient = await createServerPgClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const db = createPgClient();
-    const body = await request.json();
-
     // Support bulk insert for submitting multiple responses at once
+    const parsed = oneOrMany(feedbackResponseSchema).safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Data tidak valid', details: parsed.error.issues }, { status: 400 });
+    }
+    const body = parsed.data;
     const insertData = Array.isArray(body) ? body : [body];
 
     const { data, error } = await db
@@ -93,6 +104,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error creating feedback response:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

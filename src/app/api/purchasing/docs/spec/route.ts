@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 
 export const dynamic = "force-static";
 export const maxDuration = 60;
@@ -10,7 +11,7 @@ const spec = {
     version: "1.0.0",
     description: "REST API for NüHabit OS Purchasing Module — Suppliers, Purchase Orders, Materials",
   },
-  servers: [{ url: process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000" }],
+  servers: [{ url: appOrigin() || "http://localhost:3000" }],
   paths: {
     "/api/purchasing/suppliers": {
       get: {

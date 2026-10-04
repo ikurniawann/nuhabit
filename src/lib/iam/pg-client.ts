@@ -1,11 +1,8 @@
 import { Pool, type QueryResultRow } from "pg";
 import { SEARCH_PATH } from "@/lib/db";
+import { databaseUrl } from "@/lib/env";
 
 let pool: Pool | null = null;
-
-function getDatabaseUrl() {
-  return process.env.DATABASE_URL || "";
-}
 
 // SSL hanya untuk koneksi remote/managed. Postgres lokal umumnya
 // tidak mendukung SSL, jadi jangan dipaksa.
@@ -16,11 +13,11 @@ function getSslOption(url: string) {
 }
 
 export function isIamDbConfigured() {
-  return Boolean(getDatabaseUrl());
+  return Boolean(databaseUrl());
 }
 
 export function getIamPool() {
-  const connectionString = getDatabaseUrl();
+  const connectionString = databaseUrl();
   if (!connectionString) {
     throw new Error("DATABASE_URL belum diset di .env");
   }

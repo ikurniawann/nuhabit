@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+
+// Modul 360 feedback belum punya UI; semua handler khusus pengelola kinerja.
 
 // GET /api/hris/feedback-approvals - Get pending approvals for manager
 export async function GET(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const authClient = await createServerPgClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -95,6 +100,7 @@ export async function GET(request: NextRequest) {
       } 
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error fetching feedback approvals:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -103,6 +109,7 @@ export async function GET(request: NextRequest) {
 // POST /api/hris/feedback-approvals - Bulk approve/reject
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const authClient = await createServerPgClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -155,6 +162,7 @@ export async function POST(request: NextRequest) {
       message: `Successfully ${action}d ${data?.length || 0} submission(s)` 
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error bulk processing approvals:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { createPgClient } from "@/lib/pg/create-client";
 import { awardCrmXpForPosOrder, syncPosCustomerOrderStats } from "@/lib/crm/loyalty-engine";
@@ -66,7 +67,7 @@ const createOrderSchema = z.object({
 
 /** Link layar kasir "Buatkan Pesanan" utk notifikasi WA/Telegram (null bila URL app tak diketahui). */
 function buildSelfOrderActionUrl(request: NextRequest, orderId: string) {
-  const base = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl?.origin || "").replace(/\/$/, "");
+  const base = appOrigin(request);
   return base ? `${base}/dashboard/pos/self-orders?order=${encodeURIComponent(orderId)}` : null;
 }
 

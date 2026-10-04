@@ -38,6 +38,7 @@ import {
 import { useToast, ToastContainer } from "@/components/ui/toast";
 import { useDashboardBrands, useDashboardData } from "../queries";
 import { fetchDashboardCandidatesForExport } from "../api";
+import { buildRecruitmentReportHtml, csvCell } from "../recruitment-report";
 
 const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32"];
 
@@ -96,7 +97,7 @@ export function RecruitmentDashboardPage() {
           c.created_at ? new Date(c.created_at).toLocaleDateString("id-ID") : "",
         ]);
       });
-      const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+      const csv = rows.map(r => r.map(csvCell).join(",")).join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a"); a.href = url; a.download = "kandidat.csv"; a.click();
@@ -108,41 +109,12 @@ export function RecruitmentDashboardPage() {
   };
 
   const exportPDF = () => {
-    const printContent = `
-      <html><head><title>Laporan Rekrutmen</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        h1 { color: #1e40af; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #f3f4f6; }
-        .summary { display: flex; gap: 20px; margin: 20px 0; }
-        .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; flex: 1; }
-        .card h3 { margin: 0; font-size: 12px; color: #6b7280; }
-        .card p { margin: 4px 0 0; font-size: 24px; font-weight: bold; }
-      </style></head><body>
-      <h1>Laporan Rekrutmen - ${new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}</h1>
-      <div class="summary">
-        <div class="card"><h3>Kandidat Bulan Ini</h3><p>${summary.thisMonth}</p></div>
-        <div class="card"><h3>Pipeline Aktif</h3><p>${summary.activePipeline}</p></div>
-        <div class="card"><h3>Talent Pool</h3><p>${summary.talentPool}</p></div>
-        <div class="card"><h3>Lowongan Terbuka</h3><p>${summary.openPositions}</p></div>
-      </div>
-      <h2>Pipeline Funnel</h2>
-      <table>
-        <tr><th>Stage</th><th>Jumlah</th></tr>
-        ${pipelineFunnel.map(s => `<tr><td>${s.name}</td><td>${s.value}</td></tr>`).join("")}
-      </table>
-      <h2>Kandidat Butuh Perhatian</h2>
-      <table>
-        <tr><th>Nama</th><th>Posisi</th><th>Brand</th><th>Status</th><th>Lama di Status</th></tr>
-        ${needsAttention.map((a: any) => {
-          const days = a.days_in_current_status || 0;
-          return `<tr><td>${a.full_name || ""}</td><td>${a.position_title || ""}</td><td>${a.brand_name || ""}</td><td>${a.status}</td><td>${days} hari</td></tr>`;
-        }).join("")}
-      </table>
-      </body></html>
-    `;
+    const printContent = buildRecruitmentReportHtml({
+      periodLabel: new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+      summary,
+      pipelineFunnel,
+      needsAttention,
+    });
     const w = window.open("", "_blank");
     if (w) { w.document.write(printContent); w.document.close(); w.print(); }
     toast("PDF siap di print");

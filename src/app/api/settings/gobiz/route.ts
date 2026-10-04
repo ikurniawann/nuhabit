@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
@@ -15,10 +16,6 @@ import {
  * GET/PUT /api/settings/gobiz — konfigurasi integrasi GoBiz/GoFood (EPIC-049).
  * Secret dimask di GET; string kosong di PUT = hapus, undefined = tidak diubah.
  */
-
-function appUrl(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_APP_URL?.trim() || request.nextUrl.origin;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +47,7 @@ export async function GET(request: NextRequest) {
           apiBase: raw[SETTING_KEYS.GOBIZ_API_BASE_URL],
           oauthUrl: raw[SETTING_KEYS.GOBIZ_OAUTH_URL],
         }),
-        webhook_url: gobizWebhookUrl(appUrl(request), token),
+        webhook_url: gobizWebhookUrl(appOrigin(request), token),
         configured: isGobizConfigured(config),
         last_catalog_sync: last,
       },

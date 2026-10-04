@@ -44,6 +44,9 @@ export const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
 export const EMAIL_CODE_TTL_MS = 10 * 60_000;
 export const EMAIL_CODE_MAX_ATTEMPTS = 5;
 export const SESSION_TTL_MS = 24 * 3_600_000;
+/** PIN link: 5 salah dalam 15 menit → link terkunci 30 menit (auth.attempt_limits). */
+export const SHARE_PIN_SCOPE = "dataroom_share_pin";
+export const SHARE_PIN_POLICY = { maxFailures: 5, windowMs: 15 * 60_000, lockoutMs: 30 * 60_000 };
 
 export function generateShareToken(): string {
   return crypto.randomBytes(24).toString("base64url");

@@ -1,8 +1,12 @@
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 // GET /api/analytics/overview - Get KPI data for analytics page
 export async function GET(request: Request) {
+  const guard = await requireIamGuard(IAM.hrisInsights);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { searchParams } = new URL(request.url);
   const brand_id = searchParams.get("brand_id");

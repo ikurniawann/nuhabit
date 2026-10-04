@@ -41,7 +41,7 @@ async function loadContract(id: string): Promise<ContractDocRow | null> {
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID kontrak tidak valid" }, { status: 400 });
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID kontrak tidak valid" }, { status: 400 });
@@ -131,7 +131,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID kontrak tidak valid" }, { status: 400 });

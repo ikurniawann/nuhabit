@@ -3,13 +3,17 @@
  * Buat / update super admin di Postgres lokal (auth.users + public.users).
  *
  * Usage:
- *   SUPER_USER_EMAIL=super@arkivworld.com SUPER_USER_PASSWORD='Arkiv2026*#' node scripts/create-local-super-user.js
+ *   SUPER_USER_EMAIL=you@example.com SUPER_USER_PASSWORD='<password>' node scripts/create-local-super-user.js
+ *
+ * Tanpa SUPER_USER_PASSWORD, skrip membuat password acak dan mencetaknya sekali.
+ * Database remote ditolak kecuali --allow-remote atau ALLOW_REMOTE_DB=1.
  */
 
 const fs = require("fs");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
+const { seedPassword, passwordSource, assertLocalOrAllowed } = require("../database/seeders/lib/seed-password");
 
 const ROOT = path.join(__dirname, "..");
 for (const name of [".env", ".env.local"]) {
@@ -29,7 +33,6 @@ for (const name of [".env", ".env.local"]) {
 }
 
 const email = process.env.SUPER_USER_EMAIL || "super@arkivworld.com";
-const password = process.env.SUPER_USER_PASSWORD || "Arkiv2026*#";
 const fullName = process.env.SUPER_USER_NAME || "Arkiv Super Admin";
 const url = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
 
@@ -37,6 +40,13 @@ if (!url) {
   console.error("Set DATABASE_URL / MIGRATE_DATABASE_URL di .env.local");
   process.exit(1);
 }
+try {
+  assertLocalOrAllowed(url);
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
+}
+const password = seedPassword("SUPER_USER_PASSWORD");
 
 (async () => {
   const c = new Client({ connectionString: url });
@@ -72,7 +82,7 @@ if (!url) {
   await c.end();
   console.log("Super admin ready:");
   console.log("  Email   :", email);
-  console.log("  Password:", password);
+  console.log("  Password:", passwordSource("SUPER_USER_PASSWORD"));
 })().catch((e) => {
   console.error("Failed:", e.message);
   process.exit(1);

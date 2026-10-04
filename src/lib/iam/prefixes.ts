@@ -89,6 +89,17 @@ export const IAM = {
   gymScheduling: ["gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"],
   /** Gym → Check-in (scan QR front desk; juga dibuka dari Sesi & Absensi). */
   gymCheckin: ["gym.checkin", "gym.sessions"],
+  /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
+  hrisMaster: ["hris.master"],
+  /** HRIS → Organisasi (struktur organisasi, seksi). */
+  hrisOrganization: ["hris.organization"],
+  /** HRIS → Insights (analitik rekrutmen, laporan HR). */
+  hrisInsights: ["hris.insights"],
+  /**
+   * Pengelola penilaian kinerja. Sengaja tanpa hris.performance.review dan
+   * .dept-tasks yang juga di-grant ke role employee (ESS).
+   */
+  hrisPerformanceAdmin: ["hris.performance.kpi-scorecard", "hris.performance.kpi-config"],
 } as const;
 
 export type IamPrefixGroup = (typeof IAM)[keyof typeof IAM];

@@ -2,16 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isDevBypassActive } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
-import { findMemberByPhone, issueOtp } from "@/lib/member-portal/otp-store";
+import { findMemberByPhone, issueOtp, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal/otp-store";
 
 /**
  * POST /api/member-portal/otp { phone } — kirim kode OTP WhatsApp (Fonnte).
  * Hanya nomor yang TERDAFTAR sebagai member (pos_customers aktif) yang
  * dikirimi kode; nomor baru diarahkan ke pendaftaran mandiri
- * (/api/member-portal/register). Rate limit 3 permintaan / 10 menit / nomor.
+ * (/api/member-portal/register). Rate limit 3 permintaan / 10 menit / nomor
+ * plus rem per-IP.
+ *
+ * Jawaban 404 `not_registered` sengaja dipertahankan: sheet member di
+ * table-order memakainya untuk menawarkan lanjut sebagai tamu. Rem per-IP
+ * yang membatasi enumerasi nomor lewat endpoint ini.
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!memberIpAllowed("otp", request)) {
+      return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error }, { status: TOO_MANY_FROM_IP.status });
+    }
     const body = await request.json().catch(() => ({}));
     const phone = normalizePhoneDigits(body.phone);
     if (!phone) {

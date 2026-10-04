@@ -6,6 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 import { Employee, PromotionRequest, ApiResponse } from '@/types/hris';
 import { queryOne } from '@/lib/db';
 import { draftContractFromEmploymentStatus } from '@/lib/hris/contracts';
@@ -73,6 +75,7 @@ async function autoDraftContract(
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisRecruitment);
     const db = await createServerPgClient();
     const body: PromotionRequest = await request.json();
 
@@ -238,6 +241,7 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<Employee> & { employee_id: string; nip?: string; contract_number?: string | null; candidate?: any });
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in promote API:', error);
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },

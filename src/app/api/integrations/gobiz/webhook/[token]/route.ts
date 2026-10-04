@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { loadGobizConfig } from "@/lib/gobiz/config";
 import { parseGofoodWebhook } from "@/lib/gobiz/mapping";
 import { processGofoodEvent, recordGofoodEvent } from "@/lib/gobiz/service";
 import { verifyGobizSignature } from "@/lib/gobiz/signature";
+import { safeEqual } from "@/lib/security/compare";
 
 export const dynamic = "force-dynamic";
 
@@ -12,23 +12,18 @@ export const dynamic = "force-dynamic";
  *
  * Autentikasi: token acak di path (dibuat di Settings → Integrasi → GoBiz dan
  * didaftarkan ke GoBiz lewat notification-subscriptions) + header
- * X-Go-Signature = HMAC-SHA256 hex raw body dgn Relay secret. Tanda tangan
- * ditegakkan (401) hanya bila "gobiz_signature_enforce" = true; selain itu
- * hasilnya dicatat saja sampai terbukti cocok di sandbox. Header
+ * X-Go-Signature = HMAC-SHA256 hex raw body dgn Relay secret. Begitu Relay
+ * secret diisi, tanda tangan WAJIB valid (401 bila salah/absen); tanpa secret
+ * hanya token path yang menjaga. Header
  * X-Go-Idempotency-Key + event_id disimpan utk idempotency (GoBiz tidak
  * menjamin exactly-once). Balasan selalu {success:true} agar GoBiz tidak
  * retry berulang utk event yang memang kita abaikan.
  */
 
-function tokenMatches(expected: string, given: string) {
-  if (!expected || !given || expected.length !== given.length) return false;
-  return timingSafeEqual(Buffer.from(expected), Buffer.from(given));
-}
-
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const config = await loadGobizConfig();
-  if (!tokenMatches(config.webhookToken, String(token || ""))) {
+  if (!safeEqual(config.webhookToken, token)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
@@ -36,10 +31,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const rawBody = await request.text().catch(() => "");
   const signature = verifyGobizSignature(rawBody, request.headers.get("x-go-signature"), config.relaySecret);
   if (signature !== "valid" && signature !== "unconfigured") {
-    if (config.enforceSignature) {
-      return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 401 });
-    }
-    console.warn(`[gobiz webhook] X-Go-Signature ${signature} (mode pantau, event tetap diproses)`);
+    console.warn(`[gobiz webhook] X-Go-Signature ${signature}, event ditolak`);
+    return NextResponse.json({ success: false, error: "Invalid signature" }, { status: 401 });
   }
 
   let json: unknown = null;
@@ -61,7 +54,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ success: true, data: {}, ignored: true, reason: "duplicate_event" });
     }
     const result = await processGofoodEvent(event, eventRowId);
-    if (signature === "valid") console.info(`[gobiz webhook] X-Go-Signature valid (${event.header.event_name})`);
     return NextResponse.json({ success: true, data: { result } });
   } catch (error) {
     // Event sudah tercatat (result=error) → bisa diproses ulang dari halaman GoFood.

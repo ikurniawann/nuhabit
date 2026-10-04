@@ -1,9 +1,24 @@
 // Resend Email integration
 
-import React from "react";
 import { Resend } from "resend";
+import { escapeHtml } from "@/lib/security/escape-html";
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Klien dibuat saat email pertama dikirim, bukan saat modul di-import, supaya
+// kunci dibaca dari env runtime container. Tanpa kunci: satu peringatan saja.
+let client: Resend | null = null;
+let warnedMissingKey = false;
+
+function resendClient(): Resend | null {
+  if (client) return client;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) {
+    if (!warnedMissingKey) console.warn("[resend] RESEND_API_KEY belum diset; email tidak dikirim");
+    warnedMissingKey = true;
+    return null;
+  }
+  client = new Resend(apiKey);
+  return client;
+}
 
 export interface EmailPayload {
   to: string;
@@ -13,13 +28,11 @@ export interface EmailPayload {
 }
 
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
-  if (!resend) {
-    console.warn("RESEND_API_KEY is not set");
-    return false;
-  }
+  const resend = resendClient();
+  if (!resend) return false;
 
   try {
-    const { error } = await resend!.emails.send({
+    const { error } = await resend.emails.send({
       from: payload.from || "Talent Pool <onboarding@resend.dev>",
       to: payload.to,
       subject: payload.subject,
@@ -59,9 +72,9 @@ export function candidateStatusEmail(
   return {
     subject: `Update Status Lamaran - ${candidateName}`,
     html: `
-      <h2>Hi ${candidateName},</h2>
-      <p>Status lamaran kamu saat ini: <strong>${statusLabels[status] || status}</strong></p>
-      ${notes ? `<p>Catatan: ${notes}</p>` : ""}
+      <h2>Hi ${escapeHtml(candidateName)},</h2>
+      <p>Status lamaran kamu saat ini: <strong>${escapeHtml(statusLabels[status] || status)}</strong></p>
+      ${notes ? `<p>Catatan: ${escapeHtml(notes)}</p>` : ""}
       <p>Terima kasih sudah melamar di Aapex Technology.</p>
     `,
   };

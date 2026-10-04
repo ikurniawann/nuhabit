@@ -3,11 +3,17 @@
 // GET: Get employee detail
 // PUT: Update employee
 // DELETE: Soft delete employee
+//
+// Keamanan: GET boleh pengelola karyawan atau karyawan itu sendiri (ESS);
+// PUT/DELETE hanya pengelola. PUT memakai allowlist Zod, bukan spread body.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
-import { Employee, EmployeeUpdateData, ApiResponse } from '@/types/hris';
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { EMPLOYEE_RECORD_MANAGERS, requireEmployeeAccess } from "@/lib/hris/employee-access";
+import { employeeUpdateSchema } from "@/lib/hris/employee-update-schema";
+import { Employee, ApiResponse } from '@/types/hris';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -17,10 +23,11 @@ interface RouteParams {
 // GET /api/hris/employees/[id]
 // ============================================================
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
-    const db = createPgClient();
     const { id } = await params;
+    await requireEmployeeAccess(id);
+    const db = createPgClient();
 
     const { data, error } = await db
       .from('employees')
@@ -64,6 +71,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     } as ApiResponse<Employee>);
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in employee API:', error);
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },
@@ -78,9 +86,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    await requireIamMenuPrefix(EMPLOYEE_RECORD_MANAGERS);
     const db = createPgClient();
     const { id } = await params;
-    const body: EmployeeUpdateData = await request.json();
+    const parsed = employeeUpdateSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Data karyawan tidak valid' }, { status: 400 });
+    }
+    const body = parsed.data;
 
     // Check if employee exists
     const { data: existing } = await db
@@ -138,9 +151,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       .single();
 
     // Update employee — keep phone as '' if null to satisfy NOT NULL constraint
-    const updateData: EmployeeUpdateData = {
+    const updateData = {
       ...body,
-      phone: body.phone || '',
+      ...('phone' in body ? { phone: body.phone || '' } : {}),
       updated_at: new Date().toISOString()
     };
 
@@ -164,19 +177,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       const changes: string[] = [];
       let hasChanges = false;
 
-      if (currentData.employment_status !== body.employment_status) {
-        changes.push(`Status: ${currentData.employment_status} → ${body.employment_status}`);
+      // Hanya field yang dikirim yang dibandingkan: PUT parsial tidak
+      // boleh tercatat sebagai perubahan departemen/jabatan.
+      type TrackedKey = 'employment_status' | 'department_id' | 'section_id' | 'job_title_id';
+      const after = (key: TrackedKey) => (key in body ? body[key] : currentData[key]);
+      const changed = (key: TrackedKey) => currentData[key] !== after(key);
+      if (changed('employment_status')) {
+        changes.push(`Status: ${currentData.employment_status} → ${after('employment_status')}`);
         hasChanges = true;
       }
-      if (currentData.department_id !== body.department_id) {
+      if (changed('department_id')) {
         changes.push(`Departemen berubah`);
         hasChanges = true;
       }
-      if (currentData.section_id !== body.section_id) {
+      if (changed('section_id')) {
         changes.push(`Seksi berubah`);
         hasChanges = true;
       }
-      if (currentData.job_title_id !== body.job_title_id) {
+      if (changed('job_title_id')) {
         changes.push(`Jabatan berubah`);
         hasChanges = true;
       }
@@ -189,13 +207,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             change_type: 'status_change',
             notes: changes.join(', '),
             prev_employment_status: currentData.employment_status,
-            new_employment_status: body.employment_status,
+            new_employment_status: after('employment_status'),
             prev_department_id: currentData.department_id,
-            new_department_id: body.department_id,
+            new_department_id: after('department_id'),
             prev_section_id: currentData.section_id,
-            new_section_id: body.section_id,
+            new_section_id: after('section_id'),
             prev_job_title_id: currentData.job_title_id,
-            new_job_title_id: body.job_title_id,
+            new_job_title_id: after('job_title_id'),
             effective_date: new Date().toISOString().split('T')[0],
           });
         if (historyError) {
@@ -221,6 +239,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     } as ApiResponse<Employee>);
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in employee API:', error);
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },
@@ -234,8 +253,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // Soft delete: set is_active = false
 // ============================================================
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
+    await requireIamMenuPrefix(EMPLOYEE_RECORD_MANAGERS);
     const db = createPgClient();
     const { id } = await params;
 
@@ -279,6 +299,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     } as ApiResponse<Employee>);
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in employee API:', error);
     return NextResponse.json(
       { error: 'Terjadi kesalahan pada server' },

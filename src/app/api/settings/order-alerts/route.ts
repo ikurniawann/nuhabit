@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
@@ -31,10 +32,6 @@ import { brandName } from "@/lib/branding";
  * POST : { action: approve|remove (chat_id) | test | reconnect }
  */
 export const dynamic = "force-dynamic";
-
-function appUrl(request: NextRequest) {
-  return (process.env.NEXT_PUBLIC_APP_URL?.trim() || request.nextUrl.origin).replace(/\/$/, "");
-}
 
 function maskPhone(phone: string | null) {
   return phone ? `${phone.slice(0, 4)}••••${phone.slice(-3)}` : null;
@@ -94,7 +91,7 @@ const putSchema = z.object({
 async function connectTelegram(request: NextRequest, token: string) {
   const me = await getTelegramMe(token);
   const secret = await ensureTelegramWebhookSecret();
-  await setTelegramWebhook(token, `${appUrl(request)}/api/integrations/telegram/webhook/${secret}`, secret);
+  await setTelegramWebhook(token, `${appOrigin(request)}/api/integrations/telegram/webhook/${secret}`, secret);
   await setSetting(SETTING_KEYS.TELEGRAM_BOT_TOKEN, token);
   await setSetting(SETTING_KEYS.TELEGRAM_BOT_USERNAME, me.username ?? "");
 }

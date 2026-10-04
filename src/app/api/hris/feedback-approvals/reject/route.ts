@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+
+// Modul 360 feedback belum punya UI; semua handler khusus pengelola kinerja.
 
 // POST /api/hris/feedback-approvals/reject
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const authClient = await createServerPgClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -80,6 +85,7 @@ export async function POST(request: NextRequest) {
       message: 'Feedback rejected. Employee has been notified.' 
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error rejecting feedback:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

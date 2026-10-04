@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { canBypassOtp } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
-import { consumeOtp, findMemberByPhone } from "@/lib/member-portal/otp-store";
+import { consumeOtp, findMemberByPhone, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal/otp-store";
 import {
   createMemberSession,
   MEMBER_SESSION_COOKIE,
@@ -38,6 +38,9 @@ export async function POST(request: NextRequest) {
     if (devBypass) {
       console.warn(`[member-portal] OTP dev bypass dipakai untuk ${phone}`);
     } else {
+      if (!memberIpAllowed("verify", request)) {
+        return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error }, { status: TOO_MANY_FROM_IP.status });
+      }
       const otp = await consumeOtp(pool, phone, code);
       if (!otp.ok) return NextResponse.json({ success: false, error: otp.error }, { status: otp.status });
     }

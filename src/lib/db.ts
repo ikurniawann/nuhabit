@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
+import { databaseUrl } from "@/lib/env";
 
 /**
  * Koneksi Postgres native untuk data-access layer, auth, dan modul lain.
@@ -40,7 +41,7 @@ function sslFor(url: string) {
 
 export function getPool(): Pool {
   if (!pool) {
-    const cs = process.env.DATABASE_URL || process.env.MIGRATE_DATABASE_URL || "";
+    const cs = databaseUrl();
     if (!cs) throw new Error("DATABASE_URL belum diset");
     pool = new Pool({
       connectionString: cs,

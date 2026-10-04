@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clientIp } from "@/lib/security/client-ip";
 import { listChildren } from "@/lib/dataroom/nodes";
-import { clientIp, publicNode, resolveShareContext } from "@/lib/dataroom/api";
+import { publicNode, resolveShareContext } from "@/lib/dataroom/api";
 import { logShareAccess, touchShare } from "@/lib/dataroom/shares";
 
 /**

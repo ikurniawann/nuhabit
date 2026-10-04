@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { successResponse } from "@/lib/api/auth";
 import { query, queryOne, withTransaction } from "@/lib/db";
@@ -140,7 +141,7 @@ export async function POST(
     }
     if (!passId) throw new Error("Gagal mengalokasikan kode pass");
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
+    const baseUrl = appOrigin(request);
     const statusUrl = `${baseUrl}/pass/status/${accessToken}`;
 
     try {

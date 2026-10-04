@@ -24,12 +24,12 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
 const { sslForUrl, assertLocalTarget } = require("../scripts/pg-utils");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 const {
   HOLDING_CODE, COMPANY_CODE, BRANCH_CODE, COMPANY_NAME, BRANCH_NAME, loadEnv, ensureScope,
 } = require("./lib/dusun-bambu-scope");
 
 const DEMO_EMAIL = process.env.DUSUN_BAMBU_EMAIL || "demo@dusunbambu.id";
-const DEMO_PASSWORD = process.env.DUSUN_BAMBU_PASSWORD || "dusunbambu";
 
 // ── Outlet (gudang/lokasi jual) ────────────────────────────────────────────
 const OUTLETS = [
@@ -103,8 +103,8 @@ async function seedTables(c) {
   return count;
 }
 
-async function seedDemoUser(c, scope) {
-  const hash = await bcrypt.hash(DEMO_PASSWORD, 10);
+async function seedDemoUser(c, scope, password) {
+  const hash = await bcrypt.hash(password, 10);
   const userMeta = JSON.stringify({ full_name: "Demo Dusun Bambu", role: "admin" });
   const appMeta = JSON.stringify({ role: "admin", provider: "email" });
   const existing = await c.query(`SELECT id FROM auth.users WHERE lower(email) = lower($1)`, [DEMO_EMAIL]);
@@ -149,6 +149,8 @@ async function main() {
   if (!url) { console.error("ERROR: Set MIGRATE_DATABASE_URL / DATABASE_URL"); process.exit(1); }
   try { assertLocalTarget(url, "MIGRATE_DATABASE_URL"); } catch (err) { console.error(err.message); process.exit(1); }
 
+  const password = seedPassword("DUSUN_BAMBU_PASSWORD");
+
   const c = new Client({ connectionString: url, ssl: sslForUrl(url) });
   await c.connect();
   try {
@@ -165,8 +167,8 @@ async function main() {
     const tables = await seedTables(c);
     console.log(`✓ Meja & saung POS: ${tables} (Purbasari lesehan, sarang Lutung Kasarung, Burangrang)`);
 
-    const demoUser = await seedDemoUser(c, scope);
-    console.log(`✓ User demo: ${DEMO_EMAIL} / ${DEMO_PASSWORD} (role admin, scope cabang ${BRANCH_NAME})`);
+    const demoUser = await seedDemoUser(c, scope, password);
+    console.log(`✓ User demo: ${DEMO_EMAIL}, password ${passwordSource("DUSUN_BAMBU_PASSWORD")} (role admin, scope cabang ${BRANCH_NAME})`);
 
     await c.query("COMMIT");
     console.log(`\nSelesai bagian 1. User demo id ${demoUser}.`);

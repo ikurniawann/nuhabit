@@ -8,6 +8,12 @@ include:
 # job redeclared locally with the included one (local wins per key, rest of
 # the job -- stage/image/script/rules/needs -- comes from the include), so
 # redeclaring just `variables:` here is enough; no need to copy the whole job.
+#
+# Runtime env: the image no longer contains a .env (see the build script
+# below). The compose service on the deploy host must load the runtime env
+# itself, e.g. `env_file: /etc/arkiv/<channel>.env` (mode 600) holding the
+# same content as RUNTIME_CONFIG_CONTENT. Without it the container stops at
+# boot with "Konfigurasi env server tidak valid" (src/lib/env.ts).
 deploy-development:
   variables: {COMPOSE_SERVICE_NAME: "arkiv"}
 
@@ -53,18 +59,25 @@ rollback-production:
       until docker info >/dev/null 2>&1; do sleep 1; done
     fi
   - echo "$REGISTRY_DEPLOY_TOKEN" | docker login -u "$REGISTRY_DEPLOY_USER" --password-stdin "$DOCKER_REGISTRY_PUSH"
+  # RUNTIME_CONFIG_CONTENT goes to `next build` as a BuildKit secret, written
+  # OUTSIDE the build context. It used to be written to ./.env, which COPY . .
+  # put into a builder layer (exported to the registry by --cache-to mode=max)
+  # and Next's standalone output copied into the pushed image. The image now
+  # carries no .env*: the deploy host must hand the same content to the
+  # container at run time (docker run --env-file, or env_file: for the compose
+  # service). See .gitlab/deploy-docker.sh.
   - |
-    if [ -f package.json ]; then
-      if [ -z "${RUNTIME_CONFIG_CONTENT:-}" ]; then
-        echo "ERROR: RUNTIME_CONFIG_CONTENT is empty (required for Node/Next.js builds)"
-        exit 1
-      fi
-      printf %s "$RUNTIME_CONFIG_CONTENT" > .env
+    if [ -z "${RUNTIME_CONFIG_CONTENT:-}" ]; then
+      echo "ERROR: RUNTIME_CONFIG_CONTENT is empty (required for Node/Next.js builds)"
+      exit 1
     fi
-  - |
+    BUILD_ENV_FILE="$(mktemp)"
+    printf '%s\n' "$RUNTIME_CONFIG_CONTENT" > "$BUILD_ENV_FILE"
+    trap 'rm -f "$BUILD_ENV_FILE"' EXIT
     if docker buildx inspect cibuilder >/dev/null 2>&1; then
       echo "cibuilder available on this runner -- building with registry cache export (all stages, mode=max)."
       docker buildx build --builder cibuilder \
+        --secret "id=dotenv,src=$BUILD_ENV_FILE" \
         --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE_PUSH:buildcache-$CHANNEL,mode=max" \
         --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE_PUSH:buildcache-$CHANNEL" \
         -t "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG" \
@@ -72,7 +85,8 @@ rollback-production:
         --push .
     else
       echo "cibuilder not available on this runner -- falling back to the ci-cd-template default (no registry cache)."
-      docker build --cache-from "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" -t "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG" -t "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" .
+      DOCKER_BUILDKIT=1 docker build --secret "id=dotenv,src=$BUILD_ENV_FILE" \
+        --cache-from "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" -t "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG" -t "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" .
       docker push "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG"
       docker push "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL"
     fi

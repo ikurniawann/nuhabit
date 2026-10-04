@@ -6,8 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 export async function GET(request: NextRequest) {
+  const guard = await requireIamGuard(IAM.hrisInsights);
+  if (guard.error) return guard.error;
   try {
     const db = await createServerPgClient();
     const searchParams = request.nextUrl.searchParams;

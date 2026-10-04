@@ -21,3 +21,28 @@ describe("buildTopupReceiptEscPosBytes", () => {
     expect(text).toContain("Balance");
   });
 });
+
+describe("buildTopupReceiptHtml", () => {
+  it("escapes member-controlled values so they cannot inject markup", async () => {
+    const { buildTopupReceiptHtml } = await import("@/features/pos/topup/print-topup-receipt");
+    const html = buildTopupReceiptHtml(
+      {
+        customerName: `<img src=x onerror="alert(1)">`,
+        phone: "<script>alert(2)</script>",
+        amount: 50000,
+        arkAmountLabel: "50 ARK",
+        paymentMethod: "cash",
+        balanceBeforeLabel: "10 ARK",
+        balanceAfterLabel: "60 ARK",
+        amountLabel: "Rp 50.000",
+        cardId: `"><b>`,
+      },
+      "4/10/2026"
+    );
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain(`"><b>`);
+    expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+    expect(html).toContain("CASH");
+  });
+});

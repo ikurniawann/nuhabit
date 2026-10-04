@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readPrivateFile } from "@/lib/storage-private";
 import { getWorkforceActor } from "@/lib/hris/workforce-auth";
+import { safeSegmentsUnder } from "@/lib/security/safe-path";
 
 export async function GET(
   _req: NextRequest,
@@ -17,9 +18,9 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { path: segments } = await params;
-  // Batasi ke folder announcements/ saja
-  if (segments[0] !== "announcements" || segments.length < 2) {
+  // Batasi ke folder announcements/ saja; segmen ".." / "%2F" ditolak
+  const segments = safeSegmentsUnder((await params).path, "announcements");
+  if (!segments) {
     return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
   }
   const relPath = segments.join("/");

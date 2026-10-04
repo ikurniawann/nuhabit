@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 import { buyPackageWithArk, startQrisPurchase } from "@/lib/gym/credit-payments-server";
@@ -21,7 +22,7 @@ export const POST = withMemberSession("Gagal membeli paket", async (customerId, 
   const { package_id: packageId, method } = parsed.data;
   const blocked = await rejectIfArkCoinDisabled(method === "ark_coin");
   if (blocked) return blocked;
-  const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || request.nextUrl.origin;
+  const origin = appOrigin(request);
   try {
     return memberJson(
       method === "ark_coin"

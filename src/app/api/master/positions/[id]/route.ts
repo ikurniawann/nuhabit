@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 interface RouteParams { params: Promise<{ id: string }> }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const guard = await requireIamGuard(IAM.hrisMaster);
+  if (guard.error) return guard.error;
   const db = createPgClient();
   const { id } = await params;
   const body = await request.json();
@@ -31,6 +35,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function DELETE(_: NextRequest, { params }: RouteParams) {
+  const guard = await requireIamGuard(IAM.hrisMaster);
+  if (guard.error) return guard.error;
   const db = createPgClient();
   const { id } = await params;
 

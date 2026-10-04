@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiUser, ApiError } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/auth";
+import { requireEmployeeAccess } from "@/lib/hris/employee-access";
 import { query, queryOne } from "@/lib/db";
 
 /**
@@ -16,11 +17,11 @@ interface RouteParams {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireApiUser();
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID karyawan tidak valid" }, { status: 400 });
     }
+    await requireEmployeeAccess(id);
 
     const employee = await queryOne<{
       id: string;

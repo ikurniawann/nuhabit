@@ -31,17 +31,16 @@ const {
   HOLDING_CODE, COMPANY_CODE, BRANCH_CODE, COMPANY_NAME, BRANCH_NAME,
   sslForUrl, resolveDatabaseUrl, ensureScope,
 } = require("./lib/apparel-scope");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 
 const DEMO_EMAIL = process.env.SULU_APPAREL_EMAIL || "demo@suluapparel.id";
-const DEMO_PASSWORD = process.env.SULU_APPAREL_PASSWORD || "suluapparel";
 // Akun pemilik Sulu Apparel: role `admin` (222/223 menu — hanya tanpa
 // Notifikasi WA milik owner holding), business_scope `company` sehingga
 // melihat seluruh cabang SULU-APPAREL tetapi bukan SULU (F&B) / DUSUN-BAMBU.
 // Sengaja BUKAN role `super_admin`: role itu selalu unscoped (lihat
-// src/lib/api/scope.ts → isUnscoped). Default password mengikuti pola
-// database/seeders/super-admin.js; hanya berlaku di database lokal.
+// src/lib/api/scope.ts → isUnscoped). Password dari env atau acak
+// (lib/seed-password.js); hanya berlaku di database lokal.
 const OWNER_EMAIL = process.env.SULU_APPAREL_OWNER_EMAIL || "apparel@arkivworld.com";
-const OWNER_PASSWORD = process.env.SULU_APPAREL_OWNER_PASSWORD || "Arkiv2026*#";
 
 // ── Departemen HRIS (kode harus unik global — lihat hris.departments) ──────
 const DEPARTMENTS = [
@@ -104,20 +103,20 @@ async function upsertAdminUser(c, scope, { email, password, fullName, businessSc
   return userId;
 }
 
-function seedDemoUser(c, scope) {
+function seedDemoUser(c, scope, password) {
   return upsertAdminUser(c, scope, {
     email: DEMO_EMAIL,
-    password: DEMO_PASSWORD,
+    password,
     fullName: "Demo Sulu Apparel",
     businessScope: "branch",
     branchId: scope.branch_id,
   });
 }
 
-function seedOwnerUser(c, scope) {
+function seedOwnerUser(c, scope, password) {
   return upsertAdminUser(c, scope, {
     email: OWNER_EMAIL,
-    password: OWNER_PASSWORD,
+    password,
     fullName: "Admin Sulu Apparel",
     businessScope: "company",
     branchId: scope.branch_id, // cabang default; scope company tetap melihat semua cabang
@@ -133,6 +132,9 @@ async function main() {
     process.exit(1);
   }
 
+  const demoPassword = seedPassword("SULU_APPAREL_PASSWORD");
+  const ownerPassword = seedPassword("SULU_APPAREL_OWNER_PASSWORD");
+
   const c = new Client({ connectionString: url, ssl: sslForUrl(url) });
   await c.connect();
   try {
@@ -144,10 +146,10 @@ async function main() {
     const deptAdded = await seedDepartments(c);
     console.log(`✓ Departemen: ${DEPARTMENTS.length} dicek, ${deptAdded} baru ditambahkan`);
 
-    const demoUser = await seedDemoUser(c, scope);
-    console.log(`✓ User demo: ${DEMO_EMAIL} / ${DEMO_PASSWORD} (role admin, scope cabang ${BRANCH_NAME})`);
-    const ownerUser = await seedOwnerUser(c, scope);
-    console.log(`✓ User pemilik: ${OWNER_EMAIL} (role admin, scope company ${COMPANY_CODE}; password: default seeder / SULU_APPAREL_OWNER_PASSWORD) id ${ownerUser}`);
+    const demoUser = await seedDemoUser(c, scope, demoPassword);
+    console.log(`✓ User demo: ${DEMO_EMAIL}, password ${passwordSource("SULU_APPAREL_PASSWORD")} (role admin, scope cabang ${BRANCH_NAME})`);
+    const ownerUser = await seedOwnerUser(c, scope, ownerPassword);
+    console.log(`✓ User pemilik: ${OWNER_EMAIL}, password ${passwordSource("SULU_APPAREL_OWNER_PASSWORD")} (role admin, scope company ${COMPANY_CODE}) id ${ownerUser}`);
 
     await c.query("COMMIT");
     console.log(`\nSelesai bagian 1. User demo id ${demoUser}.`);

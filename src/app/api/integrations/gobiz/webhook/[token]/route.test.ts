@@ -108,13 +108,19 @@ describe("X-Go-Signature (Relay secret)", () => {
     expect(processGofoodEvent).toHaveBeenCalled();
   });
 
-  it("mode pantau (default): tanda tangan salah tetap diproses (token path tetap wajib)", async () => {
+  it("secret terisi: tanda tangan salah ditolak walau flag enforce mati", async () => {
     loadGobizConfig.mockResolvedValue({ webhookToken: "secret-token", relaySecret: secret, enforceSignature: false });
+    const { status } = await post("secret-token", sampleEvent, { "x-go-signature": "deadbeef" });
+    expect(status).toBe(401);
+    expect((await post("secret-token", sampleEvent)).status).toBe(401);
+    expect(recordGofoodEvent).not.toHaveBeenCalled();
+  });
+
+  it("secret kosong: hanya token path yang menjaga, event diproses", async () => {
+    loadGobizConfig.mockResolvedValue({ webhookToken: "secret-token", relaySecret: "" });
     recordGofoodEvent.mockResolvedValue("row-1");
     processGofoodEvent.mockResolvedValue("processed");
-    const { status } = await post("secret-token", sampleEvent, { "x-go-signature": "deadbeef" });
-    expect(status).toBe(200);
-    expect(processGofoodEvent).toHaveBeenCalled();
+    expect((await post("secret-token", sampleEvent)).status).toBe(200);
     expect((await post("salah", sampleEvent, { "x-go-signature": await sign(sampleEvent) })).status).toBe(401);
   });
 });

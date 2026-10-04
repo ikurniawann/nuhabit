@@ -2,19 +2,26 @@
 // API Route: Employee Documents
 // GET: List documents for an employee
 // POST: Add document record (after file upload to storage)
+//
+// Keamanan: GET boleh pengelola karyawan atau karyawan pemilik dokumen;
+// POST khusus menu kepegawaian (sama dengan DELETE/PATCH di [doc_id]).
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireEmployeeAccess } from "@/lib/hris/employee-access";
+import { IAM } from "@/lib/iam/prefixes";
 
 export async function GET(request: NextRequest) {
   try {
-    const db = await createServerPgClient();
     const employee_id = request.nextUrl.searchParams.get('employee_id');
 
     if (!employee_id) {
       return NextResponse.json({ error: 'employee_id diperlukan' }, { status: 400 });
     }
+    await requireEmployeeAccess(employee_id);
+    const db = await createServerPgClient();
 
     const { data, error } = await db
       .from('employee_documents')
@@ -29,6 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ data: data || [] });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in documents API:', error);
     return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }
@@ -36,6 +44,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const db = await createServerPgClient();
     const body = await request.json();
 
@@ -71,6 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data, message: 'Dokumen berhasil disimpan' }, { status: 201 });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in documents POST:', error);
     return NextResponse.json({ error: 'Terjadi kesalahan pada server' }, { status: 500 });
   }

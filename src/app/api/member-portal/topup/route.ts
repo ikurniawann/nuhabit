@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { rejectIfArkCoinDisabled } from "@/lib/crm/loyalty-features-server";
 import { memberError, memberJson, withMemberSession } from "@/lib/member-portal/route";
@@ -25,7 +26,7 @@ export const POST = withMemberSession("Gagal membuat top-up", async (customerId,
   if (blocked) return blocked;
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return memberError(parsed.error.issues[0]?.message ?? "Data tidak valid");
-  const origin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || request.nextUrl.origin;
+  const origin = appOrigin(request);
   try {
     const topup = await createMemberTopup({
       customerId,

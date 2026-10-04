@@ -21,7 +21,7 @@ const HR_EXPORT_ROLES = ['super_admin', 'hrd'] as const;
  */
 export async function GET(request: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisWorkforce);
     const db = await createServerPgClient();
     
     // Get query params

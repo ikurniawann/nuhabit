@@ -5,6 +5,8 @@
 // halaman status booking sendiri supaya alur bisa diuji end-to-end
 // sebelum key tersedia.
 
+import { safeEqual } from "@/lib/security/compare";
+
 const XENDIT_INVOICE_URL = "https://api.xendit.co/v2/invoices";
 const INVOICE_EXPIRY_HOURS = 2;
 
@@ -187,7 +189,5 @@ export async function createQrisCode(input: {
 
 /** Verifikasi callback webhook Xendit via header x-callback-token. */
 export function isValidWebhookToken(headerToken: string | null): boolean {
-  const expected = process.env.XENDIT_WEBHOOK_TOKEN;
-  if (!expected) return false;
-  return headerToken === expected;
+  return safeEqual(headerToken, process.env.XENDIT_WEBHOOK_TOKEN);
 }

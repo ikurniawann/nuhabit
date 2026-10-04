@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+
+const READERS = [...IAM.hris, ...IAM.settingsUsers];
 
 export async function GET() {
+  const guard = await requireIamGuard(READERS);
+  if (guard.error) return guard.error;
   const db = createPgClient();
   const { data, error } = await db
     .from('employment_statuses')
@@ -12,6 +18,8 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireIamGuard(IAM.hrisMaster);
+  if (guard.error) return guard.error;
   const db = createPgClient();
   const body = await request.json();
   const { code, name, color = 'gray', description, is_active = true } = body;

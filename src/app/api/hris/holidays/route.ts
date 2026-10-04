@@ -125,7 +125,7 @@ export function defaultDeductsLeave(type: HolidayType): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const body = (await req.json()) as HolidayBody;
 
     const invalid = validateHolidayBody(body);

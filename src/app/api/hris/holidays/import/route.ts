@@ -58,7 +58,7 @@ interface PreviewRow extends HolidayCandidate {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
 
     const yearParam = req.nextUrl.searchParams.get("year");
     const year = yearParam && YEAR_RE.test(yearParam)
@@ -141,7 +141,7 @@ function validateItem(item: ImportItem): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const body = (await req.json()) as { items?: ImportItem[] };
     const items = body.items ?? [];
 

@@ -44,6 +44,7 @@ import {
   sendOwnerNotification,
 } from "./notifications-sender";
 import type { WaNotifConfig } from "./notifications-config";
+import { appOrigin } from "@/lib/app-origin";
 
 const CHECK_INTERVAL_MS = 5 * 60_000;
 // Jam layak-ganggu utk notifikasi ambang (non-kritis) — jam tenang ditahan.
@@ -392,7 +393,7 @@ async function maybeSendPassExpiring(): Promise<void> {
   );
   if (rows.length === 0) return;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = appOrigin();
   let sent = 0;
   for (const r of rows) {
     const dedupKey = `${r.id}:${r.valid_until}`;

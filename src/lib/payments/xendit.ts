@@ -1,4 +1,5 @@
 import { createPgClient } from "@/lib/pg/create-client";
+import { safeEqual } from "@/lib/security/compare";
 import type { DbClient } from "@/lib/pg/types";
 import type { PaymentGatewayRow } from "@/lib/configuration/payment-gateways";
 
@@ -233,20 +234,31 @@ export async function getXenditQrPayments(
 }
 
 export function extractXenditWebhookToken(request: Request): string | null {
-  return (
-    request.headers.get("x-callback-token") ||
-    request.headers.get("X-CALLBACK-TOKEN") ||
-    null
-  );
+  return request.headers.get("x-callback-token");
 }
 
+/**
+ * Token callback wajib cocok dengan webhook_secret gateway. Belum
+ * dikonfigurasi = semua callback ditolak (fail closed); pelunasan tetap
+ * berjalan lewat polling kasir / rekonsiliasi yang bertanya ke API Xendit.
+ */
 export function verifyXenditWebhookToken(
   incoming: string | null,
   expected: string | null
 ): boolean {
-  if (!expected) return true; // not configured → allow (dev flexibility)
-  if (!incoming) return false;
-  return incoming.trim() === expected.trim();
+  return safeEqual(incoming?.trim(), expected?.trim());
+}
+
+/**
+ * Cek silang nominal callback dengan catatan pending kita. Token bocor saja
+ * tidak boleh cukup untuk menandai lunas; callback tanpa nominal ditolak.
+ * Toleransi < 1 rupiah untuk pembulatan.
+ */
+export function xenditAmountMatches(expected: unknown, received: unknown): boolean {
+  const want = Math.round(Number(expected));
+  const got = Math.round(Number(received));
+  if (!Number.isFinite(want) || !Number.isFinite(got) || want <= 0 || got <= 0) return false;
+  return want === got;
 }
 
 export function parseXenditQrWebhook(body: Record<string, unknown>) {

@@ -19,7 +19,7 @@ interface RouteParams {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID shift tidak valid" }, { status: 400 });
@@ -78,7 +78,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID shift tidak valid" }, { status: 400 });

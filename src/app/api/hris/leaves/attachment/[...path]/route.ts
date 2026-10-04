@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readPrivateFile } from "@/lib/storage-private";
 import { getWorkforceActor } from "@/lib/hris/workforce-auth";
+import { safeSegmentsUnder } from "@/lib/security/safe-path";
 
 /**
  * GET /api/hris/leaves/attachment/leave-attachments/<employeeId>/<file> —
@@ -16,8 +17,8 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { path: segments } = await params;
-  if (segments[0] !== "leave-attachments" || segments.length < 3) {
+  const segments = safeSegmentsUnder((await params).path, "leave-attachments", 3);
+  if (!segments) {
     return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
   }
   if (!actor.isHr && actor.employeeId !== segments[1]) {

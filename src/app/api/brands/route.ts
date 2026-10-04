@@ -1,8 +1,12 @@
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 // GET /api/brands
 export async function GET() {
+  const guard = await requireIamGuard(IAM.hris);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
 
   const { data, error, count } = await db
@@ -19,6 +23,8 @@ export async function GET() {
 
 // POST /api/brands
 export async function POST(request: Request) {
+  const guard = await requireIamGuard(IAM.settingsBusiness);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const body = await request.json();
 

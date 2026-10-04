@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { appOrigin } from "@/lib/app-origin";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from "@/lib/api/auth";
 import { awardCrmXpForTopup } from "@/lib/crm/loyalty-engine";
@@ -36,10 +37,7 @@ function resolvePaymentMethod(raw: unknown): "cash" | "qris" | "credit" | "foc" 
 
 function resolveWebhookCallbackUrl(request: NextRequest, configured: string | null) {
   if (configured) return configured;
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    request.nextUrl.origin;
-  return `${origin}/api/payments/xendit/webhook`;
+  return `${appOrigin(request)}/api/payments/xendit/webhook`;
 }
 
 // GET /api/pos/topup — riwayat wallet member (topup / bayar / refund / bonus).

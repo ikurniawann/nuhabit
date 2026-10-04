@@ -3,14 +3,33 @@ import { uploadFile } from "@/lib/storage";
 import { Resend } from "resend";
 import { createPgClient } from "@/lib/pg/create-client";
 import type { CandidateSource } from "@/types";
+import { appOrigin } from "@/lib/app-origin";
+import { checkRateLimit } from "@/lib/public/rate-limit";
+import { clientIp } from "@/lib/security/client-ip";
+import {
+  candidateConfirmationHtml,
+  emailSubject,
+  hrdNotificationHtml,
+  type ApplicationEmailData,
+} from "./emails";
 
 const FROM_EMAIL = process.env.FROM_EMAIL ?? "noreply@aapextechnology.com";
+
+/** Form karir publik: rem spam per IP (lihat model kepercayaan di client-ip). */
+const SUBMIT_LIMIT = { limit: 5, windowMs: 10 * 60_000 };
+const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 
 function getAdminDb() {
   return createPgClient();
 }
 
 export async function POST(request: NextRequest) {
+  if (!checkRateLimit(`portal-submit:${clientIp(request)}`, SUBMIT_LIMIT)) {
+    return NextResponse.json(
+      { error: "Terlalu banyak lamaran dari jaringan ini. Coba lagi beberapa menit lagi." },
+      { status: 429 }
+    );
+  }
   try {
     const formData = await request.formData();
 
@@ -35,6 +54,9 @@ export async function POST(request: NextRequest) {
     // --- Basic validation ---
     if (!full_name || !email || !phone || !domicile || !source) {
       return NextResponse.json({ error: "Field wajib belum lengkap" }, { status: 400 });
+    }
+    if (!EMAIL_RE.test(email) || email.length > 255) {
+      return NextResponse.json({ error: "Format email tidak valid" }, { status: 400 });
     }
 
     // --- Photo is required ---
@@ -121,8 +143,22 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      return NextResponse.json({ error: "Gagal simpan lamaran: " + insertError.message }, { status: 500 });
+      console.error("Portal submit insert error:", insertError);
+      return NextResponse.json({ error: "Gagal simpan lamaran" }, { status: 500 });
     }
+
+    const emailData: ApplicationEmailData = {
+      candidateId: candidate.id,
+      fullName: full_name,
+      email,
+      phone,
+      domicile,
+      source,
+      notes,
+      positionTitle,
+      brandName,
+      origin: appOrigin(request),
+    };
 
     // --- Send confirmation email to candidate ---
     if (process.env.RESEND_API_KEY) {
@@ -132,15 +168,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: email,
           subject: "Lamaran Kamu Sudah Kami Terima",
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a1a1a;">Terima Kasih, ${full_name}!</h2>
-              <p style="color: #555;">Lamaran kamu untuk posisi <strong>${positionTitle}</strong> di <strong>${brandName}</strong> sudah kami terima.</p>
-              <p style="color: #555;">Tim HRD akan menghubungi kamu melalui WhatsApp atau email dalam 1-3 hari kerja.</p>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="color: #888; font-size: 12px;">Pesan ini dikirim otomatis. Mohon tidak membalas email ini.</p>
-            </div>
-          `,
+          html: candidateConfirmationHtml(emailData),
         });
       } catch (emailError) {
         console.error("Candidate email error:", emailError);
@@ -155,48 +183,8 @@ export async function POST(request: NextRequest) {
         await resend.emails.send({
           from: FROM_EMAIL,
           to: HRD_EMAIL,
-          subject: `[Talent Pool] Lamaran Baru — ${full_name} untuk ${positionTitle}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a1a1a;">Lamaran Baru Masuk</h2>
-              <table style="width: 100%; border-collapse: collapse; margin-top: 16px;">
-                <tr>
-                  <td style="padding: 8px 0; color: #555; width: 140px;">Nama</td>
-                  <td style="padding: 8px 0; font-weight: 600; color: #1a1a1a;">${full_name}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">Email</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;"><a href="mailto:${email}">${email}</a></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">No. WhatsApp</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;"><a href="https://wa.me/${phone.replace(/\D/g, "")}">${phone}</a></td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">Domisili</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;">${domicile}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">Posisi</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;">${positionTitle}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">Outlet</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;">${brandName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #555;">Sumber</td>
-                  <td style="padding: 8px 0; color: #1a1a1a;">${source}</td>
-                </tr>
-                ${notes ? `<tr><td style="padding: 8px 0; color: #555;">Catatan</td><td style="padding: 8px 0; color: #1a1a1a;">${notes}</td></tr>` : ""}
-              </table>
-              <div style="margin-top: 24px;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://arkiv-os.vercel.app"}/dashboard/candidates/${candidate.id}" style="background: #2563eb; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 600;">Lihat di Dashboard</a>
-              </div>
-              <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="color: #888; font-size: 12px;">Pesan ini dikirim otomatis dari sistem Talent Pool.</p>
-            </div>
-          `,
+          subject: emailSubject(`[Talent Pool] Lamaran Baru: ${full_name} untuk ${positionTitle}`),
+          html: hrdNotificationHtml(emailData),
         });
       } catch (emailError) {
         console.error("HRD email error:", emailError);
@@ -210,7 +198,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("Portal submit error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "Terjadi kesalahan: " + message }, { status: 500 });
+    return NextResponse.json({ error: "Terjadi kesalahan, coba lagi" }, { status: 500 });
   }
 }

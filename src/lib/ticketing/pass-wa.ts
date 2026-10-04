@@ -2,6 +2,7 @@
 // tidak menggagalkan webhook (pemanggil memutus sendiri). Meniru booking-wa.
 
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
+import { appOrigin } from "@/lib/app-origin";
 
 export interface PaidPassWaInput {
   pass_code: string;
@@ -20,7 +21,7 @@ export async function sendPassPaidWa(
     console.error("[pass] WA gateway belum dikonfigurasi — QR tidak terkirim");
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const baseUrl = appOrigin();
   const statusUrl = `${baseUrl}/pass/status/${pass.access_token}`;
   const message =
     `*Season Pass aktif* ✅\n\n` +

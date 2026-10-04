@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { QRCodeCanvas, QRCodeSVG } from "qrcode.react";
 import { Check, Copy, Download, ExternalLink, Printer } from "lucide-react";
+import { appOrigin } from "@/lib/app-origin";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,9 +39,7 @@ export function TableQrDialog({
   const canvasHost = useRef<HTMLDivElement>(null);
   const svgHost = useRef<HTMLDivElement>(null);
 
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+  const origin = appOrigin() || (typeof window !== "undefined" ? window.location.origin : "");
   const url = useMemo(() => (table ? tableOrderUrl(table, origin) : ""), [table, origin]);
   const label = table?.name || table?.table_number || "";
 

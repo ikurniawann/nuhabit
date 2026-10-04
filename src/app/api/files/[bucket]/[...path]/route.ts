@@ -3,6 +3,10 @@ import fs from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import { NextResponse } from "next/server";
+import { getApiUser } from "@/lib/api/auth";
+import { getMemberSession } from "@/lib/member-portal/session";
+import { isWithinPrefix, safeSegments } from "@/lib/security/safe-path";
+import { bucketAccess } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -43,11 +47,26 @@ function parseRange(header: string | null, size: number): { start: number; end: 
 }
 
 /**
- * Penyaji file upload. URL bersifat capability (nama file mengandung
- * komponen acak dari uploadFile) — akses anonim ke URL persis diizinkan
- * karena dipakai lintas konteks sesi (dashboard, portal member, halaman
- * publik). Yang WAJIB: containment path (hasil security review — dulunya
- * bisa traversal keluar storage/uploads) dan nosniff.
+ * Boleh membaca file ini? Bucket publik terbuka; foto member hanya untuk
+ * pemiliknya (sesi member) atau staf; sisanya wajib sesi staf.
+ */
+async function canRead(bucket: string, segments: string[]): Promise<boolean> {
+  const access = bucketAccess(bucket);
+  if (access === "public") return true;
+  if (access === "member-owned") {
+    const member = await getMemberSession().catch(() => null);
+    if (member && segments.length > 1 && segments[0] === member.customerId) return true;
+  }
+  return Boolean(await getApiUser().catch(() => null));
+}
+
+/**
+ * Penyaji file upload. Bucket publik (lihat bucketAccess di lib/storage)
+ * disajikan anonim karena dipakai lintas konteks (dashboard, portal member,
+ * halaman publik); bucket sensitif (CV/foto kandidat, foto member) wajib
+ * sesi dan dikirim dengan Cache-Control private. Yang WAJIB untuk semua:
+ * containment path (hasil security review — dulunya bisa traversal keluar
+ * storage/uploads) dan nosniff.
  *
  * File di-STREAM (bukan dibaca penuh ke RAM) dan mendukung Range request,
  * supaya file besar / banyak request bersamaan tidak menggelembungkan memori
@@ -59,38 +78,37 @@ export async function GET(
 ) {
   try {
     const { bucket, path: segments } = await params;
-    const rel = segments.map(decodeURIComponent).join("/");
+    // Segmen ditolak bila kosong, ".", "..", dotfile, atau memuat / \ NUL
+    // setelah decode; hasil resolve tetap harus di dalam UPLOAD_ROOT.
+    const safeBucket = safeSegments([bucket]);
+    const safe = safeSegments(segments);
+    if (!safeBucket || !safe) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
+    const abs = path.resolve(UPLOAD_ROOT, safeBucket[0], ...safe);
+    if (!isWithinPrefix(abs, UPLOAD_ROOT)) {
+      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    }
 
-    // Containment: hasil resolve HARUS tetap di dalam UPLOAD_ROOT
-    const abs = path.resolve(UPLOAD_ROOT, bucket, rel);
-    if (!abs.startsWith(UPLOAD_ROOT + path.sep)) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
+    if (!(await canRead(safeBucket[0], safe))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    // Tolak segmen mencurigakan (dotfiles / traversal sisa decode)
-    if (
-      bucket.includes("..") ||
-      bucket.includes("/") ||
-      bucket.includes("\\") ||
-      segments.some((s) => {
-        const decoded = decodeURIComponent(s);
-        return decoded.includes("..") || decoded.startsWith(".");
-      })
-    ) {
-      return NextResponse.json({ error: "File not found" }, { status: 404 });
-    }
+    const isPublic = bucketAccess(safeBucket[0]) === "public";
 
     const stat = await fs.stat(abs);
     if (!stat.isFile()) {
       return NextResponse.json({ error: "File not found" }, { status: 404 });
     }
 
-    const ext = path.extname(rel).slice(1).toLowerCase();
+    const ext = path.extname(abs).slice(1).toLowerCase();
     const type = CONTENT_TYPES[ext];
     const baseHeaders: Record<string, string> = {
       "Content-Type": type ?? "application/octet-stream",
       ...(type ? {} : { "Content-Disposition": "attachment" }),
       "X-Content-Type-Options": "nosniff",
-      "Cache-Control": "public, max-age=86400",
+      // File sensitif tidak boleh disimpan cache bersama (CDN/proxy).
+      "Cache-Control": isPublic ? "public, max-age=86400" : "private, max-age=300",
+      ...(isPublic ? {} : { Vary: "Cookie, Authorization" }),
       "Accept-Ranges": "bytes",
     };
 

@@ -2,11 +2,27 @@
 // API Route: Employees
 // GET: List employees dengan filter & pagination
 // POST: Create new employee
+//
+// Keamanan: GET hanya untuk pembaca direktori karyawan dan hanya kolom
+// non-pribadi (tanpa KTP, NPWP, rekening, BPJS, alamat, kontak darurat);
+// record lengkap lewat GET /api/hris/employees/[id]. POST khusus pengelola.
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import {
+  EMPLOYEE_DIRECTORY_READERS,
+  EMPLOYEE_RECORD_MANAGERS,
+} from "@/lib/hris/employee-access";
 import { Employee, EmployeeCreateData, ApiResponse, PaginatedResponse } from '@/types/hris';
+
+const DIRECTORY_COLUMNS = `id, user_id, full_name, nip, email, phone, photo_url,
+  join_date, end_date, employment_status, is_active, is_access_app,
+  department_id, section_id, job_title_id, reporting_to, created_at, updated_at`;
+
+const SORTABLE = new Set(['full_name', 'nip', 'email', 'join_date', 'employment_status', 'created_at']);
+const MAX_LIMIT = 500;
 
 // ============================================================
 // GET /api/hris/employees
@@ -15,25 +31,29 @@ import { Employee, EmployeeCreateData, ApiResponse, PaginatedResponse } from '@/
 
 export async function GET(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(EMPLOYEE_DIRECTORY_READERS);
     const db = createPgClient();
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
-    const search = searchParams.get('search');
+    // Koma/kurung memecah ekspresi .or(), jadi dibuang supaya search tidak
+    // bisa menyisipkan filter ke kolom lain.
+    const search = searchParams.get('search')?.replace(/[,()]/g, ' ').trim();
     const department_id = searchParams.get('department_id');
     const section_id = searchParams.get('section_id');
     const employment_status = searchParams.get('employment_status');
     const is_active = searchParams.get('is_active');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const sort_by = searchParams.get('sort_by') || 'full_name';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, parseInt(searchParams.get('limit') || '20') || 20));
+    const requestedSort = searchParams.get('sort_by') || 'full_name';
+    const sort_by = SORTABLE.has(requestedSort) ? requestedSort : 'full_name';
     const sort_order = searchParams.get('sort_order') || 'asc';
 
     // Build query
     let query = db
       .from('employees')
       .select(`
-        *,
+        ${DIRECTORY_COLUMNS},
         department:departments (
           id,
           name,
@@ -95,7 +115,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching employees:', error);
       return NextResponse.json(
-        { error: 'Gagal mengambil data karyawan', details: error.message, hint: error.hint, code: error.code },
+        { error: 'Gagal mengambil data karyawan' },
         { status: 500 }
       );
     }
@@ -108,9 +128,10 @@ export async function GET(request: NextRequest) {
     } as PaginatedResponse<Employee>);
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in employees API:', error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan pada server', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Terjadi kesalahan pada server' },
       { status: 500 }
     );
   }
@@ -123,6 +144,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(EMPLOYEE_RECORD_MANAGERS);
     const db = createPgClient();
     const body: EmployeeCreateData = await request.json();
 
@@ -284,9 +306,10 @@ export async function POST(request: NextRequest) {
     } as ApiResponse<Employee>);
 
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in employees POST API:', error);
     return NextResponse.json(
-      { error: 'Terjadi kesalahan pada server', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Terjadi kesalahan pada server' },
       { status: 500 }
     );
   }

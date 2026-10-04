@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
 import { readPrivateFile } from "@/lib/storage-private";
+import { safeSegmentsUnder } from "@/lib/security/safe-path";
 
 /**
  * GET /api/psikotes/files/[...path] — sajikan berkas PRIVATE psikotes
  * (gambar tes proyektif & snapshot proctoring) khusus role HR.
  * Berbeda dgn /api/files yang publik: route ini ber-auth dan menolak
- * path traversal (di readPrivateFile).
+ * path traversal (safeSegmentsUnder + readPrivateFile).
  */
-
-const READ_ROLES = ["super_admin", "admin", "hrd", "hiring_manager"] as const;
 
 export async function GET(
   _req: NextRequest,
@@ -18,11 +17,11 @@ export async function GET(
 ) {
   try {
     await requireIamMenuPrefix(IAM.hrisRecruitment);
-    const { path: segments } = await params;
-    const rel = segments.map(decodeURIComponent).join("/");
-    if (!rel.startsWith("psikotes/")) {
+    const segments = safeSegmentsUnder((await params).path, "psikotes");
+    if (!segments) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
     }
+    const rel = segments.join("/");
     const { data, mime } = await readPrivateFile(rel);
     if (!data) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });

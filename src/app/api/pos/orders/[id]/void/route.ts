@@ -3,7 +3,10 @@ import { createPgClient } from "@/lib/pg/create-client";
 import { getPosSession } from '@/lib/api/auth';
 import { withTransaction } from '@/lib/db';
 import { restoreMerchandiseStockForOrder } from '@/lib/pos/merchandise-stock';
-import { findSupervisorByPin } from '@/lib/pos/supervisor-pin';
+import {
+  approveOrderWithSupervisorPin,
+  supervisorPinLockedMessage,
+} from '@/lib/pos/supervisor-pin-server';
 import {
   canVoidOrderStatus,
   isPaidPosOrder,
@@ -74,33 +77,29 @@ export async function POST(
 
     const db = createPgClient();
 
-    // 1. Validate supervisor PIN — pos_pin kini hash bcrypt (UI kelola PIN),
-    //    nilai plaintext lama tetap diterima sampai di-reset dari UI.
-    const { data: supervisorRows } = await db
-      .from('users')
-      .select('id, full_name, role, pos_pin')
-      .eq('role', 'pos_supervisor');
-    const supervisor = await findSupervisorByPin(
-      supervisorRows ?? [],
-      String(supervisor_pin)
-    );
-
-    if (!supervisor) {
-      return Response.json({ success: false, error: 'PIN supervisor tidak valid' }, { status: 403 });
-    }
-
-    // 2. Fetch order
-    const { data: order, error: orderErr } = await db
+    // 1. Muat order dulu, lalu PIN dicek HANYA terhadap supervisor yang
+    //    scope-nya mencakup order itu. Order hilang / di luar scope kasir
+    //    dijawab sama dengan PIN salah, dan percobaan dibatasi (DB).
+    const { data: order } = await db
       .from('pos_orders')
       .select(
         'id, status, payment_status, payment_method, order_number, total_amount, customer_id, company_id, branch_id, checkout_id, ark_coins_used'
       )
       .eq('id', orderId)
-      .single();
+      .maybeSingle();
 
-    if (orderErr || !order) {
-      return Response.json({ success: false, error: 'Order not found' }, { status: 404 });
+    const approval = await approveOrderWithSupervisorPin({
+      callerId: sessionUserId,
+      orderId,
+      order: (order as VoidOrderRow | null) ?? null,
+      pin: String(supervisor_pin),
+    });
+    if (!approval.ok) {
+      return approval.reason === 'locked'
+        ? Response.json({ success: false, error: supervisorPinLockedMessage(approval.retryMinutes) }, { status: 429 })
+        : Response.json({ success: false, error: 'PIN supervisor tidak valid' }, { status: 403 });
     }
+    const supervisor = approval.supervisor;
 
     const source = order as VoidOrderRow;
     if (!canVoidOrderStatus(source.status)) {
@@ -284,7 +283,7 @@ export async function POST(
             orderNumber: String(source.order_number ?? orderId.slice(0, 8)),
             total,
             reason: voidReason,
-            supervisorName: supervisor.full_name ?? 'supervisor',
+            supervisorName: supervisor.name,
           }),
           config,
         });

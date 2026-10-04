@@ -3,6 +3,7 @@
 // stok + reservasi TTL, invoice Xendit → redirect.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { appOrigin } from '@/lib/app-origin';
 import { z } from 'zod';
 import { checkRateLimit, clientIpFrom } from '@/lib/public/rate-limit';
 import { createPgClient } from '@/lib/pg/create-client';
@@ -117,8 +118,7 @@ export async function POST(
     }
     const markup = Number(settings.markup_amount) || 0;
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+    const baseUrl = appOrigin(request);
 
     const result = await processShopCheckout({
       storefront,

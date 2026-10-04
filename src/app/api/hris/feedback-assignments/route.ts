@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+import { feedbackAssignmentSchema, oneOrMany } from "@/lib/hris/feedback-schemas";
+
+// Modul 360 feedback belum punya UI; semua handler khusus pengelola kinerja.
 
 export async function GET(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const db = createPgClient();
     const searchParams = request.nextUrl.searchParams;
     const cycleId = searchParams.get('cycle_id');
@@ -41,6 +47,7 @@ export async function GET(request: NextRequest) {
       pagination: { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit) },
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error fetching feedback assignments:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -48,15 +55,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const authClient = await createServerPgClient();
     const { data: { user } } = await authClient.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const db = createPgClient();
-    const body = await request.json();
-
     // Support bulk insert for assigning multiple reviewers
-    const insertData = Array.isArray(body) ? body : [body];
+    const parsed = oneOrMany(feedbackAssignmentSchema).safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Data tidak valid', details: parsed.error.issues }, { status: 400 });
+    }
+    const insertData = Array.isArray(parsed.data) ? parsed.data : [parsed.data];
 
     const { data, error } = await db
       .from('feedback_assignments')
@@ -72,6 +82,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error creating feedback assignment:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

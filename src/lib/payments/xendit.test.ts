@@ -4,18 +4,35 @@ import {
   isXenditQrPaid,
   parseXenditQrWebhook,
   verifyXenditWebhookToken,
+  xenditAmountMatches,
 } from "./xendit";
 
 describe("verifyXenditWebhookToken", () => {
-  it("allows when expected token is empty", () => {
-    expect(verifyXenditWebhookToken(null, null)).toBe(true);
-    expect(verifyXenditWebhookToken("abc", null)).toBe(true);
+  it("menolak semua callback bila token belum dikonfigurasi (fail closed)", () => {
+    expect(verifyXenditWebhookToken(null, null)).toBe(false);
+    expect(verifyXenditWebhookToken("abc", null)).toBe(false);
+    expect(verifyXenditWebhookToken("", "")).toBe(false);
   });
 
   it("requires match when configured", () => {
     expect(verifyXenditWebhookToken("tok", "tok")).toBe(true);
+    expect(verifyXenditWebhookToken(" tok ", "tok")).toBe(true);
     expect(verifyXenditWebhookToken("wrong", "tok")).toBe(false);
     expect(verifyXenditWebhookToken(null, "tok")).toBe(false);
+  });
+});
+
+describe("xenditAmountMatches", () => {
+  it("nominal sama (toleransi pembulatan) diterima", () => {
+    expect(xenditAmountMatches("50000.00", 50000)).toBe(true);
+    expect(xenditAmountMatches(50000.4, 50000)).toBe(true);
+  });
+
+  it("nominal beda atau callback tanpa nominal ditolak", () => {
+    expect(xenditAmountMatches(50000, 1000)).toBe(false);
+    expect(xenditAmountMatches(50000, 0)).toBe(false);
+    expect(xenditAmountMatches(null, 50000)).toBe(false);
+    expect(xenditAmountMatches("abc", 50000)).toBe(false);
   });
 });
 

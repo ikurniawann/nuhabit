@@ -1,26 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPool } from "@/lib/db";
 import { isDevBypassActive } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
-import { findMemberByPhone, issueOtp } from "@/lib/member-portal/otp-store";
+import { issueOtp, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal/otp-store";
 
 /**
  * POST /api/member-portal/register/otp { phone } — langkah pertama daftar
- * mandiri: kirim OTP WhatsApp ke nomor yang BELUM terdaftar. Nomor yang sudah
- * member diarahkan ke Masuk. Rate limit sama dengan login (3 / 10 menit).
+ * mandiri: kirim OTP WhatsApp. Jawabannya SAMA untuk nomor member maupun
+ * bukan (tidak membocorkan siapa yang sudah member); pemilik nomor yang
+ * sudah terdaftar baru diberi tahu di /register setelah kodenya terbukti.
+ * Rate limit sama dengan login (3 / 10 menit / nomor) plus rem per-IP.
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!memberIpAllowed("otp", request)) {
+      return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error }, { status: TOO_MANY_FROM_IP.status });
+    }
     const body = await request.json().catch(() => ({}));
     const phone = normalizePhoneDigits(body.phone);
     if (!phone) {
       return NextResponse.json({ success: false, error: "Nomor WhatsApp tidak valid" }, { status: 400 });
-    }
-    if (await findMemberByPhone(getPool(), phone)) {
-      return NextResponse.json(
-        { success: false, error: "Nomor ini sudah terdaftar. Silakan masuk.", code: "already_registered" },
-        { status: 409 }
-      );
     }
 
     // Dev lokal: tidak perlu kode, jadi tidak perlu membebani rate limit.

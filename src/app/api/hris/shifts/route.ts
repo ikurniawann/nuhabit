@@ -74,7 +74,7 @@ function validateShiftBody(body: ShiftBody): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const body = (await req.json()) as ShiftBody;
 
     const invalid = validateShiftBody(body);

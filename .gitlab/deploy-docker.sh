@@ -42,16 +42,39 @@ require_var CONTAINER_NAME
 require_var HOST_PORT
 require_var DATABASE_NAME
 require_var STORAGE_DIR
-require_var NEXT_PUBLIC_APP_URL
-require_var NEXT_PUBLIC_BASE_URL
 require_var DB_PASS_URLENCODED
+
+# Env runtime + build (NEXT_PUBLIC_*, kunci integrasi) dari CI variable
+# RUNTIME_CONFIG_CONTENT, ditulis ke file di host di LUAR checkout dengan mode
+# 600. Image tidak pernah memuat .env: build menerimanya sebagai BuildKit
+# secret, container lewat --env-file. Tanpa RUNTIME_CONFIG_CONTENT, file yang
+# sudah ada dipakai ulang (mis. diisi manual oleh admin).
+ENV_FILE="${ENV_FILE:-$HOME/.config/arkiv/${CONTAINER_NAME}.env}"
+if [ -n "${RUNTIME_CONFIG_CONTENT:-}" ]; then
+  mkdir -p "$(dirname "$ENV_FILE")"
+  # --env-file Docker tidak memahami `export` maupun kutip seperti dotenv:
+  # buang prefix export dan satu lapis kutip pembungkus nilai.
+  (umask 077 && printf '%s\n' "$RUNTIME_CONFIG_CONTENT" | sed -E \
+    -e 's/^[[:space:]]*export[[:space:]]+//' \
+    -e 's/^([A-Za-z_][A-Za-z0-9_]*)="(.*)"[[:space:]]*$/\1=\2/' \
+    -e "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'[[:space:]]*\$/\1=\2/" \
+    > "$ENV_FILE")
+  chmod 600 "$ENV_FILE"
+fi
+if [ ! -f "$ENV_FILE" ]; then
+  echo "File env tidak ditemukan: $ENV_FILE (set RUNTIME_CONFIG_CONTENT atau ENV_FILE)" >&2
+  exit 1
+fi
 
 if [ -w /etc/gai.conf ] && ! grep -q 'precedence :ffff:0:0/96' /etc/gai.conf; then
   echo 'precedence :ffff:0:0/96  100' >> /etc/gai.conf
 fi
 
-DOCKER_BUILDKIT=0 docker pull node:22-alpine || true
-DOCKER_BUILDKIT=0 docker build --network=host -t "$DOCKER_IMAGE:latest" .
+# Dockerfile memakai RUN --mount (cache + secret), jadi wajib BuildKit.
+docker pull node:22-alpine || true
+DOCKER_BUILDKIT=1 docker build --network=host \
+  --secret "id=dotenv,src=${ENV_FILE}" \
+  -t "$DOCKER_IMAGE:latest" .
 
 docker stop "$CONTAINER_NAME" || true
 docker rm "$CONTAINER_NAME" || true
@@ -73,17 +96,18 @@ if [ ! -d "$STORAGE_DIR" ]; then
   exit 1
 fi
 
+# NEXT_PUBLIC_* sudah di-inline saat build, jadi tidak diteruskan lagi lewat
+# -e. DATABASE_URL di bawah menimpa nilai yang sama di ENV_FILE (bila ada).
 docker run -d \
   --name "$CONTAINER_NAME" \
   --restart unless-stopped \
   -p "${BIND_ADDRESS}:${HOST_PORT}:${CONTAINER_PORT}" \
   --add-host host.docker.internal:host-gateway \
   -v "${STORAGE_DIR}:/app/storage" \
+  --env-file "$ENV_FILE" \
   -e DATABASE_URL="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}" \
   -e MIGRATE_DATABASE_URL="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}" \
   -e NODE_ENV=production \
-  -e NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
-  -e NEXT_PUBLIC_BASE_URL="$NEXT_PUBLIC_BASE_URL" \
   "$DOCKER_IMAGE:latest"
 
 for attempt in $(seq 1 30); do

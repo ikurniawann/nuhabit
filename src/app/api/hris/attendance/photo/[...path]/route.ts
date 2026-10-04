@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readPrivateFile } from "@/lib/storage-private";
 import { getWorkforceActor } from "@/lib/hris/workforce-auth";
+import { safeSegmentsUnder } from "@/lib/security/safe-path";
 
 /**
  * GET /api/hris/attendance/photo/attendance/<employeeId>/<file> — sajikan
@@ -16,11 +17,11 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { path: segments } = await params;
-  const relPath = segments.join("/");
-  if (segments[0] !== "attendance" || segments.length < 3) {
+  const segments = safeSegmentsUnder((await params).path, "attendance", 3);
+  if (!segments) {
     return NextResponse.json({ error: "Path tidak valid" }, { status: 400 });
   }
+  const relPath = segments.join("/");
   const ownerEmployeeId = segments[1];
   if (!actor.isHr && actor.employeeId !== ownerEmployeeId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

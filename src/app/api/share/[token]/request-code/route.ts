@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { clientIp } from "@/lib/security/client-ip";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail } from "@/lib/dataroom/config";
-import { clientIp, resolveShareContext } from "@/lib/dataroom/api";
+import { resolveShareContext } from "@/lib/dataroom/api";
 import { isEmailAllowed, issueEmailCode, logShareAccess } from "@/lib/dataroom/shares";
 import { sendShareCode } from "@/lib/dataroom/mail";
 
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (ctx.share.access_type !== "email") {
     return NextResponse.json({ success: false, error: "Link ini tidak memerlukan verifikasi email" }, { status: 400 });
   }
-  const ip = clientIp(request) ?? "unknown";
+  const ip = clientIp(request);
   if (!checkRateLimit(`dataroom-code:${token}:${ip}`, 5).allowed) {
     return NextResponse.json({ success: false, error: "Terlalu banyak permintaan. Coba lagi sebentar." }, { status: 429 });
   }

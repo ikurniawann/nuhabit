@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerPgClient } from "@/lib/pg/create-client";
+import { ApiError } from "@/lib/api/auth";
+import { EMPLOYEE_RECORD_MANAGERS, requireEmployeeAccess } from "@/lib/hris/employee-access";
+import { IAM } from "@/lib/iam/prefixes";
 import { z } from 'zod';
 
 // Validation schema for resignation
@@ -20,8 +23,10 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const db = await createServerPgClient();
     const { employee_id } = await params;
+    // Pengelola karyawan / rekrutmen, atau karyawan itu sendiri
+    await requireEmployeeAccess(employee_id, [...EMPLOYEE_RECORD_MANAGERS, ...IAM.hrisRecruitment]);
+    const db = await createServerPgClient();
 
     // Get offboarding checklist
     const { data, error } = await db
@@ -61,6 +66,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       data: data || [],
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in offboarding GET:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

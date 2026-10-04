@@ -5,7 +5,8 @@
  * - Hapus auth.users kecuali keep-list
  * - Wipe data operasional HRIS + employees
  * - Upsert departments / positions dari sheet Master Data
- * - Insert karyawan + akun app (login = email Excel, password default suluin123*)
+ * - Insert karyawan + akun app (login = email Excel, password HRIS_SEED_PASSWORD;
+ *   kosong = satu password acak untuk semua akun, dicetak sekali)
  * - Role by jabatan: Cashier→pos; Head Bar/SPV/Captain/CDP/Demi→pos_supervisor; else→employee
  *
  * Safety: default hanya Postgres lokal (localhost / 127.0.0.1).
@@ -33,6 +34,7 @@ const {
   isLocalDatabaseUrl,
   parseHost,
 } = require("../scripts/pg-utils");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 
 const ROOT = path.join(__dirname, "..", "..");
 const DEFAULT_XLSX = path.join(
@@ -45,7 +47,6 @@ const KEEP_EMAILS = [
   "agus@wit.id",
   "agussugiman@gmail.com",
 ];
-const DEFAULT_PASSWORD = process.env.HRIS_SEED_PASSWORD || "suluin123*";
 const HOLDING_CODE = "PROLOGE";
 const COMPANY_CODE = "SULU";
 const BRANCH_CODE = "SULU-DAGO";
@@ -710,7 +711,9 @@ async function main() {
   });
   console.log(`Target: ${host}/${dbName}${isRemote ? " (remote)" : " (local)"}`);
   console.log(`Master Data rows: ${master.length}`);
-  console.log(`Password default: ${DEFAULT_PASSWORD}`);
+  console.log(
+    `Password akun: ${process.env.HRIS_SEED_PASSWORD ? "dari HRIS_SEED_PASSWORD" : "acak, dicetak saat apply"}`
+  );
   console.log(`Keep emails: ${KEEP_EMAILS.join(", ")}`);
   if (dryRun) {
     console.log("\n— DRY RUN — sample mapping:");
@@ -771,7 +774,7 @@ async function main() {
     }
     console.log(`Departments upserted: ${deptIds.size}, positions: ${positionIds.size}`);
 
-    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+    const passwordHash = await bcrypt.hash(seedPassword("HRIS_SEED_PASSWORD"), 10);
     const created = [];
 
     for (const row of master) {
@@ -843,7 +846,7 @@ async function main() {
     `);
     console.log("\nSelesai.");
     console.log("Counts:", counts.rows[0]);
-    console.log(`Login sample: ${created[0]?.email} / ${DEFAULT_PASSWORD}`);
+    console.log(`Login sample: ${created[0]?.email} (password ${passwordSource("HRIS_SEED_PASSWORD")})`);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     console.error("Gagal:", err.message);

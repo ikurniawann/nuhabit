@@ -1,8 +1,12 @@
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 // GET /api/positions
 export async function GET(request: Request) {
+  const guard = await requireIamGuard(IAM.hris);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { searchParams } = new URL(request.url);
 
@@ -25,6 +29,8 @@ export async function GET(request: Request) {
 
 // POST /api/positions
 export async function POST(request: Request) {
+  const guard = await requireIamGuard(IAM.hrisMaster);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const body = await request.json();
 

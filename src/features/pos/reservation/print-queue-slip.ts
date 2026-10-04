@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { canUseRawBtPrint, printBytesViaRawBt } from "@/lib/pos/rawbt-print";
 import { encodeEscPosLines, RECEIPT_DIVIDER } from "@/lib/pos/thermal-escpos";
 import { printBytesToPairedThermal } from "@/lib/pos/thermal-serial";
+import { escapeHtml } from "@/lib/security/escape-html";
 
 export type QueueSlipPayload = {
   queueLabel: string;
@@ -35,12 +36,13 @@ export function buildQueueSlipEscPosBytes(payload: QueueSlipPayload): Uint8Array
   return encodeEscPosLines(lines);
 }
 
-function buildQueueSlipHtml(payload: QueueSlipPayload): string {
+/** HTML slip untuk jendela print; nama tamu dll. di-escape. */
+export function buildQueueSlipHtml(payload: QueueSlipPayload): string {
   return `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Antrian ${payload.queueLabel}</title>
+    <title>Antrian ${escapeHtml(payload.queueLabel)}</title>
     <style>
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family:'Courier New',monospace; font-size:13px; padding:8px; }
@@ -53,14 +55,14 @@ function buildQueueSlipHtml(payload: QueueSlipPayload): string {
   <body>
     <div class="ticket">
       <div style="font-weight:bold">NOMOR ANTRIAN</div>
-      ${payload.merchantName ? `<div>${payload.merchantName}</div>` : ""}
+      ${payload.merchantName ? `<div>${escapeHtml(payload.merchantName)}</div>` : ""}
       <div class="divider"></div>
-      <div class="num">${payload.queueLabel}</div>
+      <div class="num">${escapeHtml(payload.queueLabel)}</div>
       <div class="divider"></div>
-      <div style="font-weight:bold">${payload.guestName}</div>
-      <div>${payload.paxCount} orang</div>
-      <div>${payload.dateLabel} · ${payload.timeLabel}</div>
-      ${payload.tableLabel ? `<div>Meja ${payload.tableLabel}</div>` : ""}
+      <div style="font-weight:bold">${escapeHtml(payload.guestName)}</div>
+      <div>${escapeHtml(payload.paxCount)} orang</div>
+      <div>${escapeHtml(payload.dateLabel)} · ${escapeHtml(payload.timeLabel)}</div>
+      ${payload.tableLabel ? `<div>Meja ${escapeHtml(payload.tableLabel)}</div>` : ""}
       <div class="divider"></div>
       <div>Tunjukkan nomor ini saat dipanggil</div>
     </div>

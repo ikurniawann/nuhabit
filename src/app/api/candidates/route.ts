@@ -3,9 +3,13 @@ import { NextResponse } from "next/server";
 import { candidateSchema, candidateFilterSchema } from "@/lib/validations/candidate";
 import { createApiErrorResponse, RateLimitError } from "@/lib/errors/api-errors";
 import { checkRateLimit, getRateLimitHeaders } from "@/lib/rate-limit";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 // GET /api/candidates - List candidates with pagination
 export async function GET(request: Request) {
+  const guard = await requireIamGuard(IAM.hrisRecruitment);
+  if (guard.error) return guard.error;
   try {
     const db = await createServerPgClient();
     
@@ -100,6 +104,8 @@ export async function GET(request: Request) {
 
 // POST /api/candidates - Create candidate with validation
 export async function POST(request: Request) {
+  const guard = await requireIamGuard(IAM.hrisRecruitment);
+  if (guard.error) return guard.error;
   try {
     const db = await createServerPgClient();
     

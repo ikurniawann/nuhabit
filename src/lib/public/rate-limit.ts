@@ -37,19 +37,8 @@ export function checkRateLimit(key: string, rule: RateLimitRule): boolean {
   return true;
 }
 
-/**
- * IP klien utk kunci rate limit. `cf-connecting-ip` dulu — di-set edge
- * Cloudflare (cloudflared), tidak bisa dipalsukan klien; x-forwarded-for
- * hanya fallback (bisa disuplai klien → jangan jadi satu-satunya kunci).
- * Pola sama dgn /api/offer/session/[token]/respond.
- */
-export function clientIpFrom(headers: Headers): string {
-  const cfIp = headers.get("cf-connecting-ip");
-  if (cfIp) return cfIp.trim();
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return headers.get("x-real-ip") ?? "unknown";
-}
+/** IP klien utk kunci rate limit. Model kepercayaan: lihat lib/security/client-ip. */
+export { clientIpFromHeaders as clientIpFrom } from "@/lib/security/client-ip";
 
 /** Reset semua bucket — khusus test. */
 export function resetRateLimits(): void {

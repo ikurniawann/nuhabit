@@ -18,7 +18,7 @@ const ROLES = ["super_admin", "admin", "hrd"] as const;
 
 export async function GET(req: NextRequest) {
   try {
-    await requireIamMenuPrefix(IAM.hris);
+    await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const params = parseContractListParams(req.nextUrl.searchParams);
 
     const where: string[] = [];

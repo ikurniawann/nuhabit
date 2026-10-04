@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createPgClient } from "@/lib/pg/create-client";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+import { feedbackCategorySchema } from "@/lib/hris/feedback-schemas";
+
+// Modul 360 feedback belum punya UI; semua handler khusus pengelola kinerja.
 
 export async function GET() {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const db = createPgClient();
 
     const { data, error } = await db
@@ -18,6 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ data: data || [] });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error fetching feedback categories:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -25,12 +32,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireIamMenuPrefix(IAM.hrisPerformanceAdmin);
     const db = createPgClient();
-    const body = await request.json();
+    const parsed = feedbackCategorySchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Data tidak valid', details: parsed.error.issues }, { status: 400 });
+    }
 
     const { data, error } = await db
       .from('feedback_categories')
-      .insert(body)
+      .insert(parsed.data)
       .select()
       .single();
 
@@ -38,6 +49,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error creating feedback category:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

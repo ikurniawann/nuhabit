@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import path from "path";
 
@@ -30,6 +31,37 @@ function safeExtension(file: File | Buffer): string {
   return /^[a-z0-9]{1,5}$/i.test(raw) ? raw.toLowerCase() : "bin";
 }
 
+/** 128 bit acak (CSPRNG): nama file tidak bisa ditebak dari waktu upload. */
+export function randomFileToken(): string {
+  return randomBytes(16).toString("hex");
+}
+
+/**
+ * Siapa yang boleh membaca bucket lewat /api/files:
+ * - public: aset yang memang tampil ke pengunjung/member (gambar produk &
+ *   tiket, QRIS statis, wallpaper desktop, gambar pengumuman & artwork CRM).
+ * - member-owned: foto profil member; member hanya membaca foldernya sendiri
+ *   (member-photos/<customerId>/...), staf membaca semua.
+ * - staff: selain itu, termasuk CV & foto kandidat (cv, photos, candidates)
+ *   dan bucket yang belum dikenal (default tertutup).
+ */
+export type BucketAccess = "public" | "member-owned" | "staff";
+
+const PUBLIC_BUCKETS = new Set([
+  "products",
+  "ticketing",
+  "payment-qris",
+  "desktop-wallpapers",
+  "crm-announcements",
+  "crm-avatars",
+]);
+
+export function bucketAccess(bucket: string): BucketAccess {
+  if (PUBLIC_BUCKETS.has(bucket)) return "public";
+  if (bucket === "member-photos") return "member-owned";
+  return "staff";
+}
+
 /**
  * Upload file ke storage lokal (filesystem / object storage).
  * File disimpan di storage/uploads/{bucket}/...
@@ -41,12 +73,8 @@ export async function uploadFile(
 ): Promise<{ url: string; error: string | null }> {
   try {
     const fileBuffer = file instanceof File ? Buffer.from(await file.arrayBuffer()) : file;
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    const ext = safeExtension(file);
-    const fileName = folder
-      ? `${folder}/${timestamp}-${random}.${ext}`
-      : `${timestamp}-${random}.${ext}`;
+    const baseName = `${Date.now()}-${randomFileToken()}.${safeExtension(file)}`;
+    const fileName = folder ? `${folder}/${baseName}` : baseName;
 
     const dir = path.join(UPLOAD_ROOT, bucket);
     const absPath = path.join(dir, fileName);

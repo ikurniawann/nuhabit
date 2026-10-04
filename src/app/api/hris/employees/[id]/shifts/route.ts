@@ -15,7 +15,7 @@ async function authorizeShiftManager(
   targetEmployeeId: string
 ): Promise<{ actorName: string } | NextResponse> {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix([...IAM.hrisKepegawaian, ...IAM.hrisWorkforce]);
     return { actorName: user.full_name };
   } catch (err) {
     if (!(err instanceof ApiError)) throw err;

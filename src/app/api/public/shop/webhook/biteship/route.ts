@@ -1,14 +1,17 @@
 // EPIC-039 Fase E — webhook tracking Biteship (order.status / waybill).
-// Biteship tidak menandatangani payload; amankan dengan token rahasia di
-// query (?token=BITESHIP_WEBHOOK_TOKEN) yang didaftarkan bersama URL
-// webhook di dashboard Biteship. Tanpa env token → webhook ditolak (503)
-// supaya tidak pernah terbuka tanpa sengaja.
+// Biteship tidak menandatangani payload; amankan dengan token rahasia
+// BITESHIP_WEBHOOK_TOKEN. Token dibaca dari header `x-webhook-token` atau
+// `Authorization: Bearer <token>`; query `?token=` tetap diterima untuk URL
+// yang sudah terdaftar di dashboard Biteship (token di query ikut tercatat
+// di log akses, jadi header lebih disukai). Tanpa env token → webhook
+// ditolak (503) supaya tidak pernah terbuka tanpa sengaja.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { query, queryOne } from '@/lib/db';
 import { checkRateLimit, clientIpFrom } from '@/lib/public/rate-limit';
 import { sendShopOrderShippedWa } from '@/lib/shop/shop-wa';
+import { safeEqual } from '@/lib/security/compare';
 
 const payloadSchema = z.object({
   event: z.string().optional(),
@@ -32,6 +35,14 @@ const STATUS_MAP: Record<string, string> = {
   cancelled: 'cancelled',
 };
 
+function biteshipToken(request: NextRequest): string | null {
+  return (
+    request.headers.get('x-webhook-token') ||
+    /^Bearer\s+(\S+)$/i.exec(request.headers.get('authorization') ?? '')?.[1] ||
+    request.nextUrl.searchParams.get('token')
+  );
+}
+
 export async function POST(request: NextRequest) {
   const ip = clientIpFrom(request.headers);
   if (!checkRateLimit(`biteship-webhook:${ip}`, { limit: 120, windowMs: 60_000 })) {
@@ -45,7 +56,7 @@ export async function POST(request: NextRequest) {
       { status: 503 }
     );
   }
-  if (request.nextUrl.searchParams.get('token') !== expectedToken) {
+  if (!safeEqual(biteshipToken(request), expectedToken)) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 

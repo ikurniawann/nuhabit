@@ -1,5 +1,8 @@
 import type { Pool, PoolClient } from "pg";
 import { getPool } from "@/lib/db";
+import { checkRateLimit, type RateLimitRule } from "@/lib/public/rate-limit";
+import { clientIp } from "@/lib/security/client-ip";
+import { safeEqual } from "@/lib/security/compare";
 import { sendWhatsAppOtp } from "@/lib/whatsapp";
 import {
   generateOtpCode,
@@ -74,28 +77,59 @@ export async function issueOtp(phone: string): Promise<{ ok: true; waDelivered: 
 }
 
 /**
- * Periksa kode terbaru nomor ini lalu tandai terpakai. Kode salah menambah
- * hitungan percobaan; setelah 5 kali kode itu mati.
+ * Periksa kode terbaru nomor ini lalu tandai terpakai. Setiap percobaan
+ * menambah hitungan SECARA ATOMIK sebelum kode dibandingkan, jadi tebakan
+ * paralel tidak bisa melewati batas 5 percobaan per kode.
  */
 export async function consumeOtp(db: Db, phone: string, code: string): Promise<{ ok: true } | OtpFailure> {
+  const expired: OtpFailure = { ok: false, error: "Kode kedaluwarsa. Minta kode baru", status: 400 };
   const { rows } = await db.query(
-    `SELECT id, code_hash, attempts, expires_at, consumed_at
+    `SELECT id, code_hash, expires_at, consumed_at
        FROM crm.member_portal_otp
       WHERE phone = $1
       ORDER BY created_at DESC LIMIT 1`,
     [phone]
   );
   const otp = rows[0];
-  if (!otp || otp.consumed_at || new Date(otp.expires_at) < new Date()) {
-    return { ok: false, error: "Kode kedaluwarsa. Minta kode baru", status: 400 };
-  }
-  if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+  if (!otp || otp.consumed_at || new Date(otp.expires_at) < new Date()) return expired;
+
+  const { rows: claimed } = await db.query(
+    `UPDATE crm.member_portal_otp SET attempts = attempts + 1
+      WHERE id = $1 AND attempts < $2 AND consumed_at IS NULL
+      RETURNING id`,
+    [otp.id, OTP_MAX_ATTEMPTS]
+  );
+  if (claimed.length === 0) {
     return { ok: false, error: "Terlalu banyak percobaan. Minta kode baru", status: 429 };
   }
-  if (otp.code_hash !== hashSecret(code)) {
-    await db.query(`UPDATE crm.member_portal_otp SET attempts = attempts + 1 WHERE id = $1`, [otp.id]);
+  if (!safeEqual(otp.code_hash, hashSecret(code))) {
     return { ok: false, error: "Kode salah", status: 400 };
   }
-  await db.query(`UPDATE crm.member_portal_otp SET consumed_at = now() WHERE id = $1`, [otp.id]);
-  return { ok: true };
+  const { rows: consumed } = await db.query(
+    `UPDATE crm.member_portal_otp SET consumed_at = now()
+      WHERE id = $1 AND consumed_at IS NULL
+      RETURNING id`,
+    [otp.id]
+  );
+  return consumed.length > 0 ? { ok: true } : expired;
 }
+
+/**
+ * Rem per-IP (in-memory, sliding window) di atas batas per-nomor dan
+ * per-kode: menahan satu klien yang menebar permintaan ke banyak nomor.
+ * Longgar karena banyak member bisa berbagi satu IP Wi-Fi kafe.
+ */
+export const MEMBER_IP_LIMITS = {
+  otp: { limit: 30, windowMs: 10 * 60_000 },
+  verify: { limit: 60, windowMs: 10 * 60_000 },
+} satisfies Record<string, RateLimitRule>;
+
+export function memberIpAllowed(kind: keyof typeof MEMBER_IP_LIMITS, request: Request): boolean {
+  return checkRateLimit(`member-${kind}:${clientIp(request)}`, MEMBER_IP_LIMITS[kind]);
+}
+
+export const TOO_MANY_FROM_IP: OtpFailure = {
+  ok: false,
+  error: "Terlalu banyak permintaan dari jaringan ini. Coba lagi beberapa menit lagi",
+  status: 429,
+};

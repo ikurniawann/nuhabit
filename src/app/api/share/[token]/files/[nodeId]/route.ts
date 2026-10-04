@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clientIp, nodeWithinShare, resolveShareContext, serveNodeFile } from "@/lib/dataroom/api";
+import { clientIp } from "@/lib/security/client-ip";
+import { nodeWithinShare, resolveShareContext, serveNodeFile } from "@/lib/dataroom/api";
 import { logShareAccess } from "@/lib/dataroom/shares";
 import { buildWatermarkText } from "@/lib/dataroom/watermark";
 

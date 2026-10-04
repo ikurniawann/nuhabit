@@ -1,7 +1,12 @@
 import { NextRequest } from "next/server";
 import { getPool } from "@/lib/db";
 import { createPgClient } from "@/lib/pg/create-client";
-import { findSupervisorByPin } from "@/lib/pos/supervisor-pin";
+import {
+  approveOrderWithSupervisorPin,
+  isOrderInUserScope,
+  supervisorPinLockedMessage,
+  type OrderScopeRow,
+} from "@/lib/pos/supervisor-pin-server";
 import { getPosSession } from "@/lib/api/auth";
 import { canAppendTransferItems } from "@/lib/pos/table-sale-target";
 import {
@@ -75,46 +80,36 @@ export async function POST(
 
     const db = createPgClient();
 
-    if (supervisor_pin != null && String(supervisor_pin).trim() !== "") {
-      // pos_pin kini hash bcrypt (UI kelola PIN); plaintext lama tetap diterima.
-      const { data: supervisorRows } = await db
-        .from("users")
-        .select("id, full_name, role, pos_pin")
-        .eq("role", "pos_supervisor");
-      const supervisor = await findSupervisorByPin(
-        supervisorRows ?? [],
-        String(supervisor_pin)
-      );
+    const columns =
+      "id, order_number, status, payment_status, amount_paid, table_id, discount_amount, tax_amount, checkout_id, sold_from, company_id, branch_id";
+    const [{ data: sourceRow }, { data: targetRow }] = await Promise.all([
+      db.from("pos_orders").select(columns).eq("id", sourceOrderId).maybeSingle(),
+      db.from("pos_orders").select(columns).eq("id", target_order_id).maybeSingle(),
+    ]);
+    // Order di luar scope bisnis kasir diperlakukan sama dengan tidak ada.
+    const scoped = async (row: typeof sourceRow) =>
+      row && (await isOrderInUserScope(sessionUserId, row as OrderScopeRow)) ? row : null;
+    const [source, target] = await Promise.all([scoped(sourceRow), scoped(targetRow)]);
 
-      if (!supervisor) {
-        return Response.json(
-          { success: false, error: "Invalid supervisor PIN" },
-          { status: 403 }
-        );
+    // PIN opsional (UI merge tidak memintanya). Bila dikirim, PIN dicek
+    // terhadap supervisor yang mencakup order sumber, dengan batas percobaan;
+    // order hilang dijawab sama dengan PIN salah.
+    if (supervisor_pin != null && String(supervisor_pin).trim() !== "") {
+      const approval = await approveOrderWithSupervisorPin({
+        callerId: sessionUserId,
+        orderId: sourceOrderId,
+        order: source && target ? (source as OrderScopeRow) : null,
+        pin: String(supervisor_pin),
+      });
+      if (!approval.ok) {
+        return approval.reason === "locked"
+          ? Response.json({ success: false, error: supervisorPinLockedMessage(approval.retryMinutes) }, { status: 429 })
+          : Response.json({ success: false, error: "Invalid supervisor PIN" }, { status: 403 });
       }
     }
 
-    const { data: source, error: sourceErr } = await db
-      .from("pos_orders")
-      .select("id, order_number, status, payment_status, amount_paid, table_id, discount_amount, tax_amount, checkout_id, sold_from")
-      .eq("id", sourceOrderId)
-      .single();
-
-    const { data: target, error: targetErr } = await db
-      .from("pos_orders")
-      .select("id, order_number, status, payment_status, amount_paid, discount_amount, tax_amount, checkout_id, sold_from")
-      .eq("id", target_order_id)
-      .single();
-
-    if (sourceErr || targetErr || !source || !target) {
-      return Response.json(
-        {
-          success: false,
-          error:
-            errorMessage(sourceErr || targetErr, "Order not found"),
-        },
-        { status: 404 }
-      );
+    if (!source || !target) {
+      return Response.json({ success: false, error: "Order not found" }, { status: 404 });
     }
 
     const blockedStatuses = ["completed", "cancelled", "voided", "merged"];

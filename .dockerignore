@@ -1,13 +1,10 @@
 node_modules
 .git
 .next
-.env.local
-# .env is NOT ignored on purpose: the CI build job renders RUNTIME_CONFIG_CONTENT
-# into .env in the build context, and `next build` inlines NEXT_PUBLIC_* from it
-# into the client bundle. Ignoring it makes every NEXT_PUBLIC_* bake in EMPTY --
-# the build still succeeds, the app is just silently broken at runtime.
-# It never reaches the final image: the runner stage copies only .next, public,
-# package.json and node_modules.
+# Every env file stays out of the build context: anything COPY'd lands in a
+# layer (and in the registry build cache). The build gets its env as a BuildKit
+# secret instead (see the builder stage in the Dockerfile).
+.env*
 *.md
 Dockerfile
 .dockerignore

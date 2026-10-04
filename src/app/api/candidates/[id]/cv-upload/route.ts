@@ -1,6 +1,8 @@
 import { uploadFile, validateFile } from "@/lib/storage";
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextResponse } from "next/server";
+import { requireIamGuard } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
 
 const ALLOWED_EXTENSIONS = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
 
@@ -9,6 +11,8 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireIamGuard(IAM.hrisRecruitment);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { id: candidateId } = await params;
 
@@ -83,6 +87,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const guard = await requireIamGuard(IAM.hrisRecruitment);
+  if (guard.error) return guard.error;
   const db = await createServerPgClient();
   const { id: candidateId } = await params;
 

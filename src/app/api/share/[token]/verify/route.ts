@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { clientIp, resolveShareContext } from "@/lib/dataroom/api";
+import { isSecureRequest } from "@/lib/auth/secure-cookie";
+import { resolveShareContext } from "@/lib/dataroom/api";
 import {
-  isEmailAllowed, logShareAccess, pendingSteps, sessionCookieName, upsertSession,
-  verifyEmailCode, verifyPin,
+  isEmailAllowed, logShareAccess, pendingSteps, sessionCookieName, SHARE_PIN_POLICY, SHARE_PIN_SCOPE,
+  upsertSession, verifyEmailCode, verifyPin,
 } from "@/lib/dataroom/shares";
+import { clearFailures, findActiveLock, minutesUntil, recordFailure } from "@/lib/security/attempt-limit";
+import { clientIp } from "@/lib/security/client-ip";
 
 /**
  * POST /api/share/[token]/verify { email?, code?, pin? } — tukar kode email
@@ -16,7 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const ctx = await resolveShareContext(request, token);
   if (!ctx.ok) return NextResponse.json({ success: false, error: ctx.error }, { status: ctx.status });
   const { share, session, steps } = ctx;
-  const ip = clientIp(request) ?? "unknown";
+  const ip = clientIp(request);
   const ua = request.headers.get("user-agent");
   if (!checkRateLimit(`dataroom-verify:${token}:${ip}`, 10).allowed) {
     return NextResponse.json({ success: false, error: "Terlalu banyak percobaan. Coba lagi sebentar." }, { status: 429 });
@@ -50,21 +53,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       if (emailOk) {
         const s = await upsertSession({ existing: session, shareId: share.id, shareExpiresAt: share.expires_at, email, emailOk: true, ip, userAgent: ua });
         const res = NextResponse.json({ success: true, data: { steps: pendingSteps(share, s), verified: false } });
-        setCookie(res, share.token, s.session_token, s.expires_at);
+        setCookie(request, res, share.token, s.session_token, s.expires_at);
         return res;
       }
       return NextResponse.json({ success: false, error: "Masukkan PIN" }, { status: 400 });
     }
-    if (!(await verifyPin(pin, share.pin_hash as string))) {
-      await logShareAccess({ shareId: share.id, action: "pin_failed", email: email || null, ip, userAgent: ua });
+    // Penghitung gagal per link di DB: bertahan saat restart dan tidak bisa
+    // diakali dengan berganti IP.
+    const pinSubjects = [`share:${share.id}`];
+    const lock = await findActiveLock(SHARE_PIN_SCOPE, pinSubjects);
+    const pinValid = !lock && (await verifyPin(pin, share.pin_hash as string));
+    if (!pinValid) {
+      const lockedUntil = lock ?? (await recordFailure(SHARE_PIN_SCOPE, pinSubjects, SHARE_PIN_POLICY));
+      if (!lock) await logShareAccess({ shareId: share.id, action: "pin_failed", email: email || null, ip, userAgent: ua });
+      const error = lockedUntil
+        ? `Terlalu banyak percobaan PIN. Coba lagi dalam ${minutesUntil(lockedUntil, new Date())} menit.`
+        : "PIN salah";
+      const status = lockedUntil ? 429 : 400;
       if (emailOk) {
         const s = await upsertSession({ existing: session, shareId: share.id, shareExpiresAt: share.expires_at, email, emailOk: true, ip, userAgent: ua });
-        const res = NextResponse.json({ success: false, error: "PIN salah", data: { steps: pendingSteps(share, s) } }, { status: 400 });
-        setCookie(res, share.token, s.session_token, s.expires_at);
+        const res = NextResponse.json({ success: false, error, data: { steps: pendingSteps(share, s) } }, { status });
+        setCookie(request, res, share.token, s.session_token, s.expires_at);
         return res;
       }
-      return NextResponse.json({ success: false, error: "PIN salah" }, { status: 400 });
+      return NextResponse.json({ success: false, error }, { status });
     }
+    await clearFailures(SHARE_PIN_SCOPE, pinSubjects);
     pinOk = true;
   }
 
@@ -78,13 +92,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await logShareAccess({ shareId: share.id, action: "verified", email: s.email, ip, userAgent: ua });
   }
   const res = NextResponse.json({ success: true, data: { steps: nextSteps, verified } });
-  setCookie(res, share.token, s.session_token, s.expires_at);
+  setCookie(request, res, share.token, s.session_token, s.expires_at);
   return res;
 }
 
-function setCookie(res: NextResponse, shareToken: string, sessionToken: string, expiresAt: string) {
+function setCookie(request: NextRequest, res: NextResponse, shareToken: string, sessionToken: string, expiresAt: string) {
   res.cookies.set(sessionCookieName(shareToken), sessionToken, {
-    httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
+    httpOnly: true, sameSite: "lax", secure: isSecureRequest(request),
     path: "/", expires: new Date(expiresAt),
   });
 }

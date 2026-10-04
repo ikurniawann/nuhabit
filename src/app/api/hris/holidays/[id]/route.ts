@@ -24,7 +24,7 @@ interface RouteParams {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID libur tidak valid" }, { status: 400 });
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   try {
-    const user = await requireIamMenuPrefix(IAM.hris);
+    const user = await requireIamMenuPrefix(IAM.hrisKepegawaian);
     const { id } = await params;
     if (!UUID_RE.test(id)) {
       return NextResponse.json({ error: "ID libur tidak valid" }, { status: 400 });

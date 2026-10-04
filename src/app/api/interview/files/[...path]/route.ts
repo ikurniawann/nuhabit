@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
 import { readPrivateFile } from "@/lib/storage-private";
+import { safeSegmentsUnder } from "@/lib/security/safe-path";
 
 /**
  * GET /api/interview/files/[...path] — sajikan berkas PRIVATE interview AI
  * (rekaman jawaban, audio TTS, snapshot proctoring) khusus role HR.
- * Menolak path traversal (di readPrivateFile) dan path di luar interview/.
+ * Menolak path traversal (safeSegmentsUnder) dan path di luar interview/.
  */
-
-const READ_ROLES = ["super_admin", "admin", "hrd", "hiring_manager"] as const;
 
 export async function GET(
   _req: NextRequest,
@@ -17,11 +16,11 @@ export async function GET(
 ) {
   try {
     await requireIamMenuPrefix(IAM.hrisRecruitment);
-    const { path: segments } = await params;
-    const rel = segments.map(decodeURIComponent).join("/");
-    if (!rel.startsWith("interview/")) {
+    const segments = safeSegmentsUnder((await params).path, "interview");
+    if (!segments) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
     }
+    const rel = segments.join("/");
     const { data, mime } = await readPrivateFile(rel);
     if (!data) {
       return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });

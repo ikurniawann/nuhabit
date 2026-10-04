@@ -3,7 +3,7 @@
  * Seeder: Demo user cabang Sulu Bandung (branch-scoped, bukan super_admin).
  *
  *   Email   : demo@sulu.id
- *   Password: demo
+ *   Password: DEMO_SULU_PASSWORD, atau acak (dicetak sekali) bila kosong
  *   Role    : purchasing_admin (API / auth metadata)
  *   Menus   : sulu_bandung_demo (IAM sidebar — Items + POS, tanpa Finance/Accounting/Laporan)
  *   Scope   : Prologe → Sulu → Sulu Bandung
@@ -18,11 +18,11 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
 const { sslForUrl, assertLocalTarget } = require("../scripts/pg-utils");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 
 const ROOT = path.join(__dirname, "..", "..");
 
 const EMAIL = process.env.DEMO_SULU_EMAIL || "demo@sulu.id";
-const PASSWORD = process.env.DEMO_SULU_PASSWORD || "demo";
 const FULL_NAME = process.env.DEMO_SULU_NAME || "Demo Sulu Bandung";
 const NIP = process.env.DEMO_SULU_NIP || "DEMOSULU";
 const PHONE = process.env.DEMO_SULU_PHONE || "-";
@@ -91,6 +91,8 @@ async function main() {
     process.exit(1);
   }
 
+  const password = seedPassword("DEMO_SULU_PASSWORD");
+
   const c = new Client({ connectionString: url, ssl: sslForUrl(url) });
   await c.connect();
 
@@ -104,7 +106,7 @@ async function main() {
       );
     }
 
-    const hash = await bcrypt.hash(PASSWORD, 10);
+    const hash = await bcrypt.hash(password, 10);
     const userMeta = JSON.stringify({ role: PROFILE_ROLE, full_name: FULL_NAME });
     const appMeta = JSON.stringify({ role: PROFILE_ROLE });
 
@@ -213,7 +215,7 @@ async function main() {
     await c.query("COMMIT");
     console.log("\nDemo user siap:");
     console.log("  Email   :", EMAIL);
-    console.log("  Password:", PASSWORD);
+    console.log("  Password:", passwordSource("DEMO_SULU_PASSWORD"));
     console.log("  Role    :", PROFILE_ROLE, "(API)");
     console.log("  Menus   :", MENU_ROLE);
     console.log(

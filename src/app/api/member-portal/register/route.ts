@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { setMarketingConsent } from "@/lib/member-portal/consent";
 import { canBypassOtp } from "@/lib/member-portal/dev-bypass";
-import { consumeOtp, findMemberByPhone } from "@/lib/member-portal/otp-store";
+import { consumeOtp, findMemberByPhone, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal/otp-store";
 import { validateRegistration } from "@/lib/member-portal/register";
 import {
   createMemberSession,
@@ -31,18 +31,23 @@ export async function POST(request: NextRequest) {
     if (!devBypass && !/^\d{6}$/.test(code)) {
       return NextResponse.json({ success: false, error: "Kode harus 6 digit", field: "code" }, { status: 400 });
     }
+    if (!devBypass && !memberIpAllowed("verify", request)) {
+      return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error, field: "code" }, { status: TOO_MANY_FROM_IP.status });
+    }
 
     const result = await withTransaction(async (client) => {
       await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`member-register:${reg.phoneDigits}`]);
 
-      if (await findMemberByPhone(client, reg.phoneDigits)) {
-        return { ok: false as const, status: 409, error: "Nomor ini sudah terdaftar. Silakan masuk.", field: "phone" };
-      }
+      // Kode dulu, baru status member: tanpa kode yang sah, jawaban tidak
+      // boleh membedakan nomor member dari nomor baru.
       if (devBypass) {
         console.warn(`[member-portal] OTP dev bypass dipakai untuk daftar ${reg.phoneDigits}`);
       } else {
         const otp = await consumeOtp(client, reg.phoneDigits, code);
         if (!otp.ok) return { ...otp, field: "code" };
+      }
+      if (await findMemberByPhone(client, reg.phoneDigits)) {
+        return { ok: false as const, status: 409, error: "Nomor ini sudah terdaftar. Silakan masuk.", field: "phone" };
       }
 
       const { rows } = await client.query(

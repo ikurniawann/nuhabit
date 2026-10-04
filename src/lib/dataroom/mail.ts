@@ -1,12 +1,12 @@
 import { brandName } from "@/lib/branding";
 import { sendEmail } from "@/lib/resend";
+import { appOrigin } from "@/lib/app-origin";
 
 const FROM = process.env.DATAROOM_FROM_EMAIL ?? process.env.FROM_EMAIL ?? "Dataroom <onboarding@resend.dev>";
 const BRAND = brandName();
 
 export function shareUrl(token: string): string {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/+$/, "");
-  return `${base}/share/${token}`;
+  return `${appOrigin()}/share/${token}`;
 }
 
 function esc(s: string): string {

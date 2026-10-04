@@ -9,8 +9,8 @@
  *   - iam.user_roles        : assignment user -> role (primary)
  *   - hris.employees        : data karyawan, terhubung via user_id, is_access_app
  *
- * Default kredensial bisa di-override lewat env:
- *   SUPER_USER_EMAIL, SUPER_USER_PASSWORD, SUPER_USER_NAME
+ * Kredensial lewat env: SUPER_USER_EMAIL, SUPER_USER_PASSWORD, SUPER_USER_NAME.
+ * Tanpa SUPER_USER_PASSWORD, seeder membuat password acak dan mencetaknya sekali.
  *
  * Usage:
  *   node database/seeders/super-admin.js
@@ -22,6 +22,7 @@ const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
 const { sslForUrl, assertLocalTarget } = require("../scripts/pg-utils");
+const { seedPassword, passwordSource } = require("./lib/seed-password");
 
 const ROOT = path.join(__dirname, "..", "..");
 
@@ -46,12 +47,6 @@ function loadEnv() {
   }
 }
 
-const EMAIL = process.env.SUPER_USER_EMAIL || "super@arkivworld.com";
-const PASSWORD = process.env.SUPER_USER_PASSWORD || "Arkiv2026*#";
-const FULL_NAME = process.env.SUPER_USER_NAME || "Super Admin";
-const NIP = process.env.SUPER_USER_NIP || "SUPERADMIN";
-const PHONE = process.env.SUPER_USER_PHONE || "-";
-
 async function main() {
   loadEnv();
   const url = process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL;
@@ -65,6 +60,13 @@ async function main() {
     console.error(err.message);
     process.exit(1);
   }
+
+  // Dibaca setelah loadEnv() supaya nilai di .env / .env.local ikut terpakai.
+  const EMAIL = process.env.SUPER_USER_EMAIL || "super@arkivworld.com";
+  const PASSWORD = seedPassword("SUPER_USER_PASSWORD");
+  const FULL_NAME = process.env.SUPER_USER_NAME || "Super Admin";
+  const NIP = process.env.SUPER_USER_NIP || "SUPERADMIN";
+  const PHONE = process.env.SUPER_USER_PHONE || "-";
 
   const c = new Client({ connectionString: url, ssl: sslForUrl(url) });
   await c.connect();
@@ -170,7 +172,7 @@ async function main() {
     await c.query("COMMIT");
     console.log("\nSuper admin siap:");
     console.log("  Email   :", EMAIL);
-    console.log("  Password:", PASSWORD);
+    console.log("  Password:", passwordSource("SUPER_USER_PASSWORD"));
     console.log("  Role    : super_admin");
     console.log("  Scope   : unscoped (lihat semua)");
   } catch (err) {

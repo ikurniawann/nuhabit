@@ -488,32 +488,17 @@ Profit-related POS order item fields:
 
 ## Environment Variables
 
-```env
-# Database (PostgreSQL native)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arkiv
-MIGRATE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arkiv
+Daftar lengkap ada di [`.env.example`](.env.example), dikelompokkan per integrasi dan diberi keterangan. Salin ke `.env.local` untuk development:
 
-# AI Assistant (Ollama)
-OLLAMA_API_BASE=http://localhost:11434
-OLLAMA_API_KEY=
-OLLAMA_MODEL=
-
-# Integrasi opsional
-FONNTE_API_KEY=
-RESEND_API_KEY=
-NEXT_PUBLIC_APP_URL=
-
-# Web push portal member /member (opsional; tanpa kunci, push diam).
-# Buat sepasang per lingkungan: npx web-push generate-vapid-keys
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=mailto:ops@example.com
+```bash
+cp .env.example .env.local
 ```
 
-| Variabel | Dipakai oleh | Keterangan |
-| --- | --- | --- |
-| `DATABASE_URL` | App Next.js (`pg`) | Koneksi utama aplikasi |
-| `MIGRATE_DATABASE_URL` | `db:migrate*`, seeder | Target migrasi (Postgres lokal) |
+- **Wajib:** `DATABASE_URL` (cadangan: `MIGRATE_DATABASE_URL`). Tanpa keduanya server berhenti saat boot dengan pesan jelas (`src/lib/env.ts`, dipanggil dari `src/instrumentation.ts`).
+- **Opsional:** integrasi lain (Resend, Xendit, web push, URL publik) mati bila env-nya kosong; server mencatat satu peringatan berisi daftar yang nonaktif.
+- **`NEXT_PUBLIC_*`** di-inline saat `next build`. Mengubah nilainya butuh build ulang. `NEXT_PUBLIC_BASE_URL` adalah nama lama `NEXT_PUBLIC_APP_URL` dan hanya dibaca sebagai cadangan.
+
+**Deploy (GitLab CI):** isi env produksi disimpan di CI variable `RUNTIME_CONFIG_CONTENT` (masked, protected). Build menerimanya sebagai BuildKit secret sehingga image tidak memuat `.env`. Container menerima env yang sama saat start: `.gitlab/deploy-docker.sh` menulisnya ke `ENV_FILE` di host (default `~/.config/arkiv/<container>.env`, mode 600) lalu menjalankan `docker run --env-file`. Untuk deploy lewat compose, service harus memuat file yang sama lewat `env_file:`.
 
 ## Getting Started
 
@@ -525,7 +510,7 @@ npm install
 
 ### 2. Setup Environment
 
-Buat `.env` (atau `.env.local`) dan set minimal `DATABASE_URL` + `MIGRATE_DATABASE_URL` ke Postgres lokal, plus konfigurasi AI/email/WhatsApp sesuai kebutuhan. Lihat tabel [Environment Variables](#environment-variables).
+Salin `.env.example` ke `.env.local`, lalu set minimal `DATABASE_URL` + `MIGRATE_DATABASE_URL` ke Postgres lokal, plus integrasi email/WhatsApp/pembayaran sesuai kebutuhan. Lihat [Environment Variables](#environment-variables).
 
 ### 3. Database Setup
 
@@ -542,7 +527,7 @@ npm run db:migrate:apply
 npm run db:seed:super-admin
 ```
 
-Kredensial default Super Admin: `super@arkivworld.com` / `Arkiv2026*#` (override via `SUPER_USER_EMAIL`, `SUPER_USER_PASSWORD`).
+Seeder Super Admin memakai `SUPER_USER_EMAIL` (default `super@arkivworld.com`) dan `SUPER_USER_PASSWORD`. Tanpa `SUPER_USER_PASSWORD`, seeder membuat password acak dan mencetaknya sekali di terminal; simpan saat itu juga.
 
 Panduan lengkap pipeline migrasi: [database/README.md](database/README.md)
 
