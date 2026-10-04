@@ -40,7 +40,7 @@ func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
 	}
 	svc := &service{db: db, ports: ports, now: now, log: log}
 	h := &handler{svc: svc, auth: deps.Auth}
-	return payrollModule{routes: h.routes()}
+	return payrollModule{routes: append(h.routes(), h.fileRoutes()...)}
 }
 
 // handler parses requests, guards them and renders the service results.

@@ -132,14 +132,17 @@ func runSlipShares(ctx context.Context, q database.Querier, runID string) ([]dom
 		COALESCE(pph21_deduction, 0)::float8,
 		(COALESCE(bpjs_tk_jht_employer, 0) + COALESCE(bpjs_tk_jp_employer, 0) + COALESCE(bpjs_tk_jkk_employer, 0)
 		 + COALESCE(bpjs_tk_jkm_employer, 0))::float8,
-		COALESCE(bpjs_kes_employer, 0)::float8
+		COALESCE(bpjs_kes_employer, 0)::float8,
+		(COALESCE(bpjs_tk_jht_deduction, 0) + COALESCE(bpjs_tk_jp_deduction, 0))::float8,
+		COALESCE(bpjs_kes_deduction, 0)::float8, COALESCE(tapera_employer, 0)::float8, COALESCE(tapera_deduction, 0)::float8
 		FROM hris.payroll_details WHERE payroll_run_id = $1`, runID)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (domain.RunSlipShare, error) {
 		var s domain.RunSlipShare
-		return s, r.Scan(&s.EmployeeID, &s.Gross, &s.Net, &s.Pph21, &s.BpjsTkEmployer, &s.BpjsKesEmployer)
+		return s, r.Scan(&s.EmployeeID, &s.Gross, &s.Net, &s.Pph21, &s.BpjsTkEmployer, &s.BpjsKesEmployer,
+			&s.BpjsTkEmployee, &s.BpjsKesEmployee, &s.TaperaEmployer, &s.TaperaEmployee)
 	})
 }
 

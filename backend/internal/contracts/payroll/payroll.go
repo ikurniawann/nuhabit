@@ -8,8 +8,11 @@ import "time"
 // Accounting posts the payroll journals from it per company in Companies
 // (PAYROLL_ACCRUAL from gross, PAYROLL_PPH21_WITHHOLDING from PPh 21,
 // PAYROLL_LOAN_DEDUCTION from the settled installments, PAYROLL_PAYMENT from
-// net, PAYROLL_BPJS_TK_EMPLOYER and PAYROLL_BPJS_KES_EMPLOYER from the
-// employer BPJS shares), dated PaidAt in Asia/Jakarta. An event without
+// net, PAYROLL_BPJS_TK_EMPLOYEE and PAYROLL_BPJS_KES_EMPLOYEE from the
+// employee BPJS deductions, PAYROLL_TAPERA_EMPLOYEE from the employee Tapera
+// deduction, PAYROLL_BPJS_TK_EMPLOYER, PAYROLL_BPJS_KES_EMPLOYER and
+// PAYROLL_TAPERA_EMPLOYER from the employer shares), dated PaidAt in
+// Asia/Jakarta. An event without
 // Companies posts the run totals to the one company with ready mappings.
 const TopicRunPaid = "payroll.run.paid"
 
@@ -38,6 +41,14 @@ type RunPaid struct {
 	// share, in rupiah.
 	TotalBpjsTkEmployer  float64 `json:"total_bpjs_tk_employer"`
 	TotalBpjsKesEmployer float64 `json:"total_bpjs_kes_employer"`
+	// TotalBpjsTkEmployee is the employee BPJS Ketenagakerjaan deduction
+	// (JHT, JP) and TotalBpjsKesEmployee the employee BPJS Kesehatan
+	// deduction; TotalTaperaEmployer and TotalTaperaEmployee are the Tapera
+	// shares, in rupiah.
+	TotalBpjsTkEmployee  float64 `json:"total_bpjs_tk_employee"`
+	TotalBpjsKesEmployee float64 `json:"total_bpjs_kes_employee"`
+	TotalTaperaEmployer  float64 `json:"total_tapera_employer"`
+	TotalTaperaEmployee  float64 `json:"total_tapera_employee"`
 	// Companies splits the run by the company of each employee's account
 	// (the user's company, else its branch's company).
 	Companies []RunCompany `json:"companies,omitempty"`
@@ -53,4 +64,8 @@ type RunCompany struct {
 	TotalLoanDeduction   float64 `json:"total_loan_deduction"`
 	TotalBpjsTkEmployer  float64 `json:"total_bpjs_tk_employer"`
 	TotalBpjsKesEmployer float64 `json:"total_bpjs_kes_employer"`
+	TotalBpjsTkEmployee  float64 `json:"total_bpjs_tk_employee"`
+	TotalBpjsKesEmployee float64 `json:"total_bpjs_kes_employee"`
+	TotalTaperaEmployer  float64 `json:"total_tapera_employer"`
+	TotalTaperaEmployee  float64 `json:"total_tapera_employee"`
 }

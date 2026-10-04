@@ -366,6 +366,7 @@ func TestRunLifecycle(t *testing.T) {
 	}
 	wantErr(t, e.call(&e.hr, "POST", "/api/hris/payroll/"+runID+"/calculate", map[string]any{}, 400), "Hanya payroll draft yang bisa dihitung")
 	e.call(&e.hr, "PUT", "/api/hris/payroll/"+runID, map[string]any{"status": "completed"}, 200)
+	e.exec(`UPDATE hris.payroll_details SET tapera_employer = 30000, tapera_deduction = 25000 WHERE payroll_run_id = $1`, runID)
 	paid := e.call(&e.hr, "PUT", "/api/hris/payroll/"+runID, map[string]any{"status": "paid"}, 200)
 	if paid["message"] != "Payroll ditandai dibayar — 1 cicilan pinjaman dipotong dari saldo" ||
 		paid["data"].(map[string]any)["approved_by"].(map[string]any)["id"] != hrEmp {
@@ -409,6 +410,31 @@ func TestRunLifecycle(t *testing.T) {
 	if c := event.Companies[0]; c.CompanyID == nil || *c.CompanyID != e.emps.companies[worker] || c.TotalGross != 12000000 ||
 		c.TotalNet != 10361155 || c.TotalLoanDeduction != 500000 || c.TotalBpjsTkEmployer != tk || c.TotalBpjsKesEmployer != kes {
 		t.Fatalf("company split %+v", c)
+	}
+	// The employee BPJS deductions and both Tapera shares ride along too.
+	var tkEmployee, kesEmployee float64
+	e.scalar(&tkEmployee, `SELECT (bpjs_tk_jht_deduction + bpjs_tk_jp_deduction)::float8 FROM hris.payroll_details WHERE payroll_run_id = $1`, runID)
+	e.scalar(&kesEmployee, `SELECT bpjs_kes_deduction::float8 FROM hris.payroll_details WHERE payroll_run_id = $1`, runID)
+	var shares struct {
+		TotalBpjsTkEmployee  float64 `json:"total_bpjs_tk_employee"`
+		TotalBpjsKesEmployee float64 `json:"total_bpjs_kes_employee"`
+		TotalTaperaEmployer  float64 `json:"total_tapera_employer"`
+		TotalTaperaEmployee  float64 `json:"total_tapera_employee"`
+		Companies            []struct {
+			TotalBpjsTkEmployee  float64 `json:"total_bpjs_tk_employee"`
+			TotalBpjsKesEmployee float64 `json:"total_bpjs_kes_employee"`
+			TotalTaperaEmployer  float64 `json:"total_tapera_employer"`
+			TotalTaperaEmployee  float64 `json:"total_tapera_employee"`
+		} `json:"companies"`
+	}
+	if err := json.Unmarshal([]byte(payload), &shares); err != nil {
+		t.Fatal(err)
+	}
+	if tkEmployee <= 0 || kesEmployee <= 0 || shares.TotalBpjsTkEmployee != tkEmployee || shares.TotalBpjsKesEmployee != kesEmployee ||
+		shares.TotalTaperaEmployer != 30000 || shares.TotalTaperaEmployee != 25000 || len(shares.Companies) != 1 ||
+		shares.Companies[0].TotalBpjsTkEmployee != tkEmployee || shares.Companies[0].TotalBpjsKesEmployee != kesEmployee ||
+		shares.Companies[0].TotalTaperaEmployer != 30000 || shares.Companies[0].TotalTaperaEmployee != 25000 {
+		t.Fatalf("employee shares %v %v event %+v", tkEmployee, kesEmployee, shares)
 	}
 	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 400), "Payroll yang sudah dibayar tidak bisa dihapus")
 

@@ -19,9 +19,8 @@ import (
 )
 
 // KPI (lib/kpi/{targets-repo,scorecards-repo,rubric,recommendation,
-// department-config}.ts). performance.kpi_* belong to this module.
-// POST /api/hris/kpi/snapshot stays in TS: its collectors read POS shifts,
-// purchase orders, vendor payments, logbooks and attendance of five contexts.
+// department-config}.ts). performance.kpi_* belong to this module; the
+// monthly snapshot is in kpi_snapshot.go.
 
 // pgUUIDRE accepts what PostgreSQL's uuid input does (hyphens optional
 // between groups, optional braces), so ids it would reject are caught first.

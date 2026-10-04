@@ -217,8 +217,9 @@ func (s *service) markRunPaid(ctx context.Context, userID string, run *runHead, 
 	return settled, err
 }
 
-// splitByCompany fills the employer BPJS totals and the per-company split
-// of a paid run from its slips and the installments settled per employee.
+// splitByCompany fills the BPJS and Tapera totals and the per-company
+// split of a paid run from its slips and the installments settled per
+// employee.
 func (s *service) splitByCompany(ctx context.Context, q database.Querier, event *payrollevents.RunPaid, deducted map[string]float64) error {
 	slips, err := runSlipShares(ctx, q, event.RunID)
 	if err != nil {
@@ -239,12 +240,20 @@ func (s *service) splitByCompany(ctx context.Context, q database.Querier, event 
 		}
 		event.TotalBpjsTkEmployer += g.BpjsTkEmployer
 		event.TotalBpjsKesEmployer += g.BpjsKesEmployer
+		event.TotalBpjsTkEmployee += g.BpjsTkEmployee
+		event.TotalBpjsKesEmployee += g.BpjsKesEmployee
+		event.TotalTaperaEmployer += g.TaperaEmployer
+		event.TotalTaperaEmployee += g.TaperaEmployee
 		event.Companies = append(event.Companies, payrollevents.RunCompany{CompanyID: company, TotalGross: g.Gross,
 			TotalNet: g.Net, TotalPph21: g.Pph21, TotalLoanDeduction: g.LoanDeduction,
-			TotalBpjsTkEmployer: g.BpjsTkEmployer, TotalBpjsKesEmployer: g.BpjsKesEmployer})
+			TotalBpjsTkEmployer: g.BpjsTkEmployer, TotalBpjsKesEmployer: g.BpjsKesEmployer,
+			TotalBpjsTkEmployee: g.BpjsTkEmployee, TotalBpjsKesEmployee: g.BpjsKesEmployee,
+			TotalTaperaEmployer: g.TaperaEmployer, TotalTaperaEmployee: g.TaperaEmployee})
 	}
-	event.TotalBpjsTkEmployer = jsmath.RoundTo(event.TotalBpjsTkEmployer, 2)
-	event.TotalBpjsKesEmployer = jsmath.RoundTo(event.TotalBpjsKesEmployer, 2)
+	for _, v := range []*float64{&event.TotalBpjsTkEmployer, &event.TotalBpjsKesEmployer, &event.TotalBpjsTkEmployee,
+		&event.TotalBpjsKesEmployee, &event.TotalTaperaEmployer, &event.TotalTaperaEmployee} {
+		*v = jsmath.RoundTo(*v, 2)
+	}
 	return nil
 }
 

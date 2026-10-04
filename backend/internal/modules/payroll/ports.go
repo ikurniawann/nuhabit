@@ -89,9 +89,18 @@ type Workforce interface {
 	Holidays(ctx context.Context, q database.Querier, start, end string) (map[string]bool, error)
 }
 
+// AppSettings reads configuration.app_settings (the company identity on
+// payslips): every key, nil when missing or NULL.
+type AppSettings interface {
+	GetMany(ctx context.Context, q database.Querier, keys []string) (map[string]*string, error)
+}
+
 // Ports bundles the adapters the module needs.
 type Ports struct {
 	Employees   Employees
 	Departments Departments
 	Workforce   Workforce
+	Settings    AppSettings
+	// KPI reads what the KPI snapshot measures in other contexts.
+	KPI KPISources
 }

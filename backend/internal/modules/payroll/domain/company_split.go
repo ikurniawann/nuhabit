@@ -12,6 +12,8 @@ type RunSlipShare struct {
 	EmployeeID                      string
 	Gross, Net, Pph21               float64
 	BpjsTkEmployer, BpjsKesEmployer float64
+	BpjsTkEmployee, BpjsKesEmployee float64
+	TaperaEmployer, TaperaEmployee  float64
 }
 
 // CompanyTotals is one company's share of a paid run. CompanyID is "" for
@@ -21,6 +23,8 @@ type CompanyTotals struct {
 	Gross, Net, Pph21               float64
 	LoanDeduction                   float64
 	BpjsTkEmployer, BpjsKesEmployer float64
+	BpjsTkEmployee, BpjsKesEmployee float64
+	TaperaEmployer, TaperaEmployee  float64
 }
 
 // SplitRunByCompany groups a paid run's slips by each employee's company
@@ -42,10 +46,15 @@ func SplitRunByCompany(slips []RunSlipShare, loans map[string]float64, companies
 		g.LoanDeduction += loans[s.EmployeeID]
 		g.BpjsTkEmployer += s.BpjsTkEmployer
 		g.BpjsKesEmployer += s.BpjsKesEmployer
+		g.BpjsTkEmployee += s.BpjsTkEmployee
+		g.BpjsKesEmployee += s.BpjsKesEmployee
+		g.TaperaEmployer += s.TaperaEmployer
+		g.TaperaEmployee += s.TaperaEmployee
 	}
 	out := make([]CompanyTotals, 0, len(byCompany))
 	for _, g := range byCompany {
-		for _, v := range []*float64{&g.Gross, &g.Net, &g.Pph21, &g.LoanDeduction, &g.BpjsTkEmployer, &g.BpjsKesEmployer} {
+		for _, v := range []*float64{&g.Gross, &g.Net, &g.Pph21, &g.LoanDeduction, &g.BpjsTkEmployer, &g.BpjsKesEmployer,
+			&g.BpjsTkEmployee, &g.BpjsKesEmployee, &g.TaperaEmployer, &g.TaperaEmployee} {
 			*v = jsmath.RoundTo(*v, 2)
 		}
 		out = append(out, *g)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/modules/configuration/kit"
 	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/modules/payroll"
 	"nuhabit/backend/internal/modules/payroll/domain"
@@ -21,7 +22,8 @@ import (
 // and the PostgREST employee embeds).
 
 func payrollPorts() payroll.Ports {
-	return payroll.Ports{Employees: payrollEmployees{}, Departments: payrollDepartmentsSQL{}, Workforce: payrollWorkforceSQL{}}
+	return payroll.Ports{Employees: payrollEmployees{}, Departments: payrollDepartmentsSQL{}, Workforce: payrollWorkforceSQL{},
+		Settings: kit.AppSettings{}, KPI: payrollKPISQL{}}
 }
 
 type payrollEmployees struct{ hris hris.Employees }
