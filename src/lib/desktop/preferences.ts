@@ -1,5 +1,5 @@
 /**
- * Preferensi desktop Arkiv OS per PENGGUNA (bukan per perangkat).
+ * Preferensi desktop NüHabit OS per PENGGUNA (bukan per perangkat).
  *
  * Sebelumnya semuanya di localStorage, jadi ganti laptop = mulai dari nol.
  * Sekarang disimpan di configuration.user_desktop_prefs dan localStorage
@@ -7,8 +7,8 @@
  */
 
 import { MONITOR_WIDGETS, type MonitorWidgetKey } from "@/lib/desktop/widgets";
+import { STORAGE_KEYS, writeStorage } from "@/lib/storage-keys";
 
-export const DESKTOP_PREFS_STORAGE_KEY = "arkiv-desktop-prefs";
 
 export interface DesktopPreferences {
   /** id wallpaper terpilih (bawaan atau unggahan). */
@@ -80,19 +80,7 @@ export function mergeDesktopPreferences(
   };
 }
 
-export function readLocalPreferences(): DesktopPreferences | null {
-  try {
-    const raw = window.localStorage.getItem(DESKTOP_PREFS_STORAGE_KEY);
-    return raw ? normalizeDesktopPreferences(JSON.parse(raw)) : null;
-  } catch {
-    return null;
-  }
-}
-
+/** Cache lokal; penyimpanan terkunci tidak apa-apa karena server tetap menyimpan. */
 export function writeLocalPreferences(prefs: DesktopPreferences) {
-  try {
-    window.localStorage.setItem(DESKTOP_PREFS_STORAGE_KEY, JSON.stringify(prefs));
-  } catch {
-    /* penyimpanan terkunci — preferensi tetap tersimpan di server */
-  }
+  writeStorage(STORAGE_KEYS.desktopPrefs, JSON.stringify(prefs));
 }

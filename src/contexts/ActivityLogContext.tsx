@@ -1,83 +1,71 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
-import { ActivityLog, ActivityLogState } from "@/types/activity-log";
+import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
+import type { ActivityLog, ActivityLogState } from "@/types/activity-log";
+import { STORAGE_KEYS, readStorage, writeStorage } from "@/lib/storage-keys";
 
-const STORAGE_KEY = "arkivos_activity_logs";
-const MAX_LOGS = 100; // Keep max 100 logs
+const MAX_LOGS = 100;
+const EMPTY: ActivityLog[] = [];
+
+/**
+ * Log aktivitas per browser (localStorage). Store eksternal kecil supaya
+ * render server (selalu kosong) dan klien tidak bentrok saat hidrasi.
+ */
+let cache: ActivityLog[] | null = null;
+const listeners = new Set<() => void>();
+
+function load(): ActivityLog[] {
+  try {
+    const raw = readStorage(STORAGE_KEYS.activityLogs);
+    return raw ? (JSON.parse(raw) as ActivityLog[]) : EMPTY;
+  } catch (error) {
+    console.error("Failed to load activity logs:", error);
+    return EMPTY;
+  }
+}
+
+const getSnapshot = () => (cache ??= load());
+const getServerSnapshot = () => EMPTY;
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function update(next: (prev: ActivityLog[]) => ActivityLog[]) {
+  cache = next(getSnapshot());
+  writeStorage(STORAGE_KEYS.activityLogs, JSON.stringify(cache));
+  listeners.forEach((listener) => listener());
+}
 
 const ActivityLogContext = createContext<ActivityLogState | undefined>(undefined);
 
 export function ActivityLogProvider({ children }: { children: ReactNode }) {
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const logs = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setLogs(parsed);
-      }
-    } catch (error) {
-      console.error("Failed to load activity logs:", error);
-    }
-  }, []);
-
-  // Save to localStorage when logs change
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-    } catch (error) {
-      console.error("Failed to save activity logs:", error);
-    }
-  }, [logs]);
-
-  const addLog = (log: Omit<ActivityLog, "id" | "timestamp" | "isRead">) => {
-    const newLog: ActivityLog = {
-      ...log,
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      isRead: false,
-    };
-
-    setLogs((prev) => {
-      const updated = [newLog, ...prev].slice(0, MAX_LOGS);
-      return updated;
-    });
-  };
-
-  const markAsRead = (id: string) => {
-    setLogs((prev) =>
-      prev.map((log) => (log.id === id ? { ...log, isRead: true } : log))
-    );
-  };
-
-  const markAllAsRead = () => {
-    setLogs((prev) => prev.map((log) => ({ ...log, isRead: true })));
-  };
-
-  const clearAll = () => {
-    setLogs([]);
-  };
-
-  const clearOlderThan = (days: number) => {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    setLogs((prev) =>
-      prev.filter((log) => new Date(log.timestamp) > cutoff)
-    );
-  };
-
-  const unreadCount = useMemo(() => logs.filter((log) => !log.isRead).length, [logs]);
-
-  return (
-    <ActivityLogContext.Provider
-      value={{ logs, unreadCount, addLog, markAsRead, markAllAsRead, clearAll, clearOlderThan }}
-    >
-      {children}
-    </ActivityLogContext.Provider>
+  const value = useMemo<ActivityLogState>(
+    () => ({
+      logs,
+      unreadCount: logs.filter((log) => !log.isRead).length,
+      addLog: (log) =>
+        update((prev) =>
+          [{ ...log, id: crypto.randomUUID(), timestamp: new Date().toISOString(), isRead: false }, ...prev].slice(
+            0,
+            MAX_LOGS
+          )
+        ),
+      markAsRead: (id) => update((prev) => prev.map((log) => (log.id === id ? { ...log, isRead: true } : log))),
+      markAllAsRead: () => update((prev) => prev.map((log) => ({ ...log, isRead: true }))),
+      clearAll: () => update(() => []),
+      clearOlderThan: (days) => {
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        update((prev) => prev.filter((log) => new Date(log.timestamp).getTime() > cutoff));
+      },
+    }),
+    [logs]
   );
+
+  return <ActivityLogContext.Provider value={value}>{children}</ActivityLogContext.Provider>;
 }
 
 export function useActivityLog() {

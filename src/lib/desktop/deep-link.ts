@@ -1,10 +1,13 @@
 /**
- * Deep link desktop: /arkiv-os?open=/dashboard/pos/orders&title=Transaksi
+ * Deep link desktop: /os?open=/dashboard/pos/orders&title=Transaksi
  *
  * Dipakai notifikasi WA / e-mail / hasil Spotlight supaya langsung membuka
  * JENDELA yang tepat di dalam desktop, bukan melempar ke tab dashboard.
  * Hanya path internal /dashboard yang diterima — mencegah open redirect.
  */
+
+/** Halaman kanonis desktop NüHabit OS; /arkiv-os lama dialihkan ke sini. */
+export const OS_PATH = "/os";
 
 export const DEEP_LINK_PARAM = "open";
 export const DEEP_LINK_TITLE_PARAM = "title";
@@ -49,5 +52,19 @@ export function parseDeepLink(params: { get(name: string): string | null }): Dee
 export function buildDeepLink(path: string, title?: string): string {
   const query = new URLSearchParams({ [DEEP_LINK_PARAM]: path });
   if (title) query.set(DEEP_LINK_TITLE_PARAM, title);
-  return `/arkiv-os?${query.toString()}`;
+  return `${OS_PATH}?${query.toString()}`;
+}
+
+/** /arkiv-os?… → /os?… dengan query utuh (deep link lama tetap membuka jendelanya). */
+export function legacyOsRedirectTarget(
+  searchParams: Record<string, string | string[] | undefined>
+): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams)) {
+    for (const item of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      query.append(key, item);
+    }
+  }
+  const qs = query.toString();
+  return qs ? `${OS_PATH}?${qs}` : OS_PATH;
 }

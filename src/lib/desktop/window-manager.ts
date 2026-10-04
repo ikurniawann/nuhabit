@@ -132,8 +132,6 @@ export const SHORTCUT_HINTS: Array<{ combo: string; label: string }> = [
 
 /* ── Ingatan posisi & ukuran jendela ───────────────────────────────── */
 
-export const WINDOW_GEOMETRY_STORAGE_KEY = "arkiv-window-geometry";
-
 export type GeometryMap = Record<string, WindowGeometry>;
 
 function isGeometry(value: unknown): value is WindowGeometry {

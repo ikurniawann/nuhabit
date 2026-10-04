@@ -18,6 +18,7 @@ function snapshot(over: Partial<{
     dibuatPada: "2026-07-21T02:00:00.000Z",
     pulsaBisnis: {
       hariIni: { omzet: 0, pesanan: over.pesanan ?? 0, rataRata: 0 },
+      labaKotorHariIni: null,
       kemarin: { omzet: 0, pesanan: 0 },
       mingguLalu: { omzet: 0, pesanan: 0 },
       tujuhHari: [],

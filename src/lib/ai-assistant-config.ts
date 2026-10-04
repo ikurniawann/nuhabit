@@ -101,14 +101,6 @@ export const AI_ASSISTANT_SCOPES = [
 export type AiAssistantScope = (typeof AI_ASSISTANT_SCOPES)[number]["id"];
 
 export const DEFAULT_AI_ASSISTANT_SCOPE: AiAssistantScope = "project_plus_general";
-/**
- * Versi `-v2`: pilihan model tersimpan di localStorage per browser, sehingga
- * user yang pernah membuka NüHabit OS akan terus memakai model Ollama lamanya dan
- * jatuh ke fallback meski default sudah pindah ke OpenAI. Menaikkan versi kunci
- * memaksa reset sekali ke default baru. Naikkan lagi bila default berpindah.
- */
-export const AI_ASSISTANT_SETTINGS_STORAGE_KEY = "arkiv-ai-assistant-settings-v2";
-
 export type AiAssistantSettings = {
   model: AiAssistantModel;
   scope: AiAssistantScope;

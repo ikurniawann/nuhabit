@@ -23,13 +23,6 @@ export interface WallpaperItem {
 }
 
 /**
- * Kunci localStorage pilihan wallpaper — dibaca desktop DAN halaman login.
- * Login berjalan sebelum ada sesi, jadi localStorage satu-satunya sinyal
- * pilihan user di perangkat itu (preferensi server butuh user terautentikasi).
- */
-export const WALLPAPER_STORAGE_KEY = "arkiv-wallpaper";
-
-/**
  * Wallpaper bawaan. Id-nya stabil karena itulah nilai yang tersimpan di
  * localStorage/user_desktop_prefs — mengganti id akan mereset pilihan user.
  */
