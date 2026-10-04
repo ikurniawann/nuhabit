@@ -78,7 +78,12 @@ Dependencies point inward: `http.go -> service.go -> domain`, and
    `Terjadi kesalahan server`. Member portal routes use
    `deps.Auth.MemberHandler(failMessage, ...)`, which renders the
    `withMemberSession` 401 and 500 bodies.
-6. **Time.** Calendar logic uses Asia/Jakarta. Take the clock from `Deps.Now`
+6. **Numbers.** JavaScript rounds every operation to float64; Go on arm64
+   may fuse `x*y+z` into one multiply-add and land on the other side of a
+   `.5`. Round with `platform/jsmath` (`Round` is `Math.round`, `RoundTo`
+   is `Math.round(x*10**n)/10**n`) and wrap products in `float64(...)`
+   before adding to them.
+7. **Time.** Calendar logic uses Asia/Jakarta. Take the clock from `Deps.Now`
    so tests can pin it.
 
 ## Adding a module

@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // sqlWallet ports the member top-up side of lib/wallet (server.ts,
@@ -379,7 +380,7 @@ func (w *sqlWallet) CreditBonus(ctx context.Context, customerID string, amountId
 			return err
 		}
 		a := deref(after)
-		coins = math.Floor(amountIdr/r*100+0.5) / 100
+		coins = jsmath.RoundTo(amountIdr/r, 2)
 		_, err = tx.Exec(ctx,
 			`INSERT INTO pos.pos_wallet_transactions
 			   (customer_id, type, amount, ark_coins, balance_before, balance_after, status, notes)

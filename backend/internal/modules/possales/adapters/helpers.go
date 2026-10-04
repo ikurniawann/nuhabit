@@ -4,6 +4,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // nullable maps "" to SQL NULL.
@@ -15,7 +17,7 @@ func nullable(s string) *string {
 }
 
 // round2 is Math.round(n * 100) / 100.
-func round2(n float64) float64 { return math.Floor(n*100+0.5) / 100 }
+func round2(n float64) float64 { return jsmath.RoundTo(n, 2) }
 
 // localeID is Number.prototype.toLocaleString("id-ID") with its default
 // options: "." grouping, "," decimals, at most three fraction digits.

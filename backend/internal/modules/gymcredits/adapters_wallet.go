@@ -7,6 +7,7 @@ import (
 	"math"
 
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // SQLArkWallet is the ARK Coin wallet adapter: the SQL of
@@ -24,7 +25,7 @@ var _ ArkWallet = SQLArkWallet{}
 const defaultArkRate = 1000
 
 // roundIdr is Math.round(value * 100) / 100.
-func roundIdr(v float64) float64 { return math.Floor(v*100+0.5) / 100 }
+func roundIdr(v float64) float64 { return jsmath.RoundTo(v, 2) }
 
 // Move locks the customer row, refuses a negative balance, appends the
 // wallet transaction and stores the new balance, all in the caller's tx.

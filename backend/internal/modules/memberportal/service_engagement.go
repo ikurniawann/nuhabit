@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // EngagementRepository is promos, events, challenges, reviews and the tab.
@@ -396,7 +397,7 @@ type BillView struct {
 	Payments   []billPaymentView `json:"payments"`
 }
 
-func round2(v float64) float64 { return math.Floor(v*100+0.5) / 100 }
+func round2(v float64) float64 { return jsmath.RoundTo(v, 2) }
 
 // Bill is the member's open tab: open orders with items, the balance and
 // the instalments. Cashier names, notes and references are not sent.

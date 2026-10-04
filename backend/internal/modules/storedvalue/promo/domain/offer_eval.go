@@ -323,7 +323,7 @@ func evalBundle(r OfferEvalRule, qty, price map[string]float64) evalOutcome {
 		retail += price[c.ProductID] * n
 		used = append(used, consumed{c.ProductID, n})
 	}
-	return evalOutcome{discount: max(0, math.Floor(retail-bundlePrice*sets)), consume: used}
+	return evalOutcome{discount: max(0, math.Floor(retail-float64(bundlePrice*sets))), consume: used}
 }
 
 type pooled struct {

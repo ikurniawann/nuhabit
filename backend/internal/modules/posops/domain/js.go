@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // Undefined marks a missing JSON key (JS undefined), distinct from null.
@@ -213,21 +215,11 @@ func TrimJS(s string) string {
 	return strings.TrimFunc(s, func(r rune) bool { return unicode.IsSpace(r) || r == '\uFEFF' })
 }
 
-// Round is Math.round (halves toward +Infinity). It is not inlined so its
-// argument is rounded to float64 first: inlined, arm64 would fuse a
-// caller's x*y into f-r (FMA) and round 1055.5 (10.555*100) down.
-//
-//go:noinline
-func Round(f float64) float64 {
-	r := math.Floor(f)
-	if f-r >= 0.5 {
-		r++
-	}
-	return r
-}
+// Round is Math.round.
+func Round(f float64) float64 { return jsmath.Round(f) }
 
 // Round2 is Math.round(f * 100) / 100.
-func Round2(f float64) float64 { return Round(f*100) / 100 }
+func Round2(f float64) float64 { return jsmath.RoundTo(f, 2) }
 
 // ParseInt is parseInt(s) without a radix: leading whitespace, a sign, a
 // 0x prefix for hex, then digits up to the first invalid one; NaN when no

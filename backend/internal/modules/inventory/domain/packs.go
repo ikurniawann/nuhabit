@@ -4,7 +4,11 @@
 // and frontend/src/lib/purchasing (packs, raw-material-units).
 package domain
 
-import "math"
+import (
+	"math"
+
+	"nuhabit/backend/internal/platform/jsmath"
+)
 
 // Pack is a named multiple of a material's base unit
 // (item.raw_material_unit_conversions).
@@ -33,10 +37,10 @@ func safeFactor(f float64) float64 {
 }
 
 // RoundQty is Math.round(v * 1000) / 1000.
-func RoundQty(v float64) float64 { return math.Floor(v*1000+0.5) / 1000 }
+func RoundQty(v float64) float64 { return jsmath.RoundTo(v, 3) }
 
 // RoundMoney is Math.round(v * 100) / 100.
-func RoundMoney(v float64) float64 { return math.Floor(v*100+0.5) / 100 }
+func RoundMoney(v float64) float64 { return jsmath.RoundTo(v, 2) }
 
 // PackToBase converts a pack quantity to base units.
 func PackToBase(packQty, factor float64) float64 { return RoundQty(packQty * safeFactor(factor)) }

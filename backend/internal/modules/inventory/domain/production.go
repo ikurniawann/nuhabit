@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // Production rules: lib/purchasing/production-calc.ts,
@@ -103,7 +105,7 @@ type VariantRow struct {
 	Qty      float64
 }
 
-func round2(v float64) float64 { return math.Floor(v*100+0.5) / 100 }
+func round2(v float64) float64 { return jsmath.RoundTo(v, 2) }
 
 func qtyForMessage(v float64) string {
 	r := round2(v)

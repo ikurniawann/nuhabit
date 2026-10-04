@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf16"
+
+	"nuhabit/backend/internal/platform/jsmath"
 )
 
 // ReviewReplyMax is REVIEW_REPLY_MAX.
@@ -47,7 +49,7 @@ type ReviewSummary struct {
 	Outlets      []OutletSummary `json:"outlets"`
 }
 
-func round1(n float64) float64 { return math.Floor(n*10+0.5) / 10 }
+func round1(n float64) float64 { return jsmath.RoundTo(n, 1) }
 
 // SummarizeReviews mirrors summarizeReviews: average, star distribution and
 // per-outlet figures, outlets by count then name.
