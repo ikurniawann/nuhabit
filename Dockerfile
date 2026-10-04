@@ -1,4 +1,7 @@
 # syntax=docker/dockerfile:1
+# Image FRONTEND (Next.js di frontend/). Tetap di root karena template GitLab
+# CI membangun ./Dockerfile dengan konteks root repo; backend Go punya
+# backend/Dockerfile sendiri.
 # ^ required for the `RUN --mount=type=cache|secret` lines below (BuildKit
 # Dockerfile frontend directive, must be the first line). This file needs
 # BuildKit: DOCKER_BUILDKIT=0 cannot parse --mount. See docs/ci-cache.md for why
@@ -17,7 +20,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 # Only the manifest + lockfile + .npmrc, so this layer (the slow one) is reused
 # from --cache-from on every build where dependencies didn't change.
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/.npmrc ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
@@ -25,7 +28,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY frontend/ .
 ENV NODE_ENV=production
 # `next build` inlines NEXT_PUBLIC_* into the bundles, so the build needs the
 # env. CI passes it as a BuildKit secret (`--secret id=dotenv,src=<file>`):
