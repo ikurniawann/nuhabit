@@ -72,12 +72,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_rmc_global_code
 CREATE INDEX IF NOT EXISTS idx_rmc_company_id ON item.raw_material_categories (company_id);
 
 -- ---------------------------------------------------------------------------
--- item.storage_conditions
--- ---------------------------------------------------------------------------
+-- item.storage_conditions (skipped when the table never existed)
+DO $outer$
+BEGIN
+IF to_regclass('item.storage_conditions') IS NOT NULL THEN
+EXECUTE $sc$
 ALTER TABLE item.storage_conditions
     ADD COLUMN IF NOT EXISTS company_id uuid;
 
-DO $$
+DO $inner$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'storage_conditions_company_id_fkey'
@@ -86,7 +89,7 @@ BEGIN
             ADD CONSTRAINT storage_conditions_company_id_fkey
             FOREIGN KEY (company_id) REFERENCES configuration.companies(id) ON DELETE CASCADE;
     END IF;
-END $$;
+END $inner$;
 
 ALTER TABLE item.storage_conditions DROP CONSTRAINT IF EXISTS storage_conditions_code_key;
 
@@ -99,3 +102,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_storage_global_code
     WHERE deleted_at IS NULL AND company_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_storage_company_id ON item.storage_conditions (company_id);
+$sc$;
+END IF;
+END $outer$;
