@@ -11,5 +11,6 @@ func (mod) Name() string { return Name }
 
 // New builds the module from its dependencies.
 func New(deps module.Deps) module.Module {
-	return mod{handlers{svc: NewService(NewPostgres(deps.DB), deps.Auth, deps.Log, deps.Now)}}
+	repo := NewPostgres(deps.DB)
+	return mod{handlers{svc: NewService(repo, deps.Auth, deps.Log, deps.Now), settings: repo}}
 }

@@ -21,6 +21,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Repository is the board's reporting reads plus the preferences table.
@@ -80,8 +81,8 @@ type Service struct {
 	users Users
 	log   *slog.Logger
 	now   func() time.Time
-	// probe calls the WhatsApp gateway's /status.
-	probe *http.Client
+	// probe is the client for the WhatsApp gateway at base (its /status).
+	probe func(base string) *http.Client
 	cache overviewCache
 	board *broadcaster
 	// heartbeat is the SSE keepalive interval.
@@ -91,7 +92,7 @@ type Service struct {
 // NewService wires the use cases.
 func NewService(repo Repository, users Users, log *slog.Logger, now func() time.Time) *Service {
 	s := &Service{repo: repo, users: users, log: log, now: now,
-		probe: &http.Client{}, cache: overviewCache{entries: map[string]cachedOverview{}}, heartbeat: heartbeatEvery}
+		probe: whatsapp.GatewayClient, cache: overviewCache{entries: map[string]cachedOverview{}}, heartbeat: heartbeatEvery}
 	s.board = newBroadcaster(func(ctx context.Context) *Overview { return s.BuildOverview(ctx, "today") }, log)
 	return s
 }
@@ -270,7 +271,7 @@ func (s *Service) checkWhatsApp(ctx context.Context) (domain.StatusItem, error) 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/status", nil)
 	var res *http.Response
 	if err == nil {
-		res, err = s.probe.Do(req)
+		res, err = s.probe(base).Do(req)
 	}
 	if err != nil {
 		item.Level, item.Detail = "down", "Gateway tidak menjawab"

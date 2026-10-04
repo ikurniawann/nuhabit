@@ -10,7 +10,10 @@ import (
 	"nuhabit/backend/internal/platform/module"
 )
 
-type handlers struct{ svc *Service }
+type handlers struct {
+	svc      *Service
+	settings WallpaperSettings
+}
 
 // failure is the {success:false, error} body of a route's catch block.
 type failure struct {
@@ -41,8 +44,7 @@ func (h handlers) handle(route string, fail any, fn httpx.HandlerFunc) http.Hand
 	})
 }
 
-// Routes lists the module's routes. POST and DELETE /api/desktop/wallpapers
-// stay in Next: they write uploads to Next's local storage.
+// Routes lists the module's routes.
 func (h handlers) Routes() []module.Route {
 	return []module.Route{
 		{Pattern: "GET /api/desktop/inbox", Handler: h.handle("desktop/inbox", failure{Error: "Gagal memuat daftar keputusan"}, h.inbox)},
@@ -53,6 +55,8 @@ func (h handlers) Routes() []module.Route {
 		{Pattern: "GET /api/desktop/status", Handler: h.handle("desktop/status", failure{Error: "Gagal memuat status"}, h.status)},
 		{Pattern: "GET /api/desktop/stream", Handler: h.handle("desktop/stream", bare{"Gagal membuka aliran"}, h.stream)},
 		{Pattern: "GET /api/desktop/wallpapers", Handler: h.handle("desktop/wallpapers", failure{Error: "Gagal memuat wallpaper"}, h.wallpapers)},
+		{Pattern: "POST /api/desktop/wallpapers", Handler: h.handle("desktop/wallpapers", failure{Error: "Upload gagal"}, h.uploadWallpaper)},
+		{Pattern: "DELETE /api/desktop/wallpapers", Handler: h.handle("desktop/wallpapers", failure{Error: "Gagal menghapus"}, h.deleteWallpaper)},
 	}
 }
 

@@ -58,6 +58,7 @@ func (h *Handler) Routes() []module.Route {
 		// Profile and account
 		{Pattern: "GET " + prefix + "/me", Handler: h.member("Gagal memuat profil", h.me)},
 		{Pattern: "PUT " + prefix + "/profile", Handler: h.member("Gagal menyimpan profil", h.updateProfile)},
+		{Pattern: "POST " + prefix + "/profile/photo", Handler: h.member("Gagal mengunggah foto", h.uploadPhoto)},
 		{Pattern: "PUT " + prefix + "/consent", Handler: h.member("Gagal menyimpan pilihan promo", h.consent)},
 		{Pattern: "GET " + prefix + "/visits", Handler: h.member("Gagal memuat riwayat kunjungan", h.visits)},
 		{Pattern: "GET " + prefix + "/transactions", Handler: h.member("Gagal memuat riwayat", h.transactions)},

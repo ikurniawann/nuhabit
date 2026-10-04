@@ -66,7 +66,7 @@ func TestStatus(t *testing.T) {
 			`[{db Database ok } {print Antrian cetak ok Kosong} {wa WhatsApp down Gateway tidak menjawab}] down`},
 	} {
 		s := NewService(c.repo, nil, quiet, time.Now)
-		s.probe = &http.Client{Transport: headerTransport{c.hdr}}
+		s.probe = func(string) *http.Client { return &http.Client{Transport: headerTransport{c.hdr}} }
 		res, err := s.Status(context.Background())
 		if err != nil {
 			t.Fatalf("%s: %v", c.name, err)
