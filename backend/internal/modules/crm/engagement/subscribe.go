@@ -2,12 +2,12 @@ package engagement
 
 import (
 	"context"
-	"sync"
 
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/contracts/storedvalue"
 	"nuhabit/backend/internal/modules/crm/engagement/domain"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/outbox"
 )
@@ -22,45 +22,16 @@ func Subscribe(bus *outbox.Bus, d module.Deps, p Ports) {
 	if bus == nil {
 		return
 	}
-	w := walletSubscriber{h: newHandler(d.DB, d, p), pushed: &pushedEvents{seen: map[int64]bool{}}}
+	w := walletSubscriber{h: newHandler(d.DB, d, p)}
 	bus.Subscribe(storedvalue.TopicMemberNotified, subscriberWalletNotice, w.handle)
 }
 
-// pushedEvents remembers which outbox events already sent their push, so a
-// delivery retried in this process (its inbox row rolled back with the
-// failed attempt) does not push the member twice. Bounded; a retry on
-// another replica may still push again (at-least-once).
-type pushedEvents struct {
-	mu    sync.Mutex
-	seen  map[int64]bool
-	order []int64
-}
-
-const maxPushedEvents = 4096
-
-// first reports whether id is new and records it.
-func (p *pushedEvents) first(id int64) bool {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if p.seen[id] {
-		return false
-	}
-	p.seen[id] = true
-	p.order = append(p.order, id)
-	if len(p.order) > maxPushedEvents {
-		delete(p.seen, p.order[0])
-		p.order = p.order[1:]
-	}
-	return true
-}
-
-type walletSubscriber struct {
-	h      *handler
-	pushed *pushedEvents
-}
+type walletSubscriber struct{ h *handler }
 
 // handle writes the inbox row on the delivery's transaction, so it lands
-// exactly once. The push is best effort, sent once per event id per process.
+// exactly once. The push is best effort and sent at most once per event and
+// member across replicas: the claim commits on the pool before the send, so
+// a redelivery after a failed commit finds it.
 func (w walletSubscriber) handle(ctx context.Context, tx pgx.Tx, e outbox.Event) error {
 	var in storedvalue.MemberNotified
 	if err := e.Decode(&in); err != nil {
@@ -70,8 +41,22 @@ func (w walletSubscriber) handle(ctx context.Context, tx pgx.Tx, e outbox.Event)
 	if err := n.notify(ctx, tx, in.CustomerID, domain.PushMessage{Type: in.Type, Title: in.Title, Body: in.Body}); err != nil {
 		return err
 	}
-	if w.pushed.first(e.ID) {
+	first, err := claimPush(ctx, w.h.db, e.ID, in.CustomerID)
+	if err != nil {
+		return err
+	}
+	if first {
 		w.h.send(n)
 	}
 	return nil
+}
+
+// claimPush records that event eventID pushes recipient; false when a
+// delivery already did. Claims past the outbox retention are dropped.
+func claimPush(ctx context.Context, q database.Querier, eventID int64, recipient string) (bool, error) {
+	tag, err := q.Exec(ctx, `
+WITH expired AS (DELETE FROM crm.member_push_claims WHERE claimed_at < now() - interval '7 days')
+INSERT INTO crm.member_push_claims (event_id, recipient) VALUES ($1, $2)
+ON CONFLICT DO NOTHING`, eventID, recipient)
+	return tag.RowsAffected() == 1, err
 }

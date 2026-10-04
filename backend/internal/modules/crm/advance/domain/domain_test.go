@@ -222,3 +222,33 @@ func TestJSValues(t *testing.T) {
 		t.Fatal("IsValidNormalizedPhone")
 	}
 }
+
+func TestRequiredApprovalLevels(t *testing.T) {
+	admin, owner, boss := ptr("admin"), ptr("super_admin"), ptr("user-1")
+	rules := []ApprovalRule{
+		{ID: "a", Level: 1, MinDiscount: 10, ApproverRole: admin},
+		{ID: "b", Level: 2, MinDiscount: 20, ApproverRole: owner},
+		{ID: "c", Level: 1, MinDiscount: 15, ApproverUserID: boss},
+	}
+	ids := func(levels []ApprovalRule) []string {
+		out := []string{}
+		for _, l := range levels {
+			out = append(out, l.ID)
+		}
+		return out
+	}
+	for _, c := range []struct {
+		discount float64
+		want     []string
+	}{
+		{0, []string{}},
+		{10, []string{}}, // the bar must be passed, not met
+		{12, []string{"a"}},
+		{16, []string{"c"}}, // one rule per level: the highest bar passed
+		{25, []string{"c", "b"}},
+	} {
+		if got := ids(RequiredApprovalLevels(c.discount, rules)); !reflect.DeepEqual(got, c.want) {
+			t.Fatalf("discount %v: %v, want %v", c.discount, got, c.want)
+		}
+	}
+}

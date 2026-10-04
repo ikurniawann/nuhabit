@@ -17,6 +17,7 @@ import (
 	"nuhabit/backend/internal/modules/crm/advance/domain"
 	"nuhabit/backend/internal/modules/crm/internal/kit"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/safehttp"
 )
 
 // actionCtx mirrors ActionContext.
@@ -31,6 +32,9 @@ type actionCtx struct {
 
 // webhookTimeout is AbortSignal.timeout(10_000) on the workflow webhook.
 const webhookTimeout = 10 * time.Second
+
+// msgWebhookBlocked is the action's reason when safehttp refuses the URL.
+const msgWebhookBlocked = "URL webhook ditolak: hanya https ke alamat publik"
 
 // runActions runs the actions before the first wait now (one failure does
 // not stop the rest) and queues the ones after it in crm_scheduled_actions.
@@ -91,7 +95,7 @@ func (h *handler) executeAction(ctx context.Context, a workflowAction, ac *actio
 }
 
 func (h *handler) executeDBAction(ctx context.Context, q database.Querier, a workflowAction, ac *actionCtx) (map[string]any, error) {
-	rec, sales := ac.rec, h.ports.Sales
+	rec, records := ac.rec, h.ports.Records
 	result := map[string]any{"type": a.Type}
 	switch a.Type {
 	case "create_task":
@@ -128,14 +132,11 @@ func (h *handler) executeDBAction(ctx context.Context, q database.Querier, a wor
 			notes := domain.RenderTemplate(*a.Notes, ac.template)
 			t.Notes = &notes
 		}
-		id, err := sales.CreateTask(ctx, q, t)
+		id, err := records.CreateTask(ctx, q, t)
 		if err != nil {
 			return nil, err
 		}
-		result["ok"] = true
-		if id != nil {
-			result["task_id"] = *id
-		}
+		result["ok"], result["task_id"] = true, id
 	case "assign_owner":
 		if deref(a.OnlyIfEmpty, false) && rec.str("owner_user_id") != nil {
 			result["ok"], result["skipped"] = true, "sudah ada owner"
@@ -153,7 +154,7 @@ func (h *handler) executeDBAction(ctx context.Context, q database.Querier, a wor
 			result["ok"], result["reason"] = false, "tidak ada kandidat owner"
 			return result, nil
 		}
-		if err := sales.SetOwner(ctx, q, ac.subjectType, ac.subjectID, userID); err != nil {
+		if err := records.SetOwner(ctx, q, ac.subjectType, ac.subjectID, userID); err != nil {
 			return nil, err
 		}
 		rec.set("owner_user_id", userID)
@@ -168,7 +169,7 @@ func (h *handler) executeDBAction(ctx context.Context, q database.Querier, a wor
 		if len(a.Value) > 0 {
 			_ = json.Unmarshal(a.Value, &value)
 		}
-		if err := sales.UpdateField(ctx, q, ac.subjectType, ac.subjectID, field, pgText(value)); err != nil {
+		if err := records.UpdateField(ctx, q, ac.subjectType, ac.subjectID, field, pgText(value)); err != nil {
 			return nil, err
 		}
 		rec.set(field, value)
@@ -275,6 +276,9 @@ func (h *handler) webhookAction(ctx context.Context, a workflowAction, ac *actio
 	}
 	resp, err := h.client.Do(req)
 	if err != nil {
+		if errors.Is(err, safehttp.ErrBlocked) {
+			return nil, errors.New(msgWebhookBlocked)
+		}
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, errors.New("The operation was aborted due to timeout")
 		}

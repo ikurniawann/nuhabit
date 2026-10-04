@@ -19,6 +19,7 @@ vi.mock("@/lib/sales-funnel/server", () => ({
 }));
 
 import { submitPublicForm, type PublicFormRow } from "./public-forms-server";
+import { triggerForEvent } from "./workflow";
 
 const FORM: PublicFormRow = {
   id: "f1",
@@ -32,7 +33,7 @@ const FORM: PublicFormRow = {
   submit_label: "Kirim",
   success_message: "Terima kasih!",
   redirect_url: "https://example.com/ok",
-  default_source: "website",
+  default_source: "lainnya",
   notify_user_ids: [],
   notify_numbers: [],
   is_active: true,
@@ -79,8 +80,15 @@ describe("submitPublicForm", () => {
     // Belum ada lead dengan nomor + instansi sama, lalu INSERT mengembalikan id.
     db.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "lead-1" });
     await expect(submitPublicForm(FORM, VALID, CLIENT)).resolves.toEqual(DONE);
-    expect(events.emitCrmEvent).toHaveBeenCalledWith(expect.objectContaining({ subject_id: "lead-1", event_type: "created" }));
+    expect(events.emitCrmEvent).toHaveBeenCalledWith(expect.objectContaining({ subject_id: "lead-1", event_type: "lead.created" }));
     expect(recorded()).toEqual(["ok"]);
     expect(db.query.mock.calls.some(([sql]) => String(sql).includes("submission_count + 1"))).toBe(true);
+  });
+
+  it("lead dari form memicu workflow 'lead dibuat' seperti lead dari dashboard", async () => {
+    db.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "lead-1" });
+    await submitPublicForm(FORM, VALID, CLIENT);
+    const [event] = events.emitCrmEvent.mock.calls[0] as [{ event_type: string }];
+    expect(triggerForEvent(event.event_type)).toEqual({ object: "lead", trigger: "created" });
   });
 });

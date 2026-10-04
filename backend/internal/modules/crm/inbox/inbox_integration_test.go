@@ -413,7 +413,19 @@ func TestOpenAIAdapter(t *testing.T) {
 	crmtest.MustExec(t, tx, `INSERT INTO configuration.app_settings (key, value) VALUES
 		('openai_api_key', 'sk-test'), ('openai_base_url', $1), ('openai_model', 'gpt-unknown')
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, srv.URL+"/")
-	content, model, err := OpenAIChat{Getenv: func(string) string { return "" }}.Complete(context.Background(), tx, domain.AnalysisMessages([]domain.TranscriptMessage{{Direction: "in", Body: "halo"}}))
+	messages := domain.AnalysisMessages([]domain.TranscriptMessage{{Direction: "in", Body: "halo"}})
+	// The base URL is a setting: a loopback or plain-http one is refused
+	// unless SAFEHTTP_ALLOW_HOSTS lists it.
+	if _, _, err := (OpenAIChat{Getenv: func(string) string { return "" }}).Complete(context.Background(), tx, messages); err == nil || err.Error() != msgOpenAIBaseBlocked || len(calls) != 0 {
+		t.Fatalf("unlisted loopback base URL: %v, %d calls", err, len(calls))
+	}
+	allow := func(k string) string {
+		if k == "SAFEHTTP_ALLOW_HOSTS" {
+			return strings.TrimPrefix(srv.URL, "http://")
+		}
+		return ""
+	}
+	content, model, err := OpenAIChat{Getenv: allow}.Complete(context.Background(), tx, messages)
 	if err != nil || content != `{"topic":"x"}` || model != "openai:gpt-4o-mini" {
 		t.Fatalf("complete: %q %q %v", content, model, err)
 	}

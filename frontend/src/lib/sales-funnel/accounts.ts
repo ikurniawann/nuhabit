@@ -3,6 +3,7 @@
  * Route Next.js hanya boleh mengekspor handler HTTP, jadi skema hidup di sini.
  */
 import { z } from "zod";
+import { patchSchemaOf } from "@/lib/crm/patch-schema";
 import { ACCOUNT_TYPES } from "./server";
 
 export const accountSchema = z.object({
@@ -20,7 +21,7 @@ export const accountSchema = z.object({
   custom: z.record(z.string(), z.unknown()).optional(),
 });
 export type AccountInput = z.infer<typeof accountSchema>;
-export const updateAccountSchema = accountSchema.partial().strict();
+export const updateAccountSchema = patchSchemaOf(accountSchema.strict());
 
 export const contactSchema = z.object({
   account_id: z.string().uuid().optional().nullable(),
@@ -35,4 +36,4 @@ export const contactSchema = z.object({
   custom: z.record(z.string(), z.unknown()).optional(),
 });
 export type ContactInput = z.infer<typeof contactSchema>;
-export const updateContactSchema = contactSchema.partial().strict();
+export const updateContactSchema = patchSchemaOf(contactSchema.strict());

@@ -119,6 +119,16 @@ describe("report builder (EPIC-050 T-4.1)", () => {
     expect(q.params[2]).toBe(5_000_000);
   });
 
+  test("filter not_in: <> ALL dengan satu array terikat (bukan NOT = ANY)", () => {
+    const q = buildReportQuery(
+      def({ filters: [{ field: "forecast_category", op: "not_in", value: ["commit", "best_case"] }] }),
+      { companyId: null, today: TODAY }
+    );
+    expect(q.sql).toContain("<> ALL($1)");
+    expect(q.sql).not.toContain("NOT =");
+    expect(q.params).toEqual([["commit", "best_case"]]);
+  });
+
   test("filter between & in kosong diabaikan", () => {
     const q = buildReportQuery(
       def({ filters: [{ field: "value", op: "between", value: 1, value2: 10 }, { field: "stage_name", op: "in", value: [] }] }),

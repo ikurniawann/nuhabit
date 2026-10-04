@@ -8,7 +8,8 @@ import (
 )
 
 // Every area mounts on one ServeMux without conflicting patterns: 128 of
-// the 132 TS handlers; the four left in TS are not registered.
+// the 132 TS handlers (the four left in TS are not registered), plus the
+// two public form routes.
 func TestRoutesMountTogether(t *testing.T) {
 	m := New(testutil.Deps(t, nil), Ports{})
 	mux := http.NewServeMux()
@@ -20,8 +21,8 @@ func TestRoutesMountTogether(t *testing.T) {
 		seen[r.Pattern] = true
 		mux.Handle(r.Pattern, r.Handler)
 	}
-	if len(seen) != 128 {
-		t.Fatalf("%d routes mounted, want 128", len(seen))
+	if len(seen) != 130 {
+		t.Fatalf("%d routes mounted, want 130", len(seen))
 	}
 	for _, p := range []string{
 		"POST /api/crm/avatars/upload", "POST /api/crm/engagement/announcements/image",

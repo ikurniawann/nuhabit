@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 
+	contractsales "nuhabit/backend/internal/contracts/salesfunnel"
 	"nuhabit/backend/internal/modules/crm/marketing/domain"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -279,7 +280,18 @@ func parseForm(f *validate.Form, patch bool) formInput {
 		trimmed := validate.JSTrim(*in.RedirectURL.Value)
 		in.RedirectURL.Value = &trimmed
 	}
-	in.DefaultSource = strDefault("default_source", "website", validate.StrOpts{Trim: true, Max: 30})
+	// z.enum(LEAD_SOURCES).default("lainnya"): forms may only default to a
+	// source crm_sales_leads_source_check accepts.
+	switch {
+	case patch:
+		in.DefaultSource = f.Enum("default_source", optional, contractsales.LeadSources)
+	default:
+		in.DefaultSource = f.Enum("default_source", validate.Rule{HasDefault: true}, contractsales.LeadSources)
+		if in.DefaultSource == nil {
+			lainnya := "lainnya"
+			in.DefaultSource = &lainnya
+		}
+	}
 	in.NotifyUserIDs = f.Strings("notify_user_ids", orOptional(patch, defaults), 20, validate.StrOpts{Check: validate.UUIDCheck})
 	in.NotifyNumbers = f.Strings("notify_numbers", orOptional(patch, defaults), 10, validate.StrOpts{Trim: true, Min: 8, Max: 20})
 	if patch {

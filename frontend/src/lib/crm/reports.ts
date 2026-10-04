@@ -110,6 +110,12 @@ function asText(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
+/** timestamptz arrives from node-postgres as a Date; the JSON body carries its ISO form. */
+function asTimestamp(value: unknown): string | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  return asText(value) || null;
+}
+
 export function mapTopSpenderRow(row: RawRecord): TopSpenderRow {
   return {
     id: asText(row.id),
@@ -120,7 +126,7 @@ export function mapTopSpenderRow(row: RawRecord): TopSpenderRow {
     order_count: toNumber(row.order_count),
     total_spend: toNumber(row.total_spend),
     ark_spend: toNumber(row.ark_spend),
-    last_order_at: asText(row.last_order_at, "") || null,
+    last_order_at: asTimestamp(row.last_order_at),
   };
 }
 
@@ -134,7 +140,7 @@ export function mapFrequentVisitorRow(row: RawRecord): FrequentVisitorRow {
     order_count: toNumber(row.order_count),
     visit_days: toNumber(row.visit_days),
     lifetime_visits: toNumber(row.lifetime_visits),
-    last_visit_at: asText(row.last_visit_at, "") || null,
+    last_visit_at: asTimestamp(row.last_visit_at),
   };
 }
 

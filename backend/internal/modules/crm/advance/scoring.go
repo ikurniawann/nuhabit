@@ -64,7 +64,7 @@ func (h *handler) recalculateLeadScore(ctx context.Context, leadID string) (*sco
 		return nil, err
 	}
 	score, breakdown := domain.ComputeLeadScore(rules, lead.Fields, counts)
-	if err := h.ports.Sales.SetLeadScore(ctx, h.db, leadID, score, jsonbText(breakdown)); err != nil {
+	if err := h.ports.Records.SetLeadScore(ctx, h.db, leadID, score, jsonbText(breakdown)); err != nil {
 		return nil, err
 	}
 	return &scoreResult{previous: lead.Score, score: score, changed: lead.Score != score}, nil

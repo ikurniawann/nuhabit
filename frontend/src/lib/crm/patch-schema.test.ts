@@ -22,6 +22,12 @@ describe("patchSchemaOf", () => {
     expect(patchSchemaOf(scoringRuleSchema).safeParse({ points: 500 }).success).toBe(false);
   });
 
+  it("skema strict tetap menolak key asing", () => {
+    const base = z.object({ name: z.string() }).strict();
+    expect(patchSchemaOf(base).safeParse({ nope: 1 }).success).toBe(false);
+    expect(patchSchemaOf(z.object({ name: z.string() })).parse({ nope: 1 })).toEqual({});
+  });
+
   it("field yang di-omit dibuang dari hasil", () => {
     const schema = patchSchemaOf(customFieldSchema, ["key", "object"]);
     expect(schema.parse({ key: "x", label: "Label" })).toEqual({ label: "Label" });

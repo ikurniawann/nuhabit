@@ -215,7 +215,7 @@ async function createLeadFromSubmission(
   await emitCrmEvent({
     company_id: companyId,
     branch_id: branchId,
-    event_type: "created",
+    event_type: "lead.created",
     subject_type: "lead",
     subject_id: inserted.id,
     payload: { source: "public_form", form_slug: form.slug, utm: attribution },

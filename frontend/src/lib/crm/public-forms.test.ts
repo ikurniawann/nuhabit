@@ -8,6 +8,7 @@ import {
   parseAttribution,
   publicFormSchema,
   sourceFromAttribution,
+  toLeadSource,
   validateSubmission,
   type PublicFieldDef,
 } from "./public-forms";
@@ -113,14 +114,23 @@ describe("form publik / web-to-lead (EPIC-050 T-5.3)", () => {
   });
 
   test("utm_source dipetakan ke sumber lead yang sah, sisanya jatuh ke default", () => {
-    const of = (src: string | null) => sourceFromAttribution(parseAttribution({ utm_source: src }), "website");
+    const of = (src: string | null, fallback = "lainnya") => sourceFromAttribution(parseAttribution({ utm_source: src }), fallback);
     expect(of("instagram")).toBe("instagram");
     expect(of("IG")).toBe("instagram");
     expect(of("google_ads")).toBe("google");
     expect(of("whatsapp")).toBe("wa");
-    expect(of("tiktok")).toBe("website");
-    expect(of(null)).toBe("website");
-    expect(sourceFromAttribution(parseAttribution({ utm_source: "'; DROP TABLE --" }), "website")).toBe("website");
+    expect(of("tiktok")).toBe("lainnya");
+    expect(of(null, "pameran")).toBe("pameran");
+    expect(of("'; DROP TABLE --")).toBe("lainnya");
+  });
+
+  test("hanya sumber yang lolos crm_sales_leads_source_check", () => {
+    // 'website' dulu menjadi default form dan ditolak constraint (400).
+    expect(sourceFromAttribution(parseAttribution({ utm_source: "organic" }), "lainnya")).toBe("lainnya");
+    expect(sourceFromAttribution(parseAttribution({ utm_source: null }), "website")).toBe("lainnya");
+    expect(toLeadSource("website")).toBe("lainnya");
+    expect(toLeadSource(undefined)).toBe("lainnya");
+    expect(toLeadSource("referral")).toBe("referral");
   });
 
   test("nama lead & pesan WA ke sales", () => {

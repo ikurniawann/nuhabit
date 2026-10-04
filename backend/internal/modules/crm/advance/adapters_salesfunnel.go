@@ -9,11 +9,10 @@ import (
 	"nuhabit/backend/internal/platform/database"
 )
 
-// SalesFunnelSQL is a stopgap adapter: moves to the sales-funnel context
-// (in no migration wave yet). SQL ported from lib/crm/approvals-server.ts,
-// workflow-engine.ts, events.ts and scoring-server.ts. It writes
-// quotation approval status, lead scores, tasks, owners and whitelisted
-// fields of sales-funnel records.
+// SalesFunnelSQL is the stopgap read adapter on sales-funnel tables until
+// that module exposes these reads. SQL ported from lib/crm/approvals-server.ts,
+// workflow-engine.ts, events.ts and scoring-server.ts. Writes go through
+// salesfunnel.Records (Ports.Records).
 type SalesFunnelSQL struct{}
 
 var _ SalesFunnel = SalesFunnelSQL{}
@@ -63,9 +62,22 @@ func (SalesFunnelSQL) ApprovalSubject(ctx context.Context, q database.Querier, q
 	return &s, nil
 }
 
-func (SalesFunnelSQL) SetQuotationApprovalStatus(ctx context.Context, q database.Querier, id, status string) error {
-	_, err := q.Exec(ctx, `UPDATE crm.crm_sales_quotations SET approval_status = $2 WHERE id = $1`, id, status)
-	return err
+func (SalesFunnelSQL) PricedQuotation(ctx context.Context, q database.Querier, id string) (*PricedQuotation, error) {
+	var p PricedQuotation
+	err := q.QueryRow(ctx, `SELECT q.company_id::text, q.branch_id::text, q.total::text, q.discount_percent::text,
+            q.approval_status, q.approval_request_id::text
+     FROM crm.crm_sales_quotations q
+     JOIN crm.crm_sales_deals d ON d.id = q.deal_id
+     JOIN crm.crm_sales_leads l ON l.id = d.lead_id
+     WHERE q.id = $1 AND q.deleted_at IS NULL`, id).
+		Scan(&p.CompanyID, &p.BranchID, &p.Total, &p.DiscountPercent, &p.ApprovalStatus, &p.ApprovalRequestID)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
 }
 
 var snapshotSQL = map[string]string{
@@ -105,50 +117,12 @@ var snapshotSQL = map[string]string{
               WHERE q.id = $1 AND q.deleted_at IS NULL`,
 }
 
-var tableByObject = map[string]string{
-	"lead":      "crm.crm_sales_leads",
-	"deal":      "crm.crm_sales_deals",
-	"account":   "crm.crm_accounts",
-	"contact":   "crm.crm_contacts",
-	"task":      "crm.crm_sales_activities",
-	"quotation": "crm.crm_sales_quotations",
-}
-
 func (SalesFunnelSQL) Snapshot(ctx context.Context, q database.Querier, object, id string) (*kit.Row, error) {
 	sql, ok := snapshotSQL[object]
 	if !ok {
 		return nil, nil
 	}
 	return kit.QueryOne(ctx, q, sql, id)
-}
-
-func (SalesFunnelSQL) CreateTask(ctx context.Context, q database.Querier, t Task) (*string, error) {
-	var id string
-	err := q.QueryRow(ctx, `INSERT INTO crm.crm_sales_activities
-       (company_id, branch_id, lead_id, deal_id, subject_type, subject_id, activity_type, title, notes,
-        due_at, reminder_at, status, priority, owner_user_id, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, 'open', $11, $12, $13)
-     RETURNING id::text`,
-		t.CompanyID, t.BranchID, t.LeadID, t.DealID, t.SubjectType, t.SubjectID, t.ActivityType, t.Title, t.Notes,
-		t.DueAt, t.Priority, t.OwnerUserID, t.CreatedBy).Scan(&id)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
-}
-
-func (SalesFunnelSQL) SetOwner(ctx context.Context, q database.Querier, object, id, userID string) error {
-	_, err := q.Exec(ctx, `UPDATE `+tableByObject[object]+` SET owner_user_id = $2, updated_at = now() WHERE id = $1`, id, userID)
-	return err
-}
-
-// UpdateField runs on the simple protocol so the value reaches PostgreSQL
-// as an untyped literal, coerced to the column type like node-postgres'
-// text parameters.
-func (SalesFunnelSQL) UpdateField(ctx context.Context, q database.Querier, object, id, field string, value *string) error {
-	_, err := q.Exec(ctx, `UPDATE `+tableByObject[object]+` SET `+field+` = $2, updated_at = now() WHERE id = $1`,
-		pgx.QueryExecModeSimpleProtocol, id, value)
-	return err
 }
 
 func (SalesFunnelSQL) AffectedLeadID(ctx context.Context, q database.Querier, subjectType, subjectID string) (*string, error) {
@@ -258,13 +232,6 @@ func (SalesFunnelSQL) SentQuotationCount(ctx context.Context, q database.Querier
 	var n int
 	err := q.QueryRow(ctx, sql, args...).Scan(&n)
 	return n, err
-}
-
-func (SalesFunnelSQL) SetLeadScore(ctx context.Context, q database.Querier, leadID string, score int, breakdown string) error {
-	_, err := q.Exec(ctx, `UPDATE crm.crm_sales_leads
-     SET score = $2, score_breakdown = $3::text::jsonb, score_updated_at = now()
-     WHERE id = $1`, leadID, score, breakdown)
-	return err
 }
 
 func (SalesFunnelSQL) LeadIDs(ctx context.Context, q database.Querier, companyID *string) ([]string, error) {

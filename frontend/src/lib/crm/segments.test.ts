@@ -129,6 +129,13 @@ describe("segmen dinamis & RFM (EPIC-050 T-5.1)", () => {
     expect(segmentSchema.safeParse({ name: "A", definition: { source: "member" } }).success).toBe(true);
   });
 
+  test("filter not_in: <> ALL dengan satu array terikat", () => {
+    const q = buildSegmentQuery(def({ filters: [{ field: "total_xp", op: "not_in", value: "5" }] }), { companyId: null });
+    expect(q.sql).toContain("COALESCE(t.total_xp, 0) <> ALL($1)");
+    expect(q.sql).not.toContain("NOT =");
+    expect(q.params).toEqual([[5]]);
+  });
+
   test("deskripsi segmen & lookup field", () => {
     expect(describeSegment(def({ filters: [{ field: "city", op: "eq", value: "Bandung" }], rfm: RFM_PRESETS.champions.rfm, require_wa_consent: true })))
       .toBe("Member & Pelanggan · 1 filter · RFM R4–5 F4–5 M4–5 · hanya izin WA");

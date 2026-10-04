@@ -18,7 +18,7 @@ type Ports struct{}
 type handler struct {
 	db     database.DB
 	guard  kit.Guard
-	engine *xp.Engine
+	events Events
 }
 
 // Routes mounts the area's routes.
@@ -27,7 +27,7 @@ func Routes(d module.Deps, engine *xp.Engine, _ Ports) []module.Route {
 }
 
 func newHandler(db database.DB, d module.Deps, engine *xp.Engine) *handler {
-	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, engine: engine}
+	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, events: NewEvents(engine)}
 }
 
 func (h *handler) routes() []module.Route {

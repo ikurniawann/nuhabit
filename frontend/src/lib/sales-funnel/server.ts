@@ -42,15 +42,7 @@ export const LEAD_ORG_TYPES = [
   "lainnya",
 ] as const;
 
-export const LEAD_SOURCES = [
-  "wa",
-  "instagram",
-  "referral",
-  "google",
-  "pameran",
-  "canvassing",
-  "lainnya",
-] as const;
+export { LEAD_SOURCES } from "./lead-sources";
 
 export const LEAD_TEMPERATURES = ["panas", "hangat", "dingin"] as const;
 

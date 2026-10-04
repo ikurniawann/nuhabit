@@ -26,6 +26,7 @@ import (
 
 	"nuhabit/backend/internal/modules/crm/engagement/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/safehttp"
 )
 
 // WebPush implements Pusher: a port of lib/member-portal/push.ts (VAPID web
@@ -43,12 +44,13 @@ type WebPush struct {
 
 var _ Pusher = (*WebPush)(nil)
 
-// NewWebPush builds the adapter on the process environment.
+// NewWebPush builds the adapter on the process environment. Endpoints come
+// from members' browsers, so the client is safehttp's.
 func NewWebPush(db database.Querier, log *slog.Logger, now func() time.Time) *WebPush {
 	if now == nil {
 		now = time.Now
 	}
-	return &WebPush{DB: db, Getenv: os.Getenv, Client: &http.Client{Timeout: 30 * time.Second}, Log: log, Now: now}
+	return &WebPush{DB: db, Getenv: os.Getenv, Client: safehttp.NewClient(30 * time.Second), Log: log, Now: now}
 }
 
 type vapidConfig struct {

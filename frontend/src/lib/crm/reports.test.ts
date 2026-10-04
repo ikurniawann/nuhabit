@@ -102,6 +102,14 @@ describe("mapFrequentVisitorRow", () => {
   });
 });
 
+describe("tanggal terakhir dari node-postgres (Date)", () => {
+  it("last_order_at dan last_visit_at diserialisasi ISO, bukan null", () => {
+    const at = new Date("2026-07-18T12:00:00.000Z");
+    expect(mapTopSpenderRow({ id: "c1", last_order_at: at }).last_order_at).toBe("2026-07-18T12:00:00.000Z");
+    expect(mapFrequentVisitorRow({ id: "c2", last_visit_at: at }).last_visit_at).toBe("2026-07-18T12:00:00.000Z");
+  });
+});
+
 describe("mapVenueReconciliationRow", () => {
   it("menghitung net_flow = topup + bonus - spend", () => {
     const row = mapVenueReconciliationRow({

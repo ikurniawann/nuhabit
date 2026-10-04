@@ -5,6 +5,7 @@
  * terhadap definisi form yang tersimpan. Field yang tidak terdaftar dibuang.
  */
 import { z } from "zod";
+import { LEAD_SOURCES } from "@/lib/sales-funnel/lead-sources";
 
 export const PUBLIC_FIELD_TYPES = ["text", "textarea", "email", "phone", "number", "date", "select", "checkbox"] as const;
 export type PublicFieldType = (typeof PUBLIC_FIELD_TYPES)[number];
@@ -61,7 +62,7 @@ export const publicFormSchema = z
     success_message: z.string().trim().min(1).max(500).default("Terima kasih! Tim kami akan menghubungi Anda."),
     redirect_url: z.string().url().max(500).optional().nullable(),
     /** Lead baru diberi sumber ini bila form tidak membawa UTM. */
-    default_source: z.string().trim().max(30).default("website"),
+    default_source: z.enum(LEAD_SOURCES).default("lainnya"),
     notify_user_ids: z.array(z.string().uuid()).max(20).default([]),
     notify_numbers: z.array(z.string().trim().min(8).max(20)).max(10).default([]),
     is_active: z.boolean().default(true),
@@ -126,21 +127,29 @@ export function parseAttribution(raw: Record<string, unknown> | null | undefined
   };
 }
 
+export type LeadSource = (typeof LEAD_SOURCES)[number];
+
+/** A valid lead source, or "lainnya" for anything crm_sales_leads rejects. */
+export function toLeadSource(value: string | null | undefined): LeadSource {
+  return (LEAD_SOURCES as readonly string[]).includes(value ?? "") ? (value as LeadSource) : "lainnya";
+}
+
 /**
  * Sumber lead dari UTM. utm_source bebas diisi siapa pun, jadi dipetakan ke
- * daftar sumber yang sah; yang tak dikenal jatuh ke default form.
+ * daftar sumber yang sah (crm_sales_leads_source_check); yang tak dikenal
+ * jatuh ke default form, dan default yang tidak sah menjadi "lainnya".
  */
-export function sourceFromAttribution(a: Attribution, fallback: string): string {
+export function sourceFromAttribution(a: Attribution, fallback: string): LeadSource {
   const known: Record<string, string> = {
     instagram: "instagram", ig: "instagram", facebook: "instagram", meta: "instagram",
     google: "google", googleads: "google", google_ads: "google", adwords: "google", sem: "google",
     wa: "wa", whatsapp: "wa",
     referral: "referral", refferal: "referral",
     pameran: "pameran", event: "pameran", expo: "pameran",
-    website: "website", web: "website", organic: "website",
+    website: "lainnya", web: "lainnya", organic: "lainnya",
   };
   const key = (a.utm_source ?? "").toLowerCase().replace(/[^a-z_]/g, "");
-  return known[key] ?? fallback;
+  return toLeadSource(known[key] ?? fallback);
 }
 
 // ── validasi kiriman ───────────────────────────────────────────────────────

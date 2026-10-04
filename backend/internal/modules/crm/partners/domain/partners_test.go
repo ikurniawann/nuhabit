@@ -64,6 +64,9 @@ func TestLedgerChannel(t *testing.T) {
 	if LedgerChannel("photobooth") != "photobooth" || LedgerChannel("studio_game") != "studio_game" || LedgerChannel("other") != "manual" {
 		t.Fatal("ledger channel")
 	}
+	if EventChannel("photobooth") != "photobooth" || EventChannel("studio_game") != "studio_game" || EventChannel("kiosk") != "other" {
+		t.Fatal("event channel")
+	}
 }
 
 func TestSecrets(t *testing.T) {

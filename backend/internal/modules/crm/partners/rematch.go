@@ -52,14 +52,14 @@ func (h *handler) rematch(w http.ResponseWriter, r *http.Request) error {
 		if err := kit.CrmInputErr(f); err != nil {
 			return err
 		}
-		customerID, err := h.findMember(ctx, *identifier)
+		customerID, err := findMember(ctx, h.db, *identifier)
 		if err != nil {
 			return err
 		}
 		if customerID == "" {
 			return httpx.NotFound("Member dengan telepon/email itu tidak ditemukan (atau lebih dari satu)")
 		}
-		event, err := h.settleEvent(ctx, *eventID, &customerID, &user.ID)
+		event, err := h.events.settle(ctx, h.db, *eventID, &customerID, &user.ID)
 		if err != nil {
 			return err
 		}
@@ -86,12 +86,12 @@ func (h *handler) rematch(w http.ResponseWriter, r *http.Request) error {
 
 // findMember mirrors findMemberForSubject: the member a subject means, or
 // "" when none or more than one fits.
-func (h *handler) findMember(ctx context.Context, subject string) (string, error) {
+func findMember(ctx context.Context, q database.Querier, subject string) (string, error) {
 	value := validate.JSTrim(subject)
 	if value == "" {
 		return "", nil
 	}
-	rows, err := h.db.Query(ctx, `SELECT id::text, email, phone FROM pos.pos_customers
+	rows, err := q.Query(ctx, `SELECT id::text, email, phone FROM pos.pos_customers
       WHERE is_active IS DISTINCT FROM false
         AND (lower(email) = lower($1)
              OR ($2::text IS NOT NULL AND right(regexp_replace(phone, '\D', '', 'g'), 8) = $2))
@@ -117,14 +117,14 @@ type settledEvent struct {
 	XPAwarded  int     `json:"xp_awarded"`
 }
 
-// settleEvent mirrors settleEvent: match one event (customerID set = a
+// settle mirrors settleEvent: match one event (customerID set = a
 // manual match by actorID) and award XP when due. The award is idempotent
 // per event, so settling again is safe. nil when the event does not exist.
-func (h *handler) settleEvent(ctx context.Context, eventID string, customerID, actorID *string) (*settledEvent, error) {
+func (s Events) settle(ctx context.Context, db database.DB, eventID string, customerID, actorID *string) (*settledEvent, error) {
 	var eventType, partnerName, partnerType string
 	var identifier *string
 	var partner domain.Partner
-	err := h.db.QueryRow(ctx, `SELECT e.event_type, e.customer_identifier, p.name, p.partner_type,
+	err := db.QueryRow(ctx, `SELECT e.event_type, e.customer_identifier, p.name, p.partner_type,
             p.is_active, p.awards_xp, p.xp_per_event::float8
        FROM crm.crm_external_events e
        JOIN crm.crm_integration_partners p ON p.id = e.partner_id
@@ -137,7 +137,7 @@ func (h *handler) settleEvent(ctx context.Context, eventID string, customerID, a
 		return nil, err
 	}
 	if customerID == nil && identifier != nil {
-		found, err := h.findMember(ctx, *identifier)
+		found, err := findMember(ctx, db, *identifier)
 		if err != nil {
 			return nil, err
 		}
@@ -152,9 +152,9 @@ func (h *handler) settleEvent(ctx context.Context, eventID string, customerID, a
 	if customerID != nil && decision.XP > 0 {
 		// The TS ran the award outside any transaction and caught its error;
 		// a savepoint keeps a failed award from leaving partial rows.
-		err := database.WithTx(ctx, h.db, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, db, func(tx pgx.Tx) error {
 			venue := kit.DefaultVenue(ctx, tx)
-			res, err := h.engine.AwardPartnerEventXP(ctx, tx, *customerID, eventID, domain.LedgerChannel(partnerType),
+			res, err := s.engine.AwardPartnerEventXP(ctx, tx, *customerID, eventID, domain.LedgerChannel(partnerType),
 				partnerName+": "+eventType, float64(decision.XP), venue)
 			if err == nil && res.Status == "posted" {
 				xpAwarded = int(res.XPAwarded)
@@ -172,7 +172,7 @@ func (h *handler) settleEvent(ctx context.Context, eventID string, customerID, a
 		}
 	}
 	var out settledEvent
-	err = h.db.QueryRow(ctx, `UPDATE crm.crm_external_events
+	err = db.QueryRow(ctx, `UPDATE crm.crm_external_events
         SET customer_id = $2,
             member_id = (SELECT id FROM crm.crm_member_profiles WHERE customer_id = $2),
             processing_status = $3,
@@ -230,7 +230,7 @@ func (h *handler) rematchPending(ctx context.Context, partnerID *string) (rematc
 	}
 	result := rematchResult{Checked: len(ids)}
 	for _, id := range ids {
-		settled, err := h.settleEvent(ctx, id, nil, nil)
+		settled, err := h.events.settle(ctx, h.db, id, nil, nil)
 		if err != nil {
 			return rematchResult{}, err
 		}

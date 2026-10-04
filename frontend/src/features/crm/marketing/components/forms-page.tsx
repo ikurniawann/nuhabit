@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useOwners } from "@/features/crm/advance/queries";
 import {
-  DEFAULT_FORM_FIELDS, LEAD_MAPPED_LABELS, PUBLIC_FIELD_TYPES, PUBLIC_FIELD_TYPE_LABELS,
+  DEFAULT_FORM_FIELDS, LEAD_MAPPED_LABELS, PUBLIC_FIELD_TYPES, PUBLIC_FIELD_TYPE_LABELS, toLeadSource,
 } from "@/lib/crm/public-forms";
 import { useCreateForm, useDeleteForm, useFormSubmissions, useForms, useUpdateForm } from "../queries";
 import type { FormRow, PublicFieldDef, PublicFormInput } from "../types";
@@ -180,7 +180,7 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
     const payload = {
       name: name.trim(), title: title.trim(), description: description.trim() || null,
       fields, submit_label: submitLabel.trim() || "Kirim", success_message: successMessage.trim(),
-      redirect_url: null, default_source: initial?.default_source ?? "website",
+      redirect_url: null, default_source: toLeadSource(initial?.default_source),
       notify_user_ids: notifyUsers, notify_numbers: notifyNumbers, is_active: initial?.is_active ?? true,
     };
     if (initial) updateMutation.mutate({ id: initial.id, values: payload }, { onSuccess: onClose });

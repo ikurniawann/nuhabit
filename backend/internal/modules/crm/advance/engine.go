@@ -7,10 +7,12 @@ import (
 	"math"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"nuhabit/backend/internal/modules/crm/advance/domain"
 	"nuhabit/backend/internal/modules/crm/internal/kit"
+	"nuhabit/backend/internal/platform/database"
 )
 
 // The CRM event bus and workflow engine of lib/crm/events.ts and
@@ -184,8 +186,9 @@ func (h *handler) matchingRules(ctx context.Context, object, trigger string, com
 	return out, rows.Err()
 }
 
-// processWorkflowEvent runs the active rules matching the event; one
-// failing rule does not stop the others.
+// processWorkflowEvent runs the active rules matching the event, each in
+// its own transaction (a savepoint on a delivery's): one failing rule rolls
+// back alone and does not stop the others.
 func (h *handler) processWorkflowEvent(ctx context.Context, ev crmEvent, eventID *string) error {
 	object, trigger, ok := domain.TriggerForEvent(ev.EventType)
 	if !ok {
@@ -202,7 +205,8 @@ func (h *handler) processWorkflowEvent(ctx context.Context, ev crmEvent, eventID
 	for _, rule := range rules {
 		in := runInput{object: object, subjectID: ev.SubjectID, companyID: ev.CompanyID, branchID: ev.BranchID,
 			eventID: eventID, actorUserID: ev.ActorUserID, payload: payload, changes: ev.Changes}
-		if err := h.runRuleForSubject(ctx, rule, in); err != nil {
+		err := database.WithTx(ctx, h.db, func(tx pgx.Tx) error { return h.on(tx).runRuleForSubject(ctx, rule, in) })
+		if err != nil {
 			h.log.Error("[crm-workflow] rule "+rule.Name+" gagal", "error", err)
 		}
 	}

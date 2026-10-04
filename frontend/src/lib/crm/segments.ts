@@ -239,7 +239,8 @@ function filterSql(source: SegmentSource, f: SegmentFilter, params: unknown[]): 
     case "not_in": {
       const arr = (Array.isArray(f.value) ? f.value : [f.value]).filter((v) => v !== null && v !== undefined && v !== "");
       if (arr.length === 0) return null;
-      return `${col}${f.op === "not_in" ? " NOT" : ""} = ANY(${push(arr.map((v) => castValue(def.type, v)))})`;
+      const values = push(arr.map((v) => castValue(def.type, v)));
+      return f.op === "not_in" ? `${col} <> ALL(${values})` : `${col} = ANY(${values})`;
     }
     case "between": {
       if (f.value === null || f.value === undefined || f.value2 === null || f.value2 === undefined) return null;

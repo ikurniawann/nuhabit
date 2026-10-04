@@ -19,6 +19,8 @@ import (
 
 	"nuhabit/backend/internal/modules/crm/internal/crmtest"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/safehttp"
 	"nuhabit/backend/internal/platform/testutil"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
@@ -33,6 +35,48 @@ type fakeEmployees struct{ phone string }
 
 func (f fakeEmployees) Phone(context.Context, database.Querier, string) (*string, error) {
 	return &f.phone, nil
+}
+
+// sqlRecords stands in for the sales-funnel Records service, which this
+// package may not import (internal/app wires the real one).
+type sqlRecords struct{}
+
+func (sqlRecords) SetQuotationApprovalStatus(ctx context.Context, q database.Querier, id, status string) error {
+	_, err := q.Exec(ctx, `UPDATE crm.crm_sales_quotations SET approval_status = $2 WHERE id = $1`, id, status)
+	return err
+}
+
+func (sqlRecords) SetQuotationApproval(ctx context.Context, q database.Querier, id, status string, requestID *string) error {
+	_, err := q.Exec(ctx, `UPDATE crm.crm_sales_quotations SET approval_status = $2, approval_request_id = $3 WHERE id = $1`, id, status, requestID)
+	return err
+}
+
+func (sqlRecords) CreateTask(ctx context.Context, q database.Querier, t Task) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `INSERT INTO crm.crm_sales_activities
+       (company_id, branch_id, lead_id, deal_id, subject_type, subject_id, activity_type, title, notes,
+        due_at, reminder_at, status, priority, owner_user_id, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10, 'open', $11, $12, $13) RETURNING id::text`,
+		t.CompanyID, t.BranchID, t.LeadID, t.DealID, t.SubjectType, t.SubjectID, t.ActivityType, t.Title, t.Notes,
+		t.DueAt, t.Priority, t.OwnerUserID, t.CreatedBy).Scan(&id)
+	return id, err
+}
+
+var testTables = map[string]string{"lead": "crm.crm_sales_leads", "deal": "crm.crm_sales_deals", "quotation": "crm.crm_sales_quotations"}
+
+func (sqlRecords) SetOwner(ctx context.Context, q database.Querier, object, id, userID string) error {
+	_, err := q.Exec(ctx, `UPDATE `+testTables[object]+` SET owner_user_id = $2 WHERE id = $1`, id, userID)
+	return err
+}
+
+func (sqlRecords) UpdateField(ctx context.Context, q database.Querier, object, id, field string, value *string) error {
+	_, err := q.Exec(ctx, `UPDATE `+testTables[object]+` SET `+field+` = $2 WHERE id = $1`, pgx.QueryExecModeSimpleProtocol, id, value)
+	return err
+}
+
+func (sqlRecords) SetLeadScore(ctx context.Context, q database.Querier, leadID string, score int, breakdown string) error {
+	_, err := q.Exec(ctx, `UPDATE crm.crm_sales_leads SET score = $2, score_breakdown = $3::text::jsonb WHERE id = $1`, leadID, score, breakdown)
+	return err
 }
 
 // recorder captures the requests an httptest server receives.
@@ -66,6 +110,9 @@ var fixedNow = time.Date(2026, 10, 4, 3, 0, 0, 0, time.UTC) // 10:00 WIB
 type env struct {
 	t     *testing.T
 	tx    pgx.Tx
+	h     *handler
+	deps  module.Deps
+	ports Ports
 	mux   *http.ServeMux
 	wa    *recorder
 	venue struct{ company, branch string }
@@ -75,10 +122,11 @@ func setup(t *testing.T) *env {
 	t.Helper()
 	tx := testutil.Tx(t)
 	d := testutil.Deps(t, func() time.Time { return fixedNow })
-	e := &env{t: t, tx: tx, wa: &recorder{}}
+	e := &env{t: t, tx: tx, wa: &recorder{}, deps: d}
 	gw := &whatsapp.Gateway{BaseURL: e.wa.server(t, 200).URL, Token: "tok", Timeout: 5 * time.Second}
-	h := newHandler(tx, d, Ports{WhatsApp: fakeWhatsApp{gw}, Employees: fakeEmployees{"0812-3456-7890"}})
-	e.mux = crmtest.Mux(h.routes())
+	e.ports = Ports{Records: sqlRecords{}, WhatsApp: fakeWhatsApp{gw}, Employees: fakeEmployees{"0812-3456-7890"}}
+	e.h = newHandler(tx, d, e.ports)
+	e.mux = crmtest.Mux(e.h.routes())
 	ctx := context.Background()
 	if err := tx.QueryRow(ctx, `SELECT company_id::text, id::text FROM configuration.branches ORDER BY created_at LIMIT 1`).
 		Scan(&e.venue.company, &e.venue.branch); err != nil {
@@ -462,7 +510,10 @@ func TestApprovalDecisionRunsWorkflowAndScoring(t *testing.T) {
 	reqID := e.approvalRequest(quote, requester.UserID, approver2.UserID)
 
 	hooks := &recorder{}
-	hookURL := hooks.server(t, 202).URL + "/hook"
+	hookServer := hooks.server(t, 202)
+	hookURL := hookServer.URL + "/hook"
+	// The receiver listens on loopback over http, so the test allowlists it.
+	e.h.client = safehttp.Policy{AllowHosts: []string{strings.TrimPrefix(hookServer.URL, "http://")}}.Client(0)
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_workflow_rules (company_id, name, object, trigger_type, run_once_per_record, actions)
 		VALUES ($1, 'Approval berubah', 'quotation', 'status_changed', false, $2::jsonb)`, e.venue.company,
 		`[{"type":"notify_in_app","to":"user","user_id":"`+requester.UserID+`","title":"{{quotation.quote_number}} {{event.approval}}","message":"Total {{quotation.total}} untuk {{lead.org_name}}"},
@@ -642,20 +693,5 @@ func TestRecalculateScores(t *testing.T) {
 	}
 	if breakdown[:2] != `[{` || !json.Valid([]byte(breakdown)) {
 		t.Fatalf("breakdown = %s", breakdown)
-	}
-}
-
-func TestUpdateFieldCoercesTextLikeNodePostgres(t *testing.T) {
-	e := setup(t)
-	_, deal, _ := e.salesFixture(e.staff("crm.settings").UserID)
-	ctx := context.Background()
-	s := SalesFunnelSQL{}
-	for field, v := range map[string]string{"pax_estimate": "12", "is_event_date_fixed": "true"} {
-		if err := s.UpdateField(ctx, e.tx, "deal", deal, field, &v); err != nil {
-			t.Fatalf("%s: %v", field, err)
-		}
-	}
-	if n := crmtest.Scalar[int](t, e.tx, `SELECT pax_estimate FROM crm.crm_sales_deals WHERE id = $1 AND is_event_date_fixed`, deal); n != 12 {
-		t.Fatalf("pax = %d", n)
 	}
 }

@@ -16,5 +16,7 @@ export function patchSchemaOf<S extends z.ZodRawShape, K extends keyof S = never
     const inner = field instanceof z.ZodDefault ? field.unwrap() : field;
     shape[key] = (inner as z.ZodType).optional();
   }
-  return z.object(shape) as unknown as z.ZodType<Partial<Omit<z.output<z.ZodObject<S>>, K>>>;
+  // Skema `.strict()` tetap menolak key asing.
+  const patch = base.def.catchall ? z.object(shape).catchall(base.def.catchall) : z.object(shape);
+  return patch as unknown as z.ZodType<Partial<Omit<z.output<z.ZodObject<S>>, K>>>;
 }

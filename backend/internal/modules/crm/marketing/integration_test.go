@@ -653,7 +653,7 @@ func TestForms(t *testing.T) {
 	if status != 200 || raw != `{"success":true,"data":{"id":"`+id+`","slug":"`+slug+`","name":"Kontak B2B","is_active":false},"message":"Form diperbarui"}` {
 		t.Fatalf("patch %d %s", status, raw)
 	}
-	if e.scalar(`SELECT submit_label || '|' || default_source FROM crm.crm_forms WHERE id = $1`, id) != "Kirim|website" {
+	if e.scalar(`SELECT submit_label || '|' || default_source FROM crm.crm_forms WHERE id = $1`, id) != "Kirim|lainnya" {
 		t.Fatal("patch reset defaults")
 	}
 	status, body = e.call("PATCH", "/api/crm/forms/"+id, map[string]any{"slug": "x"})

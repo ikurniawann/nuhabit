@@ -2,7 +2,9 @@ package engagement
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +15,7 @@ import (
 	"nuhabit/backend/internal/modules/crm/engagement/domain"
 	"nuhabit/backend/internal/modules/crm/internal/crmtest"
 	"nuhabit/backend/internal/platform/outbox"
+	"nuhabit/backend/internal/platform/safehttp"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -340,6 +343,42 @@ func TestMemberReviews(t *testing.T) {
 	}
 }
 
+// Each bus is one API replica. A redelivery after a lost commit lands on the
+// other replica, which must not push the member a second time.
+func TestWalletPushDedupedAcrossReplicas(t *testing.T) {
+	tx := testutil.Tx(t)
+	ctx := context.Background()
+	d := testutil.Deps(t, nil)
+	push := &recordingPush{}
+	replicas := []*outbox.Bus{outbox.NewBus(nil, d.Log), outbox.NewBus(nil, d.Log)}
+	for _, bus := range replicas {
+		Subscribe(bus, d, Ports{Push: push})
+	}
+	if err := replicas[0].Register(ctx, tx); err != nil {
+		t.Fatal(err)
+	}
+	member := crmtest.Scalar[string](t, tx, `INSERT INTO pos.pos_customers (phone, name) VALUES ($1, 'Wallet') RETURNING id::text`, "+6296"+testutil.RandomHex(4))
+	// The subscribers claim on the pool, outside this transaction.
+	t.Cleanup(func() {
+		_, _ = testutil.DB(t).Exec(context.Background(), `DELETE FROM crm.member_push_claims WHERE recipient = $1`, member)
+	})
+	if err := outbox.Publish(ctx, tx, storedvalue.TopicMemberNotified, member, storedvalue.MemberNotified{
+		CustomerID: member, Type: "wallet_low_balance", Title: "Saldo menipis", Body: "Isi ulang",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, bus := range replicas {
+		crmtest.MustExec(t, tx, `UPDATE platform.outbox_deliveries d SET delivered_at = NULL FROM platform.outbox_events e
+			WHERE e.id = d.event_id AND e.key = $1 AND d.subscriber = $2`, member, subscriberWalletNotice)
+		if n, err := bus.Dispatch(ctx, tx); err != nil || n != 1 {
+			t.Fatalf("dispatch: %d %v", n, err)
+		}
+	}
+	if len(push.members) != 1 {
+		t.Fatalf("pushes = %v, want one", push.members)
+	}
+}
+
 func TestWalletNotificationSubscriber(t *testing.T) {
 	tx := testutil.Tx(t)
 	ctx := context.Background()
@@ -351,6 +390,9 @@ func TestWalletNotificationSubscriber(t *testing.T) {
 		t.Fatal(err)
 	}
 	member := crmtest.Scalar[string](t, tx, `INSERT INTO pos.pos_customers (phone, name) VALUES ($1, 'Wallet') RETURNING id::text`, "+6296"+testutil.RandomHex(4))
+	t.Cleanup(func() {
+		_, _ = testutil.DB(t).Exec(context.Background(), `DELETE FROM crm.member_push_claims WHERE recipient = $1`, member)
+	})
 	if err := outbox.Publish(ctx, tx, storedvalue.TopicMemberNotified, member, storedvalue.MemberNotified{
 		CustomerID: member, Type: "wallet_low_balance", Title: "Saldo menipis", Body: "Isi ulang",
 	}); err != nil {
@@ -367,7 +409,7 @@ func TestWalletNotificationSubscriber(t *testing.T) {
 	}
 
 	// A redelivery of the same event (keyed on its id) does not push again.
-	w := walletSubscriber{h: newHandler(tx, d, Ports{Push: push}), pushed: &pushedEvents{seen: map[int64]bool{}}}
+	w := walletSubscriber{h: newHandler(tx, d, Ports{Push: push})}
 	ev := outbox.Event{ID: 42, Payload: []byte(`{"customer_id":"` + member + `","type":"t","title":"x","body":"y"}`)}
 	for range 2 {
 		if err := w.handle(ctx, tx, ev); err != nil {
@@ -376,5 +418,20 @@ func TestWalletNotificationSubscriber(t *testing.T) {
 	}
 	if len(push.members) != 2 {
 		t.Fatalf("redelivery pushed again: %v", push.members)
+	}
+}
+
+// Push endpoints come from members' browsers: the sender must not reach
+// the server's own network.
+func TestWebPushRefusesInternalEndpoints(t *testing.T) {
+	hit := false
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hit = true }))
+	defer srv.Close()
+	resp, err := NewWebPush(nil, nil, nil).Client.Post(srv.URL, "application/octet-stream", nil)
+	if err == nil {
+		resp.Body.Close()
+	}
+	if !errors.Is(err, safehttp.ErrBlocked) || hit {
+		t.Fatalf("loopback endpoint: err=%v hit=%v", err, hit)
 	}
 }

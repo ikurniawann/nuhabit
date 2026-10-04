@@ -6,6 +6,7 @@ package advance
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,12 +17,13 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/safehttp"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
 
-// SalesFunnel is the sales-funnel context: leads, deals, quotations and
+// SalesFunnel reads the sales-funnel context: leads, deals, quotations and
 // activities (crm.crm_sales_*), plus the B2B accounts and contacts the
-// workflow engine reads and writes. Rows keep their node-postgres shapes.
+// workflow engine evaluates. Rows keep their node-postgres shapes.
 type SalesFunnel interface {
 	// InboxQuotations returns, per quotation id, the quotation, deal and lead
 	// columns of the approval inbox (quotations without a deal or lead are
@@ -32,16 +34,13 @@ type SalesFunnel interface {
 	// ApprovalSubject returns what approver notifications name, nil when the
 	// quotation, its deal or its lead is missing.
 	ApprovalSubject(ctx context.Context, q database.Querier, quotationID string) (*ApprovalSubject, error)
-	SetQuotationApprovalStatus(ctx context.Context, q database.Querier, id, status string) error
+	// PricedQuotation is what the approval sync reads, nil when the
+	// quotation is missing, deleted, or has no deal or lead.
+	PricedQuotation(ctx context.Context, q database.Querier, id string) (*PricedQuotation, error)
 
 	// Snapshot is the record a workflow rule evaluates (nil when missing or
 	// soft-deleted), with owner_name and the joined labels.
 	Snapshot(ctx context.Context, q database.Querier, object, id string) (*kit.Row, error)
-	CreateTask(ctx context.Context, q database.Querier, t Task) (*string, error)
-	SetOwner(ctx context.Context, q database.Querier, object, id, userID string) error
-	// UpdateField writes one whitelisted field; value is the node-postgres
-	// text form (nil for NULL).
-	UpdateField(ctx context.Context, q database.Querier, object, id, field string, value *string) error
 
 	// AffectedLeadID is the lead an event on subjectType touches.
 	AffectedLeadID(ctx context.Context, q database.Querier, subjectType, subjectID string) (*string, error)
@@ -52,9 +51,56 @@ type SalesFunnel interface {
 	DoneTaskCounts(ctx context.Context, q database.Querier, leadID string, windowDays *int) (map[string]int, error)
 	DealCount(ctx context.Context, q database.Querier, leadID string, windowDays *int) (int, error)
 	SentQuotationCount(ctx context.Context, q database.Querier, leadID string, windowDays *int) (int, error)
-	SetLeadScore(ctx context.Context, q database.Querier, leadID string, score int, breakdown string) error
 	// LeadIDs lists live leads, newest first, at most 5000.
 	LeadIDs(ctx context.Context, q database.Querier, companyID *string) ([]string, error)
+}
+
+// SalesRecords writes the sales-funnel records approvals, workflow actions
+// and lead scoring change (salesfunnel.Records through internal/app).
+type SalesRecords interface {
+	SetQuotationApprovalStatus(ctx context.Context, q database.Querier, id, status string) error
+	// SetQuotationApproval sets approval_status and approval_request_id.
+	SetQuotationApproval(ctx context.Context, q database.Querier, id, status string, requestID *string) error
+	CreateTask(ctx context.Context, q database.Querier, t Task) (string, error)
+	SetOwner(ctx context.Context, q database.Querier, object, id, userID string) error
+	// UpdateField writes one whitelisted field; value is the node-postgres
+	// text form (nil for NULL).
+	UpdateField(ctx context.Context, q database.Querier, object, id, field string, value *string) error
+	SetLeadScore(ctx context.Context, q database.Querier, leadID string, score int, breakdown string) error
+}
+
+// errNoRecords fails sales-funnel writes when Ports.Records is not wired.
+var errNoRecords = errors.New("crm advance: sales-funnel records port not wired")
+
+// noRecords is the Records fallback: every write fails with errNoRecords.
+type noRecords struct{}
+
+func (noRecords) SetQuotationApprovalStatus(context.Context, database.Querier, string, string) error {
+	return errNoRecords
+}
+func (noRecords) SetQuotationApproval(context.Context, database.Querier, string, string, *string) error {
+	return errNoRecords
+}
+func (noRecords) CreateTask(context.Context, database.Querier, Task) (string, error) {
+	return "", errNoRecords
+}
+func (noRecords) SetOwner(context.Context, database.Querier, string, string, string) error {
+	return errNoRecords
+}
+func (noRecords) UpdateField(context.Context, database.Querier, string, string, string, *string) error {
+	return errNoRecords
+}
+func (noRecords) SetLeadScore(context.Context, database.Querier, string, int, string) error {
+	return errNoRecords
+}
+
+// PricedQuotation is the quotation the discount approval follows.
+type PricedQuotation struct {
+	CompanyID, BranchID *string
+	// Total and DiscountPercent are numeric text.
+	Total, DiscountPercent string
+	ApprovalStatus         string
+	ApprovalRequestID      *string
 }
 
 // QuotationLink identifies a quotation's deal.
@@ -103,9 +149,10 @@ type WhatsApp interface {
 
 // Ports are the capabilities of other bounded contexts this area uses;
 // internal/app/adapters_crm_advance.go provides them. Nil ports fall back
-// to the stopgap SQL adapters in this package.
+// to the stopgap SQL adapters in this package (Records to noRecords).
 type Ports struct {
 	Sales         SalesFunnel
+	Records       SalesRecords
 	Notifications Notifications
 	Employees     Employees
 	WhatsApp      WhatsApp
@@ -118,7 +165,7 @@ type handler struct {
 	ports  Ports
 	log    *slog.Logger
 	now    func() time.Time
-	client *http.Client
+	client *http.Client // safehttp: webhook URLs are user input
 }
 
 // Routes mounts the area's routes.
@@ -138,6 +185,9 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 	if p.Sales == nil {
 		p.Sales = SalesFunnelSQL{}
 	}
+	if p.Records == nil {
+		p.Records = noRecords{}
+	}
 	if p.Notifications == nil {
 		p.Notifications = NotificationsSQL{}
 	}
@@ -147,7 +197,15 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 	if p.WhatsApp == nil {
 		p.WhatsApp = WhatsAppGateway{Client: whatsapp.New(log)}
 	}
-	return &handler{db: db, auth: d.Auth, guard: kit.Guard{Auth: d.Auth, DB: db}, ports: p, log: log, now: now, client: &http.Client{}}
+	return &handler{db: db, auth: d.Auth, guard: kit.Guard{Auth: d.Auth, DB: db}, ports: p, log: log, now: now, client: safehttp.NewClient(0)}
+}
+
+// on is the handler running its queries on db (a delivery transaction or a
+// savepoint inside one).
+func (h *handler) on(db database.DB) *handler {
+	c := *h
+	c.db, c.guard.DB = db, db
+	return &c
 }
 
 func (h *handler) routes() []module.Route {

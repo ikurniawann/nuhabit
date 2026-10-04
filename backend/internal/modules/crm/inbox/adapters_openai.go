@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/crm/inbox/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/safehttp"
 )
 
 // OpenAIChat is a stopgap adapter: moves to the AI/settings context once
@@ -19,6 +20,8 @@ import (
 // lib/crm/conversation-insights-server.ts: key, base URL and model from
 // configuration.app_settings (env key as fallback), one non-streaming
 // chat completion, JSON mode first and retried once without it on HTTP 400.
+// The base URL is an admin setting and the request carries the API key, so
+// a nil Client uses safehttp (SAFEHTTP_ALLOW_HOSTS read through Getenv).
 type OpenAIChat struct {
 	Getenv func(string) string
 	Client *http.Client
@@ -31,6 +34,9 @@ var _ InsightModel = OpenAIChat{}
 var aiModels = []string{"openai:gpt-4o-mini", "openai:gpt-4.1-mini", "openai:gpt-4o", "openai:gpt-5.4-mini", "openai:gpt-5.5"}
 
 const analysisTimeout = 60 * time.Second
+
+// msgOpenAIBaseBlocked is the error when safehttp refuses openai_base_url.
+const msgOpenAIBaseBlocked = "openai_base_url ditolak: hanya https ke alamat publik"
 
 // Complete returns the answer text and the model id stored with the insight.
 func (o OpenAIChat) Complete(ctx context.Context, q database.Querier, messages []domain.ChatMessage) (string, string, error) {
@@ -48,6 +54,10 @@ func (o OpenAIChat) Complete(ctx context.Context, q database.Querier, messages [
 		model = aiModels[0]
 	}
 	baseURL := strings.TrimSuffix(firstSet(stored["openai_base_url"], "https://api.openai.com/v1"), "/")
+	client := o.Client
+	if client == nil {
+		client = safehttp.FromEnv(o.Getenv).Client(0)
+	}
 
 	send := func(jsonMode bool) (response, error) {
 		body := map[string]any{"model": strings.TrimPrefix(model, "openai:"), "messages": messages}
@@ -59,8 +69,11 @@ func (o OpenAIChat) Complete(ctx context.Context, q database.Querier, messages [
 		}
 		callCtx, cancel := context.WithTimeout(ctx, analysisTimeout)
 		defer cancel()
-		res, err := doRequest(callCtx, httpClient(o.Client), http.MethodPost, baseURL+"/chat/completions", body,
+		res, err := doRequest(callCtx, client, http.MethodPost, baseURL+"/chat/completions", body,
 			map[string]string{"Content-Type": "application/json", "Authorization": "Bearer " + apiKey})
+		if errors.Is(err, safehttp.ErrBlocked) {
+			return res, errors.New(msgOpenAIBaseBlocked)
+		}
 		if err != nil {
 			return res, errors.New(fetchError(callCtx, err))
 		}

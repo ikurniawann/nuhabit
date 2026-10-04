@@ -21,6 +21,7 @@ func init() {
 			Reports:      crmReportsPorts(d),
 			Advance:      crmAdvancePorts(d),
 			Reporting:    crmReportingPorts(d),
+			FormLeads:    crmFormLeads{},
 		})
 	})
 }

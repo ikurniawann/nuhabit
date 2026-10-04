@@ -130,3 +130,11 @@ func LedgerChannel(partnerType string) string {
 	}
 	return "manual"
 }
+
+// EventChannel is the source_channel of a partner's events.
+func EventChannel(partnerType string) string {
+	if partnerType == "photobooth" || partnerType == "studio_game" {
+		return partnerType
+	}
+	return "other"
+}

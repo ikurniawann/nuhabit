@@ -13,6 +13,7 @@ import (
 	"nuhabit/backend/internal/modules/crm/marketing"
 	"nuhabit/backend/internal/modules/crm/members"
 	"nuhabit/backend/internal/modules/crm/partners"
+	"nuhabit/backend/internal/modules/crm/publicforms"
 	"nuhabit/backend/internal/modules/crm/reporting"
 	"nuhabit/backend/internal/modules/crm/reports"
 	"nuhabit/backend/internal/modules/crm/xp"
@@ -37,6 +38,7 @@ type Ports struct {
 	Reports      reports.Ports
 	Advance      advance.Ports
 	Reporting    reporting.Ports
+	FormLeads    publicforms.Leads
 }
 
 // Module is the mounted CRM context.
@@ -53,6 +55,7 @@ func New(d module.Deps, p Ports) *Module {
 	engine := NewEngine(d, p.Pos)
 	loyalty.Subscribe(d.Events, engine)
 	engagement.Subscribe(d.Events, d, p.Engagement)
+	advance.Subscribe(d.Events, d, p.Advance)
 	var routes []module.Route
 	for _, rs := range [][]module.Route{
 		loyalty.Routes(d, engine, p.Loyalty),
@@ -65,6 +68,7 @@ func New(d module.Deps, p Ports) *Module {
 		reports.Routes(d, engine, p.Reports),
 		advance.Routes(d, engine, p.Advance),
 		reporting.Routes(d, engine, p.Reporting),
+		publicforms.Routes(d, engine, p.Advance, p.FormLeads),
 	} {
 		routes = append(routes, rs...)
 	}

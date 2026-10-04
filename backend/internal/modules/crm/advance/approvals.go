@@ -3,6 +3,7 @@ package advance
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
@@ -222,7 +223,7 @@ func (h *handler) decide(ctx context.Context, tx pgx.Tx, id, decision string, co
 			id, status, u.ID); err != nil {
 			return decisionResult{}, err
 		}
-		if err := sales.SetQuotationApprovalStatus(ctx, tx, req.subjectID, status); err != nil {
+		if err := h.ports.Records.SetQuotationApprovalStatus(ctx, tx, req.subjectID, status); err != nil {
 			return decisionResult{}, err
 		}
 		if req.requestedBy != nil {
@@ -346,4 +347,98 @@ func (h *handler) emitApprovalDecisionEvent(ctx context.Context, requestID, acto
 		Payload: map[string]any{"approval": approval, "decision": decision},
 	})
 	return nil
+}
+
+// syncQuotationApproval mirrors syncQuotationApproval: it opens a tiered
+// request when the discount passes a rule's bar, keeps an undecided-or-decided
+// request for the same discount, cancels a pending one whose discount
+// changed, and marks the quotation 'none' when no approval is needed.
+// Re-running it on an unchanged quotation changes nothing.
+func (h *handler) syncQuotationApproval(ctx context.Context, quotationID string, requestedBy *string) error {
+	q, err := h.ports.Sales.PricedQuotation(ctx, h.db, quotationID)
+	if err != nil || q == nil {
+		return err
+	}
+	discount := domain.JSNumber(q.DiscountPercent)
+	if math.IsNaN(discount) {
+		discount = 0
+	}
+	rules, err := h.loadApprovalRules(ctx, q.CompanyID)
+	if err != nil {
+		return err
+	}
+	levels := domain.RequiredApprovalLevels(discount, rules)
+
+	var existing *struct{ id, status, discount string }
+	if q.ApprovalRequestID != nil {
+		r := struct{ id, status, discount string }{}
+		err := h.db.QueryRow(ctx, `SELECT id::text, status, discount_percent::text FROM crm.crm_approval_requests WHERE id = $1`,
+			*q.ApprovalRequestID).Scan(&r.id, &r.status, &r.discount)
+		if err != nil && !database.IsNoRows(err) {
+			return err
+		}
+		if err == nil {
+			existing = &r
+		}
+	}
+	cancelPending := func() error {
+		if existing == nil || existing.status != "pending" {
+			return nil
+		}
+		_, err := h.db.Exec(ctx, `UPDATE crm.crm_approval_requests SET status = 'cancelled', resolved_at = now() WHERE id = $1`, existing.id)
+		return err
+	}
+
+	if len(levels) == 0 {
+		if err := cancelPending(); err != nil {
+			return err
+		}
+		return h.ports.Records.SetQuotationApproval(ctx, h.db, quotationID, "none", nil)
+	}
+	if existing != nil && domain.JSNumber(existing.discount) == discount && existing.status != "cancelled" {
+		return nil
+	}
+	if err := cancelPending(); err != nil {
+		return err
+	}
+	var requestID string
+	if err := h.db.QueryRow(ctx, `INSERT INTO crm.crm_approval_requests
+       (company_id, branch_id, object, subject_id, requested_by, status, current_level, discount_percent, amount)
+     VALUES ($1, $2, 'quotation', $3, $4, 'pending', $5, $6, $7) RETURNING id::text`,
+		q.CompanyID, q.BranchID, quotationID, requestedBy, levels[0].Level, discount, q.Total).Scan(&requestID); err != nil {
+		return err
+	}
+	for _, l := range levels {
+		if _, err := h.db.Exec(ctx, `INSERT INTO crm.crm_approval_steps (request_id, level, approver_role, approver_user_id)
+       VALUES ($1, $2, $3, $4)`, requestID, l.Level, l.ApproverRole, l.ApproverUserID); err != nil {
+			return err
+		}
+	}
+	if err := h.ports.Records.SetQuotationApproval(ctx, h.db, quotationID, "pending", &requestID); err != nil {
+		return err
+	}
+	// Notifying approvers is best effort, rolled back alone when it fails.
+	if err := database.WithTx(ctx, h.db, func(tx pgx.Tx) error {
+		return h.on(tx).notifyApprovers(ctx, requestID, levels[0].Level)
+	}); err != nil {
+		h.log.Error("[crm-approval] notifikasi gagal", "error", err)
+	}
+	return nil
+}
+
+// loadApprovalRules is loadApprovalRules: the active quotation rules of the
+// company and the global ones.
+func (h *handler) loadApprovalRules(ctx context.Context, companyID *string) ([]domain.ApprovalRule, error) {
+	rows, err := h.db.Query(ctx, `SELECT id::text, level, min_discount_percent::float8, approver_role, approver_user_id::text
+     FROM crm.crm_approval_rules
+     WHERE is_active AND object = 'quotation' AND (company_id IS NULL OR company_id = $1)
+     ORDER BY level, min_discount_percent`, companyID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (domain.ApprovalRule, error) {
+		var a domain.ApprovalRule
+		err := r.Scan(&a.ID, &a.Level, &a.MinDiscount, &a.ApproverRole, &a.ApproverUserID)
+		return a, err
+	})
 }
