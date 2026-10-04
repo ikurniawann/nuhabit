@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -11,17 +10,17 @@ import (
 	"nuhabit/backend/internal/modules/accounting"
 	acctdomain "nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/modules/procurement"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 )
 
 // Stopgap adapters for the accounting ports: the SQL the TS stores ran on
-// other contexts' tables (configuration.users scope, audit.audit_log,
+// other contexts' tables (audit.audit_log,
 // purchasing GRN/PO/vendor payments, POS orders, raw materials and the
 // sales-funnel B2B invoices). Each moves to its owning module's service
 // once that exposes the operation.
 
 var (
-	_ accounting.UserScopes  = accountingScopes{}
 	_ accounting.AuditLog    = accountingAudit{}
 	_ accounting.Purchasing  = accountingPurchasing{}
 	_ accounting.PosOrders   = accountingPos{}
@@ -31,59 +30,16 @@ var (
 
 func noRow(err error) bool { return database.IsNoRows(err) }
 
-/* ── Scope (lib/api/scope.ts getApiUserScope) ────────────────────────── */
-
-type accountingScopes struct{}
-
-func (accountingScopes) Scope(ctx context.Context, q database.Querier, userID string) (acctdomain.Scope, error) {
-	s := acctdomain.Scope{UserID: userID}
-	err := q.QueryRow(ctx, `
-SELECT role, business_scope, holding_id::text, company_id::text, branch_id::text
-  FROM configuration.users WHERE id = $1`, userID).Scan(&s.Role, &s.BusinessScope, &s.HoldingID, &s.CompanyID, &s.BranchID)
-	if noRow(err) {
-		return s, nil
-	}
-	return s, err
-}
-
 /* ── Audit (lib/audit recordAudit) ───────────────────────────────────── */
 
 type accountingAudit struct{}
 
-func jsonOrNil(v any) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-	s := string(raw)
-	return &s, nil
-}
-
 func (accountingAudit) Record(ctx context.Context, q database.Querier, e accounting.AuditEntry) error {
-	before, err := jsonOrNil(e.Before)
-	if err != nil {
-		return err
-	}
-	after, err := jsonOrNil(e.After)
-	if err != nil {
-		return err
-	}
-	var reason *string
-	if r := strings.TrimSpace(e.Reason); r != "" {
-		reason = &r
-	}
-	var actor *string
-	if e.ActorID != "" {
-		actor = &e.ActorID
-	}
-	_, err = q.Exec(ctx, `
-INSERT INTO audit.audit_log (actor_id, actor_name, action, entity, entity_id, entity_label, before, after, reason, ip, user_agent)
-VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11)`,
-		actor, e.ActorName, e.Action, e.Entity, e.EntityID, e.EntityLabel, before, after, reason, e.IP, e.UserAgent)
-	return err
+	return audit.Write(ctx, q, audit.Entry{
+		ActorID: e.ActorID, ActorName: &e.ActorName, Action: e.Action, Entity: e.Entity,
+		EntityID: &e.EntityID, EntityLabel: &e.EntityLabel, Before: e.Before, After: e.After,
+		Reason: &e.Reason, IP: e.IP, UserAgent: e.UserAgent,
+	})
 }
 
 /* ── Purchasing (lib/purchasing/accounting-amounts.ts, po-payments.ts) ── */

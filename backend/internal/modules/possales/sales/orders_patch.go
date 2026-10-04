@@ -218,7 +218,7 @@ func (h *Handler) patchOrderTx(ctx context.Context, tx pgx.Tx, user *auth.User, 
 		if pin == "" {
 			return nil, fail(400, "Metode FOC membutuhkan PIN supervisor")
 		}
-		a, err := h.approveWithPin(ctx, user.ID, pin)
+		a, err := h.pins.Approve(ctx, user.ID, pin)
 		if err != nil {
 			return nil, err
 		}

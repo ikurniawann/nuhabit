@@ -1,11 +1,9 @@
 package app
 
 import (
-	"net/http"
-	"time"
-
 	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // hris: employees, attendance, leave, shifts, overtime, holidays,
@@ -23,6 +21,6 @@ func HrisPorts(d module.Deps) hris.Ports {
 		Salary:      hrisSalarySQL{},
 		Recruitment: hrisRecruitmentSQL{},
 		Directory:   hrisDirectorySQL{},
-		WhatsApp:    &hrisWhatsApp{db: d.DB, client: &http.Client{Timeout: 30 * time.Second}},
+		WhatsApp:    &hrisWhatsApp{db: d.DB, wa: whatsapp.New(d.Log)},
 	}
 }

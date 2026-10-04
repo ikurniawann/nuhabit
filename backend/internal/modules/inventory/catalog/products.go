@@ -11,6 +11,7 @@ import (
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/httpx"
 	ps "nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/stall"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -58,7 +59,7 @@ func (h *handler) listProducts(w http.ResponseWriter, r *http.Request) error {
 	sp := r.URL.Query()
 	warehouseID := sp.Get("warehouse_id")
 	if !sp.Has("warehouse_id") {
-		if warehouseID, err = kit.ActiveStall(ctx, h.env.DB, r, u.ID); err != nil {
+		if warehouseID, err = stall.Active(ctx, h.env.DB, r, u.ID); err != nil {
 			return err
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	contracts "nuhabit/backend/internal/contracts/procurement"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/outbox"
@@ -631,7 +632,7 @@ func RevisionNumber(number string, revision int) string {
 
 // RevisePurchaseReturn is revisePurchaseReturn: a rejected return gets a
 // new draft copy; the audit row commits with it.
-func (s *Service) RevisePurchaseReturn(ctx context.Context, id string, audit auditEntry) (*Row, error) {
+func (s *Service) RevisePurchaseReturn(ctx context.Context, id string, entry audit.Entry) (*Row, error) {
 	var out *Row
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		cur, err := s.rows.One(ctx, tx, `SELECT id, return_number, status, superseded_by, revision_no, rejection_reason
@@ -670,11 +671,12 @@ func (s *Service) RevisePurchaseReturn(ctx context.Context, id string, audit aud
 			return err
 		}
 		label := cur.Str("return_number")
-		audit.Action, audit.Entity, audit.EntityID, audit.EntityLabel = "purchase_return.revise", "purchase_return", cur.Str("id"), &label
-		audit.Before = obj("status", cur.Get("status"), "rejection_reason", cur.Get("rejection_reason"))
-		audit.After = obj("revision_id", newID, "revision_number", number, "status", "draft")
-		audit.Reason = cur.StrPtr("rejection_reason")
-		if err := recordAudit(ctx, tx, audit); err != nil {
+		returnID := cur.Str("id")
+		entry.Action, entry.Entity, entry.EntityID, entry.EntityLabel = "purchase_return.revise", "purchase_return", &returnID, &label
+		entry.Before = obj("status", cur.Get("status"), "rejection_reason", cur.Get("rejection_reason"))
+		entry.After = obj("revision_id", newID, "revision_number", number, "status", "draft")
+		entry.Reason = cur.StrPtr("rejection_reason")
+		if err := audit.Write(ctx, tx, entry); err != nil {
 			return err
 		}
 		out = obj("id", newID, "return_number", number, "revision_no", revision)

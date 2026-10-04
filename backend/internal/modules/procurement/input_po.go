@@ -59,7 +59,7 @@ func parsePoCreate(body any, moduleType string) (*poCreateInput, error) {
 	in.DiskonNominal = numDefault(f, "diskon_nominal", 0, nonNegative)
 	in.PpnPersen = numDefault(f, "ppn_persen", 11, percentBounds)
 	in.SourceType = "manual"
-	if st := enumField(f, "source_type", optional, []string{"manual", "production_order", "low_stock"}); st != nil {
+	if st := f.Enum("source_type", optional, []string{"manual", "production_order", "low_stock"}); st != nil {
 		in.SourceType = *st
 	}
 	partyKey := "vendor_id"

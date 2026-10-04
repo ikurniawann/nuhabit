@@ -1,13 +1,8 @@
 package app
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"log/slog"
-	"net/http"
-	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +13,7 @@ import (
 	"nuhabit/backend/internal/modules/procurement"
 	pdomain "nuhabit/backend/internal/modules/procurement/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Stopgap SQL adapters for the procurement ports, ported from the TS
@@ -36,7 +32,8 @@ func ProcurementPorts(loc *time.Location, now func() time.Time) procurement.Port
 		Merchandise: procurementMerchandise{},
 		ReturnStock: procurementReturnStock{now: now},
 		Production:  procurementProduction{rr: rr},
-		Owner:       procurementOwnerNotifier{client: &http.Client{}, getenv: os.Getenv},
+		Owner:       procurementOwnerNotifier{wa: whatsapp.New(nil)},
+		Stock:       procurementStock{rr: rr},
 	}
 }
 
@@ -600,125 +597,10 @@ func (p procurementProduction) ProductWarehouses(ctx context.Context, q database
 
 /* ── Owner WhatsApp alerts (lib/wa/notifications-sender.ts) ──────────── */
 
-// procurementOwnerNotifier is sendOwnerNotification for procurement's
-// alerts. Owner notifications are not in a porting wave; this adapter moves
-// to that module when it exists.
-type procurementOwnerNotifier struct {
-	client *http.Client
-	getenv func(string) string
-}
+// procurementOwnerNotifier is sendOwnerNotification, claiming on the
+// caller's transaction.
+type procurementOwnerNotifier struct{ wa *whatsapp.Client }
 
-var waRecipient = regexp.MustCompile(`^62\d{8,13}$`)
-
-// normalizeWaRecipient is normalizeWaRecipient: 08…/+62…/62… → 62…, or "".
-func normalizeWaRecipient(raw string) string {
-	var b strings.Builder
-	for _, c := range raw {
-		if (c >= '0' && c <= '9') || c == '+' {
-			b.WriteRune(c)
-		}
-	}
-	n := strings.TrimPrefix(b.String(), "+")
-	if strings.HasPrefix(n, "0") {
-		n = "62" + n[1:]
-	}
-	if !waRecipient.MatchString(n) {
-		return ""
-	}
-	return n
-}
-
-func (n procurementOwnerNotifier) settings(ctx context.Context, q database.Querier, keys ...string) map[string]string {
-	out := map[string]string{}
-	rows, err := q.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`, keys)
-	if err != nil {
-		return out
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var k string
-		var v *string
-		if rows.Scan(&k, &v) == nil && v != nil {
-			out[k] = *v
-		}
-	}
-	return out
-}
-
-// Notify sends message to the configured owners once per dedup key.
 func (n procurementOwnerNotifier) Notify(ctx context.Context, q database.Querier, notifType, dedupKey, message string) error {
-	var cfg struct {
-		Enabled    *bool          `json:"enabled"`
-		Recipients []any          `json:"recipients"`
-		Types      map[string]any `json:"types"`
-	}
-	stored := n.settings(ctx, q, "wa_notif_config", "wa_gateway_url", "wa_gateway_token")
-	if raw := stored["wa_notif_config"]; raw == "" || json.Unmarshal([]byte(raw), &cfg) != nil || cfg.Enabled == nil || !*cfg.Enabled {
-		return nil
-	}
-	if on, ok := cfg.Types[notifType].(bool); ok && !on {
-		return nil
-	}
-	var recipients []string
-	for _, r := range cfg.Recipients {
-		if s, ok := r.(string); ok {
-			if norm := normalizeWaRecipient(s); norm != "" && len(recipients) < 5 {
-				recipients = append(recipients, norm)
-			}
-		}
-	}
-	token := strings.TrimSpace(stored["wa_gateway_token"])
-	if token == "" {
-		token = n.getenv("WA_GATEWAY_TOKEN")
-	}
-	if len(recipients) == 0 || token == "" {
-		return nil
-	}
-	base := strings.TrimSpace(stored["wa_gateway_url"])
-	if base == "" {
-		base = n.getenv("WA_GATEWAY_URL")
-	}
-	if base == "" {
-		base = "http://127.0.0.1:3471"
-	}
-	timeout := 20 * time.Second
-	if ms, err := strconv.Atoi(n.getenv("WA_GATEWAY_TIMEOUT_MS")); err == nil && ms > 0 {
-		timeout = time.Duration(ms) * time.Millisecond
-	}
-	list, _ := json.Marshal(recipients)
-	var claimID string
-	err := q.QueryRow(ctx, `INSERT INTO configuration.wa_notif_log (notif_type, dedup_key, message, recipients)
-		VALUES ($1, $2, $3, $4::jsonb) ON CONFLICT (notif_type, dedup_key) DO NOTHING RETURNING id::text`,
-		notifType, dedupKey, message, string(list)).Scan(&claimID)
-	if database.IsNoRows(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	delivered, timedOut := 0, false
-	for _, target := range recipients {
-		body, _ := json.Marshal(map[string]string{"target": target, "message": message})
-		reqCtx, cancel := context.WithTimeout(ctx, timeout)
-		req, _ := http.NewRequestWithContext(reqCtx, http.MethodPost, base+"/send", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-gateway-token", token)
-		resp, err := n.client.Do(req)
-		cancel()
-		switch {
-		case err != nil && reqCtx.Err() != nil:
-			timedOut = true
-		case err != nil:
-			slog.ErrorContext(ctx, "[wa-notif] gagal kirim", "type", notifType, "error", err)
-		default:
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-				delivered++
-			}
-			resp.Body.Close()
-		}
-	}
-	if delivered == 0 && !timedOut {
-		_, err = q.Exec(ctx, `DELETE FROM configuration.wa_notif_log WHERE id = $1`, claimID)
-	}
-	return err
+	return n.wa.SendOwnerNotification(ctx, q, notifType, dedupKey, message, nil)
 }

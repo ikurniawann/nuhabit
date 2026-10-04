@@ -1,21 +1,14 @@
 package app
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Adapters for the hris module's ports. Payroll, salary, recruitment and
@@ -243,124 +236,35 @@ func (hrisDirectorySQL) BrandNames(ctx context.Context, q database.Querier, ids 
 	return out, rows.Err()
 }
 
-/* ── WhatsApp gateway (settings context, not in a module yet) ────────── */
+/* ── WhatsApp gateway (platform/whatsapp) ─────────────────────────────── */
 
 // hrisWhatsApp is lib/whatsapp/gateway (loadGatewayConfig + sendGatewayText)
 // plus the configuration.wa_notif_log claim of lib/hris/leave-wa.
 type hrisWhatsApp struct {
-	db     database.Querier
-	client *http.Client
-
-	mu       sync.Mutex
-	cached   *hrisGatewayConfig
-	cachedAt time.Time
-}
-
-type hrisGatewayConfig struct {
-	baseURL, token string
-	timeout        time.Duration
+	db database.Querier
+	wa *whatsapp.Client
 }
 
 var _ hris.WhatsAppSender = (*hrisWhatsApp)(nil)
 
 func (w *hrisWhatsApp) Claim(ctx context.Context, q database.Querier, notifType, dedupKey, message string, recipients []string) (string, bool, error) {
-	raw, _ := json.Marshal(recipients)
-	var id string
-	err := q.QueryRow(ctx, `INSERT INTO configuration.wa_notif_log (notif_type, dedup_key, message, recipients)
-		VALUES ($1, $2, $3, $4::jsonb)
-		ON CONFLICT (notif_type, dedup_key) DO NOTHING
-		RETURNING id::text`, notifType, dedupKey, message, string(raw)).Scan(&id)
-	if database.IsNoRows(err) {
-		return "", false, nil
-	}
-	return id, err == nil, err
+	id, err := whatsapp.Claim(ctx, q, notifType, dedupKey, message, recipients)
+	return id, id != "", err
 }
 
 func (w *hrisWhatsApp) Release(ctx context.Context, q database.Querier, id string) error {
-	_, err := q.Exec(ctx, `DELETE FROM configuration.wa_notif_log WHERE id = $1`, id)
-	return err
+	return whatsapp.Release(ctx, q, id)
 }
 
-func (w *hrisWhatsApp) Configured(ctx context.Context) bool { return w.config(ctx) != nil }
-
-// config reads configuration.app_settings, then the env, cached 30 s; a
-// settings failure falls back to the env.
-func (w *hrisWhatsApp) config(ctx context.Context) *hrisGatewayConfig {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if !w.cachedAt.IsZero() && time.Since(w.cachedAt) < 30*time.Second {
-		return w.cached
-	}
-	var dbURL, dbToken string
-	if rows, err := w.db.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`,
-		[]string{"wa_gateway_url", "wa_gateway_token"}); err == nil {
-		for rows.Next() {
-			var key string
-			var value *string
-			if rows.Scan(&key, &value) == nil && value != nil {
-				if key == "wa_gateway_url" {
-					dbURL = strings.TrimSpace(*value)
-				} else {
-					dbToken = strings.TrimSpace(*value)
-				}
-			}
-		}
-		rows.Close()
-	}
-	token := hrisFirstSet(dbToken, os.Getenv("WA_GATEWAY_TOKEN"))
-	var cfg *hrisGatewayConfig
-	if token != "" {
-		ms, err := strconv.Atoi(os.Getenv("WA_GATEWAY_TIMEOUT_MS"))
-		if err != nil || ms == 0 {
-			ms = 20000
-		}
-		cfg = &hrisGatewayConfig{baseURL: hrisFirstSet(dbURL, os.Getenv("WA_GATEWAY_URL"), "http://127.0.0.1:3471"),
-			token: token, timeout: time.Duration(ms) * time.Millisecond}
-	}
-	w.cached, w.cachedAt = cfg, time.Now()
-	return cfg
+func (w *hrisWhatsApp) Configured(ctx context.Context) bool {
+	return w.wa.LoadGateway(ctx, w.db) != nil
 }
 
-func hrisFirstSet(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-// SendText posts {target, message} to {baseUrl}/send with x-gateway-token.
 func (w *hrisWhatsApp) SendText(ctx context.Context, target, message string) (bool, bool, string) {
-	cfg := w.config(ctx)
-	if cfg == nil {
+	gateway := w.wa.LoadGateway(ctx, w.db)
+	if gateway == nil {
 		return false, false, "gateway belum dikonfigurasi"
 	}
-	ctx, cancel := context.WithTimeout(ctx, cfg.timeout)
-	defer cancel()
-	body, _ := json.Marshal(map[string]string{"target": target, "message": message})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.baseURL+"/send", bytes.NewReader(body))
-	if err != nil {
-		return false, false, err.Error()
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-gateway-token", cfg.token)
-	res, err := w.client.Do(req)
-	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return false, true, "Gateway tidak merespons (timeout)"
-		}
-		return false, false, err.Error()
-	}
-	defer res.Body.Close()
-	var data map[string]any
-	_ = json.NewDecoder(res.Body).Decode(&data)
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		reason, _ := data["error"].(string)
-		if reason == "" {
-			reason = "Gateway menolak permintaan kirim"
-		}
-		return false, false, reason
-	}
-	return true, false, ""
+	res := gateway.SendText(ctx, target, message)
+	return res.Success, res.TimedOut, res.Reason
 }

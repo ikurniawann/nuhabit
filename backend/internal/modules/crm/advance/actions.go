@@ -221,10 +221,10 @@ func (h *handler) sendWhatsAppAction(ctx context.Context, a workflowAction, ac *
 		result["ok"], result["reason"] = false, "nomor tujuan tidak tersedia"
 		return result, nil
 	}
-	ok, reason := gw.SendText(ctx, target, domain.RenderTemplate(deref(a.Message, ""), ac.template))
-	result["ok"], result["to"] = ok, target
-	if !ok {
-		result["reason"] = reason
+	sent := gw.SendText(ctx, target, domain.RenderTemplate(deref(a.Message, ""), ac.template))
+	result["ok"], result["to"] = sent.Success, target
+	if !sent.Success {
+		result["reason"] = sent.Reason
 	}
 	return result, nil
 }

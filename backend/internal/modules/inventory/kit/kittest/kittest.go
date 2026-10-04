@@ -15,6 +15,7 @@ import (
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/stall"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -166,7 +167,7 @@ func (e *T) ScopeStaff(level string, o Org) {
 
 // ActiveStall sets the sidebar stall cookie for the following requests.
 func (e *T) ActiveStall(warehouseID string) {
-	e.Cookies = append(e.Cookies, &http.Cookie{Name: kit.ActiveStallCookie, Value: warehouseID})
+	e.Cookies = append(e.Cookies, &http.Cookie{Name: stall.CookieName, Value: warehouseID})
 }
 
 // Unit creates an item.units row.

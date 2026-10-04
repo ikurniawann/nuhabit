@@ -72,7 +72,7 @@ func newHarness(t *testing.T) *harness {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
 	deps.Log = slog.New(slog.NewTextHandler(testLog{t}, &slog.HandlerOptions{Level: slog.LevelError}))
-	m := New(deps, Options{})
+	m := New(deps, Options{Loyalty: &collLoyalty{}})
 	h := &harness{t: t, mod: m, mux: testutil.Mux(m), notifier: &fakeNotifier{codes: map[string]string{}}}
 	m.handler.svc.notifier = h.notifier
 	m.handler.svc.payments = noGateway{}

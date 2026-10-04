@@ -25,21 +25,6 @@ type svDirectory struct{}
 
 var _ storedvalue.Directory = svDirectory{}
 
-func (svDirectory) UserScope(ctx context.Context, q database.Querier, userID string) (*storedvalue.UserScope, error) {
-	var s storedvalue.UserScope
-	err := q.QueryRow(ctx,
-		`SELECT full_name, role::text, business_scope::text, company_id::text, branch_id::text
-		   FROM configuration.users WHERE id = $1`, userID).
-		Scan(&s.FullName, &s.Role, &s.BusinessScope, &s.CompanyID, &s.BranchID)
-	if database.IsNoRows(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &s, nil
-}
-
 // DefaultVenue is getCrmDefaultVenue: only JSON string values count; any
 // failure is an empty venue.
 func (svDirectory) DefaultVenue(ctx context.Context, q database.Querier) storedvalue.Venue {

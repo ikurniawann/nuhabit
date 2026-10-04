@@ -7,13 +7,12 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"nuhabit/backend/internal/modules/possales/tableorder/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // alertsSender is the stopgap Alerts: sendStaffAlert of
@@ -24,10 +23,11 @@ type alertsSender struct {
 	db     database.Querier
 	log    *slog.Logger
 	client *http.Client
+	wa     *whatsapp.Client
 }
 
 func newAlertsSender(db database.Querier, log *slog.Logger) *alertsSender {
-	return &alertsSender{db: db, log: log, client: &http.Client{}}
+	return &alertsSender{db: db, log: log, client: &http.Client{}, wa: whatsapp.New(log)}
 }
 
 type alertResult struct {
@@ -72,9 +72,9 @@ func (a *alertsSender) send(ctx context.Context, text string) (alertResult, erro
 			return result, err
 		}
 		result.WA.SkippedNoPhone = skipped
-		if base, token, timeout := a.gateway(ctx); token != "" {
+		if gateway := a.wa.LoadGateway(ctx, a.db); gateway != nil {
 			for _, phone := range phones {
-				if a.sendGateway(ctx, base, token, timeout, phone, text) {
+				if gateway.SendText(ctx, phone, text).Success {
 					result.WA.Sent++
 				} else {
 					result.WA.Failed++
@@ -149,48 +149,6 @@ func (a *alertsSender) waRecipients(ctx context.Context, roles []string) ([]stri
 		}
 	}
 	return phones, skipped, rows.Err()
-}
-
-// gateway is loadGatewayConfig: app_settings first, then the env; token ""
-// means not configured.
-func (a *alertsSender) gateway(ctx context.Context) (base, token string, timeout time.Duration) {
-	dbURL, _ := appSetting(ctx, a.db, "wa_gateway_url")
-	dbToken, _ := appSetting(ctx, a.db, "wa_gateway_token")
-	token = firstNonEmpty(strings.TrimSpace(dbToken), os.Getenv("WA_GATEWAY_TOKEN"))
-	base = firstNonEmpty(strings.TrimSpace(dbURL), os.Getenv("WA_GATEWAY_URL"), "http://127.0.0.1:3471")
-	ms, err := strconv.Atoi(os.Getenv("WA_GATEWAY_TIMEOUT_MS"))
-	if err != nil || ms == 0 {
-		ms = 20000
-	}
-	return base, token, time.Duration(ms) * time.Millisecond
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-// sendGateway is sendGatewayText: POST {base}/send with x-gateway-token.
-func (a *alertsSender) sendGateway(ctx context.Context, base, token string, timeout time.Duration, target, text string) bool {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	body, _ := json.Marshal(map[string]string{"target": target, "message": text})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/send", bytes.NewReader(body))
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-gateway-token", token)
-	res, err := a.client.Do(req)
-	if err != nil {
-		return false
-	}
-	res.Body.Close()
-	return ok(res.StatusCode)
 }
 
 // telegramChats is loadTelegramSubscribers(true).

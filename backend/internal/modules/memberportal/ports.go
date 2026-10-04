@@ -161,7 +161,7 @@ type XPAward struct {
 
 // XPResult mirrors CrmXpAwardResult.
 type XPResult struct {
-	Status    string // posted | duplicate | skipped | failed
+	Status    string // posted | duplicate | skipped | error
 	XPAwarded float64
 }
 

@@ -78,7 +78,7 @@ func parseCreateGrn(f *validate.Form) (*createGrnInput, error) {
 	start := len(f.Issues())
 	in.DeliveryID = f.Str("delivery_id", optional, uuidOpts)
 	in.PoID = f.Str("po_id", optional, uuidOpts)
-	in.ModuleType = enumField(f, "module_type", optional, []string{"raw_material", "product", "general"})
+	in.ModuleType = f.Enum("module_type", optional, []string{"raw_material", "product", "general"})
 	in.TanggalPenerimaan = f.Str("tanggal_penerimaan", optional, validate.StrOpts{})
 	in.Catatan = f.Str("catatan", optional, validate.StrOpts{})
 	if w := f.Str("warehouse_id", validate.Rule{}, uuidMsg("Gudang wajib dipilih")); w != nil {
@@ -103,7 +103,7 @@ func parseCreateGrn(f *validate.Form) (*createGrnInput, error) {
 		l.QtyAccepted = item.Num("qty_accepted", optional, nonNegative)
 		l.QtyRejected = item.Num("qty_rejected", optional, nonNegative)
 		l.SatuanID = item.Str("satuan_id", optional, uuidOpts)
-		if k := enumField(item, "kondisi", validate.Rule{HasDefault: true}, kondisiOptions); k != nil {
+		if k := item.Enum("kondisi", validate.Rule{HasDefault: true}, kondisiOptions); k != nil {
 			l.Kondisi = *k
 		}
 		l.Catatan = item.Str("catatan", optionalNullable, validate.StrOpts{})
@@ -173,7 +173,7 @@ var grnStatusOptions = []string{"pending", "partially_received", "received", "re
 
 func parseUpdateGrn(f *validate.Form) (*updateGrnInput, error) {
 	in := &updateGrnInput{}
-	in.Status = enumField(f, "status", optional, grnStatusOptions)
+	in.Status = f.Enum("status", optional, grnStatusOptions)
 	in.Catatan = f.Str("catatan", optional, validate.StrOpts{})
 	items := f.List("items", optional, 1<<30, func(items *validate.Form, i int, v any) {
 		item := items.Item(i, v)
@@ -190,7 +190,7 @@ func parseUpdateGrn(f *validate.Form) (*updateGrnInput, error) {
 		if q := item.Num("qty_ditolak", validate.Rule{}, nonNegative); q != nil {
 			l.QtyDitolak = *q
 		}
-		if k := enumField(item, "kondisi", validate.Rule{HasDefault: true}, kondisiOptions); k != nil {
+		if k := item.Enum("kondisi", validate.Rule{HasDefault: true}, kondisiOptions); k != nil {
 			l.Kondisi = *k
 		}
 		l.Catatan = item.Str("catatan", optionalNullable, validate.StrOpts{})
@@ -291,7 +291,7 @@ func jsTypeName(v any) string {
 // parseGrnQc is createQcSchema of POST /grn/[id]/qc.
 func parseGrnQc(f *validate.Form) (*QcInput, error) {
 	in := &QcInput{}
-	if st := enumField(f, "status", optional, []string{"approved", "rejected", "partial"}); st != nil {
+	if st := f.Enum("status", optional, []string{"approved", "rejected", "partial"}); st != nil {
 		in.Status = *st
 	}
 	in.ParameterInspeksi = recordField(f, "parameter_inspeksi", false)
@@ -353,7 +353,7 @@ func parseLegacyQc(f *validate.Form) (*QcInput, error) {
 		l.qtyInspected = item.Num("qty_inspected", optional, nonNegative)
 		l.qtyAccepted = item.Num("qty_accepted", optional, nonNegative)
 		l.qtyRejected = item.Num("qty_rejected", optional, nonNegative)
-		enumField(item, "hasil", optional, []string{"passed", "rejected", "partial"})
+		item.Enum("hasil", optional, []string{"passed", "rejected", "partial"})
 		recordField(item, "parameter_inspeksi", false)
 		l.alasan = item.Str("alasan", optional, validate.StrOpts{})
 		l.item.Catatan = item.Str("catatan", optionalNullable, validate.StrOpts{})
@@ -410,7 +410,7 @@ func parseCreateDelivery(f *validate.Form) (*createDeliveryInput, error) {
 	}
 	in.SupplierID = f.Str("supplier_id", optional, uuidMsg("Supplier identifier must be valid"))
 	in.VendorID = f.Str("vendor_id", optional, uuidMsg("Vendor identifier must be valid"))
-	in.ModuleType = enumField(f, "module_type", optional, []string{"raw_material", "product"})
+	in.ModuleType = f.Enum("module_type", optional, []string{"raw_material", "product"})
 	req := func(key, msg string) string {
 		if v := f.Str(key, validate.Rule{}, strMin1Msg(msg)); v != nil {
 			return *v

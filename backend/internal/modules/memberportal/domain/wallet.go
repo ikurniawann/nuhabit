@@ -87,25 +87,17 @@ func IdrToArk(amountIdr, arkRate float64) float64 {
 
 // LoyaltySettings is the normalized pos_loyalty_settings row.
 type LoyaltySettings struct {
-	ArkRate           float64
-	TopupMinAmount    float64
-	TopupPresets      []float64
-	TopupXPEnabled    bool
-	TopupXPMode       string
-	TopupXPValue      float64
-	TopupXPAmountStep float64
+	ArkRate        float64
+	TopupMinAmount float64
+	TopupPresets   []float64
 }
 
 // DefaultLoyaltySettings mirrors DEFAULT_POS_LOYALTY_SETTINGS.
 func DefaultLoyaltySettings() LoyaltySettings {
 	return LoyaltySettings{
-		ArkRate:           DefaultArkRate,
-		TopupMinAmount:    10000,
-		TopupPresets:      append([]float64(nil), DefaultTopupPresets...),
-		TopupXPEnabled:    true,
-		TopupXPMode:       "per_amount",
-		TopupXPValue:      1,
-		TopupXPAmountStep: 10000,
+		ArkRate:        DefaultArkRate,
+		TopupMinAmount: 10000,
+		TopupPresets:   append([]float64(nil), DefaultTopupPresets...),
 	}
 }
 
@@ -152,23 +144,6 @@ func ToNumber(v any) float64 {
 		}
 	}
 	return 0
-}
-
-// CalculateTopupXP mirrors calculateTopupXp.
-func CalculateTopupXP(amountIdr float64, s LoyaltySettings) float64 {
-	if !s.TopupXPEnabled {
-		return 0
-	}
-	amount := math.Max(0, amountIdr)
-	if amount <= 0 {
-		return 0
-	}
-	if s.TopupXPMode == "fixed" {
-		return math.Max(0, math.Floor(s.TopupXPValue))
-	}
-	step := math.Max(1, s.TopupXPAmountStep)
-	value := math.Max(0, s.TopupXPValue)
-	return math.Max(0, math.Floor(amount/step)*value)
 }
 
 // ParseFeatureFlag reads a crm_settings jsonb flag with the default on.

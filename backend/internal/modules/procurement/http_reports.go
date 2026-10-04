@@ -10,8 +10,7 @@ import (
 
 // Port of frontend/src/app/api/purchasing/reports/{po-summary,po-detail,
 // supplier-performance,production-in-house}. stock-card and
-// inventory-valuation follow the sidebar's active stall (getUser), which
-// the Go platform does not resolve yet; they stay in TS.
+// inventory-valuation read stock, so inventory serves them.
 func (h *Handler) reportRoutes(add addRoute) {
 	add("GET /api/purchasing/reports/po-summary", h.poSummaryReport)
 	add("GET /api/purchasing/reports/po-detail", h.poDetailReport)
@@ -27,16 +26,16 @@ func (h *Handler) productionInHouseReport(w http.ResponseWriter, r *http.Request
 	p := ReportParams{Export: "json", DateField: "completed_at", OutputType: "all"}
 	p.DateFrom = f.Str("date_from", optional, validate.StrOpts{})
 	p.DateTo = f.Str("date_to", optional, validate.StrOpts{})
-	if v := enumField(f, "date_field", validate.Rule{HasDefault: true}, []string{"completed_at", "created_at"}); v != nil {
+	if v := f.Enum("date_field", validate.Rule{HasDefault: true}, []string{"completed_at", "created_at"}); v != nil {
 		p.DateField = *v
 	}
 	p.Status = f.Str("status", optional, validate.StrOpts{})
-	if v := enumField(f, "output_type", validate.Rule{HasDefault: true}, []string{"all", "FINISHED_GOOD", "WIP"}); v != nil {
+	if v := f.Enum("output_type", validate.Rule{HasDefault: true}, []string{"all", "FINISHED_GOOD", "WIP"}); v != nil {
 		p.OutputType = *v
 	}
 	p.ProductID = f.UUID("product_id", optional)
 	p.WarehouseID = f.UUID("warehouse_id", optional)
-	if v := enumField(f, "export", validate.Rule{HasDefault: true}, []string{"json", "csv"}); v != nil {
+	if v := f.Enum("export", validate.Rule{HasDefault: true}, []string{"json", "csv"}); v != nil {
 		p.Export = *v
 	}
 	if err := f.Err("Invalid query params"); err != nil {
@@ -66,7 +65,7 @@ func reportQuery(r *http.Request, partyKey string) (ReportParams, error) {
 	} else {
 		p.SupplierID = party
 	}
-	if v := enumField(f, "export", validate.Rule{HasDefault: true}, []string{"json", "csv"}); v != nil {
+	if v := f.Enum("export", validate.Rule{HasDefault: true}, []string{"json", "csv"}); v != nil {
 		p.Export = *v
 	}
 	return p, f.Err("Invalid query params")

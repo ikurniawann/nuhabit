@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"net/http"
+	"nuhabit/backend/internal/platform/audit"
 	ps "nuhabit/backend/internal/platform/scope"
 	"strconv"
 	"strings"
@@ -609,13 +610,12 @@ func (h *handler) completeStockOpname(w http.ResponseWriter, r *http.Request) er
 			id, len(lines), len(variances), u.ID); err != nil {
 			return err
 		}
-		return kit.RecordAudit(ctx, q, kit.Audit{
+		return audit.Write(ctx, q, audit.Entry{
 			ActorID: u.ID, ActorName: &u.FullName, Action: "stock.opname_complete", Entity: "stock_opname",
 			EntityID: &id, EntityLabel: &number,
 			Before: kit.Obj("status", detail.Get("status")),
 			After:  kit.Obj("status", "completed", "lines_counted", len(lines), "variances", variances),
-			Meta:   kit.MetaOf(r),
-		})
+		}.WithRequest(r))
 	})
 	if err != nil {
 		return err

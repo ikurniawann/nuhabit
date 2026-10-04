@@ -20,29 +20,6 @@ var isoDate = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 // isoDateMessage is zod v4's z.string().regex(ISO_DATE) default message.
 const isoDateMessage = `Invalid string: must match pattern /^\d{4}-\d{2}-\d{2}$/`
 
-// enumField is z.enum(options): zod v4 reports a missing or non-string value
-// as invalid_value, not invalid_type.
-func enumField(f *validate.Form, key string, r validate.Rule, options []string) *string {
-	if f.Fields() == nil {
-		return nil
-	}
-	v, sent := f.Fields()[key]
-	if !sent && (r.Optional || r.HasDefault) {
-		return nil
-	}
-	if sent && v == nil && r.Nullable {
-		return nil
-	}
-	s, ok := v.(string)
-	_, _, valid := validate.EnumCheck(options)(s)
-	if !ok || !valid {
-		_, msg, _ := validate.EnumCheck(options)("")
-		f.Fail(key, "invalid_value", msg)
-		return nil
-	}
-	return &s
-}
-
 // customCheck is a z.string() format check with a custom message (the TS
 // passes the message to .uuid() or .regex()).
 func customCheck(base func(string) (string, string, bool), msg string) func(string) (string, string, bool) {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"nuhabit/backend/internal/modules/procurement/domain"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
@@ -107,7 +108,7 @@ func (h *Handler) applyCredits(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("Jumlah melebihi sisa tagihan PO (" + formatJSNumber(outstanding) + ")")
 	}
 	dry := dryRun != nil && *dryRun
-	res, err := h.svc.ApplyVendorCredits(r.Context(), *poID, amount, dry, withRequestMeta(auditEntry{ActorID: user.ID, ActorName: user.FullName}, r))
+	res, err := h.svc.ApplyVendorCredits(r.Context(), *poID, amount, dry, actorAudit(user).WithRequest(r))
 	if err != nil {
 		return err
 	}
@@ -152,10 +153,10 @@ func (h *Handler) approveCredit(w http.ResponseWriter, r *http.Request) error {
 	if updated != nil {
 		label, total = updated.StrPtr("credit_number"), updated.Get("total_amount")
 	}
-	h.svc.recordAuditAfterCommit(r.Context(), withRequestMeta(auditEntry{
-		ActorID: user.ID, ActorName: user.FullName, Action: "vendor_credit.approve", Entity: "vendor_credit", EntityID: id,
+	h.svc.recordAuditAfterCommit(r.Context(), audit.Entry{
+		ActorID: user.ID, ActorName: nonEmpty(&user.FullName), Action: "vendor_credit.approve", Entity: "vendor_credit", EntityID: &id,
 		EntityLabel: label, After: obj("status", "approved", "total_amount", total, "expiry_date", expiry),
-	}, r))
+	}.WithRequest(r))
 	return writeOKMessage(w, http.StatusOK, updated, "Vendor credit approved. Purchase invoice net payable has been reduced.")
 }
 

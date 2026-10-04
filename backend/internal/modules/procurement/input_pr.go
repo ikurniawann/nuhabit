@@ -44,7 +44,7 @@ func parsePrWrite(body any, moduleType string) (*prWrite, error) {
 	if d := f.Str("department_id", validate.Rule{}, uuidMsg(text.department)); d != nil {
 		w.DepartmentID = *d
 	}
-	if p := enumField(f, "priority", validate.Rule{}, []string{"low", "medium", "high", "urgent"}); p != nil {
+	if p := f.Enum("priority", validate.Rule{}, []string{"low", "medium", "high", "urgent"}); p != nil {
 		w.Priority = *p
 	}
 	w.RequiredDate = optionalBlankStr(f, "required_date", validate.StrOpts{})
@@ -74,7 +74,7 @@ func parsePrWrite(body any, moduleType string) (*prWrite, error) {
 		w.Items = append(w.Items, in)
 	})
 	action := "draft"
-	if a := enumField(f, "action", validate.Rule{Optional: true}, []string{"draft", "submit"}); a != nil {
+	if a := f.Enum("action", validate.Rule{Optional: true}, []string{"draft", "submit"}); a != nil {
 		action = *a
 	}
 	if err := firstIssueError(f, "Validasi gagal"); err != nil {
@@ -92,7 +92,7 @@ func parsePrWrite(body any, moduleType string) (*prWrite, error) {
 // parsePrDecision is prDecisionSchema through validateBody.
 func parsePrDecision(f *validate.Form) (PrDecision, error) {
 	d := PrDecision{}
-	if a := enumField(f, "action", validate.Rule{}, []string{"approve", "reject"}); a != nil {
+	if a := f.Enum("action", validate.Rule{}, []string{"approve", "reject"}); a != nil {
 		d.Action = *a
 	}
 	d.Reason = f.Str("reason", validate.Rule{Optional: true}, validate.StrOpts{})

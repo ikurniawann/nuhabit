@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	ps "nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/stall"
 	"regexp"
 	"sort"
 	"strconv"
@@ -109,129 +110,13 @@ func ValidateProductWarehouse(ctx context.Context, q database.Querier, warehouse
 
 /* ── active stall (frontend/src/lib/api/stall-scope.ts) ─────────────────── */
 
-// Active stall cookies (frontend/src/lib/auth/active-stall.ts).
-const (
-	ActiveStallCookie       = "nuhabit-active-stall"
-	LegacyActiveStallCookie = "arkiv-active-stall"
-)
-
-var stallUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-
-func activeStallCookie(r *http.Request) string {
-	for _, name := range []string{ActiveStallCookie, LegacyActiveStallCookie} {
-		if c, err := r.Cookie(name); err == nil {
-			if v := strings.TrimSpace(c.Value); v != "" {
-				return v
-			}
-		}
-	}
-	return ""
-}
-
-type stallOption struct {
-	id, name, code string
-	isDefault      bool
-}
-
-// ActiveStall is getApiStallScope: the sidebar's active stall id, or "" for
-// "Semua Stall". It follows getUser's resolution: the cookie when it names a
-// stall the user may switch to, "all" only with free access, otherwise the
-// user's home stall.
-func ActiveStall(ctx context.Context, q database.Querier, r *http.Request, userID string) (string, error) {
-	var role, defaultWarehouse, branchID *string
-	var canSwitch bool
-	err := q.QueryRow(ctx, `SELECT role, COALESCE(can_switch_stall, false), default_warehouse_id::text, branch_id::text
-		FROM configuration.users WHERE id = $1`, userID).Scan(&role, &canSwitch, &defaultWarehouse, &branchID)
-	if database.IsNoRows(err) {
-		return "", nil
-	}
-	if err != nil {
-		return "", err
-	}
-	warehouses, err := Query(ctx, q, `SELECT uw.warehouse_id::text AS warehouse_id, w.name, w.code, w.is_default
-		FROM configuration.user_warehouses uw
-		INNER JOIN configuration.warehouses w ON w.id = uw.warehouse_id
-		WHERE uw.user_id = $1 AND uw.is_active = true AND w.is_active = true
-		ORDER BY w.is_default DESC, w.name ASC`, userID)
-	if err != nil && !database.IsUndefinedTable(err) {
-		return "", err
-	}
-	home := ""
-	for _, w := range warehouses {
-		if defaultWarehouse != nil && w.Str("warehouse_id") == *defaultWarehouse {
-			home = w.Str("warehouse_id")
-			break
-		}
-	}
-	if home == "" && len(warehouses) > 0 {
-		home = warehouses[0].Str("warehouse_id")
-	}
-
-	roleName := Deref(role)
-	allAccess := roleName == "super_admin" || canSwitch
-	if !allAccess {
-		for _, w := range warehouses {
-			if w.Bool("is_default") {
-				allAccess = true
-				break
-			}
-		}
-	}
-	allowed := map[string]bool{}
-	stallCount := 0
-	if allAccess {
-		args := []any{}
-		where := "w.is_active"
-		if branchID != nil {
-			args = append(args, *branchID)
-			where += " AND w.branch_id = $1"
-		}
-		rows, err := Query(ctx, q, `SELECT w.id FROM configuration.warehouses w WHERE `+where, args...)
-		if err != nil {
-			return "", err
-		}
-		for _, w := range rows {
-			allowed[w.Str("id")] = true
-		}
-		stallCount = len(rows)
-	} else {
-		for _, w := range warehouses {
-			allowed[w.Str("warehouse_id")] = true
-		}
-		stallCount = len(warehouses)
-	}
-	canSwitchStall := roleName == "super_admin" || roleName == "admin" || canSwitch || allAccess || stallCount > 1
-	if !canSwitchStall {
-		return home, nil
-	}
-
-	cookie := activeStallCookie(r)
-	if cookie == "all" {
-		if allAccess {
-			return "", nil
-		}
-		return home, nil
-	}
-	if cookie != "" && stallUUID.MatchString(cookie) {
-		var active bool
-		err := q.QueryRow(ctx, `SELECT true FROM configuration.warehouses WHERE id = $1 AND is_active = true`, cookie).Scan(&active)
-		if err != nil && !database.IsNoRows(err) {
-			return "", err
-		}
-		if active && allowed[cookie] {
-			return cookie, nil
-		}
-	}
-	return home, nil
-}
-
 // ResolveWarehouseFilter is resolveWarehouseFilter: the explicit value wins,
 // else the active stall ("" = all stalls).
 func ResolveWarehouseFilter(ctx context.Context, q database.Querier, r *http.Request, userID, explicit string) (string, error) {
 	if explicit != "" {
 		return explicit, nil
 	}
-	return ActiveStall(ctx, q, r, userID)
+	return stall.Active(ctx, q, r, userID)
 }
 
 // StockSource is rawMaterialStockSource: the per-warehouse view when a stall
@@ -243,7 +128,7 @@ type StockSource struct {
 
 // RawMaterialStockSource resolves the stock view for the active stall.
 func RawMaterialStockSource(ctx context.Context, q database.Querier, r *http.Request, userID string) (StockSource, error) {
-	w, err := ActiveStall(ctx, q, r, userID)
+	w, err := stall.Active(ctx, q, r, userID)
 	if err != nil {
 		return StockSource{}, err
 	}

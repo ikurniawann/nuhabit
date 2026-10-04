@@ -390,3 +390,33 @@ func (w *sqlWallet) CreditBonus(ctx context.Context, customerID string, amountId
 	})
 	return coins, err
 }
+
+func isMissingSchema(err error) bool {
+	code := database.PgCode(err)
+	return code == "42P01" || code == "42703"
+}
+
+// loadLoyaltySettings reads and normalizes the active pos_loyalty_settings.
+func loadLoyaltySettings(ctx context.Context, db database.Querier) (domain.LoyaltySettings, error) {
+	s := domain.DefaultLoyaltySettings()
+	var arkRate, minAmount *float64
+	var presets json.RawMessage
+	err := db.QueryRow(ctx,
+		`SELECT ark_rate::float, topup_min_amount::float, topup_presets
+		   FROM pos.pos_loyalty_settings WHERE is_active = true ORDER BY updated_at DESC LIMIT 1`).
+		Scan(&arkRate, &minAmount, &presets)
+	if database.IsNoRows(err) || isMissingSchema(err) {
+		return s, nil
+	}
+	if err != nil {
+		return s, err
+	}
+	if arkRate != nil {
+		s.ArkRate = math.Max(1, *arkRate)
+	}
+	if minAmount != nil {
+		s.TopupMinAmount = math.Max(0, *minAmount)
+	}
+	s.TopupPresets = domain.NormalizeTopupPresets(presets)
+	return s, nil
+}

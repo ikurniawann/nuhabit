@@ -80,21 +80,6 @@ func TestVoidAndGiftMessages(t *testing.T) {
 	}
 }
 
-func TestParseWaNotifConfig(t *testing.T) {
-	s := func(v string) *string { return &v }
-	def := parseWaNotifConfig(nil)
-	if def.Enabled || len(def.Recipients) != 0 || !def.VoidBesar || def.VoidThresholdRp != 500000 {
-		t.Fatalf("default = %+v", def)
-	}
-	if got := parseWaNotifConfig(s("not json")); got.VoidThresholdRp != 500000 {
-		t.Fatalf("broken = %+v", got)
-	}
-	got := parseWaNotifConfig(s(`{"enabled":true,"recipients":["0812-3456-7890","+6281234567890","12345","628111111111"],"types":{"voidBesar":false},"voidThresholdRp":250000.4}`))
-	if !got.Enabled || got.VoidBesar || got.VoidThresholdRp != 250000 || strings.Join(got.Recipients, ",") != "6281234567890,628111111111" {
-		t.Fatalf("parsed = %+v", got)
-	}
-}
-
 // fakeProvider records requests and answers with status/body.
 type fakeProvider struct {
 	mu       sync.Mutex
@@ -126,7 +111,7 @@ func testNotifier(t *testing.T, tx pgx.Tx, env map[string]string) *Notifier {
 	n := NewNotifier(tx, slog.New(slog.NewTextHandler(io.Discard, nil)), func() time.Time {
 		return time.Date(2026, 8, 24, 8, 30, 0, 0, time.UTC)
 	})
-	n.getenv = func(k string) string { return env[k] }
+	n.wa.Getenv = func(k string) string { return env[k] }
 	return n
 }
 
@@ -189,7 +174,7 @@ func TestSendTextProviders(t *testing.T) {
 	meta := &fakeProvider{status: 400, body: `{"error":{"message":"Re-engagement message","code":131047,"error_subcode":2494010}}`}
 	msrv := meta.server(t)
 	n = testNotifier(t, tx, map[string]string{"META_WA_ACCESS_TOKEN": "tok", "META_WA_PHONE_NUMBER_ID": "123", "WA_GATEWAY_TOKEN": "x"})
-	n.metaBase = msrv.URL
+	n.wa.MetaBase = msrv.URL
 	if d := n.SendText(ctx, phone, "halo", "", "00000000-0000-0000-0000-000000000001"); d.OK || d.Reason != "Re-engagement message · code 131047 · subcode 2494010" {
 		t.Fatalf("meta error = %+v", d)
 	}
@@ -204,7 +189,7 @@ func TestSendTextProviders(t *testing.T) {
 	fon := &fakeProvider{status: 200, body: `{"status":false,"reason":"invalid token"}`}
 	fsrv := fon.server(t)
 	n = testNotifier(t, tx, map[string]string{"WHATSAPP_PROVIDER": "fonnte", "FONNTE_API_KEY": "fk"})
-	n.fonnteURL = fsrv.URL
+	n.wa.FonnteURL = fsrv.URL
 	if d := n.SendText(ctx, phone, "x", "", ""); !d.OK || d.Reason != "invalid token" {
 		t.Fatalf("fonnte = %+v (HTTP 200 counts as success, like the TS)", d)
 	}
@@ -278,8 +263,8 @@ func TestGatewayTimeout(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { <-release }))
 	t.Cleanup(func() { close(release); srv.Close() })
 	n := testNotifier(t, tx, map[string]string{"WA_GATEWAY_TOKEN": "t", "WA_GATEWAY_URL": srv.URL, "WA_GATEWAY_TIMEOUT_MS": "50"})
-	res := n.sendGateway(ctx, n.gatewayConfig(ctx), "62811", "x")
-	if res.ok || !res.timedOut || res.reason != "Gateway tidak merespons (timeout)" {
+	res := n.wa.LoadGateway(ctx, tx).SendText(ctx, "62811", "x")
+	if res.Success || !res.TimedOut || res.Reason != "Gateway tidak merespons (timeout)" {
 		t.Fatalf("timeout = %+v", res)
 	}
 	// A timed-out comp notice keeps its claim (at most once).

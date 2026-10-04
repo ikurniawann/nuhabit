@@ -1,16 +1,7 @@
 package app
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"io"
-	"log/slog"
-	"net/http"
-	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/posops/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Adapters for pos-ops' ports. The SQL is ported from the TS routes and
@@ -360,261 +352,14 @@ func (posOpsStoredValue) WalletCredits(ctx context.Context, q database.Querier, 
 
 /* ── WhatsApp (lib/whatsapp sendWhatsAppText) ────────────────────────── */
 
-// posOpsWhatsApp sends free text through the provider lib/whatsapp picks
-// (WHATSAPP_PROVIDER, else Meta, the self-hosted gateway, then Fonnte) and
-// logs each send to crm.wa_messages with the sending staff id.
+// posOpsWhatsApp sends a "notification" text through platform/whatsapp,
+// logged with the sending staff id.
 type posOpsWhatsApp struct {
-	pool   *pgxpool.Pool
-	getenv func(string) string
-	client *http.Client
-	log    *slog.Logger
-
-	mu       sync.Mutex
-	cachedAt time.Time
-	gateway  *waGateway
+	db *pgxpool.Pool
+	wa *whatsapp.Client
 }
 
-type waGateway struct {
-	baseURL, token string
-	timeout        time.Duration
-}
-
-const waNotConfigured = "WhatsApp provider belum dikonfigurasi"
-
-func newPosOpsWhatsApp(pool *pgxpool.Pool, getenv func(string) string, log *slog.Logger) *posOpsWhatsApp {
-	return &posOpsWhatsApp{pool: pool, getenv: getenv, client: &http.Client{}, log: log}
-}
-
-type waResult struct {
-	delivered        bool
-	provider, reason string
-	messageID        string
-}
-
-func (w *posOpsWhatsApp) SendText(ctx context.Context, target, message, sentByUserID string) posops.Delivery {
-	res := w.dispatch(ctx, target, message)
-	w.logOutbound(ctx, target, message, sentByUserID, res)
-	return posops.Delivery{Delivered: res.delivered, Reason: res.reason}
-}
-
-func (w *posOpsWhatsApp) dispatch(ctx context.Context, target, message string) waResult {
-	switch w.provider(ctx) {
-	case "meta":
-		return w.sendMeta(ctx, target, message)
-	case "gateway":
-		return w.sendGateway(ctx, w.gatewayConfig(ctx), target, message)
-	case "fonnte":
-		return w.sendFonnte(ctx, target, message)
-	}
-	return waResult{reason: waNotConfigured}
-}
-
-func (w *posOpsWhatsApp) metaConfigured() bool {
-	return w.getenv("META_WA_ACCESS_TOKEN") != "" && w.getenv("META_WA_PHONE_NUMBER_ID") != ""
-}
-
-func (w *posOpsWhatsApp) provider(ctx context.Context) string {
-	switch strings.ToLower(strings.TrimSpace(w.getenv("WHATSAPP_PROVIDER"))) {
-	case "meta":
-		if w.metaConfigured() {
-			return "meta"
-		}
-		return ""
-	case "gateway":
-		if w.gatewayConfig(ctx) != nil {
-			return "gateway"
-		}
-		return ""
-	case "fonnte":
-		if w.getenv("FONNTE_API_KEY") != "" {
-			return "fonnte"
-		}
-		return ""
-	}
-	switch {
-	case w.metaConfigured():
-		return "meta"
-	case w.gatewayConfig(ctx) != nil:
-		return "gateway"
-	case w.getenv("FONNTE_API_KEY") != "":
-		return "fonnte"
-	}
-	return ""
-}
-
-// gatewayConfig is loadGatewayConfig: app_settings first, then the env,
-// cached for 30 seconds.
-func (w *posOpsWhatsApp) gatewayConfig(ctx context.Context) *waGateway {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	if !w.cachedAt.IsZero() && time.Since(w.cachedAt) < 30*time.Second {
-		return w.gateway
-	}
-	settings := map[string]string{}
-	if rows, err := w.pool.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`,
-		[]string{"wa_gateway_url", "wa_gateway_token"}); err == nil {
-		for rows.Next() {
-			var key string
-			var value *string
-			if rows.Scan(&key, &value) == nil && value != nil {
-				settings[key] = strings.TrimSpace(*value)
-			}
-		}
-		rows.Close()
-	}
-	token := firstSet(settings["wa_gateway_token"], w.getenv("WA_GATEWAY_TOKEN"))
-	var cfg *waGateway
-	if token != "" {
-		timeoutMs, err := strconv.Atoi(w.getenv("WA_GATEWAY_TIMEOUT_MS"))
-		if err != nil || timeoutMs == 0 {
-			timeoutMs = 20000
-		}
-		cfg = &waGateway{
-			baseURL: firstSet(settings["wa_gateway_url"], w.getenv("WA_GATEWAY_URL"), "http://127.0.0.1:3471"),
-			token:   token,
-			timeout: time.Duration(timeoutMs) * time.Millisecond,
-		}
-	}
-	w.gateway, w.cachedAt = cfg, time.Now()
-	return cfg
-}
-
-func firstSet(values ...string) string {
-	for _, v := range values {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
-}
-
-func (w *posOpsWhatsApp) postJSON(ctx context.Context, url string, payload any, headers map[string]string) (*http.Response, error) {
-	body, _ := json.Marshal(payload)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	for k, v := range headers {
-		req.Header.Set(k, v)
-	}
-	return w.client.Do(req)
-}
-
-func (w *posOpsWhatsApp) sendMeta(ctx context.Context, target, message string) waResult {
-	version := firstSet(w.getenv("META_WA_GRAPH_VERSION"), "v21.0")
-	url := "https://graph.facebook.com/" + version + "/" + w.getenv("META_WA_PHONE_NUMBER_ID") + "/messages"
-	resp, err := w.postJSON(ctx, url, map[string]any{
-		"messaging_product": "whatsapp",
-		"recipient_type":    "individual",
-		"to":                target,
-		"type":              "text",
-		"text":              map[string]any{"preview_url": false, "body": message},
-	}, map[string]string{"Authorization": "Bearer " + w.getenv("META_WA_ACCESS_TOKEN")})
-	if err != nil {
-		return waResult{provider: "meta", reason: err.Error()}
-	}
-	defer resp.Body.Close()
-	var data map[string]any
-	_ = json.NewDecoder(resp.Body).Decode(&data)
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return waResult{provider: "meta", reason: metaErrorReason(data)}
-	}
-	id := ""
-	if msgs, ok := data["messages"].([]any); ok && len(msgs) > 0 {
-		if m, ok := msgs[0].(map[string]any); ok {
-			id, _ = m["id"].(string)
-		}
-	}
-	return waResult{delivered: true, provider: "meta", messageID: id}
-}
-
-func metaErrorReason(data map[string]any) string {
-	e, _ := data["error"].(map[string]any)
-	msg, _ := e["message"].(string)
-	if msg == "" {
-		msg = "Unknown error"
-	}
-	parts := []string{msg}
-	if code, ok := e["code"].(float64); ok {
-		parts = append(parts, "code "+strconv.FormatFloat(code, 'f', -1, 64))
-	}
-	if sub, ok := e["error_subcode"].(float64); ok {
-		parts = append(parts, "subcode "+strconv.FormatFloat(sub, 'f', -1, 64))
-	}
-	return strings.Join(parts, " · ")
-}
-
-func (w *posOpsWhatsApp) sendGateway(ctx context.Context, cfg *waGateway, target, message string) waResult {
-	ctx, cancel := context.WithTimeout(ctx, cfg.timeout)
-	defer cancel()
-	resp, err := w.postJSON(ctx, cfg.baseURL+"/send", map[string]string{"target": target, "message": message},
-		map[string]string{"x-gateway-token": cfg.token})
-	if err != nil {
-		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return waResult{provider: "gateway", reason: "Gateway tidak merespons (timeout)"}
-		}
-		return waResult{provider: "gateway", reason: err.Error()}
-	}
-	defer resp.Body.Close()
-	var data map[string]any
-	_ = json.NewDecoder(resp.Body).Decode(&data)
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		reason, _ := data["error"].(string)
-		return waResult{provider: "gateway", reason: firstSet(reason, "Gateway menolak permintaan kirim")}
-	}
-	id, _ := data["messageId"].(string)
-	return waResult{delivered: true, provider: "gateway", messageID: id}
-}
-
-func (w *posOpsWhatsApp) sendFonnte(ctx context.Context, target, message string) waResult {
-	resp, err := w.postJSON(ctx, "https://api.fonnte.com/send", map[string]string{"target": target, "message": message},
-		map[string]string{"Authorization": w.getenv("FONNTE_API_KEY")})
-	if err != nil {
-		return waResult{provider: "fonnte", reason: err.Error()}
-	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
-	var data map[string]any
-	if json.Unmarshal(raw, &data) != nil {
-		return waResult{provider: "fonnte", reason: "invalid response"}
-	}
-	status, _ := data["status"].(bool)
-	reason, _ := data["reason"].(string)
-	return waResult{delivered: status || (resp.StatusCode >= 200 && resp.StatusCode <= 299), provider: "fonnte", reason: reason}
-}
-
-// logOutbound is logOutboundMessage: failures are logged, never returned.
-func (w *posOpsWhatsApp) logOutbound(ctx context.Context, phone, body, sentBy string, res waResult) {
-	var customerID *string
-	err := w.pool.QueryRow(ctx, `SELECT id FROM pos.pos_customers
-		WHERE regexp_replace(COALESCE(phone,''), '\D', '', 'g') IN ($1, '0' || substring($1 from 3))
-		LIMIT 1`, phone).Scan(&customerID)
-	if err != nil && !database.IsNoRows(err) {
-		w.log.Error("[wa-log] Gagal mencatat pesan keluar", "error", err.Error())
-		return
-	}
-	status, reason := "failed", &res.reason
-	if res.delivered {
-		status, reason = "sent", nil
-	} else if res.reason == "" {
-		unknown := "Unknown error"
-		reason = &unknown
-	}
-	_, err = w.pool.Exec(ctx, `INSERT INTO crm.wa_messages
-		  (conversation_id, direction, message_type, phone, customer_id, body,
-		   status, provider, provider_message_id, error_reason, sent_by_user_id)
-		VALUES (NULL, 'out', 'notification', $1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (provider_message_id) WHERE provider_message_id IS NOT NULL DO NOTHING`,
-		phone, customerID, body, status, emptyNil(res.provider), emptyNil(res.messageID), reason, emptyNil(sentBy))
-	if err != nil {
-		w.log.Error("[wa-log] Gagal mencatat pesan keluar", "error", err.Error())
-	}
-}
-
-func emptyNil(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
+func (w posOpsWhatsApp) SendText(ctx context.Context, target, message, sentByUserID string) posops.Delivery {
+	res := w.wa.SendText(ctx, w.db, target, message, "notification", sentByUserID)
+	return posops.Delivery{Delivered: res.Success, Reason: res.Reason}
 }

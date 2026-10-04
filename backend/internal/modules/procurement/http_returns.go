@@ -106,7 +106,7 @@ func (h *Handler) createReturn(w http.ResponseWriter, r *http.Request) error {
 	in := &ReturnCreate{}
 	str := func(key string) *string { return f.Str(key, nullish, validate.StrOpts{}) }
 	in.GrnID, in.SupplierID, in.VendorID, in.ModuleType, in.ReturnDate = str("grn_id"), str("supplier_id"), str("vendor_id"), str("module_type"), str("return_date")
-	in.ReasonType = enumField(f, "reason_type", nullish, reasonTypes)
+	in.ReasonType = f.Enum("reason_type", nullish, reasonTypes)
 	in.ReasonNotes, in.Notes = str("reason_notes"), str("notes")
 	f.List("items", nullish, 1<<30, func(items *validate.Form, i int, v any) { in.Items = append(in.Items, returnLines(items, i, v)) })
 	if err := f.Err("Validation failed"); err != nil {
@@ -167,7 +167,7 @@ func (h *Handler) updateReturn(w http.ResponseWriter, r *http.Request) error {
 	if d := f.Str("return_date", validate.Rule{}, validate.StrOpts{Min: 1}); d != nil {
 		in.ReturnDate = *d
 	}
-	if t := enumField(f, "reason_type", validate.Rule{}, reasonTypes); t != nil {
+	if t := f.Enum("reason_type", validate.Rule{}, reasonTypes); t != nil {
 		in.ReasonType = *t
 	}
 	in.ReasonNotes = f.Str("reason_notes", nullish, validate.StrOpts{})
@@ -223,7 +223,7 @@ func (h *Handler) reviseReturn(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	rev, err := h.svc.RevisePurchaseReturn(r.Context(), r.PathValue("id"), withRequestMeta(auditEntry{ActorID: user.ID, ActorName: user.FullName}, r))
+	rev, err := h.svc.RevisePurchaseReturn(r.Context(), r.PathValue("id"), actorAudit(user).WithRequest(r))
 	if err != nil {
 		return err
 	}

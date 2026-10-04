@@ -9,6 +9,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Handler is the HTTP transport of /api/accounting/** and /api/finance/**.
@@ -30,17 +31,17 @@ func (h *Handler) staff(fn staffFunc) http.Handler {
 	})
 }
 
-func (h *Handler) scope(r *http.Request, u *auth.User) (domain.Scope, error) {
+func (h *Handler) scope(r *http.Request, u *auth.User) (*pscope.Scope, error) {
 	return h.svc.Scope(r.Context(), u.ID)
 }
 
 // company is requireAccountingCompanyId(await getApiUserScope(), msg).
-func (h *Handler) company(r *http.Request, u *auth.User, msg string) (string, domain.Scope, error) {
+func (h *Handler) company(r *http.Request, u *auth.User, msg string) (string, *pscope.Scope, error) {
 	sc, err := h.scope(r, u)
 	if err != nil {
 		return "", sc, err
 	}
-	id, err := sc.RequireCompany(msg)
+	id, err := domain.RequireCompany(sc, msg)
 	return id, sc, rejection(err)
 }
 

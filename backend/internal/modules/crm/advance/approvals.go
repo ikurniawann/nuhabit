@@ -320,8 +320,8 @@ func (h *handler) notifyApprovers(ctx context.Context, requestID string, level i
 		if phone == "" {
 			continue
 		}
-		if ok, reason := gw.SendText(ctx, phone, text); !ok {
-			h.log.Error("[crm-approval] WA approver gagal", "reason", reason)
+		if sent := gw.SendText(ctx, phone, text); !sent.Success {
+			h.log.Error("[crm-approval] WA approver gagal", "reason", sent.Reason)
 		}
 	}
 	return nil

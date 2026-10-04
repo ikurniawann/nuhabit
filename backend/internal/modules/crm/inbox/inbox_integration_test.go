@@ -20,6 +20,7 @@ import (
 	"nuhabit/backend/internal/modules/crm/internal/crmtest"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/testutil"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 /* ── fakes for the external ports ─────────────────────────────────────── */
@@ -611,7 +612,12 @@ func TestWhatsAppGatewayAdapter(t *testing.T) {
 	defer srv.Close()
 	crmtest.MustExec(t, tx, `INSERT INTO configuration.app_settings (key, value) VALUES ('wa_gateway_url', $1), ('wa_gateway_token', 'tok')
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, srv.URL)
-	g := &WhatsAppGateway{Getenv: func(string) string { return "" }}
+	newGateway := func() *WhatsAppGateway {
+		c := whatsapp.New(nil)
+		c.Getenv = func(string) string { return "" }
+		return &WhatsAppGateway{Client: c}
+	}
+	g := newGateway()
 	res := g.SendText(context.Background(), tx, "6281", "halo")
 	if !res.Success || res.Provider != "gateway" || *res.MessageID != "m-1" || token != "tok" {
 		t.Fatalf("sent: %+v token=%q", res, token)
@@ -620,17 +626,7 @@ func TestWhatsAppGatewayAdapter(t *testing.T) {
 	if res := g.SendText(context.Background(), tx, "6281", "halo"); res.Success || res.Reason != "Nomor tidak terdaftar" {
 		t.Fatalf("refused: %+v", res)
 	}
-	if res := (&WhatsAppGateway{Getenv: func(string) string { return "" }}).SendText(context.Background(), testutil.Tx(t), "1", "x"); res.Reason != waNotConfigured {
+	if res := newGateway().SendText(context.Background(), testutil.Tx(t), "1", "x"); res.Reason != whatsapp.NotConfigured {
 		t.Fatalf("unconfigured: %+v", res)
-	}
-}
-
-func TestParseNotifConfig(t *testing.T) {
-	enabled, on, to := parseNotifConfig(`{"enabled":true,"types":{"komplain":false},"recipients":["0812-3456-7890","+6281234567890","123"]}`, "komplain")
-	if !enabled || on || len(to) != 1 || to[0] != "6281234567890" {
-		t.Fatalf("config: %v %v %v", enabled, on, to)
-	}
-	if enabled, on, _ := parseNotifConfig("", "reviewRendah"); enabled || !on {
-		t.Fatal("default: master off, type on")
 	}
 }

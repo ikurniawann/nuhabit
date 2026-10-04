@@ -103,7 +103,7 @@ func (ff *formFields) email(key, msg string) {
 }
 
 func (ff *formFields) enum(key string, r validate.Rule, options []string, def string) *string {
-	v := enumField(ff.f, key, r, options)
+	v := ff.f.Enum(key, r, options)
 	if v == nil && def != "" {
 		if _, sent := ff.f.Fields()[key]; !sent {
 			v = &def
@@ -171,14 +171,14 @@ func (h *Handler) listSuppliers(w http.ResponseWriter, r *http.Request) error {
 		b := v != ""
 		p.IsActive = &b
 	}
-	p.Status = enumField(f, "status", optional, supplierStatuses)
-	p.PaymentTerms = enumField(f, "payment_terms", optional, paymentTerms)
+	p.Status = f.Enum("status", optional, supplierStatuses)
+	p.PaymentTerms = f.Enum("payment_terms", optional, paymentTerms)
 	p.Page = coerceNumber(f, "page", 1, 1, nil)
 	p.Limit = coerceNumber(f, "limit", 20, 1, validate.Bound(100))
-	if v := enumField(f, "sort_by", validate.Rule{HasDefault: true}, []string{"nama_supplier", "kode_supplier", "kota", "created_at"}); v != nil {
+	if v := f.Enum("sort_by", validate.Rule{HasDefault: true}, []string{"nama_supplier", "kode_supplier", "kota", "created_at"}); v != nil {
 		p.SortBy = *v
 	}
-	if v := enumField(f, "sort_dir", validate.Rule{HasDefault: true}, []string{"ASC", "DESC"}); v != nil {
+	if v := f.Enum("sort_dir", validate.Rule{HasDefault: true}, []string{"ASC", "DESC"}); v != nil {
 		p.SortDir = *v
 	}
 	if err := queryParamsError(f); err != nil {
@@ -340,9 +340,9 @@ func (h *Handler) listVendors(w http.ResponseWriter, r *http.Request) error {
 	f := queryForm(r)
 	p := VendorListParams{}
 	p.Search = f.Str("search", optional, validate.StrOpts{})
-	p.Category = enumField(f, "category", optional, vendorCategories)
-	p.UsageScope = enumField(f, "usage_scope", optional, vendorUsages)
-	p.Status = enumField(f, "status", optional, activeStatuses)
+	p.Category = f.Enum("category", optional, vendorCategories)
+	p.UsageScope = f.Enum("usage_scope", optional, vendorUsages)
+	p.Status = f.Enum("status", optional, activeStatuses)
 	p.Page = coerceNumber(f, "page", 1, 1, nil)
 	p.Limit = coerceNumber(f, "limit", 10, 1, validate.Bound(100))
 	if err := queryParamsError(f); err != nil {
@@ -471,7 +471,7 @@ func (h *Handler) listPriceLists(w http.ResponseWriter, r *http.Request) error {
 	p.Search = f.Str("search", optional, validate.StrOpts{})
 	p.VendorID = f.UUID("vendor_id", optional)
 	p.ProductID = f.UUID("product_id", optional)
-	p.Status = enumField(f, "status", optional, activeStatuses)
+	p.Status = f.Enum("status", optional, activeStatuses)
 	p.Page = coerceNumber(f, "page", 1, 1, nil)
 	p.Limit = coerceNumber(f, "limit", 10, 1, validate.Bound(100))
 	if err := queryParamsError(f); err != nil {

@@ -7,6 +7,7 @@ import (
 	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 /* ── Account types ───────────────────────────────────────────────────── */
@@ -187,7 +188,7 @@ func (h *Handler) mappingInScope(r *http.Request, u *auth.User, global string) (
 	if m != nil {
 		company = m.CompanyID
 	}
-	return m, rejection(sc.AssertRecordInScope(m != nil, company, msgs))
+	return m, rejection(domain.AssertRecordInScope(sc, m != nil, company, msgs))
 }
 
 func (h *Handler) getMapping(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -285,7 +286,7 @@ func (h *Handler) yearInScope(r *http.Request, u *auth.User, global string) (*Fi
 	if y != nil {
 		company = y.CompanyID
 	}
-	return y, rejection(sc.AssertRecordInScope(y != nil, company, msgs))
+	return y, rejection(domain.AssertRecordInScope(sc, y != nil, company, msgs))
 }
 
 func (h *Handler) getFiscalYear(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -459,10 +460,10 @@ func (h *Handler) createEntry(w http.ResponseWriter, r *http.Request, u *auth.Us
 
 var entryScope = domain.RecordScopeMessages{NotFound: "Journal entry tidak ditemukan", OutOfScope: "Journal entry di luar scope"}
 
-func (h *Handler) entryInScope(r *http.Request, u *auth.User, global string) (*JournalEntry, domain.Scope, error) {
+func (h *Handler) entryInScope(r *http.Request, u *auth.User, global string) (*JournalEntry, *pscope.Scope, error) {
 	e, err := h.svc.JournalEntry(r.Context(), r.PathValue("id"))
 	if err != nil {
-		return nil, domain.Scope{}, err
+		return nil, nil, err
 	}
 	sc, err := h.scope(r, u)
 	if err != nil {
@@ -474,7 +475,7 @@ func (h *Handler) entryInScope(r *http.Request, u *auth.User, global string) (*J
 	if e != nil {
 		company = e.CompanyID
 	}
-	return e, sc, rejection(sc.AssertRecordInScope(e != nil, company, msgs))
+	return e, sc, rejection(domain.AssertRecordInScope(sc, e != nil, company, msgs))
 }
 
 func (h *Handler) getEntry(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -496,7 +497,7 @@ func (h *Handler) updateEntry(w http.ResponseWriter, r *http.Request, u *auth.Us
 	}
 	companyID := existing.CompanyID
 	if companyID == nil {
-		id, err := sc.RequireCompany("")
+		id, err := domain.RequireCompany(sc, "")
 		if err != nil {
 			return rejection(err)
 		}

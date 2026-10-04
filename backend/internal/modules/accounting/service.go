@@ -15,8 +15,8 @@ import (
 	"log/slog"
 	"time"
 
-	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/database"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Service holds the accounting use cases. db is the pool in production and
@@ -45,6 +45,6 @@ func (s *Service) today() string { return s.now().UTC().Format("2006-01-02") }
 func (s *Service) todayCompact() string { return s.now().UTC().Format("20060102") }
 
 // Scope resolves the user's business scope.
-func (s *Service) Scope(ctx context.Context, userID string) (domain.Scope, error) {
-	return s.ports.Scopes.Scope(ctx, s.db, userID)
+func (s *Service) Scope(ctx context.Context, userID string) (*pscope.Scope, error) {
+	return pscope.Load(ctx, s.db, userID)
 }

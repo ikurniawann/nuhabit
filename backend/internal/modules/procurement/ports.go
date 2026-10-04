@@ -19,6 +19,18 @@ type Ports struct {
 	ReturnStock ReturnStock
 	Production  Production
 	Owner       OwnerNotifier
+	Stock       StockAlerts
+}
+
+// StockAlerts reads raw material stock (inventory's v_raw_materials_stock
+// views) for the purchasing dashboard. warehouseID "" reads the aggregate
+// over every stall.
+type StockAlerts interface {
+	// LowStockCount counts the materials at MENIPIS or HABIS.
+	LowStockCount(ctx context.Context, q database.Querier, warehouseID string) (int, error)
+	// LowStockItems lists the ten lowest of them by qty_onhand: id, nama,
+	// kategori, qty_onhand, min_stock, satuan.
+	LowStockItems(ctx context.Context, q database.Querier, warehouseID string) ([]*Row, error)
 }
 
 // OwnerNotifier sends an owner WhatsApp alert (lib/wa/notifications-sender

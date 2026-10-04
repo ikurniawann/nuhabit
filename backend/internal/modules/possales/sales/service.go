@@ -45,6 +45,7 @@ type Handler struct {
 	events  *outbox.Bus
 	p       Ports
 	limiter *kit.RateLimiter
+	pins    *Supervisors
 }
 
 // New builds the handler on deps with the given ports.
@@ -64,7 +65,8 @@ func newHandler(db database.DB, deps module.Deps, p Ports) *Handler {
 	if p.GofoodReady == nil {
 		p.GofoodReady = func(context.Context, string) {}
 	}
-	h := &Handler{db: db, auth: deps.Auth, log: log, now: now, events: deps.Events, p: p, limiter: kit.NewRateLimiter(now)}
+	h := &Handler{db: db, auth: deps.Auth, log: log, now: now, events: deps.Events, p: p, limiter: kit.NewRateLimiter(now),
+		pins: NewSupervisors(db, p.Directory, now)}
 	h.subscribe()
 	return h
 }

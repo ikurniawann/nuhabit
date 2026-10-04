@@ -12,6 +12,7 @@ import (
 
 	contracts "nuhabit/backend/internal/contracts/procurement"
 	"nuhabit/backend/internal/modules/procurement/domain"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -783,7 +784,7 @@ type GrnCreated struct {
 	Grn     *Row
 	Status  string
 	Message string
-	Audit   auditEntry
+	Audit   audit.Entry
 }
 
 // warehouseScopeErrors are WAREHOUSE_SCOPE_ERRORS of grn-create.
@@ -1018,12 +1019,12 @@ func (s *Service) createGrn(ctx context.Context, tx pgx.Tx, in *createGrnInput, 
 			return nil, serverMessage(err, "Gagal menyimpan item penerimaan barang")
 		}
 		createdItems = append(createdItems, c)
-		audit := obj("raw_material_id", nonEmpty(l.RawMaterialID), "product_id", nonEmpty(l.ProductID), "supply_item_id", nonEmpty(l.SupplyItemID),
+		auditItem := obj("raw_material_id", nonEmpty(l.RawMaterialID), "product_id", nonEmpty(l.ProductID), "supply_item_id", nonEmpty(l.SupplyItemID),
 			"qty_diterima", l.QtyDiterima, "qty_ditolak", l.QtyDitolak, "batch_number", nil, "expiry_date", nil)
 		if hasBatch {
-			audit.Set("batch_number", batch).Set("expiry_date", expiry)
+			auditItem.Set("batch_number", batch).Set("expiry_date", expiry)
 		}
-		auditItems = append(auditItems, audit)
+		auditItems = append(auditItems, auditItem)
 	}
 
 	if moduleType == "general" && initial != domain.GrnRejected {
@@ -1116,7 +1117,7 @@ func (s *Service) createGrn(ctx context.Context, tx pgx.Tx, in *createGrnInput, 
 	grn.Set("status", status)
 	return &GrnCreated{
 		Grn: grn, Status: status, Message: domain.GrnCreatedMessage(number, status, moduleType, nil),
-		Audit: auditEntry{ActorID: user.ID, ActorName: user.FullName, Action: "grn.post", Entity: "grn", EntityID: grnID, EntityLabel: &number,
+		Audit: audit.Entry{ActorID: user.ID, ActorName: nonEmpty(&user.FullName), Action: "grn.post", Entity: "grn", EntityID: &grnID, EntityLabel: &number,
 			After: obj("status", status, "warehouse_id", in.WarehouseID, "purchase_order_id", poID, "items", auditItems)},
 	}, nil
 }

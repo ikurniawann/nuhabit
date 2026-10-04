@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/procurement/domain"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	pscope "nuhabit/backend/internal/platform/scope"
@@ -197,7 +198,7 @@ type CreditApplication struct {
 
 // ApplyVendorCredits is applyVendorCredits: oldest usable credits cover the
 // amount; a dry run only computes the allocation.
-func (s *Service) ApplyVendorCredits(ctx context.Context, poID string, amount float64, dryRun bool, audit auditEntry) (*CreditApplication, error) {
+func (s *Service) ApplyVendorCredits(ctx context.Context, poID string, amount float64, dryRun bool, entry audit.Entry) (*CreditApplication, error) {
 	if !(amount > 0) {
 		return nil, badRequest("Jumlah kredit yang dipakai harus lebih dari 0")
 	}
@@ -226,7 +227,7 @@ func (s *Service) ApplyVendorCredits(ctx context.Context, poID string, amount fl
 		}
 		for _, a := range allocations {
 			if _, err := tx.Exec(ctx, `INSERT INTO purchasing.vendor_credit_applications (vendor_credit_id, purchase_order_id, amount, applied_by)
-				VALUES ($1, $2, $3, $4)`, a.CreditID, po.Str("id"), a.Amount, audit.ActorID); err != nil {
+				VALUES ($1, $2, $3, $4)`, a.CreditID, po.Str("id"), a.Amount, entry.ActorID); err != nil {
 				return err
 			}
 			if _, err := tx.Exec(ctx, `UPDATE purchasing.vendor_credits SET applied_amount = applied_amount + $2, updated_at = now() WHERE id = $1`,
@@ -235,9 +236,10 @@ func (s *Service) ApplyVendorCredits(ctx context.Context, poID string, amount fl
 			}
 		}
 		label := po.Str("nomor_po")
-		audit.Action, audit.Entity, audit.EntityID, audit.EntityLabel = "vendor_credit.apply", "purchase_order", po.Str("id"), &label
-		audit.After = obj("requested", amount, "allocations", allocations, "uncovered", remaining)
-		return recordAudit(ctx, tx, audit)
+		poID := po.Str("id")
+		entry.Action, entry.Entity, entry.EntityID, entry.EntityLabel = "vendor_credit.apply", "purchase_order", &poID, &label
+		entry.After = obj("requested", amount, "allocations", allocations, "uncovered", remaining)
+		return audit.Write(ctx, tx, entry)
 	})
 	return out, err
 }

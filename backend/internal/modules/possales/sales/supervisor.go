@@ -3,6 +3,7 @@ package sales
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -39,9 +40,11 @@ func (a Approval) reject(w http.ResponseWriter, invalidMsg string) error {
 	return kit.Fail(w, 403, invalidMsg)
 }
 
-// verifyPosPin is verifyPosPin: bcrypt hashes through pgcrypto's crypt()
-// (bcryptjs writes $2b$, pgcrypto reads the identical $2a$ form), legacy
-// plaintext compared as-is.
+// verifyPosPin is verifyPosPin: bcrypt hashes through pgcrypto's crypt(),
+// legacy plaintext compared as-is. bcryptjs 3 writes $2b$, which pgcrypto
+// does not parse; $2a$ and $2b$ differ only for passwords over 255 bytes,
+// so the hash is read in its $2a$ form. pgcrypto writes $2a$, which
+// bcryptjs compares.
 func verifyPosPin(ctx context.Context, q database.Querier, pin, stored string) (bool, error) {
 	if stored == "" {
 		return false, nil
@@ -65,23 +68,102 @@ func hashPosPin(ctx context.Context, q database.Querier, pin string) (string, er
 	return h, err
 }
 
-// findSupervisor returns the first in-scope supervisor whose PIN matches.
-func (h *Handler) findSupervisor(ctx context.Context, q database.Querier, pin, companyID, branchID string) (*ports.Supervisor, error) {
-	list, err := h.p.Directory.ActiveSupervisors(ctx, q)
+// Supervisors is lib/pos/supervisor-pin-server.ts: supervisor PIN approval
+// limited to supervisors whose business scope covers the cashier (or the
+// order), with failures counted in auth.attempt_limits. Stored value uses it
+// through internal/app for FOC top-ups and member refunds.
+type Supervisors struct {
+	db  database.DB
+	dir SupervisorDirectory
+	now func() time.Time
+}
+
+// SupervisorDirectory lists the active supervisors with their scope.
+type SupervisorDirectory interface {
+	ActiveSupervisors(ctx context.Context, q database.Querier) ([]ports.Supervisor, error)
+}
+
+// NewSupervisors builds the approval service on db.
+func NewSupervisors(db database.DB, dir SupervisorDirectory, now func() time.Time) *Supervisors {
+	if now == nil {
+		now = time.Now
+	}
+	return &Supervisors{db: db, dir: dir, now: now}
+}
+
+// Approve is approveWithSupervisorPin (no order): only active supervisors
+// whose scope covers the cashier's company/branch; failures count per
+// cashier.
+func (s *Supervisors) Approve(ctx context.Context, callerID, pin string) (Approval, error) {
+	pin = domain.Trim(pin)
+	return s.approveWithAttemptLimit(ctx, []string{"user:" + callerID}, func() (*ports.Supervisor, error) {
+		if pin == "" {
+			return nil, nil
+		}
+		caller, err := s.profile(ctx, callerID)
+		if err != nil || caller == nil {
+			return nil, err
+		}
+		return s.find(ctx, pin, caller.CompanyID, caller.BranchID)
+	})
+}
+
+// approveOrder is approveOrderWithSupervisorPin: a missing or out-of-scope
+// order answers like a wrong PIN; failures count per cashier and per order.
+func (s *Supervisors) approveOrder(ctx context.Context, callerID, orderID string, order *orderScope, pin string) (Approval, error) {
+	pin = domain.Trim(pin)
+	return s.approveWithAttemptLimit(ctx, []string{"user:" + callerID, "order:" + orderID}, func() (*ports.Supervisor, error) {
+		if order == nil || pin == "" {
+			return nil, nil
+		}
+		in, err := s.orderInUserScope(ctx, callerID, *order)
+		if err != nil || !in {
+			return nil, err
+		}
+		return s.find(ctx, pin, strPtr(order.CompanyID), strPtr(order.BranchID))
+	})
+}
+
+// orderScope is OrderScopeRow.
+type orderScope struct{ CompanyID, BranchID string }
+
+// orderInUserScope is isOrderInUserScope: false without a profile row.
+func (s *Supervisors) orderInUserScope(ctx context.Context, userID string, o orderScope) (bool, error) {
+	sc, err := s.profile(ctx, userID)
+	if err != nil || sc == nil {
+		return false, err
+	}
+	return scope.OperationalRowInScope(sc, strPtr(o.CompanyID), strPtr(o.BranchID)), nil
+}
+
+// profile is the user's configuration.users scope, nil without a row
+// (role is NOT NULL, so only a missing row loads a nil role).
+func (s *Supervisors) profile(ctx context.Context, userID string) (*scope.Scope, error) {
+	sc, err := scope.Load(ctx, s.db, userID)
+	if err != nil || sc.Role == nil {
+		return nil, err
+	}
+	return sc, nil
+}
+
+// find is findSupervisorByPin over the supervisors whose scope covers the
+// unit.
+func (s *Supervisors) find(ctx context.Context, pin string, companyID, branchID *string) (*ports.Supervisor, error) {
+	list, err := s.dir.ActiveSupervisors(ctx, s.db)
 	if err != nil {
 		return nil, err
 	}
 	for i := range list {
-		s := list[i]
-		if !scope.OperationalRowInScope(s.Scope, strPtr(companyID), strPtr(branchID)) {
+		sup := list[i]
+		if !scope.OperationalRowInScope(sup.Scope, companyID, branchID) {
 			continue
 		}
-		ok, err := verifyPosPin(ctx, q, pin, s.PosPin)
+		ok, err := verifyPosPin(ctx, s.db, pin, sup.PosPin)
 		if err != nil {
 			return nil, err
 		}
 		if ok {
-			return &s, nil
+			return &sup, nil
 		}
 	}
 	return nil, nil
@@ -89,80 +171,35 @@ func (h *Handler) findSupervisor(ctx context.Context, q database.Querier, pin, c
 
 // approveWithAttemptLimit is the shared frame: refuse while locked, look up
 // the supervisor, record a failure or clear the count.
-func (h *Handler) approveWithAttemptLimit(ctx context.Context, subjects []string, find func() (*ports.Supervisor, error)) (Approval, error) {
-	now := h.now()
-	if lock, err := findActiveLock(ctx, h.db, subjects, now); err != nil {
+func (s *Supervisors) approveWithAttemptLimit(ctx context.Context, subjects []string, find func() (*ports.Supervisor, error)) (Approval, error) {
+	now := s.now()
+	if lock, err := findActiveLock(ctx, s.db, subjects, now); err != nil {
 		return Approval{}, err
 	} else if lock != nil {
 		return Approval{RetryMinutes: domain.MinutesUntil(*lock, now)}, nil
 	}
-	s, err := find()
+	sup, err := find()
 	if err != nil {
 		return Approval{}, err
 	}
-	if s == nil {
-		lock, err := recordFailure(ctx, h.db, subjects, h.now)
+	if sup == nil {
+		lock, err := recordFailure(ctx, s.db, subjects, s.now)
 		if err != nil {
 			return Approval{}, err
 		}
 		if lock != nil {
-			return Approval{RetryMinutes: domain.MinutesUntil(*lock, h.now())}, nil
+			return Approval{RetryMinutes: domain.MinutesUntil(*lock, s.now())}, nil
 		}
 		return Approval{}, nil
 	}
-	if _, err := h.db.Exec(ctx, `DELETE FROM auth.attempt_limits WHERE scope = $1 AND subject = ANY($2::text[])`, domain.SupervisorPinScope, subjects); err != nil {
+	if _, err := s.db.Exec(ctx, `DELETE FROM auth.attempt_limits WHERE scope = $1 AND subject = ANY($2::text[])`, domain.SupervisorPinScope, subjects); err != nil {
 		return Approval{}, err
 	}
 	name := "Supervisor"
-	if s.FullName != nil && *s.FullName != "" {
-		name = *s.FullName
+	if sup.FullName != nil && *sup.FullName != "" {
+		name = *sup.FullName
 	}
-	return Approval{Approver: &Approver{ID: s.ID, Name: name}}, nil
-}
-
-// approveWithPin is approveWithSupervisorPin (FOC, no order): supervisors
-// whose scope covers the cashier's company/branch.
-func (h *Handler) approveWithPin(ctx context.Context, callerID, pin string) (Approval, error) {
-	pin = domain.Trim(pin)
-	return h.approveWithAttemptLimit(ctx, []string{"user:" + callerID}, func() (*ports.Supervisor, error) {
-		if pin == "" {
-			return nil, nil
-		}
-		caller, err := scope.Load(ctx, h.db, callerID)
-		if err != nil {
-			return nil, err
-		}
-		return h.findSupervisor(ctx, h.db, pin, deref(caller.CompanyID), deref(caller.BranchID))
-	})
-}
-
-// orderScope is OrderScopeRow.
-type orderScope struct{ CompanyID, BranchID string }
-
-// orderInUserScope is isOrderInUserScope.
-func (h *Handler) orderInUserScope(ctx context.Context, userID string, o orderScope) (bool, error) {
-	s, err := scope.Load(ctx, h.db, userID)
-	if err != nil {
-		return false, err
-	}
-	return scope.OperationalRowInScope(s, strPtr(o.CompanyID), strPtr(o.BranchID)), nil
-}
-
-// approveOrderWithPin is approveOrderWithSupervisorPin: a missing or
-// out-of-scope order answers like a wrong PIN; failures count per cashier
-// and per order.
-func (h *Handler) approveOrderWithPin(ctx context.Context, callerID, orderID string, order *orderScope, pin string) (Approval, error) {
-	pin = domain.Trim(pin)
-	return h.approveWithAttemptLimit(ctx, []string{"user:" + callerID, "order:" + orderID}, func() (*ports.Supervisor, error) {
-		if order == nil || pin == "" {
-			return nil, nil
-		}
-		in, err := h.orderInUserScope(ctx, callerID, *order)
-		if err != nil || !in {
-			return nil, err
-		}
-		return h.findSupervisor(ctx, h.db, pin, order.CompanyID, order.BranchID)
-	})
+	return Approval{Approver: &Approver{ID: sup.ID, Name: name}}, nil
 }
 
 /* ── auth.attempt_limits (lib/security/attempt-limit.ts) ─────────────── */
@@ -202,9 +239,7 @@ func findActiveLock(ctx context.Context, q database.Querier, subjects []string, 
 // recordFailure counts one failure per subject (sorted, row-locked) and
 // returns the longest active lock.
 func recordFailure(ctx context.Context, db database.DB, subjects []string, clock func() time.Time) (*time.Time, error) {
-	ordered := append([]string(nil), subjects...)
-	sortStrings(ordered)
-	ordered = uniqueSorted(ordered)
+	ordered := slices.Compact(slices.Sorted(slices.Values(subjects)))
 	var latest *time.Time
 	err := database.WithTx(ctx, db, func(tx pgx.Tx) error {
 		for _, subject := range ordered {
@@ -234,24 +269,6 @@ func recordFailure(ctx context.Context, db database.DB, subjects []string, clock
 		return nil
 	})
 	return latest, err
-}
-
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j] < s[j-1]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
-}
-
-func uniqueSorted(s []string) []string {
-	out := s[:0]
-	for i, v := range s {
-		if i == 0 || v != s[i-1] {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 /* ── /api/pos/supervisors ────────────────────────────────────────────── */

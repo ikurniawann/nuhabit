@@ -14,6 +14,7 @@ import (
 	"nuhabit/backend/internal/modules/storedvalue/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/scope"
 )
 
 // Cashier top-ups: QRIS creation, crediting a paid QR, reconciliation with
@@ -378,15 +379,15 @@ func (w *Wallet) ReconcilePendingTopup(ctx context.Context, id string) (Reconcil
 // (company derived from the branch when missing), else the CRM default
 // venue; never fails.
 func (w *Wallet) resolveTopupVenue(ctx context.Context, userID string) Venue {
-	scope, err := w.ports.Directory.UserScope(ctx, w.db, userID)
+	sc, err := scope.Load(ctx, w.db, userID)
 	if err != nil {
 		w.log.Error("[pos] resolveTopupVenue gagal — topup tetap diproses tanpa venue", "error", err.Error())
 		return Venue{}
 	}
 	fallback := w.ports.Directory.DefaultVenue(ctx, w.db)
 	picked := Venue{CompanyID: fallback.CompanyID, BranchID: fallback.BranchID}
-	if scope != nil && (scope.BranchID != nil || scope.CompanyID != nil) {
-		picked = Venue{CompanyID: scope.CompanyID, BranchID: scope.BranchID}
+	if sc.BranchID != nil || sc.CompanyID != nil {
+		picked = Venue{CompanyID: sc.CompanyID, BranchID: sc.BranchID}
 	}
 	if picked.BranchID != nil && picked.CompanyID == nil {
 		company, err := w.ports.Directory.BranchCompany(ctx, w.db, *picked.BranchID)

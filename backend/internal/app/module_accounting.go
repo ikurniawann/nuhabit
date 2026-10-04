@@ -22,7 +22,6 @@ func AccountingPorts(d module.Deps) accounting.Ports {
 	loc := procurement.Location(d.Config.TimeZone)
 	terms := procurement.NewService(d.DB, ProcurementPorts(loc, d.Now), d.Now, d.Log, loc)
 	return accounting.Ports{
-		Scopes:     accountingScopes{},
 		Audit:      accountingAudit{},
 		Purchasing: accountingPurchasing{terms: terms},
 		PosOrders:  accountingPos{},

@@ -94,7 +94,7 @@ func (h *Handler) mergeUseCase(r *http.Request, user *auth.User) (*response, err
 		if row == nil {
 			return nil
 		}
-		if in, _ := h.orderInUserScope(ctx, user.ID, orderScope{CompanyID: row.Str("company_id"), BranchID: row.Str("branch_id")}); !in {
+		if in, _ := h.pins.orderInUserScope(ctx, user.ID, orderScope{CompanyID: row.Str("company_id"), BranchID: row.Str("branch_id")}); !in {
 			return nil
 		}
 		return row
@@ -105,7 +105,7 @@ func (h *Handler) mergeUseCase(r *http.Request, user *auth.User) (*response, err
 		if source != nil && target != nil {
 			scoped = &orderScope{CompanyID: source.Str("company_id"), BranchID: source.Str("branch_id")}
 		}
-		a, err := h.approveOrderWithPin(ctx, user.ID, sourceID, scoped, domain.String(pin))
+		a, err := h.pins.approveOrder(ctx, user.ID, sourceID, scoped, domain.String(pin))
 		if err != nil {
 			return nil, err
 		}

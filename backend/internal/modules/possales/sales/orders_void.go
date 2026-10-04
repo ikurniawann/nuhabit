@@ -51,7 +51,7 @@ func (h *Handler) voidUseCase(r *http.Request, user *auth.User) (*response, erro
 	if order != nil {
 		scopeRow = &orderScope{CompanyID: order.Str("company_id"), BranchID: order.Str("branch_id")}
 	}
-	approval, err := h.approveOrderWithPin(ctx, user.ID, orderID, scopeRow, domain.String(body.Get("supervisor_pin")))
+	approval, err := h.pins.approveOrder(ctx, user.ID, orderID, scopeRow, domain.String(body.Get("supervisor_pin")))
 	if err != nil {
 		return nil, err
 	}

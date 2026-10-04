@@ -1,7 +1,8 @@
 // Package stock serves stock levels, movements, batches and expiry, scrap,
 // stock opnames (raw material and product), transfers, adjustments and
-// supply stock under /api/inventory and /api/purchasing/inventory, and
-// applies the stock effects procurement publishes.
+// supply stock under /api/inventory and /api/purchasing/inventory, the
+// stock card and inventory valuation reports, and applies the stock effects
+// procurement publishes.
 package stock
 
 import (
@@ -117,6 +118,8 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("GET /api/purchasing/inventory/supply/{id}", h.supplyStockDetail),
 		kit.Route("POST /api/purchasing/inventory/supply-adjustment", h.adjustSupply),
 		kit.Route("GET /api/purchasing/inventory/supply-usage", h.listSupplyUsages),
+		kit.Route("GET /api/purchasing/reports/stock-card", h.stockCard),
+		kit.Route("GET /api/purchasing/reports/inventory-valuation", h.inventoryValuation),
 		kit.Route("POST /api/purchasing/inventory/supply-usage", h.createSupplyUsage),
 	}
 }

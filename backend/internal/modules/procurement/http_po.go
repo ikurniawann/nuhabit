@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/procurement/domain"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
@@ -154,12 +155,12 @@ func (h *Handler) approvePo(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.svc.recordAuditAfterCommit(r.Context(), withRequestMeta(auditEntry{
-		ActorID: user.ID, ActorName: user.FullName, Action: "po.approve", Entity: "purchase_order", EntityID: id,
+	h.svc.recordAuditAfterCommit(r.Context(), audit.Entry{
+		ActorID: user.ID, ActorName: nonEmpty(&user.FullName), Action: "po.approve", Entity: "purchase_order", EntityID: &id,
 		EntityLabel: before.StrPtr("nomor_po"),
 		Before:      obj("status", before.Get("status")),
 		After:       obj("status", "approved", "grand_total", before.Get("grand_total")),
-	}, r))
+	}.WithRequest(r))
 	return writeOKMessage(w, http.StatusOK, data, "PO berhasil diapprove")
 }
 
@@ -181,13 +182,13 @@ func (h *Handler) cancelPo(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.svc.recordAuditAfterCommit(r.Context(), withRequestMeta(auditEntry{
-		ActorID: user.ID, ActorName: user.FullName, Action: "po.cancel", Entity: "purchase_order", EntityID: id,
+	h.svc.recordAuditAfterCommit(r.Context(), audit.Entry{
+		ActorID: user.ID, ActorName: nonEmpty(&user.FullName), Action: "po.cancel", Entity: "purchase_order", EntityID: &id,
 		EntityLabel: before.StrPtr("nomor_po"),
 		Before:      obj("status", before.Get("status")),
 		After:       obj("status", "cancelled"),
 		Reason:      &reason,
-	}, r))
+	}.WithRequest(r))
 	return writeOKMessage(w, http.StatusOK, data, "PO berhasil dibatalkan")
 }
 
@@ -220,7 +221,7 @@ func (h *Handler) sendPo(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	via := enumField(f, "sent_via", validate.Rule{}, []string{"EMAIL", "WHATSAPP", "PRINT", "OTHER"})
+	via := f.Enum("sent_via", validate.Rule{}, []string{"EMAIL", "WHATSAPP", "PRINT", "OTHER"})
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"nuhabit/backend/internal/modules/crm/internal/kit"
@@ -17,6 +16,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // SalesFunnel is the sales-funnel context: leads, deals, quotations and
@@ -98,7 +98,7 @@ type Employees interface {
 // WhatsApp resolves the self-hosted WhatsApp gateway configuration.
 type WhatsApp interface {
 	// LoadGateway mirrors loadGatewayConfig: nil when no token is set.
-	LoadGateway(ctx context.Context, q database.Querier) *Gateway
+	LoadGateway(ctx context.Context, q database.Querier) *whatsapp.Gateway
 }
 
 // Ports are the capabilities of other bounded contexts this area uses;
@@ -145,7 +145,7 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 		p.Employees = EmployeesSQL{}
 	}
 	if p.WhatsApp == nil {
-		p.WhatsApp = WhatsAppSettingsSQL{Getenv: os.Getenv}
+		p.WhatsApp = WhatsAppGateway{Client: whatsapp.New(log)}
 	}
 	return &handler{db: db, auth: d.Auth, guard: kit.Guard{Auth: d.Auth, DB: db}, ports: p, log: log, now: now, client: &http.Client{}}
 }

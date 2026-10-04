@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
+	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 )
@@ -184,15 +185,11 @@ type actorProfile struct {
 	BranchID  *string
 }
 
-func cardActor(scope *UserScope) actorProfile {
-	a := actorProfile{Name: "Kasir"}
-	if scope != nil {
-		if scope.FullName != nil {
-			if n := strings.TrimSpace(*scope.FullName); n != "" {
-				a.Name = n
-			}
-		}
-		a.CompanyID, a.BranchID = scope.CompanyID, scope.BranchID
+// cardActor reads the profile auth already loaded from configuration.users.
+func cardActor(u *auth.User) actorProfile {
+	a := actorProfile{Name: "Kasir", CompanyID: u.CompanyID, BranchID: u.BranchID}
+	if n := strings.TrimSpace(u.FullName); n != "" {
+		a.Name = n
 	}
 	return a
 }

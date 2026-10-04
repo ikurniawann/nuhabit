@@ -2,77 +2,75 @@ package app
 
 import (
 	"context"
+	"regexp"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/modules/payroll"
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/scope"
 )
 
-// Payroll reads employees and attendance-side records owned by the HRIS
-// people context. Until module hris exposes a read service, these adapters
-// run the SQL the TS libs ran (lib/payroll/inputs.ts, lib/hris/workforce-auth.ts,
-// lib/hris/holidays-db.ts and the PostgREST employee embeds). Switch them to
-// the hris read service once it exists; the payroll ports stay the same.
+// Payroll reads employees through hris.Employees. The reads that service
+// does not cover (email lookup, direct reports, active employees in natural
+// order, departments, attendance-side records) run the SQL the TS libs ran
+// (lib/payroll/inputs.ts, lib/hris/workforce-auth.ts, lib/hris/holidays-db.ts
+// and the PostgREST employee embeds).
 
 func payrollPorts() payroll.Ports {
-	return payroll.Ports{Employees: payrollEmployeesSQL{}, Departments: payrollDepartmentsSQL{}, Workforce: payrollWorkforceSQL{}}
+	return payroll.Ports{Employees: payrollEmployees{}, Departments: payrollDepartmentsSQL{}, Workforce: payrollWorkforceSQL{}}
 }
 
-type payrollEmployeesSQL struct{}
+type payrollEmployees struct{ hris hris.Employees }
 
-var _ payroll.Employees = payrollEmployeesSQL{}
+var _ payroll.Employees = payrollEmployees{}
 
-func (payrollEmployeesSQL) IDByUser(ctx context.Context, q database.Querier, userID string) (string, error) {
-	return payrollFirstID(ctx, q, `SELECT id::text FROM hris.employees WHERE user_id = $1 LIMIT 1`, userID)
+func (e payrollEmployees) IDByUser(ctx context.Context, q database.Querier, userID string) (string, error) {
+	emp, err := e.hris.ByUserID(ctx, q, userID)
+	if err != nil || emp == nil {
+		return "", err
+	}
+	return emp.ID, nil
 }
 
-func (payrollEmployeesSQL) IDByEmail(ctx context.Context, q database.Querier, email string) (string, error) {
-	return payrollFirstID(ctx, q, `SELECT id::text FROM hris.employees WHERE email = $1 LIMIT 1`, email)
-}
-
-func payrollFirstID(ctx context.Context, q database.Querier, sql string, arg string) (string, error) {
+func (payrollEmployees) IDByEmail(ctx context.Context, q database.Querier, email string) (string, error) {
 	var id string
-	err := q.QueryRow(ctx, sql, arg).Scan(&id)
+	err := q.QueryRow(ctx, `SELECT id::text FROM hris.employees WHERE email = $1 LIMIT 1`, email).Scan(&id)
 	if database.IsNoRows(err) {
 		return "", nil
 	}
 	return id, err
 }
 
-func (payrollEmployeesSQL) Briefs(ctx context.Context, q database.Querier, ids []string) (map[string]payroll.EmployeeBrief, error) {
-	rows, err := q.Query(ctx, `
-		SELECT e.id::text, e.full_name, e.nip, e.email, e.phone, e.photo_url, e.is_active,
-		       e.employment_status, e.join_date::text, e.department_id::text,
-		       d.id IS NOT NULL, d.name, p.id IS NOT NULL, p.title, e.reporting_to::text
-		  FROM hris.employees e
-		  LEFT JOIN hris.departments d ON d.id = e.department_id
-		  LEFT JOIN hris.positions p ON p.id = e.job_title_id
-		 WHERE e.id::text = ANY($1)`, ids)
-	if err != nil {
-		return nil, err
-	}
-	list, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (payroll.EmployeeBrief, error) {
-		var b payroll.EmployeeBrief
-		err := r.Scan(&b.ID, &b.FullName, &b.NIP, &b.Email, &b.Phone, &b.PhotoURL, &b.IsActive,
-			&b.EmploymentStatus, &b.JoinDate, &b.DepartmentID, &b.HasDepartment, &b.Department,
-			&b.HasPosition, &b.Position, &b.ReportingTo)
-		return b, err
-	})
+// canonicalUUID is the text form of a uuid column. The TS compared
+// e.id::text, so any other spelling (upper case, braces) matches nothing.
+var canonicalUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+func (e payrollEmployees) Briefs(ctx context.Context, q database.Querier, ids []string) (map[string]payroll.EmployeeBrief, error) {
+	valid := slices.DeleteFunc(slices.Clone(ids), func(id string) bool { return !canonicalUUID.MatchString(id) })
+	list, err := e.hris.ListByIDs(ctx, q, valid)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[string]payroll.EmployeeBrief, len(list))
-	for _, b := range list {
-		out[b.ID] = b
+	for _, emp := range list {
+		out[emp.ID] = payroll.EmployeeBrief{
+			ID: emp.ID, FullName: emp.FullName, NIP: &emp.Nip, Email: &emp.Email, Phone: &emp.Phone,
+			PhotoURL: emp.PhotoURL, IsActive: emp.IsActive, EmploymentStatus: emp.EmploymentStatus,
+			JoinDate: emp.JoinDate, DepartmentID: emp.DepartmentID,
+			Department: emp.DepartmentName, HasDepartment: emp.DepartmentName != nil,
+			Position: emp.PositionTitle, HasPosition: emp.PositionTitle != nil, ReportingTo: emp.ReportingTo,
+		}
 	}
 	return out, nil
 }
 
 // Active keeps the TS query shape (no joins) so the rows come back in the
 // same natural order the TS loop processed them in.
-func (payrollEmployeesSQL) Active(ctx context.Context, q database.Querier) ([]payroll.EmployeeBrief, error) {
+func (payrollEmployees) Active(ctx context.Context, q database.Querier) ([]payroll.EmployeeBrief, error) {
 	rows, err := q.Query(ctx, `SELECT id::text, full_name, nip, is_active, employment_status, join_date::text,
 		department_id::text FROM hris.employees WHERE is_active = $1`, true)
 	if err != nil {
@@ -85,7 +83,7 @@ func (payrollEmployeesSQL) Active(ctx context.Context, q database.Querier) ([]pa
 	})
 }
 
-func (payrollEmployeesSQL) DirectReports(ctx context.Context, q database.Querier, managerID string) ([]string, error) {
+func (payrollEmployees) DirectReports(ctx context.Context, q database.Querier, managerID string) ([]string, error) {
 	rows, err := q.Query(ctx, `SELECT id::text FROM hris.employees WHERE reporting_to = $1 AND is_active = true`, managerID)
 	if err != nil {
 		return nil, err
@@ -93,25 +91,36 @@ func (payrollEmployeesSQL) DirectReports(ctx context.Context, q database.Querier
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-// KPIRole reads the linked account's role (configuration.users), as the TS
-// snapshot does; "employee" for an employee without an account.
-func (payrollEmployeesSQL) KPIRole(ctx context.Context, q database.Querier, employeeID string) (string, bool, error) {
-	var role string
-	err := q.QueryRow(ctx, `SELECT COALESCE(u.role, 'employee') FROM hris.employees e
-		LEFT JOIN configuration.users u ON u.id = e.user_id WHERE e.id = $1`, employeeID).Scan(&role)
-	if database.IsNoRows(err) {
-		return "", false, nil
+// KPIRole reads the linked account's role, as the TS snapshot does;
+// "employee" for an employee without an account or role.
+func (e payrollEmployees) KPIRole(ctx context.Context, q database.Querier, employeeID string) (string, bool, error) {
+	emp, err := e.hris.ByID(ctx, q, employeeID)
+	if err != nil || emp == nil {
+		return "", false, err
 	}
-	return role, err == nil, err
+	if emp.UserID == nil {
+		return "employee", true, nil
+	}
+	sc, err := scope.Load(ctx, q, *emp.UserID)
+	if err != nil {
+		return "", false, err
+	}
+	if sc.Role == nil {
+		return "employee", true, nil
+	}
+	return *sc.Role, true, nil
 }
 
-func (payrollEmployeesSQL) DepartmentMembers(ctx context.Context, q database.Querier, departmentID string) ([]payroll.Member, error) {
-	rows, err := q.Query(ctx, `SELECT id::text, full_name FROM hris.employees
-		WHERE department_id = $1 AND is_active ORDER BY full_name`, departmentID)
+func (e payrollEmployees) DepartmentMembers(ctx context.Context, q database.Querier, departmentID string) ([]payroll.Member, error) {
+	list, err := e.hris.ActiveByDepartment(ctx, q, departmentID)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[payroll.Member])
+	out := make([]payroll.Member, len(list))
+	for i, emp := range list {
+		out[i] = payroll.Member{ID: emp.ID, FullName: emp.FullName}
+	}
+	return out, nil
 }
 
 type payrollDepartmentsSQL struct{}

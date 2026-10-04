@@ -29,10 +29,6 @@ type fakeDir struct {
 	venue kit.Venue
 }
 
-func (d fakeDir) UserScope(context.Context, database.Querier, string) (*kit.UserScope, error) {
-	return nil, nil
-}
-
 func (d fakeDir) DefaultVenue(context.Context, database.Querier) kit.Venue { return d.venue }
 
 type fakeCatalog struct {

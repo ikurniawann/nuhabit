@@ -6,6 +6,7 @@ import (
 
 	"nuhabit/backend/internal/modules/ticketing"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // ticketing: tickets, visits and tabs, gate taps, website booking admin,
@@ -20,7 +21,7 @@ func init() {
 		return ticketing.New(d, ticketing.Ports{
 			Venues:    ticketingVenues{db: d.DB},
 			Employees: ticketingEmployees{},
-			Messenger: ticketingMessenger{wa: newPosOpsWhatsApp(d.DB, os.Getenv, d.Log)},
+			Messenger: ticketingMessenger{db: d.DB, wa: whatsapp.New(d.Log)},
 			AppOrigin: ticketingAppOrigin(os.Getenv),
 		})
 	})

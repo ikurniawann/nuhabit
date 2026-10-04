@@ -34,6 +34,7 @@ Next buffers proxied request bodies up to 10 MB (`proxyClientMaxBodySize`).
 
 ```
 internal/platform   shared kernel, no business rules
+  audit             audit.audit_log writer on the caller's querier
   config            env + dotenv loading
   database          pgxpool with the TS search_path and timezone, Querier,
                     WithTx (pool or tx; nested = savepoint), pg error helpers
@@ -42,7 +43,10 @@ internal/platform   shared kernel, no business rules
   iam               generated menu prefixes + pure matchers
   members           shared read of member display fields (pos.pos_customers)
   module            Deps, Route, Module
+  stall             the sidebar's active stall (cookie + getUser rules)
   testutil          DB, Tx, Deps, CreateStaff, CreateMember, Request, Do
+  whatsapp          lib/whatsapp: Meta/gateway/Fonnte send, crm.wa_messages
+                    log, wa_notif_log claims, owner alerts
 internal/modules/<context>
   domain/           pure Go rules, unit tested, no DB or HTTP
   service.go        use cases; declares Repository and ports as interfaces

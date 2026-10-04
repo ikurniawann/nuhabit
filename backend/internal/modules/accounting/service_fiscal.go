@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Fiscal years, periods, coverage and period closing (fiscal-year-store.ts,
@@ -484,7 +485,7 @@ func (s *Service) ListPeriods(ctx context.Context, companyID, fiscalYearID, stat
 }
 
 // AssertPeriodInScope is assertFiscalPeriodInScope.
-func (s *Service) AssertPeriodInScope(ctx context.Context, id string, scope domain.Scope) error {
+func (s *Service) AssertPeriodInScope(ctx context.Context, id string, scope *pscope.Scope) error {
 	companyID, found, err := scalar[*string](ctx, s.db, `
 SELECT y.company_id::text
   FROM accounting.fiscal_periods p
@@ -493,7 +494,7 @@ SELECT y.company_id::text
 	if err != nil {
 		return err
 	}
-	return rejection(scope.AssertRecordInScope(found, companyID, domain.RecordScopeMessages{
+	return rejection(domain.AssertRecordInScope(scope, found, companyID, domain.RecordScopeMessages{
 		NotFound: "Fiscal period tidak ditemukan", OutOfScope: "Fiscal period di luar scope"}))
 }
 

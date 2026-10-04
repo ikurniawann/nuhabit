@@ -373,14 +373,6 @@ func TestWalletRules(t *testing.T) {
 	if len(NormalizeTopupPresets(nil)) != 5 {
 		t.Fatal("default presets")
 	}
-	s := DefaultLoyaltySettings()
-	if CalculateTopupXP(25000, s) != 2 {
-		t.Fatal("per amount xp")
-	}
-	s.TopupXPMode, s.TopupXPValue = "fixed", 7
-	if CalculateTopupXP(25000, s) != 7 {
-		t.Fatal("fixed xp")
-	}
 	if !ParseFeatureFlag(nil, true) || ParseFeatureFlag(json.RawMessage(`false`), true) || ParseFeatureFlag(json.RawMessage(`"0"`), true) {
 		t.Fatal("feature flag")
 	}

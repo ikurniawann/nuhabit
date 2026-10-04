@@ -19,6 +19,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -28,27 +29,16 @@ type Venue struct {
 	BranchID  *string
 }
 
-// UserScope is the configuration.users scope of a staff user
-// (getApiUserScope / toUserScope in TS).
-type UserScope struct {
-	FullName      *string
-	Role          *string
-	BusinessScope *string
-	CompanyID     *string
-	BranchID      *string
-}
-
 // Branch is an active configuration.branches row.
 type Branch struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// Directory reads identity, venue and settings data owned by other
-// contexts (configuration.*, crm.crm_settings, pos_orders numbers).
+// Directory reads venue and settings data owned by other contexts
+// (configuration branches and companies, crm.crm_settings, pos_orders
+// numbers).
 type Directory interface {
-	// UserScope is nil when the user has no configuration.users row.
-	UserScope(ctx context.Context, q database.Querier, userID string) (*UserScope, error)
 	// DefaultVenue is getCrmDefaultVenue: crm_settings default_company_id /
 	// default_branch_id; any failure is an empty venue.
 	DefaultVenue(ctx context.Context, q database.Querier) Venue
@@ -131,17 +121,12 @@ func (k *Kit) PromoContext(r *http.Request) (*PromoContext, error) {
 	if err != nil {
 		return nil, err
 	}
-	scope, err := k.Dir.UserScope(r.Context(), k.DB, u.ID)
+	sc, err := scope.Load(r.Context(), k.DB, u.ID)
 	if err != nil {
 		return nil, err
 	}
-	var company, branch string
-	if scope != nil {
-		company = Deref(scope.CompanyID)
-		if Deref(scope.BusinessScope) == "branch" {
-			branch = Deref(scope.BranchID)
-		}
-	}
+	companyID, branchID := scope.ImportBusinessIDs(sc)
+	company, branch := Deref(companyID), Deref(branchID)
 	if company == "" || branch == "" {
 		v := k.Dir.DefaultVenue(r.Context(), k.DB)
 		if company == "" {

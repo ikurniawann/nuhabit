@@ -1,10 +1,9 @@
 package app
 
 import (
-	"os"
-
 	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // pos-ops: shifts, tables, reservations, catalog, customers, dashboard,
@@ -28,6 +27,6 @@ func PosOpsPorts(d module.Deps) posops.Ports {
 		Shop:        posOpsShop{},
 		CRM:         posOpsCRM{},
 		StoredValue: posOpsStoredValue{},
-		WhatsApp:    newPosOpsWhatsApp(d.DB, os.Getenv, d.Log),
+		WhatsApp:    posOpsWhatsApp{db: d.DB, wa: whatsapp.New(d.Log)},
 	}
 }

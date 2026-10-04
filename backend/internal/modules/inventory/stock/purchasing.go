@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"nuhabit/backend/internal/platform/audit"
 	ps "nuhabit/backend/internal/platform/scope"
 	"strings"
 	"time"
@@ -248,14 +249,14 @@ func (h *handler) adjustRawMaterial(w http.ResponseWriter, r *http.Request) erro
 	}); err != nil {
 		return err
 	}
-	h.auditAfterCommit(r, kit.Audit{
+	h.auditAfterCommit(r, audit.Entry{
 		ActorID: u.ID, ActorName: &u.FullName, Action: "stock.adjust", Entity: "inventory", EntityID: &invID,
 		EntityLabel: materialKode(material),
 		Before:      kit.Obj("qty_available", qtyBefore),
 		After: kit.Obj("qty_available", *qtyActual, "qty_diff", diff, "raw_material_id", *rawMaterialID,
 			"warehouse_id", *warehouseID),
-		Reason: notes, Meta: kit.MetaOf(r),
-	})
+		Reason: notes,
+	}.WithRequest(r))
 
 	company, err := companyOfBranch(ctx, db, cur.StrPtr("branch_id"))
 	if err != nil {
@@ -287,8 +288,8 @@ func materialKode(m *kit.Row) *string {
 
 // auditAfterCommit is recordAuditAfterCommit: a failure is logged, never
 // returned.
-func (h *handler) auditAfterCommit(r *http.Request, a kit.Audit) {
-	if err := kit.RecordAudit(r.Context(), h.env.DB, a); err != nil {
+func (h *handler) auditAfterCommit(r *http.Request, a audit.Entry) {
+	if err := audit.Write(r.Context(), h.env.DB, a); err != nil {
 		h.env.Log.ErrorContext(r.Context(), "audit: gagal mencatat", "action", a.Action, "error", err)
 	}
 }
@@ -563,13 +564,13 @@ func (h *handler) transfer(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.auditAfterCommit(r, kit.Audit{
+	h.auditAfterCommit(r, audit.Entry{
 		ActorID: u.ID, ActorName: &u.FullName, Action: "stock.transfer", Entity: "stock_transfer",
 		EntityID: &res.ReferenceID, EntityLabel: &res.TransferNumber,
 		After: kit.Obj("raw_material_id", *rawMaterialID, "qty", res.Qty, "unit_cost", res.UnitCost,
 			"source_warehouse_id", *sourceID, "dest_warehouse_id", *destID, "transfer_kind", *kind),
-		Reason: notes, Meta: kit.MetaOf(r),
-	})
+		Reason: notes,
+	}.WithRequest(r))
 	var company *string
 	if material != nil {
 		company = material.StrPtr("company_id")

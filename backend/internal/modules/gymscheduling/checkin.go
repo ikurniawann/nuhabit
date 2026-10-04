@@ -69,8 +69,9 @@ func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, booking
 // checkInBooking runs the gate for a member whose QR is already valid:
 // membership, re-entry/anti-passback, a confirmed booking at this branch
 // around now, balance. On success the credits are deducted and the booking
-// checked in within the same transaction. token is consumed when set.
-func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, branchID, scannedBy *string, token string, now time.Time) (CheckInResult, error) {
+// checked in within the same transaction. token is consumed when set; the
+// access log records source.
+func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, branchID, scannedBy *string, token, source string, now time.Time) (CheckInResult, error) {
 	var res CheckInResult
 	member, err := s.Members.Get(ctx, q, customerID)
 	if err != nil {
@@ -181,7 +182,7 @@ effects:
 	if candidate != nil {
 		bookingID = &candidate.ID
 	}
-	if err := s.logAccess(ctx, q, res, bookingID, branchID, "gate", scannedBy); err != nil {
+	if err := s.logAccess(ctx, q, res, bookingID, branchID, source, scannedBy); err != nil {
 		return res, err
 	}
 	if entryKind == domain.EntryBooking {
@@ -209,7 +210,7 @@ func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scanned
 		}
 		problem := domain.CheckQrToken(row, now)
 		if problem == "" {
-			res, err = s.checkInBooking(ctx, q, row.CustomerID, branchID, scannedBy, token, now)
+			res, err = s.checkInBooking(ctx, q, row.CustomerID, branchID, scannedBy, token, "gate", now)
 			return err
 		}
 		reason := domain.TokenDenial[problem]
@@ -218,6 +219,19 @@ func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scanned
 			res.CustomerID = &row.CustomerID
 		}
 		return s.logAccess(ctx, q, res, nil, branchID, "gate", scannedBy)
+	})
+	return res, err
+}
+
+// CheckInBooking is checkInBooking(client, {customerId, scannedBy, source})
+// for a member whose QR another channel already accepted (the POS till
+// passes source "pos"). It runs in its own transaction on the service's DB,
+// a savepoint when that DB is the caller's transaction.
+func (s *Service) CheckInBooking(ctx context.Context, customerID string, scannedBy *string, source string) (res CheckInResult, err error) {
+	now := s.now()
+	err = s.inTx(ctx, func(q Q) error {
+		res, err = s.checkInBooking(ctx, q, customerID, nil, scannedBy, "", source, now)
+		return err
 	})
 	return res, err
 }

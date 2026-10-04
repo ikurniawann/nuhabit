@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/platform/audit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
@@ -172,13 +173,13 @@ func (h *handler) scrap(w http.ResponseWriter, r *http.Request) error {
 		if trimmedNotes != nil {
 			auditReason += ": " + *trimmedNotes
 		}
-		return kit.RecordAudit(ctx, q, kit.Audit{
+		return audit.Write(ctx, q, audit.Entry{
 			ActorID: u.ID, ActorName: &u.FullName, Action: "stock.scrap", Entity: "inventory",
 			EntityID: kit.Ptr(inv.Str("id")), EntityLabel: &referenceNumber,
 			Before: kit.Obj("qty_available", qtyBefore, "batch", batchBefore),
 			After:  kit.Obj("qty_available", qtyAfter, "qty_scrapped", qty, "value", qty*unitCost, "reason", *reason),
-			Reason: &auditReason, Meta: kit.MetaOf(r),
-		})
+			Reason: &auditReason,
+		}.WithRequest(r))
 	})
 	if err != nil {
 		return err

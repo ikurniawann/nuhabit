@@ -8,7 +8,6 @@ package reporting
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"nuhabit/backend/internal/modules/crm/internal/kit"
@@ -16,6 +15,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Notifier writes in-app notifications (public.notifications, owned by the
@@ -76,7 +76,7 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 		p.Staff = EmployeesSQL{}
 	}
 	if p.WhatsApp == nil {
-		p.WhatsApp = WhatsAppGateway{Getenv: os.Getenv}
+		p.WhatsApp = WhatsAppGateway{Client: whatsapp.New(d.Log)}
 	}
 	loc, err := time.LoadLocation(database.TimeZone)
 	if err != nil {

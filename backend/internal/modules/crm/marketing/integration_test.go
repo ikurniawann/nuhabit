@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/crm/internal/crmtest"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -37,10 +38,36 @@ func newEnv(t *testing.T) *env {
 	staff := crmtest.Staff(t, "crm.promo")
 	d := testutil.Deps(t, func() time.Time { return testNow })
 	tx := testutil.Tx(t)
-	h := newHandler(tx, d.Auth, func() time.Time { return testNow }, Ports{AppSettingsSQL{}, PromoSQL{}, FunnelSQL{}})
+	h := newHandler(tx, d.Auth, func() time.Time { return testNow }, Ports{AppSettingsSQL{}, promoTables{}, FunnelSQL{}})
 	e := &env{t: t, ctx: context.Background(), tx: tx, h: h, tier: "gotest-" + testutil.RandomHex(4)}
 	e.staff = staff
 	return e
+}
+
+// promoTables stands in for stored-value's promo service (internal/app wires
+// it) with the same SQL, so the voucher test reads real promo rows.
+type promoTables struct{}
+
+func (promoTables) IssueCode(ctx context.Context, q database.Querier, companyID, branchID, campaignID, code string) (bool, error) {
+	tag, err := q.Exec(ctx, `INSERT INTO promo.promo_codes (company_id, branch_id, campaign_id, code, usage_limit)
+		VALUES ($1, $2, $3, $4, 1) ON CONFLICT (branch_id, code) DO NOTHING`, companyID, branchID, campaignID, code)
+	return tag.RowsAffected() > 0, err
+}
+
+func (promoTables) BatchConversion(ctx context.Context, q database.Querier, codes []string) (Conversion, error) {
+	var c Conversion
+	err := q.QueryRow(ctx, `SELECT COUNT(DISTINCT r.code_id)::float8, COALESCE(SUM(r.discount_amount), 0)::float8
+		FROM promo.promo_redemptions r JOIN promo.promo_codes k ON k.id = r.code_id
+		WHERE r.status <> 'released' AND k.code = ANY($1)`, codes).Scan(&c.Count, &c.Value)
+	return c, err
+}
+
+func (promoTables) PublicConversion(ctx context.Context, q database.Querier, campaignID string, phones []string) (Conversion, error) {
+	var c Conversion
+	err := q.QueryRow(ctx, `SELECT COUNT(*)::float8, COALESCE(SUM(r.discount_amount), 0)::float8
+		FROM promo.promo_redemptions r
+		WHERE r.campaign_id = $1 AND r.status <> 'released' AND r.phone = ANY($2)`, campaignID, phones).Scan(&c.Count, &c.Value)
+	return c, err
 }
 
 // ServeHTTP runs one request in a savepoint, released on success and

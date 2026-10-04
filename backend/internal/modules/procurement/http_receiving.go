@@ -103,7 +103,7 @@ func (h *Handler) listGrns(w http.ResponseWriter, r *http.Request) error {
 	p.Page = coerceNumber(f, "page", 1, 1, nil)
 	p.Limit = coerceNumber(f, "limit", 20, 1, validate.Bound(100))
 	p.Search = f.Str("search", optional, validate.StrOpts{})
-	p.Status = enumField(f, "status", optional, grnStatusOptions)
+	p.Status = f.Enum("status", optional, grnStatusOptions)
 	p.DeliveryID = f.UUID("delivery_id", optional)
 	p.PoID = f.UUID("po_id", optional)
 	p.DateFrom = f.Str("date_from", optional, validate.StrOpts{})
@@ -139,7 +139,7 @@ func (h *Handler) createGrn(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.svc.recordAuditAfterCommit(r.Context(), withRequestMeta(created.Audit, r))
+	h.svc.recordAuditAfterCommit(r.Context(), created.Audit.WithRequest(r))
 	return writeOKMessage(w, http.StatusCreated, created.Grn, created.Message)
 }
 
@@ -340,14 +340,14 @@ func (h *Handler) listDeliveries(w http.ResponseWriter, r *http.Request) error {
 	p.SupplierID = f.Str("supplier_id", optional, validate.StrOpts{})
 	p.VendorID = f.Str("vendor_id", optional, validate.StrOpts{})
 	p.PoID = f.Str("po_id", optional, validate.StrOpts{})
-	p.ModuleType = enumField(f, "module_type", optional, []string{"raw_material", "product"})
+	p.ModuleType = f.Enum("module_type", optional, []string{"raw_material", "product"})
 	p.Page = coerceNumber(f, "page", 1, 1, nil)
 	p.Limit = coerceNumber(f, "limit", 20, 1, validate.Bound(100))
 	p.SortBy, p.SortDir = "created_at", "DESC"
-	if v := enumField(f, "sort_by", validate.Rule{HasDefault: true}, []string{"tanggal_kirim", "created_at", "status"}); v != nil {
+	if v := f.Enum("sort_by", validate.Rule{HasDefault: true}, []string{"tanggal_kirim", "created_at", "status"}); v != nil {
 		p.SortBy = *v
 	}
-	if v := enumField(f, "sort_dir", validate.Rule{HasDefault: true}, []string{"ASC", "DESC"}); v != nil {
+	if v := f.Enum("sort_dir", validate.Rule{HasDefault: true}, []string{"ASC", "DESC"}); v != nil {
 		p.SortDir = *v
 	}
 	if err := paramsError(f); err != nil {
@@ -448,7 +448,7 @@ func (h *Handler) updateDelivery(w http.ResponseWriter, r *http.Request) error {
 	in.TanggalKirim = f.Str("tanggal_kirim", optional, validate.StrOpts{})
 	in.TanggalEstimasi = f.Str("tanggal_estimasi_tiba", optional, validate.StrOpts{})
 	in.TanggalAktual = f.Str("tanggal_aktual_tiba", optional, validate.StrOpts{})
-	in.Status = enumField(f, "status", optional, []string{"pending", "shipped", "in_transit", "delivered", "cancelled"})
+	in.Status = f.Enum("status", optional, []string{"pending", "shipped", "in_transit", "delivered", "cancelled"})
 	in.Catatan = f.Str("catatan", optional, validate.StrOpts{})
 	if err := f.Err("Validation failed"); err != nil {
 		return err

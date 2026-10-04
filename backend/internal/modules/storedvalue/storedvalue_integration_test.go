@@ -22,13 +22,9 @@ import (
 
 type fakeDir struct {
 	Directory
-	scope *UserScope
 	venue Venue
 }
 
-func (d *fakeDir) UserScope(context.Context, database.Querier, string) (*UserScope, error) {
-	return d.scope, nil
-}
 func (d *fakeDir) DefaultVenue(context.Context, database.Querier) Venue { return d.venue }
 func (d *fakeDir) BranchCompany(context.Context, database.Querier, string) (*string, error) {
 	return nil, nil
@@ -169,7 +165,7 @@ func newEnv(t *testing.T) *env {
 	e.cashier = testutil.CreateStaff(t, testutil.StaffOptions{FullName: "Arip", Menus: map[string][]string{
 		"pos": nil, "pos.operations.member-bills": {"read", "create"}}})
 	e.member = testutil.CreateMember(t)
-	e.dir = &fakeDir{scope: &UserScope{FullName: strPtr("Arip")}}
+	e.dir = &fakeDir{}
 	e.tx = testutil.Tx(t)
 	m := newModule(deps, Ports{
 		Directory: e.dir, Loyalty: fakeLoyalty{}, Supervisors: fakeSupervisors{}, WhatsApp: e.wa,
@@ -569,8 +565,9 @@ func TestMemberBills(t *testing.T) {
 		t.Fatalf("settled %s", raw)
 	}
 	var events int
-	if err := e.tx.QueryRow(e.ctx, `SELECT count(*) FROM platform.outbox_events WHERE key = ANY($1) AND topic = 'pos.sale.completed'`,
-		[]string{"aaaaaaaa-0000-4000-8000-000000000001", "aaaaaaaa-0000-4000-8000-000000000002"}).Scan(&events); err != nil || events != 2 {
+	if err := e.tx.QueryRow(e.ctx, `SELECT count(*) FROM platform.outbox_events
+		WHERE key = ANY($1) AND topic = 'pos.sale.completed' AND payload->>'user_id' = $2`,
+		[]string{"aaaaaaaa-0000-4000-8000-000000000001", "aaaaaaaa-0000-4000-8000-000000000002"}, e.cashier.UserID).Scan(&events); err != nil || events != 2 {
 		t.Fatalf("sale events %d %v", events, err)
 	}
 }

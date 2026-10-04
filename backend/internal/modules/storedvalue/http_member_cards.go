@@ -6,7 +6,6 @@ import (
 
 	"nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/modules/storedvalue/kit"
-	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
@@ -27,14 +26,6 @@ func (h *Handler) memberCardRoutes() []module.Route {
 
 // strictUUID is UUID_RE of the member card routes (any version).
 var strictUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-
-func (h *Handler) actor(r *http.Request, u *auth.User) (actorProfile, error) {
-	scope, err := h.kit.Dir.UserScope(r.Context(), h.kit.DB, u.ID)
-	if err != nil {
-		return actorProfile{}, err
-	}
-	return cardActor(scope), nil
-}
 
 func (h *Handler) memberCards(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.kit.PosUser(r); err != nil {
@@ -62,10 +53,7 @@ func (h *Handler) unlinkCard(w http.ResponseWriter, r *http.Request) error {
 	if problem != "" {
 		return httpx.BadRequest(problem)
 	}
-	actor, err := h.actor(r, u)
-	if err != nil {
-		return err
-	}
+	actor := cardActor(u)
 	out, err := h.cards.Unlink(r.Context(), id, reason, notes, u.ID, actor)
 	if err != nil {
 		return err
@@ -90,10 +78,7 @@ func (h *Handler) requestCardRefund(w http.ResponseWriter, r *http.Request) erro
 	if problem != "" {
 		return httpx.BadRequest(problem)
 	}
-	actor, err := h.actor(r, u)
-	if err != nil {
-		return err
-	}
+	actor := cardActor(u)
 	out, err := h.cards.RequestRefund(r.Context(), id, notes, u.ID, actor)
 	if err != nil {
 		return err
@@ -120,10 +105,7 @@ func (h *Handler) cancelRefund(w http.ResponseWriter, r *http.Request) error {
 	if problem != "" {
 		return httpx.BadRequest(problem)
 	}
-	actor, err := h.actor(r, u)
-	if err != nil {
-		return err
-	}
+	actor := cardActor(u)
 	cancelled, err := h.cards.CancelRefund(r.Context(), id, reason, u.ID, actor)
 	if err != nil {
 		return err
@@ -161,10 +143,7 @@ func (h *Handler) completeRefund(w http.ResponseWriter, r *http.Request) error {
 	if !approval.OK {
 		return supervisorRejection(approval)
 	}
-	actor, err := h.actor(r, u)
-	if err != nil {
-		return err
-	}
+	actor := cardActor(u)
 	out, err := h.cards.CompleteRefund(r.Context(), id, notes, u.ID, actor, approval.Supervisor)
 	if err != nil {
 		return err

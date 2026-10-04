@@ -1,17 +1,12 @@
 package reporting
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
 	"unicode/utf16"
 
 	"nuhabit/backend/internal/modules/crm/internal/kit"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // NotificationsSQL is a stopgap adapter: it moves to the notifications
@@ -64,71 +59,19 @@ func (EmployeesSQL) EmployeePhone(ctx context.Context, q database.Querier, userI
 	return phone, err
 }
 
-// WhatsAppGateway is a stopgap adapter: it moves to the WhatsApp /
-// notifications context. It ports loadGatewayConfig and sendGatewayText of
-// lib/whatsapp/gateway.ts: configuration.app_settings first, then the env;
-// POST {baseUrl}/send with x-gateway-token. No send is logged, like the TS.
-type WhatsAppGateway struct {
-	Getenv func(string) string
-	Client *http.Client
-}
+// WhatsAppGateway is loadGatewayConfig and sendGatewayText of
+// lib/whatsapp/gateway.ts on platform/whatsapp. No send is logged, like
+// the TS.
+type WhatsAppGateway struct{ Client *whatsapp.Client }
 
 var _ WhatsApp = WhatsAppGateway{}
 
 func (g WhatsAppGateway) Gateway(ctx context.Context, q database.Querier) TextSender {
-	stored := map[string]string{}
-	// A settings read failure falls back to the env, like the TS.
-	if rows, err := q.Query(ctx, `SELECT key, value FROM configuration.app_settings WHERE key = ANY($1)`,
-		[]string{"wa_gateway_url", "wa_gateway_token"}); err == nil {
-		for rows.Next() {
-			var key string
-			var value *string
-			if rows.Scan(&key, &value) == nil && value != nil {
-				stored[key] = strings.TrimSpace(*value)
-			}
-		}
-		rows.Close()
-	}
-	token := stored["wa_gateway_token"]
-	if token == "" {
-		token = g.Getenv("WA_GATEWAY_TOKEN")
-	}
-	if token == "" {
+	gateway := g.Client.LoadGateway(ctx, q)
+	if gateway == nil {
 		return nil
 	}
-	base := stored["wa_gateway_url"]
-	if base == "" {
-		base = g.Getenv("WA_GATEWAY_URL")
-	}
-	if base == "" {
-		base = "http://127.0.0.1:3471"
-	}
-	timeoutMs, err := strconv.Atoi(g.Getenv("WA_GATEWAY_TIMEOUT_MS"))
-	if err != nil || timeoutMs == 0 {
-		timeoutMs = 20000
-	}
-	client := g.Client
-	if client == nil {
-		client = http.DefaultClient
-	}
 	return func(ctx context.Context, target, message string) bool {
-		ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutMs)*time.Millisecond)
-		defer cancel()
-		body, _ := json.Marshal(struct {
-			Target  string `json:"target"`
-			Message string `json:"message"`
-		}{target, message})
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, base+"/send", bytes.NewReader(body))
-		if err != nil {
-			return false
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-gateway-token", token)
-		resp, err := client.Do(req)
-		if err != nil {
-			return false
-		}
-		resp.Body.Close()
-		return resp.StatusCode >= 200 && resp.StatusCode <= 299
+		return gateway.SendText(ctx, target, message).Success
 	}
 }

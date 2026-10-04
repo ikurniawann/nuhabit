@@ -14,14 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"nuhabit/backend/internal/modules/crm/xp"
+	"nuhabit/backend/internal/modules/crm"
+	"nuhabit/backend/internal/modules/possales/adapters"
+	"nuhabit/backend/internal/modules/possales/sales"
 	"nuhabit/backend/internal/modules/storedvalue"
 	"nuhabit/backend/internal/modules/storedvalue/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // storedValuePorts wires the stored-value ports. POS checkout builds the
@@ -29,9 +31,9 @@ import (
 func storedValuePorts(d module.Deps) storedvalue.Ports {
 	return storedvalue.Ports{
 		Directory:   svDirectory{},
-		Loyalty:     svLoyalty{engine: &xp.Engine{Pos: crmPosReads{}, Log: d.Log, Now: d.Now}},
-		Supervisors: svSupervisors{db: d.DB, now: d.Now},
-		WhatsApp:    svWhatsApp{wa: newPosOpsWhatsApp(d.DB, os.Getenv, d.Log), pool: d.DB, now: d.Now},
+		Loyalty:     svLoyalty{engine: crm.NewEngine(d, crmPosReads{})},
+		Supervisors: svSupervisors{pins: sales.NewSupervisors(d.DB, adapters.Directory{}, d.Now)},
+		WhatsApp:    svWhatsApp{wa: whatsapp.New(d.Log), pool: d.DB, now: d.Now},
 		Gateway:     newSvXendit(os.Getenv),
 		Orders:      svBillOrders{},
 		GiftCards:   storedValueGiftCardPorts(d),
@@ -41,9 +43,8 @@ func storedValuePorts(d module.Deps) storedvalue.Ports {
 
 /* ── WhatsApp (lib/whatsapp, lib/wa/comp-notification) ───────────────── */
 
-// svWhatsApp reuses the lib/whatsapp port of adapters_posops.go.
 type svWhatsApp struct {
-	wa   *posOpsWhatsApp
+	wa   *whatsapp.Client
 	pool *pgxpool.Pool
 	now  func() time.Time
 }
@@ -53,8 +54,8 @@ func (w svWhatsApp) SendText(ctx context.Context, target, message, messageType s
 	if sentByUserID != nil {
 		by = *sentByUserID
 	}
-	d := w.wa.SendText(ctx, target, message, by)
-	return storedvalue.WADelivery{Delivered: d.Delivered, Reason: d.Reason}
+	res := w.wa.SendText(ctx, w.pool, target, message, messageType, by)
+	return storedvalue.WADelivery{Delivered: res.Success, Reason: res.Reason}
 }
 
 // compNotifTarget is COMP_NOTIF_TARGET (the owner's number).
@@ -84,28 +85,22 @@ func (w svWhatsApp) NotifyFocTopup(ctx context.Context, n storedvalue.FocTopupNo
 	if len(key) > 160 {
 		key = key[:160]
 	}
-	recipients, _ := json.Marshal([]string{compNotifTarget})
-	var claimID string
-	err := w.pool.QueryRow(ctx,
-		`INSERT INTO configuration.wa_notif_log (notif_type, dedup_key, message, recipients)
-		 VALUES ('komplimen', $1, $2, $3::jsonb)
-		 ON CONFLICT (notif_type, dedup_key) DO NOTHING RETURNING id`, key, message, string(recipients)).Scan(&claimID)
+	claimID, err := whatsapp.Claim(ctx, w.pool, "komplimen", key, message, []string{compNotifTarget})
 	if err != nil {
-		if !database.IsNoRows(err) {
-			w.wa.log.Error("[wa-comp] notifikasi topup FOC error", "error", err.Error())
-		}
+		w.wa.Log.Error("[wa-comp] notifikasi topup FOC error", "error", err.Error())
+	}
+	if claimID == "" {
 		return
 	}
-	release := func() { _, _ = w.pool.Exec(ctx, `DELETE FROM configuration.wa_notif_log WHERE id = $1`, claimID) }
-	cfg := w.wa.gatewayConfig(ctx)
-	if cfg == nil {
-		w.wa.log.Warn("[wa-comp] gateway belum dikonfigurasi — notifikasi komplimen dilewati")
+	release := func() { _ = whatsapp.Release(ctx, w.pool, claimID) }
+	gateway := w.wa.LoadGateway(ctx, w.pool)
+	if gateway == nil {
+		w.wa.Log.Warn("[wa-comp] gateway belum dikonfigurasi — notifikasi komplimen dilewati")
 		release()
 		return
 	}
-	res := w.wa.sendGateway(ctx, cfg, compNotifTarget, message)
-	if !res.delivered && res.reason != "Gateway tidak merespons (timeout)" {
-		w.wa.log.Error("[wa-comp] gagal kirim", "target", compNotifTarget, "reason", res.reason)
+	if res := gateway.SendText(ctx, compNotifTarget, message); !res.Success && !res.TimedOut {
+		w.wa.Log.Error("[wa-comp] gagal kirim", "target", compNotifTarget, "reason", res.Reason)
 		release()
 	}
 }
@@ -278,165 +273,19 @@ func (x svXendit) QRCode(ctx context.Context, secret, qrID string) (map[string]a
 	return payload, nil
 }
 
-/* ── Supervisor PIN (lib/pos/supervisor-pin-server.ts) ───────────────── */
+/* ── Supervisor PIN (pos-sales approveWithSupervisorPin) ─────────────── */
 
-// STOPGAP until pos-sales exposes approveWithSupervisorPin: the durable
-// attempt limit of lib/security/attempt-limit.ts (scope pos_supervisor_pin,
-// 5 failures in 15 minutes lock the cashier 15 minutes) and the PIN check
-// of lib/pos/supervisor-pin.ts. bcryptjs hashes ($2a$/$2b$) are verified by
-// pgcrypto crypt(); $2b$ is the same algorithm as $2a$ for short PINs.
-type svSupervisors struct {
-	db  *pgxpool.Pool
-	now func() time.Time
-}
-
-const (
-	pinScope       = "pos_supervisor_pin"
-	pinMaxFailures = 5
-	pinWindow      = 15 * time.Minute
-	pinLockout     = 15 * time.Minute
-)
-
-type svScope struct {
-	role, businessScope, company, branch *string
-}
-
-func (s svScope) unscoped() bool {
-	return (s.role != nil && *s.role == "super_admin") || s.businessScope == nil || *s.businessScope == ""
-}
-
-// covers is isOperationalRowInBusinessScope(scope, unit).
-func (s svScope) covers(company, branch *string) bool {
-	if s.unscoped() {
-		return true
-	}
-	differs := func(a, b *string) bool { return a != nil && *a != "" && b != nil && *b != "" && *a != *b }
-	switch *s.businessScope {
-	case "branch":
-		return !differs(s.company, company) && !differs(branch, s.branch)
-	case "company":
-		return !differs(s.company, company)
-	}
-	return true
-}
-
-func minutesUntil(until, now time.Time) int {
-	return max(1, int(math.Ceil(until.Sub(now).Minutes())))
-}
+type svSupervisors struct{ pins *sales.Supervisors }
 
 func (a svSupervisors) Approve(ctx context.Context, callerID, pin string) (storedvalue.SupervisorApproval, error) {
-	subject := "user:" + callerID
-	now := a.now()
-	var lockedUntil *time.Time
-	err := a.db.QueryRow(ctx, `SELECT locked_until FROM auth.attempt_limits WHERE scope = $1 AND subject = $2`, pinScope, subject).Scan(&lockedUntil)
-	if err != nil && !database.IsNoRows(err) {
+	r, err := a.pins.Approve(ctx, callerID, pin)
+	switch {
+	case err != nil:
 		return storedvalue.SupervisorApproval{}, err
+	case r.Approver != nil:
+		return storedvalue.SupervisorApproval{OK: true, Supervisor: storedvalue.ApprovedSupervisor{ID: r.Approver.ID, Name: r.Approver.Name}}, nil
+	case r.RetryMinutes > 0:
+		return storedvalue.SupervisorApproval{Reason: "locked", RetryMinutes: r.RetryMinutes}, nil
 	}
-	if lockedUntil != nil && lockedUntil.After(now) {
-		return storedvalue.SupervisorApproval{Reason: "locked", RetryMinutes: minutesUntil(*lockedUntil, now)}, nil
-	}
-	sup, err := a.find(ctx, callerID, strings.TrimSpace(pin))
-	if err != nil {
-		return storedvalue.SupervisorApproval{}, err
-	}
-	if sup == nil {
-		lock, err := a.recordFailure(ctx, subject)
-		if err != nil {
-			return storedvalue.SupervisorApproval{}, err
-		}
-		if lock != nil {
-			return storedvalue.SupervisorApproval{Reason: "locked", RetryMinutes: minutesUntil(*lock, a.now())}, nil
-		}
-		return storedvalue.SupervisorApproval{Reason: "invalid"}, nil
-	}
-	if _, err := a.db.Exec(ctx, `DELETE FROM auth.attempt_limits WHERE scope = $1 AND subject = ANY($2::text[])`, pinScope, []string{subject}); err != nil {
-		return storedvalue.SupervisorApproval{}, err
-	}
-	return storedvalue.SupervisorApproval{OK: true, Supervisor: *sup}, nil
-}
-
-// find returns the in-scope active supervisor whose PIN matches.
-func (a svSupervisors) find(ctx context.Context, callerID, pin string) (*storedvalue.ApprovedSupervisor, error) {
-	if pin == "" {
-		return nil, nil
-	}
-	var caller svScope
-	err := a.db.QueryRow(ctx,
-		`SELECT role::text, business_scope::text, company_id::text, branch_id::text FROM configuration.users WHERE id = $1`, callerID).
-		Scan(&caller.role, &caller.businessScope, &caller.company, &caller.branch)
-	if database.IsNoRows(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	rows, err := a.db.Query(ctx,
-		`SELECT id::text, full_name, role::text, business_scope::text, company_id::text, branch_id::text,
-		        CASE WHEN pos_pin LIKE '$2%' THEN public.crypt($1, '$2a$' || substr(pos_pin, 5)) = '$2a$' || substr(pos_pin, 5)
-		             ELSE pos_pin = $1 END AS matches
-		   FROM configuration.users
-		  WHERE role = 'pos_supervisor' AND status = 'active' AND pos_pin IS NOT NULL`, pin)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id string
-		var name *string
-		var s svScope
-		var matches bool
-		if err := rows.Scan(&id, &name, &s.role, &s.businessScope, &s.company, &s.branch, &matches); err != nil {
-			return nil, err
-		}
-		if matches && s.covers(caller.company, caller.branch) {
-			n := "Supervisor"
-			if name != nil && *name != "" {
-				n = *name
-			}
-			return &storedvalue.ApprovedSupervisor{ID: id, Name: n}, nil
-		}
-	}
-	return nil, rows.Err()
-}
-
-// recordFailure is recordFailure: one more failure under a row lock;
-// the active lock after it, or nil.
-func (a svSupervisors) recordFailure(ctx context.Context, subject string) (*time.Time, error) {
-	var lock *time.Time
-	err := database.WithTx(ctx, a.db, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `INSERT INTO auth.attempt_limits (scope, subject) VALUES ($1, $2) ON CONFLICT (scope, subject) DO NOTHING`,
-			pinScope, subject); err != nil {
-			return err
-		}
-		var failures int
-		var windowStart time.Time
-		var lockedUntil *time.Time
-		if err := tx.QueryRow(ctx,
-			`SELECT failures, window_started_at, locked_until FROM auth.attempt_limits WHERE scope = $1 AND subject = $2 FOR UPDATE`,
-			pinScope, subject).Scan(&failures, &windowStart, &lockedUntil); err != nil {
-			return err
-		}
-		now := a.now()
-		lockExpired := lockedUntil != nil && !lockedUntil.After(now)
-		fresh := now.Sub(windowStart) > pinWindow || lockExpired || failures == 0
-		if fresh {
-			failures, windowStart, lockedUntil = 1, now, nil
-		} else {
-			failures++
-		}
-		if failures >= pinMaxFailures {
-			t := now.Add(pinLockout)
-			lockedUntil = &t
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE auth.attempt_limits SET failures = $3, window_started_at = $4, locked_until = $5, updated_at = now()
-			  WHERE scope = $1 AND subject = $2`, pinScope, subject, failures, windowStart, lockedUntil); err != nil {
-			return err
-		}
-		if lockedUntil != nil && lockedUntil.After(now) {
-			lock = lockedUntil
-		}
-		return nil
-	})
-	return lock, err
+	return storedvalue.SupervisorApproval{Reason: "invalid"}, nil
 }

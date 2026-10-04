@@ -39,6 +39,15 @@ func appSettings(ctx context.Context, q database.Querier, keys ...string) (map[s
 	return out, rows.Err()
 }
 
+func firstSet(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 // settingOrEnv is `stored[key]?.trim() || env?.trim() || ""`.
 func settingOrEnv(stored map[string]string, key, env string) string {
 	if v := stored[key]; v != "" {

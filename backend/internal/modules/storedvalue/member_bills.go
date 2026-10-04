@@ -449,6 +449,7 @@ func (b *memberBills) settleOpenOrders(ctx context.Context, tx pgx.Tx, customerI
 		event := possales.SaleCompleted{
 			OrderID: o.ID, CustomerID: &customerID, TotalAmount: total,
 			PaymentMethod: domain.MemberBillPaymentMethod, BranchID: o.BranchID, Items: []possales.SaleItem{}, StatsAmount: &total,
+			UserID: &user.ID,
 		}
 		for _, it := range items {
 			if it.OrderID == o.ID {

@@ -3,6 +3,7 @@ package memberportal
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -201,4 +202,16 @@ func (x *xenditPayments) QRCode(ctx context.Context, secretKey, qrID string) (ma
 		payload["id"] = qrID
 	}
 	return payload, nil
+}
+
+// basicAuth is the Authorization value for a secret-key-only Basic auth.
+func basicAuth(secret string) string {
+	return "Basic " + base64.StdEncoding.EncodeToString([]byte(secret+":"))
+}
+
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

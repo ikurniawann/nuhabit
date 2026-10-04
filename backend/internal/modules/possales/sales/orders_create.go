@@ -20,6 +20,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/stall"
 )
 
 const (
@@ -143,13 +144,7 @@ func (h *Handler) createOrder(w http.ResponseWriter, r *http.Request) error {
 
 // activeStallMode reads the stall switcher cookie (resolveActiveStallFromCookies).
 func (h *Handler) activeStall(r *http.Request) (domain.ActiveStallMode, string) {
-	value := ""
-	for _, name := range []string{"nuhabit-active-stall", "arkiv-active-stall"} {
-		if c, err := r.Cookie(name); err == nil && domain.Trim(c.Value) != "" {
-			value = domain.Trim(c.Value)
-			break
-		}
-	}
+	value := stall.Cookie(r)
 	if value == "" {
 		return domain.StallUnset, ""
 	}
@@ -427,7 +422,7 @@ func (h *Handler) createSingleOrder(ctx context.Context, oc orderCtx) (*response
 		if rej := domain.GuardFocRequest(customerID, pin); rej != nil {
 			return fail(rej.Status, rej.Message)
 		}
-		a, err := h.approveWithPin(ctx, oc.user.ID, pin)
+		a, err := h.pins.Approve(ctx, oc.user.ID, pin)
 		if err != nil {
 			return &response{status: 500, body: failBody(kit.ErrorMessage(err))}
 		}

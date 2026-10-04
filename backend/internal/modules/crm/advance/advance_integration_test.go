@@ -20,12 +20,13 @@ import (
 	"nuhabit/backend/internal/modules/crm/internal/crmtest"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/testutil"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // fakeWhatsApp points the workflow at a test gateway.
-type fakeWhatsApp struct{ gw *Gateway }
+type fakeWhatsApp struct{ gw *whatsapp.Gateway }
 
-func (f fakeWhatsApp) LoadGateway(context.Context, database.Querier) *Gateway { return f.gw }
+func (f fakeWhatsApp) LoadGateway(context.Context, database.Querier) *whatsapp.Gateway { return f.gw }
 
 // fakeEmployees gives every user the same phone.
 type fakeEmployees struct{ phone string }
@@ -75,7 +76,7 @@ func setup(t *testing.T) *env {
 	tx := testutil.Tx(t)
 	d := testutil.Deps(t, func() time.Time { return fixedNow })
 	e := &env{t: t, tx: tx, wa: &recorder{}}
-	gw := &Gateway{BaseURL: e.wa.server(t, 200).URL, Token: "tok", Timeout: 5 * time.Second}
+	gw := &whatsapp.Gateway{BaseURL: e.wa.server(t, 200).URL, Token: "tok", Timeout: 5 * time.Second}
 	h := newHandler(tx, d, Ports{WhatsApp: fakeWhatsApp{gw}, Employees: fakeEmployees{"0812-3456-7890"}})
 	e.mux = crmtest.Mux(h.routes())
 	ctx := context.Background()

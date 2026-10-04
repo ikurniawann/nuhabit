@@ -2,12 +2,12 @@ package posops
 
 import (
 	"net/http"
-	"strings"
 
 	"nuhabit/backend/internal/modules/posops/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/stall"
 )
 
 // Catalog routes (app/api/pos/products). The catch renders
@@ -28,23 +28,9 @@ func (h *Handler) productRoutes() []module.Route {
 	}
 }
 
-// Active stall cookies (lib/auth/active-stall.ts): the new name first.
-const (
-	activeStallCookie       = "nuhabit-active-stall"
-	legacyActiveStallCookie = "arkiv-active-stall"
-)
-
 // caller builds the stall rules' view of the request.
 func (h *Handler) caller(r *http.Request, u *auth.User) Caller {
-	c := Caller{UserID: u.ID, Role: u.Role}
-	for _, name := range []string{activeStallCookie, legacyActiveStallCookie} {
-		if ck, err := r.Cookie(name); err == nil {
-			if v := strings.TrimSpace(ck.Value); v != "" {
-				c.ActiveStall = v
-				break
-			}
-		}
-	}
+	c := Caller{UserID: u.ID, Role: u.Role, ActiveStall: stall.Cookie(r)}
 	// loadCentralCashierGate treats a failing grant lookup as no grant.
 	if granted, err := h.auth.GrantedMenuCodes(r.Context(), u.ID, u.Role); err == nil {
 		c.CentralMenu = iam.HasMenuCode(granted, domain.CentralCashierMenu)

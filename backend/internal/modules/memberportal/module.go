@@ -22,6 +22,8 @@ type Module struct {
 type Options struct {
 	// Credits backs GET /app/home/me; without it that route stays in TS.
 	Credits CreditWallet
+	// Loyalty is the CRM XP engine (profile, challenge, badge and top-up XP).
+	Loyalty Loyalty
 }
 
 // New builds the module with its in-package adapters.
@@ -31,7 +33,7 @@ func New(deps module.Deps, opts Options) *Module {
 	svc := &Service{
 		repo:       repo,
 		notifier:   newWhatsAppNotifier(deps.DB, getenv, deps.Log),
-		loyalty:    &sqlLoyalty{db: deps.DB, log: deps.Log},
+		loyalty:    opts.Loyalty,
 		log:        deps.Log,
 		now:        deps.Now,
 		ipLimiter:  domain.NewRateLimiter(),

@@ -12,18 +12,11 @@ import (
 // internal/app/adapters_accounting.go implements them with the SQL the TS
 // stores ran; each moves to its owning module's service when that exists.
 type Ports struct {
-	Scopes     UserScopes
 	Audit      AuditLog
 	Purchasing Purchasing
 	PosOrders  PosOrders
 	Materials  Materials
 	Sales      SalesFunnel
-}
-
-// UserScopes is getApiUserScope (configuration.users business scope), which
-// platform/auth does not expose yet.
-type UserScopes interface {
-	Scope(ctx context.Context, q database.Querier, userID string) (domain.Scope, error)
 }
 
 // AuditEntry is one audit.audit_log row (lib/audit recordAudit).

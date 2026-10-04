@@ -62,10 +62,6 @@ type fakeDir struct {
 
 func (d fakeDir) DefaultVenue(context.Context, database.Querier) kit.Venue { return d.venue }
 
-func (d fakeDir) UserScope(context.Context, database.Querier, string) (*kit.UserScope, error) {
-	return nil, nil
-}
-
 type env struct {
 	t        *testing.T
 	ctx      context.Context

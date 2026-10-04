@@ -5,6 +5,7 @@ import (
 
 	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Finance B2B invoices (lib/finance/invoices.ts): the cross-deal invoice
@@ -16,7 +17,7 @@ import (
 type FinanceUser struct {
 	ID    string
 	Role  string
-	Scope domain.Scope
+	Scope *pscope.Scope
 }
 
 // hasCompanyScope is the sales-funnel fail-closed tenant check.

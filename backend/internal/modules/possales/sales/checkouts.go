@@ -115,7 +115,7 @@ func (h *Handler) createCheckoutUseCase(r *http.Request, user *auth.User) (*resp
 		if pin == "" {
 			return nil, fail(400, "Metode FOC membutuhkan PIN supervisor")
 		}
-		a, err := h.approveWithPin(ctx, userID, pin)
+		a, err := h.pins.Approve(ctx, userID, pin)
 		if err != nil {
 			return nil, err
 		}
@@ -229,7 +229,7 @@ func (h *Handler) completeCheckoutUseCase(r *http.Request, userID string) (*resp
 		if pin == "" {
 			return nil, fail(400, "Metode FOC membutuhkan PIN supervisor")
 		}
-		a, err := h.approveWithPin(ctx, userID, pin)
+		a, err := h.pins.Approve(ctx, userID, pin)
 		if err != nil {
 			return nil, err
 		}

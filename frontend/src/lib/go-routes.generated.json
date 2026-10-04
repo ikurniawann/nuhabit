@@ -3472,6 +3472,11 @@
   {
     "module": "procurement",
     "method": "GET",
+    "path": "/api/purchasing/dashboard"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
     "path": "/api/purchasing/deliveries"
   },
   {
@@ -4020,6 +4025,11 @@
     "path": "/api/purchasing/receiving-workspace"
   },
   {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/reports/inventory-valuation"
+  },
+  {
     "module": "procurement",
     "method": "GET",
     "path": "/api/purchasing/reports/po-detail"
@@ -4033,6 +4043,11 @@
     "module": "procurement",
     "method": "GET",
     "path": "/api/purchasing/reports/production-in-house"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/reports/stock-card"
   },
   {
     "module": "procurement",

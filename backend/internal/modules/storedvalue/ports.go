@@ -26,7 +26,6 @@ type Ports struct {
 // the same ones.
 type (
 	Venue     = kit.Venue
-	UserScope = kit.UserScope
 	Branch    = kit.Branch
 	Directory = kit.Directory
 )

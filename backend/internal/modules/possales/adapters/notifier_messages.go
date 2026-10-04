@@ -2,7 +2,6 @@ package adapters
 
 import (
 	"encoding/json"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -124,72 +123,4 @@ func formatGiftExpiry(raw json.RawMessage) string {
 		return "Invalid Date"
 	}
 	return longDateWIB(t)
-}
-
-// waNotifConfig is the part of WaNotifConfig the void alert reads.
-type waNotifConfig struct {
-	Enabled         bool
-	Recipients      []string
-	VoidBesar       bool
-	VoidThresholdRp float64
-}
-
-var waRecipient = regexp.MustCompile(`^62\d{8,13}$`)
-var notDigitPlus = regexp.MustCompile(`[^\d+]`)
-
-// normalizeWaRecipient maps 08…/+62…/62… to 62xxxxxxxxxx ("" = invalid).
-func normalizeWaRecipient(raw string) string {
-	n := strings.TrimPrefix(notDigitPlus.ReplaceAllString(raw, ""), "+")
-	if strings.HasPrefix(n, "0") {
-		n = "62" + n[1:]
-	}
-	if !waRecipient.MatchString(n) {
-		return ""
-	}
-	return n
-}
-
-// parseWaNotifConfig reads wa_notif_config with per-field defaults
-// (disabled, no recipients, voidBesar on, threshold 500.000).
-func parseWaNotifConfig(raw *string) waNotifConfig {
-	cfg := waNotifConfig{VoidBesar: true, VoidThresholdRp: 500_000}
-	if raw == nil || *raw == "" {
-		return cfg
-	}
-	var o map[string]any
-	if json.Unmarshal([]byte(*raw), &o) != nil || o == nil {
-		return cfg
-	}
-	if list, ok := o["recipients"].([]any); ok {
-		seen := map[string]bool{}
-		var valid []string
-		for _, r := range list {
-			if s, ok := r.(string); ok {
-				if n := normalizeWaRecipient(s); n != "" {
-					valid = append(valid, n)
-				}
-			}
-		}
-		if len(valid) > 5 {
-			valid = valid[:5]
-		}
-		for _, n := range valid {
-			if !seen[n] {
-				seen[n] = true
-				cfg.Recipients = append(cfg.Recipients, n)
-			}
-		}
-	}
-	if types, ok := o["types"].(map[string]any); ok {
-		if v, ok := types["voidBesar"].(bool); ok {
-			cfg.VoidBesar = v
-		}
-	}
-	if v, ok := o["voidThresholdRp"].(float64); ok && v >= 0 {
-		cfg.VoidThresholdRp = domain.RoundHalfUp(v)
-	}
-	if v, ok := o["enabled"].(bool); ok {
-		cfg.Enabled = v
-	}
-	return cfg
 }

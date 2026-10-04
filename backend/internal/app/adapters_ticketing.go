@@ -8,6 +8,8 @@ import (
 
 	"nuhabit/backend/internal/modules/ticketing"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/whatsapp"
 )
 
 // Adapters for the ticketing ports.
@@ -22,11 +24,8 @@ type ticketingVenues struct{ db *pgxpool.Pool }
 var _ ticketing.Venues = ticketingVenues{}
 
 func (a ticketingVenues) Resolve(ctx context.Context, userID string) (string, string, error) {
-	var companyID, branchID *string
-	var scope *string
-	err := a.db.QueryRow(ctx, `SELECT business_scope, company_id::text, branch_id::text
-		FROM configuration.users WHERE id = $1`, userID).Scan(&scope, &companyID, &branchID)
-	if err != nil && !database.IsNoRows(err) {
+	sc, err := scope.Load(ctx, a.db, userID)
+	if err != nil {
 		return "", "", err
 	}
 	text := func(s *string) string {
@@ -35,10 +34,8 @@ func (a ticketingVenues) Resolve(ctx context.Context, userID string) (string, st
 		}
 		return *s
 	}
-	company, branch := text(companyID), ""
-	if text(scope) == "branch" {
-		branch = text(branchID)
-	}
+	companyID, branchID := scope.ImportBusinessIDs(sc)
+	company, branch := text(companyID), text(branchID)
 	if company != "" && branch != "" {
 		return company, branch, nil
 	}
@@ -96,17 +93,20 @@ func (ticketingEmployees) Find(ctx context.Context, q database.Querier, ids []st
 // ticketingMessenger sends booking texts through the self-hosted gateway
 // only (booking-wa.ts calls loadGatewayConfig + sendGatewayText directly,
 // without the provider switch or the crm.wa_messages log).
-type ticketingMessenger struct{ wa *posOpsWhatsApp }
+type ticketingMessenger struct {
+	db *pgxpool.Pool
+	wa *whatsapp.Client
+}
 
 var _ ticketing.Messenger = ticketingMessenger{}
 
 func (m ticketingMessenger) SendText(ctx context.Context, target, message string) error {
-	cfg := m.wa.gatewayConfig(ctx)
-	if cfg == nil {
+	gateway := m.wa.LoadGateway(ctx, m.db)
+	if gateway == nil {
 		return ticketing.ErrMessengerNotConfigured
 	}
-	if res := m.wa.sendGateway(ctx, cfg, target, message); !res.delivered {
-		return errors.New(res.reason)
+	if res := gateway.SendText(ctx, target, message); !res.Success {
+		return errors.New(res.Reason)
 	}
 	return nil
 }

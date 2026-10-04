@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/accounting/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	pscope "nuhabit/backend/internal/platform/scope"
 )
 
 // Setup data: account types, the chart of accounts and journal mappings
@@ -233,7 +234,7 @@ func loadAccountRow(ctx context.Context, q database.Querier, id string) (*scoped
 	return one[scopedAccount](ctx, q, `SELECT id::text, company_id::text, parent_id::text, deleted_at IS NOT NULL, level FROM accounting.chart_of_accounts WHERE id = $1`, id)
 }
 
-func (s *Service) loadScopedAccount(ctx context.Context, id string, scope domain.Scope) (*scopedAccount, error) {
+func (s *Service) loadScopedAccount(ctx context.Context, id string, scope *pscope.Scope) (*scopedAccount, error) {
 	row, err := loadAccountRow(ctx, s.db, id)
 	if err != nil {
 		return nil, err
@@ -241,14 +242,14 @@ func (s *Service) loadScopedAccount(ctx context.Context, id string, scope domain
 	if row == nil || row.Deleted {
 		return nil, httpx.NotFound("Akun tidak ditemukan")
 	}
-	if !scope.InBusinessScope(row.CompanyID, nil) {
+	if !pscope.RowInScope(scope, row.CompanyID, nil) {
 		return nil, httpx.Forbidden("Akun di luar scope")
 	}
 	return row, nil
 }
 
 // CreateAccount is createChartOfAccount.
-func (s *Service) CreateAccount(ctx context.Context, userID, companyID string, scope domain.Scope, in AccountInput) (*Account, error) {
+func (s *Service) CreateAccount(ctx context.Context, userID, companyID string, scope *pscope.Scope, in AccountInput) (*Account, error) {
 	code, level, err := resolveCode(in.Code)
 	if err != nil {
 		return nil, err
@@ -259,7 +260,7 @@ func (s *Service) CreateAccount(ctx context.Context, userID, companyID string, s
 		if parent == nil || parent.Deleted {
 			return nil, httpx.BadRequest("Parent akun tidak ditemukan")
 		}
-		if !scope.InBusinessScope(parent.CompanyID, nil) {
+		if !pscope.RowInScope(scope, parent.CompanyID, nil) {
 			return nil, httpx.Forbidden("Parent di luar scope")
 		}
 		if parent.CompanyID == nil || *parent.CompanyID != companyID {
@@ -289,7 +290,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true,$12,$12) RETURNING id::text`,
 }
 
 // UpdateAccount is updateChartOfAccount.
-func (s *Service) UpdateAccount(ctx context.Context, id, userID string, scope domain.Scope, in AccountInput) (*Account, error) {
+func (s *Service) UpdateAccount(ctx context.Context, id, userID string, scope *pscope.Scope, in AccountInput) (*Account, error) {
 	existing, err := s.loadScopedAccount(ctx, id, scope)
 	if err != nil {
 		return nil, err
@@ -326,7 +327,7 @@ UPDATE accounting.chart_of_accounts
 }
 
 // DeleteAccount is softDeleteChartOfAccount: refused while live children exist.
-func (s *Service) DeleteAccount(ctx context.Context, id, userID string, scope domain.Scope) error {
+func (s *Service) DeleteAccount(ctx context.Context, id, userID string, scope *pscope.Scope) error {
 	existing, err := s.loadScopedAccount(ctx, id, scope)
 	if err != nil {
 		return err
