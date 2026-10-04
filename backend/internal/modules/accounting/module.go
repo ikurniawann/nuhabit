@@ -3,6 +3,7 @@ package accounting
 import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Name is the MODULES key.
@@ -24,5 +25,5 @@ func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
 	if deps.Events != nil {
 		svc.subscribe(deps.Events)
 	}
-	return mod{&Handler{svc: svc, auth: deps.Auth}}
+	return mod{&Handler{svc: svc, auth: deps.Auth, files: storage.FromEnv()}}
 }

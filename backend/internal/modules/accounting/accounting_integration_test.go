@@ -825,6 +825,7 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 	e.account("1102001", "BANK BCA 7319", "ASSET", true)
 	bpjsTk := e.account("2103002", "BPJS Ketenagakerjaan", "LIABILITY", false)
 	bpjsKes := e.account("2103003", "BPJS Kesehatan", "LIABILITY", false)
+	tapera := e.account("2103009", "Hutang Tapera", "LIABILITY", false)
 	cashier := e.account("1101001", "House Bank - General Cashier", "ASSET", true)
 	e.fiscal2026()
 	e.exec(`UPDATE accounting.journal_mappings SET is_active = false WHERE event_code LIKE 'PAYROLL\_%' AND company_id IS DISTINCT FROM $1`, e.company)
@@ -837,7 +838,7 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 
 	var filled int
 	e.scalar(&filled, `SELECT accounting.ensure_payroll_journal_mappings($1::uuid)`, e.company)
-	if filled != 11 {
+	if filled != 19 {
 		t.Fatalf("filled %d lines", filled)
 	}
 	rows, err := e.tx.Query(e.ctx, `SELECT m.event_code||' '||l.entry_side||' '||l.line_role||' '||COALESCE(l.account_id::text, '-')
@@ -852,11 +853,15 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 	}
 	want := []string{
 		"PAYROLL_ACCRUAL DEBIT SALARY_EXPENSE " + expense, "PAYROLL_ACCRUAL CREDIT SALARY_PAYABLE " + payable,
+		"PAYROLL_BPJS_KES_EMPLOYEE DEBIT SALARY_PAYABLE " + payable, "PAYROLL_BPJS_KES_EMPLOYEE CREDIT BPJS_KES_PAYABLE " + bpjsKes,
 		"PAYROLL_BPJS_KES_EMPLOYER DEBIT BPJS_EXPENSE " + expense, "PAYROLL_BPJS_KES_EMPLOYER CREDIT BPJS_KES_PAYABLE " + bpjsKes,
+		"PAYROLL_BPJS_TK_EMPLOYEE DEBIT SALARY_PAYABLE " + payable, "PAYROLL_BPJS_TK_EMPLOYEE CREDIT BPJS_TK_PAYABLE " + bpjsTk,
 		"PAYROLL_BPJS_TK_EMPLOYER DEBIT BPJS_EXPENSE " + expense, "PAYROLL_BPJS_TK_EMPLOYER CREDIT BPJS_TK_PAYABLE " + bpjsTk,
 		"PAYROLL_LOAN_DEDUCTION DEBIT SALARY_PAYABLE " + payable, "PAYROLL_LOAN_DEDUCTION CREDIT LOAN_RECEIVABLE " + loans,
 		"PAYROLL_PAYMENT DEBIT SALARY_PAYABLE " + payable, "PAYROLL_PAYMENT CREDIT BANK " + cashier,
 		"PAYROLL_PPH21_WITHHOLDING DEBIT SALARY_PAYABLE " + payable, "PAYROLL_PPH21_WITHHOLDING CREDIT TAX " + pph21,
+		"PAYROLL_TAPERA_EMPLOYEE DEBIT SALARY_PAYABLE " + payable, "PAYROLL_TAPERA_EMPLOYEE CREDIT TAPERA_PAYABLE " + tapera,
+		"PAYROLL_TAPERA_EMPLOYER DEBIT TAPERA_EXPENSE " + expense, "PAYROLL_TAPERA_EMPLOYER CREDIT TAPERA_PAYABLE " + tapera,
 	}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("payroll mapping accounts:\n got %v\nwant %v", got, want)
@@ -872,17 +877,22 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 		PaidAt: time.Date(2026, 10, 4, 2, 0, 0, 0, time.UTC), TotalLoanDeduction: 500000,
 		Companies: []payroll.RunCompany{
 			{CompanyID: &e.company, TotalGross: 10000000, TotalNet: 9000000, TotalPph21: 250000, TotalLoanDeduction: 500000,
-				TotalBpjsTkEmployer: 600000, TotalBpjsKesEmployer: 400000},
+				TotalBpjsTkEmployer: 600000, TotalBpjsKesEmployer: 400000, TotalBpjsTkEmployee: 200000, TotalBpjsKesEmployee: 50000,
+				TotalTaperaEmployer: 30000, TotalTaperaEmployee: 25000},
 			{TotalGross: 1000000, TotalNet: 900000, TotalPph21: 100000},
 		}})
 	e.dispatch()
 	posted := []string{
 		"PAYROLL_ACCRUAL:DEBIT=11000000.00,CREDIT=11000000.00",
+		"PAYROLL_BPJS_KES_EMPLOYEE:DEBIT=50000.00,CREDIT=50000.00",
 		"PAYROLL_BPJS_KES_EMPLOYER:DEBIT=400000.00,CREDIT=400000.00",
+		"PAYROLL_BPJS_TK_EMPLOYEE:DEBIT=200000.00,CREDIT=200000.00",
 		"PAYROLL_BPJS_TK_EMPLOYER:DEBIT=600000.00,CREDIT=600000.00",
 		"PAYROLL_LOAN_DEDUCTION:DEBIT=500000.00,CREDIT=500000.00",
 		"PAYROLL_PAYMENT:DEBIT=9900000.00,CREDIT=9900000.00",
 		"PAYROLL_PPH21_WITHHOLDING:DEBIT=350000.00,CREDIT=350000.00",
+		"PAYROLL_TAPERA_EMPLOYEE:DEBIT=25000.00,CREDIT=25000.00",
+		"PAYROLL_TAPERA_EMPLOYER:DEBIT=30000.00,CREDIT=30000.00",
 	}
 	if got := e.journals(run); fmt.Sprint(got) != fmt.Sprint(posted) {
 		t.Fatalf("payroll journals per company:\n got %v\nwant %v", got, posted)
@@ -891,5 +901,38 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 	e.scalar(&companies, `SELECT count(DISTINCT company_id)::int FROM accounting.journal_entries WHERE source_document_id = $1 AND company_id = $2`, run, e.company)
 	if companies != 1 {
 		t.Fatal("journals post to the employees' company")
+	}
+}
+
+// A landed cost batch posts PURCHASE_LANDED_COST for what went into stock
+// and what was expensed, and the reversal for what came out, once per batch.
+func TestLandedCostJournals(t *testing.T) {
+	e := setup(t)
+	stock := e.account("1301001", "Persediaan Bahan Baku", "ASSET", false)
+	cogs := e.account("5101001", "Harga Pokok Penjualan", "EXPENSE", false)
+	ap := e.account("2101001", "Hutang Usaha", "LIABILITY", false)
+	e.fiscal2026()
+	optional := func(l map[string]any) map[string]any { l["is_required"] = false; return l }
+	e.mapping("PURCHASE_LANDED_COST", "PURCHASING", optional(mline("DEBIT", "INVENTORY", stock, "SUBTOTAL")),
+		optional(mline("DEBIT", "COGS", cogs, "COGS")), mline("CREDIT", "AP", ap, "TOTAL"))
+	e.mapping("PURCHASE_LANDED_COST_REVERSAL", "PURCHASING", mline("DEBIT", "AP", ap, "TOTAL"),
+		optional(mline("CREDIT", "INVENTORY", stock, "SUBTOTAL")), optional(mline("CREDIT", "COGS", cogs, "COGS")))
+
+	added, moved := "6f1d5c2e-3333-4a1b-9c1d-000000000001", "6f1d5c2e-3333-4a1b-9c1d-000000000002"
+	batch := func(id string, capitalized, expensed float64) inventory.LandedCostApplied {
+		return inventory.LandedCostApplied{BatchID: id, CostID: "6f1d5c2e-3333-4a1b-9c1d-000000000009", CompanyID: &e.company,
+			UserID: e.staff.UserID, EntryDate: "2026-10-05", Capitalized: capitalized, Expensed: expensed}
+	}
+	e.publish(inventory.TopicLandedCostApplied, added, batch(added, 9000, 3000))
+	e.publish(inventory.TopicLandedCostApplied, added, batch(added, 9000, 3000))
+	// Value out of the stock while the expensed part grows: both journals.
+	e.publish(inventory.TopicLandedCostApplied, moved, batch(moved, -9000, 1000))
+	e.dispatch()
+	if got, want := e.journals(added), []string{"PURCHASE_LANDED_COST:DEBIT=9000.00,DEBIT=3000.00,CREDIT=12000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("capitalized batch:\n got %v\nwant %v", got, want)
+	}
+	if got, want := e.journals(moved), []string{"PURCHASE_LANDED_COST:DEBIT=1000.00,CREDIT=1000.00",
+		"PURCHASE_LANDED_COST_REVERSAL:DEBIT=9000.00,CREDIT=9000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("mixed batch:\n got %v\nwant %v", got, want)
 	}
 }

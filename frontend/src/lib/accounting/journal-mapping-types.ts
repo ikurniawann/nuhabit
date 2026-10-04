@@ -43,6 +43,8 @@ export const JOURNAL_LINE_ROLES = [
   "BPJS_EXPENSE",
   "BPJS_TK_PAYABLE",
   "BPJS_KES_PAYABLE",
+  "TAPERA_EXPENSE",
+  "TAPERA_PAYABLE",
   "OTHER",
 ] as const;
 export type JournalLineRole = (typeof JOURNAL_LINE_ROLES)[number];
@@ -64,12 +66,18 @@ export const JOURNAL_EVENT_CODES = [
   "PURCHASE_AP_INVOICE",
   "PURCHASE_PAYMENT",
   "PURCHASE_RETURN",
+  "PURCHASE_LANDED_COST",
+  "PURCHASE_LANDED_COST_REVERSAL",
   "PAYROLL_ACCRUAL",
   "PAYROLL_PAYMENT",
   "PAYROLL_PPH21_WITHHOLDING",
   "PAYROLL_LOAN_DEDUCTION",
   "PAYROLL_BPJS_TK_EMPLOYER",
   "PAYROLL_BPJS_KES_EMPLOYER",
+  "PAYROLL_BPJS_TK_EMPLOYEE",
+  "PAYROLL_BPJS_KES_EMPLOYEE",
+  "PAYROLL_TAPERA_EMPLOYER",
+  "PAYROLL_TAPERA_EMPLOYEE",
   "PINJAMAN_DISBURSEMENT",
   "PINJAMAN_REPAYMENT",
   "SALE_AR_INVOICE",
@@ -166,6 +174,16 @@ export const JOURNAL_EVENT_META: Record<
     module: "PURCHASING",
     description: "Retur pembelian ke vendor",
   },
+  PURCHASE_LANDED_COST: {
+    name: "Purchase Landed Cost",
+    module: "PURCHASING",
+    description: "Biaya tambahan pembelian (ongkir, bea, handling) dikapitalisasi ke inventory",
+  },
+  PURCHASE_LANDED_COST_REVERSAL: {
+    name: "Purchase Landed Cost Reversal",
+    module: "PURCHASING",
+    description: "Pembalikan biaya tambahan pembelian yang dihapus dari inventory",
+  },
   PAYROLL_ACCRUAL: {
     name: "Payroll Accrual",
     module: "PAYROLL",
@@ -195,6 +213,26 @@ export const JOURNAL_EVENT_META: Record<
     name: "Payroll BPJS Kesehatan (Pemberi Kerja)",
     module: "PAYROLL",
     description: "Iuran BPJS Kesehatan bagian perusahaan (beban dan hutang BPJS)",
+  },
+  PAYROLL_BPJS_TK_EMPLOYEE: {
+    name: "Payroll BPJS Ketenagakerjaan (Karyawan)",
+    module: "PAYROLL",
+    description: "Potongan BPJS Ketenagakerjaan karyawan (hutang gaji ke hutang BPJS)",
+  },
+  PAYROLL_BPJS_KES_EMPLOYEE: {
+    name: "Payroll BPJS Kesehatan (Karyawan)",
+    module: "PAYROLL",
+    description: "Potongan BPJS Kesehatan karyawan (hutang gaji ke hutang BPJS)",
+  },
+  PAYROLL_TAPERA_EMPLOYER: {
+    name: "Payroll Tapera (Pemberi Kerja)",
+    module: "PAYROLL",
+    description: "Iuran Tapera bagian perusahaan (beban dan hutang Tapera)",
+  },
+  PAYROLL_TAPERA_EMPLOYEE: {
+    name: "Payroll Tapera (Karyawan)",
+    module: "PAYROLL",
+    description: "Potongan Tapera karyawan (hutang gaji ke hutang Tapera)",
   },
   PINJAMAN_DISBURSEMENT: {
     name: "Pinjaman — Pencairan",

@@ -10,12 +10,14 @@ import (
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	pscope "nuhabit/backend/internal/platform/scope"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Handler is the HTTP transport of /api/accounting/** and /api/finance/**.
 type Handler struct {
-	svc  *Service
-	auth *auth.Service
+	svc   *Service
+	auth  *auth.Service
+	files *storage.Store
 }
 
 type staffFunc func(w http.ResponseWriter, r *http.Request, u *auth.User) error
@@ -117,9 +119,7 @@ const (
 	apiFinance    = "/api/finance"
 )
 
-// Routes lists every ported route. POST /api/accounting/chart-of-accounts/import
-// (xlsx) and /api/finance/invoices/{id}/faktur-pajak (local file storage)
-// stay in TS.
+// Routes lists every route of /api/accounting and /api/finance.
 func (h *Handler) Routes() []module.Route {
 	a := func(method, path string, fn staffFunc) module.Route {
 		return module.Route{Pattern: method + " " + apiAccounting + path, Handler: h.staff(fn)}
@@ -134,6 +134,7 @@ func (h *Handler) Routes() []module.Route {
 		a("POST", "/chart-of-accounts", h.createAccount),
 		a("PUT", "/chart-of-accounts/{id}", h.updateAccount),
 		a("DELETE", "/chart-of-accounts/{id}", h.deleteAccount),
+		a("POST", "/chart-of-accounts/import", h.importAccounts),
 
 		a("GET", "/journal-mappings", h.listMappings),
 		a("POST", "/journal-mappings", h.createMapping),
@@ -196,6 +197,9 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "GET " + apiFinance + "/invoices/{id}/payments", Handler: h.finance(h.listInvoicePayments)},
 		{Pattern: "POST " + apiFinance + "/invoices/{id}/payments", Handler: h.finance(h.receivePaymentGone)},
 		{Pattern: "DELETE " + apiFinance + "/payments/{paymentId}", Handler: h.finance(h.deleteDealPayment)},
+		{Pattern: "GET " + apiFinance + "/invoices/{id}/faktur-pajak", Handler: h.financeViewer(h.downloadFakturPajak)},
+		{Pattern: "POST " + apiFinance + "/invoices/{id}/faktur-pajak", Handler: h.finance(h.uploadFakturPajak)},
+		{Pattern: "DELETE " + apiFinance + "/invoices/{id}/faktur-pajak", Handler: h.finance(h.deleteFakturPajak)},
 	}
 }
 

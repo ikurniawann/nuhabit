@@ -191,3 +191,26 @@ func ValueVariances(lines []VarianceLine, shortage bool) ([]ValuedVariance, floa
 	}
 	return out, total
 }
+
+// LandedCostAmounts splits a landed cost batch into the amount bags of
+// PURCHASE_LANDED_COST (the positive parts: SUBTOTAL into inventory, COGS
+// expensed) and PURCHASE_LANDED_COST_REVERSAL (the negative parts, as
+// positive amounts). TOTAL is the AP side of each; a bag with nothing to
+// post is nil.
+func LandedCostAmounts(capitalized, expensed float64) (post, reverse Amounts) {
+	bag := func(stock, cogs float64) Amounts {
+		stock, cogs = Round2(math.Max(stock, 0)), Round2(math.Max(cogs, 0))
+		if stock+cogs <= 0 {
+			return nil
+		}
+		a := Amounts{"TOTAL": Round2(stock + cogs)}
+		if stock > 0 {
+			a["SUBTOTAL"] = stock
+		}
+		if cogs > 0 {
+			a["COGS"] = cogs
+		}
+		return a
+	}
+	return bag(capitalized, expensed), bag(-capitalized, -expensed)
+}

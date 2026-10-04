@@ -167,8 +167,6 @@ func parseClosePrevious(r *http.Request) (bool, error) {
 
 /* ── Chart of accounts, account types, mappings ──────────────────────── */
 
-var cashFlowCategories = []string{"OPERATING", "INVESTING", "FINANCING", "NON_CASH"}
-
 func parseAccount(r *http.Request) (AccountInput, error) {
 	f, err := readForm(r)
 	if err != nil {
@@ -182,7 +180,7 @@ func parseAccount(r *http.Request) (AccountInput, error) {
 	}
 	in.IsContra = deref(f.Bool("is_contra", optional))
 	in.IsCashBank = deref(f.Bool("is_cash_bank", optional))
-	in.CashFlowCategory = f.Enum("cash_flow_category", optNullable, cashFlowCategories)
+	in.CashFlowCategory = f.Enum("cash_flow_category", optNullable, domain.CashFlowCategories)
 	in.Description = f.Str("description", optNullable, validate.StrOpts{Trim: true})
 	in.IsActive = f.BoolDefault("is_active", true)
 	return in, f.Err("Validation failed")

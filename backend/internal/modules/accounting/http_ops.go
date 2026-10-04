@@ -442,9 +442,12 @@ func (h *Handler) recordArReceipt(w http.ResponseWriter, r *http.Request, u *aut
 type financeFunc func(w http.ResponseWriter, r *http.Request, u FinanceUser) error
 
 // finance is requireFinanceUser(): a session plus an accounting menu grant.
-func (h *Handler) finance(fn financeFunc) http.Handler {
+func (h *Handler) finance(fn financeFunc) http.Handler { return h.financeFor(iam.Accounting, fn) }
+
+// financeFor is requireFinanceUser with the menu prefixes it accepts.
+func (h *Handler) financeFor(menus []string, fn financeFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		u, err := h.auth.RequireMenuPrefix(r, iam.Accounting...)
+		u, err := h.auth.RequireMenuPrefix(r, menus...)
 		if err != nil {
 			return err
 		}

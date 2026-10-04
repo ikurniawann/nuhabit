@@ -257,4 +257,8 @@ type SalesFunnel interface {
 	// DealPaymentDeal returns the deal of a live deal payment ("" when missing).
 	DealPaymentDeal(ctx context.Context, q database.Querier, paymentID string) (string, error)
 	SoftDeleteDealPayment(ctx context.Context, q database.Querier, paymentID, userID string) error
+	// FakturPajakInvoice returns nil when the invoice is missing or deleted.
+	FakturPajakInvoice(ctx context.Context, q database.Querier, id string) (*FakturPajakInvoice, error)
+	// SetFakturPajak stores (or with nil clears) the attachment's private path.
+	SetFakturPajak(ctx context.Context, q database.Querier, id string, path *string) error
 }

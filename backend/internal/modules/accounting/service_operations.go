@@ -411,6 +411,33 @@ func (s *Service) PostStockAdjustment(ctx context.Context, db database.DB, in in
 		lines: []domain.VarianceLine{{RawMaterialID: in.RawMaterialID, QtyDiff: in.QtyDiff, UnitCost: in.UnitCost}}})
 }
 
+// PostLandedCost posts a landed cost batch: PURCHASE_LANDED_COST for the
+// value that went into stock or was expensed, PURCHASE_LANDED_COST_REVERSAL
+// for the value that came out, each keyed by the batch id.
+func (s *Service) PostLandedCost(ctx context.Context, db database.DB, in inventory.LandedCostApplied) ([]domain.PostResult, error) {
+	post, reverse := domain.LandedCostAmounts(in.Capitalized, in.Expensed)
+	var results []domain.PostResult
+	for _, j := range []struct {
+		event, label string
+		amounts      domain.Amounts
+	}{
+		{"PURCHASE_LANDED_COST", "kapitalisasi ke inventory", post},
+		{"PURCHASE_LANDED_COST_REVERSAL", "pembalikan dari inventory", reverse},
+	} {
+		if j.amounts == nil {
+			continue
+		}
+		r, err := PostFromMapping(ctx, db, MappingPost{CompanyID: in.CompanyID, UserID: in.UserID, EventCode: j.event,
+			DocumentType: "landed_cost", DocumentID: in.BatchID, EntryDate: in.EntryDate, Amounts: j.amounts,
+			SourceModule: "PURCHASING", Description: "Biaya tambahan pembelian — " + j.label})
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
 // PostStockTransfer is postStockTransferAccounting: a debit and credit of
 // the same inventory account, an audit trail of the moved value.
 func (s *Service) PostStockTransfer(ctx context.Context, db database.DB, in inventory.StockTransferred) (domain.PostResult, error) {

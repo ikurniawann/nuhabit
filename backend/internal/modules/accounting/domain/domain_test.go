@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 )
@@ -417,5 +418,22 @@ func TestReportBalances(t *testing.T) {
 	}
 	if side, amt, _ := OpeningLine(5, 15); side != Credit || amt != 10 {
 		t.Fatal("OpeningLine credit")
+	}
+}
+
+func TestLandedCostAmounts(t *testing.T) {
+	for _, c := range []struct {
+		capitalized, expensed float64
+		post, reverse         Amounts
+	}{
+		{9000, 3000, Amounts{"SUBTOTAL": 9000, "COGS": 3000, "TOTAL": 12000}, nil},
+		{-9000, -1000.005, nil, Amounts{"SUBTOTAL": 9000, "COGS": 1000.01, "TOTAL": 10000.01}},
+		{-9000, 1000, Amounts{"COGS": 1000, "TOTAL": 1000}, Amounts{"SUBTOTAL": 9000, "TOTAL": 9000}},
+		{0, 0, nil, nil},
+	} {
+		post, reverse := LandedCostAmounts(c.capitalized, c.expensed)
+		if fmt.Sprint(post) != fmt.Sprint(c.post) || fmt.Sprint(reverse) != fmt.Sprint(c.reverse) {
+			t.Errorf("LandedCostAmounts(%v, %v) = %v %v, want %v %v", c.capitalized, c.expensed, post, reverse, c.post, c.reverse)
+		}
 	}
 }

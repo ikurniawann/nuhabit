@@ -22,9 +22,13 @@ var payrollJournals = []struct {
 	{"PAYROLL_ACCRUAL", "TOTAL", "beban gaji", func(r payroll.RunCompany) float64 { return r.TotalGross }},
 	{"PAYROLL_PPH21_WITHHOLDING", "TAX", "potongan PPh 21", func(r payroll.RunCompany) float64 { return r.TotalPph21 }},
 	{"PAYROLL_LOAN_DEDUCTION", "PAID", "potongan cicilan pinjaman", func(r payroll.RunCompany) float64 { return r.TotalLoanDeduction }},
+	{"PAYROLL_BPJS_TK_EMPLOYEE", "TOTAL", "potongan BPJS Ketenagakerjaan karyawan", func(r payroll.RunCompany) float64 { return r.TotalBpjsTkEmployee }},
+	{"PAYROLL_BPJS_KES_EMPLOYEE", "TOTAL", "potongan BPJS Kesehatan karyawan", func(r payroll.RunCompany) float64 { return r.TotalBpjsKesEmployee }},
+	{"PAYROLL_TAPERA_EMPLOYEE", "TOTAL", "potongan Tapera karyawan", func(r payroll.RunCompany) float64 { return r.TotalTaperaEmployee }},
 	{"PAYROLL_PAYMENT", "PAID", "pembayaran gaji bersih", func(r payroll.RunCompany) float64 { return r.TotalNet }},
 	{"PAYROLL_BPJS_TK_EMPLOYER", "TOTAL", "BPJS Ketenagakerjaan pemberi kerja", func(r payroll.RunCompany) float64 { return r.TotalBpjsTkEmployer }},
 	{"PAYROLL_BPJS_KES_EMPLOYER", "TOTAL", "BPJS Kesehatan pemberi kerja", func(r payroll.RunCompany) float64 { return r.TotalBpjsKesEmployer }},
+	{"PAYROLL_TAPERA_EMPLOYER", "TOTAL", "Tapera pemberi kerja", func(r payroll.RunCompany) float64 { return r.TotalTaperaEmployer }},
 }
 
 func numeric(s *string) float64 {
@@ -110,7 +114,9 @@ func payrollGroups(ctx context.Context, q database.Querier, in payroll.RunPaid) 
 	if len(groups) == 0 {
 		groups = []payroll.RunCompany{{TotalGross: numeric(in.TotalGross), TotalNet: numeric(in.TotalNet),
 			TotalPph21: numeric(in.TotalPph21), TotalLoanDeduction: in.TotalLoanDeduction,
-			TotalBpjsTkEmployer: in.TotalBpjsTkEmployer, TotalBpjsKesEmployer: in.TotalBpjsKesEmployer}}
+			TotalBpjsTkEmployer: in.TotalBpjsTkEmployer, TotalBpjsKesEmployer: in.TotalBpjsKesEmployer,
+			TotalBpjsTkEmployee: in.TotalBpjsTkEmployee, TotalBpjsKesEmployee: in.TotalBpjsKesEmployee,
+			TotalTaperaEmployer: in.TotalTaperaEmployer, TotalTaperaEmployee: in.TotalTaperaEmployee}}
 	}
 	var merged []payroll.RunCompany
 	var skipped []domain.PostResult
@@ -138,6 +144,10 @@ func payrollGroups(ctx context.Context, q database.Querier, in payroll.RunPaid) 
 		m.TotalLoanDeduction += g.TotalLoanDeduction
 		m.TotalBpjsTkEmployer += g.TotalBpjsTkEmployer
 		m.TotalBpjsKesEmployer += g.TotalBpjsKesEmployer
+		m.TotalBpjsTkEmployee += g.TotalBpjsTkEmployee
+		m.TotalBpjsKesEmployee += g.TotalBpjsKesEmployee
+		m.TotalTaperaEmployer += g.TotalTaperaEmployer
+		m.TotalTaperaEmployee += g.TotalTaperaEmployee
 	}
 	return merged, skipped, nil
 }
