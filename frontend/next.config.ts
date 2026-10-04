@@ -21,6 +21,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    // src/proxy.ts rewrites ported /api routes to the Go service. Next cuts
+    // proxied requests at 30 s by default, which would drop the desktop and
+    // AI assistant SSE streams and slow reports; EventSource reconnects
+    // after the hour.
+    proxyTimeout: 60 * 60 * 1000,
+  },
   async rewrites() {
     return {
       beforeFiles: [
