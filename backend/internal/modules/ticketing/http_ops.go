@@ -69,7 +69,7 @@ func (h *handler) listBookings(w http.ResponseWriter, r *http.Request, v Venue) 
 }
 
 func (h *handler) lookupBooking(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-booking-lookup", 60, "Terlalu banyak pencarian — tunggu sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-booking-lookup", 60, "Terlalu banyak pencarian — tunggu sebentar"); err != nil {
 		return err
 	}
 	code := domain.NormalizeBookingCode(query(r.URL.Query(), "code", ""))
@@ -96,7 +96,7 @@ func (h *handler) bookingDetail(w http.ResponseWriter, r *http.Request, v Venue)
 }
 
 func (h *handler) updateBookingNotes(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-booking-refund-note", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-booking-refund-note", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -130,7 +130,7 @@ func (h *handler) updateBookingNotes(w http.ResponseWriter, r *http.Request, v V
 }
 
 func (h *handler) cancelBooking(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-booking-cancel", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-booking-cancel", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -153,7 +153,7 @@ func (h *handler) cancelBooking(w http.ResponseWriter, r *http.Request, v Venue)
 }
 
 func (h *handler) redeemBooking(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-booking-redeem", 20, "Terlalu banyak redeem — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-booking-redeem", 20, "Terlalu banyak redeem — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -186,7 +186,7 @@ func (h *handler) redeemBooking(w http.ResponseWriter, r *http.Request, v Venue)
 }
 
 func (h *handler) resendBookingWa(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-booking-resend", 10, "Terlalu sering kirim ulang — tunggu sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-booking-resend", 10, "Terlalu sering kirim ulang — tunggu sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -203,7 +203,7 @@ func (h *handler) resendBookingWa(w http.ResponseWriter, r *http.Request, v Venu
 // ── Gate ─────────────────────────────────────────────────────────────────
 
 func (h *handler) gateTap(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-gate", 120, "Terlalu banyak tap — tunggu sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-gate", 120, "Terlalu banyak tap — tunggu sebentar"); err != nil {
 		return err
 	}
 	f, err := readForm(r)
@@ -227,7 +227,7 @@ func (h *handler) gateTap(w http.ResponseWriter, r *http.Request, v Venue) error
 }
 
 func (h *handler) passTap(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-pass-gate", 120, "Terlalu banyak scan — tunggu sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-pass-gate", 120, "Terlalu banyak scan — tunggu sebentar"); err != nil {
 		return err
 	}
 	f, err := readForm(r)
@@ -270,7 +270,7 @@ func parsePayment(f *validate.Form) DepositInput {
 }
 
 func (h *handler) registerVisit(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-register", 20, "Terlalu banyak registrasi — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-register", 20, "Terlalu banyak registrasi — coba lagi sebentar"); err != nil {
 		return err
 	}
 	f, err := readForm(r)
@@ -327,7 +327,7 @@ func (h *handler) visitDetail(w http.ResponseWriter, r *http.Request, v Venue) e
 }
 
 func (h *handler) topUpDeposit(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-topup", 20, "Terlalu banyak top-up — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-topup", 20, "Terlalu banyak top-up — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -347,7 +347,7 @@ func (h *handler) topUpDeposit(w http.ResponseWriter, r *http.Request, v Venue) 
 }
 
 func (h *handler) settleVisit(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-settle", 20, "Terlalu banyak settlement — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-settle", 20, "Terlalu banyak settlement — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id := r.PathValue("id")
@@ -371,7 +371,7 @@ func (h *handler) settleVisit(w http.ResponseWriter, r *http.Request, v Venue) e
 }
 
 func (h *handler) voidCharge(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-void", 20, "Terlalu banyak void — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-void", 20, "Terlalu banyak void — coba lagi sebentar"); err != nil {
 		return err
 	}
 	id, chargeID := r.PathValue("id"), r.PathValue("chargeId")
@@ -390,7 +390,7 @@ func (h *handler) voidCharge(w http.ResponseWriter, r *http.Request, v Venue) er
 }
 
 func (h *handler) markBandLost(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-band-lost", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-band-lost", 20, "Terlalu banyak aksi — coba lagi sebentar"); err != nil {
 		return err
 	}
 	out, err := h.svc.MarkBandLost(r.Context(), v, r.PathValue("id"), r.PathValue("bandId"))
@@ -450,7 +450,7 @@ func (h *handler) renewSeasonPass(w http.ResponseWriter, r *http.Request, v Venu
 // ── Tab, occupancy, report ───────────────────────────────────────────────
 
 func (h *handler) tabCheck(w http.ResponseWriter, r *http.Request, v Venue) error {
-	if err := h.limit(v, "ticketing-tab-check", 60, "Terlalu banyak pengecekan — tunggu sebentar"); err != nil {
+	if err := h.limit(r.Context(), v, "ticketing-tab-check", 60, "Terlalu banyak pengecekan — tunggu sebentar"); err != nil {
 		return err
 	}
 	f, err := readForm(r)

@@ -373,19 +373,3 @@ func TestBookingMessages(t *testing.T) {
 		t.Fatal(gift)
 	}
 }
-
-func TestRateLimiter(t *testing.T) {
-	l := NewRateLimiter()
-	now := time.Now()
-	for n := 0; n < 3; n++ {
-		if !l.Allow("k", 3, now) {
-			t.Fatal("blocked early")
-		}
-	}
-	if l.Allow("k", 3, now) {
-		t.Fatal("limit not enforced")
-	}
-	if !l.Allow("k", 3, now.Add(61*time.Second)) {
-		t.Fatal("window not reset")
-	}
-}

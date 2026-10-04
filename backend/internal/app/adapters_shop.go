@@ -2,23 +2,22 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
 
-	"github.com/jackc/pgx/v5"
-
+	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/shop"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
 
-// shop reads the POS merchandise catalog and member phones and claims stock
-// through the pos_sell_merchandise_* functions. pos-ops and CRM expose no
-// service for these yet, so the adapters below run the SQL of
-// lib/shop/storefront-server.ts and lib/shop/marketplace/*.ts.
+// shop reads the POS merchandise catalog and claims its stock through
+// pos-ops' Merchandise service, and member phones through a stopgap SQL
+// adapter (CRM exposes no service for them yet).
 
 // ShopPorts wires the shop module; its integration tests use it too.
 func ShopPorts(d module.Deps) shop.Ports {
@@ -28,7 +27,7 @@ func ShopPorts(d module.Deps) shop.Ports {
 	}
 	return shop.Ports{
 		Catalog:   shopCatalog{},
-		Stock:     shopStock{},
+		Stock:     posops.Merchandise{},
 		Members:   shopMembers{},
 		Payments:  shopPayments{newXenditInvoices(os.Getenv, log)},
 		Messenger: gatewayMessenger{db: d.DB, wa: whatsapp.New(log)},
@@ -37,163 +36,101 @@ func ShopPorts(d module.Deps) shop.Ports {
 	}
 }
 
-type shopCatalog struct{}
+// shopCatalog composes pos-ops' merchandise catalog with the shop's web
+// channel rows (pos.pos_products joined with shop.product_channels).
+type shopCatalog struct {
+	pos      posops.Merchandise
+	channels shop.Channels
+}
 
 var _ shop.Catalog = shopCatalog{}
 
-const webProductSelect = `SELECT p.id::text, p.name, p.description, p.long_description, p.image_url,
-	  p.base_price::text, pc.price_override::text, p.weight_gram::text, p.inventory_quantity::text,
-	  EXISTS (SELECT 1 FROM pos.pos_product_skus s WHERE s.product_id = p.id AND s.is_active = true)
-	FROM pos.pos_products p
-	JOIN shop.product_channels pc
-	  ON pc.product_id = p.id AND pc.channel_code = 'web' AND pc.is_distributed
-	WHERE p.product_kind = 'merchandise'
-	  AND p.is_active = true AND p.is_available = true`
-
-func scanWebProduct(row pgx.Row) (shop.WebProduct, error) {
-	var p shop.WebProduct
-	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.LongDescription, &p.ImageURL,
-		&p.BasePrice, &p.ChannelPrice, &p.WeightGram, &p.InventoryQuantity, &p.HasActiveSKU)
-	return p, err
-}
-
-func (shopCatalog) WebProducts(ctx context.Context, q database.Querier) ([]shop.WebProduct, error) {
-	rows, err := q.Query(ctx, webProductSelect+` ORDER BY p.name`)
+// webProducts is the merchandise of the web channel rows, by name.
+func (c shopCatalog) webProducts(ctx context.Context, q database.Querier, productID string) ([]shop.WebProduct, error) {
+	prices, err := c.channels.Web(ctx, q, productID)
+	if err != nil || len(prices) == 0 {
+		return nil, err
+	}
+	products, err := c.pos.Products(ctx, q, slices.Collect(maps.Keys(prices)))
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (shop.WebProduct, error) { return scanWebProduct(r) })
-}
-
-func (shopCatalog) WebProduct(ctx context.Context, q database.Querier, id string) (*shop.WebProduct, error) {
-	p, err := scanWebProduct(q.QueryRow(ctx, webProductSelect+` AND p.id = $1::uuid`, id))
-	if database.IsNoRows(err) {
-		return nil, nil
+	out := make([]shop.WebProduct, len(products))
+	for i, p := range products {
+		out[i] = shop.WebProduct{ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription,
+			ImageURL: p.ImageURL, BasePrice: p.BasePrice, ChannelPrice: prices[p.ID], WeightGram: p.WeightGram,
+			InventoryQuantity: p.InventoryQuantity, HasActiveSKU: p.HasActiveSKU}
 	}
-	return &p, err
+	return out, nil
 }
 
-const skuSelect = `SELECT id::text, product_id::text, sku, name, price_override::text, stock_quantity::text
-	FROM pos.pos_product_skus`
-
-func scanSKU(row pgx.Row) (shop.CatalogSKU, error) {
-	var s shop.CatalogSKU
-	err := row.Scan(&s.ID, &s.ProductID, &s.SKU, &s.Name, &s.PriceOverride, &s.StockQuantity)
-	return s, err
+func (c shopCatalog) WebProducts(ctx context.Context, q database.Querier) ([]shop.WebProduct, error) {
+	return c.webProducts(ctx, q, "")
 }
 
-func (shopCatalog) ActiveSKUs(ctx context.Context, q database.Querier, productIDs []string) ([]shop.CatalogSKU, error) {
-	rows, err := q.Query(ctx, skuSelect+` WHERE product_id = ANY($1::uuid[]) AND is_active = true ORDER BY name`, productIDs)
+func (c shopCatalog) WebProduct(ctx context.Context, q database.Querier, id string) (*shop.WebProduct, error) {
+	products, err := c.webProducts(ctx, q, id)
+	if err != nil || len(products) == 0 {
+		return nil, err
+	}
+	return &products[0], nil
+}
+
+func (c shopCatalog) ActiveSKUs(ctx context.Context, q database.Querier, productIDs []string) ([]shop.CatalogSKU, error) {
+	skus, err := c.pos.ActiveSKUs(ctx, q, productIDs)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (shop.CatalogSKU, error) { return scanSKU(r) })
-}
-
-func (shopCatalog) ActiveSKU(ctx context.Context, q database.Querier, skuID, productID string) (*shop.CatalogSKU, error) {
-	s, err := scanSKU(q.QueryRow(ctx, skuSelect+` WHERE id = $1::uuid AND product_id = $2::uuid AND is_active = true`, skuID, productID))
-	if database.IsNoRows(err) {
-		return nil, nil
+	out := make([]shop.CatalogSKU, len(skus))
+	for i, s := range skus {
+		out[i] = shop.CatalogSKU(s)
 	}
-	return &s, err
+	return out, nil
 }
 
-func (shopCatalog) Images(ctx context.Context, q database.Querier, productIDs []string) ([]shop.ProductImage, error) {
-	rows, err := q.Query(ctx, `SELECT product_id::text, url FROM pos.pos_product_images
-		WHERE product_id = ANY($1::uuid[]) ORDER BY display_order`, productIDs)
+func (c shopCatalog) ActiveSKU(ctx context.Context, q database.Querier, skuID, productID string) (*shop.CatalogSKU, error) {
+	s, err := c.pos.ActiveSKU(ctx, q, skuID, productID)
+	if s == nil || err != nil {
+		return nil, err
+	}
+	out := shop.CatalogSKU(*s)
+	return &out, nil
+}
+
+func (c shopCatalog) Images(ctx context.Context, q database.Querier, productIDs []string) ([]shop.ProductImage, error) {
+	images, err := c.pos.Images(ctx, q, productIDs)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[shop.ProductImage])
-}
-
-func (shopCatalog) Cargo(ctx context.Context, q database.Querier, id string) (*string, string, bool, error) {
-	var weight *string
-	var price string
-	err := q.QueryRow(ctx, `SELECT weight_gram::text, base_price::text FROM pos.pos_products
-		WHERE id = $1::uuid AND product_kind = 'merchandise' AND is_active = true`, id).Scan(&weight, &price)
-	if database.IsNoRows(err) {
-		return nil, "", false, nil
+	out := make([]shop.ProductImage, len(images))
+	for i, img := range images {
+		out[i] = shop.ProductImage(img)
 	}
-	return weight, price, err == nil, err
+	return out, nil
 }
 
-func (shopCatalog) ProductKind(ctx context.Context, q database.Querier, id string) (string, bool, error) {
-	var kind string
-	err := q.QueryRow(ctx, `SELECT product_kind FROM pos.pos_products WHERE id = $1::uuid`, id).Scan(&kind)
-	if database.IsNoRows(err) {
-		return "", false, nil
-	}
-	return kind, err == nil, err
+func (c shopCatalog) Cargo(ctx context.Context, q database.Querier, id string) (*string, string, bool, error) {
+	return c.pos.Cargo(ctx, q, id)
 }
 
-func (shopCatalog) Labels(ctx context.Context, q database.Querier, productIDs, skuIDs []string) (map[string]string, map[string]shop.SKULabel, error) {
-	products := map[string]string{}
-	rows, err := q.Query(ctx, `SELECT id::text, name FROM pos.pos_products WHERE id = ANY($1::uuid[])`, productIDs)
+func (c shopCatalog) ProductKind(ctx context.Context, q database.Querier, id string) (string, bool, error) {
+	return c.pos.ProductKind(ctx, q, id)
+}
+
+func (c shopCatalog) Labels(ctx context.Context, q database.Querier, productIDs, skuIDs []string) (map[string]string, map[string]shop.SKULabel, error) {
+	products, skus, err := c.pos.Labels(ctx, q, productIDs, skuIDs)
 	if err != nil {
 		return nil, nil, err
 	}
-	for rows.Next() {
-		var id, name string
-		if err := rows.Scan(&id, &name); err != nil {
-			rows.Close()
-			return nil, nil, err
-		}
-		products[id] = name
+	labels := make(map[string]shop.SKULabel, len(skus))
+	for id, l := range skus {
+		labels[id] = shop.SKULabel(l)
 	}
-	rows.Close()
-	skus := map[string]shop.SKULabel{}
-	rows, err = q.Query(ctx, `SELECT id::text, name, sku FROM pos.pos_product_skus WHERE id = ANY($1::uuid[])`, skuIDs)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id string
-		var l shop.SKULabel
-		if err := rows.Scan(&id, &l.Name, &l.Code); err != nil {
-			return nil, nil, err
-		}
-		skus[id] = l
-	}
-	return products, skus, rows.Err()
+	return products, labels, nil
 }
 
-func (shopCatalog) LocalStock(ctx context.Context, q database.Querier, productID string, skuID *string) (*string, error) {
-	var stock *string
-	var err error
-	if skuID != nil {
-		err = q.QueryRow(ctx, `SELECT stock_quantity::text FROM pos.pos_product_skus WHERE id = $1::uuid`, *skuID).Scan(&stock)
-	} else {
-		err = q.QueryRow(ctx, `SELECT inventory_quantity::text FROM pos.pos_products WHERE id = $1::uuid`, productID).Scan(&stock)
-	}
-	if database.IsNoRows(err) {
-		return nil, nil
-	}
-	return stock, err
-}
-
-// shopStock claims stock with the POS merchandise functions (DB functions,
-// not table writes), like lib/shop's claimLine.
-type shopStock struct{}
-
-func (shopStock) Sell(ctx context.Context, q database.Querier, productID string, skuID *string, qty float64) (*bool, string, error) {
-	var raw []byte
-	var err error
-	if skuID != nil {
-		err = q.QueryRow(ctx, `SELECT public.pos_sell_merchandise_sku_stock($1::uuid, $2::numeric)`, *skuID, qty).Scan(&raw)
-	} else {
-		err = q.QueryRow(ctx, `SELECT public.pos_sell_merchandise_stock($1::uuid, $2::numeric)`, productID, qty).Scan(&raw)
-	}
-	if err != nil {
-		return nil, "", err
-	}
-	var res struct {
-		Success *bool  `json:"success"`
-		Reason  string `json:"reason"`
-	}
-	_ = json.Unmarshal(raw, &res)
-	return res.Success, res.Reason, nil
+func (c shopCatalog) LocalStock(ctx context.Context, q database.Querier, productID string, skuID *string) (*string, error) {
+	return c.pos.LocalStock(ctx, q, productID, skuID)
 }
 
 // shopMembers finds the CRM member whose phone digits end with a suffix.

@@ -1,6 +1,7 @@
 package ticketing
 
 import (
+	"context"
 	"errors"
 	"math"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -24,13 +26,11 @@ type handler struct {
 	svc     *Service
 	guard   Guard
 	venues  Venues
-	limiter *domain.RateLimiter
+	limiter *ratelimit.Limiter
 	now     func() time.Time
 }
 
-// Routes lists every /api/ticketing route except
-// POST /api/ticketing/products/{id}/thumbnail, which writes to Next's
-// local file storage and stays in TS.
+// Routes lists every /api/ticketing route.
 func (h *handler) Routes() []module.Route {
 	admin, op, reports := iam.TicketingAdmin, iam.TicketingOperator, iam.TicketingReports
 	r := func(pattern string, menus []string, fn venueFunc) module.Route {
@@ -94,6 +94,7 @@ func (h *handler) Routes() []module.Route {
 		r("GET /api/ticketing/products/loket-options", op, h.loketOptions),
 		r("GET /api/ticketing/products/{id}", admin, h.productDetail),
 		r("PATCH /api/ticketing/products/{id}", admin, h.updateProduct),
+		r("POST /api/ticketing/products/{id}/thumbnail", admin, h.uploadThumbnail),
 		r("PUT /api/ticketing/products/{id}/bundle-items", admin, h.saveBundleItems),
 		r("PUT /api/ticketing/products/{id}/channel-prices", admin, h.saveChannelPrices),
 		r("PATCH /api/ticketing/products/{id}/channels", admin, h.setDistribution),
@@ -125,9 +126,14 @@ func (h *handler) venue(menus []string, fn venueFunc) http.Handler {
 	})
 }
 
-// limit is assertStaffRateLimit: per user and bucket, one-minute window.
-func (h *handler) limit(v Venue, bucket string, max int, msg string) error {
-	if !h.limiter.Allow(bucket+":"+v.UserID, max, h.now()) {
+// limit is assertStaffRateLimit: per user and bucket, one-minute window
+// shared by every replica.
+func (h *handler) limit(ctx context.Context, v Venue, bucket string, max int, msg string) error {
+	w, err := h.limiter.Fixed(ctx, bucket+":"+v.UserID, max, time.Minute, h.now())
+	if err != nil {
+		return err
+	}
+	if !w.Allowed {
 		return httpx.Status(http.StatusTooManyRequests, msg)
 	}
 	return nil

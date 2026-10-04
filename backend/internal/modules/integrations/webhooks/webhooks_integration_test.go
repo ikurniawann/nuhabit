@@ -102,6 +102,7 @@ type fixture struct {
 	env      map[string]string
 	now      time.Time
 	tg       *telegramServer
+	replica  func() *http.ServeMux // a second API process on the same database
 }
 
 type telegramServer struct {
@@ -128,9 +129,12 @@ func newFixture(t *testing.T) *fixture {
 		_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
 	}))
 	t.Cleanup(f.tg.Close)
-	h := NewHandler(tx, Ports{Payments: f.pay, Inbox: f.inbox, Partners: f.partners}, func() time.Time { return f.now },
-		slog.New(slog.NewTextHandler(io.Discard, nil)), func(k string) string { return f.env[k] }, f.tg.URL)
-	f.mux = testutil.Mux(routes(h.Routes()))
+	f.replica = func() *http.ServeMux {
+		h := NewHandler(tx, Ports{Payments: f.pay, Inbox: f.inbox, Partners: f.partners}, func() time.Time { return f.now },
+			slog.New(slog.NewTextHandler(io.Discard, nil)), func(k string) string { return f.env[k] }, f.tg.URL)
+		return testutil.Mux(routes(h.Routes()))
+	}
+	f.mux = f.replica()
 	return f
 }
 
@@ -296,6 +300,8 @@ func TestWaInbound(t *testing.T) {
 	for range 9 { // one wrong token was already sent above
 		in("{}", "salah")
 	}
+	expect(t, in("{}", "rahasia"), 429, `{"success":false,"error":"Too many attempts"}`)
+	f.mux = f.replica()
 	expect(t, in("{}", "rahasia"), 429, `{"success":false,"error":"Too many attempts"}`)
 	f.now = f.now.Add(61 * time.Second)
 	expect(t, in("{}", "rahasia"), 200, `{"success":true,"stored":0,"skipped":0}`)

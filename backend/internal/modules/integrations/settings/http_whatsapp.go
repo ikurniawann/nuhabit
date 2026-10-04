@@ -48,7 +48,7 @@ func gatewayGet(ctx context.Context, g *whatsapp.Gateway, path string, timeout t
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-gateway-token", g.Token)
-	res, err := http.DefaultClient.Do(req)
+	res, err := g.HTTPClient().Do(req)
 	if err != nil {
 		return 0, nil, err
 	}

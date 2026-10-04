@@ -10,12 +10,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 
 	"nuhabit/backend/internal/modules/integrations/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Pending is a pending record a QR payment settles: its id and expected
@@ -103,11 +103,9 @@ type Handler struct {
 	now      func() time.Time
 	getenv   func(string) string
 	telegram string // Telegram Bot API base URL
-
-	// authFailures are the recent wrong wa/inbound tokens (anti brute
-	// force, per process like the TS module state).
-	mu           sync.Mutex
-	authFailures []time.Time
+	// limiter counts wrong wa/inbound tokens (anti brute force) across
+	// every replica.
+	limiter *ratelimit.Limiter
 }
 
 // New builds the handler on the pool.
@@ -124,7 +122,7 @@ func NewHandler(db database.DB, p Ports, now func() time.Time, log *slog.Logger,
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Handler{db: db, ports: p, log: log, now: now, getenv: getenv, telegram: telegramAPI}
+	return &Handler{db: db, ports: p, log: log, now: now, getenv: getenv, telegram: telegramAPI, limiter: ratelimit.New(db)}
 }
 
 // Routes lists the webhook routes. They are public (auth.PublicAuthPrefixes)

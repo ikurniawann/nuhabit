@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"context"
 	"crypto/subtle"
 	"net/http"
 	"time"
@@ -30,25 +31,19 @@ func fail(w http.ResponseWriter, status int, msg string) {
 	}{false, msg})
 }
 
-// tooManyFailures drops failures older than the window and reports whether
-// the limit is reached.
-func (h *Handler) tooManyFailures(now time.Time) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	kept := h.authFailures[:0]
-	for _, at := range h.authFailures {
-		if at.After(now.Add(-inboundFailWindow)) {
-			kept = append(kept, at)
-		}
-	}
-	h.authFailures = kept
-	return len(kept) >= inboundFailLimit
+// inboundFailKey counts wrong wa/inbound tokens across every replica.
+const inboundFailKey = "wa-inbound:auth-failures"
+
+// tooManyFailures reports whether the wrong tokens of the last window
+// reached the limit.
+func (h *Handler) tooManyFailures(ctx context.Context, now time.Time) (bool, error) {
+	n, err := h.limiter.SlidingCount(ctx, inboundFailKey, inboundFailWindow, now)
+	return n >= inboundFailLimit, err
 }
 
-func (h *Handler) recordFailure(now time.Time) {
-	h.mu.Lock()
-	h.authFailures = append(h.authFailures, now)
-	h.mu.Unlock()
+func (h *Handler) recordFailure(ctx context.Context, now time.Time) error {
+	_, _, err := h.limiter.Sliding(ctx, inboundFailKey, inboundFailLimit, inboundFailWindow, now)
+	return err
 }
 
 // tokenMatches compares in constant time once the lengths agree.
@@ -63,13 +58,21 @@ func (h *Handler) waInbound(w http.ResponseWriter, r *http.Request) {
 		fail(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	now := h.now()
-	if h.tooManyFailures(now) {
+	ctx, now := r.Context(), h.now()
+	locked, err := h.tooManyFailures(ctx, now)
+	if err != nil {
+		h.log.ErrorContext(ctx, "[wa-inbound] Gagal membaca batas percobaan", "error", err)
+		fail(w, http.StatusInternalServerError, "Terjadi kesalahan server")
+		return
+	}
+	if locked {
 		fail(w, http.StatusTooManyRequests, "Too many attempts")
 		return
 	}
 	if !tokenMatches(r.Header.Get("x-gateway-token"), token) {
-		h.recordFailure(now)
+		if err := h.recordFailure(ctx, now); err != nil {
+			h.log.ErrorContext(ctx, "[wa-inbound] Gagal mencatat token salah", "error", err)
+		}
 		fail(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}

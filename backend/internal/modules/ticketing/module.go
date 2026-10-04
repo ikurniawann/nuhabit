@@ -3,8 +3,8 @@ package ticketing
 import (
 	"log/slog"
 
-	"nuhabit/backend/internal/modules/ticketing/domain"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Name is the MODULES key.
@@ -22,5 +22,9 @@ func New(deps module.Deps, ports Ports) module.Module {
 		log = slog.Default()
 	}
 	svc := NewService(deps.DB, ports, deps.Now, log)
-	return mod{h: &handler{svc: svc, guard: deps.Auth, venues: ports.Venues, limiter: domain.NewRateLimiter(), now: svc.now}}
+	return mod{h: newHandler(svc, deps.Auth, ports.Venues)}
+}
+
+func newHandler(svc *Service, guard Guard, venues Venues) *handler {
+	return &handler{svc: svc, guard: guard, venues: venues, limiter: ratelimit.New(svc.db), now: svc.now}
 }

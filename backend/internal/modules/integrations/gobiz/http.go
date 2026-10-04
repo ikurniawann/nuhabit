@@ -1,8 +1,8 @@
 // Package gobiz ports the GoBiz / GoFood integration settings and webhook:
 // frontend/src/app/api/settings/gobiz (GET, PUT, POST actions) and
 // POST /api/integrations/gobiz/webhook/{token}, with lib/gobiz. The
-// cashier's GoFood order actions live in possales/gofood; the image
-// converter /api/public/gofood-image stays in Next (sharp + local files).
+// cashier's GoFood order actions live in possales/gofood. The public image
+// converter /api/public/gofood-image/{file} is in image.go.
 package gobiz
 
 import (
@@ -70,6 +70,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "PUT /api/settings/gobiz", Handler: httpx.Handle(h.putSettings)},
 		{Pattern: "POST /api/settings/gobiz/actions", Handler: httpx.Handle(h.action)},
 		{Pattern: "POST /api/integrations/gobiz/webhook/{token}", Handler: httpx.Handle(h.webhook)},
+		{Pattern: "GET /api/public/gofood-image/{file}", Handler: http.HandlerFunc(h.gofoodImage)},
 	}
 }
 

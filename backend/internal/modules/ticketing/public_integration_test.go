@@ -87,7 +87,7 @@ func newPublicFixture(t *testing.T) *publicFixture {
 	venues := fixedVenue{f.venue.CompanyID, f.venue.BranchID}
 	svc := NewService(f.tx, Ports{Venues: venues, Employees: sqlEmployees{}, Messenger: f.wa, AppOrigin: "https://tiket.example",
 		Public: PublicPorts{Payments: p.pay, Promo: p.promo, Branches: fakeBranches{}}}, nil, discard)
-	f.mux = testutil.Mux(mod{h: &handler{svc: svc, guard: headerGuard{}, venues: venues, limiter: domain.NewRateLimiter(), now: time.Now}})
+	f.mux = testutil.Mux(mod{h: newHandler(svc, headerGuard{}, venues)})
 	f.ok(f.call("PUT", "/api/ticketing/settings", map[string]any{"booking_slug": p.slug}))
 	f.exec(`UPDATE ticketing.ticket_channels SET is_online = true, is_active = true WHERE id = $1`, f.web)
 	return p

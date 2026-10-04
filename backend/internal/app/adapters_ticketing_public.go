@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"nuhabit/backend/internal/modules/configuration/branches"
 	"nuhabit/backend/internal/modules/storedvalue"
 	"nuhabit/backend/internal/modules/storedvalue/promo"
 	"nuhabit/backend/internal/modules/ticketing"
@@ -27,7 +28,7 @@ func ticketingPublicPorts(d module.Deps) ticketing.PublicPorts {
 	return ticketing.PublicPorts{
 		Payments: ticketingPayments{newXenditInvoices(os.Getenv, log)},
 		Promo:    ticketingPromo{storedvalue.NewPromo(d, storedValuePorts(d))},
-		Branches: ticketingBranches{},
+		Branches: branches.Service{},
 	}
 }
 
@@ -68,17 +69,4 @@ func (t ticketingPromo) Hold(ctx context.Context, q database.Querier, in ticketi
 func (t ticketingPromo) Capture(ctx context.Context, q database.Querier, contextType, contextID string) error {
 	_, err := t.s.CapturePromoRedemption(ctx, q, contextType, contextID)
 	return err
-}
-
-// ticketingBranches reads configuration.branches (stopgap until the
-// configuration context exposes it).
-type ticketingBranches struct{}
-
-func (ticketingBranches) Name(ctx context.Context, q database.Querier, branchID string) (*string, error) {
-	var name *string
-	err := q.QueryRow(ctx, `SELECT name FROM configuration.branches WHERE id = $1`, branchID).Scan(&name)
-	if database.IsNoRows(err) {
-		return nil, nil
-	}
-	return name, err
 }

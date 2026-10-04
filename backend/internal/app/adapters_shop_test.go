@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/shop"
 	"nuhabit/backend/internal/modules/ticketing"
 	"nuhabit/backend/internal/platform/httpx"
@@ -83,7 +84,7 @@ func TestShopCatalogStockAndMemberAdapters(t *testing.T) {
 
 	// Claims go through the POS functions: a product with variants needs
 	// one, a tracked product loses stock and gets it back.
-	s := shopStock{}
+	s := posops.Merchandise{}
 	if ok, reason, _ := s.Sell(ctx, tx, variants, nil, 1); ok == nil || *ok || reason != "variant_required" {
 		t.Errorf("variant claim = %v %s", ok, reason)
 	}
@@ -103,9 +104,6 @@ func TestShopCatalogStockAndMemberAdapters(t *testing.T) {
 	digits := member.Phone[len(member.Phone)-10:]
 	if id, err := (shopMembers{}).ByPhoneSuffix(ctx, tx, digits); err != nil || id != member.CustomerID {
 		t.Errorf("member = %s %v", id, err)
-	}
-	if name, err := (ticketingBranches{}).Name(ctx, tx, "00000000-0000-4000-8000-000000000000"); err != nil || name != nil {
-		t.Errorf("missing branch = %v %v", name, err)
 	}
 }
 

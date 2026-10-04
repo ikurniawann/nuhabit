@@ -87,6 +87,8 @@ type fixture struct {
 	wa     *fakeMessenger
 	walkIn string
 	web    string
+	// replica builds a second API process on the same database.
+	replica func() *http.ServeMux
 }
 
 var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -118,8 +120,8 @@ func newFixture(t *testing.T) *fixture {
 		venue: Venue{UserID: staff.UserID, CompanyID: company, BranchID: branch}}
 	venues := fixedVenue{company, branch}
 	svc := NewService(tx, Ports{Venues: venues, Employees: sqlEmployees{}, Messenger: f.wa, AppOrigin: "https://tiket.example"}, nil, discard)
-	h := &handler{svc: svc, guard: headerGuard{}, venues: venues, limiter: domain.NewRateLimiter(), now: time.Now}
-	f.mux = testutil.Mux(mod{h: h})
+	f.mux = testutil.Mux(mod{h: newHandler(svc, headerGuard{}, venues)})
+	f.replica = func() *http.ServeMux { return testutil.Mux(mod{h: newHandler(svc, headerGuard{}, venues)}) }
 
 	// Bootstrap settings and the default channels, as opening the page does.
 	f.ok(f.call("GET", "/api/ticketing/settings", nil))
@@ -702,6 +704,9 @@ func TestValidationAndErrors(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		f.call("GET", "/api/ticketing/bookings/lookup?code=BK-AAAAAA", nil)
 	}
+	f.fail(f.call("GET", "/api/ticketing/bookings/lookup?code=BK-AAAAAA", nil), 429, "Terlalu banyak pencarian — tunggu sebentar")
+	// Every replica counts against the same window.
+	f.mux = f.replica()
 	f.fail(f.call("GET", "/api/ticketing/bookings/lookup?code=BK-AAAAAA", nil), 429, "Terlalu banyak pencarian — tunggu sebentar")
 	// Last: a PostgreSQL error aborts the shared test transaction.
 	f.fail(f.call("GET", "/api/ticketing/visits/not-a-uuid", nil), 400, "Format data tidak valid")
