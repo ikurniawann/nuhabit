@@ -98,6 +98,12 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("POST /api/purchasing/products/{id}/bom", h.addProductBom),
 		kit.Route("PUT /api/purchasing/bom/{id}", h.updateProductBom),
 		kit.Route("DELETE /api/purchasing/bom/{id}", h.deleteProductBom),
+
+		kit.Route("POST /api/purchasing/import/products", h.importProducts),
+		kit.Route("POST /api/purchasing/import/raw-materials", h.importRawMaterials),
+		kit.Route("POST /api/purchasing/import/units", h.importUnits),
+		kit.Route("GET /api/purchasing/export/products", h.exportProducts),
+		kit.Route("GET /api/purchasing/export/raw-materials", h.exportRawMaterials),
 	}
 }
 

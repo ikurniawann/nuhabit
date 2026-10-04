@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ApiError } from "@/lib/api/auth";
 import { query } from "@/lib/db";
+import { capitalizeLandedCosts } from "@/lib/purchasing/landed-cost";
 import {
   ADDITIONAL_COST_REFERENCE_TYPES,
   ADDITIONAL_COST_TYPES,
@@ -9,10 +10,12 @@ import {
 
 /*
  * Biaya tambahan pembelian (freight, bea masuk, handling, ...) per PO atau GRN
- * di purchasing.cogs_additional_costs. Biaya dialokasikan ke baris yang
- * diterima menurut nilai saat COGS diestimasi; tidak ada alokasi tersimpan.
- * Sama dengan Go: internal/modules/inventory/production/additional_costs.go
- * dan domain/landed_cost.go.
+ * di purchasing.cogs_additional_costs. Membuat atau menghapus biaya
+ * memindahkan alokasinya ke (atau dari) nilai stok bahan baku yang dibawa
+ * dokumennya (capitalizeLandedCosts); estimasi COGS hanya menambah bagian
+ * yang belum teralokasi. Sama dengan Go:
+ * internal/modules/inventory/production/additional_costs.go dan
+ * domain/landed_cost.go.
  */
 
 export const additionalCostSchema = z.object({
@@ -140,17 +143,23 @@ async function loadDocumentNumbers(refs: Array<{ type: string; id: string }>) {
   return new Map(rows.map((row) => [row.key, row.number]));
 }
 
-/** Tarif landed cost bahan-bahan BOM dari biaya aktif di dokumen penerimaannya. */
+/**
+ * Tarif landed cost bahan-bahan BOM dari bagian biaya aktif di dokumen
+ * penerimaannya yang belum masuk nilai stok.
+ */
 export async function loadLandedRates(materialIds: string[]) {
   if (materialIds.length === 0) return new Map<string, number>();
   const { lines, totals } = await loadReceivedValues(materialIds);
   if (lines.length === 0) return new Map<string, number>();
   const costs = await query<LandedCost>(
-    `SELECT reference_type, reference_id::text AS reference_id,
-            COALESCE(jumlah_idr, round(jumlah * COALESCE(exchange_rate, 1), 2))::float8 AS amount
-       FROM purchasing.cogs_additional_costs
-      WHERE is_active = true AND ((reference_type = 'GRN' AND reference_id = ANY($1::uuid[]))
-         OR (reference_type = 'PO' AND reference_id = ANY($2::uuid[])))`,
+    `SELECT reference_type, reference_id, amount::float8 AS amount FROM (
+       SELECT c.reference_type, c.reference_id::text AS reference_id,
+              COALESCE(c.jumlah_idr, round(c.jumlah * COALESCE(c.exchange_rate, 1), 2))
+              - COALESCE((SELECT sum(a.amount) FROM inventory.landed_cost_allocations a WHERE a.cost_id = c.id), 0) AS amount
+         FROM purchasing.cogs_additional_costs c
+        WHERE c.is_active = true AND ((c.reference_type = 'GRN' AND c.reference_id = ANY($1::uuid[]))
+           OR (c.reference_type = 'PO' AND c.reference_id = ANY($2::uuid[])))) open
+      WHERE amount > 0`,
     [lines.map((line) => line.grn_id), lines.map((line) => line.po_id)]
   );
   return landedCostRates(costs, lines, totals);
@@ -245,6 +254,7 @@ export async function createAdditionalCost(userId: string, input: AdditionalCost
       userId,
     ]
   );
+  await capitalizeLandedCosts({ costIds: [id], userId });
   const [row] = await readCosts(["c.id = $1::uuid"], [id]);
   return row;
 }
@@ -259,4 +269,5 @@ export async function deleteAdditionalCost(userId: string, id: string) {
     [id, userId]
   );
   if (rows.length === 0) throw notFound;
+  await capitalizeLandedCosts({ costIds: [id], userId });
 }

@@ -6,16 +6,22 @@ import (
 	"regexp"
 	"slices"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/modules/inventory/ledger"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
 )
 
 // Additional purchase costs (freight, duty, handling, ...) on a PO or GRN in
 // purchasing.cogs_additional_costs: lib/purchasing/cogs-additional-cost.ts.
-// They are allocated to received raw materials by value when COGS is
-// estimated (domain.LandedCostRates); nothing is stored per line.
+// Creating or deleting one moves its allocation into or out of the stock
+// value of the raw materials it brought in (ledger.CapitalizeLandedCosts);
+// the COGS estimate adds only the part not allocated yet
+// (domain.LandedCostRates).
 
 var (
 	costReferenceTypes = []string{"PO", "GRN"}
@@ -129,11 +135,16 @@ func (h *handler) createAdditionalCost(w http.ResponseWriter, r *http.Request) e
 		exchange = *rate
 	}
 	var id string
-	if err := h.env.DB.QueryRow(ctx, `INSERT INTO purchasing.cogs_additional_costs (reference_type, reference_id, tipe_biaya, deskripsi,
-		jumlah, currency, exchange_rate, jumlah_idr, tanggal_transaksi, catatan, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::date, CURRENT_DATE), $10, $11, $11) RETURNING id::text`,
-		ref.Type, ref.ID, *costType, description, *amount, currency, exchange, domain.LandedCostIDR(*amount, exchange), date, notes, u.ID,
-	).Scan(&id); err != nil {
+	if err := database.WithTx(ctx, h.env.DB, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `INSERT INTO purchasing.cogs_additional_costs (reference_type, reference_id, tipe_biaya, deskripsi,
+			jumlah, currency, exchange_rate, jumlah_idr, tanggal_transaksi, catatan, created_by, updated_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::date, CURRENT_DATE), $10, $11, $11) RETURNING id::text`,
+			ref.Type, ref.ID, *costType, description, *amount, currency, exchange, domain.LandedCostIDR(*amount, exchange), date, notes, u.ID,
+		).Scan(&id); err != nil {
+			return err
+		}
+		return ledger.CapitalizeLandedCosts(ctx, tx, []string{id}, nil, u.ID, h.env.Now())
+	}); err != nil {
 		return err
 	}
 	a := &kit.Args{}
@@ -155,19 +166,27 @@ func (h *handler) deleteAdditionalCost(w http.ResponseWriter, r *http.Request) e
 	if !validate.IsUUID(id) {
 		return notFound
 	}
-	tag, err := h.env.DB.Exec(r.Context(), `UPDATE purchasing.cogs_additional_costs SET is_active = false, updated_by = $2
-		WHERE id = $1 AND is_active = true`, id, u.ID)
+	ctx := r.Context()
+	err = database.WithTx(ctx, h.env.DB, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE purchasing.cogs_additional_costs SET is_active = false, updated_by = $2
+			WHERE id = $1 AND is_active = true`, id, u.ID)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return notFound
+		}
+		return ledger.CapitalizeLandedCosts(ctx, tx, []string{id}, nil, u.ID, h.env.Now())
+	})
 	if err != nil {
 		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return notFound
 	}
 	return kit.OK(w, kit.Obj("success", true, "data", nil, "message", "Biaya tambahan berhasil dihapus"))
 }
 
-// landedRates is each BOM material's landed cost rate from the active
-// additional costs on the documents that received it.
+// landedRates is each BOM material's landed cost rate from the part of the
+// active additional costs on the documents that received it that is not in
+// the stock value yet.
 func (h *handler) landedRates(ctx context.Context, lines []cogsLine) (map[string]float64, error) {
 	ids := materialIDs(lines)
 	if len(ids) == 0 {
@@ -182,11 +201,14 @@ func (h *handler) landedRates(ctx context.Context, lines []cogsLine) (map[string
 		grns = append(grns, l.GrnID)
 		pos = append(pos, l.PoID)
 	}
-	rows, err := kit.Query(ctx, h.env.DB, `SELECT reference_type, reference_id::text AS reference_id,
-		COALESCE(jumlah_idr, round(jumlah * COALESCE(exchange_rate, 1), 2))::float8 AS amount
-		FROM purchasing.cogs_additional_costs
-		WHERE is_active = true AND ((reference_type = 'GRN' AND reference_id = ANY($1::uuid[]))
-		   OR (reference_type = 'PO' AND reference_id = ANY($2::uuid[])))`, grns, pos)
+	rows, err := kit.Query(ctx, h.env.DB, `SELECT reference_type, reference_id, amount::float8 AS amount FROM (
+		SELECT c.reference_type, c.reference_id::text AS reference_id,
+		       COALESCE(c.jumlah_idr, round(c.jumlah * COALESCE(c.exchange_rate, 1), 2))
+		       - COALESCE((SELECT sum(a.amount) FROM inventory.landed_cost_allocations a WHERE a.cost_id = c.id), 0) AS amount
+		  FROM purchasing.cogs_additional_costs c
+		 WHERE c.is_active = true AND ((c.reference_type = 'GRN' AND c.reference_id = ANY($1::uuid[]))
+		    OR (c.reference_type = 'PO' AND c.reference_id = ANY($2::uuid[])))) open
+		WHERE amount > 0`, grns, pos)
 	if err != nil {
 		return nil, err
 	}

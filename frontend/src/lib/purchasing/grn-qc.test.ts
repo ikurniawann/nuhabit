@@ -42,6 +42,12 @@ vi.mock("@/lib/purchasing/accounting-posting", () => ({
     (postGrnAccountingJournalsMock as unknown as (...a: unknown[]) => unknown)(...args),
 }));
 
+const capitalizeLandedCostsMock = vi.fn(async () => []);
+vi.mock("@/lib/purchasing/landed-cost", () => ({
+  capitalizeLandedCosts: (...args: unknown[]) =>
+    (capitalizeLandedCostsMock as unknown as (...a: unknown[]) => unknown)(...args),
+}));
+
 // ---- Fake query-builder db (FIFO respons per tabel + db.rpc). ------------
 type FakeResult = { data: unknown; error: unknown };
 
@@ -367,6 +373,8 @@ describe("submitGrnQcInspection — EPIC-047 Fase 2 GRN per varian", () => {
     );
     expect(rpcCalls).toHaveLength(0);
     expect(addInventoryFromGrnMock).toHaveBeenCalledTimes(1);
+    // The additional costs on the GRN and its PO join the posted stock.
+    expect(capitalizeLandedCostsMock).toHaveBeenCalledWith({ grnIds: [baseInput([]).grnId], userId: baseInput([]).userId });
   });
 });
 

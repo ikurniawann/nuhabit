@@ -5,6 +5,10 @@ vi.mock("@/lib/db", () => ({
   query: (...args: unknown[]) => queryMock(...args),
   queryOne: vi.fn(),
 }));
+const capitalizeMock = vi.fn(async () => []);
+vi.mock("@/lib/purchasing/landed-cost", () => ({
+  capitalizeLandedCosts: (...args: unknown[]) => (capitalizeMock as unknown as (...a: unknown[]) => unknown)(...args),
+}));
 
 const {
   additionalCostSchema,
@@ -16,7 +20,10 @@ const {
   loadLandedRates,
 } = await import("./cogs-additional-cost");
 
-beforeEach(() => queryMock.mockReset());
+beforeEach(() => {
+  queryMock.mockReset();
+  capitalizeMock.mockClear();
+});
 
 describe("landedCostRates (same cases as the Go domain test)", () => {
   const lines = [
@@ -124,6 +131,8 @@ describe("additional cost store", () => {
     ]);
     const insertParams = queryMock.mock.calls[1][1] as unknown[];
     expect(insertParams.slice(0, 8)).toEqual(["GRN", GRN, "freight", "Ongkir", 10, "USD", 1200, 12000]);
+    // The new cost goes into the stock value of what its GRN brought in.
+    expect(capitalizeMock).toHaveBeenCalledWith({ costIds: ["c1"], userId: "user-1" });
   });
 
   it("404 when the PO does not exist", async () => {
@@ -152,6 +161,7 @@ describe("additional cost store", () => {
   it("soft-deletes once", async () => {
     queryMock.mockResolvedValueOnce([{ id: "c1" }]).mockResolvedValueOnce([]);
     await deleteAdditionalCost("user-1", "11111111-1111-4111-8111-111111111111");
+    expect(capitalizeMock).toHaveBeenCalledWith({ costIds: ["11111111-1111-4111-8111-111111111111"], userId: "user-1" });
     await expect(deleteAdditionalCost("user-1", "11111111-1111-4111-8111-111111111111")).rejects.toMatchObject({
       status: 404,
       message: "Biaya tambahan tidak ditemukan",
@@ -168,5 +178,7 @@ describe("additional cost store", () => {
       .mockResolvedValueOnce([{ reference_type: "GRN", reference_id: GRN, amount: 12000 }]);
     const rates = await loadLandedRates(["rm"]);
     expect(rates.get("rm")).toBeCloseTo(0.1, 12);
+    // Only the part not in the stock value yet raises the estimate.
+    expect(queryMock.mock.calls[2][0]).toContain("inventory.landed_cost_allocations");
   });
 });

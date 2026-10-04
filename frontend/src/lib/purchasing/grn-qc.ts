@@ -395,6 +395,7 @@ export async function submitGrnQcInspection(
         )
       );
 
+  let postedRawMaterial = false;
   for (const item of items) {
     const grnItem = grnItemMap.get(item.grn_item_id)!;
     const accepted = toQty(item.qty_accepted);
@@ -422,6 +423,7 @@ export async function submitGrnQcInspection(
       const unitCost = toQty(grnItem.purchase_order_item?.harga_satuan);
       const warehouseId = grnItem.warehouse_id ?? null;
 
+      postedRawMaterial = true;
       await addInventoryFromGrn(
         db,
         rawMaterialId,
@@ -491,6 +493,11 @@ export async function submitGrnQcInspection(
     grnId,
     userId,
   });
+  // Biaya tambahan di GRN ini dan PO-nya ikut masuk nilai stok yang baru diposting.
+  if (postedRawMaterial) {
+    const { capitalizeLandedCosts } = await import("@/lib/purchasing/landed-cost");
+    await capitalizeLandedCosts({ grnIds: [grnId], userId });
+  }
 
   return {
     inspectionId: inspection.id,

@@ -65,3 +65,23 @@ type StockTransferred struct {
 	SourceWarehouseName string  `json:"source_warehouse_name,omitempty"`
 	DestWarehouseName   string  `json:"dest_warehouse_name,omitempty"`
 }
+
+// TopicLandedCostApplied fires when an additional purchase cost
+// (purchasing.cogs_additional_costs) moves stock value: created, deleted, or
+// reaching a receipt that posted stock (inventory.apply_landed_costs).
+// Accounting posts PURCHASE_LANDED_COST for the positive parts and
+// PURCHASE_LANDED_COST_REVERSAL for the negative ones, keyed by BatchID.
+const TopicLandedCostApplied = "inventory.landed_cost.applied"
+
+// LandedCostApplied is the TopicLandedCostApplied payload. Capitalized went
+// into (negative: came out of) the raw materials' stock value; Expensed had
+// no stock left to carry it. Rupiah.
+type LandedCostApplied struct {
+	BatchID     string  `json:"batch_id"`
+	CostID      string  `json:"cost_id"`
+	CompanyID   *string `json:"company_id"`
+	UserID      string  `json:"user_id"`
+	EntryDate   string  `json:"entry_date"`
+	Capitalized float64 `json:"capitalized"`
+	Expensed    float64 `json:"expensed"`
+}

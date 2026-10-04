@@ -59,7 +59,8 @@ func ApplyOnOrder(ctx context.Context, q database.Querier, p procurement.Purchas
 
 // ApplyGrnStock posts a goods receipt: raw material lines (already in base
 // units) through addInventoryFromGrn, stockable supply item lines through
-// addSupplyStockFromGrn.
+// addSupplyStockFromGrn. Then the additional costs on the GRN and its PO
+// move into the value of the raw materials it brought in.
 func ApplyGrnStock(ctx context.Context, q database.Querier, p procurement.GrnStockReceived, now time.Time) error {
 	stockable, err := stockableSupplies(ctx, q, p.Lines)
 	if err != nil {
@@ -85,7 +86,7 @@ func ApplyGrnStock(ctx context.Context, q database.Querier, p procurement.GrnSto
 			return err
 		}
 	}
-	return nil
+	return ledger.CapitalizeLandedCosts(ctx, q, nil, []string{p.GrnID}, p.UserID, now)
 }
 
 // stockableSupplies is the stockable filter of createGrn's supply posting.
