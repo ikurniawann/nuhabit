@@ -22,7 +22,8 @@ back to Next, so cutover and rollback are one variable.
 
 Set `BACKEND_ENABLED=1` for the deploy. The script builds `backend/`, runs
 `<CONTAINER_NAME>-api` on the network `<CONTAINER_NAME>-net` as uid 1001 with
-`STORAGE_DIR` mounted at `/app/storage` (the same uploads Next uses), waits for
+`STORAGE_DIR` mounted at `/app/storage` (the same uploads Next uses) and
+`PUBLIC_ORIGIN=http://<CONTAINER_NAME>:3000`, waits for
 its health check, then starts Next with
 `BACKEND_URL=http://<CONTAINER_NAME>-api:8080`. If the API is unhealthy, Next
 starts without `BACKEND_URL`.
@@ -41,6 +42,7 @@ service next to `arkiv` in the host's compose file:
     environment:
       DATABASE_URL: postgresql://...      # same as arkiv
       STORAGE_DIR: /app/storage
+      PUBLIC_ORIGIN: http://arkiv:3000    # Next serves public/
     volumes:
       - /srv/arkiv/storage:/app/storage   # same host dir as arkiv
     extra_hosts:
@@ -50,9 +52,16 @@ service next to `arkiv` in the host's compose file:
 and on the `arkiv` service set `BACKEND_URL: http://arkiv-api:8080` (both
 services share the compose network). The API exposes no host port.
 
+`PUBLIC_ORIGIN` is where the API fetches Next's `public/` files, which ship
+only in the Next image: the GoFood photo converter
+(`/api/public/gofood-image/...`) reads a `/products/...` photo from
+`PUBLIC_DIR` first and falls back to `PUBLIC_ORIGIN` over HTTP (that host
+only, 10 s timeout, 15 MB cap). Without it, those photos answer 404.
+
 ## Scaling
 
 Several API replicas may run behind one `BACKEND_URL` (a load balancer or a
-compose `deploy.replicas`): rate limits, live-interview signaling and the
-outbox all coordinate through Postgres. `MODULES=<names>` mounts a subset when
-one module should run as its own service.
+compose `deploy.replicas`): rate limits, live-interview signaling, interview
+recording appends (an advisory lock per part file) and the outbox all
+coordinate through Postgres. `MODULES=<names>` mounts a subset when one module
+should run as its own service.

@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"sync"
 	"testing"
 
 	"nuhabit/backend/internal/modules/integrations/gobiz/domain"
@@ -96,5 +98,66 @@ func TestGofoodImage(t *testing.T) {
 		if rec := get(file); rec.Code != 404 || rec.Body.String() != `{"error":"Gambar tidak ditemukan"}` {
 			t.Fatalf("%s: %d %s", file, rec.Code, rec.Body.String())
 		}
+	}
+}
+
+// The API container has no public/: a /products photo missing locally is
+// fetched from PUBLIC_ORIGIN (the Next container) and processed the same.
+func TestGofoodImageFromPublicOrigin(t *testing.T) {
+	t.Setenv("STORAGE_DIR", filepath.Join(t.TempDir(), "storage"))
+	t.Setenv("PUBLIC_DIR", "")
+	var photo bytes.Buffer
+	if err := png.Encode(&photo, image.NewNRGBA(image.Rect(0, 0, 40, 20))); err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var paths []string
+	fetched := func() []string { mu.Lock(); defer mu.Unlock(); return slices.Clone(paths) }
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		paths = append(paths, r.URL.EscapedPath())
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/products/remote/kopi susu.png":
+			_, _ = w.Write(photo.Bytes())
+		case "/products/remote/huge.png":
+			_, _ = w.Write(make([]byte, maxImageSourceBytes+1))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer origin.Close()
+
+	mux := http.NewServeMux()
+	for _, rt := range (&Handler{}).Routes() {
+		mux.Handle(rt.Pattern, rt.Handler)
+	}
+	get := func(src string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/public/gofood-image/"+domain.EncodeImageSource(src)+".jpg", nil))
+		return rec
+	}
+
+	if rec := get("/products/remote/kopi%20susu.png"); rec.Code != 404 || len(fetched()) != 0 {
+		t.Fatalf("without PUBLIC_ORIGIN: %d, fetched %v", rec.Code, fetched())
+	}
+	t.Setenv("PUBLIC_ORIGIN", origin.URL+"/")
+	rec := get("/products/remote/kopi%20susu.png")
+	if rec.Code != 200 || rec.Header().Get("Content-Type") != "image/jpeg" {
+		t.Fatalf("remote photo: %d %s", rec.Code, rec.Body.String())
+	}
+	if out, err := jpeg.Decode(bytes.NewReader(rec.Body.Bytes())); err != nil || out.Bounds().Dx() != 40 {
+		t.Fatalf("remote decode: %v", err)
+	}
+	if got := fetched(); got[0] != "/products/remote/kopi%20susu.png" {
+		t.Fatalf("fetched %v", got)
+	}
+	for _, src := range []string{"/products/remote/missing.png", "/products/remote/huge.png", "/api/files/products/x.png", "/products/%2e%2e/x.png"} {
+		if rec := get(src); rec.Code != 404 {
+			t.Fatalf("%s: %d", src, rec.Code)
+		}
+	}
+	if got := fetched(); len(got) != 3 {
+		t.Fatalf("only missing public photos go to the origin: %v", got)
 	}
 }

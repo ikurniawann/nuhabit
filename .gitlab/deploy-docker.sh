@@ -112,6 +112,8 @@ docker rm "$API_CONTAINER" >/dev/null 2>&1 || true
 if [ "${BACKEND_ENABLED:-0}" = "1" ]; then
   DOCKER_BUILDKIT=1 docker build --network=host -t "$DOCKER_IMAGE-api:latest" backend
   # uid 1001 sama dengan user nextjs: STORAGE_DIR milik 1001 dengan mode 750.
+  # public/ Next tidak ikut di image API: foto /products untuk GoFood diambil
+  # dari container Next lewat PUBLIC_ORIGIN (satu network).
   docker run -d \
     --name "$API_CONTAINER" \
     --restart unless-stopped \
@@ -123,6 +125,7 @@ if [ "${BACKEND_ENABLED:-0}" = "1" ]; then
     -e DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e STORAGE_DIR=/app/storage \
+    -e PUBLIC_ORIGIN="http://${CONTAINER_NAME}:${CONTAINER_PORT}" \
     "$DOCKER_IMAGE-api:latest"
   # Tunggu HEALTHCHECK bawaan image (api -healthcheck) menjadi healthy.
   api_ready=""
