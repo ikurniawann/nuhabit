@@ -3,7 +3,7 @@ import type {
   JournalEntryItem,
   JournalEntryListFilters,
   JournalEntryPayload,
-} from "./types";
+} from "@/lib/accounting/types";
 
 const BASE = "/api/accounting/journal-entries";
 

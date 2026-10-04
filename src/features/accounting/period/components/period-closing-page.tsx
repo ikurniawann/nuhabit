@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
@@ -18,7 +18,7 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useCloseAccountingPeriod } from "../mutations";
 import {
   useAccountingPeriods,
@@ -32,19 +32,12 @@ export function PeriodClosingPage() {
   const periodParam = searchParams.get("period");
 
   const openPeriodsQuery = useAccountingPeriods({ status: "OPEN" });
-  const openPeriods = openPeriodsQuery.data ?? [];
+  const openPeriods = useMemo(() => openPeriodsQuery.data ?? [], [openPeriodsQuery.data]);
 
-  const [periodId, setPeriodId] = useState(periodParam || "");
+  // Pilihan user > ?period= > period OPEN pertama.
+  const [pickedPeriodId, setPeriodId] = useState("");
+  const periodId = pickedPeriodId || periodParam || openPeriods[0]?.id || "";
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    if (periodParam) setPeriodId(periodParam);
-  }, [periodParam]);
-
-  useEffect(() => {
-    if (periodId || openPeriods.length === 0) return;
-    setPeriodId(openPeriods[0]!.id);
-  }, [periodId, openPeriods]);
 
   const previewQuery = usePeriodClosePreview(periodId || null);
   const preview = previewQuery.data;
@@ -109,7 +102,7 @@ export function PeriodClosingPage() {
                 Tidak ada period OPEN.{" "}
                 <button
                   type="button"
-                  className="text-primary underline-offset-2 hover:underline"
+                  className="text-brand-text underline-offset-2 hover:underline"
                   onClick={() => router.push(PERIOD_ROUTES.accountingPeriod)}
                 >
                   Buka period
@@ -130,7 +123,7 @@ export function PeriodClosingPage() {
 
           {periodId && previewQuery.isLoading ? (
             <div className="py-8 text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             </div>
           ) : null}
 
@@ -162,7 +155,7 @@ export function PeriodClosingPage() {
                     <dd>
                       <Badge
                         variant="outline"
-                        className="border-primary/30 text-primary"
+                        className="border-primary/30 text-brand-text"
                       >
                         {preview.period.status}
                       </Badge>

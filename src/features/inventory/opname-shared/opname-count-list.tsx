@@ -12,6 +12,7 @@ import {
   summarize,
   type OpnameFilter,
 } from "./opname-progress";
+import { formatNumber } from "@/lib/format";
 
 /**
  * Daftar item stok opname — dipakai bahan baku & produk, halaman hitung & riwayat.
@@ -57,27 +58,39 @@ const FILTERS: { value: OpnameFilter; label: string }[] = [
   { value: "selisih", label: "Selisih" },
 ];
 
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
-
 function Variance({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-400">—</span>;
   if (value === 0) return <span className="text-emerald-600">0</span>;
-  if (value > 0) return <span className="font-medium text-emerald-600">+{formatQty(value)}</span>;
-  return <span className="font-medium text-red-600">{formatQty(value)}</span>;
+  if (value > 0)
+    return (
+      <span className="font-medium text-emerald-600">
+        +{formatNumber(value, 4)}
+      </span>
+    );
+  return (
+    <span className="font-medium text-red-600">{formatNumber(value, 4)}</span>
+  );
 }
 
 function StatusMark({ status }: { status: ReturnType<typeof lineStatus> }) {
   if (status === "belum") {
     return (
-      <span className="inline-block size-5 rounded-full border-2 border-gray-300" aria-label="Belum dihitung" title="Belum dihitung" />
+      <span
+        className="inline-block size-5 rounded-full border-2 border-gray-300"
+        aria-label="Belum dihitung"
+        title="Belum dihitung"
+      />
     );
   }
   return (
     <CheckCircleSolid
-      className={cn("size-5", status === "selisih" ? "text-amber-500" : "text-emerald-600")}
-      aria-label={status === "selisih" ? "Sudah dihitung, ada selisih" : "Sudah dihitung"}
+      className={cn(
+        "size-5",
+        status === "selisih" ? "text-amber-500" : "text-emerald-600",
+      )}
+      aria-label={
+        status === "selisih" ? "Sudah dihitung, ada selisih" : "Sudah dihitung"
+      }
     />
   );
 }
@@ -106,7 +119,7 @@ export function OpnameCountList({
       sudah: stats.sudah,
       selisih: stats.selisih,
     }),
-    [items.length, stats]
+    [items.length, stats],
   );
 
   const visible = useMemo(() => {
@@ -114,7 +127,10 @@ export function OpnameCountList({
     return items.filter(
       (item) =>
         matchesFilter(item, filter) &&
-        (!q || item.name.toLowerCase().includes(q) || item.code.toLowerCase().includes(q) || (item.subtitle ?? "").toLowerCase().includes(q))
+        (!q ||
+          item.name.toLowerCase().includes(q) ||
+          item.code.toLowerCase().includes(q) ||
+          (item.subtitle ?? "").toLowerCase().includes(q)),
     );
   }, [items, filter, search]);
 
@@ -135,13 +151,33 @@ export function OpnameCountList({
         <div>
           <div className="flex items-center justify-between text-xs text-gray-600">
             <span>
-              <span className="font-semibold text-gray-900">{stats.sudah}</span>/{stats.total} dihitung
-              {stats.selisih > 0 ? <span className="text-amber-600"> · {stats.selisih} selisih</span> : null}
+              <span className="font-semibold text-gray-900">{stats.sudah}</span>
+              /{stats.total} dihitung
+              {stats.selisih > 0 ? (
+                <span className="text-amber-600">
+                  {" "}
+                  · {stats.selisih} selisih
+                </span>
+              ) : null}
             </span>
-            <span className="font-semibold tabular-nums text-gray-900">{stats.persen}%</span>
+            <span className="font-semibold tabular-nums text-gray-900">
+              {stats.persen}%
+            </span>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-valuenow={stats.persen} aria-valuemin={0} aria-valuemax={100}>
-            <div className={cn("h-full rounded-full transition-all", stats.persen === 100 ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${stats.persen}%` }} />
+          <div
+            className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100"
+            role="progressbar"
+            aria-valuenow={stats.persen}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div
+              className={cn(
+                "h-full rounded-full transition-all",
+                stats.persen === 100 ? "bg-emerald-500" : "bg-amber-500",
+              )}
+              style={{ width: `${stats.persen}%` }}
+            />
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -152,10 +188,20 @@ export function OpnameCountList({
               onClick={() => setFilter(f.value)}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                filter === f.value ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                filter === f.value
+                  ? "border-gray-900 bg-gray-900 text-white"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
               )}
             >
-              {f.label} <span className={cn("tabular-nums", filter === f.value ? "text-white/70" : "text-gray-400")}>{counts[f.value]}</span>
+              {f.label}{" "}
+              <span
+                className={cn(
+                  "tabular-nums",
+                  filter === f.value ? "text-white/70" : "text-gray-400",
+                )}
+              >
+                {counts[f.value]}
+              </span>
             </button>
           ))}
         </div>
@@ -172,10 +218,16 @@ export function OpnameCountList({
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-sm text-gray-400">Memuat data...</p>
+        <p className="py-10 text-center text-sm text-gray-400">
+          Memuat data...
+        </p>
       ) : visible.length === 0 ? (
         <p className="py-10 text-center text-sm text-gray-400">
-          {items.length === 0 ? emptyText : filter === "belum" && stats.belum === 0 ? "Semua item sudah dihitung 🎉" : "Data tidak ditemukan"}
+          {items.length === 0
+            ? emptyText
+            : filter === "belum" && stats.belum === 0
+              ? "Semua item sudah dihitung 🎉"
+              : "Data tidak ditemukan"}
         </p>
       ) : (
         <>
@@ -188,13 +240,21 @@ export function OpnameCountList({
                   key={item.key}
                   className={cn(
                     "rounded-xl border p-3 transition-colors",
-                    status === "belum" ? "border-gray-200 bg-white" : status === "selisih" ? "border-amber-200 bg-amber-50/40" : "border-emerald-200 bg-emerald-50/40"
+                    status === "belum"
+                      ? "border-gray-200 bg-white"
+                      : status === "selisih"
+                        ? "border-amber-200 bg-amber-50/40"
+                        : "border-emerald-200 bg-emerald-50/40",
                   )}
                 >
                   <div className="flex items-start gap-2.5">
-                    <div className="pt-0.5"><StatusMark status={status} /></div>
+                    <div className="pt-0.5">
+                      <StatusMark status={status} />
+                    </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900">{item.name}</p>
+                      <p className="truncate text-sm font-semibold text-gray-900">
+                        {item.name}
+                      </p>
                       <p className="truncate text-xs text-gray-500">
                         <span className="font-mono">{item.code}</span>
                         {item.subtitle ? ` · ${item.subtitle}` : ""}
@@ -208,7 +268,9 @@ export function OpnameCountList({
                     </div>
                     <div className="text-right">
                       <span className="text-gray-400">Sistem </span>
-                      <span className="font-semibold tabular-nums text-gray-900">{formatQty(item.qtySystem)}</span>
+                      <span className="font-semibold tabular-nums text-gray-900">
+                        {formatNumber(item.qtySystem, 4)}
+                      </span>
                     </div>
                   </div>
                   <div className="mt-2 flex items-center gap-2">
@@ -224,7 +286,9 @@ export function OpnameCountList({
                         step="any"
                         enterKeyHint="next"
                         value={item.qtyInput}
-                        onChange={(e) => onQtyChange?.(item.key, e.target.value)}
+                        onChange={(e) =>
+                          onQtyChange?.(item.key, e.target.value)
+                        }
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             e.preventDefault();
@@ -239,7 +303,11 @@ export function OpnameCountList({
                     ) : (
                       <div className="flex-1 text-right">
                         <span className="text-xs text-gray-400">Fisik </span>
-                        <span className="text-lg font-semibold tabular-nums text-gray-900">{item.qtyInput === "" ? "—" : formatQty(Number(item.qtyInput))}</span>
+                        <span className="text-lg font-semibold tabular-nums text-gray-900">
+                          {item.qtyInput === ""
+                            ? "—"
+                            : formatNumber(Number(item.qtyInput), 4)}
+                        </span>
                       </div>
                     )}
                     {editable && onFillSystem ? (
@@ -257,7 +325,9 @@ export function OpnameCountList({
                       </button>
                     ) : null}
                     <div className="w-16 shrink-0 text-right text-sm">
-                      <p className="text-[10px] uppercase tracking-wide text-gray-400">Selisih</p>
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400">
+                        Selisih
+                      </p>
                       <Variance value={item.variance} />
                     </div>
                   </div>
@@ -284,15 +354,31 @@ export function OpnameCountList({
                 {visible.map((item) => {
                   const status = lineStatus(item);
                   return (
-                    <tr key={item.key} className={cn("border-b border-gray-200/70 hover:bg-gray-50/80", status === "belum" ? "" : "bg-emerald-50/20")}>
-                      <td className="px-3 py-3"><StatusMark status={status} /></td>
-                      <td className="px-3 py-3 font-mono text-xs text-gray-600">{item.code}</td>
+                    <tr
+                      key={item.key}
+                      className={cn(
+                        "border-b border-gray-200/70 hover:bg-gray-50/80",
+                        status === "belum" ? "" : "bg-emerald-50/20",
+                      )}
+                    >
+                      <td className="px-3 py-3">
+                        <StatusMark status={status} />
+                      </td>
+                      <td className="px-3 py-3 font-mono text-xs text-gray-600">
+                        {item.code}
+                      </td>
                       <td className="px-3 py-3 font-medium text-gray-900">
                         {item.name}
-                        {item.subtitle ? <p className="mt-0.5 text-xs font-normal text-gray-400">{item.subtitle}</p> : null}
+                        {item.subtitle ? (
+                          <p className="mt-0.5 text-xs font-normal text-gray-400">
+                            {item.subtitle}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-3 py-3 text-gray-600">{item.unit}</td>
-                      <td className="px-3 py-3 text-right text-gray-700">{formatQty(item.qtySystem)}</td>
+                      <td className="px-3 py-3 text-right text-gray-700">
+                        {formatNumber(item.qtySystem, 4)}
+                      </td>
                       <td className="px-3 py-3 text-right">
                         {editable ? (
                           <Input
@@ -300,17 +386,25 @@ export function OpnameCountList({
                             min={0}
                             step="any"
                             value={item.qtyInput}
-                            onChange={(e) => onQtyChange?.(item.key, e.target.value)}
+                            onChange={(e) =>
+                              onQtyChange?.(item.key, e.target.value)
+                            }
                             disabled={busy}
                             className="ml-auto h-9 w-28 border-gray-200/80 text-right"
                             placeholder="—"
                             aria-label={`Qty fisik ${item.name}`}
                           />
                         ) : (
-                          <span className="text-gray-700">{item.qtyInput === "" ? "—" : formatQty(Number(item.qtyInput))}</span>
+                          <span className="text-gray-700">
+                            {item.qtyInput === ""
+                              ? "—"
+                              : formatNumber(Number(item.qtyInput), 4)}
+                          </span>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-right"><Variance value={item.variance} /></td>
+                      <td className="px-3 py-3 text-right">
+                        <Variance value={item.variance} />
+                      </td>
                     </tr>
                   );
                 })}

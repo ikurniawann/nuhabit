@@ -279,5 +279,3 @@ export async function buildExecutiveDashboard(): Promise<ExecutiveDashboard> {
     gagal: [...gagal, ...overview.gagal.map((g) => `overview:${g}`)],
   };
 }
-
-export const EXECUTIVE_DASHBOARD_ROLES = ["super_admin", "direksi"] as const;

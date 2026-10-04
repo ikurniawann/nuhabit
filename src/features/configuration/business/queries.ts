@@ -1,7 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchBusinessTree } from "./api";
+import {
+  fetchBusinessTree,
+  fetchCompanyProfile,
+  fetchReceiptSettings,
+} from "./api";
 import { businessQueryKeys } from "./query-keys";
 
 export const useBusinessTree = (enabled = true) =>
@@ -11,4 +15,16 @@ export const useBusinessTree = (enabled = true) =>
     enabled,
     retry: 1,
     staleTime: 60_000,
+  });
+
+export const useReceiptSettings = () =>
+  useQuery({
+    queryKey: businessQueryKeys.receipt(),
+    queryFn: fetchReceiptSettings,
+  });
+
+export const useCompanyProfile = () =>
+  useQuery({
+    queryKey: businessQueryKeys.companyProfile(),
+    queryFn: fetchCompanyProfile,
   });

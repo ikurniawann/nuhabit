@@ -2,16 +2,16 @@ import { apiGet, apiPost } from "@/lib/api-client";
 import type {
   BeginningBalanceSavePayload,
   BeginningBalanceSuggestion,
-} from "./types";
+} from "@/lib/accounting/types";
 
 export const fetchBeginningBalance = (fiscalYearId: string) =>
   apiGet<{ data: BeginningBalanceSuggestion }>(
-    `/api/accounting/fiscal-years/${fiscalYearId}/beginning-balance`
+    `/api/accounting/fiscal-years/${fiscalYearId}/beginning-balance`,
   ).then((res) => res.data);
 
 export const saveBeginningBalanceApi = (
   fiscalYearId: string,
-  body: BeginningBalanceSavePayload
+  body: BeginningBalanceSavePayload,
 ) =>
   apiPost<{
     data: { entry_id: string; status: string };

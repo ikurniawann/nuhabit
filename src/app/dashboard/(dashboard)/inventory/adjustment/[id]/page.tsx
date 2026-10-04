@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 
 type PageProps = {
   params: Promise<{ id: string }>;

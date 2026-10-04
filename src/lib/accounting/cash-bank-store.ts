@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
 import { formatAccountCodeDisplay } from "@/lib/accounting/account-code";
 import { createJournalEntryRecord } from "@/lib/accounting/journal-entry-store";
@@ -351,7 +352,7 @@ async function assertCashBankAccount(
     !row.is_cash_bank ||
     row.company_id !== companyId
   ) {
-    throw new Error("Akun kas/bank tidak valid");
+    throw ApiError.badRequest("Akun kas/bank tidak valid");
   }
   return { id: row.id, code: row.code, name: row.name };
 }
@@ -362,7 +363,7 @@ async function assertOffsetAccount(
   cashAccountId: string
 ): Promise<{ id: string; code: string; name: string }> {
   if (accountId === cashAccountId) {
-    throw new Error("Akun lawan tidak boleh sama dengan akun kas/bank");
+    throw ApiError.badRequest("Akun lawan tidak boleh sama dengan akun kas/bank");
   }
   const row = await queryOne<{
     id: string;
@@ -383,7 +384,7 @@ async function assertOffsetAccount(
     !row.is_postable ||
     row.company_id !== companyId
   ) {
-    throw new Error("Akun lawan tidak valid / tidak postable");
+    throw ApiError.badRequest("Akun lawan tidak valid / tidak postable");
   }
   return { id: row.id, code: row.code, name: row.name };
 }
@@ -405,7 +406,7 @@ export async function createCashMovement(opts: {
   memo?: string | null;
 }): Promise<CashMovementRow> {
   const amount = round2(opts.amount);
-  if (!(amount > 0)) throw new Error("Amount harus lebih dari 0");
+  if (!(amount > 0)) throw ApiError.badRequest("Amount harus lebih dari 0");
 
   const cash = await assertCashBankAccount(opts.companyId, opts.cashAccountId);
   const offset = await assertOffsetAccount(
@@ -613,9 +614,9 @@ export async function createCashTransfer(opts: {
   memo?: string | null;
 }): Promise<CashTransferRow> {
   const amount = round2(opts.amount);
-  if (!(amount > 0)) throw new Error("Amount harus lebih dari 0");
+  if (!(amount > 0)) throw ApiError.badRequest("Amount harus lebih dari 0");
   if (opts.fromAccountId === opts.toAccountId) {
-    throw new Error("Akun asal dan tujuan tidak boleh sama");
+    throw ApiError.badRequest("Akun asal dan tujuan tidak boleh sama");
   }
 
   const from = await assertCashBankAccount(opts.companyId, opts.fromAccountId);

@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGet, apiPost, buildListUrl } from "@/lib/api-client";
+import { formatDateTime, formatNumber } from "@/lib/format";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -12,6 +15,7 @@ import {
   Send,
   Smartphone,
 } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 /**
  * EPIC-012 Fase A — riwayat pesan WhatsApp: siapa penerimanya, apa statusnya.
@@ -61,72 +65,72 @@ const STATUS_LABELS: Record<WaMessage["status"], string> = {
   queued: "Antre",
 };
 
-const dateTime = new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" });
-const angka = new Intl.NumberFormat("id-ID");
+type HistoryFilters = {
+  direction: string;
+  type: string;
+  status: string;
+  search: string;
+};
+
+function fetchMessageHistory(filters: HistoryFilters) {
+  const params = Object.fromEntries(
+    Object.entries(filters).map(([key, value]) => [
+      key,
+      value === "all" ? undefined : value || undefined,
+    ]),
+  );
+  return apiGet<{ data: { messages?: WaMessage[]; summary?: Summary } }>(
+    buildListUrl("/api/settings/wa-gateway/messages", params),
+  ).then((r) => r.data);
+}
+
+/** Teks cari yang baru ikut berubah setelah jeda ketik. */
 
 export function WaMessageHistory() {
-  const [messages, setMessages] = useState<WaMessage[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [loading, setLoading] = useState(true);
   const [direction, setDirection] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ error: string | null; message: string | null }>({
+  const [feedback, setFeedback] = useState<{
+    error: string | null;
+    message: string | null;
+  }>({
     error: null,
     message: null,
   });
 
-  const load = useCallback(async () => {
-    const sp = new URLSearchParams();
-    if (direction !== "all") sp.set("direction", direction);
-    if (typeFilter !== "all") sp.set("type", typeFilter);
-    if (statusFilter !== "all") sp.set("status", statusFilter);
-    if (search.trim()) sp.set("search", search.trim());
-
-    try {
-      const response = await fetch(`/api/settings/wa-gateway/messages?${sp.toString()}`, {
-        cache: "no-store",
-      });
-      const json = await response.json();
-      if (!response.ok || !json.success) {
-        throw new Error(json.error || "Gagal memuat riwayat pesan");
-      }
-      setMessages(json.data.messages ?? []);
-      setSummary(json.data.summary ?? null);
-      setFeedback((current) => ({ ...current, error: null }));
-    } catch (error) {
-      setFeedback({
-        error: error instanceof Error ? error.message : "Gagal memuat riwayat pesan",
-        message: null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [direction, typeFilter, statusFilter, search]);
-
-  useEffect(() => {
-    setLoading(true);
-    const timer = setTimeout(() => void load(), 250);
-    return () => clearTimeout(timer);
-  }, [load]);
+  const debouncedSearch = useDebouncedValue(search.trim(), 250);
+  const filters = {
+    direction,
+    type: typeFilter,
+    status: statusFilter,
+    search: debouncedSearch,
+  };
+  const historyQuery = useQuery({
+    queryKey: ["settings", "wa-gateway", "messages", filters],
+    queryFn: () => fetchMessageHistory(filters),
+  });
+  const messages = historyQuery.data?.messages ?? [];
+  const summary = historyQuery.data?.summary ?? null;
+  const loading = historyQuery.isLoading;
+  const loadError =
+    historyQuery.error instanceof Error ? historyQuery.error.message : null;
+  const shownError = feedback.error ?? loadError;
+  const load = async () => {
+    await historyQuery.refetch();
+  };
 
   async function resend(message: WaMessage) {
     setResendingId(message.id);
     setFeedback({ error: null, message: null });
 
     try {
-      const response = await fetch("/api/settings/wa-gateway/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: message.id }),
+      await apiPost("/api/settings/wa-gateway/messages", { id: message.id });
+      setFeedback({
+        error: null,
+        message: `Pesan ke ${message.phone} dikirim ulang.`,
       });
-      const json = await response.json();
-      if (!response.ok || !json.success) {
-        throw new Error(json.error || "Gagal mengirim ulang");
-      }
-      setFeedback({ error: null, message: `Pesan ke ${message.phone} dikirim ulang.` });
       await load();
     } catch (error) {
       setFeedback({
@@ -142,26 +146,34 @@ export function WaMessageHistory() {
     <div className="space-y-4">
       {summary && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <SummaryCard icon={ArrowUpRight} label="Pesan keluar" value={angka.format(summary.total_out)} />
-          <SummaryCard icon={ArrowDownLeft} label="Pesan masuk" value={angka.format(summary.total_in)} />
+          <SummaryCard
+            icon={ArrowUpRight}
+            label="Pesan keluar"
+            value={formatNumber(summary.total_out)}
+          />
+          <SummaryCard
+            icon={ArrowDownLeft}
+            label="Pesan masuk"
+            value={formatNumber(summary.total_in)}
+          />
           <SummaryCard
             icon={Send}
             label="Gagal kirim"
-            value={angka.format(summary.total_failed)}
+            value={formatNumber(summary.total_failed)}
             tone={summary.total_failed > 0 ? "red" : "default"}
           />
         </div>
       )}
 
-      {(feedback.error || feedback.message) && (
+      {(shownError || feedback.message) && (
         <div
           className={`rounded-md border px-4 py-3 text-sm ${
-            feedback.error
+            shownError
               ? "border-red-200 bg-red-50 text-red-700"
               : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
-          {feedback.error || feedback.message}
+          {shownError || feedback.message}
         </div>
       )}
 
@@ -176,17 +188,36 @@ export function WaMessageHistory() {
               className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
             />
           </label>
-          <FilterSelect value={direction} onChange={setDirection} options={[
-            ["all", "Semua arah"], ["out", "Keluar"], ["in", "Masuk"],
-          ]} />
-          <FilterSelect value={typeFilter} onChange={setTypeFilter} options={[
-            ["all", "Semua jenis"], ["otp", "OTP"], ["notification", "Notifikasi"],
-            ["chat", "Chat"], ["broadcast", "Broadcast"],
-          ]} />
-          <FilterSelect value={statusFilter} onChange={setStatusFilter} options={[
-            ["all", "Semua status"], ["sent", "Terkirim"], ["received", "Diterima"],
-            ["failed", "Gagal"],
-          ]} />
+          <FilterSelect
+            value={direction}
+            onChange={setDirection}
+            options={[
+              ["all", "Semua arah"],
+              ["out", "Keluar"],
+              ["in", "Masuk"],
+            ]}
+          />
+          <FilterSelect
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              ["all", "Semua jenis"],
+              ["otp", "OTP"],
+              ["notification", "Notifikasi"],
+              ["chat", "Chat"],
+              ["broadcast", "Broadcast"],
+            ]}
+          />
+          <FilterSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              ["all", "Semua status"],
+              ["sent", "Terkirim"],
+              ["received", "Diterima"],
+              ["failed", "Gagal"],
+            ]}
+          />
         </div>
 
         {loading ? (
@@ -200,8 +231,14 @@ export function WaMessageHistory() {
         ) : (
           <div className="divide-y divide-slate-100">
             {messages.map((message) => (
-              <div key={message.id} className="grid gap-2 px-4 py-3 lg:grid-cols-[24px_220px_1fr_190px] lg:items-start">
-                <div className="pt-0.5" title={message.direction === "out" ? "Keluar" : "Masuk"}>
+              <div
+                key={message.id}
+                className="grid gap-2 px-4 py-3 lg:grid-cols-[24px_220px_1fr_190px] lg:items-start"
+              >
+                <div
+                  className="pt-0.5"
+                  title={message.direction === "out" ? "Keluar" : "Masuk"}
+                >
                   {message.direction === "out" ? (
                     <ArrowUpRight className="size-4 text-slate-400" />
                   ) : (
@@ -216,8 +253,12 @@ export function WaMessageHistory() {
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                     {message.customer_name && <span>+{message.phone}</span>}
                     <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5">
-                      {message.message_type === "otp" && <KeyRound className="size-3" />}
-                      {message.message_type === "chat" && <MessageCircle className="size-3" />}
+                      {message.message_type === "otp" && (
+                        <KeyRound className="size-3" />
+                      )}
+                      {message.message_type === "chat" && (
+                        <MessageCircle className="size-3" />
+                      )}
                       {TYPE_LABELS[message.message_type]}
                     </span>
                     {message.wa_from_me && (
@@ -236,35 +277,45 @@ export function WaMessageHistory() {
                   ) : message.body ? (
                     <span className="line-clamp-2">{message.body}</span>
                   ) : message.media_type ? (
-                    <span className="italic text-slate-400">[{message.media_type}]</span>
+                    <span className="italic text-slate-400">
+                      [{message.media_type}]
+                    </span>
                   ) : (
                     <span className="text-slate-300">—</span>
                   )}
                   {message.error_reason && (
-                    <div className="mt-1 text-xs text-red-600">{message.error_reason}</div>
+                    <div className="mt-1 text-xs text-red-600">
+                      {message.error_reason}
+                    </div>
                   )}
                 </div>
 
                 <div className="flex items-start justify-between gap-2 lg:flex-col lg:items-end">
-                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[message.status]}`}>
+                  <span
+                    className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${STATUS_STYLES[message.status]}`}
+                  >
                     {STATUS_LABELS[message.status]}
                   </span>
-                  <span className="text-xs text-slate-400">{dateTime.format(new Date(message.created_at))}</span>
-                  {message.status === "failed" && message.message_type !== "otp" && message.body && (
-                    <button
-                      type="button"
-                      onClick={() => void resend(message)}
-                      disabled={resendingId === message.id}
-                      className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
-                    >
-                      {resendingId === message.id ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="size-3" />
-                      )}
-                      Kirim ulang
-                    </button>
-                  )}
+                  <span className="text-xs text-slate-400">
+                    {formatDateTime(message.created_at)}
+                  </span>
+                  {message.status === "failed" &&
+                    message.message_type !== "otp" &&
+                    message.body && (
+                      <button
+                        type="button"
+                        onClick={() => void resend(message)}
+                        disabled={resendingId === message.id}
+                        className="inline-flex h-7 items-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                      >
+                        {resendingId === message.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="size-3" />
+                        )}
+                        Kirim ulang
+                      </button>
+                    )}
                 </div>
               </div>
             ))}
@@ -288,9 +339,13 @@ function SummaryCard({
 }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className={`mb-2 flex size-9 items-center justify-center rounded-md ${
-        tone === "red" ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-700"
-      }`}>
+      <div
+        className={`mb-2 flex size-9 items-center justify-center rounded-md ${
+          tone === "red"
+            ? "bg-red-50 text-red-600"
+            : "bg-slate-100 text-slate-700"
+        }`}
+      >
         <Icon className="size-4" />
       </div>
       <div className="text-xl font-semibold text-slate-950">{value}</div>
@@ -315,7 +370,9 @@ function FilterSelect({
       className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
     >
       {options.map(([optionValue, label]) => (
-        <option key={optionValue} value={optionValue}>{label}</option>
+        <option key={optionValue} value={optionValue}>
+          {label}
+        </option>
       ))}
     </select>
   );

@@ -66,7 +66,9 @@ export const BUSINESS_LEVEL_LABELS: Record<BusinessEntityType, string> = {
   warehouse: "Stall",
 };
 
-export const BUSINESS_CHILD_TYPE: Partial<Record<BusinessEntityType, BusinessEntityType>> = {
+export const BUSINESS_CHILD_TYPE: Partial<
+  Record<BusinessEntityType, BusinessEntityType>
+> = {
   holding: "company",
   company: "branch",
   branch: "warehouse",
@@ -78,11 +80,26 @@ export function flattenBusinessTree(tree: BusinessTree): BusinessTreeNode[] {
   for (const holding of tree.holdings) {
     rows.push({ kind: "holding", level: 0, data: holding });
     for (const company of holding.companies) {
-      rows.push({ kind: "company", level: 1, data: company, holdingId: holding.id });
+      rows.push({
+        kind: "company",
+        level: 1,
+        data: company,
+        holdingId: holding.id,
+      });
       for (const branch of company.branches) {
-        rows.push({ kind: "branch", level: 2, data: branch, companyId: company.id });
+        rows.push({
+          kind: "branch",
+          level: 2,
+          data: branch,
+          companyId: company.id,
+        });
         for (const warehouse of branch.warehouses) {
-          rows.push({ kind: "warehouse", level: 3, data: warehouse, branchId: branch.id });
+          rows.push({
+            kind: "warehouse",
+            level: 3,
+            data: warehouse,
+            branchId: branch.id,
+          });
         }
       }
     }

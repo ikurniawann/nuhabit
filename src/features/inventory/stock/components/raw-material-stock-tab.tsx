@@ -7,19 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { formatAmount } from "@/lib/purchasing/utils";
-import {
-  AlertCircle,
-  Eye,
-  Package,
-  Search,
-} from "lucide-react";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { AlertCircle, Eye, Package, Search } from "lucide-react";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { useRawMaterialStock } from "../queries";
-import { listStockWarehouses } from "../api";
+import { useWarehouseLookup } from "@/features/inventory/shared/inventory-lookups";
 import type { RawStockStatus } from "../types";
+import { formatNumber } from "@/lib/format";
 
 const STATUS_STYLES: Record<string, string> = {
   AMAN: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -47,10 +42,6 @@ const STATUS_OPTIONS = [
   { value: "out_of_stock", label: "Stok Habis" },
 ];
 
-function formatQty(value: number | string | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
-
 function resolveDisplay(
   item: {
     qty_onhand: number;
@@ -61,7 +52,7 @@ function resolveDisplay(
     satuan_kecil_nama?: string | null;
     konversi_factor?: number | null;
   },
-  mode: UnitMode
+  mode: UnitMode,
 ) {
   const largeLabel = item.satuan_besar_nama || item.satuan || "—";
   const factor = Number(item.konversi_factor) || 0;
@@ -84,25 +75,19 @@ function resolveDisplay(
 }
 
 export function RawMaterialStockTab() {
+  const warehousesQuery = useWarehouseLookup();
+  const warehouses = useMemo(
+    () => warehousesQuery.data ?? [],
+    [warehousesQuery.data],
+  );
+  const loadingWarehouses = warehousesQuery.isLoading;
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
-  const [warehouses, setWarehouses] = useState<
-    { id: string; name: string; code: string }[]
-  >([]);
-  const [loadingWarehouses, setLoadingWarehouses] = useState(true);
   const [unitMode, setUnitMode] = useState<UnitMode>("besar");
   const [page, setPage] = useState(1);
   const limit = 20;
-
-  useEffect(() => {
-    setLoadingWarehouses(true);
-    listStockWarehouses()
-      .then(setWarehouses)
-      .catch((e) => console.error("Error loading warehouses:", e))
-      .finally(() => setLoadingWarehouses(false));
-  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -121,7 +106,7 @@ export function RawMaterialStockTab() {
         description: w.code,
       })),
     ],
-    [warehouses]
+    [warehouses],
   );
 
   const selectedWarehouseLabel = useMemo(() => {
@@ -137,18 +122,18 @@ export function RawMaterialStockTab() {
     warehouse_id: warehouseFilter,
   });
 
-  const items = listQuery.data?.items ?? [];
+  const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
   const loading = listQuery.isLoading;
   const total = listQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const summary = useMemo(() => {
     const attention = items.filter(
-      (i) => i.status_stok === "MENIPIS" || i.status_stok === "HABIS"
+      (i) => i.status_stok === "MENIPIS" || i.status_stok === "HABIS",
     ).length;
     const totalValue = items.reduce(
       (s, i) => s + (Number(i.total_value) || 0),
-      0
+      0,
     );
     return { attention, totalValue };
   }, [items]);
@@ -156,7 +141,10 @@ export function RawMaterialStockTab() {
   const getStockStatusBadge = (status: RawStockStatus) => {
     const normalized = status || "AMAN";
     return (
-      <Badge variant="outline" className={STATUS_STYLES[normalized] || STATUS_STYLES.AMAN}>
+      <Badge
+        variant="outline"
+        className={STATUS_STYLES[normalized] || STATUS_STYLES.AMAN}
+      >
         {normalized === "MENIPIS" || normalized === "HABIS" ? (
           <AlertCircle className="mr-1 inline h-3 w-3" />
         ) : null}
@@ -170,21 +158,29 @@ export function RawMaterialStockTab() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Total Bahan Baku</p>
+            <p className="text-xs font-medium text-gray-500">
+              Total Bahan Baku
+            </p>
             <p className="mt-1 text-2xl font-bold text-gray-900">{total}</p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Perlu Perhatian (Halaman Ini)</p>
-            <p className="mt-1 text-2xl font-bold text-amber-700">{summary.attention}</p>
+            <p className="text-xs font-medium text-gray-500">
+              Perlu Perhatian (Halaman Ini)
+            </p>
+            <p className="mt-1 text-2xl font-bold text-amber-700">
+              {summary.attention}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Nilai Stok (Halaman Ini)</p>
+            <p className="text-xs font-medium text-gray-500">
+              Nilai Stok (Halaman Ini)
+            </p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
-              {formatAmount(summary.totalValue)}
+              {formatNumber(summary.totalValue)}
             </p>
           </CardContent>
         </Card>
@@ -229,9 +225,13 @@ export function RawMaterialStockTab() {
                 setWarehouseFilter(v || "all");
                 setPage(1);
               }}
-              placeholder={loadingWarehouses ? "Memuat stall..." : "Semua Stall"}
+              placeholder={
+                loadingWarehouses ? "Memuat stall..." : "Semua Stall"
+              }
               searchPlaceholder="Cari stall..."
-              emptyMessage={loadingWarehouses ? "Memuat..." : "Stall tidak ditemukan"}
+              emptyMessage={
+                loadingWarehouses ? "Memuat..." : "Stall tidak ditemukan"
+              }
               disabled={loadingWarehouses}
               className="h-10 w-full lg:w-52"
             />
@@ -240,12 +240,15 @@ export function RawMaterialStockTab() {
       >
         {warehouseFilter === "all" ? (
           <p className="border-b border-gray-200/70 px-5 py-2 text-xs text-gray-500">
-            Menampilkan total stok dari seluruh stall di cabang Anda (bukan per lokasi).
+            Menampilkan total stok dari seluruh stall di cabang Anda (bukan per
+            lokasi).
           </p>
         ) : (
           <p className="border-b border-gray-200/70 px-5 py-2 text-xs text-gray-500">
             Menampilkan stok per lokasi stall:{" "}
-            <span className="font-medium text-gray-700">{selectedWarehouseLabel}</span>
+            <span className="font-medium text-gray-700">
+              {selectedWarehouseLabel}
+            </span>
           </p>
         )}
 
@@ -254,14 +257,22 @@ export function RawMaterialStockTab() {
             <thead>
               <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
                 <th className="py-3 pr-4 text-left font-semibold">Kode</th>
-                <th className="px-3 py-3 text-left font-semibold">Nama Bahan</th>
+                <th className="px-3 py-3 text-left font-semibold">
+                  Nama Bahan
+                </th>
                 <th className="px-3 py-3 text-left font-semibold">Kategori</th>
                 <th className="px-3 py-3 text-right font-semibold">Tersedia</th>
                 <th className="px-3 py-3 text-right font-semibold">Minimum</th>
                 <th className="px-3 py-3 text-left font-semibold">Satuan</th>
-                <th className="px-3 py-3 text-right font-semibold">Harga Satuan</th>
-                <th className="px-3 py-3 text-right font-semibold">Nilai Stok</th>
-                <th className="px-3 py-3 text-center font-semibold">Status Stok</th>
+                <th className="px-3 py-3 text-right font-semibold">
+                  Harga Satuan
+                </th>
+                <th className="px-3 py-3 text-right font-semibold">
+                  Nilai Stok
+                </th>
+                <th className="px-3 py-3 text-center font-semibold">
+                  Status Stok
+                </th>
                 <th className="py-3 pl-3 text-right font-semibold">Aksi</th>
               </tr>
             </thead>
@@ -283,33 +294,45 @@ export function RawMaterialStockTab() {
                 items.map((item) => {
                   const disp = resolveDisplay(item, unitMode);
                   return (
-                    <tr key={item.id} className="transition-colors hover:bg-gray-50/80">
+                    <tr
+                      key={item.id}
+                      className="transition-colors hover:bg-gray-50/80"
+                    >
                       <td className="py-3 pr-4 font-mono text-xs text-gray-600">
                         {item.kode}
                       </td>
-                      <td className="px-3 py-3 font-medium text-gray-900">{item.nama}</td>
+                      <td className="px-3 py-3 font-medium text-gray-900">
+                        {item.nama}
+                      </td>
                       <td className="px-3 py-3 text-xs text-gray-500">
                         {item.kategori || "—"}
                       </td>
                       <td className="px-3 py-3 text-right font-semibold text-blue-700">
-                        {formatQty(disp.qty)}
+                        {formatNumber(disp.qty, 4)}
                       </td>
                       <td className="px-3 py-3 text-right text-gray-700">
-                        {formatQty(disp.min)}
+                        {formatNumber(disp.min, 4)}
                       </td>
-                      <td className="px-3 py-3 text-gray-600">{disp.unitLabel}</td>
+                      <td className="px-3 py-3 text-gray-600">
+                        {disp.unitLabel}
+                      </td>
                       <td className="px-3 py-3 text-right text-gray-700">
-                        {formatAmount(disp.unitCost, { maximumFractionDigits: 2 })}
+                        {formatNumber(disp.unitCost, 2)}
                       </td>
                       <td className="px-3 py-3 text-right font-medium text-gray-800">
-                        {formatAmount(Number(item.total_value) || 0)}
+                        {formatNumber(Number(item.total_value) || 0)}
                       </td>
                       <td className="px-3 py-3 text-center">
                         {getStockStatusBadge(item.status_stok)}
                       </td>
                       <td className="py-3 pl-3 text-right">
                         <Link href={RM_ROUTES.materialsDetail(item.id)}>
-                          <Button variant="ghost" size="sm" className="cursor-pointer" title="Lihat Detail">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="cursor-pointer"
+                            title="Lihat Detail"
+                          >
                             <Eye className="h-4 w-4 text-pink-600" />
                           </Button>
                         </Link>

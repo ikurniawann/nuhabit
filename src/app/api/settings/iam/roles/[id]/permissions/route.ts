@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import {
   getIamRoleFromDb,
@@ -7,71 +8,32 @@ import {
   replaceIamRolePermissionsInDb,
 } from "@/lib/iam/role-repository";
 import { mapRoleDetail } from "@/lib/iam/role-mapper";
+import { normalizeRolePermissions, rolePermissionsSchema } from "@/lib/settings/iam-schemas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: string }).message);
-  }
-  return "Internal server error";
+async function getRoleOr404(id: string) {
+  const row = await getIamRoleFromDb(id);
+  if (!row) throw ApiError.notFound("Role not found");
+  return row;
 }
 
-export async function GET(_request: NextRequest, context: RouteContext) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-    const { id } = await context.params;
-
-    const row = await getIamRoleFromDb(id);
-    if (!row) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    const permissions = await listRolePermissionsMatrixFromDb(id);
-    return NextResponse.json({
-      roleId: id,
-      permissions: mapRoleDetail(row, permissions).permissions,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles/:id/permissions] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
+async function permissionsResponse(id: string, row: Awaited<ReturnType<typeof getRoleOr404>>) {
+  const matrix = await listRolePermissionsMatrixFromDb(id);
+  return NextResponse.json({ roleId: id, permissions: mapRoleDetail(row, matrix).permissions });
 }
 
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.settingsRoles);
-    const { id } = await context.params;
-    const body = await request.json();
+export const GET = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const { id } = await params;
+  return permissionsResponse(id, await getRoleOr404(id));
+}, "GET /api/settings/iam/roles/[id]/permissions");
 
-    const row = await getIamRoleFromDb(id);
-    if (!row) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    const permissions = Array.isArray(body.permissions) ? body.permissions : [];
-    const normalized = permissions
-      .filter(
-        (item: { menuId?: string; isGranted?: boolean }) =>
-          item.menuId && item.isGranted !== false
-      )
-      .map((item: { menuId: string; grantedActions?: string[] }) => ({
-        menuId: item.menuId,
-        grantedActions: Array.isArray(item.grantedActions) ? item.grantedActions : ["read"],
-      }));
-
-    await replaceIamRolePermissionsInDb(id, normalized, user.id);
-
-    const matrix = await listRolePermissionsMatrixFromDb(id);
-    return NextResponse.json({
-      roleId: id,
-      permissions: mapRoleDetail(row, matrix).permissions,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles/:id/permissions] PUT failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  const user = await requireIamMenuPrefix(IAM.settingsRoles);
+  const { id } = await params;
+  const body = await validateBody(request, rolePermissionsSchema);
+  const row = await getRoleOr404(id);
+  await replaceIamRolePermissionsInDb(id, normalizeRolePermissions(body.permissions), user.id);
+  return permissionsResponse(id, row);
+}, "PUT /api/settings/iam/roles/[id]/permissions");

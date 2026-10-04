@@ -38,7 +38,12 @@ function buildInternalTree(tree: BusinessTree): BusinessTreeNodeInternal[] {
         children: branch.warehouses.map((warehouse) => ({
           id: warehouse.id,
           kind: "warehouse" as const,
-          node: { kind: "warehouse", level: 3, data: warehouse, branchId: branch.id },
+          node: {
+            kind: "warehouse",
+            level: 3,
+            data: warehouse,
+            branchId: branch.id,
+          },
           children: [],
         })),
       })),
@@ -51,7 +56,7 @@ export function flattenBusinessTreeDisplay(
   expandedIds: Set<string>,
   depth = 0,
   parentContinuations: boolean[] = [],
-  nodes?: BusinessTreeNodeInternal[]
+  nodes?: BusinessTreeNodeInternal[],
 ): FlatBusinessTreeRow[] {
   const roots = nodes ?? buildInternalTree(tree);
   const rows: FlatBusinessTreeRow[] = [];
@@ -70,7 +75,13 @@ export function flattenBusinessTreeDisplay(
 
     if (hasChildren && expandedIds.has(entry.id)) {
       rows.push(
-        ...flattenBusinessTreeDisplay(tree, expandedIds, depth + 1, [...parentContinuations, !isLast], entry.children)
+        ...flattenBusinessTreeDisplay(
+          tree,
+          expandedIds,
+          depth + 1,
+          [...parentContinuations, !isLast],
+          entry.children,
+        ),
       );
     }
   });
@@ -103,18 +114,6 @@ export function collectExpandableBusinessIds(tree: BusinessTree): string[] {
 
   walkHoldings(tree.holdings);
   return ids;
-}
-
-export function mergeExpandableIds(prev: Set<string>, expandableIds: string[]): Set<string> {
-  let changed = false;
-  const next = new Set(prev);
-  for (const id of expandableIds) {
-    if (!next.has(id)) {
-      next.add(id);
-      changed = true;
-    }
-  }
-  return changed ? next : prev;
 }
 
 export function countBusinessEntities(tree: BusinessTree) {

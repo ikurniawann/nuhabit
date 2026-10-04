@@ -50,7 +50,9 @@ export function RolesTable({
                 selectedId === row.id ? "bg-pink-50/60" : ""
               }`}
             >
-              <td className="px-4 py-3 font-medium text-gray-900">{row.name}</td>
+              <td className="px-4 py-3 font-medium text-gray-900">
+                {row.name}
+              </td>
               <td className="px-4 py-3">
                 <span className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs">
                   {row.code}
@@ -59,7 +61,9 @@ export function RolesTable({
               <td className="max-w-xs truncate px-4 py-3 text-gray-500">
                 {row.description ?? "—"}
               </td>
-              <td className="px-4 py-3 text-gray-700">{row.menuPermissionCount} menus</td>
+              <td className="px-4 py-3 text-gray-700">
+                {row.menuPermissionCount} menus
+              </td>
               <td className="px-4 py-3">
                 <Badge
                   className={

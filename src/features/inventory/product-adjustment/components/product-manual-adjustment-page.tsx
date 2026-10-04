@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,81 +10,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { DsDateTimePicker } from "@/components/design-system";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { listStockWarehouses } from "@/features/inventory/stock/api";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import {
+  useWarehouseLookup,
+  type WarehouseLookup,
+} from "@/features/inventory/shared/inventory-lookups";
+import { adjustProductStock, type AdjustLine } from "../api";
+import { useStallAdjustLines } from "../queries";
 import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
 
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
-type AdjustLine = {
-  key: string;
-  product_id: string;
-  product_kode: string;
-  product_nama: string;
-  satuan: string | null;
-  qty_system: number;
-  qty_actual_input: string;
-};
+const NO_WAREHOUSES: WarehouseLookup[] = [];
+const NO_LINES: AdjustLine[] = [];
 
 export function ProductManualAdjustmentPage() {
   const [warehouseId, setWarehouseId] = useState("");
-  const [warehouses, setWarehouses] = useState<{ id: string; name: string; code: string }[]>([]);
-  const [loadingWarehouses, setLoadingWarehouses] = useState(true);
-  const [adjustDate, setAdjustDate] = useState(new Date().toISOString().slice(0, 10));
+  const warehousesQuery = useWarehouseLookup();
+  const warehouses = warehousesQuery.data ?? NO_WAREHOUSES;
+  const loadingWarehouses = warehousesQuery.isLoading;
+  const [adjustDate, setAdjustDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
   const [notes, setNotes] = useState("");
   const [itemSearch, setItemSearch] = useState("");
-  const [lines, setLines] = useState<AdjustLine[]>([]);
-  const [loading, setLoading] = useState(false);
+  const linesQuery = useStallAdjustLines(warehouseId);
+  const loading = linesQuery.isFetching;
+  // Suntingan per stall; null = belum diubah sejak data stall dimuat.
+  const [edited, setEdited] = useState<{
+    warehouseId: string;
+    lines: AdjustLine[];
+  } | null>(null);
+  const lines =
+    edited?.warehouseId === warehouseId
+      ? edited.lines
+      : warehouseId
+        ? (linesQuery.data ?? NO_LINES)
+        : NO_LINES;
+  const setLines = (update: (prev: AdjustLine[]) => AdjustLine[]) =>
+    setEdited((current) => ({
+      warehouseId,
+      lines: update(
+        current?.warehouseId === warehouseId
+          ? current.lines
+          : (linesQuery.data ?? NO_LINES),
+      ),
+    }));
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    setLoadingWarehouses(true);
-    listStockWarehouses()
-      .then(setWarehouses)
-      .catch(() => toast.error("Gagal memuat stall"))
-      .finally(() => setLoadingWarehouses(false));
-  }, []);
-
-  useEffect(() => {
-    if (!warehouseId) {
-      setLines([]);
-      return;
-    }
-
-    setLoading(true);
-    fetch(`/api/inventory/finished-goods?limit=500&warehouse_id=${warehouseId}`)
-      .then((res) => res.json())
-      .then((json) => {
-        const rows = Array.isArray(json.data?.data)
-          ? json.data.data
-          : Array.isArray(json.data)
-            ? json.data
-            : [];
-        setLines(
-          rows.map((row: Record<string, unknown>) => ({
-            key: String(row.product_id || row.id),
-            product_id: String(row.product_id || row.id),
-            product_kode: String(row.product_kode || ""),
-            product_nama: String(row.product_nama || ""),
-            satuan: (row.satuan_nama as string) || null,
-            qty_system: Number(row.qty_available) || 0,
-            qty_actual_input: "",
-          }))
-        );
-      })
-      .catch(() => toast.error("Gagal memuat daftar produk"))
-      .finally(() => setLoading(false));
-  }, [warehouseId]);
 
   const warehouseOptions = warehouses.map((w) => ({
     value: w.id,
     label: w.name,
     description: w.code,
   }));
-  const selectedWarehouse = warehouseOptions.find((w) => w.value === warehouseId);
+  const selectedWarehouse = warehouseOptions.find(
+    (w) => w.value === warehouseId,
+  );
 
   const filteredLines = useMemo(() => {
     const q = itemSearch.trim().toLowerCase();
@@ -92,7 +73,7 @@ export function ProductManualAdjustmentPage() {
     return lines.filter(
       (line) =>
         line.product_nama.toLowerCase().includes(q) ||
-        line.product_kode.toLowerCase().includes(q)
+        line.product_kode.toLowerCase().includes(q),
     );
   }, [lines, itemSearch]);
 
@@ -110,7 +91,9 @@ export function ProductManualAdjustmentPage() {
 
   const handleLineChange = (key: string, value: string) => {
     setLines((prev) =>
-      prev.map((line) => (line.key === key ? { ...line, qty_actual_input: value } : line))
+      prev.map((line) =>
+        line.key === key ? { ...line, qty_actual_input: value } : line,
+      ),
     );
   };
 
@@ -119,7 +102,7 @@ export function ProductManualAdjustmentPage() {
       prev.map((line) => ({
         ...line,
         qty_actual_input: String(line.qty_system),
-      }))
+      })),
     );
   };
 
@@ -147,11 +130,15 @@ export function ProductManualAdjustmentPage() {
       return !Number.isFinite(n) || n < 0;
     });
     if (invalid) {
-      toast.error("Stok baru harus berupa angka lebih besar atau sama dengan nol");
+      toast.error(
+        "Stok baru harus berupa angka lebih besar atau sama dengan nol",
+      );
       return false;
     }
 
-    const withVariance = toSave.filter((line) => resolveQty(line) !== line.qty_system);
+    const withVariance = toSave.filter(
+      (line) => resolveQty(line) !== line.qty_system,
+    );
     if (withVariance.length === 0) {
       toast.error("Tidak ada selisih stok untuk disimpan");
       return false;
@@ -163,7 +150,9 @@ export function ProductManualAdjustmentPage() {
   const buildNote = () => {
     const stallLabel = selectedWarehouse?.label || STALL_LABELS.singular;
     const base = notes.trim();
-    const dateLabel = adjustDate ? `Penyesuaian ${adjustDate}` : "Penyesuaian Stok";
+    const dateLabel = adjustDate
+      ? `Penyesuaian ${adjustDate}`
+      : "Penyesuaian Stok";
     const prefix = `${dateLabel} (${stallLabel})`;
     return base ? `${prefix}: ${base}` : prefix;
   };
@@ -185,24 +174,18 @@ export function ProductManualAdjustmentPage() {
       for (const line of toSave) {
         const qty = resolveQty(line)!;
         try {
-          const res = await fetch("/api/inventory/finished-goods/adjustment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              product_id: line.product_id,
-              qty_actual: qty,
-              notes: note,
-            }),
+          await adjustProductStock({
+            product_id: line.product_id,
+            qty_actual: qty,
+            notes: note,
           });
-          const json = await res.json();
-          if (!res.ok) {
-            throw new Error(json.message || "Gagal menyesuaikan stok");
-          }
           saved += 1;
           setLines((prev) =>
             prev.map((row) =>
-              row.key === line.key ? { ...row, qty_system: qty, qty_actual_input: "" } : row
-            )
+              row.key === line.key
+                ? { ...row, qty_system: qty, qty_actual_input: "" }
+                : row,
+            ),
           );
         } catch {
           failed += 1;
@@ -274,7 +257,9 @@ export function ProductManualAdjustmentPage() {
                 value={warehouseId}
                 onChange={setWarehouseId}
                 placeholder={
-                  loadingWarehouses ? STALL_LABELS.loading : STALL_LABELS.selectPlaceholder
+                  loadingWarehouses
+                    ? STALL_LABELS.loading
+                    : STALL_LABELS.selectPlaceholder
                 }
                 searchPlaceholder={STALL_LABELS.search}
                 emptyMessage={STALL_LABELS.empty}
@@ -282,7 +267,9 @@ export function ProductManualAdjustmentPage() {
                 className="mt-1.5 h-9 text-sm"
               />
               {selectedWarehouse && (
-                <p className="mt-1 text-xs text-gray-500">{selectedWarehouse.description}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {selectedWarehouse.description}
+                </p>
               )}
             </div>
             <div className="min-w-0 md:col-span-4">
@@ -315,15 +302,21 @@ export function ProductManualAdjustmentPage() {
             <div className="grid grid-cols-3 gap-3 border-t border-gray-200/70 pt-4">
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Total Baris</p>
-                <p className="text-lg font-bold text-gray-900">{progress.total}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {progress.total}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Terisi</p>
-                <p className="text-lg font-bold text-amber-600">{progress.filled}</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {progress.filled}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Ada Selisih</p>
-                <p className="text-lg font-bold text-pink-600">{progress.variance}</p>
+                <p className="text-lg font-bold text-pink-600">
+                  {progress.variance}
+                </p>
               </div>
             </div>
           )}
@@ -334,7 +327,9 @@ export function ProductManualAdjustmentPage() {
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Koreksi Stok</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Koreksi Stok
+              </h2>
               <p className="text-sm text-gray-500">
                 {!warehouseId
                   ? "Pilih stall untuk memuat produk"
@@ -364,30 +359,47 @@ export function ProductManualAdjustmentPage() {
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Kode</th>
-                  <th className="px-4 py-3 text-left font-semibold">Nama Produk</th>
+                  <th className="px-4 py-3 text-left font-semibold">
+                    Nama Produk
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Satuan</th>
-                  <th className="px-4 py-3 text-right font-semibold">Stok Saat Ini</th>
-                  <th className="px-4 py-3 text-right font-semibold">Stok Baru</th>
-                  <th className="px-4 py-3 text-right font-semibold">Selisih</th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Stok Saat Ini
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Stok Baru
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Selisih
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {!warehouseId ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-gray-400"
+                    >
                       Pilih stall terlebih dahulu
                     </td>
                   </tr>
                 ) : loading ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-gray-400"
+                    >
                       <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-pink-600" />
                       Memuat item...
                     </td>
                   </tr>
                 ) : filteredLines.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-4 py-10 text-center text-gray-400"
+                    >
                       {hasItems
                         ? "Data tidak ditemukan"
                         : "Tidak ada produk aktif untuk stall ini"}
@@ -396,7 +408,9 @@ export function ProductManualAdjustmentPage() {
                 ) : (
                   filteredLines.map((line) => {
                     const actual =
-                      line.qty_actual_input === "" ? null : Number(line.qty_actual_input);
+                      line.qty_actual_input === ""
+                        ? null
+                        : Number(line.qty_actual_input);
                     const variance =
                       actual === null || !Number.isFinite(actual)
                         ? null
@@ -410,9 +424,11 @@ export function ProductManualAdjustmentPage() {
                         <td className="px-4 py-3 font-medium text-gray-900">
                           {line.product_nama}
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{line.satuan || "—"}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {line.satuan || "—"}
+                        </td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          {formatQty(line.qty_system)}
+                          {formatNumber(line.qty_system, 4)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Input
@@ -420,7 +436,9 @@ export function ProductManualAdjustmentPage() {
                             min={0}
                             step="any"
                             value={line.qty_actual_input}
-                            onChange={(e) => handleLineChange(line.key, e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(line.key, e.target.value)
+                            }
                             placeholder="0"
                             disabled={submitting}
                             className="ml-auto h-9 w-28 border-gray-200/80 text-right text-sm"
@@ -437,7 +455,7 @@ export function ProductManualAdjustmentPage() {
                                   : "text-red-600"
                           }`}
                         >
-                          {variance === null ? "—" : formatQty(variance)}
+                          {variance === null ? "—" : formatNumber(variance, 4)}
                         </td>
                       </tr>
                     );

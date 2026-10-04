@@ -4,8 +4,8 @@ import Link from "next/link";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useArReceivable } from "../queries";
 import { AR_ROUTES } from "../api";
 
@@ -37,7 +37,7 @@ export function ArReceivablePage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -66,7 +66,7 @@ export function ArReceivablePage() {
                     <td className="px-2 py-3">{row.customer_name || "—"}</td>
                     <td className="px-2 py-3">{row.due_date || "—"}</td>
                     <td className="px-2 py-3 text-right">
-                      {formatAmount(row.outstanding_amount || 0)}
+                      {formatNumber(row.outstanding_amount || 0)}
                     </td>
                     <td className="px-2 py-3">
                       <Badge variant="outline">{row.payment_status}</Badge>

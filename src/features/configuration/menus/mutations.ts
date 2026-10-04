@@ -3,7 +3,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusQueryKeys } from "./query-keys";
 import { createMenu, updateMenu, deleteMenu } from "./api";
-import type { CreateMenuPayload, UpdateMenuPayload } from "./types";
+import type {
+  CreateMenuPayload,
+  UpdateMenuPayload,
+} from "@/lib/iam/menu-types";
 
 function useInvalidateMenus() {
   const qc = useQueryClient();

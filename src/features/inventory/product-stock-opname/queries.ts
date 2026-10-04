@@ -10,7 +10,9 @@ import {
 } from "./api";
 import { productStockOpnameQueryKeys } from "./query-keys";
 
-export const useProductStockOpnameList = (params: ProductStockOpnameListParams) =>
+export const useProductStockOpnameList = (
+  params: ProductStockOpnameListParams,
+) =>
   useQuery({
     queryKey: productStockOpnameQueryKeys.list(params),
     queryFn: () => listProductStockOpnames(params),

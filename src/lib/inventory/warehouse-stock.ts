@@ -1,4 +1,6 @@
 import { query, queryOne } from "@/lib/db";
+import { branchScopeOr, companyScopeOr, type UserScope } from "@/lib/api/scope";
+import { createServerPgClient } from "@/lib/pg/create-client";
 
 function toNumber(value: unknown) {
   const parsed = Number(value);
@@ -197,4 +199,56 @@ export async function listRawMaterialStockByBranch(
   );
 
   return rows.map(mapQueryRow);
+}
+
+/** Filter search (kode/nama) + status stok untuk daftar stok bahan baku. */
+export function filterStockRows(rows: RawMaterialStockRow[], search?: string, status?: string) {
+  let filtered = rows;
+  const q = search?.trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter(
+      (row) => row.material_nama.toLowerCase().includes(q) || row.material_kode.toLowerCase().includes(q)
+    );
+  }
+  if (status === "out_of_stock") return filtered.filter((row) => row.qty_onhand <= 0);
+  if (status === "low_stock") {
+    return filtered.filter(
+      (row) => row.qty_onhand > 0 && computeStockStatus(row.qty_onhand, row.min_stock) === "MENIPIS"
+    );
+  }
+  if (status === "normal") {
+    return filtered.filter((row) => computeStockStatus(row.qty_onhand, row.min_stock) === "AMAN");
+  }
+  return filtered;
+}
+
+export function paginateRows<T>(rows: T[], page: number, limit: number) {
+  const offset = (page - 1) * limit;
+  return { total: rows.length, data: rows.slice(offset, offset + limit) };
+}
+
+const LEGACY_STATUS: Record<string, string> = { out_of_stock: "HABIS", low_stock: "MENIPIS", normal: "AMAN" };
+
+/** Stok tanpa cabang efektif: view lama v_raw_materials_stock dengan filter company/branch. */
+export async function listLegacyRawMaterialStock(opts: {
+  scope: UserScope | null;
+  search?: string;
+  status?: string;
+  page: number;
+  limit: number;
+}) {
+  const { scope, search, status, page, limit } = opts;
+  const db = await createServerPgClient();
+  let q = db.from("v_raw_materials_stock").select("*", { count: "exact" }).is("deleted_at", null).eq("is_active", true);
+  const companyOr = companyScopeOr(scope);
+  if (companyOr) q = q.or(companyOr);
+  const branchOr = branchScopeOr(scope);
+  if (branchOr) q = q.or(branchOr);
+  if (search) q = q.or(`nama.ilike.%${search}%,kode.ilike.%${search}%`);
+  if (status && LEGACY_STATUS[status]) q = q.eq("status_stok", LEGACY_STATUS[status]);
+
+  const offset = (page - 1) * limit;
+  const { data, error, count } = await q.order("nama", { ascending: true }).range(offset, offset + limit - 1);
+  if (error) throw error;
+  return { data: data || [], total: count || 0 };
 }

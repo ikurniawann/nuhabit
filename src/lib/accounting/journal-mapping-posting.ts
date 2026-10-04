@@ -1,10 +1,10 @@
+import { ApiError } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
 import {
   createJournalEntryRecord,
   findJournalEntryBySource,
 } from "@/lib/accounting/journal-entry-store";
-import type { JournalEntryLinePayload } from "@/features/accounting/journal-entries/types";
-import type { JournalMappingLineItem } from "@/features/accounting/journal-mappings/types";
+import type { JournalEntryLinePayload, JournalMappingLineItem } from "./types";
 import type {
   JournalAmountSource,
   JournalEventCode,
@@ -25,6 +25,12 @@ export class AccountingPostError extends Error {
     super(message);
     this.name = "AccountingPostError";
   }
+}
+
+/** Untuk `.catch()` di route: galat posting jurnal tetap 500 tapi pesannya sampai ke user. */
+export function rethrowAccountingPostError(error: unknown): never {
+  if (error instanceof AccountingPostError) throw new ApiError(500, error.message);
+  throw error;
 }
 
 type MappingHeader = {

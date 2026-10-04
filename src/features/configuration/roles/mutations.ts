@@ -57,7 +57,9 @@ export function useUpdateRolePermissions() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: rolesQueryKeys.all });
       qc.invalidateQueries({ queryKey: rolesQueryKeys.detail(variables.id) });
-      qc.invalidateQueries({ queryKey: rolesQueryKeys.permissions(variables.id) });
+      qc.invalidateQueries({
+        queryKey: rolesQueryKeys.permissions(variables.id),
+      });
     },
   });
 }

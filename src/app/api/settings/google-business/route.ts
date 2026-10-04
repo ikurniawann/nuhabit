@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getApiUser } from "@/lib/api/auth";
-import { SETTING_KEYS, getSettings, maskSecret, setSetting } from "@/lib/settings/app-settings";
+import { ApiError, requireApiRole } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import {
+  SETTING_KEYS,
+  getSettings,
+  maskSecret,
+  setSetting,
+} from "@/lib/settings/app-settings";
 import { resetGoogleTokenCache } from "@/lib/crm/google-business-client";
 import { parseLocationIds } from "@/lib/crm/google-reviews";
 
@@ -27,16 +33,7 @@ const updateSchema = z.object({
   location_id: z.string().trim().max(1000).optional(),
 });
 
-async function requireSuperAdmin() {
-  const user = await getApiUser();
-  if (!user) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
-  if (user.role !== "super_admin") {
-    return NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 });
-  }
-  return null;
-}
+const requireSuperAdmin = () => requireApiRole(["super_admin"]);
 
 /** Normalisasi: terima "accounts/123" maupun "123". */
 function withPrefix(value: string, prefix: "accounts" | "locations"): string {
@@ -45,105 +42,93 @@ function withPrefix(value: string, prefix: "accounts" | "locations"): string {
   return trimmed.startsWith(`${prefix}/`) ? trimmed : `${prefix}/${trimmed}`;
 }
 
-export async function GET() {
-  const forbidden = await requireSuperAdmin();
-  if (forbidden) return forbidden;
+export const GET = apiHandler(async () => {
+  await requireSuperAdmin();
+  const stored = await getSettings([
+    SETTING_KEYS.GOOGLE_BP_CLIENT_ID,
+    SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET,
+    SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN,
+    SETTING_KEYS.GOOGLE_BP_ACCOUNT_ID,
+    SETTING_KEYS.GOOGLE_BP_LOCATION_ID,
+  ]);
 
-  try {
-    const stored = await getSettings([
-      SETTING_KEYS.GOOGLE_BP_CLIENT_ID,
-      SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET,
-      SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN,
+  const clientId = stored[SETTING_KEYS.GOOGLE_BP_CLIENT_ID] ?? "";
+  const accountId = stored[SETTING_KEYS.GOOGLE_BP_ACCOUNT_ID] ?? "";
+  const locationId = stored[SETTING_KEYS.GOOGLE_BP_LOCATION_ID] ?? "";
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      // Nilai non-rahasia boleh tampil utuh agar mudah diperiksa.
+      client_id: clientId,
+      account_id: accountId,
+      location_id: locationId,
+      // Rahasia: hanya penanda + samaran.
+      has_client_secret: Boolean(stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET]),
+      client_secret_masked: maskSecret(
+        stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET],
+      ),
+      has_refresh_token: Boolean(stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN]),
+      refresh_token_masked: maskSecret(
+        stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN],
+      ),
+      configured: Boolean(
+        clientId &&
+        accountId &&
+        locationId &&
+        stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET] &&
+        stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN],
+      ),
+    },
+  });
+}, "GET /api/settings/google-business");
+
+export const PUT = apiHandler(async (request: NextRequest) => {
+  await requireSuperAdmin();
+  const parsed = updateSchema.safeParse(await request.json());
+  if (!parsed.success) throw ApiError.badRequest("Payload tidak valid");
+  const payload = parsed.data;
+
+  const updates: [string, string][] = [];
+  if (payload.client_id !== undefined) {
+    updates.push([SETTING_KEYS.GOOGLE_BP_CLIENT_ID, payload.client_id]);
+  }
+  if (payload.account_id !== undefined) {
+    updates.push([
       SETTING_KEYS.GOOGLE_BP_ACCOUNT_ID,
-      SETTING_KEYS.GOOGLE_BP_LOCATION_ID,
+      withPrefix(payload.account_id, "accounts"),
     ]);
-
-    const clientId = stored[SETTING_KEYS.GOOGLE_BP_CLIENT_ID] ?? "";
-    const accountId = stored[SETTING_KEYS.GOOGLE_BP_ACCOUNT_ID] ?? "";
-    const locationId = stored[SETTING_KEYS.GOOGLE_BP_LOCATION_ID] ?? "";
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        // Nilai non-rahasia boleh tampil utuh agar mudah diperiksa.
-        client_id: clientId,
-        account_id: accountId,
-        location_id: locationId,
-        // Rahasia: hanya penanda + samaran.
-        has_client_secret: Boolean(stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET]),
-        client_secret_masked: maskSecret(stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET]),
-        has_refresh_token: Boolean(stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN]),
-        refresh_token_masked: maskSecret(stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN]),
-        configured: Boolean(
-          clientId &&
-            accountId &&
-            locationId &&
-            stored[SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET] &&
-            stored[SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN]
-        ),
-      },
-    });
-  } catch (error) {
-    console.error("Error reading Google Business config:", error);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat konfigurasi" },
-      { status: 500 }
-    );
   }
-}
-
-export async function PUT(request: NextRequest) {
-  const forbidden = await requireSuperAdmin();
-  if (forbidden) return forbidden;
-
-  try {
-    const payload = updateSchema.parse(await request.json());
-
-    const updates: [string, string][] = [];
-    if (payload.client_id !== undefined) {
-      updates.push([SETTING_KEYS.GOOGLE_BP_CLIENT_ID, payload.client_id]);
-    }
-    if (payload.account_id !== undefined) {
-      updates.push([SETTING_KEYS.GOOGLE_BP_ACCOUNT_ID, withPrefix(payload.account_id, "accounts")]);
-    }
-    if (payload.location_id !== undefined) {
-      // Multi-lokasi: tiap entri dinormalkan ke `locations/{id}` lalu
-      // disimpan sebagai daftar dipisah koma — nilai lama satu lokasi tetap sah.
-      updates.push([
-        SETTING_KEYS.GOOGLE_BP_LOCATION_ID,
-        parseLocationIds(payload.location_id).join(","),
-      ]);
-    }
-    // Rahasia hanya ditulis bila benar-benar diisi — field kosong berarti
-    // "jangan ubah", supaya menyimpan perubahan lain tidak menghapus token.
-    if (payload.client_secret) {
-      updates.push([SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET, payload.client_secret]);
-    }
-    if (payload.refresh_token) {
-      updates.push([SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN, payload.refresh_token]);
-    }
-
-    for (const [key, value] of updates) {
-      await setSetting(key, value || null);
-    }
-
-    // Kredensial berubah → token lama tidak boleh dipakai lagi.
-    resetGoogleTokenCache();
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: "Payload tidak valid" }, { status: 400 });
-    }
-    console.error("Error saving Google Business config:", error);
-    return NextResponse.json({ success: false, error: "Gagal menyimpan" }, { status: 500 });
+  if (payload.location_id !== undefined) {
+    // Multi-lokasi: tiap entri dinormalkan ke `locations/{id}` lalu
+    // disimpan sebagai daftar dipisah koma — nilai lama satu lokasi tetap sah.
+    updates.push([
+      SETTING_KEYS.GOOGLE_BP_LOCATION_ID,
+      parseLocationIds(payload.location_id).join(","),
+    ]);
   }
-}
+  // Rahasia hanya ditulis bila benar-benar diisi — field kosong berarti
+  // "jangan ubah", supaya menyimpan perubahan lain tidak menghapus token.
+  if (payload.client_secret) {
+    updates.push([SETTING_KEYS.GOOGLE_BP_CLIENT_SECRET, payload.client_secret]);
+  }
+  if (payload.refresh_token) {
+    updates.push([SETTING_KEYS.GOOGLE_BP_REFRESH_TOKEN, payload.refresh_token]);
+  }
+
+  for (const [key, value] of updates) {
+    await setSetting(key, value || null);
+  }
+
+  // Kredensial berubah → token lama tidak boleh dipakai lagi.
+  resetGoogleTokenCache();
+
+  return NextResponse.json({ success: true });
+}, "PUT /api/settings/google-business");
 
 /** Hapus seluruh kredensial (mis. saat berpindah akun/lokasi). */
-export async function DELETE() {
-  const forbidden = await requireSuperAdmin();
-  if (forbidden) return forbidden;
+export const DELETE = apiHandler(async () => {
+  await requireSuperAdmin();
 
   for (const key of [
     SETTING_KEYS.GOOGLE_BP_CLIENT_ID,
@@ -156,4 +141,4 @@ export async function DELETE() {
   resetGoogleTokenCache();
 
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/settings/google-business");

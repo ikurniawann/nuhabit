@@ -1,34 +1,31 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowPathIcon,
-  ArrowsRightLeftIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import { useQueryClient } from "@tanstack/react-query";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { sortWarehouses } from "@/lib/configuration/sort-warehouses";
-import { isMainStorageCode, isStallCode } from "@/lib/configuration/stall-labels";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { createStockTransfer } from "../api";
+import { useTransferSourceStock, useTransferWarehouses } from "../queries";
+import { stockTransferQueryKeys } from "../query-keys";
 import {
-  useStockTransferList,
-  useTransferSourceStock,
-  useTransferWarehouses,
-} from "../queries";
-import {
-  STOCK_TRANSFER_KIND_LABELS,
-  type StockTransferKind,
-  type WarehouseOption,
-} from "../types";
+  linesToTransfer,
+  partitionWarehouses,
+  resolveTransferQty,
+  toComboboxOptions,
+  transferInputError,
+  transferProgress,
+  type TransferLine,
+} from "../transfer-lines";
+import { TransferHistorySection } from "./transfer-history-section";
+import { STOCK_TRANSFER_KIND_LABELS, type StockTransferKind } from "../types";
 import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
 
 const TRANSFER_KIND_OPTIONS: { value: StockTransferKind; label: string }[] = [
   { value: "main_to_stall", label: STOCK_TRANSFER_KIND_LABELS.main_to_stall },
@@ -36,96 +33,37 @@ const TRANSFER_KIND_OPTIONS: { value: StockTransferKind; label: string }[] = [
   { value: "stall_to_main", label: STOCK_TRANSFER_KIND_LABELS.stall_to_main },
 ];
 
-type TransferLine = {
-  key: string;
-  raw_material_id: string;
-  material_kode: string;
-  material_nama: string;
-  satuan: string | null;
-  qty_available: number;
-  qty_transfer_input: string;
-};
-
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
-
-function formatDateTime(dateStr?: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function partitionWarehouses(warehouses: WarehouseOption[]) {
-  const sorted = sortWarehouses(warehouses);
-  const main =
-    sorted.find((w) => isMainStorageCode(w.code) || w.is_default) ?? null;
-  const stalls = sorted.filter((w) => isStallCode(w.code));
-  return { main, stalls, sorted };
-}
-
-function toComboboxOptions(items: WarehouseOption[]) {
-  return items.map((w) => ({
-    value: w.id,
-    label: w.name,
-    description: w.code,
-  }));
-}
-
 export function InventoryTransfersPage() {
-  const [page, setPage] = useState(1);
-  const [transferKind, setTransferKind] = useState<StockTransferKind>("main_to_stall");
-  const [sourceWarehouseId, setSourceWarehouseId] = useState("");
-  const [destWarehouseId, setDestWarehouseId] = useState("");
+  const queryClient = useQueryClient();
+  const [transferKind, setTransferKind] =
+    useState<StockTransferKind>("main_to_stall");
+  const [pickedSourceId, setSourceWarehouseId] = useState("");
+  const [pickedDestId, setDestWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
   const [itemSearch, setItemSearch] = useState("");
   const [qtyInputs, setQtyInputs] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  const limit = 20;
   const warehousesQuery = useTransferWarehouses();
-  const listQuery = useStockTransferList({ page, limit });
-  const sourceStockQuery = useTransferSourceStock(sourceWarehouseId);
-  const loading = !!sourceWarehouseId && sourceStockQuery.isLoading;
-
   const { main, stalls } = useMemo(
     () => partitionWarehouses(warehousesQuery.data || []),
-    [warehousesQuery.data]
+    [warehousesQuery.data],
   );
+  // Main Storage terkunci sebagai asal (main_to_stall) atau tujuan (stall_to_main).
+  const sourceWarehouseId =
+    transferKind === "main_to_stall" ? (main?.id ?? "") : pickedSourceId;
+  const destWarehouseId =
+    transferKind === "stall_to_main" ? (main?.id ?? "") : pickedDestId;
 
-  useEffect(() => {
-    if (!main) return;
-
-    if (transferKind === "main_to_stall") {
-      setSourceWarehouseId(main.id);
-      setDestWarehouseId("");
-    } else if (transferKind === "stall_to_main") {
-      setSourceWarehouseId("");
-      setDestWarehouseId(main.id);
-    } else {
-      setSourceWarehouseId("");
-      setDestWarehouseId("");
-    }
-    setQtyInputs({});
-    setItemSearch("");
-  }, [transferKind, main?.id]);
-
-  useEffect(() => {
-    setQtyInputs({});
-    setItemSearch("");
-  }, [sourceWarehouseId]);
+  const sourceStockQuery = useTransferSourceStock(sourceWarehouseId);
+  const loading = !!sourceWarehouseId && sourceStockQuery.isLoading;
 
   useEffect(() => {
     if (!sourceStockQuery.isError || !sourceWarehouseId) return;
     toast.error(
       sourceStockQuery.error instanceof Error
         ? sourceStockQuery.error.message
-        : "Gagal memuat bahan baku"
+        : "Gagal memuat bahan baku",
     );
   }, [sourceStockQuery.isError, sourceStockQuery.error, sourceWarehouseId]);
 
@@ -144,13 +82,17 @@ export function InventoryTransfersPage() {
       return toComboboxOptions([main]);
     }
     if (transferKind === "main_to_stall" || transferKind === "stall_to_stall") {
-      const available = stalls.filter((stall) => stall.id !== sourceWarehouseId);
+      const available = stalls.filter(
+        (stall) => stall.id !== sourceWarehouseId,
+      );
       return toComboboxOptions(available);
     }
     return [];
   }, [transferKind, main, stalls, sourceWarehouseId]);
 
-  const selectedSource = sourceOptions.find((w) => w.value === sourceWarehouseId);
+  const selectedSource = sourceOptions.find(
+    (w) => w.value === sourceWarehouseId,
+  );
 
   const lines = useMemo<TransferLine[]>(() => {
     if (!sourceWarehouseId || !sourceStockQuery.data) return [];
@@ -171,33 +113,30 @@ export function InventoryTransfersPage() {
     return lines.filter(
       (line) =>
         line.material_nama.toLowerCase().includes(q) ||
-        line.material_kode.toLowerCase().includes(q)
+        line.material_kode.toLowerCase().includes(q),
     );
   }, [lines, itemSearch]);
 
-  const progress = useMemo(() => {
-    const filled = lines.filter((line) => line.qty_transfer_input !== "").length;
-    const toTransfer = lines.filter((line) => {
-      if (line.qty_transfer_input === "") return false;
-      const n = Number(line.qty_transfer_input);
-      return Number.isFinite(n) && n > 0;
-    }).length;
-    return { filled, toTransfer, total: lines.length };
-  }, [lines]);
+  const progress = useMemo(() => transferProgress(lines), [lines]);
 
   const hasItems = lines.length > 0;
   const canSubmit = hasItems && progress.toTransfer > 0;
 
-  const historyItems = listQuery.data?.data ?? [];
-  const total = listQuery.data?.pagination.total ?? 0;
-  const totalPages = listQuery.data?.pagination.total_pages ?? 1;
+  const resetLines = () => {
+    setQtyInputs({});
+    setItemSearch("");
+  };
 
   const handleKindChange = (kind: StockTransferKind) => {
     setTransferKind(kind);
+    setSourceWarehouseId("");
+    setDestWarehouseId("");
+    resetLines();
   };
 
   const handleSourceChange = (value: string) => {
     setSourceWarehouseId(value);
+    resetLines();
     if (transferKind === "stall_to_stall" && value === destWarehouseId) {
       setDestWarehouseId("");
     }
@@ -211,65 +150,16 @@ export function InventoryTransfersPage() {
     setQtyInputs((prev) => ({ ...prev, [key]: value }));
   };
 
-  const resolveQty = (line: TransferLine): number | null => {
-    if (line.qty_transfer_input === "") return null;
-    const n = Number(line.qty_transfer_input);
-    return Number.isFinite(n) ? n : null;
-  };
-
   const validateInputs = () => {
-    if (!sourceWarehouseId) {
-      toast.error("Silakan pilih stall asal");
-      return false;
-    }
-    if (!destWarehouseId) {
-      toast.error("Silakan pilih stall tujuan");
-      return false;
-    }
-    if (sourceWarehouseId === destWarehouseId) {
-      toast.error("Stall asal dan stall tujuan harus berbeda");
-      return false;
-    }
-
-    const toTransfer = lines.filter((line) => {
-      const qty = resolveQty(line);
-      return qty !== null && qty > 0;
-    });
-
-    if (toTransfer.length === 0) {
-      toast.error("Isi qty transfer lebih dari nol untuk minimal satu bahan baku");
-      return false;
-    }
-
-    const invalid = lines.find((line) => {
-      if (line.qty_transfer_input === "") return false;
-      const n = Number(line.qty_transfer_input);
-      if (!Number.isFinite(n) || n < 0) return true;
-      if (n > 0 && n > line.qty_available) return true;
-      return false;
-    });
-
-    if (invalid) {
-      if (Number(invalid.qty_transfer_input) > invalid.qty_available) {
-        toast.error(
-          `${invalid.material_kode}: qty melebihi stok tersedia (${formatQty(invalid.qty_available)})`
-        );
-      } else {
-        toast.error("Qty transfer harus berupa angka valid yang lebih besar atau sama dengan nol");
-      }
-      return false;
-    }
-
-    return true;
+    const error = transferInputError(lines, sourceWarehouseId, destWarehouseId);
+    if (error) toast.error(error);
+    return !error;
   };
 
   const handleSubmit = async () => {
     if (!validateInputs()) return;
 
-    const toTransfer = lines.filter((line) => {
-      const qty = resolveQty(line);
-      return qty !== null && qty > 0;
-    });
+    const toTransfer = linesToTransfer(lines);
 
     setSubmitting(true);
     const note = notes.trim() || undefined;
@@ -279,7 +169,7 @@ export function InventoryTransfersPage() {
 
     try {
       for (const line of toTransfer) {
-        const qty = resolveQty(line)!;
+        const qty = resolveTransferQty(line)!;
         try {
           await createStockTransfer({
             transfer_kind: transferKind,
@@ -304,7 +194,12 @@ export function InventoryTransfersPage() {
           }
           return next;
         });
-        await Promise.all([sourceStockQuery.refetch(), listQuery.refetch()]);
+        await Promise.all([
+          sourceStockQuery.refetch(),
+          queryClient.invalidateQueries({
+            queryKey: stockTransferQueryKeys.all,
+          }),
+        ]);
       }
 
       if (saved > 0 && failed === 0) {
@@ -357,7 +252,9 @@ export function InventoryTransfersPage() {
                   key={option.value}
                   type="button"
                   size="sm"
-                  variant={transferKind === option.value ? "default" : "outline"}
+                  variant={
+                    transferKind === option.value ? "default" : "outline"
+                  }
                   className={
                     transferKind === option.value
                       ? "purchasing-main-button"
@@ -382,7 +279,9 @@ export function InventoryTransfersPage() {
                 onChange={handleSourceChange}
                 options={sourceOptions}
                 placeholder={
-                  warehousesQuery.isLoading ? "Memuat stall..." : "Pilih stall asal"
+                  warehousesQuery.isLoading
+                    ? "Memuat stall..."
+                    : "Pilih stall asal"
                 }
                 disabled={sourceDisabled}
                 className="w-full! h-9 border-gray-200/80 text-sm"
@@ -398,7 +297,9 @@ export function InventoryTransfersPage() {
                 onChange={handleDestChange}
                 options={destOptions}
                 placeholder={
-                  warehousesQuery.isLoading ? "Memuat stall..." : "Pilih stall tujuan"
+                  warehousesQuery.isLoading
+                    ? "Memuat stall..."
+                    : "Pilih stall tujuan"
                 }
                 disabled={destDisabled}
                 className="w-full! h-9 border-gray-200/80 text-sm"
@@ -424,15 +325,23 @@ export function InventoryTransfersPage() {
             <div className="grid grid-cols-3 gap-3 border-t border-gray-200/70 pt-4">
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Total Baris</p>
-                <p className="text-lg font-bold text-gray-900">{progress.total}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {progress.total}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Terisi</p>
-                <p className="text-lg font-bold text-amber-600">{progress.filled}</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {progress.filled}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
-                <p className="text-xs font-medium text-gray-500">Akan Ditransfer</p>
-                <p className="text-lg font-bold text-pink-600">{progress.toTransfer}</p>
+                <p className="text-xs font-medium text-gray-500">
+                  Akan Ditransfer
+                </p>
+                <p className="text-lg font-bold text-pink-600">
+                  {progress.toTransfer}
+                </p>
               </div>
             </div>
           )}
@@ -443,7 +352,9 @@ export function InventoryTransfersPage() {
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Item Transfer</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Item Transfer
+              </h2>
               <p className="text-sm text-gray-500">
                 {!sourceWarehouseId
                   ? "Pilih stall asal untuk memuat bahan baku"
@@ -484,25 +395,37 @@ export function InventoryTransfersPage() {
               <tbody>
                 {!sourceWarehouseId ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={5}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       Silakan pilih stall asal terlebih dahulu
                     </td>
                   </tr>
                 ) : loading ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={5}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       Memuat item...
                     </td>
                   </tr>
                 ) : sourceStockQuery.isError ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-10 text-center text-red-500">
+                    <td
+                      colSpan={5}
+                      className="px-3 py-10 text-center text-red-500"
+                    >
                       Gagal memuat bahan baku
                     </td>
                   </tr>
                 ) : filteredLines.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={5}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       {hasItems
                         ? "Tidak ada item yang cocok dengan pencarian"
                         : "Bahan baku aktif tidak ditemukan"}
@@ -523,13 +446,15 @@ export function InventoryTransfersPage() {
                         <td className="px-3 py-3 font-medium text-gray-900">
                           {line.material_nama}
                         </td>
-                        <td className="px-3 py-3 text-gray-600">{line.satuan || "—"}</td>
+                        <td className="px-3 py-3 text-gray-600">
+                          {line.satuan || "—"}
+                        </td>
                         <td
                           className={`px-3 py-3 text-right ${
                             canTransfer ? "text-gray-700" : "text-gray-400"
                           }`}
                         >
-                          {formatQty(line.qty_available)}
+                          {formatNumber(line.qty_available, 4)}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <Input
@@ -538,7 +463,9 @@ export function InventoryTransfersPage() {
                             max={line.qty_available}
                             step="any"
                             value={line.qty_transfer_input}
-                            onChange={(e) => handleLineChange(line.key, e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(line.key, e.target.value)
+                            }
                             placeholder="—"
                             disabled={submitting || !canTransfer}
                             className="ml-auto h-9 w-28 border-gray-200/80 text-right text-sm disabled:bg-gray-50/80"
@@ -554,96 +481,7 @@ export function InventoryTransfersPage() {
         </CardContent>
       </Card>
 
-      <PurchasingListSection
-        icon={ArrowsRightLeftIcon}
-        title="Riwayat Transfer"
-        description={`${total} data transfer`}
-        toolbar={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="purchasing-secondary-button"
-            onClick={() => listQuery.refetch()}
-            disabled={listQuery.isFetching}
-          >
-            <ArrowPathIcon
-              className={`mr-2 h-4 w-4 ${listQuery.isFetching ? "animate-spin" : ""}`}
-            />
-            Muat Ulang
-          </Button>
-        }
-      >
-        <div className="overflow-x-auto px-4 pb-4">
-          <table className="w-full min-w-[960px] text-sm">
-            <thead>
-              <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                <th className="px-3 py-3">No. Transfer</th>
-                <th className="px-3 py-3">Tanggal</th>
-                <th className="px-3 py-3">Jenis</th>
-                <th className="px-3 py-3">Bahan Baku</th>
-                <th className="px-3 py-3 text-right">Qty</th>
-                      <th className="px-3 py-3">Stall Asal</th>
-                      <th className="px-3 py-3">Stall Tujuan</th>
-                <th className="px-3 py-3">Dibuat Oleh</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listQuery.isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-3 py-10 text-center text-gray-400">
-                    Memuat riwayat transfer...
-                  </td>
-                </tr>
-              ) : historyItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-3 py-10 text-center text-gray-400">
-                    Belum ada transfer yang tercatat
-                  </td>
-                </tr>
-              ) : (
-                historyItems.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-gray-200/70 transition-colors hover:bg-gray-50/60"
-                  >
-                    <td className="px-3 py-3 font-mono text-xs text-gray-700">
-                      {item.transfer_number}
-                    </td>
-                    <td className="px-3 py-3 text-gray-600">{formatDateTime(item.created_at)}</td>
-                    <td className="px-3 py-3 text-gray-600">
-                      {item.transfer_kind
-                        ? STOCK_TRANSFER_KIND_LABELS[item.transfer_kind]
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-3">
-                      <p className="font-medium text-gray-900">{item.material_nama}</p>
-                      <p className="text-xs text-gray-500">{item.material_kode}</p>
-                    </td>
-                    <td className="px-3 py-3 text-right font-medium text-gray-900">
-                      {formatQty(item.qty)}
-                    </td>
-                    <td className="px-3 py-3 text-gray-600">{item.source_warehouse_name}</td>
-                    <td className="px-3 py-3 text-gray-600">{item.dest_warehouse_name}</td>
-                    <td className="px-3 py-3 text-gray-600">{item.created_by_name || "—"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {totalPages > 1 && (
-          <div className="border-t border-gray-200/70 px-4 py-4">
-            <PurchasingTablePagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              onPageChange={setPage}
-            />
-          </div>
-        )}
-      </PurchasingListSection>
+      <TransferHistorySection />
     </div>
   );
 }

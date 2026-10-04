@@ -1,8 +1,5 @@
 export type ProductStockOpnameStatus =
-  | "draft"
-  | "in_progress"
-  | "completed"
-  | "cancelled";
+  "draft" | "in_progress" | "completed" | "cancelled";
 
 export type ProductStockOpnameReason = "stock_opname" | "manual_adjustment";
 

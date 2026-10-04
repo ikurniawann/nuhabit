@@ -1,23 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useArInvoiceList } from "../queries";
 import { AR_ROUTES } from "../api";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
 
 export function ArInvoicesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
+  const { query: searchQuery, setQuery: setSearchQuery, search } = useDebouncedSearch();
 
   const filters = useMemo(
     () => ({ search: search || undefined, limit: 50 }),
@@ -32,7 +28,7 @@ export function ArInvoicesPage() {
         <h1 className="text-2xl font-bold text-foreground">AR Invoice</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Register piutang Accounting (dari Invoice B2B yang diterbitkan).{" "}
-          <Link href={AR_ROUTES.invoicesB2b} className="text-primary hover:underline">
+          <Link href={AR_ROUTES.invoicesB2b} className="text-brand-text hover:underline">
             Kelola terbit B2B
           </Link>
         </p>
@@ -64,7 +60,7 @@ export function ArInvoicesPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -95,10 +91,10 @@ export function ArInvoicesPage() {
                       {row.deal_title || "—"}
                     </td>
                     <td className="px-2 py-3 text-right">
-                      {formatAmount(row.total_amount)}
+                      {formatNumber(row.total_amount)}
                     </td>
                     <td className="px-2 py-3 text-right">
-                      {formatAmount(row.outstanding_amount || 0)}
+                      {formatNumber(row.outstanding_amount || 0)}
                     </td>
                     <td className="px-2 py-3">
                       <Badge variant="outline">{row.payment_status}</Badge>

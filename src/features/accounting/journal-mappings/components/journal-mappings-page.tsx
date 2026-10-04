@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlusIcon, BookOpenIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
@@ -9,21 +9,24 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { TableRow } from "@/components/ui/table";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterDeleteDialog } from "@/features/master-data/components/master-delete-dialog";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { JOURNAL_MODULES } from "@/lib/accounting/journal-mapping-types";
 import { useJournalMappingList } from "../queries";
 import { useDeleteJournalMapping } from "../mutations";
 import { JOURNAL_MAPPING_ROUTES } from "../routes";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { toast } from "sonner";
 
 export function JournalMappingsPage() {
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [moduleFilter, setModuleFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ export function JournalMappingsPage() {
       search: search || undefined,
       module: moduleFilter || undefined,
     }),
-    [search, moduleFilter]
+    [search, moduleFilter],
   );
 
   const { data, isLoading } = useJournalMappingList(filters);
@@ -41,34 +44,24 @@ export function JournalMappingsPage() {
   const rows = useMemo(() => data ?? [], [data]);
   const isDeleting = deleteMutation.isPending;
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
-
   const moduleFilterOptions = useMemo(
     () => JOURNAL_MODULES.map((m) => ({ value: m, label: m })),
-    []
+    [],
   );
 
   async function handleDelete() {
     if (!deleteId || isDeleting) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      showToast("Mapping berhasil dihapus", "success");
+      toast.success("Mapping berhasil dihapus");
       setDeleteId(null);
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal menghapus",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -127,7 +120,7 @@ export function JournalMappingsPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat journal mapping...
             </p>

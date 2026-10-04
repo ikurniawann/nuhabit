@@ -245,3 +245,31 @@ export async function listMovementsForExport(filter: MovementFilter): Promise<Mo
     params.values
   );
 }
+
+// ── Pilihan bahan baku ───────────────────────────────────────────────────────
+
+export interface MaterialOption {
+  id: string;
+  kode: string;
+  nama: string;
+  satuan: string | null;
+}
+
+/** Bahan baku aktif (maks 2000) untuk filter & pemilih, dibatasi company/branch user. */
+export async function listActiveMaterialOptions(scope: UserScope | null): Promise<MaterialOption[]> {
+  const scoped = scope && !scope.isUnscoped;
+  const companyId = scoped && scope.businessScope !== "holding" ? scope.companyId : null;
+  const branchId = scoped && scope.businessScope === "branch" ? scope.branchId : null;
+  return query<MaterialOption>(
+    `SELECT rm.id, rm.kode, rm.nama, COALESCE(u_kecil.nama, u_besar.nama) AS satuan
+       FROM item.raw_materials rm
+       LEFT JOIN item.units u_kecil ON u_kecil.id = rm.satuan_kecil_id
+       LEFT JOIN item.units u_besar ON u_besar.id = rm.satuan_besar_id
+      WHERE rm.is_active = true AND rm.deleted_at IS NULL
+        AND ($1::uuid IS NULL OR rm.company_id = $1)
+        AND ($2::uuid IS NULL OR rm.branch_id = $2)
+      ORDER BY rm.nama
+      LIMIT 2000`,
+    [companyId, branchId]
+  );
+}

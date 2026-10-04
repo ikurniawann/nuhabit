@@ -70,11 +70,11 @@ export function generateMonthlyPeriods(
 
 /**
  * Period N hanya boleh OPEN jika semua period sebelumnya sudah CLOSED.
- * (Harus closing dulu sebelum open period berikutnya.)
+ * Return pesan pelanggaran pertama, atau null jika urutan valid.
  */
-export function assertPeriodsOpenSequence(
+export function findOpenSequenceViolation(
   periods: Array<{ period_no: number; name?: string; status: string }>
-): void {
+): string | null {
   const sorted = [...periods].sort((a, b) => a.period_no - b.period_no);
   for (const period of sorted) {
     if (period.status !== "OPEN") continue;
@@ -83,13 +83,12 @@ export function assertPeriodsOpenSequence(
     );
     if (blockers.length > 0) {
       const prev = blockers[blockers.length - 1];
-      throw new Error(
-        `Tidak bisa OPEN period ${period.period_no}: period ${prev.period_no}${
-          prev.name ? ` (${prev.name})` : ""
-        } belum CLOSED. Tutup period sebelumnya terlebih dahulu.`
-      );
+      return `Tidak bisa OPEN period ${period.period_no}: period ${prev.period_no}${
+        prev.name ? ` (${prev.name})` : ""
+      } belum CLOSED. Tutup period sebelumnya terlebih dahulu.`;
     }
   }
+  return null;
 }
 
 /**

@@ -18,9 +18,10 @@ import type {
 const BASE = "/api/settings/iam/roles";
 
 export const fetchRoleList = (params?: ListParams) =>
-  apiGet<ListResponse<RoleItem>>(buildListUrl(BASE, params));
+  apiGet<ListResponse<RoleItem>>(buildListUrl(BASE, { ...params }));
 
-export const fetchRoleDetail = (id: string) => apiGet<RoleDetail>(`${BASE}/${id}`);
+export const fetchRoleDetail = (id: string) =>
+  apiGet<RoleDetail>(`${BASE}/${id}`);
 
 export const createRole = (body: CreateRolePayload) =>
   apiPost<{ id: string }>(BASE, body);
@@ -32,11 +33,14 @@ export const deleteRole = (id: string) => apiDelete(`${BASE}/${id}`);
 
 export const fetchRolePermissions = (id: string) =>
   apiGet<{ roleId: string; permissions: RoleMenuPermission[] }>(
-    `${BASE}/${id}/permissions`
+    `${BASE}/${id}/permissions`,
   );
 
-export const updateRolePermissions = (id: string, permissions: RolePermissionUpdate[]) =>
+export const updateRolePermissions = (
+  id: string,
+  permissions: RolePermissionUpdate[],
+) =>
   apiPut<{ roleId: string; permissions: RoleMenuPermission[] }>(
     `${BASE}/${id}/permissions`,
-    { permissions }
+    { permissions },
   );

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import {
   FormFieldLabel,
   formInputClassName,
@@ -18,21 +17,25 @@ import {
   FormPageLayout,
   FormPageLoading,
 } from "@/components/layout/form-page-layout";
-import { generateMonthlyPeriods, getOpenPeriodBlockReason } from "@/lib/accounting/fiscal-periods";
-import type { FiscalPeriodStatus } from "@/lib/accounting/fiscal-types";
+import {
+  generateMonthlyPeriods,
+  getOpenPeriodBlockReason,
+} from "@/lib/accounting/fiscal-periods";
 import { useFiscalYear } from "../queries";
 import { useCreateFiscalYear, useUpdateFiscalYear } from "../mutations";
-import type { FiscalPeriodPayload } from "../types";
+import type {
+  FiscalPeriodPayload,
+  FiscalYearItem,
+} from "@/lib/accounting/types";
 import { FISCAL_YEAR_ROUTES } from "../routes";
-
-type FormPeriod = {
-  key: string;
-  period_no: number;
-  name: string;
-  start_date: string;
-  end_date: string;
-  status: FiscalPeriodStatus;
-};
+import {
+  mergeRegeneratedPeriods,
+  planOpenNextPeriod,
+  toFormPeriods,
+  togglePeriod,
+  type FormPeriod,
+} from "../period-form";
+import { toast } from "sonner";
 
 type FormState = {
   code: string;
@@ -53,15 +56,6 @@ function defaultYearDates() {
   };
 }
 
-function toFormPeriods(
-  periods: ReturnType<typeof generateMonthlyPeriods>
-): FormPeriod[] {
-  return periods.map((p) => ({
-    key: `p-${p.period_no}`,
-    ...p,
-  }));
-}
-
 export function FiscalYearFormPage({
   mode,
   fiscalYearId,
@@ -70,71 +64,90 @@ export function FiscalYearFormPage({
   fiscalYearId?: string;
 }) {
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-  const defaults = defaultYearDates();
-  const [form, setForm] = useState<FormState>(() => ({
-    code: defaults.code,
-    name: defaults.name,
-    start_date: defaults.start_date,
-    end_date: defaults.end_date,
-    is_active: true,
-    periods:
-      mode === "create"
-        ? toFormPeriods(
-            generateMonthlyPeriods(defaults.start_date, defaults.end_date)
-          )
-        : [],
-  }));
-  const [hydrated, setHydrated] = useState(mode === "create");
+  const {
+    data: existing,
+    isLoading,
+    isError,
+  } = useFiscalYear(mode === "edit" ? (fiscalYearId ?? null) : null);
 
-  const { data: existing, isLoading, isError } = useFiscalYear(
-    mode === "edit" ? fiscalYearId ?? null : null
+  if (mode === "create")
+    return <FiscalYearForm mode="create" initial={createFormState()} />;
+  if (isLoading) return <FormPageLoading />;
+  if (isError || !existing) {
+    return (
+      <FormPageLayout>
+        <FormPageHeader
+          title="Fiscal year tidak ditemukan"
+          description="Data mungkin sudah dihapus."
+          onBack={() => router.push(FISCAL_YEAR_ROUTES.list)}
+        />
+      </FormPageLayout>
+    );
+  }
+  return (
+    <FiscalYearForm
+      key={existing.id}
+      mode="edit"
+      fiscalYearId={existing.id}
+      initial={formFromFiscalYear(existing)}
+    />
   );
+}
+
+function createFormState(): FormState {
+  const defaults = defaultYearDates();
+  return {
+    ...defaults,
+    is_active: true,
+    periods: toFormPeriods(
+      generateMonthlyPeriods(defaults.start_date, defaults.end_date),
+    ),
+  };
+}
+
+function formFromFiscalYear(existing: FiscalYearItem): FormState {
+  return {
+    code: existing.code,
+    name: existing.name,
+    start_date: existing.start_date,
+    end_date: existing.end_date,
+    is_active: existing.is_active,
+    periods: existing.periods.map((p) => ({
+      key: p.id,
+      period_no: p.period_no,
+      name: p.name,
+      start_date: p.start_date,
+      end_date: p.end_date,
+      status: p.status,
+    })),
+  };
+}
+
+function FiscalYearForm({
+  mode,
+  fiscalYearId,
+  initial,
+}: {
+  mode: "create" | "edit";
+  fiscalYearId?: string;
+  initial: FormState;
+}) {
+  const router = useRouter();
+  const [form, setForm] = useState<FormState>(initial);
   const createMutation = useCreateFiscalYear();
   const updateMutation = useUpdateFiscalYear();
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  useEffect(() => {
-    if (mode !== "edit" || !existing || hydrated) return;
-    setForm({
-      code: existing.code,
-      name: existing.name,
-      start_date: existing.start_date,
-      end_date: existing.end_date,
-      is_active: existing.is_active,
-      periods: existing.periods.map((p) => ({
-        key: p.id,
-        period_no: p.period_no,
-        name: p.name,
-        start_date: p.start_date,
-        end_date: p.end_date,
-        status: p.status,
-      })),
-    });
-    setHydrated(true);
-  }, [mode, existing, hydrated]);
-
   function regeneratePeriods() {
     try {
-      const periods = generateMonthlyPeriods(form.start_date, form.end_date);
+      const generated = generateMonthlyPeriods(form.start_date, form.end_date);
       setForm((f) => ({
         ...f,
-        periods: periods.map((p) => {
-          const prev = f.periods.find((x) => x.period_no === p.period_no);
-          return {
-            key: prev?.key ?? `p-${p.period_no}`,
-            ...p,
-            // Pakai status generate (period 1 OPEN, sisanya CLOSED) agar urutan valid
-            name: prev?.name || p.name,
-          };
-        }),
+        periods: mergeRegeneratedPeriods(f.periods, generated),
       }));
-      showToast("12 period bulanan digenerate ulang", "success");
+      toast.success("12 period bulanan digenerate ulang");
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal generate period",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal generate period");
     }
   }
 
@@ -153,56 +166,25 @@ export function FiscalYearFormPage({
     if (target.status === "CLOSED") {
       const block = getOpenPeriodBlockReason(form.periods, target.period_no);
       if (block) {
-        showToast(block, "error");
+        toast.error(block);
         return;
       }
     }
 
-    setForm((f) => ({
-      ...f,
-      periods: f.periods.map((p) =>
-        p.key === key
-          ? { ...p, status: p.status === "OPEN" ? "CLOSED" : "OPEN" }
-          : p
-      ),
-    }));
+    setForm((f) => ({ ...f, periods: togglePeriod(f.periods, key) }));
   }
 
   function openNextPeriod() {
-    const sorted = [...form.periods].sort((a, b) => a.period_no - b.period_no);
-    const openPeriods = sorted.filter((p) => p.status === "OPEN");
-    const lastOpen = openPeriods[openPeriods.length - 1];
-    const next = lastOpen
-      ? sorted.find((p) => p.period_no === lastOpen.period_no + 1)
-      : sorted.find((p) => p.status === "CLOSED");
-
-    if (!next) {
-      showToast("Tidak ada period berikutnya yang bisa dibuka", "error");
+    const plan = planOpenNextPeriod(form.periods);
+    if (!plan) {
+      toast.error("Tidak ada period berikutnya yang bisa dibuka");
       return;
     }
-
-    setForm((f) => ({
-      ...f,
-      periods: f.periods.map((p) => {
-        if (p.period_no < next.period_no && p.status === "OPEN") {
-          return { ...p, status: "CLOSED" as const };
-        }
-        if (p.key === next.key) {
-          return { ...p, status: "OPEN" as const };
-        }
-        return p;
-      }),
-    }));
-
-    const closedNames = openPeriods
-      .filter((p) => p.period_no < next.period_no)
-      .map((p) => p.name)
-      .join(", ");
-    showToast(
-      closedNames
-        ? `Menutup ${closedNames} → membuka ${next.name}. Simpan untuk menerapkan.`
-        : `Menyarankan buka ${next.name}. Simpan untuk menerapkan.`,
-      "success"
+    setForm((f) => ({ ...f, periods: plan.periods }));
+    toast.success(
+      plan.closedNames
+        ? `Menutup ${plan.closedNames} → membuka ${plan.next.name}. Simpan untuk menerapkan.`
+        : `Menyarankan buka ${plan.next.name}. Simpan untuk menerapkan.`,
     );
   }
 
@@ -210,11 +192,11 @@ export function FiscalYearFormPage({
     e.preventDefault();
     if (isSaving) return;
     if (!form.code.trim() || !form.name.trim()) {
-      showToast("Kode dan nama wajib diisi", "error");
+      toast.error("Kode dan nama wajib diisi");
       return;
     }
     if (form.periods.length < 1) {
-      showToast("Generate period terlebih dahulu", "error");
+      toast.error("Generate period terlebih dahulu");
       return;
     }
 
@@ -241,42 +223,21 @@ export function FiscalYearFormPage({
           id: fiscalYearId,
           ...payload,
         });
-        showToast(res.message || "Fiscal year berhasil diperbarui", "success");
+        toast.success(res.message || "Fiscal year berhasil diperbarui");
         router.push(FISCAL_YEAR_ROUTES.list);
       } else {
         const res = await createMutation.mutateAsync(payload);
-        showToast(
-          res.message || "Fiscal year berhasil ditambahkan",
-          "success"
-        );
+        toast.success(res.message || "Fiscal year berhasil ditambahkan");
         // Setelah fiscal dibuat → langsung ke Beginning Balance
         router.push(FISCAL_YEAR_ROUTES.beginningBalance(res.data.id));
       }
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal menyimpan",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
     }
-  }
-
-  if (mode === "edit" && isLoading) return <FormPageLoading />;
-
-  if (mode === "edit" && (isError || (!isLoading && !existing))) {
-    return (
-      <FormPageLayout>
-        <FormPageHeader
-          title="Fiscal year tidak ditemukan"
-          description="Data mungkin sudah dihapus."
-          onBack={() => router.push(FISCAL_YEAR_ROUTES.list)}
-        />
-      </FormPageLayout>
-    );
   }
 
   return (
     <FormPageLayout>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <FormPageHeader
         title={mode === "edit" ? "Edit Fiscal Year" : "Tambah Fiscal Year"}
         description="Tentukan rentang tahun fiskal lalu generate 12 period bulanan. Period berikutnya hanya bisa OPEN setelah period sebelumnya CLOSED. Fiscal year baru juga tidak bisa OPEN jika fiscal sebelumnya masih punya period OPEN."
@@ -366,7 +327,7 @@ export function FiscalYearFormPage({
                   variant="outline"
                   onClick={openNextPeriod}
                   disabled={form.periods.length === 0}
-                  className="h-9 rounded-lg border-primary/20 text-primary"
+                  className="h-9 rounded-lg border-primary/20 text-brand-text"
                 >
                   Buka period berikutnya
                 </Button>
@@ -447,15 +408,15 @@ export function FiscalYearFormPage({
                             onClick={() => togglePeriodStatus(p.key)}
                             title={
                               p.status === "CLOSED"
-                                ? getOpenPeriodBlockReason(
+                                ? (getOpenPeriodBlockReason(
                                     form.periods,
-                                    p.period_no
-                                  ) ?? "Klik untuk OPEN"
+                                    p.period_no,
+                                  ) ?? "Klik untuk OPEN")
                                 : "Klik untuk CLOSED"
                             }
                             className={
                               p.status === "OPEN"
-                                ? "h-8 border-primary/20 text-primary"
+                                ? "h-8 border-primary/20 text-brand-text"
                                 : "h-8 border-gray-200/80 text-muted-foreground"
                             }
                           >

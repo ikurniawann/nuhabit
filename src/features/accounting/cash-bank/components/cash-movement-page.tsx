@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDownTrayIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { useMemo, useState } from "react";
+import {
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+} from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,11 +22,14 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useCreateCashMovement } from "../mutations";
 import { useCashMovements, usePostableAccountOptions } from "../queries";
 import type { CashMovementKind } from "../types";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+
+const NO_ACCOUNTS: never[] = [];
 
 type Props = {
   kind: CashMovementKind;
@@ -37,16 +43,14 @@ export function CashMovementPage({ kind }: Props) {
     : "Pencatatan pengeluaran kas/bank (Debit akun lawan, Credit kas)";
   const Icon = isIn ? ArrowDownTrayIcon : ArrowUpTrayIcon;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
 
   const { data, isLoading } = useCashMovements(kind, {
     search: search || undefined,
@@ -116,7 +120,7 @@ export function CashMovementPage({ kind }: Props) {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -159,7 +163,7 @@ export function CashMovementPage({ kind }: Props) {
                       {row.description || "—"}
                     </td>
                     <td className="px-2 py-3 text-right tabular-nums">
-                      {formatAmount(row.amount)}
+                      {formatNumber(row.amount)}
                     </td>
                   </tr>
                 ))}
@@ -179,18 +183,40 @@ export function CashMovementPage({ kind }: Props) {
 }
 
 function CashMovementDialog({
-  kind,
   open,
   onOpenChange,
+  ...formProps
 }: {
-  kind: CashMovementKind;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  kind: CashMovementKind;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPanel size="sm">
+        {/* Form dipasang ulang tiap dialog dibuka supaya isiannya mulai bersih. */}
+        {open ? (
+          <CashMovementForm
+            onClose={() => onOpenChange(false)}
+            {...formProps}
+          />
+        ) : null}
+      </DialogPanel>
+    </Dialog>
+  );
+}
+
+function CashMovementForm({
+  kind,
+  onClose,
+}: {
+  kind: CashMovementKind;
+  onClose: () => void;
 }) {
   const isIn = kind === "cash_in";
   const mutation = useCreateCashMovement(kind);
   const optionsQuery = usePostableAccountOptions();
-  const accounts = optionsQuery.data ?? [];
+  const accounts = optionsQuery.data ?? NO_ACCOUNTS;
 
   const cashOptions = useMemo(
     () =>
@@ -200,14 +226,16 @@ function CashMovementDialog({
           value: a.id,
           label: `${a.code_display || a.code} — ${a.name}`,
         })),
-    [accounts]
+    [accounts],
   );
 
-  const [entryDate, setEntryDate] = useState(
-    new Date().toISOString().slice(0, 10)
+  const [entryDate, setEntryDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [amount, setAmount] = useState<number | undefined>();
-  const [cashAccountId, setCashAccountId] = useState("");
+  const [pickedCashId, setCashAccountId] = useState("");
+  // Default ke akun kas/bank pertama sampai user memilih.
+  const cashAccountId = pickedCashId || cashOptions[0]?.value || "";
   const [offsetAccountId, setOffsetAccountId] = useState("");
   const [description, setDescription] = useState("");
   const [memo, setMemo] = useState("");
@@ -222,23 +250,8 @@ function CashMovementDialog({
             a.is_cash_bank ? " (Kas/Bank)" : ""
           }`,
         })),
-    [accounts, cashAccountId]
+    [accounts, cashAccountId],
   );
-
-  useEffect(() => {
-    if (!open) return;
-    setEntryDate(new Date().toISOString().slice(0, 10));
-    setAmount(undefined);
-    setCashAccountId("");
-    setOffsetAccountId("");
-    setDescription("");
-    setMemo("");
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || cashAccountId || cashOptions.length === 0) return;
-    setCashAccountId(cashOptions[0]!.value);
-  }, [open, cashAccountId, cashOptions]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -262,127 +275,120 @@ function CashMovementDialog({
       });
       toast.success(
         res.message ||
-          (isIn ? "Cash In berhasil dicatat" : "Cash Out berhasil dicatat")
+          (isIn ? "Cash In berhasil dicatat" : "Cash Out berhasil dicatat"),
       );
-      onOpenChange(false);
+      onClose();
     } catch (err) {
       toast.error(
         err instanceof Error
           ? err.message
           : isIn
             ? "Gagal mencatat Cash In"
-            : "Gagal mencatat Cash Out"
+            : "Gagal mencatat Cash Out",
       );
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPanel size="sm">
-        <DialogPanelForm onSubmit={onSubmit}>
-          <DialogPanelHeader>
-            <DialogPanelTitle>
-              {isIn ? "Catat Cash In" : "Catat Cash Out"}
-            </DialogPanelTitle>
-            <DialogPanelDescription>
-              {isIn
-                ? "Debit akun kas/bank, Credit akun lawan. Jurnal langsung POSTED."
-                : "Debit akun lawan, Credit akun kas/bank. Jurnal langsung POSTED."}
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input
-                type="date"
-                value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-                required
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Akun Kas/Bank</Label>
-              <Combobox
-                options={cashOptions}
-                value={cashAccountId}
-                onChange={(v) => {
-                  setCashAccountId(v);
-                  if (v === offsetAccountId) setOffsetAccountId("");
-                }}
-                placeholder="Pilih akun kas/bank"
-                searchPlaceholder="Cari akun..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Akun Lawan</Label>
-              <Combobox
-                options={offsetOptions}
-                value={offsetAccountId}
-                onChange={setOffsetAccountId}
-                placeholder="Pilih akun lawan"
-                searchPlaceholder="Cari akun..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <NumericInput
-                value={amount}
-                onValueChange={setAmount}
-                className="h-10 bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Keterangan</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Opsional"
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Memo baris</Label>
-              <Input
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder="Opsional"
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-          </DialogPanelBody>
-          <DialogFooter className="gap-3 px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                mutation.isPending ||
-                !cashAccountId ||
-                !offsetAccountId ||
-                !amount
-              }
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan & Posting"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogPanelForm>
-      </DialogPanel>
-    </Dialog>
+    <DialogPanelForm onSubmit={onSubmit}>
+      <DialogPanelHeader>
+        <DialogPanelTitle>
+          {isIn ? "Catat Cash In" : "Catat Cash Out"}
+        </DialogPanelTitle>
+        <DialogPanelDescription>
+          {isIn
+            ? "Debit akun kas/bank, Credit akun lawan. Jurnal langsung POSTED."
+            : "Debit akun lawan, Credit akun kas/bank. Jurnal langsung POSTED."}
+        </DialogPanelDescription>
+      </DialogPanelHeader>
+      <DialogPanelBody className="space-y-4">
+        <div className="space-y-2">
+          <Label>Tanggal</Label>
+          <Input
+            type="date"
+            value={entryDate}
+            onChange={(e) => setEntryDate(e.target.value)}
+            required
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Akun Kas/Bank</Label>
+          <Combobox
+            options={cashOptions}
+            value={cashAccountId}
+            onChange={(v) => {
+              setCashAccountId(v);
+              if (v === offsetAccountId) setOffsetAccountId("");
+            }}
+            placeholder="Pilih akun kas/bank"
+            searchPlaceholder="Cari akun..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Akun Lawan</Label>
+          <Combobox
+            options={offsetOptions}
+            value={offsetAccountId}
+            onChange={setOffsetAccountId}
+            placeholder="Pilih akun lawan"
+            searchPlaceholder="Cari akun..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Amount</Label>
+          <NumericInput
+            value={amount}
+            onValueChange={setAmount}
+            className="h-10 bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Keterangan</Label>
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Opsional"
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Memo baris</Label>
+          <Input
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="Opsional"
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+      </DialogPanelBody>
+      <DialogFooter className="gap-3 px-6 py-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={mutation.isPending}
+        >
+          Batal
+        </Button>
+        <Button
+          type="submit"
+          disabled={
+            mutation.isPending || !cashAccountId || !offsetAccountId || !amount
+          }
+        >
+          {mutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Menyimpan...
+            </>
+          ) : (
+            "Simpan & Posting"
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogPanelForm>
   );
 }

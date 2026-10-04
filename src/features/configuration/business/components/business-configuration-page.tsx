@@ -26,8 +26,7 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { ToastContainer, useToast } from "@/components/ui/toast";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useBusinessTree } from "../queries";
 import {
   useCreateBusinessEntity,
@@ -44,9 +43,9 @@ import {
   collectExpandableBusinessIds,
   countBusinessEntities,
   flattenBusinessTreeDisplay,
-  mergeExpandableIds,
 } from "../utils/business-tree";
 import type { FlatBusinessTreeRow } from "../utils/business-tree";
+import { toast } from "sonner";
 
 const LEVEL_ICONS = {
   holding: Building2,
@@ -77,7 +76,9 @@ function TreeGuides({
     <span className="flex shrink-0 items-stretch" aria-hidden>
       {parentContinuations.map((continues, index) => (
         <span key={index} className="relative flex w-5 justify-center">
-          {continues ? <span className="absolute bottom-0 top-0 w-px bg-gray-200/90" /> : null}
+          {continues ? (
+            <span className="absolute bottom-0 top-0 w-px bg-gray-200/90" />
+          ) : null}
         </span>
       ))}
       <span className="relative flex w-5 items-center justify-center">
@@ -115,8 +116,15 @@ function BusinessTreeRow({
   return (
     <tr className="border-b border-gray-200/50 transition-colors hover:bg-gray-50/80">
       <td className="px-4 py-3">
-        <div className="flex items-center gap-1" style={{ paddingLeft: depth * 4 }}>
-          <TreeGuides depth={depth} isLast={isLast} parentContinuations={parentContinuations} />
+        <div
+          className="flex items-center gap-1"
+          style={{ paddingLeft: depth * 4 }}
+        >
+          <TreeGuides
+            depth={depth}
+            isLast={isLast}
+            parentContinuations={parentContinuations}
+          />
           {hasChildren ? (
             <button
               type="button"
@@ -124,28 +132,43 @@ function BusinessTreeRow({
               className="mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800"
               aria-label={isExpanded ? "Collapse" : "Expand"}
             >
-              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
             </button>
           ) : (
             <span className="mr-1 inline-block h-6 w-6 shrink-0" />
           )}
-          <span className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${LEVEL_COLORS[node.kind]}`}>
+          <span
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${LEVEL_COLORS[node.kind]}`}
+          >
             <Icon className="h-3.5 w-3.5" />
           </span>
           <div className="min-w-0 pl-2">
-            <p className="truncate font-medium text-gray-900">{node.data.name}</p>
-            <p className="truncate font-mono text-xs text-gray-400">{node.data.code}</p>
+            <p className="truncate font-medium text-gray-900">
+              {node.data.name}
+            </p>
+            <p className="truncate font-mono text-xs text-gray-400">
+              {node.data.code}
+            </p>
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
-        <Badge variant="outline" className={`border-0 font-medium ${LEVEL_COLORS[node.kind]}`}>
+        <Badge
+          variant="outline"
+          className={`border-0 font-medium ${LEVEL_COLORS[node.kind]}`}
+        >
           {BUSINESS_LEVEL_LABELS[node.kind]}
         </Badge>
       </td>
       <td className="px-4 py-3">
         {node.kind === "warehouse" && node.data.is_default ? (
-          <Badge className="border-0 bg-gray-100 font-normal text-gray-600">Default</Badge>
+          <Badge className="border-0 bg-gray-100 font-normal text-gray-600">
+            Default
+          </Badge>
         ) : (
           <Badge
             className={
@@ -207,13 +230,13 @@ interface FormState {
 const EMPTY_FORM: FormState = { name: "", code: "", is_active: true };
 
 export function BusinessConfigurationPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const { data: tree, isLoading, isError, error } = useBusinessTree();
   const createMutation = useCreateBusinessEntity();
   const updateMutation = useUpdateBusinessEntity();
   const deleteMutation = useDeleteBusinessEntity();
 
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // Node default terbuka; yang ditutup user dicatat di sini.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
   const [formType, setFormType] = useState<BusinessEntityType>("holding");
@@ -222,33 +245,43 @@ export function BusinessConfigurationPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingNode, setDeletingNode] = useState<BusinessTreeNode | null>(null);
+  const [deletingNode, setDeletingNode] = useState<BusinessTreeNode | null>(
+    null,
+  );
 
   const businessTree = useMemo(() => tree ?? { holdings: [] }, [tree]);
-  const counts = useMemo(() => countBusinessEntities(businessTree), [businessTree]);
+  const counts = useMemo(
+    () => countBusinessEntities(businessTree),
+    [businessTree],
+  );
 
+  const expandedIds = useMemo(
+    () =>
+      new Set(
+        collectExpandableBusinessIds(businessTree).filter(
+          (id) => !collapsedIds.has(id),
+        ),
+      ),
+    [businessTree, collapsedIds],
+  );
   const displayRows = useMemo(
     () => flattenBusinessTreeDisplay(businessTree, expandedIds),
-    [businessTree, expandedIds]
+    [businessTree, expandedIds],
   );
 
   useEffect(() => {
-    setExpandedIds((prev) =>
-      mergeExpandableIds(prev, collectExpandableBusinessIds(businessTree))
-    );
-  }, [businessTree]);
-
-  useEffect(() => {
     if (isError) {
-      showToast(error instanceof Error ? error.message : "Gagal memuat data business", "error");
+      toast.error(
+        error instanceof Error ? error.message : "Gagal memuat data business",
+      );
     }
-  }, [isError, error, showToast]);
+  }, [isError, error]);
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
 
   function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
+    setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -291,7 +324,7 @@ export function BusinessConfigurationPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) {
-      showToast("Nama wajib diisi", "error");
+      toast.error("Nama wajib diisi");
       return;
     }
 
@@ -306,7 +339,9 @@ export function BusinessConfigurationPage() {
             is_active: form.is_active,
           },
         });
-        showToast(`${BUSINESS_LEVEL_LABELS[editNode.kind]} berhasil diperbarui`, "success");
+        toast.success(
+          `${BUSINESS_LEVEL_LABELS[editNode.kind]} berhasil diperbarui`,
+        );
       } else {
         await createMutation.mutateAsync({
           type: formType,
@@ -315,11 +350,13 @@ export function BusinessConfigurationPage() {
           parentId: formParentId,
           is_active: form.is_active,
         });
-        showToast(`${BUSINESS_LEVEL_LABELS[formType]} berhasil ditambahkan`, "success");
+        toast.success(
+          `${BUSINESS_LEVEL_LABELS[formType]} berhasil ditambahkan`,
+        );
       }
       setFormOpen(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
     }
   }
 
@@ -330,11 +367,13 @@ export function BusinessConfigurationPage() {
         type: deletingNode.kind,
         id: deletingNode.data.id,
       });
-      showToast(`${BUSINESS_LEVEL_LABELS[deletingNode.kind]} berhasil dihapus`, "success");
+      toast.success(
+        `${BUSINESS_LEVEL_LABELS[deletingNode.kind]} berhasil dihapus`,
+      );
       setDeleteOpen(false);
       setDeletingNode(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menghapus", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
@@ -345,8 +384,6 @@ export function BusinessConfigurationPage() {
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Business</h1>
@@ -432,7 +469,10 @@ export function BusinessConfigurationPage() {
         )}
       </PurchasingListSection>
 
-      <Dialog open={formOpen} onOpenChange={(open) => !open && setFormOpen(false)}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => !open && setFormOpen(false)}
+      >
         <DialogPanel size="sm">
           <DialogPanelForm onSubmit={handleSave}>
             <DialogPanelHeader>
@@ -447,20 +487,31 @@ export function BusinessConfigurationPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">Nama *</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                  Nama *
+                </label>
                 <Input
                   value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
                   placeholder={`Nama ${BUSINESS_LEVEL_LABELS[formType].toLowerCase()}`}
                   className="focus:border-pink-400 focus:ring-1 focus:ring-pink-100"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">Kode</label>
+                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                  Kode
+                </label>
                 <Input
                   value={form.code}
-                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      code: e.target.value.toUpperCase(),
+                    }))
+                  }
                   placeholder="Opsional — auto-generate dari nama"
                   className="font-mono focus:border-pink-400 focus:ring-1 focus:ring-pink-100"
                 />
@@ -469,7 +520,9 @@ export function BusinessConfigurationPage() {
                 <input
                   type="checkbox"
                   checked={form.is_active}
-                  onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, is_active: e.target.checked }))
+                  }
                   className="h-4 w-4 rounded accent-pink-600"
                 />
                 Aktif
@@ -504,14 +557,22 @@ export function BusinessConfigurationPage() {
         </DialogPanel>
       </Dialog>
 
-      <Dialog open={deleteOpen} onOpenChange={(open) => !open && setDeleteOpen(false)}>
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => !open && setDeleteOpen(false)}
+      >
         <DialogPanel size="xs">
           <DialogPanelHeader>
             <DialogPanelTitle>
-              Hapus {deletingNode ? BUSINESS_LEVEL_LABELS[deletingNode.kind] : "Entitas"}?
+              Hapus{" "}
+              {deletingNode
+                ? BUSINESS_LEVEL_LABELS[deletingNode.kind]
+                : "Entitas"}
+              ?
             </DialogPanelTitle>
             <DialogPanelDescription>
-              {deletingNode?.kind === "warehouse" && deletingNode.data.is_default
+              {deletingNode?.kind === "warehouse" &&
+              deletingNode.data.is_default
                 ? "Main Storage tidak dapat dihapus jika masih satu-satunya stall di cabang ini."
                 : "Entitas child akan ikut terhapus. Tindakan ini tidak dapat dibatalkan."}
             </DialogPanelDescription>
@@ -520,7 +581,9 @@ export function BusinessConfigurationPage() {
             {deletingNode ? (
               <p className="text-sm text-gray-700">
                 <span className="font-medium">{deletingNode.data.name}</span>
-                <span className="ml-2 font-mono text-xs text-gray-400">({deletingNode.data.code})</span>
+                <span className="ml-2 font-mono text-xs text-gray-400">
+                  ({deletingNode.data.code})
+                </span>
               </p>
             ) : null}
           </DialogPanelBody>

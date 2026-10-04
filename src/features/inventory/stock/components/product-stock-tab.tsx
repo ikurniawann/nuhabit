@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { formatAmount, formatDate } from "@/lib/purchasing/utils";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
 import {
   CheckCircle2,
@@ -19,12 +18,13 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import type { ProductStockVariant } from "../types";
 import { useProductStock } from "../queries";
-import { listStockWarehouses } from "../api";
+import { useWarehouseLookup } from "@/features/inventory/shared/inventory-lookups";
+import { formatDate, formatNumber } from "@/lib/format";
 
 /** EPIC-047 Fase 1C — label baris varian: nilai opsi (mis. "M / Hitam"), fallback nama SKU. */
 function variantLabel(variant: ProductStockVariant) {
@@ -38,19 +38,17 @@ const STATUS_OPTIONS = [
   { value: "out_of_stock", label: "Habis" },
 ];
 
-function formatQty(value: number | string | null | undefined) {
-  return Number(value || 0).toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
 export function ProductStockTab() {
+  const warehousesQuery = useWarehouseLookup();
+  const warehouses = useMemo(
+    () => warehousesQuery.data ?? [],
+    [warehousesQuery.data],
+  );
+  const loadingWarehouses = warehousesQuery.isLoading;
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [stallFilter, setStallFilter] = useState("all");
-  const [warehouses, setWarehouses] = useState<
-    { id: string; name: string; code: string }[]
-  >([]);
-  const [loadingWarehouses, setLoadingWarehouses] = useState(true);
   const [page, setPage] = useState(1);
   const limit = 10;
   // EPIC-047 Fase 1C — baris produk mana yang expand rincian per varian.
@@ -67,16 +65,6 @@ export function ProductStockTab() {
       return next;
     });
   };
-
-  useEffect(() => {
-    // loadingWarehouses sudah true di useState awal — tidak perlu di-set
-    // ulang di sini (react-hooks/set-state-in-effect: no setState sync di
-    // badan efek).
-    listStockWarehouses()
-      .then(setWarehouses)
-      .catch((e) => console.error("Error loading stalls:", e))
-      .finally(() => setLoadingWarehouses(false));
-  }, []);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -103,17 +91,20 @@ export function ProductStockTab() {
         description: w.code,
       })),
     ],
-    [warehouses]
+    [warehouses],
   );
 
-  const items = listQuery.data?.items ?? [];
+  const items = useMemo(() => listQuery.data?.items ?? [], [listQuery.data]);
   const loading = listQuery.isLoading;
   const total = listQuery.data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const summary = useMemo(() => {
     const out = items.filter((i) => (Number(i.qty_available) || 0) <= 0).length;
-    const totalValue = items.reduce((s, i) => s + (Number(i.total_value) || 0), 0);
+    const totalValue = items.reduce(
+      (s, i) => s + (Number(i.total_value) || 0),
+      0,
+    );
     return { out, totalValue };
   }, [items]);
 
@@ -126,7 +117,10 @@ export function ProductStockTab() {
   };
 
   const hasActiveFilters =
-    Boolean(search) || statusFilter !== "all" || stallFilter !== "all" || page > 1;
+    Boolean(search) ||
+    statusFilter !== "all" ||
+    stallFilter !== "all" ||
+    page > 1;
 
   return (
     <div className="space-y-6">
@@ -139,15 +133,21 @@ export function ProductStockTab() {
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Habis (Halaman Ini)</p>
-            <p className="mt-1 text-2xl font-bold text-red-600">{summary.out}</p>
+            <p className="text-xs font-medium text-gray-500">
+              Habis (Halaman Ini)
+            </p>
+            <p className="mt-1 text-2xl font-bold text-red-600">
+              {summary.out}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Nilai Stok (Halaman Ini)</p>
+            <p className="text-xs font-medium text-gray-500">
+              Nilai Stok (Halaman Ini)
+            </p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
-              {formatAmount(summary.totalValue)}
+              {formatNumber(summary.totalValue)}
             </p>
           </CardContent>
         </Card>
@@ -166,7 +166,11 @@ export function ProductStockTab() {
                 setStallFilter(value || "all");
                 setPage(1);
               }}
-              placeholder={loadingWarehouses ? STALL_LABELS.loading : STALL_LABELS.allBranchTotal}
+              placeholder={
+                loadingWarehouses
+                  ? STALL_LABELS.loading
+                  : STALL_LABELS.allBranchTotal
+              }
               searchPlaceholder={STALL_LABELS.search}
               emptyMessage={STALL_LABELS.empty}
               disabled={loadingWarehouses}
@@ -218,32 +222,49 @@ export function ProductStockTab() {
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold">Kode</th>
-                <th className="px-4 py-3 text-left font-semibold">Nama Produk</th>
+                <th className="px-4 py-3 text-left font-semibold">
+                  Nama Produk
+                </th>
                 <th className="px-4 py-3 text-left font-semibold">Stall</th>
                 <th className="px-4 py-3 text-left font-semibold">Kategori</th>
                 <th className="px-4 py-3 text-right font-semibold">Tersedia</th>
                 <th className="px-4 py-3 text-left font-semibold">Satuan</th>
-                <th className="px-4 py-3 text-right font-semibold">HPP / Satuan</th>
-                <th className="px-4 py-3 text-right font-semibold">Harga Jual</th>
-                <th className="px-4 py-3 text-right font-semibold">Nilai Stok</th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  HPP / Satuan
+                </th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Harga Jual
+                </th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Nilai Stok
+                </th>
                 <th className="px-4 py-3 text-center font-semibold">Status</th>
-                <th className="px-4 py-3 text-left font-semibold">Pembaruan Terakhir</th>
+                <th className="px-4 py-3 text-left font-semibold">
+                  Pembaruan Terakhir
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-12 text-center text-gray-400">
+                  <td
+                    colSpan={11}
+                    className="px-4 py-12 text-center text-gray-400"
+                  >
                     Memuat stok produk...
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-16 text-center text-gray-400">
+                  <td
+                    colSpan={11}
+                    className="px-4 py-16 text-center text-gray-400"
+                  >
                     <ShoppingBag className="mx-auto mb-3 h-12 w-12 opacity-30" />
                     <p>Data stok produk tidak ditemukan</p>
                     <p className="mt-1 text-xs text-gray-500">
-                      Stok muncul otomatis setelah produksi atau penyelesaian barang jadi
+                      Stok muncul otomatis setelah produksi atau penyelesaian
+                      barang jadi
                     </p>
                   </td>
                 </tr>
@@ -257,7 +278,7 @@ export function ProductStockTab() {
                   const isExpanded = hasVariants && expandedIds.has(item.id);
                   const variantSum = variants.reduce(
                     (sum, v) => sum + (Number(v.stock_quantity) || 0),
-                    0
+                    0,
                   );
                   const sumMismatch = hasVariants && variantSum !== qty;
 
@@ -274,7 +295,11 @@ export function ProductStockTab() {
                                 type="button"
                                 onClick={() => toggleVariants(item.id)}
                                 className="shrink-0 rounded p-0.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-                                aria-label={isExpanded ? "Sembunyikan varian" : "Tampilkan varian"}
+                                aria-label={
+                                  isExpanded
+                                    ? "Sembunyikan varian"
+                                    : "Tampilkan varian"
+                                }
                               >
                                 {isExpanded ? (
                                   <ChevronDown className="h-3.5 w-3.5" />
@@ -285,13 +310,17 @@ export function ProductStockTab() {
                             )}
                             {item.product_id ? (
                               <Link
-                                href={PRODUCT_ROUTES.productsDetail(item.product_id)}
+                                href={PRODUCT_ROUTES.productsDetail(
+                                  item.product_id,
+                                )}
                                 className="font-medium text-pink-700 hover:underline"
                               >
                                 {item.product_nama}
                               </Link>
                             ) : (
-                              <span className="font-medium text-gray-900">{item.product_nama}</span>
+                              <span className="font-medium text-gray-900">
+                                {item.product_nama}
+                              </span>
                             )}
                             {hasVariants && (
                               <button
@@ -304,7 +333,9 @@ export function ProductStockTab() {
                             )}
                           </div>
                           {sumMismatch && (
-                            <p className="mt-0.5 text-[10px] text-amber-600">Σ varian ≠ total</p>
+                            <p className="mt-0.5 text-[10px] text-amber-600">
+                              Σ varian ≠ total
+                            </p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-600">
@@ -314,17 +345,19 @@ export function ProductStockTab() {
                           {item.product_kategori || "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-semibold text-pink-700">
-                          {formatQty(qty)}
+                          {formatNumber(qty, 4)}
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{item.satuan_nama || "—"}</td>
-                        <td className="px-4 py-3 text-right text-gray-700">
-                          {formatAmount(Number(item.unit_cost) || 0)}
+                        <td className="px-4 py-3 text-gray-600">
+                          {item.satuan_nama || "—"}
                         </td>
                         <td className="px-4 py-3 text-right text-gray-700">
-                          {formatAmount(Number(item.harga_jual) || 0)}
+                          {formatNumber(Number(item.unit_cost) || 0)}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {formatNumber(Number(item.harga_jual) || 0)}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-800">
-                          {formatAmount(Number(item.total_value) || 0)}
+                          {formatNumber(Number(item.total_value) || 0)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           {isOut ? (
@@ -346,18 +379,25 @@ export function ProductStockTab() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-500">
-                          {item.last_movement_at ? formatDate(item.last_movement_at) : "—"}
+                          {item.last_movement_at
+                            ? formatDate(item.last_movement_at)
+                            : "—"}
                         </td>
                       </tr>
                       {isExpanded &&
                         variants.map((variant) => (
-                          <tr key={variant.sku_id} className="bg-gray-50/60 text-xs text-gray-500">
-                            <td className="px-4 py-2 pl-8 font-mono">{variant.sku}</td>
+                          <tr
+                            key={variant.sku_id}
+                            className="bg-gray-50/60 text-xs text-gray-500"
+                          >
+                            <td className="px-4 py-2 pl-8 font-mono">
+                              {variant.sku}
+                            </td>
                             <td className="px-4 py-2" colSpan={3}>
                               {variantLabel(variant)}
                             </td>
                             <td className="px-4 py-2 text-right font-medium text-gray-600">
-                              {formatQty(variant.stock_quantity)}
+                              {formatNumber(variant.stock_quantity, 4)}
                             </td>
                             <td colSpan={6} />
                           </tr>

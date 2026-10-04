@@ -1,7 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bot, Check, Eye, EyeOff, ImagePlus, KeyRound, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPut } from "@/lib/api-client";
+import {
+  Bot,
+  Check,
+  Eye,
+  EyeOff,
+  ImagePlus,
+  KeyRound,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,13 +34,23 @@ interface IntegrationsData {
 
 type ProviderId = "deepseek" | "openai";
 
+const INTEGRATIONS_URL = "/api/settings/integrations";
+const INTEGRATIONS_KEY = ["settings", "integrations"] as const;
+
 const PROVIDER_META: Record<
   ProviderId,
-  { title: string; description: string; icon: typeof Bot; iconClass: string; keyPlaceholder: string }
+  {
+    title: string;
+    description: string;
+    icon: typeof Bot;
+    iconClass: string;
+    keyPlaceholder: string;
+  }
 > = {
   deepseek: {
     title: "DeepSeek AI",
-    description: "Dipakai untuk analisis CV kandidat dan insight psikotes (teks).",
+    description:
+      "Dipakai untuk analisis CV kandidat dan insight psikotes (teks).",
     icon: Bot,
     iconClass: "bg-sky-100 text-sky-700",
     keyPlaceholder: "sk-…",
@@ -58,7 +78,7 @@ function ProviderCard({
 }: {
   provider: ProviderId;
   config: ProviderConfig;
-  onSaved: (data: IntegrationsData) => void;
+  onSaved: () => Promise<void>;
 }) {
   const meta = PROVIDER_META[provider];
   const Icon = meta.icon;
@@ -72,15 +92,8 @@ function ProviderCard({
   const [baseUrl, setBaseUrl] = useState(config.base_url);
 
   const putConfig = async (fields: Record<string, unknown>) => {
-    const res = await fetch("/api/settings/integrations", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload(provider, fields)),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "Gagal menyimpan");
-    const refreshed = await fetch("/api/settings/integrations").then((r) => r.json());
-    onSaved(refreshed.data);
+    await apiPut(INTEGRATIONS_URL, buildPayload(provider, fields));
+    await onSaved();
   };
 
   const handleSave = async () => {
@@ -119,7 +132,9 @@ function ProviderCard({
   return (
     <Card className="p-5">
       <div className="mb-4 flex items-center gap-2">
-        <div className={`flex size-9 items-center justify-center rounded-lg ${meta.iconClass}`}>
+        <div
+          className={`flex size-9 items-center justify-center rounded-lg ${meta.iconClass}`}
+        >
           <Icon className="size-5" />
         </div>
         <div>
@@ -138,7 +153,10 @@ function ProviderCard({
           <Label className="text-xs font-medium">API Key</Label>
           {config.has_api_key && (
             <p className="text-xs text-muted-foreground">
-              Key tersimpan: <code className="rounded bg-muted px-1">{config.api_key_masked}</code>{" "}
+              Key tersimpan:{" "}
+              <code className="rounded bg-muted px-1">
+                {config.api_key_masked}
+              </code>{" "}
               — isi field di bawah hanya jika ingin mengganti.
             </p>
           )}
@@ -150,7 +168,9 @@ function ProviderCard({
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder={
-                  config.has_api_key ? `${meta.keyPlaceholder} (ganti key)` : meta.keyPlaceholder
+                  config.has_api_key
+                    ? `${meta.keyPlaceholder} (ganti key)`
+                    : meta.keyPlaceholder
                 }
                 className="pl-9 pr-9"
                 autoComplete="off"
@@ -161,11 +181,20 @@ function ProviderCard({
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 aria-label={showKey ? "Sembunyikan key" : "Tampilkan key"}
               >
-                {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {showKey ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
               </button>
             </div>
             {config.has_api_key && (
-              <Button type="button" variant="outline" onClick={handleRemoveKey} disabled={saving}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleRemoveKey}
+                disabled={saving}
+              >
                 Hapus Key
               </Button>
             )}
@@ -179,7 +208,10 @@ function ProviderCard({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Base URL</Label>
-            <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
+            <Input
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+            />
           </div>
         </div>
 
@@ -202,28 +234,20 @@ function ProviderCard({
 }
 
 export function IntegrationsPage() {
-  const [data, setData] = useState<IntegrationsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/settings/integrations");
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Gagal memuat konfigurasi");
-        if (!cancelled) setData(json.data);
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Gagal memuat konfigurasi");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const queryClient = useQueryClient();
+  const integrationsQuery = useQuery({
+    queryKey: INTEGRATIONS_KEY,
+    queryFn: () =>
+      apiGet<{ data: IntegrationsData }>(INTEGRATIONS_URL).then((r) => r.data),
+  });
+  const data = integrationsQuery.data ?? null;
+  const loading = integrationsQuery.isLoading;
+  const loadError =
+    integrationsQuery.error instanceof Error
+      ? integrationsQuery.error.message
+      : null;
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: INTEGRATIONS_KEY });
 
   if (loading) {
     return (
@@ -238,8 +262,8 @@ export function IntegrationsPage() {
       <div>
         <h1 className="text-lg font-semibold text-foreground">Integrasi</h1>
         <p className="text-sm text-muted-foreground">
-          Konfigurasi layanan eksternal. API key disimpan di server dan tidak pernah
-          ditampilkan penuh setelah disimpan.
+          Konfigurasi layanan eksternal. API key disimpan di server dan tidak
+          pernah ditampilkan penuh setelah disimpan.
         </p>
       </div>
 
@@ -247,8 +271,16 @@ export function IntegrationsPage() {
 
       {data && (
         <>
-          <ProviderCard provider="deepseek" config={data.deepseek} onSaved={setData} />
-          <ProviderCard provider="openai" config={data.openai} onSaved={setData} />
+          <ProviderCard
+            provider="deepseek"
+            config={data.deepseek}
+            onSaved={refresh}
+          />
+          <ProviderCard
+            provider="openai"
+            config={data.openai}
+            onSaved={refresh}
+          />
         </>
       )}
 

@@ -15,12 +15,11 @@ export function accountingCompanyId(
  * Wajib punya company_id di profil user.
  * Tidak me-default ke Sulu atau company lain.
  */
-export function requireAccountingCompanyId(scope: UserScope | null): string {
+export function requireAccountingCompanyId(
+  scope: UserScope | null,
+  message = "Akun Anda belum terikat company. Data accounting hanya tampil untuk company user yang login."
+): string {
   const companyId = accountingCompanyId(scope);
-  if (!companyId) {
-    throw ApiError.badRequest(
-      "Akun Anda belum terikat company. Data accounting hanya tampil untuk company user yang login."
-    );
-  }
+  if (!companyId) throw ApiError.badRequest(message);
   return companyId;
 }

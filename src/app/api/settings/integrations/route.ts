@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import {
   DEEPSEEK_DEFAULTS,
@@ -22,99 +23,64 @@ const PROVIDER_KEYS = {
     apiKey: SETTING_KEYS.DEEPSEEK_API_KEY,
     model: SETTING_KEYS.DEEPSEEK_MODEL,
     baseUrl: SETTING_KEYS.DEEPSEEK_BASE_URL,
+    defaults: DEEPSEEK_DEFAULTS,
   },
   openai: {
     apiKey: SETTING_KEYS.OPENAI_API_KEY,
     model: SETTING_KEYS.OPENAI_MODEL,
     baseUrl: SETTING_KEYS.OPENAI_BASE_URL,
+    defaults: OPENAI_DEFAULTS,
   },
 } as const;
 
-export async function GET() {
-  try {
-    await requireIamMenuPrefix(IAM.settingsIntegrations);
-    const s = await getSettings([
-      SETTING_KEYS.DEEPSEEK_API_KEY,
-      SETTING_KEYS.DEEPSEEK_MODEL,
-      SETTING_KEYS.DEEPSEEK_BASE_URL,
-      SETTING_KEYS.OPENAI_API_KEY,
-      SETTING_KEYS.OPENAI_MODEL,
-      SETTING_KEYS.OPENAI_BASE_URL,
-    ]);
-    return NextResponse.json({
-      data: {
-        deepseek: {
-          api_key_masked: maskSecret(s[SETTING_KEYS.DEEPSEEK_API_KEY]),
-          has_api_key: Boolean(s[SETTING_KEYS.DEEPSEEK_API_KEY]),
-          model: s[SETTING_KEYS.DEEPSEEK_MODEL] || DEEPSEEK_DEFAULTS.model,
-          base_url: s[SETTING_KEYS.DEEPSEEK_BASE_URL] || DEEPSEEK_DEFAULTS.baseUrl,
-        },
-        openai: {
-          api_key_masked: maskSecret(s[SETTING_KEYS.OPENAI_API_KEY]),
-          has_api_key: Boolean(s[SETTING_KEYS.OPENAI_API_KEY]),
-          model: s[SETTING_KEYS.OPENAI_MODEL] || OPENAI_DEFAULTS.model,
-          base_url: s[SETTING_KEYS.OPENAI_BASE_URL] || OPENAI_DEFAULTS.baseUrl,
-        },
-      },
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/integrations] GET failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+type Provider = keyof typeof PROVIDER_KEYS;
 
-/** Terapkan {api_key, model, base_url} parsial utk satu provider.
- *  Return pesan error atau null bila valid. */
-async function applyProviderConfig(
-  provider: keyof typeof PROVIDER_KEYS,
-  input: { api_key?: unknown; model?: unknown; base_url?: unknown }
-): Promise<string | null> {
-  const keys = PROVIDER_KEYS[provider];
+export const GET = apiHandler(async () => {
+  await requireIamMenuPrefix(IAM.settingsIntegrations);
+  const keys = Object.values(PROVIDER_KEYS).flatMap((k) => [k.apiKey, k.model, k.baseUrl]);
+  const s = await getSettings(keys);
+  const view = (provider: Provider) => {
+    const k = PROVIDER_KEYS[provider];
+    return {
+      api_key_masked: maskSecret(s[k.apiKey]),
+      has_api_key: Boolean(s[k.apiKey]),
+      model: s[k.model] || k.defaults.model,
+      base_url: s[k.baseUrl] || k.defaults.baseUrl,
+    };
+  };
+  return NextResponse.json({ data: { deepseek: view("deepseek"), openai: view("openai") } });
+}, "GET /api/settings/integrations");
+
+/** Validasi {api_key, model, base_url} parsial satu provider; lempar 400 berprefiks. */
+function validateProviderInput(input: { api_key?: unknown; model?: unknown; base_url?: unknown }, prefix: string) {
+  const fail = (message: string) => ApiError.badRequest(`${prefix}${message}`);
   const { api_key, model, base_url } = input;
-
-  if (api_key !== undefined) {
-    if (api_key !== null && typeof api_key !== "string") return "api_key tidak valid";
-    // string kosong = hapus key; string berisi = simpan; undefined = tidak diubah
-    await setSetting(keys.apiKey, api_key ? api_key.trim() : null);
+  if (api_key !== undefined && api_key !== null && typeof api_key !== "string") throw fail("api_key tidak valid");
+  if (model !== undefined && (typeof model !== "string" || !model.trim())) throw fail("model tidak valid");
+  if (base_url !== undefined && (typeof base_url !== "string" || !/^https?:\/\//.test(base_url.trim()))) {
+    throw fail("base_url tidak valid");
   }
-  if (model !== undefined) {
-    if (typeof model !== "string" || !model.trim()) return "model tidak valid";
-    await setSetting(keys.model, model.trim());
-  }
-  if (base_url !== undefined) {
-    if (typeof base_url !== "string" || !/^https?:\/\//.test(base_url.trim())) {
-      return "base_url tidak valid";
-    }
-    await setSetting(keys.baseUrl, base_url.trim().replace(/\/+$/, ""));
-  }
-  return null;
+  return input as { api_key?: string | null; model?: string; base_url?: string };
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsIntegrations);
-    const body = await request.json();
-    const { api_key, model, base_url, openai } = body ?? {};
-
-    // Field flat = DeepSeek (bentuk payload lama, tetap didukung)
-    const deepseekError = await applyProviderConfig("deepseek", { api_key, model, base_url });
-    if (deepseekError) return NextResponse.json({ error: deepseekError }, { status: 400 });
-
-    if (openai !== undefined) {
-      if (openai === null || typeof openai !== "object") {
-        return NextResponse.json({ error: "openai tidak valid" }, { status: 400 });
-      }
-      const openaiError = await applyProviderConfig("openai", openai);
-      if (openaiError) {
-        return NextResponse.json({ error: `openai: ${openaiError}` }, { status: 400 });
-      }
-    }
-
-    return NextResponse.json({ message: "Konfigurasi tersimpan" });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/integrations] PUT failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+async function applyProviderConfig(provider: Provider, input: ReturnType<typeof validateProviderInput>) {
+  const keys = PROVIDER_KEYS[provider];
+  // string kosong = hapus key; string berisi = simpan; undefined = tidak diubah
+  if (input.api_key !== undefined) await setSetting(keys.apiKey, input.api_key ? input.api_key.trim() : null);
+  if (input.model !== undefined) await setSetting(keys.model, input.model.trim());
+  if (input.base_url !== undefined) await setSetting(keys.baseUrl, input.base_url.trim().replace(/\/+$/, ""));
 }
+
+export const PUT = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsIntegrations);
+  const body = ((await request.json()) ?? {}) as Record<string, unknown>;
+  const { api_key, model, base_url, openai } = body;
+
+  // Field flat = DeepSeek (bentuk payload lama, tetap didukung)
+  await applyProviderConfig("deepseek", validateProviderInput({ api_key, model, base_url }, ""));
+  if (openai !== undefined) {
+    if (openai === null || typeof openai !== "object") throw ApiError.badRequest("openai tidak valid");
+    await applyProviderConfig("openai", validateProviderInput(openai, "openai: "));
+  }
+  return NextResponse.json({ message: "Konfigurasi tersimpan" });
+}, "PUT /api/settings/integrations");

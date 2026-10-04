@@ -8,13 +8,17 @@ import type {
   TrialBalanceReport,
 } from "./types";
 import type { ReportKind } from "./routes";
+import type { AccountingDashboard } from "@/lib/accounting/dashboard-store";
 
 const BASE = "/api/accounting/reports";
 
-function getReport<T>(kind: ReportKind, filters?: Record<string, string | undefined>) {
-  return apiGet<{ data: T }>(
-    buildListUrl(`${BASE}/${kind}`, filters)
-  ).then((res) => res.data);
+function getReport<T>(
+  kind: ReportKind,
+  filters?: Record<string, string | undefined>,
+) {
+  return apiGet<{ data: T }>(buildListUrl(`${BASE}/${kind}`, filters)).then(
+    (res) => res.data,
+  );
 }
 
 export const fetchTrialBalance = (asOf?: string) =>
@@ -45,10 +49,21 @@ export const fetchGeneralLedgerAccounts = (asOf?: string) =>
 export const fetchGeneralLedger = (
   accountId: string,
   dateFrom?: string,
-  dateTo?: string
+  dateTo?: string,
 ) =>
   getReport<GeneralLedgerReport>("general-ledger", {
     account_id: accountId,
     date_from: dateFrom,
     date_to: dateTo,
   });
+
+export type DashboardFilters = {
+  as_of: string;
+  date_from: string;
+  date_to: string;
+};
+
+export const fetchAccountingDashboard = (filters: DashboardFilters) =>
+  apiGet<{ data: AccountingDashboard | null }>(
+    buildListUrl("/api/accounting/dashboard", filters),
+  ).then((res) => res.data);

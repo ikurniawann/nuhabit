@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RupiahInput } from "@/features/sales-funnel/pipeline/components/rupiah-input";
-import { formatRupiah } from "@/features/sales-funnel/pipeline/types";
 import {
   useDeleteFakturPajak,
   useInvoiceDetail,
@@ -24,6 +23,7 @@ import {
   useReviseInvoice,
   useUploadFakturPajak,
 } from "../queries";
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
 const FAKTUR_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
 const FAKTUR_MAX_BYTES = 10 * 1024 * 1024;
@@ -56,14 +56,6 @@ const METHOD_LABELS: Record<string, string> = {
   lainnya: "Lainnya",
 };
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function InvoiceDetailDialog({
   invoiceId,
@@ -205,9 +197,9 @@ export function InvoiceDetailDialog({
                     {detail.term ? (
                       <p className="mt-1 text-xs text-gray-600">
                         Termin: {detail.term.label} (
-                        {Number(detail.term.percent).toLocaleString("id-ID")}%)
+                        {formatNumber(detail.term.percent, 2)}%)
                         {detail.term.due_date
-                          ? ` · jatuh tempo asal ${formatDate(detail.term.due_date)}`
+                          ? ` · jatuh tempo asal ${formatDate(detail.term.due_date, "—")}`
                           : ""}
                       </p>
                     ) : (
@@ -338,11 +330,11 @@ export function InvoiceDetailDialog({
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Jatuh tempo</p>
-                    <p className="text-gray-900">{formatDate(detail.due_date)}</p>
+                    <p className="text-gray-900">{formatDate(detail.due_date, "—")}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Tanggal Acara</p>
-                    <p className="text-gray-900">{formatDate(detail.event_date)}</p>
+                    <p className="text-gray-900">{formatDate(detail.event_date, "—")}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">PIC</p>
@@ -387,7 +379,7 @@ export function InvoiceDetailDialog({
                           {METHOD_LABELS[payment.method] ?? payment.method}
                         </Badge>
                         <span className="text-xs text-gray-500">
-                          {formatDate(payment.paid_on)}
+                          {formatDate(payment.paid_on, "—")}
                           {payment.note ? ` · ${payment.note}` : ""}
                         </span>
                       </li>

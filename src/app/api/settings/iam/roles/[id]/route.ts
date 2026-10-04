@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { mapRoleDetail } from "@/lib/iam/role-mapper";
 import {
@@ -8,86 +9,44 @@ import {
   listRolePermissionsMatrixFromDb,
   updateIamRoleInDb,
 } from "@/lib/iam/role-repository";
+import { roleUpdateSchema } from "@/lib/settings/iam-schemas";
+import { rethrowUserFacing } from "@/lib/settings/route-errors";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: string }).message);
+const notFound = () => ApiError.notFound("Role not found");
+
+export const GET = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const { id } = await params;
+  const row = await getIamRoleFromDb(id);
+  if (!row) throw notFound();
+  return NextResponse.json(mapRoleDetail(row, await listRolePermissionsMatrixFromDb(id)));
+}, "GET /api/settings/iam/roles/[id]");
+
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const { id } = await params;
+  const body = await validateBody(request, roleUpdateSchema);
+  const existing = await getIamRoleFromDb(id);
+  if (!existing) throw notFound();
+  if (existing.is_system && body.code && body.code !== existing.code) {
+    throw ApiError.badRequest("System role code cannot be changed");
   }
-  return "Internal server error";
-}
 
-export async function GET(_request: NextRequest, context: RouteContext) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-    const { id } = await context.params;
+  const updated = await updateIamRoleInDb(id, {
+    code: existing.is_system ? undefined : body.code?.trim()?.toLowerCase(),
+    name: body.name?.trim(),
+    description: body.description,
+    isActive: body.isActive,
+  });
+  if (!updated) throw notFound();
+  return NextResponse.json({ id });
+}, "PUT /api/settings/iam/roles/[id]");
 
-    const row = await getIamRoleFromDb(id);
-    if (!row) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    const permissions = await listRolePermissionsMatrixFromDb(id);
-    return NextResponse.json(mapRoleDetail(row, permissions));
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles/:id] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-    const { id } = await context.params;
-    const body = await request.json();
-
-    const existing = await getIamRoleFromDb(id);
-    if (!existing) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    if (existing.is_system && body.code && body.code !== existing.code) {
-      return NextResponse.json({ error: "System role code cannot be changed" }, { status: 400 });
-    }
-
-    const updated = await updateIamRoleInDb(id, {
-      code: existing.is_system ? undefined : body.code?.trim()?.toLowerCase(),
-      name: body.name?.trim(),
-      description: body.description,
-      isActive: body.isActive,
-    });
-
-    if (!updated) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ id });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles/:id] PUT failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function DELETE(_request: NextRequest, context: RouteContext) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-    const { id } = await context.params;
-
-    const deleted = await deleteIamRoleInDb(id);
-    if (!deleted) {
-      return NextResponse.json({ error: "Role not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles/:id] DELETE failed:", error);
-    const message = apiErrorMessage(error);
-    const status = message.includes("System roles") ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
-  }
-}
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const deleted = await deleteIamRoleInDb((await params).id).catch(rethrowUserFacing(/System roles/));
+  if (!deleted) throw notFound();
+  return NextResponse.json({ success: true });
+}, "DELETE /api/settings/iam/roles/[id]");

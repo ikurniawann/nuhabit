@@ -1,55 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
-import {
-  getApiUserScope,
-  isRowInBusinessScope,
-} from "@/lib/api/scope";
-import { ACCOUNTING_API_ROLES } from "@/lib/accounting/coa-types";
-import {
-  getJournalEntry,
-  postJournalEntry,
-} from "@/lib/accounting/journal-entry-store";
+import { getApiUserScope } from "@/lib/api/scope";
+import { assertRecordInScope } from "@/lib/accounting/route-helpers";
+import { getJournalEntry, postJournalEntry } from "@/lib/accounting/journal-entry-store";
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
-function errMsg(error: unknown) {
-  return error instanceof Error ? error.message : "Internal server error";
-}
-
-export async function POST(_request: NextRequest, { params }: RouteParams) {
-  try {
+export const POST = apiHandler(
+  async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireIamMenuPrefix(IAM.accounting);
     const { id } = await params;
-    const scope = await getApiUserScope();
-
-    const existing = await getJournalEntry(id);
-    if (!existing) throw ApiError.notFound("Journal entry tidak ditemukan");
-    if (
-      existing.company_id != null &&
-      !isRowInBusinessScope(scope, existing)
-    ) {
-      throw ApiError.forbidden("Journal entry di luar scope");
-    }
-
-    try {
-      const data = await postJournalEntry(id, user.id);
-      return NextResponse.json({
-        data,
-        message: "Journal entry berhasil diposting",
-      });
-    } catch (error) {
-      const msg = errMsg(error);
-      if (/fiscal|balance|Minimal|POSTED|recon|period/i.test(msg)) {
-        throw ApiError.badRequest(msg);
-      }
-      throw error;
-    }
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[accounting/journal-entries/:id/post] POST", error);
-    return NextResponse.json({ error: errMsg(error) }, { status: 500 });
-  }
-}
+    assertRecordInScope(await getJournalEntry(id), await getApiUserScope(), {
+      notFound: "Journal entry tidak ditemukan",
+      outOfScope: "Journal entry di luar scope",
+    });
+    const data = await postJournalEntry(id, user.id);
+    return NextResponse.json({ data, message: "Journal entry berhasil diposting" });
+  },
+  "POST /api/accounting/journal-entries/[id]/post"
+);

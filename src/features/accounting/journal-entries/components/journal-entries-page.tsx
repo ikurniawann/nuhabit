@@ -1,41 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  PlusIcon,
-  DocumentTextIcon,
-} from "@heroicons/react/24/outline";
+import { PlusIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterDeleteDialog } from "@/features/master-data/components/master-delete-dialog";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { JOURNAL_ENTRY_STATUSES } from "@/lib/accounting/fiscal-types";
 import { useJournalEntryList } from "../queries";
-import {
-  useDeleteJournalEntry,
-  usePostJournalEntry,
-} from "../mutations";
+import { useDeleteJournalEntry, usePostJournalEntry } from "../mutations";
 import { JOURNAL_ENTRY_ROUTES } from "../routes";
-
-function formatAmount(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
+import { formatLedgerAmount } from "@/lib/accounting/format";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { toast } from "sonner";
 
 export function JournalEntriesPage() {
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -49,7 +40,7 @@ export function JournalEntriesPage() {
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
     }),
-    [search, statusFilter, dateFrom, dateTo]
+    [search, statusFilter, dateFrom, dateTo],
   );
 
   const { data, isLoading } = useJournalEntryList(filters);
@@ -58,27 +49,19 @@ export function JournalEntriesPage() {
   const rows = useMemo(() => data ?? [], [data]);
   const isDeleting = deleteMutation.isPending;
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
-
   const statusOptions = useMemo(
     () => JOURNAL_ENTRY_STATUSES.map((s) => ({ value: s, label: s })),
-    []
+    [],
   );
 
   async function handleDelete() {
     if (!deleteId || isDeleting) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      showToast("Journal entry berhasil dihapus", "success");
+      toast.success("Journal entry berhasil dihapus");
       setDeleteId(null);
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal menghapus",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
@@ -87,12 +70,9 @@ export function JournalEntriesPage() {
     setPostingId(id);
     try {
       const res = await postMutation.mutateAsync(id);
-      showToast(res.message || "Journal entry berhasil diposting", "success");
+      toast.success(res.message || "Journal entry berhasil diposting");
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal posting",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal posting");
     } finally {
       setPostingId(null);
     }
@@ -100,8 +80,6 @@ export function JournalEntriesPage() {
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -174,7 +152,7 @@ export function JournalEntriesPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat journal entries...
             </p>
@@ -217,10 +195,10 @@ export function JournalEntriesPage() {
                       {row.fiscal_period_name || "—"}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">
-                      {formatAmount(row.total_debit)}
+                      {formatLedgerAmount(row.total_debit)}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums">
-                      {formatAmount(row.total_credit)}
+                      {formatLedgerAmount(row.total_credit)}
                     </td>
                     <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-1">
@@ -254,7 +232,7 @@ export function JournalEntriesPage() {
                             variant="outline"
                             disabled={postingId === row.id}
                             onClick={() => handlePost(row.id)}
-                            className="h-8 rounded-lg border-primary/20 text-primary"
+                            className="h-8 rounded-lg border-primary/20 text-brand-text"
                           >
                             {postingId === row.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />

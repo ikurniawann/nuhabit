@@ -22,35 +22,30 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import { useCreateMenu, useDeleteMenu, useUpdateMenu } from "../mutations";
 import { useMenuDetail, useMenuList } from "../queries";
-import type { CreateMenuPayload, MenuItem } from "../types";
+import type { CreateMenuPayload, MenuItem } from "@/lib/iam/menu-types";
 import { MenuDetailSections } from "./menu-detail-sections";
 import { MenuFormDialog } from "./menu-form-dialog";
 import { MenuTreeTable } from "./menu-tree-table";
-import {
-  buildMenuTree,
-  collectExpandableIds,
-  filterMenusWithAncestors,
-  flattenMenuTree,
-  mergeExpandableIds,
-  sortSiblings,
-} from "../utils/menu-tree";
+import { buildMenuTree, collectExpandableIds, filterMenusWithAncestors, flattenMenuTree, sortSiblings } from "../utils/menu-tree";
+import { toast } from "sonner";
 
 export function MenusConfigurationPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [menuTypeFilter, setMenuTypeFilter] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  // Node baru default terbuka; yang ditutup user dicatat di sini.
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [formMenuId, setFormMenuId] = useState<string | null>(null);
-  const [formDefaultParentId, setFormDefaultParentId] = useState<string | null>(null);
+  const [formDefaultParentId, setFormDefaultParentId] = useState<string | null>(
+    null,
+  );
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletingMenu, setDeletingMenu] = useState<MenuItem | null>(null);
@@ -68,7 +63,8 @@ export function MenusConfigurationPage() {
   } = useMenuDetail(selectedId);
 
   const allRows = useMemo(() => data?.data ?? [], [data?.data]);
-  const isFormSubmitting = createMenuMutation.isPending || updateMenuMutation.isPending;
+  const isFormSubmitting =
+    createMenuMutation.isPending || updateMenuMutation.isPending;
   const isDeleting = deleteMenuMutation.isPending;
 
   const menuTypes = useMemo(() => {
@@ -83,27 +79,28 @@ export function MenusConfigurationPage() {
         status: statusFilter,
         menuType: menuTypeFilter,
       }),
-    [allRows, search, statusFilter, menuTypeFilter]
+    [allRows, search, statusFilter, menuTypeFilter],
   );
 
   const menuTree = useMemo(() => buildMenuTree(filteredItems), [filteredItems]);
 
+  const expandableIds = useMemo(() => collectExpandableIds(menuTree), [menuTree]);
+  const expandedIds = useMemo(
+    () => new Set(expandableIds.filter((id) => !collapsedIds.has(id))),
+    [expandableIds, collapsedIds],
+  );
   const displayRows = useMemo(
     () => flattenMenuTree(menuTree, expandedIds),
-    [menuTree, expandedIds]
+    [menuTree, expandedIds],
   );
 
   useEffect(() => {
-    setExpandedIds((prev) =>
-      mergeExpandableIds(prev, collectExpandableIds(menuTree))
-    );
-  }, [menuTree]);
-
-  useEffect(() => {
     if (isError) {
-      showToast(error instanceof Error ? error.message : "Failed to load menu list", "error");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load menu list",
+      );
     }
-  }, [isError, error, showToast]);
+  }, [isError, error]);
 
   function handleView(id: string) {
     setSelectedId(id);
@@ -138,17 +135,18 @@ export function MenusConfigurationPage() {
     try {
       if (formMode === "edit" && formMenuId) {
         await updateMenuMutation.mutateAsync({ id: formMenuId, ...payload });
-        showToast("Menu updated successfully", "success");
+        toast.success("Menu updated successfully");
       } else {
         await createMenuMutation.mutateAsync(payload);
-        showToast("Menu added successfully", "success");
+        toast.success("Menu added successfully");
       }
       setFormOpen(false);
       setFormMenuId(null);
     } catch (submitError) {
-      showToast(
-        submitError instanceof Error ? submitError.message : "Failed to save menu",
-        "error"
+      toast.error(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save menu",
       );
     }
   }
@@ -158,7 +156,7 @@ export function MenusConfigurationPage() {
 
     try {
       await deleteMenuMutation.mutateAsync(deletingMenu.id);
-      showToast("Menu deleted successfully", "success");
+      toast.success("Menu deleted successfully");
       setDeleteOpen(false);
       setDeletingMenu(null);
 
@@ -166,9 +164,10 @@ export function MenusConfigurationPage() {
         handleDetailClose();
       }
     } catch (deleteError) {
-      showToast(
-        deleteError instanceof Error ? deleteError.message : "Failed to delete menu",
-        "error"
+      toast.error(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete menu",
       );
     }
   }
@@ -176,7 +175,9 @@ export function MenusConfigurationPage() {
   async function handleReorder(item: MenuItem, direction: "up" | "down") {
     if (reorderingId) return;
 
-    const siblings = sortSiblings(allRows.filter((row) => row.parentId === item.parentId));
+    const siblings = sortSiblings(
+      allRows.filter((row) => row.parentId === item.parentId),
+    );
     const index = siblings.findIndex((row) => row.id === item.id);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (index < 0 || targetIndex < 0 || targetIndex >= siblings.length) return;
@@ -186,7 +187,11 @@ export function MenusConfigurationPage() {
 
     // Normalisasi order semua sibling (1..n) agar duplikat orderNumber ikut rapi.
     const changes = next
-      .map((row, i) => ({ id: row.id, orderNumber: i + 1, previous: row.orderNumber }))
+      .map((row, i) => ({
+        id: row.id,
+        orderNumber: i + 1,
+        previous: row.orderNumber,
+      }))
       .filter((change) => change.previous !== change.orderNumber);
 
     if (changes.length === 0) return;
@@ -195,14 +200,15 @@ export function MenusConfigurationPage() {
     try {
       await Promise.all(
         changes.map(({ id, orderNumber }) =>
-          updateMenuMutation.mutateAsync({ id, orderNumber })
-        )
+          updateMenuMutation.mutateAsync({ id, orderNumber }),
+        ),
       );
-      showToast("Menu order updated", "success");
+      toast.success("Menu order updated");
     } catch (reorderError) {
-      showToast(
-        reorderError instanceof Error ? reorderError.message : "Failed to update menu order",
-        "error"
+      toast.error(
+        reorderError instanceof Error
+          ? reorderError.message
+          : "Failed to update menu order",
       );
     } finally {
       setReorderingId(null);
@@ -215,11 +221,12 @@ export function MenusConfigurationPage() {
     setReorderingId(item.id);
     try {
       await updateMenuMutation.mutateAsync({ id: item.id, orderNumber });
-      showToast("Menu order updated", "success");
+      toast.success("Menu order updated");
     } catch (reorderError) {
-      showToast(
-        reorderError instanceof Error ? reorderError.message : "Failed to update menu order",
-        "error"
+      toast.error(
+        reorderError instanceof Error
+          ? reorderError.message
+          : "Failed to update menu order",
       );
     } finally {
       setReorderingId(null);
@@ -227,7 +234,7 @@ export function MenusConfigurationPage() {
   }
 
   function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
+    setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -236,25 +243,23 @@ export function MenusConfigurationPage() {
   }
 
   function expandAll() {
-    setExpandedIds(new Set(collectExpandableIds(menuTree)));
+    setCollapsedIds(new Set());
   }
 
   function collapseAll() {
-    setExpandedIds(new Set());
+    setCollapsedIds(new Set(expandableIds));
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Squares2X2Icon className="h-6 w-6 text-pink-600" />
           <div>
             <h1 className="text-xl font-bold text-gray-900">Menu Management</h1>
             <p className="text-sm text-gray-500">
-              IAM sidebar menu hierarchy — tree view ({displayRows.length} shown / {allRows.length}{" "}
-              total)
+              IAM sidebar menu hierarchy — tree view ({displayRows.length} shown
+              / {allRows.length} total)
             </p>
           </div>
         </div>
@@ -283,7 +288,9 @@ export function MenusConfigurationPage() {
               </label>
               <Select
                 value={statusFilter || "all"}
-                onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
+                onValueChange={(value) =>
+                  setStatusFilter(value === "all" ? "" : value)
+                }
               >
                 <SelectTrigger className="h-9 w-full sm:w-36">
                   <SelectValue placeholder="Status" />
@@ -296,7 +303,9 @@ export function MenusConfigurationPage() {
               </Select>
               <Select
                 value={menuTypeFilter || "all"}
-                onValueChange={(value) => setMenuTypeFilter(value === "all" ? "" : value)}
+                onValueChange={(value) =>
+                  setMenuTypeFilter(value === "all" ? "" : value)
+                }
               >
                 <SelectTrigger className="h-9 w-full sm:w-40">
                   <SelectValue placeholder="Menu type" />
@@ -313,7 +322,9 @@ export function MenusConfigurationPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">{allRows.length} menus</span>
+              <span className="text-xs text-gray-500">
+                {allRows.length} menus
+              </span>
               <button
                 type="button"
                 onClick={expandAll}
@@ -339,9 +350,13 @@ export function MenusConfigurationPage() {
             </div>
           ) : isError ? (
             <div className="py-12 text-center">
-              <p className="mb-1 text-sm font-medium text-gray-700">Failed to load menus</p>
+              <p className="mb-1 text-sm font-medium text-gray-700">
+                Failed to load menus
+              </p>
               <p className="mb-3 text-xs text-gray-500">
-                {error instanceof Error ? error.message : "A server error occurred"}
+                {error instanceof Error
+                  ? error.message
+                  : "A server error occurred"}
               </p>
               <button
                 type="button"
@@ -352,7 +367,9 @@ export function MenusConfigurationPage() {
               </button>
             </div>
           ) : displayRows.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">No menus found</div>
+            <div className="py-12 text-center text-gray-400">
+              No menus found
+            </div>
           ) : (
             <MenuTreeTable
               rows={displayRows}
@@ -370,10 +387,15 @@ export function MenusConfigurationPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={detailOpen} onOpenChange={(open) => !open && handleDetailClose()}>
+      <Dialog
+        open={detailOpen}
+        onOpenChange={(open) => !open && handleDetailClose()}
+      >
         <DialogPanel size="md">
           <DialogPanelHeader>
-            <DialogPanelTitle>{detailData?.menuName ?? "Detail Menu"}</DialogPanelTitle>
+            <DialogPanelTitle>
+              {detailData?.menuName ?? "Detail Menu"}
+            </DialogPanelTitle>
             <DialogPanelDescription>
               {detailData?.code
                 ? `Code: ${detailData.code} — permission context & metadata`
@@ -387,7 +409,9 @@ export function MenusConfigurationPage() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-pink-500" />
               </div>
             ) : detailError ? (
-              <p className="text-sm text-gray-500">Failed to load menu details</p>
+              <p className="text-sm text-gray-500">
+                Failed to load menu details
+              </p>
             ) : detailData ? (
               <MenuDetailSections detail={detailData} />
             ) : null}
@@ -425,8 +449,8 @@ export function MenusConfigurationPage() {
           <DialogPanelHeader>
             <DialogPanelTitle>Delete Menu?</DialogPanelTitle>
             <DialogPanelDescription>
-              Are you sure you want to delete &quot;{deletingMenu?.menuName}&quot;?
-              The menu will be deactivated and removed from the list.
+              Are you sure you want to delete &quot;{deletingMenu?.menuName}
+              &quot;? The menu will be deactivated and removed from the list.
             </DialogPanelDescription>
           </DialogPanelHeader>
           <DialogFooter>

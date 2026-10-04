@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
 import {
   bucketAging,
@@ -141,11 +142,11 @@ export async function createArInvoiceFromSalesInvoice(opts: {
       WHERE i.id = $1 AND i.deleted_at IS NULL`,
     [opts.salesInvoiceId]
   );
-  if (!src) throw new Error("Sales invoice tidak ditemukan");
-  if (src.status === "batal") throw new Error("Invoice batal — tidak membuat AR");
+  if (!src) throw ApiError.notFound("Sales invoice tidak ditemukan");
+  if (src.status === "batal") throw ApiError.badRequest("Invoice batal — tidak membuat AR");
 
   const total = round2(Number(src.amount) || 0);
-  if (total <= 0) throw new Error("Nilai invoice 0");
+  if (total <= 0) throw ApiError.badRequest("Nilai invoice 0");
 
   const invoiceNo = await nextNo("AR");
   const invoiceDate = src.sent_at
@@ -287,14 +288,14 @@ export async function recordArReceipt(opts: {
   note: string | null;
 }> {
   const invoice = await getArInvoiceById(opts.invoiceId);
-  if (!invoice) throw new Error("AR invoice tidak ditemukan");
-  if (invoice.status !== "POSTED") throw new Error("Hanya invoice POSTED yang bisa diterima");
+  if (!invoice) throw ApiError.notFound("AR invoice tidak ditemukan");
+  if (invoice.status !== "POSTED") throw ApiError.badRequest("Hanya invoice POSTED yang bisa diterima");
 
   const amount = round2(opts.amount);
-  if (amount <= 0) throw new Error("Amount harus > 0");
+  if (amount <= 0) throw ApiError.badRequest("Amount harus > 0");
   const outstanding = invoice.outstanding_amount ?? invoice.total_amount;
   if (amount > outstanding + 0.01) {
-    throw new Error("Amount tidak boleh melebihi outstanding");
+    throw ApiError.badRequest("Amount tidak boleh melebihi outstanding");
   }
 
   const receiptDate = opts.receiptDate || new Date().toISOString().slice(0, 10);

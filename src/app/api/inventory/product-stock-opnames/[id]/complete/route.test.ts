@@ -456,7 +456,7 @@ describe("POST /api/inventory/product-stock-opnames/[id]/complete — per-SKU (E
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toMatch(/tidak ditemukan/);
+    expect(body.error).toMatch(/tidak ditemukan/);
 
     // Ditolak sebelum transaksi apa pun — tidak ada write stok/movement.
     expect(fakeClientRef.calls).toHaveLength(0);

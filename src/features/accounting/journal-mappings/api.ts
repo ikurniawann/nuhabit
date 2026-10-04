@@ -3,7 +3,7 @@ import type {
   JournalMappingItem,
   JournalMappingListFilters,
   JournalMappingPayload,
-} from "./types";
+} from "@/lib/accounting/types";
 
 const BASE = "/api/accounting/journal-mappings";
 

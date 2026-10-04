@@ -7,7 +7,7 @@ import {
   fetchFiscalYear,
   fetchFiscalCoverage,
 } from "./api";
-import type { FiscalYearListFilters } from "./types";
+import type { FiscalYearListFilters } from "@/lib/accounting/types";
 
 export const useFiscalYearList = (filters?: FiscalYearListFilters) =>
   useQuery({

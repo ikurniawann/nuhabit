@@ -16,18 +16,31 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SCRAP_REASON_OPTIONS, type ScrapReason } from "@/lib/inventory/scrap-reasons";
+import {
+  SCRAP_REASON_OPTIONS,
+  type ScrapReason,
+} from "@/lib/inventory/scrap-reasons";
 import {
   fetchJson,
-  formatDate,
-  formatQty,
   useMaterialLookup,
   useWarehouseLookup,
 } from "../../shared/inventory-lookups";
+import { formatDate, formatNumber } from "@/lib/format";
 
-type OpenBatch = { id: string; batch_number: string | null; expiry_date: string | null; qty_remaining: number };
+type OpenBatch = {
+  id: string;
+  batch_number: string | null;
+  expiry_date: string | null;
+  qty_remaining: number;
+};
 
 /** Batch yang dikunci dari halaman Stok Kedaluwarsa (write-off satu batch). */
 export interface ScrapBatchPreset {
@@ -65,7 +78,9 @@ export function ScrapDialog({
   const [materialId, setMaterialId] = useState(preset?.rawMaterialId ?? "");
   const [batchId, setBatchId] = useState(preset?.batchId ?? NO_BATCH);
   const [qty, setQty] = useState(preset ? String(preset.qtyRemaining) : "");
-  const [reason, setReason] = useState<ScrapReason>(preset ? "expired" : "damaged");
+  const [reason, setReason] = useState<ScrapReason>(
+    preset ? "expired" : "damaged",
+  );
   const [notes, setNotes] = useState("");
 
   const batches = useQuery({
@@ -73,7 +88,7 @@ export function ScrapDialog({
     queryFn: async () =>
       (
         await fetchJson<{ data: OpenBatch[] }>(
-          `/api/inventory/batches?raw_material_id=${materialId}&warehouse_id=${warehouseId}`
+          `/api/inventory/batches?raw_material_id=${materialId}&warehouse_id=${warehouseId}`,
         )
       ).data,
     enabled: !preset && Boolean(materialId && warehouseId),
@@ -83,7 +98,9 @@ export function ScrapDialog({
   const maxQty = preset?.qtyRemaining ?? selectedBatch?.qty_remaining;
   const qtyNumber = Number(qty);
   const valid =
-    Boolean(warehouseId && materialId) && qtyNumber > 0 && (maxQty === undefined || qtyNumber <= maxQty);
+    Boolean(warehouseId && materialId) &&
+    qtyNumber > 0 &&
+    (maxQty === undefined || qtyNumber <= maxQty);
 
   const save = useMutation({
     mutationFn: () =>
@@ -107,7 +124,8 @@ export function ScrapDialog({
       onDone?.();
       onClose();
     },
-    onError: (error) => toast.error("Scrap gagal dicatat", { description: error.message }),
+    onError: (error) =>
+      toast.error("Scrap gagal dicatat", { description: error.message }),
   });
 
   return (
@@ -120,10 +138,14 @@ export function ScrapDialog({
           }}
         >
           <DialogPanelHeader>
-            <DialogPanelTitle>{preset ? `Write-off batch ${preset.batchNumber ?? "tanpa nomor"}` : "Catat scrap"}</DialogPanelTitle>
+            <DialogPanelTitle>
+              {preset
+                ? `Write-off batch ${preset.batchNumber ?? "tanpa nomor"}`
+                : "Catat scrap"}
+            </DialogPanelTitle>
             <DialogPanelDescription>
-              Stok gudang berkurang lewat mutasi scrap, jurnal selisih persediaan diposting, dan tindakan tercatat di
-              audit trail.
+              Stok gudang berkurang lewat mutasi scrap, jurnal selisih
+              persediaan diposting, dan tindakan tercatat di audit trail.
             </DialogPanelDescription>
           </DialogPanelHeader>
           <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -131,8 +153,9 @@ export function ScrapDialog({
               <div className="rounded-2xl bg-surface px-4 py-3 text-sm sm:col-span-2">
                 <p className="font-medium">{preset.materialName}</p>
                 <p className="text-muted-foreground">
-                  {preset.warehouseName ?? "Gudang"} · kedaluwarsa {formatDate(preset.expiryDate)} · sisa{" "}
-                  {formatQty(preset.qtyRemaining)} {preset.satuan ?? ""}
+                  {preset.warehouseName ?? "Gudang"} · kedaluwarsa{" "}
+                  {formatDate(preset.expiryDate)} · sisa{" "}
+                  {formatNumber(preset.qtyRemaining, 3)} {preset.satuan ?? ""}
                 </p>
               </div>
             ) : (
@@ -140,7 +163,11 @@ export function ScrapDialog({
                 <label className="flex min-w-0 flex-col gap-1.5">
                   <span className="text-sm font-medium">Gudang</span>
                   <Combobox
-                    options={(warehouses.data ?? []).map((w) => ({ value: w.id, label: w.name, description: w.code }))}
+                    options={(warehouses.data ?? []).map((w) => ({
+                      value: w.id,
+                      label: w.name,
+                      description: w.code,
+                    }))}
                     value={warehouseId}
                     onChange={(value) => {
                       setWarehouseId(value);
@@ -152,7 +179,11 @@ export function ScrapDialog({
                 <label className="flex min-w-0 flex-col gap-1.5">
                   <span className="text-sm font-medium">Bahan baku</span>
                   <Combobox
-                    options={(materials.data ?? []).map((m) => ({ value: m.id, label: m.nama, description: m.kode }))}
+                    options={(materials.data ?? []).map((m) => ({
+                      value: m.id,
+                      label: m.nama,
+                      description: m.kode,
+                    }))}
                     value={materialId}
                     onChange={(value) => {
                       setMaterialId(value);
@@ -165,18 +196,25 @@ export function ScrapDialog({
                   <span className="text-sm font-medium">Batch</span>
                   <Select
                     value={batchId}
-                    onValueChange={(value) => setBatchId(String(value ?? NO_BATCH))}
+                    onValueChange={(value) =>
+                      setBatchId(String(value ?? NO_BATCH))
+                    }
                     disabled={!materialId || !warehouseId}
                   >
                     <SelectTrigger aria-label="Batch">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NO_BATCH}>Otomatis (FEFO, kedaluwarsa terdekat dulu)</SelectItem>
+                      <SelectItem value={NO_BATCH}>
+                        Otomatis (FEFO, kedaluwarsa terdekat dulu)
+                      </SelectItem>
                       {(batches.data ?? []).map((b) => (
                         <SelectItem key={b.id} value={b.id}>
-                          {b.batch_number ?? "Tanpa nomor"} · {b.expiry_date ? formatDate(b.expiry_date) : "tanpa tanggal"} ·
-                          sisa {formatQty(b.qty_remaining)}
+                          {b.batch_number ?? "Tanpa nomor"} ·{" "}
+                          {b.expiry_date
+                            ? formatDate(b.expiry_date)
+                            : "tanpa tanggal"}{" "}
+                          · sisa {formatNumber(b.qty_remaining, 3)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -196,12 +234,17 @@ export function ScrapDialog({
                 required
               />
               {maxQty !== undefined && (
-                <span className="text-xs text-muted-foreground">Maksimal {formatQty(maxQty)} dari batch ini.</span>
+                <span className="text-xs text-muted-foreground">
+                  Maksimal {formatNumber(maxQty, 3)} dari batch ini.
+                </span>
               )}
             </label>
             <label className="flex min-w-0 flex-col gap-1.5">
               <span className="text-sm font-medium">Alasan</span>
-              <Select value={reason} onValueChange={(value) => setReason(value as ScrapReason)}>
+              <Select
+                value={reason}
+                onValueChange={(value) => setReason(value as ScrapReason)}
+              >
                 <SelectTrigger aria-label="Alasan scrap">
                   <SelectValue />
                 </SelectTrigger>
@@ -225,10 +268,19 @@ export function ScrapDialog({
             </label>
           </DialogPanelBody>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={save.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={save.isPending}
+            >
               Batal
             </Button>
-            <Button type="submit" variant="destructive" disabled={!valid || save.isPending}>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={!valid || save.isPending}
+            >
               {preset ? "Write-off" : "Catat scrap"}
             </Button>
           </DialogFooter>

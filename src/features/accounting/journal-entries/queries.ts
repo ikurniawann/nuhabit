@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { journalEntryQueryKeys } from "./query-keys";
 import { fetchJournalEntryList, fetchJournalEntry } from "./api";
-import type { JournalEntryListFilters } from "./types";
+import type { JournalEntryListFilters } from "@/lib/accounting/types";
 
 export const useJournalEntryList = (filters?: JournalEntryListFilters) =>
   useQuery({

@@ -3,14 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ToastContainer, useToast } from "@/components/ui/toast";
-import { apiGet, apiPut } from "@/lib/api-client";
-import { buildReceiptLines, type ReceiptPayload } from "@/components/pos/PrintReceipt";
+import {
+  buildReceiptLines,
+  type ReceiptPayload,
+} from "@/components/pos/PrintReceipt";
 import {
   RECEIPT_LINE_MAX_CHARS,
   RECEIPT_MAX_LINES_PER_SECTION,
   type PosReceiptSettings,
 } from "@/lib/pos/receipt-settings";
+import { toast } from "sonner";
+import type { ReceiptStallOption } from "../api";
+import { useReceiptSettings } from "../queries";
+import { useSaveReceiptSettings } from "../mutations";
 
 /**
  * EPIC-040 — Konfigurasi header/footer struk POS di Settings → Business.
@@ -19,9 +24,15 @@ import {
  * preview = persis output print worker.
  */
 
-type StallOption = { id: string; name: string; branch_id: string | null };
-
 const GLOBAL_SCOPE = "__global__";
+const NO_ROWS: PosReceiptSettings[] = [];
+const NO_STALLS: ReceiptStallOption[] = [];
+
+type ScopeDraft = {
+  headerText: string;
+  footerText: string;
+  showStallName: boolean;
+};
 
 const SAMPLE_PAYLOAD: ReceiptPayload = {
   orderNumber: "ORD-CONTOH-001",
@@ -29,7 +40,13 @@ const SAMPLE_PAYLOAD: ReceiptPayload = {
   table: null,
   items: [
     { id: "1", productId: "p1", name: "Tsukune", price: 25000, quantity: 2 },
-    { id: "2", productId: "p2", name: "Oolong Peach", price: 25000, quantity: 1 },
+    {
+      id: "2",
+      productId: "p2",
+      name: "Oolong Peach",
+      price: 25000,
+      quantity: 1,
+    },
   ],
   notes: "",
   total: 75000,
@@ -51,76 +68,72 @@ function textToLines(text: string) {
 }
 
 export function ReceiptSettingsCard() {
-  const { toasts, showToast, removeToast } = useToast();
-  const [rows, setRows] = useState<PosReceiptSettings[]>([]);
-  const [stalls, setStalls] = useState<StallOption[]>([]);
+  const settingsQuery = useReceiptSettings();
+  const saveMutation = useSaveReceiptSettings();
+  const rows = settingsQuery.data?.data ?? NO_ROWS;
+  const stalls = settingsQuery.data?.stalls ?? NO_STALLS;
+  const loading = settingsQuery.isLoading;
+  const saving = saveMutation.isPending;
   const [scope, setScope] = useState<string>(GLOBAL_SCOPE);
-  const [headerText, setHeaderText] = useState("");
-  const [footerText, setFooterText] = useState("");
-  const [showStallName, setShowStallName] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // Isian per scope; tanpa suntingan memakai baris tersimpan scope itu (kosong bila
+  // belum pernah diatur — fallback runtime tetap ke global, tampil sebagai placeholder).
+  const [edits, setEdits] = useState<Record<string, ScopeDraft>>({});
 
-  useEffect(() => {
-    let cancelled = false;
-    apiGet<{ data: PosReceiptSettings[]; stalls: StallOption[] }>("/api/settings/receipt")
-      .then((res) => {
-        if (cancelled) return;
-        setRows(res.data ?? []);
-        setStalls(res.stalls ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) showToast("Gagal memuat konfigurasi struk", "error");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Saat ganti scope, muat baris scope itu (kosong bila belum pernah diatur —
-  // fallback runtime tetap ke global, ditampilkan sebagai placeholder).
-  useEffect(() => {
+  const saved = useMemo(() => {
     const row =
       scope === GLOBAL_SCOPE
         ? rows.find((r) => !r.branch_id && !r.warehouse_id)
         : rows.find((r) => r.warehouse_id === scope);
-    setHeaderText(linesToText(row?.header_lines ?? []));
-    setFooterText(linesToText(row?.footer_lines ?? []));
-    setShowStallName(row?.show_stall_name !== false);
+    return {
+      headerText: linesToText(row?.header_lines ?? []),
+      footerText: linesToText(row?.footer_lines ?? []),
+      showStallName: row?.show_stall_name !== false,
+    };
   }, [scope, rows]);
+  const { headerText, footerText, showStallName } = edits[scope] ?? saved;
+  const edit = (patch: Partial<ScopeDraft>) =>
+    setEdits((prev) => ({
+      ...prev,
+      [scope]: { ...(prev[scope] ?? saved), ...patch },
+    }));
+
+  useEffect(() => {
+    if (settingsQuery.isError) toast.error("Gagal memuat konfigurasi struk");
+  }, [settingsQuery.isError]);
 
   const previewLines = useMemo(() => {
     return buildReceiptLines(
       {
         ...SAMPLE_PAYLOAD,
-        receiptHeader: textToLines(headerText).map((l) => l.slice(0, RECEIPT_LINE_MAX_CHARS)),
-        receiptFooter: textToLines(footerText).map((l) => l.slice(0, RECEIPT_LINE_MAX_CHARS)),
+        receiptHeader: textToLines(headerText).map((l) =>
+          l.slice(0, RECEIPT_LINE_MAX_CHARS),
+        ),
+        receiptFooter: textToLines(footerText).map((l) =>
+          l.slice(0, RECEIPT_LINE_MAX_CHARS),
+        ),
       },
-      "CUSTOMER"
+      "CUSTOMER",
     );
   }, [headerText, footerText]);
 
   async function handleSave() {
-    setSaving(true);
     try {
       const stall = stalls.find((s) => s.id === scope);
-      const res = await apiPut<{ data: PosReceiptSettings[] }>("/api/settings/receipt", {
+      await saveMutation.mutateAsync({
         warehouse_id: stall?.id ?? null,
         branch_id: stall?.branch_id ?? null,
         header_lines: textToLines(headerText),
         footer_lines: textToLines(footerText),
         show_stall_name: showStallName,
       });
-      setRows(res.data ?? []);
-      showToast("Konfigurasi struk tersimpan");
+      setEdits((prev) => {
+        const next = { ...prev };
+        delete next[scope];
+        return next;
+      });
+      toast.success("Konfigurasi struk tersimpan");
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal menyimpan", "error");
-    } finally {
-      setSaving(false);
+      toast.error(error instanceof Error ? error.message : "Gagal menyimpan");
     }
   }
 
@@ -129,16 +142,18 @@ export function ReceiptSettingsCard() {
 
   return (
     <div className="rounded-xl border border-gray-200/70 bg-white p-5 shadow-sm">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="flex items-center gap-2">
-        <ReceiptText className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold text-gray-800">Konfigurasi Struk</h3>
+        <ReceiptText className="h-4 w-4 text-brand-text" />
+        <h3 className="text-sm font-semibold text-gray-800">
+          Konfigurasi Struk
+        </h3>
       </div>
       <p className="mt-0.5 text-xs text-gray-500">
-        Header (identitas usaha) dan footer (ucapan penutup) struk kasir. Satu baris teks =
-        satu baris struk; maks {RECEIPT_MAX_LINES_PER_SECTION} baris per bagian,{" "}
-        {RECEIPT_LINE_MAX_CHARS} karakter per baris (kertas 80mm). Berlaku juga untuk footer
-        struk WhatsApp. Copy dapur/bar sengaja tidak memuatnya.
+        Header (identitas usaha) dan footer (ucapan penutup) struk kasir. Satu
+        baris teks = satu baris struk; maks {RECEIPT_MAX_LINES_PER_SECTION}{" "}
+        baris per bagian, {RECEIPT_LINE_MAX_CHARS} karakter per baris (kertas
+        80mm). Berlaku juga untuk footer struk WhatsApp. Copy dapur/bar sengaja
+        tidak memuatnya.
       </p>
 
       {loading ? (
@@ -149,7 +164,9 @@ export function ReceiptSettingsCard() {
         <div className="mt-4 grid gap-5 lg:grid-cols-2">
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Scope</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Scope
+              </label>
               <select
                 className="w-full rounded-md border border-gray-200 bg-white p-2 text-sm"
                 value={scope}
@@ -175,9 +192,11 @@ export function ReceiptSettingsCard() {
               <textarea
                 rows={4}
                 className={textareaClass}
-                placeholder={"NÜHABIT\nJl. Alamat Studio No. 1, Senopati\nIG @nuhabit"}
+                placeholder={
+                  "NÜHABIT\nJl. Alamat Studio No. 1, Senopati\nIG @nuhabit"
+                }
                 value={headerText}
-                onChange={(e) => setHeaderText(e.target.value)}
+                onChange={(e) => edit({ headerText: e.target.value })}
               />
             </div>
             <div>
@@ -187,22 +206,28 @@ export function ReceiptSettingsCard() {
               <textarea
                 rows={3}
                 className={textareaClass}
-                placeholder={"Terima kasih atas kunjungan Anda\nWiFi: SULU-GUEST"}
+                placeholder={
+                  "Terima kasih atas kunjungan Anda\nWiFi: SULU-GUEST"
+                }
                 value={footerText}
-                onChange={(e) => setFooterText(e.target.value)}
+                onChange={(e) => edit({ footerText: e.target.value })}
               />
             </div>
             <label className="flex items-center gap-2 text-xs text-gray-600">
               <input
                 type="checkbox"
                 checked={showStallName}
-                onChange={(e) => setShowStallName(e.target.checked)}
+                onChange={(e) => edit({ showStallName: e.target.checked })}
               />
               Cetak baris &quot;Stall: …&quot; di struk customer
             </label>
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Simpan Konfigurasi"}
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Simpan Konfigurasi"
+                )}
               </Button>
             </div>
           </div>

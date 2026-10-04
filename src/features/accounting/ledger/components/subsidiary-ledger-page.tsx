@@ -6,8 +6,8 @@ import { ClipboardDocumentListIcon } from "@heroicons/react/24/outline";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import type { SubsidiaryKind } from "../api";
 import { useSubsidiaryLedger, useSubsidiaryParties } from "../queries";
 
@@ -49,7 +49,7 @@ export function SubsidiaryLedgerPage() {
       (partiesQuery.data ?? []).map((p) => ({
         value: p.party_key,
         label: p.party_name,
-        description: `${p.invoice_count} invoice · outstanding ${formatAmount(p.outstanding)}`,
+        description: `${p.invoice_count} invoice · outstanding ${formatNumber(p.outstanding)}`,
       })),
     [partiesQuery.data]
   );
@@ -125,7 +125,7 @@ export function SubsidiaryLedgerPage() {
                           ? "/dashboard/accounting/accounts-payable"
                           : "/dashboard/accounting/receivable"
                       }
-                      className="text-primary hover:underline"
+                      className="text-brand-text hover:underline"
                     >
                       {kind === "AP" ? "Accounts Payable" : "Accounts Receivable"}
                     </Link>
@@ -156,25 +156,25 @@ export function SubsidiaryLedgerPage() {
               <div>
                 Opening:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.opening_balance)}
+                  {formatNumber(data.opening_balance)}
                 </span>
               </div>
               <div>
                 Debit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_debit)}
+                  {formatNumber(data.total_debit)}
                 </span>
               </div>
               <div>
                 Credit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_credit)}
+                  {formatNumber(data.total_credit)}
                 </span>
               </div>
               <div>
                 Closing:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.closing_balance)}
+                  {formatNumber(data.closing_balance)}
                 </span>
               </div>
             </div>
@@ -182,7 +182,7 @@ export function SubsidiaryLedgerPage() {
             {data.lines.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
                 Tidak ada mutasi pada periode ini. Saldo tetap{" "}
-                {formatAmount(data.closing_balance)}.
+                {formatNumber(data.closing_balance)}.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -217,13 +217,13 @@ export function SubsidiaryLedgerPage() {
                           {line.description || "—"}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.debit ? formatAmount(line.debit) : "—"}
+                          {line.debit ? formatNumber(line.debit) : "—"}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.credit ? formatAmount(line.credit) : "—"}
+                          {line.credit ? formatNumber(line.credit) : "—"}
                         </td>
                         <td className="px-2 py-2 text-right font-medium tabular-nums">
-                          {formatAmount(line.running_balance)}
+                          {formatNumber(line.running_balance)}
                         </td>
                       </tr>
                     ))}

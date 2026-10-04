@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import { queryOne, withTransaction } from "@/lib/db";
 import { recordAudit, type AuditActor } from "@/lib/audit";
 import { roundQty } from "@/lib/inventory/batches";
@@ -13,12 +14,6 @@ import {
  * mengonsumsi batch itu lebih dulu (kolom inventory_movements.batch_id).
  */
 
-
-export class ScrapError extends Error {
-  constructor(public status: 400 | 404 | 409, message: string) {
-    super(message);
-  }
-}
 
 export interface ScrapInput {
   rawMaterialId: string;
@@ -84,7 +79,7 @@ export async function scrapStock(input: ScrapInput): Promise<ScrapResult> {
       [input.rawMaterialId, input.warehouseId]
     );
     const inventory = rows[0];
-    if (!inventory) throw new ScrapError(404, "Bahan baku tidak punya stok di gudang ini");
+    if (!inventory) throw ApiError.notFound("Bahan baku tidak punya stok di gudang ini");
 
     let batchRemaining: number | null = null;
     let batchLabel: { batch_number: string | null; expiry_date: string | null } | null = null;
@@ -94,14 +89,14 @@ export async function scrapStock(input: ScrapInput): Promise<ScrapResult> {
            FROM inventory.stock_batches WHERE id = $1 AND inventory_id = $2`,
         [input.batchId, inventory.id]
       );
-      if (!batch.rows[0]) throw new ScrapError(404, "Batch tidak ditemukan di gudang ini");
+      if (!batch.rows[0]) throw ApiError.notFound("Batch tidak ditemukan di gudang ini");
       batchRemaining = Number(batch.rows[0].qty_remaining);
       batchLabel = { batch_number: batch.rows[0].batch_number, expiry_date: batch.rows[0].expiry_date };
     }
 
     const qtyBefore = Number(inventory.qty_available);
     const rejection = evaluateScrap({ qty, qtyAvailable: qtyBefore, batchRemaining });
-    if (rejection) throw new ScrapError(409, rejection);
+    if (rejection) throw ApiError.conflict(rejection);
 
     const qtyAfter = roundQty(qtyBefore - qty);
     const unitCost = Number(inventory.unit_cost || 0);

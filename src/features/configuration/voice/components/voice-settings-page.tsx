@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost, apiPut } from "@/lib/api-client";
 import {
   AlertTriangle,
   Check,
@@ -56,8 +58,8 @@ function SecretInput({
       <Label className="text-xs font-medium">{label}</Label>
       {masked && (
         <p className="text-xs text-muted-foreground">
-          Tersimpan: <code className="rounded bg-muted px-1">{masked}</code> — isi hanya
-          jika ingin mengganti.
+          Tersimpan: <code className="rounded bg-muted px-1">{masked}</code> —
+          isi hanya jika ingin mengganti.
         </p>
       )}
       <div className="relative">
@@ -83,20 +85,72 @@ function SecretInput({
   );
 }
 
-export function VoiceSettingsPage() {
-  const [data, setData] = useState<TtsSettingsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+const TTS_URL = "/api/settings/tts";
+const TTS_KEY = ["settings", "tts"] as const;
+const fetchTtsSettings = () =>
+  apiGet<{ data: TtsSettingsData }>(TTS_URL).then((r) => r.data);
 
-  const [provider, setProvider] = useState<TtsProviderId>("openai");
-  const [voice, setVoice] = useState("");
-  const [model, setModel] = useState("");
+export function VoiceSettingsPage() {
+  const queryClient = useQueryClient();
+  const settingsQuery = useQuery({
+    queryKey: TTS_KEY,
+    queryFn: fetchTtsSettings,
+  });
+  const [saved, setSaved] = useState(false);
+
+  if (settingsQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    );
+  }
+
+  async function handleSaved() {
+    await queryClient.invalidateQueries({ queryKey: TTS_KEY });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
+
+  // Form dipasang ulang tiap data tersimpan dimuat ulang (setelah simpan).
+  return (
+    <VoiceSettingsForm
+      key={settingsQuery.dataUpdatedAt}
+      data={settingsQuery.data ?? null}
+      loadError={
+        settingsQuery.error instanceof Error
+          ? settingsQuery.error.message
+          : null
+      }
+      saved={saved}
+      onSaved={handleSaved}
+    />
+  );
+}
+
+function VoiceSettingsForm({
+  data,
+  loadError,
+  saved,
+  onSaved,
+}: {
+  data: TtsSettingsData | null;
+  loadError: string | null;
+  saved: boolean;
+  onSaved: () => Promise<void>;
+}) {
+  const [provider, setProvider] = useState<TtsProviderId>(
+    data?.provider ?? "openai",
+  );
+  const [voice, setVoice] = useState(data?.voice ?? "");
+  const [model, setModel] = useState(data?.model ?? "");
   const [azureKey, setAzureKey] = useState("");
-  const [azureRegion, setAzureRegion] = useState("");
+  const [azureRegion, setAzureRegion] = useState(
+    data?.credentials.azure.region ?? "",
+  );
   const [elevenKey, setElevenKey] = useState("");
 
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [previewing, setPreviewing] = useState(false);
@@ -104,35 +158,6 @@ export function VoiceSettingsPage() {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [previewMeta, setPreviewMeta] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  const load = async () => {
-    const res = await fetch("/api/settings/tts");
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error ?? "Gagal memuat konfigurasi");
-    const d = json.data as TtsSettingsData;
-    setData(d);
-    setProvider(d.provider);
-    setVoice(d.voice);
-    setModel(d.model);
-    setAzureRegion(d.credentials.azure.region);
-    return d;
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        await load();
-      } catch (e) {
-        if (!cancelled) setLoadError(e instanceof Error ? e.message : "Gagal memuat");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const meta = data?.catalog[provider];
 
@@ -160,15 +185,18 @@ export function VoiceSettingsPage() {
     setPreviewError(null);
     setPreviewSrc(null);
     try {
-      const res = await fetch("/api/settings/tts/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, voice, model }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Gagal membuat preview");
+      const json = await apiPost<{
+        data: {
+          audio_base64: string;
+          provider: string;
+          voice: string;
+          model: string;
+        };
+      }>("/api/settings/tts/preview", { provider, voice, model });
       setPreviewSrc(`data:audio/mpeg;base64,${json.data.audio_base64}`);
-      setPreviewMeta(`${json.data.provider} · ${json.data.voice} · ${json.data.model}`);
+      setPreviewMeta(
+        `${json.data.provider} · ${json.data.voice} · ${json.data.model}`,
+      );
     } catch (e) {
       setPreviewError(e instanceof Error ? e.message : "Gagal membuat preview");
     } finally {
@@ -190,7 +218,6 @@ export function VoiceSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     setSaveError(null);
-    setSaved(false);
     try {
       const payload: Record<string, unknown> = { provider, voice, model };
       if (azureKey.trim()) payload.azure_key = azureKey.trim();
@@ -199,19 +226,8 @@ export function VoiceSettingsPage() {
       }
       if (elevenKey.trim()) payload.elevenlabs_key = elevenKey.trim();
 
-      const res = await fetch("/api/settings/tts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Gagal menyimpan");
-
-      setAzureKey("");
-      setElevenKey("");
-      await load();
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      await apiPut(TTS_URL, payload);
+      await onSaved();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Gagal menyimpan");
     } finally {
@@ -219,18 +235,14 @@ export function VoiceSettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="size-5 animate-spin" />
-      </div>
-    );
-  }
-
   const credentialWarning =
-    provider === "azure" && !data?.credentials.azure.configured && !azureKey.trim()
+    provider === "azure" &&
+    !data?.credentials.azure.configured &&
+    !azureKey.trim()
       ? "Azure Speech key & region belum tersimpan — preview akan gagal sampai keduanya diisi."
-      : provider === "elevenlabs" && !data?.credentials.elevenlabs.configured && !elevenKey.trim()
+      : provider === "elevenlabs" &&
+          !data?.credentials.elevenlabs.configured &&
+          !elevenKey.trim()
         ? "ElevenLabs API key belum tersimpan — preview akan gagal sampai diisi."
         : provider === "openai" && !data?.credentials.openai.configured
           ? "API key OpenAI belum diisi di Settings → Integrasi."
@@ -241,8 +253,8 @@ export function VoiceSettingsPage() {
       <div>
         <h1 className="text-lg font-semibold text-foreground">Suara AI</h1>
         <p className="text-sm text-muted-foreground">
-          Suara yang membacakan pertanyaan Interview AI. Dengarkan dulu lewat tombol
-          preview sebelum menyimpan.
+          Suara yang membacakan pertanyaan Interview AI. Dengarkan dulu lewat
+          tombol preview sebelum menyimpan.
         </p>
       </div>
 
@@ -255,8 +267,12 @@ export function VoiceSettingsPage() {
               <Volume2 className="size-5" />
             </div>
             <div>
-              <div className="text-sm font-semibold">Provider Text-to-Speech</div>
-              <p className="text-xs text-muted-foreground">{meta.description}</p>
+              <div className="text-sm font-semibold">
+                Provider Text-to-Speech
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {meta.description}
+              </p>
             </div>
           </div>
 
@@ -280,7 +296,10 @@ export function VoiceSettingsPage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Suara</Label>
               {meta.voices.length > 0 && (
-                <Select value={voiceIsCustom ? "" : voice} onValueChange={setVoice}>
+                <Select
+                  value={voiceIsCustom ? "" : voice}
+                  onValueChange={setVoice}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih suara" />
                   </SelectTrigger>
@@ -305,13 +324,14 @@ export function VoiceSettingsPage() {
                   }
                 />
               )}
-              {!meta.voices.some((v) => v.nativeIndonesian) && meta.voices.length > 0 && (
-                <p className="flex items-start gap-1.5 text-xs text-amber-700">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  Semua suara provider ini penutur asli Inggris — bahasa Indonesia akan
-                  terdengar beraksen berapa pun instruksinya.
-                </p>
-              )}
+              {!meta.voices.some((v) => v.nativeIndonesian) &&
+                meta.voices.length > 0 && (
+                  <p className="flex items-start gap-1.5 text-xs text-amber-700">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    Semua suara provider ini penutur asli Inggris — bahasa
+                    Indonesia akan terdengar beraksen berapa pun instruksinya.
+                  </p>
+                )}
             </div>
 
             <div className="space-y-1.5">
@@ -331,8 +351,12 @@ export function VoiceSettingsPage() {
               {provider === "openai" && model !== "gpt-4o-mini-tts" && (
                 <p className="flex items-start gap-1.5 text-xs text-amber-700">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  Hanya <code className="rounded bg-muted px-1">gpt-4o-mini-tts</code> yang
-                  menerima instruksi pelafalan Indonesia; model lain mengabaikannya.
+                  Hanya{" "}
+                  <code className="rounded bg-muted px-1">
+                    gpt-4o-mini-tts
+                  </code>{" "}
+                  yang menerima instruksi pelafalan Indonesia; model lain
+                  mengabaikannya.
                 </p>
               )}
             </div>
@@ -378,7 +402,12 @@ export function VoiceSettingsPage() {
 
             <div className="rounded-lg bg-muted/40 p-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Button type="button" variant="outline" onClick={handlePreview} disabled={previewing}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreview}
+                  disabled={previewing}
+                >
                   {previewing ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
@@ -387,16 +416,26 @@ export function VoiceSettingsPage() {
                   Dengarkan Preview
                 </Button>
                 {previewMeta && (
-                  <span className="text-xs text-muted-foreground">{previewMeta}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {previewMeta}
+                  </span>
                 )}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Memakai kalimat pembuka wawancara yang sesungguhnya. Preview tidak
-                mengubah pengaturan tersimpan — kredensial baru perlu Disimpan dulu.
+                Memakai kalimat pembuka wawancara yang sesungguhnya. Preview
+                tidak mengubah pengaturan tersimpan — kredensial baru perlu
+                Disimpan dulu.
               </p>
-              {previewError && <p className="mt-2 text-sm text-red-600">{previewError}</p>}
+              {previewError && (
+                <p className="mt-2 text-sm text-red-600">{previewError}</p>
+              )}
               {previewSrc && (
-                <audio ref={audioRef} controls className="mt-3 w-full" src={previewSrc}>
+                <audio
+                  ref={audioRef}
+                  controls
+                  className="mt-3 w-full"
+                  src={previewSrc}
+                >
                   Browser Anda tidak mendukung pemutar audio.
                 </audio>
               )}

@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+import {
+  transferInputError,
+  transferProgress,
+  type TransferLine,
+} from "./transfer-lines";
+
+const line = (
+  kode: string,
+  available: number,
+  input: string,
+): TransferLine => ({
+  key: kode,
+  raw_material_id: kode,
+  material_kode: kode,
+  material_nama: kode,
+  satuan: null,
+  qty_available: available,
+  qty_transfer_input: input,
+});
+
+describe("transferInputError", () => {
+  it("wajib asal & tujuan berbeda", () => {
+    expect(transferInputError([], "", "b")).toBe("Silakan pilih stall asal");
+    expect(transferInputError([], "a", "")).toBe("Silakan pilih stall tujuan");
+    expect(transferInputError([], "a", "a")).toBe(
+      "Stall asal dan stall tujuan harus berbeda",
+    );
+  });
+
+  it("minimal satu qty > 0 dan tidak melebihi stok", () => {
+    expect(transferInputError([line("BB-1", 5, "0")], "a", "b")).toBe(
+      "Isi qty transfer lebih dari nol untuk minimal satu bahan baku",
+    );
+    expect(
+      transferInputError(
+        [line("BB-1", 5, "2"), line("BB-2", 1.5, "3")],
+        "a",
+        "b",
+      ),
+    ).toBe("BB-2: qty melebihi stok tersedia (1,5)");
+    expect(
+      transferInputError(
+        [line("BB-1", 5, "2"), line("BB-2", 1, "-1")],
+        "a",
+        "b",
+      ),
+    ).toBe(
+      "Qty transfer harus berupa angka valid yang lebih besar atau sama dengan nol",
+    );
+    expect(transferInputError([line("BB-1", 5, "5")], "a", "b")).toBeNull();
+  });
+});
+
+describe("transferProgress", () => {
+  it("hitung terisi dan yang akan ditransfer", () => {
+    expect(
+      transferProgress([
+        line("a", 5, "0"),
+        line("b", 5, "1"),
+        line("c", 5, ""),
+      ]),
+    ).toEqual({
+      filled: 2,
+      toTransfer: 1,
+      total: 3,
+    });
+  });
+});

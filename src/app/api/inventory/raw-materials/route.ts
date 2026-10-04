@@ -1,22 +1,23 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
+import { ApiError, paginatedResponse, requireIamMenuPrefix } from "@/lib/api/auth";
+import { IAM } from "@/lib/iam/prefixes";
+import { apiHandler } from "@/lib/api/handler";
 import { resolveWarehouseFilter } from "@/lib/api/stall-scope";
-import { createServerPgClient } from "@/lib/pg/create-client";
-import { paginatedResponse } from "@/lib/api/auth";
 import {
   effectiveBranchId,
   getApiUserScope,
-  companyScopeOr,
-  branchScopeOr,
   validateWarehouseForReceivingScope,
 } from "@/lib/api/scope";
+import { parseSearchParams } from "@/lib/inventory/query-params";
 import {
-  computeStockStatus,
+  filterStockRows,
+  listLegacyRawMaterialStock,
   listRawMaterialStockByBranch,
   listRawMaterialStockByWarehouse,
   mapRawMaterialStockRow,
-  type RawMaterialStockRow,
+  paginateRows,
 } from "@/lib/inventory/warehouse-stock";
-import { z } from "zod";
 
 const querySchema = z.object({
   search: z.string().optional(),
@@ -26,137 +27,33 @@ const querySchema = z.object({
   warehouse_id: z.string().uuid().optional(),
 });
 
-function filterStockRows(
-  rows: RawMaterialStockRow[],
-  search?: string,
-  status?: string
-) {
-  let filtered = rows;
+const MESSAGE = "Raw material stock retrieved";
 
-  if (search?.trim()) {
-    const q = search.trim().toLowerCase();
-    filtered = filtered.filter(
-      (row) =>
-        row.material_nama.toLowerCase().includes(q) ||
-        row.material_kode.toLowerCase().includes(q)
-    );
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.itemsInventory);
+  const scope = await getApiUserScope();
+  const { search, status, page, limit, warehouse_id } = parseSearchParams(
+    request.nextUrl.searchParams,
+    querySchema,
+    "Filter tidak valid",
+    []
+  );
+  // Filter gudang eksplisit menang; selain itu ikut stall aktif di sidebar.
+  const warehouseId = await resolveWarehouseFilter(warehouse_id);
+  const branchId = effectiveBranchId(scope);
+
+  if (!warehouseId && !branchId) {
+    const { data, total } = await listLegacyRawMaterialStock({ scope, search, status, page, limit });
+    return paginatedResponse(data, { page, limit, total }, MESSAGE);
   }
 
-  if (status === "out_of_stock") {
-    filtered = filtered.filter((row) => row.qty_onhand <= 0);
-  } else if (status === "low_stock") {
-    filtered = filtered.filter(
-      (row) =>
-        row.qty_onhand > 0 && computeStockStatus(row.qty_onhand, row.min_stock) === "MENIPIS"
-    );
-  } else if (status === "normal") {
-    filtered = filtered.filter(
-      (row) => computeStockStatus(row.qty_onhand, row.min_stock) === "AMAN"
-    );
+  if (warehouseId) {
+    const check = await validateWarehouseForReceivingScope(warehouseId, scope, null);
+    if ("error" in check) throw ApiError.badRequest("Gudang tidak valid atau tidak diizinkan");
   }
-
-  return filtered;
-}
-
-function paginateRows<T>(rows: T[], page: number, limit: number) {
-  const total = rows.length;
-  const offset = (page - 1) * limit;
-  return {
-    total,
-    data: rows.slice(offset, offset + limit),
-  };
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const scope = await getApiUserScope();
-    const { searchParams } = new URL(request.url);
-    const params = querySchema.parse(Object.fromEntries(searchParams));
-    const { search, status, page, limit } = params;
-    // Filter gudang eksplisit menang; selain itu ikut stall aktif di sidebar.
-    const warehouseIdParam = await resolveWarehouseFilter(params.warehouse_id);
-
-    if (warehouseIdParam) {
-      const warehouseCheck = await validateWarehouseForReceivingScope(
-        warehouseIdParam,
-        scope,
-        null
-      );
-      if ("error" in warehouseCheck) {
-        return Response.json(
-          { success: false, error: "Gudang tidak valid atau tidak diizinkan" },
-          { status: 400 }
-        );
-      }
-
-      const rows = filterStockRows(
-        await listRawMaterialStockByWarehouse(warehouseIdParam),
-        search,
-        status
-      );
-      const { data, total } = paginateRows(rows, page, limit);
-
-      return paginatedResponse(
-        data.map(mapRawMaterialStockRow),
-        { page, limit, total },
-        "Raw material stock retrieved"
-      );
-    }
-
-    const branchId = effectiveBranchId(scope);
-    if (!branchId) {
-      const db = await createServerPgClient();
-      let legacyQuery = db
-        .from("v_raw_materials_stock")
-        .select("*", { count: "exact" })
-        .is("deleted_at", null)
-        .eq("is_active", true);
-
-      const companyOr = companyScopeOr(scope);
-      if (companyOr) legacyQuery = legacyQuery.or(companyOr);
-      const branchOr = branchScopeOr(scope);
-      if (branchOr) legacyQuery = legacyQuery.or(branchOr);
-
-      if (search) {
-        legacyQuery = legacyQuery.or(`nama.ilike.%${search}%,kode.ilike.%${search}%`);
-      }
-      if (status === "out_of_stock") {
-        legacyQuery = legacyQuery.eq("status_stok", "HABIS");
-      } else if (status === "low_stock") {
-        legacyQuery = legacyQuery.eq("status_stok", "MENIPIS");
-      } else if (status === "normal") {
-        legacyQuery = legacyQuery.eq("status_stok", "AMAN");
-      }
-
-      const offset = (page - 1) * limit;
-      const { data, error, count } = await legacyQuery
-        .order("nama", { ascending: true })
-        .range(offset, offset + limit - 1);
-
-      if (error) throw error;
-
-      return paginatedResponse(
-        data || [],
-        { page, limit, total: count || 0 },
-        "Raw material stock retrieved"
-      );
-    }
-
-    const rows = filterStockRows(
-      await listRawMaterialStockByBranch(branchId),
-      search,
-      status
-    );
-    const { data, total } = paginateRows(rows, page, limit);
-
-    return paginatedResponse(
-      data.map(mapRawMaterialStockRow),
-      { page, limit, total },
-      "Raw material stock retrieved"
-    );
-  } catch (e: unknown) {
-    console.error("Error fetching raw material stock:", e);
-    const message = e instanceof Error ? e.message : "Unknown error";
-    return Response.json({ success: false, error: message }, { status: 500 });
-  }
-}
+  const rows = warehouseId
+    ? await listRawMaterialStockByWarehouse(warehouseId)
+    : await listRawMaterialStockByBranch(branchId!);
+  const { data, total } = paginateRows(filterStockRows(rows, search, status), page, limit);
+  return paginatedResponse(data.map(mapRawMaterialStockRow), { page, limit, total }, MESSAGE);
+}, "GET /api/inventory/raw-materials");

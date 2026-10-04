@@ -1,50 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { filterMenuRows, mapMenuItem } from "@/lib/iam/menu-mapper";
 import { createIamMenuInDb, listIamMenusFromDb } from "@/lib/iam/menu-repository";
+import { menuPayloadSchema } from "@/lib/settings/iam-schemas";
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: string }).message);
-  }
-  return "Internal server error";
-}
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsMenus);
+  const sp = request.nextUrl.searchParams;
+  const filtered = filterMenuRows((await listIamMenusFromDb()).map(mapMenuItem), {
+    search: sp.get("search") ?? undefined,
+    status: sp.get("status") ?? undefined,
+    menuType: sp.get("menuType") ?? undefined,
+  });
+  return NextResponse.json({ data: filtered, total: filtered.length });
+}, "GET /api/settings/iam/menus");
 
-export async function GET(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsMenus);
-
-    const { searchParams } = request.nextUrl;
-    const search = searchParams.get("search") ?? undefined;
-    const status = searchParams.get("status") ?? undefined;
-    const menuType = searchParams.get("menuType") ?? undefined;
-
-    const rows = await listIamMenusFromDb();
-    const mapped = rows.map(mapMenuItem);
-    const filtered = filterMenuRows(mapped, { search, status, menuType });
-
-    return NextResponse.json({
-      data: filtered,
-      total: filtered.length,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/menus] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.settingsMenus);
-    const body = await request.json();
-    const id = await createIamMenuInDb(body, user.id);
-    return NextResponse.json({ id }, { status: 201 });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/menus] POST failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  const user = await requireIamMenuPrefix(IAM.settingsMenus);
+  const body = await validateBody(request, menuPayloadSchema);
+  const id = await createIamMenuInDb(body, user.id);
+  return NextResponse.json({ id }, { status: 201 });
+}, "POST /api/settings/iam/menus");

@@ -1,12 +1,12 @@
 import { requireIamPage } from "@/lib/auth/require-user";
 import { IAM } from "@/lib/iam/prefixes";
-import { WaNotifSettingsPanel } from "@/components/arkiv/wa-notif-settings";
+import { WaNotifSettingsPanel } from "@/features/os-desktop/components/settings/wa-notif-settings";
 import { OrderAlertSettingsCard } from "@/features/configuration/order-alerts/order-alert-settings-card";
 
 /**
  * Settings → Notifikasi WA di dashboard.
  *
- * Komponennya sama dengan jendela Settings di desktop /arkiv-os (EPIC-020) —
+ * Komponennya sama dengan jendela Settings di desktop /os (EPIC-020) —
  * satu sumber untuk recipients owner, ambang notifikasi, dan penerima laporan
  * tutup kasir. Komponen itu ditata untuk latar gelap desktop, jadi di dashboard
  * (terang) ia dirender dengan tone="light" — satu form dua kulit, bukan dua salinan.

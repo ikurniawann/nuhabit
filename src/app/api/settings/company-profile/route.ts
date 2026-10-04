@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { z } from "zod";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { getSettings, setSetting, SETTING_KEYS } from "@/lib/settings/app-settings";
 
@@ -18,43 +20,25 @@ const FIELDS = {
 } as const;
 
 type Field = keyof typeof FIELDS;
+const FIELD_NAMES = Object.keys(FIELDS) as Field[];
 
-export async function GET() {
-  try {
-    await requireIamMenuPrefix(IAM.settingsBusiness);
-    const settings = await getSettings(Object.values(FIELDS));
-    const data = Object.fromEntries(
-      (Object.keys(FIELDS) as Field[]).map((field) => [field, settings[FIELDS[field]]])
-    );
-    return NextResponse.json({ data });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[company-profile] GET failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+const field = z.string().max(500).nullable().optional();
+const putSchema = z.object(Object.fromEntries(FIELD_NAMES.map((name) => [name, field])) as Record<Field, typeof field>);
+
+export const GET = apiHandler(async () => {
+  await requireIamMenuPrefix(IAM.settingsBusiness);
+  const settings = await getSettings(Object.values(FIELDS));
+  const data = Object.fromEntries(FIELD_NAMES.map((name) => [name, settings[FIELDS[name]]]));
+  return NextResponse.json({ data });
+}, "GET /api/settings/company-profile");
+
+export const PUT = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsBusiness);
+  const body = await validateBody(request, putSchema);
+  for (const name of FIELD_NAMES) {
+    const value = body[name];
+    if (value === undefined) continue;
+    await setSetting(FIELDS[name], value ? value.trim() : null);
   }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsBusiness);
-    const body = (await request.json()) as Record<string, unknown>;
-
-    for (const field of Object.keys(FIELDS) as Field[]) {
-      const value = body[field];
-      if (value === undefined) continue;
-      if (value !== null && typeof value !== "string") {
-        return NextResponse.json({ error: `${field} tidak valid` }, { status: 400 });
-      }
-      if (typeof value === "string" && value.length > 500) {
-        return NextResponse.json({ error: `${field} terlalu panjang` }, { status: 400 });
-      }
-      await setSetting(FIELDS[field], value ? value.trim() : null);
-    }
-
-    return NextResponse.json({ message: "Profil perusahaan tersimpan" });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[company-profile] PUT failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
+  return NextResponse.json({ message: "Profil perusahaan tersimpan" });
+}, "PUT /api/settings/company-profile");

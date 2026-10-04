@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CreditCard, Loader2, Save, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useUpdatePaymentGateway } from "../mutations";
 import { usePaymentGateways } from "../queries";
 import type { PaymentGatewayEnvironment, PaymentGatewayPublic } from "../types";
@@ -21,40 +21,32 @@ type Draft = {
   callback_url: string;
 };
 
-const emptyDraft = (): Draft => ({
-  is_active: false,
-  environment: "sandbox",
-  secret_key: "",
-  public_key: "",
-  webhook_secret: "",
-  callback_url: "",
+/** Draft awal dari data tersimpan; rahasia tampil tersamar (kosong = biarkan nilai lama). */
+const draftFrom = (gateway: PaymentGatewayPublic): Draft => ({
+  is_active: gateway.is_active,
+  environment: gateway.environment,
+  secret_key: gateway.secret_key_masked || "",
+  public_key: gateway.public_key_masked || "",
+  webhook_secret: gateway.webhook_secret_masked || "",
+  callback_url: gateway.callback_url || "",
 });
 
 export function PaymentGatewaysPage() {
   const gatewaysQuery = usePaymentGateways();
   const updateMutation = useUpdatePaymentGateway();
-  const [selectedProvider, setSelectedProvider] = useState<"xendit" | "midtrans">("xendit");
-  const [draft, setDraft] = useState<Draft>(emptyDraft());
-
-  const gateways = gatewaysQuery.data ?? [];
+  const [selectedProvider, setSelectedProvider] = useState<
+    "xendit" | "midtrans"
+  >("xendit");
+  const gateways = useMemo(
+    () => gatewaysQuery.data ?? [],
+    [gatewaysQuery.data],
+  );
   const selected = useMemo(
     () => gateways.find((row) => row.provider === selectedProvider) ?? null,
-    [gateways, selectedProvider]
+    [gateways, selectedProvider],
   );
 
-  useEffect(() => {
-    if (!selected) return;
-    setDraft({
-      is_active: selected.is_active,
-      environment: selected.environment,
-      secret_key: selected.secret_key_masked || "",
-      public_key: selected.public_key_masked || "",
-      webhook_secret: selected.webhook_secret_masked || "",
-      callback_url: selected.callback_url || "",
-    });
-  }, [selected]);
-
-  async function handleSave() {
+  async function handleSave(draft: Draft) {
     if (!selected) return;
     await updateMutation.mutateAsync({
       provider: selected.provider,
@@ -101,14 +93,16 @@ export function PaymentGatewaysPage() {
                   "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition-colors",
                   selectedProvider === gateway.provider
                     ? "border-primary/30 bg-primary/5"
-                    : "border-border hover:bg-muted/40"
+                    : "border-border hover:bg-muted/40",
                 )}
               >
-                <div className="rounded-md bg-primary/10 p-2 text-primary">
+                <div className="rounded-md bg-primary/10 p-2 text-brand-text">
                   <CreditCard className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-foreground">{gateway.display_name}</div>
+                  <div className="font-semibold text-foreground">
+                    {gateway.display_name}
+                  </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
                     {gateway.coming_soon
                       ? "Coming soon"
@@ -128,10 +122,10 @@ export function PaymentGatewaysPage() {
               Pilih provider di sebelah kiri
             </div>
           ) : (
+            // Draft dipasang ulang saat ganti provider atau setelah data tersimpan dimuat ulang.
             <GatewayForm
+              key={`${selected.provider}-${gatewaysQuery.dataUpdatedAt}`}
               gateway={selected}
-              draft={draft}
-              onChange={setDraft}
               onSave={handleSave}
               saving={updateMutation.isPending}
             />
@@ -146,45 +140,56 @@ export function PaymentGatewaysPage() {
 
 function GatewayForm({
   gateway,
-  draft,
-  onChange,
   onSave,
   saving,
 }: {
   gateway: PaymentGatewayPublic;
-  draft: Draft;
-  onChange: (draft: Draft) => void;
-  onSave: () => void;
+  onSave: (draft: Draft) => void;
   saving: boolean;
 }) {
+  const [draft, onChange] = useState<Draft>(() => draftFrom(gateway));
   const disabled = gateway.coming_soon;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{gateway.display_name}</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            {gateway.display_name}
+          </h2>
           <p className="text-sm text-muted-foreground">
             {gateway.coming_soon
               ? "Provider ini masih placeholder dan belum bisa diaktifkan."
               : "Isi kredensial API. Field secret kosong = biarkan nilai lama."}
           </p>
         </div>
-        <Button type="button" onClick={onSave} disabled={saving || disabled} className="gap-2">
-          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        <Button
+          type="button"
+          onClick={() => onSave(draft)}
+          disabled={saving || disabled}
+          className="gap-2"
+        >
+          {saving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Save className="size-4" />
+          )}
           {saving ? "Saving..." : "Save settings"}
         </Button>
       </div>
 
       {disabled ? (
         <div className="rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Midtrans coming soon — struktur multi-gateway sudah siap untuk ditambahkan.
+          Midtrans coming soon — struktur multi-gateway sudah siap untuk
+          ditambahkan.
         </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1.5">
-          <span className="text-sm font-medium text-foreground">Environment</span>
+          <span className="text-sm font-medium text-foreground">
+            Environment
+          </span>
           <div className="grid grid-cols-2 gap-2">
             {(["sandbox", "live"] as PaymentGatewayEnvironment[]).map((env) => (
               <button
@@ -195,8 +200,8 @@ function GatewayForm({
                 className={cn(
                   "rounded-lg border px-3 py-2 text-sm font-medium capitalize",
                   draft.environment === env
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border text-muted-foreground"
+                    ? "border-primary/30 bg-primary/10 text-brand-text"
+                    : "border-border text-muted-foreground",
                 )}
               >
                 {env}
@@ -213,20 +218,20 @@ function GatewayForm({
             "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm",
             draft.is_active
               ? "border-primary/30 bg-primary/5 text-foreground"
-              : "border-border bg-muted/30 text-muted-foreground"
+              : "border-border bg-muted/30 text-muted-foreground",
           )}
         >
           <span className="font-medium">Aktifkan gateway</span>
           <span
             className={cn(
               "relative h-5 w-9 rounded-full transition-colors",
-              draft.is_active ? "bg-primary" : "bg-muted-foreground/30"
+              draft.is_active ? "bg-primary" : "bg-muted-foreground/30",
             )}
           >
             <span
               className={cn(
                 "absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform",
-                draft.is_active ? "left-4" : "left-0.5"
+                draft.is_active ? "left-4" : "left-0.5",
               )}
             />
           </span>
@@ -266,12 +271,15 @@ function GatewayForm({
           <Input
             disabled={disabled}
             value={draft.callback_url}
-            onChange={(e) => onChange({ ...draft, callback_url: e.target.value })}
+            onChange={(e) =>
+              onChange({ ...draft, callback_url: e.target.value })
+            }
             placeholder="https://your-domain.com/api/payments/xendit/webhook"
             className="border-border font-mono text-sm"
           />
           <p className="text-xs text-muted-foreground">
-            Samakan dengan Xendit Dashboard → Settings → Callbacks (QR code paid). Endpoint app:{' '}
+            Samakan dengan Xendit Dashboard → Settings → Callbacks (QR code
+            paid). Endpoint app:{" "}
             <span className="font-mono">/api/payments/xendit/webhook</span>
           </p>
         </div>
@@ -279,8 +287,9 @@ function GatewayForm({
 
       <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <Shield className="mt-0.5 size-3.5 shrink-0" />
-        Nilai tersimpan ditampilkan sebagian (contoh: xnd_********3456). Fokus ke field lalu ketik
-        ulang untuk mengganti. Simpan dengan nilai bertanda ***** = secret lama tetap dipakai.
+        Nilai tersimpan ditampilkan sebagian (contoh: xnd_********3456). Fokus
+        ke field lalu ketik ulang untuk mengganti. Simpan dengan nilai bertanda
+        ***** = secret lama tetap dipakai.
       </div>
     </div>
   );
@@ -303,14 +312,17 @@ function MaskedSecretField({
   disabled?: boolean;
   onChange: (value: string) => void;
 }) {
-  const isMaskedDisplay = /\*{4,}/.test(value) || value.includes("…") || value.includes("••••");
+  const isMaskedDisplay =
+    /\*{4,}/.test(value) || value.includes("…") || value.includes("••••");
 
   return (
     <div className="space-y-1.5">
       <Label>
         {label}
         {hasValue ? (
-          <span className="ml-1 font-normal text-muted-foreground">(tersimpan)</span>
+          <span className="ml-1 font-normal text-muted-foreground">
+            (tersimpan)
+          </span>
         ) : null}
       </Label>
       <Input
@@ -327,7 +339,9 @@ function MaskedSecretField({
         className="border-border font-mono text-sm tracking-wide"
       />
       {hasValue && isMaskedDisplay ? (
-        <p className="text-xs text-muted-foreground">Klik field lalu ketik secret baru untuk mengganti.</p>
+        <p className="text-xs text-muted-foreground">
+          Klik field lalu ketik secret baru untuk mengganti.
+        </p>
       ) : null}
     </div>
   );

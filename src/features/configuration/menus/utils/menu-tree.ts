@@ -1,4 +1,4 @@
-import type { MenuItem } from "../types";
+import type { MenuItem } from "@/lib/iam/menu-types";
 
 export interface MenuTreeNode extends MenuItem {
   children: MenuTreeNode[];
@@ -19,7 +19,8 @@ export interface FlatMenuTreeRow {
 
 export function sortSiblings(items: MenuItem[]): MenuItem[] {
   return [...items].sort(
-    (a, b) => a.orderNumber - b.orderNumber || a.menuName.localeCompare(b.menuName)
+    (a, b) =>
+      a.orderNumber - b.orderNumber || a.menuName.localeCompare(b.menuName),
   );
 }
 
@@ -45,7 +46,7 @@ export function flattenMenuTree(
   nodes: MenuTreeNode[],
   expandedIds: Set<string>,
   depth = 0,
-  parentContinuations: boolean[] = []
+  parentContinuations: boolean[] = [],
 ): FlatMenuTreeRow[] {
   const rows: FlatMenuTreeRow[] = [];
 
@@ -68,7 +69,7 @@ export function flattenMenuTree(
         ...flattenMenuTree(node.children, expandedIds, depth + 1, [
           ...parentContinuations,
           !isLast,
-        ])
+        ]),
       );
     }
   });
@@ -92,24 +93,10 @@ export function collectExpandableIds(nodes: MenuTreeNode[]): string[] {
   return ids;
 }
 
-/** Add expandable node ids without replacing the Set when nothing changed. */
-export function mergeExpandableIds(prev: Set<string>, expandableIds: string[]): Set<string> {
-  let changed = false;
-  const next = new Set(prev);
-
-  for (const id of expandableIds) {
-    if (!next.has(id)) {
-      next.add(id);
-      changed = true;
-    }
-  }
-
-  return changed ? next : prev;
-}
 
 function itemMatchesFilter(
   item: MenuItem,
-  params: { search?: string; status?: string; menuType?: string }
+  params: { search?: string; status?: string; menuType?: string },
 ): boolean {
   const search = params.search?.trim().toLowerCase();
   const status = params.status?.trim().toLowerCase();
@@ -132,10 +119,10 @@ function itemMatchesFilter(
 /** Keep matched rows plus all ancestors so tree structure stays intact. */
 export function filterMenusWithAncestors(
   items: MenuItem[],
-  params: { search?: string; status?: string; menuType?: string }
+  params: { search?: string; status?: string; menuType?: string },
 ): MenuItem[] {
   const hasFilter = Boolean(
-    params.search?.trim() || params.status?.trim() || params.menuType?.trim()
+    params.search?.trim() || params.status?.trim() || params.menuType?.trim(),
   );
 
   if (!hasFilter) return items;

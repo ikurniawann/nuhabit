@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { formatAccountCodeDisplay } from "@/lib/accounting/account-code";
@@ -5,8 +6,8 @@ import type {
   BeginningBalanceLine,
   BeginningBalanceSavePayload,
   BeginningBalanceSuggestion,
-} from "@/features/accounting/beginning-balance/types";
-import { PL_ACCOUNT_TYPES } from "@/features/accounting/beginning-balance/types";
+} from "./types";
+import { PL_ACCOUNT_TYPES } from "./types";
 import type { JournalLineSide } from "@/lib/accounting/fiscal-types";
 
 function round2(n: number) {
@@ -104,7 +105,7 @@ export async function getBeginningBalanceSuggestion(
      WHERE id = $1 AND deleted_at IS NULL`,
     [fiscalYearId]
   );
-  if (!year) throw new Error("Fiscal year tidak ditemukan");
+  if (!year) throw ApiError.notFound("Fiscal year tidak ditemukan");
 
   const period1 = await queryOne<{ id: string; name: string; status: string }>(
     `SELECT id, name, status
@@ -414,15 +415,15 @@ export async function saveBeginningBalance(opts: {
 }): Promise<{ entry_id: string; status: string }> {
   const suggestion = await getBeginningBalanceSuggestion(opts.fiscalYearId);
   if (!suggestion.can_edit && suggestion.existing_entry_id) {
-    throw new Error("Beginning balance sudah POSTED dan tidak bisa diubah");
+    throw ApiError.badRequest("Beginning balance sudah POSTED dan tidak bisa diubah");
   }
   if (!suggestion.period_id) {
-    throw new Error("Fiscal year belum punya period");
+    throw ApiError.badRequest("Fiscal year belum punya period");
   }
 
   const lines = opts.payload.lines.filter((l) => l.amount > 0);
   if (lines.length < 2) {
-    throw new Error("Minimal 2 baris saldo awal (debit & credit)");
+    throw ApiError.badRequest("Minimal 2 baris saldo awal (debit & credit)");
   }
 
   let debit = 0;
@@ -432,7 +433,7 @@ export async function saveBeginningBalance(opts: {
     else credit += l.amount;
   }
   if (round2(debit) !== round2(credit)) {
-    throw new Error(
+    throw ApiError.badRequest(
       `Saldo awal tidak balance: Debit ${round2(debit)} ≠ Credit ${round2(credit)}`
     );
   }
@@ -446,14 +447,14 @@ export async function saveBeginningBalance(opts: {
      WHERE id = $1 AND deleted_at IS NULL`,
     [opts.fiscalYearId]
   );
-  if (!year) throw new Error("Fiscal year tidak ditemukan");
+  if (!year) throw ApiError.notFound("Fiscal year tidak ditemukan");
 
   // Ensure period 1 is OPEN for opening date
   const period = await queryOne<{ id: string; status: string }>(
     `SELECT id, status FROM accounting.fiscal_periods WHERE id = $1`,
     [suggestion.period_id]
   );
-  if (!period) throw new Error("Period 1 tidak ditemukan");
+  if (!period) throw ApiError.notFound("Period 1 tidak ditemukan");
 
   const post = opts.payload.post ?? false;
 

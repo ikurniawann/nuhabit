@@ -3,11 +3,7 @@
 import { useState } from "react";
 import { ScaleIcon } from "@heroicons/react/24/outline";
 import { useBalanceSheet } from "../queries";
-import {
-  AsOfFilter,
-  ReportShell,
-  todayStr,
-} from "./report-shell";
+import { AsOfFilter, ReportShell, todayStr } from "./report-shell";
 import {
   AccountBalanceTable,
   ErrorBlock,

@@ -9,7 +9,7 @@ import type {
 export type * from "./types";
 
 export async function listInventory(
-  params: InventoryListParams = {}
+  params: InventoryListParams = {},
 ): Promise<InventoryListResult> {
   const sp = new URLSearchParams();
   if (params.page) sp.set("page", String(params.page));
@@ -38,7 +38,7 @@ export async function getInventorySummary(): Promise<InventorySummary> {
 }
 
 export async function getInventoryItem(
-  id: string
+  id: string,
 ): Promise<InventoryItem | null> {
   const res = await fetch(`/api/inventory?limit=1000`);
   const data = await res.json();
@@ -49,10 +49,10 @@ export async function getInventoryItem(
 export async function listInventoryMovements(
   id: string,
   page = 1,
-  limit = 25
+  limit = 25,
 ): Promise<InventoryMovementsResult> {
   const res = await fetch(
-    `/api/inventory/${id}/movements?page=${page}&limit=${limit}`
+    `/api/inventory/${id}/movements?page=${page}&limit=${limit}`,
   );
   const data = await res.json();
   return {

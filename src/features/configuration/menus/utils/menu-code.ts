@@ -1,4 +1,4 @@
-import type { MenuItem } from "../types";
+import type { MenuItem } from "@/lib/iam/menu-types";
 
 function slugify(value: string): string {
   return value

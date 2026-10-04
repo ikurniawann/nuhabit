@@ -18,7 +18,7 @@ import {
   createJournalEntryRecord,
   findJournalEntryBySource,
 } from "@/lib/accounting/journal-entry-store";
-import type { JournalEntryLinePayload } from "@/features/accounting/journal-entries/types";
+import type { JournalEntryLinePayload } from "@/lib/accounting/types";
 import type { JournalEventCode } from "@/lib/accounting/journal-mapping-types";
 
 export { AccountingPostError };

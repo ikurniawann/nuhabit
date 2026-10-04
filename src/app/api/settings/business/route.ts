@@ -1,55 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { z } from "zod";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
-import {
-  createBusinessEntity,
-  fetchBusinessTree,
-  type BusinessEntityType,
-} from "@/lib/configuration/business-repository";
+import { createBusinessEntity, fetchBusinessTree } from "@/lib/configuration/business-repository";
+import { BUSINESS_ENTITY_TYPES } from "@/lib/settings/business-entity";
+import { rethrowUserFacing } from "@/lib/settings/route-errors";
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Internal server error";
-}
+const createSchema = z.object({
+  type: z.enum(BUSINESS_ENTITY_TYPES, { message: "Tipe entitas tidak valid" }),
+  name: z.string().default(""),
+  code: z.string().optional(),
+  parentId: z.string().nullable().optional(),
+  is_active: z.boolean().optional(),
+});
 
-const VALID_TYPES: BusinessEntityType[] = ["holding", "company", "branch", "warehouse"];
+export const GET = apiHandler(async () => {
+  await requireIamMenuPrefix(IAM.settingsBusiness);
+  return NextResponse.json({ data: await fetchBusinessTree() });
+}, "GET /api/settings/business");
 
-export async function GET() {
-  try {
-    await requireIamMenuPrefix(IAM.settingsBusiness);
-    const tree = await fetchBusinessTree();
-    return NextResponse.json({ data: tree });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/business] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsBusiness);
-    const body = await request.json();
-    const type = body.type as BusinessEntityType;
-
-    if (!VALID_TYPES.includes(type)) {
-      return NextResponse.json({ error: "Tipe entitas tidak valid" }, { status: 400 });
-    }
-
-    const result = await createBusinessEntity(type, {
-      name: body.name,
-      code: body.code,
-      parentId: body.parentId,
-      is_active: body.is_active,
-    });
-
-    const tree = await fetchBusinessTree();
-    return NextResponse.json({ data: result, tree }, { status: 201 });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/business] POST failed:", error);
-    const message = apiErrorMessage(error);
-    const status = message.includes("wajib") || message.includes("valid") ? 400 : 500;
-    return NextResponse.json({ error: message }, { status });
-  }
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsBusiness);
+  const { type, parentId, ...fields } = await validateBody(request, createSchema);
+  const result = await createBusinessEntity(type, { ...fields, parentId: parentId ?? undefined }).catch(
+    rethrowUserFacing(/wajib|valid/)
+  );
+  return NextResponse.json({ data: result, tree: await fetchBusinessTree() }, { status: 201 });
+}, "POST /api/settings/business");

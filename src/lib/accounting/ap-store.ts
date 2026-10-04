@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { DbClient } from "@/lib/pg/types";
 import { query, queryOne } from "@/lib/db";
 import {
@@ -134,7 +135,7 @@ export async function createApInvoiceFromGrn(opts: {
 
   const built = await buildGrnAccountingAmounts(opts.db, opts.grnId);
   if ((built.amounts.TOTAL || 0) <= 0) {
-    throw new Error("Nilai GRN 0 — tidak membuat AP invoice");
+    throw ApiError.badRequest("Nilai GRN 0 — tidak membuat AP invoice");
   }
 
   const { data: grn, error: grnError } = await opts.db
@@ -144,7 +145,7 @@ export async function createApInvoiceFromGrn(opts: {
     )
     .eq("id", opts.grnId)
     .single();
-  if (grnError || !grn) throw new Error("GRN tidak ditemukan");
+  if (grnError || !grn) throw ApiError.notFound("GRN tidak ditemukan");
 
   const poId = (grn.purchase_order_id as string | null) || null;
   let vendorId = (grn.vendor_id as string | null) || null;
@@ -170,7 +171,7 @@ export async function createApInvoiceFromGrn(opts: {
   }
 
   if (!vendorId && !supplierId) {
-    throw new Error("GRN/PO tidak punya vendor atau supplier");
+    throw ApiError.badRequest("GRN/PO tidak punya vendor atau supplier");
   }
   if (vendorId && supplierId) supplierId = null;
 
@@ -366,16 +367,16 @@ export async function recordApPayment(opts: {
   note: string | null;
 }> {
   const invoice = await getApInvoiceById(opts.invoiceId);
-  if (!invoice) throw new Error("AP invoice tidak ditemukan");
+  if (!invoice) throw ApiError.notFound("AP invoice tidak ditemukan");
   if (invoice.status !== "POSTED") {
-    throw new Error("Hanya invoice POSTED yang bisa dibayar");
+    throw ApiError.badRequest("Hanya invoice POSTED yang bisa dibayar");
   }
 
   const amount = round2(opts.amount);
-  if (amount <= 0) throw new Error("Amount pembayaran harus > 0");
+  if (amount <= 0) throw ApiError.badRequest("Amount pembayaran harus > 0");
   const outstanding = invoice.outstanding_amount ?? invoice.total_amount;
   if (amount > outstanding + 0.01) {
-    throw new Error("Amount pembayaran tidak boleh melebihi outstanding");
+    throw ApiError.badRequest("Amount pembayaran tidak boleh melebihi outstanding");
   }
 
   const paymentDate = opts.paymentDate || new Date().toISOString().slice(0, 10);

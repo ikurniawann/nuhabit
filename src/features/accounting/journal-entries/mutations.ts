@@ -8,7 +8,7 @@ import {
   deleteJournalEntry,
   postJournalEntryApi,
 } from "./api";
-import type { JournalEntryPayload } from "./types";
+import type { JournalEntryPayload } from "@/lib/accounting/types";
 
 function useInvalidate() {
   const qc = useQueryClient();

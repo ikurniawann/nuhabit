@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { formatAccountCodeDisplay } from "@/lib/accounting/account-code";
@@ -6,7 +7,7 @@ import type {
   JournalEntryItem,
   JournalEntryLineItem,
   JournalEntryLinePayload,
-} from "@/features/accounting/journal-entries/types";
+} from "./types";
 import type {
   JournalEntryStatus,
   JournalLineSide,
@@ -237,26 +238,26 @@ export async function getJournalEntry(
 
 function assertMutable(entry: JournalEntryItem) {
   if (entry.entry_type === "OPENING") {
-    throw new Error(
+    throw ApiError.badRequest(
       "Beginning balance (OPENING) dikelola lewat menu Beginning Balance"
     );
   }
   if (entry.entry_type === "AUTO") {
-    throw new Error(
+    throw ApiError.badRequest(
       "Journal entry AUTO dari modul operasional tidak bisa diubah dari sini"
     );
   }
   if (entry.status === "POSTED") {
-    throw new Error("Journal entry POSTED tidak bisa diubah/dihapus");
+    throw ApiError.badRequest("Journal entry POSTED tidak bisa diubah/dihapus");
   }
   if (entry.is_recon) {
-    throw new Error("Journal entry dengan flag recon tidak bisa diubah/dihapus");
+    throw ApiError.badRequest("Journal entry dengan flag recon tidak bisa diubah/dihapus");
   }
 }
 
 function validateLines(lines: JournalEntryLinePayload[]) {
   if (lines.length < 2) {
-    throw new Error("Minimal 2 baris jurnal (debit dan credit)");
+    throw ApiError.badRequest("Minimal 2 baris jurnal (debit dan credit)");
   }
 
   let debit = 0;
@@ -265,13 +266,13 @@ function validateLines(lines: JournalEntryLinePayload[]) {
   let hasCredit = false;
 
   for (const line of lines) {
-    if (!line.account_id) throw new Error("Setiap baris harus punya akun COA");
+    if (!line.account_id) throw ApiError.badRequest("Setiap baris harus punya akun COA");
     if (line.entry_side !== "DEBIT" && line.entry_side !== "CREDIT") {
-      throw new Error("entry_side harus DEBIT atau CREDIT");
+      throw ApiError.badRequest("entry_side harus DEBIT atau CREDIT");
     }
     const amount = Number(line.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      throw new Error("Amount harus lebih dari 0");
+      throw ApiError.badRequest("Amount harus lebih dari 0");
     }
     if (line.entry_side === "DEBIT") {
       debit += amount;
@@ -283,10 +284,10 @@ function validateLines(lines: JournalEntryLinePayload[]) {
   }
 
   if (!hasDebit || !hasCredit) {
-    throw new Error("Harus ada minimal satu baris Debit dan satu baris Credit");
+    throw ApiError.badRequest("Harus ada minimal satu baris Debit dan satu baris Credit");
   }
   if (round2(debit) !== round2(credit)) {
-    throw new Error(
+    throw ApiError.badRequest(
       `Jurnal tidak balance: Debit ${round2(debit)} ≠ Credit ${round2(credit)}`
     );
   }
@@ -298,7 +299,7 @@ async function assertPostableAccounts(
   companyId: string | null
 ) {
   const unique = [...new Set(accountIds.filter(Boolean))];
-  if (unique.length === 0) throw new Error("Akun COA wajib diisi");
+  if (unique.length === 0) throw ApiError.badRequest("Akun COA wajib diisi");
 
   const { rows } = await client.query<{
     id: string;
@@ -313,19 +314,19 @@ async function assertPostableAccounts(
   );
 
   if (rows.length !== unique.length) {
-    throw new Error("Satu atau lebih akun COA tidak ditemukan");
+    throw ApiError.notFound("Satu atau lebih akun COA tidak ditemukan");
   }
   for (const row of rows) {
-    if (row.deleted_at) throw new Error("Akun COA sudah dihapus");
+    if (row.deleted_at) throw ApiError.badRequest("Akun COA sudah dihapus");
     if (!row.is_postable) {
-      throw new Error("Akun jurnal harus postable (bukan header)");
+      throw ApiError.badRequest("Akun jurnal harus postable (bukan header)");
     }
     if (
       !companyId ||
       !row.company_id ||
       row.company_id !== companyId
     ) {
-      throw new Error("Akun COA harus dalam company yang sama");
+      throw ApiError.badRequest("Akun COA harus dalam company yang sama");
     }
   }
 }
@@ -503,7 +504,7 @@ export async function updateJournalEntryRecord(opts: {
   post: boolean;
 }): Promise<JournalEntryItem> {
   const existing = await getJournalEntry(opts.id);
-  if (!existing) throw new Error("Journal entry tidak ditemukan");
+  if (!existing) throw ApiError.notFound("Journal entry tidak ditemukan");
   assertMutable(existing);
   validateLines(opts.lines);
 
@@ -554,15 +555,15 @@ export async function postJournalEntry(
   userId: string
 ): Promise<JournalEntryItem> {
   const existing = await getJournalEntry(id);
-  if (!existing) throw new Error("Journal entry tidak ditemukan");
+  if (!existing) throw ApiError.notFound("Journal entry tidak ditemukan");
   if (existing.status === "POSTED") {
-    throw new Error("Journal entry sudah POSTED");
+    throw ApiError.badRequest("Journal entry sudah POSTED");
   }
   if (existing.lines.length < 2) {
-    throw new Error("Minimal 2 baris jurnal sebelum post");
+    throw ApiError.badRequest("Minimal 2 baris jurnal sebelum post");
   }
   if (round2(existing.total_debit) !== round2(existing.total_credit)) {
-    throw new Error("Jurnal tidak balance");
+    throw ApiError.badRequest("Jurnal tidak balance");
   }
 
   await withTransaction(async (client) => {
@@ -594,7 +595,7 @@ export async function softDeleteJournalEntry(
   userId: string
 ): Promise<void> {
   const existing = await getJournalEntry(id);
-  if (!existing) throw new Error("Journal entry tidak ditemukan");
+  if (!existing) throw ApiError.notFound("Journal entry tidak ditemukan");
   assertMutable(existing);
 
   await query(

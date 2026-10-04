@@ -1,74 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { mapMenuDetail } from "@/lib/iam/menu-mapper";
-import {
-  deleteIamMenuInDb,
-  getIamMenuFromDb,
-  updateIamMenuInDb,
-} from "@/lib/iam/menu-repository";
+import { deleteIamMenuInDb, getIamMenuFromDb, updateIamMenuInDb } from "@/lib/iam/menu-repository";
+import { menuUpdateSchema } from "@/lib/settings/iam-schemas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: string }).message);
-  }
-  return "Internal server error";
-}
+const notFound = () => ApiError.notFound("Menu not found");
 
-export async function GET(_request: NextRequest, context: RouteContext) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsMenus);
-    const { id } = await context.params;
+export const GET = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.settingsMenus);
+  const row = await getIamMenuFromDb((await params).id);
+  if (!row) throw notFound();
+  return NextResponse.json(mapMenuDetail(row));
+}, "GET /api/settings/iam/menus/[id]");
 
-    const row = await getIamMenuFromDb(id);
-    if (!row) {
-      return NextResponse.json({ error: "Menu not found" }, { status: 404 });
-    }
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  const user = await requireIamMenuPrefix(IAM.settingsMenus);
+  const { id } = await params;
+  const body = await validateBody(request, menuUpdateSchema);
+  if (!(await updateIamMenuInDb(id, body, user.id))) throw notFound();
+  return NextResponse.json({ id });
+}, "PUT /api/settings/iam/menus/[id]");
 
-    return NextResponse.json(mapMenuDetail(row));
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/menus/:id] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function PUT(request: NextRequest, context: RouteContext) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.settingsMenus);
-    const { id } = await context.params;
-    const body = await request.json();
-
-    const updated = await updateIamMenuInDb(id, body, user.id);
-    if (!updated) {
-      return NextResponse.json({ error: "Menu not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ id });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/menus/:id] PUT failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function DELETE(_request: NextRequest, context: RouteContext) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.settingsMenus);
-    const { id } = await context.params;
-
-    const deleted = await deleteIamMenuInDb(id, user.id);
-    if (!deleted) {
-      return NextResponse.json({ error: "Menu not found" }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/menus/:id] DELETE failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  const user = await requireIamMenuPrefix(IAM.settingsMenus);
+  if (!(await deleteIamMenuInDb((await params).id, user.id))) throw notFound();
+  return NextResponse.json({ success: true });
+}, "DELETE /api/settings/iam/menus/[id]");

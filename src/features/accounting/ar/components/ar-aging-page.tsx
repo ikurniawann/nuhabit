@@ -2,8 +2,8 @@
 
 import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useArAging } from "../queries";
 
 const LABELS: Record<string, string> = {
@@ -34,7 +34,7 @@ export function ArAgingPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : (
           <div className="overflow-x-auto px-4">
@@ -55,7 +55,7 @@ export function ArAgingPage() {
                     <td className="px-2 py-3">{LABELS[b.bucket] || b.bucket}</td>
                     <td className="px-2 py-3 text-right">{b.invoice_count}</td>
                     <td className="px-2 py-3 text-right">
-                      {formatAmount(b.amount)}
+                      {formatNumber(b.amount)}
                     </td>
                   </tr>
                 ))}

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { getApiUserScope } from "@/lib/api/scope";
+import { parseSearchParams } from "@/lib/inventory/query-params";
 import { listExpiringBatches } from "@/lib/inventory/stock-queries";
 
 const paramsSchema = z.object({
@@ -17,28 +19,21 @@ const paramsSchema = z.object({
  * GET /api/inventory/expiry — batch yang kedaluwarsa dalam `days` hari dan yang
  * sudah lewat, dengan nilai berisiko (qty x biaya rata-rata).
  */
-export async function GET(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.itemsInventory);
-    const raw = Object.fromEntries(
-      [...request.nextUrl.searchParams.entries()].filter(([, value]) => value !== "")
-    );
-    const params = paramsSchema.parse(raw);
-    const result = await listExpiringBatches({
-      scope: await getApiUserScope(),
-      days: params.days,
-      status: params.status,
-      warehouseId: params.warehouse_id,
-      branchId: params.branch_id,
-      search: params.search,
-    });
-    return Response.json({ success: true, data: result.rows, summary: result.summary, meta: { today: result.today, horizon: result.horizon } });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    if (error instanceof z.ZodError) {
-      return Response.json({ success: false, message: "Filter tidak valid" }, { status: 400 });
-    }
-    console.error("GET /api/inventory/expiry", error);
-    return Response.json({ success: false, message: "Gagal memuat stok kedaluwarsa" }, { status: 500 });
-  }
-}
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.itemsInventory);
+  const params = parseSearchParams(request.nextUrl.searchParams, paramsSchema);
+  const result = await listExpiringBatches({
+    scope: await getApiUserScope(),
+    days: params.days,
+    status: params.status,
+    warehouseId: params.warehouse_id,
+    branchId: params.branch_id,
+    search: params.search,
+  });
+  return Response.json({
+    success: true,
+    data: result.rows,
+    summary: result.summary,
+    meta: { today: result.today, horizon: result.horizon },
+  });
+}, "GET /api/inventory/expiry");

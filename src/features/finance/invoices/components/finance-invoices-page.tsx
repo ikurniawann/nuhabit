@@ -29,9 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { RupiahInput } from "@/features/sales-funnel/pipeline/components/rupiah-input";
-import { formatRupiah } from "@/features/sales-funnel/pipeline/types";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import {
   useCreateInvoicePayment,
@@ -42,6 +41,9 @@ import {
   useUpdateInvoiceStatus,
 } from "../queries";
 import type { FinanceInvoice } from "../api";
+import { formatDate, formatRupiah } from "@/lib/format";
+import { useRouter } from "next/navigation";
+import { AR_ROUTES } from "@/features/accounting/ar/api";
 
 /**
  * Modul Finance — Invoice & Pembayaran (EPIC-025 Opsi B): pengajuan sales
@@ -83,14 +85,6 @@ const todayInput = () => {
   return now.toISOString().slice(0, 10);
 };
 
-function formatShortDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 /** Popup catat pembayaran + riwayat per invoice. */
 function PaymentDialog({
@@ -224,7 +218,7 @@ function PaymentDialog({
                           {METHOD_LABELS[payment.method] ?? payment.method}
                         </Badge>
                         <span className="text-xs text-gray-500">
-                          {formatShortDate(payment.paid_on)}
+                          {formatDate(payment.paid_on, "—")}
                           {payment.note ? ` · ${payment.note}` : ""}
                         </span>
                         <button
@@ -259,6 +253,7 @@ function PaymentDialog({
 }
 
 export function FinanceInvoicesPage() {
+  const router = useRouter();
   const [status, setStatus] = useState("semua");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -357,7 +352,7 @@ export function FinanceInvoicesPage() {
                     {invoice.quote_number ? ` · ${invoice.quote_number}` : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-400">
-                    Jatuh tempo {formatShortDate(invoice.due_date)}
+                    Jatuh tempo {formatDate(invoice.due_date, "—")}
                     {invoice.created_by_name
                       ? ` · diajukan ${invoice.created_by_name}`
                       : ""}
@@ -410,10 +405,10 @@ export function FinanceInvoicesPage() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => {
-                        window.location.href = `/dashboard/accounting/receivable/receipts?sales_invoice=${invoice.id}`;
-                      }}
-                      className="h-8 gap-1.5 rounded-lg border-primary/20 text-primary hover:bg-primary/5"
+                      onClick={() =>
+                        router.push(`${AR_ROUTES.receipts}?sales_invoice=${invoice.id}`)
+                      }
+                      className="h-8 gap-1.5 rounded-lg border-primary/20 text-brand-text hover:bg-primary/5"
                     >
                       <Wallet className="h-3.5 w-3.5" /> Terima di Accounting
                     </Button>

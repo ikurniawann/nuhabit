@@ -7,25 +7,32 @@ import type {
 
 export type StockTransferListResult = {
   data: StockTransferRecord[];
-  pagination: { page: number; limit: number; total: number; total_pages: number };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
 };
 
 async function parseJson<T>(res: Response): Promise<T> {
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Request failed");
+    throw new Error(json.error || json.message || "Request failed");
   }
   return json;
 }
 
 export async function listStockTransfers(
-  params: StockTransferListParams = {}
+  params: StockTransferListParams = {},
 ): Promise<StockTransferListResult> {
   const sp = new URLSearchParams();
   if (params.page) sp.set("page", String(params.page));
   if (params.limit) sp.set("limit", String(params.limit));
 
-  const res = await fetch(`/api/purchasing/inventory/transfer?${sp.toString()}`);
+  const res = await fetch(
+    `/api/purchasing/inventory/transfer?${sp.toString()}`,
+  );
   const json = await parseJson<{
     success: boolean;
     data: StockTransferRecord[];
@@ -51,7 +58,7 @@ export async function listTransferWarehouses(): Promise<WarehouseOption[]> {
   const res = await fetch("/api/purchasing/warehouses");
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || "Failed to load stalls");
+    throw new Error(json.error || json.message || "Failed to load stalls");
   }
   return Array.isArray(json.data) ? json.data : [];
 }
@@ -65,13 +72,15 @@ export type SourceStockLine = {
   qty_system: number;
 };
 
-export async function listSourceStockLines(warehouseId: string): Promise<SourceStockLine[]> {
+export async function listSourceStockLines(
+  warehouseId: string,
+): Promise<SourceStockLine[]> {
   const res = await fetch(
-    `/api/purchasing/inventory/transfer/preview?warehouse_id=${encodeURIComponent(warehouseId)}`
+    `/api/purchasing/inventory/transfer/preview?warehouse_id=${encodeURIComponent(warehouseId)}`,
   );
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Failed to load stock");
+    throw new Error(json.error || json.message || "Failed to load stock");
   }
   return (json.data || []) as SourceStockLine[];
 }

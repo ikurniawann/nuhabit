@@ -48,15 +48,18 @@ export function InstagramSettingsPage() {
           <Camera className="size-5 text-pink-600" /> Instagram Messaging
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Hubungkan akun Instagram bisnis agar DM masuk ke Inbox CS dan bisa dibalas dari
-          dashboard. Hanya Super Admin yang dapat mengubah pengaturan ini.
+          Hubungkan akun Instagram bisnis agar DM masuk ke Inbox CS dan bisa
+          dibalas dari dashboard. Hanya Super Admin yang dapat mengubah
+          pengaturan ini.
         </p>
       </header>
 
       <InstagramConnectPanel />
 
       <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-slate-900">Langkah di dashboard Meta</h2>
+        <h2 className="text-sm font-semibold text-slate-900">
+          Langkah di dashboard Meta
+        </h2>
         <ol className="mt-3 space-y-3">
           {LANGKAH.map((langkah, index) => (
             <li key={langkah.judul} className="flex gap-3">
@@ -64,8 +67,12 @@ export function InstagramSettingsPage() {
                 {index + 1}
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800">{langkah.judul}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{langkah.detail}</p>
+                <p className="text-sm font-medium text-slate-800">
+                  {langkah.judul}
+                </p>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                  {langkah.detail}
+                </p>
               </div>
             </li>
           ))}
@@ -77,26 +84,32 @@ export function InstagramSettingsPage() {
           rel="noopener noreferrer"
           className="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-violet-700 hover:underline"
         >
-          Dokumentasi resmi Instagram Messaging <ExternalLink className="size-3" />
+          Dokumentasi resmi Instagram Messaging{" "}
+          <ExternalLink className="size-3" />
         </a>
       </section>
 
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <h2 className="text-sm font-semibold text-amber-900">Yang perlu diketahui</h2>
+        <h2 className="text-sm font-semibold text-amber-900">
+          Yang perlu diketahui
+        </h2>
         <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-amber-800">
           <li>
-            <strong>Jendela balas 24 jam.</strong> Meta hanya mengizinkan balasan dalam 24 jam
-            sejak pesan terakhir pelanggan. Lewat dari itu balasan ditolak, dan dashboard akan
-            memberi tahu alasannya sebelum Anda mengetik.
+            <strong>Jendela balas 24 jam.</strong> Meta hanya mengizinkan
+            balasan dalam 24 jam sejak pesan terakhir pelanggan. Lewat dari itu
+            balasan ditolak, dan dashboard akan memberi tahu alasannya sebelum
+            Anda mengetik.
           </li>
           <li>
-            <strong>Konteks member sengaja kosong.</strong> DM Instagram tidak ditautkan ke profil
-            member karena Instagram tidak membawa nomor telepon.
+            <strong>Konteks member sengaja kosong.</strong> DM Instagram tidak
+            ditautkan ke profil member karena Instagram tidak membawa nomor
+            telepon.
           </li>
           <li>
-            <strong>Mode development.</strong> Untuk pengujian, aplikasi Meta yang masih berstatus
-            development umumnya sudah bisa berkirim pesan dengan akun yang punya peran di aplikasi
-            tersebut. App Review baru wajib untuk penggunaan publik.
+            <strong>Mode development.</strong> Untuk pengujian, aplikasi Meta
+            yang masih berstatus development umumnya sudah bisa berkirim pesan
+            dengan akun yang punya peran di aplikasi tersebut. App Review baru
+            wajib untuk penggunaan publik.
           </li>
         </ul>
       </section>

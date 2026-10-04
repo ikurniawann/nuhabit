@@ -15,16 +15,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useStockOpnameList } from "../queries";
 import {
   STOCK_OPNAME_STATUS_COLORS,
   STOCK_OPNAME_STATUS_LABELS,
   type StockOpnameStatus,
 } from "../types";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Semua Status" },
@@ -34,24 +35,13 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Dibatalkan" },
 ];
 
-function formatQty(value: number) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export function StockOpnameListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StockOpnameStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<StockOpnameStatus | "all">(
+    "all",
+  );
   const limit = 20;
 
   useEffect(() => {
@@ -89,7 +79,10 @@ export function StockOpnameListPage() {
               </Button>
             </Link>
             <Link href={RM_ROUTES.inventoryStock}>
-              <Button variant="outline" className="purchasing-secondary-button w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="purchasing-secondary-button w-full sm:w-auto"
+              >
                 Lihat Stok
               </Button>
             </Link>
@@ -106,7 +99,9 @@ export function StockOpnameListPage() {
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Perhitungan Berjalan</p>
+            <p className="text-xs font-medium text-gray-500">
+              Perhitungan Berjalan
+            </p>
             <p className="mt-1 text-2xl font-bold text-amber-600">
               {items.filter((item) => item.status === "in_progress").length}
             </p>
@@ -161,7 +156,9 @@ export function StockOpnameListPage() {
               onClick={() => listQuery.refetch()}
               disabled={loading}
             >
-              <ArrowPathIcon className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <ArrowPathIcon
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
               Muat Ulang
             </Button>
           </div>
@@ -184,13 +181,19 @@ export function StockOpnameListPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-12 text-center text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-3 py-12 text-center text-gray-400"
+                  >
                     Memuat sesi stok opname...
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-12 text-center text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-3 py-12 text-center text-gray-400"
+                  >
                     <ClipboardDocumentListIcon className="mx-auto mb-2 h-8 w-8 text-gray-300" />
                     Belum ada sesi stok opname
                   </td>
@@ -211,13 +214,13 @@ export function StockOpnameListPage() {
                       {item.warehouse?.name || "—"}
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700">
-                      {formatQty(item.total_lines)}
+                      {formatNumber(item.total_lines, 4)}
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700">
-                      {formatQty(item.lines_counted)}
+                      {formatNumber(item.lines_counted, 4)}
                     </td>
                     <td className="px-3 py-3 text-right text-gray-700">
-                      {formatQty(item.lines_with_variance)}
+                      {formatNumber(item.lines_with_variance, 4)}
                     </td>
                     <td className="px-3 py-3">
                       <Badge
@@ -228,16 +231,25 @@ export function StockOpnameListPage() {
                       </Badge>
                     </td>
                     <td className="px-3 py-3 text-right">
-                      {item.status === "draft" || item.status === "in_progress" ? (
+                      {item.status === "draft" ||
+                      item.status === "in_progress" ? (
                         <Link href={RM_ROUTES.inventoryOpnameContinue(item.id)}>
-                          <Button variant="ghost" size="sm" className="h-8 gap-1 text-pink-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-pink-700"
+                          >
                             <PencilSquareIcon className="h-4 w-4" />
                             Lanjutkan
                           </Button>
                         </Link>
                       ) : (
                         <Link href={RM_ROUTES.inventoryOpnameDetail(item.id)}>
-                          <Button variant="ghost" size="sm" className="h-8 gap-1 text-pink-700">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-pink-700"
+                          >
                             <EyeIcon className="h-4 w-4" />
                             Detail
                           </Button>

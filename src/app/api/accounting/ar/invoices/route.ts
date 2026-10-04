@@ -1,49 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { getApiUserScope } from "@/lib/api/scope";
-import { ACCOUNTING_API_ROLES } from "@/lib/accounting/coa-types";
 import { requireAccountingCompanyId } from "@/lib/accounting/company-scope";
-import {
-  listArInvoices,
-  syncArFromOpenSalesInvoices,
-} from "@/lib/accounting/ar-store";
+import { listArInvoices, syncArFromOpenSalesInvoices } from "@/lib/accounting/ar-store";
+import { parseInvoiceListQuery } from "@/lib/accounting/route-helpers";
 
-function errMsg(error: unknown) {
-  return error instanceof Error ? error.message : "Internal server error";
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.accounting);
-    const scope = await getApiUserScope();
-    const companyId = requireAccountingCompanyId(scope);
-    // Lazy sync terkirim B2B → AR
-    await syncArFromOpenSalesInvoices({
-      companyId,
-      userId: user.id,
-      limit: 30,
-    });
-    const sp = request.nextUrl.searchParams;
-    const result = await listArInvoices({
-      companyId,
-      status: sp.get("status") || undefined,
-      paymentStatus: sp.get("payment_status") || undefined,
-      search: sp.get("search") || undefined,
-      limit: Number(sp.get("limit") || 20),
-      offset: Number(sp.get("offset") || 0),
-    });
-    return NextResponse.json({
-      success: true,
-      data: result.rows,
-      meta: { total: result.total },
-    });
-  } catch (error: unknown) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("GET /api/accounting/ar/invoices", error);
-    return NextResponse.json(
-      { success: false, message: errMsg(error) },
-      { status: 500 }
-    );
-  }
-}
+export const GET = apiHandler(async (request: NextRequest) => {
+  const user = await requireIamMenuPrefix(IAM.accounting);
+  const companyId = requireAccountingCompanyId(await getApiUserScope());
+  // Lazy sync terkirim B2B → AR
+  await syncArFromOpenSalesInvoices({ companyId, userId: user.id, limit: 30 });
+  const result = await listArInvoices({
+    companyId,
+    ...parseInvoiceListQuery(request.nextUrl.searchParams),
+  });
+  return NextResponse.json({ success: true, data: result.rows, meta: { total: result.total } });
+}, "GET /api/accounting/ar/invoices");

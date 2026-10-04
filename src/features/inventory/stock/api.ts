@@ -20,10 +20,10 @@ function buildParams(params: StockListParams) {
 }
 
 export async function listRawMaterialStock(
-  params: StockListParams = {}
+  params: StockListParams = {},
 ): Promise<StockListResult<RawMaterialStockItem>> {
   const res = await fetch(
-    `/api/inventory/raw-materials?${buildParams(params).toString()}`
+    `/api/inventory/raw-materials?${buildParams(params).toString()}`,
   );
   const data = await res.json();
   return {
@@ -33,10 +33,10 @@ export async function listRawMaterialStock(
 }
 
 export async function listProductStock(
-  params: StockListParams = {}
+  params: StockListParams = {},
 ): Promise<StockListResult<ProductStockItem>> {
   const res = await fetch(
-    `/api/inventory/finished-goods?${buildParams(params).toString()}`
+    `/api/inventory/finished-goods?${buildParams(params).toString()}`,
   );
   const data = await res.json();
   return {
@@ -51,7 +51,7 @@ export async function listStockWarehouses(): Promise<
   const res = await fetch("/api/purchasing/warehouses");
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || "Gagal memuat data stall");
+    throw new Error(json.error || json.message || "Gagal memuat data stall");
   }
   return Array.isArray(json.data) ? json.data : [];
 }

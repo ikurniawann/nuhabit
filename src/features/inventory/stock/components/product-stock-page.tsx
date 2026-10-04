@@ -1,6 +1,6 @@
 "use client";
 
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { ProductStockTab } from "./product-stock-tab";
 
 export function ProductStockPage() {

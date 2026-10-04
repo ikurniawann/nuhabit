@@ -22,7 +22,10 @@ interface PermissionActionPickerProps {
   onChange: (actions: string[]) => void;
 }
 
-export function PermissionActionPicker({ value, onChange }: PermissionActionPickerProps) {
+export function PermissionActionPicker({
+  value,
+  onChange,
+}: PermissionActionPickerProps) {
   const [customInput, setCustomInput] = useState("");
   const [inputError, setInputError] = useState("");
 
@@ -109,7 +112,7 @@ export function PermissionActionPicker({ value, onChange }: PermissionActionPick
                   "rounded-full border px-3 py-1.5 text-xs font-medium capitalize transition-colors",
                   selected
                     ? "border-pink-200 bg-pink-50 text-pink-700"
-                    : "border-gray-200/70 bg-gray-50/80 text-gray-600 hover:border-gray-300 hover:bg-gray-100"
+                    : "border-gray-200/70 bg-gray-50/80 text-gray-600 hover:border-gray-300 hover:bg-gray-100",
                 )}
               >
                 {action}
@@ -173,7 +176,8 @@ export function PermissionActionPicker({ value, onChange }: PermissionActionPick
           <p className="mt-1.5 text-xs text-red-500">{inputError}</p>
         ) : (
           <p className="mt-1.5 text-xs text-gray-500">
-            Use lowercase letters, numbers, hyphens, or underscores. Spaces become hyphens.
+            Use lowercase letters, numbers, hyphens, or underscores. Spaces
+            become hyphens.
           </p>
         )}
       </div>

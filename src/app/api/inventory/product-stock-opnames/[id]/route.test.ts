@@ -100,7 +100,7 @@ describe("GET /api/inventory/product-stock-opnames/[id] — scope guard", () => 
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toMatch(/tidak ditemukan/);
+    expect(body.error).toMatch(/tidak ditemukan/);
   });
 
   it("caller unscoped (super_admin) → tetap bisa lihat opname company manapun", async () => {
@@ -144,6 +144,6 @@ describe("PATCH /api/inventory/product-stock-opnames/[id] — scope guard", () =
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toMatch(/tidak ditemukan/);
+    expect(body.error).toMatch(/tidak ditemukan/);
   });
 });

@@ -7,7 +7,7 @@ import {
   updateJournalMapping,
   deleteJournalMapping,
 } from "./api";
-import type { JournalMappingPayload } from "./types";
+import type { JournalMappingPayload } from "@/lib/accounting/types";
 
 function useInvalidate() {
   const qc = useQueryClient();

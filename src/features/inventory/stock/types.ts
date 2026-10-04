@@ -1,3 +1,5 @@
+import type { ProductStockVariant } from "@/lib/inventory/finished-goods-stock";
+
 export type RawStockStatus = "AMAN" | "MENIPIS" | "HABIS";
 
 export interface RawMaterialStockItem {
@@ -22,13 +24,7 @@ export interface RawMaterialStockItem {
 }
 
 /** EPIC-047 Fase 1C — satu baris SKU aktif produk merchandise ber-varian. */
-export interface ProductStockVariant {
-  sku_id: string;
-  sku: string;
-  name: string;
-  options: Record<string, string> | null;
-  stock_quantity: number;
-}
+export type { ProductStockVariant };
 
 export interface ProductStockItem {
   id: string;

@@ -8,7 +8,7 @@ import {
   deleteFiscalYear,
   openFiscalPeriod,
 } from "./api";
-import type { FiscalYearPayload } from "./types";
+import type { FiscalYearPayload } from "@/lib/accounting/types";
 
 function useInvalidate() {
   const qc = useQueryClient();

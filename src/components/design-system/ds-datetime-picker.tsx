@@ -9,6 +9,7 @@ import { dsFocusRing } from "./tokens";
 import "flatpickr/dist/themes/light.css";
 import "./ds-flatpickr.css";
 import { Indonesian } from "flatpickr/dist/l10n/id.js";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 export interface DsDateTimePickerProps {
   value?: string;
@@ -29,21 +30,10 @@ export interface DsDateTimePickerProps {
   time24hr?: boolean;
 }
 
+/** Nilai flatpickr ("Y-m-d" / "Y-m-d H:i") → teks tampilan WIB. */
 function formatDisplay(value: string, dateOnly: boolean) {
   if (!value) return "";
-  const date = new Date(value.includes("T") ? value : value.replace(" ", "T"));
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    ...(dateOnly
-      ? {}
-      : {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-  });
+  return dateOnly ? formatDate(value, value) : formatDateTime(value.replace(" ", "T"), value);
 }
 
 export function DsDateTimePicker({
@@ -65,51 +55,52 @@ export function DsDateTimePicker({
 }: DsDateTimePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const fpInstance = useRef<flatpickr.Instance | null>(null);
-  const [displayValue, setDisplayValue] = useState(value ?? "");
+  // Terkontrol bila `value` diberikan; selain itu ingat pilihan terakhir sendiri.
+  const [internalValue, setInternalValue] = useState("");
+  const displayValue = value ?? internalValue;
   const generatedId = React.useId();
   const inputId = id ?? generatedId;
-
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    if (!inputRef.current || fpInstance.current) return;
+    onChangeRef.current = onChange;
+  });
 
-    fpInstance.current = flatpickr(inputRef.current, {
+  // Instance flatpickr dibuat ulang hanya bila mode tanggal/jam berubah;
+  // value, min/max, dan disabled disinkronkan lewat efek di bawah.
+  useEffect(() => {
+    if (!inputRef.current) return;
+    const instance = flatpickr(inputRef.current, {
       enableTime: !dateOnly,
       dateFormat: dateOnly ? "Y-m-d" : "Y-m-d H:i",
       altInput: false,
       locale: Indonesian,
       disableMobile: true,
       time_24hr: time24hr,
-      minDate,
-      maxDate,
-      defaultDate: value || undefined,
-      onReady: (_dates, _dateStr, instance) => {
-        instance.calendarContainer.classList.add("ds-flatpickr");
+      onReady: (_dates, _dateStr, fp) => {
+        fp.calendarContainer.classList.add("ds-flatpickr");
       },
       onChange: (_dates, dateStr) => {
-        setDisplayValue(dateStr);
-        onChange?.(dateStr);
+        setInternalValue(dateStr);
+        onChangeRef.current?.(dateStr);
       },
     });
-
+    fpInstance.current = instance;
     return () => {
-      fpInstance.current?.destroy();
+      instance.destroy();
       fpInstance.current = null;
     };
-  }, []);
+  }, [dateOnly, time24hr]);
 
   useEffect(() => {
-    if (fpInstance.current && value !== undefined) {
-      fpInstance.current.setDate(value, false);
-      setDisplayValue(value);
-    }
-  }, [value]);
+    if (fpInstance.current && value !== undefined) fpInstance.current.setDate(value, false);
+  }, [value, dateOnly, time24hr]);
 
   useEffect(() => {
     if (!fpInstance.current) return;
     fpInstance.current.set("minDate", minDate);
     fpInstance.current.set("maxDate", maxDate);
     if (disabled) fpInstance.current.close();
-  }, [minDate, maxDate, disabled]);
+  }, [minDate, maxDate, disabled, dateOnly, time24hr]);
 
   const openPicker = () => {
     if (!disabled) fpInstance.current?.open();
@@ -117,7 +108,7 @@ export function DsDateTimePicker({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDisplayValue("");
+    setInternalValue("");
     onChange?.("");
     fpInstance.current?.clear();
   };

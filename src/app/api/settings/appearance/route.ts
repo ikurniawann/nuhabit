@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, getApiUser, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { getApiUserScope } from "@/lib/api/scope";
 import {
@@ -11,102 +12,51 @@ import {
 } from "@/lib/theme/company-appearance";
 import { parseAppearanceTokens } from "@/lib/theme/appearance-tokens";
 
-export async function GET(request: NextRequest) {
-  try {
-    const user = await getApiUser();
-    if (!user) {
-      return NextResponse.json({
-        data: {
-          company_id: null,
-          company_name: null,
-          companies: [],
-          theme: parseAppearanceTokens(null),
-        },
-      });
-    }
-    const scope = await getApiUserScope();
-    if (!scope) throw ApiError.unauthorized("Authentication required");
+type Companies = Awaited<ReturnType<typeof listAccessibleAppearanceCompanies>>;
 
-    const companies = await listAccessibleAppearanceCompanies(scope);
-    const requested = request.nextUrl.searchParams.get("company_id");
-    const companyId =
-      requested && canAccessAppearanceCompany(scope, requested)
-        ? requested
-        : resolveDefaultCompanyId(scope, companies);
-
-    if (!companyId) {
-      return NextResponse.json({
-        data: {
-          company_id: null,
-          company_name: null,
-          companies,
-          theme: parseAppearanceTokens(null),
-        },
-      });
-    }
-
-    if (requested && !canAccessAppearanceCompany(scope, requested)) {
-      throw ApiError.forbidden("Company tidak dapat diakses");
-    }
-
-    const company = companies.find((c) => c.id === companyId) ?? null;
-    const theme = await getCompanyAppearance(companyId);
-    return NextResponse.json({
-      data: {
-        company_id: companyId,
-        company_name: company?.name ?? null,
-        companies,
-        theme,
-      },
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/appearance] GET failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+function appearanceData(companyId: string | null, companies: Companies, theme: ReturnType<typeof parseAppearanceTokens>) {
+  const company = companyId ? companies.find((c) => c.id === companyId) : undefined;
+  return { company_id: companyId, company_name: company?.name ?? null, companies, theme };
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const user = await requireIamMenuPrefix(IAM.settingsAppearance);
-    const scope = await getApiUserScope();
-    if (!scope) throw ApiError.unauthorized("Authentication required");
-
-    const body = (await request.json()) as {
-      company_id?: unknown;
-      theme?: unknown;
-    };
-    const companyId = typeof body.company_id === "string" ? body.company_id : "";
-    if (!companyId) {
-      return NextResponse.json({ error: "company_id wajib" }, { status: 400 });
-    }
-    if (!canAccessAppearanceCompany(scope, companyId)) {
-      throw ApiError.forbidden("Company tidak dapat diakses");
-    }
-
-    const companies = await listAccessibleAppearanceCompanies(scope);
-    if (!companies.some((c) => c.id === companyId)) {
-      return NextResponse.json({ error: "Company tidak ditemukan" }, { status: 404 });
-    }
-
-    const theme = await saveCompanyAppearance(
-      companyId,
-      parseAppearanceTokens(body.theme),
-      user.id
-    );
-    const company = companies.find((c) => c.id === companyId) ?? null;
-    return NextResponse.json({
-      message: "Tema perusahaan tersimpan",
-      data: {
-        company_id: companyId,
-        company_name: company?.name ?? null,
-        companies,
-        theme,
-      },
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[settings/appearance] PUT failed:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
+async function requireScope() {
+  const scope = await getApiUserScope();
+  if (!scope) throw ApiError.unauthorized("Authentication required");
+  return scope;
 }
+
+/** Tema perusahaan; tanpa sesi → tema default (dipakai halaman login). */
+export const GET = apiHandler(async (request: NextRequest) => {
+  if (!(await getApiUser())) {
+    return NextResponse.json({ data: appearanceData(null, [], parseAppearanceTokens(null)) });
+  }
+  const scope = await requireScope();
+  const companies = await listAccessibleAppearanceCompanies(scope);
+  const requested = request.nextUrl.searchParams.get("company_id");
+  const requestedAllowed = requested ? canAccessAppearanceCompany(scope, requested) : false;
+  const companyId = requested && requestedAllowed ? requested : resolveDefaultCompanyId(scope, companies);
+
+  if (!companyId) {
+    return NextResponse.json({ data: appearanceData(null, companies, parseAppearanceTokens(null)) });
+  }
+  if (requested && !requestedAllowed) throw ApiError.forbidden("Company tidak dapat diakses");
+  return NextResponse.json({ data: appearanceData(companyId, companies, await getCompanyAppearance(companyId)) });
+}, "GET /api/settings/appearance");
+
+export const PUT = apiHandler(async (request: NextRequest) => {
+  const user = await requireIamMenuPrefix(IAM.settingsAppearance);
+  const scope = await requireScope();
+  const body = ((await request.json()) ?? {}) as { company_id?: unknown; theme?: unknown };
+  const companyId = typeof body.company_id === "string" ? body.company_id : "";
+  if (!companyId) throw ApiError.badRequest("company_id wajib");
+  if (!canAccessAppearanceCompany(scope, companyId)) throw ApiError.forbidden("Company tidak dapat diakses");
+
+  const companies = await listAccessibleAppearanceCompanies(scope);
+  if (!companies.some((c) => c.id === companyId)) throw ApiError.notFound("Company tidak ditemukan");
+
+  const theme = await saveCompanyAppearance(companyId, parseAppearanceTokens(body.theme), user.id);
+  return NextResponse.json({
+    message: "Tema perusahaan tersimpan",
+    data: appearanceData(companyId, companies, theme),
+  });
+}, "PUT /api/settings/appearance");

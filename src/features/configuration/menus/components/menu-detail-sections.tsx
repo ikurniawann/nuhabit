@@ -1,7 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import type { MenuDetail } from "../types";
+import type { MenuDetail } from "@/lib/iam/menu-types";
+import { formatDateTime } from "@/lib/format";
 
 interface MenuDetailSectionsProps {
   detail: MenuDetail;
@@ -10,7 +11,9 @@ interface MenuDetailSectionsProps {
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+        {label}
+      </p>
       <div className="text-sm text-gray-900">{value}</div>
     </div>
   );
@@ -18,7 +21,8 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function MenuDetailSections({ detail }: MenuDetailSectionsProps) {
   const actions =
-    detail.permissionContext?.actions && detail.permissionContext.actions.length > 0
+    detail.permissionContext?.actions &&
+    detail.permissionContext.actions.length > 0
       ? detail.permissionContext.actions
       : ["read"];
 
@@ -27,8 +31,12 @@ export function MenuDetailSections({ detail }: MenuDetailSectionsProps) {
       <div className="rounded-xl border border-gray-200/70 bg-gray-50/50 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-gray-900">{detail.menuName}</h3>
-            <p className="mt-1 font-mono text-xs text-gray-500">{detail.code}</p>
+            <h3 className="text-base font-semibold text-gray-900">
+              {detail.menuName}
+            </h3>
+            <p className="mt-1 font-mono text-xs text-gray-500">
+              {detail.code}
+            </p>
           </div>
           <Badge
             className={
@@ -60,7 +68,9 @@ export function MenuDetailSections({ detail }: MenuDetailSectionsProps) {
       </div>
 
       <div className="space-y-3 rounded-xl border border-gray-200/70 p-4">
-        <p className="text-sm font-semibold text-gray-900">Permission Context</p>
+        <p className="text-sm font-semibold text-gray-900">
+          Permission Context
+        </p>
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => (
             <Badge
@@ -77,12 +87,15 @@ export function MenuDetailSections({ detail }: MenuDetailSectionsProps) {
       </div>
 
       <div className="grid gap-4 text-xs text-gray-500 sm:grid-cols-2">
-        <Field label="Created At" value={new Date(detail.createdAt).toLocaleString("en-US")} />
+        <Field
+          label="Created At"
+          value={formatDateTime(detail.createdAt)}
+        />
         <Field
           label="Updated At"
           value={
             detail.updatedAt
-              ? new Date(detail.updatedAt).toLocaleString("en-US")
+              ? formatDateTime(detail.updatedAt)
               : "—"
           }
         />

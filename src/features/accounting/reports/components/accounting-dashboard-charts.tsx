@@ -1,30 +1,34 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { ApexOptions } from "apexcharts";
 import { ApexChart } from "@/features/pos/reports/components/apex-chart";
 import type { AccountingDashboard } from "@/lib/accounting/dashboard-store";
-import { formatAmount } from "./report-shell";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
 const FALLBACK_PRIMARY = "#00281a";
 
+const noSubscribe = () => () => {};
+
+/** Warna brand dari CSS var (server render memakai fallback). */
 function useBrandPrimary() {
-  const [color, setColor] = useState(FALLBACK_PRIMARY);
-  useEffect(() => {
-    const v = getComputedStyle(document.documentElement)
-      .getPropertyValue("--brand-primary")
-      .trim();
-    if (v) setColor(v);
-  }, []);
-  return color;
+  return useSyncExternalStore(
+    noSubscribe,
+    () =>
+      getComputedStyle(document.documentElement)
+        .getPropertyValue("--brand-primary")
+        .trim() || FALLBACK_PRIMARY,
+    () => FALLBACK_PRIMARY,
+  );
 }
 
+/** Label sumbu grafik ringkas tanpa "Rp" ("1.2jt"); sengaja beda dari formatRupiahCompact. */
 function formatCompact(n: number) {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}M`;
   if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}jt`;
   if (abs >= 1_000) return `${(n / 1_000).toFixed(0)}rb`;
-  return formatAmount(n);
+  return formatLedgerAmount(n);
 }
 
 const baseOptions: ApexOptions = {
@@ -66,10 +70,7 @@ export function BalanceCompositionChart({
   rows: AccountingDashboard["balance_composition"];
 }) {
   const brandPrimary = useBrandPrimary();
-  const filtered = useMemo(
-    () => rows.filter((r) => r.value > 0),
-    [rows]
-  );
+  const filtered = useMemo(() => rows.filter((r) => r.value > 0), [rows]);
 
   const options = useMemo<ApexOptions>(
     () => ({
@@ -105,8 +106,8 @@ export function BalanceCompositionChart({
                   formatCompact(
                     w.globals.seriesTotals.reduce(
                       (a: number, b: number) => a + b,
-                      0
-                    )
+                      0,
+                    ),
                   ),
               },
             },
@@ -119,16 +120,13 @@ export function BalanceCompositionChart({
       },
       tooltip: {
         ...baseOptions.tooltip,
-        y: { formatter: (v) => formatAmount(v) },
+        y: { formatter: (v) => formatLedgerAmount(v) },
       },
     }),
-    [filtered, brandPrimary]
+    [filtered, brandPrimary],
   );
 
-  const series = useMemo(
-    () => filtered.map((r) => r.value),
-    [filtered]
-  );
+  const series = useMemo(() => filtered.map((r) => r.value), [filtered]);
 
   if (filtered.length === 0) {
     return <ChartEmpty message="Belum ada saldo neraca" />;
@@ -147,14 +145,8 @@ export function PnlBreakdownChart({
   const brandPrimary = useBrandPrimary();
 
   const colors = useMemo(
-    () => [
-      brandPrimary,
-      "#f59e0b",
-      "#ef4444",
-      "#22c55e",
-      "#f97316",
-    ],
-    [brandPrimary]
+    () => [brandPrimary, "#f59e0b", "#ef4444", "#22c55e", "#f97316"],
+    [brandPrimary],
   );
 
   const options = useMemo<ApexOptions>(
@@ -188,15 +180,15 @@ export function PnlBreakdownChart({
       },
       tooltip: {
         ...baseOptions.tooltip,
-        y: { formatter: (v) => formatAmount(v) },
+        y: { formatter: (v) => formatLedgerAmount(v) },
       },
     }),
-    [rows, colors]
+    [rows, colors],
   );
 
   const series = useMemo(
     () => [{ name: "Nilai", data: rows.map((r) => r.value) }],
-    [rows]
+    [rows],
   );
 
   if (rows.every((r) => r.value === 0)) {
@@ -249,10 +241,10 @@ export function MonthlyTrendChart({
       tooltip: {
         shared: true,
         intersect: false,
-        y: { formatter: (v) => formatAmount(v) },
+        y: { formatter: (v) => formatLedgerAmount(v) },
       },
     }),
-    [rows, brandPrimary]
+    [rows, brandPrimary],
   );
 
   const series = useMemo(
@@ -261,7 +253,7 @@ export function MonthlyTrendChart({
       { name: "Expense", data: rows.map((r) => r.expense) },
       { name: "Net", data: rows.map((r) => r.net) },
     ],
-    [rows]
+    [rows],
   );
 
   if (rows.length === 0) {
@@ -282,7 +274,7 @@ export function CashFlowChart({
 
   const colors = useMemo(
     () => [brandPrimary, "#0ea5e9", "#8b5cf6"],
-    [brandPrimary]
+    [brandPrimary],
   );
 
   const options = useMemo<ApexOptions>(
@@ -312,15 +304,15 @@ export function CashFlowChart({
       },
       tooltip: {
         ...baseOptions.tooltip,
-        y: { formatter: (v) => formatAmount(v) },
+        y: { formatter: (v) => formatLedgerAmount(v) },
       },
     }),
-    [rows, colors]
+    [rows, colors],
   );
 
   const series = useMemo(
     () => [{ name: "Nilai", data: rows.map((r) => r.value) }],
-    [rows]
+    [rows],
   );
 
   if (rows.every((r) => r.value === 0)) {
@@ -353,7 +345,7 @@ export function TopExpenseChart({
       },
       xaxis: {
         categories: rows.map((r) =>
-          r.name.length > 22 ? `${r.name.slice(0, 22)}…` : r.name
+          r.name.length > 22 ? `${r.name.slice(0, 22)}…` : r.name,
         ),
         labels: { style: { colors: "#94a3b8", fontSize: "11px" } },
       },
@@ -362,15 +354,15 @@ export function TopExpenseChart({
       },
       tooltip: {
         ...baseOptions.tooltip,
-        y: { formatter: (v) => formatAmount(v) },
+        y: { formatter: (v) => formatLedgerAmount(v) },
       },
     }),
-    [rows, brandPrimary]
+    [rows, brandPrimary],
   );
 
   const series = useMemo(
     () => [{ name: "Beban", data: rows.map((r) => r.balance) }],
-    [rows]
+    [rows],
   );
 
   if (rows.length === 0) {

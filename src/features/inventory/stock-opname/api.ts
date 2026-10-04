@@ -8,7 +8,12 @@ import type {
 
 export interface StockOpnameListResult {
   data: StockOpnameDetail[];
-  pagination: { page: number; limit: number; total: number; total_pages: number };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
 }
 
 function buildParams(params: StockOpnameListParams) {
@@ -31,9 +36,11 @@ async function parseJson<T>(res: Response): Promise<T> {
 }
 
 export async function listStockOpnames(
-  params: StockOpnameListParams = {}
+  params: StockOpnameListParams = {},
 ): Promise<StockOpnameListResult> {
-  const res = await fetch(`/api/inventory/stock-opnames?${buildParams(params).toString()}`);
+  const res = await fetch(
+    `/api/inventory/stock-opnames?${buildParams(params).toString()}`,
+  );
   const json = await parseJson<{
     success: boolean;
     data: StockOpnameDetail[];
@@ -47,54 +54,64 @@ export async function listStockOpnames(
 
 export async function getStockOpname(id: string): Promise<StockOpnameDetail> {
   const res = await fetch(`/api/inventory/stock-opnames/${id}`);
-  const json = await parseJson<{ success: boolean; data: StockOpnameDetail }>(res);
+  const json = await parseJson<{ success: boolean; data: StockOpnameDetail }>(
+    res,
+  );
   return json.data;
 }
 
 export async function createStockOpname(
-  input: CreateStockOpnameInput
+  input: CreateStockOpnameInput,
 ): Promise<StockOpnameDetail> {
   const res = await fetch("/api/inventory/stock-opnames", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const json = await parseJson<{ success: boolean; data: StockOpnameDetail; message?: string }>(
-    res
-  );
+  const json = await parseJson<{
+    success: boolean;
+    data: StockOpnameDetail;
+    message?: string;
+  }>(res);
   return json.data;
 }
 
 export async function updateStockOpname(
   id: string,
-  input: UpdateStockOpnameInput
+  input: UpdateStockOpnameInput,
 ): Promise<StockOpnameDetail> {
   const res = await fetch(`/api/inventory/stock-opnames/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
-  const json = await parseJson<{ success: boolean; data: StockOpnameDetail; message?: string }>(
-    res
-  );
+  const json = await parseJson<{
+    success: boolean;
+    data: StockOpnameDetail;
+    message?: string;
+  }>(res);
   return json.data;
 }
 
-export async function completeStockOpname(id: string): Promise<StockOpnameDetail> {
+export async function completeStockOpname(
+  id: string,
+): Promise<StockOpnameDetail> {
   const res = await fetch(`/api/inventory/stock-opnames/${id}/complete`, {
     method: "POST",
   });
-  const json = await parseJson<{ success: boolean; data: StockOpnameDetail; message?: string }>(
-    res
-  );
+  const json = await parseJson<{
+    success: boolean;
+    data: StockOpnameDetail;
+    message?: string;
+  }>(res);
   return json.data;
 }
 
 export async function listStockOpnamePreview(
-  warehouseId: string
+  warehouseId: string,
 ): Promise<StockOpnamePreviewLine[]> {
   const res = await fetch(
-    `/api/inventory/stock-opnames/preview?warehouse_id=${encodeURIComponent(warehouseId)}`
+    `/api/inventory/stock-opnames/preview?warehouse_id=${encodeURIComponent(warehouseId)}`,
   );
   const json = await parseJson<{
     success: boolean;

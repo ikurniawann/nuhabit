@@ -9,13 +9,30 @@ import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { ExpiringBatchRow } from "@/lib/inventory/stock-queries";
 import type { ExpirySummary } from "@/lib/inventory/batches";
-import { fetchJson, formatDate, formatQty, formatRupiah, useWarehouseLookup } from "../../shared/inventory-lookups";
-import { ScrapDialog, type ScrapBatchPreset } from "../../scrap/components/scrap-dialog";
+import { fetchJson, useWarehouseLookup } from "../../shared/inventory-lookups";
+import {
+  ScrapDialog,
+  type ScrapBatchPreset,
+} from "../../scrap/components/scrap-dialog";
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
 const WINDOWS = [7, 14, 30, 60, 90];
 type StatusFilter = "all" | "near" | "expired";
@@ -45,9 +62,11 @@ export function ExpiringStockPage() {
   const expiry = useQuery({
     queryKey: ["inventory-expiry", days, status, warehouseId, search.trim()],
     queryFn: () =>
-      fetchJson<{ data: ExpiringBatchRow[]; summary: ExpirySummary; meta: { today: string; horizon: string } }>(
-        `/api/inventory/expiry?${params.toString()}`
-      ),
+      fetchJson<{
+        data: ExpiringBatchRow[];
+        summary: ExpirySummary;
+        meta: { today: string; horizon: string };
+      }>(`/api/inventory/expiry?${params.toString()}`),
     placeholderData: keepPreviousData,
   });
 
@@ -66,27 +85,32 @@ export function ExpiringStockPage() {
         <StatCard
           label="Sudah kedaluwarsa"
           value={formatRupiah(summary?.expiredValue)}
-          hint={`${formatQty(summary?.expiredBatches)} batch · ${formatQty(summary?.expiredQty)} unit`}
+          hint={`${formatNumber(summary?.expiredBatches, 3)} batch · ${formatNumber(summary?.expiredQty, 3)} unit`}
           icon={<Ban />}
           tone={summary?.expiredBatches ? "danger" : "default"}
         />
         <StatCard
           label={`Kedaluwarsa ≤ ${days} hari`}
           value={formatRupiah(summary?.nearValue)}
-          hint={`${formatQty(summary?.nearBatches)} batch · ${formatQty(summary?.nearQty)} unit`}
+          hint={`${formatNumber(summary?.nearBatches, 3)} batch · ${formatNumber(summary?.nearQty, 3)} unit`}
           icon={<AlarmClock />}
           tone={summary?.nearBatches ? "warning" : "default"}
         />
         <StatCard
           label="Total nilai berisiko"
-          value={formatRupiah((summary?.expiredValue ?? 0) + (summary?.nearValue ?? 0))}
+          value={formatRupiah(
+            (summary?.expiredValue ?? 0) + (summary?.nearValue ?? 0),
+          )}
           icon={<PackageX />}
           tone="ink"
         />
       </div>
 
       <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Select value={String(days)} onValueChange={(value) => setDays(Number(value) || 30)}>
+        <Select
+          value={String(days)}
+          onValueChange={(value) => setDays(Number(value) || 30)}
+        >
           <SelectTrigger aria-label="Jendela kedaluwarsa">
             <SelectValue />
           </SelectTrigger>
@@ -98,7 +122,10 @@ export function ExpiringStockPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={(value) => setStatus((value as StatusFilter) ?? "all")}>
+        <Select
+          value={status}
+          onValueChange={(value) => setStatus((value as StatusFilter) ?? "all")}
+        >
           <SelectTrigger aria-label="Status kedaluwarsa">
             <SelectValue />
           </SelectTrigger>
@@ -109,20 +136,32 @@ export function ExpiringStockPage() {
           </SelectContent>
         </Select>
         <Combobox
-          options={(warehouses.data ?? []).map((w) => ({ value: w.id, label: w.name, description: w.code }))}
+          options={(warehouses.data ?? []).map((w) => ({
+            value: w.id,
+            label: w.name,
+            description: w.code,
+          }))}
           value={warehouseId}
           onChange={setWarehouseId}
           placeholder="Semua gudang / outlet"
           allowClear
         />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari bahan atau nomor batch" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari bahan atau nomor batch"
+        />
       </Card>
 
       <Card className="py-0">
         {expiry.isLoading ? (
-          <p className="px-5 py-10 text-center text-sm text-muted-foreground">Memuat batch…</p>
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+            Memuat batch…
+          </p>
         ) : expiry.error ? (
-          <p className="px-5 py-10 text-center text-sm text-danger">{expiry.error.message}</p>
+          <p className="px-5 py-10 text-center text-sm text-danger">
+            {expiry.error.message}
+          </p>
         ) : rows.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-muted-foreground">
             Tidak ada batch yang kedaluwarsa dalam {days} hari ke depan.
@@ -134,7 +173,9 @@ export function ExpiringStockPage() {
                 <TableHead>Bahan & batch</TableHead>
                 <TableHead>Kedaluwarsa</TableHead>
                 <TableHead className="text-right">Sisa</TableHead>
-                <TableHead className="hidden md:table-cell text-right">Nilai berisiko</TableHead>
+                <TableHead className="hidden md:table-cell text-right">
+                  Nilai berisiko
+                </TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -146,22 +187,37 @@ export function ExpiringStockPage() {
                     <TableCell className="max-w-[18rem] whitespace-normal">
                       <p className="font-medium">{row.material_nama}</p>
                       <p className="text-xs text-muted-foreground">
-                        <span className="font-mono">{row.batch_number ?? "Tanpa nomor batch"}</span> ·{" "}
-                        {row.warehouse_nama ?? "Tanpa gudang"}
+                        <span className="font-mono">
+                          {row.batch_number ?? "Tanpa nomor batch"}
+                        </span>{" "}
+                        · {row.warehouse_nama ?? "Tanpa gudang"}
                       </p>
                     </TableCell>
                     <TableCell>
                       <p className="text-sm">{formatDate(row.expiry_date)}</p>
-                      <Badge variant={expired ? "destructive" : row.days_left <= 7 ? "warning" : "info"}>
+                      <Badge
+                        variant={
+                          expired
+                            ? "destructive"
+                            : row.days_left <= 7
+                              ? "warning"
+                              : "info"
+                        }
+                      >
                         {daysLabel(row.days_left)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatQty(row.qty_remaining)} <span className="text-xs text-muted-foreground">{row.satuan ?? ""}</span>
+                      {formatNumber(row.qty_remaining, 3)}{" "}
+                      <span className="text-xs text-muted-foreground">
+                        {row.satuan ?? ""}
+                      </span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-right tabular-nums">
                       {formatRupiah(row.value_at_risk)}
-                      <span className="block text-xs text-muted-foreground">@ {formatRupiah(row.avg_cost)}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        @ {formatRupiah(row.avg_cost)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -193,7 +249,9 @@ export function ExpiringStockPage() {
         )}
       </Card>
 
-      {writeOff && <ScrapDialog preset={writeOff} onClose={() => setWriteOff(null)} />}
+      {writeOff && (
+        <ScrapDialog preset={writeOff} onClose={() => setWriteOff(null)} />
+      )}
     </div>
   );
 }

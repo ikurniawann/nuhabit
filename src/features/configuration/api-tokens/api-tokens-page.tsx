@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/format";
 
 /**
  * EPIC-042: kelola Open API token (integrasi agent eksternal, mis. OpenClaw).
@@ -35,8 +36,6 @@ type TokenRow = {
   last_used_at: string | null;
 };
 
-const tanggal = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" }) : "—";
 
 export function ApiTokensPage() {
   const queryClient = useQueryClient();
@@ -120,7 +119,7 @@ export function ApiTokensPage() {
         <h2 className="text-lg font-semibold">Open API Tokens</h2>
         <p className="text-sm text-muted-foreground">
           Akses API untuk sistem eksternal (agent, integrasi). Kirim header{" "}
-          <code className="rounded bg-muted px-1">Authorization: Bearer arkiv_…</code>. Spesifikasi
+          <code className="rounded bg-muted px-1">Authorization: Bearer nh_…</code>. Spesifikasi
           endpoint: <code className="rounded bg-muted px-1">/api/openapi.json</code>.
         </p>
       </div>
@@ -235,8 +234,8 @@ export function ApiTokensPage() {
                 <td className="px-3 py-2 font-mono text-xs">{row.token_prefix}…</td>
                 <td className="px-3 py-2 font-mono text-xs">{row.scopes.join(", ")}</td>
                 <td className="px-3 py-2">{row.user_name ?? "—"}</td>
-                <td className="px-3 py-2">{tanggal(row.last_used_at)}</td>
-                <td className="px-3 py-2">{tanggal(row.expires_at)}</td>
+                <td className="px-3 py-2">{formatDateTime(row.last_used_at, "—")}</td>
+                <td className="px-3 py-2">{formatDateTime(row.expires_at, "—")}</td>
                 <td className="px-3 py-2">
                   {row.revoked_at ? (
                     <span className="rounded bg-red-100 px-2 py-0.5 text-xs text-red-700">

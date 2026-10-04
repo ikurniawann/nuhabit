@@ -15,9 +15,12 @@ import { productStockOpnameQueryKeys } from "./query-keys";
 export const useCreateProductStockOpname = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: CreateProductStockOpnameInput) => createProductStockOpname(input),
+    mutationFn: (input: CreateProductStockOpnameInput) =>
+      createProductStockOpname(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: productStockOpnameQueryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: productStockOpnameQueryKeys.all,
+      });
     },
   });
 };
@@ -25,10 +28,17 @@ export const useCreateProductStockOpname = () => {
 export const useUpdateProductStockOpname = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateProductStockOpnameInput }) =>
-      updateProductStockOpname(id, input),
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateProductStockOpnameInput;
+    }) => updateProductStockOpname(id, input),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: productStockOpnameQueryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: productStockOpnameQueryKeys.all,
+      });
       queryClient.invalidateQueries({
         queryKey: productStockOpnameQueryKeys.detail(variables.id),
       });
@@ -41,7 +51,9 @@ export const useCompleteProductStockOpname = () => {
   return useMutation({
     mutationFn: (id: string) => completeProductStockOpname(id),
     onSuccess: (_data, id) => {
-      queryClient.invalidateQueries({ queryKey: productStockOpnameQueryKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: productStockOpnameQueryKeys.all,
+      });
       queryClient.invalidateQueries({
         queryKey: productStockOpnameQueryKeys.detail(id),
       });

@@ -11,14 +11,15 @@ import type {
   MenuDetail,
   CreateMenuPayload,
   UpdateMenuPayload,
-} from "./types";
+} from "@/lib/iam/menu-types";
 
 const BASE = "/api/settings/iam/menus";
 
 export const fetchMenuList = (params?: ListParams) =>
-  apiGet<ListResponse<MenuItem>>(buildListUrl(BASE, params));
+  apiGet<ListResponse<MenuItem>>(buildListUrl(BASE, { ...params }));
 
-export const fetchMenuDetail = (id: string) => apiGet<MenuDetail>(`${BASE}/${id}`);
+export const fetchMenuDetail = (id: string) =>
+  apiGet<MenuDetail>(`${BASE}/${id}`);
 
 export const createMenu = (body: CreateMenuPayload) =>
   apiPost<{ id: string }>(BASE, body);

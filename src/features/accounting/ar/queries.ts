@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchArAging,
+  fetchArInvoiceBySalesInvoice,
   fetchArInvoices,
   fetchArReceivable,
   fetchArReceipts,
@@ -35,5 +36,15 @@ export function useArAging(asOf?: string) {
   return useQuery({
     queryKey: arKeys.aging(asOf),
     queryFn: () => fetchArAging(asOf),
+  });
+}
+
+/** Deep link ?sales_invoice=: AR invoice terkait; galat (mis. 404) diabaikan. */
+export function useArInvoiceBySalesInvoice(salesInvoiceId: string | null) {
+  return useQuery({
+    queryKey: arKeys.bySalesInvoice(salesInvoiceId ?? ""),
+    queryFn: () => fetchArInvoiceBySalesInvoice(salesInvoiceId!),
+    enabled: Boolean(salesInvoiceId),
+    retry: false,
   });
 }

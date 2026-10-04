@@ -7,17 +7,12 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { JOURNAL_ENTRY_ROUTES } from "@/features/accounting/journal-entries/routes";
 import { useCashBankLedger } from "../queries";
 import { CASH_BANK_ROUTES } from "../routes";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
-function formatAmount(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 export function CashBankLedgerPage() {
   const router = useRouter();
@@ -87,7 +82,7 @@ export function CashBankLedgerPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">Memuat ledger...</p>
           </div>
         ) : isError ? (
@@ -106,25 +101,25 @@ export function CashBankLedgerPage() {
               <div>
                 Opening:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.opening_balance)}
+                  {formatLedgerAmount(data.opening_balance)}
                 </span>
               </div>
               <div>
                 Debit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_debit)}
+                  {formatLedgerAmount(data.total_debit)}
                 </span>
               </div>
               <div>
                 Credit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_credit)}
+                  {formatLedgerAmount(data.total_credit)}
                 </span>
               </div>
               <div>
                 Closing:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.closing_balance)}
+                  {formatLedgerAmount(data.closing_balance)}
                 </span>
               </div>
               <Badge variant="outline" className="border-gray-200/80">
@@ -158,7 +153,7 @@ export function CashBankLedgerPage() {
                       <td className="px-2 py-2 text-right">—</td>
                       <td className="px-2 py-2 text-right">—</td>
                       <td className="px-2 py-2 text-right tabular-nums font-medium text-foreground">
-                        {formatAmount(data.opening_balance)}
+                        {formatLedgerAmount(data.opening_balance)}
                       </td>
                       <td className="px-2 py-2" />
                     </tr>
@@ -185,13 +180,13 @@ export function CashBankLedgerPage() {
                           {line.memo || line.description || "—"}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.debit > 0 ? formatAmount(line.debit) : ""}
+                          {line.debit > 0 ? formatLedgerAmount(line.debit) : ""}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.credit > 0 ? formatAmount(line.credit) : ""}
+                          {line.credit > 0 ? formatLedgerAmount(line.credit) : ""}
                         </td>
                         <td className="px-2 py-2 text-right font-medium tabular-nums">
-                          {formatAmount(line.running_balance)}
+                          {formatLedgerAmount(line.running_balance)}
                         </td>
                         <td className="px-2 py-2 text-right">
                           <Button

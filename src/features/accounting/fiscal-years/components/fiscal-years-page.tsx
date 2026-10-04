@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlusIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
@@ -8,20 +8,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterDeleteDialog } from "@/features/master-data/components/master-delete-dialog";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { useFiscalYearList } from "../queries";
 import { useDeleteFiscalYear } from "../mutations";
 import { FISCAL_YEAR_ROUTES } from "../routes";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { toast } from "sonner";
 
 export function FiscalYearsPage() {
   const router = useRouter();
-  const { toasts, showToast, removeToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const { query: searchQuery, setQuery: setSearchQuery, search } = useDebouncedSearch();
   const [activeFilter, setActiveFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -38,10 +37,6 @@ export function FiscalYearsPage() {
   const rows = useMemo(() => data ?? [], [data]);
   const isDeleting = deleteMutation.isPending;
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
 
   const activeOptions = useMemo(
     () => [
@@ -55,19 +50,15 @@ export function FiscalYearsPage() {
     if (!deleteId || isDeleting) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      showToast("Fiscal year berhasil dihapus", "success");
+      toast.success("Fiscal year berhasil dihapus");
       setDeleteId(null);
     } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Gagal menghapus",
-        "error"
-      );
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
@@ -125,7 +116,7 @@ export function FiscalYearsPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat fiscal years...
             </p>
@@ -182,7 +173,7 @@ export function FiscalYearsPage() {
                               FISCAL_YEAR_ROUTES.beginningBalance(row.id)
                             )
                           }
-                          className="h-8 rounded-lg border-primary/20 text-primary"
+                          className="h-8 rounded-lg border-primary/20 text-brand-text"
                         >
                           Saldo Awal
                         </Button>

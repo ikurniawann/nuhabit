@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getApiUser } from "@/lib/api/auth";
+import { ApiError, getApiUser } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
 import { userHasIamPrefix } from "@/lib/iam/has-menu";
 import type { UserRole } from "@/types";
@@ -23,33 +23,28 @@ function financeMenus(allowed: readonly string[]): readonly string[] {
   return IAM.accounting;
 }
 
+/** Guard finance: sesi + grant menu accounting (atau sales-funnel untuk viewer), lempar 401/403. */
+export async function requireFinanceUser(
+  allowed: readonly UserRole[] = FINANCE_ROLES
+): Promise<FinanceUser> {
+  const user = await getApiUser();
+  if (!user) throw ApiError.unauthorized();
+  if (!(await userHasIamPrefix(user.id, user.role, financeMenus(allowed)))) {
+    throw ApiError.forbidden();
+  }
+  return { id: user.id, role: user.role };
+}
+
+/** Varian non-throw untuk route lama (sales-funnel) yang memeriksa `error`. */
 export async function requireFinanceRole(
   allowed: UserRole[] = FINANCE_ROLES
 ): Promise<
   { error: NextResponse; user: null } | { error: null; user: FinanceUser }
 > {
-  const user = await getApiUser();
-  if (!user) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      ),
-      user: null,
-    };
+  try {
+    return { error: null, user: await requireFinanceUser(allowed) };
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.toResponse(), user: null };
+    throw error;
   }
-  if (!(await userHasIamPrefix(user.id, user.role, financeMenus(allowed)))) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Insufficient permissions" },
-        { status: 403 }
-      ),
-      user: null,
-    };
-  }
-  return { error: null, user: { id: user.id, role: user.role } };
-}
-
-export function isFinanceRole(role: UserRole): boolean {
-  return FINANCE_ROLES.includes(role);
 }

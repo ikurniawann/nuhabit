@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { getApiUserScope } from "@/lib/api/scope";
-import { ACCOUNTING_API_ROLES } from "@/lib/accounting/coa-types";
 import { accountingCompanyId } from "@/lib/accounting/company-scope";
 import {
   getBalanceSheetReport,
@@ -13,79 +13,47 @@ import {
   listGeneralLedgerAccounts,
 } from "@/lib/accounting/reports-store";
 
-interface RouteParams {
-  params: Promise<{ report: string }>;
-}
+async function loadReport(report: string, companyId: string, sp: URLSearchParams) {
+  const param = (key: string) => sp.get(key)?.trim() || undefined;
+  const today = new Date().toISOString().slice(0, 10);
+  const asOf = param("as_of") ?? today;
+  const dateFrom = param("date_from") ?? `${today.slice(0, 4)}-01-01`;
+  const dateTo = param("date_to") ?? today;
 
-function errMsg(error: unknown) {
-  return error instanceof Error ? error.message : "Internal server error";
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function yearStart() {
-  return `${today().slice(0, 4)}-01-01`;
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
-  try {
-    await requireIamMenuPrefix(IAM.accounting);
-    const { report } = await params;
-    const scope = await getApiUserScope();
-    const companyId = accountingCompanyId(scope);
-    if (!companyId) {
-      return NextResponse.json({ data: null });
+  switch (report) {
+    case "trial-balance":
+      return getTrialBalanceReport(companyId, asOf);
+    case "balance-sheet":
+      return getBalanceSheetReport(companyId, asOf);
+    case "income-statement":
+      return getIncomeStatementReport(companyId, dateFrom, dateTo);
+    case "cash-flow":
+      return getCashFlowReport(companyId, dateFrom, dateTo);
+    case "general-ledger": {
+      const accountId = param("account_id");
+      if (!accountId) return listGeneralLedgerAccounts(companyId, asOf);
+      const data = await getGeneralLedgerReport({
+        companyId,
+        accountId,
+        dateFrom: param("date_from"),
+        dateTo: param("date_to"),
+      });
+      if (!data) throw ApiError.notFound("Akun tidak ditemukan");
+      return data;
     }
-
-    const { searchParams } = new URL(request.url);
-    const asOf = searchParams.get("as_of")?.trim() || today();
-    const dateFrom = searchParams.get("date_from")?.trim() || yearStart();
-    const dateTo = searchParams.get("date_to")?.trim() || today();
-    const accountId = searchParams.get("account_id")?.trim() || undefined;
-
-    switch (report) {
-      case "trial-balance": {
-        const data = await getTrialBalanceReport(companyId, asOf);
-        return NextResponse.json({ data });
-      }
-      case "balance-sheet": {
-        const data = await getBalanceSheetReport(companyId, asOf);
-        return NextResponse.json({ data });
-      }
-      case "income-statement": {
-        const data = await getIncomeStatementReport(
-          companyId,
-          dateFrom,
-          dateTo
-        );
-        return NextResponse.json({ data });
-      }
-      case "cash-flow": {
-        const data = await getCashFlowReport(companyId, dateFrom, dateTo);
-        return NextResponse.json({ data });
-      }
-      case "general-ledger": {
-        if (accountId) {
-          const data = await getGeneralLedgerReport({
-            companyId,
-            accountId,
-            dateFrom: searchParams.get("date_from")?.trim() || undefined,
-            dateTo: searchParams.get("date_to")?.trim() || undefined,
-          });
-          if (!data) throw ApiError.notFound("Akun tidak ditemukan");
-          return NextResponse.json({ data });
-        }
-        const data = await listGeneralLedgerAccounts(companyId, asOf);
-        return NextResponse.json({ data });
-      }
-      default:
-        throw ApiError.notFound("Report tidak ditemukan");
-    }
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[accounting/reports/:report] GET", error);
-    return NextResponse.json({ error: errMsg(error) }, { status: 500 });
+    default:
+      throw ApiError.notFound("Report tidak ditemukan");
   }
 }
+
+export const GET = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ report: string }> }) => {
+    await requireIamMenuPrefix(IAM.accounting);
+    const { report } = await params;
+    const companyId = accountingCompanyId(await getApiUserScope());
+    if (!companyId) return NextResponse.json({ data: null });
+    const data = await loadReport(report, companyId, request.nextUrl.searchParams);
+    return NextResponse.json({ data });
+  },
+  "GET /api/accounting/reports/[report]"
+);

@@ -1,4 +1,5 @@
-export type StockTransferKind = "main_to_stall" | "stall_to_stall" | "stall_to_main";
+export type StockTransferKind =
+  "main_to_stall" | "stall_to_stall" | "stall_to_main";
 
 export type WarehouseOption = {
   id: string;

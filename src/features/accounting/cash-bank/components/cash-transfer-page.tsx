@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
@@ -19,22 +19,23 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useCreateCashTransfer } from "../mutations";
 import { useCashBankAccounts, useCashTransfers } from "../queries";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+
+const NO_ACCOUNTS: never[] = [];
 
 export function CashTransferPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
 
   const { data, isLoading } = useCashTransfers({
     search: search || undefined,
@@ -106,7 +107,7 @@ export function CashTransferPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -149,7 +150,7 @@ export function CashTransferPage() {
                       {row.description || "—"}
                     </td>
                     <td className="px-2 py-3 text-right tabular-nums">
-                      {formatAmount(row.amount)}
+                      {formatNumber(row.amount)}
                     </td>
                   </tr>
                 ))}
@@ -167,56 +168,60 @@ export function CashTransferPage() {
 function CashTransferDialog({
   open,
   onOpenChange,
+  ...formProps
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPanel size="sm">
+        {/* Form dipasang ulang tiap dialog dibuka supaya isiannya mulai bersih. */}
+        {open ? (
+          <CashTransferForm
+            onClose={() => onOpenChange(false)}
+            {...formProps}
+          />
+        ) : null}
+      </DialogPanel>
+    </Dialog>
+  );
+}
+
+function CashTransferForm({ onClose }: { onClose: () => void }) {
   const mutation = useCreateCashTransfer();
   const accountsQuery = useCashBankAccounts();
-  const accounts = accountsQuery.data ?? [];
+  const accounts = accountsQuery.data ?? NO_ACCOUNTS;
 
   const accountOptions = useMemo(
     () =>
       accounts.map((a) => ({
         value: a.id,
-        label: `${a.code_display || a.code} — ${a.name} (saldo ${formatAmount(a.balance)})`,
+        label: `${a.code_display || a.code} — ${a.name} (saldo ${formatNumber(a.balance)})`,
       })),
-    [accounts]
+    [accounts],
   );
 
-  const [entryDate, setEntryDate] = useState(
-    new Date().toISOString().slice(0, 10)
+  const [entryDate, setEntryDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [amount, setAmount] = useState<number | undefined>();
-  const [fromAccountId, setFromAccountId] = useState("");
+  const [pickedFromId, setFromAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [description, setDescription] = useState("");
   const [memo, setMemo] = useState("");
 
   const fromOptions = useMemo(
     () => accountOptions.filter((o) => o.value !== toAccountId),
-    [accountOptions, toAccountId]
+    [accountOptions, toAccountId],
   );
+  // Default ke akun pertama sampai user memilih.
+  const fromAccountId = pickedFromId || fromOptions[0]?.value || "";
 
   const toOptions = useMemo(
     () => accountOptions.filter((o) => o.value !== fromAccountId),
-    [accountOptions, fromAccountId]
+    [accountOptions, fromAccountId],
   );
-
-  useEffect(() => {
-    if (!open) return;
-    setEntryDate(new Date().toISOString().slice(0, 10));
-    setAmount(undefined);
-    setFromAccountId("");
-    setToAccountId("");
-    setDescription("");
-    setMemo("");
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || fromAccountId || fromOptions.length === 0) return;
-    setFromAccountId(fromOptions[0]!.value);
-  }, [open, fromAccountId, fromOptions]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -240,118 +245,114 @@ function CashTransferDialog({
         memo: memo || null,
       });
       toast.success(res.message || "Transfer berhasil dicatat");
-      onOpenChange(false);
+      onClose();
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Gagal mencatat transfer"
+        err instanceof Error ? err.message : "Gagal mencatat transfer",
       );
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPanel size="sm">
-        <DialogPanelForm onSubmit={onSubmit}>
-          <DialogPanelHeader>
-            <DialogPanelTitle>Catat Transfer</DialogPanelTitle>
-            <DialogPanelDescription>
-              Debit akun tujuan, Credit akun asal. Jurnal langsung POSTED.
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="space-y-4">
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input
-                type="date"
-                value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-                required
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Dari akun (Credit)</Label>
-              <Combobox
-                options={fromOptions}
-                value={fromAccountId}
-                onChange={(v) => {
-                  setFromAccountId(v);
-                  if (v === toAccountId) setToAccountId("");
-                }}
-                placeholder="Pilih akun asal"
-                searchPlaceholder="Cari akun..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Ke akun (Debit)</Label>
-              <Combobox
-                options={toOptions}
-                value={toAccountId}
-                onChange={setToAccountId}
-                placeholder="Pilih akun tujuan"
-                searchPlaceholder="Cari akun..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Amount</Label>
-              <NumericInput
-                value={amount}
-                onValueChange={setAmount}
-                className="h-10 bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Keterangan</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Opsional"
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Memo baris</Label>
-              <Input
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder="Opsional"
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-          </DialogPanelBody>
-          <DialogFooter className="gap-3 px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                mutation.isPending ||
-                !fromAccountId ||
-                !toAccountId ||
-                fromAccountId === toAccountId ||
-                !amount
-              }
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan & Posting"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogPanelForm>
-      </DialogPanel>
-    </Dialog>
+    <DialogPanelForm onSubmit={onSubmit}>
+      <DialogPanelHeader>
+        <DialogPanelTitle>Catat Transfer</DialogPanelTitle>
+        <DialogPanelDescription>
+          Debit akun tujuan, Credit akun asal. Jurnal langsung POSTED.
+        </DialogPanelDescription>
+      </DialogPanelHeader>
+      <DialogPanelBody className="space-y-4">
+        <div className="space-y-2">
+          <Label>Tanggal</Label>
+          <Input
+            type="date"
+            value={entryDate}
+            onChange={(e) => setEntryDate(e.target.value)}
+            required
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Dari akun (Credit)</Label>
+          <Combobox
+            options={fromOptions}
+            value={fromAccountId}
+            onChange={(v) => {
+              setFromAccountId(v);
+              if (v === toAccountId) setToAccountId("");
+            }}
+            placeholder="Pilih akun asal"
+            searchPlaceholder="Cari akun..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Ke akun (Debit)</Label>
+          <Combobox
+            options={toOptions}
+            value={toAccountId}
+            onChange={setToAccountId}
+            placeholder="Pilih akun tujuan"
+            searchPlaceholder="Cari akun..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Amount</Label>
+          <NumericInput
+            value={amount}
+            onValueChange={setAmount}
+            className="h-10 bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Keterangan</Label>
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Opsional"
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Memo baris</Label>
+          <Input
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="Opsional"
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+      </DialogPanelBody>
+      <DialogFooter className="gap-3 px-6 py-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={mutation.isPending}
+        >
+          Batal
+        </Button>
+        <Button
+          type="submit"
+          disabled={
+            mutation.isPending ||
+            !fromAccountId ||
+            !toAccountId ||
+            fromAccountId === toAccountId ||
+            !amount
+          }
+        >
+          {mutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Menyimpan...
+            </>
+          ) : (
+            "Simpan & Posting"
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogPanelForm>
   );
 }

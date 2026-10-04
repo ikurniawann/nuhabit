@@ -12,17 +12,29 @@ export interface OpnameProgressLine {
 
 export function lineStatus(line: OpnameProgressLine): OpnameLineStatus {
   if (line.qtyInput.trim() === "") return "belum";
-  if (line.variance === null || !Number.isFinite(line.variance) || line.variance === 0) return "sama";
+  if (
+    line.variance === null ||
+    !Number.isFinite(line.variance) ||
+    line.variance === 0
+  )
+    return "sama";
   return "selisih";
 }
 
-export function matchesFilter(line: OpnameProgressLine, filter: OpnameFilter): boolean {
+export function matchesFilter(
+  line: OpnameProgressLine,
+  filter: OpnameFilter,
+): boolean {
   const status = lineStatus(line);
   switch (filter) {
-    case "belum": return status === "belum";
-    case "sudah": return status !== "belum";
-    case "selisih": return status === "selisih";
-    default: return true;
+    case "belum":
+      return status === "belum";
+    case "sudah":
+      return status !== "belum";
+    case "selisih":
+      return status === "selisih";
+    default:
+      return true;
   }
 }
 
@@ -36,14 +48,19 @@ export function summarize(lines: OpnameProgressLine[]) {
   }
   const total = lines.length;
   const sudah = total - belum;
-  return { total, sudah, belum, selisih, persen: total === 0 ? 0 : Math.round((sudah / total) * 100) };
+  return {
+    total,
+    sudah,
+    belum,
+    selisih,
+    persen: total === 0 ? 0 : Math.round((sudah / total) * 100),
+  };
 }
 
 /** Kunci baris berikutnya yang belum dihitung setelah `afterKey` (melingkar). */
-export function nextUncountedKey<T extends OpnameProgressLine & { key: string }>(
-  lines: T[],
-  afterKey: string | null
-): string | null {
+export function nextUncountedKey<
+  T extends OpnameProgressLine & { key: string },
+>(lines: T[], afterKey: string | null): string | null {
   if (lines.length === 0) return null;
   const start = afterKey ? lines.findIndex((l) => l.key === afterKey) : -1;
   for (let i = 1; i <= lines.length; i += 1) {

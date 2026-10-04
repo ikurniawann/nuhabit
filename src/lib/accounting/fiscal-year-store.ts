@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction } from "@/lib/db";
 import type {
@@ -5,9 +6,9 @@ import type {
   FiscalPeriodPayload,
   FiscalYearItem,
   FiscalYearPayload,
-} from "@/features/accounting/fiscal-years/types";
+} from "./types";
 import type { FiscalPeriodStatus } from "@/lib/accounting/fiscal-types";
-import { assertPeriodsOpenSequence } from "@/lib/accounting/fiscal-periods";
+import { findOpenSequenceViolation } from "@/lib/accounting/fiscal-periods";
 
 type YearRow = {
   id: string;
@@ -146,30 +147,31 @@ function validatePeriods(
   periods: FiscalPeriodPayload[]
 ) {
   if (periods.length < 1 || periods.length > 12) {
-    throw new Error("Fiscal year harus punya 1–12 period");
+    throw ApiError.badRequest("Fiscal year harus punya 1–12 period");
   }
   const nos = new Set<number>();
   for (const p of periods) {
     if (p.period_no < 1 || p.period_no > 12) {
-      throw new Error("period_no harus antara 1–12");
+      throw ApiError.badRequest("period_no harus antara 1–12");
     }
     if (nos.has(p.period_no)) {
-      throw new Error(`period_no ${p.period_no} duplikat`);
+      throw ApiError.badRequest(`period_no ${p.period_no} duplikat`);
     }
     nos.add(p.period_no);
     if (p.end_date < p.start_date) {
-      throw new Error(`Period ${p.period_no}: end_date < start_date`);
+      throw ApiError.badRequest(`Period ${p.period_no}: end_date < start_date`);
     }
     if (p.start_date < yearStart || p.end_date > yearEnd) {
-      throw new Error(
+      throw ApiError.badRequest(
         `Period ${p.period_no} harus berada dalam rentang fiscal year`
       );
     }
     if (p.status !== "OPEN" && p.status !== "CLOSED") {
-      throw new Error(`Period ${p.period_no}: status tidak valid`);
+      throw ApiError.badRequest(`Period ${p.period_no}: status tidak valid`);
     }
   }
-  assertPeriodsOpenSequence(periods);
+  const sequenceError = findOpenSequenceViolation(periods);
+  if (sequenceError) throw ApiError.badRequest(sequenceError);
 }
 
 /**
@@ -210,7 +212,7 @@ async function assertPreviousFiscalYearsClosed(
   );
 
   if (rows[0]) {
-    throw new Error(
+    throw ApiError.badRequest(
       `Tidak bisa OPEN fiscal: fiscal year ${rows[0].code} (${rows[0].name}) masih punya ${rows[0].open_count} period OPEN. Closing semua period fiscal sebelumnya terlebih dahulu.`
     );
   }
@@ -243,7 +245,7 @@ export async function createFiscalYearRecord(opts: {
 }): Promise<FiscalYearItem> {
   const { payload } = opts;
   if (payload.end_date < payload.start_date) {
-    throw new Error("end_date harus >= start_date");
+    throw ApiError.badRequest("end_date harus >= start_date");
   }
   validatePeriods(payload.start_date, payload.end_date, payload.periods);
 
@@ -287,7 +289,7 @@ export async function updateFiscalYearRecord(opts: {
 }): Promise<FiscalYearItem> {
   const { payload } = opts;
   if (payload.end_date < payload.start_date) {
-    throw new Error("end_date harus >= start_date");
+    throw ApiError.badRequest("end_date harus >= start_date");
   }
   validatePeriods(payload.start_date, payload.end_date, payload.periods);
 
@@ -297,7 +299,7 @@ export async function updateFiscalYearRecord(opts: {
        WHERE id = $1 AND deleted_at IS NULL`,
       [opts.id]
     );
-    if (!yearRow.rows[0]) throw new Error("Fiscal year tidak ditemukan");
+    if (!yearRow.rows[0]) throw ApiError.notFound("Fiscal year tidak ditemukan");
 
     await assertPreviousFiscalYearsClosed(client, {
       companyId: yearRow.rows[0].company_id,
@@ -319,7 +321,7 @@ export async function updateFiscalYearRecord(opts: {
       const keepNos = new Set(payload.periods.map((p) => p.period_no));
       for (const row of used.rows) {
         if (!keepNos.has(row.period_no)) {
-          throw new Error(
+          throw ApiError.badRequest(
             `Period ${row.period_no} masih dipakai journal entry dan tidak boleh dihapus`
           );
         }
@@ -411,7 +413,7 @@ export async function softDeleteFiscalYear(
     [id]
   );
   if (inUse && Number(inUse.n) > 0) {
-    throw new Error(
+    throw ApiError.badRequest(
       "Fiscal year masih dipakai journal entry dan tidak bisa dihapus"
     );
   }

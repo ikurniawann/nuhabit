@@ -1,5 +1,8 @@
+import { ApiError } from "@/lib/api/auth";
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction } from "@/lib/db";
+import type { UserScope } from "@/lib/api/scope";
+import { assertRecordInScope } from "@/lib/accounting/route-helpers";
 import type {
   AccountingPeriodListItem,
   FiscalCoverageResult,
@@ -66,7 +69,7 @@ export async function assertOpenFiscalPeriod(
 ): Promise<ResolvedFiscalPeriod> {
   const period = await resolveOpenFiscalPeriod(entryDate, companyId, client);
   if (!period) {
-    throw new Error(
+    throw ApiError.badRequest(
       "Tidak ada fiscal period OPEN untuk tanggal jurnal. Konfigurasi Fiscal Years terlebih dahulu."
     );
   }
@@ -216,16 +219,16 @@ export async function openFiscalPeriodById(opts: {
       [opts.periodId]
     );
     const target = rows[0];
-    if (!target) throw new Error("Fiscal period tidak ditemukan");
+    if (!target) throw ApiError.notFound("Fiscal period tidak ditemukan");
     if (!target.fiscal_year_is_active) {
-      throw new Error("Fiscal year tidak aktif");
+      throw ApiError.badRequest("Fiscal year tidak aktif");
     }
     if (
       opts.companyId != null &&
       target.company_id != null &&
       target.company_id !== opts.companyId
     ) {
-      throw new Error("Fiscal period di luar scope company");
+      throw ApiError.badRequest("Fiscal period di luar scope company");
     }
     if (target.status === "OPEN") {
       return target;
@@ -250,7 +253,7 @@ export async function openFiscalPeriodById(opts: {
       [target.fiscal_year_id]
     );
     if (priorYearOpen.rows[0]) {
-      throw new Error(
+      throw ApiError.badRequest(
         `Tidak bisa OPEN: fiscal year ${priorYearOpen.rows[0].code} belum fully CLOSED`
       );
     }
@@ -271,7 +274,7 @@ export async function openFiscalPeriodById(opts: {
 
     if (prevOpen.rows.length > 0) {
       if (!opts.closePrevious) {
-        throw new Error(
+        throw ApiError.badRequest(
           `Tutup period ${prevOpen.rows.map((p) => p.name).join(", ")} terlebih dahulu sebelum OPEN ${target.name}`
         );
       }
@@ -390,7 +393,7 @@ export async function getPeriodClosePreview(opts: {
   companyId: string;
 }): Promise<PeriodClosePreview> {
   const period = await loadPeriodForCompany(opts.periodId, opts.companyId);
-  if (!period) throw new Error("Fiscal period tidak ditemukan");
+  if (!period) throw ApiError.notFound("Fiscal period tidak ditemukan");
 
   const draftEntries = await query<{
     id: string;
@@ -475,7 +478,7 @@ export async function closeFiscalPeriodById(opts: {
     companyId: opts.companyId,
   });
   if (!preview.can_close) {
-    throw new Error(preview.blockers[0] || "Period tidak bisa ditutup");
+    throw ApiError.badRequest(preview.blockers[0] || "Period tidak bisa ditutup");
   }
 
   return withTransaction(async (client) => {
@@ -489,7 +492,7 @@ export async function closeFiscalPeriodById(opts: {
       [opts.periodId]
     );
     if ((draftRows[0]?.c ?? 0) > 0) {
-      throw new Error(
+      throw ApiError.badRequest(
         `Masih ada ${draftRows[0].c} jurnal DRAFT. Posting atau hapus dulu sebelum closing.`
       );
     }
@@ -524,5 +527,23 @@ export async function closeFiscalPeriodById(opts: {
       start_date: String(row.start_date).slice(0, 10),
       end_date: String(row.end_date).slice(0, 10),
     };
+  });
+}
+
+/** 404 bila period tidak ada, 403 bila company-nya di luar scope user. */
+export async function assertFiscalPeriodInScope(
+  periodId: string,
+  scope: UserScope | null
+): Promise<void> {
+  const row = await queryOne<{ id: string; company_id: string | null }>(
+    `SELECT p.id, y.company_id
+     FROM accounting.fiscal_periods p
+     JOIN accounting.fiscal_years y ON y.id = p.fiscal_year_id
+     WHERE p.id = $1 AND y.deleted_at IS NULL`,
+    [periodId]
+  );
+  assertRecordInScope(row ?? null, scope, {
+    notFound: "Fiscal period tidak ditemukan",
+    outOfScope: "Fiscal period di luar scope",
   });
 }

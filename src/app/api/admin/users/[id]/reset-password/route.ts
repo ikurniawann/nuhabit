@@ -1,40 +1,16 @@
-import { NextResponse } from "next/server";
-import { createPgClient } from "@/lib/pg/create-client";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
+import { resetAdminUserPassword } from "@/lib/admin/admin-users";
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+/** Reset ke password sementara; nilai sementara hanya ada di respons ini. */
+export const POST = apiHandler(
+  async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const { id } = await params;
     const actor = await requireIamMenuPrefix(IAM.settingsUsers);
-    const db = createPgClient();
-
-    const { data: authUser, error: authError } = await db.auth.admin.getUserById(id);
-    if (authError || !authUser.user?.email) {
-      throw ApiError.notFound("Email user tidak ditemukan");
-    }
-
-    const origin = new URL(request.url).origin;
-    const { error } = await db.auth.resetPasswordForEmail(authUser.user.email, {
-      redirectTo: `${origin}/login`,
-    });
-
-    if (error) throw ApiError.badRequest(error.message);
-
-    await db.from("admin_user_audit_logs").insert({
-      actor_id: actor.id,
-      target_user_id: id,
-      action: "reset_password",
-      details: { email: authUser.user.email },
-    });
-
-    return NextResponse.json({ message: "Link reset password berhasil dikirim" });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error sending reset password:", error);
-    return NextResponse.json({ error: "Gagal mengirim reset password" }, { status: 500 });
-  }
-}
+    const { tempPassword } = await resetAdminUserPassword(actor.id, id);
+    return NextResponse.json({ message: "Password sementara berhasil dibuat", tempPassword });
+  },
+  "POST /api/admin/users/[id]/reset-password"
+);

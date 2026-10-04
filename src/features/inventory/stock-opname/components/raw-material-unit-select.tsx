@@ -26,7 +26,9 @@ export function RawMaterialUnitSelect({
   }));
 
   if (options.length <= 1) {
-    return <span className="text-sm text-gray-600">{options[0]?.label ?? "—"}</span>;
+    return (
+      <span className="text-sm text-gray-600">{options[0]?.label ?? "—"}</span>
+    );
   }
 
   return (

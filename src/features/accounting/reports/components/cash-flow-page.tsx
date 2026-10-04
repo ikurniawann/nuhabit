@@ -7,7 +7,6 @@ import type { CashFlowSection } from "../types";
 import {
   PeriodFilter,
   ReportShell,
-  formatAmount,
   todayStr,
   yearStartStr,
 } from "./report-shell";
@@ -18,6 +17,7 @@ import {
   SectionTitle,
   SummaryRow,
 } from "./report-table";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
 function CfSection({
   title,
@@ -73,13 +73,13 @@ export function CashFlowPage() {
               <div>
                 Opening Cash:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.cash_opening)}
+                  {formatLedgerAmount(data.cash_opening)}
                 </span>
               </div>
               <div>
                 Closing Cash:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.cash_closing)}
+                  {formatLedgerAmount(data.cash_closing)}
                 </span>
               </div>
             </div>

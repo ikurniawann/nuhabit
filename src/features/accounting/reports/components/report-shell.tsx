@@ -5,16 +5,9 @@ import Link from "next/link";
 import type { ComponentType } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { cn } from "@/lib/utils";
 import { REPORT_ROUTES } from "../routes";
-
-export function formatAmount(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 export function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -48,7 +41,7 @@ export function ReportShell({
           href={REPORT_ROUTES.hub}
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "h-10 rounded-lg border-gray-200/80"
+            "h-10 rounded-lg border-gray-200/80",
           )}
         >
           Dashboard

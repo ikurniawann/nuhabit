@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentMagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { ChevronDown, ChevronRight, Loader2, Search, X } from "lucide-react";
@@ -9,18 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useCoaList } from "@/features/accounting/chart-of-accounts/queries";
 import { useJournalEntryList } from "../queries";
 import { JOURNAL_ENTRY_ROUTES } from "../routes";
-import type { JournalEntryItem } from "../types";
-
-function formatAmount(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
+import type { JournalEntryItem } from "@/lib/accounting/types";
+import { formatLedgerAmount } from "@/lib/accounting/format";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
 
 function formatDateTime(iso: string | null) {
   if (!iso) return "—";
@@ -36,8 +31,11 @@ function formatDateTime(iso: string | null) {
 
 export function JournalHistoryPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [entryType, setEntryType] = useState("");
@@ -53,7 +51,7 @@ export function JournalHistoryPage() {
       entry_type: entryType || undefined,
       account_id: accountId || undefined,
     }),
-    [search, dateFrom, dateTo, entryType, accountId]
+    [search, dateFrom, dateTo, entryType, accountId],
   );
 
   const { data, isLoading } = useJournalEntryList(filters);
@@ -63,18 +61,13 @@ export function JournalHistoryPage() {
   });
   const rows = useMemo(() => data ?? [], [data]);
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
-
   const accountOptions = useMemo(
     () =>
       (coaData ?? []).map((a) => ({
         value: a.id,
         label: `${a.code_display || a.code} — ${a.name}`,
       })),
-    [coaData]
+    [coaData],
   );
 
   const entryTypeOptions = useMemo(
@@ -82,7 +75,7 @@ export function JournalHistoryPage() {
       { value: "MANUAL", label: "MANUAL" },
       { value: "OPENING", label: "OPENING" },
     ],
-    []
+    [],
   );
 
   function toggleExpand(id: string) {
@@ -204,7 +197,7 @@ export function JournalHistoryPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat journal history...
             </p>
@@ -300,17 +293,17 @@ function HistoryRow({
           {row.fiscal_year_code ? ` (${row.fiscal_year_code})` : ""}
         </td>
         <td className="px-3 py-3 text-right tabular-nums text-foreground">
-          {formatAmount(row.total_debit)}
+          {formatLedgerAmount(row.total_debit)}
         </td>
         <td className="px-3 py-3 text-right tabular-nums text-foreground">
-          {formatAmount(row.total_credit)}
+          {formatLedgerAmount(row.total_credit)}
         </td>
         <td className="px-3 py-3 text-xs text-muted-foreground">
           {formatDateTime(row.posted_at)}
           {row.is_recon ? (
             <Badge
               variant="outline"
-              className="ml-1 border-primary/20 text-primary"
+              className="ml-1 border-primary/20 text-brand-text"
             >
               recon
             </Badge>
@@ -351,12 +344,12 @@ function HistoryRow({
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums">
                       {line.entry_side === "DEBIT"
-                        ? formatAmount(line.amount)
+                        ? formatLedgerAmount(line.amount)
                         : ""}
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums">
                       {line.entry_side === "CREDIT"
-                        ? formatAmount(line.amount)
+                        ? formatLedgerAmount(line.amount)
                         : ""}
                     </td>
                     <td className="px-2 py-1.5 text-muted-foreground">

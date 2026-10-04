@@ -290,7 +290,7 @@ export function parseStandardCoaSheet(matrix: unknown[][]): {
   return { rows: staged, issues };
 }
 
-export async function parseCoaSpreadsheet(buffer: Buffer, _fileName: string) {
+export async function parseCoaSpreadsheet(buffer: Buffer) {
   // Prefer sheet named COA if present (SULU workbook), else the first sheet.
   const matrix = await parseXlsxToMatrix(buffer, {
     pickSheet: (wb) =>

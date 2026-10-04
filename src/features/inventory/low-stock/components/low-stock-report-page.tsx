@@ -5,11 +5,15 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { formatRupiah } from "@/lib/purchasing/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ExclamationTriangleIcon,
-  ArrowSmallDownIcon,
   ShoppingCartIcon,
   ArrowUpOnSquareIcon,
   ArrowPathIcon,
@@ -17,6 +21,7 @@ import {
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useLowStock } from "../queries";
 import type { LowStockItem } from "../types";
+import { formatRupiah } from "@/lib/format";
 
 export function LowStockReportPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -34,15 +39,27 @@ export function LowStockReportPage() {
   // Hitung summary
   const summary = {
     totalItems: items.length,
-    outOfStock: items.filter(i => i.qty_available === 0).length,
-    lowStock: items.filter(i => i.qty_available > 0 && i.qty_available < i.qty_minimum).length,
+    outOfStock: items.filter((i) => i.qty_available === 0).length,
+    lowStock: items.filter(
+      (i) => i.qty_available > 0 && i.qty_available < i.qty_minimum,
+    ).length,
     totalReorderCost: items.reduce((sum, i) => sum + i.estimated_cost, 0),
   };
 
   // Export to CSV
   function exportToCSV() {
-    const headers = ["Kode", "Nama Bahan", "Kategori", "Stok Saat Ini", "Minimum", "Kekurangan", "Saran Order", "Estimasi Biaya", "Supplier"];
-    const rows = items.map(i => [
+    const headers = [
+      "Kode",
+      "Nama Bahan",
+      "Kategori",
+      "Stok Saat Ini",
+      "Minimum",
+      "Kekurangan",
+      "Saran Order",
+      "Estimasi Biaya",
+      "Supplier",
+    ];
+    const rows = items.map((i) => [
       i.material_kode,
       i.material_nama,
       i.kategori || "-",
@@ -51,10 +68,10 @@ export function LowStockReportPage() {
       i.shortage_qty,
       i.suggested_order_qty,
       i.estimated_cost,
-      i.supplier_name || "-"
+      i.supplier_name || "-",
     ]);
 
-    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -68,8 +85,12 @@ export function LowStockReportPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">📦 Low Stock Alert</h1>
-          <p className="text-sm text-gray-500">Monitor stok bahan baku di bawah minimum</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            📦 Low Stock Alert
+          </h1>
+          <p className="text-sm text-gray-500">
+            Monitor stok bahan baku di bawah minimum
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={fetchLowStock}>
@@ -91,7 +112,9 @@ export function LowStockReportPage() {
               <ExclamationTriangleIcon className="w-8 h-8 text-red-500" />
               <div>
                 <p className="text-xs text-red-600">Total Items</p>
-                <p className="text-2xl font-bold text-red-700">{summary.totalItems}</p>
+                <p className="text-2xl font-bold text-red-700">
+                  {summary.totalItems}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -103,7 +126,9 @@ export function LowStockReportPage() {
               <ExclamationTriangleIcon className="w-8 h-8 text-orange-500" />
               <div>
                 <p className="text-xs text-orange-600">Stok Habis</p>
-                <p className="text-2xl font-bold text-orange-700">{summary.outOfStock}</p>
+                <p className="text-2xl font-bold text-orange-700">
+                  {summary.outOfStock}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -115,7 +140,9 @@ export function LowStockReportPage() {
               <ExclamationTriangleIcon className="w-8 h-8 text-yellow-500" />
               <div>
                 <p className="text-xs text-yellow-600">Stok Rendah</p>
-                <p className="text-2xl font-bold text-yellow-700">{summary.lowStock}</p>
+                <p className="text-2xl font-bold text-yellow-700">
+                  {summary.lowStock}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -127,7 +154,9 @@ export function LowStockReportPage() {
               <ShoppingCartIcon className="w-8 h-8 text-blue-500" />
               <div>
                 <p className="text-xs text-blue-600">Estimasi Reorder</p>
-                <p className="text-lg font-bold text-blue-700">{formatRupiah(summary.totalReorderCost)}</p>
+                <p className="text-lg font-bold text-blue-700">
+                  {formatRupiah(summary.totalReorderCost)}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -142,7 +171,9 @@ export function LowStockReportPage() {
         <CardContent>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-sm text-gray-600 mb-1 block">Kategori</label>
+              <label className="text-sm text-gray-600 mb-1 block">
+                Kategori
+              </label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Semua Kategori" />
@@ -164,7 +195,9 @@ export function LowStockReportPage() {
                 <SelectContent>
                   <SelectItem value="all">Semua Status</SelectItem>
                   <SelectItem value="out_of_stock">Stok Habis (0)</SelectItem>
-                  <SelectItem value="low_stock">Stok Rendah (&lt; minimum)</SelectItem>
+                  <SelectItem value="low_stock">
+                    Stok Rendah (&lt; minimum)
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -175,44 +208,86 @@ export function LowStockReportPage() {
       {/* Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Daftar Bahan Perlu Reorder</CardTitle>
+          <CardTitle className="text-base">
+            Daftar Bahan Perlu Reorder
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-y">
                 <tr>
-                  {["Kode", "Nama Bahan", "Kategori", "Stok Saat Ini", "Minimum", "Kekurangan", "Saran Order", "Estimasi Biaya", "Supplier", "Aksi"].map(h => (
-                    <th key={h} className="text-left py-3 px-4 font-medium text-gray-700 whitespace-nowrap">{h}</th>
+                  {[
+                    "Kode",
+                    "Nama Bahan",
+                    "Kategori",
+                    "Stok Saat Ini",
+                    "Minimum",
+                    "Kekurangan",
+                    "Saran Order",
+                    "Estimasi Biaya",
+                    "Supplier",
+                    "Aksi",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left py-3 px-4 font-medium text-gray-700 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {loading ? (
-                  <tr><td colSpan={10} className="py-12 text-center text-gray-400">Memuat data...</td></tr>
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="py-12 text-center text-gray-400"
+                    >
+                      Memuat data...
+                    </td>
+                  </tr>
                 ) : items.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="py-16 text-center">
                       <CheckCircleIcon className="w-12 h-12 mx-auto mb-3 text-green-500 opacity-50" />
                       <p className="text-gray-500">Semua stok aman! 🎉</p>
-                      <p className="text-xs text-gray-400 mt-1">Tidak ada item di bawah minimum</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Tidak ada item di bawah minimum
+                      </p>
                     </td>
                   </tr>
                 ) : (
-                  items.map(item => {
+                  items.map((item) => {
                     const isOutOfStock = item.qty_available === 0;
                     return (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="py-3 px-4 font-mono text-xs text-gray-600">{item.material_kode}</td>
-                        <td className="py-3 px-4 font-medium">{item.material_nama}</td>
-                        <td className="py-3 px-4 text-gray-500 text-xs">{item.kategori || "—"}</td>
-                        <td className={`py-3 px-4 font-semibold ${isOutOfStock ? 'text-red-600' : 'text-blue-700'}`}>
+                        <td className="py-3 px-4 font-mono text-xs text-gray-600">
+                          {item.material_kode}
+                        </td>
+                        <td className="py-3 px-4 font-medium">
+                          {item.material_nama}
+                        </td>
+                        <td className="py-3 px-4 text-gray-500 text-xs">
+                          {item.kategori || "—"}
+                        </td>
+                        <td
+                          className={`py-3 px-4 font-semibold ${isOutOfStock ? "text-red-600" : "text-blue-700"}`}
+                        >
                           {item.qty_available.toFixed(2)} {item.satuan}
                         </td>
-                        <td className="py-3 px-4 text-gray-500">{item.qty_minimum.toFixed(0)}</td>
+                        <td className="py-3 px-4 text-gray-500">
+                          {item.qty_minimum.toFixed(0)}
+                        </td>
                         <td className="py-3 px-4">
-                          <Badge variant="outline" className={`${isOutOfStock ? 'bg-red-100 text-red-700 border-red-200' : 'bg-yellow-100 text-yellow-700 border-yellow-200'}`}>
-                            {item.shortage_qty > 0 ? `-${item.shortage_qty}` : '0'}
+                          <Badge
+                            variant="outline"
+                            className={`${isOutOfStock ? "bg-red-100 text-red-700 border-red-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}`}
+                          >
+                            {item.shortage_qty > 0
+                              ? `-${item.shortage_qty}`
+                              : "0"}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-medium text-blue-700">
@@ -231,7 +306,11 @@ export function LowStockReportPage() {
                         </td>
                         <td className="py-3 px-4">
                           <Link href={buildPoInsertHref(item)}>
-                            <Button variant="outline" size="sm" className="text-xs">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs"
+                            >
                               Buat PO
                             </Button>
                           </Link>

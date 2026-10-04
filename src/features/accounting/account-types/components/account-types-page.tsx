@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { TagIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +18,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TableRow } from "@/components/ui/table";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import {
   FormFieldLabel,
   formInputClassName,
 } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterDeleteDialog } from "@/features/master-data/components/master-delete-dialog";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { useAccountTypeList } from "../queries";
@@ -33,6 +32,8 @@ import {
   useDeleteAccountType,
 } from "../mutations";
 import type { AccountTypeItem } from "../types";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { toast } from "sonner";
 
 type FormState = {
   name: string;
@@ -51,9 +52,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export function AccountTypesPage() {
-  const { toasts, showToast, removeToast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const { query: searchQuery, setQuery: setSearchQuery, search } = useDebouncedSearch();
   const [dialog, setDialog] = useState<"add" | "edit" | null>(null);
   const [selected, setSelected] = useState<AccountTypeItem | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -68,10 +67,6 @@ export function AccountTypesPage() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(timeout);
-  }, [searchQuery]);
 
   const filtered = useMemo(() => {
     if (!search) return rows;
@@ -104,7 +99,7 @@ export function AccountTypesPage() {
     e.preventDefault();
     if (isSaving) return;
     if (!form.name.trim() || !form.code.trim()) {
-      showToast("Nama dan kode wajib diisi", "error");
+      toast.error("Nama dan kode wajib diisi");
       return;
     }
     try {
@@ -113,14 +108,14 @@ export function AccountTypesPage() {
           id: selected.id,
           ...form,
         });
-        showToast(res.message || "Account type berhasil diperbarui", "success");
+        toast.success(res.message || "Account type berhasil diperbarui");
       } else {
         const res = await createMutation.mutateAsync(form);
-        showToast(res.message || "Account type berhasil ditambahkan", "success");
+        toast.success(res.message || "Account type berhasil ditambahkan");
       }
       setDialog(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menyimpan");
     }
   }
 
@@ -128,16 +123,15 @@ export function AccountTypesPage() {
     if (!deleteId || isDeleting) return;
     try {
       await deleteMutation.mutateAsync(deleteId);
-      showToast("Account type berhasil dihapus", "success");
+      toast.success("Account type berhasil dihapus");
       setDeleteId(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menghapus", "error");
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus");
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-200/70 pb-4 sm:flex-row sm:items-center">
         <div>
@@ -184,7 +178,7 @@ export function AccountTypesPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">Memuat data...</p>
           </div>
         ) : filtered.length === 0 ? (

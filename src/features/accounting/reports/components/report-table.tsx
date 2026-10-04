@@ -2,7 +2,7 @@
 
 import { Loader2 } from "lucide-react";
 import type { ReportAccountBalance } from "../types";
-import { formatAmount } from "./report-shell";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
 export function AccountBalanceTable({
   rows,
@@ -52,13 +52,13 @@ export function AccountBalanceTable({
                 </td>
               ) : null}
               <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
-                {formatAmount(row.debit)}
+                {formatLedgerAmount(row.debit)}
               </td>
               <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
-                {formatAmount(row.credit)}
+                {formatLedgerAmount(row.credit)}
               </td>
               <td className="px-3 py-3 text-right font-medium tabular-nums text-foreground">
-                {formatAmount(row.balance)}
+                {formatLedgerAmount(row.balance)}
               </td>
             </tr>
           ))}
@@ -80,7 +80,7 @@ export function SectionTitle({
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {typeof total === "number" ? (
         <span className="text-sm font-semibold tabular-nums text-foreground">
-          {formatAmount(total)}
+          {formatLedgerAmount(total)}
         </span>
       ) : null}
     </div>
@@ -105,7 +105,9 @@ export function SummaryRow({
       }`}
     >
       <span>{label}</span>
-      <span className="tabular-nums text-foreground">{formatAmount(value)}</span>
+      <span className="tabular-nums text-foreground">
+        {formatLedgerAmount(value)}
+      </span>
     </div>
   );
 }
@@ -113,7 +115,7 @@ export function SummaryRow({
 export function LoadingBlock({ label }: { label: string }) {
   return (
     <div className="py-14 text-center">
-      <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+      <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
       <p className="mt-2 text-sm text-muted-foreground">{label}</p>
     </div>
   );

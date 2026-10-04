@@ -1,55 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CheckCircleIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import {
   toDisplayQty,
-  type RawMaterialUnitInfo,
   type RawMaterialUnitMode,
 } from "@/lib/inventory/raw-material-units";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useStockOpname } from "../queries";
 import {
   STOCK_OPNAME_STATUS_COLORS,
   STOCK_OPNAME_STATUS_LABELS,
-  type StockOpnameLine,
 } from "../types";
 import { RawMaterialUnitSelect } from "./raw-material-unit-select";
-import { OpnameCountList, type OpnameCountItem } from "@/features/inventory/opname-shared";
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(dateStr?: string | null) {
-  if (!dateStr) return "";
-  return new Date(dateStr).toLocaleString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function lineUnitInfo(line: StockOpnameLine): RawMaterialUnitInfo {
-  return {
-    satuan: line.satuan,
-    satuan_besar_nama: line.satuan_besar_nama ?? line.satuan,
-    satuan_kecil_nama: line.satuan_kecil_nama,
-    konversi_factor: line.konversi_factor,
-  };
-}
+import {
+  OpnameCountList,
+  type OpnameCountItem,
+} from "@/features/inventory/opname-shared";
+import { formatDate, formatDateTime } from "@/lib/format";
+import { unitInfoFrom } from "../count-lines";
 
 interface StockOpnameDetailPageProps {
   id: string;
@@ -64,25 +38,16 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
 
   const detail = detailQuery.data;
 
-  useEffect(() => {
-    if (!detail?.lines?.length) return;
-    setViewUnitByLine((prev) => {
-      const next = { ...prev };
-      for (const line of detail.lines) {
-        if (!next[line.id]) next[line.id] = "besar";
-      }
-      return next;
-    });
-  }, [detail?.lines]);
-
   const countItems = useMemo<OpnameCountItem[]>(
     () =>
       (detail?.lines ?? []).map((line) => {
-        const unit = lineUnitInfo(line);
+        const unit = unitInfoFrom(line);
         const viewMode = viewUnitByLine[line.id] ?? "besar";
         const displaySystem = toDisplayQty(line.qty_system, viewMode, unit);
         const displayCounted =
-          line.qty_counted === null || line.qty_counted === undefined ? null : toDisplayQty(line.qty_counted, viewMode, unit);
+          line.qty_counted === null || line.qty_counted === undefined
+            ? null
+            : toDisplayQty(line.qty_counted, viewMode, unit);
         const variance =
           displayCounted === null
             ? null
@@ -97,7 +62,9 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
             <RawMaterialUnitSelect
               info={unit}
               value={viewMode}
-              onChange={(mode) => setViewUnitByLine((prev) => ({ ...prev, [line.id]: mode }))}
+              onChange={(mode) =>
+                setViewUnitByLine((prev) => ({ ...prev, [line.id]: mode }))
+              }
             />
           ),
           qtySystem: displaySystem,
@@ -105,19 +72,19 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
           variance,
         };
       }),
-    [detail?.lines, viewUnitByLine]
+    [detail?.lines, viewUnitByLine],
   );
 
   const progress = useMemo(() => {
     const lines = detail?.lines ?? [];
     const counted = lines.filter(
-      (line) => line.qty_counted !== null && line.qty_counted !== undefined
+      (line) => line.qty_counted !== null && line.qty_counted !== undefined,
     ).length;
     const variance = lines.filter(
       (line) =>
         line.qty_variance !== null &&
         line.qty_variance !== undefined &&
-        line.qty_variance !== 0
+        line.qty_variance !== 0,
     ).length;
     return { counted, variance, total: lines.length };
   }, [detail?.lines]);
@@ -174,19 +141,25 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500">Total Baris</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{progress.total}</p>
+            <p className="mt-1 text-2xl font-bold text-gray-900">
+              {progress.total}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500">Terhitung</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">{progress.counted}</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">
+              {progress.counted}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500">Ada Selisih</p>
-            <p className="mt-1 text-2xl font-bold text-pink-600">{progress.variance}</p>
+            <p className="mt-1 text-2xl font-bold text-pink-600">
+              {progress.variance}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
@@ -206,7 +179,9 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Baris Bahan Baku</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Baris Bahan Baku
+              </h2>
               <p className="text-sm text-gray-500">
                 Hasil perhitungan stok fisik (hanya baca)
               </p>
@@ -257,8 +232,8 @@ export function StockOpnameDetailPage({ id }: StockOpnameDetailPageProps) {
       {canContinue && (
         <div className="rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Sesi ini masih berstatus draf. Gunakan tombol{" "}
-          <span className="font-medium">Lanjutkan Perhitungan</span> untuk melanjutkan
-          perhitungan di halaman opname.
+          <span className="font-medium">Lanjutkan Perhitungan</span> untuk
+          melanjutkan perhitungan di halaman opname.
         </div>
       )}
     </div>

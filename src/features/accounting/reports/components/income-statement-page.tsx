@@ -22,7 +22,7 @@ export function IncomeStatementPage() {
   const [dateTo, setDateTo] = useState(todayStr());
   const { data, isLoading, isError, error } = useIncomeStatement(
     dateFrom,
-    dateTo
+    dateTo,
   );
 
   return (
@@ -60,7 +60,10 @@ export function IncomeStatementPage() {
             </section>
 
             <section className="space-y-3">
-              <SectionTitle title="Cost of Goods Sold" total={data.total_cogs} />
+              <SectionTitle
+                title="Cost of Goods Sold"
+                total={data.total_cogs}
+              />
               <AccountBalanceTable rows={data.cogs} />
               <SummaryRow
                 label="Gross Profit"

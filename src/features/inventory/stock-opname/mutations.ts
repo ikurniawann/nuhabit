@@ -22,8 +22,13 @@ export const useCreateStockOpname = () => {
 export const useUpdateStockOpname = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, input }: { id: string; input: UpdateStockOpnameInput }) =>
-      updateStockOpname(id, input),
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: string;
+      input: UpdateStockOpnameInput;
+    }) => updateStockOpname(id, input),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: stockOpnameQueryKeys.all });
       queryClient.invalidateQueries({
@@ -39,7 +44,9 @@ export const useCompleteStockOpname = () => {
     mutationFn: (id: string) => completeStockOpname(id),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: stockOpnameQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: stockOpnameQueryKeys.detail(id) });
+      queryClient.invalidateQueries({
+        queryKey: stockOpnameQueryKeys.detail(id),
+      });
     },
   });
 };

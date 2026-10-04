@@ -1,47 +1,25 @@
 import { NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
-import { ACCOUNTING_API_ROLES } from "@/lib/accounting/coa-types";
 import {
   createArInvoiceFromSalesInvoice,
   getArInvoiceBySalesInvoiceId,
 } from "@/lib/accounting/ar-store";
 
-function errMsg(error: unknown) {
-  return error instanceof Error ? error.message : "Internal server error";
-}
-
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ salesInvoiceId: string }> }
-) {
-  try {
+export const GET = apiHandler(
+  async (_request: Request, { params }: { params: Promise<{ salesInvoiceId: string }> }) => {
     const user = await requireIamMenuPrefix(IAM.accounting);
     const { salesInvoiceId } = await params;
     let row = await getArInvoiceBySalesInvoiceId(salesInvoiceId);
     if (!row) {
-      try {
-        const created = await createArInvoiceFromSalesInvoice({
-          salesInvoiceId,
-          userId: user.id,
-        });
-        row = created.invoice;
-      } catch {
-        // leave null
-      }
+      // Buat AR on-demand; invoice yang tidak memenuhi syarat dibiarkan 404.
+      row = await createArInvoiceFromSalesInvoice({ salesInvoiceId, userId: user.id })
+        .then((created) => created.invoice)
+        .catch(() => null);
     }
-    if (!row) {
-      return NextResponse.json(
-        { success: false, message: "AR invoice tidak ditemukan untuk B2B ini" },
-        { status: 404 }
-      );
-    }
+    if (!row) throw ApiError.notFound("AR invoice tidak ditemukan untuk B2B ini");
     return NextResponse.json({ success: true, data: row });
-  } catch (error: unknown) {
-    if (error instanceof ApiError) return error.toResponse();
-    return NextResponse.json(
-      { success: false, message: errMsg(error) },
-      { status: 500 }
-    );
-  }
-}
+  },
+  "GET /api/accounting/ar/by-sales-invoice/[salesInvoiceId]"
+);

@@ -3,16 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { DsDateTimePicker } from "@/components/design-system";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { OpnameCountList, type OpnameCountItem } from "@/features/inventory/opname-shared";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import {
+  OpnameCountList,
+  type OpnameCountItem,
+} from "@/features/inventory/opname-shared";
 import {
   useProductStockOpname,
   useProductStockOpnamePreview,
@@ -24,161 +26,173 @@ import {
   useUpdateProductStockOpname,
 } from "../mutations";
 import { toast } from "sonner";
+import {
+  productCountProgress,
+  productCountedUpdates,
+  productLinesFromDetail,
+  productLinesFromPreview,
+  productQtyInputError,
+  resolveQty,
+  type ProductCountLine,
+} from "../count-lines";
+import type {
+  ProductStockOpnameDetail,
+  ProductStockOpnamePreviewLine,
+} from "../types";
+import {
+  OpnameDesktopActions,
+  OpnameMobileActions,
+  OpnameProgressTiles,
+} from "@/features/inventory/opname-shared/opname-actions";
 
-type CountLine = {
-  key: string;
-  lineId?: string;
-  product_id: string;
-  product_kode: string;
-  product_nama: string;
-  satuan: string | null;
-  qty_system: number;
-  qty_counted_input: string;
-  // EPIC-047 Fase 3 — terisi saat baris ini mewakili satu SKU (produk
-  // merchandise POS ber-varian); null/undefined = baris level produk lama.
-  pos_sku_id?: string | null;
-  pos_sku_code?: string | null;
-  pos_sku_name?: string | null;
-};
-
-function buildLineKey(productId: string, posSkuId?: string | null) {
-  return `${productId}::${posSkuId ?? ""}`;
-}
+const NO_LINES: ProductCountLine[] = [];
+const NO_PREVIEW: ProductStockOpnamePreviewLine[] = [];
 
 interface ProductStockOpnameCreatePageProps {
   opnameId?: string;
 }
 
-export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCreatePageProps) {
+export function ProductStockOpnameCreatePage({
+  opnameId,
+}: ProductStockOpnameCreatePageProps) {
   const router = useRouter();
-  const isContinue = Boolean(opnameId);
+  const detailQuery = useProductStockOpname(opnameId || "");
+  const detail = detailQuery.data;
+  const isClosed =
+    detail?.status === "completed" || detail?.status === "cancelled";
+
+  // Sesi yang sudah selesai/batal tidak bisa dilanjutkan: arahkan ke detail.
+  useEffect(() => {
+    if (detail && isClosed)
+      router.replace(PRODUCT_ROUTES.inventoryOpnameDetail(detail.id));
+  }, [detail, isClosed, router]);
+
+  if (!opnameId) return <ProductStockOpnameEditor />;
+  if (detailQuery.isLoading) return <OpnameSessionLoading />;
+  if (!detail || isClosed) return null;
+  return <ProductStockOpnameEditor key={detail.id} detail={detail} />;
+}
+
+function OpnameSessionLoading() {
+  return (
+    <div className="flex items-center justify-center py-16 text-sm text-gray-500">
+      <Loader2 className="mr-2 h-5 w-5 animate-spin text-pink-600" />
+      Memuat sesi stok opname produk...
+    </div>
+  );
+}
+
+function ProductStockOpnameEditor({
+  detail,
+}: {
+  detail?: ProductStockOpnameDetail;
+}) {
+  const router = useRouter();
+  const opnameId = detail?.id;
+  const isContinue = Boolean(detail);
 
   const warehousesQuery = useProductStockOpnameWarehouses();
-  const detailQuery = useProductStockOpname(opnameId || "");
   const createMutation = useCreateProductStockOpname();
   const updateMutation = useUpdateProductStockOpname();
   const completeMutation = useCompleteProductStockOpname();
 
-  const [warehouseId, setWarehouseId] = useState("");
-  const [opnameDate, setOpnameDate] = useState(new Date().toISOString().slice(0, 10));
-  const [notes, setNotes] = useState("");
+  const [warehouseId, setWarehouseId] = useState(
+    detail?.warehouse_id || detail?.warehouse?.id || "",
+  );
+  const [opnameDate, setOpnameDate] = useState(
+    () =>
+      detail?.opname_date?.slice(0, 10) ||
+      new Date().toISOString().slice(0, 10),
+  );
+  const [notes, setNotes] = useState(detail?.notes || "");
   const [itemSearch, setItemSearch] = useState("");
-  const [lines, setLines] = useState<CountLine[]>([]);
-  const [initialized, setInitialized] = useState(false);
 
   const previewQuery = useProductStockOpnamePreview(
-    !isContinue && warehouseId ? warehouseId : ""
+    !isContinue && warehouseId ? warehouseId : "",
   );
 
-  const detail = detailQuery.data;
+  // Sesi lanjutan memakai baris server; sesi baru memakai pratinjau stall terpilih.
+  const sourceKey = isContinue ? "detail" : warehouseId;
+  const [edited, setEdited] = useState<{
+    source: string;
+    lines: ProductCountLine[];
+  } | null>(() =>
+    detail
+      ? { source: "detail", lines: productLinesFromDetail(detail.lines || []) }
+      : null,
+  );
+  const baseLines = useMemo(
+    () =>
+      isContinue || !warehouseId
+        ? NO_LINES
+        : productLinesFromPreview(previewQuery.data ?? NO_PREVIEW),
+    [isContinue, warehouseId, previewQuery.data],
+  );
+  const lines = edited?.source === sourceKey ? edited.lines : baseLines;
+  const setLines = (update: (prev: ProductCountLine[]) => ProductCountLine[]) =>
+    setEdited((current) => ({
+      source: sourceKey,
+      lines: update(current?.source === sourceKey ? current.lines : baseLines),
+    }));
+
   const warehouseOptions = (warehousesQuery.data || []).map((w) => ({
     value: w.id,
     label: w.name,
     description: w.code,
   }));
-  const selectedWarehouse = warehouseOptions.find((w) => w.value === warehouseId);
-  const isEditableContinue =
-    isContinue && (detail?.status === "draft" || detail?.status === "in_progress");
+  const selectedWarehouse = warehouseOptions.find(
+    (w) => w.value === warehouseId,
+  );
 
   const isBusy =
-    createMutation.isPending || updateMutation.isPending || completeMutation.isPending;
-
-  useEffect(() => {
-    if (!isContinue || !detail || initialized) return;
-
-    if (detail.status === "completed" || detail.status === "cancelled") {
-      router.replace(PRODUCT_ROUTES.inventoryOpnameDetail(detail.id));
-      return;
-    }
-
-    setOpnameDate(detail.opname_date?.slice(0, 10) || opnameDate);
-    setNotes(detail.notes || "");
-    setWarehouseId(detail.warehouse_id || detail.warehouse?.id || "");
-    setLines(
-      (detail.lines || []).map((line) => ({
-        key: line.id,
-        lineId: line.id,
-        product_id: line.product_id,
-        product_kode: line.product_kode || "",
-        product_nama: line.product_nama || "",
-        satuan: line.satuan ?? null,
-        qty_system: line.qty_system,
-        qty_counted_input:
-          line.qty_counted === null || line.qty_counted === undefined
-            ? ""
-            : String(line.qty_counted),
-        pos_sku_id: line.pos_sku_id ?? null,
-        pos_sku_code: line.pos_sku_code ?? null,
-        pos_sku_name: line.pos_sku_name ?? null,
-      }))
-    );
-    setInitialized(true);
-  }, [isContinue, detail, initialized, router, opnameDate]);
-
-  useEffect(() => {
-    if (isContinue || previewQuery.isLoading) return;
-    if (!warehouseId) {
-      setLines([]);
-      return;
-    }
-
-    const items = previewQuery.data ?? [];
-    setLines(
-      items.map((item) => ({
-        key: buildLineKey(item.product_id, item.pos_sku_id),
-        product_id: item.product_id,
-        product_kode: item.product_kode,
-        product_nama: item.product_nama,
-        satuan: item.satuan,
-        qty_system: item.qty_system,
-        qty_counted_input: "",
-        pos_sku_id: item.pos_sku_id ?? null,
-        pos_sku_code: item.pos_sku_code ?? null,
-        pos_sku_name: item.pos_sku_name ?? null,
-      }))
-    );
-  }, [isContinue, warehouseId, previewQuery.data, previewQuery.isLoading]);
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    completeMutation.isPending;
 
   const handleFillSystemLine = (key: string) => {
     setLines((prev) =>
-      prev.map((line) => (line.key === key ? { ...line, qty_counted_input: String(line.qty_system) } : line))
+      prev.map((line) =>
+        line.key === key
+          ? { ...line, qty_counted_input: String(line.qty_system) }
+          : line,
+      ),
     );
   };
 
   const countItems = useMemo<OpnameCountItem[]>(
     () =>
       lines.map((line) => {
-        const counted = line.qty_counted_input === "" ? null : Number(line.qty_counted_input);
+        const counted =
+          line.qty_counted_input === "" ? null : Number(line.qty_counted_input);
         return {
           key: line.key,
           code: line.product_kode,
           name: line.product_nama,
-          subtitle: line.pos_sku_id ? `Varian: ${line.pos_sku_code || "—"} — ${line.pos_sku_name || "—"}` : null,
+          subtitle: line.pos_sku_id
+            ? `Varian: ${line.pos_sku_code || "—"} — ${line.pos_sku_name || "—"}`
+            : null,
           unit: line.satuan || "—",
           qtySystem: line.qty_system,
           qtyInput: line.qty_counted_input,
-          variance: counted === null || !Number.isFinite(counted) ? null : counted - line.qty_system,
+          variance:
+            counted === null || !Number.isFinite(counted)
+              ? null
+              : counted - line.qty_system,
         };
       }),
-    [lines]
+    [lines],
   );
 
-  const progress = useMemo(() => {
-    const counted = lines.filter((line) => line.qty_counted_input !== "").length;
-    const variance = lines.filter((line) => {
-      if (line.qty_counted_input === "") return false;
-      const n = Number(line.qty_counted_input);
-      return Number.isFinite(n) && n !== line.qty_system;
-    }).length;
-    return { counted, variance, total: lines.length };
-  }, [lines]);
+  const progress = useMemo(() => productCountProgress(lines), [lines]);
 
   const hasItems = lines.length > 0;
   const isPreviewLoading = !isContinue && previewQuery.isLoading;
 
   const handleLineChange = (key: string, value: string) => {
     setLines((prev) =>
-      prev.map((line) => (line.key === key ? { ...line, qty_counted_input: value } : line))
+      prev.map((line) =>
+        line.key === key ? { ...line, qty_counted_input: value } : line,
+      ),
     );
   };
 
@@ -187,50 +201,14 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
       prev.map((line) => ({
         ...line,
         qty_counted_input: String(line.qty_system),
-      }))
+      })),
     );
-  };
-
-  const resolveQty = (line: CountLine): number | null => {
-    if (line.qty_counted_input === "") return null;
-    const n = Number(line.qty_counted_input);
-    return Number.isFinite(n) ? n : null;
   };
 
   const validateQtyInputs = (requireAll: boolean) => {
-    if (requireAll) {
-      const uncounted = lines.filter((line) => line.qty_counted_input === "");
-      if (uncounted.length > 0) {
-        toast.error(`${uncounted.length} baris belum dihitung`);
-        return false;
-      }
-    }
-
-    const invalid = lines.find((line) => {
-      if (line.qty_counted_input === "") return false;
-      const n = Number(line.qty_counted_input);
-      return !Number.isFinite(n) || n < 0;
-    });
-    if (invalid) {
-      toast.error("Qty fisik harus angka ≥ 0");
-      return false;
-    }
-    return true;
-  };
-
-  const buildLineUpdates = (
-    lineRecords: { id: string; product_id: string; pos_sku_id?: string | null }[]
-  ) => {
-    const byKey = new Map(
-      lineRecords.map((l) => [buildLineKey(l.product_id, l.pos_sku_id), l.id])
-    );
-    return lines
-      .filter((line) => line.qty_counted_input !== "")
-      .map((line) => ({
-        id: line.lineId || byKey.get(buildLineKey(line.product_id, line.pos_sku_id))!,
-        qty_counted: resolveQty(line) ?? 0,
-      }))
-      .filter((line) => line.id);
+    const error = productQtyInputError(lines, requireAll);
+    if (error) toast.error(error);
+    return !error;
   };
 
   const handleSaveDraft = async () => {
@@ -267,13 +245,7 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
         reason: "stock_opname",
       });
 
-      const updates = buildLineUpdates(
-        (created.lines || []).map((l) => ({
-          id: l.id,
-          product_id: l.product_id,
-          pos_sku_id: l.pos_sku_id,
-        }))
-      );
+      const updates = productCountedUpdates(lines, created.lines || []);
 
       if (updates.length > 0) {
         await updateMutation.mutateAsync({
@@ -285,7 +257,9 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
       toast.success("Draf stok opname produk berhasil disimpan");
       router.replace(PRODUCT_ROUTES.inventoryOpnameContinue(created.id));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal menyimpan draf");
+      toast.error(
+        error instanceof Error ? error.message : "Gagal menyimpan draf",
+      );
     }
   };
 
@@ -318,10 +292,13 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
             lines: lines.map((line) => {
               const createdLine = created.lines?.find(
                 (l) =>
-                  l.product_id === line.product_id && (l.pos_sku_id ?? null) === (line.pos_sku_id ?? null)
+                  l.product_id === line.product_id &&
+                  (l.pos_sku_id ?? null) === (line.pos_sku_id ?? null),
               );
               if (!createdLine) {
-                throw new Error(`Baris tidak ditemukan untuk ${line.product_kode}`);
+                throw new Error(
+                  `Baris tidak ditemukan untuk ${line.product_kode}`,
+                );
               }
               return {
                 id: createdLine.id,
@@ -344,11 +321,15 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
       }
 
       await completeMutation.mutateAsync(sessionId);
-      toast.success("Stok opname produk berhasil diselesaikan dan persediaan telah disesuaikan");
+      toast.success(
+        "Stok opname produk berhasil diselesaikan dan persediaan telah disesuaikan",
+      );
       router.push(PRODUCT_ROUTES.inventoryOpnameDetail(sessionId!));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Gagal menyelesaikan stok opname"
+        error instanceof Error
+          ? error.message
+          : "Gagal menyelesaikan stok opname",
       );
     }
   };
@@ -363,72 +344,34 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
       toast.success("Stok opname produk berhasil dibatalkan");
       router.push(PRODUCT_ROUTES.inventoryOpname);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal membatalkan sesi");
+      toast.error(
+        error instanceof Error ? error.message : "Gagal membatalkan sesi",
+      );
     }
   };
-
-  if (isContinue && detailQuery.isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin text-pink-600" />
-        Memuat sesi stok opname produk...
-      </div>
-    );
-  }
-
-  if (isContinue && !isEditableContinue && detail) {
-    return null;
-  }
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
       <PurchasingFormHeader
         backHref={PRODUCT_ROUTES.inventoryOpname}
-        title={isContinue ? "Lanjutkan Stok Opname Produk" : "Buat Stok Opname Produk"}
+        title={
+          isContinue
+            ? "Lanjutkan Stok Opname Produk"
+            : "Buat Stok Opname Produk"
+        }
         description="Masukkan qty fisik produk jadi, lalu simpan sebagai draf atau selesaikan opname"
         actions={
           hasItems ? (
-            <div className="hidden flex-wrap gap-2 md:flex">
-              <Button
-                type="button"
-                variant="outline"
-                className="purchasing-secondary-button w-full sm:w-auto"
-                onClick={handleFillSystem}
-                disabled={isBusy}
-              >
-                Isi dengan Stok Sistem
-              </Button>
-              {isContinue && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-red-200/80 text-red-700 sm:w-auto"
-                  onClick={handleCancel}
-                  disabled={isBusy}
-                >
-                  Batalkan Sesi
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                className="purchasing-secondary-button w-full sm:w-auto"
-                onClick={handleSaveDraft}
-                disabled={isBusy}
-              >
-                {updateMutation.isPending && !completeMutation.isPending
-                  ? "Menyimpan..."
-                  : "Simpan Draf"}
-              </Button>
-              <Button
-                type="button"
-                className="purchasing-main-button w-full sm:w-auto"
-                onClick={handleComplete}
-                disabled={isBusy}
-              >
-                {completeMutation.isPending ? "Memproses..." : "Selesaikan Opname"}
-              </Button>
-            </div>
+            <OpnameDesktopActions
+              busy={isBusy}
+              disabled={!warehouseId}
+              saving={updateMutation.isPending}
+              completing={completeMutation.isPending}
+              onFillSystem={handleFillSystem}
+              onCancel={isContinue ? handleCancel : undefined}
+              onSaveDraft={handleSaveDraft}
+              onComplete={handleComplete}
+            />
           ) : undefined
         }
       />
@@ -448,7 +391,9 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
                 value={warehouseId}
                 onChange={setWarehouseId}
                 placeholder={
-                  warehousesQuery.isLoading ? STALL_LABELS.loading : STALL_LABELS.selectPlaceholder
+                  warehousesQuery.isLoading
+                    ? STALL_LABELS.loading
+                    : STALL_LABELS.selectPlaceholder
                 }
                 searchPlaceholder={STALL_LABELS.search}
                 emptyMessage={STALL_LABELS.empty}
@@ -456,7 +401,9 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
                 className="mt-1.5 h-9 text-sm"
               />
               {selectedWarehouse && (
-                <p className="mt-1 text-xs text-gray-500">{selectedWarehouse.description}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {selectedWarehouse.description}
+                </p>
               )}
             </div>
             <div className="min-w-0 md:col-span-4">
@@ -485,22 +432,7 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
             </div>
           </div>
 
-          {hasItems && (
-            <div className="grid grid-cols-3 gap-3 border-t border-gray-200/70 pt-4">
-              <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
-                <p className="text-xs font-medium text-gray-500">Total Baris</p>
-                <p className="text-lg font-bold text-gray-900">{progress.total}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
-                <p className="text-xs font-medium text-gray-500">Terhitung</p>
-                <p className="text-lg font-bold text-amber-600">{progress.counted}</p>
-              </div>
-              <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
-                <p className="text-xs font-medium text-gray-500">Ada Selisih</p>
-                <p className="text-lg font-bold text-pink-600">{progress.variance}</p>
-              </div>
-            </div>
-          )}
+          {hasItems && <OpnameProgressTiles progress={progress} />}
         </CardContent>
       </Card>
 
@@ -508,7 +440,9 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Perhitungan Stok Fisik</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Perhitungan Stok Fisik
+              </h2>
               <p className="text-sm text-gray-500">
                 {isPreviewLoading
                   ? "Memuat produk..."
@@ -537,28 +471,16 @@ export function ProductStockOpnameCreatePage({ opnameId }: ProductStockOpnameCre
       </Card>
 
       {hasItems && (
-        <>
-          {/* Aksi sekunder di HP — tombol utama ada di bilah bawah */}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs md:hidden">
-            <button type="button" className="text-gray-600 underline-offset-2 hover:underline disabled:opacity-50" onClick={handleFillSystem} disabled={isBusy}>
-              Isi semua dengan stok sistem
-            </button>
-            {isContinue && (
-              <button type="button" className="text-red-600 underline-offset-2 hover:underline disabled:opacity-50" onClick={handleCancel} disabled={isBusy}>
-                Batalkan sesi
-              </button>
-            )}
-          </div>
-          {/* Bilah aksi lengket di bawah — jempol tidak perlu menggulir ke atas */}
-          <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-gray-200/70 bg-white/95 p-3 backdrop-blur md:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
-            <Button type="button" variant="outline" className="purchasing-secondary-button h-11 flex-1" onClick={handleSaveDraft} disabled={isBusy || !warehouseId}>
-              {updateMutation.isPending && !completeMutation.isPending ? "Menyimpan..." : "Simpan Draf"}
-            </Button>
-            <Button type="button" className="purchasing-main-button h-11 flex-1" onClick={handleComplete} disabled={isBusy || !warehouseId}>
-              {completeMutation.isPending ? "Memproses..." : "Selesaikan"}
-            </Button>
-          </div>
-        </>
+        <OpnameMobileActions
+          busy={isBusy}
+          disabled={!warehouseId}
+          saving={updateMutation.isPending}
+          completing={completeMutation.isPending}
+          onFillSystem={handleFillSystem}
+          onCancel={isContinue ? handleCancel : undefined}
+          onSaveDraft={handleSaveDraft}
+          onComplete={handleComplete}
+        />
       )}
     </div>
   );

@@ -2,7 +2,12 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { removeStaticQris, setStaticQrisEnabled, updatePaymentGateway, uploadStaticQris } from "./api";
+import {
+  removeStaticQris,
+  setStaticQrisEnabled,
+  updatePaymentGateway,
+  uploadStaticQris,
+} from "./api";
 import { paymentGatewaysQueryKeys } from "./query-keys";
 import type { StaticQrisConfig, UpdatePaymentGatewayPayload } from "./types";
 
@@ -10,13 +15,18 @@ export function useUpdatePaymentGateway() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: UpdatePaymentGatewayPayload) => updatePaymentGateway(payload),
+    mutationFn: (payload: UpdatePaymentGatewayPayload) =>
+      updatePaymentGateway(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: paymentGatewaysQueryKeys.all });
+      await queryClient.invalidateQueries({
+        queryKey: paymentGatewaysQueryKeys.all,
+      });
       toast.success("Payment gateway settings saved.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Failed to save settings");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save settings",
+      );
     },
   });
 }
@@ -44,11 +54,13 @@ export function useStaticQrisMutation() {
             ? "Static QRIS dihapus."
             : data.enabled
               ? "Static QRIS diaktifkan."
-              : "Static QRIS dinonaktifkan."
+              : "Static QRIS dinonaktifkan.",
       );
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Gagal menyimpan Static QRIS");
+      toast.error(
+        error instanceof Error ? error.message : "Gagal menyimpan Static QRIS",
+      );
     },
   });
 }

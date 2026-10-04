@@ -20,12 +20,6 @@ export const ACCOUNT_TYPE_CODES = [
 
 export type AccountTypeCode = (typeof ACCOUNT_TYPE_CODES)[number];
 
-export const ACCOUNTING_API_ROLES = [
-  "super_admin",
-  "admin",
-  "finance_staff",
-] as const;
-
 export function isCashFlowCategory(
   value: string | null | undefined
 ): value is CashFlowCategory {

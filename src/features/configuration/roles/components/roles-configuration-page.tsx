@@ -22,7 +22,6 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ToastContainer, useToast } from "@/components/ui/toast";
 import {
   useCreateRole,
   useDeleteRole,
@@ -35,9 +34,9 @@ import { RoleDetailSections } from "./role-detail-sections";
 import { RoleFormDialog } from "./role-form-dialog";
 import { RolePermissionsDialog } from "./role-permissions-dialog";
 import { RolesTable } from "./roles-table";
+import { toast } from "sonner";
 
 export function RolesConfigurationPage() {
-  const { toasts, showToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -59,7 +58,7 @@ export function RolesConfigurationPage() {
       search: search.trim() || undefined,
       status: statusFilter || undefined,
     }),
-    [search, statusFilter]
+    [search, statusFilter],
   );
 
   const { data, isLoading, isError, error, refetch } = useRoleList(listParams);
@@ -75,15 +74,18 @@ export function RolesConfigurationPage() {
   } = useRoleDetail(selectedId);
 
   const allRows = useMemo(() => data?.data ?? [], [data?.data]);
-  const isFormSubmitting = createRoleMutation.isPending || updateRoleMutation.isPending;
+  const isFormSubmitting =
+    createRoleMutation.isPending || updateRoleMutation.isPending;
   const isDeleting = deleteRoleMutation.isPending;
   const isSavingPermissions = updatePermissionsMutation.isPending;
 
   useEffect(() => {
     if (isError) {
-      showToast(error instanceof Error ? error.message : "Failed to load roles", "error");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load roles",
+      );
     }
-  }, [isError, error, showToast]);
+  }, [isError, error]);
 
   function handleView(id: string) {
     setSelectedId(id);
@@ -123,18 +125,19 @@ export function RolesConfigurationPage() {
     try {
       if (formMode === "edit" && formRoleId) {
         await updateRoleMutation.mutateAsync({ id: formRoleId, ...payload });
-        showToast("Role updated successfully", "success");
+        toast.success("Role updated successfully");
       } else {
         await createRoleMutation.mutateAsync(payload);
-        showToast("Role added successfully", "success");
+        toast.success("Role added successfully");
       }
       setFormOpen(false);
       setFormRoleId(null);
       setEditingRole(null);
     } catch (submitError) {
-      showToast(
-        submitError instanceof Error ? submitError.message : "Failed to save role",
-        "error"
+      toast.error(
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to save role",
       );
     }
   }
@@ -144,7 +147,7 @@ export function RolesConfigurationPage() {
 
     try {
       await deleteRoleMutation.mutateAsync(deletingRole.id);
-      showToast("Role deleted successfully", "success");
+      toast.success("Role deleted successfully");
       setDeleteOpen(false);
       setDeletingRole(null);
 
@@ -152,15 +155,18 @@ export function RolesConfigurationPage() {
         handleDetailClose();
       }
     } catch (deleteError) {
-      showToast(
-        deleteError instanceof Error ? deleteError.message : "Failed to delete role",
-        "error"
+      toast.error(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Failed to delete role",
       );
     }
   }
 
   async function handleSavePermissions(
-    permissions: Parameters<typeof updatePermissionsMutation.mutateAsync>[0]["permissions"]
+    permissions: Parameters<
+      typeof updatePermissionsMutation.mutateAsync
+    >[0]["permissions"],
   ) {
     if (!permissionsRole || isSavingPermissions) return;
 
@@ -169,26 +175,27 @@ export function RolesConfigurationPage() {
         id: permissionsRole.id,
         permissions,
       });
-      showToast("Permissions updated successfully", "success");
+      toast.success("Permissions updated successfully");
       setPermissionsOpen(false);
       setPermissionsRole(null);
     } catch (saveError) {
-      showToast(
-        saveError instanceof Error ? saveError.message : "Failed to save permissions",
-        "error"
+      toast.error(
+        saveError instanceof Error
+          ? saveError.message
+          : "Failed to save permissions",
       );
     }
   }
 
   return (
     <div className="space-y-6">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <ShieldCheckIcon className="h-6 w-6 text-pink-600" />
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Role & Permission</h1>
+            <h1 className="text-xl font-bold text-gray-900">
+              Role & Permission
+            </h1>
             <p className="text-sm text-gray-500">
               IAM roles and menu access ({allRows.length} roles)
             </p>
@@ -215,7 +222,9 @@ export function RolesConfigurationPage() {
             />
             <Select
               value={statusFilter || "all"}
-              onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)}
+              onValueChange={(value) =>
+                setStatusFilter(value === "all" ? "" : value)
+              }
             >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Status" />
@@ -234,9 +243,13 @@ export function RolesConfigurationPage() {
             </div>
           ) : isError ? (
             <div className="py-12 text-center">
-              <p className="mb-1 text-sm font-medium text-gray-700">Failed to load roles</p>
+              <p className="mb-1 text-sm font-medium text-gray-700">
+                Failed to load roles
+              </p>
               <p className="mb-3 text-xs text-gray-500">
-                {error instanceof Error ? error.message : "A server error occurred"}
+                {error instanceof Error
+                  ? error.message
+                  : "A server error occurred"}
               </p>
               <button
                 type="button"
@@ -247,7 +260,9 @@ export function RolesConfigurationPage() {
               </button>
             </div>
           ) : allRows.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">No roles found</div>
+            <div className="py-12 text-center text-gray-400">
+              No roles found
+            </div>
           ) : (
             <RolesTable
               rows={allRows}
@@ -261,10 +276,15 @@ export function RolesConfigurationPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={detailOpen} onOpenChange={(open) => !open && handleDetailClose()}>
+      <Dialog
+        open={detailOpen}
+        onOpenChange={(open) => !open && handleDetailClose()}
+      >
         <DialogPanel size="md">
           <DialogPanelHeader>
-            <DialogPanelTitle>{detailData?.name ?? "Role Details"}</DialogPanelTitle>
+            <DialogPanelTitle>
+              {detailData?.name ?? "Role Details"}
+            </DialogPanelTitle>
             <DialogPanelDescription>
               {detailData?.code
                 ? `Code: ${detailData.code} — permissions & metadata`
@@ -278,7 +298,9 @@ export function RolesConfigurationPage() {
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-pink-500" />
               </div>
             ) : detailError ? (
-              <p className="text-sm text-gray-500">Failed to load role details</p>
+              <p className="text-sm text-gray-500">
+                Failed to load role details
+              </p>
             ) : detailData ? (
               <RoleDetailSections detail={detailData} />
             ) : null}

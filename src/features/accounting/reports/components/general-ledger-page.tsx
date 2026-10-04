@@ -7,18 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { filterComboboxClassName } from "@/components/layout/form-field";
 import { JOURNAL_ENTRY_ROUTES } from "@/features/accounting/journal-entries/routes";
-import {
-  useGeneralLedger,
-  useGeneralLedgerAccounts,
-} from "../queries";
+import { useGeneralLedger, useGeneralLedgerAccounts } from "../queries";
 import {
   PeriodFilter,
   ReportShell,
-  formatAmount,
   todayStr,
   yearStartStr,
 } from "./report-shell";
 import { ErrorBlock, LoadingBlock } from "./report-table";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
 export function GeneralLedgerPage() {
   const router = useRouter();
@@ -28,20 +25,16 @@ export function GeneralLedgerPage() {
   const [dateTo, setDateTo] = useState(todayStr());
 
   const accountsQuery = useGeneralLedgerAccounts(asOf);
-  const ledgerQuery = useGeneralLedger(
-    accountId || null,
-    dateFrom,
-    dateTo
-  );
+  const ledgerQuery = useGeneralLedger(accountId || null, dateFrom, dateTo);
 
   const accountOptions = useMemo(
     () =>
       (accountsQuery.data ?? []).map((a) => ({
         value: a.id,
         label: `${a.code_display || a.code} — ${a.name}`,
-        description: `${a.account_type_code} · saldo ${formatAmount(a.balance)}`,
+        description: `${a.account_type_code} · saldo ${formatLedgerAmount(a.balance)}`,
       })),
-    [accountsQuery.data]
+    [accountsQuery.data],
   );
 
   const data = ledgerQuery.data;
@@ -103,25 +96,25 @@ export function GeneralLedgerPage() {
               <div>
                 Opening:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.opening_balance)}
+                  {formatLedgerAmount(data.opening_balance)}
                 </span>
               </div>
               <div>
                 Debit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_debit)}
+                  {formatLedgerAmount(data.total_debit)}
                 </span>
               </div>
               <div>
                 Credit:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.total_credit)}
+                  {formatLedgerAmount(data.total_credit)}
                 </span>
               </div>
               <div>
                 Closing:{" "}
                 <span className="font-medium tabular-nums">
-                  {formatAmount(data.closing_balance)}
+                  {formatLedgerAmount(data.closing_balance)}
                 </span>
               </div>
             </div>
@@ -129,7 +122,7 @@ export function GeneralLedgerPage() {
             {data.lines.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">
                 Tidak ada mutasi pada periode ini. Saldo tetap{" "}
-                {formatAmount(data.closing_balance)}.
+                {formatLedgerAmount(data.closing_balance)}.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -161,13 +154,13 @@ export function GeneralLedgerPage() {
                           {line.memo || line.description || "—"}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.debit ? formatAmount(line.debit) : "—"}
+                          {line.debit ? formatLedgerAmount(line.debit) : "—"}
                         </td>
                         <td className="px-2 py-2 text-right tabular-nums">
-                          {line.credit ? formatAmount(line.credit) : "—"}
+                          {line.credit ? formatLedgerAmount(line.credit) : "—"}
                         </td>
                         <td className="px-2 py-2 text-right font-medium tabular-nums">
-                          {formatAmount(line.running_balance)}
+                          {formatLedgerAmount(line.running_balance)}
                         </td>
                         <td className="px-2 py-2 text-right">
                           <Button
@@ -177,7 +170,7 @@ export function GeneralLedgerPage() {
                             className="h-8 rounded-lg border-gray-200/80"
                             onClick={() =>
                               router.push(
-                                JOURNAL_ENTRY_ROUTES.edit(line.entry_id)
+                                JOURNAL_ENTRY_ROUTES.edit(line.entry_id),
                               )
                             }
                           >

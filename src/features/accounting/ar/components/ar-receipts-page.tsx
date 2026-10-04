@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
@@ -21,27 +21,33 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { AR_RECEIPT_METHODS } from "@/lib/accounting/ar-types";
 import type { ArInvoiceRow } from "@/lib/accounting/ar-types";
 import { useCreateArReceipt } from "../mutations";
-import { useArInvoiceList, useArReceiptList } from "../queries";
+import {
+  useArInvoiceBySalesInvoice,
+  useArInvoiceList,
+  useArReceiptList,
+} from "../queries";
 import { AR_ROUTES } from "../api";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
 
 export function ArReceiptsPage() {
   const searchParams = useSearchParams();
   const invoiceParam = searchParams.get("invoice");
   const salesInvoiceParam = searchParams.get("sales_invoice");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    search,
+  } = useDebouncedSearch();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<ArInvoiceRow | null>(null);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
+  // ?invoice= / ?sales_invoice= membuka dialog sekali begitu invoice-nya termuat.
+  const [deepLinkDismissed, setDeepLinkDismissed] = useState(false);
+  const salesInvoiceQuery = useArInvoiceBySalesInvoice(salesInvoiceParam);
 
   const { data, isLoading } = useArReceiptList({
     search: search || undefined,
@@ -65,37 +71,19 @@ export function ArReceiptsPage() {
     });
   }, [openQ.data, partialQ.data, overdueQ.data]);
 
-  useEffect(() => {
-    if (!invoiceParam || !openInvoices.length) return;
-    const match = openInvoices.find((r) => r.id === invoiceParam);
-    if (match) {
-      setSelected(match);
-      setOpen(true);
-    }
-  }, [invoiceParam, openInvoices]);
+  const deepLinkInvoice = deepLinkDismissed
+    ? null
+    : (salesInvoiceQuery.data ??
+      (invoiceParam
+        ? openInvoices.find((r) => r.id === invoiceParam)
+        : undefined) ??
+      null);
+  const dialogInitial = deepLinkInvoice ?? selected;
 
-  useEffect(() => {
-    if (!salesInvoiceParam) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/accounting/ar/by-sales-invoice/${salesInvoiceParam}`
-        );
-        if (!res.ok || cancelled) return;
-        const body = (await res.json()) as { data: ArInvoiceRow };
-        if (body.data && !cancelled) {
-          setSelected(body.data);
-          setOpen(true);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [salesInvoiceParam]);
+  function setDialogOpen(next: boolean) {
+    setOpen(next);
+    if (!next) setDeepLinkDismissed(true);
+  }
 
   const rows = data?.data ?? [];
 
@@ -113,6 +101,7 @@ export function ArReceiptsPage() {
           className="h-10 bg-primary text-primary-foreground hover:bg-primary/90"
           onClick={() => {
             setSelected(null);
+            setDeepLinkDismissed(true);
             setOpen(true);
           }}
         >
@@ -147,12 +136,15 @@ export function ArReceiptsPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             Belum ada receipt. Outstanding:{" "}
-            <Link href={AR_ROUTES.receivable} className="text-primary hover:underline">
+            <Link
+              href={AR_ROUTES.receivable}
+              className="text-brand-text hover:underline"
+            >
               Receivable
             </Link>
           </p>
@@ -181,7 +173,7 @@ export function ArReceiptsPage() {
                     </td>
                     <td className="px-2 py-3">{row.receipt_date}</td>
                     <td className="px-2 py-3 text-right">
-                      {formatAmount(row.amount)}
+                      {formatNumber(row.amount)}
                     </td>
                   </tr>
                 ))}
@@ -192,51 +184,64 @@ export function ArReceiptsPage() {
       </PurchasingListSection>
 
       <ReceiptDialog
-        open={open}
-        onOpenChange={setOpen}
+        open={open || deepLinkInvoice !== null}
+        onOpenChange={setDialogOpen}
         invoices={
-          selected && !openInvoices.some((i) => i.id === selected.id)
-            ? [selected, ...openInvoices]
+          dialogInitial && !openInvoices.some((i) => i.id === dialogInitial.id)
+            ? [dialogInitial, ...openInvoices]
             : openInvoices
         }
-        initial={selected}
+        initial={dialogInitial}
       />
     </div>
   );
 }
 
-function ReceiptDialog({
-  open,
-  onOpenChange,
-  invoices,
-  initial,
-}: {
+type ReceiptDialogProps = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   invoices: ArInvoiceRow[];
   initial: ArInvoiceRow | null;
+};
+
+function ReceiptDialog({
+  open,
+  onOpenChange,
+  ...formProps
+}: ReceiptDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPanel size="sm">
+        {/* Form dipasang ulang tiap dialog dibuka supaya isinya mulai dari invoice terpilih. */}
+        {open ? (
+          <ReceiptForm onClose={() => onOpenChange(false)} {...formProps} />
+        ) : null}
+      </DialogPanel>
+    </Dialog>
+  );
+}
+
+function ReceiptForm({
+  invoices,
+  initial,
+  onClose,
+}: Omit<ReceiptDialogProps, "open" | "onOpenChange"> & {
+  onClose: () => void;
 }) {
   const mutation = useCreateArReceipt();
-  const [invoiceId, setInvoiceId] = useState("");
-  const [amount, setAmount] = useState<number | undefined>();
-  const [receiptDate, setReceiptDate] = useState(
-    new Date().toISOString().slice(0, 10)
+  const start = initial || invoices[0] || null;
+  const [invoiceId, setInvoiceId] = useState(start?.id || "");
+  const [amount, setAmount] = useState<number | undefined>(
+    start?.outstanding_amount,
+  );
+  const [receiptDate, setReceiptDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
   );
   const [method, setMethod] = useState<string>("transfer");
   const [notes, setNotes] = useState("");
 
   const selected = invoices.find((i) => i.id === invoiceId);
   const outstanding = selected?.outstanding_amount ?? 0;
-
-  useEffect(() => {
-    if (!open) return;
-    const inv = initial || invoices[0] || null;
-    setInvoiceId(inv?.id || "");
-    setAmount(inv?.outstanding_amount);
-    setReceiptDate(new Date().toISOString().slice(0, 10));
-    setMethod("transfer");
-    setNotes("");
-  }, [open, initial, invoices]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -250,100 +255,98 @@ function ReceiptDialog({
         notes: notes || null,
       });
       toast.success(res.message || "Receipt berhasil");
-      onOpenChange(false);
+      onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal mencatat receipt");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal mencatat receipt",
+      );
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPanel size="sm">
-        <DialogPanelForm onSubmit={onSubmit}>
-          <DialogPanelHeader>
-            <DialogPanelTitle>Catat Penerimaan AR</DialogPanelTitle>
-            <DialogPanelDescription>
-              Mengurangi outstanding piutang dan memposting jurnal via mapping.
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="space-y-4">
-            <div className="space-y-2">
-              <Label>AR Invoice</Label>
-              <Combobox
-                options={invoices.map((i) => ({
-                  value: i.id,
-                  label: `${i.invoice_no} — ${i.customer_name || "Customer"} (${formatAmount(i.outstanding_amount || 0)})`,
-                }))}
-                value={invoiceId}
-                onChange={(v) => {
-                  setInvoiceId(v);
-                  const inv = invoices.find((i) => i.id === v);
-                  setAmount(inv?.outstanding_amount);
-                }}
-                placeholder="Pilih invoice"
-                searchPlaceholder="Cari..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Tanggal</Label>
-              <Input
-                type="date"
-                value={receiptDate}
-                onChange={(e) => setReceiptDate(e.target.value)}
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Amount (outstanding {formatAmount(outstanding)})</Label>
-              <NumericInput
-                value={amount}
-                onValueChange={setAmount}
-                className="h-10 bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Metode</Label>
-              <Combobox
-                options={AR_RECEIPT_METHODS.map((m) => ({ value: m, label: m }))}
-                value={method}
-                onChange={setMethod}
-                placeholder="Metode"
-                searchPlaceholder="Cari..."
-                className="h-10 w-full bg-card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Catatan</Label>
-              <Input
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
-              />
-            </div>
-          </DialogPanelBody>
-          <DialogFooter className="gap-3 px-6 py-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button type="submit" disabled={mutation.isPending || !invoiceId}>
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Simpan Receipt"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogPanelForm>
-      </DialogPanel>
-    </Dialog>
+    <DialogPanelForm onSubmit={onSubmit}>
+      <DialogPanelHeader>
+        <DialogPanelTitle>Catat Penerimaan AR</DialogPanelTitle>
+        <DialogPanelDescription>
+          Mengurangi outstanding piutang dan memposting jurnal via mapping.
+        </DialogPanelDescription>
+      </DialogPanelHeader>
+      <DialogPanelBody className="space-y-4">
+        <div className="space-y-2">
+          <Label>AR Invoice</Label>
+          <Combobox
+            options={invoices.map((i) => ({
+              value: i.id,
+              label: `${i.invoice_no} — ${i.customer_name || "Customer"} (${formatNumber(i.outstanding_amount || 0)})`,
+            }))}
+            value={invoiceId}
+            onChange={(v) => {
+              setInvoiceId(v);
+              const inv = invoices.find((i) => i.id === v);
+              setAmount(inv?.outstanding_amount);
+            }}
+            placeholder="Pilih invoice"
+            searchPlaceholder="Cari..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Tanggal</Label>
+          <Input
+            type="date"
+            value={receiptDate}
+            onChange={(e) => setReceiptDate(e.target.value)}
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Amount (outstanding {formatNumber(outstanding)})</Label>
+          <NumericInput
+            value={amount}
+            onValueChange={setAmount}
+            className="h-10 bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Metode</Label>
+          <Combobox
+            options={AR_RECEIPT_METHODS.map((m) => ({ value: m, label: m }))}
+            value={method}
+            onChange={setMethod}
+            placeholder="Metode"
+            searchPlaceholder="Cari..."
+            className="h-10 w-full bg-card"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Catatan</Label>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
+          />
+        </div>
+      </DialogPanelBody>
+      <DialogFooter className="gap-3 px-6 py-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={mutation.isPending}
+        >
+          Batal
+        </Button>
+        <Button type="submit" disabled={mutation.isPending || !invoiceId}>
+          {mutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Menyimpan...
+            </>
+          ) : (
+            "Simpan Receipt"
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogPanelForm>
   );
 }

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { journalMappingQueryKeys } from "./query-keys";
 import { fetchJournalMappingList, fetchJournalMapping } from "./api";
-import type { JournalMappingListFilters } from "./types";
+import type { JournalMappingListFilters } from "@/lib/accounting/types";
 
 export const useJournalMappingList = (filters?: JournalMappingListFilters) =>
   useQuery({

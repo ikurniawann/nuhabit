@@ -15,17 +15,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
-import { useProductStockOpnameList, useProductStockOpnameWarehouses } from "../queries";
+import {
+  useProductStockOpnameList,
+  useProductStockOpnameWarehouses,
+} from "../queries";
 import {
   PRODUCT_STOCK_OPNAME_STATUS_COLORS,
   PRODUCT_STOCK_OPNAME_STATUS_LABELS,
   type ProductStockOpnameStatus,
 } from "../types";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Semua Status" },
@@ -35,24 +39,13 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Dibatalkan" },
 ];
 
-function formatQty(value: number) {
-  return Number(value || 0).toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
-function formatOpnameDate(dateStr?: string | null) {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export function ProductStockOpnameListPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ProductStockOpnameStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    ProductStockOpnameStatus | "all"
+  >("all");
   const [stallFilter, setStallFilter] = useState("");
   const limit = 10;
 
@@ -89,7 +82,10 @@ export function ProductStockOpnameListPage() {
   const loading = listQuery.isLoading;
 
   const hasActiveFilters =
-    Boolean(search) || statusFilter !== "all" || Boolean(stallFilter) || page > 1;
+    Boolean(search) ||
+    statusFilter !== "all" ||
+    Boolean(stallFilter) ||
+    page > 1;
 
   const handleResetFilters = () => {
     setSearchQuery("");
@@ -113,7 +109,10 @@ export function ProductStockOpnameListPage() {
               </Button>
             </Link>
             <Link href={PRODUCT_ROUTES.inventoryStock}>
-              <Button variant="outline" className="purchasing-secondary-button w-full sm:w-auto">
+              <Button
+                variant="outline"
+                className="purchasing-secondary-button w-full sm:w-auto"
+              >
                 Lihat Stok
               </Button>
             </Link>
@@ -130,7 +129,9 @@ export function ProductStockOpnameListPage() {
         </Card>
         <Card className="border-gray-200/70 shadow-xs">
           <CardContent className="p-4">
-            <p className="text-xs font-medium text-gray-500">Perhitungan Berjalan</p>
+            <p className="text-xs font-medium text-gray-500">
+              Perhitungan Berjalan
+            </p>
             <p className="mt-1 text-2xl font-bold text-amber-600">
               {items.filter((item) => item.status === "in_progress").length}
             </p>
@@ -187,7 +188,9 @@ export function ProductStockOpnameListPage() {
                 setPage(1);
               }}
               placeholder={
-                warehousesQuery.isLoading ? STALL_LABELS.loading : `All ${STALL_LABELS.plural}`
+                warehousesQuery.isLoading
+                  ? STALL_LABELS.loading
+                  : `All ${STALL_LABELS.plural}`
               }
               searchPlaceholder={STALL_LABELS.search}
               emptyMessage={STALL_LABELS.empty}
@@ -211,11 +214,17 @@ export function ProductStockOpnameListPage() {
               onClick={() => listQuery.refetch()}
               disabled={loading}
             >
-              <ArrowPathIcon className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              <ArrowPathIcon
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
               Muat Ulang
             </Button>
             {hasActiveFilters && (
-              <Button variant="outline" onClick={handleResetFilters} className="h-10 shrink-0">
+              <Button
+                variant="outline"
+                onClick={handleResetFilters}
+                className="h-10 shrink-0"
+              >
                 Atur Ulang
               </Button>
             )}
@@ -230,7 +239,9 @@ export function ProductStockOpnameListPage() {
                 <th className="px-4 py-3 text-left font-semibold">Stall</th>
                 <th className="px-4 py-3 text-left font-semibold">Tanggal</th>
                 <th className="px-4 py-3 text-right font-semibold">Baris</th>
-                <th className="px-4 py-3 text-right font-semibold">Terhitung</th>
+                <th className="px-4 py-3 text-right font-semibold">
+                  Terhitung
+                </th>
                 <th className="px-4 py-3 text-right font-semibold">Selisih</th>
                 <th className="px-4 py-3 text-left font-semibold">Status</th>
                 <th className="px-4 py-3 text-right font-semibold">Aksi</th>
@@ -239,13 +250,19 @@ export function ProductStockOpnameListPage() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-gray-400"
+                  >
                     Memuat sesi stok opname produk...
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-12 text-center text-gray-400"
+                  >
                     <ClipboardDocumentListIcon className="mx-auto mb-2 h-8 w-8 text-gray-300" />
                     Belum ada sesi stok opname produk
                   </td>
@@ -256,7 +273,8 @@ export function ProductStockOpnameListPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={
-                          item.status === "draft" || item.status === "in_progress"
+                          item.status === "draft" ||
+                          item.status === "in_progress"
                             ? PRODUCT_ROUTES.inventoryOpnameContinue(item.id)
                             : PRODUCT_ROUTES.inventoryOpnameDetail(item.id)
                         }
@@ -268,27 +286,34 @@ export function ProductStockOpnameListPage() {
                     <td className="px-4 py-3 text-gray-600">
                       {item.warehouse?.name || item.warehouse?.code || "—"}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{formatOpnameDate(item.opname_date)}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">
-                      {formatQty(item.total_lines)}
+                    <td className="px-4 py-3 text-gray-600">
+                      {formatDate(item.opname_date, "—")}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-700">
-                      {formatQty(item.lines_counted)}
+                      {formatNumber(item.total_lines, 4)}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-700">
-                      {formatQty(item.lines_with_variance)}
+                      {formatNumber(item.lines_counted, 4)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-700">
+                      {formatNumber(item.lines_with_variance, 4)}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
                         variant="outline"
-                        className={PRODUCT_STOCK_OPNAME_STATUS_COLORS[item.status]}
+                        className={
+                          PRODUCT_STOCK_OPNAME_STATUS_COLORS[item.status]
+                        }
                       >
                         {PRODUCT_STOCK_OPNAME_STATUS_LABELS[item.status]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {item.status === "draft" || item.status === "in_progress" ? (
-                        <Link href={PRODUCT_ROUTES.inventoryOpnameContinue(item.id)}>
+                      {item.status === "draft" ||
+                      item.status === "in_progress" ? (
+                        <Link
+                          href={PRODUCT_ROUTES.inventoryOpnameContinue(item.id)}
+                        >
                           <Button
                             variant="ghost"
                             size="sm"
@@ -299,7 +324,9 @@ export function ProductStockOpnameListPage() {
                           </Button>
                         </Link>
                       ) : (
-                        <Link href={PRODUCT_ROUTES.inventoryOpnameDetail(item.id)}>
+                        <Link
+                          href={PRODUCT_ROUTES.inventoryOpnameDetail(item.id)}
+                        >
                           <Button
                             variant="ghost"
                             size="sm"

@@ -6,4 +6,6 @@ export const arKeys = {
     [...arKeys.all, "receipts", f ?? {}] as const,
   receivable: () => [...arKeys.all, "receivable"] as const,
   aging: (asOf?: string) => [...arKeys.all, "aging", asOf ?? ""] as const,
+  bySalesInvoice: (salesInvoiceId: string) =>
+    [...arKeys.all, "by-sales-invoice", salesInvoiceId] as const,
 };

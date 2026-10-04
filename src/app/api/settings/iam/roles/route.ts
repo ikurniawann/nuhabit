@@ -1,60 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { filterRoleRows, mapRoleItem } from "@/lib/iam/role-mapper";
 import { createIamRoleInDb, listIamRolesFromDb } from "@/lib/iam/role-repository";
+import { roleCreateSchema } from "@/lib/settings/iam-schemas";
 
-function apiErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "object" && error && "message" in error) {
-    return String((error as { message?: string }).message);
-  }
-  return "Internal server error";
-}
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const sp = request.nextUrl.searchParams;
+  const filtered = filterRoleRows((await listIamRolesFromDb()).map(mapRoleItem), {
+    search: sp.get("search") ?? undefined,
+    status: sp.get("status") ?? undefined,
+  });
+  return NextResponse.json({ data: filtered, total: filtered.length });
+}, "GET /api/settings/iam/roles");
 
-export async function GET(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-
-    const { searchParams } = request.nextUrl;
-    const search = searchParams.get("search") ?? undefined;
-    const status = searchParams.get("status") ?? undefined;
-
-    const rows = await listIamRolesFromDb();
-    const mapped = rows.map(mapRoleItem);
-    const filtered = filterRoleRows(mapped, { search, status });
-
-    return NextResponse.json({
-      data: filtered,
-      total: filtered.length,
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles] GET failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsRoles);
-    const body = await request.json();
-
-    if (!body.code?.trim() || !body.name?.trim()) {
-      return NextResponse.json({ error: "Code and name are required" }, { status: 400 });
-    }
-
-    const id = await createIamRoleInDb({
-      code: String(body.code).trim().toLowerCase(),
-      name: String(body.name).trim(),
-      description: body.description?.trim() || null,
-      isActive: body.isActive ?? true,
-    });
-
-    return NextResponse.json({ id }, { status: 201 });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("[iam/roles] POST failed:", error);
-    return NextResponse.json({ error: apiErrorMessage(error) }, { status: 500 });
-  }
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsRoles);
+  const body = await validateBody(request, roleCreateSchema);
+  const id = await createIamRoleInDb({
+    code: body.code.toLowerCase(),
+    name: body.name,
+    description: body.description?.trim() || null,
+    isActive: body.isActive ?? true,
+  });
+  return NextResponse.json({ id }, { status: 201 });
+}, "POST /api/settings/iam/roles");

@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { filterComboboxClassName } from "@/components/layout/form-field";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatNumber } from "@/lib/format";
 import { useApInvoiceList } from "../queries";
 import type { ApInvoiceRow, ApPaymentStatus } from "../routes";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
 
 const PAYMENT_STATUS_LABELS: Record<ApPaymentStatus, string> = {
   unpaid: "Belum Dibayar",
@@ -27,14 +28,9 @@ const PAYMENT_STATUS_STYLES: Record<ApPaymentStatus, string> = {
 };
 
 export function ApInvoicesPage() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const { query: searchQuery, setQuery: setSearchQuery, search } = useDebouncedSearch();
   const [paymentStatus, setPaymentStatus] = useState("all");
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
 
   const filters = useMemo(
     () => ({
@@ -101,7 +97,7 @@ export function ApInvoicesPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : (
           <InvoiceTable rows={rows} />
@@ -150,10 +146,10 @@ function InvoiceTable({ rows }: { rows: ApInvoiceRow[] }) {
               </td>
               <td className="px-2 py-3">{row.invoice_date}</td>
               <td className="px-2 py-3 text-right">
-                {formatAmount(row.total_amount)}
+                {formatNumber(row.total_amount)}
               </td>
               <td className="px-2 py-3 text-right">
-                {formatAmount(row.outstanding_amount || 0)}
+                {formatNumber(row.outstanding_amount || 0)}
               </td>
               <td className="px-2 py-3">
                 <Badge

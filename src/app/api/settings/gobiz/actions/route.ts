@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { appOrigin } from "@/lib/app-origin";
 import { z } from "zod";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { SETTING_KEYS, setSetting } from "@/lib/settings/app-settings";
 import { generateWebhookToken, gobizWebhookUrl } from "@/lib/gobiz/config";
@@ -25,40 +26,38 @@ const schema = z.object({
   action: z.enum(["test", "register_webhooks", "sync_catalog", "regenerate_token"]),
 });
 
-export async function POST(request: NextRequest) {
-  try {
-    await requireIamMenuPrefix(IAM.settingsIntegrations);
-    const parsed = schema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return NextResponse.json({ success: false, error: "Aksi tidak valid" }, { status: 400 });
+async function runAction(action: z.infer<typeof schema>["action"], origin: string) {
+  switch (action) {
+    case "test":
+      return testGobizConnection();
+    case "register_webhooks":
+      return registerGobizWebhooks(origin);
+    case "sync_catalog":
+      return syncCatalogToGobiz(origin);
+    case "regenerate_token": {
+      const token = generateWebhookToken();
+      await setSetting(SETTING_KEYS.GOBIZ_WEBHOOK_TOKEN, token);
+      return { webhook_url: gobizWebhookUrl(origin, token) };
+    }
+  }
+}
 
-    switch (parsed.data.action) {
-      case "test":
-        return NextResponse.json({ success: true, data: await testGobizConnection() });
-      case "register_webhooks":
-        return NextResponse.json({ success: true, data: await registerGobizWebhooks(appOrigin(request)) });
-      case "sync_catalog":
-        return NextResponse.json({ success: true, data: await syncCatalogToGobiz(appOrigin(request)) });
-      case "regenerate_token": {
-        const token = generateWebhookToken();
-        await setSetting(SETTING_KEYS.GOBIZ_WEBHOOK_TOKEN, token);
-        return NextResponse.json({ success: true, data: { webhook_url: gobizWebhookUrl(appOrigin(request), token) } });
-      }
-    }
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.settingsIntegrations);
+  const parsed = schema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) throw ApiError.badRequest("Aksi tidak valid");
+
+  try {
+    return NextResponse.json({ success: true, data: await runAction(parsed.data.action, appOrigin(request)) });
   } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    if (error instanceof GobizNotConfiguredError) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error instanceof GobizNotConfiguredError) throw ApiError.badRequest(error.message);
     if (error instanceof GobizApiError) {
+      // Status + body GoBiz ikut dikirim supaya admin bisa diagnosa di UI.
       return NextResponse.json(
         { success: false, error: `GoBiz: ${error.message}`, status: error.status, detail: error.body },
         { status: 502 }
       );
     }
-    console.error("[settings/gobiz/actions] failed:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Internal server error" },
-      { status: 500 }
-    );
+    throw error;
   }
-}
+}, "POST /api/settings/gobiz/actions");

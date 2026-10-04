@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { Loader2, Search, X } from "lucide-react";
@@ -18,26 +18,22 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useFiscalYearList } from "@/features/accounting/fiscal-years/queries";
 import { useOpenAccountingPeriod } from "../mutations";
 import { useAccountingPeriods } from "../queries";
 import { PERIOD_ROUTES } from "../routes";
 import type { AccountingPeriodListItem } from "../types";
+import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
 
 export function AccountingPeriodPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const { query: searchQuery, setQuery: setSearchQuery, search } = useDebouncedSearch();
   const [fiscalYearId, setFiscalYearId] = useState("");
   const [status, setStatus] = useState<"" | "OPEN" | "CLOSED">("");
   const [openTarget, setOpenTarget] =
     useState<AccountingPeriodListItem | null>(null);
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
 
   const yearsQuery = useFiscalYearList({ is_active: "true" });
   const yearOptions = useMemo(
@@ -129,7 +125,7 @@ export function AccountingPeriodPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
           </div>
         ) : rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
@@ -172,7 +168,7 @@ export function AccountingPeriodPage() {
                         variant="outline"
                         className={
                           row.status === "OPEN"
-                            ? "border-primary/30 text-primary"
+                            ? "border-primary/30 text-brand-text"
                             : "border-gray-200/80 text-muted-foreground"
                         }
                       >

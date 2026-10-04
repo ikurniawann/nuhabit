@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { formatAccountCodeDisplay } from "@/lib/accounting/account-code";
@@ -5,7 +6,7 @@ import type {
   JournalMappingItem,
   JournalMappingLineItem,
   JournalMappingLinePayload,
-} from "@/features/accounting/journal-mappings/types";
+} from "./types";
 
 type MappingRow = {
   id: string;
@@ -179,19 +180,19 @@ async function assertPostableAccounts(
   );
 
   if (rows.length !== unique.length) {
-    throw new Error("Satu atau lebih akun COA tidak ditemukan");
+    throw ApiError.notFound("Satu atau lebih akun COA tidak ditemukan");
   }
   for (const row of rows) {
-    if (row.deleted_at) throw new Error("Akun COA sudah dihapus");
+    if (row.deleted_at) throw ApiError.badRequest("Akun COA sudah dihapus");
     if (!row.is_postable) {
-      throw new Error("Akun mapping harus postable (bukan header)");
+      throw ApiError.badRequest("Akun mapping harus postable (bukan header)");
     }
     if (
       !companyId ||
       !row.company_id ||
       row.company_id !== companyId
     ) {
-      throw new Error("Akun COA harus dalam company yang sama");
+      throw ApiError.badRequest("Akun COA harus dalam company yang sama");
     }
   }
 }

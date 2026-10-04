@@ -3,7 +3,7 @@ import type {
   FiscalYearItem,
   FiscalYearListFilters,
   FiscalYearPayload,
-} from "./types";
+} from "@/lib/accounting/types";
 import type {
   FiscalCoverageResult,
   ResolvedFiscalPeriod,

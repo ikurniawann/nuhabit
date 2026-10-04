@@ -1,7 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Camera, CheckCircle2, Copy, Loader2, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { useState } from "react";
+import type { InstagramCredentials } from "../api";
+import {
+  useDeleteInstagramConfig,
+  useInstagramConfig,
+  useSaveInstagramConfig,
+} from "../queries";
+import {
+  Camera,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  Save,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
 
 /**
  * EPIC-013 Fase C — form kredensial Instagram Messaging.
@@ -12,102 +26,63 @@ import { Camera, CheckCircle2, Copy, Loader2, Save, ShieldAlert, Trash2 } from "
  * lama", bukan menghapus.
  */
 
-interface ConfigState {
-  verify_token: string;
-  account_id: string;
-  has_app_secret: boolean;
-  app_secret_masked: string | null;
-  has_access_token: boolean;
-  access_token_masked: string | null;
-  webhook_ready: boolean;
-  configured: boolean;
-}
-
 const WEBHOOK_PATH = "/api/crm/instagram/webhook";
 
 export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
-  const [config, setConfig] = useState<ConfigState | null>(null);
-  const [form, setForm] = useState({
-    app_secret: "",
-    verify_token: "",
-    access_token: "",
-    account_id: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const configQuery = useInstagramConfig();
+  const saveMutation = useSaveInstagramConfig();
+  const deleteMutation = useDeleteInstagramConfig();
+  const config = configQuery.data ?? null;
+  // Isian user; field yang belum disentuh memakai nilai tersimpan (rahasia selalu kosong).
+  const [edits, setEdits] = useState<Partial<InstagramCredentials>>({});
+  const form: InstagramCredentials = {
+    app_secret: edits.app_secret ?? "",
+    access_token: edits.access_token ?? "",
+    verify_token: edits.verify_token ?? config?.verify_token ?? "",
+    account_id: edits.account_id ?? config?.account_id ?? "",
+  };
+  const setField = (key: keyof InstagramCredentials) => (value: string) =>
+    setEdits((prev) => ({ ...prev, [key]: value }));
+  const saving = saveMutation.isPending || deleteMutation.isPending;
   const [copied, setCopied] = useState(false);
-  const [feedback, setFeedback] = useState<{ error: string | null; message: string | null }>({
+  const [feedback, setFeedback] = useState<{
+    error: string | null;
+    message: string | null;
+  }>({
     error: null,
     message: null,
   });
-
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/settings/instagram", { cache: "no-store" });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Gagal memuat konfigurasi");
-      setConfig(json.data);
-      setForm((current) => ({
-        ...current,
-        verify_token: json.data.verify_token ?? "",
-        account_id: json.data.account_id ?? "",
-      }));
-    } catch (error) {
-      setFeedback({
-        error: error instanceof Error ? error.message : "Gagal memuat konfigurasi",
-        message: null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const loadError =
+    configQuery.error instanceof Error ? configQuery.error.message : null;
 
   async function save() {
-    setSaving(true);
     setFeedback({ error: null, message: null });
     try {
-      const response = await fetch("/api/settings/instagram", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Gagal menyimpan");
-      setForm((current) => ({ ...current, app_secret: "", access_token: "" }));
+      await saveMutation.mutateAsync(form);
+      setEdits({});
       setFeedback({ error: null, message: "Kredensial tersimpan." });
-      await load();
       onSaved?.();
     } catch (error) {
       setFeedback({
         error: error instanceof Error ? error.message : "Gagal menyimpan",
         message: null,
       });
-    } finally {
-      setSaving(false);
     }
   }
 
   async function hapus() {
-    setSaving(true);
-    try {
-      await fetch("/api/settings/instagram", { method: "DELETE" });
-      setForm({ app_secret: "", verify_token: "", access_token: "", account_id: "" });
-      setFeedback({ error: null, message: "Kredensial dihapus." });
-      await load();
-      onSaved?.();
-    } finally {
-      setSaving(false);
-    }
+    await deleteMutation.mutateAsync();
+    setEdits({ verify_token: "", account_id: "" });
+    setFeedback({ error: null, message: "Kredensial dihapus." });
+    onSaved?.();
   }
 
   const webhookUrl =
-    typeof window !== "undefined" ? `${window.location.origin}${WEBHOOK_PATH}` : WEBHOOK_PATH;
+    typeof window !== "undefined"
+      ? `${window.location.origin}${WEBHOOK_PATH}`
+      : WEBHOOK_PATH;
 
-  if (loading) {
+  if (configQuery.isLoading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <Loader2 className="mx-auto h-5 w-5 animate-spin text-violet-600" />
@@ -123,7 +98,8 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
             <Camera className="size-4 text-pink-600" /> Instagram Messaging
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            Diisi Super Admin. App Secret dan Access Token tidak pernah ditampilkan kembali.
+            Diisi Super Admin. App Secret dan Access Token tidak pernah
+            ditampilkan kembali.
           </p>
         </div>
         {config?.configured ? (
@@ -143,8 +119,9 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
 
       {config?.webhook_ready && !config.configured && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Pesan masuk sudah bisa diterima, tetapi <strong>balasan belum bisa dikirim</strong> —
-          lengkapi Access Token dan ID Akun Instagram.
+          Pesan masuk sudah bisa diterima, tetapi{" "}
+          <strong>balasan belum bisa dikirim</strong> — lengkapi Access Token
+          dan ID Akun Instagram.
         </p>
       )}
 
@@ -178,21 +155,27 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
           label="Verify Token"
           hint="Anda yang menentukan; salin persis ke Meta."
           value={form.verify_token}
-          onChange={(v) => setForm((f) => ({ ...f, verify_token: v }))}
+          onChange={setField("verify_token")}
         />
         <Field
           label="ID Akun Instagram"
           hint="Instagram Business Account ID."
           value={form.account_id}
-          onChange={(v) => setForm((f) => ({ ...f, account_id: v }))}
+          onChange={setField("account_id")}
         />
         <Field
           label="App Secret"
           type="password"
-          hint={config?.has_app_secret ? `Tersimpan: ${config.app_secret_masked}` : "Belum diisi."}
-          placeholder={config?.has_app_secret ? "Biarkan kosong bila tidak diubah" : ""}
+          hint={
+            config?.has_app_secret
+              ? `Tersimpan: ${config.app_secret_masked}`
+              : "Belum diisi."
+          }
+          placeholder={
+            config?.has_app_secret ? "Biarkan kosong bila tidak diubah" : ""
+          }
           value={form.app_secret}
-          onChange={(v) => setForm((f) => ({ ...f, app_secret: v }))}
+          onChange={setField("app_secret")}
         />
         <Field
           label="Access Token"
@@ -202,14 +185,18 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
               ? `Tersimpan: ${config.access_token_masked}`
               : "Butuh izin instagram_manage_messages."
           }
-          placeholder={config?.has_access_token ? "Biarkan kosong bila tidak diubah" : ""}
+          placeholder={
+            config?.has_access_token ? "Biarkan kosong bila tidak diubah" : ""
+          }
           value={form.access_token}
-          onChange={(v) => setForm((f) => ({ ...f, access_token: v }))}
+          onChange={setField("access_token")}
         />
       </div>
 
-      {feedback.error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{feedback.error}</p>
+      {(feedback.error || loadError) && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          {feedback.error || loadError}
+        </p>
       )}
       {feedback.message && (
         <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
@@ -224,7 +211,11 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
           disabled={saving}
           className="inline-flex h-9 items-center gap-1.5 rounded-md bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
         >
-          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+          {saving ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Save className="size-3.5" />
+          )}
           Simpan
         </button>
         {(config?.has_app_secret || config?.has_access_token) && (
@@ -259,7 +250,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        {label}
+      </label>
       <input
         type={type}
         value={value}

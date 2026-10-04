@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { ManualAdjustmentPage } from "@/features/inventory/adjustment/components/manual-adjustment-page";
 
 type PageProps = {

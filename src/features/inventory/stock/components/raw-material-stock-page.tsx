@@ -1,6 +1,6 @@
 "use client";
 
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { RawMaterialStockTab } from "./raw-material-stock-tab";
 
 export function RawMaterialStockPage() {

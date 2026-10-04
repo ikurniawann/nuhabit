@@ -8,17 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { DsDateTimePicker } from "@/components/design-system";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   useStockOpnamePreview,
   useStockOpnameWarehouses,
 } from "@/features/inventory/stock-opname/queries";
 import { toast } from "sonner";
-
-function formatQty(value: number | null | undefined) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
-}
+import { formatNumber } from "@/lib/format";
+import { fetchJson } from "@/features/inventory/shared/inventory-lookups";
 
 type AdjustLine = {
   key: string;
@@ -34,7 +32,9 @@ export function ManualAdjustmentPage() {
   const warehousesQuery = useStockOpnameWarehouses();
 
   const [warehouseId, setWarehouseId] = useState("");
-  const [adjustDate, setAdjustDate] = useState(new Date().toISOString().slice(0, 10));
+  const [adjustDate, setAdjustDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
   const [notes, setNotes] = useState("");
   const [itemSearch, setItemSearch] = useState("");
   const [qtyInputs, setQtyInputs] = useState<Record<string, string>>({});
@@ -48,7 +48,9 @@ export function ManualAdjustmentPage() {
     label: w.name,
     description: w.code,
   }));
-  const selectedWarehouse = warehouseOptions.find((w) => w.value === warehouseId);
+  const selectedWarehouse = warehouseOptions.find(
+    (w) => w.value === warehouseId,
+  );
 
   const lines = useMemo<AdjustLine[]>(() => {
     if (!warehouseId || !previewQuery.data) return [];
@@ -69,7 +71,7 @@ export function ManualAdjustmentPage() {
     return lines.filter(
       (line) =>
         line.material_nama.toLowerCase().includes(q) ||
-        line.material_kode.toLowerCase().includes(q)
+        line.material_kode.toLowerCase().includes(q),
     );
   }, [lines, itemSearch]);
 
@@ -129,11 +131,15 @@ export function ManualAdjustmentPage() {
       return !Number.isFinite(n) || n < 0;
     });
     if (invalid) {
-      toast.error("Stok baru harus berupa angka lebih besar atau sama dengan nol");
+      toast.error(
+        "Stok baru harus berupa angka lebih besar atau sama dengan nol",
+      );
       return false;
     }
 
-    const withVariance = toSave.filter((line) => resolveQty(line) !== line.qty_system);
+    const withVariance = toSave.filter(
+      (line) => resolveQty(line) !== line.qty_system,
+    );
     if (withVariance.length === 0) {
       toast.error("Tidak ada selisih stok untuk disimpan");
       return false;
@@ -144,7 +150,9 @@ export function ManualAdjustmentPage() {
 
   const buildNote = () => {
     const base = notes.trim();
-    const dateLabel = adjustDate ? `Penyesuaian ${adjustDate}` : "Penyesuaian Stok";
+    const dateLabel = adjustDate
+      ? `Penyesuaian ${adjustDate}`
+      : "Penyesuaian Stok";
     return base ? `${dateLabel}: ${base}` : dateLabel;
   };
 
@@ -166,7 +174,7 @@ export function ManualAdjustmentPage() {
       for (const line of toSave) {
         const qty = resolveQty(line)!;
         try {
-          const res = await fetch("/api/purchasing/inventory/adjustment", {
+          await fetchJson("/api/purchasing/inventory/adjustment", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -176,10 +184,6 @@ export function ManualAdjustmentPage() {
               notes: note,
             }),
           });
-          const json = await res.json();
-          if (!res.ok) {
-            throw new Error(json.message || "Gagal menyesuaikan stok");
-          }
           saved += 1;
           savedIds.push(line.raw_material_id);
         } catch {
@@ -293,15 +297,21 @@ export function ManualAdjustmentPage() {
             <div className="grid grid-cols-3 gap-3 border-t border-gray-200/70 pt-4">
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Total Baris</p>
-                <p className="text-lg font-bold text-gray-900">{progress.total}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {progress.total}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Terisi</p>
-                <p className="text-lg font-bold text-amber-600">{progress.filled}</p>
+                <p className="text-lg font-bold text-amber-600">
+                  {progress.filled}
+                </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 bg-gray-50/50 px-3 py-2">
                 <p className="text-xs font-medium text-gray-500">Ada Selisih</p>
-                <p className="text-lg font-bold text-pink-600">{progress.variance}</p>
+                <p className="text-lg font-bold text-pink-600">
+                  {progress.variance}
+                </p>
               </div>
             </div>
           )}
@@ -312,7 +322,9 @@ export function ManualAdjustmentPage() {
         <CardContent className="p-0">
           <div className="flex flex-col gap-3 border-b border-gray-200/70 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Koreksi Stok</h2>
+              <h2 className="text-base font-semibold text-gray-900">
+                Koreksi Stok
+              </h2>
               <p className="text-sm text-gray-500">
                 {!warehouseId
                   ? "Pilih stall untuk memuat bahan baku"
@@ -320,7 +332,9 @@ export function ManualAdjustmentPage() {
                     ? "Memuat bahan baku..."
                     : hasItems
                       ? `Isi stok baru${
-                          selectedWarehouse ? ` — ${selectedWarehouse.label}` : ""
+                          selectedWarehouse
+                            ? ` — ${selectedWarehouse.label}`
+                            : ""
                         }`
                       : "Tidak ada bahan baku aktif di stall ini"}
               </p>
@@ -354,25 +368,37 @@ export function ManualAdjustmentPage() {
               <tbody>
                 {!warehouseId ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       Pilih stall terlebih dahulu
                     </td>
                   </tr>
                 ) : loading ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       Memuat item...
                     </td>
                   </tr>
                 ) : previewQuery.isError ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-red-500">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-10 text-center text-red-500"
+                    >
                       Gagal memuat bahan baku
                     </td>
                   </tr>
                 ) : filteredLines.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-10 text-center text-gray-400">
+                    <td
+                      colSpan={6}
+                      className="px-3 py-10 text-center text-gray-400"
+                    >
                       {hasItems
                         ? "Data tidak ditemukan"
                         : "Tidak ada bahan baku aktif"}
@@ -400,9 +426,11 @@ export function ManualAdjustmentPage() {
                         <td className="px-3 py-3 font-medium text-gray-900">
                           {line.material_nama}
                         </td>
-                        <td className="px-3 py-3 text-gray-600">{line.satuan || "—"}</td>
+                        <td className="px-3 py-3 text-gray-600">
+                          {line.satuan || "—"}
+                        </td>
                         <td className="px-3 py-3 text-right text-gray-700">
-                          {formatQty(line.qty_system)}
+                          {formatNumber(line.qty_system, 4)}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <Input
@@ -410,7 +438,9 @@ export function ManualAdjustmentPage() {
                             min={0}
                             step="any"
                             value={line.qty_actual_input}
-                            onChange={(e) => handleLineChange(line.key, e.target.value)}
+                            onChange={(e) =>
+                              handleLineChange(line.key, e.target.value)
+                            }
                             placeholder="0"
                             disabled={submitting}
                             className="ml-auto h-9 w-28 border-gray-200/80 text-right text-sm"
@@ -427,7 +457,7 @@ export function ManualAdjustmentPage() {
                                   : "text-red-600"
                           }`}
                         >
-                          {variance === null ? "—" : formatQty(variance)}
+                          {variance === null ? "—" : formatNumber(variance, 4)}
                         </td>
                       </tr>
                     );

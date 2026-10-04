@@ -15,17 +15,23 @@ export type ArListFilters = {
 
 export const fetchArInvoices = (filters?: ArListFilters) =>
   apiGet<{ data: ArInvoiceRow[]; meta?: { total: number } }>(
-    buildListUrl(BASE_INV, filters as Record<string, string | number | undefined>)
+    buildListUrl(
+      BASE_INV,
+      filters as Record<string, string | number | undefined>,
+    ),
   );
 
 export const fetchArReceipts = (filters?: ArListFilters) =>
   apiGet<{ data: ArReceiptRow[]; meta?: { total: number } }>(
-    buildListUrl(BASE_RCP, filters as Record<string, string | number | undefined>)
+    buildListUrl(
+      BASE_RCP,
+      filters as Record<string, string | number | undefined>,
+    ),
   );
 
 export const fetchArReceivable = () =>
   apiGet<{ data: ArInvoiceRow[] }>("/api/accounting/ar/receivable").then(
-    (r) => r.data
+    (r) => r.data,
   );
 
 export const fetchArAging = (asOf?: string) =>
@@ -36,8 +42,14 @@ export const fetchArAging = (asOf?: string) =>
       invoices: ArInvoiceRow[];
     };
   }>(buildListUrl("/api/accounting/ar/aging", { as_of: asOf })).then(
-    (r) => r.data
+    (r) => r.data,
   );
+
+/** AR invoice untuk sales invoice B2B (dibuat on-demand di server). */
+export const fetchArInvoiceBySalesInvoice = (salesInvoiceId: string) =>
+  apiGet<{ data: ArInvoiceRow }>(
+    `/api/accounting/ar/by-sales-invoice/${encodeURIComponent(salesInvoiceId)}`,
+  ).then((r) => r.data);
 
 export const createArReceipt = (body: {
   invoice_id: string;
@@ -46,8 +58,7 @@ export const createArReceipt = (body: {
   method?: string;
   reference_number?: string | null;
   notes?: string | null;
-}) =>
-  apiPost<{ data: ArReceiptRow; message?: string }>(BASE_RCP, body);
+}) => apiPost<{ data: ArReceiptRow; message?: string }>(BASE_RCP, body);
 
 export const AR_ROUTES = {
   receivable: "/dashboard/accounting/receivable",

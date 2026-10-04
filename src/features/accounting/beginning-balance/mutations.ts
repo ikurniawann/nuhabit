@@ -5,7 +5,7 @@ import { beginningBalanceQueryKeys } from "./query-keys";
 import { fiscalYearQueryKeys } from "@/features/accounting/fiscal-years/query-keys";
 import { journalEntryQueryKeys } from "@/features/accounting/journal-entries/query-keys";
 import { saveBeginningBalanceApi } from "./api";
-import type { BeginningBalanceSavePayload } from "./types";
+import type { BeginningBalanceSavePayload } from "@/lib/accounting/types";
 
 export function useSaveBeginningBalance(fiscalYearId: string) {
   const qc = useQueryClient();

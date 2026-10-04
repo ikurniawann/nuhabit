@@ -6,7 +6,7 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useFiscalYearList } from "@/features/accounting/fiscal-years/queries";
 import { FISCAL_YEAR_ROUTES } from "@/features/accounting/fiscal-years/routes";
 import { BEGINNING_BALANCE_ROUTES } from "../routes";
@@ -24,8 +24,7 @@ export function BeginningBalanceListPage() {
             Beginning Balance
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Saldo awal per fiscal year — suggest dari FY sebelumnya, bisa
-            diedit
+            Saldo awal per fiscal year — suggest dari FY sebelumnya, bisa diedit
           </p>
         </div>
         <Button
@@ -45,7 +44,7 @@ export function BeginningBalanceListPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat fiscal years...
             </p>
@@ -106,7 +105,7 @@ export function BeginningBalanceListPage() {
                         size="sm"
                         onClick={() =>
                           router.push(
-                            BEGINNING_BALANCE_ROUTES.forFiscalYear(row.id)
+                            BEGINNING_BALANCE_ROUTES.forFiscalYear(row.id),
                           )
                         }
                         className="h-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"

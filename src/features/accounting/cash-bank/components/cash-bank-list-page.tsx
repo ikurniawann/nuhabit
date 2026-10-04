@@ -6,16 +6,11 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useCashBankAccounts } from "../queries";
 import { CASH_BANK_ROUTES } from "../routes";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
-function formatAmount(n: number) {
-  return new Intl.NumberFormat("id-ID", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n);
-}
 
 export function CashBankListPage() {
   const router = useRouter();
@@ -38,7 +33,7 @@ export function CashBankListPage() {
         <div className="rounded-lg border border-gray-200/70 bg-card px-4 py-2 text-sm">
           <span className="text-muted-foreground">Total saldo: </span>
           <span className="font-semibold tabular-nums text-foreground">
-            {formatAmount(totalBalance)}
+            {formatLedgerAmount(totalBalance)}
           </span>
         </div>
       </div>
@@ -50,7 +45,7 @@ export function CashBankListPage() {
       >
         {isLoading ? (
           <div className="py-14 text-center">
-            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-brand-text" />
             <p className="mt-2 text-sm text-muted-foreground">
               Memuat Cash & Bank...
             </p>
@@ -98,7 +93,7 @@ export function CashBankListPage() {
                       {row.movement_count}
                     </td>
                     <td className="px-3 py-3 text-right font-medium tabular-nums text-foreground">
-                      {formatAmount(row.balance)}
+                      {formatLedgerAmount(row.balance)}
                     </td>
                     <td className="px-3 py-3 text-right">
                       <Button

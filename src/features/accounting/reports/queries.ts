@@ -3,12 +3,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { reportQueryKeys } from "./query-keys";
 import {
+  fetchAccountingDashboard,
   fetchBalanceSheet,
   fetchCashFlow,
   fetchGeneralLedger,
   fetchGeneralLedgerAccounts,
   fetchIncomeStatement,
   fetchTrialBalance,
+  type DashboardFilters,
 } from "./api";
 
 export const useTrialBalance = (asOf: string) =>
@@ -52,7 +54,7 @@ export const useGeneralLedgerAccounts = (asOf: string) =>
 export const useGeneralLedger = (
   accountId: string | null,
   dateFrom: string,
-  dateTo: string
+  dateTo: string,
 ) =>
   useQuery({
     queryKey: reportQueryKeys.report("general-ledger", {
@@ -60,6 +62,17 @@ export const useGeneralLedger = (
       date_from: dateFrom,
       date_to: dateTo,
     }),
-    queryFn: () => fetchGeneralLedger(accountId!, dateFrom || undefined, dateTo || undefined),
+    queryFn: () =>
+      fetchGeneralLedger(
+        accountId!,
+        dateFrom || undefined,
+        dateTo || undefined,
+      ),
     enabled: Boolean(accountId),
+  });
+
+export const useAccountingDashboard = (filters: DashboardFilters) =>
+  useQuery({
+    queryKey: reportQueryKeys.dashboard(filters),
+    queryFn: () => fetchAccountingDashboard(filters),
   });

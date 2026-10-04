@@ -3,18 +3,14 @@
 import { useState } from "react";
 import { TableCellsIcon } from "@heroicons/react/24/outline";
 import { useTrialBalance } from "../queries";
-import {
-  AsOfFilter,
-  ReportShell,
-  formatAmount,
-  todayStr,
-} from "./report-shell";
+import { AsOfFilter, ReportShell, todayStr } from "./report-shell";
 import {
   AccountBalanceTable,
   ErrorBlock,
   LoadingBlock,
   SummaryRow,
 } from "./report-table";
+import { formatLedgerAmount } from "@/lib/accounting/format";
 
 export function TrialBalancePage() {
   const [asOf, setAsOf] = useState(todayStr());
@@ -53,8 +49,8 @@ export function TrialBalancePage() {
               />
               <p className="px-3 pt-1 text-xs text-muted-foreground">
                 {data.rows.length} akun postable · termasuk saldo 0 · selisih{" "}
-                {formatAmount(
-                  Math.abs(data.total_debit - data.total_credit)
+                {formatLedgerAmount(
+                  Math.abs(data.total_debit - data.total_credit),
                 )}
               </p>
             </div>
