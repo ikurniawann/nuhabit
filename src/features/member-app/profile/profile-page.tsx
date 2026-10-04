@@ -2,25 +2,38 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Award,
   BookMarked,
   Camera,
   ChevronRight,
+  Coins,
+  Flag,
   Footprints,
+  Gift,
   HeartPulse,
   IdCard,
   LogOut,
+  MessageSquareText,
+  PartyPopper,
+  Receipt,
+  ReceiptText,
   Settings,
+  Sparkles,
+  TicketPercent,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { formatNumber } from "@/lib/member-app/loyalty";
 import { MemberCardSheet } from "../components/member-card";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { m } from "../lib/links";
 import { useAccount, useInvalidateAll } from "../lib/queries-home";
+import { useLoyaltyMe } from "../lib/queries-loyalty";
 import { Spinner, StatusBadge, formatDay } from "../ui";
 
 export function ProfilePage() {
@@ -28,24 +41,33 @@ export function ProfilePage() {
   const router = useRouter();
   const qc = useQueryClient();
   const { data: me, isLoading } = useAccount();
+  const { data: loyalty } = useLoyaltyMe();
   const invalidate = useInvalidateAll();
   const [editing, setEditing] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
-  const [email, setEmail] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", birth_date: "", gender: "", city: "" });
   const [busy, setBusy] = useState(false);
 
   if (isLoading || !me) return <Spinner label={t("Loading profile…")} />;
   const member = me.member;
 
+  const profile = loyalty?.profile;
+  const setField = (key: keyof typeof form) => (value: string) => setForm((cur) => ({ ...cur, [key]: value }));
   const startEdit = () => {
-    setEmail(member.email);
+    setForm({
+      name: member.fullName,
+      email: member.email,
+      birth_date: profile?.birthDate?.slice(0, 10) ?? "",
+      gender: profile?.gender ?? "",
+      city: profile?.city ?? "",
+    });
     setEditing(true);
   };
 
   const save = async () => {
     setBusy(true);
     try {
-      await memberApi("/profile", { method: "PUT", json: { email } });
+      await memberApi("/profile", { method: "PUT", json: { ...form, name: form.name.trim() } });
       invalidate();
       setEditing(false);
     } finally {
@@ -100,8 +122,60 @@ export function ProfilePage() {
         {editing ? (
           <>
             <div>
+              <label className="nh-label">{t("Full name")}</label>
+              <input
+                className="nh-input"
+                value={form.name}
+                maxLength={100}
+                onChange={(e) => setField("name")(e.target.value)}
+              />
+            </div>
+            <div>
               <label className="nh-label">{t("Email")}</label>
-              <input className="nh-input" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input className="nh-input" value={form.email} onChange={(e) => setField("email")(e.target.value)} />
+            </div>
+            <div>
+              <label className="nh-label">{t("Date of birth")}</label>
+              <input
+                className="nh-input"
+                type="date"
+                value={form.birth_date}
+                onChange={(e) => setField("birth_date")(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="nh-label">{t("Gender")}</label>
+              <div className="flex gap-2">
+                {(
+                  [
+                    ["male", t("Male")],
+                    ["female", t("Female")],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={form.gender === value}
+                    onClick={() => setField("gender")(form.gender === value ? "" : value)}
+                    className={`flex-1 rounded-xl border px-3 py-2.5 text-sm font-bold ${
+                      form.gender === value
+                        ? "border-nh-forest bg-nh-forest/10 text-nh-forest"
+                        : "border-nh-line bg-nh-cream text-nh-muted"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="nh-label">{t("City")}</label>
+              <input
+                className="nh-input"
+                value={form.city}
+                maxLength={100}
+                onChange={(e) => setField("city")(e.target.value)}
+              />
             </div>
             <div>
               <label className="nh-label">{t("Phone")}</label>
@@ -111,7 +185,11 @@ export function ProfilePage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <button className="nh-btn-brand flex-1 !py-2" disabled={busy} onClick={() => void save()}>
+              <button
+                className="nh-btn-brand flex-1 !py-2"
+                disabled={busy || !form.name.trim()}
+                onClick={() => void save()}
+              >
                 {t("Save")}
               </button>
               <button className="nh-btn-ghost flex-1 !py-2" onClick={() => setEditing(false)}>
@@ -129,6 +207,12 @@ export function ProfilePage() {
               <span className="text-nh-muted">{t("Phone")}</span>
               <span className="font-bold">{member.phone}</span>
             </div>
+            {profile?.city ? (
+              <div className="flex justify-between">
+                <span className="text-nh-muted">{t("City")}</span>
+                <span className="font-bold">{profile.city}</span>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <span className="text-nh-muted">{t("Member since")}</span>
               <span className="font-bold">{formatDay(member.createdAt)}</span>
@@ -154,35 +238,54 @@ export function ProfilePage() {
           </span>
           <ChevronRight size={16} className="text-nh-muted" />
         </button>
-        {[
-          { to: "/wallet", icon: Wallet, title: t("Wallet & credits"), hint: t("Balance, top up, history") },
-          { to: "/my-classes", icon: BookMarked, title: t("My classes"), hint: t("What your packages cover") },
-          {
-            to: "/profile/emergency",
-            icon: HeartPulse,
-            title: t("Emergency contact"),
-            hint: member.emergencyContact
-              ? `${member.emergencyContact.name} · ${member.emergencyContact.phone}`
-              : t("Not set - add one"),
-          },
-          { to: "/profile/gear", icon: Footprints, title: t("My gear"), hint: t("Shoes & bike mileage") },
-          { to: "/profile/settings", icon: Settings, title: t("Settings"), hint: t("Units, reminders") },
-        ].map(({ to, icon: Icon, title, hint }) => (
-          <Link
-            key={to}
-            href={m(to)}
-            className="flex items-center gap-3 rounded-xl px-2 py-2.5 active:bg-nh-raised"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-nh-ink-soft text-white">
-              <Icon size={16} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">{title}</span>
-              <span className="block truncate text-xs text-nh-muted">{hint}</span>
-            </span>
-            <ChevronRight size={16} className="text-nh-muted" />
-          </Link>
-        ))}
+        <LinkRows
+          items={[
+            { to: "/wallet", icon: Wallet, title: t("Wallet & credits"), hint: t("Balance, top up, history") },
+            { to: "/my-classes", icon: BookMarked, title: t("My classes"), hint: t("What your packages cover") },
+            {
+              to: "/profile/emergency",
+              icon: HeartPulse,
+              title: t("Emergency contact"),
+              hint: member.emergencyContact
+                ? `${member.emergencyContact.name} · ${member.emergencyContact.phone}`
+                : t("Not set - add one"),
+            },
+            { to: "/profile/gear", icon: Footprints, title: t("My gear"), hint: t("Shoes & bike mileage") },
+            { to: "/profile/settings", icon: Settings, title: t("Settings"), hint: t("Units, reminders") },
+          ]}
+        />
+      </section>
+
+      <section className="nh-card flex flex-col !p-2 text-sm">
+        <p className="nh-label !mb-0 px-2 pt-2">{t("Member")}</p>
+        <LinkRows
+          items={[
+            {
+              to: "/coins",
+              icon: Coins,
+              title: "ARK Coin",
+              hint: loyalty
+                ? t("{n} ARK · top up, history", { n: formatNumber(loyalty.coins) })
+                : t("Balance, top up, history"),
+            },
+            {
+              to: "/rewards",
+              icon: Gift,
+              title: t("Rewards"),
+              hint: loyalty
+                ? `${formatNumber(loyalty.totalXp)} XP · ${loyalty.tier?.name ?? "Member"}`
+                : t("Trade XP for rewards"),
+            },
+            { to: "/badges", icon: Award, title: t("Badges"), hint: t("Your achievements") },
+            { to: "/collection", icon: Sparkles, title: t("Collection"), hint: t("Artwork & wallpapers") },
+            { to: "/events", icon: PartyPopper, title: t("Events"), hint: t("Race days, workshops, meetups") },
+            { to: "/challenges", icon: Flag, title: t("Challenges"), hint: t("Visit and spend goals") },
+            { to: "/promos", icon: TicketPercent, title: t("Promos"), hint: t("Promo codes for members") },
+            { to: "/reviews", icon: MessageSquareText, title: t("Reviews"), hint: t("Rate your orders") },
+            { to: "/orders", icon: ReceiptText, title: t("Orders"), hint: t("Receipts and outlet visits") },
+            { to: "/bills", icon: Receipt, title: t("Member bill"), hint: t("Unpaid orders on your tab") },
+          ]}
+        />
       </section>
 
       <section className="nh-card flex flex-col gap-2 text-sm">
@@ -207,4 +310,20 @@ export function ProfilePage() {
       {cardOpen ? <MemberCardSheet onClose={() => setCardOpen(false)} /> : null}
     </div>
   );
+}
+
+/** Baris tautan akun: ikon bulat gelap, judul, petunjuk, chevron. */
+function LinkRows({ items }: { items: Array<{ to: string; icon: LucideIcon; title: string; hint: string }> }) {
+  return items.map(({ to, icon: Icon, title, hint }) => (
+    <Link key={to} href={m(to)} className="flex items-center gap-3 rounded-xl px-2 py-2.5 active:bg-nh-raised">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-nh-ink-soft text-white">
+        <Icon size={16} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold">{title}</span>
+        <span className="block truncate text-xs text-nh-muted">{hint}</span>
+      </span>
+      <ChevronRight size={16} className="text-nh-muted" />
+    </Link>
+  ));
 }

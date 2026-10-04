@@ -48,13 +48,13 @@ import { badgeTarget } from "./badges";
 
 describe("badgeTarget", () => {
   it("teks syarat mengikuti metrik badge", () => {
-    expect(badgeTarget({ metric: "visits", threshold: 10, min_lifetime_xp: 0 })).toEqual({ key: "{n} kunjungan", vars: { n: "10" } });
+    expect(badgeTarget({ metric: "visits", threshold: 10, min_lifetime_xp: 0 })).toEqual({ key: "{n} visits", vars: { n: "10" } });
     expect(badgeTarget({ metric: "spend_idr", threshold: 500_000, min_lifetime_xp: 0 })).toEqual({ key: "Rp {n}", vars: { n: "500.000" } });
     expect(badgeTarget({ metric: "streak_weeks", threshold: 4, min_lifetime_xp: 0 })).toEqual({
-      key: "{n} minggu beruntun",
+      key: "{n}-week streak",
       vars: { n: "4" },
     });
-    expect(badgeTarget({ metric: "manual", threshold: null, min_lifetime_xp: 0 })).toEqual({ key: "Diberikan admin" });
+    expect(badgeTarget({ metric: "manual", threshold: null, min_lifetime_xp: 0 })).toEqual({ key: "Given by the team" });
   });
 
   it("badge XP lama tanpa threshold memakai min_lifetime_xp", () => {

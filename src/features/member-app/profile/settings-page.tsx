@@ -2,11 +2,14 @@
 
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { setLang, useLang } from "@/features/member-portal/mobile/mobile-i18n";
+import { useState } from "react";
+import { setLang, useLang } from "../lib/lang";
 import type { MemberSettingsView } from "@/lib/member-app/home-views";
+import { useMemberPush } from "../components/pwa";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { useInvalidateAll, useSettings } from "../lib/queries-home";
+import { loyaltyKeys, useLoyaltyMe, useRefresh } from "../lib/queries-loyalty";
 import { Spinner } from "../ui";
 
 const optionClass = (active: boolean) =>
@@ -82,10 +85,81 @@ export function SettingsPage() {
         </label>
       </div>
 
+      <NotificationSettings />
+
       <div className="nh-card text-sm text-nh-muted">
         <p className="nh-label">{t("About")}</p>
         <p>{t("NüHabit member app. Units and reminders are saved to your account; language applies to this device.")}</p>
       </div>
+    </div>
+  );
+}
+
+/** Web push di perangkat ini dan persetujuan promo WhatsApp (dulu di profil portal lama). */
+function NotificationSettings() {
+  const t = useT();
+  const push = useMemberPush();
+  const refresh = useRefresh();
+  const { data: me } = useLoyaltyMe();
+  const [saving, setSaving] = useState(false);
+  const [consentError, setConsentError] = useState("");
+
+  const pushHint: Record<typeof push.state, string> = {
+    on: t("On for this device"),
+    off: t("Events, promos, and balance updates straight to your phone"),
+    denied: t("Blocked in your browser settings"),
+    unsupported: t("This browser does not support notifications yet"),
+    unconfigured: t("Not available yet"),
+  };
+  const pushLocked =
+    push.busy || push.state === "unsupported" || push.state === "unconfigured" || push.state === "denied";
+
+  const changeMarketing = async (enabled: boolean) => {
+    setSaving(true);
+    setConsentError("");
+    try {
+      await memberApi("/consent", { method: "PUT", json: { enabled } });
+      await refresh(loyaltyKeys.me);
+    } catch (e) {
+      setConsentError(e instanceof Error ? e.message : t("Request failed"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="nh-card flex flex-col gap-4 text-sm">
+      <p className="nh-label !mb-0">{t("Notifications")}</p>
+      <label className="flex items-center justify-between gap-3 font-bold">
+        <span>
+          {t("Phone notifications")}
+          <span className="block text-xs font-medium text-nh-muted">{pushHint[push.state]}</span>
+        </span>
+        <input
+          type="checkbox"
+          checked={push.state === "on"}
+          disabled={pushLocked}
+          onChange={(e) => void (e.target.checked ? push.enable() : push.disable())}
+          className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-3 font-bold">
+        <span>
+          {t("Promos on WhatsApp")}
+          <span className="block text-xs font-medium text-nh-muted">
+            {me?.marketingOptIn ? t("You get promos and news") : t("WhatsApp promos are off")}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={me?.marketingOptIn ?? false}
+          disabled={!me || saving}
+          onChange={(e) => void changeMarketing(e.target.checked)}
+          className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
+        />
+      </label>
+      {push.error ? <p className="text-xs font-semibold text-nh-danger">{t(push.error)}</p> : null}
+      {consentError ? <p className="text-xs font-semibold text-nh-danger">{consentError}</p> : null}
     </div>
   );
 }

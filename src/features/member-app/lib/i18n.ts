@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import { useLang } from "@/features/member-portal/mobile/mobile-i18n";
+import { useLang } from "./lang";
 import { CLASSES_ID } from "./i18n-classes";
 import { HOME_ID } from "./i18n-home";
+import { LOYALTY_ID } from "./i18n-loyalty";
 import { TRAIN_ID } from "./i18n-train";
 import { ID_WORKOUT } from "./i18n-workout";
 
@@ -147,7 +148,14 @@ const BASE_ID: Record<string, string> = {
   Readiness: 'Kesiapan',
 };
 
-export const ID: Record<string, string> = { ...TRAIN_ID, ...BASE_ID, ...HOME_ID, ...CLASSES_ID, ...ID_WORKOUT };
+export const ID: Record<string, string> = {
+  ...LOYALTY_ID,
+  ...TRAIN_ID,
+  ...BASE_ID,
+  ...HOME_ID,
+  ...CLASSES_ID,
+  ...ID_WORKOUT,
+};
 
 /** Isi placeholder `{name}` pada teks yang sudah diterjemahkan; yang tak berisi dibiarkan. */
 export function fill(text: string, vars: Record<string, string | number>): string {

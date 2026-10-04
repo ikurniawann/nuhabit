@@ -4,13 +4,13 @@ import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Activity, Bell, CalendarDays, Home, QrCode, Search, User } from "lucide-react";
-import { OfflineBanner } from "@/features/member-portal/mobile/mobile-pwa";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { asset, m } from "../lib/links";
 import { useMe } from "../lib/queries";
 import { Spinner } from "../ui";
+import { OfflineBanner, useMemberServiceWorker } from "./pwa";
 import "../member-app.css";
 
 const NAV = [
@@ -52,6 +52,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
 /** Kerangka aplikasi member: header bulat, wordmark tengah, nav pil mengambang dengan QR lime. */
 export function AppLayout({ children }: { children: ReactNode }) {
+  useMemberServiceWorker();
   return (
     <div className="nh-app">
       <RequireAuth>

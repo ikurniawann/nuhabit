@@ -1,6 +1,6 @@
 "use client";
 
-import { BookMarked, CalendarDays, CirclePlay, Dumbbell, Flag, QrCode } from "lucide-react";
+import { BookMarked, CalendarDays, CirclePlay, Coins, Dumbbell, Flag, Gift, QrCode } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -98,6 +98,8 @@ export function HomePage() {
           { to: "/workout", icon: Dumbbell, label: t("Generate workout"), tint: "bg-nh-ink-soft text-white" },
           { to: "/races", icon: Flag, label: t("Races"), tint: "bg-nh-ink-soft text-white" },
           { to: "/train/tutorials", icon: CirclePlay, label: t("Guides"), tint: "bg-nh-ink-soft text-white" },
+          { to: "/coins", icon: Coins, label: "ARK Coin", tint: "bg-nh-ink-soft text-white" },
+          { to: "/rewards", icon: Gift, label: t("Rewards"), tint: "bg-nh-ink-soft text-white" },
         ].map(({ to, icon: Icon, label, tint }) => (
           <Link key={to} href={m(to)} className="nh-card flex items-center gap-3 !p-4 active:scale-[0.98]">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tint}`}>
@@ -146,7 +148,14 @@ export function HomePage() {
       {/* Promo */}
       {promos && promos.length > 0 ? (
         <section>
-          <SectionHeader label={t("Promos")} />
+          <SectionHeader
+            label={t("Promos")}
+            action={
+              <Link href={m("/promos")} className="text-xs font-bold text-nh-ink/50">
+                {t("See all")} →
+              </Link>
+            }
+          />
           <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
             {promos.map((p) => (
               <Link

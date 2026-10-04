@@ -3,7 +3,7 @@
 import { Users } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useLang } from "@/features/member-portal/mobile/mobile-i18n";
+import { useLang } from "../lib/lang";
 import { joinDot } from "../lib/classes-view";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";

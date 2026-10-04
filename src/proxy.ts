@@ -5,7 +5,7 @@ import { updateSession } from "@/lib/auth/middleware";
  * Serves the member portal at its own hostname.
  *
  *   member.suluinwounderland.com/            -> /member
- *   member.suluinwounderland.com/classic     -> /member/classic
+ *   member.suluinwounderland.com/coins       -> /member/coins
  *
  * The pages keep living under src/app/member; only the public URL changes.
  * dashboard.suluinwounderland.com is untouched and still serves /member too,

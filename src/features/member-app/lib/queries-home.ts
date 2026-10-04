@@ -82,6 +82,8 @@ export interface MemberNotification {
   type: string;
   title: string;
   body: string;
+  /** Tujuan portal ("events", "promo:KODE"); dipetakan ke rute lewat goLinkHref. */
+  linkUrl: string | null;
   createdAt: string;
   readAt: string | null;
 }
@@ -91,7 +93,15 @@ export const useNotifications = () =>
     queryKey: homeKeys.notifications,
     queryFn: async () => {
       const data = await memberApi<{
-        notifications: Array<{ id: string; type: string; title: string; body: string; created_at: string; read_at: string | null }>;
+        notifications: Array<{
+          id: string;
+          type: string;
+          title: string;
+          body: string;
+          link_url: string | null;
+          created_at: string;
+          read_at: string | null;
+        }>;
       }>("/notifications");
       return data.notifications.map(
         (n): MemberNotification => ({
@@ -99,6 +109,7 @@ export const useNotifications = () =>
           type: n.type,
           title: n.title,
           body: n.body,
+          linkUrl: n.link_url,
           createdAt: n.created_at,
           readAt: n.read_at,
         })

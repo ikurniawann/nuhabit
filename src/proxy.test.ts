@@ -28,7 +28,7 @@ describe("proxy: member hostname", () => {
   // through and served the dashboard.
   test("matches the member label anywhere in the host", async () => {
     expect(await call(MEMBER_DEV, "/")).toBe("/member");
-    expect(await call(MEMBER_DEV, "/classic")).toBe("/member/classic");
+    expect(await call(MEMBER_DEV, "/coins")).toBe("/member/coins");
   });
 
   test("is case-insensitive", async () => {
@@ -36,7 +36,7 @@ describe("proxy: member hostname", () => {
   });
 
   test("prefixes a nested path", async () => {
-    expect(await call(MEMBER, "/classic")).toBe("/member/classic");
+    expect(await call(MEMBER, "/coins")).toBe("/member/coins");
   });
 
   // The whole portal 404s if these get prefixed: ~30 absolute calls to
@@ -48,14 +48,14 @@ describe("proxy: member hostname", () => {
   // Links in the app emit absolute /member/... paths; prefixing twice would
   // send them to /member/member/...
   test("does not double-prefix an already-correct path", async () => {
-    expect(await call(MEMBER, "/member/classic")).toBeNull();
+    expect(await call(MEMBER, "/member/coins")).toBeNull();
   });
 });
 
 describe("proxy: other hostnames", () => {
   test("leaves the dashboard host alone", async () => {
     expect(await call(DASH, "/")).toBeNull();
-    expect(await call(DASH, "/member/classic")).toBeNull();
+    expect(await call(DASH, "/member/coins")).toBeNull();
     expect(await call(DASH_DEV, "/")).toBeNull();
   });
 });

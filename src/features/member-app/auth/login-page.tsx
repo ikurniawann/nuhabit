@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { useMemberOtp } from "@/features/member-portal/use-member-otp";
+import { useMemberOtp } from "../lib/use-member-otp";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
 import "../member-app.css";
