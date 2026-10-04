@@ -21,6 +21,7 @@ type Ports struct {
 	CRM         CRM
 	StoredValue StoredValue
 	WhatsApp    WhatsApp
+	ReportRows  ReportRows
 }
 
 // Sales reads POS orders and checkouts (pos-sales).
@@ -189,6 +190,9 @@ type Directory interface {
 	Branches(ctx context.Context, q database.Querier, ids []string) (map[string]Branch, error)
 	// ActiveBranches lists active branches {id, name, code} by name.
 	ActiveBranches(ctx context.Context, q database.Querier) ([]*Obj, error)
+	// BrandName is resolveBrandName (lib/branding-server.ts): the company
+	// name, else the default venue company's, app_brand_name, the env, "NüHabit".
+	BrandName(ctx context.Context, q database.Querier, companyID *string) string
 }
 
 // Branch is a configuration.branches row.

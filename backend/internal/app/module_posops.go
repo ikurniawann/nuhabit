@@ -28,5 +28,6 @@ func PosOpsPorts(d module.Deps) posops.Ports {
 		CRM:         posOpsCRM{},
 		StoredValue: posOpsStoredValue{},
 		WhatsApp:    posOpsWhatsApp{db: d.DB, wa: whatsapp.New(d.Log)},
+		ReportRows:  posOpsReportRows{},
 	}
 }

@@ -24,22 +24,15 @@ import (
 // ReceiptSettings mirrors GET /api/pos/receipt-settings: every active row,
 // normalized. updated_at is a Date in node-postgres, so it renders null.
 func (s *Service) ReceiptSettings(ctx context.Context) ([]*Obj, error) {
-	rows, err := QueryObjs(ctx, s.db, `SELECT id::text, branch_id::text, warehouse_id::text, header_lines::text,
-		footer_lines::text, show_stall_name FROM pos.pos_receipt_settings WHERE is_active = true`)
+	rows, err := ReceiptStore{}.ActiveRows(ctx, s.db)
 	if err != nil {
-		if database.IsUndefinedTable(err) {
-			return []*Obj{}, nil
-		}
 		return nil, err
 	}
 	out := make([]*Obj, len(rows))
 	for i, r := range rows {
-		var header, footer any
-		_ = json.Unmarshal([]byte(r.Str("header_lines")), &header)
-		_ = json.Unmarshal([]byte(r.Str("footer_lines")), &footer)
-		out[i] = NewObj("id", r.Get("id"), "branch_id", r.Get("branch_id"), "warehouse_id", r.Get("warehouse_id"),
-			"header_lines", domain.ReceiptLines(header), "footer_lines", domain.ReceiptLines(footer),
-			"show_stall_name", r.Get("show_stall_name") != false, "updated_at", nil)
+		out[i] = NewObj("id", r.ID, "branch_id", r.BranchID, "warehouse_id", r.WarehouseID,
+			"header_lines", domain.ReceiptLines(r.HeaderLines), "footer_lines", domain.ReceiptLines(r.FooterLines),
+			"show_stall_name", r.ShowStallName, "updated_at", nil)
 	}
 	return out, nil
 }

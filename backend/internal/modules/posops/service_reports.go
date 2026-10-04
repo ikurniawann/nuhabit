@@ -123,24 +123,28 @@ func (s *Service) reportRange(from, to string) (domain.ReportRange, error) {
 
 // RushHourReport mirrors GET /api/pos/reports/rush-hour.
 func (s *Service) RushHourReport(ctx context.Context, userID, from, to, warehouseID string) (*Obj, error) {
-	r, err := s.reportRange(from, to)
+	r, f, rep, err := s.rushHour(ctx, userID, from, to, warehouseID)
 	if err != nil {
 		return nil, err
 	}
-	f, err := s.reportStallFilter(ctx, userID, warehouseID)
+	return reportHead(r, f).Set("summary", rep.Summary).Set("peak_hour", rep.PeakHour).
+		Set("peak_revenue_hour", rep.PeakRevenueHour).Set("peak_day", rep.PeakDay).Set("hourly", rep.Hourly).
+		Set("weekdays", rep.Weekdays).Set("heatmap", rep.Heatmap), nil
+}
+
+// rushHour builds the rush hour report of the caller's stalls.
+func (s *Service) rushHour(ctx context.Context, userID, from, to, warehouseID string) (domain.ReportRange, reportStalls, domain.RushHourReport, error) {
+	r, f, err := s.stallReport(ctx, userID, from, to, warehouseID)
 	if err != nil {
-		return nil, err
+		return r, f, domain.RushHourReport{}, err
 	}
 	var points []domain.RushHourPoint
 	if !f.none() {
 		if points, err = s.ports.Sales.RushHourPoints(ctx, s.db, r.StartIso, r.EndIso, f.WarehouseIDs); err != nil {
-			return nil, err
+			return r, f, domain.RushHourReport{}, err
 		}
 	}
-	rep := domain.BuildRushHourReport(points)
-	return reportHead(r, f).Set("summary", rep.Summary).Set("peak_hour", rep.PeakHour).
-		Set("peak_revenue_hour", rep.PeakRevenueHour).Set("peak_day", rep.PeakDay).Set("hourly", rep.Hourly).
-		Set("weekdays", rep.Weekdays).Set("heatmap", rep.Heatmap), nil
+	return r, f, domain.BuildRushHourReport(points), nil
 }
 
 /* ── Voids ───────────────────────────────────────────────────────────── */

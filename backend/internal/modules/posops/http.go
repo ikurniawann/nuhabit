@@ -72,7 +72,12 @@ func okData(w http.ResponseWriter, data any) error {
 // 500 {success:false,error:message(err)}. *Fail and *httpx.Error keep their
 // status and body.
 func caught(message func(error) string, fn httpx.HandlerFunc) http.Handler {
-	return rendered(fn, func(err error) (int, string) { return http.StatusInternalServerError, message(err) })
+	return rendered(fn, status500(message))
+}
+
+// status500 answers every error with 500 and message(err).
+func status500(message func(error) string) func(error) (int, string) {
+	return func(err error) (int, string) { return http.StatusInternalServerError, message(err) }
 }
 
 // rendered is caught with a status chosen per error.

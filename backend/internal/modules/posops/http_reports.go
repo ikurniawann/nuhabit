@@ -7,12 +7,15 @@ import (
 	"nuhabit/backend/internal/platform/module"
 )
 
-// Report routes (app/api/pos/reports). The xlsx exports (export,
-// rush-hour/export) and the reports with a ?format=xlsx variant
-// (product-sales, transactions) stay in Next: they need exceljs.
+// Report routes (app/api/pos/reports). The xlsx exports and the
+// ?format=xlsx variants live in http_reports_xlsx.go.
 func (h *Handler) reportRoutes() []module.Route {
 	return []module.Route{
-		{Pattern: "GET /api/pos/reports/rush-hour", Handler: h.rushHourRoute()},
+		{Pattern: "GET /api/pos/reports/rush-hour", Handler: rendered(h.rushHourReport, rushHourStatus("Gagal memuat laporan rush hour"))},
+		{Pattern: "GET /api/pos/reports/rush-hour/export", Handler: rendered(h.rushHourExport, rushHourStatus("Gagal export rush hour"))},
+		{Pattern: "GET /api/pos/reports/product-sales", Handler: caught(pgMessage, h.productSalesReport)},
+		{Pattern: "GET /api/pos/reports/transactions", Handler: caught(pgMessage, h.transactionReport)},
+		{Pattern: "GET /api/pos/reports/export", Handler: caught(func(error) string { return "Gagal membuat file Excel" }, h.exportReport)},
 		{Pattern: "GET /api/pos/reports/voids", Handler: caught(pgMessage, h.voidReport)},
 		{Pattern: "GET /api/pos/reports/payment-methods", Handler: caught(pgMessage, h.paymentMethodReport)},
 		{Pattern: "GET /api/pos/reports/profit", Handler: caught(fixed("Gagal memuat laporan profit POS"), h.profitReport)},
@@ -23,15 +26,15 @@ func (h *Handler) reportRoutes() []module.Route {
 
 var knownRushHourError = regexp.MustCompile(`(?i)tanggal|stall`)
 
-// rushHourRoute answers a range or stall error with 400 and its message,
-// anything else with 500 "Gagal memuat laporan rush hour".
-func (h *Handler) rushHourRoute() http.Handler {
-	return rendered(h.rushHourReport, func(err error) (int, string) {
+// rushHourStatus answers a range or stall error with 400 and its message,
+// anything else with 500 and fallback.
+func rushHourStatus(fallback string) func(error) (int, string) {
+	return func(err error) (int, string) {
 		if msg := pgMessage(err); knownRushHourError.MatchString(msg) {
 			return http.StatusBadRequest, msg
 		}
-		return http.StatusInternalServerError, "Gagal memuat laporan rush hour"
-	})
+		return http.StatusInternalServerError, fallback
+	}
 }
 
 func (h *Handler) rushHourReport(w http.ResponseWriter, r *http.Request) error {

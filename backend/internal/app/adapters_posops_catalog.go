@@ -7,6 +7,7 @@ import (
 
 	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/posops/domain"
+	"nuhabit/backend/internal/modules/shop"
 	"nuhabit/backend/internal/platform/database"
 )
 
@@ -212,33 +213,25 @@ func (posOpsInventory) MaterialStock(ctx context.Context, q database.Querier, id
 
 /* ── Shop (online catalog distribution) ──────────────────────────────── */
 
-type posOpsShop struct{}
+// posOpsShop adapts the shop's channel service.
+type posOpsShop struct{ channels shop.Channels }
 
 var _ posops.Shop = posOpsShop{}
 
-func (posOpsShop) ProductChannels(ctx context.Context, q database.Querier, productIDs []string) (map[string][]posops.ProductChannel, error) {
-	rows, err := q.Query(ctx, `SELECT product_id::text, channel_code, is_distributed
-		FROM shop.product_channels WHERE product_id = ANY($1::uuid[])`, productIDs)
+func (s posOpsShop) ProductChannels(ctx context.Context, q database.Querier, productIDs []string) (map[string][]posops.ProductChannel, error) {
+	byProduct, err := s.channels.ByProduct(ctx, q, productIDs)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := map[string][]posops.ProductChannel{}
-	for rows.Next() {
-		var id string
-		var c posops.ProductChannel
-		if err := rows.Scan(&id, &c.ChannelCode, &c.IsDistributed); err != nil {
-			return nil, err
+	out := make(map[string][]posops.ProductChannel, len(byProduct))
+	for id, channels := range byProduct {
+		for _, c := range channels {
+			out[id] = append(out[id], posops.ProductChannel(c))
 		}
-		out[id] = append(out[id], c)
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-func (posOpsShop) SetWebDistribution(ctx context.Context, q database.Querier, productID string, distributed bool) error {
-	_, err := q.Exec(ctx, `INSERT INTO shop.product_channels (product_id, channel_code, is_distributed)
-		VALUES ($1::text::uuid, 'web', $2)
-		ON CONFLICT (product_id, channel_code)
-		DO UPDATE SET is_distributed = EXCLUDED.is_distributed, updated_at = now()`, productID, distributed)
-	return err
+func (s posOpsShop) SetWebDistribution(ctx context.Context, q database.Querier, productID string, distributed bool) error {
+	return s.channels.SetWeb(ctx, q, productID, distributed)
 }
