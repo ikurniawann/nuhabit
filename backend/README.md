@@ -77,12 +77,24 @@ docs/ARCHITECTURE.md
 | `gym-training` | 30 | exercises, HYROX workouts and sessions, races, coach incentives and payouts |
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |
+| `pos-sales` | 39 | orders, multi-stall checkout, QRIS, KDS, print jobs, supervisor PIN, GoFood, table order |
+| `pos-ops` | 46 | shifts, tables, reservations, POS catalog, customers, dashboard, reports, POS settings |
+| `stored-value` | 59 | ARK wallet, top-up, member cards and bills, refunds, gift cards, promo and offers |
+| `procurement` | 97 | purchase requests and orders, GRN, QC, deliveries, returns, vendors, payables reports |
+| `inventory` | 91 | stock, movements, opnames, transfers, items and BOM, production, COGS |
+| `accounting` | 61 | chart of accounts, journals, fiscal periods, AP/AR, cash-bank, reports, finance |
+| `hris` | 82 | employees, attendance, leave, shifts, overtime, contracts, onboarding, announcements, master data |
+| `payroll` | 62 | payroll runs, payslips, salary, loans, KPI, performance reviews, feedback, department tasks |
+| `recruitment` | 61 | candidates, psikotes, interviews, offers, job openings, positions, promotion |
+| `crm` | 128 | loyalty and XP, members, campaigns, segments, inbox, approvals, workflow rules, reports |
+| `ticketing` | 56 | bookings, gate taps, visits, season and staff passes, capacity, channels |
 
 The Next app forwards a request to Go when `BACKEND_URL` is set, its path is
 under a prefix in `frontend/src/lib/backend-routes.ts`, and Go registers that
 method and path (`frontend/src/lib/go-routes.generated.json`, refreshed by
-`make generate`). Other routes under a prefix, such as `POST
-/api/member-portal/profile/photo`, which writes Next's storage, stay in Next.
+`make generate`), unless the route is in `NEXT_ONLY_ROUTES`: uploads and files
+in Next's storage, xlsx/pdf output and OCR/AI extraction stay in Next. That
+list is the remaining work for the port.
 
 ## Tests
 
