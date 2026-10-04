@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { ApiError } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { getPool } from "@/lib/db";
-import { apiErrorResponse, requireCrmInboxAgent } from "@/lib/crm/server";
+import { requireCrmUser } from "@/lib/crm/guards";
 import {
   MAX_PENDING_LIMIT,
   analyzeConversation,
@@ -12,10 +14,9 @@ import {
 /**
  * EPIC-029 — analisa percakapan inbox dengan AI (ringkasan + kata kunci).
  *
- * Guard `requireCrmInboxAgent` (super_admin / admin / pos_supervisor) karena
- * respons endpoint ini memuat `summary` yang menyarikan isi chat — PII. Laporan
- * agregat bebas PII hidup di `/api/crm/reports/conversations`, dengan guard
- * role laporan yang berbeda.
+ * Gate menu inbox karena respons memuat `summary` yang menyarikan isi chat —
+ * PII. Laporan agregat bebas PII hidup di `/api/crm/reports/conversations`,
+ * dengan gate laporan yang berbeda.
  */
 
 const bodySchema = z.union([
@@ -27,59 +28,30 @@ const bodySchema = z.union([
 ]);
 
 /** Baca insight tersimpan satu percakapan — tanpa memanggil OpenAI. */
-export async function GET(request: NextRequest) {
-  const guard = await requireCrmInboxAgent();
-  if (guard.error) return guard.error;
-
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("inbox");
   const conversationId = request.nextUrl.searchParams.get("conversation_id");
-  if (!conversationId) {
-    return NextResponse.json(
-      { success: false, error: "Parameter conversation_id wajib diisi" },
-      { status: 400 }
-    );
+  if (!conversationId) throw ApiError.badRequest("Parameter conversation_id wajib diisi");
+  const insight = await getStoredInsight(getPool(), conversationId);
+  return NextResponse.json({ success: true, data: { insight } });
+}, "crm.inbox.analytics.GET");
+
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("inbox");
+  const parsed = bodySchema.safeParse(await request.json().catch(() => undefined));
+  if (!parsed.success) {
+    throw ApiError.badRequest("Body tidak valid (kirim {conversation_id} atau {analyze_pending:true, limit?})");
+  }
+  const payload = parsed.data;
+  const pool = getPool();
+
+  if ("analyze_pending" in payload) {
+    return NextResponse.json({ success: true, data: await analyzePending(pool, { limit: payload.limit }) });
   }
 
-  try {
-    const insight = await getStoredInsight(getPool(), conversationId);
-    return NextResponse.json({ success: true, data: { insight } });
-  } catch (error) {
-    return apiErrorResponse(error, "Gagal memuat ringkasan percakapan");
-  }
-}
-
-export async function POST(request: NextRequest) {
-  const guard = await requireCrmInboxAgent();
-  if (guard.error) return guard.error;
-
-  let payload: z.infer<typeof bodySchema>;
-  try {
-    payload = bodySchema.parse(await request.json());
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Body tidak valid (kirim {conversation_id} atau {analyze_pending:true, limit?})",
-      },
-      { status: 400 }
-    );
-  }
-
-  try {
-    const pool = getPool();
-
-    if ("analyze_pending" in payload) {
-      const batch = await analyzePending(pool, { limit: payload.limit });
-      return NextResponse.json({ success: true, data: batch });
-    }
-
-    const result = await analyzeConversation(pool, payload.conversation_id, {
-      force: payload.force,
-    });
-    // Kegagalan analisa BUKAN error server: percakapannya ada, hanya AI-nya yang
-    // tidak menjawab. 502 supaya UI bisa membedakannya dari bug/izin.
-    const status = result.status === "failed" ? 502 : 200;
-    return NextResponse.json({ success: result.status !== "failed", data: result }, { status });
-  } catch (error) {
-    return apiErrorResponse(error, "Gagal menganalisa percakapan");
-  }
-}
+  const result = await analyzeConversation(pool, payload.conversation_id, { force: payload.force });
+  // Kegagalan analisa BUKAN error server: percakapannya ada, hanya AI-nya yang
+  // tidak menjawab. 502 supaya UI bisa membedakannya dari bug/izin.
+  const status = result.status === "failed" ? 502 : 200;
+  return NextResponse.json({ success: result.status !== "failed", data: result }, { status });
+}, "crm.inbox.analytics.POST");

@@ -30,7 +30,7 @@ export function LoyaltyFeaturesSection({
     <Card className="border-gray-200/70 shadow-xs">
       <CardHeader className="border-b border-gray-200/70 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <ToggleRight className="h-4 w-4 text-primary" />
+          <ToggleRight className="h-4 w-4 text-brand-text" />
           Fitur Loyalty
           {saving ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
         </CardTitle>

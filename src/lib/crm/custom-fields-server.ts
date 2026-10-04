@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-050 Fase 3 (T-3.3) — custom fields, sisi server: muat definisi aktif
  * (global + company) dan validasi payload `custom` sebelum tulis.

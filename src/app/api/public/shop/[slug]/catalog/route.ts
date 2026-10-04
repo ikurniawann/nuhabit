@@ -1,6 +1,8 @@
 // EPIC-039 Fase D — katalog publik storefront (tanpa auth, rate-limited).
 
 import { NextRequest, NextResponse } from 'next/server';
+import { ApiError } from '@/lib/api/auth';
+import { apiHandler } from '@/lib/api/handler';
 import { checkRateLimit, clientIpFrom } from '@/lib/public/rate-limit';
 import {
   buildShopCatalog,
@@ -8,21 +10,16 @@ import {
   resolveStorefront,
 } from '@/lib/shop/storefront-server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const ip = clientIpFrom(request.headers);
-  if (!checkRateLimit(`shop-catalog:${ip}`, { limit: 60, windowMs: 60_000 })) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
-  }
+export const GET = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
+    const ip = clientIpFrom(request.headers);
+    if (!checkRateLimit(`shop-catalog:${ip}`, { limit: 60, windowMs: 60_000 })) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
 
-  try {
     const { slug } = await params;
     const storefront = await resolveStorefront(slug);
-    if (!storefront) {
-      return NextResponse.json({ success: false, error: 'Toko tidak ditemukan' }, { status: 404 });
-    }
+    if (!storefront) throw ApiError.notFound('Toko tidak ditemukan');
 
     // Opportunistik: reservasi kedaluwarsa dirilis supaya stok katalog akurat
     await releaseExpiredReservations();
@@ -39,8 +36,6 @@ export async function GET(
         products,
       },
     });
-  } catch (error: unknown) {
-    console.error('[shop] catalog error:', error);
-    return NextResponse.json({ success: false, error: 'Gagal memuat katalog' }, { status: 500 });
-  }
-}
+  },
+  'shop.public.catalog.GET'
+);

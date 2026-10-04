@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatRupiah } from "@/lib/format";
 import { useTicketingSettings } from "../../masters/queries";
 import { useLoketOptions } from "../../products/queries";
 import { useRegisterVisit } from "../queries";
@@ -48,8 +49,6 @@ interface RegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 /** 1 baris keranjang = 1 jenis tiket (varian satuan atau 1 unit paket). */
 interface CartLine {
@@ -308,7 +307,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                         : option.variant_name}
                     </p>
                     <p className="mt-2 text-sm font-bold text-rose-600">
-                      {formatRp(optionPrice(option))}
+                      {formatRupiah(optionPrice(option))}
                       <span className="font-normal text-gray-400">
                         {option.product_kind === "bundle" ? " /unit" : " /tiket"}
                       </span>
@@ -362,7 +361,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                 </Select>
                 {effectiveMode === "postpaid" && defaultLimit > 0 ? (
                   <p className="text-xs text-gray-500">
-                    Plafon tagihan venue: {formatRp(defaultLimit)}
+                    Plafon tagihan venue: {formatRupiah(defaultLimit)}
                   </p>
                 ) : null}
               </div>
@@ -412,7 +411,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                 </h3>
                 {totalAmount > 0 && (
                   <span className="text-sm font-bold tabular-nums text-gray-900">
-                    {formatRp(totalAmount)}
+                    {formatRupiah(totalAmount)}
                   </span>
                 )}
               </div>
@@ -436,7 +435,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                             )}
                           </p>
                           <p className="text-[11px] text-gray-400">
-                            {formatRp(line.price)}{" "}
+                            {formatRupiah(line.price)}{" "}
                             {line.productKind === "bundle" ? "/unit" : "/tiket"}
                           </p>
                         </div>

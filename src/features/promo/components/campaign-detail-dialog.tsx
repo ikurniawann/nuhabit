@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogFooter,
   DialogPanel,
   DialogPanelBody,
   DialogPanelDescription,
@@ -19,25 +18,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { formatDateTime, formatRupiah } from "@/lib/format";
+import { codesCsv } from "../campaign-form";
 import {
   useDeleteCode,
   useGenerateBatch,
   usePromoCodes,
   usePromoRedemptions,
   useToggleCode,
-  useUpdateCode,
 } from "../queries";
 import type { PromoCampaign, PromoCode } from "../types";
 import { PROMO_SCOPE_PREFIX } from "../types";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+import { EditCodeDialog } from "./edit-code-dialog";
 
 const STATUS_BADGES: Record<string, string> = {
   held: "bg-amber-100 text-amber-700",
@@ -51,14 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function downloadCodesCsv(campaignName: string, codes: PromoCode[]) {
-  const lines = [
-    "code,usage_limit,usage_count,is_active",
-    ...codes.map(
-      (c) =>
-        `${c.code},${c.usage_limit ?? ""},${c.usage_count},${c.is_active ? "1" : "0"}`
-    ),
-  ];
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob([codesCsv(codes)], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -81,12 +66,9 @@ export function CampaignDetailDialog({
   const redemptionsQuery = usePromoRedemptions(campaignId);
   const toggleMutation = useToggleCode();
   const deleteMutation = useDeleteCode();
-  const updateCodeMutation = useUpdateCode(() => setEditingCode(null));
 
   const [batchCount, setBatchCount] = useState("");
   const [editingCode, setEditingCode] = useState<PromoCode | null>(null);
-  const [editCodeValue, setEditCodeValue] = useState("");
-  const [editUsageLimit, setEditUsageLimit] = useState("");
 
   const generateBatch = useGenerateBatch(() => {
     setBatchCount("");
@@ -103,17 +85,7 @@ export function CampaignDetailDialog({
     batchCountNum < 1 ||
     batchCountNum > 1000;
 
-  const openEditCode = (code: PromoCode) => {
-    setEditingCode(code);
-    setEditCodeValue(code.code);
-    setEditUsageLimit(code.usage_limit !== null ? String(code.usage_limit) : "");
-  };
-
-  const editCodeInvalid = !/^[A-Za-z0-9-]{3,40}$/.test(editCodeValue.trim());
-  const codeBusy =
-    updateCodeMutation.isPending ||
-    deleteMutation.isPending ||
-    toggleMutation.isPending;
+  const codeBusy = deleteMutation.isPending || toggleMutation.isPending;
 
   return (
     <>
@@ -181,7 +153,7 @@ export function CampaignDetailDialog({
               </div>
               {codesQuery.isLoading ? (
                 <div className="py-6 text-center">
-                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-brand-text" />
                 </div>
               ) : codes.length === 0 ? (
                 <p className="mt-2 rounded-lg border border-dashed border-gray-200 px-3 py-4 text-center text-sm text-muted-foreground">
@@ -214,7 +186,7 @@ export function CampaignDetailDialog({
                                 variant="outline"
                                 className="h-8 w-8 p-0"
                                 disabled={codeBusy}
-                                onClick={() => openEditCode(code)}
+                                onClick={() => setEditingCode(code)}
                                 aria-label="Edit kode"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -258,7 +230,7 @@ export function CampaignDetailDialog({
               <Label>Riwayat Pemakaian (100 terbaru)</Label>
               {redemptionsQuery.isLoading ? (
                 <div className="py-6 text-center">
-                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-brand-text" />
                 </div>
               ) : redemptions.length === 0 ? (
                 <p className="mt-2 rounded-lg border border-dashed border-gray-200 px-3 py-4 text-center text-sm text-muted-foreground">
@@ -276,12 +248,12 @@ export function CampaignDetailDialog({
                           {r.code}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {r.phone ?? "tanpa nomor"} · {formatTime(r.created_at)}
+                          {r.phone ?? "tanpa nomor"} · {formatDateTime(r.created_at)}
                         </p>
                       </div>
                       <div className="shrink-0 text-right">
                         <p className="font-medium tabular-nums text-foreground">
-                          −{formatRp(Number(r.discount_amount))}
+                          −{formatRupiah(r.discount_amount)}
                         </p>
                         <Badge
                           className={`border-0 font-normal ${STATUS_BADGES[r.status]}`}
@@ -298,90 +270,9 @@ export function CampaignDetailDialog({
         </DialogPanel>
       </Dialog>
 
-      <Dialog
-        open={editingCode !== null}
-        onOpenChange={(open) => {
-          if (updateCodeMutation.isPending) return;
-          if (!open) setEditingCode(null);
-        }}
-      >
-        <DialogPanel size="xs">
-          <DialogPanelHeader>
-            <DialogPanelTitle>Edit Voucher</DialogPanelTitle>
-            <DialogPanelDescription>
-              Ubah kode atau batas pemakaian. Hanya untuk voucher yang belum
-              terpakai.
-            </DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit_code">Kode</Label>
-              <Input
-                id="edit_code"
-                value={editCodeValue}
-                disabled={updateCodeMutation.isPending}
-                onChange={(e) => setEditCodeValue(e.target.value.toUpperCase())}
-                className="border-gray-200/80 font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit_usage_limit">Batas pakai (opsional)</Label>
-              <Input
-                id="edit_usage_limit"
-                type="number"
-                min={1}
-                placeholder="kosong = tanpa batas / ikut campaign"
-                value={editUsageLimit}
-                disabled={updateCodeMutation.isPending}
-                onChange={(e) =>
-                  setEditUsageLimit(e.target.value.replace(/\D/g, ""))
-                }
-                className="border-gray-200/80"
-              />
-            </div>
-          </DialogPanelBody>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={updateCodeMutation.isPending}
-              onClick={() => setEditingCode(null)}
-            >
-              Batal
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                editCodeInvalid ||
-                updateCodeMutation.isPending ||
-                editingCode === null
-              }
-              onClick={() => {
-                if (!editingCode || editCodeInvalid) return;
-                updateCodeMutation.mutate({
-                  id: editingCode.id,
-                  values: {
-                    code: editCodeValue.trim(),
-                    usage_limit:
-                      editUsageLimit.trim() === ""
-                        ? null
-                        : Number(editUsageLimit),
-                  },
-                });
-              }}
-            >
-              {updateCodeMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan…
-                </>
-              ) : (
-                "Simpan"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogPanel>
-      </Dialog>
+      {editingCode && (
+        <EditCodeDialog key={editingCode.id} code={editingCode} onClose={() => setEditingCode(null)} />
+      )}
     </>
   );
 }

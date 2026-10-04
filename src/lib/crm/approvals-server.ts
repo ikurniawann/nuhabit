@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-050 Fase 2 (T-2.4) — approval diskon quotation, sisi server.
  * Alur: quotation dibuat/diubah dengan diskon > ambang → request + steps
@@ -5,9 +6,13 @@
  * quotation.approval_status = approved/rejected. Kirim WA / tandai terkirim
  * ditolak selama pending/rejected (canReleaseQuotation).
  */
+import type { ApiUser } from "@/lib/api/auth";
+import type { UserScope } from "@/lib/api/scope";
 import { query, queryOne } from "@/lib/db";
+import { formatRupiah } from "@/lib/format";
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { isValidNormalizedPhone, normalizePhone } from "@/lib/sales-funnel/server";
+import { emitCrmEvent } from "./events";
 import { canDecideStep, requiredApprovalLevels, type ApprovalRule } from "./approvals";
 import { notifyUsers } from "./workflow-engine";
 
@@ -69,7 +74,7 @@ async function notifyApprovers(requestId: string, level: number): Promise<void> 
   if (!req || !step) return;
   const userIds = await approverUserIds(step, req.company_id);
   const title = `Approval diskon ${Number(req.discount_percent)}% — ${req.quote_number}`;
-  const message = `${req.org_name} · ${req.deal_title} · total Rp ${Math.round(Number(req.amount ?? 0)).toLocaleString("id-ID")}${req.requester ? ` · diajukan ${req.requester}` : ""}`;
+  const message = `${req.org_name} · ${req.deal_title} · total ${formatRupiah(req.amount)}${req.requester ? ` · diajukan ${req.requester}` : ""}`;
   await notifyUsers(userIds, title, message, `/dashboard/sales-funnel/approvals?request=${requestId}`, { request_id: requestId, level });
 
   // WA ke approver (best-effort)
@@ -215,4 +220,80 @@ export async function decideApproval(
     await notifyUsers([req.requested_by], `Diskon ${quotationLink?.quote_number ?? ""} DISETUJUI`, comment ?? "Quotation boleh dikirim", link, { request_id: requestId });
   }
   return { ok: true, status: "approved", next_level: null };
+}
+
+/**
+ * Inbox approval quotation. view=mine: yang menunggu keputusan saya (role/user
+ * cocok pada tingkat berjalan) + yang saya ajukan; view=all: semua di scope.
+ * status=pending|approved|rejected|all.
+ */
+export function listApprovalInbox(
+  user: Pick<ApiUser, "id" | "role">,
+  scope: UserScope | null,
+  filter: { view: "mine" | "all"; status: string }
+) {
+  const conditions: string[] = ["r.object = 'quotation'"];
+  const params: unknown[] = [];
+  const add = (fragment: string, value: unknown) => {
+    params.push(value);
+    conditions.push(fragment.replace("?", `$${params.length}`));
+  };
+  if (scope?.companyId) add("r.company_id = ?", scope.companyId);
+  if (filter.status !== "all") add("r.status = ?", filter.status);
+  if (filter.view === "mine") {
+    params.push(user.id, user.role);
+    conditions.push(
+      `(r.requested_by = $${params.length - 1}
+        OR EXISTS (SELECT 1 FROM crm.crm_approval_steps s
+                    WHERE s.request_id = r.id AND s.level = r.current_level AND s.status = 'pending'
+                      AND (s.approver_user_id = $${params.length - 1}
+                           OR s.approver_role = $${params.length}
+                           OR $${params.length} = 'super_admin')))`
+    );
+  }
+  return query(
+    `SELECT r.id, r.status, r.current_level, r.discount_percent, r.amount, r.note, r.created_at, r.resolved_at,
+            r.subject_id AS quotation_id, q.quote_number, q.total, q.subtotal, q.discount_nominal, q.status AS quotation_status,
+            d.id AS deal_id, d.title AS deal_title, l.org_name, l.pic_name,
+            u.full_name AS requested_by_name,
+            (SELECT json_agg(json_build_object('level', s.level, 'status', s.status, 'approver_role', s.approver_role,
+                                               'approver_user_id', s.approver_user_id, 'decided_at', s.decided_at,
+                                               'comment', s.comment, 'decided_by_name', du.full_name) ORDER BY s.level)
+               FROM crm.crm_approval_steps s LEFT JOIN configuration.users du ON du.id = s.decided_by
+              WHERE s.request_id = r.id) AS steps,
+            EXISTS (SELECT 1 FROM crm.crm_approval_steps s
+                     WHERE s.request_id = r.id AND s.level = r.current_level AND s.status = 'pending'
+                       AND (s.approver_user_id = $${params.length + 1} OR s.approver_role = $${params.length + 2} OR $${params.length + 2} = 'super_admin')) AS can_decide
+     FROM crm.crm_approval_requests r
+     JOIN crm.crm_sales_quotations q ON q.id = r.subject_id
+     JOIN crm.crm_sales_deals d ON d.id = q.deal_id
+     JOIN crm.crm_sales_leads l ON l.id = d.lead_id
+     LEFT JOIN configuration.users u ON u.id = r.requested_by
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY (r.status = 'pending') DESC, r.created_at DESC
+     LIMIT 200`,
+    [...params, user.id, user.role]
+  );
+}
+
+/** Event CRM quotation.status_changed setelah keputusan approval (memicu workflow). */
+export async function emitApprovalDecisionEvent(
+  requestId: string,
+  actorUserId: string,
+  payload: { approval: string; decision: string }
+) {
+  const req = await queryOne<{ subject_id: string; company_id: string; branch_id: string | null }>(
+    `SELECT subject_id, company_id, branch_id FROM crm.crm_approval_requests WHERE id = $1`,
+    [requestId]
+  );
+  if (!req) return;
+  await emitCrmEvent({
+    event_type: "quotation.status_changed",
+    subject_type: "quotation",
+    subject_id: req.subject_id,
+    company_id: req.company_id,
+    branch_id: req.branch_id,
+    actor_user_id: actorUserId,
+    payload,
+  });
 }

@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
-import { crmFail, crmOk, crmRoute } from "@/lib/crm/crm-route";
+import { ApiError, successResponse } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { parseCrmInput, requireCrmUser } from "@/lib/crm/guards";
 import { findMemberForSubject, rematchPendingEvents, settleEvent } from "@/lib/crm/partners-server";
 
 const rematchSchema = z.discriminatedUnion("mode", [
@@ -14,15 +15,16 @@ const rematchSchema = z.discriminatedUnion("mode", [
  * POST — cocokkan ulang event. Payload partner tidak diubah; hanya sisi
  * pencocokan kita. XP diberikan bila partner aktif dan memberi XP.
  */
-export const POST = crmRoute(IAM.crmPartners, "Gagal mencocokkan ulang event", async (userId, request: Request) => {
-  const body = rematchSchema.parse(await request.json());
+export const POST = apiHandler(async (request: Request) => {
+  const user = await requireCrmUser("partners");
+  const body = parseCrmInput(rematchSchema, await request.json());
   if (body.mode === "manual") {
     const customerId = await findMemberForSubject(body.identifier);
-    if (!customerId) return crmFail("Member dengan telepon/email itu tidak ditemukan (atau lebih dari satu)", 404);
-    const event = await settleEvent(body.event_id, { customerId, actorId: userId });
-    if (!event) return crmFail("Event tidak ditemukan", 404);
-    return crmOk(event, "Event dicocokkan ke member");
+    if (!customerId) throw ApiError.notFound("Member dengan telepon/email itu tidak ditemukan (atau lebih dari satu)");
+    const event = await settleEvent(body.event_id, { customerId, actorId: user.id });
+    if (!event) throw ApiError.notFound("Event tidak ditemukan");
+    return successResponse(event, "Event dicocokkan ke member");
   }
   const result = await rematchPendingEvents(body.partner_id ?? null);
-  return crmOk(result, `${result.matched} dari ${result.checked} event berhasil dicocokkan`);
-});
+  return successResponse(result, `${result.matched} dari ${result.checked} event berhasil dicocokkan`);
+}, "crm.partners.events.rematch.POST");

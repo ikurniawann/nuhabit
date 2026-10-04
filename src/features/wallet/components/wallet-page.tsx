@@ -23,7 +23,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
-import { ENTRY_LABELS, angka, entryDelta, rupiah, signedRupiah, tanggal, waktu, walletApi, type WalletEntry } from "../api";
+import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { ENTRY_LABELS, entryDelta, signedRupiah, walletApi, type WalletEntry } from "../api";
 
 const memberKey = (id: string) => ["wallet", "member", id];
 const NOT_REVERSIBLE = new Set(["reversal", "topup_refund"]);
@@ -100,13 +101,13 @@ export function WalletPage() {
                 key={m.id}
                 type="button"
                 onClick={() => pick(m.id)}
-                className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm hover:text-forest"
+                className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm hover:text-brand-text"
               >
                 <span>
                   <span className="font-medium">{m.name ?? "Tanpa nama"}</span>
                   <span className="ml-2 font-mono text-xs text-muted-foreground">{m.phone}</span>
                 </span>
-                <span className="tabular-nums">{rupiah(m.balance)}</span>
+                <span className="tabular-nums">{formatRupiah(m.balance)}</span>
               </button>
             ))}
           </div>
@@ -130,15 +131,15 @@ export function WalletPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
             <StatCard
               label={data.member.name ?? data.member.phone}
-              value={rupiah(data.member.balance)}
+              value={formatRupiah(data.member.balance)}
               hint={data.member.phone}
               icon={<Wallet />}
               tone="ink"
             />
-            <StatCard label="Lot aktif" value={angka(data.lots.length)} icon={<Layers />} />
+            <StatCard label="Lot aktif" value={formatNumber(data.lots.length)} icon={<Layers />} />
             <StatCard
               label="Kedaluwarsa ≤ 30 hari"
-              value={rupiah(expiringSoon.reduce((s, l) => s + l.remaining, 0))}
+              value={formatRupiah(expiringSoon.reduce((s, l) => s + l.remaining, 0))}
               icon={<Hourglass />}
               tone={expiringSoon.length ? "warning" : "default"}
             />
@@ -163,11 +164,11 @@ export function WalletPage() {
                       <TableCell>
                         {ENTRY_LABELS[lot.type] ?? lot.type}
                         <span className="block text-xs text-muted-foreground">
-                          {waktu(lot.created_at)} · awal {rupiah(lot.amount)}
+                          {formatDateTime(lot.created_at)} · awal {formatRupiah(lot.amount)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{rupiah(lot.remaining)}</TableCell>
-                      <TableCell>{tanggal(lot.expires_at)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{formatRupiah(lot.remaining)}</TableCell>
+                      <TableCell>{formatDate(lot.expires_at, "Tidak kedaluwarsa")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -222,14 +223,14 @@ function LedgerTable({ entries, onCorrect }: { entries: WalletEntry[]; onCorrect
                   {Boolean(meta.refunded_at) && <Badge variant="outline">Direfund</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {[waktu(e.created_at), e.notes, meta.actor_name ? `oleh ${meta.actor_name}` : null].filter(Boolean).join(" · ")}
+                  {[formatDateTime(e.created_at), e.notes, meta.actor_name ? `oleh ${meta.actor_name}` : null].filter(Boolean).join(" · ")}
                 </p>
-                {e.expires_at && <p className="text-xs text-muted-foreground">Berlaku s.d. {tanggal(e.expires_at)}</p>}
+                {e.expires_at && <p className="text-xs text-muted-foreground">Berlaku s.d. {formatDate(e.expires_at)}</p>}
               </TableCell>
               <TableCell className={`text-right tabular-nums ${amount > 0 ? "text-success" : "text-danger"}`}>
                 {signedRupiah(amount)}
               </TableCell>
-              <TableCell className="hidden text-right tabular-nums md:table-cell">{rupiah(e.balance_after)}</TableCell>
+              <TableCell className="hidden text-right tabular-nums md:table-cell">{formatRupiah(e.balance_after)}</TableCell>
               <TableCell className="text-right">
                 {done && !locked && !NOT_REVERSIBLE.has(e.type) && (
                   <div className="flex justify-end gap-1">
@@ -299,10 +300,10 @@ function CorrectionDialog({
         : "Refund top-up";
   const description =
     correction.kind === "adjust"
-      ? `Saldo saat ini ${rupiah(balance)}. Penambahan menjadi lot baru dengan masa berlaku default.`
+      ? `Saldo saat ini ${formatRupiah(balance)}. Penambahan menjadi lot baru dengan masa berlaku default.`
       : correction.kind === "reverse"
         ? `Entri ${signedRupiah(entryDelta(correction.entry))} dibalik sekali. Saldo tidak boleh menjadi minus.`
-        : `Saldo top-up beserta bonus paketnya ditarik. Uang ${rupiah(Math.abs(correction.entry.amount))} dikembalikan di luar sistem.`;
+        : `Saldo top-up beserta bonus paketnya ditarik. Uang ${formatRupiah(Math.abs(correction.entry.amount))} dikembalikan di luar sistem.`;
   const valid = reason.trim().length >= 5 && (correction.kind !== "adjust" || Number(amount) > 0);
 
   return (

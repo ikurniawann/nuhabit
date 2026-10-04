@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate, formatRupiah } from "@/lib/format";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -14,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DealFormDialog } from "../../pipeline";
-import { formatRupiah } from "../../pipeline/types";
+import { formatRupiahOrDash } from "../../pipeline/types";
 import { useLeadDetail, usePicLookup } from "../queries";
 import {
   ORG_TYPE_LABELS,
@@ -31,15 +32,6 @@ import { ScoreBadge } from "./score-badge";
 import { useUpdateTask } from "@/features/sales-funnel/tasks/queries";
 import { TaskFormDialog } from "@/features/sales-funnel/tasks/components/task-form-dialog";
 
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function DealRow({ deal }: { deal: LeadDealSummary }) {
   const stageBadge = deal.is_won
     ? "border-0 bg-emerald-100 font-normal text-emerald-700"
@@ -51,7 +43,7 @@ function DealRow({ deal }: { deal: LeadDealSummary }) {
       <div className="min-w-0">
         <p className="font-medium text-gray-900">{deal.title}</p>
         <p className="mt-0.5 text-xs text-gray-500">
-          {formatDate(deal.event_date)}
+          {formatDate(deal.event_date, "—")}
           {deal.event_date && !deal.is_event_date_fixed ? " (tentatif)" : ""}
           {deal.pax_estimate ? ` · ${deal.pax_estimate} pax` : ""}
           {deal.lost_reason_name ? ` · Kalah: ${deal.lost_reason_name}` : ""}
@@ -59,7 +51,7 @@ function DealRow({ deal }: { deal: LeadDealSummary }) {
       </div>
       <div className="flex shrink-0 items-center gap-2.5">
         <span className="text-sm font-semibold text-gray-900">
-          {formatRupiah(deal.value_final ?? deal.value_estimate)}
+          {formatRupiahOrDash(deal.value_final ?? deal.value_estimate)}
         </span>
         <Badge className={stageBadge}>{deal.stage_name}</Badge>
       </div>

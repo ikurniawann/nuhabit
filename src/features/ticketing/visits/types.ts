@@ -1,5 +1,5 @@
 import type { PaymentMode } from "../masters/types";
-import type { GateTapResult } from "@/app/api/ticketing/gate/tap/route";
+import type { GateTapResult } from "@/lib/ticketing/gate-server";
 
 export type VisitStatus = "open" | "settled" | "void";
 export type CashMethod = "cash" | "qris" | "card";

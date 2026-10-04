@@ -12,14 +12,13 @@ import {
 import { CATEGORY_LABELS, PRIORITY_LABELS, formatDuration } from "@/lib/crm/cs-rules";
 import { useCsReport } from "../queries";
 import type { CrmReportPeriodInput } from "../types";
+import { formatNumber } from "@/lib/format";
 
 /**
  * EPIC-012 Fase E — bagian laporan customer service pada halaman Laporan CRM,
  * dipecah per kanal sejak EPIC-013 Fase B.
  * Hanya angka agregat; isi chat & nomor customer sengaja tidak ditampilkan.
  */
-
-const angka = new Intl.NumberFormat("id-ID");
 
 function labelKategori(category: string) {
   if (category === "belum_dikategorikan") return "Belum dikategorikan";
@@ -58,21 +57,21 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
           icon={MessageCircle}
           tone="text-sky-700 bg-sky-50"
           label="Percakapan"
-          value={angka.format(summary?.total_conversations ?? 0)}
-          hint={`${angka.format(summary?.total_complaints ?? 0)} ditandai komplain`}
+          value={formatNumber(summary?.total_conversations ?? 0)}
+          hint={`${formatNumber(summary?.total_complaints ?? 0)} ditandai komplain`}
         />
         <MetricCard
           icon={Timer}
           tone="text-violet-700 bg-violet-50"
           label="Rata-rata respons pertama"
           value={formatDuration(summary?.avg_first_response_seconds ?? null)}
-          hint={`${angka.format(summary?.total_sla_breached ?? 0)} lewat SLA`}
+          hint={`${formatNumber(summary?.total_sla_breached ?? 0)} lewat SLA`}
         />
         <MetricCard
           icon={CheckCircle2}
           tone="text-emerald-700 bg-emerald-50"
           label="Selesai"
-          value={`${angka.format(summary?.total_resolved ?? 0)} (${resolvedRate}%)`}
+          value={`${formatNumber(summary?.total_resolved ?? 0)} (${resolvedRate}%)`}
           hint={`Rata-rata ${formatDuration(summary?.avg_resolution_seconds ?? null)}`}
         />
         <MetricCard
@@ -80,7 +79,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
           tone="text-amber-700 bg-amber-50"
           label="Kepuasan (CSAT)"
           value={summary?.avg_csat != null ? `${summary.avg_csat.toFixed(1)}/5` : "-"}
-          hint={`${angka.format(summary?.csat_responses ?? 0)} penilaian masuk`}
+          hint={`${formatNumber(summary?.csat_responses ?? 0)} penilaian masuk`}
         />
       </div>
 
@@ -109,9 +108,9 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                       <td className="px-3 py-2 text-slate-600">
                         {PRIORITY_LABELS[row.priority as keyof typeof PRIORITY_LABELS] ?? row.priority}
                       </td>
-                      <td className="px-3 py-2 text-right">{angka.format(row.total)}</td>
+                      <td className="px-3 py-2 text-right">{formatNumber(row.total)}</td>
                       <td className="px-3 py-2 text-right text-emerald-700">
-                        {angka.format(row.resolved)}
+                        {formatNumber(row.resolved)}
                       </td>
                       <td className="px-3 py-2 text-right text-slate-500">
                         {formatDuration(row.avg_resolution_seconds)}
@@ -200,12 +199,12 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                     <td className="px-3 py-2 font-medium capitalize text-slate-800">
                       {row.channel === "whatsapp" ? "WhatsApp" : "Instagram"}
                     </td>
-                    <td className="px-3 py-2 text-right">{angka.format(row.conversations)}</td>
+                    <td className="px-3 py-2 text-right">{formatNumber(row.conversations)}</td>
                     <td className="px-3 py-2 text-right text-orange-700">
-                      {angka.format(row.complaints)}
+                      {formatNumber(row.complaints)}
                     </td>
                     <td className="px-3 py-2 text-right text-emerald-700">
-                      {angka.format(row.resolved)}
+                      {formatNumber(row.resolved)}
                     </td>
                     <td className="px-3 py-2 text-right text-slate-500">
                       {formatDuration(row.avg_first_response_seconds)}
@@ -226,21 +225,21 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
           <Empty>Belum ada ulasan Google pada periode ini.</Empty>
         ) : (
           <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-            <ReviewStat label="Ulasan masuk" value={angka.format(data.reviews.total)} />
+            <ReviewStat label="Ulasan masuk" value={formatNumber(data.reviews.total)} />
             <ReviewStat
               label="Rata-rata rating"
               value={data.reviews.avg_rating != null ? `${data.reviews.avg_rating.toFixed(1)}/5` : "-"}
             />
             <ReviewStat
               label="Sudah dibalas"
-              value={`${angka.format(data.reviews.replied)} (${Math.round(
+              value={`${formatNumber(data.reviews.replied)} (${Math.round(
                 (data.reviews.replied / data.reviews.total) * 100
               )}%)`}
               tone="text-emerald-700"
             />
             <ReviewStat
               label="Rating ≤ 2 bintang"
-              value={angka.format(data.reviews.low_rating)}
+              value={formatNumber(data.reviews.low_rating)}
               tone={data.reviews.low_rating > 0 ? "text-red-700" : undefined}
             />
           </div>
@@ -266,9 +265,9 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                 {data?.agents.map((row) => (
                   <tr key={row.agent_name}>
                     <td className="px-3 py-2 font-medium text-slate-800">{row.agent_name}</td>
-                    <td className="px-3 py-2 text-right">{angka.format(row.handled)}</td>
+                    <td className="px-3 py-2 text-right">{formatNumber(row.handled)}</td>
                     <td className="px-3 py-2 text-right text-emerald-700">
-                      {angka.format(row.resolved)}
+                      {formatNumber(row.resolved)}
                     </td>
                     <td className="px-3 py-2 text-right text-slate-500">
                       {formatDuration(row.avg_first_response_seconds)}
@@ -288,7 +287,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" />
           <span>
-            <strong>{angka.format(summary?.total_sla_breached ?? 0)} percakapan</strong> melewati
+            <strong>{formatNumber(summary?.total_sla_breached ?? 0)} percakapan</strong> melewati
             batas waktu balas pada periode ini. Periksa di Inbox WhatsApp — percakapan
             bertanda &ldquo;Lewat SLA&rdquo;.
           </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -54,7 +55,7 @@ import {
   type ActivityType,
   type SalesActivity,
 } from "../../activities/types";
-import { EVENT_TYPE_LABELS, formatRupiah, type SalesDeal } from "../types";
+import { EVENT_TYPE_LABELS, formatEventDate, formatRupiahOrDash, type SalesDeal } from "../types";
 
 const TYPE_ICON: Record<ActivityType, typeof Phone> = {
   telepon: Phone,
@@ -62,15 +63,6 @@ const TYPE_ICON: Record<ActivityType, typeof Phone> = {
   meeting: Users,
   catatan: StickyNote,
 };
-
-function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 interface DealDetailDialogProps {
   deal: SalesDeal | null;
@@ -171,19 +163,13 @@ export function DealDetailDialog({ deal, onClose, onEdit }: DealDetailDialogProp
                     <p className="text-xs text-gray-400">Tanggal Acara</p>
                     <p className="inline-flex items-center gap-1 text-gray-900">
                       <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-                      {deal.event_date
-                        ? `${new Date(deal.event_date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}${deal.is_event_date_fixed ? "" : " (tentatif)"}`
-                        : "—"}
+                      {formatEventDate(deal) ?? "—"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Nilai</p>
                     <p className="font-semibold text-gray-900">
-                      {formatRupiah(deal.value_final ?? deal.value_estimate)}
+                      {formatRupiahOrDash(deal.value_final ?? deal.value_estimate)}
                     </p>
                   </div>
                   <div>

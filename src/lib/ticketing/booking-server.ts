@@ -1,3 +1,4 @@
+import "server-only";
 // Fase D — sisi server booking publik: resolusi venue via booking_slug,
 // katalog kanal website ber-harga ter-resolve, dan lazy expiry booking.
 // SEMUA fungsi di file ini dipanggil dari route TANPA auth — jangan
@@ -330,4 +331,121 @@ export async function expireBookingIfDue(bookingId: string): Promise<boolean> {
     ).catch((err) => console.error("[booking] release promo error:", err));
   }
   return updated.length > 0;
+}
+
+// ── Item booking (status publik, lookup & rincian dashboard) ─────────
+
+interface BookingItemRow {
+  variant_id: string;
+  ticket_product_id: string;
+  product_name: string;
+  variant_name: string;
+  qty: number;
+  unit_price: string;
+  season_kind: string;
+  subtotal: string;
+}
+
+export function loadBookingItems(bookingId: string) {
+  return query<BookingItemRow>(
+    `SELECT variant_id, ticket_product_id, product_name, variant_name,
+            qty, unit_price, season_kind, subtotal
+     FROM ticketing.ticket_booking_items
+     WHERE booking_id = $1
+     ORDER BY product_name, variant_name`,
+    [bookingId]
+  );
+}
+
+/** Ringkasan item untuk detail/status: tanpa id varian/produk. */
+export const publicItem = (i: BookingItemRow) => ({
+  product_name: i.product_name,
+  variant_name: i.variant_name,
+  qty: i.qty,
+  unit_price: Number(i.unit_price),
+  season_kind: i.season_kind,
+  subtotal: Number(i.subtotal),
+});
+
+// ── Status publik via capability token ───────────────────────────────
+
+/**
+ * Status booking via access_token (64 hex acak). null = tak dikenal (404
+ * generik). Menyentuh status = lazy expiry menunggu-bayar yang basi. QR di
+ * halaman status memuat booking_code — dipindai petugas loket (Fase D4).
+ */
+export async function getPublicBookingStatus(token: string) {
+  const booking = await queryOne<{
+    id: string;
+    booking_code: string;
+    visit_date: string;
+    customer_name: string;
+    status: string;
+    total: string;
+    discount_amount: string | null;
+    promo_code: string | null;
+    gift_recipient_name: string | null;
+    slot_label: string | null;
+    slot_start_time: string | null;
+    slot_end_time: string | null;
+    xendit_invoice_url: string | null;
+    expires_at: string | null;
+    paid_at: string | null;
+    used_at: string | null;
+  }>(
+    `SELECT id, booking_code, visit_date::text AS visit_date, customer_name,
+            status, total, discount_amount, promo_code, xendit_invoice_url,
+            gift_recipient_name,
+            slot_label, slot_start_time::text AS slot_start_time,
+            slot_end_time::text AS slot_end_time,
+            expires_at::text AS expires_at, paid_at::text AS paid_at,
+            used_at::text AS used_at
+     FROM ticketing.ticket_bookings
+     WHERE access_token = $1`,
+    [token]
+  );
+  if (!booking) return null;
+
+  let status = booking.status;
+  if (status === "menunggu-bayar" && (await expireBookingIfDue(booking.id))) {
+    status = "kedaluwarsa";
+  }
+
+  const [items, guests] = await Promise.all([
+    loadBookingItems(booking.id),
+    query<{ guest_name: string; variant_name: string }>(
+      `SELECT g.guest_name, i.variant_name
+       FROM ticketing.ticket_booking_guests g
+       JOIN ticketing.ticket_booking_items i ON i.id = g.booking_item_id
+       WHERE g.booking_id = $1
+       ORDER BY g.position`,
+      [booking.id]
+    ),
+  ]);
+
+  const total = Number(booking.total);
+  const discount = Number(booking.discount_amount ?? 0);
+  return {
+    booking_code: booking.booking_code,
+    visit_date: booking.visit_date,
+    customer_name: booking.customer_name,
+    status,
+    total,
+    // EPIC-032 B1 — potongan promo (0 = tanpa promo) + jumlah dibayar
+    discount_amount: discount,
+    promo_code: booking.promo_code,
+    gift_recipient_name: booking.gift_recipient_name,
+    payable: Math.round((total - discount) * 100) / 100,
+    // EPIC-031 D — jam slot (null = sepanjang hari)
+    slot_label: booking.slot_label,
+    slot_start_time: booking.slot_start_time?.slice(0, 5) ?? null,
+    slot_end_time: booking.slot_end_time?.slice(0, 5) ?? null,
+    // Link bayar hanya relevan selama masih menunggu
+    invoice_url: status === "menunggu-bayar" ? booking.xendit_invoice_url : null,
+    expires_at: booking.expires_at,
+    paid_at: booking.paid_at,
+    used_at: booking.used_at,
+    items: items.map(publicItem),
+    guests,
+  };
 }

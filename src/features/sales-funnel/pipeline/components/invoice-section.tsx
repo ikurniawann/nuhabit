@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { useState } from "react";
 import { FileCheck2, FileDown, Loader2, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,6 @@ import {
   useDealInvoices,
   useDeleteDealInvoice,
 } from "../queries";
-import { formatRupiah } from "../types";
 import type { InvoiceTermOption } from "../api";
 
 /**
@@ -51,15 +51,6 @@ const PAYMENT_BADGES: Record<string, string> = {
 };
 
 const CUSTOM_TERM = "custom";
-
-function formatShortDate(value: string | null): string {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function InvoiceSection({
   dealId,
@@ -113,7 +104,7 @@ export function InvoiceSection({
   };
 
   const termLabel = (term: InvoiceTermOption) =>
-    `${term.label} (${Number(term.percent).toLocaleString("id-ID")}% · ${formatRupiah(term.amount)})`;
+    `${term.label} (${formatNumber(term.percent, 3)}% · ${formatRupiah(term.amount)})`;
 
   // Breakdown PPN informatif — nominal termin sudah termasuk PPN
   const amountNumber = Number(amount) || 0;
@@ -179,7 +170,7 @@ export function InvoiceSection({
                 </p>
                 <p className="text-xs text-gray-500">
                   {invoice.due_date
-                    ? `Jatuh tempo ${formatShortDate(invoice.due_date)}`
+                    ? `Jatuh tempo ${formatDate(invoice.due_date, "")}`
                     : "Tanpa jatuh tempo"}
                   {invoice.quote_number ? ` · ${invoice.quote_number}` : ""}
                 </p>

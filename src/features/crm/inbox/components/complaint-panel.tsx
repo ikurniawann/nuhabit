@@ -11,6 +11,7 @@ import {
   type CsCategory,
   type CsPriority,
 } from "@/lib/crm/cs-rules";
+import { formatDateTime } from "@/lib/format";
 import type { InboxConversation, InternalNote } from "../types";
 
 /**
@@ -25,9 +26,6 @@ const PRIORITY_STYLES: Record<CsPriority, string> = {
   urgent: "bg-red-50 text-red-700",
 };
 
-const waktu = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" });
-
 export function ComplaintPanel({
   conversation,
   notes,
@@ -40,8 +38,8 @@ export function ComplaintPanel({
     is_complaint: boolean;
     category?: CsCategory | null;
     priority?: CsPriority;
-  }) => Promise<void>;
-  onAddNote: (body: string) => Promise<void>;
+  }) => Promise<unknown>;
+  onAddNote: (body: string) => Promise<unknown>;
 }) {
   const [noteDraft, setNoteDraft] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -135,13 +133,13 @@ export function ComplaintPanel({
           <div className="flex items-center gap-1.5 rounded bg-red-50 px-2 py-1 text-[11px] font-medium text-red-700">
             <AlertTriangle className="size-3" />
             Lewat batas balas
-            {conversation.escalated_at && ` · sejak ${waktu(conversation.escalated_at)}`}
+            {conversation.escalated_at && ` · sejak ${formatDateTime(conversation.escalated_at)}`}
           </div>
         )}
         <MetricRow
           icon={Clock}
           label="Menunggu sejak"
-          value={conversation.awaiting_since ? waktu(conversation.awaiting_since) : "tidak ada"}
+          value={conversation.awaiting_since ? formatDateTime(conversation.awaiting_since) : "tidak ada"}
         />
         <MetricRow
           icon={Timer}
@@ -193,7 +191,7 @@ export function ComplaintPanel({
               <div key={note.id} className="rounded-md border border-amber-200 bg-amber-50/70 px-2 py-1.5 text-xs">
                 <p className="whitespace-pre-wrap break-words text-slate-700">{note.body}</p>
                 <div className="mt-0.5 text-[10px] text-slate-400">
-                  {note.author_name || "Agent"} · {waktu(note.created_at)}
+                  {note.author_name || "Agent"} · {formatDateTime(note.created_at)}
                 </div>
               </div>
             ))}

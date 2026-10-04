@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import {
   useCreateWaTemplate,
@@ -33,8 +33,6 @@ export function WaTemplatesSection() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<WaTemplate | null>(null);
   const [deleting, setDeleting] = useState<WaTemplate | null>(null);
-  const [name, setName] = useState("");
-  const [body, setBody] = useState("");
 
   const templatesQuery = useWaTemplates();
   const templates = templatesQuery.data ?? [];
@@ -43,28 +41,7 @@ export function WaTemplatesSection() {
     setFormOpen(false);
     setEditing(null);
   };
-  const createMutation = useCreateWaTemplate(close);
-  const updateMutation = useUpdateWaTemplate(close);
   const deleteMutation = useDeleteWaTemplate();
-  const isPending = createMutation.isPending || updateMutation.isPending;
-
-  useEffect(() => {
-    if (!formOpen) return;
-    setName(editing?.name ?? "");
-    setBody(editing?.body ?? "");
-  }, [formOpen, editing]);
-
-  const canSubmit = name.trim() !== "" && body.trim() !== "";
-
-  const handleSubmit = () => {
-    if (!canSubmit || isPending) return;
-    const values = { name: name.trim(), body: body.trim() };
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, values });
-    } else {
-      createMutation.mutate(values);
-    }
-  };
 
   return (
     <>
@@ -131,41 +108,7 @@ export function WaTemplatesSection() {
 
       <Dialog open={formOpen} onOpenChange={(open) => !open && close()}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editing ? "Edit Template" : "Tambah Template"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="tpl_name">Nama Template *</Label>
-              <Input
-                id="tpl_name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Follow-up Penawaran"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="tpl_body">Isi Pesan *</Label>
-              <Textarea
-                id="tpl_body"
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={5}
-                placeholder="Halo {pic}, ..."
-              />
-              <p className="text-xs text-gray-500">{PLACEHOLDER_HINT}</p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={close} disabled={isPending}>
-              Batal
-            </Button>
-            <Button onClick={handleSubmit} disabled={!canSubmit || isPending}>
-              {isPending ? "Menyimpan…" : editing ? "Simpan Perubahan" : "Tambah"}
-            </Button>
-          </DialogFooter>
+          {formOpen ? <WaTemplateForm key={editing?.id ?? "new"} template={editing} onClose={close} /> : null}
         </DialogContent>
       </Dialog>
 
@@ -181,6 +124,66 @@ export function WaTemplatesSection() {
           setDeleting(null);
         }}
       />
+    </>
+  );
+}
+
+/** Isi form template; di-mount ulang per template (key) sehingga state awal dari props. */
+function WaTemplateForm({ template, onClose }: { template: WaTemplate | null; onClose: () => void }) {
+  const [name, setName] = useState(template?.name ?? "");
+  const [body, setBody] = useState(template?.body ?? "");
+  const createMutation = useCreateWaTemplate(onClose);
+  const updateMutation = useUpdateWaTemplate(onClose);
+  const isPending = createMutation.isPending || updateMutation.isPending;
+  const canSubmit = name.trim() !== "" && body.trim() !== "";
+
+  const handleSubmit = () => {
+    if (!canSubmit || isPending) return;
+    const values = { name: name.trim(), body: body.trim() };
+    if (template) {
+      updateMutation.mutate({ id: template.id, values });
+    } else {
+      createMutation.mutate(values);
+    }
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>
+          {template ? "Edit Template" : "Tambah Template"}
+        </DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="tpl_name">Nama Template *</Label>
+          <Input
+            id="tpl_name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Follow-up Penawaran"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="tpl_body">Isi Pesan *</Label>
+          <Textarea
+            id="tpl_body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={5}
+            placeholder="Halo {pic}, ..."
+          />
+          <p className="text-xs text-gray-500">{PLACEHOLDER_HINT}</p>
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isPending}>
+          Batal
+        </Button>
+        <Button onClick={handleSubmit} disabled={!canSubmit || isPending}>
+          {isPending ? "Menyimpan…" : template ? "Simpan Perubahan" : "Tambah"}
+        </Button>
+      </DialogFooter>
     </>
   );
 }

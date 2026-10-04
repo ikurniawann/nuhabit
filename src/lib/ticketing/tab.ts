@@ -4,6 +4,8 @@
 // Amount di ledger selalu positif; arah dari direction. Semua nominal
 // dibulatkan 2dp agar bebas drift float.
 
+import { formatRupiah } from "@/lib/format";
+
 export const CHARGE_TYPES = [
   "tiket",
   "fnb",
@@ -80,7 +82,7 @@ export function canCharge(input: {
     if (sisa < 0) {
       return {
         ok: false,
-        reason: `Saldo tidak cukup (saldo Rp${input.summary.saldo.toLocaleString("id-ID")}) — silakan top-up dulu`,
+        reason: `Saldo tidak cukup (saldo ${formatRupiah(input.summary.saldo)}) — silakan top-up dulu`,
       };
     }
     return { ok: true };
@@ -92,7 +94,7 @@ export function canCharge(input: {
     if (after > limit) {
       return {
         ok: false,
-        reason: `Melewati plafon tagihan Rp${limit.toLocaleString("id-ID")} — silakan bayar parsial di kasir`,
+        reason: `Melewati plafon tagihan ${formatRupiah(limit)} — silakan bayar parsial di kasir`,
       };
     }
   }

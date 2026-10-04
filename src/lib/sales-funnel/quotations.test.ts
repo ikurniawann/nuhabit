@@ -1,6 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, it, test } from "vitest";
 import {
   allocateTermAmounts,
+  buildQuotationWaMessage,
   quotationPayloadSchema,
   termProgress,
 } from "./quotations";
@@ -89,5 +90,44 @@ describe("termProgress (waterfall pembayaran → status per termin)", () => {
     const progress = termProgress(terms, 10_000_000, 12_000_000);
     expect(progress.map((p) => p.status)).toEqual(["lunas", "lunas"]);
     expect(progress[1].paid).toBe(5_000_000);
+  });
+});
+
+describe("buildQuotationWaMessage", () => {
+  it("ringkasan item, PPN, total, dan baris opsional", () => {
+    const message = buildQuotationWaMessage(
+      {
+        quote_number: "QT-2610-0001",
+        branch_name: "Lembang",
+        pic_name: "Budi",
+        deal_title: "Gathering Akhir Tahun",
+        org_name: "PT Maju",
+        use_ppn: true,
+        ppn_persen: "11",
+        subtotal: "1000000",
+        ppn_nominal: "110000",
+        total: "1110000",
+        event_date: "2026-11-07",
+        valid_until: null,
+        notes: null,
+      },
+      [{ description: "Paket Makan", item_type: "produk", qty: "50", unit_price: "20000", line_total: "1000000" }]
+    );
+    expect(message.split("\n")).toEqual([
+      "*PENAWARAN QT-2610-0001*",
+      "_Lembang_",
+      "",
+      "Halo Budi, berikut ringkasan penawaran untuk *Gathering Akhir Tahun* (PT Maju):",
+      "",
+      "• Paket Makan — 50 pax @ Rp20.000 = *Rp1.000.000*",
+      "",
+      "Subtotal: Rp1.000.000",
+      "PPN 11%: Rp110.000",
+      "*TOTAL: Rp1.110.000*",
+      "",
+      "Tanggal acara: Sabtu, 7 November 2026",
+      "",
+      "Bila sudah sesuai, mohon konfirmasinya ya 🙏",
+    ]);
   });
 });

@@ -19,13 +19,16 @@ export const formatWib = (iso: string | Date) =>
  * member: tangkapan layar tidak berguna setelah TTL dan tidak bisa ditelusuri
  * balik ke identitas. */
 
-export const QR_TOKEN_PREFIX = "bcdqr_";
+export const QR_TOKEN_PREFIX = "nhqr_";
+/** Prefix sebelum rename NüHabit; QR yang sudah terbit tetap dikenali sampai TTL habis. */
+export const LEGACY_QR_TOKEN_PREFIX = "bcdqr_";
 export const QR_TTL_SECONDS = 60;
 
 export type QrProblem = "not_found" | "expired" | "consumed";
 
 export function isMemberQrToken(value: string): boolean {
-  return value.trim().toLowerCase().startsWith(QR_TOKEN_PREFIX);
+  const token = value.trim().toLowerCase();
+  return token.startsWith(QR_TOKEN_PREFIX) || token.startsWith(LEGACY_QR_TOKEN_PREFIX);
 }
 
 export function checkQrToken(

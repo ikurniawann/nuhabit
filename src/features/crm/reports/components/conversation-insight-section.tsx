@@ -15,6 +15,7 @@ import {
 import { analyzePendingConversations, downloadConversationInsightXlsx } from "../api";
 import { conversationInsightQueryKey, useConversationInsightReport } from "../queries";
 import type { CrmReportPeriodInput } from "../types";
+import { formatNumber } from "@/lib/format";
 
 /**
  * EPIC-029 — bagian "Analitik Percakapan" pada halaman Laporan CRM.
@@ -23,8 +24,6 @@ import type { CrmReportPeriodInput } from "../types";
  * per percakapan (yang bisa memuat PII) sengaja TIDAK ditampilkan di sini — itu
  * hanya ada di inbox, di balik guard agent.
  */
-
-const angka = new Intl.NumberFormat("id-ID");
 
 export function ConversationInsightSection({ period }: { period: CrmReportPeriodInput }) {
   const queryClient = useQueryClient();
@@ -57,9 +56,9 @@ export function ConversationInsightSection({ period }: { period: CrmReportPeriod
         setNotice("Tidak ada percakapan baru yang perlu dianalisa.");
       } else {
         setNotice(
-          `${angka.format(requested)} percakapan diperiksa: ${angka.format(baru)} dianalisa, ` +
-            `${angka.format(cached)} sudah terkini, ${angka.format(empty)} tanpa isi teks, ` +
-            `${angka.format(failed)} gagal.`
+          `${formatNumber(requested)} percakapan diperiksa: ${formatNumber(baru)} dianalisa, ` +
+            `${formatNumber(cached)} sudah terkini, ${formatNumber(empty)} tanpa isi teks, ` +
+            `${formatNumber(failed)} gagal.`
         );
       }
       // Muat ulang laporan agar angka hasil analisa langsung terlihat.
@@ -139,28 +138,28 @@ export function ConversationInsightSection({ period }: { period: CrmReportPeriod
           icon={Percent}
           tone="text-sky-700 bg-sky-50"
           label="Percakapan teranalisa"
-          value={`${angka.format(analyzed)} / ${angka.format(totalConversations)}`}
-          hint={`${coverage}% cakupan · ${angka.format(summary?.not_analyzed ?? 0)} belum dianalisa`}
+          value={`${formatNumber(analyzed)} / ${formatNumber(totalConversations)}`}
+          hint={`${coverage}% cakupan · ${formatNumber(summary?.not_analyzed ?? 0)} belum dianalisa`}
         />
         <MetricCard
           icon={AlertTriangle}
           tone="text-amber-700 bg-amber-50"
           label="Terindikasi komplain"
-          value={angka.format(summary?.complaints ?? 0)}
+          value={formatNumber(summary?.complaints ?? 0)}
           hint="Menurut penilaian AI atas isi percakapan"
         />
         <MetricCard
           icon={Frown}
           tone="text-rose-700 bg-rose-50"
           label="Sentimen negatif"
-          value={angka.format(summary?.sentiment.negatif ?? 0)}
-          hint={`${angka.format(summary?.sentiment.netral ?? 0)} netral`}
+          value={formatNumber(summary?.sentiment.negatif ?? 0)}
+          hint={`${formatNumber(summary?.sentiment.netral ?? 0)} netral`}
         />
         <MetricCard
           icon={Smile}
           tone="text-emerald-700 bg-emerald-50"
           label="Sentimen positif"
-          value={angka.format(summary?.sentiment.positif ?? 0)}
+          value={formatNumber(summary?.sentiment.positif ?? 0)}
           hint="Pelanggan puas di akhir percakapan"
         />
       </div>
@@ -197,10 +196,10 @@ export function ConversationInsightSection({ period }: { period: CrmReportPeriod
                       </div>
                     </td>
                     <td className="px-4 py-2 text-right font-semibold text-slate-950">
-                      {angka.format(row.conversations)}
+                      {formatNumber(row.conversations)}
                     </td>
                     <td className="px-4 py-2 text-right text-slate-500">
-                      {angka.format(row.count)}
+                      {formatNumber(row.count)}
                     </td>
                   </tr>
                 ))}
@@ -232,7 +231,7 @@ export function ConversationInsightSection({ period }: { period: CrmReportPeriod
                     </div>
                   </div>
                   <div className="text-sm font-semibold text-slate-950">
-                    {angka.format(row.count)}
+                    {formatNumber(row.count)}
                   </div>
                 </div>
               ))}

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Folder, HardDrive, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { apiGet } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
+import { useFolderTree, type FolderRow } from "@/features/dataroom/queries";
 import type { DataroomItem } from "@/features/dataroom/types";
 
 /** Dialog satu kolom nama: folder baru & ganti nama. Dimount hanya saat dibuka. */
@@ -48,21 +48,17 @@ export function NameDialog({ open, title, initial, submitLabel, busy, onClose, o
   );
 }
 
-interface FolderRow { id: string; parent_id: string | null; name: string }
+const NO_FOLDERS: FolderRow[] = [];
 
 /** Dialog "Pindahkan ke": pohon folder; folder sendiri & turunannya dinonaktifkan. */
 export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
   open: boolean; items: DataroomItem[]; busy: boolean;
   onClose: () => void; onSubmit: (targetId: string | null) => void;
 }) {
-  const [folders, setFolders] = useState<FolderRow[] | null>(null);
+  const tree = useFolderTree();
+  const folders = tree.isError ? NO_FOLDERS : (tree.data ?? null);
   const [selected, setSelected] = useState<string | null | undefined>(undefined);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!open) return;
-    apiGet<{ data: FolderRow[] }>("/api/dataroom/tree").then((res) => setFolders(res.data)).catch(() => setFolders([]));
-  }, [open]);
 
   const byParent = useMemo(() => {
     const map = new Map<string | null, FolderRow[]>();
@@ -103,7 +99,7 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
             style={{ paddingLeft: 8 + depth * 18 }}
             className={cn(
               "flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left text-sm hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent",
-              selected === f.id && "bg-primary/10 text-primary"
+              selected === f.id && "bg-primary/10 text-brand-text"
             )}
           >
             <span
@@ -135,7 +131,7 @@ export function MoveDialog({ open, items, busy, onClose, onSubmit }: {
               <button
                 type="button"
                 onClick={() => setSelected(null)}
-                className={cn("flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted", selected === null && "bg-primary/10 text-primary")}
+                className={cn("flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted", selected === null && "bg-primary/10 text-brand-text")}
               >
                 <HardDrive className="h-4 w-4 text-muted-foreground" /> Dataroom (root)
                 {currentParent === null && <span className="ml-auto text-[10px] text-muted-foreground">lokasi saat ini</span>}

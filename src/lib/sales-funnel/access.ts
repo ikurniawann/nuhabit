@@ -1,6 +1,7 @@
+import { ApiError } from "@/lib/api/auth";
 import { getApiUserScope } from "@/lib/api/scope";
 import { queryOne } from "@/lib/db";
-import { requireCompanyScope, type SalesFunnelUser } from "./server";
+import { hasCompanyScope, type SalesFunnelUser } from "./server";
 
 export type AccessibleLead = {
   id: string;
@@ -29,7 +30,7 @@ async function checkRowAccess<T extends AccessibleLead>(
   user: SalesFunnelUser
 ): Promise<AccessResult<T>> {
   const scope = await getApiUserScope();
-  if (requireCompanyScope(user, scope)) {
+  if (!hasCompanyScope(user, scope)) {
     return { record: null, forbidden: true };
   }
   if (!row) return { record: null, forbidden: false };
@@ -169,4 +170,65 @@ export async function findAccessibleSubject(
       return { venue: null, forbidden: false, notFound: false, memberGlobal: true };
     }
   }
+}
+
+// ── Versi lempar ApiError (route lewat apiHandler): 403 bila di luar scope,
+// 404 bila tidak ada ──
+
+function assertAccessible<T>(record: T | null, forbidden: boolean, notFoundMessage: string): T {
+  if (forbidden) throw ApiError.forbidden();
+  if (!record) throw ApiError.notFound(notFoundMessage);
+  return record;
+}
+
+export async function requireAccessibleLead(id: string, user: SalesFunnelUser): Promise<AccessibleLead> {
+  const { lead, forbidden } = await findAccessibleLead(id, user);
+  return assertAccessible(lead, forbidden, "Lead tidak ditemukan");
+}
+
+export async function requireAccessibleDeal(id: string, user: SalesFunnelUser): Promise<AccessibleDeal> {
+  const { deal, forbidden } = await findAccessibleDeal(id, user);
+  return assertAccessible(deal, forbidden, "Deal tidak ditemukan");
+}
+
+export async function requireAccessibleActivity(id: string, user: SalesFunnelUser): Promise<AccessibleLead> {
+  const { activity, forbidden } = await findAccessibleActivity(id, user);
+  return assertAccessible(activity, forbidden, "Aktivitas tidak ditemukan");
+}
+
+export async function requireAccessibleAccount(id: string, user: SalesFunnelUser): Promise<AccessibleLead> {
+  const { account, forbidden } = await findAccessibleAccount(id, user);
+  return assertAccessible(account, forbidden, "Account tidak ditemukan");
+}
+
+export async function requireAccessibleContact(id: string, user: SalesFunnelUser): Promise<AccessibleLead> {
+  const { contact, forbidden } = await findAccessibleContact(id, user);
+  return assertAccessible(contact, forbidden, "Contact tidak ditemukan");
+}
+
+export async function requireAccessibleSubject(
+  subjectType: Parameters<typeof findAccessibleSubject>[0],
+  subjectId: string,
+  user: SalesFunnelUser
+): Promise<{ venue: TaskSubjectVenue | null; memberGlobal: boolean }> {
+  const { venue, forbidden, notFound, memberGlobal } = await findAccessibleSubject(subjectType, subjectId, user);
+  if (forbidden) throw ApiError.forbidden();
+  if (notFound) throw ApiError.notFound("Subjek tidak ditemukan");
+  return { venue, memberGlobal };
+}
+
+/**
+ * Dokumen anak deal (quotation/invoice): baris dicek dengan fetch minimal
+ * dulu (jangan materialisasi PII tenant lain sebelum otorisasi), lalu akses
+ * mengikuti deal induk. Deal tak terjangkau = 403.
+ */
+export async function requireDealChildAccess<T extends { deal_id: string }>(
+  row: T | null,
+  user: SalesFunnelUser,
+  notFoundMessage: string
+): Promise<{ row: T; deal: AccessibleDeal }> {
+  if (!row) throw ApiError.notFound(notFoundMessage);
+  const { deal, forbidden } = await findAccessibleDeal(row.deal_id, user);
+  if (forbidden || !deal) throw ApiError.forbidden();
+  return { row, deal };
 }

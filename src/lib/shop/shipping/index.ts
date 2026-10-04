@@ -1,11 +1,13 @@
 // EPIC-039 Fase C — resolver provider kurir + akses settings pengiriman.
 
+import { createPgClient } from "@/lib/pg/create-client";
 import type { DbClient } from "@/lib/pg/types";
 import { biteshipProvider } from "./biteship";
 import { rajaongkirProvider } from "./rajaongkir";
-import type { ShippingProvider, ShippingProviderName } from "./types";
+import type { RateQuote, ShippingProvider, ShippingProviderName } from "./types";
 
 export * from "./types";
+export * from "./quotes";
 
 const PROVIDERS: Record<ShippingProviderName, ShippingProvider> = {
   biteship: biteshipProvider,
@@ -68,4 +70,35 @@ export function parseCourierList(value: string | null | undefined): string[] {
     .split(",")
     .map((code) => code.trim().toLowerCase())
     .filter(Boolean);
+}
+
+/** Settings aktif + provider + origin + markup: titik awal semua route ongkir. */
+export async function loadShippingContext(db: DbClient = createPgClient()) {
+  const settings = await getOrCreateShippingSettings(db);
+  return {
+    settings,
+    provider: resolveShippingProvider(settings.provider),
+    originId: resolveOriginId(settings),
+    markup: Number(settings.markup_amount) || 0,
+  };
+}
+
+export type ShippingContext = Awaited<ReturnType<typeof loadShippingContext>>;
+
+/** Tarif dari origin toko ke tujuan, dengan kurir aktif di settings. */
+export function quoteFromOrigin(
+  context: ShippingContext,
+  originId: string,
+  destination: { id: string; postalCode: string | null },
+  cargo: { weightGram: number; itemValue: number }
+): Promise<RateQuote[]> {
+  return context.provider.getRates({
+    originId,
+    originPostalCode: context.settings.origin_postal_code,
+    destinationId: destination.id,
+    destinationPostalCode: destination.postalCode,
+    weightGram: cargo.weightGram,
+    itemValue: cargo.itemValue,
+    couriers: parseCourierList(context.settings.couriers),
+  });
 }

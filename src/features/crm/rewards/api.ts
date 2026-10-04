@@ -7,16 +7,9 @@ import type {
   RewardsListResult,
   SaveRewardPayload,
 } from "./types";
+import { parseCrmResponse } from "../http";
 
 export type * from "./types";
-
-async function parseCrmResponse<T>(response: Response, fallbackError: string): Promise<T> {
-  const json = await response.json();
-  if (!response.ok || !json.success) {
-    throw new Error(json.error || fallbackError);
-  }
-  return json as T;
-}
 
 export function buildRewardPayload(reward: Reward, overrides: Partial<Reward> = {}): SaveRewardPayload {
   const next = { ...reward, ...overrides };

@@ -57,18 +57,13 @@ function usePromoMutation<TVariables, TResult = unknown>(
   });
 }
 
-export const useCreateCampaign = (
-  onSuccess?: (result: { id: string }) => void | Promise<void>
-) =>
+export const useCreateCampaign = () =>
   usePromoMutation(
     (values: PromoCampaignFormValues) => createCampaign(values),
-    "Campaign promo dibuat",
-    onSuccess
+    "Campaign promo dibuat"
   );
 
-export const useUpdateCampaign = (
-  onSuccess?: (result: { id: string }) => void | Promise<void>
-) =>
+export const useUpdateCampaign = () =>
   usePromoMutation(
     ({
       id,
@@ -77,8 +72,7 @@ export const useUpdateCampaign = (
       id: string;
       values: Partial<PromoCampaignFormValues> & { is_active?: boolean; show_in_member_portal?: boolean };
     }) => updateCampaign(id, values),
-    "Campaign diperbarui",
-    onSuccess
+    "Campaign diperbarui"
   );
 
 export const useCreateSingleCode = (onSuccess?: () => void) =>

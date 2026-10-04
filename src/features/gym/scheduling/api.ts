@@ -1,5 +1,7 @@
 /** Klien API Gym → jadwal kelas, sesi, booking, jenis kelas, coach, check-in. */
 import type { BookingStatus, GateDenialReason, SessionStatus } from "@/lib/gym/booking";
+import { formatTime } from "@/lib/format";
+import { call, send } from "../shared";
 
 export interface ClassType {
   id: string;
@@ -130,20 +132,6 @@ export interface AccessLogRow {
   staff_name: string | null;
 }
 
-async function call<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    cache: "no-store",
-    ...init,
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.success) throw new Error(json.error || "Permintaan gagal");
-  return json.data as T;
-}
-
-const send = <T>(url: string, body: unknown, method = "POST") =>
-  call<T>(url, { method, body: JSON.stringify(body) });
-
 const qs = (params: Record<string, string | undefined>) =>
   new URLSearchParams(Object.entries(params).filter((e): e is [string, string] => Boolean(e[1]))).toString();
 
@@ -197,14 +185,11 @@ export const GYM_KEYS = {
 
 /* ── Label & format ──────────────────────────────────────────────────── */
 
-export const angka = (n: number) => Number(n || 0).toLocaleString("id-ID");
-
-const WIB = "Asia/Jakarta";
-export const jam = (iso: string) =>
-  new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: WIB });
+/** "Sen, 5 Okt" (WIB). Jadwal kelas butuh nama hari, jadi tidak memakai formatDate. */
 export const tanggal = (iso: string) =>
-  new Date(iso).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: WIB });
-export const waktu = (iso: string) => `${tanggal(iso)}, ${jam(iso)}`;
+  new Date(iso).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
+/** "Sen, 5 Okt, 14.30" (WIB). */
+export const waktu = (iso: string) => `${tanggal(iso)}, ${formatTime(iso)}`;
 
 /** "YYYY-MM-DD" (WIB) → ISO awal hari WIB. */
 export const wibDayStart = (day: string) => new Date(`${day}T00:00:00+07:00`).toISOString();
@@ -214,6 +199,9 @@ export const addDays = (day: string, days: number) =>
 /** Hari WIB ("YYYY-MM-DD") dari sebuah instan. */
 export const wibDay = (iso: string | Date) =>
   new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
+/** Jam WIB ("HH:MM", nilai <input type="time">) dari sebuah instan. */
+export const wibTime = (iso: string | Date) =>
+  new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(11, 16);
 
 export const SESSION_BADGE: Record<
   SessionStatus,
@@ -247,7 +235,3 @@ export const CLASS_COLOR: Record<ClassColor, { bar: string; label: string }> = {
   success: { bar: "bg-success", label: "Mint" },
   ink: { bar: "bg-ink", label: "Hitam" },
 };
-
-/** Select native bergaya pill. */
-export const SELECT =
-  "h-10 w-full rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest";

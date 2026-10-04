@@ -1,169 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { syncQuotationApproval } from "@/lib/crm/approvals-server";
-import { emitCrmEvent } from "@/lib/crm/events";
-import { createdResponse, successResponse } from "@/lib/api/auth";
-import { query, withTransaction } from "@/lib/db";
-import { findAccessibleDeal } from "@/lib/sales-funnel/access";
-import {
-  computeTotals,
-  insertItems,
-  insertTerms,
-  quotationPayloadSchema,
-  validateProducts,
-} from "@/lib/sales-funnel/quotations";
-import { requireSalesFunnelRole } from "@/lib/sales-funnel/server";
+import { NextRequest } from "next/server";
+import { createdResponse, successResponse, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { requireAccessibleDeal } from "@/lib/sales-funnel/access";
+import { quotationPayloadSchema } from "@/lib/sales-funnel/quotations";
+import { createQuotation, listDealQuotations } from "@/lib/sales-funnel/quotations-server";
+import { requireSalesFunnelUser } from "@/lib/sales-funnel/server";
+
+type Params = { params: Promise<{ id: string }> };
 
 /** Daftar quotation sebuah deal + baris itemnya (EPIC-022 Fase F1). */
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { error, user } = await requireSalesFunnelRole();
-  if (error) return error;
+export const GET = apiHandler(async (_request: NextRequest, { params }: Params) => {
+  const user = await requireSalesFunnelUser();
+  const { id } = await params;
+  await requireAccessibleDeal(id, user);
+  return successResponse(await listDealQuotations(id));
+}, "sales-funnel.deals.quotations.GET");
 
-  try {
-    const { id } = await params;
-    const { deal, forbidden } = await findAccessibleDeal(id, user);
-    if (forbidden || !deal) {
-      return NextResponse.json(
-        { success: false, error: forbidden ? "Insufficient permissions" : "Deal tidak ditemukan" },
-        { status: forbidden ? 403 : 404 }
-      );
-    }
-
-    const rows = await query(
-      `SELECT q.id, q.quote_number, q.status, q.use_ppn, q.ppn_persen,
-              q.subtotal, q.ppn_nominal, q.total, q.notes, q.valid_until,
-              q.discount_percent, q.discount_nominal, q.approval_status, q.approval_request_id,
-              q.version, q.parent_quotation_id, q.superseded_at,
-              q.stock_deducted_at, q.bom_status, q.created_at,
-              COALESCE(
-                (SELECT json_agg(json_build_object(
-                   'id', i.id, 'item_type', i.item_type,
-                   'product_id', i.product_id, 'description', i.description,
-                   'qty', i.qty, 'unit_price', i.unit_price,
-                   'line_total', i.line_total
-                 ) ORDER BY i.sort_order)
-                 FROM crm.crm_sales_quotation_items i
-                 WHERE i.quotation_id = q.id),
-                '[]'::json
-              ) AS items,
-              COALESCE(
-                (SELECT json_agg(json_build_object(
-                   'id', t.id, 'label', t.label, 'percent', t.percent,
-                   'due_date', t.due_date
-                 ) ORDER BY t.sort_order)
-                 FROM crm.crm_sales_quotation_terms t
-                 WHERE t.quotation_id = q.id),
-                '[]'::json
-              ) AS terms
-       FROM crm.crm_sales_quotations q
-       WHERE q.deal_id = $1 AND q.deleted_at IS NULL
-       ORDER BY q.created_at DESC
-       LIMIT 20`,
-      [id]
-    );
-    return successResponse(rows);
-  } catch (err) {
-    console.error("[sales-funnel] list quotations error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat quotation" },
-      { status: 500 }
-    );
-  }
-}
-
-/** Buat quotation baru — total dihitung server, item dalam satu transaksi. */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { error, user } = await requireSalesFunnelRole();
-  if (error) return error;
-
-  try {
-    const { id } = await params;
-    const { deal, forbidden } = await findAccessibleDeal(id, user);
-    if (forbidden || !deal) {
-      return NextResponse.json(
-        { success: false, error: forbidden ? "Insufficient permissions" : "Deal tidak ditemukan" },
-        { status: forbidden ? 403 : 404 }
-      );
-    }
-
-    const parsed = quotationPayloadSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.issues },
-        { status: 400 }
-      );
-    }
-    const payload = parsed.data;
-    const { subtotal, discountNominal, ppnNominal, total, lines } = computeTotals(payload);
-
-    const row = await withTransaction(async (client) => {
-      const productError = await validateProducts(client, payload);
-      if (productError) throw new Error(productError);
-
-      const inserted = await client.query<{
-        id: string;
-        quote_number: string;
-        total: string;
-      }>(
-        `INSERT INTO crm.crm_sales_quotations
-           (company_id, branch_id, deal_id, quote_number, use_ppn,
-            ppn_persen, subtotal, ppn_nominal, total, notes, valid_until,
-            created_by, discount_percent, discount_nominal)
-         VALUES ($1, $2, $3,
-                 'QT-' || to_char(now(), 'YYMM') || '-' ||
-                   lpad(nextval('crm.crm_sales_quotation_number_seq')::text, 4, '0'),
-                 $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-         RETURNING id, quote_number, total`,
-        [
-          deal.company_id,
-          deal.branch_id,
-          deal.id,
-          payload.use_ppn,
-          payload.ppn_persen,
-          subtotal,
-          ppnNominal,
-          total,
-          payload.notes || null,
-          payload.valid_until || null,
-          user.id,
-          payload.discount_percent ?? 0,
-          discountNominal,
-        ]
-      );
-      const quotation = inserted.rows[0];
-      await insertItems(client, quotation.id, lines);
-      await insertTerms(client, quotation.id, payload.terms);
-
-      // Total penawaran = estimasi nilai deal berjalan
-      await client.query(
-        `UPDATE crm.crm_sales_deals
-         SET value_estimate = $1, updated_at = now()
-         WHERE id = $2 AND closed_at IS NULL`,
-        [total, deal.id]
-      );
-      return quotation;
-    });
-
-    // EPIC-050 Fase 2: approval diskon + event bus
-    if (row?.id) {
-      await syncQuotationApproval(String(row.id), user.id).catch((e) => console.error("[crm-approval] sync gagal:", e));
-      await emitCrmEvent({ event_type: "quotation.created", subject_type: "quotation", subject_id: String(row.id), company_id: deal.company_id, branch_id: deal.branch_id, actor_user_id: user.id, payload: { total, discount_percent: payload.discount_percent ?? 0 } });
-    }
-    return createdResponse(row, `Quotation ${row.quote_number} dibuat`);
-  } catch (err) {
-    const message =
-      err instanceof Error && err.message.startsWith("Ada produk")
-        ? err.message
-        : "Gagal membuat quotation";
-    console.error("[sales-funnel] create quotation error:", err);
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: message === "Gagal membuat quotation" ? 500 : 400 }
-    );
-  }
-}
+/** Buat quotation baru — total dihitung server. */
+export const POST = apiHandler(async (request: NextRequest, { params }: Params) => {
+  const user = await requireSalesFunnelUser();
+  const { id } = await params;
+  const deal = await requireAccessibleDeal(id, user);
+  const payload = await validateBody(request, quotationPayloadSchema);
+  const row = await createQuotation(user, deal, payload);
+  return createdResponse(row, `Quotation ${row.quote_number} dibuat`);
+}, "sales-funnel.deals.quotations.POST");

@@ -6,41 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SALES_CHANNEL_CODES, SALES_CHANNEL_LABELS } from "@/lib/pos/sales-channels";
-
-export interface OfferLimitsDraft {
-  /** Kosong = semua channel. */
-  sales_channels: string[];
-  max_uses: string;
-  max_uses_per_member: string;
-  is_exclusive: boolean;
-  priority: string;
-  unlock_code: string;
-}
-
-export const EMPTY_OFFER_LIMITS: OfferLimitsDraft = {
-  sales_channels: [],
-  max_uses: "",
-  max_uses_per_member: "",
-  is_exclusive: false,
-  priority: "0",
-  unlock_code: "",
-};
-
-const toPositiveIntOrNull = (raw: string) => {
-  const n = Number(raw);
-  return raw.trim() !== "" && Number.isInteger(n) && n > 0 ? n : null;
-};
-
-export function offerLimitsPayload(draft: OfferLimitsDraft) {
-  return {
-    sales_channels: draft.sales_channels.length > 0 ? draft.sales_channels : null,
-    max_uses: toPositiveIntOrNull(draft.max_uses),
-    max_uses_per_member: toPositiveIntOrNull(draft.max_uses_per_member),
-    is_exclusive: draft.is_exclusive,
-    priority: Math.min(1000, Math.max(0, Math.floor(Number(draft.priority) || 0))),
-    unlock_code: draft.unlock_code.trim().toUpperCase() || null,
-  };
-}
+import type { OfferLimitsDraft } from "../offer-form";
 
 export function OfferLimitsFields({
   value,

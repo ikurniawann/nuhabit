@@ -1,3 +1,4 @@
+import "server-only";
 import { randomInt } from "node:crypto";
 import { getPool, withTransaction } from "@/lib/db";
 import {

@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { formatNumber } from "@/lib/format";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import {
   useCreateTimeSlot,
   useDeleteTimeSlot,
@@ -40,6 +41,7 @@ export function TimeSlotsSection() {
   const settingsQuery = useTicketingSettings();
   const slotsQuery = useTimeSlots();
   const updateSettings = useUpdateSettings();
+  const [draft, setDraft] = useState<SlotForm>(EMPTY_SLOT);
   const createMutation = useCreateTimeSlot(() => setDraft(EMPTY_SLOT));
   const updateMutation = useUpdateTimeSlot();
   const deleteMutation = useDeleteTimeSlot();
@@ -50,7 +52,6 @@ export function TimeSlotsSection() {
     graceEdit ??
     (settings === undefined ? "" : String(settings.slot_grace_minutes));
 
-  const [draft, setDraft] = useState<SlotForm>(EMPTY_SLOT);
   const draftWindowInvalid =
     draft.start_time !== "" &&
     draft.end_time !== "" &&
@@ -205,7 +206,7 @@ export function TimeSlotsSection() {
                       </Badge>
                       {slot.capacity !== null ? (
                         <Badge className="ml-1 border-0 bg-gray-100 font-normal text-gray-600">
-                          {slot.capacity.toLocaleString("id-ID")} orang
+                          {formatNumber(slot.capacity)} orang
                         </Badge>
                       ) : null}
                     </p>

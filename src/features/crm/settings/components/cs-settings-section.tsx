@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Clock, Headset, Loader2, MessageSquareReply, Save, Star, Timer } from "lucide-react";
 import type { CrmSettings } from "../types";
 import { Button } from "@/components/ui/button";
@@ -49,11 +49,8 @@ export function CsSettingsSection({
   saving: boolean;
   onSave: (payload: Partial<CrmSettings>) => void;
 }) {
+  // Pemanggil me-mount ulang lewat `key` saat pengaturan server berubah.
   const [draft, setDraft] = useState<Draft>(() => toDraft(settings));
-
-  useEffect(() => {
-    if (settings) setDraft(toDraft(settings));
-  }, [settings]);
 
   const start = Number(draft.cs_business_hours_start);
   const end = Number(draft.cs_business_hours_end);
@@ -80,7 +77,7 @@ export function CsSettingsSection({
     <Card className="border-gray-200/70 shadow-xs">
       <CardHeader className="border-b border-gray-200/70 pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Headset className="h-4 w-4 text-primary" />
+          <Headset className="h-4 w-4 text-brand-text" />
           Customer Service (WhatsApp)
         </CardTitle>
       </CardHeader>

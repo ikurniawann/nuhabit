@@ -1,3 +1,4 @@
+import "server-only";
 import { getPool, withTransaction } from "@/lib/db";
 import type { Division } from "./hyrox";
 import {

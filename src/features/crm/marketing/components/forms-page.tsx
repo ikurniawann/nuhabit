@@ -12,16 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useOwners } from "@/features/crm/advance/queries";
 import {
   DEFAULT_FORM_FIELDS, LEAD_MAPPED_LABELS, PUBLIC_FIELD_TYPES, PUBLIC_FIELD_TYPE_LABELS,
 } from "@/lib/crm/public-forms";
 import { useCreateForm, useDeleteForm, useFormSubmissions, useForms, useUpdateForm } from "../queries";
 import type { FormRow, PublicFieldDef, PublicFormInput } from "../types";
-
-const dateTime = (v: string | null) =>
-  v ? new Date(v).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+import { formatDateTime } from "@/lib/format";
 
 /** EPIC-050 T-5.3 — kelola form publik yang tampil di poskopi.reddie.id/public. */
 export function PublicFormsPage() {
@@ -67,7 +65,7 @@ export function PublicFormsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-900">{f.name}</p>
                     <p className="text-xs text-gray-500">
-                      {f.title} · {(f.fields ?? DEFAULT_FORM_FIELDS).length} field · terakhir {dateTime(f.last_submission_at)}
+                      {f.title} · {(f.fields ?? DEFAULT_FORM_FIELDS).length} field · terakhir {formatDateTime(f.last_submission_at, "—")}
                     </p>
                   </div>
                   <Badge className="border-0 bg-emerald-100 font-normal text-emerald-700">{f.submission_count} kiriman</Badge>
@@ -139,7 +137,7 @@ function SubmissionsView({ form }: { form: FormRow }) {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-gray-900">{s.org_name ?? s.pic_name ?? "—"}</p>
                 <p className="text-xs text-gray-500">
-                  {dateTime(s.created_at)}
+                  {formatDateTime(s.created_at, "—")}
                   {s.pic_phone ? ` · ${s.pic_phone}` : ""}
                   {s.utm?.utm_source ? ` · dari ${s.utm.utm_source}` : ""}
                   {s.reason ? ` · ${s.reason}` : ""}

@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPosSession } from "@/lib/api/auth";
+import { ApiError, getPosSession, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { createPgClient } from "@/lib/pg/create-client";
-import {
-  CRM_DEFAULT_TIERS,
-  apiErrorResponse,
-  isMissingCrmSchema,
-  requireCrmConfigRole,
-  validationErrorResponse,
-} from "@/lib/crm/server";
+import { crmSchemaError, requireCrmUser } from "@/lib/crm/guards";
+import { CRM_DEFAULT_TIERS, isMissingCrmSchema } from "@/lib/crm/server";
 
 const tierSchema = z.object({
   code: z.string().trim().min(1).max(40).transform((value) => value.toLowerCase()),
@@ -23,64 +19,31 @@ const tierSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export async function GET() {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
-
-  try {
-    const db = createPgClient();
-    const { data, error } = await db
-      .from("crm_membership_tiers")
-      .select("*")
-      .order("rank", { ascending: true });
-
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json({ success: true, data: CRM_DEFAULT_TIERS, meta: { schemaReady: false } });
-      }
-      throw error;
+export const GET = apiHandler(async () => {
+  if (!(await getPosSession())) throw ApiError.unauthorized();
+  const { data, error } = await createPgClient()
+    .from("crm_membership_tiers")
+    .select("*")
+    .order("rank", { ascending: true });
+  if (error) {
+    if (isMissingCrmSchema(error)) {
+      return NextResponse.json({ success: true, data: CRM_DEFAULT_TIERS, meta: { schemaReady: false } });
     }
-
-    return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
-  } catch (error) {
-    console.error("Error fetching CRM tiers:", error);
-    return apiErrorResponse(error);
+    throw error;
   }
-}
+  return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
+}, "crm.tiers.GET");
 
-export async function POST(request: NextRequest) {
-  const forbidden = await requireCrmConfigRole();
-  if (forbidden) return forbidden;
-
-  try {
-    const payload = tierSchema.parse(await request.json());
-    const db = createPgClient();
-    const { data, error } = await db
-      .from("crm_membership_tiers")
-      // benefits di-stringify manual: driver pg menserialisasi array JS jadi
-      // literal array Postgres ("{}"), bukan JSON — jsonb butuh string JSON.
-      .upsert({ ...payload, benefits: JSON.stringify(payload.benefits) }, { onConflict: "code" })
-      .select()
-      .single();
-
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json(
-          { success: false, error: "CRM migration belum diterapkan" },
-          { status: 409 }
-        );
-      }
-      throw error;
-    }
-
-    return NextResponse.json({ success: true, data });
-  } catch (error) {
-    const validation = validationErrorResponse(error);
-    if (validation) return validation;
-
-    console.error("Error saving CRM tier:", error);
-    return apiErrorResponse(error);
-  }
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("settings");
+  const payload = await validateBody(request, tierSchema);
+  const { data, error } = await createPgClient()
+    .from("crm_membership_tiers")
+    // benefits di-stringify manual: driver pg menserialisasi array JS jadi
+    // literal array Postgres ("{}"), bukan JSON — jsonb butuh string JSON.
+    .upsert({ ...payload, benefits: JSON.stringify(payload.benefits) }, { onConflict: "code" })
+    .select()
+    .single();
+  if (error) throw crmSchemaError(error);
+  return NextResponse.json({ success: true, data });
+}, "crm.tiers.POST");

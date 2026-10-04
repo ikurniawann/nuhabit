@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 /**
  * Generator PDF invoice — pdfkit sisi server mengikuti pola
@@ -36,10 +37,6 @@ export interface InvoicePdfData {
   ppn_persen: number;
   note: string | null;
   owner_name: string | null;
-}
-
-function rupiah(value: number): string {
-  return "Rp " + Math.round(value || 0).toLocaleString("id-ID");
 }
 
 function tanggal(value: string | null): string {
@@ -134,7 +131,7 @@ export async function buildInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
   const description =
     data.label +
     (data.term_percent !== null
-      ? ` (${Number(data.term_percent).toLocaleString("id-ID")}% dari nilai kesepakatan)`
+      ? ` (${formatNumber(data.term_percent, 3)}% dari nilai kesepakatan)`
       : "") +
     (data.quote_number ? ` — sesuai ${data.quote_number}` : "");
   const descHeight = doc.heightOfString(description, {
@@ -142,7 +139,7 @@ export async function buildInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
   });
   doc.text(description, left, rowY, { width: colAmount - left - 8 });
   doc.font("Helvetica-Bold");
-  doc.text(rupiah(data.amount), colAmount, rowY, {
+  doc.text(formatRupiah(data.amount), colAmount, rowY, {
     width: right - colAmount,
     align: "right",
   });
@@ -166,13 +163,13 @@ export async function buildInvoicePdf(data: InvoicePdfData): Promise<Buffer> {
   if (data.use_ppn && data.ppn_persen > 0) {
     // Nominal termin sudah termasuk PPN — pecah DPP & PPN dari nominal
     const dpp = Math.round(data.amount / (1 + data.ppn_persen / 100));
-    totalRow("DPP", rupiah(dpp));
-    totalRow(`PPN ${data.ppn_persen}%`, rupiah(data.amount - dpp));
+    totalRow("DPP", formatRupiah(dpp));
+    totalRow(`PPN ${data.ppn_persen}%`, formatRupiah(data.amount - dpp));
   }
-  totalRow("TOTAL TAGIHAN", rupiah(data.amount), true);
+  totalRow("TOTAL TAGIHAN", formatRupiah(data.amount), true);
   if (data.paid > 0) {
-    totalRow("Sudah dibayar", rupiah(data.paid));
-    totalRow("SISA TAGIHAN", rupiah(Math.max(0, data.amount - data.paid)), true);
+    totalRow("Sudah dibayar", formatRupiah(data.paid));
+    totalRow("SISA TAGIHAN", formatRupiah(Math.max(0, data.amount - data.paid)), true);
   }
 
   // ── Catatan ──

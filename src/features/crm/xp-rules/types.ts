@@ -10,7 +10,7 @@ export type XpSourceChannel = (typeof XP_SOURCE_CHANNELS)[number];
 
 /**
  * Jenis kejadian yang BENAR-BENAR dicocokkan mesin loyalty
- * (`findBestRule` di lib/crm/loyalty-engine.ts). Nilai di luar daftar ini
+ * (`findBestRule` di lib/crm/loyalty-rules.ts). Nilai di luar daftar ini
  * akan tersimpan rapi tetapi tidak pernah cocok, sehingga aturannya diam-diam
  * tidak berlaku — karena itu di form dibuat sebagai pilihan, bukan teks bebas.
  */

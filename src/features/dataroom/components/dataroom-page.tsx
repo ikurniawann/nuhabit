@@ -1,27 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type DragEvent, type MouseEvent } from "react";
+import { useCallback, useMemo, useRef, useState, type DragEvent, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Building2, ChevronRight, Download, Eye, FolderInput, FolderOpen, FolderPlus, HardDrive, LayoutGrid, Link2,
-  List, Loader2, Lock, MoreVertical, Pencil, Plus, RefreshCw, Search, Share2, Trash2, Upload, UploadCloud,
+  List, Loader2, Pencil, Plus, RefreshCw, Search, Share2, Trash2, Upload, UploadCloud,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api-client";
+import { apiDelete, apiPatch, apiPost } from "@/lib/api-client";
 import { formatBytes, isPreviewable } from "@/lib/dataroom/config";
 import { cn } from "@/lib/utils";
 import { AccessDialog } from "@/features/dataroom/components/access-dialog";
 import { ContextMenu, type MenuEntry } from "@/features/dataroom/components/context-menu";
 import { DeleteDialog, MoveDialog, NameDialog } from "@/features/dataroom/components/dialogs";
-import { ItemIcon } from "@/features/dataroom/components/item-icon";
+import { ItemGrid, ItemTable, type ItemInteractions } from "@/features/dataroom/components/item-views";
 import { PreviewDialog } from "@/features/dataroom/components/preview-dialog";
 import { ShareDialog } from "@/features/dataroom/components/share-dialog";
 import { UploadPanel } from "@/features/dataroom/components/upload-panel";
 import { useUploadQueue } from "@/features/dataroom/hooks/use-upload-queue";
-import { tanggal, type DataroomItem, type DataroomListing } from "@/features/dataroom/types";
+import { useViewMode } from "@/features/dataroom/hooks/use-view-mode";
+import { dataroomKeys, nodeFileUrl, startDownload, useDataroomListing } from "@/features/dataroom/queries";
+import type { DataroomItem } from "@/features/dataroom/types";
 
 /**
  * Dataroom (owner 2026-09-04) — penyimpanan dokumen ala Google Drive:
@@ -31,7 +34,6 @@ import { tanggal, type DataroomItem, type DataroomListing } from "@/features/dat
  */
 
 const DND_MIME = "application/x-dataroom-ids";
-type ViewMode = "grid" | "list";
 type Dialog =
   | { kind: "new-folder" }
   | { kind: "rename"; item: DataroomItem }
@@ -42,26 +44,16 @@ type Dialog =
   | { kind: "access"; item: DataroomItem }
   | null;
 
-// Mode tampilan disimpan di localStorage; dibaca lewat external store agar
-// render server (grid) dan klien tetap konsisten tanpa setState di effect.
-const viewListeners = new Set<() => void>();
-function readViewMode(): ViewMode {
-  try { return window.localStorage.getItem("dataroom:view") === "list" ? "list" : "grid"; } catch { return "grid"; }
-}
-function subscribeView(cb: () => void) { viewListeners.add(cb); return () => { viewListeners.delete(cb); }; }
-function writeViewMode(mode: ViewMode) {
-  try { window.localStorage.setItem("dataroom:view", mode); } catch { /* abaikan */ }
-  viewListeners.forEach((cb) => cb());
-}
-
 export function DataroomPage() {
   const router = useRouter();
   const params = useSearchParams();
   const folderId = params.get("folder") || null;
 
-  const [listing, setListing] = useState<(DataroomListing & { key: string | null }) | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const view = useSyncExternalStore(subscribeView, readViewMode, () => "grid" as ViewMode);
+  const queryClient = useQueryClient();
+  const listingQuery = useDataroomListing(folderId);
+  const listing = listingQuery.data;
+  const error = listingQuery.isError ? listingQuery.error.message || "Gagal memuat Dataroom" : null;
+  const [view, changeView] = useViewMode();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ x: number; y: number; entries: MenuEntry[] } | null>(null);
@@ -71,20 +63,15 @@ export function DataroomPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
 
-  const load = useCallback(() => {
-    apiGet<{ data: DataroomListing }>(`/api/dataroom/nodes${folderId ? `?parent=${folderId}` : ""}`)
-      .then((res) => { setListing({ ...res.data, key: folderId }); setError(null); })
-      .catch((err) => setError(err instanceof Error ? err.message : "Gagal memuat Dataroom"));
-  }, [folderId]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const onUploaded = useCallback((parentId: string | null) => {
-    if (parentId === folderId) load();
-  }, [folderId, load]);
+  const reload = () => queryClient.invalidateQueries({ queryKey: dataroomKeys.all });
+  const onUploaded = useCallback(
+    (parentId: string | null) => {
+      void queryClient.invalidateQueries({ queryKey: dataroomKeys.listing(parentId) });
+    },
+    [queryClient]
+  );
   const { tasks, enqueue, clearFinished } = useUploadQueue(onUploaded);
 
-  const loading = !listing || listing.key !== folderId;
   const perms = listing?.permissions ?? { create: false, update: false, delete: false, manage_access: false };
   const items = useMemo(() => {
     const all = listing?.items ?? [];
@@ -99,7 +86,6 @@ export function DataroomPage() {
     router.push(id ? `/dashboard/dataroom?folder=${id}` : "/dashboard/dataroom");
   };
 
-  const changeView = (mode: ViewMode) => writeViewMode(mode);
   const openFilePicker = () => fileInput.current?.click();
 
   // ── Aksi ────────────────────────────────────────────────────────────────
@@ -109,7 +95,7 @@ export function DataroomPage() {
       await fn();
       if (okMsg) toast.success(okMsg);
       setDialog(null);
-      load();
+      void reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Terjadi kesalahan");
     } finally {
@@ -132,9 +118,7 @@ export function DataroomPage() {
       setSelected(new Set());
     }, targets.length === 1 ? "Item dihapus" : `${targets.length} item dihapus`);
 
-  const download = (item: DataroomItem) => {
-    window.location.assign(`/api/dataroom/nodes/${item.id}/download`);
-  };
+  const download = (item: DataroomItem) => startDownload(nodeFileUrl(item.id));
   const openItem = (item: DataroomItem) => {
     if (item.kind === "folder") openFolder(item.id);
     else if (isPreviewable(item.mime)) setDialog({ kind: "preview", item });
@@ -147,7 +131,7 @@ export function DataroomPage() {
       return [
         { key: "new-folder", label: "Folder baru", icon: <FolderPlus />, disabled: !perms.create, onSelect: () => setDialog({ kind: "new-folder" }) },
         { key: "upload", label: "Upload file", icon: <Upload />, disabled: !perms.create, onSelect: openFilePicker },
-        { key: "reload", label: "Muat ulang", icon: <RefreshCw />, separatorBefore: true, onSelect: load },
+        { key: "reload", label: "Muat ulang", icon: <RefreshCw />, separatorBefore: true, onSelect: () => void reload() },
       ];
     }
     const group = selected.has(item.id) && selectedItems.length > 1 ? selectedItems : [item];
@@ -238,6 +222,20 @@ export function DataroomPage() {
     if (dragDepth.current === 0) setDropTarget(null);
   };
 
+  const clearDropTarget = (id: string) => setDropTarget((t) => (t === id ? null : t));
+  const itemUi: ItemInteractions = {
+    draggable: perms.update,
+    selected,
+    dropTarget,
+    onDragStart,
+    onDragOver: allowDrop,
+    onDragLeave: clearDropTarget,
+    onDrop: handleDrop,
+    onClick: onItemClick,
+    onOpen: openItem,
+    onContextMenu,
+  };
+
   const usage = listing?.usage;
   const usedPct = usage ? Math.min(100, (usage.used / usage.quota) * 100) : 0;
 
@@ -259,7 +257,7 @@ export function DataroomPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3 sm:px-6">
         <div className="min-w-[200px] flex-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold"><HardDrive className="h-5 w-5 text-primary" />Dataroom</h1>
+          <h1 className="flex items-center gap-2 text-xl font-semibold"><HardDrive className="h-5 w-5 text-brand-text" />Dataroom</h1>
           <p className="hidden text-xs text-muted-foreground sm:block">
             Simpan & bagikan dokumen perusahaan. Tarik file ke halaman ini untuk mengunggah.
             {listing?.actor && !listing.actor.is_admin && (
@@ -303,9 +301,9 @@ export function DataroomPage() {
             type="button"
             onClick={(e) => { e.stopPropagation(); openFolder(null); }}
             onDragOver={(e) => allowDrop(e, "root")}
-            onDragLeave={() => setDropTarget((t) => (t === "root" ? null : t))}
+            onDragLeave={() => clearDropTarget("root")}
             onDrop={(e) => handleDrop(e, "root")}
-            className={cn("rounded-md px-2 py-1 font-medium hover:bg-muted", !folderId && "text-primary", dropTarget === "root" && "bg-primary/15 ring-2 ring-primary")}
+            className={cn("rounded-md px-2 py-1 font-medium hover:bg-muted", !folderId && "text-brand-text", dropTarget === "root" && "bg-primary/15 ring-2 ring-primary")}
           >
             Dataroom
           </button>
@@ -316,9 +314,9 @@ export function DataroomPage() {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); openFolder(a.id); }}
                 onDragOver={(e) => allowDrop(e, a.id)}
-                onDragLeave={() => setDropTarget((t) => (t === a.id ? null : t))}
+                onDragLeave={() => clearDropTarget(a.id)}
                 onDrop={(e) => handleDrop(e, a.id)}
-                className={cn("truncate rounded-md px-2 py-1 hover:bg-muted", idx === arr.length - 1 && "font-medium text-primary", dropTarget === a.id && "bg-primary/15 ring-2 ring-primary")}
+                className={cn("truncate rounded-md px-2 py-1 hover:bg-muted", idx === arr.length - 1 && "font-medium text-brand-text", dropTarget === a.id && "bg-primary/15 ring-2 ring-primary")}
               >
                 {a.name}
               </button>
@@ -345,7 +343,7 @@ export function DataroomPage() {
 
         {error ? (
           <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">{error}</div>
-        ) : loading ? (
+        ) : !listing ? (
           <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat…</div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-16 text-center text-sm text-muted-foreground">
@@ -353,101 +351,9 @@ export function DataroomPage() {
             {search ? "Tidak ada item yang cocok." : "Folder ini masih kosong. Tarik file ke sini, atau klik kanan untuk membuat folder / upload."}
           </div>
         ) : view === "grid" ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                draggable={perms.update}
-                onDragStart={(e) => onDragStart(e, item)}
-                onDragOver={item.kind === "folder" ? (e) => allowDrop(e, item.id) : undefined}
-                onDragLeave={item.kind === "folder" ? () => setDropTarget((t) => (t === item.id ? null : t)) : undefined}
-                onDrop={item.kind === "folder" ? (e) => handleDrop(e, item.id) : undefined}
-                onClick={(e) => onItemClick(e, item)}
-                onDoubleClick={() => openItem(item)}
-                onContextMenu={(e) => onContextMenu(e, item)}
-                className={cn(
-                  "group relative flex cursor-default select-none flex-col rounded-xl border bg-card p-3 transition",
-                  "hover:border-primary/40 hover:shadow-sm",
-                  selected.has(item.id) && "border-primary bg-primary/10",
-                  dropTarget === item.id && "border-primary bg-primary/15 ring-2 ring-primary"
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <ItemIcon kind={item.kind} mime={item.mime} name={item.name} className="h-10 w-10" />
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onContextMenu(e, item); }}
-                    className="rounded-md p-1 text-muted-foreground opacity-0 hover:bg-muted group-hover:opacity-100 focus:opacity-100 sm:opacity-0 max-sm:opacity-100"
-                    aria-label="Menu"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </div>
-                <p className="mt-2 line-clamp-2 break-words text-sm font-medium leading-tight" title={item.name}>{item.name}</p>
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  {item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {tanggal(item.updated_at, false)}
-                </p>
-                {item.departments && item.departments.length > 0 && (
-                  <p className="mt-1 flex items-center gap-1 truncate text-[11px] text-amber-700" title={item.departments.map((d) => d.name).join(", ")}>
-                    <Lock className="h-3 w-3 shrink-0" />
-                    <span className="truncate">{item.departments.map((d) => d.name).join(", ")}</span>
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <ItemGrid items={items} ui={itemUi} />
         ) : (
-          <div className="overflow-x-auto rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium">Nama</th>
-                  <th className="px-3 py-2 text-left font-medium">Pemilik</th>
-                  <th className="px-3 py-2 text-left font-medium">Diubah</th>
-                  <th className="px-3 py-2 text-right font-medium">Ukuran</th>
-                  <th className="w-10 px-2 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    draggable={perms.update}
-                    onDragStart={(e) => onDragStart(e, item)}
-                    onDragOver={item.kind === "folder" ? (e) => allowDrop(e, item.id) : undefined}
-                    onDragLeave={item.kind === "folder" ? () => setDropTarget((t) => (t === item.id ? null : t)) : undefined}
-                    onDrop={item.kind === "folder" ? (e) => handleDrop(e, item.id) : undefined}
-                    onClick={(e) => onItemClick(e, item)}
-                    onDoubleClick={() => openItem(item)}
-                    onContextMenu={(e) => onContextMenu(e, item)}
-                    className={cn(
-                      "cursor-default select-none border-t hover:bg-muted/50",
-                      selected.has(item.id) && "bg-primary/10",
-                      dropTarget === item.id && "bg-primary/15 ring-2 ring-inset ring-primary"
-                    )}
-                  >
-                    <td className="px-3 py-2">
-                      <span className="flex items-center gap-2">
-                        <ItemIcon kind={item.kind} mime={item.mime} name={item.name} className="h-5 w-5 shrink-0" />
-                        <span className="truncate">{item.name}</span>
-                        {item.departments && item.departments.length > 0 && (
-                          <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700" title={item.departments.map((d) => d.name).join(", ")}>
-                            <Lock className="h-3 w-3" />{item.departments.length === 1 ? item.departments[0].name : `${item.departments.length} departemen`}
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">{item.created_by_name ?? "—"}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{tanggal(item.updated_at)}</td>
-                    <td className="px-3 py-2 text-right text-muted-foreground">{item.kind === "file" ? formatBytes(item.size_bytes) : "—"}</td>
-                    <td className="px-2 py-2">
-                      <button type="button" onClick={(e) => { e.stopPropagation(); onContextMenu(e, item); }} className="rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Menu"><MoreVertical className="h-4 w-4" /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ItemTable items={items} ui={itemUi} />
         )}
       </div>
 
@@ -466,7 +372,7 @@ export function DataroomPage() {
         <DeleteDialog open items={dialog.items} busy={busy} onClose={() => setDialog(null)} onConfirm={() => deleteItems(dialog.items)} />
       )}
       {dialog?.kind === "access" && (
-        <AccessDialog open node={dialog.item} onClose={() => setDialog(null)} onSaved={() => load()} />
+        <AccessDialog open node={dialog.item} onClose={() => setDialog(null)} onSaved={() => void reload()} />
       )}
       {dialog?.kind === "share" && (
         <ShareDialog open node={dialog.item} canManage={perms.create} onClose={() => setDialog(null)} />
@@ -474,8 +380,8 @@ export function DataroomPage() {
       {dialog?.kind === "preview" && (
         <PreviewDialog
           open name={dialog.item.name} mime={dialog.item.mime} size={dialog.item.size_bytes}
-          inlineUrl={`/api/dataroom/nodes/${dialog.item.id}/download?inline=1`}
-          downloadUrl={`/api/dataroom/nodes/${dialog.item.id}/download`}
+          inlineUrl={nodeFileUrl(dialog.item.id, true)}
+          downloadUrl={nodeFileUrl(dialog.item.id)}
           onClose={() => setDialog(null)}
         />
       )}

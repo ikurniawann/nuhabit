@@ -43,7 +43,7 @@ describe("timeline terpadu (EPIC-050 T-1.4)", () => {
       ],
     });
     expect(events.map((e) => e.key)).toEqual(["stage:s1", "quotation:q1", "task:t1", "wa:w1"]);
-    expect(events[1].title).toContain("Rp 1.500.000");
+    expect(events[1].title).toContain("Rp1.500.000");
     expect(events[3].title).toBe("WA masuk");
   });
 

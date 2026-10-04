@@ -6,6 +6,8 @@
 //   - rajaongkir: rates + tracking by waybill (TANPA createShipment — resi
 //                 diinput manual di manajemen pesanan)
 
+import { ApiError } from "@/lib/api/auth";
+
 export type ShippingProviderName = "biteship" | "rajaongkir";
 
 export type RateQuote = {
@@ -96,12 +98,10 @@ export interface ShippingProvider {
   createShipment(request: CreateShipmentRequest): Promise<CreateShipmentResult>;
 }
 
-export class ShippingProviderError extends Error {
-  constructor(
-    message: string,
-    readonly status: number = 502
-  ) {
-    super(message);
+/** Galat provider kurir = ApiError (default 502) supaya apiHandler meneruskan status & pesannya. */
+export class ShippingProviderError extends ApiError {
+  constructor(message: string, status = 502) {
+    super(status, message);
     this.name = "ShippingProviderError";
   }
 }

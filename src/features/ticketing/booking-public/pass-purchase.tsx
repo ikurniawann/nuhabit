@@ -3,97 +3,42 @@
 // EPIC-028 B2 — beli Season Pass online (publik, tanpa login): pilih produk
 // pass → isi data pemegang → invoice Xendit → redirect. Aktif saat webhook PAID.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft, CalendarCheck, Loader2, ShieldCheck } from "lucide-react";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-
-const ENTRY_LABEL: Record<string, string> = {
-  once_per_day: "1× per hari",
-  unlimited: "Masuk tak terbatas",
-  limited_visits: "Jatah kunjungan",
-};
-
-interface PassProduct {
-  ticket_product_id: string;
-  name: string;
-  description: string | null;
-  thumbnail_url: string | null;
-  validity_months: number;
-  entry_policy: string;
-  visit_quota: number | null;
-  unit_price: number;
-}
+import { formatRupiah } from "@/lib/format";
+import { useCreatePass, usePassCatalog } from "./queries";
+import { PUBLIC_ENTRY_LABEL } from "./types";
 
 export function PassPurchase({ slug }: { slug: string }) {
-  const [venueName, setVenueName] = useState("");
-  const [passes, setPasses] = useState<PassProduct[]>([]);
+  const catalog = usePassCatalog(slug);
+  const createPass = useCreatePass(slug);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [holderName, setHolderName] = useState("");
   const [holderPhone, setHolderPhone] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const selected = useMemo(
-    () => passes.find((p) => p.ticket_product_id === selectedId) ?? null,
-    [passes, selectedId]
-  );
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/public/booking/${slug}/passes`);
-      const body = await res.json();
-      if (body?.data?.venue?.name) setVenueName(body.data.venue.name);
-      if (!res.ok || !body.success) {
-        setError(body.error ?? "Gagal memuat pass");
-        return;
-      }
-      setPasses(body.data.passes ?? []);
-      if ((body.data.passes ?? []).length === 0) {
-        setError("Belum ada Season Pass dijual online untuk venue ini");
-      }
-    } catch {
-      setError("Jaringan bermasalah — coba lagi");
-    } finally {
-      setLoading(false);
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const venueName = catalog.data?.venueName ?? "";
+  const passes = catalog.data?.passes ?? [];
+  const selected = passes.find((p) => p.ticket_product_id === selectedId) ?? null;
+  const loading = catalog.isPending;
+  // Tetap "memproses" setelah sukses sampai browser pindah ke invoice
+  const submitting = createPass.isPending || createPass.isSuccess;
+  const error =
+    createPass.error?.message ??
+    catalog.error?.message ??
+    (catalog.isSuccess && passes.length === 0
+      ? "Belum ada Season Pass dijual online untuk venue ini"
+      : null);
 
   const phoneDigits = holderPhone.replace(/\D/g, "");
   const canPay = selected && holderName.trim().length >= 2 && phoneDigits.length >= 8;
 
-  const submit = async () => {
+  const submit = () => {
     if (!canPay || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/public/booking/${slug}/pass`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticket_product_id: selected!.ticket_product_id,
-          holder_name: holderName.trim(),
-          holder_phone: holderPhone.trim(),
-        }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.success) {
-        setError(body.error ?? "Gagal membuat pass — coba lagi");
-        setSubmitting(false);
-        return;
-      }
-      window.location.href = body.data.invoice_url ?? body.data.status_url;
-    } catch {
-      setError("Jaringan bermasalah — pass belum dibuat, coba lagi");
-      setSubmitting(false);
-    }
+    createPass.mutate({
+      ticket_product_id: selected.ticket_product_id,
+      holder_name: holderName.trim(),
+      holder_phone: holderPhone.trim(),
+    });
   };
 
   return (
@@ -150,7 +95,7 @@ export function PassPurchase({ slug }: { slug: string }) {
                     {p.name}
                   </h3>
                   <span className="shrink-0 text-[15px] font-bold text-emerald-600">
-                    {formatRp(p.unit_price)}
+                    {formatRupiah(p.unit_price)}
                   </span>
                 </div>
                 {p.description && (
@@ -164,7 +109,7 @@ export function PassPurchase({ slug }: { slug: string }) {
                     Berlaku {p.validity_months} bulan
                   </span>
                   <span className="rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700">
-                    {ENTRY_LABEL[p.entry_policy] ?? p.entry_policy}
+                    {PUBLIC_ENTRY_LABEL[p.entry_policy] ?? p.entry_policy}
                     {p.entry_policy === "limited_visits" && ` (${p.visit_quota}×)`}
                   </span>
                 </div>
@@ -177,12 +122,12 @@ export function PassPurchase({ slug }: { slug: string }) {
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-gray-900">{selected.name}</span>
                 <span className="font-bold text-emerald-600">
-                  {formatRp(selected.unit_price)}
+                  {formatRupiah(selected.unit_price)}
                 </span>
               </div>
               <p className="mt-1 text-xs text-emerald-800/80">
                 Berlaku {selected.validity_months} bulan sejak pembayaran ·{" "}
-                {ENTRY_LABEL[selected.entry_policy] ?? selected.entry_policy}
+                {PUBLIC_ENTRY_LABEL[selected.entry_policy] ?? selected.entry_policy}
               </p>
             </div>
             <label className="block">
@@ -229,7 +174,7 @@ export function PassPurchase({ slug }: { slug: string }) {
                 <Loader2 className="h-5 w-5 animate-spin" /> Memproses…
               </>
             ) : (
-              <>Bayar {formatRp(selected.unit_price)}</>
+              <>Bayar {formatRupiah(selected.unit_price)}</>
             )}
           </button>
         </footer>

@@ -23,7 +23,9 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { angka, CLASS_COLOR, GYM_KEYS, schedulingApi, SELECT, type ClassColor, type ClassType } from "../api";
+import { CLASS_COLOR, GYM_KEYS, schedulingApi, type ClassColor, type ClassType } from "../api";
+import { SELECT } from "@/features/gym/shared";
+import { formatNumber } from "@/lib/format";
 
 /** Gym → Jenis Kelas: template durasi, kapasitas, dan biaya kredit untuk sesi baru. */
 export function ClassTypesPage() {
@@ -90,7 +92,7 @@ export function ClassTypesPage() {
                   <TableCell className="text-right tabular-nums">{t.default_duration_min} mnt</TableCell>
                   <TableCell className="text-right tabular-nums">{t.default_credit_cost}</TableCell>
                   <TableCell className="hidden text-right tabular-nums sm:table-cell">{t.default_capacity}</TableCell>
-                  <TableCell className="hidden text-right tabular-nums md:table-cell">{angka(t.upcoming_sessions)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums md:table-cell">{formatNumber(t.upcoming_sessions)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>

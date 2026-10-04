@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-012 Fase D — sisi server penanganan komplain: baca konfigurasi CS,
  * jaga state SLA saat pesan mengalir, auto-reply di luar jam operasional,

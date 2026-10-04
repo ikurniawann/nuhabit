@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { crmFetch } from "../crm-fetch";
 import { REVIEW_REPLY_MAX, type ReviewSummary } from "@/lib/crm/member-reviews";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 interface MemberReview {
   id: string;
@@ -66,15 +67,6 @@ const STATUS_BADGE: Record<MemberReview["status"], { label: string; variant: "ac
 
 const SELECT =
   "h-10 rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest";
-
-const waktu = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
 
 const call = <T,>(url: string, init?: RequestInit) => crmFetch<T>(url, init).then((r) => r.data);
 
@@ -127,15 +119,15 @@ export function MemberReviewsPage() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard
           label="Rata-rata rating"
-          value={summary?.average != null ? summary.average.toLocaleString("id-ID") : "-"}
+          value={summary?.average != null ? formatNumber(summary.average, 2) : "-"}
           unit="/ 5"
           icon={<Star />}
           tone="ink"
         />
-        <StatCard label="Total ulasan" value={(summary?.count ?? 0).toLocaleString("id-ID")} hint="Tanpa yang disembunyikan" />
+        <StatCard label="Total ulasan" value={formatNumber(summary?.count)} hint="Tanpa yang disembunyikan" />
         <StatCard
           label="Belum dibalas"
-          value={newCount.toLocaleString("id-ID")}
+          value={formatNumber(newCount)}
           hint="Di filter saat ini"
           icon={<MessageSquareReply />}
           tone={newCount > 0 ? "accent" : "default"}
@@ -168,7 +160,7 @@ export function MemberReviewsPage() {
               <div key={o.branch_id ?? "none"} className="flex items-center justify-between text-sm">
                 <span className="min-w-0 truncate">{o.name}</span>
                 <span className="shrink-0 tabular-nums text-muted-foreground">
-                  {o.average.toLocaleString("id-ID")}★ · {o.count} ulasan
+                  {formatNumber(o.average, 2)}★ · {o.count} ulasan
                 </span>
               </div>
             ))}
@@ -245,7 +237,7 @@ export function MemberReviewsPage() {
                   <TableCell className="hidden md:table-cell">
                     <p className="font-medium">{review.member_name ?? "Member"}</p>
                     <p className="text-xs text-muted-foreground">
-                      {review.order_number} · {review.outlet_name ?? "-"} · {waktu(review.created_at)}
+                      {review.order_number} · {review.outlet_name ?? "-"} · {formatDateTime(review.created_at)}
                     </p>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">

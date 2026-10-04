@@ -1,26 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { successResponse } from "@/lib/api/auth";
-import { query, queryOne } from "@/lib/db";
-import { requireCrmSettingsUser } from "@/lib/crm/advance-guard";
+import { apiHandler } from "@/lib/api/handler";
+import { assertRuleAccess, listWorkflowRuleRuns } from "@/lib/crm/advance-rules-server";
+import { requireCrmScope } from "@/lib/crm/guards";
 
 /** Log eksekusi satu rule (50 terakhir) + aksi terjadwal yang masih menunggu. */
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { error, user, scope } = await requireCrmSettingsUser();
-  if (error) return error;
+export const GET = apiHandler(async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+  const { user, scope } = await requireCrmScope("settings");
   const { id } = await params;
-  const rule = await queryOne<{ id: string; company_id: string | null }>(`SELECT id, company_id FROM crm.crm_workflow_rules WHERE id = $1`, [id]);
-  if (!rule || (user.role !== "super_admin" && rule.company_id && scope?.companyId && rule.company_id !== scope.companyId)) {
-    return NextResponse.json({ success: false, error: "Rule tidak ditemukan" }, { status: 404 });
-  }
-  const runs = await query(
-    `SELECT id, subject_type, subject_id, status, actions_result, error, created_at
-     FROM crm.crm_workflow_runs WHERE rule_id = $1 ORDER BY created_at DESC LIMIT 50`,
-    [id]
-  );
-  const scheduled = await query(
-    `SELECT id, subject_type, subject_id, run_at, status, attempts, last_error
-     FROM crm.crm_scheduled_actions WHERE rule_id = $1 AND status = 'pending' ORDER BY run_at LIMIT 50`,
-    [id]
-  );
-  return successResponse({ runs, scheduled });
-}
+  await assertRuleAccess("crm_workflow_rules", id, user, scope, "Rule tidak ditemukan");
+  return successResponse(await listWorkflowRuleRuns(id));
+}, "crm.workflow-rules.[id].runs.GET");

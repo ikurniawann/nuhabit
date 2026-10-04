@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronRight, Clock, Download, Droplets, Eye, FolderOpen, Loader2, Lock, Mail, ShieldCheck,
 } from "lucide-react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiGet, apiPost } from "@/lib/api-client";
 import { brandName } from "@/lib/branding";
 import { formatBytes, isPreviewable } from "@/lib/dataroom/config";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
 import { PreviewDialog } from "@/features/dataroom/components/preview-dialog";
-import { tanggal, type DataroomItem } from "@/features/dataroom/types";
+import type { DataroomItem } from "@/features/dataroom/types";
 
 /**
  * Halaman publik /share/[token]: gerbang verifikasi (email + kode 6 digit
@@ -38,20 +40,18 @@ interface ShareMeta {
 interface Listing { folder: DataroomItem; ancestors: { id: string; name: string }[]; items: DataroomItem[] }
 
 export function SharePage({ token }: { token: string }) {
-  const [meta, setMeta] = useState<ShareMeta | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [listing, setListing] = useState<Listing | null>(null);
   const [preview, setPreview] = useState<DataroomItem | null>(null);
 
   const base = `/api/share/${token}`;
 
-  const loadMeta = useCallback(() => {
-    apiGet<{ data: ShareMeta }>(base)
-      .then((res) => { setMeta(res.data); setError(null); })
-      .catch((err) => setError(err instanceof Error ? err.message : "Link tidak bisa dibuka"));
-  }, [base]);
-
-  useEffect(() => { loadMeta(); }, [loadMeta]);
+  const metaQuery = useQuery({
+    queryKey: ["dataroom", "share-meta", token],
+    queryFn: () => apiGet<{ data: ShareMeta }>(base).then((res) => res.data),
+    retry: false,
+  });
+  const meta = metaQuery.data ?? null;
+  const error = metaQuery.isError ? metaQuery.error.message || "Link tidak bisa dibuka" : null;
 
   const openFolder = useCallback((folderId: string) => {
     apiGet<{ data: Listing }>(`${base}/list?folder=${folderId}`)
@@ -63,7 +63,6 @@ export function SharePage({ token }: { token: string }) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
-      <Toaster richColors position="top-center" />
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><FolderOpen className="h-5 w-5" /></div>
@@ -74,7 +73,7 @@ export function SharePage({ token }: { token: string }) {
           {meta && (
             <div className="ml-auto hidden items-center gap-3 text-xs text-muted-foreground sm:flex">
               {meta.shared_by && <span>Dibagikan oleh {meta.shared_by}</span>}
-              <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Aktif sampai {tanggal(meta.expires_at)}</span>
+              <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" />Aktif sampai {formatDateTime(meta.expires_at)}</span>
               {meta.watermark && <span className="flex items-center gap-1"><Droplets className="h-3.5 w-3.5" />Watermark</span>}
             </div>
           )}
@@ -91,7 +90,7 @@ export function SharePage({ token }: { token: string }) {
         ) : !meta ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat…</div>
         ) : !meta.verified ? (
-          <Gate token={token} meta={meta} onVerified={loadMeta} />
+          <Gate token={token} meta={meta} onVerified={() => void metaQuery.refetch()} />
         ) : meta.kind === "file" && meta.root ? (
           <FileCard item={meta.root} inlineUrl={fileUrl(meta.root, false)} downloadUrl={fileUrl(meta.root, true)} onPreview={() => setPreview(meta.root)} />
         ) : (
@@ -158,7 +157,7 @@ function Gate({ token, meta, onVerified }: { token: string; meta: ShareMeta; onV
   return (
     <div className="mx-auto max-w-md rounded-xl border bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
-        <ShieldCheck className="h-6 w-6 text-primary" />
+        <ShieldCheck className="h-6 w-6 text-brand-text" />
         <div>
           <h2 className="font-semibold">Verifikasi akses</h2>
           <p className="text-xs text-muted-foreground">
@@ -208,7 +207,7 @@ function FileCard({ item, inlineUrl, downloadUrl, onPreview }: { item: DataroomI
         <ItemIcon kind="file" mime={item.mime} name={item.name} className="h-10 w-10" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium">{item.name}</p>
-          <p className="text-xs text-muted-foreground">{formatBytes(item.size_bytes)} · {tanggal(item.updated_at)}</p>
+          <p className="text-xs text-muted-foreground">{formatBytes(item.size_bytes)} · {formatDateTime(item.updated_at)}</p>
         </div>
         {previewable && <Button variant="outline" onClick={onPreview}><Eye className="mr-2 h-4 w-4" />Pratinjau</Button>}
         <Button onClick={() => { window.location.assign(downloadUrl); }}><Download className="mr-2 h-4 w-4" />Unduh</Button>
@@ -233,7 +232,7 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
             <button
               type="button"
               onClick={() => (c.id === root.id ? onBackToRoot() : onOpenFolder(c.id))}
-              className={cn("rounded-md px-2 py-1 hover:bg-muted", idx === crumbs.length - 1 && "font-medium text-primary")}
+              className={cn("rounded-md px-2 py-1 hover:bg-muted", idx === crumbs.length - 1 && "font-medium text-brand-text")}
             >
               {c.name}
             </button>
@@ -253,7 +252,7 @@ function FolderBrowser({ root, rootItems, listing, onOpenFolder, onBackToRoot, o
                 onClick={() => (item.kind === "folder" ? onOpenFolder(item.id) : isPreviewable(item.mime) ? onPreview(item) : (window.location.assign(fileUrl(item, true))))}
               >
                 <p className="truncate text-sm font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {tanggal(item.updated_at)}</p>
+                <p className="text-xs text-muted-foreground">{item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {formatDateTime(item.updated_at)}</p>
               </button>
               {item.kind === "file" && (
                 <div className="flex shrink-0 gap-1">

@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { matchRedeemGuests } from "@/lib/ticketing/booking";
+import { formatRupiah } from "@/lib/format";
 import { lookupBooking } from "../api";
 import { useRedeemBooking } from "../queries";
 import {
@@ -36,8 +37,6 @@ interface RedeemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 /**
  * Redeem booking website di loket (D4): scan/ketik kode BK-XXXXXX →
@@ -178,7 +177,7 @@ export function RedeemDialog({ open, onOpenChange }: RedeemDialogProps) {
                   </p>
                   <p className="text-xs text-gray-500">
                     Kunjungan {booking.visit_date} · {guests.length} orang ·
-                    Total {formatRp(booking.total)}
+                    Total {formatRupiah(booking.total)}
                   </p>
                 </div>
                 <Badge

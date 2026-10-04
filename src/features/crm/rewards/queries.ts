@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { listRedemptions, listRewards, searchClaimMembers } from "./api";
 import { redemptionsQueryKeys, rewardsQueryKeys } from "./query-keys";
 import type { RedemptionsListParams, RewardsListParams } from "./types";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 export const useRewardsList = (params: RewardsListParams) =>
   useQuery({
@@ -22,12 +22,7 @@ export const useRedemptionsList = (params: RedemptionsListParams) =>
 
 /** Pencarian member untuk panel klaim kasir. `term` kosong = query nonaktif. */
 export const useClaimMembers = (term: string) => {
-  const [debounced, setDebounced] = useState(term);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(term), 300);
-    return () => clearTimeout(timer);
-  }, [term]);
+  const debounced = useDebouncedValue(term, 300);
 
   return useQuery({
     queryKey: ["crm", "rewards", "claim-members", debounced] as const,

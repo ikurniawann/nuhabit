@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronRight, Download, ExternalLink, Eye, Loader2, Lock, X } from "lucide-react";
-import { apiGet } from "@/lib/api-client";
 import { formatBytes, isImageMime, isPreviewable } from "@/lib/dataroom/config";
+import { formatDate } from "@/lib/format";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
-import { tanggal, type DataroomItem, type DataroomListing } from "@/features/dataroom/types";
+import { nodeFileUrl, startDownload, useDataroomListing } from "@/features/dataroom/queries";
+import type { DataroomItem } from "@/features/dataroom/types";
 
 /**
  * Penjelajah Dataroom di jendela Drive Desktop (owner 2026-09-05): isi
@@ -16,27 +17,20 @@ import { tanggal, type DataroomItem, type DataroomListing } from "@/features/dat
  */
 export function DriveDataroomBrowser({ rootId, rootName }: { rootId: string; rootName: string }) {
   const [folderId, setFolderId] = useState(rootId);
-  const [listing, setListing] = useState<(DataroomListing & { key: string }) | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<DataroomItem | null>(null);
+  const listingQuery = useDataroomListing(folderId);
+  const listing = listingQuery.data;
+  const error = listingQuery.isError ? listingQuery.error.message || "Gagal memuat folder" : null;
 
-  const load = useCallback(() => {
-    apiGet<{ data: DataroomListing }>(`/api/dataroom/nodes?parent=${folderId}`)
-      .then((res) => { setListing({ ...res.data, key: folderId }); setError(null); })
-      .catch((err) => setError(err instanceof Error ? err.message : "Gagal memuat folder"));
-  }, [folderId]);
-  useEffect(() => { load(); }, [load]);
-
-  const loading = !listing || listing.key !== folderId;
   const ancestors = listing?.ancestors ?? [];
   const rootIdx = ancestors.findIndex((a) => a.id === rootId);
   const crumbs = rootIdx >= 0 ? ancestors.slice(rootIdx) : [{ id: rootId, name: rootName, parent_id: null }];
-  const dl = (item: DataroomItem, inline = false) => `/api/dataroom/nodes/${item.id}/download${inline ? "?inline=1" : ""}`;
+  const dl = (item: DataroomItem, inline = false) => nodeFileUrl(item.id, inline);
 
   const open = (item: DataroomItem) => {
     if (item.kind === "folder") setFolderId(item.id);
     else if (isPreviewable(item.mime)) setPreview(item);
-    else window.location.assign(dl(item));
+    else startDownload(dl(item));
   };
 
   return (
@@ -66,7 +60,7 @@ export function DriveDataroomBrowser({ rootId, rootName }: { rootId: string; roo
 
       {error ? (
         <div className="rounded-3xl border border-rose-300/30 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</div>
-      ) : loading ? (
+      ) : !listing ? (
         <div className="flex items-center gap-2 p-4 text-sm text-white/55"><Loader2 className="size-4 animate-spin" /> Memuat…</div>
       ) : listing.items.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-white/15 bg-white/5 p-6 text-center text-sm text-white/50">
@@ -89,7 +83,7 @@ export function DriveDataroomBrowser({ rootId, rootName }: { rootId: string; roo
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold">{item.name}</div>
                 <div className="mt-1 truncate text-xs text-white/45">
-                  {item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {tanggal(item.updated_at, false)}
+                  {item.kind === "file" ? formatBytes(item.size_bytes) : "Folder"} · {formatDate(item.updated_at)}
                   {item.departments && item.departments.length > 0 && (
                     <span className="ml-2 inline-flex items-center gap-1 text-amber-200/80"><Lock className="size-3" />{item.departments.map((d) => d.name).join(", ")}</span>
                   )}

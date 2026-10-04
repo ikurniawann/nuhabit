@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useBands, useRegisterBand, useUpdateBand } from "../queries";
 import type { BandStatus, TicketBand } from "../types";
 

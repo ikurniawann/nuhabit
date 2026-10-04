@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SALES_CHANNEL_CODES } from "@/lib/pos/sales-channels";
+import { OFFER_TYPES } from "./offer-rules";
 
 // Body buat/ubah penawaran (bundling, BXGY, volume) — dipakai route POST
 // dan PATCH. Aturan bisnis lintas field ada di validateOfferRule.
@@ -13,7 +14,7 @@ const itemSchema = z.object({
 });
 
 export const offerRuleBodySchema = z.object({
-  offer_type: z.enum(["bundle", "bxgy", "volume"]),
+  offer_type: z.enum(OFFER_TYPES),
   name: z.string().min(1).max(160),
   description: z.string().nullable().optional(),
   valid_from: z.string().nullable().optional(),

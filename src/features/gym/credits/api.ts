@@ -1,5 +1,6 @@
 /** Klien API admin Gym: paket kredit, kredit member, aturan gym. */
 import type { GymRules } from "@/lib/gym/rules";
+import { call, send } from "../shared";
 
 export type { GymRules };
 
@@ -104,19 +105,6 @@ export interface RulesAdmin {
   branches: { id: string; name: string; override: Partial<GymRules> }[];
 }
 
-async function call<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    cache: "no-store",
-    ...init,
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.success) throw new Error(json.error || "Permintaan gagal");
-  return json.data as T;
-}
-
-const send = <T>(url: string, body: unknown, method = "POST") => call<T>(url, { method, body: JSON.stringify(body) });
-
 export const gymCreditsApi = {
   packages: () => call<{ packages: CreditPackage[]; class_types: ClassTypeOption[] }>("/api/gym/packages"),
   savePackage: (input: PackageInput) => send<{ id: string }>("/api/gym/packages", input),
@@ -139,19 +127,6 @@ export const gymCreditsApi = {
 };
 
 /* ── Label & format ──────────────────────────────────────────────────── */
-
-export const angka = (n: number) => Number(n || 0).toLocaleString("id-ID");
-export const rupiah = (n: number) => `Rp ${angka(n)}`;
-export const tanggal = (iso: string) =>
-  new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jakarta" });
-export const waktu = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jakarta",
-  });
 
 export const ENTRY_LABELS: Record<EntryType, string> = {
   top_up: "Beli paket",

@@ -1,21 +1,10 @@
 /** Klien API Gym → Insentif Coach. */
 
 import type { CoachStatement, PayoutAction, PayoutStatus } from "@/lib/gym/incentive";
-import type { CoachStatementView, SchemeRow } from "@/lib/gym/incentive-server";
-import { call, post, remove } from "../training/api";
+import type { CoachStatementView, SchemeInput, SchemeRow } from "@/lib/gym/incentive-server";
+import { call, remove, send } from "../shared";
 
-export interface SchemeInput {
-  id?: string;
-  name: string;
-  coach_id: string | null;
-  session_fee_idr: number;
-  per_attendee_idr: number;
-  full_class_bonus_idr: number;
-  full_class_threshold_percent: number;
-  no_show_penalty_idr: number;
-  is_active: boolean;
-  rates: { class_type_id: string; session_fee_idr: number; per_attendee_idr: number }[];
-}
+export type { SchemeInput };
 
 export interface NamedOption {
   id: string;
@@ -45,7 +34,7 @@ export interface PayoutDetail extends Omit<PayoutRow, "sessions"> {
 
 export const incentivesApi = {
   schemes: () => call<{ schemes: SchemeRow[]; coaches: NamedOption[]; class_types: NamedOption[] }>("/api/gym/incentives/schemes"),
-  saveScheme: (input: SchemeInput) => post<{ id: string }>("/api/gym/incentives/schemes", input),
+  saveScheme: (input: SchemeInput) => send<{ id: string }>("/api/gym/incentives/schemes", input),
   deleteScheme: (id: string) => remove<{ id: string }>(`/api/gym/incentives/schemes?id=${id}`),
 
   statements: (month: string) => call<CoachStatementView[]>(`/api/gym/incentives/statements?month=${month}`),
@@ -53,9 +42,9 @@ export const incentivesApi = {
   payouts: (month: string) => call<PayoutRow[]>(`/api/gym/incentives/payouts?month=${month}`),
   payout: (id: string) => call<PayoutDetail>(`/api/gym/incentives/payouts/${id}`),
   createPayout: (coachId: string, month: string) =>
-    post<{ id: string }>("/api/gym/incentives/payouts", { coach_id: coachId, month }),
+    send<{ id: string }>("/api/gym/incentives/payouts", { coach_id: coachId, month }),
   actOnPayout: (id: string, action: PayoutAction, extra: { payment_reference?: string; note?: string } = {}) =>
-    post<{ id: string }>(`/api/gym/incentives/payouts/${id}`, { action, ...extra }),
+    send<{ id: string }>(`/api/gym/incentives/payouts/${id}`, { action, ...extra }),
 };
 
 /** `YYYY-MM` bulan berjalan (zona browser). */

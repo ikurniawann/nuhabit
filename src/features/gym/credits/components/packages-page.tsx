@@ -23,7 +23,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
-import { angka, gymCreditsApi, rupiah, type ClassTypeOption, type CreditPackage } from "../api";
+import { formatNumber, formatRupiah } from "@/lib/format";
+import { gymCreditsApi, type ClassTypeOption, type CreditPackage } from "../api";
 
 const PACKAGES_KEY = ["gym-credits", "packages"];
 
@@ -72,9 +73,9 @@ export function PackagesPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Paket dijual" value={angka(active.length)} icon={<Package />} tone="ink" />
-        <StatCard label="Diarsipkan" value={angka(rows.length - active.length)} icon={<Archive />} />
-        <StatCard label="Terjual" value={angka(sold)} unit="pembelian" icon={<ShoppingBag />} />
+        <StatCard label="Paket dijual" value={formatNumber(active.length)} icon={<Package />} tone="ink" />
+        <StatCard label="Diarsipkan" value={formatNumber(rows.length - active.length)} icon={<Archive />} />
+        <StatCard label="Terjual" value={formatNumber(sold)} unit="pembelian" icon={<ShoppingBag />} />
       </div>
 
       <Card className="py-0">
@@ -118,13 +119,13 @@ export function PackagesPage() {
                         .join(" · ")}
                     </p>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{angka(p.credits)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(p.credits)}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {rupiah(p.price_idr)}
-                    <span className="block text-xs text-muted-foreground">{rupiah(Math.round(p.price_idr / p.credits))}/kredit</span>
+                    {formatRupiah(p.price_idr)}
+                    <span className="block text-xs text-muted-foreground">{formatRupiah(Math.round(p.price_idr / p.credits))}/kredit</span>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{angka(p.validity_days)} hari</TableCell>
-                  <TableCell className="hidden lg:table-cell text-right tabular-nums">{angka(p.sold_count)}</TableCell>
+                  <TableCell className="hidden md:table-cell">{formatNumber(p.validity_days)} hari</TableCell>
+                  <TableCell className="hidden lg:table-cell text-right tabular-nums">{formatNumber(p.sold_count)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>
@@ -259,7 +260,7 @@ function PackageDialog({
               <p className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
                 <Layers className="size-4" />
                 {Number(form.credits) > 0 && Number(form.price_idr) > 0
-                  ? `${rupiah(Math.round(Number(form.price_idr) / Number(form.credits)))} per kredit`
+                  ? `${formatRupiah(Math.round(Number(form.price_idr) / Number(form.credits)))} per kredit`
                   : "Isi kredit dan harga"}
               </p>
             </div>

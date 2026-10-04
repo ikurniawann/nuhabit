@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-013 Fase A — sinkronisasi & penyimpanan Google Review.
  *

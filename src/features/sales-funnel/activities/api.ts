@@ -1,3 +1,4 @@
+import { parseError } from "../api-error";
 import type {
   ActivityFilters,
   ActivityFormValues,
@@ -5,17 +6,6 @@ import type {
   WaTemplate,
 } from "./types";
 import { localInputToIso } from "./types";
-
-async function parseError(res: Response, fallback: string): Promise<never> {
-  let message = fallback;
-  try {
-    const body = (await res.json()) as { error?: string; message?: string };
-    message = body.error ?? body.message ?? fallback;
-  } catch {
-    // body bukan JSON — pakai fallback
-  }
-  throw new Error(message);
-}
 
 export async function fetchActivities(
   filters: ActivityFilters

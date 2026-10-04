@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,38 +49,46 @@ interface CloseDealDialogProps {
  * Dialog wajib saat deal digeser ke tahap Menang (nilai final + tanggal
  * acara fix) atau Kalah (alasan) — aturan acceptance criteria EPIC-022.
  */
-export function CloseDealDialog({
+export function CloseDealDialog({ target, onClose, onSubmit, isPending }: CloseDealDialogProps) {
+  return (
+    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {target ? (
+          <CloseDealForm
+            key={`${target.deal.id}:${target.stage.id}`}
+            target={target}
+            onClose={onClose}
+            onSubmit={onSubmit}
+            isPending={isPending}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CloseDealForm({
   target,
   onClose,
   onSubmit,
   isPending,
-}: CloseDealDialogProps) {
-  const [valueFinal, setValueFinal] = useState("");
-  const [eventDate, setEventDate] = useState("");
+}: CloseDealDialogProps & { target: CloseDealTarget }) {
+  const [valueFinal, setValueFinal] = useState(target.deal.value_final ?? target.deal.value_estimate ?? "");
+  const [eventDate, setEventDate] = useState(target.deal.event_date?.slice(0, 10) ?? "");
   const [lostReasonId, setLostReasonId] = useState("");
   const [makeMember, setMakeMember] = useState(false);
 
   const lostReasonsQuery = useLostReasons();
   const lostReasons = lostReasonsQuery.data ?? [];
 
-  const isWon = target?.stage.is_won ?? false;
-
-  useEffect(() => {
-    if (!target) return;
-    setValueFinal(
-      target.deal.value_final ?? target.deal.value_estimate ?? ""
-    );
-    setEventDate(target.deal.event_date?.slice(0, 10) ?? "");
-    setLostReasonId("");
-    setMakeMember(false);
-  }, [target]);
+  const isWon = target.stage.is_won;
 
   const canSubmit = isWon
     ? valueFinal !== "" && Number(valueFinal) >= 0 && eventDate !== ""
     : lostReasonId !== "";
 
   const handleSubmit = () => {
-    if (!target || !canSubmit || isPending) return;
+    if (!canSubmit || isPending) return;
     const extras: CloseDealExtras = {
       makeMember: isWon && makeMember,
       leadId: target.deal.lead_id,
@@ -109,87 +117,83 @@ export function CloseDealDialog({
   };
 
   return (
-    <Dialog open={target !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {isWon ? "Deal Menang (Booked) 🎉" : "Deal Kalah"}
-          </DialogTitle>
-          <DialogDescription>
-            {target
-              ? isWon
-                ? `Konfirmasi booking "${target.deal.title}" — ${target.deal.org_name}.`
-                : `Catat alasan kalah "${target.deal.title}" — ${target.deal.org_name}.`
-              : null}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>
+          {isWon ? "Deal Menang (Booked) 🎉" : "Deal Kalah"}
+        </DialogTitle>
+        <DialogDescription>
+          {isWon
+            ? `Konfirmasi booking "${target.deal.title}" — ${target.deal.org_name}.`
+            : `Catat alasan kalah "${target.deal.title}" — ${target.deal.org_name}.`}
+        </DialogDescription>
+      </DialogHeader>
 
-        {isWon ? (
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="value_final">Nilai Final (Rp) *</Label>
-              <Input
-                id="value_final"
-                type="number"
-                min={0}
-                value={valueFinal}
-                onChange={(e) => setValueFinal(e.target.value)}
-                placeholder="15000000"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="event_date_won">Tanggal Acara (fix) *</Label>
-              <Input
-                id="event_date_won"
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-              />
-              <p className="text-xs text-gray-500">
-                Menang = booking terkonfirmasi, tanggal otomatis ditandai fix.
-              </p>
-            </div>
-            {!target?.deal.customer_id ? (
-              <label className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 text-sm text-emerald-900">
-                <Checkbox
-                  checked={makeMember}
-                  onCheckedChange={(checked) => setMakeMember(checked === true)}
-                />
-                Jadikan {target?.deal.pic_name} member loyalty
-              </label>
-            ) : null}
-          </div>
-        ) : (
+      {isWon ? (
+        <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Alasan Kalah *</Label>
-            <Select value={lostReasonId} onValueChange={setLostReasonId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih alasan..." />
-              </SelectTrigger>
-              <SelectContent>
-                {lostReasons.map((reason) => (
-                  <SelectItem key={reason.id} value={reason.id}>
-                    {reason.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="value_final">Nilai Final (Rp) *</Label>
+            <Input
+              id="value_final"
+              type="number"
+              min={0}
+              value={valueFinal}
+              onChange={(e) => setValueFinal(e.target.value)}
+              placeholder="15000000"
+            />
           </div>
-        )}
+          <div className="space-y-1.5">
+            <Label htmlFor="event_date_won">Tanggal Acara (fix) *</Label>
+            <Input
+              id="event_date_won"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Menang = booking terkonfirmasi, tanggal otomatis ditandai fix.
+            </p>
+          </div>
+          {!target.deal.customer_id ? (
+            <label className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 text-sm text-emerald-900">
+              <Checkbox
+                checked={makeMember}
+                onCheckedChange={(checked) => setMakeMember(checked === true)}
+              />
+              Jadikan {target.deal.pic_name} member loyalty
+            </label>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <Label>Alasan Kalah *</Label>
+          <Select value={lostReasonId} onValueChange={setLostReasonId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih alasan..." />
+            </SelectTrigger>
+            <SelectContent>
+              {lostReasons.map((reason) => (
+                <SelectItem key={reason.id} value={reason.id}>
+                  {reason.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isPending}>
-            Batal
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit || isPending}
-            className={isWon ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}
-          >
-            {isPending ? "Menyimpan…" : isWon ? "Konfirmasi Booking" : "Tandai Kalah"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose} disabled={isPending}>
+          Batal
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={!canSubmit || isPending}
+          className={isWon ? "bg-emerald-600 hover:bg-emerald-700" : "bg-red-600 hover:bg-red-700"}
+        >
+          {isPending ? "Menyimpan…" : isWon ? "Konfirmasi Booking" : "Tandai Kalah"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }

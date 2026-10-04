@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { formatRupiah } from "@/lib/format";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   DragDropContext,
   Draggable,
@@ -23,7 +24,6 @@ import { useLinkLeadCustomer } from "../../leads/queries";
 import { useDeals, useDeleteDeal, usePipelines, useStages, useUpdateDeal } from "../queries";
 import {
   EVENT_TYPE_LABELS,
-  formatRupiah,
   type DealFilters,
   type SalesDeal,
   type SalesStage,
@@ -236,6 +236,7 @@ export function SalesFunnelPipelinePage() {
                                 ref={dragProvided.innerRef}
                                 {...dragProvided.draggableProps}
                                 {...dragProvided.dragHandleProps}
+                                style={dragProvided.draggableProps.style as CSSProperties}
                                 className={
                                   dragSnapshot.isDragging
                                     ? "rotate-1 opacity-90 shadow-lg"

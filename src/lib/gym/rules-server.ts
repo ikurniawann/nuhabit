@@ -1,3 +1,4 @@
+import "server-only";
 /** Simpan & baca aturan gym untuk halaman admin. getGymRules ikut diekspor dari sini. */
 import { getPool } from "@/lib/db";
 import { GYM_RULE_DEFAULTS, resolveGymRules, sanitizeStoredRules, type GymRules } from "./rules";

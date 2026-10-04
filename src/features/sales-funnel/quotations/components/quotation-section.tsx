@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatRupiah } from "../../pipeline/types";
+import { formatDate, formatRupiah } from "@/lib/format";
 import {
   useDeleteQuotation,
   useQuotations,
@@ -115,7 +115,7 @@ export function QuotationSection({ dealId, enabled }: QuotationSectionProps) {
                     ? `PPN ${Number(quotation.ppn_persen)}%`
                     : "tanpa PPN"}
                   {quotation.valid_until
-                    ? ` · s/d ${new Date(quotation.valid_until).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`
+                    ? ` · s/d ${formatDate(quotation.valid_until)}`
                     : ""}
                 </p>
               </button>

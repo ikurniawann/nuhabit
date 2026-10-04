@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, Link2, Loader2, Save, ShieldAlert, Trash2 } from "lucide-react";
+import type { GoogleBusinessConfig, GoogleBusinessForm } from "../api";
+import { useGoogleBusinessConfig, useGoogleBusinessMutations } from "../queries";
 
 /**
  * EPIC-013 Fase A — form kredensial Google Business Profile.
@@ -11,104 +13,68 @@ import { CheckCircle2, Link2, Loader2, Save, ShieldAlert, Trash2 } from "lucide-
  * field rahasia berarti "biarkan yang lama", bukan menghapus.
  */
 
-interface ConfigState {
-  client_id: string;
-  account_id: string;
-  location_id: string;
-  has_client_secret: boolean;
-  client_secret_masked: string | null;
-  has_refresh_token: boolean;
-  refresh_token_masked: string | null;
-  configured: boolean;
-}
+type Feedback = { error: string | null; message: string | null };
 
-export function GoogleConnectPanel({ onSaved }: { onSaved: () => void }) {
-  const [config, setConfig] = useState<ConfigState | null>(null);
-  const [form, setForm] = useState({
-    client_id: "",
-    client_secret: "",
-    refresh_token: "",
-    account_id: "",
-    location_id: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ error: string | null; message: string | null }>({
-    error: null,
-    message: null,
-  });
+const formFromConfig = (config: GoogleBusinessConfig | undefined): GoogleBusinessForm => ({
+  client_id: config?.client_id ?? "",
+  client_secret: "",
+  refresh_token: "",
+  account_id: config?.account_id ?? "",
+  location_id: config?.location_id ?? "",
+});
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch("/api/settings/google-business", { cache: "no-store" });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Gagal memuat konfigurasi");
-      setConfig(json.data);
-      setForm((current) => ({
-        ...current,
-        client_id: json.data.client_id ?? "",
-        account_id: json.data.account_id ?? "",
-        location_id: json.data.location_id ?? "",
-      }));
-    } catch (error) {
-      setFeedback({
-        error: error instanceof Error ? error.message : "Gagal memuat konfigurasi",
-        message: null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+export function GoogleConnectPanel() {
+  const configQuery = useGoogleBusinessConfig();
+  const [feedback, setFeedback] = useState<Feedback>({ error: null, message: null });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function save() {
-    setSaving(true);
-    setFeedback({ error: null, message: null });
-    try {
-      const response = await fetch("/api/settings/google-business", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.error || "Gagal menyimpan");
-
-      setForm((current) => ({ ...current, client_secret: "", refresh_token: "" }));
-      setFeedback({ error: null, message: "Kredensial tersimpan." });
-      await load();
-      onSaved();
-    } catch (error) {
-      setFeedback({
-        error: error instanceof Error ? error.message : "Gagal menyimpan",
-        message: null,
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function disconnect() {
-    setSaving(true);
-    try {
-      await fetch("/api/settings/google-business", { method: "DELETE" });
-      setForm({ client_id: "", client_secret: "", refresh_token: "", account_id: "", location_id: "" });
-      setFeedback({ error: null, message: "Kredensial dihapus." });
-      await load();
-      onSaved();
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) {
+  if (configQuery.isLoading) {
     return (
       <div className="flex justify-center rounded-lg border border-slate-200 bg-white py-10 shadow-sm">
         <Loader2 className="size-5 animate-spin text-slate-400" />
       </div>
     );
+  }
+
+  const loadError = configQuery.error instanceof Error ? configQuery.error.message : null;
+  return (
+    <GoogleConnectForm
+      // Mount ulang saat konfigurasi server berubah supaya field ikut nilai tersimpan.
+      key={JSON.stringify(configQuery.data ?? null)}
+      config={configQuery.data}
+      feedback={loadError ? { error: loadError, message: null } : feedback}
+      onFeedback={setFeedback}
+    />
+  );
+}
+
+function GoogleConnectForm({
+  config,
+  feedback,
+  onFeedback,
+}: {
+  config: GoogleBusinessConfig | undefined;
+  feedback: Feedback;
+  onFeedback: (feedback: Feedback) => void;
+}) {
+  const [form, setForm] = useState(() => formFromConfig(config));
+  const { save: saveMutation, disconnect: disconnectMutation } = useGoogleBusinessMutations();
+  const saving = saveMutation.isPending || disconnectMutation.isPending;
+
+  async function save() {
+    onFeedback({ error: null, message: null });
+    try {
+      await saveMutation.mutateAsync(form);
+      setForm((current) => ({ ...current, client_secret: "", refresh_token: "" }));
+      onFeedback({ error: null, message: "Kredensial tersimpan." });
+    } catch (error) {
+      onFeedback({ error: error instanceof Error ? error.message : "Gagal menyimpan", message: null });
+    }
+  }
+
+  async function disconnect() {
+    await disconnectMutation.mutateAsync();
+    setForm(formFromConfig(undefined));
+    onFeedback({ error: null, message: "Kredensial dihapus." });
   }
 
   return (

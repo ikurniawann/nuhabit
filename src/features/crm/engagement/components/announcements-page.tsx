@@ -15,7 +15,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isPortalLink, PORTAL_LINK_OPTIONS } from "@/lib/member-portal/links";
 import { cn } from "@/lib/utils";
-import { angka, engagementApi, waktu, type Announcement, type AudienceInput } from "../api";
+import { engagementApi, waktu, type Announcement, type AudienceInput } from "../api";
+import { formatNumber } from "@/lib/format";
 import { Field, TableNote, TEXTAREA } from "./shared";
 
 const KIND_LABEL: Record<Announcement["kind"], string> = { announcement: "Pengumuman", promo: "Promo" };
@@ -89,7 +90,7 @@ export function AnnouncementsPage() {
         link_url: linkUrl,
       }),
     onSuccess: (data) => {
-      toast.success("Pengumuman terkirim", { description: `${angka(data.recipients)} member menerimanya di portal.` });
+      toast.success("Pengumuman terkirim", { description: `${formatNumber(data.recipients)} member menerimanya di portal.` });
       setTitle("");
       setBody("");
       setPreview(null);
@@ -120,13 +121,13 @@ export function AnnouncementsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Terkirim" value={angka(rows.length)} unit="pengumuman" icon={<Megaphone />} tone="ink" />
-        <StatCard label="Total penerima" value={angka(totalRecipients)} unit="member" icon={<Users />} />
+        <StatCard label="Terkirim" value={formatNumber(rows.length)} unit="pengumuman" icon={<Megaphone />} tone="ink" />
+        <StatCard label="Total penerima" value={formatNumber(totalRecipients)} unit="member" icon={<Users />} />
         <StatCard
           label="Dibaca"
           value={totalRecipients ? Math.round((totalRead / totalRecipients) * 100) : 0}
           unit="%"
-          hint={`${angka(totalRead)} dari ${angka(totalRecipients)} notifikasi`}
+          hint={`${formatNumber(totalRead)} dari ${formatNumber(totalRecipients)} notifikasi`}
           icon={<Eye />}
           tone="info"
         />
@@ -280,7 +281,7 @@ export function AnnouncementsPage() {
                 </Button>
                 {preview !== null && (
                   <span className="text-sm text-body">
-                    <strong className="tabular-nums">{angka(preview)}</strong> member · {audienceText(audience)}
+                    <strong className="tabular-nums">{formatNumber(preview)}</strong> member · {audienceText(audience)}
                   </span>
                 )}
               </div>
@@ -329,7 +330,7 @@ export function AnnouncementsPage() {
                       {audienceText(a.audience)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {angka(a.read_count)} / {angka(a.recipient_count)}
+                      {formatNumber(a.read_count)} / {formatNumber(a.recipient_count)}
                     </TableCell>
                   </TableRow>
                 ))}

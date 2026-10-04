@@ -8,7 +8,7 @@ import {
   MAX_COMMENT_LENGTH,
   MAX_PHOTO_BYTES,
 } from "./athlete";
-import { AthleteError } from "./athlete-server";
+import { AthleteError } from "./athlete-views";
 
 /** Handler API Train: sesi member wajib, AthleteError jadi respons dengan statusnya. */
 export function athleteRoute<A extends unknown[]>(

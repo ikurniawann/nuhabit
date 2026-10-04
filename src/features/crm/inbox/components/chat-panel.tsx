@@ -18,14 +18,15 @@ import type {
   ReplyTemplate,
 } from "../types";
 import { STATUS_LABELS, STATUS_STYLES } from "../types";
+import type { ConversationAction } from "../api";
+import { conversationTitle, withDateSeparators } from "../inbox-format";
+import { formatTime } from "@/lib/format";
 import { ConversationInsightCard } from "./conversation-insight-card";
 
-/** Panel tengah — thread chat + komposer balasan + aksi status/assign. */
-
-const waktu = (iso: string) =>
-  new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-const tanggalPenuh = (iso: string) =>
-  new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+/**
+ * Panel tengah — thread chat + komposer balasan + aksi status/assign.
+ * Pemanggil memberi `key={conversation.id}` supaya draf & menu reset saat pindah percakapan.
+ */
 
 export function ChatPanel({
   conversation,
@@ -40,10 +41,7 @@ export function ChatPanel({
   templates: ReplyTemplate[];
   busy: boolean;
   onReply: (message: string) => Promise<boolean>;
-  onAction: (
-    action: "assign_me" | "unassign" | "set_status",
-    status?: ConversationStatus
-  ) => Promise<void>;
+  onAction: (payload: ConversationAction) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
@@ -54,12 +52,6 @@ export function ChatPanel({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, conversation.id]);
 
-  useEffect(() => {
-    setDraft("");
-    setShowTemplates(false);
-    setShowStatus(false);
-  }, [conversation.id]);
-
   async function submit() {
     const message = draft.trim();
     if (!message || busy) return;
@@ -67,18 +59,12 @@ export function ChatPanel({
     if (sent) setDraft("");
   }
 
-  let lastDate = "";
-
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
         <div className="min-w-0">
           <div className="truncate text-sm font-semibold text-slate-900">
-            {conversation.customer_name ||
-              conversation.display_name ||
-              (conversation.channel === "whatsapp"
-                ? `+${conversation.external_id}`
-                : conversation.external_id)}
+            {conversationTitle(conversation)}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
             <span className={`rounded-full border px-2 py-0.5 font-medium ${STATUS_STYLES[conversation.status]}`}>
@@ -96,7 +82,7 @@ export function ChatPanel({
           {conversation.assigned_user_id ? (
             <button
               type="button"
-              onClick={() => void onAction("unassign")}
+              onClick={() => onAction({ action: "unassign" })}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
             >
               <UserMinus className="size-3.5" /> Lepas
@@ -104,7 +90,7 @@ export function ChatPanel({
           ) : (
             <button
               type="button"
-              onClick={() => void onAction("assign_me")}
+              onClick={() => onAction({ action: "assign_me" })}
               className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
             >
               <UserCheck className="size-3.5" /> Tangani
@@ -127,7 +113,7 @@ export function ChatPanel({
                     type="button"
                     onClick={() => {
                       setShowStatus(false);
-                      void onAction("set_status", status);
+                      onAction({ action: "set_status", status });
                     }}
                     className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-slate-50 ${
                       status === conversation.status ? "font-semibold text-slate-900" : "text-slate-600"
@@ -147,16 +133,13 @@ export function ChatPanel({
       <ConversationInsightCard conversationId={conversation.id} />
 
       <div className="flex-1 space-y-2 overflow-y-auto bg-slate-50 p-4">
-        {messages.map((message) => {
-          const date = tanggalPenuh(message.created_at);
-          const showDate = date !== lastDate;
-          lastDate = date;
+        {withDateSeparators(messages).map(({ message, dateLabel }) => {
           const outbound = message.direction === "out";
 
           return (
             <div key={message.id}>
-              {showDate && (
-                <div className="my-3 text-center text-[11px] text-slate-400">{date}</div>
+              {dateLabel && (
+                <div className="my-3 text-center text-[11px] text-slate-400">{dateLabel}</div>
               )}
               <div className={`flex ${outbound ? "justify-end" : "justify-start"}`}>
                 <div
@@ -176,7 +159,7 @@ export function ChatPanel({
                       outbound ? "text-violet-200" : "text-slate-400"
                     }`}
                   >
-                    {waktu(message.created_at)}
+                    {formatTime(message.created_at)}
                     {outbound && message.sent_by_name && <span>· {message.sent_by_name}</span>}
                     {outbound && message.wa_from_me && (
                       <span className="inline-flex items-center gap-0.5">

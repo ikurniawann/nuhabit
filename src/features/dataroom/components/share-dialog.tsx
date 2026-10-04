@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Ban, Check, Copy, Droplets, Globe, Link2, Loader2, Lock, Mail, RefreshCw, ScrollText,
 } from "lucide-react";
@@ -9,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiDelete, apiGet, apiPost } from "@/lib/api-client";
+import { apiDelete, apiPost } from "@/lib/api-client";
 import { DATAROOM_MAX_EXPIRY_DAYS, isWatermarkable, normalizeEmails } from "@/lib/dataroom/config";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
-import { tanggal, type DataroomItem, type ShareLogRow, type ShareRow } from "@/features/dataroom/types";
+import { dataroomKeys, useShareLogs, useShares } from "@/features/dataroom/queries";
+import type { DataroomItem, ShareRow } from "@/features/dataroom/types";
 
 /**
  * Dialog Bagikan: buat link (publik / email tertentu, PIN, watermark, masa
@@ -42,26 +45,14 @@ export function ShareDialog({ open, node, canManage, onClose }: {
   const [sendEmail, setSendEmail] = useState(true);
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<ShareRow | null>(null);
-  const [shares, setShares] = useState<ShareRow[] | null>(null);
   const [logsFor, setLogsFor] = useState<string | null>(null);
-  const [logs, setLogs] = useState<ShareLogRow[] | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [openedAt] = useState(() => Date.now());
-
-  const load = useCallback(() => {
-    const url = node ? `/api/dataroom/shares?node_id=${node.id}` : "/api/dataroom/shares";
-    apiGet<{ data: ShareRow[] }>(url).then((res) => setShares(res.data)).catch((err) => toast.error(err instanceof Error ? err.message : "Gagal memuat link"));
-  }, [node]);
-
-  useEffect(() => {
-    if (open) load();
-  }, [open, load]);
-
-  const resetForm = () => {
-    setAccessType("public"); setEmails(""); setPin(""); setWatermark(false); setDays(7); setSendEmail(true); setCreated(null);
-  };
-
-  const close = () => { resetForm(); setShares(null); setLogsFor(null); setLogs(null); onClose(); };
+  const queryClient = useQueryClient();
+  const sharesQuery = useShares(node?.id ?? null);
+  const shares = sharesQuery.data ?? null;
+  const logsQuery = useShareLogs(logsFor);
+  const refreshShares = () => queryClient.invalidateQueries({ queryKey: dataroomKeys.allShares });
 
   const copy = async (s: ShareRow) => {
     try {
@@ -86,7 +77,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
         watermark, expires_days: days, send_email: accessType === "email" && sendEmail,
       });
       setCreated(res.data);
-      load();
+      void refreshShares();
       const mail = res.data.mail;
       toast.success(
         mail ? `Link dibuat. Email terkirim ke ${mail.sent} penerima${mail.failed.length ? `, gagal: ${mail.failed.join(", ")}` : ""}` : "Link dibuat"
@@ -103,28 +94,18 @@ export function ShareDialog({ open, node, canManage, onClose }: {
     try {
       await apiDelete(`/api/dataroom/shares/${s.id}`);
       toast.success("Link dicabut");
-      load();
+      void refreshShares();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal mencabut link");
     }
   };
 
-  const toggleLogs = async (s: ShareRow) => {
-    if (logsFor === s.id) { setLogsFor(null); setLogs(null); return; }
-    setLogsFor(s.id); setLogs(null);
-    try {
-      const res = await apiGet<{ data: { logs: ShareLogRow[] } }>(`/api/dataroom/shares/${s.id}`);
-      setLogs(res.data.logs);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal memuat log");
-      setLogsFor(null);
-    }
-  };
+  const toggleLogs = (s: ShareRow) => setLogsFor((current) => (current === s.id ? null : s.id));
 
   const wmSupported = !node || node.kind === "folder" || isWatermarkable(node.mime);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="flex max-h-[92vh] flex-col gap-0 p-0 sm:max-w-3xl">
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -177,7 +158,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                   <div className="flex items-center gap-1.5">
                     <Input type="number" min={1} max={DATAROOM_MAX_EXPIRY_DAYS} value={days} onChange={(e) => setDays(Math.max(1, Math.min(DATAROOM_MAX_EXPIRY_DAYS, Number(e.target.value) || 1)))} className="w-24" />
                     {[1, 7, 30, 90].map((d) => (
-                      <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-md border px-2 py-1 text-xs", days === d ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted")}>{d}h</button>
+                      <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-md border px-2 py-1 text-xs", days === d ? "border-primary bg-primary/10 text-brand-text" : "hover:bg-muted")}>{d}h</button>
                     ))}
                   </div>
                 </div>
@@ -196,7 +177,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
               </label>
 
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-muted-foreground">Link akan aktif sampai {tanggal(new Date(openedAt + days * 86_400_000).toISOString())}</p>
+                <p className="text-xs text-muted-foreground">Link akan aktif sampai {formatDateTime(openedAt + days * 86_400_000)}</p>
                 <Button type="button" onClick={submit} disabled={busy}>
                   {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Buat link
                 </Button>
@@ -219,9 +200,11 @@ export function ShareDialog({ open, node, canManage, onClose }: {
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">{node ? "Link untuk item ini" : "Daftar link"}</h3>
-              <Button type="button" variant="ghost" size="sm" onClick={load}><RefreshCw className="mr-1 h-3.5 w-3.5" />Muat ulang</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => sharesQuery.refetch()}><RefreshCw className="mr-1 h-3.5 w-3.5" />Muat ulang</Button>
             </div>
-            {shares === null ? (
+            {sharesQuery.isError ? (
+              <p className="py-4 text-sm text-destructive">{sharesQuery.error.message || "Gagal memuat link"}</p>
+            ) : shares === null ? (
               <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat…</p>
             ) : shares.length === 0 ? (
               <p className="rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground">Belum ada link berbagi.</p>
@@ -251,21 +234,23 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Aktif sampai {tanggal(s.expires_at)} · dibuat {tanggal(s.created_at)} oleh {s.created_by_name ?? "—"} · dibuka {s.view_count}× · {s.access_count} lihat/unduh
-                        {s.last_accessed_at && <> · terakhir {tanggal(s.last_accessed_at)}</>}
+                        Aktif sampai {formatDateTime(s.expires_at)} · dibuat {formatDateTime(s.created_at)} oleh {s.created_by_name ?? "—"} · dibuka {s.view_count}× · {s.access_count} lihat/unduh
+                        {s.last_accessed_at && <> · terakhir {formatDateTime(s.last_accessed_at)}</>}
                       </p>
                       {logsFor === s.id && (
                         <div className="rounded-md bg-muted/50 p-2">
-                          {logs === null ? (
+                          {logsQuery.isError ? (
+                            <p className="text-xs text-destructive">{logsQuery.error.message || "Gagal memuat log"}</p>
+                          ) : !logsQuery.data ? (
                             <p className="text-xs text-muted-foreground">Memuat log…</p>
-                          ) : logs.length === 0 ? (
+                          ) : logsQuery.data.length === 0 ? (
                             <p className="text-xs text-muted-foreground">Belum ada aktivitas.</p>
                           ) : (
                             <table className="w-full text-xs">
                               <tbody>
-                                {logs.map((l) => (
+                                {logsQuery.data.map((l) => (
                                   <tr key={l.id} className="border-b last:border-0">
-                                    <td className="py-1 pr-2 whitespace-nowrap text-muted-foreground">{tanggal(l.created_at)}</td>
+                                    <td className="py-1 pr-2 whitespace-nowrap text-muted-foreground">{formatDateTime(l.created_at)}</td>
                                     <td className="py-1 pr-2 font-medium">{ACTION_LABEL[l.action] ?? l.action}</td>
                                     <td className="py-1 pr-2 truncate max-w-[180px]">{l.file_name ?? ""}</td>
                                     <td className="py-1 pr-2">{l.email ?? "—"}</td>

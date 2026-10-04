@@ -14,7 +14,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BOOKING_STATUSES, type BookingStatus } from "@/lib/gym/booking";
-import { addDays, angka, BOOKING_BADGE, GYM_KEYS, schedulingApi, SELECT, waktu, wibDay, wibDayStart } from "../api";
+import { addDays, BOOKING_BADGE, GYM_KEYS, schedulingApi, waktu, wibDay, wibDayStart } from "../api";
+import { SELECT } from "@/features/gym/shared";
+import { formatNumber } from "@/lib/format";
 
 const RANGES = {
   next7: { label: "7 hari ke depan", from: 0, to: 8 },
@@ -64,11 +66,11 @@ export function BookingsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Terdaftar & check-in" value={angka(count("confirmed") + count("checked_in") + count("completed"))} icon={<CalendarCheck />} tone="ink" />
-        <StatCard label="Waitlist" value={angka(count("waitlist"))} icon={<Hourglass />} tone={count("waitlist") ? "info" : "default"} />
+        <StatCard label="Terdaftar & check-in" value={formatNumber(count("confirmed") + count("checked_in") + count("completed"))} icon={<CalendarCheck />} tone="ink" />
+        <StatCard label="Waitlist" value={formatNumber(count("waitlist"))} icon={<Hourglass />} tone={count("waitlist") ? "info" : "default"} />
         <StatCard
           label="No-show & batal terlambat"
-          value={angka(count("no_show") + rows.filter((b) => b.late_cancel).length)}
+          value={formatNumber(count("no_show") + rows.filter((b) => b.late_cancel).length)}
           icon={<UserX />}
           tone={count("no_show") ? "warning" : "default"}
         />
@@ -125,7 +127,7 @@ export function BookingsPage() {
                       <p className="font-mono text-xs text-muted-foreground">{b.member_phone}</p>
                     </TableCell>
                     <TableCell className="max-w-[16rem] whitespace-normal">
-                      <Link href={`/dashboard/gym/sessions/${b.session_id}`} className="font-medium text-forest hover:underline">
+                      <Link href={`/dashboard/gym/sessions/${b.session_id}`} className="font-medium text-brand-text hover:underline">
                         {b.class_type_name}
                       </Link>
                       <p className="text-xs text-muted-foreground">

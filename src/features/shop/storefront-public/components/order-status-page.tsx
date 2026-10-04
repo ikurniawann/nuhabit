@@ -4,23 +4,9 @@
 // sini). Polling ringan saat masih pending supaya status paid muncul tanpa
 // refresh manual.
 
-import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, Loader2, Package, Truck, XCircle } from 'lucide-react';
-
-type OrderStatus = {
-  order_number: string;
-  status: string;
-  customer_name: string;
-  shipping_area_label: string | null;
-  shipping_address: string;
-  courier: string;
-  subtotal: number;
-  shipping_cost: number;
-  total: number;
-  invoice_url: string | null;
-  waybill: string | null;
-  items: Array<{ name: string; quantity: number; unit_price: number; total: number }>;
-};
+import { formatRupiah } from '@/lib/format';
+import { useShopOrderStatus } from '../queries';
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   pending: { label: 'Menunggu Pembayaran', tone: 'bg-amber-50 text-amber-700' },
@@ -32,49 +18,14 @@ const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   refund: { label: 'Refund', tone: 'bg-gray-100 text-gray-600' },
 };
 
-function formatRp(value: number): string {
-  return `Rp ${Math.round(value).toLocaleString('id-ID')}`;
-}
-
 export function ShopOrderStatusPage({ token }: { token: string }) {
-  const [order, setOrder] = useState<OrderStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: order, error } = useShopOrderStatus(token);
 
-  useEffect(() => {
-    let stopped = false;
-    let timer: number | undefined;
-
-    const load = async () => {
-      try {
-        const response = await fetch(`/api/public/shop/order/${token}`, { cache: 'no-store' });
-        const json = await response.json();
-        if (stopped) return;
-        if (!response.ok || !json.success) {
-          setError(json.error || 'Order tidak ditemukan');
-          return;
-        }
-        setOrder(json.data as OrderStatus);
-        // Masih pending → poll tiap 5 dtk menunggu webhook paid
-        if ((json.data as OrderStatus).status === 'pending') {
-          timer = window.setTimeout(load, 5000);
-        }
-      } catch {
-        if (!stopped) setError('Gagal memuat order');
-      }
-    };
-    load();
-
-    return () => {
-      stopped = true;
-      if (timer) window.clearTimeout(timer);
-    };
-  }, [token]);
-
-  if (error) {
+  if (error && !order) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-50 px-6 text-center">
         <XCircle className="h-10 w-10 text-red-300" />
-        <p className="text-sm text-gray-500">{error}</p>
+        <p className="text-sm text-gray-500">{error.message || 'Gagal memuat order'}</p>
       </div>
     );
   }
@@ -138,16 +89,16 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
                 <span className="text-gray-700">
                   {item.name} <span className="text-gray-400">× {item.quantity}</span>
                 </span>
-                <span className="text-gray-900">{formatRp(item.total)}</span>
+                <span className="text-gray-900">{formatRupiah(item.total)}</span>
               </div>
             ))}
             <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-sm">
               <span className="text-gray-500">Ongkir{order.courier ? ` (${order.courier})` : ''}</span>
-              <span className="text-gray-900">{formatRp(order.shipping_cost)}</span>
+              <span className="text-gray-900">{formatRupiah(order.shipping_cost)}</span>
             </div>
             <div className="flex items-center justify-between text-base font-semibold">
               <span>Total</span>
-              <span className="text-pink-600">{formatRp(order.total)}</span>
+              <span className="text-pink-600">{formatRupiah(order.total)}</span>
             </div>
           </div>
         </div>

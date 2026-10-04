@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { rupiah, walletApi, type TopupPackage } from "../api";
+import { formatRupiah } from "@/lib/format";
+import { walletApi, type TopupPackage } from "../api";
 
 /**
  * Pilihan paket top-up di layar kasir (paket aktif untuk cabang kasir).
@@ -38,10 +39,10 @@ export function TopupPackagePicker({
               )}
             >
               <div className="text-sm font-semibold text-foreground">{pkg.name}</div>
-              <div className="mt-0.5 text-sm">Bayar {rupiah(pkg.price_idr)}</div>
+              <div className="mt-0.5 text-sm">Bayar {formatRupiah(pkg.price_idr)}</div>
               <div className="mt-0.5 text-[11px] text-muted-foreground">
-                Saldo {rupiah(pkg.credit_idr)}
-                {bonus > 0 ? ` (bonus ${rupiah(bonus)})` : ""}
+                Saldo {formatRupiah(pkg.credit_idr)}
+                {bonus > 0 ? ` (bonus ${formatRupiah(bonus)})` : ""}
                 {pkg.validity_days ? ` · berlaku ${pkg.validity_days} hari` : ""}
               </div>
             </button>

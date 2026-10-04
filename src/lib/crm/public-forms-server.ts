@@ -1,10 +1,13 @@
+import "server-only";
 /**
  * EPIC-050 T-5.3 — sisi server form publik.
  * Tidak ada sesi login di sini: tenant diambil dari form (slug = kredensial),
  * seluruh isian divalidasi ulang, dan kiriman selalu dicatat untuk audit.
  */
 import { createHash } from "node:crypto";
+import { ApiError } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 import { createPgClient } from "@/lib/pg/create-client";
 import { getCrmDefaultVenue } from "@/lib/crm/server";
 import { emitCrmEvent } from "@/lib/crm/events";
@@ -14,9 +17,12 @@ import { isValidNormalizedPhone, normalizePhone } from "@/lib/sales-funnel/serve
 import {
   DEFAULT_FORM_FIELDS,
   buildLeadAlert,
+  isLikelyBot,
   leadOrgName,
+  parseAttribution,
   publicFieldSchema,
   sourceFromAttribution,
+  validateSubmission,
   type Attribution,
   type PublicFieldDef,
   type SubmissionResult,
@@ -94,11 +100,11 @@ function idList(raw: unknown): string[] {
 }
 
 /** IP disimpan sebagai hash — cukup untuk menelusuri spam tanpa menyimpan IP mentah. */
-export function hashIp(ip: string): string {
+function hashIp(ip: string): string {
   return createHash("sha256").update(`bcdcoffee-form:${ip}`).digest("hex").slice(0, 64);
 }
 
-export async function recordSubmission(input: {
+async function recordSubmission(input: {
   formId: string;
   leadId: string | null;
   payload: unknown;
@@ -124,7 +130,7 @@ export async function recordSubmission(input: {
   );
 }
 
-export interface CreateLeadResult {
+interface CreateLeadResult {
   leadId: string;
   duplicate: boolean;
 }
@@ -134,7 +140,7 @@ export interface CreateLeadResult {
  * ada, lead lama dipakai kembali dan kiriman dicatat sebagai catatan tambahan —
  * lebih berguna daripada menolak kiriman pelanggan.
  */
-export async function createLeadFromSubmission(
+async function createLeadFromSubmission(
   form: PublicFormRow,
   submission: SubmissionResult,
   attribution: Attribution
@@ -168,7 +174,7 @@ export async function createLeadFromSubmission(
         `UPDATE crm.crm_sales_leads
          SET notes = COALESCE(notes || E'\\n\\n', '') || $2, updated_at = now()
          WHERE id = $1`,
-        [existing.id, `[Form publik ${new Date().toISOString().slice(0, 10)}] ${note}`.slice(0, 4000)]
+        [existing.id, `[Form publik ${formatDate(new Date())}] ${note}`.slice(0, 4000)]
       );
     }
     return { leadId: existing.id, duplicate: true };
@@ -219,7 +225,7 @@ export async function createLeadFromSubmission(
 }
 
 /** Beri tahu sales lewat notifikasi aplikasi dan WhatsApp. */
-export async function notifyNewLead(
+async function notifyNewLead(
   form: PublicFormRow,
   leadId: string,
   submission: SubmissionResult,
@@ -259,6 +265,48 @@ export async function notifyNewLead(
   }
 }
 
-export async function bumpSubmissionCount(formId: string): Promise<void> {
+async function bumpSubmissionCount(formId: string): Promise<void> {
   await query(`UPDATE crm.crm_forms SET submission_count = submission_count + 1, updated_at = now() WHERE id = $1`, [formId]);
+}
+
+/**
+ * Kiriman form publik → lead + scoring + workflow + notifikasi sales. Setiap
+ * kiriman dicatat (termasuk yang ditolak). Bot dibalas seolah berhasil supaya
+ * tidak belajar polanya. 400 = isian tidak valid, 503 = venue belum dikonfigurasi.
+ */
+export async function submitPublicForm(
+  form: PublicFormRow,
+  payload: Record<string, unknown>,
+  client: { ip: string; userAgent: string | null }
+): Promise<{ message: string; redirect_url: string | null }> {
+  const done = { message: form.success_message, redirect_url: form.redirect_url };
+  const attribution = parseAttribution(payload);
+  const record = (leadId: string | null, status: "ok" | "rejected" | "duplicate", reason?: string) =>
+    recordSubmission({
+      formId: form.id, leadId, payload, utm: attribution, ipHash: hashIp(client.ip), userAgent: client.userAgent, status, reason,
+    });
+
+  const bot = isLikelyBot(payload);
+  if (bot.bot) {
+    await record(null, "rejected", bot.reason);
+    return done;
+  }
+
+  const submission = validateSubmission(formFields(form.fields), payload);
+  if (!submission.ok) {
+    await record(null, "rejected", "validasi gagal");
+    throw ApiError.badRequest("Periksa kembali isian Anda", submission.errors);
+  }
+
+  const created = await createLeadFromSubmission(form, submission, attribution);
+  if (!created) {
+    await record(null, "rejected", "venue belum dikonfigurasi");
+    throw new ApiError(503, "Form belum siap menerima kiriman. Hubungi kami lewat WhatsApp.");
+  }
+
+  await record(created.leadId, created.duplicate ? "duplicate" : "ok");
+  await bumpSubmissionCount(form.id);
+  // Notifikasi tidak boleh menggagalkan respons ke pengirim form.
+  if (!created.duplicate) await notifyNewLead(form, created.leadId, submission, attribution).catch(() => undefined);
+  return done;
 }

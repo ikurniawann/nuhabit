@@ -1,19 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { BedDouble, Building2, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api-client";
+import { formatRupiah } from "@/lib/format";
+import type { RoomRow, RoomTypeRow } from "@/lib/resort/types";
 import { cn } from "@/lib/utils";
-import {
-  ROOM_STATUS_CLASS, ROOM_STATUS_LABEL, rupiah,
-  type RateSeasonRow, type RoomRow, type RoomTypeRow,
-} from "@/features/resort/types";
+import { resortApi, useResortMutation, useRoomTypes, useRooms } from "@/features/resort/queries";
+import { ROOM_STATUS_CLASS, ROOM_STATUS_LABEL } from "@/features/resort/types";
 
 /**
  * Resort → Kamar & Tipe (owner 2026-09-06): master tipe kamar (kapasitas,
@@ -31,44 +30,27 @@ const emptyType: TypeForm = {
 };
 
 export function ResortRoomsPage() {
-  const [types, setTypes] = useState<RoomTypeRow[] | null>(null);
-  const [seasons, setSeasons] = useState<RateSeasonRow[]>([]);
-  const [rooms, setRooms] = useState<RoomRow[] | null>(null);
+  const typesQuery = useRoomTypes();
+  const types = typesQuery.data?.types ?? (typesQuery.isError ? [] : null);
+  const seasons = typesQuery.data?.seasons ?? [];
+  const roomsQuery = useRooms();
+  const rooms = roomsQuery.data ?? (roomsQuery.isError ? [] : null);
   const [typeDialog, setTypeDialog] = useState<{ mode: "create" } | { mode: "edit"; row: RoomTypeRow } | null>(null);
   const [roomDialog, setRoomDialog] = useState<{ mode: "create" } | { mode: "edit"; row: RoomRow } | null>(null);
 
-  const load = useCallback(() => {
-    apiGet<{ data: { types: RoomTypeRow[]; seasons: RateSeasonRow[] } }>("/api/resort/room-types?all=1")
-      .then((res) => { setTypes(res.data.types); setSeasons(res.data.seasons); })
-      .catch((err) => { setTypes([]); toast.error(err instanceof Error ? err.message : "Gagal memuat tipe kamar"); });
-    apiGet<{ data: RoomRow[] }>("/api/resort/rooms")
-      .then((res) => setRooms(res.data))
-      .catch(() => setRooms([]));
-  }, []);
-  useEffect(() => { load(); }, [load]);
-
-  const removeType = async (row: RoomTypeRow) => {
-    if (!confirm(`Hapus tipe kamar "${row.name}"?`)) return;
-    try {
-      const res = await apiDelete(`/api/resort/room-types/${row.id}`) as { message?: string };
-      toast.success(res.message ?? "Tipe kamar dihapus");
-      load();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menghapus"); }
+  const deleteType = useResortMutation(resortApi.deleteRoomType, "Tipe kamar dihapus");
+  const deleteRoom = useResortMutation(resortApi.deleteRoom, "Kamar dihapus");
+  const removeType = (row: RoomTypeRow) => {
+    if (confirm(`Hapus tipe kamar "${row.name}"?`)) deleteType.mutate(row.id);
   };
-  const removeRoom = async (row: RoomRow) => {
-    if (!confirm(`Hapus kamar "${row.name}"?`)) return;
-    try {
-      const res = await apiDelete(`/api/resort/rooms/${row.id}`) as { message?: string };
-      toast.success(res.message ?? "Kamar dihapus");
-      load();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menghapus"); }
+  const removeRoom = (row: RoomRow) => {
+    if (confirm(`Hapus kamar "${row.name}"?`)) deleteRoom.mutate(row.id);
   };
 
   return (
     <div className="space-y-5">
-      <Toaster richColors position="top-center" />
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-bold"><Building2 className="h-6 w-6 text-primary" />Kamar &amp; Tipe</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold"><Building2 className="h-6 w-6 text-brand-text" />Kamar &amp; Tipe</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Master akomodasi: tipe kamar dengan tarif weekday/weekend, lalu unit kamar fisik yang dijual.
         </p>
@@ -99,10 +81,10 @@ export function ResortRoomsPage() {
                     </div>
                   </div>
                   <div className="rounded-md bg-muted/50 p-2 text-xs">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Weekday</span><span className="font-semibold">{rupiah(t.rate_weekday)}</span></div>
-                    <div className="mt-0.5 flex justify-between"><span className="text-muted-foreground">Weekend (Jum–Sab)</span><span className="font-semibold">{rupiah(t.rate_weekend)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Weekday</span><span className="font-semibold">{formatRupiah(t.rate_weekday)}</span></div>
+                    <div className="mt-0.5 flex justify-between"><span className="text-muted-foreground">Weekend (Jum–Sab)</span><span className="font-semibold">{formatRupiah(t.rate_weekend)}</span></div>
                     {t.extra_bed_capacity > 0 && (
-                      <div className="mt-0.5 flex justify-between"><span className="text-muted-foreground">Extra bed (maks {t.extra_bed_capacity})</span><span>{rupiah(t.extra_bed_rate)}</span></div>
+                      <div className="mt-0.5 flex justify-between"><span className="text-muted-foreground">Extra bed (maks {t.extra_bed_capacity})</span><span>{formatRupiah(t.extra_bed_rate)}</span></div>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -116,7 +98,7 @@ export function ResortRoomsPage() {
         )}
         {seasons.length > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Musim tarif aktif: {seasons.map((s) => `${s.label} (${s.start_date} → ${s.end_date}${s.rate ? `, ${rupiah(s.rate)}` : s.surcharge_percent ? `, +${s.surcharge_percent}%` : ""})`).join(" · ")}
+            Musim tarif aktif: {seasons.map((s) => `${s.label} (${s.start_date} → ${s.end_date}${s.rate ? `, ${formatRupiah(s.rate)}` : s.surcharge_percent ? `, +${s.surcharge_percent}%` : ""})`).join(" · ")}
           </p>
         )}
       </section>
@@ -176,7 +158,7 @@ export function ResortRoomsPage() {
         <TypeDialog
           initial={typeDialog.mode === "edit" ? typeDialog.row : null}
           onClose={() => setTypeDialog(null)}
-          onSaved={() => { setTypeDialog(null); load(); }}
+          onSaved={() => setTypeDialog(null)}
         />
       )}
       {roomDialog && types && (
@@ -184,7 +166,7 @@ export function ResortRoomsPage() {
           types={types.filter((t) => t.is_active)}
           initial={roomDialog.mode === "edit" ? roomDialog.row : null}
           onClose={() => setRoomDialog(null)}
-          onSaved={() => { setRoomDialog(null); load(); }}
+          onSaved={() => setRoomDialog(null)}
         />
       )}
     </div>
@@ -199,11 +181,15 @@ function TypeDialog({ initial, onClose, onSaved }: { initial: RoomTypeRow | null
     rate_weekend: String(initial.rate_weekend || ""), extra_bed_rate: String(initial.extra_bed_rate || ""),
     amenities: (initial.amenities ?? []).join(", "), sort_order: initial.sort_order,
   } : emptyType);
-  const [busy, setBusy] = useState(false);
+  const mutation = useResortMutation(
+    (body: Record<string, unknown>) => resortApi.saveRoomType(initial?.id ?? null, body),
+    "Tersimpan",
+    onSaved
+  );
+  const busy = mutation.isPending;
 
-  const save = async () => {
+  const save = () => {
     if (!form.code.trim() || !form.name.trim()) { toast.error("Kode dan nama tipe wajib diisi"); return; }
-    setBusy(true);
     const payload = {
       name: form.name.trim(), description: form.description.trim() || null, zone: form.zone.trim() || null,
       capacity_adults: form.capacity_adults, capacity_children: form.capacity_children,
@@ -213,14 +199,7 @@ function TypeDialog({ initial, onClose, onSaved }: { initial: RoomTypeRow | null
       amenities: form.amenities.split(",").map((a) => a.trim()).filter(Boolean),
       sort_order: form.sort_order,
     };
-    try {
-      const res = initial
-        ? await apiPatch<{ message?: string }>(`/api/resort/room-types/${initial.id}`, payload)
-        : await apiPost<{ message?: string }>("/api/resort/room-types", { ...payload, code: form.code.trim() });
-      toast.success(res.message ?? "Tersimpan");
-      onSaved();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menyimpan"); }
-    finally { setBusy(false); }
+    mutation.mutate(initial ? payload : { ...payload, code: form.code.trim() });
   };
 
   return (
@@ -282,25 +261,24 @@ function RoomDialog({ types, initial, onClose, onSaved }: {
     code: initial?.code ?? "", name: initial?.name ?? "", zone: initial?.zone ?? "",
     status: initial?.status ?? ("siap" as RoomRow["status"]), notes: initial?.notes ?? "",
   });
-  const [busy, setBusy] = useState(false);
+  const mutation = useResortMutation(
+    (body: Record<string, unknown>) => resortApi.saveRoom(initial?.id ?? null, body),
+    "Tersimpan",
+    onSaved
+  );
+  const busy = mutation.isPending;
 
-  const save = async () => {
+  const save = () => {
     if (!form.room_type_id || !form.code.trim() || !form.name.trim()) { toast.error("Tipe, kode, dan nama kamar wajib diisi"); return; }
-    setBusy(true);
-    try {
-      const res = initial
-        ? await apiPatch<{ message?: string }>(`/api/resort/rooms/${initial.id}`, {
-            name: form.name.trim(), zone: form.zone.trim() || null, status: form.status,
-            notes: form.notes.trim() || null, room_type_id: form.room_type_id,
-          })
-        : await apiPost<{ message?: string }>("/api/resort/rooms", {
-            room_type_id: form.room_type_id, code: form.code.trim(), name: form.name.trim(),
-            zone: form.zone.trim() || null, notes: form.notes.trim() || null,
-          });
-      toast.success(res.message ?? "Tersimpan");
-      onSaved();
-    } catch (err) { toast.error(err instanceof Error ? err.message : "Gagal menyimpan"); }
-    finally { setBusy(false); }
+    mutation.mutate(initial
+      ? {
+          name: form.name.trim(), zone: form.zone.trim() || null, status: form.status,
+          notes: form.notes.trim() || null, room_type_id: form.room_type_id,
+        }
+      : {
+          room_type_id: form.room_type_id, code: form.code.trim(), name: form.name.trim(),
+          zone: form.zone.trim() || null, notes: form.notes.trim() || null,
+        });
   };
 
   return (

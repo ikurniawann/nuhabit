@@ -1,5 +1,6 @@
 /** Paket top-up dompet (pure): skema input, ketersediaan, bonus. */
 import { z } from "zod";
+import { formatRupiah } from "@/lib/format";
 
 export interface TopupPackage {
   id: string;
@@ -49,7 +50,7 @@ export function packageAvailableAt(
 /** Nominal top-up bebas member harus di antara minimum dan maksimum. */
 export function checkFreeAmount(amount: number, min: number, max: number): string | null {
   if (!Number.isInteger(amount) || amount <= 0) return "Nominal top-up tidak valid";
-  if (amount < min) return `Minimal top-up Rp ${min.toLocaleString("id-ID")}`;
-  if (max > 0 && amount > max) return `Maksimal top-up Rp ${max.toLocaleString("id-ID")}`;
+  if (amount < min) return `Minimal top-up ${formatRupiah(min)}`;
+  if (max > 0 && amount > max) return `Maksimal top-up ${formatRupiah(max)}`;
   return null;
 }

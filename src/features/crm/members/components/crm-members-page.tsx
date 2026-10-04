@@ -15,25 +15,10 @@ import {
 import type { CrmMember } from "../types";
 import { useMemberList } from "../queries";
 import { useEnrollMember } from "../mutations";
+import { tierName } from "../member-detail";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
-const numberFormat = new Intl.NumberFormat("id-ID");
-const currencyFormat = new Intl.NumberFormat("id-ID", {
-  style: "currency",
-  currency: "IDR",
-  maximumFractionDigits: 0,
-});
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
-
-function formatCurrency(value: number) {
-  return currencyFormat.format(value || 0);
-}
-
-function tierName(member: CrmMember) {
-  return member.tier?.name || member.customer?.membership_tier || "Regular";
-}
+const NONE: CrmMember[] = [];
 
 export function CrmMembersPage() {
   const [search, setSearch] = useState("");
@@ -47,12 +32,11 @@ export function CrmMembersPage() {
 
   const enrollMutation = useEnrollMember();
 
-  const members = data?.members ?? [];
+  const members = data?.members ?? NONE;
   const schemaReady = data?.schemaReady ?? false;
   const errorMessage = error instanceof Error ? error.message : null;
   const loading = isLoading || isFetching;
 
-  const filteredMembers = useMemo(() => members, [members]);
   const summary = useMemo(() => {
     const totalLifetimeXp = members.reduce((sum, member) => sum + member.lifetime_xp, 0);
     const totalSpend = members.reduce((sum, member) => sum + (member.customer?.total_spent ?? 0), 0);
@@ -119,7 +103,7 @@ export function CrmMembersPage() {
           <MetricCard icon={UserRound} label="Members" value={formatNumber(members.length)} />
           <MetricCard icon={Sparkles} label="ARK Coin" value={formatNumber(summary.totalArk)} />
           <MetricCard icon={Crown} label="Lifetime XP" value={formatNumber(summary.totalLifetimeXp)} />
-          <MetricCard icon={Coins} label="Total Spend" value={formatCurrency(summary.totalSpend)} />
+          <MetricCard icon={Coins} label="Total Spend" value={formatRupiah(summary.totalSpend)} />
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -174,12 +158,12 @@ export function CrmMembersPage() {
                     <tr>
                       <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">Memuat members...</td>
                     </tr>
-                  ) : filteredMembers.length === 0 ? (
+                  ) : members.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-500">Belum ada member.</td>
                     </tr>
                   ) : (
-                    filteredMembers.map((member) => (
+                    members.map((member) => (
                       <tr
                         key={member.id}
                         className="transition hover:bg-slate-50"
@@ -197,10 +181,10 @@ export function CrmMembersPage() {
                             {tierName(member)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-emerald-700">{formatNumber(member.customer?.ark_coin_balance ?? 0)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-emerald-700">{formatNumber(member.customer?.ark_coin_balance)}</td>
                         <td className="px-4 py-3 text-right text-sm text-slate-700">{formatNumber(member.lifetime_xp)}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatCurrency(member.customer?.total_spent ?? 0)}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatNumber(member.customer?.visit_count ?? 0)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatRupiah(member.customer?.total_spent)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatNumber(member.customer?.visit_count)}</td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
                             {member.id.startsWith("pos-") && (

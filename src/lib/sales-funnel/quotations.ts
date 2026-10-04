@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PoolClient } from "pg";
+import { formatDateLong, formatNumber, formatRupiah } from "@/lib/format";
 import { isValidCalendarDate } from "./server";
 
 // Batas selaras presisi kolom numeric(14,2) — line_total maks 12 digit
@@ -231,4 +232,49 @@ export async function insertItems(
      VALUES ${rows.join(", ")}`,
     values
   );
+}
+
+export interface QuotationWaSummary {
+  quote_number: string;
+  branch_name: string | null;
+  pic_name: string;
+  deal_title: string;
+  org_name: string;
+  use_ppn: boolean;
+  ppn_persen: string | number;
+  subtotal: string | number;
+  ppn_nominal: string | number;
+  total: string | number;
+  event_date: string | null;
+  valid_until: string | null;
+  notes: string | null;
+}
+
+/** Ringkasan penawaran sebagai teks WA ke PIC (EPIC-022 Fase F2, keputusan owner #4). */
+export function buildQuotationWaMessage(
+  quotation: QuotationWaSummary,
+  items: Array<{ description: string; item_type: string; qty: string | number; unit_price: string | number; line_total: string | number }>
+): string {
+  const lines = [
+    `*PENAWARAN ${quotation.quote_number}*`,
+    quotation.branch_name ? `_${quotation.branch_name}_` : null,
+    ``,
+    `Halo ${quotation.pic_name}, berikut ringkasan penawaran untuk *${quotation.deal_title}* (${quotation.org_name}):`,
+    ``,
+    ...items.map((item) => {
+      const unit = item.item_type === "produk" ? " pax" : "x";
+      return `• ${item.description} — ${formatNumber(item.qty, 3)}${unit} @ ${formatRupiah(item.unit_price)} = *${formatRupiah(item.line_total)}*`;
+    }),
+    ``,
+    `Subtotal: ${formatRupiah(quotation.subtotal)}`,
+    quotation.use_ppn ? `PPN ${Number(quotation.ppn_persen)}%: ${formatRupiah(quotation.ppn_nominal)}` : null,
+    `*TOTAL: ${formatRupiah(quotation.total)}*`,
+    ``,
+    quotation.event_date ? `Tanggal acara: ${formatDateLong(quotation.event_date)}` : null,
+    quotation.valid_until ? `Penawaran berlaku s.d. ${formatDateLong(quotation.valid_until)}` : null,
+    quotation.notes ? `Catatan: ${quotation.notes}` : null,
+    ``,
+    `Bila sudah sesuai, mohon konfirmasinya ya 🙏`,
+  ];
+  return lines.filter((line) => line !== null).join("\n");
 }

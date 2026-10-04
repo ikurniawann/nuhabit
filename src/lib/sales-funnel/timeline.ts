@@ -5,6 +5,7 @@
  * beberapa sumber (task/aktivitas, riwayat tahap deal, quotation, invoice,
  * pesan WA, catatan). Fungsi di sini murni: normalisasi + gabung + urut.
  */
+import { formatRupiah } from "@/lib/format";
 
 export const TIMELINE_KINDS = [
   "task",
@@ -87,8 +88,6 @@ export interface TimelineSources {
   deals?: Array<{ id: string; title: string; stage_name: string; created_at: string; owner_name?: string | null }>;
 }
 
-const rupiah = (value: string | number) =>
-  `Rp ${Math.round(Number(value) || 0).toLocaleString("id-ID")}`;
 
 const ACTIVITY_LABEL: Record<string, string> = {
   telepon: "Telepon",
@@ -132,7 +131,7 @@ export function normalizeQuotations(rows: NonNullable<TimelineSources["quotation
     key: `quotation:${q.id}`,
     kind: "quotation",
     at: q.created_at,
-    title: `Quotation ${q.quote_number} · ${rupiah(q.total)}`,
+    title: `Quotation ${q.quote_number} · ${formatRupiah(q.total)}`,
     badge: q.status,
     href: `/dashboard/sales-funnel/pipeline?deal=${q.deal_id}`,
   }));
@@ -143,7 +142,7 @@ export function normalizeInvoices(rows: NonNullable<TimelineSources["invoices"]>
     key: `invoice:${i.id}`,
     kind: "invoice",
     at: i.created_at,
-    title: `Invoice ${i.invoice_number}${i.label ? ` (${i.label})` : ""} · ${rupiah(i.amount)}`,
+    title: `Invoice ${i.invoice_number}${i.label ? ` (${i.label})` : ""} · ${formatRupiah(i.amount)}`,
     badge: i.status,
     href: `/dashboard/sales-funnel/pipeline?deal=${i.deal_id}`,
   }));

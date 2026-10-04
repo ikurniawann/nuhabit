@@ -1,18 +1,15 @@
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
-import { actorOf, fail, ok, walletRoute } from "@/lib/wallet/route";
+import { apiHandler } from "@/lib/api/handler";
+import { actorOf, ok, parseInput, requireWalletAdmin, uuidParam, type IdContext } from "@/lib/wallet/route";
 import { applyAdjustment } from "@/lib/wallet/server";
 
 const schema = z.object({ amount: z.number(), reason: z.string().max(300) });
 
 /** POST — penyesuaian saldo manual bertanda (+ menambah, − mengurangi), alasan wajib. */
-export const POST = walletRoute(
-  IAM.posWallet,
-  "Gagal menyimpan penyesuaian",
-  async (user, request: Request, ctx: { params: Promise<{ id: string }> }) => {
-    const { id } = await ctx.params;
-    if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-    const input = schema.parse(await request.json());
-    return ok(await applyAdjustment({ customerId: id, ...input, actor: actorOf(user) }), 201);
-  }
-);
+export const POST = apiHandler(async (request: NextRequest, ctx: IdContext) => {
+  const user = await requireWalletAdmin();
+  const customerId = await uuidParam(ctx);
+  const input = parseInput(schema, await request.json());
+  return ok(await applyAdjustment({ customerId, ...input, actor: actorOf(user) }), 201);
+}, "wallet.members.adjust.POST");

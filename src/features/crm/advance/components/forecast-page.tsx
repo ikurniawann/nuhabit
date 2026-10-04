@@ -8,13 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { usePipelines } from "@/features/sales-funnel/pipeline/queries";
 import { FORECAST_CATEGORY_LABELS } from "@/lib/sales-funnel/forecast";
 import { useForecast, useSaveTargets, useTargets } from "../queries";
 import type { ForecastRow } from "../types";
+import { formatRupiah } from "@/lib/format";
 
-const rupiah = (v: number | string | null | undefined) => `Rp ${Math.round(Number(v) || 0).toLocaleString("id-ID")}`;
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 const shiftMonth = (m: string, dir: -1 | 1) => {
   const [y, mo] = m.split("-").map(Number);
@@ -92,11 +92,11 @@ export function ForecastPage() {
       {total ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
-            [total.company_target_set ? "Target perusahaan" : "Target (Σ salesperson)", rupiah(total.target_value)],
-            ["Menang", `${rupiah(total.won_value)} · ${total.won_deals} deal`],
-            ["Weighted pipeline", rupiah(total.weighted_value)],
-            ["Proyeksi", `${rupiah(total.won_value + total.weighted_value)} (${total.attainment_percent}%)`],
-            ["Gap ke target", rupiah(total.gap)],
+            [total.company_target_set ? "Target perusahaan" : "Target (Σ salesperson)", formatRupiah(total.target_value)],
+            ["Menang", `${formatRupiah(total.won_value)} · ${total.won_deals} deal`],
+            ["Weighted pipeline", formatRupiah(total.weighted_value)],
+            ["Proyeksi", `${formatRupiah(total.won_value + total.weighted_value)} (${total.attainment_percent}%)`],
+            ["Gap ke target", formatRupiah(total.gap)],
           ].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-gray-200/80 bg-white p-4">
               <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
@@ -108,8 +108,8 @@ export function ForecastPage() {
 
       {total?.company_target_set && allocationPct !== null ? (
         <p className={`text-sm ${allocationPct < 100 ? "text-amber-700" : allocationPct > 100 ? "text-red-700" : "text-emerald-700"}`}>
-          Teralokasi ke salesperson: {rupiah(allocated)} ({allocationPct}% dari target perusahaan)
-          {allocationPct < 100 ? ` · sisa ${rupiah(companyTarget!.target_value - allocated)} belum dibagi` : allocationPct > 100 ? " · melebihi target perusahaan" : ""}
+          Teralokasi ke salesperson: {formatRupiah(allocated)} ({allocationPct}% dari target perusahaan)
+          {allocationPct < 100 ? ` · sisa ${formatRupiah(companyTarget!.target_value - allocated)} belum dibagi` : allocationPct > 100 ? " · melebihi target perusahaan" : ""}
         </p>
       ) : null}
 
@@ -160,12 +160,12 @@ export function ForecastPage() {
                 {total ? (
                   <tr className="bg-gray-50/80 font-semibold">
                     <td className="px-4 py-3">Total{total.company_target_set ? <span className="ml-1 text-xs font-normal text-gray-500">(target perusahaan)</span> : null}</td>
-                    <td className="px-4 py-3 text-right">{rupiah(total.target_value)}</td>
-                    <td className="px-4 py-3 text-right text-emerald-700">{rupiah(total.won_value)}</td>
-                    <td className="px-4 py-3 text-right">{rupiah(total.commit_value)}</td>
-                    <td className="px-4 py-3 text-right">{rupiah(total.best_case_value)}</td>
-                    <td className="px-4 py-3 text-right">{rupiah(total.pipeline_value)}</td>
-                    <td className="px-4 py-3 text-right">{rupiah(total.weighted_value)}</td>
+                    <td className="px-4 py-3 text-right">{formatRupiah(total.target_value)}</td>
+                    <td className="px-4 py-3 text-right text-emerald-700">{formatRupiah(total.won_value)}</td>
+                    <td className="px-4 py-3 text-right">{formatRupiah(total.commit_value)}</td>
+                    <td className="px-4 py-3 text-right">{formatRupiah(total.best_case_value)}</td>
+                    <td className="px-4 py-3 text-right">{formatRupiah(total.pipeline_value)}</td>
+                    <td className="px-4 py-3 text-right">{formatRupiah(total.weighted_value)}</td>
                     <td className="px-4 py-3">{total.attainment_percent}%</td>
                   </tr>
                 ) : null}
@@ -185,7 +185,7 @@ export function ForecastPage() {
                 </Link>
                 <Badge className={CATEGORY_BADGE[d.category] ?? ""}>{FORECAST_CATEGORY_LABELS[d.category]}</Badge>
                 <span className="text-xs text-gray-500">{d.stage_name} · {d.probability}%</span>
-                <span className="w-32 text-right font-medium">{rupiah(d.value)}</span>
+                <span className="w-32 text-right font-medium">{formatRupiah(d.value)}</span>
                 <span className="w-28 text-right text-xs text-gray-500">{d.owner_name ?? "Tanpa PJ"}</span>
               </li>
             ))}
@@ -204,13 +204,13 @@ function ForecastRowView({ row, edit, onEdit }: { row: ForecastRow; edit: Record
       <td className="px-4 py-3 text-right">
         {edit && row.user_id ? (
           <Input type="number" min={0} value={edit[row.user_id] ?? ""} onChange={(e) => onEdit(e.target.value)} className="ml-auto h-8 w-36 text-right" />
-        ) : rupiah(row.target_value)}
+        ) : formatRupiah(row.target_value)}
       </td>
-      <td className="px-4 py-3 text-right text-emerald-700">{rupiah(row.won_value)}</td>
-      <td className="px-4 py-3 text-right">{rupiah(row.commit_value)}</td>
-      <td className="px-4 py-3 text-right">{rupiah(row.best_case_value)}</td>
-      <td className="px-4 py-3 text-right">{rupiah(row.pipeline_value)}</td>
-      <td className="px-4 py-3 text-right">{rupiah(row.weighted_value)}</td>
+      <td className="px-4 py-3 text-right text-emerald-700">{formatRupiah(row.won_value)}</td>
+      <td className="px-4 py-3 text-right">{formatRupiah(row.commit_value)}</td>
+      <td className="px-4 py-3 text-right">{formatRupiah(row.best_case_value)}</td>
+      <td className="px-4 py-3 text-right">{formatRupiah(row.pipeline_value)}</td>
+      <td className="px-4 py-3 text-right">{formatRupiah(row.weighted_value)}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="h-2 w-28 overflow-hidden rounded-full bg-gray-100">

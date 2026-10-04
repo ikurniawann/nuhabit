@@ -16,7 +16,8 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GYM_KEYS, jam, schedulingApi, SELECT, wibDay, type Session } from "../api";
+import { GYM_KEYS, schedulingApi, type Session, wibDay, wibTime } from "../api";
+import { SELECT } from "@/features/gym/shared";
 
 /**
  * Buat sesi baru (date = hari awal, "YYYY-MM-DD") atau ubah sesi yang ada.
@@ -40,7 +41,7 @@ export function SessionDialog({
     class_type_id: session?.class_type_id ?? "",
     coach_id: session?.coach_id ?? "",
     day: session ? wibDay(session.starts_at) : (date ?? wibDay(new Date())),
-    time: session ? jam(session.starts_at).replace(".", ":") : "18:30",
+    time: session ? wibTime(session.starts_at) : "18:30",
     area: session?.area ?? "Main Floor",
     duration_min: session
       ? String(Math.round((Date.parse(session.ends_at) - Date.parse(session.starts_at)) / 60_000))

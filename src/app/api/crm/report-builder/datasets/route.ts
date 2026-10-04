@@ -1,14 +1,14 @@
 import { successResponse } from "@/lib/api/auth";
-import { requireReportUser } from "@/lib/crm/report-builder-server";
+import { apiHandler } from "@/lib/api/handler";
+import { requireCrmUser } from "@/lib/crm/guards";
 import {
   AGGREGATION_LABELS, AGGREGATIONS, CHART_TYPE_LABELS, CHART_TYPES, DATE_BUCKET_LABELS, DATE_BUCKETS,
   DATE_PRESET_LABELS, DATE_PRESETS, FILTER_OP_LABELS, FILTER_OPS, REPORT_DATASET_DEFS, REPORT_DATASETS,
 } from "@/lib/crm/report-builder";
 
 /** EPIC-050 T-4.1 — metadata registry untuk UI builder (tanpa ekspresi SQL). */
-export async function GET() {
-  const { error } = await requireReportUser();
-  if (error) return error;
+export const GET = apiHandler(async () => {
+  await requireCrmUser("reports");
   const datasets = REPORT_DATASETS.map((key) => {
     const ds = REPORT_DATASET_DEFS[key];
     return {
@@ -29,4 +29,4 @@ export async function GET() {
     aggregations: AGGREGATIONS.map((a) => ({ key: a, label: AGGREGATION_LABELS[a] })),
     chart_types: CHART_TYPES.map((c) => ({ key: c, label: CHART_TYPE_LABELS[c] })),
   });
-}
+}, "crm.report-builder.datasets.GET");

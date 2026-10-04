@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
 import { todayInJakarta } from "@/lib/ticketing/booking";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 import { useBookings } from "../queries";
 import {
   BOOKING_STATUS_BADGES,
@@ -24,15 +25,6 @@ import {
 } from "../types";
 import { BookingDetailDialog } from "./booking-detail-dialog";
 import { OccupancyCalendar } from "./occupancy-calendar";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 const ALL_STATUS = "semua" as const;
 
@@ -154,7 +146,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
                     </td>
                     <td className="px-4 py-3 text-gray-700">{booking.visit_date}</td>
                     <td className="px-4 py-3 text-right font-medium text-gray-900">
-                      {formatRp(booking.total)}
+                      {formatRupiah(booking.total)}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -174,7 +166,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
                       ) : null}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
-                      {formatTime(booking.created_at)}
+                      {formatDateTime(booking.created_at)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">

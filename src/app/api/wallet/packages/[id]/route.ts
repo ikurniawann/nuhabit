@@ -1,27 +1,21 @@
-import { z } from "zod";
-import { getPool } from "@/lib/db";
-import { IAM } from "@/lib/iam/prefixes";
+import type { NextRequest } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
 import { packageInputSchema } from "@/lib/wallet/packages";
-import { fail, ok, walletRoute } from "@/lib/wallet/route";
-import { savePackage } from "@/lib/wallet/topup";
-
-type Ctx = { params: Promise<{ id: string }> };
+import { ok, parseInput, requireWalletAdmin, uuidParam, type IdContext } from "@/lib/wallet/route";
+import { deactivatePackage, savePackage } from "@/lib/wallet/topup";
 
 /** PUT — ubah paket. */
-export const PUT = walletRoute(IAM.posWallet, "Gagal menyimpan paket", async (user, request: Request, ctx: Ctx) => {
-  const { id } = await ctx.params;
-  if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-  const input = packageInputSchema.parse(await request.json());
+export const PUT = apiHandler(async (request: NextRequest, ctx: IdContext) => {
+  const user = await requireWalletAdmin();
+  const id = await uuidParam(ctx);
+  const input = parseInput(packageInputSchema, await request.json());
   return ok(await savePackage(id, input, user.id));
-});
+}, "wallet.packages.id.PUT");
 
 /** DELETE — nonaktifkan paket (riwayat top-up tetap menunjuk ke paket ini). */
-export const DELETE = walletRoute(IAM.posWallet, "Gagal menonaktifkan paket", async (user, _request: Request, ctx: Ctx) => {
-  const { id } = await ctx.params;
-  if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-  const { rowCount } = await getPool().query(
-    `UPDATE pos.pos_topup_packages SET is_active = false, updated_by = $2, updated_at = now() WHERE id = $1`,
-    [id, user.id]
-  );
-  return rowCount ? ok({ id }) : fail("Paket tidak ditemukan", 404);
-});
+export const DELETE = apiHandler(async (_request: NextRequest, ctx: IdContext) => {
+  const user = await requireWalletAdmin();
+  const id = await uuidParam(ctx);
+  await deactivatePackage(id, user.id);
+  return ok({ id });
+}, "wallet.packages.id.DELETE");

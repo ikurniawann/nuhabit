@@ -54,12 +54,3 @@ export interface ShareLogRow {
   user_agent: string | null;
   created_at: string;
 }
-
-export const tanggal = (iso: string | null | undefined, withTime = true) =>
-  iso
-    ? new Date(iso).toLocaleString("id-ID", {
-        day: "2-digit", month: "short", year: "numeric",
-        ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-        timeZone: "Asia/Jakarta",
-      })
-    : "—";

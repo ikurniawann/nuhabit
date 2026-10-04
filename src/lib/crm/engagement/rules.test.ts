@@ -25,6 +25,9 @@ describe("checkQrToken", () => {
   });
   it("recognises member QR payloads regardless of case", () => {
     expect(isMemberQrToken(" BCDQR_abc ")).toBe(true);
+    expect(isMemberQrToken("nhqr_abc")).toBe(true);
+    expect(isMemberQrToken(" NHQR_abc ")).toBe(true);
+    expect(isMemberQrToken("nh_abc")).toBe(false);
     expect(isMemberQrToken("04A1B2C3")).toBe(false);
   });
 });

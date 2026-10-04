@@ -5,7 +5,7 @@ import { ChartBarIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { DATE_PRESETS, DATE_PRESET_LABELS, reportDefinitionSchema, type DatePreset } from "@/lib/crm/report-builder";
 import { useRunDefinition } from "@/features/crm/report-builder/queries";
 import { ReportResultView } from "@/features/crm/report-builder";

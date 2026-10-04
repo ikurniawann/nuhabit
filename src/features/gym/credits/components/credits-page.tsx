@@ -24,14 +24,11 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
+import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import {
-  angka,
   ENTRY_LABELS,
   gymCreditsApi,
   METHOD_LABELS,
-  rupiah,
-  tanggal,
-  waktu,
   type CreditEntry,
   type CreditPurchase,
   type MemberCredits,
@@ -111,7 +108,7 @@ export function CreditsPage() {
                       <span className="block truncate text-sm font-medium">{m.name ?? "Tanpa nama"}</span>
                       <span className="block truncate font-mono text-xs text-muted-foreground">{m.phone}</span>
                     </span>
-                    <Badge variant={m.balance > 0 ? "ink" : "muted"}>{angka(m.balance)} kr</Badge>
+                    <Badge variant={m.balance > 0 ? "ink" : "muted"}>{formatNumber(m.balance)} kr</Badge>
                   </button>
                 </li>
               ))}
@@ -170,7 +167,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard
           label="Saldo kredit"
-          value={angka(d.balance)}
+          value={formatNumber(d.balance)}
           unit="kredit"
           icon={<Ticket />}
           tone={d.low_balance ? "warning" : "ink"}
@@ -178,12 +175,12 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
         />
         <StatCard
           label={`Kedaluwarsa ≤ ${d.expiry_reminder_days} hari`}
-          value={angka(d.expiring_credits)}
+          value={formatNumber(d.expiring_credits)}
           unit="kredit"
           icon={<CalendarClock />}
           tone={d.expiring_credits > 0 ? "accent" : "default"}
         />
-        <StatCard label="Saldo ARK Coin" value={rupiah(d.member.ark_balance_idr)} icon={<Coins />} />
+        <StatCard label="Saldo ARK Coin" value={formatRupiah(d.member.ark_balance_idr)} icon={<Coins />} />
       </div>
 
       <Card className="py-0">
@@ -204,9 +201,9 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                 <TableRow key={lot.id} className={lot.remaining === 0 ? "opacity-60" : undefined}>
                   <TableCell>{lot.package_name ?? "Bonus / penyesuaian"}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {angka(lot.remaining)} / {angka(lot.credits)}
+                    {formatNumber(lot.remaining)} / {formatNumber(lot.credits)}
                   </TableCell>
-                  <TableCell>{lot.expired ? <Badge variant="muted">Kedaluwarsa</Badge> : tanggal(lot.expires_at)}</TableCell>
+                  <TableCell>{lot.expired ? <Badge variant="muted">Kedaluwarsa</Badge> : formatDate(lot.expires_at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -239,13 +236,13 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                     {(e.note || e.created_by_name) && (
                       <p className="text-xs text-muted-foreground">{[e.note, e.created_by_name].filter(Boolean).join(" · ")}</p>
                     )}
-                    <p className="text-xs text-muted-foreground md:hidden">{waktu(e.created_at)}</p>
+                    <p className="text-xs text-muted-foreground md:hidden">{formatDateTime(e.created_at)}</p>
                   </TableCell>
                   <TableCell className={cn("text-right font-medium tabular-nums", e.amount > 0 ? "text-success" : "text-danger")}>
                     {e.amount > 0 ? "+" : ""}
-                    {angka(e.amount)}
+                    {formatNumber(e.amount)}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{waktu(e.created_at)}</TableCell>
+                  <TableCell className="hidden md:table-cell">{formatDateTime(e.created_at)}</TableCell>
                   <TableCell className="text-right">
                     {!e.reversed && e.type !== "reversal" && e.type !== "expiration" && (
                       <Button variant="ghost" size="sm" onClick={() => setReversing(e)}>
@@ -283,16 +280,16 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                       <p className="font-medium">{p.package_name}</p>
                       <p className="text-xs text-muted-foreground">
                         {[
-                          `${angka(p.credits)} kredit`,
+                          `${formatNumber(p.credits)} kredit`,
                           p.payment_method ? METHOD_LABELS[p.payment_method] : null,
                           p.channel === "member_portal" ? "Portal" : "Front desk",
-                          tanggal(p.paid_at ?? p.created_at),
+                          formatDate(p.paid_at ?? p.created_at),
                         ]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{rupiah(p.total_idr)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatRupiah(p.total_idr)}</TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </TableCell>
@@ -315,7 +312,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
       {dialog === "sell" && <SellDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
       {reversing && (
         <ReasonDialog
-          title={`Batalkan ${ENTRY_LABELS[reversing.type].toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${angka(reversing.amount)}?`}
+          title={`Batalkan ${ENTRY_LABELS[reversing.type].toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}
           description="Entri asli tetap ada. Sistem menulis entri pembatalan dengan jumlah berlawanan."
           confirmLabel="Batalkan entri"
           action={(reason) => gymCreditsApi.reverse(reversing.id, reason)}
@@ -328,8 +325,8 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
           title={`Refund ${refunding.package_name}?`}
           description={
             refunding.payment_method === "ark_coin"
-              ? `${angka(refunding.credits)} kredit ditarik dan ${rupiah(refunding.total_idr)} kembali ke saldo ARK Coin member.`
-              : `${angka(refunding.credits)} kredit ditarik. Kembalikan ${rupiah(refunding.total_idr)} ke member secara manual di kasir.`
+              ? `${formatNumber(refunding.credits)} kredit ditarik dan ${formatRupiah(refunding.total_idr)} kembali ke saldo ARK Coin member.`
+              : `${formatNumber(refunding.credits)} kredit ditarik. Kembalikan ${formatRupiah(refunding.total_idr)} ke member secara manual di kasir.`
           }
           confirmLabel="Refund"
           action={(reason) => gymCreditsApi.refundPurchase(refunding.id, reason)}
@@ -348,7 +345,7 @@ function AdjustDialog({ credits, onClose, onDone }: { credits: MemberCredits; on
   const save = useMutation({
     mutationFn: () => gymCreditsApi.adjust(credits.member.id, value, reason.trim()),
     onSuccess: (res) => {
-      toast.success("Kredit disesuaikan", { description: `Saldo sekarang ${angka(res.balanceAfter)} kredit` });
+      toast.success("Kredit disesuaikan", { description: `Saldo sekarang ${formatNumber(res.balanceAfter)} kredit` });
       onDone();
       onClose();
     },
@@ -368,7 +365,7 @@ function AdjustDialog({ credits, onClose, onDone }: { credits: MemberCredits; on
           <DialogPanelHeader>
             <DialogPanelTitle>Sesuaikan kredit</DialogPanelTitle>
             <DialogPanelDescription>
-              Saldo sekarang {angka(credits.balance)} kredit. Angka plus menjadi lot baru dengan masa berlaku default aturan gym.
+              Saldo sekarang {formatNumber(credits.balance)} kredit. Angka plus menjadi lot baru dengan masa berlaku default aturan gym.
             </DialogPanelDescription>
           </DialogPanelHeader>
           <DialogPanelBody className="grid grid-cols-1 gap-4">
@@ -409,7 +406,7 @@ function SellDialog({ credits, onClose, onDone }: { credits: MemberCredits; onCl
     mutationFn: () =>
       gymCreditsApi.sell(credits.member.id, { package_id: packageId, payment_method: method, discount_idr: discountIdr, note }),
     onSuccess: (purchase) => {
-      toast.success("Paket terjual", { description: `${purchase.package_name}: +${angka(purchase.credits)} kredit` });
+      toast.success("Paket terjual", { description: `${purchase.package_name}: +${formatNumber(purchase.credits)} kredit` });
       onDone();
       onClose();
     },
@@ -438,7 +435,7 @@ function SellDialog({ credits, onClose, onDone }: { credits: MemberCredits; onCl
                 <SelectContent>
                   {active.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} · {angka(p.credits)} kredit · {rupiah(p.price_idr)}
+                      {p.name} · {formatNumber(p.credits)} kredit · {formatRupiah(p.price_idr)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -472,10 +469,10 @@ function SellDialog({ credits, onClose, onDone }: { credits: MemberCredits; onCl
             </Field>
             <div className="rounded-2xl bg-surface px-4 py-3 sm:col-span-2">
               <p className="text-xs text-muted-foreground">Total dibayar</p>
-              <p className="text-2xl font-bold tabular-nums">{rupiah(total)}</p>
+              <p className="text-2xl font-bold tabular-nums">{formatRupiah(total)}</p>
               {method === "ark_coin" && (
                 <p className={cn("text-xs", arkShort ? "text-danger" : "text-muted-foreground")}>
-                  Saldo ARK Coin {rupiah(credits.member.ark_balance_idr)}
+                  Saldo ARK Coin {formatRupiah(credits.member.ark_balance_idr)}
                   {arkShort ? " · tidak cukup" : ""}
                 </p>
               )}

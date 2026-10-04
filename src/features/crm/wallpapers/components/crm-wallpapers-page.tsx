@@ -19,8 +19,9 @@ import {
 import type { Wallpaper, WallpaperForm } from "../types";
 import { useWallpapersList } from "../queries";
 import { useDeleteWallpaper, useSaveWallpaper, useToggleWallpaper } from "../mutations";
+import { formatNumber } from "@/lib/format";
 
-const numberFormat = new Intl.NumberFormat("id-ID");
+const NO_WALLPAPERS: Wallpaper[] = [];
 
 const defaultForm: WallpaperForm = {
   id: "",
@@ -36,10 +37,6 @@ const defaultForm: WallpaperForm = {
   starts_at: "",
   ends_at: "",
 };
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
 
 function toDateInput(value: string | null) {
   return value ? value.slice(0, 10) : "";
@@ -70,7 +67,7 @@ export function CrmWallpapersPage() {
   const toggleMutation = useToggleWallpaper();
   const deleteMutation = useDeleteWallpaper();
 
-  const wallpapers = data?.wallpapers ?? [];
+  const wallpapers = data?.wallpapers ?? NO_WALLPAPERS;
   const tiers = data?.tiers ?? [];
   const loading = isLoading || isFetching;
   const queryError = error instanceof Error ? error.message : null;

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { toast } from "sonner";
 import {
   useAdjustGiftCard,
@@ -47,8 +47,8 @@ import {
   GiftCardPrintDialog,
   GiftCardReloadDialog,
 } from "./gift-card-dialogs";
+import { formatDate, formatRupiah } from "@/lib/format";
 
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 const STATUS_BADGE: Record<GiftCardStatus, string> = {
   pending: "bg-gray-100 text-gray-600",
@@ -300,13 +300,13 @@ export function GiftCardPage() {
                       {card.code}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {formatRp(Number(card.initial_value))}
+                      {formatRupiah(card.initial_value)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900">
-                      {formatRp(Number(card.balance))}
+                      {formatRupiah(card.balance)}
                       {Number(card.reloaded_total) > 0 ? (
                         <p className="text-xs font-normal text-muted-foreground">
-                          reload {formatRp(Number(card.reloaded_total))}
+                          reload {formatRupiah(card.reloaded_total)}
                         </p>
                       ) : null}
                     </td>
@@ -317,7 +317,7 @@ export function GiftCardPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
                       {card.expires_at
-                        ? new Date(card.expires_at).toLocaleDateString("id-ID")
+                        ? formatDate(card.expires_at)
                         : "Tanpa batas"}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
@@ -413,7 +413,7 @@ export function GiftCardPage() {
             <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm">
               <span className="font-mono font-medium">{adjustCard?.code}</span>
               <span className="ml-2 text-gray-500">
-                saldo saat ini {formatRp(Number(adjustCard?.balance ?? 0))}
+                saldo saat ini {formatRupiah(adjustCard?.balance ?? 0)}
               </span>
             </div>
             <div className="space-y-1.5">

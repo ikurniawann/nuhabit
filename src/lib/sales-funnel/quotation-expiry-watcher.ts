@@ -3,6 +3,7 @@
  * ke penanggung jawab deal: WA + in-app, sekali per quotation (expiry_reminded_at).
  */
 import { getPool } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { notifyUsers } from "@/lib/crm/workflow-engine";
 import { isValidNormalizedPhone, normalizePhone } from "./server";
@@ -33,7 +34,7 @@ export async function sendQuotationExpiryReminders(): Promise<number> {
   const config = await loadGatewayConfig();
   let n = 0;
   for (const q of claimed.rows) {
-    const due = new Date(q.valid_until).toLocaleDateString("id-ID", { day: "numeric", month: "long" });
+    const due = formatDate(q.valid_until);
     const text = `Quotation ${q.quote_number} (${q.org_name} · ${q.deal_title}) berlaku sampai ${due}. Follow-up PIC atau buat revisi.`;
     if (q.owner_user_id) {
       await notifyUsers([q.owner_user_id], `Quotation ${q.quote_number} segera kedaluwarsa`, text, `/dashboard/sales-funnel/pipeline?deal=${q.deal_id}`, { quotation_id: q.id });

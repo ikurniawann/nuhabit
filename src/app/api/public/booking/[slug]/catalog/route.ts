@@ -1,66 +1,29 @@
-import { NextRequest, NextResponse } from "next/server";
-import { successResponse } from "@/lib/api/auth";
-import { checkRateLimit, clientIpFrom } from "@/lib/public/rate-limit";
-import {
-  todayInJakarta,
-  validateVisitDateWindow,
-} from "@/lib/ticketing/booking";
-import {
-  buildPublicCatalog,
-  resolvePublicVenue,
-} from "@/lib/ticketing/booking-server";
+import { NextRequest } from "next/server";
+import { ApiError, successResponse } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { todayInJakarta, visitDateWindowError } from "@/lib/ticketing/booking";
+import { buildPublicCatalog, resolvePublicVenue } from "@/lib/ticketing/booking-server";
+import { assertPublicRateLimit } from "@/lib/ticketing/rate-limit";
 
 // Endpoint PUBLIK (tanpa auth): katalog ticket utk satu tanggal — hanya
 // produk Active terdistribusi website ber-harga lengkap. 404 generik utk
 // slug tak dikenal (anti-enumerasi).
 
-const notFound = () =>
-  NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const ip = clientIpFrom(request.headers);
-  if (!checkRateLimit(`booking-catalog:${ip}`, { limit: 30, windowMs: 60_000 })) {
-    return NextResponse.json(
-      { success: false, error: "Terlalu banyak permintaan — coba lagi sebentar" },
-      { status: 429 }
-    );
-  }
-
-  try {
+export const GET = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
+    assertPublicRateLimit(request.headers, "booking-catalog", { limit: 30, windowMs: 60_000 });
     const { slug } = await params;
     const visitDate = request.nextUrl.searchParams.get("date") ?? "";
-
-    const window = validateVisitDateWindow(visitDate, todayInJakarta());
-    if (window !== "ok") {
-      const message =
-        window === "masa-lalu"
-          ? "Tanggal kunjungan sudah lewat"
-          : window === "terlalu-jauh"
-            ? "Tanggal kunjungan terlalu jauh ke depan"
-            : "Tanggal kunjungan tidak valid";
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
+    const windowError = visitDateWindowError(visitDate, todayInJakarta());
+    if (windowError) throw ApiError.badRequest(windowError);
 
     const venue = await resolvePublicVenue(slug);
-    if (!venue) return notFound();
-
-    const catalog = await buildPublicCatalog(venue, visitDate);
+    if (!venue) throw ApiError.notFound("Not found");
     return successResponse({
       visit_date: visitDate,
       venue: { name: venue.venueName },
-      products: catalog,
+      products: await buildPublicCatalog(venue, visitDate),
     });
-  } catch (err) {
-    console.error("[booking] catalog error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat katalog" },
-      { status: 500 }
-    );
-  }
-}
+  },
+  "public.booking.catalog.GET"
+);

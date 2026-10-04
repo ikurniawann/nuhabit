@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useChannels, useTicketingSettings, useUpdateChannel, useUpdateSettings } from "../queries";
 import type { PaymentMode, ReEntryPolicy } from "../types";
 

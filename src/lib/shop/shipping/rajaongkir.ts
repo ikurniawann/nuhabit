@@ -5,7 +5,6 @@
 
 import {
   type AreaSuggestion,
-  type CreateShipmentRequest,
   type CreateShipmentResult,
   type RateQuote,
   type RateRequest,
@@ -145,7 +144,7 @@ export const rajaongkirProvider: ShippingProvider = {
     };
   },
 
-  async createShipment(_request: CreateShipmentRequest): Promise<CreateShipmentResult> {
+  async createShipment(): Promise<CreateShipmentResult> {
     throw new ShippingProviderError(
       "RajaOngkir tidak mendukung pembuatan order pengiriman — buat pengiriman di aplikasi kurir lalu input resi manual",
       400

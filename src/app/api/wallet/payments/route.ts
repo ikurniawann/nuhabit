@@ -1,11 +1,13 @@
-import { IAM } from "@/lib/iam/prefixes";
+import type { NextRequest } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
 import { listOnlinePayments, paymentFiltersSchema } from "@/lib/wallet/payments";
-import { ok, walletRoute } from "@/lib/wallet/route";
+import { ok, parseInput, requireWalletAdmin } from "@/lib/wallet/route";
 
 /** GET — top-up QRIS online (kasir & portal) dengan filter status/sumber/tanggal/cari. */
-export const GET = walletRoute(IAM.posWallet, "Gagal memuat pembayaran online", async (_user, request: Request) => {
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireWalletAdmin();
   const params = Object.fromEntries(
-    [...new URL(request.url).searchParams.entries()].filter(([, value]) => value !== "")
+    [...request.nextUrl.searchParams.entries()].filter(([, value]) => value !== "")
   );
-  return ok(await listOnlinePayments(paymentFiltersSchema.parse(params)));
-});
+  return ok(await listOnlinePayments(parseInput(paymentFiltersSchema, params)));
+}, "wallet.payments.GET");

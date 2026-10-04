@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-011 Fase F — sisi server alur redeem reward.
  *

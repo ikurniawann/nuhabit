@@ -1,4 +1,5 @@
 import { randomInt } from "crypto";
+import { formatRupiah } from "@/lib/format";
 
 /**
  * Reservasi resort (owner 2026-09-06): status, kode, dan saldo folio.
@@ -95,5 +96,5 @@ export function validateStayDates(checkIn: string, checkOut: string): string | n
 export function reservationSummary(input: {
   code: string; guest: string; nights: number; rooms: number; total: number;
 }): string {
-  return `${input.code} — ${input.guest}, ${input.rooms} kamar × ${input.nights} malam, total Rp ${Math.round(input.total).toLocaleString("id-ID")}`;
+  return `${input.code} — ${input.guest}, ${input.rooms} kamar × ${input.nights} malam, total ${formatRupiah(input.total)}`;
 }

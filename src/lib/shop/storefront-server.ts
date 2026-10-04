@@ -1,3 +1,4 @@
+import "server-only";
 // EPIC-039 Fase D — server logic storefront publik: katalog, checkout
 // (reservasi stok klaim-dulu + invoice Xendit), commit/release reservasi.
 //
@@ -8,6 +9,7 @@
 
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { createInvoice, getInvoiceExpiryHours, isXenditConfigured } from "@/lib/xendit/client";
+import type { CatalogProduct, CatalogSku } from "@/lib/shop/types";
 
 export const SHOP_INVOICE_PREFIX = "shop-order-";
 
@@ -17,27 +19,6 @@ export type StorefrontRow = {
   name: string;
   description: string | null;
   venue_ids: string[] | null;
-};
-
-export type CatalogSku = {
-  id: string;
-  sku: string;
-  name: string;
-  price: number;
-  stock: number;
-};
-
-export type CatalogProduct = {
-  id: string;
-  name: string;
-  description: string | null;
-  longDescription: string | null;
-  imageUrl: string | null;
-  images: string[];
-  price: number;
-  weightGram: number | null;
-  stock: number;
-  skus: CatalogSku[];
 };
 
 const DEFAULT_ITEM_WEIGHT_GRAM = 1000;

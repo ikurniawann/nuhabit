@@ -179,7 +179,8 @@ export interface LoketOption {
   ticket_product_id: string;
   ticket_code: string;
   ticket_name: string;
-  product_kind: TicketProductKind;
+  /** Loket hanya menjual tiket satuan & paket (season pass lewat menu Pass). */
+  product_kind: "single" | "bundle";
   price_regular: number | null;
   price_high: number | null;
   /** Fase P — komposisi paket (kosong utk tiket satuan). */

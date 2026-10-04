@@ -64,7 +64,10 @@ describe("canCharge — guard prepaid", () => {
       creditLimit: null,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toContain("top-up");
+    if (!r.ok) {
+      expect(r.reason).toContain("top-up");
+      expect(r.reason).toContain("saldo Rp40.000");
+    }
   });
 
   test("nominal nol/negatif → tolak", () => {
@@ -91,7 +94,9 @@ describe("canCharge — guard postpaid credit limit", () => {
       creditLimit: 500000,
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toContain("plafon");
+    if (!r.ok) expect(r.reason).toBe(
+      "Melewati plafon tagihan Rp500.000 — silakan bayar parsial di kasir"
+    );
   });
 
   test("tanpa plafon (null) → selalu boleh", () => {

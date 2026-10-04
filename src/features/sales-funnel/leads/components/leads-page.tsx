@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { DealFormDialog } from "@/features/sales-funnel/pipeline";
 import { useDeleteLead, useLeads } from "../queries";

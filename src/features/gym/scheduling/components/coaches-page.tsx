@@ -21,7 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { angka, GYM_KEYS, schedulingApi, SELECT, type Coach } from "../api";
+import { GYM_KEYS, schedulingApi, type Coach } from "../api";
+import { SELECT } from "@/features/gym/shared";
+import { formatNumber } from "@/lib/format";
 
 /** Gym → Coach: profil yang tampil di portal member dan jadwal kelas. */
 export function CoachesPage() {
@@ -73,8 +75,8 @@ export function CoachesPage() {
                     <p className="line-clamp-2 text-xs text-muted-foreground">{c.bio}</p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{c.specialization || "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{angka(c.upcoming_sessions)}</TableCell>
-                  <TableCell className="hidden text-right tabular-nums sm:table-cell">{angka(c.completed_sessions)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{formatNumber(c.upcoming_sessions)}</TableCell>
+                  <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(c.completed_sessions)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
                       Ubah

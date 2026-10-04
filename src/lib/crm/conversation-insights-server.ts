@@ -1,3 +1,4 @@
+import "server-only";
 import type { Pool, PoolClient } from "pg";
 import { getPool } from "@/lib/db";
 import {

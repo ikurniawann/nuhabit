@@ -23,12 +23,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { weekStartWib } from "@/lib/gym/booking";
 import { cn } from "@/lib/utils";
+import { formatNumber, formatTime } from "@/lib/format";
 import {
   addDays,
-  angka,
   CLASS_COLOR,
   GYM_KEYS,
-  jam,
   schedulingApi,
   SESSION_BADGE,
   tanggal,
@@ -78,15 +77,15 @@ export function SchedulePage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Sesi minggu ini" value={angka(rows.length)} icon={<CalendarDays />} tone="ink" />
+        <StatCard label="Sesi minggu ini" value={formatNumber(rows.length)} icon={<CalendarDays />} tone="ink" />
         <StatCard
           label="Kursi terisi"
-          value={angka(seatsTaken)}
-          unit={`/ ${angka(seatsTotal)}`}
+          value={formatNumber(seatsTaken)}
+          unit={`/ ${formatNumber(seatsTotal)}`}
           icon={<Users />}
           tone={seatsTotal && seatsTaken >= seatsTotal ? "warning" : "default"}
         />
-        <StatCard label="Di waitlist" value={angka(waiting)} unit="member" icon={<Hourglass />} tone={waiting ? "info" : "default"} />
+        <StatCard label="Di waitlist" value={formatNumber(waiting)} unit="member" icon={<Hourglass />} tone={waiting ? "info" : "default"} />
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -112,7 +111,7 @@ export function SchedulePage() {
             return (
               <Card key={day} size="sm" variant={day === today ? "default" : "soft"} className="min-w-0 gap-2 p-3">
                 <div className="flex items-center justify-between gap-1">
-                  <p className={cn("text-sm font-semibold", day === today && "text-forest")}>{tanggal(wibDayStart(day))}</p>
+                  <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(wibDayStart(day))}</p>
                   <Button variant="ghost" size="icon-xs" onClick={() => setCreatingOn(day)} aria-label={`Sesi baru ${day}`}>
                     <Plus />
                   </Button>
@@ -148,12 +147,12 @@ function SessionTile({ session }: { session: Session }) {
       <span className={cn("w-1 shrink-0 rounded-full", CLASS_COLOR[session.color]?.bar ?? "bg-forest")} aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-muted-foreground tabular-nums">
-          {jam(session.starts_at)}–{jam(session.ends_at)}
+          {formatTime(session.starts_at)}–{formatTime(session.ends_at)}
         </span>
         <span className="block truncate text-sm font-semibold">{session.class_type_name}</span>
         <span className="block truncate text-xs text-muted-foreground">{session.coach_name ?? "Coach belum ditentukan"}</span>
         <span className="mt-1 flex flex-wrap items-center gap-1 text-xs tabular-nums">
-          {angka(session.confirmed_count)}/{angka(session.capacity)}
+          {formatNumber(session.confirmed_count)}/{formatNumber(session.capacity)}
           {session.waitlist_count > 0 && <span className="text-info">+{session.waitlist_count}</span>}
           {session.status !== "published" && <Badge variant={badge.variant}>{badge.label}</Badge>}
         </span>
@@ -179,8 +178,8 @@ function CopyWeekDialog({
   const copy = useMutation({
     mutationFn: () => schedulingApi.duplicateWeek({ source_week: week, target_week: targetWeek, publish }),
     onSuccess: (data) => {
-      toast.success(`${angka(data.created)} sesi disalin`, {
-        description: data.skipped ? `${angka(data.skipped)} slot sudah ada dan dilewati.` : undefined,
+      toast.success(`${formatNumber(data.created)} sesi disalin`, {
+        description: data.skipped ? `${formatNumber(data.skipped)} slot sudah ada dan dilewati.` : undefined,
       });
       onCopied();
       onClose();
@@ -194,7 +193,7 @@ function CopyWeekDialog({
         <DialogPanelHeader>
           <DialogPanelTitle>Salin jadwal minggu ini</DialogPanelTitle>
           <DialogPanelDescription>
-            {angka(count)} sesi (kecuali yang batal) disalin dengan jam dan coach yang sama. Slot yang sudah terisi di
+            {formatNumber(count)} sesi (kecuali yang batal) disalin dengan jam dan coach yang sama. Slot yang sudah terisi di
             minggu tujuan dilewati.
           </DialogPanelDescription>
         </DialogPanelHeader>

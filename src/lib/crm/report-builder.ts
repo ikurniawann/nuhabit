@@ -8,6 +8,7 @@
  * selalu lewat parameter ($n). Tidak ada string pengguna yang masuk ke SQL.
  */
 import { z } from "zod";
+import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 
 // ── dataset ────────────────────────────────────────────────────────────────
 export const REPORT_DATASETS = ["lead", "deal", "quotation", "task", "account", "contact"] as const;
@@ -594,15 +595,15 @@ export function formatCellValue(type: ReportFieldType | "number", v: unknown): s
   if (v === null || v === undefined || v === "") return "—";
   switch (type) {
     case "currency":
-      return `Rp ${Math.round(Number(v) || 0).toLocaleString("id-ID")}`;
+      return formatRupiah(Number(v) || 0);
     case "number":
-      return Number(v).toLocaleString("id-ID");
+      return formatNumber(Number(v), 3);
     case "boolean":
       return v === true || v === "true" ? "Ya" : "Tidak";
     case "date":
-      return new Date(String(v)).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+      return formatDate(String(v));
     case "datetime":
-      return new Date(String(v)).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      return formatDateTime(String(v));
     default:
       return String(v);
   }

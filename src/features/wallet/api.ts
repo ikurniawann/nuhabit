@@ -1,4 +1,5 @@
 /** Klien API dompet member (POS → Member → Dompet). */
+import { formatRupiah } from "@/lib/format";
 import { isCreditEntry } from "@/lib/wallet/ledger";
 import type { TopupPackage, PackageInput } from "@/lib/wallet/packages";
 import type { WalletSettings } from "@/lib/wallet/server";
@@ -141,15 +142,8 @@ export const walletApi = {
 export const entryDelta = (e: { type: string; amount: number }) =>
   isCreditEntry(e.type, e.amount) ? Math.abs(e.amount) : -Math.abs(e.amount);
 
-export const angka = (n: number) => Number(n || 0).toLocaleString("id-ID");
-export const rupiah = (n: number) => `Rp ${angka(Math.round(n))}`;
-export const signedRupiah = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${rupiah(Math.abs(n))}`;
-export const waktu = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" })
-    : "—";
-export const tanggal = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString("id-ID", { dateStyle: "medium", timeZone: "Asia/Jakarta" }) : "Tidak kedaluwarsa";
+/** Mutasi bertanda: "+Rp10.000" / "−Rp10.000". */
+export const signedRupiah = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${formatRupiah(Math.abs(n))}`;
 
 export const ENTRY_LABELS: Record<string, string> = {
   topup: "Top-up",

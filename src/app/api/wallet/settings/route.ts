@@ -1,6 +1,7 @@
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
-import { ok, walletRoute } from "@/lib/wallet/route";
+import { apiHandler } from "@/lib/api/handler";
+import { ok, parseInput, requireWalletAdmin } from "@/lib/wallet/route";
 import { loadWalletSettings, saveWalletSettings } from "@/lib/wallet/server";
 
 const settingsSchema = z.object({
@@ -10,9 +11,13 @@ const settingsSchema = z.object({
   wallet_expiry_reminder_days: z.number().int().min(0).max(90),
 });
 
-export const GET = walletRoute(IAM.posWallet, "Gagal memuat aturan saldo", async () => ok(await loadWalletSettings()));
+export const GET = apiHandler(async () => {
+  await requireWalletAdmin();
+  return ok(await loadWalletSettings());
+}, "wallet.settings.GET");
 
-export const PUT = walletRoute(IAM.posWallet, "Gagal menyimpan aturan saldo", async (user, request: Request) => {
-  const input = settingsSchema.parse(await request.json());
+export const PUT = apiHandler(async (request: NextRequest) => {
+  const user = await requireWalletAdmin();
+  const input = parseInput(settingsSchema, await request.json());
   return ok(await saveWalletSettings(input, user.id));
-});
+}, "wallet.settings.PUT");

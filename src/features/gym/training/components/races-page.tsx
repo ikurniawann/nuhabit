@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Flag, Plus, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
-import { angka, fromLocalInput, toLocalInput, waktu } from "@/features/crm/engagement/api";
+import { fromLocalInput, toLocalInput } from "@/features/crm/engagement/api";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,8 @@ import {
   type RaceStatus,
 } from "@/lib/gym/races";
 import { trainingApi, type RaceEventRow } from "../api";
-import { SELECT } from "./shared";
+import { SELECT } from "@/features/gym/shared";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 const RACES_KEY = ["gym", "races"];
 
@@ -87,9 +88,9 @@ export function RacesPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Race mendatang" value={angka(upcoming.length)} icon={<CalendarDays />} tone="ink" />
-        <StatCard label="Member berlatih menuju race" value={angka(training)} icon={<Users />} />
-        <StatCard label="Hasil race tercatat" value={angka(raced)} icon={<Trophy />} tone={raced ? "success" : "default"} />
+        <StatCard label="Race mendatang" value={formatNumber(upcoming.length)} icon={<CalendarDays />} tone="ink" />
+        <StatCard label="Member berlatih menuju race" value={formatNumber(training)} icon={<Users />} />
+        <StatCard label="Hasil race tercatat" value={formatNumber(raced)} icon={<Trophy />} tone={raced ? "success" : "default"} />
       </div>
 
       <Card className="py-0">
@@ -120,16 +121,16 @@ export function RacesPage() {
                       <p className="text-xs text-muted-foreground">
                         {[race.venue, race.city, race.country].filter(Boolean).join(" · ")}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{waktu(race.starts_at)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{formatDateTime(race.starts_at)}</p>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{waktu(race.starts_at)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{formatDateTime(race.starts_at)}</TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <Badge variant={STATUS_VARIANT[race.status]}>{RACE_STATUS_LABELS[race.status]}</Badge>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {angka(race.training_count + race.raced_count)}
+                      {formatNumber(race.training_count + race.raced_count)}
                       {race.raced_count > 0 && (
-                        <span className="block text-xs text-success">{angka(race.raced_count)} hasil</span>
+                        <span className="block text-xs text-success">{formatNumber(race.raced_count)} hasil</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -304,7 +305,7 @@ function EntrantsDialog({ race, onClose }: { race: RaceEventRow; onClose: () => 
         <DialogPanelHeader>
           <DialogPanelTitle>Peserta {race.name}</DialogPanelTitle>
           <DialogPanelDescription>
-            {waktu(race.starts_at)} · member yang menargetkan race ini dari portal
+            {formatDateTime(race.starts_at)} · member yang menargetkan race ini dari portal
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="px-0 py-0">
@@ -340,7 +341,7 @@ function EntrantsDialog({ race, onClose }: { race: RaceEventRow; onClose: () => 
                     <TableCell className="text-right tabular-nums">
                       {entry.result_sec ? (
                         <span className="inline-flex items-center gap-1">
-                          <Flag className="size-3.5 text-forest" aria-hidden />
+                          <Flag className="size-3.5 text-brand-text" aria-hidden />
                           {formatDuration(entry.result_sec)}
                         </span>
                       ) : (

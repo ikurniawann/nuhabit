@@ -1,15 +1,10 @@
-import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
+import type { NextRequest } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
 import { loadOnlinePayment } from "@/lib/wallet/payments";
-import { fail, ok, walletRoute } from "@/lib/wallet/route";
+import { ok, requireWalletAdmin, uuidParam, type IdContext } from "@/lib/wallet/route";
 
 /** GET — detail pembayaran online beserta bonus, refund, dan pembatalannya. */
-export const GET = walletRoute(
-  IAM.posWallet,
-  "Gagal memuat pembayaran",
-  async (_user, _request: Request, ctx: { params: Promise<{ id: string }> }) => {
-    const { id } = await ctx.params;
-    if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-    return ok(await loadOnlinePayment(id));
-  }
-);
+export const GET = apiHandler(async (_request: NextRequest, ctx: IdContext) => {
+  await requireWalletAdmin();
+  return ok(await loadOnlinePayment(await uuidParam(ctx)));
+}, "wallet.payments.id.GET");

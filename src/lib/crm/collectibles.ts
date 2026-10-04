@@ -9,6 +9,7 @@
  * Sumber XP kanonik: `pos.pos_customers.total_xp` (keputusan 25 Jul 2026;
  * `crm_member_profiles.lifetime_xp` hanya mirror internal engine).
  */
+import { formatNumber } from "@/lib/format";
 
 /** Jatah total yang pernah diperoleh member: satu tiap kelipatan interval. */
 export function entitlementQuota(totalXp: number, intervalXp: number): number {
@@ -89,7 +90,7 @@ export function blockerMessage(
       return "Stok habis";
     case "below_min_xp": {
       const kurang = Math.max(0, (ctx.minXp ?? 0) - ctx.totalXp);
-      return `Kurang ${kurang.toLocaleString("id-ID")} XP lagi`;
+      return `Kurang ${formatNumber(kurang)} XP lagi`;
     }
     case "below_tier":
       return ctx.tierName ? `Perlu tier ${ctx.tierName}` : "Tier belum cukup";

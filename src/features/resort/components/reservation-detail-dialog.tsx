@@ -1,64 +1,50 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { BedDouble, CheckCircle2, Loader2, LogIn, LogOut, Plus, Receipt, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPost } from "@/lib/api-client";
+import { formatDate, formatDateTime, formatRupiah } from "@/lib/format";
 import {
   FOLIO_CHARGE_LABELS, FOLIO_CHARGE_TYPES, RESERVATION_SOURCE_LABELS, RESERVATION_STATUS_LABELS,
   chargeDirection, type FolioChargeType,
 } from "@/lib/resort/reservation";
 import { cn } from "@/lib/utils";
-import {
-  STATUS_CLASS, rupiah, tanggal,
-  type ReservationDetail, type RoomRow,
-} from "@/features/resort/types";
+import { resortApi, useReservationDetail, useResortMutation, useRooms } from "@/features/resort/queries";
+import { STATUS_CLASS } from "@/features/resort/types";
+
+const EMPTY_CHARGE = { description: "", amount: "", method: "" };
 
 /**
  * Detail reservasi + folio tamu (owner 2026-09-06). Dipakai halaman Reservasi
  * dan Front Office: konfirmasi, check-in (menetapkan unit kamar), check-out
  * (menolak bila folio belum lunas), batal, dan menambah biaya/pembayaran.
  */
-export function ReservationDetailDialog({ id, onClose, onChanged }: {
-  id: string; onClose: () => void; onChanged: () => void;
-}) {
-  const [detail, setDetail] = useState<ReservationDetail | null>(null);
-  const [rooms, setRooms] = useState<RoomRow[]>([]);
+export function ReservationDetailDialog({ id, onClose }: { id: string; onClose: () => void }) {
+  const { data: detail } = useReservationDetail(id);
+  const rooms = useRooms().data ?? [];
   const [assign, setAssign] = useState<Record<string, string>>({});
-  const [busy, setBusy] = useState(false);
   const [charge, setCharge] = useState<{ type: FolioChargeType; description: string; amount: string; method: string }>({
-    type: "fnb", description: "", amount: "", method: "",
+    type: "fnb", ...EMPTY_CHARGE,
   });
   const [checkoutReason, setCheckoutReason] = useState("");
 
-  const load = useCallback(() => {
-    apiGet<{ data: ReservationDetail }>(`/api/resort/reservations/${id}`)
-      .then((res) => setDetail(res.data))
-      .catch((err) => toast.error(err instanceof Error ? err.message : "Gagal memuat reservasi"));
-  }, [id]);
+  const statusMutation = useResortMutation(
+    (body: Record<string, unknown>) => resortApi.changeStatus(id, body),
+    "Status diperbarui"
+  );
+  const chargeMutation = useResortMutation(
+    (body: Record<string, unknown>) => resortApi.addCharge(id, body),
+    "Folio diperbarui",
+    () => setCharge((c) => ({ type: c.type, ...EMPTY_CHARGE }))
+  );
+  const busy = statusMutation.isPending || chargeMutation.isPending;
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    apiGet<{ data: RoomRow[] }>("/api/resort/rooms").then((res) => setRooms(res.data)).catch(() => setRooms([]));
-  }, []);
-
-  const act = async (action: string, extra: Record<string, unknown> = {}) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const res = await apiPost<{ message: string }>(`/api/resort/reservations/${id}/status`, { action, ...extra });
-      toast.success(res.message ?? "Status diperbarui");
-      load();
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal mengubah status");
-    } finally {
-      setBusy(false);
-    }
+  const act = (action: string, extra: Record<string, unknown> = {}) => {
+    if (!busy) statusMutation.mutate({ action, ...extra });
   };
 
   const checkIn = () => {
@@ -76,33 +62,22 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
   const checkOut = () => {
     const balance = detail?.totals.balance ?? 0;
     if (balance > 0 && !checkoutReason.trim()) {
-      toast.error(`Folio masih ${rupiah(balance)} — catat pembayaran dulu, atau isi alasan untuk check-out dengan saldo terbuka`);
+      toast.error(`Folio masih ${formatRupiah(balance)} — catat pembayaran dulu, atau isi alasan untuk check-out dengan saldo terbuka`);
       return;
     }
     act("check-out", balance > 0 ? { force: true, reason: checkoutReason.trim() } : {});
   };
 
-  const addCharge = async () => {
+  const addCharge = () => {
     const amount = Number(charge.amount);
     if (!charge.description.trim() || !Number.isFinite(amount) || amount <= 0) {
       toast.error("Isi keterangan dan nominal yang benar");
       return;
     }
-    setBusy(true);
-    try {
-      const res = await apiPost<{ message: string }>(`/api/resort/reservations/${id}/charges`, {
-        charge_type: charge.type, description: charge.description.trim(), amount,
-        payment_method: charge.method.trim() || null,
-      });
-      toast.success(res.message ?? "Folio diperbarui");
-      setCharge({ type: charge.type, description: "", amount: "", method: "" });
-      load();
-      onChanged();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal menambah folio");
-    } finally {
-      setBusy(false);
-    }
+    chargeMutation.mutate({
+      charge_type: charge.type, description: charge.description.trim(), amount,
+      payment_method: charge.method.trim() || null,
+    });
   };
 
   const status = detail?.status;
@@ -116,7 +91,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
       <DialogContent className="flex max-h-[92vh] flex-col gap-0 p-0 sm:max-w-3xl">
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle className="flex flex-wrap items-center gap-2 text-base">
-            <BedDouble className="h-5 w-5 text-primary" />
+            <BedDouble className="h-5 w-5 text-brand-text" />
             {detail ? (
               <>
                 <span>{detail.reservation_code}</span>
@@ -142,7 +117,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Menginap</p>
-                <p className="font-medium">{tanggal(detail.check_in)} → {tanggal(detail.check_out)}</p>
+                <p className="font-medium">{formatDate(detail.check_in)} → {formatDate(detail.check_out)}</p>
                 <p className="text-xs text-muted-foreground">
                   {detail.nights} malam · {detail.adults} dewasa{detail.children ? `, ${detail.children} anak` : ""} · {RESERVATION_SOURCE_LABELS[detail.source]}
                 </p>
@@ -168,7 +143,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{room.room_type_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {rupiah(room.nightly_rate)} × {room.nights} malam
+                          {formatRupiah(room.nightly_rate)} × {room.nights} malam
                           {room.extra_bed > 0 ? ` · ${room.extra_bed} extra bed` : ""} · tamu {room.guest_name ?? detail.guest_name}
                         </p>
                       </div>
@@ -186,7 +161,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
                       ) : (
                         <span className="rounded-md bg-muted px-2 py-1 text-xs">{room.room_name ?? "Belum ditetapkan"}</span>
                       )}
-                      <span className="w-28 text-right font-semibold">{rupiah(room.subtotal)}</span>
+                      <span className="w-28 text-right font-semibold">{formatRupiah(room.subtotal)}</span>
                     </div>
                   );
                 })}
@@ -197,7 +172,7 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="flex items-center gap-1.5 text-sm font-semibold"><Receipt className="h-4 w-4" />Folio tamu</h3>
                 <div className="text-right text-xs text-muted-foreground">
-                  Tagihan {rupiah(detail.totals.charges)} · Bayar {rupiah(detail.totals.payments)}
+                  Tagihan {formatRupiah(detail.totals.charges)} · Bayar {formatRupiah(detail.totals.payments)}
                 </div>
               </div>
               <div className="overflow-hidden rounded-lg border">
@@ -210,16 +185,16 @@ export function ReservationDetailDialog({ id, onClose, onChanged }: {
                           <span className="ml-2 text-muted-foreground">{f.description}</span>
                           {f.payment_method ? <span className="ml-2 text-xs text-muted-foreground">({f.payment_method})</span> : null}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right text-xs text-muted-foreground">{tanggal(f.created_at, true)}</td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right text-xs text-muted-foreground">{formatDateTime(f.created_at)}</td>
                         <td className={cn("whitespace-nowrap px-3 py-2 text-right font-semibold", f.direction === "kredit" ? "text-emerald-700" : "")}>
-                          {f.direction === "kredit" ? "−" : ""}{rupiah(f.amount)}
+                          {f.direction === "kredit" ? "−" : ""}{formatRupiah(f.amount)}
                         </td>
                       </tr>
                     ))}
                     <tr className="bg-muted/60">
                       <td className="px-3 py-2 font-semibold" colSpan={2}>Saldo</td>
                       <td className={cn("px-3 py-2 text-right font-bold", detail.totals.balance > 0 ? "text-amber-700" : "text-emerald-700")}>
-                        {rupiah(detail.totals.balance)}
+                        {formatRupiah(detail.totals.balance)}
                       </td>
                     </tr>
                   </tbody>

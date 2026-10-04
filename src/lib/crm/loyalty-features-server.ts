@@ -1,3 +1,4 @@
+import "server-only";
 import { cache } from "react";
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";

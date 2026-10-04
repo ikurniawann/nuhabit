@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * EPIC-050 Fase 2 (T-2.2) — lead scoring, sisi server: muat aturan, kumpulkan
  * sinyal (snapshot + hitungan event), tulis leads.score. Dipanggil dari event

@@ -1,3 +1,4 @@
+import { formatDate, formatRupiah as formatRupiahPuebi } from "@/lib/format";
 import type { LeadOrgType } from "../leads/types";
 
 export type DealEventType =
@@ -125,6 +126,19 @@ export const EMPTY_DEAL_FORM: DealFormValues = {
   value_estimate: "",
 };
 
+/** Nilai rupiah yang boleh kosong (nilai deal, belanja member): kosong → "—". */
+export function formatRupiahOrDash(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "—";
+  return formatRupiahPuebi(value);
+}
+
+/** Tanggal acara deal + penanda tentatif; null bila belum ada tanggal. */
+export function formatEventDate(deal: Pick<SalesDeal, "event_date" | "is_event_date_fixed">): string | null {
+  if (!deal.event_date) return null;
+  return `${formatDate(deal.event_date)}${deal.is_event_date_fixed ? "" : " (tentatif)"}`;
+}
+
+/** Format lama untuk modul finance (di luar sales-funnel); kode sales-funnel memakai @/lib/format / formatRupiahOrDash. */
 export function formatRupiah(value: string | number | null): string {
   if (value === null || value === "" || value === undefined) return "—";
   const num = typeof value === "string" ? Number(value) : value;

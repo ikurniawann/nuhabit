@@ -10,6 +10,7 @@ import {
   normalizeBookingCode,
   redeemWindowStatus,
   validateVisitDateWindow,
+  visitDateWindowError,
 } from "./booking";
 
 describe("canTransitionBooking (mesin status booking)", () => {
@@ -214,5 +215,19 @@ describe("redeemWindowStatus & isForfeitDue (kebijakan hangus, owner 2026-07-23)
   test("belum hari-H tidak pernah dianggap hangus walau kebijakan aktif", () => {
     expect(redeemWindowStatus("2026-08-01", "2026-07-23", 0)).toBe("belum-mulai");
     expect(isForfeitDue("2026-08-01", "2026-07-23", 0)).toBe(false);
+  });
+});
+
+describe("visitDateWindowError (pesan jendela tanggal booking)", () => {
+  const today = "2026-10-04";
+
+  test("tanggal dalam jendela → null", () => {
+    expect(visitDateWindowError("2026-10-04", today)).toBeNull();
+  });
+
+  test("tiap penolakan punya pesan Indonesia", () => {
+    expect(visitDateWindowError("2026-10-03", today)).toBe("Tanggal kunjungan sudah lewat");
+    expect(visitDateWindowError("2027-10-04", today)).toBe("Tanggal kunjungan terlalu jauh ke depan");
+    expect(visitDateWindowError("2026-02-30", today)).toBe("Tanggal kunjungan tidak valid");
   });
 });

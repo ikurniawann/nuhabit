@@ -22,6 +22,7 @@ import {
   type XpRuleForm,
   type XpSourceChannel,
 } from "../types";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 /**
  * EPIC-011 lanjutan — kelola aturan perolehan XP.
@@ -83,8 +84,6 @@ const KOSONG: XpRuleForm = {
   is_active: true,
 };
 
-const angka = (value: number) => Math.round(value).toLocaleString("id-ID");
-
 /**
  * Kolom numeric dikirim pg sebagai string berdesimal ("1.0000", "1000.00").
  * Untuk input form: bersihkan nol desimal — "1" dan "1000", bukan apa adanya.
@@ -100,17 +99,17 @@ function ringkasan(rule: XpRule): string {
   const nilai = Number(rule.xp_value) || 0;
   switch (rule.xp_mode) {
     case "fixed":
-      return `${angka(nilai)} XP per transaksi`;
+      return `${formatNumber(nilai)} XP per transaksi`;
     case "per_item":
-      return `${angka(nilai)} XP per item`;
+      return `${formatNumber(nilai)} XP per item`;
     case "per_amount":
-      return `${angka(nilai)} XP tiap Rp ${angka(Number(rule.amount_step) || 1)}`;
+      return `${formatNumber(nilai)} XP tiap ${formatRupiah(Number(rule.amount_step) || 1)}`;
     case "multiplier":
       return `XP dasar dikalikan ${nilai}`;
     case "percentage":
       return `${nilai}% dari nominal`;
     default:
-      return `${angka(nilai)} XP`;
+      return `${formatNumber(nilai)} XP`;
   }
 }
 
@@ -288,7 +287,7 @@ export function CrmXpRulesPage() {
                     <p className="text-xs text-slate-400">{MODE_SHORT[rule.xp_mode]}</p>
                   </td>
                   <td className="px-4 py-3">
-                    {Number(rule.min_amount) > 0 ? `Rp ${angka(Number(rule.min_amount))}` : "—"}
+                    {Number(rule.min_amount) > 0 ? formatRupiah(rule.min_amount) : "—"}
                   </td>
                   <td className="px-4 py-3">{rule.priority}</td>
                   <td className="px-4 py-3">
@@ -472,15 +471,15 @@ function Field({
   value: string;
   onChange: (value: string) => void;
   numeric?: boolean;
-  /** "Rp" → pratinjau "Rp 1.000"; "XP" → pratinjau "1 XP". */
+  /** "Rp" → pratinjau "Rp1.000"; "XP" → pratinjau "1 XP". */
   satuan?: "Rp" | "XP";
 }) {
   const n = Number(value);
   const pratinjau =
     numeric && satuan && value !== "" && Number.isFinite(n)
       ? satuan === "Rp"
-        ? `Rp ${Math.round(n).toLocaleString("id-ID")}`
-        : `${parseFloat(n.toFixed(4)).toLocaleString("id-ID")} XP`
+        ? formatRupiah(n)
+        : `${formatNumber(n, 4)} XP`
       : null;
 
   return (

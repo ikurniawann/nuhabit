@@ -13,6 +13,7 @@
  * dipertahankan demi at-most-once.
  */
 import { getPool } from "@/lib/db";
+import { formatDateLong, formatDateTime, formatTime } from "@/lib/format";
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { normalizePhone, isValidNormalizedPhone } from "./server";
 
@@ -56,13 +57,7 @@ function subjectLabel(row: ReminderRow): string {
 }
 
 export function buildReminderMessage(row: ReminderRow): string {
-  const due = new Date(row.due_at).toLocaleString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const due = `${formatDateLong(row.due_at)}, ${formatTime(row.due_at)}`;
   const head = row.title ? `${row.title}` : `${row.activity_type.toUpperCase()}`;
   const prio = row.priority === "urgent" ? " 🔴 URGENT" : row.priority === "high" ? " 🟠 Tinggi" : "";
   const lines = [
@@ -160,7 +155,7 @@ export async function sendDueFollowupReminders(): Promise<{ sent: number; inApp:
               [
                 row.owner_user_id,
                 `Task jatuh tempo: ${row.title ?? row.activity_type}`,
-                `${subjectLabel(row)} — ${new Date(row.due_at).toLocaleString("id-ID")}`,
+                `${subjectLabel(row)} — ${formatDateTime(row.due_at)}`,
                 `/dashboard/sales-funnel/tasks?task=${row.id}`,
                 JSON.stringify({ task_id: row.id, subject_type: row.subject_type }),
               ]

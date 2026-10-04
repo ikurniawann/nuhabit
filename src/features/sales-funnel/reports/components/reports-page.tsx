@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate } from "@/lib/format";
 import { useMemo, useState } from "react";
 import {
   CalendarDays,
@@ -13,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EVENT_TYPE_LABELS, formatRupiah } from "../../pipeline/types";
+import { EVENT_TYPE_LABELS, formatRupiahOrDash } from "../../pipeline/types";
 import { ORG_TYPE_LABELS, SOURCE_LABELS } from "../../leads/types";
 import { useFunnelReport } from "../queries";
 import type { BreakdownRow, ReportFilters } from "../types";
@@ -72,7 +73,7 @@ function BreakdownTable({
                   {Number(row.won)}
                 </td>
                 <td className="py-2 text-right font-medium text-gray-900">
-                  {formatRupiah(row.won_value)}
+                  {formatRupiahOrDash(row.won_value)}
                 </td>
               </tr>
             ))}
@@ -179,14 +180,14 @@ export function SalesFunnelReportsPage() {
                 icon: Wallet,
                 tone: "bg-pink-100 text-pink-700",
                 label: "Nilai Booking",
-                value: formatRupiah(summary?.won_value ?? null),
+                value: formatRupiahOrDash(summary?.won_value),
                 hint: "total nilai final deal menang dalam periode",
               },
               {
                 icon: TrendingUp,
                 tone: "bg-blue-100 text-blue-700",
                 label: "Pipeline Berjalan",
-                value: formatRupiah(summary?.pipeline_value ?? null),
+                value: formatRupiahOrDash(summary?.pipeline_value),
                 hint: `${summary?.open_count ?? 0} deal terbuka saat ini`,
               },
               {
@@ -309,14 +310,10 @@ export function SalesFunnelReportsPage() {
                       </div>
                       <div className="shrink-0 text-right">
                         <Badge className="border-0 bg-emerald-100 font-normal text-emerald-700">
-                          {new Date(event.event_date).toLocaleDateString("id-ID", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatDate(event.event_date)}
                         </Badge>
                         <p className="mt-1 text-xs font-semibold text-gray-900">
-                          {formatRupiah(event.value_final)}
+                          {formatRupiahOrDash(event.value_final)}
                         </p>
                       </div>
                     </li>

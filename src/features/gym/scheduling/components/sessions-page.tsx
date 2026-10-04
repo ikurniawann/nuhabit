@@ -12,7 +12,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addDays, angka, GYM_KEYS, schedulingApi, SELECT, SESSION_BADGE, waktu, wibDay, wibDayStart } from "../api";
+import { addDays, GYM_KEYS, schedulingApi, SESSION_BADGE, waktu, wibDay, wibDayStart } from "../api";
+import { SELECT } from "@/features/gym/shared";
+import { formatNumber } from "@/lib/format";
 
 type Range = "today" | "upcoming" | "past";
 
@@ -47,12 +49,12 @@ export function SessionsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Sesi" value={angka(live.length)} icon={<CalendarClock />} tone="ink" />
-        <StatCard label="Kursi terisi" value={angka(booked)} icon={<Users />} />
+        <StatCard label="Sesi" value={formatNumber(live.length)} icon={<CalendarClock />} tone="ink" />
+        <StatCard label="Kursi terisi" value={formatNumber(booked)} icon={<Users />} />
         <StatCard
           label="Sudah check-in"
-          value={angka(checkedIn)}
-          unit={booked ? `/ ${angka(booked)}` : undefined}
+          value={formatNumber(checkedIn)}
+          unit={booked ? `/ ${formatNumber(booked)}` : undefined}
           icon={<UserCheck />}
           tone={checkedIn ? "success" : "default"}
         />
@@ -114,10 +116,10 @@ export function SessionsPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{waktu(s.starts_at)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {angka(s.confirmed_count)} / {angka(s.capacity)}
-                      {s.waitlist_count > 0 && <span className="block text-xs text-info">+{angka(s.waitlist_count)} waitlist</span>}
+                      {formatNumber(s.confirmed_count)} / {formatNumber(s.capacity)}
+                      {s.waitlist_count > 0 && <span className="block text-xs text-info">+{formatNumber(s.waitlist_count)} waitlist</span>}
                     </TableCell>
-                    <TableCell className="hidden text-right tabular-nums sm:table-cell">{angka(s.checked_in_count)}</TableCell>
+                    <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(s.checked_in_count)}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </TableCell>

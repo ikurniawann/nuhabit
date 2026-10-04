@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
-import { rupiah, walletApi, type WalletSettings } from "../api";
+import { formatRupiah } from "@/lib/format";
+import { walletApi, type WalletSettings } from "../api";
 import { SweepPanel } from "./sweep-panel";
 
 const SETTINGS_KEY = ["wallet", "settings"];
@@ -86,7 +87,7 @@ function SettingsForm({ initial }: { initial: WalletSettings }) {
       </Field>
       <Field
         label="Ambang saldo rendah (Rp)"
-        hint={`0 = nonaktif. Member yang saldonya turun di bawah ${rupiah(Number(form.threshold) || 0)} dikabari, maksimal sekali per 7 hari.`}
+        hint={`0 = nonaktif. Member yang saldonya turun di bawah ${formatRupiah(Number(form.threshold) || 0)} dikabari, maksimal sekali per 7 hari.`}
       >
         <Input type="number" min={0} step={1_000} value={form.threshold} onChange={set("threshold")} />
       </Field>

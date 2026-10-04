@@ -1,30 +1,4 @@
-import { NextResponse } from "next/server";
-import { getApiUser } from "@/lib/api/auth";
-import { IAM } from "@/lib/iam/prefixes";
-import { userHasIamPrefix } from "@/lib/iam/has-menu";
-import type { UserRole } from "@/types";
 import { toNumber } from "@/lib/crm/server";
-
-// Laporan CRM (EPIC-011 Fase E) dibaca role yang sama dengan menu CRM
-// dashboard/members: super_admin, admin, direksi.
-export const CRM_REPORT_ROLES: UserRole[] = ["super_admin", "admin", "direksi"];
-
-export async function requireCrmReportRole(): Promise<NextResponse | null> {
-  const user = await getApiUser();
-  if (!user) {
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-  if (!(await userHasIamPrefix(user.id, user.role, IAM.crmReports))) {
-    return NextResponse.json(
-      { success: false, error: "Insufficient permissions" },
-      { status: 403 }
-    );
-  }
-  return null;
-}
 
 export type ReportPeriod = {
   /** Batas bawah inklusif (ISO). */

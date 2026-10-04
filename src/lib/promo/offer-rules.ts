@@ -1,6 +1,7 @@
 import { SALES_CHANNEL_CODES } from "@/lib/pos/sales-channels";
 
-export type OfferType = "bundle" | "bxgy" | "volume";
+export const OFFER_TYPES = ["bundle", "bxgy", "volume"] as const;
+export type OfferType = (typeof OFFER_TYPES)[number];
 export type OfferItemRole = "component" | "buy" | "get" | "eligible";
 export type BxgyGetMode = "same_as_buy" | "specific_products";
 export type VolumeBasis = "qty" | "spend";

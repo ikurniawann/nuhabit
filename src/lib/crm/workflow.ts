@@ -3,6 +3,7 @@
  * skema aturan, evaluator kondisi, render template pesan, pemetaan event → trigger.
  * Eksekusi aksi (DB/WA/webhook) ada di workflow-engine.ts.
  */
+import { formatNumber } from "@/lib/format";
 import { z } from "zod";
 
 export const WORKFLOW_OBJECTS = ["lead", "deal", "account", "contact", "task", "quotation"] as const;
@@ -222,7 +223,7 @@ export function renderTemplate(template: string, context: Record<string, unknown
         return undefined;
       }, context);
       if (value === null || value === undefined) return "";
-      if (typeof value === "number") return value.toLocaleString("id-ID");
+      if (typeof value === "number") return formatNumber(value, 3);
       return String(value);
     })
     .replace(/[ \t]{2,}/g, " ")

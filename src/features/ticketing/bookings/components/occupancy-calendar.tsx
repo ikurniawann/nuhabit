@@ -8,7 +8,7 @@
 import { useMemo, useState } from "react";
 import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useOccupancy } from "../queries";
 import type { OccupancyDay } from "../types";
 

@@ -2,6 +2,7 @@
 
 import type { Division, ExerciseCategory } from "@/lib/gym/hyrox";
 import type { MemberRaceStatus, RaceRegion, RaceStatus } from "@/lib/gym/races";
+import { call, remove, send } from "../shared";
 
 export interface ExerciseRow {
   id: string;
@@ -68,29 +69,15 @@ export interface RaceEntrant {
   created_at: string;
 }
 
-export async function call<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    cache: "no-store",
-    ...init,
-    headers: init?.body ? { "Content-Type": "application/json" } : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.success) throw new Error(json.error || "Permintaan gagal");
-  return json.data as T;
-}
-
-export const post = <T>(url: string, body: unknown) => call<T>(url, { method: "POST", body: JSON.stringify(body) });
-export const remove = <T>(url: string) => call<T>(url, { method: "DELETE" });
-
 export const trainingApi = {
   library: () => call<{ exercises: ExerciseRow[]; substitutions: SubstitutionRow[] }>("/api/gym/exercises"),
-  saveExercise: (input: ExerciseInput) => post<{ id: string }>("/api/gym/exercises", input),
+  saveExercise: (input: ExerciseInput) => send<{ id: string }>("/api/gym/exercises", input),
   deleteExercise: (id: string) => remove<{ id: string }>(`/api/gym/exercises?id=${id}`),
-  saveSubstitution: (input: SubstitutionInput) => post<{ id: string }>("/api/gym/exercises/substitutions", input),
+  saveSubstitution: (input: SubstitutionInput) => send<{ id: string }>("/api/gym/exercises/substitutions", input),
   deleteSubstitution: (id: string) => remove<{ id: string }>(`/api/gym/exercises/substitutions?id=${id}`),
 
   races: () => call<RaceEventRow[]>("/api/gym/races"),
-  saveRace: (input: RaceInput) => post<{ id: string }>("/api/gym/races", input),
+  saveRace: (input: RaceInput) => send<{ id: string }>("/api/gym/races", input),
   deleteRace: (id: string) => remove<{ id: string; outcome: "deleted" | "cancelled" }>(`/api/gym/races?id=${id}`),
   entrants: (raceId: string) => call<RaceEntrant[]>(`/api/gym/races/${raceId}/entrants`),
 };

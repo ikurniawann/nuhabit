@@ -1,3 +1,4 @@
+import "server-only";
 // EPIC-034 Fase B+C — jalur uang gift card di sisi server.
 //
 // Fase B: penerbitan kartu saat penjualan di kasir lunas.

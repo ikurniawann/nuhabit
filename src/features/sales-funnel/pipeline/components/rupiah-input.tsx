@@ -1,5 +1,6 @@
 "use client";
 
+import { formatRupiah } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 
 /**
@@ -18,9 +19,7 @@ export function RupiahInput({
   placeholder?: string;
   className?: string;
 }) {
-  const display = value
-    ? `Rp ${Number(value).toLocaleString("id-ID")}`
-    : "";
+  const display = value ? formatRupiah(value) : "";
 
   return (
     <Input

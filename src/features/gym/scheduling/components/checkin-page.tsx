@@ -13,7 +13,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
-import { angka, GYM_KEYS, jam, schedulingApi, waktu, type AccessLogRow, type CheckInResult } from "../api";
+import { formatNumber, formatTime } from "@/lib/format";
+import { GYM_KEYS, schedulingApi, waktu, type AccessLogRow, type CheckInResult } from "../api";
 
 const TOKEN_INPUT_ID = "gym-checkin-token";
 const SOURCE_LABEL: Record<AccessLogRow["source"], string> = { gate: "Gate", pos: "Kasir", manual: "Front desk" };
@@ -66,7 +67,7 @@ export function CheckinPage() {
               autoFocus
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              placeholder="Pindai QR atau tempel token bcdqr_…"
+              placeholder="Pindai QR atau tempel token nhqr_…"
               aria-label="Token QR member"
               className="font-mono"
             />
@@ -80,11 +81,11 @@ export function CheckinPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Check-in kelas hari ini" value={angka(today.checked_in)} icon={<QrCode />} tone="ink" />
-        <StatCard label="Kredit terpotong hari ini" value={angka(today.credits)} icon={<Coins />} />
+        <StatCard label="Check-in kelas hari ini" value={formatNumber(today.checked_in)} icon={<QrCode />} tone="ink" />
+        <StatCard label="Kredit terpotong hari ini" value={formatNumber(today.credits)} icon={<Coins />} />
         <StatCard
           label="Scan ditolak hari ini"
-          value={angka(today.denied)}
+          value={formatNumber(today.denied)}
           hint="Tanpa booking, QR kedaluwarsa, saldo kurang"
           icon={<ShieldX />}
           tone={today.denied ? "warning" : "default"}
@@ -116,7 +117,7 @@ export function CheckinPage() {
                     <p className="font-medium">{row.member_name ?? "Tidak diketahui"}</p>
                     {row.class_type_name && row.starts_at && (
                       <p className="text-xs text-muted-foreground">
-                        {row.class_type_name}, {jam(row.starts_at)}
+                        {row.class_type_name}, {formatTime(row.starts_at)}
                       </p>
                     )}
                   </TableCell>

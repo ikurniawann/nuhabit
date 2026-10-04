@@ -24,7 +24,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
-import { angka, rupiah, walletApi, type TopupPackage } from "../api";
+import { formatNumber, formatRupiah } from "@/lib/format";
+import { walletApi, type TopupPackage } from "../api";
 
 const PACKAGES_KEY = ["wallet", "packages"];
 
@@ -63,15 +64,15 @@ export function PackagesPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Paket aktif" value={angka(active.length)} icon={<Package />} tone="ink" />
+        <StatCard label="Paket aktif" value={formatNumber(active.length)} icon={<Package />} tone="ink" />
         <StatCard
           label="Tampil di portal"
-          value={angka(active.filter((p) => p.available_online).length)}
+          value={formatNumber(active.filter((p) => p.available_online).length)}
           icon={<Smartphone />}
         />
         <StatCard
           label="Paket berbonus"
-          value={angka(active.filter((p) => p.credit_idr > p.price_idr).length)}
+          value={formatNumber(active.filter((p) => p.credit_idr > p.price_idr).length)}
           icon={<Gift />}
           tone="accent"
         />
@@ -112,13 +113,13 @@ export function PackagesPage() {
                           .join(" · ")}
                       </p>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{rupiah(pkg.price_idr)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatRupiah(pkg.price_idr)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {rupiah(pkg.credit_idr)}
-                      {bonus > 0 && <span className="block text-xs text-success">+{rupiah(bonus)} bonus</span>}
+                      {formatRupiah(pkg.credit_idr)}
+                      {bonus > 0 && <span className="block text-xs text-success">+{formatRupiah(bonus)} bonus</span>}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {pkg.validity_days ? `${angka(pkg.validity_days)} hari` : "Tidak kedaluwarsa"}
+                      {pkg.validity_days ? `${formatNumber(pkg.validity_days)} hari` : "Tidak kedaluwarsa"}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       <div className="flex flex-wrap gap-1">
@@ -236,7 +237,7 @@ function PackageDialog({ pkg, onClose, onSaved }: { pkg: TopupPackage | null; on
             <Field label="Harga (Rp)">
               <Input type="number" min={1_000} step={1_000} value={form.price_idr} onChange={set("price_idr")} required />
             </Field>
-            <Field label="Saldo diterima (Rp)" hint={credit > price ? `Bonus ${rupiah(credit - price)}` : "Sama dengan harga = tanpa bonus."}>
+            <Field label="Saldo diterima (Rp)" hint={credit > price ? `Bonus ${formatRupiah(credit - price)}` : "Sama dengan harga = tanpa bonus."}>
               <Input type="number" min={price} step={1_000} value={form.credit_idr} onChange={set("credit_idr")} required />
             </Field>
             <Field label="Masa berlaku (hari)" hint="Kosongkan bila saldo paket tidak kedaluwarsa.">

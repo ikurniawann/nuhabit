@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useStages } from "@/features/sales-funnel/pipeline/queries";
 import { CONDITION_OPS, UPDATABLE_FIELDS, WORKFLOW_OBJECTS, WORKFLOW_TRIGGERS } from "@/lib/crm/workflow";
 import {
@@ -35,6 +35,7 @@ import {
   type WorkflowRuleRow,
   type WorkflowTrigger,
 } from "../types";
+import { formatDateTime } from "@/lib/format";
 
 // ── Form state (string-friendly) ──
 interface CondForm { field: string; op: WorkflowCondition["op"]; value: string }
@@ -225,7 +226,7 @@ function RunLog({ ruleId }: { ruleId: string }) {
             <li key={r.id} className="py-2">
               <div className="flex items-center gap-2">
                 <Badge className={`border-0 font-normal ${r.status === "success" ? "bg-emerald-100 text-emerald-700" : r.status === "skipped" ? "bg-gray-100 text-gray-500" : r.status === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>{r.status}</Badge>
-                <span className="text-xs text-gray-500">{r.subject_type} {r.subject_id.slice(0, 8)} · {new Date(r.created_at).toLocaleString("id-ID")}</span>
+                <span className="text-xs text-gray-500">{r.subject_type} {r.subject_id.slice(0, 8)} · {formatDateTime(r.created_at)}</span>
               </div>
               {r.actions_result?.length ? (
                 <ul className="mt-1 text-xs text-gray-600">

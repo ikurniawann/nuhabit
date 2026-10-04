@@ -1,3 +1,4 @@
+import "server-only";
 // Fase C (EPIC-023): jembatan kasir POS → ledger tab ticketing.
 // Order F&B dibayar "NFC Tab" tidak menerima uang — tagihannya pindah jadi
 // baris `fnb` di ticket_visit_charges (referensi pos_order_id).

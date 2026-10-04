@@ -25,19 +25,7 @@ import { describeBadgeRule } from "@/lib/crm/badges";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { memberEngagementApi, type MemberActivity, type MemberBadgeRow } from "../engagement-api";
 import { membersQueryKeys } from "../query-keys";
-
-const angka = (n: number | null | undefined) => Number(n || 0).toLocaleString("id-ID");
-const waktu = (iso: string | null | undefined) =>
-  iso
-    ? new Date(iso).toLocaleString("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Jakarta",
-      })
-    : "-";
+import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 
 const key = (customerId: string, part: string) => ["crm", "members", "engagement", customerId, part];
 
@@ -73,7 +61,7 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
         <TabsContent value="checkins">
           <ActivityTable customerId={customerId} tab="checkins" empty="Belum pernah check-in dengan QR." head={["Waktu", "Hasil", "Kasir"]}>
             {(row) => [
-              waktu(row.created_at),
+              formatDateTime(row.created_at),
               row.decision === "accepted" ? (
                 <Badge variant="success">Diterima</Badge>
               ) : (
@@ -87,7 +75,7 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
           <ActivityTable customerId={customerId} tab="bookings" empty="Belum pernah mendaftar event." head={["Event", "Jadwal", "Status"]}>
             {(row) => [
               <span key="t" className="font-medium">{row.title}</span>,
-              waktu(row.starts_at),
+              formatDateTime(row.starts_at),
               <Badge key="s" variant={row.status === "attended" ? "success" : row.status === "cancelled" || row.status === "no_show" ? "muted" : "info"}>
                 {BOOKING_LABELS[row.status]}
                 {row.status === "waitlist" && row.waitlist_position ? ` #${row.waitlist_position}` : ""}
@@ -100,9 +88,9 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
           <ActivityTable customerId={customerId} tab="challenges" empty="Belum ikut challenge." head={["Challenge", "Target", "Status"]}>
             {(row) => [
               <span key="t" className="font-medium">{row.title}</span>,
-              row.metric === "spend" ? `Belanja Rp ${angka(row.target)}` : `${angka(row.target)} kunjungan`,
+              row.metric === "spend" ? `Belanja ${formatRupiah(row.target)}` : `${formatNumber(row.target)} kunjungan`,
               row.rewarded_at ? (
-                <Badge variant="success">Selesai {waktu(row.rewarded_at)}</Badge>
+                <Badge variant="success">Selesai {formatDateTime(row.rewarded_at)}</Badge>
               ) : new Date(row.ends_at) < new Date() ? (
                 <Badge variant="muted">Berakhir</Badge>
               ) : (
@@ -118,7 +106,7 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
                 <p className="font-medium">{row.title}</p>
                 <p className="text-xs text-muted-foreground">{row.campaign_name ? `Kampanye: ${row.campaign_name}` : row.type}</p>
               </div>,
-              waktu(row.created_at),
+              formatDateTime(row.created_at),
               row.clicked_at ? (
                 <Badge variant="success">Diklik</Badge>
               ) : row.opened_at ? (
@@ -140,11 +128,11 @@ export function MemberEngagementPanel({ customerId, memberKey }: { customerId: s
                   {[row.status !== "completed" ? row.status : null, row.notes].filter(Boolean).join(" · ") || "-"}
                 </p>
               </div>,
-              waktu(row.created_at),
+              formatDateTime(row.created_at),
               <span key="a" className="tabular-nums">
-                Rp {angka(row.amount)}
+                {formatRupiah(row.amount)}
                 {row.balance_after != null && (
-                  <span className="block text-xs text-muted-foreground">saldo Rp {angka(row.balance_after)}</span>
+                  <span className="block text-xs text-muted-foreground">saldo {formatRupiah(row.balance_after)}</span>
                 )}
               </span>,
             ]}
@@ -272,12 +260,12 @@ function BadgesTab({ customerId }: { customerId: string }) {
               </TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">
                 {describeBadgeRule(badge)}
-                {badge.bonus_xp > 0 ? ` · bonus ${angka(badge.bonus_xp)} XP` : ""}
+                {badge.bonus_xp > 0 ? ` · bonus ${formatNumber(badge.bonus_xp)} XP` : ""}
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
                   {owned ? (
-                    <Badge variant="success">{badge.source === "manual" ? "Diberikan admin" : "Diraih"} {waktu(badge.awarded_at)}</Badge>
+                    <Badge variant="success">{badge.source === "manual" ? "Diberikan admin" : "Diraih"} {formatDateTime(badge.awarded_at)}</Badge>
                   ) : badge.revoked_at ? (
                     <Badge variant="muted">Dicabut</Badge>
                   ) : null}
@@ -320,7 +308,7 @@ function ConsentTab({ customerId }: { customerId: string }) {
     <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
       <ConsentRow
         title="Izin WhatsApp (portal)"
-        hint={data.wa_verified_at ? `Nomor terverifikasi ${waktu(data.wa_verified_at)}` : "Nomor belum diverifikasi lewat OTP"}
+        hint={data.wa_verified_at ? `Nomor terverifikasi ${formatDateTime(data.wa_verified_at)}` : "Nomor belum diverifikasi lewat OTP"}
         checked={data.wa_consent}
         disabled={save.isPending}
         onChange={(next) => save.mutate({ wa_consent: next })}
@@ -329,7 +317,7 @@ function ConsentTab({ customerId }: { customerId: string }) {
         title="Terima kampanye marketing"
         hint={
           data.marketing_opt_out
-            ? `Opt-out ${data.optout_source === "keyword" ? "lewat balasan STOP" : "manual"} ${waktu(data.optout_at)}`
+            ? `Opt-out ${data.optout_source === "keyword" ? "lewat balasan STOP" : "manual"} ${formatDateTime(data.optout_at)}`
             : "Tidak ada di daftar opt-out; kampanye WA bisa dikirim"
         }
         checked={!data.marketing_opt_out}
@@ -385,7 +373,7 @@ function XpAdjustDialog({
     mutationFn: () => memberEngagementApi.adjustXp(customerId, { delta, reason: reason.trim(), request_id: requestId }),
     onSuccess: (result) => {
       toast.success(result.message ?? "XP disesuaikan", {
-        description: `XP sekarang ${angka(result.data.totalXp)}`,
+        description: `XP sekarang ${formatNumber(result.data.totalXp)}`,
       });
       void queryClient.invalidateQueries({ queryKey: membersQueryKeys.detail(memberKey) });
       onClose();
@@ -435,7 +423,7 @@ function XpAdjustDialog({
               Batal
             </Button>
             <Button type="submit" disabled={!valid || adjust.isPending}>
-              {direction === "add" ? "Tambah" : "Kurangi"} {amount ? `${angka(Number(amount))} XP` : "XP"}
+              {direction === "add" ? "Tambah" : "Kurangi"} {amount ? `${formatNumber(Number(amount))} XP` : "XP"}
             </Button>
           </DialogFooter>
         </DialogPanelForm>

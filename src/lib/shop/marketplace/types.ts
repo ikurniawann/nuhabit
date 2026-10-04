@@ -1,6 +1,8 @@
 // EPIC-039 Fase F — kontrak adapter marketplace (Shopee dulu; Tokopedia/
 // TikTok Shop tinggal menambah adapter dengan interface yang sama).
 
+import { ApiError } from "@/lib/api/auth";
+
 export type MarketplaceChannel = "shopee";
 
 export type MarketplaceAccountRow = {
@@ -68,12 +70,10 @@ export interface MarketplaceAdapter {
   pullOrders(account: MarketplaceAccountRow, since: Date): Promise<MarketplaceOrder[]>;
 }
 
-export class MarketplaceError extends Error {
-  constructor(
-    message: string,
-    readonly status: number = 502
-  ) {
-    super(message);
+/** Galat marketplace = ApiError (default 502) supaya apiHandler meneruskan status & pesannya. */
+export class MarketplaceError extends ApiError {
+  constructor(message: string, status = 502) {
+    super(status, message);
     this.name = "MarketplaceError";
   }
 }

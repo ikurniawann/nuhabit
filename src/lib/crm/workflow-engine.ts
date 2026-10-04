@@ -299,7 +299,10 @@ export async function executeAction(action: WorkflowAction, ctx: ActionContext):
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (action.secret) {
         const { createHmac } = await import("node:crypto");
-        headers["X-BCDCoffee-Signature"] = createHmac("sha256", action.secret).update(body).digest("hex");
+        const signature = createHmac("sha256", action.secret).update(body).digest("hex");
+        headers["X-NuHabit-Signature"] = signature;
+        // Header lama tetap dikirim agar penerima yang sudah ada tidak putus.
+        headers["X-BCDCoffee-Signature"] = signature;
       }
       const res = await fetch(action.url, { method: "POST", headers, body, signal: AbortSignal.timeout(10_000) });
       return { type: action.type, ok: res.ok, status: res.status };

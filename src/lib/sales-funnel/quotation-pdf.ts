@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
 /**
  * Generator PDF quotation (EPIC-022 Fase F2) — pdfkit sisi server mengikuti
@@ -53,10 +54,6 @@ export interface QuotationPdfData {
   owner_name: string | null;
   items: QuotationPdfItem[];
   terms?: QuotationPdfTerm[];
-}
-
-function rupiah(value: number): string {
-  return "Rp " + Math.round(value || 0).toLocaleString("id-ID");
 }
 
 function tanggal(value: string | null): string {
@@ -171,17 +168,17 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Buffer>
       lineBreak: true,
     });
     doc.text(
-      `${item.qty.toLocaleString("id-ID")}${item.item_type === "produk" ? " pax" : ""}`,
+      `${formatNumber(item.qty, 3)}${item.item_type === "produk" ? " pax" : ""}`,
       colQty,
       rowY,
       { width: colPrice - colQty - 8, align: "right" }
     );
-    doc.text(rupiah(item.unit_price), colPrice, rowY, {
+    doc.text(formatRupiah(item.unit_price), colPrice, rowY, {
       width: colTotal - colPrice - 8,
       align: "right",
     });
     doc.font("Helvetica-Bold");
-    doc.text(rupiah(item.line_total), colTotal, rowY, {
+    doc.text(formatRupiah(item.line_total), colTotal, rowY, {
       width: right - colTotal,
       align: "right",
     });
@@ -208,14 +205,14 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Buffer>
     doc.text(value, colTotal, y, { width: right - colTotal, align: "right" });
     doc.moveDown(0.25);
   };
-  totalRow("Subtotal", rupiah(data.subtotal));
+  totalRow("Subtotal", formatRupiah(data.subtotal));
   if (data.discount_nominal && Number(data.discount_nominal) > 0) {
-    totalRow(`Diskon ${Number(data.discount_percent ?? 0).toLocaleString("id-ID")}%`, `- ${rupiah(Number(data.discount_nominal))}`);
+    totalRow(`Diskon ${formatNumber(data.discount_percent, 3)}%`, `- ${formatRupiah(Number(data.discount_nominal))}`);
   }
   if (data.use_ppn) {
-    totalRow(`PPN ${data.ppn_persen}%`, rupiah(data.ppn_nominal));
+    totalRow(`PPN ${data.ppn_persen}%`, formatRupiah(data.ppn_nominal));
   }
-  totalRow("TOTAL", rupiah(data.total), true);
+  totalRow("TOTAL", formatRupiah(data.total), true);
 
   // ── Termin pembayaran (Fase G) ──
   if (data.terms && data.terms.length > 0) {
@@ -228,14 +225,14 @@ export async function buildQuotationPdf(data: QuotationPdfData): Promise<Buffer>
       const y = doc.y;
       doc.font("Helvetica").fontSize(9).fillColor(COLOR_TEXT);
       doc.text(
-        `${term.label} (${Number(term.percent).toLocaleString("id-ID")}%)` +
+        `${term.label} (${formatNumber(term.percent, 3)}%)` +
           (term.due_date ? ` — jatuh tempo ${tanggal(term.due_date)}` : ""),
         left,
         y,
         { width: colTotal - left - 8 }
       );
       doc.font("Helvetica-Bold");
-      doc.text(rupiah(term.amount), colTotal, y, {
+      doc.text(formatRupiah(term.amount), colTotal, y, {
         width: right - colTotal,
         align: "right",
       });

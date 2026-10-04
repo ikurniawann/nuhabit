@@ -31,8 +31,8 @@ import { GIFT_CARD_RELOAD_PAYMENT_METHODS } from "@/lib/giftcard/reload-payment-
 import { lookupMembersByPhone } from "../gift-card-api";
 import { useLinkGiftCardMember, useReloadGiftCard } from "../gift-card-queries";
 import type { GiftCard } from "../gift-card-types";
+import { formatRupiah } from "@/lib/format";
 
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 type DialogProps = { card: GiftCard | null; onClose: () => void };
 
@@ -56,7 +56,7 @@ export function GiftCardReloadDialog({ card, onClose }: DialogProps) {
           <DialogPanelTitle>Reload saldo</DialogPanelTitle>
           <DialogPanelDescription>
             Kartu <span className="font-mono">{card?.code}</span> · saldo{" "}
-            {formatRp(Number(card?.balance ?? 0))}. Pembayaran tercatat di riwayat kartu.
+            {formatRupiah(card?.balance ?? 0)}. Pembayaran tercatat di riwayat kartu.
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -114,7 +114,7 @@ export function GiftCardReloadDialog({ card, onClose }: DialogProps) {
               })
             }
           >
-            {reload.isPending ? "Menyimpan…" : valid ? `Reload ${formatRp(amountNum)}` : "Reload"}
+            {reload.isPending ? "Menyimpan…" : valid ? `Reload ${formatRupiah(amountNum)}` : "Reload"}
           </Button>
         </DialogFooter>
       </DialogPanel>
@@ -237,7 +237,7 @@ export function GiftCardPrintDialog({ card, onClose }: DialogProps) {
     code.textContent = card.code;
     const value = doc.createElement("div");
     value.className = "value";
-    value.textContent = `Saldo ${formatRp(Number(card.balance))}`;
+    value.textContent = `Saldo ${formatRupiah(card.balance)}`;
     doc.body.append(heading, qr, code, value);
     popup.focus();
     popup.print();

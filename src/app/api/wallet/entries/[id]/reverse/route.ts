@@ -1,16 +1,15 @@
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
-import { actorOf, fail, ok, walletRoute } from "@/lib/wallet/route";
+import { apiHandler } from "@/lib/api/handler";
+import { actorOf, ok, parseInput, requireWalletAdmin, uuidParam, type IdContext } from "@/lib/wallet/route";
 import { reverseEntry } from "@/lib/wallet/server";
 
+const schema = z.object({ reason: z.string().max(300) });
+
 /** POST — batalkan satu entri dompet (sekali saja, tidak boleh membuat saldo minus). */
-export const POST = walletRoute(
-  IAM.posWallet,
-  "Gagal membatalkan entri",
-  async (user, request: Request, ctx: { params: Promise<{ id: string }> }) => {
-    const { id } = await ctx.params;
-    if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-    const { reason } = z.object({ reason: z.string().max(300) }).parse(await request.json());
-    return ok(await reverseEntry({ entryId: id, reason, actor: actorOf(user) }), 201);
-  }
-);
+export const POST = apiHandler(async (request: NextRequest, ctx: IdContext) => {
+  const user = await requireWalletAdmin();
+  const entryId = await uuidParam(ctx);
+  const { reason } = parseInput(schema, await request.json());
+  return ok(await reverseEntry({ entryId, reason, actor: actorOf(user) }), 201);
+}, "wallet.entries.reverse.POST");

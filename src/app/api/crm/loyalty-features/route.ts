@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPosSession } from "@/lib/api/auth";
+import { ApiError, getPosSession } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
 
 /**
@@ -9,10 +10,7 @@ import { getLoyaltyFeatures } from "@/lib/crm/loyalty-features-server";
  */
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
+export const GET = apiHandler(async () => {
+  if (!(await getPosSession())) throw ApiError.unauthorized();
   return NextResponse.json({ success: true, data: await getLoyaltyFeatures() });
-}
+}, "crm.loyalty-features.GET");

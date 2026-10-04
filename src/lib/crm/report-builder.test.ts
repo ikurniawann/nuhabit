@@ -161,8 +161,11 @@ describe("report builder (EPIC-050 T-4.1)", () => {
       { key: "sum_value", label: "Total Nilai", type: "currency" as const, isAggregate: true },
     ];
     expect(summarizeRows([], cols)).toBe("Tidak ada data.");
-    expect(summarizeRows([{ owner_name: "Ani", sum_value: 5_000_000 }], cols)).toBe("• Ani — Total Nilai: Rp 5.000.000");
+    expect(summarizeRows([{ owner_name: "Ani", sum_value: 5_000_000 }], cols)).toBe("• Ani — Total Nilai: Rp5.000.000");
     expect(formatCellValue("number", 1234)).toBe("1.234");
+    expect(formatCellValue("number", 1.5)).toBe("1,5");
+    expect(formatCellValue("date", "2026-10-04")).toBe("4 Okt 2026");
+    expect(formatCellValue("datetime", "2026-10-04T07:30:00Z")).toBe("4 Okt 2026, 14.30");
     expect(formatCellValue("boolean", true)).toBe("Ya");
     expect(formatCellValue("text", null)).toBe("—");
     expect(aggregateLabel("deal", { fn: "avg", field: "value" })).toBe("Rata-rata Nilai Deal");

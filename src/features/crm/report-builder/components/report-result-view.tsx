@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { ApexOptions } from "apexcharts";
 import { ApexChart } from "@/features/pos/reports/components/apex-chart";
 import { formatCellValue } from "@/lib/crm/report-builder";
+import { formatNumber, formatRupiah, formatRupiahCompact } from "@/lib/format";
 import type { ChartType, ReportResult } from "../types";
 
 const PALETTE = ["#9F1239", "#BE185D", "#DB2777", "#F472B6", "#FBCFE8", "#7C2D12", "#B45309", "#047857"];
@@ -65,7 +66,7 @@ export function ReportKpi({ result }: { result: ReportResult }) {
     <div className="px-5 py-6">
       <p className="text-xs uppercase tracking-wide text-gray-500">{col.label}</p>
       <p className="mt-1 text-3xl font-bold text-gray-900">
-        {col.isAggregate ? formatCellValue(col.type, total) : result.row_count.toLocaleString("id-ID")}
+        {col.isAggregate ? formatCellValue(col.type, total) : formatNumber(result.row_count)}
       </p>
       <p className="mt-1 text-xs text-gray-500">{result.row_count} baris</p>
     </div>
@@ -91,7 +92,7 @@ export function ReportChart({ result, chartType, height = 320 }: { result: Repor
       legend: { position: "bottom" },
       dataLabels: { enabled: isPie },
       tooltip: {
-        y: { formatter: (v: number) => (money ? `Rp ${Math.round(v).toLocaleString("id-ID")}` : Number(v).toLocaleString("id-ID")) },
+        y: { formatter: (v: number) => (money ? formatRupiah(v) : formatNumber(v, 3)) },
       },
     };
     if (isPie) {
@@ -103,8 +104,6 @@ export function ReportChart({ result, chartType, height = 320 }: { result: Repor
     }
     // Rupiah dan jumlah baris beda ordo besaran. Bila keduanya ada dalam satu
     // grafik, seri jumlah jadi tak terlihat — jadi diberi sumbu Y sendiri.
-    const rupiahFmt = (v: number) => `Rp ${Math.round(v / 1000).toLocaleString("id-ID")}k`;
-    const countFmt = (v: number) => Math.round(v).toLocaleString("id-ID");
     // Sumbu cacah: tanpa ini ApexCharts membuat tik pecahan (0,2 / 0,4) yang
     // setelah dibulatkan tampil sebagai label kembar "0 0 0 1 1 1".
     const maxOf = (cols: typeof aggCols) =>
@@ -134,17 +133,17 @@ export function ReportChart({ result, chartType, height = 320 }: { result: Repor
             opposite: !isMoney,
             show: firstOfGroup,
             ...(isMoney ? {} : intTicks(aggCols.filter((x) => x.type !== "currency"))),
-            labels: { formatter: isMoney ? rupiahFmt : countFmt },
+            labels: { formatter: (v: number) => (isMoney ? formatRupiahCompact(v) : formatNumber(v)) },
             title: firstOfGroup ? { text: isMoney ? "Rupiah" : "Jumlah", style: { fontSize: "11px", fontWeight: 500 } } : undefined,
           };
         })
-      : { ...(money ? {} : intTicks(aggCols)), labels: { formatter: money ? rupiahFmt : countFmt } };
+      : { ...(money ? {} : intTicks(aggCols)), labels: { formatter: (v: number) => (money ? formatRupiahCompact(v) : formatNumber(v)) } };
     return {
       series: aggCols.map((c) => ({ name: c.label, data: result.rows.map((r) => Number(r[c.key]) || 0) })),
       options: {
         ...base,
         xaxis: horizontal
-          ? { categories, ...(money ? {} : intTicks(aggCols)), labels: { formatter: (v: string) => (money ? rupiahFmt(Number(v)) : countFmt(Number(v))), style: { fontSize: "11px" } } }
+          ? { categories, ...(money ? {} : intTicks(aggCols)), labels: { formatter: (v: string) => (money ? formatRupiahCompact(Number(v)) : formatNumber(Number(v))), style: { fontSize: "11px" } } }
           : { categories, labels: { rotate: -35, trim: true, style: { fontSize: "11px" } } },
         yaxis,
         plotOptions: { bar: { horizontal: chartType === "bar", borderRadius: 4, columnWidth: "55%" } },

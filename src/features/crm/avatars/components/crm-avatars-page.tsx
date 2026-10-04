@@ -20,8 +20,9 @@ import {
 import type { Avatar, AvatarForm } from "../types";
 import { useAvatarsList } from "../queries";
 import { useDeleteAvatar, useSaveAvatar, useToggleAvatar } from "../mutations";
+import { formatNumber } from "@/lib/format";
 
-const numberFormat = new Intl.NumberFormat("id-ID");
+const NO_AVATARS: Avatar[] = [];
 
 const defaultForm: AvatarForm = {
   id: "",
@@ -36,10 +37,6 @@ const defaultForm: AvatarForm = {
   stock_redeemed: 0,
   is_active: true,
 };
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
 
 function rarityTone(rarity: Avatar["rarity"]) {
   const tones: Record<Avatar["rarity"], string> = {
@@ -66,7 +63,7 @@ export function CrmAvatarsPage() {
   const toggleMutation = useToggleAvatar();
   const deleteMutation = useDeleteAvatar();
 
-  const avatars = data?.avatars ?? [];
+  const avatars = data?.avatars ?? NO_AVATARS;
   const tiers = data?.tiers ?? [];
   const loading = isLoading || isFetching;
   const queryError = error instanceof Error ? error.message : null;

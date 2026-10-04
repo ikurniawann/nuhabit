@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useApprovals, useDecideApproval } from "../queries";
 import type { ApprovalRequestRow } from "../types";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 
-const rupiah = (v: string | number | null | undefined) => `Rp ${Math.round(Number(v) || 0).toLocaleString("id-ID")}`;
 const STATUS_BADGE: Record<ApprovalRequestRow["status"], string> = {
   pending: "border-0 bg-amber-100 font-normal text-amber-700",
   approved: "border-0 bg-emerald-100 font-normal text-emerald-700",
@@ -87,8 +87,8 @@ export function ApprovalsInboxPage() {
                       <span className="text-gray-500"> · PIC {r.pic_name}</span>
                     </p>
                     <p className="text-xs text-gray-500">
-                      Subtotal {rupiah(r.subtotal)} − diskon {rupiah(r.discount_nominal)} = <span className="font-medium text-gray-900">{rupiah(r.total)}</span>
-                      {r.requested_by_name ? ` · diajukan ${r.requested_by_name}` : ""} · {new Date(r.created_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      Subtotal {formatRupiah(r.subtotal)} − diskon {formatRupiah(r.discount_nominal)} = <span className="font-medium text-gray-900">{formatRupiah(r.total)}</span>
+                      {r.requested_by_name ? ` · diajukan ${r.requested_by_name}` : ""} · {formatDateTime(r.created_at)}
                     </p>
                     {r.steps?.length ? (
                       <ol className="mt-2 flex flex-wrap gap-2 text-xs">
@@ -126,7 +126,7 @@ export function ApprovalsInboxPage() {
           </DialogHeader>
           {deciding ? (
             <p className="text-sm text-gray-600">
-              {deciding.row.quote_number} · {deciding.row.org_name} · diskon {Number(deciding.row.discount_percent)}% · total {rupiah(deciding.row.total)}
+              {deciding.row.quote_number} · {deciding.row.org_name} · diskon {Number(deciding.row.discount_percent)}% · total {formatRupiah(deciding.row.total)}
             </p>
           ) : null}
           <Textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3} placeholder="Catatan untuk sales (opsional)" />

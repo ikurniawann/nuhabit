@@ -1,50 +1,26 @@
-import { NextRequest, NextResponse } from "next/server";
-import { successResponse } from "@/lib/api/auth";
-import { checkRateLimit, clientIpFrom } from "@/lib/public/rate-limit";
-import {
-  todayInJakarta,
-  validateVisitDateWindow,
-} from "@/lib/ticketing/booking";
+import { NextRequest } from "next/server";
+import { ApiError, successResponse } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { todayInJakarta, validateVisitDateWindow } from "@/lib/ticketing/booking";
 import { resolvePublicVenue } from "@/lib/ticketing/booking-server";
-import {
-  countSlotUsedByDate,
-  loadActiveSlots,
-} from "@/lib/ticketing/capacity-server";
+import { countSlotUsedByDate, loadActiveSlots } from "@/lib/ticketing/capacity-server";
+import { assertPublicRateLimit } from "@/lib/ticketing/rate-limit";
 
 // EPIC-031 Fase D — endpoint PUBLIK: slot waktu venue utk satu tanggal.
 // Kosong = venue tanpa timed-entry (wizard tanpa langkah slot). Status
 // per slot hanya available|sold_out — TANPA angka (konsisten availability).
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const ip = clientIpFrom(request.headers);
-  if (!checkRateLimit(`booking-slots:${ip}`, { limit: 30, windowMs: 60_000 })) {
-    return NextResponse.json(
-      { success: false, error: "Terlalu banyak permintaan — coba lagi sebentar" },
-      { status: 429 }
-    );
-  }
-
-  try {
+export const GET = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
+    assertPublicRateLimit(request.headers, "booking-slots", { limit: 30, windowMs: 60_000 });
     const { slug } = await params;
     const date = request.nextUrl.searchParams.get("date") ?? "";
     if (validateVisitDateWindow(date, todayInJakarta()) !== "ok") {
-      return NextResponse.json(
-        { success: false, error: "Tanggal tidak valid" },
-        { status: 400 }
-      );
+      throw ApiError.badRequest("Tanggal tidak valid");
     }
 
     const venue = await resolvePublicVenue(slug);
-    if (!venue) {
-      return NextResponse.json(
-        { success: false, error: "Not found" },
-        { status: 404 }
-      );
-    }
-
+    if (!venue) throw ApiError.notFound("Not found");
     const scope = { companyId: venue.companyId, branchId: venue.branchId };
     const slots = await loadActiveSlots(scope);
     if (slots.length === 0) return successResponse({ slots: [] });
@@ -57,17 +33,11 @@ export async function GET(
         start_time: slot.start_time.slice(0, 5),
         end_time: slot.end_time.slice(0, 5),
         status:
-          slot.capacity !== null &&
-          (usedBySlot.get(slot.id) ?? 0) >= slot.capacity
+          slot.capacity !== null && (usedBySlot.get(slot.id) ?? 0) >= slot.capacity
             ? "sold_out"
             : "available",
       })),
     });
-  } catch (err) {
-    console.error("[booking] slots error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat slot waktu" },
-      { status: 500 }
-    );
-  }
-}
+  },
+  "public.booking.slots.GET"
+);

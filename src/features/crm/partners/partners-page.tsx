@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { crmFetch as call } from "../crm-fetch";
 import { PARTNER_TYPE_LABELS, PARTNER_TYPES, PARTNER_XP_CAP, type PartnerType } from "@/lib/crm/partner-types";
+import { formatDateTime, formatNumber } from "@/lib/format";
 
 interface Partner {
   id: string;
@@ -71,17 +72,6 @@ const EVENT_BADGE: Record<PartnerEvent["status"], { label: string; variant: "suc
 
 const SELECT =
   "h-10 rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest";
-
-const waktu = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleString("id-ID", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Jakarta",
-      })
-    : "-";
 
 /** CRM → Loyalty → Partner Loyalty: partner eksternal, secret, dan event masuk. */
 export function PartnersPage() {
@@ -150,8 +140,8 @@ export function PartnersPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard label="Partner aktif" value={rows.filter((p) => p.is_active).length} icon={<Plug />} tone="ink" />
-        <StatCard label="Event belum cocok" value={pending.toLocaleString("id-ID")} tone={pending ? "warning" : "default"} />
-        <StatCard label="XP dari partner" value={xpTotal.toLocaleString("id-ID")} unit="XP" />
+        <StatCard label="Event belum cocok" value={formatNumber(pending)} tone={pending ? "warning" : "default"} />
+        <StatCard label="XP dari partner" value={formatNumber(xpTotal)} unit="XP" />
       </div>
 
       <Card className="py-0">
@@ -186,7 +176,7 @@ export function PartnersPage() {
                       {partner.processed_count} diproses
                       {partner.pending_count > 0 && <span className="text-warning"> · {partner.pending_count} tertunda</span>}
                     </p>
-                    <p className="text-xs text-muted-foreground">Terakhir {waktu(partner.last_event_at)}</p>
+                    <p className="text-xs text-muted-foreground">Terakhir {formatDateTime(partner.last_event_at)}</p>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -292,7 +282,7 @@ X-Signature: sha256=<hex HMAC-SHA256(raw body, secret)>
                   <TableCell>
                     <p className="font-medium">{event.event_type}</p>
                     <p className="text-xs text-muted-foreground">
-                      {event.partner_name} · {event.external_event_id} · {waktu(event.received_at)}
+                      {event.partner_name} · {event.external_event_id} · {formatDateTime(event.received_at)}
                     </p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">

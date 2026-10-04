@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatRupiah } from "@/lib/format";
 import { CategoryAutocomplete } from "./category-autocomplete";
 import { useCreateProduct, useProducts } from "../queries";
 import type {
@@ -33,8 +34,6 @@ import type {
   TicketProductKind,
   TicketVariantPreset,
 } from "../types";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 export function TicketsPage() {
   const router = useRouter();
@@ -204,7 +203,7 @@ export function TicketsPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-900">
-                      {formatRp(product.base_price)}
+                      {formatRupiah(product.base_price)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">

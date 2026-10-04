@@ -22,17 +22,8 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  angka,
-  engagementApi,
-  fromLocalInput,
-  rupiah,
-  toLocalInput,
-  waktu,
-  type CrmEvent,
-  type EventBooking,
-  type EventInput,
-} from "../api";
+import { engagementApi, fromLocalInput, toLocalInput, waktu, type CrmEvent, type EventBooking, type EventInput } from "../api";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { Field, TableNote, TEXTAREA } from "./shared";
 
 const EVENTS_KEY = ["crm-engagement", "events"];
@@ -65,7 +56,7 @@ export function EventsPage() {
   const cancelMutation = useMutation({
     mutationFn: (id: string) => engagementApi.cancelEvent(id),
     onSuccess: (data) => {
-      toast.success("Event dibatalkan", { description: `${angka(data.notified)} member dikabari lewat portal.` });
+      toast.success("Event dibatalkan", { description: `${formatNumber(data.notified)} member dikabari lewat portal.` });
       setCancelling(null);
       void queryClient.invalidateQueries({ queryKey: EVENTS_KEY });
     },
@@ -92,15 +83,15 @@ export function EventsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Event mendatang" value={angka(upcoming.length)} icon={<CalendarDays />} tone="ink" />
+        <StatCard label="Event mendatang" value={formatNumber(upcoming.length)} icon={<CalendarDays />} tone="ink" />
         <StatCard
           label="Kursi terisi"
-          value={angka(seatsTaken)}
-          unit={`/ ${angka(seatsTotal)}`}
+          value={formatNumber(seatsTaken)}
+          unit={`/ ${formatNumber(seatsTotal)}`}
           icon={<Users />}
           tone={seatsTotal && seatsTaken >= seatsTotal ? "warning" : "default"}
         />
-        <StatCard label="Di waitlist" value={angka(waiting)} unit="member" icon={<Hourglass />} tone={waiting ? "info" : "default"} />
+        <StatCard label="Di waitlist" value={formatNumber(waiting)} unit="member" icon={<Hourglass />} tone={waiting ? "info" : "default"} />
       </div>
 
       <Card className="py-0">
@@ -130,7 +121,7 @@ export function EventsPage() {
                     <TableCell className="max-w-[16rem] whitespace-normal">
                       <p className="font-medium">{event.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {[event.host_name, event.location, event.price_idr > 0 ? rupiah(event.price_idr) : "Gratis"]
+                        {[event.host_name, event.location, event.price_idr > 0 ? formatRupiah(event.price_idr) : "Gratis"]
                           .filter(Boolean)
                           .join(" · ")}
                       </p>
@@ -138,9 +129,9 @@ export function EventsPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{waktu(event.starts_at)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {angka(event.confirmed_count)} / {angka(event.capacity)}
+                      {formatNumber(event.confirmed_count)} / {formatNumber(event.capacity)}
                       {event.waitlist_count > 0 && (
-                        <span className="block text-xs text-info">+{angka(event.waitlist_count)} waitlist</span>
+                        <span className="block text-xs text-info">+{formatNumber(event.waitlist_count)} waitlist</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
@@ -324,7 +315,7 @@ function RosterDialog({ event, onClose }: { event: CrmEvent; onClose: () => void
         <DialogPanelHeader>
           <DialogPanelTitle>Peserta {event.title}</DialogPanelTitle>
           <DialogPanelDescription>
-            {waktu(event.starts_at)} · {angka(event.confirmed_count)} dari {angka(event.capacity)} kursi terisi
+            {waktu(event.starts_at)} · {formatNumber(event.confirmed_count)} dari {formatNumber(event.capacity)} kursi terisi
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="px-0 py-0">

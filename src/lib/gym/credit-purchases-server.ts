@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * Siklus pembelian paket kredit: pending → paid → refunded (port wallet
  * service NüHabit). Pembayaran = uang, buku besar = kredit: pembelian yang

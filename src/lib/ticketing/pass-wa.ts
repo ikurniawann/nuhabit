@@ -3,6 +3,7 @@
 
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { appOrigin } from "@/lib/app-origin";
+import { formatDate } from "@/lib/format";
 
 export interface PaidPassWaInput {
   pass_code: string;
@@ -10,6 +11,17 @@ export interface PaidPassWaInput {
   holder_name: string;
   holder_phone: string | null;
   valid_until: string;
+}
+
+/** Pesan WA pass aktif (QR = link status ber-token). */
+export function buildPassPaidMessage(pass: PaidPassWaInput): string {
+  return (
+    `*Season Pass aktif* ✅\n\n` +
+    `Kode pass: *${pass.pass_code}*\n` +
+    `Atas nama: ${pass.holder_name}\n` +
+    `Berlaku s/d: ${formatDate(pass.valid_until)}\n\n` +
+    `Tunjukkan / scan QR di halaman ini saat masuk:\n${appOrigin()}/pass/status/${pass.access_token}`
+  );
 }
 
 export async function sendPassPaidWa(
@@ -21,18 +33,9 @@ export async function sendPassPaidWa(
     console.error("[pass] WA gateway belum dikonfigurasi — QR tidak terkirim");
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = appOrigin();
-  const statusUrl = `${baseUrl}/pass/status/${pass.access_token}`;
-  const message =
-    `*Season Pass aktif* ✅\n\n` +
-    `Kode pass: *${pass.pass_code}*\n` +
-    `Atas nama: ${pass.holder_name}\n` +
-    `Berlaku s/d: ${pass.valid_until}\n\n` +
-    `Tunjukkan / scan QR di halaman ini saat masuk:\n${statusUrl}`;
-
   const result = await sendGatewayText(config, {
     target: pass.holder_phone,
-    message,
+    message: buildPassPaidMessage(pass),
   });
   if (!result.success) {
     console.error("[pass] kirim WA gagal:", result.reason);

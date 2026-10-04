@@ -3,6 +3,7 @@
 // diuji; pemakaian di route API publik /api/public/booking/*.
 
 import { randomBytes, randomInt } from "crypto";
+import { addDaysIso } from "./calendar";
 import { isValidCalendarDate } from "./pricing";
 
 export const BOOKING_STATUSES = [
@@ -82,12 +83,6 @@ export type VisitDateWindowResult =
   | "terlalu-jauh"
   | "tidak-valid";
 
-const addDays = (isoDate: string, days: number): string => {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d + days));
-  return date.toISOString().slice(0, 10);
-};
-
 /** Jendela booking: hari ini s/d +BOOKING_MAX_DAYS_AHEAD (inklusif). */
 export function validateVisitDateWindow(
   visitDate: string,
@@ -95,8 +90,20 @@ export function validateVisitDateWindow(
 ): VisitDateWindowResult {
   if (!isValidCalendarDate(visitDate)) return "tidak-valid";
   if (visitDate < today) return "masa-lalu";
-  if (visitDate > addDays(today, BOOKING_MAX_DAYS_AHEAD)) return "terlalu-jauh";
+  if (visitDate > addDaysIso(today, BOOKING_MAX_DAYS_AHEAD)) return "terlalu-jauh";
   return "ok";
+}
+
+const VISIT_DATE_WINDOW_ERRORS: Record<Exclude<VisitDateWindowResult, "ok">, string> = {
+  "masa-lalu": "Tanggal kunjungan sudah lewat",
+  "terlalu-jauh": "Tanggal kunjungan terlalu jauh ke depan",
+  "tidak-valid": "Tanggal kunjungan tidak valid",
+};
+
+/** Pesan galat jendela tanggal kunjungan (null = boleh dipesan). */
+export function visitDateWindowError(visitDate: string, today: string): string | null {
+  const window = validateVisitDateWindow(visitDate, today);
+  return window === "ok" ? null : VISIT_DATE_WINDOW_ERRORS[window];
 }
 
 /**
@@ -111,7 +118,7 @@ export function redeemWindowStatus(
 ): "belum-mulai" | "boleh" | "lewat" {
   if (today < visitDate) return "belum-mulai";
   const lastDay =
-    forfeitDays === null ? visitDate : addDays(visitDate, forfeitDays);
+    forfeitDays === null ? visitDate : addDaysIso(visitDate, forfeitDays);
   return today <= lastDay ? "boleh" : "lewat";
 }
 

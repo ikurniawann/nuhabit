@@ -3,16 +3,20 @@
  * Semua mutasi saldo berjalan dalam transaksi dengan baris member terkunci.
  */
 import type { Pool, PoolClient } from "pg";
+import { ApiError } from "@/lib/api/auth";
 import { getPool, withTransaction } from "@/lib/db";
+import { formatRupiah } from "@/lib/format";
 import { POS_LOYALTY_SETTINGS_SINGLETON_ID } from "@/lib/pos/loyalty-settings";
 import { validateAdjustment, validateReversal, validateTopupRefund } from "./corrections";
 import { computeLotRemainders, expiresAtFor, roundIdr, type LedgerRow } from "./ledger";
 
 type Db = Pool | PoolClient;
 
-export class WalletError extends Error {
-  constructor(message: string, public status = 400) {
-    super(message);
+/** Galat aturan dompet: ApiError supaya apiHandler menjawab dengan status & pesannya. */
+export class WalletError extends ApiError {
+  constructor(message: string, status = 400) {
+    super(status, message);
+    this.name = "WalletError";
   }
 }
 
@@ -352,7 +356,7 @@ export function refundTopup(input: {
       ark_rate: settings.ark_rate,
       payment_method: input.method,
       reference_id: reference,
-      notes: `Refund top-up Rp ${check.refundIdr.toLocaleString("id-ID")} via ${input.method}${
+      notes: `Refund top-up ${formatRupiah(check.refundIdr)} via ${input.method}${
         check.manual ? " (manual, QRIS tanpa refund API)" : ""
       }`,
       metadata: {

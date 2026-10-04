@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * Akses DB kredit kelas gym. Semua fungsi menerima client dari pemanggil
  * supaya bisa digabung dalam satu transaksi (mis. booking + potong kredit).
@@ -7,6 +8,7 @@
  * tidak sama-sama lolos cek saldo.
  */
 import type { Pool, PoolClient } from "pg";
+import { ApiError } from "@/lib/api/auth";
 import {
   buildReversalEntry,
   computeCreditBalance,
@@ -25,9 +27,11 @@ import { getGymRules } from "./rules";
 
 export type Db = Pool | PoolClient;
 
-export class GymCreditError extends Error {
-  constructor(message: string, public status = 400) {
-    super(message);
+/** Galat kredit yang aman ditampilkan (route → 4xx lewat apiHandler). */
+export class GymCreditError extends ApiError {
+  constructor(message: string, status = 400) {
+    super(status, message);
+    this.name = "GymCreditError";
   }
 }
 

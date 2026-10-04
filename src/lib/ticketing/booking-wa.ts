@@ -5,6 +5,7 @@
 
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { appOrigin } from "@/lib/app-origin";
+import { formatDateLong, formatRupiah } from "@/lib/format";
 
 export interface PaidBookingWaInput {
   booking_code: string;
@@ -25,13 +26,44 @@ function buildTotalLines(booking: PaidBookingWaInput): string {
   const total = Number(booking.total);
   const discount = Number(booking.discount_amount ?? 0);
   if (discount <= 0) {
-    return `Total: Rp${total.toLocaleString("id-ID")}\n\n`;
+    return `Total: ${formatRupiah(total)}\n\n`;
   }
   const paid = Math.round((total - discount) * 100) / 100;
   return (
-    `Total: Rp${total.toLocaleString("id-ID")}\n` +
-    `Potongan promo: -Rp${discount.toLocaleString("id-ID")}\n` +
-    `Dibayar: Rp${paid.toLocaleString("id-ID")}\n\n`
+    `Total: ${formatRupiah(total)}\n` +
+    `Potongan promo: -${formatRupiah(discount)}\n` +
+    `Dibayar: ${formatRupiah(paid)}\n\n`
+  );
+}
+
+const bookingStatusUrl = (booking: PaidBookingWaInput) =>
+  `${appOrigin()}/booking/status/${booking.access_token}`;
+
+/** Pesan WA ke pemesan saat booking terbayar. */
+export function buildBookingPaidMessage(booking: PaidBookingWaInput): string {
+  const statusUrl = bookingStatusUrl(booking);
+  return (
+    `*Pembayaran diterima* ✅\n\n` +
+    `Kode booking: *${booking.booking_code}*\n` +
+    `Tanggal kunjungan: ${formatDateLong(booking.visit_date)}\n` +
+    `Atas nama: ${booking.customer_name}\n` +
+    buildTotalLines(booking) +
+    (booking.gift_recipient_name
+      ? `E-tiket HADIAH telah dikirim ke WA ${booking.gift_recipient_name}. ` +
+        `Link di bawah adalah salinan untukmu:\n${statusUrl}`
+      : `Tunjukkan QR di halaman ini ke petugas loket:\n${statusUrl}`)
+  );
+}
+
+/** Pesan WA e-tiket hadiah ke penerima. */
+export function buildBookingGiftMessage(booking: PaidBookingWaInput): string {
+  return (
+    `*Kamu menerima hadiah tiket!* 🎁\n\n` +
+    `Dari: ${booking.customer_name}\n` +
+    `Untuk: *${booking.gift_recipient_name}*\n` +
+    `Kode booking: *${booking.booking_code}*\n` +
+    `Tanggal kunjungan: ${formatDateLong(booking.visit_date)}\n\n` +
+    `Tunjukkan QR di halaman ini ke petugas loket:\n${bookingStatusUrl(booking)}`
   );
 }
 
@@ -45,22 +77,9 @@ export async function sendBookingPaidWa(
     );
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = appOrigin();
-  const statusUrl = `${baseUrl}/booking/status/${booking.access_token}`;
-  const message =
-    `*Pembayaran diterima* ✅\n\n` +
-    `Kode booking: *${booking.booking_code}*\n` +
-    `Tanggal kunjungan: ${booking.visit_date}\n` +
-    `Atas nama: ${booking.customer_name}\n` +
-    buildTotalLines(booking) +
-    (booking.gift_recipient_name
-      ? `E-tiket HADIAH telah dikirim ke WA ${booking.gift_recipient_name}. ` +
-        `Link di bawah adalah salinan untukmu:\n${statusUrl}`
-      : `Tunjukkan QR di halaman ini ke petugas loket:\n${statusUrl}`);
-
   const result = await sendGatewayText(config, {
     target: booking.customer_phone,
-    message,
+    message: buildBookingPaidMessage(booking),
   });
   if (!result.success) {
     console.error("[booking] kirim WA gagal:", result.reason);
@@ -87,27 +106,9 @@ export async function sendBookingGiftWa(
     );
     return { success: false, reason: "gateway-belum-dikonfigurasi" };
   }
-  const baseUrl = appOrigin();
-  const statusUrl = `${baseUrl}/booking/status/${booking.access_token}`;
-  const message =
-    `*Kamu menerima hadiah tiket!* 🎁
-
-` +
-    `Dari: ${booking.customer_name}
-` +
-    `Untuk: *${booking.gift_recipient_name}*
-` +
-    `Kode booking: *${booking.booking_code}*
-` +
-    `Tanggal kunjungan: ${booking.visit_date}
-
-` +
-    `Tunjukkan QR di halaman ini ke petugas loket:
-${statusUrl}`;
-
   const result = await sendGatewayText(config, {
     target: booking.gift_recipient_phone,
-    message,
+    message: buildBookingGiftMessage(booking),
   });
   if (!result.success) {
     console.error("[booking] kirim WA hadiah gagal:", result.reason);

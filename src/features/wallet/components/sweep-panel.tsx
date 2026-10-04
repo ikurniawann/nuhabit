@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableNote } from "@/features/crm/engagement/components/shared";
-import { angka, rupiah, waktu, walletApi } from "../api";
+import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { walletApi } from "../api";
 
 const RUNS_KEY = ["wallet", "sweep-runs"];
 
@@ -23,7 +24,7 @@ export function SweepPanel() {
         toast.message("Sapuan lain sedang berjalan. Coba lagi sebentar.");
       } else {
         toast.success("Sapuan selesai", {
-          description: `${angka(r.expired_lots)} lot hangus (${rupiah(r.expired_idr)}), ${angka(r.reminders_sent)} pengingat, ${angka(r.nudges_sent)} dorongan saldo rendah.`,
+          description: `${formatNumber(r.expired_lots)} lot hangus (${formatRupiah(r.expired_idr)}), ${formatNumber(r.reminders_sent)} pengingat, ${formatNumber(r.nudges_sent)} dorongan saldo rendah.`,
         });
       }
       void queryClient.invalidateQueries({ queryKey: RUNS_KEY });
@@ -64,15 +65,15 @@ export function SweepPanel() {
             {runs.data?.map((r) => (
               <TableRow key={r.id}>
                 <TableCell>
-                  {waktu(r.started_at)}
+                  {formatDateTime(r.started_at)}
                   <span className="block text-xs text-muted-foreground">{r.trigger === "manual" ? "Manual" : "Otomatis"}</span>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {rupiah(r.expired_idr)}
-                  <span className="block text-xs text-muted-foreground">{angka(r.expired_lots)} lot</span>
+                  {formatRupiah(r.expired_idr)}
+                  <span className="block text-xs text-muted-foreground">{formatNumber(r.expired_lots)} lot</span>
                 </TableCell>
-                <TableCell className="hidden text-right tabular-nums sm:table-cell">{angka(r.reminders_sent)}</TableCell>
-                <TableCell className="hidden text-right tabular-nums sm:table-cell">{angka(r.nudges_sent)}</TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(r.reminders_sent)}</TableCell>
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(r.nudges_sent)}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   {r.error ? (
                     <Badge variant="destructive" title={r.error}>

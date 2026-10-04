@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { ApiError, successResponse } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { createPgClient } from "@/lib/pg/create-client";
-import { crmFail, crmOk, crmRoute } from "@/lib/crm/crm-route";
+import { parseCrmInput, requireCrmUser } from "@/lib/crm/guards";
 import { adjustMemberXp } from "@/lib/crm/loyalty-engine";
+import { requireMemberCustomerId } from "@/lib/crm/member-detail-server";
 import { getCrmDefaultVenue } from "@/lib/crm/server";
-import { MEMBER_LOYALTY_WRITE_MENUS, resolveCustomerId } from "@/lib/crm/member-detail-server";
 
 const adjustSchema = z.object({
   delta: z
@@ -18,28 +20,24 @@ const adjustSchema = z.object({
 });
 
 /** POST — tambah/kurangi XP member dengan alasan (tercatat di ledger XP). */
-export const POST = crmRoute(
-  MEMBER_LOYALTY_WRITE_MENUS,
-  "Gagal menyesuaikan XP",
-  async (userId, request: Request, { params }: { params: Promise<{ id: string }> }) => {
-    const customerId = await resolveCustomerId((await params).id);
-    if (!customerId) return crmFail("Member tidak ditemukan", 404);
-    const body = adjustSchema.parse(await request.json());
-    const db = createPgClient();
-    const venue = await getCrmDefaultVenue(db);
-    const result = await adjustMemberXp(db, {
-      customerId,
-      delta: body.delta,
-      reason: body.reason,
-      actorId: userId,
-      requestId: body.request_id,
-      companyId: venue.companyId,
-      branchId: venue.branchId,
-    });
-    if (result.status === "skipped") return crmFail("XP member sudah 0, tidak ada yang dikurangi", 409);
-    return crmOk(
-      result,
-      result.status === "duplicate" ? "Penyesuaian ini sudah tercatat" : "XP member disesuaikan"
-    );
-  }
-);
+export const POST = apiHandler(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
+  const user = await requireCrmUser("memberLoyaltyWrite");
+  const customerId = await requireMemberCustomerId((await params).id);
+  const body = parseCrmInput(adjustSchema, await request.json());
+  const db = createPgClient();
+  const venue = await getCrmDefaultVenue(db);
+  const result = await adjustMemberXp(db, {
+    customerId,
+    delta: body.delta,
+    reason: body.reason,
+    actorId: user.id,
+    requestId: body.request_id,
+    companyId: venue.companyId,
+    branchId: venue.branchId,
+  });
+  if (result.status === "skipped") throw ApiError.conflict("XP member sudah 0, tidak ada yang dikurangi");
+  return successResponse(
+    result,
+    result.status === "duplicate" ? "Penyesuaian ini sudah tercatat" : "XP member disesuaikan"
+  );
+}, "crm.members.[id].xp-adjust.POST");

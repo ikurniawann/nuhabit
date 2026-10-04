@@ -1,13 +1,12 @@
+import "server-only";
 /**
- * EPIC-050 Fase 4 — sisi server report builder: gate akses, eksekusi query,
+ * EPIC-050 Fase 4 — sisi server report builder: visibilitas, eksekusi query,
  * pemuatan report tersimpan, dan perakitan sheet XLSX.
  */
-import { NextResponse } from "next/server";
-import { getApiUser, type ApiUser } from "@/lib/api/auth";
-import { getApiUserScope, type UserScope } from "@/lib/api/scope";
+import type { ApiUser } from "@/lib/api/auth";
+import type { UserScope } from "@/lib/api/scope";
 import { query, queryOne } from "@/lib/db";
-import { IAM } from "@/lib/iam/prefixes";
-import { userHasIamPrefix } from "@/lib/iam/has-menu";
+import { formatDateTime } from "@/lib/format";
 import {
   buildReportQuery,
   datasetDef,
@@ -18,29 +17,9 @@ import {
   type ReportDefinition,
 } from "./report-builder";
 
-/** Gate: siapa pun yang di-grant menu crm.reports lewat IAM. */
-export async function requireReportUser(): Promise<
-  { error: NextResponse; user: null; scope: null } | { error: null; user: ApiUser; scope: UserScope | null }
-> {
-  const user = await getApiUser();
-  if (!user) {
-    return { error: NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 }), user: null, scope: null };
-  }
-  if (!(await userHasIamPrefix(user.id, user.role, IAM.crmReports))) {
-    return { error: NextResponse.json({ success: false, error: "Insufficient permissions" }, { status: 403 }), user: null, scope: null };
-  }
-  return { error: null, user, scope: await getApiUserScope() };
-}
-
 /** Hanya admin/super admin yang boleh mengubah report bersama, dashboard default & jadwal. */
 export function canManageShared(user: ApiUser): boolean {
   return user.role === "super_admin" || user.role === "admin";
-}
-
-/** company_id baris baru: super_admin tanpa scope → NULL (global). */
-export function reportCompanyId(user: ApiUser, scope: UserScope | null): string | null {
-  if (user.role === "super_admin" && !scope?.companyId) return null;
-  return scope?.companyId ?? null;
 }
 
 /** Baris yang boleh dilihat: global + company user, dan bukan report privat orang lain. */
@@ -158,7 +137,7 @@ export function buildReportSheets(
     ["Periode", definition.date_preset === "custom" ? `${definition.date_from ?? "?"} s/d ${definition.date_to ?? "?"}` : definition.date_preset],
     ["Mode", result.grouped ? "Agregasi" : "Tabel"],
     ["Jumlah baris", result.row_count],
-    ["Dibuat", generatedAt.toLocaleString("id-ID")],
+    ["Dibuat", formatDateTime(generatedAt)],
   ];
   if (result.truncated) info.push(["Catatan", `Dipotong pada batas ${definition.limit} baris`]);
   return [

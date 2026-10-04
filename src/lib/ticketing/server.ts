@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { getApiUser } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import {
   getApiUserScope,
   importBusinessIds,
@@ -7,65 +6,7 @@ import {
 } from "@/lib/api/scope";
 import { query } from "@/lib/db";
 import { IAM } from "@/lib/iam/prefixes";
-import { userHasIamPrefix } from "@/lib/iam/has-menu";
 import type { UserRole } from "@/types";
-
-/** @deprecated Gate memakai menu IAM. Konstanta tetap agar call site lama compile. */
-export const TICKETING_ADMIN_ROLES: UserRole[] = ["super_admin"];
-export const TICKETING_OPERATOR_ROLES: UserRole[] = [
-  "super_admin",
-  "pos_supervisor",
-  "pos",
-];
-
-export type TicketingUser = { id: string; role: UserRole };
-
-function ticketingMenusForAccess(access: readonly string[]): readonly string[] {
-  if (access.some((item) => item.includes(".") || item === "ticketing")) {
-    return access;
-  }
-  if (access.includes("pos")) return IAM.ticketingOperator;
-  if (access.includes("pos_supervisor")) return IAM.ticketingReports;
-  return IAM.ticketingAdmin;
-}
-
-/**
- * Guard modul Ticketing via grant IAM (bukan daftar role).
- * Argumen role lama di-map ke prefix menu agar 44 route tidak diubah satu-satu.
- */
-export async function requireTicketingRole(
-  access: readonly string[] = TICKETING_ADMIN_ROLES
-): Promise<
-  { error: NextResponse; user: null } | { error: null; user: TicketingUser }
-> {
-  const user = await getApiUser();
-  if (!user) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      ),
-      user: null,
-    };
-  }
-  const prefixes = ticketingMenusForAccess(access);
-  if (!(await userHasIamPrefix(user.id, user.role, prefixes))) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Insufficient permissions" },
-        { status: 403 }
-      ),
-      user: null,
-    };
-  }
-  return { error: null, user: { id: user.id, role: user.role } };
-}
-
-export const requireTicketingAdmin = () =>
-  requireTicketingRole(TICKETING_ADMIN_ROLES);
-
-export const SEASON_KINDS = ["regular", "high"] as const;
-export type SeasonKind = (typeof SEASON_KINDS)[number];
 
 export const BAND_STATUSES = [
   "tersedia",
@@ -79,6 +20,9 @@ export const BAND_STATUSES = [
 export const RE_ENTRY_POLICIES = ["sekali-masuk", "bebas-keluar-masuk"] as const;
 
 export const PAYMENT_MODES = ["postpaid", "prepaid"] as const;
+
+/** Metode uang fisik yang diterima loket/kasir — konsisten dengan POS. */
+export const CASH_METHODS = ["cash", "qris", "card"] as const;
 
 /**
  * Venue untuk data ticketing: scope bisnis user dulu, lalu fallback venue
@@ -111,44 +55,31 @@ export async function resolveTicketingVenue(scope: UserScope | null): Promise<{
   return { companyId, branchId };
 }
 
-/** Response 400 standar bila venue belum bisa di-resolve. */
-export function venueNotConfiguredResponse(): NextResponse {
-  return NextResponse.json(
-    {
-      success: false,
-      error:
-        "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user",
-    },
-    { status: 400 }
-  );
-}
+const VENUE_NOT_CONFIGURED =
+  "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user";
 
 export type TicketingContext = {
-  user: TicketingUser;
+  user: { id: string; role: UserRole };
   companyId: string;
   branchId: string;
 };
 
 /**
  * Guard + resolusi venue sekali jalan untuk route ticketing:
- * role → scope bisnis → venue (fail-closed bila venue tak ter-resolve).
- * Default role admin (Fase A); route operasional Fase B mengoper
- * TICKETING_OPERATOR_ROLES.
+ * grant menu IAM → scope bisnis → venue (fail-closed bila venue tak
+ * ter-resolve). Default menu admin (Master Ticket, Pengaturan); route
+ * operasional mengoper IAM.ticketingOperator, laporan/void
+ * IAM.ticketingReports. Melempar ApiError 401/403/400.
  */
-export async function requireTicketingContext(
-  roles: UserRole[] = TICKETING_ADMIN_ROLES
-): Promise<
-  { error: NextResponse; ctx: null } | { error: null; ctx: TicketingContext }
-> {
-  const { error, user } = await requireTicketingRole(roles);
-  if (error) return { error, ctx: null };
-
-  const scope = await getApiUserScope();
-  const { companyId, branchId } = await resolveTicketingVenue(scope);
-  if (!companyId || !branchId) {
-    return { error: venueNotConfiguredResponse(), ctx: null };
-  }
-  return { error: null, ctx: { user, companyId, branchId } };
+export async function ticketingContext(
+  menus: readonly string[] = IAM.ticketingAdmin
+): Promise<TicketingContext> {
+  const user = await requireIamMenuPrefix(menus);
+  const { companyId, branchId } = await resolveTicketingVenue(
+    await getApiUserScope()
+  );
+  if (!companyId || !branchId) throw ApiError.badRequest(VENUE_NOT_CONFIGURED);
+  return { user: { id: user.id, role: user.role }, companyId, branchId };
 }
 
 /** Normalisasi UID NFC dari reader/wedge: hex uppercase tanpa separator. */
@@ -161,4 +92,26 @@ const MIN_NFC_UID_LENGTH = 8;
 /** Valid bila hasil normalisasi masih layak jadi UID kartu (≥ 4 byte hex). */
 export function isValidNfcUid(uid: string): boolean {
   return uid.length >= MIN_NFC_UID_LENGTH && uid.length <= 64;
+}
+
+/** Normalisasi + validasi satu UID; melempar 400 dengan pesan pemanggil. */
+export function requireNfcUid(raw: string, message = "UID gelang tidak valid"): string {
+  const uid = normalizeNfcUid(raw);
+  if (!isValidNfcUid(uid)) throw ApiError.badRequest(message);
+  return uid;
+}
+
+/**
+ * Normalisasi sekumpulan UID yang di-tap bersamaan (registrasi/redeem):
+ * semua harus valid dan tidak ada yang di-tap dua kali.
+ */
+export function requireDistinctNfcUids(raws: readonly string[]): string[] {
+  const uids = raws.map(normalizeNfcUid);
+  if (uids.some((uid) => !isValidNfcUid(uid))) {
+    throw ApiError.badRequest("Ada UID gelang yang tidak valid");
+  }
+  if (new Set(uids).size !== uids.length) {
+    throw ApiError.badRequest("Ada gelang yang di-tap dua kali");
+  }
+  return uids;
 }

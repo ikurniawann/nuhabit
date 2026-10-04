@@ -24,7 +24,8 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { challengePhase, CHALLENGE_METRIC_LABEL } from "@/lib/crm/engagement/rules";
 import { cn } from "@/lib/utils";
-import { angka, engagementApi, fromLocalInput, rupiah, toLocalInput, waktu, type Challenge } from "../api";
+import { engagementApi, fromLocalInput, toLocalInput, waktu, type Challenge } from "../api";
+import { formatNumber, formatRupiah } from "@/lib/format";
 import { Field, TableNote, TEXTAREA } from "./shared";
 
 const CHALLENGES_KEY = ["crm-engagement", "challenges"];
@@ -36,10 +37,10 @@ const PHASE_BADGE = {
 } as const;
 
 const formatTarget = (c: Pick<Challenge, "metric" | "target">) =>
-  c.metric === "spend" ? rupiah(c.target) : `${angka(c.target)} kunjungan`;
+  c.metric === "spend" ? formatRupiah(c.target) : `${formatNumber(c.target)} kunjungan`;
 
 function rewardText(c: Pick<Challenge, "reward_xp" | "reward_ark_idr">): string {
-  const parts = [c.reward_xp > 0 && `${angka(c.reward_xp)} XP`, c.reward_ark_idr > 0 && `${rupiah(c.reward_ark_idr)} ARK`];
+  const parts = [c.reward_xp > 0 && `${formatNumber(c.reward_xp)} XP`, c.reward_ark_idr > 0 && `${formatRupiah(c.reward_ark_idr)} ARK`];
   return parts.filter(Boolean).join(" + ") || "Tanpa hadiah";
 }
 
@@ -68,16 +69,16 @@ export function ChallengesPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Sedang berjalan" value={angka(running.length)} icon={<Flag />} tone="ink" />
+        <StatCard label="Sedang berjalan" value={formatNumber(running.length)} icon={<Flag />} tone="ink" />
         <StatCard
           label="Peserta aktif"
-          value={angka(running.reduce((s, c) => s + c.participant_count, 0))}
+          value={formatNumber(running.reduce((s, c) => s + c.participant_count, 0))}
           unit="member"
           icon={<Users />}
         />
         <StatCard
           label="Sudah menuntaskan"
-          value={angka(rows.reduce((s, c) => s + c.completed_count, 0))}
+          value={formatNumber(rows.reduce((s, c) => s + c.completed_count, 0))}
           unit="member"
           icon={<Trophy />}
           tone="success"
@@ -119,8 +120,8 @@ export function ChallengesPage() {
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">{rewardText(c)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {angka(c.participant_count)}
-                      <span className="block text-xs text-success">{angka(c.completed_count)} tuntas</span>
+                      {formatNumber(c.participant_count)}
+                      <span className="block text-xs text-success">{formatNumber(c.completed_count)} tuntas</span>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -324,7 +325,7 @@ function ParticipantsDialog({ challenge, onClose }: { challenge: Challenge; onCl
                     <TableCell className="min-w-[10rem]">
                       <div className="flex items-center justify-between gap-2 text-xs">
                         <span className="tabular-nums">
-                          {challenge.metric === "spend" ? rupiah(p.value) : angka(p.value)}
+                          {challenge.metric === "spend" ? formatRupiah(p.value) : formatNumber(p.value)}
                         </span>
                         {p.rewarded_at ? (
                           <Badge variant="success">Hadiah terkirim</Badge>

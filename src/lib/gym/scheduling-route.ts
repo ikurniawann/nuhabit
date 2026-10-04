@@ -1,36 +1,8 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePosMenu } from "@/lib/api/auth";
 import { memberError, withMemberSession } from "@/lib/member-portal/route";
 import { SchedulingError } from "./booking-server";
 
-export const ok = (data: unknown) => NextResponse.json({ success: true, data });
-export const fail = (error: string, status = 400) => NextResponse.json({ success: false, error }, { status });
-
 export const uuid = z.string().uuid();
-
-/**
- * Bungkus handler API staf jadwal gym: gerbang menu IAM, 400 untuk zod,
- * SchedulingError → pesannya + status 4xx, galat lain → 500 dengan pesan aman.
- */
-export function schedulingRoute<A extends unknown[]>(
-  prefixes: readonly string[],
-  failMessage: string,
-  handler: (userId: string, ...args: A) => Promise<Response>
-) {
-  return async (...args: A): Promise<Response> => {
-    const guard = await requirePosMenu(prefixes);
-    if (guard.error) return guard.error;
-    try {
-      return await handler(guard.userId, ...args);
-    } catch (error) {
-      if (error instanceof SchedulingError) return fail(error.message, error.status);
-      if (error instanceof z.ZodError) return fail("Data tidak valid");
-      console.error(`[gym-scheduling] ${failMessage}:`, error);
-      return fail(failMessage, 500);
-    }
-  };
-}
 
 /** Versi portal member: sesi member wajib, SchedulingError → pesan untuk member. */
 export function memberSchedulingRoute<A extends unknown[]>(

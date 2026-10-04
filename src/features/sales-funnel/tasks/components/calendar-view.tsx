@@ -1,5 +1,6 @@
 "use client";
 
+import { formatTime } from "@/lib/format";
 import { useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,7 @@ const MODES: Array<{ value: CalendarMode; label: string }> = [
   { value: "month", label: "Bulan" },
 ];
 
-function timeLabel(iso: string | null): string {
-  if (!iso) return "";
-  return new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-}
+const timeLabel = (iso: string | null) => formatTime(iso, "");
 
 function TaskChip({ task, onClick }: { task: SalesTask; onClick: () => void }) {
   const done = task.status === "done" || task.status === "cancelled";

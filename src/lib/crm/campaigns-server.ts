@@ -1,3 +1,4 @@
+import "server-only";
 // EPIC-033 — sisi server kampanye WA: preview segmen, build antrean
 // penerima (klaim-dulu, exclude opt-out), dan konsumsi antrean oleh
 // watcher. Keputusan owner 26 Jul: master switch default MATI — semua

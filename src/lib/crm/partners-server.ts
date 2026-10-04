@@ -1,3 +1,4 @@
+import "server-only";
 import { createHash } from "crypto";
 import { getPool } from "@/lib/db";
 import { createPgClient } from "@/lib/pg/create-client";

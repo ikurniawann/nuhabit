@@ -8,7 +8,7 @@
 // Redesign 23 Jul: disamakan dengan wizard ala Airbnb — bg putih, heading
 // besar rata kiri, kartu rounded-3xl ber-shadow lembut, CTA rose.
 
-import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
   BadgeCheck,
@@ -18,98 +18,75 @@ import {
   TicketCheck,
   TimerOff,
 } from "lucide-react";
+import { formatDateLong, formatDateTime, formatRupiah } from "@/lib/format";
+import { useBookingStatus } from "./queries";
 
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-
-const formatDateLong = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-const formatDateTime = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-interface BookingItem {
-  product_name: string;
-  variant_name: string;
-  qty: number;
-  unit_price: number;
-  season_kind: string;
-  subtotal: number;
-}
-
-interface BookingStatusData {
-  booking_code: string;
-  visit_date: string;
-  customer_name: string;
-  status: string;
-  total: number;
-  /** EPIC-032 B2 — potongan promo (0 = tanpa promo) & jumlah dibayar. */
-  discount_amount: number;
-  promo_code: string | null;
-  payable: number;
-  /** EPIC-032 D2 — hadiah: nama penerima (null = bukan hadiah). */
-  gift_recipient_name: string | null;
-  /** EPIC-031 D — jam slot (null = sepanjang hari). */
-  slot_label: string | null;
-  slot_start_time: string | null;
-  slot_end_time: string | null;
-  invoice_url: string | null;
-  expires_at: string | null;
-  paid_at: string | null;
-  used_at: string | null;
-  items: BookingItem[];
-  guests: { guest_name: string; variant_name: string }[];
-}
-
-const POLL_MS = 10_000;
+const STATUS_VIEW: Record<
+  string,
+  {
+    label: string;
+    badge: string;
+    icon: ReactNode;
+    title: string;
+    subtitle: string;
+  }
+> = {
+  "menunggu-bayar": {
+    label: "Menunggu Pembayaran",
+    badge: "bg-amber-100 text-amber-800",
+    icon: <Clock3 className="h-4 w-4" />,
+    title: "Selesaikan pembayaranmu",
+    subtitle:
+      "Booking sudah dibuat — lakukan pembayaran sebelum batas waktu habis.",
+  },
+  terbayar: {
+    label: "Terbayar",
+    badge: "bg-emerald-100 text-emerald-800",
+    icon: <BadgeCheck className="h-4 w-4" />,
+    title: "Pembayaran berhasil! 🎉",
+    subtitle:
+      "Tunjukkan QR di bawah ke petugas loket pada tanggal kunjungan.",
+  },
+  digunakan: {
+    label: "Sudah Digunakan",
+    badge: "bg-blue-100 text-blue-800",
+    icon: <TicketCheck className="h-4 w-4" />,
+    title: "Tiket sudah digunakan",
+    subtitle: "Booking ini sudah ditukar di loket. Selamat bermain!",
+  },
+  kedaluwarsa: {
+    label: "Kedaluwarsa",
+    badge: "bg-gray-200 text-gray-600",
+    icon: <TimerOff className="h-4 w-4" />,
+    title: "Booking kedaluwarsa",
+    subtitle: "Batas waktu pembayaran terlewati. Silakan buat booking baru.",
+  },
+  dibatalkan: {
+    label: "Dibatalkan",
+    badge: "bg-red-100 text-red-700",
+    icon: <CircleSlash className="h-4 w-4" />,
+    title: "Booking dibatalkan",
+    subtitle:
+      "Bila sudah terlanjur membayar, hubungi petugas venue untuk proses pengembalian.",
+  },
+  hangus: {
+    label: "Hangus",
+    badge: "bg-orange-100 text-orange-700",
+    icon: <TimerOff className="h-4 w-4" />,
+    title: "Booking hangus",
+    subtitle:
+      "Masa berlaku tiket sudah lewat. Hubungi petugas venue bila ada kendala.",
+  },
+};
 
 interface BookingStatusPageProps {
   token: string;
 }
 
 export function BookingStatusPage({ token }: BookingStatusPageProps) {
-  const [booking, setBooking] = useState<BookingStatusData | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { data: booking, isPending } = useBookingStatus(token);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/public/booking/status/${token}`, {
-        cache: "no-store",
-      });
-      if (res.status === 404) {
-        setNotFound(true);
-        return;
-      }
-      const body = await res.json();
-      if (res.ok && body.success) setBooking(body.data);
-    } catch {
-      // jaringan — biarkan poll berikutnya mencoba lagi
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  useEffect(() => {
-    if (booking?.status !== "menunggu-bayar") return;
-    const timer = setInterval(load, POLL_MS);
-    return () => clearInterval(timer);
-  }, [booking?.status, load]);
-
-  if (loading) {
+  if (isPending) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-white">
         <Loader2 className="h-7 w-7 animate-spin text-rose-500" />
@@ -117,7 +94,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
     );
   }
 
-  if (notFound || !booking) {
+  if (!booking) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-white px-6">
         <div className="max-w-sm text-center">
@@ -134,64 +111,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
     );
   }
 
-  const statusView: Record<
-    string,
-    {
-      label: string;
-      badge: string;
-      icon: React.ReactNode;
-      title: string;
-      subtitle: string;
-    }
-  > = {
-    "menunggu-bayar": {
-      label: "Menunggu Pembayaran",
-      badge: "bg-amber-100 text-amber-800",
-      icon: <Clock3 className="h-4 w-4" />,
-      title: "Selesaikan pembayaranmu",
-      subtitle:
-        "Booking sudah dibuat — lakukan pembayaran sebelum batas waktu habis.",
-    },
-    terbayar: {
-      label: "Terbayar",
-      badge: "bg-emerald-100 text-emerald-800",
-      icon: <BadgeCheck className="h-4 w-4" />,
-      title: "Pembayaran berhasil! 🎉",
-      subtitle:
-        "Tunjukkan QR di bawah ke petugas loket pada tanggal kunjungan.",
-    },
-    digunakan: {
-      label: "Sudah Digunakan",
-      badge: "bg-blue-100 text-blue-800",
-      icon: <TicketCheck className="h-4 w-4" />,
-      title: "Tiket sudah digunakan",
-      subtitle: "Booking ini sudah ditukar di loket. Selamat bermain!",
-    },
-    kedaluwarsa: {
-      label: "Kedaluwarsa",
-      badge: "bg-gray-200 text-gray-600",
-      icon: <TimerOff className="h-4 w-4" />,
-      title: "Booking kedaluwarsa",
-      subtitle: "Batas waktu pembayaran terlewati. Silakan buat booking baru.",
-    },
-    dibatalkan: {
-      label: "Dibatalkan",
-      badge: "bg-red-100 text-red-700",
-      icon: <CircleSlash className="h-4 w-4" />,
-      title: "Booking dibatalkan",
-      subtitle:
-        "Bila sudah terlanjur membayar, hubungi petugas venue untuk proses pengembalian.",
-    },
-    hangus: {
-      label: "Hangus",
-      badge: "bg-orange-100 text-orange-700",
-      icon: <TimerOff className="h-4 w-4" />,
-      title: "Booking hangus",
-      subtitle:
-        "Masa berlaku tiket sudah lewat. Hubungi petugas venue bila ada kendala.",
-    },
-  };
-  const view = statusView[booking.status] ?? statusView["menunggu-bayar"];
+  const view = STATUS_VIEW[booking.status] ?? STATUS_VIEW["menunggu-bayar"];
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col bg-white md:max-w-2xl">
@@ -249,7 +169,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
                 href={booking.invoice_url}
                 className="mt-4 block w-full rounded-xl bg-rose-500 py-3.5 text-center text-[15px] font-semibold text-white transition-colors hover:bg-rose-600"
               >
-                Bayar Sekarang — {formatRp(booking.payable ?? booking.total)}
+                Bayar Sekarang — {formatRupiah(booking.payable ?? booking.total)}
               </a>
             )}
             <p className="mt-3 text-center text-xs text-gray-400">
@@ -315,7 +235,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
                   {item.product_name} — {item.variant_name} × {item.qty}
                 </span>
                 <span className="font-medium tabular-nums text-gray-900">
-                  {formatRp(item.subtotal)}
+                  {formatRupiah(item.subtotal)}
                 </span>
               </div>
             ))}
@@ -345,7 +265,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
               <>
                 <div className="flex justify-between text-sm text-gray-500">
                   <span>Subtotal</span>
-                  <span className="tabular-nums">{formatRp(booking.total)}</span>
+                  <span className="tabular-nums">{formatRupiah(booking.total)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-emerald-600">
                   <span>
@@ -353,7 +273,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
                     {booking.promo_code ? ` (${booking.promo_code})` : ""}
                   </span>
                   <span className="tabular-nums">
-                    −{formatRp(booking.discount_amount)}
+                    −{formatRupiah(booking.discount_amount)}
                   </span>
                 </div>
               </>
@@ -363,7 +283,7 @@ export function BookingStatusPage({ token }: BookingStatusPageProps) {
                 {booking.discount_amount > 0 ? "Total Bayar" : "Total"}
               </span>
               <span className="text-base font-semibold tabular-nums text-gray-900">
-                {formatRp(
+                {formatRupiah(
                   booking.discount_amount > 0
                     ? (booking.payable ?? booking.total)
                     : booking.total

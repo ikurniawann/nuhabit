@@ -5,13 +5,12 @@ import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/solid";
 import { normalizeNfcUid } from "@/features/pos/nfc";
 import { usePosNfcBridge } from "@/features/pos/nfc/use-pos-nfc-bridge";
 import { usePosNfcWebViewIngest } from "@/features/pos/nfc/use-pos-nfc-webview-ingest";
+import { formatRupiah } from "@/lib/format";
 import { gateTap } from "../api";
 import type { GateTapResponse } from "../types";
 
 const RESULT_RESET_MS = 6000;
 const TAP_DEBOUNCE_MS = 1200;
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 interface TapLogItem {
   at: string;
@@ -147,7 +146,7 @@ export function GatePage() {
           ) : null}
           {current.ok && current.charged_amount ? (
             <p className="mt-2 text-xl text-white/80">
-              Tiket {formatRp(current.charged_amount)} tercatat di tab
+              Tiket {formatRupiah(current.charged_amount)} tercatat di tab
             </p>
           ) : null}
           {!current.ok && current.reason ? (

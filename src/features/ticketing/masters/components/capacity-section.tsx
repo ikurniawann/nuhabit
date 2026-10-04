@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { formatDate, formatNumber } from "@/lib/format";
+import { addDaysIso } from "@/lib/ticketing/calendar";
+import { todayIso } from "@/lib/ticketing/ui-dates";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import {
   useCapacityDates,
   useCreateCapacityDate,
@@ -38,27 +41,11 @@ const EMPTY_OVERRIDE: OverrideForm = {
   capacity: "",
 };
 
-const formatDateId = (iso: string) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-const todayIso = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
-    new Date()
-  );
-
-const addDaysIso = (iso: string, days: number) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-};
-
 export function CapacitySection() {
   const settingsQuery = useTicketingSettings();
   const capacityQuery = useCapacityDates();
   const updateSettings = useUpdateSettings();
+  const [draft, setDraft] = useState<OverrideForm>(EMPTY_OVERRIDE);
   const createMutation = useCreateCapacityDate(() => setDraft(EMPTY_OVERRIDE));
   const updateMutation = useUpdateCapacityDate();
   const deleteMutation = useDeleteCapacityDate();
@@ -75,7 +62,8 @@ export function CapacitySection() {
   // Peringatan LIVE (utang A3, keputusan tunda ke Fase C): bila kapasitas
   // baru < okupansi tertinggi 90 hari ke depan → transaksi existing aman,
   // tapi ada tanggal yang langsung berstatus penuh
-  const occupancyQuery = useOccupancyRange(todayIso(), addDaysIso(todayIso(), 90));
+  const today = todayIso();
+  const occupancyQuery = useOccupancyRange(today, addDaysIso(today, 90));
   const worstUpcoming = (() => {
     const days = occupancyQuery.data ?? [];
     let worst: { date: string; used: number } | null = null;
@@ -89,7 +77,6 @@ export function CapacitySection() {
   const capacityBelowOccupancy =
     capacityNum !== null && worstUpcoming !== null && capacityNum < worstUpcoming.used;
 
-  const [draft, setDraft] = useState<OverrideForm>(EMPTY_OVERRIDE);
   const draftCapacityNum = draft.capacity.trim() === "" ? null : Number(draft.capacity);
   const draftRangeInvalid =
     draft.start_date !== "" && draft.end_date !== "" && draft.end_date < draft.start_date;
@@ -165,7 +152,7 @@ export function CapacitySection() {
                   </>
                 ) : (
                   <>
-                    Maksimum {Number(capacityValue).toLocaleString("id-ID")}{" "}
+                    Maksimum {formatNumber(capacityValue)}{" "}
                     orang/hari (booking online yang belum kedaluwarsa +
                     pengunjung walk-in). Tanggal penuh otomatis ditutup di
                     kalender booking & loket.
@@ -175,8 +162,8 @@ export function CapacitySection() {
             </div>
             {capacityBelowOccupancy && worstUpcoming ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                Perhatian: okupansi {formatDateId(worstUpcoming.date)} sudah{" "}
-                {worstUpcoming.used.toLocaleString("id-ID")} orang — di atas
+                Perhatian: okupansi {formatDate(worstUpcoming.date)} sudah{" "}
+                {formatNumber(worstUpcoming.used)} orang — di atas
                 kapasitas yang akan disimpan. Booking existing tidak
                 dibatalkan, tapi tanggal tersebut langsung berstatus penuh.
               </p>
@@ -270,14 +257,14 @@ export function CapacitySection() {
                         </Badge>
                       ) : (
                         <Badge className="ml-2 border-0 bg-blue-100 font-normal text-blue-700">
-                          {row.capacity.toLocaleString("id-ID")} orang
+                          {formatNumber(row.capacity)} orang
                         </Badge>
                       )}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {formatDateId(row.start_date)}
+                      {formatDate(row.start_date)}
                       {row.end_date !== row.start_date
-                        ? ` – ${formatDateId(row.end_date)}`
+                        ? ` – ${formatDate(row.end_date)}`
                         : ""}
                     </p>
                   </div>

@@ -11,30 +11,22 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TableRow } from "@/components/ui/table";
+import { formatDateTime, formatRupiah } from "@/lib/format";
+import { addDaysIso } from "@/lib/ticketing/calendar";
+import { todayIso } from "@/lib/ticketing/ui-dates";
 import {
   useReportOccupancy,
   useTicketingReport,
   type ReportAggRow,
 } from "../queries";
 
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-
+// Label hari tabel harian: nama hari membantu membaca pola akhir pekan
 const formatDateShort = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
     weekday: "short",
     day: "numeric",
     month: "short",
   });
-
-const todayIso = () =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
-    new Date()
-  );
-
-const addDaysIso = (iso: string, days: number) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-};
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "Tunai",
@@ -90,7 +82,7 @@ function AggTable({
                 {row.qty}×
               </td>
               <td className="py-1.5 text-right font-medium tabular-nums text-gray-900">
-                {formatRp(row.net)}
+                {formatRupiah(row.net)}
               </td>
             </tr>
           ))}
@@ -220,42 +212,42 @@ export function TicketingReportsPage() {
             />
             <StatCard
               label="Revenue Tiket (net)"
-              value={formatRp(report.summary.tiket_net)}
+              value={formatRupiah(report.summary.tiket_net)}
               hint={
                 report.summary.denda_net > 0
-                  ? `+ denda ${formatRp(report.summary.denda_net)}`
+                  ? `+ denda ${formatRupiah(report.summary.denda_net)}`
                   : undefined
               }
             />
             {report.summary.diskon_promo > 0 && (
               <StatCard
                 label="Potongan Promo"
-                value={`−${formatRp(report.summary.diskon_promo)}`}
+                value={`−${formatRupiah(report.summary.diskon_promo)}`}
                 hint="Diskon kode promo terpakai saat redeem — bukan uang keluar; revenue tiket di atas masih gross"
               />
             )}
             <StatCard
               label="Revenue F&B on-Tab (net)"
-              value={formatRp(report.summary.fnb_net)}
+              value={formatRupiah(report.summary.fnb_net)}
               hint="Penjualan F&B via gelang — di luar penjualan kasir langsung"
             />
             <StatCard
               label="Uang Masuk"
-              value={formatRp(report.summary.uang_masuk)}
+              value={formatRupiah(report.summary.uang_masuk)}
               hint={
                 report.summary.refund_keluar > 0
-                  ? `refund keluar ${formatRp(report.summary.refund_keluar)}`
+                  ? `refund keluar ${formatRupiah(report.summary.refund_keluar)}`
                   : "deposit + pembayaran (semua metode)"
               }
             />
             <StatCard
               label="Titipan Booking"
-              value={formatRp(report.booking.titipan_total)}
+              value={formatRupiah(report.booking.titipan_total)}
               hint={`${report.booking.titipan_count} booking terbayar belum di-redeem — pendapatan diterima di muka, belum jadi revenue (keadaan saat ini)`}
             />
             <StatCard
               label="Pendapatan Hangus"
-              value={formatRp(report.booking.hangus_total)}
+              value={formatRupiah(report.booking.hangus_total)}
               hint={`${report.booking.hangus_count} booking hangus dalam rentang — terbayar tapi lewat masa berlaku redeem`}
             />
           </div>
@@ -287,13 +279,13 @@ export function TicketingReportsPage() {
                       {day.masuk_lagi}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">
-                      {formatRp(day.tiket_net)}
+                      {formatRupiah(day.tiket_net)}
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums">
-                      {formatRp(day.fnb_net)}
+                      {formatRupiah(day.fnb_net)}
                     </td>
                     <td className="px-4 py-2 text-right font-medium tabular-nums">
-                      {formatRp(day.uang_masuk)}
+                      {formatRupiah(day.uang_masuk)}
                     </td>
                   </TableRow>
                 ))}
@@ -349,7 +341,7 @@ export function TicketingReportsPage() {
                         }`}
                       >
                         {m.charge_type === "refund-deposit" ? "−" : ""}
-                        {formatRp(m.total)}
+                        {formatRupiah(m.total)}
                       </td>
                     </tr>
                   ))}
@@ -388,7 +380,7 @@ export function TicketingReportsPage() {
 
               <h3 className="mt-4 text-sm font-semibold text-gray-900">
                 Tab Menggantung ({report.hanging.count} visit ·{" "}
-                {formatRp(report.hanging.total)})
+                {formatRupiah(report.hanging.total)})
               </h3>
               <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto pr-1">
                 {report.hanging.items.map((h) => (
@@ -402,16 +394,11 @@ export function TicketingReportsPage() {
                       </p>
                       <p className="text-xs text-gray-400">
                         {h.payment_mode} ·{" "}
-                        {new Date(h.opened_at).toLocaleString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatDateTime(h.opened_at)}
                       </p>
                     </div>
                     <span className="shrink-0 font-medium tabular-nums text-amber-700">
-                      {formatRp(h.outstanding)}
+                      {formatRupiah(h.outstanding)}
                     </span>
                   </div>
                 ))}

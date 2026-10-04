@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useOwners } from "@/features/crm/advance/queries";
 import {
   DAY_NAMES, SCHEDULE_CHANNELS, SCHEDULE_CHANNEL_LABELS, SCHEDULE_FREQUENCIES, SCHEDULE_FREQUENCY_LABELS, describeSchedule,
@@ -20,9 +20,7 @@ import {
   useCreateSchedule, useDeleteSchedule, useRunScheduleNow, useSavedReports, useSchedules, useUpdateSchedule,
 } from "../queries";
 import type { ScheduleChannel, ScheduleFrequency, ScheduleInput, ScheduleRecipient, ScheduleRow } from "../types";
-
-const dateTime = (v: string | null) =>
-  v ? new Date(v).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "—";
+import { formatDateTime } from "@/lib/format";
 
 /** EPIC-050 T-4.3 — Laporan Terjadwal: kirim ringkasan report lewat WA / notifikasi. */
 export function ReportSchedulesPage() {
@@ -71,13 +69,13 @@ export function ReportSchedulesPage() {
                   <p className="font-medium text-gray-900">{s.name} <span className="text-xs font-normal text-gray-400">· {s.report_name}</span></p>
                   <p className="text-xs text-gray-500">
                     {describeSchedule(s)} · {SCHEDULE_CHANNEL_LABELS[s.channel]} · {s.recipients.length} penerima
-                    {s.is_active ? ` · berikutnya ${dateTime(s.next_run_at)}` : ""}
+                    {s.is_active ? ` · berikutnya ${formatDateTime(s.next_run_at, "—")}` : ""}
                   </p>
                   {s.last_status === "error" ? <p className="text-xs text-red-600">Gagal terakhir: {s.last_error ?? "tidak diketahui"}</p> : null}
                 </div>
                 {s.last_run_at ? (
                   <Badge className={`border-0 font-normal ${s.last_status === "error" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
-                    terakhir {dateTime(s.last_run_at)}
+                    terakhir {formatDateTime(s.last_run_at, "—")}
                   </Badge>
                 ) : null}
                 <button type="button" className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-pink-700"

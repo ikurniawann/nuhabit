@@ -9,7 +9,7 @@ import {
 import { CsvImporter } from "@/components/ui/csv-importer";
 import { useQueryClient } from "@tanstack/react-query";
 import { leadQueryKeys } from "../queries";
-import { LEAD_IMPORT_COLUMNS, LEAD_IMPORT_SAMPLE_ROWS } from "../import-config";
+import { LEAD_IMPORT_COLUMNS, LEAD_IMPORT_SAMPLE_ROWS } from "@/lib/sales-funnel/lead-import-config";
 
 interface LeadImportDialogProps {
   open: boolean;

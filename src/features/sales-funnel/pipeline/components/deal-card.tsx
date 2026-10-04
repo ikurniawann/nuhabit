@@ -6,7 +6,8 @@ import { ORG_TYPE_LABELS } from "../../leads/types";
 import {
   EVENT_TYPE_LABELS,
   daysInStage,
-  formatRupiah,
+  formatEventDate,
+  formatRupiahOrDash,
   isDealStuck,
   type SalesDeal,
 } from "../types";
@@ -18,16 +19,6 @@ const EVENT_BADGE: Record<string, string> = {
   "buyout-venue": "border-0 bg-purple-100 font-normal text-purple-700",
   lainnya: "border-0 bg-gray-100 font-normal text-gray-600",
 };
-
-function formatEventDate(deal: SalesDeal): string | null {
-  if (!deal.event_date) return null;
-  const formatted = new Date(deal.event_date).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  return `${formatted}${deal.is_event_date_fixed ? "" : " (tentatif)"}`;
-}
 
 interface DealCardProps {
   deal: SalesDeal;
@@ -82,7 +73,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
       </div>
 
       <div className="mt-2 flex items-center justify-between text-xs">
-        <span className="font-semibold text-gray-900">{formatRupiah(value)}</span>
+        <span className="font-semibold text-gray-900">{formatRupiahOrDash(value)}</span>
         {eventDate ? (
           <span className="inline-flex items-center gap-1 text-gray-500">
             <CalendarDays className="h-3 w-3" />

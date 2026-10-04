@@ -1,18 +1,14 @@
-import { z } from "zod";
-import { IAM } from "@/lib/iam/prefixes";
+import type { NextRequest } from "next/server";
+import { ApiError } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { createPgClient } from "@/lib/pg/create-client";
 import { reconcilePendingTopup } from "@/lib/pos/topup-qris-reconcile";
-import { fail, ok, walletRoute } from "@/lib/wallet/route";
+import { ok, requireWalletAdmin, uuidParam, type IdContext } from "@/lib/wallet/route";
 
 /** POST — cek ulang ke Xendit dan kredit bila sudah dibayar (logika rekonsiliasi yang sama dengan kasir). */
-export const POST = walletRoute(
-  IAM.posWallet,
-  "Gagal merekonsiliasi pembayaran",
-  async (_user, _request: Request, ctx: { params: Promise<{ id: string }> }) => {
-    const { id } = await ctx.params;
-    if (!z.string().uuid().safeParse(id).success) return fail("ID tidak valid");
-    const outcome = await reconcilePendingTopup(createPgClient(), id);
-    if (outcome.status === "not_found") return fail("Pembayaran tidak ditemukan", 404);
-    return ok(outcome);
-  }
-);
+export const POST = apiHandler(async (_request: NextRequest, ctx: IdContext) => {
+  await requireWalletAdmin();
+  const outcome = await reconcilePendingTopup(createPgClient(), await uuidParam(ctx));
+  if (outcome.status === "not_found") throw ApiError.notFound("Pembayaran tidak ditemukan");
+  return ok(outcome);
+}, "wallet.payments.reconcile.POST");

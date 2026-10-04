@@ -3,6 +3,7 @@
  * tetap memakai `min_lifetime_xp`; metrik lain memakai `threshold` dan
  * dihitung dari order lunas member. Badge `manual` hanya diberikan admin.
  */
+import { formatNumber } from "@/lib/format";
 
 export const BADGE_METRICS = ["lifetime_xp", "visits", "spend_idr", "streak_weeks", "manual"] as const;
 export type BadgeMetric = (typeof BADGE_METRICS)[number];
@@ -88,7 +89,7 @@ export function longestWeeklyStreak(weekStarts: string[]): number {
 export function describeBadgeRule(rule: BadgeRule): string {
   const threshold = badgeThreshold(rule);
   if (threshold === null) return "Diberikan manual oleh admin";
-  const n = threshold.toLocaleString("id-ID");
+  const n = formatNumber(threshold, 3);
   switch (rule.metric) {
     case "lifetime_xp":
       return `${n} lifetime XP`;

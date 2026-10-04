@@ -22,8 +22,7 @@ import { BADGE_METRICS, BADGE_METRIC_LABELS, badgeThreshold, describeBadgeRule }
 import type { Badge, BadgeForm } from "../types";
 import { useBadgesList } from "../queries";
 import { useDeleteBadge, useSaveBadge, useToggleBadge } from "../mutations";
-
-const numberFormat = new Intl.NumberFormat("id-ID");
+import { formatNumber } from "@/lib/format";
 
 const defaultForm: BadgeForm = {
   id: "",
@@ -35,10 +34,6 @@ const defaultForm: BadgeForm = {
   bonus_xp: "0",
   is_active: true,
 };
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
 
 export function CrmBadgesPage() {
   const [search, setSearch] = useState("");

@@ -8,6 +8,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
 import { readInstagramWebhookConfig } from "@/lib/instagram/client";
 import {
   SIGNATURE_HEADER,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/instagram/webhook";
 import { recordGatewayMessage } from "@/lib/whatsapp/store";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const config = await readInstagramWebhookConfig();
   if (!config) {
     return new NextResponse("Instagram belum dikonfigurasi", { status: 503 });
@@ -37,9 +38,9 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: { "Content-Type": "text/plain" },
   });
-}
+}, "crm.instagram.webhook.GET");
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const config = await readInstagramWebhookConfig();
   if (!config) {
     return new NextResponse("Instagram belum dikonfigurasi", { status: 503 });
@@ -79,4 +80,4 @@ export async function POST(request: NextRequest) {
   // Selalu 200 selama tanda tangan sah. Status non-2xx membuat Meta mengirim
   // ulang berkali-kali dan akhirnya menonaktifkan langganan webhook.
   return NextResponse.json({ received: true, stored }, { status: 200 });
-}
+}, "crm.instagram.webhook.POST");

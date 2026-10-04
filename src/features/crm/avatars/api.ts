@@ -1,14 +1,7 @@
 import type { Avatar, AvatarsListParams, AvatarsListResult, SaveAvatarPayload } from "./types";
+import { parseCrmResponse } from "../http";
 
 export type * from "./types";
-
-async function parseCrmResponse<T>(response: Response, fallbackError: string): Promise<T> {
-  const json = await response.json();
-  if (!response.ok || !json.success) {
-    throw new Error(json.error || fallbackError);
-  }
-  return json as T;
-}
 
 export function buildAvatarPayload(avatar: Avatar, overrides: Partial<Avatar> = {}): SaveAvatarPayload {
   const next = { ...avatar, ...overrides };

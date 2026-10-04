@@ -22,18 +22,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableNote } from "@/features/crm/engagement/components/shared";
-import {
-  ENTRY_LABELS,
-  STATUS_LABELS,
-  angka,
-  entryDelta,
-  rupiah,
-  signedRupiah,
-  waktu,
-  walletApi,
-  type OnlinePayment,
-  type PaymentFilters,
-} from "../api";
+import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { ENTRY_LABELS, STATUS_LABELS, entryDelta, signedRupiah, walletApi, type OnlinePayment, type PaymentFilters } from "../api";
 
 const PAYMENTS_KEY = ["wallet", "payments"];
 const ALL = "all";
@@ -67,17 +57,17 @@ export function PaymentsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Lunas" value={rupiah(paid?.amount ?? 0)} unit={`${angka(paid?.count ?? 0)} trx`} icon={<CheckCircle2 />} tone="success" />
+        <StatCard label="Lunas" value={formatRupiah(paid?.amount ?? 0)} unit={`${formatNumber(paid?.count ?? 0)} trx`} icon={<CheckCircle2 />} tone="success" />
         <StatCard
           label="Menunggu bayar"
-          value={angka(pending?.count ?? 0)}
+          value={formatNumber(pending?.count ?? 0)}
           unit="trx"
           icon={<Clock />}
           tone={pending?.count ? "warning" : "default"}
         />
         <StatCard
           label="Total transaksi"
-          value={angka((payments.data?.summary ?? []).reduce((s, r) => s + r.count, 0))}
+          value={formatNumber((payments.data?.summary ?? []).reduce((s, r) => s + r.count, 0))}
           icon={<QrCode />}
           tone="ink"
         />
@@ -159,7 +149,7 @@ function PaymentRow({ payment: p, onOpen }: { payment: OnlinePayment; onOpen: ()
           {[p.member_phone, p.source === "member" ? "Portal" : "Kasir", p.package_name].filter(Boolean).join(" · ")}
         </p>
       </TableCell>
-      <TableCell className="text-right tabular-nums">{rupiah(p.amount)}</TableCell>
+      <TableCell className="text-right tabular-nums">{formatRupiah(p.amount)}</TableCell>
       <TableCell>
         <div className="flex flex-wrap gap-1">
           <Badge variant={status.variant}>{status.label}</Badge>
@@ -168,8 +158,8 @@ function PaymentRow({ payment: p, onOpen }: { payment: OnlinePayment; onOpen: ()
         </div>
       </TableCell>
       <TableCell className="hidden md:table-cell">
-        {waktu(p.created_at)}
-        <span className="block text-xs text-muted-foreground">{p.paid_at ? `Dibayar ${waktu(p.paid_at)}` : "Belum dibayar"}</span>
+        {formatDateTime(p.created_at)}
+        <span className="block text-xs text-muted-foreground">{p.paid_at ? `Dibayar ${formatDateTime(p.paid_at)}` : "Belum dibayar"}</span>
       </TableCell>
       <TableCell className="hidden max-w-[12rem] truncate font-mono text-xs lg:table-cell">
         {p.xendit_transaction_id ?? p.reference_id ?? "—"}
@@ -198,11 +188,11 @@ function PaymentDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const rows: [string, React.ReactNode][] = p
     ? [
         ["Status", STATUS_LABELS[p.status ?? ""]?.label ?? p.status],
-        ["Nominal dibayar", rupiah(p.amount)],
+        ["Nominal dibayar", formatRupiah(p.amount)],
         ["Paket", (meta.package_name as string) ?? "Nominal bebas"],
         ["Sumber", meta.source === "member" ? "Portal member" : "Kasir"],
-        ["Dibuat", waktu(p.created_at)],
-        ["Dibayar", waktu((meta.credited_at as string) ?? null)],
+        ["Dibuat", formatDateTime(p.created_at)],
+        ["Dibayar", formatDateTime((meta.credited_at as string) ?? null)],
         ["QR Xendit", p.xendit_transaction_id ?? "—"],
         ["Payment Xendit", (meta.xendit_payment_id as string) ?? "—"],
         ["Referensi", p.reference_id ?? "—"],
@@ -218,7 +208,7 @@ function PaymentDialog({ id, onClose }: { id: string; onClose: () => void }) {
           <DialogPanelDescription>
             {detail.data?.member ? (
               <Link className="underline" href={`/dashboard/pos/wallet?member=${detail.data.member.id}`}>
-                {detail.data.member.name ?? detail.data.member.phone} · saldo {rupiah(detail.data.member.balance)}
+                {detail.data.member.name ?? detail.data.member.phone} · saldo {formatRupiah(detail.data.member.balance)}
               </Link>
             ) : (
               "Memuat…"
@@ -245,7 +235,7 @@ function PaymentDialog({ id, onClose }: { id: string; onClose: () => void }) {
                     {detail.data?.related.map((r) => (
                       <li key={r.id} className="flex justify-between gap-3">
                         <span>
-                          {ENTRY_LABELS[r.type] ?? r.type} · {waktu(r.created_at)}
+                          {ENTRY_LABELS[r.type] ?? r.type} · {formatDateTime(r.created_at)}
                         </span>
                         <span className="tabular-nums">
                           {signedRupiah(entryDelta(r))}

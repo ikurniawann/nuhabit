@@ -1,71 +1,35 @@
-import { NextRequest, NextResponse } from "next/server";
-import { successResponse } from "@/lib/api/auth";
-import { checkRateLimit, clientIpFrom } from "@/lib/public/rate-limit";
+import { NextRequest } from "next/server";
+import { ApiError, successResponse } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { resolvePublicVenue } from "@/lib/ticketing/booking-server";
+import { dateRangeError } from "@/lib/ticketing/calendar";
 import { buildAvailability } from "@/lib/ticketing/capacity-server";
-import { isValidCalendarDate } from "@/lib/ticketing/pricing";
+import { assertPublicRateLimit } from "@/lib/ticketing/rate-limit";
 
 // EPIC-031 B3 — endpoint PUBLIK (tanpa auth): peta tanggal tidak-tersedia
 // utk kalender wizard. HANYA status penuh/tutup — TANPA angka sisa/kapasitas
-// (keputusan owner 25 Jul). Tanggal tersedia diomit dari respons.
-// Indikatif saja: kebenaran final tetap guard 409 di create booking.
+// (keputusan owner 25 Jul). Indikatif: kebenaran final tetap guard 409 di
+// create booking.
 
 const MAX_RANGE_DAYS = 92;
 
-const daysBetween = (from: string, to: string) =>
-  Math.round(
-    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
-      86_400_000
-  );
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const ip = clientIpFrom(request.headers);
-  if (!checkRateLimit(`booking-availability:${ip}`, { limit: 30, windowMs: 60_000 })) {
-    return NextResponse.json(
-      { success: false, error: "Terlalu banyak permintaan — coba lagi sebentar" },
-      { status: 429 }
-    );
-  }
-
-  try {
+export const GET = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
+    assertPublicRateLimit(request.headers, "booking-availability", { limit: 30, windowMs: 60_000 });
     const { slug } = await params;
     const from = request.nextUrl.searchParams.get("from") ?? "";
     const to = request.nextUrl.searchParams.get("to") ?? "";
-    if (!isValidCalendarDate(from) || !isValidCalendarDate(to) || to < from) {
-      return NextResponse.json(
-        { success: false, error: "Rentang tanggal tidak valid" },
-        { status: 400 }
-      );
-    }
-    if (daysBetween(from, to) > MAX_RANGE_DAYS) {
-      return NextResponse.json(
-        { success: false, error: `Rentang maksimum ${MAX_RANGE_DAYS} hari` },
-        { status: 400 }
-      );
-    }
+    const rangeError = dateRangeError(from, to, MAX_RANGE_DAYS);
+    if (rangeError) throw ApiError.badRequest(rangeError);
 
     const venue = await resolvePublicVenue(slug);
-    if (!venue) {
-      return NextResponse.json(
-        { success: false, error: "Not found" },
-        { status: 404 }
-      );
-    }
-
+    if (!venue) throw ApiError.notFound("Not found");
     const dates = await buildAvailability(
       { companyId: venue.companyId, branchId: venue.branchId },
       from,
       to
     );
     return successResponse({ dates });
-  } catch (err) {
-    console.error("[booking] availability error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat ketersediaan" },
-      { status: 500 }
-    );
-  }
-}
+  },
+  "public.booking.availability.GET"
+);

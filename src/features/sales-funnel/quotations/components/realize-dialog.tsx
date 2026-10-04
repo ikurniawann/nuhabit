@@ -1,5 +1,6 @@
 "use client";
 
+import { formatNumber } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,11 +68,11 @@ export function RealizeDialog({
                       ) : null}
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-gray-900">
-                      {shortage.needed.toLocaleString("id-ID")}
+                      {formatNumber(shortage.needed, 2)}
                       {shortage.satuan ? ` ${shortage.satuan}` : ""}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold text-red-600">
-                      {shortage.available.toLocaleString("id-ID")}
+                      {formatNumber(shortage.available, 2)}
                       {shortage.satuan ? ` ${shortage.satuan}` : ""}
                     </td>
                   </tr>

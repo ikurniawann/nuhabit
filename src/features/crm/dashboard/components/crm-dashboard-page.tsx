@@ -17,33 +17,10 @@ import {
 import Link from "next/link";
 import type { CrmCustomer } from "../types";
 import { useCrmDashboard } from "../queries";
-
-const numberFormat = new Intl.NumberFormat("id-ID");
-const currencyFormat = new Intl.NumberFormat("id-ID", {
-  style: "currency",
-  currency: "IDR",
-  maximumFractionDigits: 0,
-});
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
-
-function formatCurrency(value: number) {
-  return currencyFormat.format(value || 0);
-}
+import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 
 function tierLabel(tier: string) {
   return tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Regular";
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 }
 
 // Panel konfigurasi tier & XP pindah permanen ke /dashboard/crm/settings
@@ -64,7 +41,7 @@ export function CrmDashboardPage() {
       { label: "Customers", value: formatNumber(stats?.totalCustomers ?? 0), icon: UsersRound, tone: "text-sky-700 bg-sky-50" },
       { label: "Member Kartu", value: formatNumber(stats?.cardMembers ?? 0), icon: CreditCard, tone: "text-emerald-700 bg-emerald-50" },
       { label: "Member Terdaftar", value: formatNumber(stats?.registeredMembers ?? 0), icon: UserRound, tone: "text-cyan-700 bg-cyan-50" },
-      { label: "Saldo ARK Beredar", value: formatCurrency(stats?.arkOutstanding ?? 0), icon: Coins, tone: "text-amber-700 bg-amber-50" },
+      { label: "Saldo ARK Beredar", value: formatRupiah(stats?.arkOutstanding ?? 0), icon: Coins, tone: "text-amber-700 bg-amber-50" },
       { label: "XP Rules", value: formatNumber(stats?.xpRuleCount ?? 0), icon: Sparkles, tone: "text-violet-700 bg-violet-50" },
       { label: "Tiers", value: formatNumber(stats?.tierCount ?? 0), icon: Trophy, tone: "text-rose-700 bg-rose-50" },
     ],
@@ -165,7 +142,7 @@ export function CrmDashboardPage() {
             title="Top Spender Transaksi"
             valueLabel="Spend"
             rows={dashboardData?.topTransactionSpenders ?? []}
-            getValue={(customer) => formatCurrency(customer.total_spent)}
+            getValue={(customer) => formatRupiah(customer.total_spent)}
           />
           <ArkCoinsTable rows={dashboardData?.topArkSpenders ?? []} />
         </section>

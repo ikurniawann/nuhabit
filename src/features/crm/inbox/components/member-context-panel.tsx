@@ -1,17 +1,13 @@
 "use client";
 
 import { Crown, ShoppingBag, Sparkles, Ticket, User, Wallet } from "lucide-react";
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { MemberContext } from "../types";
 
 /**
  * Panel konteks member di samping chat — pembeda utama inbox ini: agent
  * langsung tahu siapa yang komplain berikut riwayat belanjanya.
  */
-
-const rupiah = (value: number) => `Rp ${Math.round(value).toLocaleString("id-ID")}`;
-const angka = (value: number) => Math.round(value).toLocaleString("id-ID");
-const tanggal = (iso: string) =>
-  new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
 
 export function MemberContextPanel({ member }: { member: MemberContext | null }) {
   if (!member) {
@@ -40,8 +36,8 @@ export function MemberContextPanel({ member }: { member: MemberContext | null })
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        <StatBox icon={Sparkles} label="XP" value={angka(member.total_xp)} />
-        <StatBox icon={Wallet} label="ARK Coin" value={angka(member.ark_coin_balance)} />
+        <StatBox icon={Sparkles} label="XP" value={formatNumber(member.total_xp)} />
+        <StatBox icon={Wallet} label="ARK Coin" value={formatNumber(member.ark_coin_balance)} />
         <StatBox icon={User} label="Kunjungan" value={`${member.visit_count}×`} />
       </div>
 
@@ -60,11 +56,11 @@ export function MemberContextPanel({ member }: { member: MemberContext | null })
                     {order.order_number || order.id.slice(0, 8)}
                   </div>
                   <div className="text-slate-400">
-                    {tanggal(order.created_at)} · {order.status}
+                    {formatDate(order.created_at)} · {order.status}
                   </div>
                 </div>
                 <div className="shrink-0 font-semibold text-slate-700">
-                  {rupiah(order.total_amount)}
+                  {formatRupiah(order.total_amount)}
                 </div>
               </div>
             ))}
@@ -84,7 +80,7 @@ export function MemberContextPanel({ member }: { member: MemberContext | null })
               <div key={redemption.redemption_number} className="rounded-md border border-slate-200 px-2.5 py-1.5 text-xs">
                 <div className="truncate font-medium text-slate-800">{redemption.reward_name}</div>
                 <div className="text-slate-400">
-                  {tanggal(redemption.requested_at)} · {redemption.status}
+                  {formatDate(redemption.requested_at)} · {redemption.status}
                 </div>
               </div>
             ))}

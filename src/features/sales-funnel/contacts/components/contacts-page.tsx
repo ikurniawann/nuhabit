@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { RecordTimeline } from "@/features/sales-funnel/timeline";
 import { TaskFormDialog, useUpdateTask } from "@/features/sales-funnel/tasks";

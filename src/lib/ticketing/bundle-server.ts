@@ -1,3 +1,4 @@
+import "server-only";
 // Fase P — jembatan komposisi paket ke data ber-tenant. Dipakai loket
 // (registrasi), katalog booking publik, dan guard aktivasi Master Ticket.
 // Eksekutor SQL disuntik supaya bisa jalan di dalam transaksi (PoolClient)

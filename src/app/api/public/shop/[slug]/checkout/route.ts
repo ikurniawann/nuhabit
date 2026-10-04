@@ -3,17 +3,12 @@
 // stok + reservasi TTL, invoice Xendit → redirect.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { appOrigin } from '@/lib/app-origin';
 import { z } from 'zod';
+import { ApiError } from '@/lib/api/auth';
+import { apiHandler } from '@/lib/api/handler';
+import { appOrigin } from '@/lib/app-origin';
 import { checkRateLimit, clientIpFrom } from '@/lib/public/rate-limit';
-import { createPgClient } from '@/lib/pg/create-client';
-import {
-  getOrCreateShippingSettings,
-  parseCourierList,
-  resolveOriginId,
-  resolveShippingProvider,
-  ShippingProviderError,
-} from '@/lib/shop/shipping';
+import { findQuote, loadShippingContext, quoteFromOrigin } from '@/lib/shop/shipping';
 import {
   computeCartWeightAndValue,
   processShopCheckout,
@@ -50,76 +45,42 @@ const bodySchema = z.object({
   notes: z.string().trim().max(500).nullish(),
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const ip = clientIpFrom(request.headers);
-  if (!checkRateLimit(`shop-checkout:${ip}`, { limit: 10, windowMs: 60_000 })) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
-  }
+export const POST = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
+    const ip = clientIpFrom(request.headers);
+    if (!checkRateLimit(`shop-checkout:${ip}`, { limit: 10, windowMs: 60_000 })) {
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    }
 
-  try {
     const { slug } = await params;
     const storefront = await resolveStorefront(slug);
-    if (!storefront) {
-      return NextResponse.json({ success: false, error: 'Toko tidak ditemukan' }, { status: 404 });
-    }
+    if (!storefront) throw ApiError.notFound('Toko tidak ditemukan');
 
     const parsed = bodySchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: 'Data checkout tidak lengkap/valid' },
-        { status: 400 }
-      );
-    }
+    if (!parsed.success) throw ApiError.badRequest('Data checkout tidak lengkap/valid');
     const body = parsed.data;
 
     await releaseExpiredReservations();
 
     // Ongkir otoritatif: hitung ulang dari provider, cocokkan pilihan klien
-    const { weightGram, itemValue } = await computeCartWeightAndValue(body.items);
-    if (weightGram <= 0) {
-      return NextResponse.json({ success: false, error: 'Keranjang tidak valid' }, { status: 400 });
-    }
+    const cargo = await computeCartWeightAndValue(body.items);
+    if (cargo.weightGram <= 0) throw ApiError.badRequest('Keranjang tidak valid');
 
-    const db = createPgClient();
-    const settings = await getOrCreateShippingSettings(db);
-    const originId = resolveOriginId(settings);
-    if (!originId) {
-      return NextResponse.json(
-        { success: false, error: 'Toko belum mengatur alamat pengiriman' },
-        { status: 503 }
-      );
-    }
+    const context = await loadShippingContext();
+    if (!context.originId) throw new ApiError(503, 'Toko belum mengatur alamat pengiriman');
 
-    const provider = resolveShippingProvider(settings.provider);
-    const quotes = await provider.getRates({
-      originId,
-      originPostalCode: settings.origin_postal_code,
-      destinationId: body.destination.area_id,
-      destinationPostalCode: body.destination.postal_code ?? null,
-      weightGram,
-      itemValue,
-      couriers: parseCourierList(settings.couriers),
-    });
-
-    const chosen = quotes.find(
-      (quote) =>
-        quote.courierCode.toLowerCase() === body.courier.code.toLowerCase() &&
-        quote.serviceCode.toLowerCase() === body.courier.service_code.toLowerCase() &&
-        quote.price > 0
+    const quotes = await quoteFromOrigin(
+      context,
+      context.originId,
+      { id: body.destination.area_id, postalCode: body.destination.postal_code ?? null },
+      cargo
     );
+    const chosen = findQuote(quotes, body.courier.code, body.courier.service_code);
     if (!chosen) {
-      return NextResponse.json(
-        { success: false, error: 'Layanan kurir tidak tersedia lagi — pilih ulang ongkir' },
-        { status: 409 }
-      );
+      throw ApiError.conflict('Layanan kurir tidak tersedia lagi — pilih ulang ongkir');
     }
-    const markup = Number(settings.markup_amount) || 0;
 
     const baseUrl = appOrigin(request);
-
     const result = await processShopCheckout({
       storefront,
       items: body.items.map((item) => ({
@@ -141,19 +102,13 @@ export async function POST(
       courier: {
         code: chosen.courierCode,
         serviceCode: chosen.serviceCode,
-        provider: provider.name,
-        cost: chosen.price + markup,
+        provider: context.provider.name,
+        cost: chosen.price + context.markup,
       },
       notes: body.notes ?? null,
       baseUrl,
     });
-
-    if (!result.ok) {
-      return NextResponse.json(
-        { success: false, error: result.reason },
-        { status: result.status }
-      );
-    }
+    if (!result.ok) throw new ApiError(result.status, result.reason);
 
     return NextResponse.json(
       {
@@ -166,11 +121,6 @@ export async function POST(
       },
       { status: 201 }
     );
-  } catch (error: unknown) {
-    if (error instanceof ShippingProviderError) {
-      return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-    }
-    console.error('[shop] checkout error:', error);
-    return NextResponse.json({ success: false, error: 'Checkout gagal — coba lagi' }, { status: 500 });
-  }
-}
+  },
+  'shop.public.checkout.POST'
+);

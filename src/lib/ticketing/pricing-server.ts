@@ -1,3 +1,4 @@
+import "server-only";
 // Jembatan resolver harga murni (pricing.ts v2) ke data ber-tenant:
 // varian produk ticket + kalender per ticket + override harga kanal.
 // Dipakai gate tap-charge dan (Fase D) website booking.
@@ -9,13 +10,6 @@ import {
   type ResolveTicketPriceResult,
   type SeasonKind,
 } from "./pricing";
-
-/** Tanggal hari ini menurut operasional venue (WIB). */
-export function todayJakartaDate(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Jakarta",
-  }).format(new Date());
-}
 
 export type { ResolveTicketPriceResult, SeasonKind };
 

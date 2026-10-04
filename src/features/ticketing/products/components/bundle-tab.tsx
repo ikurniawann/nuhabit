@@ -18,10 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatRupiah } from "@/lib/format";
 import { useChannelManager, useSaveBundleItems } from "../queries";
 import type { TicketProductDetail } from "../types";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 interface BundleRow {
   component_variant_id: string;
@@ -159,7 +158,7 @@ export function BundleTab({ detail }: { detail: TicketProductDetail }) {
                       <SelectItem key={c.variant_id} value={c.variant_id}>
                         {c.label}
                         {c.price_regular != null
-                          ? ` (${formatRp(c.price_regular)})`
+                          ? ` (${formatRupiah(c.price_regular)})`
                           : ""}
                       </SelectItem>
                     ))}
@@ -247,20 +246,20 @@ export function BundleTab({ detail }: { detail: TicketProductDetail }) {
           <div className="flex justify-between">
             <dt className="text-gray-500">Total harga satuan komponen</dt>
             <dd className="tabular-nums text-gray-900">
-              {standaloneTotal > 0 ? formatRp(standaloneTotal) : "—"}
+              {standaloneTotal > 0 ? formatRupiah(standaloneTotal) : "—"}
             </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-500">Harga paket (varian “Paket”)</dt>
             <dd className="tabular-nums text-gray-900">
-              {bundlePrice != null ? formatRp(bundlePrice) : "belum diisi"}
+              {bundlePrice != null ? formatRupiah(bundlePrice) : "belum diisi"}
             </dd>
           </div>
           {bundlePrice != null && standaloneTotal > bundlePrice ? (
             <div className="flex justify-between font-medium text-emerald-700">
               <dt>Hemat untuk pengunjung</dt>
               <dd className="tabular-nums">
-                {formatRp(standaloneTotal - bundlePrice)}
+                {formatRupiah(standaloneTotal - bundlePrice)}
               </dd>
             </div>
           ) : null}

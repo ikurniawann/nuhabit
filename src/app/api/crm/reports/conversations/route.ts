@@ -1,60 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiHandler } from "@/lib/api/handler";
 import { getPool } from "@/lib/db";
-import { apiErrorResponse } from "@/lib/crm/server";
-import { requireCrmReportRole, resolveReportPeriod } from "@/lib/crm/reports";
-import { getConversationInsightReport } from "@/lib/crm/conversation-insights-server";
 import { buildReportSheets, reportFileName } from "@/lib/crm/conversation-insights";
+import { getConversationInsightReport } from "@/lib/crm/conversation-insights-server";
+import { requireCrmUser } from "@/lib/crm/guards";
+import { requireReportPeriod } from "@/lib/crm/reports-server";
 
 /**
  * EPIC-029 — laporan agregat analitik percakapan (JSON atau XLSX).
  *
- * Peran mengikuti laporan CRM lain (super_admin/admin/direksi). Seperti
- * `reports/cs/route.ts`, respons sengaja TIDAK memuat isi chat, ringkasan
- * per percakapan, nomor telepon, maupun nama customer — hanya angka agregat,
- * kata kunci, dan topik, supaya laporan bisa dibuka manajemen tanpa membuka
- * PII percakapan.
+ * Gate menu laporan CRM. Seperti `reports/cs`, respons sengaja TIDAK memuat
+ * isi chat, ringkasan per percakapan, nomor telepon, maupun nama customer —
+ * hanya angka agregat, kata kunci, dan topik.
  *
  * `format=xlsx` mengembalikan file (3 sheet: Ringkasan, Kata Kunci, Topik) agar
  * bisa dibuka Excel atau di-import ke Google Sheet.
  */
-export async function GET(request: NextRequest) {
-  const guard = await requireCrmReportRole();
-  if (guard) return guard;
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("reports");
+  const { searchParams } = request.nextUrl;
+  const period = requireReportPeriod(searchParams);
+  const report = await getConversationInsightReport(getPool(), period);
 
-  const { searchParams } = new URL(request.url);
-  const period = resolveReportPeriod(searchParams.get("from"), searchParams.get("to"));
-  if (!period) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Periode tidak valid (format YYYY-MM-DD, from <= to, maksimal 366 hari)",
-      },
-      { status: 400 }
-    );
+  if (searchParams.get("format") !== "xlsx") {
+    return NextResponse.json({ success: true, data: report });
   }
 
-  const format = searchParams.get("format") === "xlsx" ? "xlsx" : "json";
-
-  try {
-    const report = await getConversationInsightReport(getPool(), period);
-
-    if (format === "json") {
-      return NextResponse.json({ success: true, data: report });
-    }
-
-    const { buildXlsxBuffer } = await import("@/lib/spreadsheet/exceljs-safe");
-    const buffer = await buildXlsxBuffer(
-      buildReportSheets(report).map((sheet) => ({ name: sheet.name, rows: sheet.rows })),
-    );
-
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${reportFileName(report.period)}"`,
-        "Cache-Control": "no-store",
-      },
-    });
-  } catch (error) {
-    return apiErrorResponse(error, "Gagal menyusun laporan analitik percakapan");
-  }
-}
+  const { buildXlsxBuffer } = await import("@/lib/spreadsheet/exceljs-safe");
+  const buffer = await buildXlsxBuffer(
+    buildReportSheets(report).map((sheet) => ({ name: sheet.name, rows: sheet.rows })),
+  );
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "Content-Disposition": `attachment; filename="${reportFileName(report.period)}"`,
+      "Cache-Control": "no-store",
+    },
+  });
+}, "crm.reports.conversations.GET");

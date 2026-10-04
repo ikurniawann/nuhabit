@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPosSession } from "@/lib/api/auth";
+import { ApiError, getPosSession, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { createPgClient } from "@/lib/pg/create-client";
-import { apiErrorResponse, isMissingCrmSchema, validationErrorResponse,
-  requireCrmConfigRole,
-} from "@/lib/crm/server";
+import { crmSchemaError, requireCrmUser } from "@/lib/crm/guards";
+import { isMissingCrmSchema } from "@/lib/crm/server";
 
 const avatarSchema = z.object({
   code: z.string().trim().min(1).max(80).transform((value) => value.toLowerCase()),
@@ -22,106 +22,48 @@ const avatarSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).default({}),
 });
 
-export async function GET(request: NextRequest) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
+export const GET = apiHandler(async (request: NextRequest) => {
+  if (!(await getPosSession())) throw ApiError.unauthorized();
+  const rarity = request.nextUrl.searchParams.get("rarity");
+  let query = createPgClient()
+    .from("crm_collectible_avatars")
+    .select("*, required_tier:crm_membership_tiers(code, name, rank)")
+    .order("created_at", { ascending: false });
+  if (rarity) query = query.eq("rarity", rarity);
 
-  try {
-    const db = createPgClient();
-    const rarity = request.nextUrl.searchParams.get("rarity");
-
-    let query = db
-      .from("crm_collectible_avatars")
-      .select("*, required_tier:crm_membership_tiers(code, name, rank)")
-      .order("created_at", { ascending: false });
-
-    if (rarity) query = query.eq("rarity", rarity);
-
-    const { data, error } = await query;
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json({ success: true, data: [], meta: { schemaReady: false } });
-      }
-      throw error;
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingCrmSchema(error)) {
+      return NextResponse.json({ success: true, data: [], meta: { schemaReady: false } });
     }
-
-    return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
-  } catch (error) {
-    console.error("Error fetching CRM avatars:", error);
-    return apiErrorResponse(error);
+    throw error;
   }
-}
+  return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
+}, "crm.avatars.GET");
 
-export async function POST(request: NextRequest) {
-  const forbidden = await requireCrmConfigRole();
-  if (forbidden) return forbidden;
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("settings");
+  const payload = await validateBody(request, avatarSchema);
+  const { data, error } = await createPgClient()
+    .from("crm_collectible_avatars")
+    .upsert(payload, { onConflict: "code" })
+    .select()
+    .single();
+  if (error) throw crmSchemaError(error);
+  return NextResponse.json({ success: true, data });
+}, "crm.avatars.POST");
 
-  try {
-    const payload = avatarSchema.parse(await request.json());
-    const db = createPgClient();
-    const { data, error } = await db
-      .from("crm_collectible_avatars")
-      .upsert(payload, { onConflict: "code" })
-      .select()
-      .single();
+export const DELETE = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("settings");
+  const avatarId = request.nextUrl.searchParams.get("id");
+  if (!avatarId) throw ApiError.badRequest("Avatar id wajib diisi");
 
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json(
-          { success: false, error: "CRM migration belum diterapkan" },
-          { status: 409 }
-        );
-      }
-      throw error;
+  const { error } = await createPgClient().from("crm_collectible_avatars").delete().eq("id", avatarId);
+  if (error) {
+    if (error.code === "23503") {
+      throw ApiError.conflict("Avatar sudah terhubung dengan member/reward. Nonaktifkan avatar sebagai gantinya.");
     }
-
-    return NextResponse.json({ success: true, data });
-  } catch (error) {
-    const validation = validationErrorResponse(error);
-    if (validation) return validation;
-
-    console.error("Error saving CRM avatar:", error);
-    return apiErrorResponse(error);
+    throw crmSchemaError(error);
   }
-}
-
-export async function DELETE(request: NextRequest) {
-  const forbidden = await requireCrmConfigRole();
-  if (forbidden) return forbidden;
-
-  try {
-    const avatarId = request.nextUrl.searchParams.get("id");
-    if (!avatarId) {
-      return NextResponse.json({ success: false, error: "Avatar id wajib diisi" }, { status: 400 });
-    }
-
-    const db = createPgClient();
-    const { error } = await db
-      .from("crm_collectible_avatars")
-      .delete()
-      .eq("id", avatarId);
-
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json(
-          { success: false, error: "CRM migration belum diterapkan" },
-          { status: 409 }
-        );
-      }
-      if (error.code === "23503") {
-        return NextResponse.json(
-          { success: false, error: "Avatar sudah terhubung dengan member/reward. Nonaktifkan avatar sebagai gantinya." },
-          { status: 409 }
-        );
-      }
-      throw error;
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting CRM avatar:", error);
-    return apiErrorResponse(error);
-  }
-}
+  return NextResponse.json({ success: true });
+}, "crm.avatars.DELETE");

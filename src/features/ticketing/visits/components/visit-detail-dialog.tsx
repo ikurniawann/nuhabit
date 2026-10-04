@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 import {
   useMarkBandLost,
   useSettleVisit,
@@ -39,15 +40,6 @@ interface VisitDetailDialogProps {
   /** true bila user boleh void (supervisor) — server tetap menolak kasir. */
   canVoidCharges?: boolean;
 }
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 function MethodSelect({
   value,
@@ -185,12 +177,12 @@ export function VisitDetailDialog({
               >
                 {detail.visit.status === "open" ? "Berjalan" : "Selesai"}
               </Badge>
-              <span>Masuk {formatTime(detail.visit.opened_at)}</span>
+              <span>Masuk {formatDateTime(detail.visit.opened_at)}</span>
               {detail.visit.contact_phone ? (
                 <span>· {detail.visit.contact_phone}</span>
               ) : null}
               {detail.visit.credit_limit !== null ? (
-                <span>· Plafon {formatRp(detail.visit.credit_limit)}</span>
+                <span>· Plafon {formatRupiah(detail.visit.credit_limit)}</span>
               ) : null}
             </div>
 
@@ -199,13 +191,13 @@ export function VisitDetailDialog({
               <div className="rounded-lg border border-gray-200/70 px-3 py-2.5">
                 <p className="text-xs text-gray-500">Total Tagihan</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {formatRp(detail.summary.debit)}
+                  {formatRupiah(detail.summary.debit)}
                 </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 px-3 py-2.5">
                 <p className="text-xs text-gray-500">Uang Masuk</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  {formatRp(detail.summary.kredit)}
+                  {formatRupiah(detail.summary.kredit)}
                 </p>
               </div>
               <div className="rounded-lg border border-gray-200/70 px-3 py-2.5">
@@ -219,7 +211,7 @@ export function VisitDetailDialog({
                       : "text-gray-900"
                   }`}
                 >
-                  {formatRp(isPrepaid ? detail.summary.saldo : detail.summary.outstanding)}
+                  {formatRupiah(isPrepaid ? detail.summary.saldo : detail.summary.outstanding)}
                 </p>
               </div>
             </div>
@@ -248,7 +240,7 @@ export function VisitDetailDialog({
                     </Badge>
                     <span className="text-xs text-gray-500">
                       {band.entered_at
-                        ? `Masuk ${formatTime(band.entered_at)}`
+                        ? `Masuk ${formatDateTime(band.entered_at)}`
                         : "Belum tap gate"}
                     </span>
                     <span className="ml-auto flex items-center gap-2">
@@ -271,7 +263,7 @@ export function VisitDetailDialog({
                           className="h-7 px-2 text-xs"
                           onClick={() => setSettlingBand(band)}
                         >
-                          Settle {formatRp(bandDue.get(band.band_id) ?? 0)}
+                          Settle {formatRupiah(bandDue.get(band.band_id) ?? 0)}
                         </Button>
                       ) : null}
                       {isOpen && band.status === "aktif" ? (
@@ -313,7 +305,7 @@ export function VisitDetailDialog({
                               {charge.description}
                             </span>
                             <span className="ml-1 text-xs text-gray-400">
-                              {formatTime(charge.created_at)}
+                              {formatDateTime(charge.created_at)}
                             </span>
                           </td>
                           <td
@@ -324,7 +316,7 @@ export function VisitDetailDialog({
                             } ${isReversed ? "line-through opacity-60" : ""}`}
                           >
                             {charge.direction === "kredit" ? "−" : ""}
-                            {formatRp(charge.amount)}
+                            {formatRupiah(charge.amount)}
                           </td>
                           <td className="w-14 px-2 py-2 text-right">
                             {canVoid ? (
@@ -399,7 +391,7 @@ export function VisitDetailDialog({
               <div className="rounded-lg border-2 border-red-200 bg-red-50/50 p-4">
                 <p className="text-sm text-gray-700">
                   Void <strong>{voidingCharge.description}</strong> (
-                  {formatRp(voidingCharge.amount)})? Baris pembalik akan ditulis —
+                  {formatRupiah(voidingCharge.amount)})? Baris pembalik akan ditulis —
                   ledger tidak pernah dihapus.
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -471,7 +463,7 @@ export function VisitDetailDialog({
                     <div className="flex flex-wrap items-center gap-2">
                       <span>
                         Harus dibayar:{" "}
-                        <strong>{formatRp(detail.plan.amountDue)}</strong> via
+                        <strong>{formatRupiah(detail.plan.amountDue)}</strong> via
                       </span>
                       <MethodSelect value={payMethod} onChange={setPayMethod} />
                     </div>
@@ -480,7 +472,7 @@ export function VisitDetailDialog({
                     <div className="flex flex-wrap items-center gap-2">
                       <span>
                         Refund sisa saldo:{" "}
-                        <strong>{formatRp(detail.plan.refundAmount)}</strong> via
+                        <strong>{formatRupiah(detail.plan.refundAmount)}</strong> via
                       </span>
                       <MethodSelect value={refundMethod} onChange={setRefundMethod} />
                     </div>
@@ -511,7 +503,7 @@ export function VisitDetailDialog({
                 <p className="text-sm text-gray-700">
                   Settle gelang{" "}
                   <span className="font-mono text-xs">{settlingBand.nfc_uid}</span> —
-                  tagihan <strong>{formatRp(bandDue.get(settlingBand.band_id) ?? 0)}</strong>
+                  tagihan <strong>{formatRupiah(bandDue.get(settlingBand.band_id) ?? 0)}</strong>
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <MethodSelect value={payMethod} onChange={setPayMethod} />

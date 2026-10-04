@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getPosSession } from "@/lib/api/auth";
+import { ApiError, getPosSession, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { createPgClient } from "@/lib/pg/create-client";
-import { apiErrorResponse, isMissingCrmSchema, validationErrorResponse,
-  requireCrmConfigRole,
-} from "@/lib/crm/server";
+import { crmSchemaError, requireCrmUser } from "@/lib/crm/guards";
 import { QUOTA_PERIODS } from "@/lib/crm/rewards";
+import { isMissingCrmSchema } from "@/lib/crm/server";
 
 const rewardSchema = z.object({
   code: z.string().trim().min(1).max(80).transform((value) => value.toLowerCase()),
@@ -26,108 +26,53 @@ const rewardSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export async function GET(request: NextRequest) {
-  const sessionUserId = await getPosSession();
-  if (!sessionUserId) {
-    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
-  }
+export const GET = apiHandler(async (request: NextRequest) => {
+  if (!(await getPosSession())) throw ApiError.unauthorized();
+  const rewardType = request.nextUrl.searchParams.get("reward_type");
+  const includeAvatarRewards = request.nextUrl.searchParams.get("include_avatar_rewards") === "true";
 
-  try {
-    const db = createPgClient();
-    const rewardType = request.nextUrl.searchParams.get("reward_type");
-    const includeAvatarRewards = request.nextUrl.searchParams.get("include_avatar_rewards") === "true";
+  let query = createPgClient()
+    .from("crm_rewards")
+    .select("*, required_tier:crm_membership_tiers(code, name, rank)")
+    .order("created_at", { ascending: false });
+  if (rewardType) query = query.eq("reward_type", rewardType);
+  if (!rewardType && !includeAvatarRewards) query = query.neq("reward_type", "avatar");
 
-    let query = db
-      .from("crm_rewards")
-      .select("*, required_tier:crm_membership_tiers(code, name, rank)")
-      .order("created_at", { ascending: false });
-
-    if (rewardType) query = query.eq("reward_type", rewardType);
-    if (!rewardType && !includeAvatarRewards) query = query.neq("reward_type", "avatar");
-
-    const { data, error } = await query;
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json({ success: true, data: [], meta: { schemaReady: false } });
-      }
-      throw error;
+  const { data, error } = await query;
+  if (error) {
+    if (isMissingCrmSchema(error)) {
+      return NextResponse.json({ success: true, data: [], meta: { schemaReady: false } });
     }
-
-    return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
-  } catch (error) {
-    console.error("Error fetching CRM rewards:", error);
-    return apiErrorResponse(error);
+    throw error;
   }
-}
+  return NextResponse.json({ success: true, data: data ?? [], meta: { schemaReady: true } });
+}, "crm.rewards.GET");
 
-export async function POST(request: NextRequest) {
-  const forbidden = await requireCrmConfigRole();
-  if (forbidden) return forbidden;
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("settings");
+  const payload = await validateBody(request, rewardSchema);
+  const { data, error } = await createPgClient()
+    .from("crm_rewards")
+    .upsert(payload, { onConflict: "code" })
+    .select()
+    .single();
+  if (error) throw crmSchemaError(error);
+  return NextResponse.json({ success: true, data });
+}, "crm.rewards.POST");
 
-  try {
-    const payload = rewardSchema.parse(await request.json());
-    const db = createPgClient();
-    const { data, error } = await db
-      .from("crm_rewards")
-      .upsert(payload, { onConflict: "code" })
-      .select()
-      .single();
+export const DELETE = apiHandler(async (request: NextRequest) => {
+  await requireCrmUser("settings");
+  const rewardId = request.nextUrl.searchParams.get("id");
+  if (!rewardId) throw ApiError.badRequest("Reward id wajib diisi");
 
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json(
-          { success: false, error: "CRM migration belum diterapkan" },
-          { status: 409 }
-        );
-      }
-      throw error;
+  const { error } = await createPgClient().from("crm_rewards").delete().eq("id", rewardId);
+  if (error) {
+    if (error.code === "23503") {
+      throw ApiError.conflict(
+        "Reward sudah memiliki redemption dan tidak bisa dihapus. Nonaktifkan reward sebagai gantinya."
+      );
     }
-
-    return NextResponse.json({ success: true, data });
-  } catch (error) {
-    const validation = validationErrorResponse(error);
-    if (validation) return validation;
-
-    console.error("Error saving CRM reward:", error);
-    return apiErrorResponse(error);
+    throw crmSchemaError(error);
   }
-}
-
-export async function DELETE(request: NextRequest) {
-  const forbidden = await requireCrmConfigRole();
-  if (forbidden) return forbidden;
-
-  try {
-    const rewardId = request.nextUrl.searchParams.get("id");
-    if (!rewardId) {
-      return NextResponse.json({ success: false, error: "Reward id wajib diisi" }, { status: 400 });
-    }
-
-    const db = createPgClient();
-    const { error } = await db
-      .from("crm_rewards")
-      .delete()
-      .eq("id", rewardId);
-
-    if (error) {
-      if (isMissingCrmSchema(error)) {
-        return NextResponse.json(
-          { success: false, error: "CRM migration belum diterapkan" },
-          { status: 409 }
-        );
-      }
-      if (error.code === "23503") {
-        return NextResponse.json(
-          { success: false, error: "Reward sudah memiliki redemption dan tidak bisa dihapus. Nonaktifkan reward sebagai gantinya." },
-          { status: 409 }
-        );
-      }
-      throw error;
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting CRM reward:", error);
-    return apiErrorResponse(error);
-  }
-}
+  return NextResponse.json({ success: true });
+}, "crm.rewards.DELETE");

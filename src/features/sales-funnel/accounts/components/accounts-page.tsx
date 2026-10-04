@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate, formatRupiah } from "@/lib/format";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BuildingOffice2Icon, PlusIcon } from "@heroicons/react/24/outline";
@@ -16,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { MasterTableActions } from "@/features/master-data/components/master-table-actions";
 import { ORG_TYPE_LABELS } from "../../leads/types";
 import { useAccounts, useDeleteAccount } from "../queries";
@@ -25,16 +26,13 @@ import { AccountFormDialog } from "./account-form-dialog";
 
 const ALL = "all";
 
-const rupiah = (value: string | number | null | undefined) =>
-  `Rp ${Math.round(Number(value) || 0).toLocaleString("id-ID")}`;
-
 function relative(iso: string | null | undefined): string {
   if (!iso) return "—";
   const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
   if (days <= 0) return "hari ini";
   if (days === 1) return "kemarin";
   if (days < 30) return `${days} hari lalu`;
-  return new Date(iso).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  return formatDate(iso);
 }
 
 /** EPIC-050 T-1.3 — daftar Account (instansi/perusahaan B2B). */
@@ -168,7 +166,7 @@ export function SalesAccountsPage() {
                       <td className="px-4 py-3 text-right text-gray-700">{account.contact_count ?? 0}</td>
                       <td className="px-4 py-3 text-right text-gray-700">{account.lead_count ?? 0}</td>
                       <td className="px-4 py-3 text-right text-gray-700">{account.open_deal_count ?? 0}</td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">{rupiah(account.won_value)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-900">{formatRupiah(account.won_value)}</td>
                       <td className="px-4 py-3 text-gray-600">{relative(account.last_activity_at)}</td>
                       <td className="px-4 py-3 text-gray-600">{account.owner_name ?? "—"}</td>
                       <td className="px-4 py-3">

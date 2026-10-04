@@ -1,13 +1,18 @@
+import type { NextRequest } from "next/server";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { getPool, withTransaction } from "@/lib/db";
-import { IAM } from "@/lib/iam/prefixes";
-import { createSession, listSessions } from "@/lib/gym/booking-server";
 import { SESSION_STATUSES, type SessionStatus } from "@/lib/gym/booking";
-import { ok, optionalUuid, rangeParams, schedulingRoute } from "@/lib/gym/scheduling-route";
+import { createSession, listSessions } from "@/lib/gym/booking-server";
+import { optionalUuid, rangeParams } from "@/lib/gym/scheduling-route";
 import { sessionCreateSchema } from "@/lib/gym/scheduling-schemas";
+import { ok, parseBody } from "@/lib/gym/staff-route";
+import { IAM } from "@/lib/iam/prefixes";
 
-/** GET ?from&to&class_type_id&coach_id&branch_id&status=a,b — sesi + hitungan kursi. */
-export const GET = schedulingRoute(IAM.gymScheduling, "Gagal memuat sesi", async (_userId, request: Request) => {
-  const url = new URL(request.url);
+/** GET ?from&to&class_type_id&coach_id&branch_id&status=a,b: sesi + hitungan kursi. */
+export const GET = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.gymScheduling);
+  const url = request.nextUrl;
   const statuses = (url.searchParams.get("status") ?? "")
     .split(",")
     .filter((s): s is SessionStatus => (SESSION_STATUSES as readonly string[]).includes(s));
@@ -19,11 +24,12 @@ export const GET = schedulingRoute(IAM.gymScheduling, "Gagal memuat sesi", async
     statuses: statuses.length ? statuses : undefined,
   });
   return ok(sessions);
-});
+}, "gym.sessions.GET");
 
-/** POST — jadwalkan sesi; nilai kosong diambil dari jenis kelas, jendela booking dari aturan. */
-export const POST = schedulingRoute(IAM.gymScheduling, "Gagal membuat sesi", async (userId, request: Request) => {
-  const input = sessionCreateSchema.parse(await request.json());
+/** POST: jadwalkan sesi; nilai kosong diambil dari jenis kelas, jendela booking dari aturan. */
+export const POST = apiHandler(async (request: NextRequest) => {
+  const user = await requireIamMenuPrefix(IAM.gymScheduling);
+  const input = await parseBody(request, sessionCreateSchema);
   const id = await withTransaction((client) =>
     createSession(
       client,
@@ -39,8 +45,8 @@ export const POST = schedulingRoute(IAM.gymScheduling, "Gagal membuat sesi", asy
         notes: input.notes,
         publish: input.publish,
       },
-      userId
+      user.id
     )
   );
   return ok({ id });
-});
+}, "gym.sessions.POST");

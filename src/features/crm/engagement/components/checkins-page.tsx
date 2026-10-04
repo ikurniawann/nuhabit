@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { QR_PROBLEM_LABEL } from "@/lib/crm/engagement/rules";
-import { angka, engagementApi, waktu } from "../api";
+import { engagementApi, waktu } from "../api";
+import { formatNumber } from "@/lib/format";
 import { TableNote } from "./shared";
 
 /** CRM → Engagement → Check-in Member: log setiap scan QR kartu member di kasir. */
@@ -30,11 +31,11 @@ export function CheckinsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Scan diterima hari ini" value={angka(today.accepted)} icon={<QrCode />} tone="ink" />
-        <StatCard label="Member unik hari ini" value={angka(today.members)} icon={<Users />} />
+        <StatCard label="Scan diterima hari ini" value={formatNumber(today.accepted)} icon={<QrCode />} tone="ink" />
+        <StatCard label="Member unik hari ini" value={formatNumber(today.members)} icon={<Users />} />
         <StatCard
           label="Scan ditolak hari ini"
-          value={angka(today.denied)}
+          value={formatNumber(today.denied)}
           hint="QR kedaluwarsa, dipakai ulang, atau tidak dikenal"
           icon={<ShieldX />}
           tone={today.denied ? "warning" : "default"}

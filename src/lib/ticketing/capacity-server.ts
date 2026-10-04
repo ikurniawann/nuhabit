@@ -1,3 +1,4 @@
+import "server-only";
 // EPIC-031 Fase B1 — sisi server kuota harian venue: hitung okupansi live
 // (booking online + walk-in loket) dan guard anti-oversell DI BAWAH advisory
 // lock. Semua fungsi menerima PoolClient supaya berjalan DI DALAM transaksi
@@ -5,7 +6,9 @@
 // withTransaction untuk jalur tulis.
 
 import type { PoolClient } from "pg";
+import { ApiError } from "@/lib/api/auth";
 import { query } from "@/lib/db";
+import { addDaysIso } from "./calendar";
 import {
   CAPACITY_HOLDING_BOOKING_STATUSES,
   isCapacityExceeded,
@@ -113,11 +116,6 @@ export async function countCapacityUsed(
  * dan angka sisa/kapasitas TIDAK pernah bocor ke publik, keputusan owner).
  */
 export type UnavailableKind = "sold_out" | "closed";
-
-const addDaysIso = (iso: string, days: number) => {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-};
 
 async function loadCapacityConfig(scope: VenueScope, from: string, to: string) {
   const [settingsRows, overrideRows] = await Promise.all([
@@ -258,7 +256,7 @@ export interface BookingSlot {
 const SLOT_COLUMNS = `id, label, start_time::text AS start_time,
   end_time::text AS end_time, capacity`;
 
-/** Jam WIB sekarang "HH:MM" — pasangan todayJakartaDate. */
+/** Jam WIB sekarang "HH:MM" — pasangan todayInJakarta (booking.ts). */
 export function nowJakartaTime(): string {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Jakarta",
@@ -342,11 +340,10 @@ export async function assertSlotCapacity(
   }
 }
 
-/** Error ber-statusCode 409 — pola staff-passes (route menerjemahkan). */
-export class CapacityFullError extends Error {
-  statusCode = 409 as const;
+/** 409 kuota penuh — ApiError supaya apiHandler meneruskan pesannya. */
+export class CapacityFullError extends ApiError {
   constructor(message = "Kuota tanggal ini sudah penuh — pilih tanggal lain") {
-    super(message);
+    super(409, message);
     this.name = "CapacityFullError";
   }
 }

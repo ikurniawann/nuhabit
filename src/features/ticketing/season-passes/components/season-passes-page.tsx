@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TicketIcon } from "@heroicons/react/24/outline";
 import { Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -23,19 +23,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { formatDate, formatRupiah } from "@/lib/format";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { useIssuePass, usePassOptions, usePasses, useRenewPass } from "../queries";
 import { ENTRY_POLICY_LABEL, type IssuedPassResult } from "../types";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatDate = (iso: string | null) =>
-  iso
-    ? new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
 
 const STATUS_STYLE: Record<string, string> = {
   active: "bg-emerald-100 text-emerald-700",
@@ -59,10 +50,8 @@ export function SeasonPassesPage() {
   const optionsQuery = usePassOptions();
   const options = optionsQuery.data ?? [];
 
-  const selectedOption = useMemo(
-    () => options.find((o) => o.ticket_product_id === productId) ?? null,
-    [options, productId]
-  );
+  const selectedOption =
+    options.find((o) => o.ticket_product_id === productId) ?? null;
 
   const resetForm = () => {
     setProductId("");
@@ -177,7 +166,7 @@ export function SeasonPassesPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {formatDate(p.valid_until)}
+                      {formatDate(p.valid_until, "—")}
                     </td>
                     <td className="px-4 py-3">
                       <Badge
@@ -226,7 +215,7 @@ export function SeasonPassesPage() {
                 <SelectContent>
                   {options.map((o) => (
                     <SelectItem key={o.ticket_product_id} value={o.ticket_product_id}>
-                      {o.name} — {formatRp(o.unit_price)}
+                      {o.name} — {formatRupiah(o.unit_price)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -298,8 +287,8 @@ export function SeasonPassesPage() {
               </p>
               <p className="text-sm text-gray-700">{issued.holder_name}</p>
               <p className="text-xs text-gray-500">
-                Berlaku {formatDate(issued.valid_from)} —{" "}
-                {formatDate(issued.valid_until)} ·{" "}
+                Berlaku {formatDate(issued.valid_from, "—")} —{" "}
+                {formatDate(issued.valid_until, "—")} ·{" "}
                 {ENTRY_POLICY_LABEL[issued.entry_policy]}
               </p>
               <p className="text-xs text-gray-400">

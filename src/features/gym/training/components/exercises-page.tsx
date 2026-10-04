@@ -25,7 +25,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EXERCISE_CATEGORIES, RACE_COMPARABLE_SIMILARITY } from "@/lib/gym/hyrox";
 import { trainingApi, type ExerciseRow, type SubstitutionRow } from "../api";
-import { SELECT } from "./shared";
+import { SELECT } from "@/features/gym/shared";
 
 const LIBRARY_KEY = ["gym", "exercises"];
 

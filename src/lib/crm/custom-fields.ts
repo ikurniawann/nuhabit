@@ -5,6 +5,7 @@
  * validateCustomValues() sebelum insert/update.
  */
 import { z } from "zod";
+import { formatDate, formatNumber } from "@/lib/format";
 
 export const CUSTOM_FIELD_OBJECTS = ["lead", "deal", "account", "contact"] as const;
 export type CustomFieldObject = (typeof CUSTOM_FIELD_OBJECTS)[number];
@@ -188,9 +189,9 @@ export function formatCustomValue(def: CustomFieldDef, v: unknown): string {
     case "multipicklist":
       return Array.isArray(v) ? v.join(", ") : String(v);
     case "number":
-      return Number(v).toLocaleString("id-ID");
+      return formatNumber(Number(v), 3);
     case "date":
-      return new Date(String(v)).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+      return formatDate(String(v));
     default:
       return String(v);
   }

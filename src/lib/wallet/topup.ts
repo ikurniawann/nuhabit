@@ -49,6 +49,23 @@ export async function savePackage(id: string | null, input: PackageInput, actorI
 }
 
 /** Paket yang dijual saat ini; kasir dicek cabangnya, member hanya paket online. */
+/** Nonaktifkan paket (riwayat top-up tetap menunjuk ke paket ini). */
+export async function deactivatePackage(id: string, actorId: string): Promise<void> {
+  const { rowCount } = await getPool().query(
+    `UPDATE pos.pos_topup_packages SET is_active = false, updated_by = $2, updated_at = now() WHERE id = $1`,
+    [id, actorId]
+  );
+  if (!rowCount) throw new WalletError("Paket tidak ditemukan", 404);
+}
+
+/** Cabang aktif, untuk membatasi paket top-up per cabang. */
+export async function listActiveBranches(): Promise<{ id: string; name: string }[]> {
+  const { rows } = await getPool().query<{ id: string; name: string }>(
+    `SELECT id, name FROM configuration.branches WHERE is_active ORDER BY name`
+  );
+  return rows;
+}
+
 export async function getPackageForSale(id: string, channel: { branchId: string | null } | "member") {
   const { rows } = await getPool().query(`SELECT ${PACKAGE_COLUMNS} FROM pos.pos_topup_packages WHERE id = $1`, [id]);
   const pkg = rows[0] as TopupPackage | undefined;

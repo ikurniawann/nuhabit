@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
-import { successResponse } from "@/lib/api/auth";
-import { checkRateLimit } from "@/lib/rate-limit";
-import {
-  TICKETING_OPERATOR_ROLES,
-  isValidNfcUid,
-  normalizeNfcUid,
-  requireTicketingContext,
-} from "@/lib/ticketing/server";
+import { successResponse, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { IAM } from "@/lib/iam/prefixes";
+import { assertStaffRateLimit } from "@/lib/ticketing/rate-limit";
+import { requireNfcUid, ticketingContext } from "@/lib/ticketing/server";
 import { checkTabForCharge } from "@/lib/ticketing/tab-server";
 
 const checkSchema = z.object({
@@ -20,49 +17,21 @@ const checkSchema = z.object({
  * rombongan + apakah total order bakal lolos guard saldo/plafon.
  * Read-only — charge sungguhan terjadi saat order dibuat.
  */
-export async function POST(request: NextRequest) {
-  const { error, ctx } = await requireTicketingContext(TICKETING_OPERATOR_ROLES);
-  if (error) return error;
-
-  const rate = checkRateLimit(`ticketing-tab-check:${ctx.user.id}`, 60);
-  if (!rate.allowed) {
-    return NextResponse.json(
-      { success: false, error: "Terlalu banyak pengecekan — tunggu sebentar" },
-      { status: 429 }
-    );
-  }
-
-  try {
-    const parsed = checkSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.issues },
-        { status: 400 }
-      );
-    }
-    const uid = normalizeNfcUid(parsed.data.nfc_uid);
-    if (!isValidNfcUid(uid)) {
-      return NextResponse.json(
-        { success: false, error: "UID gelang tidak valid" },
-        { status: 400 }
-      );
-    }
-
-    const result = await checkTabForCharge({
-      bandUid: uid,
-      amount: parsed.data.amount,
-      companyId: ctx.companyId,
-      branchId: ctx.branchId,
-    });
-    if (!result.ok) {
-      return successResponse({ ok: false, reason: result.reason });
-    }
-    return successResponse({ ok: true, ...result.target });
-  } catch (err) {
-    console.error("[ticketing] tab check error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memeriksa tab" },
-      { status: 500 }
-    );
-  }
-}
+export const POST = apiHandler(async (request: NextRequest) => {
+  const ctx = await ticketingContext(IAM.ticketingOperator);
+  assertStaffRateLimit(
+    `ticketing-tab-check:${ctx.user.id}`,
+    60,
+    "Terlalu banyak pengecekan — tunggu sebentar"
+  );
+  const body = await validateBody(request, checkSchema);
+  const result = await checkTabForCharge({
+    bandUid: requireNfcUid(body.nfc_uid),
+    amount: body.amount,
+    companyId: ctx.companyId,
+    branchId: ctx.branchId,
+  });
+  return successResponse(
+    result.ok ? { ok: true, ...result.target } : { ok: false, reason: result.reason }
+  );
+}, "ticketing.tab.check.POST");

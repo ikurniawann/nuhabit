@@ -1,5 +1,5 @@
 import { parseXlsxToMatrix } from "@/lib/spreadsheet/exceljs-safe";
-import { LEAD_IMPORT_COLUMNS } from "@/features/sales-funnel/leads/import-config";
+import { LEAD_IMPORT_COLUMNS } from "./lead-import-config";
 
 export const LEAD_SPREADSHEET_HEADERS = LEAD_IMPORT_COLUMNS.map((col) => col.key);
 

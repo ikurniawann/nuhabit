@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateLong, formatTime } from "@/lib/format";
 import { useMemo } from "react";
 import Link from "next/link";
 import {
@@ -54,22 +55,8 @@ const BADGE_LABEL: Record<string, string> = {
   unpaid: "Belum bayar",
 };
 
-function formatDay(day: string): string {
-  if (day === "tanpa-tanggal") return "Tanpa tanggal";
-  const [y, m, d] = day.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatTime(at: string): string {
-  const t = Date.parse(at);
-  if (Number.isNaN(t)) return "";
-  return new Date(t).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
-}
+/** Header grup: kunci YYYY-MM-DD dari groupByDay (WIB). */
+const formatDay = (day: string) => formatDateLong(day, "Tanpa tanggal");
 
 interface RecordTimelineProps {
   subjectType: TaskSubjectType;
@@ -181,7 +168,7 @@ function TimelineItem({
             <p className="mt-0.5 whitespace-pre-line text-xs text-gray-600">{event.description}</p>
           ) : null}
           <p className="mt-0.5 text-[11px] text-gray-400">
-            {formatTime(event.at)}
+            {formatTime(event.at, "")}
             {event.actor ? ` · ${event.actor}` : ""}
             {typeof event.meta?.priority === "string" && event.meta.priority !== "normal"
               ? ` · prioritas ${event.meta.priority}`

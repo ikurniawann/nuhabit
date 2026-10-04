@@ -14,21 +14,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 import { RedeemDialog } from "../../bookings";
 import { useTabStats, useVisits } from "../queries";
 import type { VisitStatus } from "../types";
 import { RegistrationDialog } from "./registration-dialog";
 import { VisitDetailDialog } from "./visit-detail-dialog";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatTime = (iso: string) =>
-  new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
 export function LoketPage({ canVoidCharges = false }: { canVoidCharges?: boolean }) {
   const [status, setStatus] = useState<VisitStatus>("open");
@@ -70,13 +62,13 @@ export function LoketPage({ canVoidCharges = false }: { canVoidCharges?: boolean
         <div className="rounded-xl border border-amber-200/70 bg-amber-50/50 px-4 py-3">
           <p className="text-xs text-amber-700">Tagihan Berjalan (Postpaid)</p>
           <p className="text-2xl font-bold text-amber-800">
-            {stats ? formatRp(stats.outstanding_total) : "—"}
+            {stats ? formatRupiah(stats.outstanding_total) : "—"}
           </p>
         </div>
         <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/50 px-4 py-3">
           <p className="text-xs text-emerald-700">Saldo Titipan (Prepaid)</p>
           <p className="text-2xl font-bold text-emerald-800">
-            {stats ? formatRp(stats.saldo_total) : "—"}
+            {stats ? formatRupiah(stats.saldo_total) : "—"}
           </p>
         </div>
       </div>
@@ -173,12 +165,12 @@ export function LoketPage({ canVoidCharges = false }: { canVoidCharges?: boolean
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-gray-900">
                       {visit.payment_mode === "prepaid"
-                        ? formatRp(visit.saldo)
-                        : formatRp(visit.outstanding)}
+                        ? formatRupiah(visit.saldo)
+                        : formatRupiah(visit.outstanding)}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
-                      {formatTime(visit.opened_at)}
-                      {visit.settled_at ? ` → ${formatTime(visit.settled_at)}` : ""}
+                      {formatDateTime(visit.opened_at)}
+                      {visit.settled_at ? ` → ${formatDateTime(visit.settled_at)}` : ""}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end">

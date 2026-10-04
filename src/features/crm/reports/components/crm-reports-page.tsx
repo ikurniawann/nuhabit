@@ -15,30 +15,7 @@ import { useCrmReports } from "../queries";
 import { CsReportSection } from "./cs-report-section";
 import { ConversationInsightSection } from "./conversation-insight-section";
 import type { CrmReportPeriodInput } from "../types";
-
-const numberFormat = new Intl.NumberFormat("id-ID");
-const currencyFormat = new Intl.NumberFormat("id-ID", {
-  style: "currency",
-  currency: "IDR",
-  maximumFractionDigits: 0,
-});
-
-function formatNumber(value: number) {
-  return numberFormat.format(value || 0);
-}
-
-function formatCurrency(value: number) {
-  return currencyFormat.format(value || 0);
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
 function tierLabel(tier: string) {
   return tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Regular";
@@ -80,35 +57,35 @@ export function CrmReportsPage() {
     () => [
       {
         label: "Saldo ARK Beredar",
-        value: formatCurrency(data?.reconciliation.outstanding_balance ?? 0),
+        value: formatRupiah(data?.reconciliation.outstanding_balance ?? 0),
         hint: "Liabilitas platform saat ini",
         icon: Wallet,
         tone: "text-amber-700 bg-amber-50",
       },
       {
         label: "Topup Periode",
-        value: formatCurrency(totals?.topup_amount ?? 0),
+        value: formatRupiah(totals?.topup_amount ?? 0),
         hint: "Kas masuk dari topup",
         icon: Coins,
         tone: "text-emerald-700 bg-emerald-50",
       },
       {
         label: "Bonus Topup",
-        value: formatCurrency(totals?.bonus_amount ?? 0),
+        value: formatRupiah(totals?.bonus_amount ?? 0),
         hint: "Saldo bonus (non-tunai)",
         icon: TrendingUp,
         tone: "text-violet-700 bg-violet-50",
       },
       {
         label: "Topup FOC",
-        value: formatCurrency(totals?.foc_topup_amount ?? 0),
+        value: formatRupiah(totals?.foc_topup_amount ?? 0),
         hint: "Gratis untuk marketing — bukan kas masuk",
         icon: Coins,
         tone: "text-amber-700 bg-amber-50",
       },
       {
         label: "Belanja ARK Periode",
-        value: formatCurrency(totals?.spend_amount ?? 0),
+        value: formatRupiah(totals?.spend_amount ?? 0),
         hint: "ARK dibelanjakan di kasir",
         icon: ArrowLeftRight,
         tone: "text-sky-700 bg-sky-50",
@@ -304,16 +281,16 @@ function ReconciliationSection({
                     <div className="font-medium text-slate-900">{venue.branch_name}</div>
                     <div className="text-xs text-slate-500">{venue.company_name}</div>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-900">{formatCurrency(venue.topup_amount)}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{formatCurrency(venue.bonus_amount)}</td>
-                  <td className="px-4 py-3 text-right text-amber-700">{formatCurrency(venue.foc_topup_amount ?? 0)}</td>
-                  <td className="px-4 py-3 text-right text-slate-900">{formatCurrency(venue.spend_amount)}</td>
+                  <td className="px-4 py-3 text-right text-slate-900">{formatRupiah(venue.topup_amount)}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{formatRupiah(venue.bonus_amount)}</td>
+                  <td className="px-4 py-3 text-right text-amber-700">{formatRupiah(venue.foc_topup_amount ?? 0)}</td>
+                  <td className="px-4 py-3 text-right text-slate-900">{formatRupiah(venue.spend_amount)}</td>
                   <td
                     className={`px-4 py-3 text-right font-semibold ${
                       venue.net_flow >= 0 ? "text-emerald-700" : "text-red-700"
                     }`}
                   >
-                    {formatCurrency(venue.net_flow)}
+                    {formatRupiah(venue.net_flow)}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-600">{formatNumber(venue.topup_count)}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{formatNumber(venue.payment_count)}</td>
@@ -323,14 +300,14 @@ function ReconciliationSection({
             <tfoot>
               <tr className="border-t border-slate-200 bg-slate-50 font-semibold text-slate-950">
                 <td className="px-4 py-3">Total</td>
-                <td className="px-4 py-3 text-right">{formatCurrency(totals.topup_amount)}</td>
-                <td className="px-4 py-3 text-right">{formatCurrency(totals.bonus_amount)}</td>
-                <td className="px-4 py-3 text-right text-amber-700">{formatCurrency(totals.foc_topup_amount)}</td>
-                <td className="px-4 py-3 text-right">{formatCurrency(totals.spend_amount)}</td>
+                <td className="px-4 py-3 text-right">{formatRupiah(totals.topup_amount)}</td>
+                <td className="px-4 py-3 text-right">{formatRupiah(totals.bonus_amount)}</td>
+                <td className="px-4 py-3 text-right text-amber-700">{formatRupiah(totals.foc_topup_amount)}</td>
+                <td className="px-4 py-3 text-right">{formatRupiah(totals.spend_amount)}</td>
                 <td
                   className={`px-4 py-3 text-right ${totals.net_flow >= 0 ? "text-emerald-700" : "text-red-700"}`}
                 >
-                  {formatCurrency(totals.net_flow)}
+                  {formatRupiah(totals.net_flow)}
                 </td>
                 <td className="px-4 py-3" colSpan={2} />
               </tr>
@@ -341,7 +318,7 @@ function ReconciliationSection({
 
       {untaggedCount > 0 ? (
         <p className="border-t border-slate-200 px-4 py-2.5 text-xs text-slate-500">
-          Di luar tabel: {formatCurrency(untaggedAmount)} dari {formatNumber(untaggedCount)} topup belum
+          Di luar tabel: {formatRupiah(untaggedAmount)} dari {formatNumber(untaggedCount)} topup belum
           bertanda venue, sehingga tidak bisa direkonsiliasi antar-venue.
         </p>
       ) : null}
@@ -382,10 +359,10 @@ function TopSpenderTable({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-semibold text-slate-950">{formatCurrency(row.total_spend)}</div>
+                <div className="text-sm font-semibold text-slate-950">{formatRupiah(row.total_spend)}</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {formatNumber(row.order_count)} order
-                  {row.ark_spend > 0 ? ` · ARK ${formatCurrency(row.ark_spend)}` : ""}
+                  {row.ark_spend > 0 ? ` · ARK ${formatRupiah(row.ark_spend)}` : ""}
                 </div>
               </div>
             </div>

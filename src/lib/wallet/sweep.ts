@@ -7,6 +7,7 @@
  * Advisory lock memastikan hanya satu proses yang menyapu pada satu waktu.
  */
 import { getPool, withTransaction } from "@/lib/db";
+import { formatRupiah } from "@/lib/format";
 import { notifyMember } from "@/lib/crm/engagement/server";
 import { formatWib } from "@/lib/crm/engagement/rules";
 import { normalizeWaPhone } from "@/lib/pos/receipt-wa";
@@ -33,8 +34,6 @@ interface SweepResult {
   reminders_sent: number;
   nudges_sent: number;
 }
-
-const rupiah = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
 
 interface MemberContact {
   name: string | null;
@@ -98,7 +97,7 @@ async function expireCustomer(customerId: string, settings: WalletSettings, now:
       await notifyMember(client, customerId, {
         type: "wallet_expired",
         title: "Saldo ARK Coin kedaluwarsa",
-        body: `${rupiah(expiredIdr)} saldo Anda melewati masa berlaku dan sudah hangus.`,
+        body: `${formatRupiah(expiredIdr)} saldo Anda melewati masa berlaku dan sudah hangus.`,
       });
     }
     if (plan.processedLotIds.length > 0) {
@@ -168,12 +167,12 @@ async function remindCustomer(customerId: string, settings: WalletSettings, now:
   await notifyMember(pool, customerId, {
     type: "wallet_expiring",
     title: "Saldo ARK Coin segera kedaluwarsa",
-    body: `${rupiah(total)} (${ark} ARK) berakhir ${formatWib(earliest)}. Pakai sebelum tanggal itu.`,
+    body: `${formatRupiah(total)} (${ark} ARK) berakhir ${formatWib(earliest)}. Pakai sebelum tanggal itu.`,
   });
   const waSent = contact
     ? await sendMemberWa(
         contact,
-        `Halo ${contact.name || "Member"}, saldo ARK Coin Anda sebesar ${rupiah(total)} (${ark} ARK) akan kedaluwarsa pada ${formatWib(earliest)}. Gunakan sebelum tanggal tersebut di outlet mana pun.`
+        `Halo ${contact.name || "Member"}, saldo ARK Coin Anda sebesar ${formatRupiah(total)} (${ark} ARK) akan kedaluwarsa pada ${formatWib(earliest)}. Gunakan sebelum tanggal tersebut di outlet mana pun.`
       )
     : false;
   if (waSent) {
@@ -241,11 +240,11 @@ async function sendLowBalanceNudges(settings: WalletSettings, now: Date) {
       await notifyMember(pool, row.id, {
         type: "wallet_low_balance",
         title: "Saldo ARK Coin menipis",
-        body: `Saldo Anda tinggal ${rupiah(row.balance)}. Top-up di kasir atau dari menu ARK Coin di portal.`,
+        body: `Saldo Anda tinggal ${formatRupiah(row.balance)}. Top-up di kasir atau dari menu ARK Coin di portal.`,
       });
       const waSent = await sendMemberWa(
         row,
-        `Halo ${row.name || "Member"}, saldo ARK Coin Anda tinggal ${rupiah(row.balance)}. Top-up sekarang di kasir atau lewat portal member agar transaksi berikutnya tetap lancar.`
+        `Halo ${row.name || "Member"}, saldo ARK Coin Anda tinggal ${formatRupiah(row.balance)}. Top-up sekarang di kasir atau lewat portal member agar transaksi berikutnya tetap lancar.`
       );
       if (waSent) await pool.query(`UPDATE pos.pos_wallet_low_balance_nudges SET wa_sent = true WHERE id = $1`, [nudge[0].id]);
       sent += 1;

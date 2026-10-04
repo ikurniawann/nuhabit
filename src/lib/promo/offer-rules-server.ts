@@ -1,3 +1,5 @@
+import "server-only";
+import { ApiError } from "@/lib/api/auth";
 import { query, withTransaction } from "@/lib/db";
 import type { PoolClient } from "pg";
 import {
@@ -186,9 +188,10 @@ const RULE_COLUMNS = `name, description, valid_from, valid_until, is_active,
   max_uses_per_member, is_exclusive, priority, unlock_code`;
 
 /** Input admin ditolak (validasi / kode bentrok) — route memetakan ke 400. */
-export class OfferRuleInputError extends Error {
+/** Input penawaran tidak sah → 400 lewat apiHandler. */
+export class OfferRuleInputError extends ApiError {
   constructor(message: string) {
-    super(message);
+    super(400, message);
     this.name = "OfferRuleInputError";
   }
 }

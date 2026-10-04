@@ -3,68 +3,14 @@
 // EPIC-028 B2 — status Season Pass publik: pending → tombol bayar; active →
 // QR + kode + masa berlaku; expired/cancelled → info.
 
-import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatDate = (iso: string | null) =>
-  iso
-    ? new Date(`${iso}T00:00:00`).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : "—";
-
-const ENTRY_LABEL: Record<string, string> = {
-  once_per_day: "1× per hari",
-  unlimited: "Masuk tak terbatas",
-  limited_visits: "Jatah kunjungan",
-};
-
-interface PassStatus {
-  pass_code: string;
-  holder_name: string;
-  product_name: string;
-  status: string;
-  entry_policy: string;
-  valid_from: string | null;
-  valid_until: string | null;
-  visit_quota_total: number | null;
-  visit_quota_used: number;
-  unit_price: number;
-  qr_value: string;
-  invoice_url: string | null;
-}
+import { formatDate, formatRupiah } from "@/lib/format";
+import { usePassStatus } from "./queries";
+import { PUBLIC_ENTRY_LABEL } from "./types";
 
 export function PassStatusPage({ token }: { token: string }) {
-  const [pass, setPass] = useState<PassStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/public/booking/pass-status/${token}`);
-      if (res.status === 404) {
-        setNotFound(true);
-        return;
-      }
-      const body = await res.json();
-      if (body.success) setPass(body.data);
-    } catch {
-      // biarkan — UI tampilkan loading selesai tanpa data
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    load();
-    // Poll saat menunggu bayar supaya QR muncul otomatis setelah PAID
-    const timer = setInterval(load, 8000);
-    return () => clearInterval(timer);
-  }, [load]);
+  const { data: pass, isPending: loading } = usePassStatus(token);
 
   if (loading) {
     return (
@@ -74,7 +20,7 @@ export function PassStatusPage({ token }: { token: string }) {
     );
   }
 
-  if (notFound || !pass) {
+  if (!pass) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-3 bg-white px-6 text-center">
         <XCircle className="h-12 w-12 text-gray-300" />
@@ -110,13 +56,13 @@ export function PassStatusPage({ token }: { token: string }) {
             <div className="flex justify-between">
               <dt className="text-gray-500">Berlaku</dt>
               <dd className="text-right font-medium text-gray-900">
-                {formatDate(pass.valid_from)} — {formatDate(pass.valid_until)}
+                {formatDate(pass.valid_from, "—")} — {formatDate(pass.valid_until, "—")}
               </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-gray-500">Kebijakan masuk</dt>
               <dd className="font-medium text-gray-900">
-                {ENTRY_LABEL[pass.entry_policy] ?? pass.entry_policy}
+                {PUBLIC_ENTRY_LABEL[pass.entry_policy] ?? pass.entry_policy}
               </dd>
             </div>
             {pass.entry_policy === "limited_visits" && (
@@ -138,7 +84,7 @@ export function PassStatusPage({ token }: { token: string }) {
           <Clock className="h-12 w-12 text-amber-400" />
           <p className="font-semibold text-gray-900">Menunggu pembayaran</p>
           <p className="text-sm text-gray-500">
-            Selesaikan pembayaran {formatRp(pass.unit_price)} untuk mengaktifkan
+            Selesaikan pembayaran {formatRupiah(pass.unit_price)} untuk mengaktifkan
             pass. Halaman ini akan otomatis menampilkan QR setelah lunas.
           </p>
           {pass.invoice_url && (

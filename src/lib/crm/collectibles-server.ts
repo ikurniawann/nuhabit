@@ -1,3 +1,4 @@
+import "server-only";
 import type { Pool, PoolClient } from "pg";
 import { withTransaction } from "@/lib/db";
 import { createPgClient } from "@/lib/pg/create-client";

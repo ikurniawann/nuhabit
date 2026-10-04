@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate, formatDateTime, formatRupiah } from "@/lib/format";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,13 +29,6 @@ import { useAccountDetail, useDeleteAccount } from "../queries";
 import type { AccountContactSummary } from "../types";
 import { AccountFormDialog } from "./account-form-dialog";
 
-const rupiah = (value: string | number | null | undefined) =>
-  `Rp ${Math.round(Number(value) || 0).toLocaleString("id-ID")}`;
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-}
 
 function contactToSalesContact(c: AccountContactSummary, accountId: string, companyId: string, branchId: string, accountName: string): SalesContact {
   return {
@@ -152,7 +146,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
           ["Contact", contacts.length],
           ["Lead", leads.length],
           ["Deal Terbuka", openDeals.length],
-          ["Nilai Menang", rupiah(wonValue)],
+          ["Nilai Menang", formatRupiah(wonValue)],
         ].map(([label, value]) => (
           <div key={String(label)} className="rounded-xl border border-gray-200/80 bg-white p-4">
             <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
@@ -221,7 +215,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
                     </Link>
                     <Badge className="border-0 bg-orange-100 font-normal text-orange-700">{TEMPERATURE_LABELS[l.temperature as LeadTemperature] ?? l.temperature}</Badge>
                     <Badge className="border-0 bg-blue-100 font-normal text-blue-700">{STATUS_LABELS[l.status as LeadStatus] ?? l.status}</Badge>
-                    <span className="text-xs text-gray-400">{formatDate(l.created_at)}</span>
+                    <span className="text-xs text-gray-400">{formatDate(l.created_at, "—")}</span>
                   </li>
                 ))}
               </ul>
@@ -240,8 +234,8 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
                       {d.title}
                     </Link>
                     <Badge className={`border-0 font-normal ${d.is_won ? "bg-emerald-100 text-emerald-700" : d.is_lost ? "bg-gray-100 text-gray-500" : "bg-pink-100 text-pink-700"}`}>{d.stage_name}</Badge>
-                    <span className="text-xs text-gray-600">{rupiah(d.value_final ?? d.value_estimate)}</span>
-                    <span className="text-xs text-gray-400">{formatDate(d.event_date)}</span>
+                    <span className="text-xs text-gray-600">{formatRupiah(d.value_final ?? d.value_estimate)}</span>
+                    <span className="text-xs text-gray-400">{formatDate(d.event_date, "—")}</span>
                   </li>
                 ))}
               </ul>
@@ -256,7 +250,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
                   {quotations.map((q) => (
                     <li key={q.id} className="flex justify-between rounded-lg border border-gray-200/80 bg-white px-3 py-2">
                       <span>{q.quote_number} <Badge className="ml-1 border-0 bg-gray-100 font-normal text-gray-600">{q.status}</Badge></span>
-                      <span className="font-medium">{rupiah(q.total)}</span>
+                      <span className="font-medium">{formatRupiah(q.total)}</span>
                     </li>
                   ))}
                 </ul>
@@ -267,7 +261,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
                   {invoices.map((i) => (
                     <li key={i.id} className="flex justify-between rounded-lg border border-gray-200/80 bg-white px-3 py-2">
                       <span>{i.invoice_number} <Badge className="ml-1 border-0 bg-gray-100 font-normal text-gray-600">{i.status}</Badge></span>
-                      <span className="font-medium">{rupiah(i.amount)}</span>
+                      <span className="font-medium">{formatRupiah(i.amount)}</span>
                     </li>
                   ))}
                 </ul>
@@ -300,7 +294,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
                   <li key={t.id} className="rounded-lg border border-gray-200/80 p-2">
                     <p className="font-medium text-gray-900">{t.title ?? t.activity_type}</p>
                     <p className="text-xs text-gray-500">
-                      {t.due_at ? new Date(t.due_at).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "tanpa jatuh tempo"}
+                      {formatDateTime(t.due_at, "tanpa jatuh tempo")}
                       {t.owner_name ? ` · ${t.owner_name}` : ""}
                     </p>
                   </li>

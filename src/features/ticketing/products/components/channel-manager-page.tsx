@@ -18,15 +18,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TableRow } from "@/components/ui/table";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { formatRupiah } from "@/lib/format";
 import {
   useChannelManager,
   useSaveChannelPrices,
   useToggleChannel,
 } from "../queries";
 import type { ChannelManagerChannel, ChannelManagerItem } from "../types";
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 interface PriceDialogState {
   product: ChannelManagerItem;
@@ -271,11 +270,11 @@ export function ChannelManagerPage() {
                               varian:{" "}
                               {variant.price_regular === null
                                 ? "—"
-                                : formatRp(variant.price_regular)}{" "}
+                                : formatRupiah(variant.price_regular)}{" "}
                               /{" "}
                               {variant.price_high === null
                                 ? "—"
-                                : formatRp(variant.price_high)}
+                                : formatRupiah(variant.price_high)}
                             </p>
                           </td>
                           <td className="px-3 py-2">

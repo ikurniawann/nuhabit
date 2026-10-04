@@ -1,17 +1,11 @@
-// EPIC-032 — guard & konteks route promo. Pengelola = super_admin +
-// marketing (keputusan owner 26 Jul; role marketing di-provision penuh di
-// Task A4 — sebelum itu hanya super_admin yang efektif punya akses).
+// EPIC-032 — guard & konteks route promo. Pengelola = pemegang menu IAM promo
+// (super_admin + marketing).
 
 import { randomInt } from "crypto";
-import { NextResponse } from "next/server";
-import { getApiUser } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { getApiUserScope } from "@/lib/api/scope";
 import { IAM } from "@/lib/iam/prefixes";
-import { userHasIamPrefix } from "@/lib/iam/has-menu";
-import {
-  resolveTicketingVenue,
-  venueNotConfiguredResponse,
-} from "@/lib/ticketing/server";
+import { resolveTicketingVenue } from "@/lib/ticketing/server";
 import type { UserRole } from "@/types";
 
 /** @deprecated Gate memakai menu IAM promo / crm.promo. */
@@ -23,39 +17,18 @@ export type PromoContext = {
   branchId: string;
 };
 
-export async function requirePromoContext(
-  _roles: UserRole[] = PROMO_MANAGER_ROLES
-): Promise<
-  { error: NextResponse; ctx: null } | { error: null; ctx: PromoContext }
-> {
-  const user = await getApiUser();
-  if (!user) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      ),
-      ctx: null,
-    };
-  }
-  if (!(await userHasIamPrefix(user.id, user.role, IAM.promo))) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Insufficient permissions" },
-        { status: 403 }
-      ),
-      ctx: null,
-    };
-  }
-  const scope = await getApiUserScope();
-  const { companyId, branchId } = await resolveTicketingVenue(scope);
-  if (!companyId || !branchId) {
-    return { error: venueNotConfiguredResponse(), ctx: null };
-  }
-  return {
-    error: null,
-    ctx: { user: { id: user.id, role: user.role }, companyId, branchId },
-  };
+/** Venue (company + branch) tempat data promo dibatasi. */
+export type PromoVenue = Pick<PromoContext, "companyId" | "branchId">;
+
+const VENUE_NOT_CONFIGURED =
+  "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user";
+
+/** Gerbang menu promo + venue (company/branch) dari scope user atau default CRM. Melempar ApiError. */
+export async function requirePromoContext(): Promise<PromoContext> {
+  const user = await requireIamMenuPrefix(IAM.promo);
+  const { companyId, branchId } = await resolveTicketingVenue(await getApiUserScope());
+  if (!companyId || !branchId) throw ApiError.badRequest(VENUE_NOT_CONFIGURED);
+  return { user: { id: user.id, role: user.role }, companyId, branchId };
 }
 
 // Charset anti-ambigu (tanpa 0/O/1/I) — pola booking code EPIC-023

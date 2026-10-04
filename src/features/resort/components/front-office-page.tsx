@@ -1,20 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { BedSingle, DoorOpen, Loader2, LogIn, LogOut, RefreshCw, Users } from "lucide-react";
-import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { apiGet, apiPatch } from "@/lib/api-client";
+import { formatDate, formatRupiah } from "@/lib/format";
 import { wibDateString } from "@/lib/pos/report-period";
 import { RESERVATION_STATUS_LABELS } from "@/lib/resort/reservation";
+import type { FrontOfficeBoard, ReservationListRow, RoomRow } from "@/lib/resort/types";
 import { cn } from "@/lib/utils";
 import { ReservationDetailDialog } from "@/features/resort/components/reservation-detail-dialog";
-import {
-  ROOM_STATUS_CLASS, ROOM_STATUS_LABEL, STATUS_CLASS, rupiah, tanggal,
-  type FrontOfficeBoard, type ReservationListRow, type RoomRow,
-} from "@/features/resort/types";
+import { resortApi, useFrontOffice, useResortMutation } from "@/features/resort/queries";
+import { ROOM_STATUS_CLASS, ROOM_STATUS_LABEL, STATUS_CLASS } from "@/features/resort/types";
+
+type BoardRoom = FrontOfficeBoard["rooms"][number];
 
 /**
  * Resort → Front Office (owner 2026-09-06): papan kerja harian resepsionis —
@@ -23,26 +23,17 @@ import {
  */
 export function ResortFrontOfficePage() {
   const [date, setDate] = useState(() => wibDateString(new Date()));
-  const [board, setBoard] = useState<FrontOfficeBoard | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    apiGet<{ data: FrontOfficeBoard }>(`/api/resort/front-office?date=${date}`)
-      .then((res) => setBoard(res.data))
-      .catch((err) => { setBoard(null); toast.error(err instanceof Error ? err.message : "Gagal memuat papan front office"); });
-  }, [date]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const setRoomStatus = async (room: FrontOfficeBoard["rooms"][number], status: RoomRow["status"]) => {
-    try {
-      await apiPatch(`/api/resort/rooms/${room.id}`, { status });
-      toast.success(`${room.name}: ${ROOM_STATUS_LABEL[status]}`);
-      load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal mengubah status kamar");
-    }
-  };
+  const boardQuery = useFrontOffice(date);
+  const board = boardQuery.data;
+  const roomStatus = useResortMutation(
+    async ({ room, status }: { room: BoardRoom; status: RoomRow["status"] }) => {
+      await resortApi.saveRoom(room.id, { status });
+      return { message: `${room.name}: ${ROOM_STATUS_LABEL[status]}` };
+    },
+    "Status kamar diperbarui"
+  );
+  const setRoomStatus = (room: BoardRoom, status: RoomRow["status"]) => roomStatus.mutate({ room, status });
 
   const cards: Array<[string, string, string]> = board
     ? [
@@ -55,22 +46,25 @@ export function ResortFrontOfficePage() {
 
   return (
     <div className="space-y-5">
-      <Toaster richColors position="top-center" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold"><DoorOpen className="h-6 w-6 text-primary" />Front Office</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold"><DoorOpen className="h-6 w-6 text-brand-text" />Front Office</h1>
           <p className="mt-1 text-sm text-muted-foreground">Kedatangan, keberangkatan, tamu menginap, dan status kamar.</p>
         </div>
         <div className="flex items-end gap-2">
           <label className="text-xs text-muted-foreground">Tanggal
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="mt-1 h-9" />
           </label>
-          <Button variant="outline" className="h-9" onClick={load}><RefreshCw className="mr-1.5 h-4 w-4" />Muat ulang</Button>
+          <Button variant="outline" className="h-9" onClick={() => void boardQuery.refetch()}><RefreshCw className="mr-1.5 h-4 w-4" />Muat ulang</Button>
         </div>
       </div>
 
       {!board ? (
-        <Card><CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Memuat…</CardContent></Card>
+        <Card><CardContent className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+          {boardQuery.isError
+            ? boardQuery.error.message || "Gagal memuat papan front office"
+            : <><Loader2 className="h-4 w-4 animate-spin" />Memuat…</>}
+        </CardContent></Card>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -111,7 +105,7 @@ export function ResortFrontOfficePage() {
                     </div>
                     {room.guest_name ? (
                       <p className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
-                        {room.guest_name} · sampai {tanggal(room.occupied_until)}
+                        {room.guest_name} · sampai {formatDate(room.occupied_until)}
                       </p>
                     ) : (
                       <div className="flex flex-wrap gap-1">
@@ -138,7 +132,7 @@ export function ResortFrontOfficePage() {
         </>
       )}
 
-      {detailId && <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} onChanged={load} />}
+      {detailId && <ReservationDetailDialog id={detailId} onClose={() => setDetailId(null)} />}
     </div>
   );
 }
@@ -171,8 +165,8 @@ function GuestList({ title, icon, rows, empty, onOpen, showRooms }: {
                     {r.reservation_code} · {r.room_count} kamar{showRooms && r.rooms_label ? ` (${r.rooms_label})` : ""} · {r.nights} malam
                   </p>
                   <p className="mt-0.5 text-xs">
-                    <span className="text-muted-foreground">Total {rupiah(r.total)}</span>
-                    {r.balance > 0 && <span className="ml-2 font-medium text-amber-700">sisa {rupiah(r.balance)}</span>}
+                    <span className="text-muted-foreground">Total {formatRupiah(r.total)}</span>
+                    {r.balance > 0 && <span className="ml-2 font-medium text-amber-700">sisa {formatRupiah(r.balance)}</span>}
                   </p>
                 </button>
               </li>

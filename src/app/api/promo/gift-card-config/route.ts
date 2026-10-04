@@ -1,30 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { successResponse } from "@/lib/api/auth";
-import {
-  loadGiftCardConfig,
-  saveGiftCardConfig,
-} from "@/lib/giftcard/giftcard-server";
+import { successResponse, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { MAX_GIFT_CARD_VALUE } from "@/lib/giftcard/giftcard";
-import { requirePromoContext } from "@/lib/giftcard/server";
+import { loadGiftCardConfig, saveGiftCardConfig } from "@/lib/giftcard/giftcard-server";
+import { requirePromoContext } from "@/lib/promo/server";
 
 // EPIC-034 Fase B — konfigurasi nominal & masa berlaku gift card (keputusan
-// owner #4: configurable, bukan hardcode). Guard = peran pengelola Promo
-// (super_admin + marketing), sama dgn tab Gift Card yang menampungnya.
-
-export async function GET() {
-  const { error } = await requirePromoContext();
-  if (error) return error;
-  try {
-    return successResponse(await loadGiftCardConfig());
-  } catch (err) {
-    console.error("[giftcard] config get error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal memuat konfigurasi gift card" },
-      { status: 500 }
-    );
-  }
-}
+// owner #4: configurable, bukan hardcode). Guard = pengelola Promo, sama dgn
+// tab Gift Card yang menampungnya.
 
 const putSchema = z.object({
   presets: z
@@ -36,24 +20,13 @@ const putSchema = z.object({
   expiry_months: z.number().int().min(1).max(120).nullable().optional(),
 });
 
-export async function PUT(request: NextRequest) {
-  const { error } = await requirePromoContext();
-  if (error) return error;
-  try {
-    const parsed = putSchema.safeParse(await request.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.issues },
-        { status: 400 }
-      );
-    }
-    const saved = await saveGiftCardConfig(parsed.data);
-    return successResponse(saved, "Konfigurasi gift card tersimpan");
-  } catch (err) {
-    console.error("[giftcard] config put error:", err);
-    return NextResponse.json(
-      { success: false, error: "Gagal menyimpan konfigurasi gift card" },
-      { status: 500 }
-    );
-  }
-}
+export const GET = apiHandler(async () => {
+  await requirePromoContext();
+  return successResponse(await loadGiftCardConfig());
+}, "promo.gift-card-config.GET");
+
+export const PUT = apiHandler(async (request: NextRequest) => {
+  await requirePromoContext();
+  const body = await validateBody(request, putSchema);
+  return successResponse(await saveGiftCardConfig(body), "Konfigurasi gift card tersimpan");
+}, "promo.gift-card-config.PUT");

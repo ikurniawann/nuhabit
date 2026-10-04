@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
 import { ApiError, requireIamAction, requireIamMenuPrefix, type ApiUser } from "@/lib/api/auth";
 import { getApiUserScope } from "@/lib/api/scope";
 import { query, queryOne } from "@/lib/db";
 import { IAM } from "@/lib/iam/prefixes";
-import type { RateSeason, RoomTypeRate } from "@/lib/resort/rates";
-import { INVENTORY_BLOCKING_STATUSES } from "@/lib/resort/reservation";
+import type { BookedRow } from "./planning";
+import type { RateSeason } from "./rates";
+import { folioTotals, INVENTORY_BLOCKING_STATUSES } from "./reservation";
+import type { FolioRow, ReservationDetail, RoomTypeRow } from "./types";
 
 /**
  * Konteks venue modul Resort — sama pola dengan Ticketing: scope bisnis user,
@@ -31,13 +32,6 @@ async function resolveVenue(): Promise<{ companyId: string | null; branchId: str
   return { companyId, branchId };
 }
 
-export function venueNotConfigured(): NextResponse {
-  return NextResponse.json(
-    { success: false, error: "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user" },
-    { status: 409 }
-  );
-}
-
 export async function requireResortContext(action?: "create" | "update" | "delete"): Promise<ResortContext> {
   const user = action
     ? await requireIamAction(IAM.resort, action)
@@ -49,8 +43,8 @@ export async function requireResortContext(action?: "create" | "update" | "delet
 
 // ── Query bersama ──────────────────────────────────────────────────────────
 
-export async function loadRoomTypes(branchId: string, onlyActive = true): Promise<(RoomTypeRate & Record<string, unknown>)[]> {
-  return query(
+export async function loadRoomTypes(branchId: string, onlyActive = true): Promise<RoomTypeRow[]> {
+  return query<RoomTypeRow>(
     `SELECT t.id, t.code, t.name, t.description, t.zone, t.capacity_adults, t.capacity_children,
             t.extra_bed_capacity, t.rate_weekday::float8 AS rate_weekday, t.rate_weekend::float8 AS rate_weekend,
             t.extra_bed_rate::float8 AS extra_bed_rate, t.amenities, t.is_active, t.sort_order,
@@ -59,7 +53,7 @@ export async function loadRoomTypes(branchId: string, onlyActive = true): Promis
      WHERE t.branch_id = $1 ${onlyActive ? "AND t.is_active" : ""}
      ORDER BY t.sort_order, t.name`,
     [branchId]
-  ) as Promise<(RoomTypeRate & Record<string, unknown>)[]>;
+  );
 }
 
 export async function loadSeasons(branchId: string, from?: string, to?: string): Promise<RateSeason[]> {
@@ -78,8 +72,6 @@ export async function loadSeasons(branchId: string, from?: string, to?: string):
   );
 }
 
-export interface BookedRow { room_type_id: string; room_id: string | null; check_in: string; check_out: string; reservation_id: string }
-
 /** Kamar terpakai pada rentang tanggal (status yang masih memblokir stok). */
 export async function loadBookedRooms(branchId: string, from: string, to: string, excludeReservationId?: string | null): Promise<BookedRow[]> {
   return query<BookedRow>(
@@ -94,13 +86,17 @@ export async function loadBookedRooms(branchId: string, from: string, to: string
   );
 }
 
-export interface FolioRow {
-  id: string; charge_type: string; direction: "debit" | "kredit"; description: string;
-  amount: number; payment_method: string | null; created_by_name: string | null; created_at: string;
+/** Nama staf untuk jejak folio/catatan; kosong → "Front Office". */
+export async function loadActorName(userId: string): Promise<string> {
+  const actor = await queryOne<{ full_name: string | null }>(
+    `SELECT full_name FROM configuration.users WHERE id = $1`, [userId]
+  );
+  return actor?.full_name?.trim() || "Front Office";
 }
 
-export async function reservationDetail(branchId: string, id: string) {
-  const reservation = await queryOne(
+/** Detail reservasi + kamar + folio + total folio; null bila tidak ada di cabang ini. */
+export async function reservationDetail(branchId: string, id: string): Promise<ReservationDetail | null> {
+  const reservation = await queryOne<Omit<ReservationDetail, "rooms" | "folio" | "totals">>(
     `SELECT r.*, r.check_in::text AS check_in, r.check_out::text AS check_out,
             r.room_total::float8 AS room_total, r.extra_total::float8 AS extra_total,
             r.discount_amount::float8 AS discount_amount, r.total::float8 AS total
@@ -109,7 +105,7 @@ export async function reservationDetail(branchId: string, id: string) {
   );
   if (!reservation) return null;
   const [rooms, folio] = await Promise.all([
-    query(
+    query<ReservationDetail["rooms"][number]>(
       `SELECT rr.id, rr.room_type_id, rr.room_id, rr.room_type_name, rr.room_name, rr.guest_name,
               rr.nightly_rate::float8 AS nightly_rate, rr.nights, rr.extra_bed, rr.subtotal::float8 AS subtotal,
               rr.rate_breakdown, rm.code AS room_code, rm.status AS room_status
@@ -125,5 +121,5 @@ export async function reservationDetail(branchId: string, id: string) {
       [id]
     ),
   ]);
-  return { ...reservation, rooms, folio };
+  return { ...reservation, rooms, folio, totals: folioTotals(folio) };
 }

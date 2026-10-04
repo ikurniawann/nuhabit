@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import {
   RFM_PRESETS,
   SEGMENT_SOURCES,
@@ -26,8 +26,8 @@ import {
   useCreateSegment, useDeleteSegment, usePreviewDefinition, useRecountSegment, useSegments, useUpdateSegment,
 } from "../queries";
 import type { SegmentDefinition, SegmentPreview, SegmentRow, SegmentSource } from "../types";
+import { formatNumber, formatRupiah } from "@/lib/format";
 
-const rupiah = (v: unknown) => `Rp ${Math.round(Number(v) || 0).toLocaleString("id-ID")}`;
 const emptyDefinition = (source: SegmentSource = "member"): SegmentDefinition => segmentDefinitionSchema.parse({ source });
 
 /** EPIC-050 T-5.1 — Segmen dinamis + RFM, dipakai sebagai penerima kampanye WA. */
@@ -79,7 +79,7 @@ export function SegmentsPage() {
                 </div>
                 {s.last_count !== null ? (
                   <Badge className="border-0 bg-pink-100 font-normal text-pink-700">
-                    <Users className="mr-1 h-3 w-3" />{s.last_count.toLocaleString("id-ID")} anggota
+                    <Users className="mr-1 h-3 w-3" />{formatNumber(s.last_count)} anggota
                   </Badge>
                 ) : (
                   <Badge className="border-0 bg-gray-100 font-normal text-gray-500">belum dihitung</Badge>
@@ -260,7 +260,7 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
         <div className="rounded-lg border border-gray-200/80 bg-gray-50/60 p-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-800">
-              {preview ? `${preview.total.toLocaleString("id-ID")} anggota` : "Belum dihitung"}
+              {preview ? `${formatNumber(preview.total)} anggota` : "Belum dihitung"}
             </p>
             <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={runPreview} disabled={previewMutation.isPending}>
               {previewMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Hitung
@@ -273,7 +273,7 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
                   <span className="font-medium text-gray-800">{m.name}</span>
                   <span className="text-gray-400">{m.phone}</span>
                   {preview.with_rfm ? (
-                    <span className="text-gray-500">R{m.r_score} F{m.f_score} M{m.m_score} · {rupiah(m.total_spent)}</span>
+                    <span className="text-gray-500">R{m.r_score} F{m.f_score} M{m.m_score} · {formatRupiah(m.total_spent)}</span>
                   ) : null}
                 </li>
               ))}

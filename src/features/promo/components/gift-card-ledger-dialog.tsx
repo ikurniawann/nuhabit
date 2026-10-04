@@ -13,8 +13,8 @@ import {
 import { TableRow } from "@/components/ui/table";
 import { useGiftCardLedger } from "../gift-card-queries";
 import type { GiftCard } from "../gift-card-types";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
 const DIRECTION_LABELS: Record<string, string> = {
   isi: "Isi/Terbit",
@@ -70,7 +70,7 @@ export function GiftCardLedgerDialog({
                 {entries.map((entry) => (
                   <TableRow key={entry.id} className="hover:bg-gray-50/80">
                     <td className="px-3 py-2 text-xs text-gray-600">
-                      {new Date(entry.created_at).toLocaleString("id-ID")}
+                      {formatDateTime(entry.created_at)}
                     </td>
                     <td className="px-3 py-2">
                       <Badge
@@ -80,10 +80,10 @@ export function GiftCardLedgerDialog({
                       </Badge>
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">
-                      {formatRp(Number(entry.amount))}
+                      {formatRupiah(entry.amount)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium text-gray-900">
-                      {formatRp(Number(entry.balance_after))}
+                      {formatRupiah(entry.balance_after)}
                     </td>
                     <td className="px-3 py-2 text-xs text-gray-500">
                       {entry.context_type ?? "—"}

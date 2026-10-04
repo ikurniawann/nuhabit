@@ -23,11 +23,10 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatNumber, formatTime } from "@/lib/format";
 import {
-  angka,
   BOOKING_BADGE,
   GYM_KEYS,
-  jam,
   schedulingApi,
   SESSION_BADGE,
   waktu,
@@ -86,10 +85,10 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         return;
       }
       if (action === "publish") toast.success("Sesi diterbitkan");
-      if (action === "cancel") toast.success("Sesi dibatalkan", { description: `${angka(result.notified ?? 0)} member dikabari.` });
+      if (action === "cancel") toast.success("Sesi dibatalkan", { description: `${formatNumber(result.notified ?? 0)} member dikabari.` });
       if (action === "complete")
         toast.success("Sesi ditutup", {
-          description: `${angka(result.completed ?? 0)} hadir, ${angka(result.noShows ?? 0)} no-show, ${angka(result.penaltyCredits ?? 0)} kredit hangus.`,
+          description: `${formatNumber(result.completed ?? 0)} hadir, ${formatNumber(result.noShows ?? 0)} no-show, ${formatNumber(result.penaltyCredits ?? 0)} kredit hangus.`,
         });
       refresh();
     },
@@ -130,7 +129,7 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         <ArrowLeft /> Semua sesi
       </Link>
       <PageHeader
-        kicker={`${waktu(session.starts_at)}–${jam(session.ends_at)} · ${session.area ?? "Area belum ditentukan"}`}
+        kicker={`${waktu(session.starts_at)}–${formatTime(session.ends_at)} · ${session.area ?? "Area belum ditentukan"}`}
         title={session.class_type_name}
         description={`${session.coach_name ?? "Coach belum ditentukan"} · ${session.credit_cost} kredit per member, dipotong saat check-in.`}
         actions={
@@ -163,14 +162,14 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatCard
           label="Terdaftar"
-          value={angka(session.confirmed_count)}
-          unit={`/ ${angka(session.capacity)}`}
+          value={formatNumber(session.confirmed_count)}
+          unit={`/ ${formatNumber(session.capacity)}`}
           icon={<Users />}
           tone="ink"
         />
-        <StatCard label="Check-in" value={angka(session.checked_in_count)} icon={<UserCheck />} tone={session.checked_in_count ? "success" : "default"} />
-        <StatCard label="Waitlist" value={angka(session.waitlist_count)} icon={<Hourglass />} tone={session.waitlist_count ? "info" : "default"} />
-        <StatCard label="Kredit per kelas" value={angka(session.credit_cost)} icon={<Coins />} />
+        <StatCard label="Check-in" value={formatNumber(session.checked_in_count)} icon={<UserCheck />} tone={session.checked_in_count ? "success" : "default"} />
+        <StatCard label="Waitlist" value={formatNumber(session.waitlist_count)} icon={<Hourglass />} tone={session.waitlist_count ? "info" : "default"} />
+        <StatCard label="Kredit per kelas" value={formatNumber(session.credit_cost)} icon={<Coins />} />
       </div>
 
       <Card className="py-0">
@@ -190,8 +189,8 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         />
         {cancelled.length > 0 && (
           <p className="px-5 pb-4 text-xs text-muted-foreground">
-            {angka(cancelled.length)} booking batal
-            {cancelled.some((b) => b.late_cancel) && `, ${angka(cancelled.filter((b) => b.late_cancel).length)} di antaranya batal terlambat`}.
+            {formatNumber(cancelled.length)} booking batal
+            {cancelled.some((b) => b.late_cancel) && `, ${formatNumber(cancelled.filter((b) => b.late_cancel).length)} di antaranya batal terlambat`}.
           </p>
         )}
       </Card>
@@ -247,7 +246,7 @@ function RosterTable({
                   {b.status === "waitlist" ? `Waitlist #${b.waitlist_position}` : badge.label}
                 </Badge>
                 {b.promotion_offered_at && <span className="ml-2 text-xs text-info">kursi ditawarkan</span>}
-                {b.checked_in_at && <span className="ml-2 text-xs text-muted-foreground">{jam(b.checked_in_at)}</span>}
+                {b.checked_in_at && <span className="ml-2 text-xs text-muted-foreground">{formatTime(b.checked_in_at)}</span>}
                 {b.source === "admin" && <span className="ml-2 text-xs text-muted-foreground">oleh staf</span>}
               </TableCell>
               <TableCell className="text-right">
@@ -311,7 +310,7 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
               <div className="min-w-0">
                 <p className="truncate font-medium">{m.name ?? "Member"}</p>
                 <p className="text-xs text-muted-foreground">
-                  {m.phone} · {angka(m.credits)} kredit{m.is_active ? "" : " · nonaktif"}
+                  {m.phone} · {formatNumber(m.credits)} kredit{m.is_active ? "" : " · nonaktif"}
                 </p>
               </div>
               <Button size="sm" disabled={book.isPending} onClick={() => book.mutate(m.id)}>

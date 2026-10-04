@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateTime, formatRupiah } from "@/lib/format";
 import {
   useBookingDetail,
   useCancelBooking,
@@ -30,18 +31,6 @@ interface BookingDetailDialogProps {
   canManage?: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const formatRp = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
-const formatDateTime = (iso: string | null) =>
-  iso
-    ? new Date(iso).toLocaleString("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "—";
 
 /**
  * Rincian booking + aksi D5: batalkan (wajib catatan bila sudah terbayar),
@@ -151,16 +140,16 @@ function BookingDetailBody({
         </div>
         <div>
           <p className="text-xs text-gray-500">Dibuat</p>
-          <p className="text-gray-700">{formatDateTime(booking.created_at)}</p>
+          <p className="text-gray-700">{formatDateTime(booking.created_at, "—")}</p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Dibayar</p>
-          <p className="text-gray-700">{formatDateTime(booking.paid_at)}</p>
+          <p className="text-gray-700">{formatDateTime(booking.paid_at, "—")}</p>
         </div>
         {booking.used_at ? (
           <div>
             <p className="text-xs text-gray-500">Dipakai (redeem loket)</p>
-            <p className="text-gray-700">{formatDateTime(booking.used_at)}</p>
+            <p className="text-gray-700">{formatDateTime(booking.used_at, "—")}</p>
           </div>
         ) : null}
         {booking.status === "menunggu-bayar" && booking.xendit_invoice_url ? (
@@ -199,10 +188,10 @@ function BookingDetailBody({
                 </td>
                 <td className="px-3 py-2 text-center">{item.qty}</td>
                 <td className="px-3 py-2 text-right">
-                  {formatRp(item.unit_price)}
+                  {formatRupiah(item.unit_price)}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  {formatRp(item.subtotal)}
+                  {formatRupiah(item.subtotal)}
                 </td>
               </tr>
             ))}
@@ -211,7 +200,7 @@ function BookingDetailBody({
                 Total
               </td>
               <td className="px-3 py-2 text-right">
-                {formatRp(booking.total)}
+                {formatRupiah(booking.total)}
               </td>
             </tr>
           </tbody>

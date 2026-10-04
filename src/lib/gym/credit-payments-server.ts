@@ -1,3 +1,4 @@
+import "server-only";
 /**
  * Pembayaran paket kredit dari portal member: QRIS dinamis Xendit (pola
  * yang sama dengan top-up ARK) atau saldo ARK Coin. Kredit terbit hanya

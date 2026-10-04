@@ -1,11 +1,9 @@
-import { getPool } from "@/lib/db";
-import { IAM } from "@/lib/iam/prefixes";
-import { ok, walletRoute } from "@/lib/wallet/route";
+import { apiHandler } from "@/lib/api/handler";
+import { ok, requireWalletAdmin } from "@/lib/wallet/route";
+import { listActiveBranches } from "@/lib/wallet/topup";
 
 /** GET — cabang aktif, untuk membatasi paket top-up per cabang. */
-export const GET = walletRoute(IAM.posWallet, "Gagal memuat cabang", async () => {
-  const { rows } = await getPool().query(
-    `SELECT id, name FROM configuration.branches WHERE is_active ORDER BY name`
-  );
-  return ok(rows);
-});
+export const GET = apiHandler(async () => {
+  await requireWalletAdmin();
+  return ok(await listActiveBranches());
+}, "wallet.branches.GET");

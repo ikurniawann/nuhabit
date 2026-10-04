@@ -1,9 +1,9 @@
 "use client";
 
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { Loader2, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useDealPayments } from "../queries";
-import { formatRupiah } from "../types";
 
 /**
  * Pembayaran deal — READ-ONLY di pipeline (EPIC-025 Opsi B): pencatatan
@@ -24,15 +24,6 @@ const TERM_BADGES: Record<string, string> = {
   sebagian: "bg-amber-100 text-amber-700",
   belum: "bg-gray-100 text-gray-500",
 };
-
-function formatShortDate(value: string | null): string {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function PaymentSection({
   dealId,
@@ -118,14 +109,14 @@ export function PaymentSection({
                       {term.status}
                     </Badge>
                     <span className="font-medium text-gray-800">
-                      {term.label} ({Number(term.percent).toLocaleString("id-ID")}%)
+                      {term.label} ({formatNumber(term.percent, 3)}%)
                     </span>
                     <span className="text-gray-500">
                       {formatRupiah(term.paid)} / {formatRupiah(term.amount)}
                     </span>
                     {term.due_date ? (
                       <span className="ml-auto text-gray-400">
-                        jatuh tempo {formatShortDate(term.due_date)}
+                        jatuh tempo {formatDate(term.due_date, "")}
                       </span>
                     ) : null}
                   </div>
@@ -154,7 +145,7 @@ export function PaymentSection({
                     </Badge>
                   ) : null}
                   <span className="text-xs text-gray-500">
-                    {formatShortDate(payment.paid_on)}
+                    {formatDate(payment.paid_on, "")}
                     {payment.note ? ` · ${payment.note}` : ""}
                   </span>
                 </li>

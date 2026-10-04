@@ -24,13 +24,6 @@ export interface CampaignTargetValue {
   new_member_days: string;
 }
 
-/** Kosong = tanpa batas hari; selain itu bilangan bulat 1–3650. */
-export function isValidNewMemberDays(value: CampaignTargetValue): boolean {
-  if (value.eligibility !== "member_baru" || value.new_member_days.trim() === "") return true;
-  const days = Number(value.new_member_days);
-  return Number.isInteger(days) && days >= 1 && days <= 3650;
-}
-
 export function CampaignTargetFields({
   value,
   onChange,

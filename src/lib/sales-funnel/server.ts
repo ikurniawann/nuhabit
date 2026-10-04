@@ -1,39 +1,35 @@
 import { NextResponse } from "next/server";
-import { getApiUser } from "@/lib/api/auth";
-import { importBusinessIds, type UserScope } from "@/lib/api/scope";
+import { ApiError, getApiUser } from "@/lib/api/auth";
+import { getApiUserScope, importBusinessIds, type UserScope } from "@/lib/api/scope";
+import { mergeCustomValues, validateCustomValues, type CustomFieldObject, type CustomValues } from "@/lib/crm/custom-fields";
+import { loadCustomFieldDefs } from "@/lib/crm/custom-fields-server";
 import { query, queryOne } from "@/lib/db";
 import { IAM } from "@/lib/iam/prefixes";
 import { userHasIamPrefix } from "@/lib/iam/has-menu";
 import type { UserRole } from "@/types";
 
-/** @deprecated Gate memakai menu IAM `sales-funnel`. */
+/** Role yang boleh jadi penanggung jawab lead/deal (gate menu memakai IAM `sales-funnel`). */
 export const SALES_FUNNEL_ROLES: UserRole[] = ["super_admin", "sales"];
 
 export type SalesFunnelUser = { id: string; role: UserRole };
 
-export async function requireSalesFunnelRole(): Promise<
-  { error: NextResponse; user: null } | { error: null; user: SalesFunnelUser }
-> {
+/** Guard route sales-funnel: sesi + grant menu IAM `sales-funnel`, lempar 401/403. */
+export async function requireSalesFunnelUser(): Promise<SalesFunnelUser> {
   const user = await getApiUser();
-  if (!user) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      ),
-      user: null,
-    };
-  }
+  if (!user) throw ApiError.unauthorized();
   if (!(await userHasIamPrefix(user.id, user.role, IAM.salesFunnel))) {
-    return {
-      error: NextResponse.json(
-        { success: false, error: "Insufficient permissions" },
-        { status: 403 }
-      ),
-      user: null,
-    };
+    throw ApiError.forbidden();
   }
-  return { error: null, user: { id: user.id, role: user.role } };
+  return { id: user.id, role: user.role };
+}
+
+/** Batasi aksi ke role tertentu (konfigurasi = admin/super_admin). */
+export function requireRole(
+  user: SalesFunnelUser,
+  roles: readonly UserRole[],
+  message = "Insufficient permissions"
+): void {
+  if (!roles.includes(user.role)) throw ApiError.forbidden(message);
 }
 
 export const LEAD_ORG_TYPES = [
@@ -150,24 +146,73 @@ export function isValidNormalizedPhone(phone: string): boolean {
   return phone.length >= MIN_PHONE_DIGITS && phone.startsWith("62");
 }
 
+const SCOPE_MISSING = "Scope bisnis user belum dikonfigurasi — hubungi admin";
+
 /**
  * Tenant isolation WAJIB fail-closed (acceptance criteria EPIC-022): selain
  * super_admin, user tanpa company_id di scope bisnisnya DITOLAK — jangan
  * pernah melewatkan filter company diam-diam.
  */
+export function hasCompanyScope(user: SalesFunnelUser, scope: UserScope | null): boolean {
+  return user.role === "super_admin" || Boolean(scope?.companyId);
+}
+
+/** Versi respons untuk route finance (pola `if (err) return err`). */
 export function requireCompanyScope(
   user: SalesFunnelUser,
   scope: UserScope | null
 ): NextResponse | null {
-  if (user.role === "super_admin") return null;
-  if (scope?.companyId) return null;
-  return NextResponse.json(
-    {
-      success: false,
-      error: "Scope bisnis user belum dikonfigurasi — hubungi admin",
-    },
-    { status: 403 }
-  );
+  return hasCompanyScope(user, scope) ? null : ApiError.forbidden(SCOPE_MISSING).toResponse();
+}
+
+/** Scope bisnis user yang sudah lolos cek fail-closed. */
+export async function requireSalesScope(user: SalesFunnelUser): Promise<UserScope | null> {
+  const scope = await getApiUserScope();
+  if (!hasCompanyScope(user, scope)) throw ApiError.forbidden(SCOPE_MISSING);
+  return scope;
+}
+
+/**
+ * Penanggung jawab baru: role sales hanya boleh menunjuk dirinya sendiri,
+ * user lain wajib lolos validateAssignableOwner.
+ */
+export async function assertOwnerAssignable(
+  user: SalesFunnelUser,
+  ownerUserId: string | null | undefined,
+  companyId: string | null
+): Promise<void> {
+  if (!ownerUserId) return;
+  if (user.role === "sales" && ownerUserId !== user.id) {
+    throw ApiError.forbidden("Role sales hanya boleh menjadi penanggung jawab sendiri");
+  }
+  const ownerError = await validateAssignableOwner(ownerUserId, companyId);
+  if (ownerError) throw ApiError.badRequest(ownerError);
+}
+
+/**
+ * Validasi payload `custom` terhadap definisi aktif. `existing` (PATCH)
+ * membuat validasi parsial dan hasilnya di-merge ke nilai lama.
+ */
+export async function resolveCustomValues(
+  object: CustomFieldObject,
+  companyId: string | null,
+  raw: CustomValues | null | undefined,
+  existing?: CustomValues
+): Promise<CustomValues> {
+  const defs = await loadCustomFieldDefs(object, companyId);
+  const partial = existing !== undefined;
+  const result = validateCustomValues(defs, raw, { partial });
+  if (!result.ok) {
+    throw ApiError.badRequest(result.errors.map((e) => e.message).join("; "), result.errors);
+  }
+  return partial ? mergeCustomValues(existing, result.values) : result.values;
+}
+
+/** Nomor WA kanonik 62… atau 400 dengan pesan route. */
+export function requireValidPhone(raw: string, message: string): string {
+  const phone = normalizePhone(raw);
+  if (!isValidNormalizedPhone(phone)) throw ApiError.badRequest(message);
+  return phone;
 }
 
 /**
@@ -199,5 +244,20 @@ export async function resolveSalesVenue(scope: UserScope | null): Promise<{
   } catch {
     // crm_settings belum ada → biarkan null, route yang menolak dengan 400
   }
+  return { companyId, branchId };
+}
+
+const VENUE_MISSING =
+  "Venue belum dikonfigurasi — set default_company_id/default_branch_id di CRM Settings atau lengkapi scope bisnis user";
+/** Pesan venue kosong untuk contact & task member (warisan route lama). */
+export const VENUE_MISSING_SHORT = "Venue belum dikonfigurasi — lengkapi scope bisnis user atau venue default CRM";
+
+/** resolveSalesVenue yang wajib lengkap (company + branch), else 400. */
+export async function requireSalesVenue(
+  scope: UserScope | null,
+  message = VENUE_MISSING
+): Promise<{ companyId: string; branchId: string }> {
+  const { companyId, branchId } = await resolveSalesVenue(scope);
+  if (!companyId || !branchId) throw ApiError.badRequest(message);
   return { companyId, branchId };
 }

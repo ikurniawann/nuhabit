@@ -1,3 +1,4 @@
+import "server-only";
 // EPIC-032 Fase A2 — sisi server engine promo: preview validasi (read-only)
 // dan siklus hidup pemakaian kode: HOLD (klaim transaksional di bawah
 // advisory lock) → CAPTURE (terpakai final) → RELEASE (lepas + kembalikan

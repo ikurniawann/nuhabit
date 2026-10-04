@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { dayKey, visibleRange, type CalendarMode } from "../calendar";
 import { useDeleteTask, useTasks, useUpdateTask } from "../queries";
 import {
@@ -51,10 +52,6 @@ function subjectHref(task: SalesTask): string | null {
   }
 }
 
-function formatDue(iso: string | null): string {
-  if (!iso) return "Tanpa jatuh tempo";
-  return new Date(iso).toLocaleString("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 
 /**
  * EPIC-050 Fase 1 (T-1.5) — Tasks & Kalender: menggantikan "Follow-up Hari Ini".
@@ -249,7 +246,7 @@ export function SalesTasksPage() {
                     {task.notes ? <p className="mt-0.5 line-clamp-2 text-xs text-gray-600">{task.notes}</p> : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-3 text-xs">
-                    <span className={late ? "font-semibold text-red-600" : "text-gray-500"}>{formatDue(task.due_at)}</span>
+                    <span className={late ? "font-semibold text-red-600" : "text-gray-500"}>{formatDateTime(task.due_at, "Tanpa jatuh tempo")}</span>
                     {task.pic_phone && task.subject_type !== "member" ? (
                       <a href={`https://wa.me/${task.pic_phone}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">WA</a>
                     ) : null}

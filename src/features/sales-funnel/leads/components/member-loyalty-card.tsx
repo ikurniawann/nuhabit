@@ -1,12 +1,13 @@
 "use client";
 
+import { formatDate, formatNumber } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { Coins, CreditCard, Link2, Loader2, Unlink, UserPlus2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { formatRupiah } from "../../pipeline/types";
+import { formatRupiahOrDash } from "../../pipeline/types";
 import {
   useCustomerSearch,
   useLinkLeadCustomer,
@@ -17,15 +18,6 @@ import type {
   LinkedCustomer,
   SalesLead,
 } from "../types";
-
-function formatDate(value: string | null): string {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 interface MemberLoyaltyCardProps {
   lead: SalesLead;
@@ -86,7 +78,7 @@ export function MemberLoyaltyCard({
           <div>
             <p className="text-xs text-gray-400">Total Belanja POS</p>
             <p className="font-semibold text-gray-900">
-              {formatRupiah(customer.total_spent as string | number | null)}
+              {formatRupiahOrDash(customer.total_spent)}
             </p>
           </div>
           <div>
@@ -95,20 +87,20 @@ export function MemberLoyaltyCard({
           </div>
           <div>
             <p className="text-xs text-gray-400">Kunjungan Terakhir</p>
-            <p className="text-gray-900">{formatDate(customer.last_visit)}</p>
+            <p className="text-gray-900">{formatDate(customer.last_visit, "—")}</p>
           </div>
           <div>
             <p className="inline-flex items-center gap-1 text-xs text-gray-400">
               <Coins className="h-3 w-3" /> Ark Coin
             </p>
             <p className="text-gray-900">
-              {Number(customer.ark_coin_balance ?? 0).toLocaleString("id-ID")}
+              {formatNumber(customer.ark_coin_balance)}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-400">Total XP</p>
             <p className="text-gray-900">
-              {Number(customer.total_xp ?? 0).toLocaleString("id-ID")}
+              {formatNumber(customer.total_xp)}
             </p>
           </div>
         </div>
@@ -122,10 +114,10 @@ export function MemberLoyaltyCard({
               {recentOrders.map((order) => (
                 <li key={order.id} className="flex items-center justify-between">
                   <span className="text-gray-500">
-                    {formatDate(order.created_at)}
+                    {formatDate(order.created_at, "—")}
                   </span>
                   <span className="font-medium text-gray-900">
-                    {formatRupiah(order.total_amount as string | number | null)}
+                    {formatRupiahOrDash(order.total_amount)}
                   </span>
                 </li>
               ))}
