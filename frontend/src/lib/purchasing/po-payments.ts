@@ -32,7 +32,24 @@ export function computePoShortageAmount(
   );
 }
 
-export async function getPoShortageAmount(db: DbClient, poId: string): Promise<number> {
+/**
+ * Shortage credited against the payable. An open PO still expects its
+ * remaining quantity, so the shortage counts only once the PO is closed or
+ * cancelled (same rule as the Go ShortageCredit).
+ */
+export function computePoShortageCredit(
+  poStatus: string | null | undefined,
+  items: Parameters<typeof computePoShortageAmount>[0]
+): number {
+  const status = String(poStatus ?? "").toLowerCase();
+  return status === "closed" || status === "cancelled" ? computePoShortageAmount(items) : 0;
+}
+
+export async function getPoShortageCredit(
+  db: DbClient,
+  poId: string,
+  poStatus: string | null | undefined
+): Promise<number> {
   const { data, error } = await db
     .from("purchase_order_items")
     .select("qty_ordered, qty_received, harga_satuan")
@@ -40,7 +57,7 @@ export async function getPoShortageAmount(db: DbClient, poId: string): Promise<n
     .eq("is_active", true);
 
   if (error) throw error;
-  return computePoShortageAmount(data || []);
+  return computePoShortageCredit(poStatus, data || []);
 }
 
 export type PoPayableContext = {
@@ -207,11 +224,11 @@ export async function getReturnCreditsByPoIds(
   return credits;
 }
 
-export async function getPoCreditBreakdown(db: DbClient, poId: string) {
+export async function getPoCreditBreakdown(db: DbClient, poId: string, poStatus: string | null | undefined) {
   try {
     const [returnCredit, shortageCredit] = await Promise.all([
       getPoReturnCreditAmount(db, poId),
-      getPoShortageAmount(db, poId),
+      getPoShortageCredit(db, poId, poStatus),
     ]);
 
     return {
@@ -236,7 +253,7 @@ export async function getPoPayableContext(
 ): Promise<PoPayableContext | null> {
   const { data: po, error: poError } = await db
     .from("purchase_orders")
-    .select("id, supplier_id, vendor_id, total, subtotal, diskon_nominal, ppn_nominal")
+    .select("id, status, supplier_id, vendor_id, total, subtotal, diskon_nominal, ppn_nominal")
     .eq("id", poId)
     .maybeSingle();
 
@@ -252,7 +269,7 @@ export async function getPoPayableContext(
   if (viewError) throw viewError;
 
   const grossPayableAmount = toAmount(viewRow?.payable_amount ?? po.total ?? po.subtotal);
-  const creditBreakdown = await getPoCreditBreakdown(db, poId);
+  const creditBreakdown = await getPoCreditBreakdown(db, poId, po.status as string | null);
   const paidAmount = toAmount(viewRow?.paid_amount);
   const amounts = computePoInvoiceAmounts({
     grossPayable: grossPayableAmount,

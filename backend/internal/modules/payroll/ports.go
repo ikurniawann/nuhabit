@@ -56,6 +56,10 @@ type Employees interface {
 	// DepartmentMembers are the department's active employees ordered by
 	// full_name (database collation).
 	DepartmentMembers(ctx context.Context, q database.Querier, departmentID string) ([]Member, error)
+	// Companies maps each employee among ids to the company of its linked
+	// account (the user's company, else its branch's company); employees
+	// without one are absent.
+	Companies(ctx context.Context, q database.Querier, ids []string) (map[string]string, error)
 }
 
 // Member is an employee's id and name.

@@ -210,7 +210,7 @@ export async function getPurchaseOrderDetail(db: DbClient, id: string) {
   if (deliveryError) throw deliveryError;
   const delivery = summarizePoDelivery((deliveryRows ?? []) as PoDeliveryRow[]);
 
-  const creditBreakdown = await getPoCreditBreakdown(db, id);
+  const creditBreakdown = await getPoCreditBreakdown(db, id, po.status as string | null);
   const invoice = computePoInvoiceAmounts({
     grossPayable: Number(po.payable_amount ?? po.grand_total ?? po.total ?? 0),
     returnCredit: creditBreakdown.return_credit_amount,

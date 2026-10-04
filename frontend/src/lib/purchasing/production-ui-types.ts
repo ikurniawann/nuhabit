@@ -28,11 +28,16 @@ export type CogsMaterial = {
   waste_percentage: number;
   effective_qty: number;
   subtotal: number;
+  /** Tarif biaya tambahan pembelian bahan ini, persen dari biaya bahan. */
+  landed_cost_rate?: number;
+  additional_cost?: number;
 };
 
 export type CogsData = {
   hpp_per_unit: number;
   total_bom_cost: number;
+  /** Biaya tambahan pembelian (freight, bea, handling) per unit, sudah masuk hpp_per_unit. */
+  total_additional_cost?: number;
   total_overhead: number;
   breakdown_bahan: CogsMaterial[];
 };

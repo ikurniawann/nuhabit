@@ -2,7 +2,6 @@ package production
 
 import (
 	"context"
-	"errors"
 	"math"
 	"net/http"
 	"strings"
@@ -14,8 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 )
 
-// lib/purchasing/production-recipes.ts, production-wip.ts, cogs-estimate.ts
-// and cogs-additional-cost.ts.
+// lib/purchasing/production-recipes.ts, production-wip.ts and cogs-estimate.ts.
 
 // scopedItems is listScopedItems: up to 200 active rows of view in scope.
 func (h *handler) scopedItems(r *http.Request, view string, extra ...string) (kit.Rows, *ps.Scope, error) {
@@ -233,9 +231,17 @@ type cogsLine struct {
 	satuan     *kit.Row
 }
 
-// estimate is estimateBomCost.
-func estimate(lines []cogsLine, stock map[string]*kit.Row, overhead float64, convertUnits bool) (breakdown []*kit.Row, hpp, totalBom, totalOverhead float64) {
-	total := 0.0
+// cogsTotals are the estimate's per-unit totals.
+type cogsTotals struct {
+	hpp, bom, additional, overhead float64
+}
+
+// estimate is estimateBomCost: material at average cost, plus each
+// material's landed cost rate (additional purchase costs), plus overhead on
+// both.
+func estimate(lines []cogsLine, stock map[string]*kit.Row, rates map[string]float64, overhead float64, convertUnits bool) ([]*kit.Row, cogsTotals) {
+	var breakdown []*kit.Row
+	total, additional := 0.0, 0.0
 	for _, l := range lines {
 		s := stock[l.materialID]
 		qty, waste := kit.ToNum(l.qty), kit.ToNum(l.waste)
@@ -252,6 +258,9 @@ func estimate(lines []cogsLine, stock map[string]*kit.Row, overhead float64, con
 		}
 		sub := effective * unit
 		total += sub
+		rate := rates[l.materialID]
+		extra := float64(sub * rate)
+		additional += extra
 		get := func(r *kit.Row, k string) string {
 			if r == nil {
 				return ""
@@ -274,13 +283,16 @@ func estimate(lines []cogsLine, stock map[string]*kit.Row, overhead float64, con
 		breakdown = append(breakdown, line.Set("jumlah", qty).
 			Set("satuan", kit.FirstNonEmpty(get(l.satuan, "nama"), get(s, "satuan_kecil_nama"), get(s, "satuan_besar_nama"), "-")).
 			Set("qty_available", onhand).Set("qty_on_order", onorder).Set("unit_cost", unit).Set("waste_percentage", waste*100).
-			Set("effective_qty", domain.Round3(effective)).Set("subtotal", domain.Round2(sub)))
+			Set("effective_qty", domain.Round3(effective)).Set("subtotal", domain.Round2(sub)).
+			Set("landed_cost_rate", domain.Round2(rate*100)).Set("additional_cost", domain.Round2(extra)))
 	}
-	totalOverhead = total * overhead
-	return breakdown, domain.Round2(total + totalOverhead), domain.Round2(total), domain.Round2(totalOverhead)
+	totalOverhead := (total + additional) * overhead
+	return breakdown, cogsTotals{hpp: domain.Round2(total + additional + totalOverhead), bom: domain.Round2(total),
+		additional: domain.Round2(additional), overhead: domain.Round2(totalOverhead)}
 }
 
-func (h *handler) cogsStock(ctx context.Context, lines []cogsLine, columns string) (map[string]*kit.Row, error) {
+// materialIDs are the distinct materials of the BOM lines.
+func materialIDs(lines []cogsLine) []string {
 	var ids []string
 	seen := map[string]bool{}
 	for _, l := range lines {
@@ -289,6 +301,11 @@ func (h *handler) cogsStock(ctx context.Context, lines []cogsLine, columns strin
 			ids = append(ids, l.materialID)
 		}
 	}
+	return ids
+}
+
+func (h *handler) cogsStock(ctx context.Context, lines []cogsLine, columns string) (map[string]*kit.Row, error) {
+	ids := materialIDs(lines)
 	out := map[string]*kit.Row{}
 	if len(ids) == 0 {
 		return out, nil
@@ -334,19 +351,23 @@ func (h *handler) productCogs(w http.ResponseWriter, r *http.Request) error {
 			kit.Embed(b.Get("raw_material")), kit.Embed(b.Get("satuan"))}
 	}
 	if len(lines) == 0 {
-		return kit.Data(w, header.Set("hpp_per_unit", 0).Set("total_bom_cost", 0).Set("total_overhead", 0).
+		return kit.Data(w, header.Set("hpp_per_unit", 0).Set("total_bom_cost", 0).Set("total_additional_cost", 0).Set("total_overhead", 0).
 			Set("breakdown_bahan", []any{}).Set("stock_warnings", []any{}).Set("warning", "This product does not have a bill of materials yet"))
 	}
 	stock, err := h.cogsStock(ctx, lines, "id, qty_onhand, qty_on_order, avg_cost, material_type, source_product_id, konversi_factor, satuan_kecil_id, satuan_besar_id, satuan_kecil_nama, satuan_besar_nama")
 	if err != nil {
 		return err
 	}
+	landed, err := h.landedRates(ctx, lines)
+	if err != nil {
+		return err
+	}
 	rate := h.overheadRate(ctx)
-	breakdown, hpp, totalBom, totalOverhead := estimate(lines, stock, rate, true)
+	breakdown, t := estimate(lines, stock, landed, rate, true)
 	harga := product.Num("harga_jual")
 	var margin, marginPct *float64
 	if harga > 0 {
-		m := harga - hpp
+		m := harga - t.hpp
 		p := math.Floor((m/harga)*10000+0.5) / 100
 		margin, marginPct = &m, &p
 	}
@@ -358,8 +379,8 @@ func (h *handler) productCogs(w http.ResponseWriter, r *http.Request) error {
 				"stock_coverage_units", math.Floor((avail/qty)*10+0.5)/10))
 		}
 	}
-	return kit.Data(w, header.Set("hpp_per_unit", hpp).Set("total_bom_cost", totalBom).Set("overhead_rate", rate*100).
-		Set("total_overhead", totalOverhead).Set("breakdown_bahan", breakdown).Set("margin_vs_harga_jual", margin).
+	return kit.Data(w, header.Set("hpp_per_unit", t.hpp).Set("total_bom_cost", t.bom).Set("total_additional_cost", t.additional).
+		Set("overhead_rate", rate*100).Set("total_overhead", t.overhead).Set("breakdown_bahan", breakdown).Set("margin_vs_harga_jual", margin).
 		Set("margin_percentage", marginPct).Set("margin_label", domain.MarginLabel(marginPct)).Set("stock_warnings", warnings))
 }
 
@@ -391,64 +412,19 @@ func (h *handler) rawMaterialCogs(w http.ResponseWriter, r *http.Request) error 
 			kit.Embed(b.Get("component")), kit.Embed(b.Get("satuan"))}
 	}
 	if len(lines) == 0 {
-		return kit.Data(w, header.Set("hpp_per_unit", 0).Set("total_bom_cost", 0).Set("total_overhead", 0).
+		return kit.Data(w, header.Set("hpp_per_unit", 0).Set("total_bom_cost", 0).Set("total_additional_cost", 0).Set("total_overhead", 0).
 			Set("breakdown_bahan", []any{}).Set("warning", "This raw material does not have a bill of materials yet"))
 	}
 	stock, err := h.cogsStock(ctx, lines, "id, qty_onhand, qty_on_order, avg_cost, material_type, satuan_kecil_nama, satuan_besar_nama")
 	if err != nil {
 		return err
 	}
+	landed, err := h.landedRates(ctx, lines)
+	if err != nil {
+		return err
+	}
 	rate := h.overheadRate(ctx)
-	breakdown, hpp, totalBom, totalOverhead := estimate(lines, stock, rate, false)
-	return kit.Data(w, header.Set("hpp_per_unit", hpp).Set("total_bom_cost", totalBom).Set("overhead_rate", rate*100).
-		Set("total_overhead", totalOverhead).Set("breakdown_bahan", breakdown))
-}
-
-/* ── additional costs ────────────────────────────────────────────────── */
-
-// The TS additional-cost routes target tables that do not exist in any
-// schema (additional_costs, additional_cost_allocations, goods_receipt_items)
-// and PO item columns that were renamed (jumlah, produk_id). The Go routes
-// reproduce their observable outcomes without reading procurement tables.
-var errNoAdditionalCosts = errors.New(`relation "additional_costs" does not exist`)
-
-/* GET /api/purchasing/cogs/additional-cost — always 500 (missing table). */
-func (h *handler) listAdditionalCosts(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
-		return err
-	}
-	return errNoAdditionalCosts
-}
-
-/* POST /api/purchasing/cogs/additional-cost */
-func (h *handler) createAdditionalCost(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.itemsStaff(r); err != nil {
-		return err
-	}
-	f := validate.New(validate.ReadBody(r))
-	po := f.UUID("po_id", validate.Rule{Optional: true})
-	grn := f.UUID("grn_id", validate.Rule{Optional: true})
-	kit.Enum(f, "jenis_biaya", validate.Rule{}, []string{"freight", "handling", "asuransi", "loading", "lainnya"}, "")
-	kit.NumCheck(f, "jumlah", validate.Rule{}, positive("Jumlah harus positif"))
-	f.Str("mata_uang", validate.Rule{HasDefault: true}, validate.StrOpts{})
-	f.Str("keterangan", validate.Rule{Optional: true}, validate.StrOpts{})
-	kit.Enum(f, "metode_alokasi", validate.Rule{HasDefault: true}, []string{"by_value", "by_weight", "equal"}, "")
-	items := f.List("items", validate.Rule{Optional: true}, math.MaxInt32, func(sub *validate.Form, i int, v any) {
-		item := sub.Item(i, v)
-		item.UUID("po_item_id", validate.Rule{Optional: true})
-		item.UUID("grn_item_id", validate.Rule{Optional: true})
-		item.Num("amount", validate.Rule{Optional: true}, validate.NumOpts{Positive: true})
-	})
-	if err := f.Err("Validation failed"); err != nil {
-		return err
-	}
-	switch {
-	case po == nil && grn == nil:
-		return httpx.BadRequest("po_id atau grn_id wajib diisi")
-	case len(items) > 0:
-		return errNoAdditionalCosts // the insert into additional_costs fails
-	case po != nil:
-		return httpx.NotFound("PO tidak ditemukan atau tidak memiliki items")
-	}
-	return httpx.NotFound("GRN tidak ditemukan")
+	breakdown, t := estimate(lines, stock, landed, rate, false)
+	return kit.Data(w, header.Set("hpp_per_unit", t.hpp).Set("total_bom_cost", t.bom).Set("total_additional_cost", t.additional).
+		Set("overhead_rate", rate*100).Set("total_overhead", t.overhead).Set("breakdown_bahan", breakdown))
 }

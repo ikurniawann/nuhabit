@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/inventory/catalog"
 	invdomain "nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
@@ -276,6 +278,97 @@ func (inventoryGrns) SupplierGrnIDs(ctx context.Context, q database.Querier, grn
 			return nil, err
 		}
 		out[id] = true
+	}
+	return out, rows.Err()
+}
+
+/* ── Procurement receipts (COGS landed cost) ─────────────────────────── */
+
+type inventoryReceipts struct{}
+
+var _ production.Receipts = inventoryReceipts{}
+
+// receiptValue is a GRN line's value: quantity received × PO unit price.
+const receiptValue = `(gi.qty_diterima * poi.harga_satuan)::float8`
+
+// ReceivedValues is loadReceivedValues in lib/purchasing/cogs-additional-cost.ts.
+func (inventoryReceipts) ReceivedValues(ctx context.Context, q database.Querier, rawMaterialIDs []string) ([]invdomain.ReceiptLine, map[string]float64, error) {
+	rows, err := q.Query(ctx, `SELECT gi.grn_id::text, g.purchase_order_id::text, gi.raw_material_id::text, `+receiptValue+`
+		FROM purchasing.grn_items gi
+		JOIN purchasing.grn g ON g.id = gi.grn_id AND g.is_active = true
+		JOIN purchasing.purchase_order_items poi ON poi.id = gi.purchase_order_item_id
+		WHERE gi.is_active = true AND gi.raw_material_id = ANY($1::uuid[])`, rawMaterialIDs)
+	if err != nil {
+		return nil, nil, err
+	}
+	lines, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (invdomain.ReceiptLine, error) {
+		var l invdomain.ReceiptLine
+		return l, r.Scan(&l.GrnID, &l.PoID, &l.MaterialID, &l.Value)
+	})
+	if err != nil || len(lines) == 0 {
+		return nil, nil, err
+	}
+	var grns, pos []string
+	for _, l := range lines {
+		grns = append(grns, l.GrnID)
+		pos = append(pos, l.PoID)
+	}
+	rows, err = q.Query(ctx, `SELECT 'GRN:' || gi.grn_id::text, sum(`+receiptValue+`)
+		FROM purchasing.grn_items gi
+		JOIN purchasing.grn g ON g.id = gi.grn_id AND g.is_active = true
+		JOIN purchasing.purchase_order_items poi ON poi.id = gi.purchase_order_item_id
+		WHERE gi.is_active = true AND gi.grn_id = ANY($1::uuid[]) GROUP BY gi.grn_id
+		UNION ALL
+		SELECT 'PO:' || g.purchase_order_id::text, sum(`+receiptValue+`)
+		FROM purchasing.grn_items gi
+		JOIN purchasing.grn g ON g.id = gi.grn_id AND g.is_active = true
+		JOIN purchasing.purchase_order_items poi ON poi.id = gi.purchase_order_item_id
+		WHERE gi.is_active = true AND g.purchase_order_id = ANY($2::uuid[]) GROUP BY g.purchase_order_id`, grns, pos)
+	if err != nil {
+		return nil, nil, err
+	}
+	totals, err := collectAmounts(rows)
+	return lines, totals, err
+}
+
+// DocumentNumbers is loadDocumentNumbers in lib/purchasing/cogs-additional-cost.ts.
+func (inventoryReceipts) DocumentNumbers(ctx context.Context, q database.Querier, refs []production.DocRef) (map[string]string, error) {
+	var pos, grns []string
+	for _, r := range refs {
+		if r.Type == "PO" {
+			pos = append(pos, r.ID)
+		} else {
+			grns = append(grns, r.ID)
+		}
+	}
+	rows, err := q.Query(ctx, `SELECT 'PO:' || id::text, nomor_po FROM purchasing.purchase_orders WHERE id = ANY($1::uuid[]) AND deleted_at IS NULL
+		UNION ALL
+		SELECT 'GRN:' || id::text, nomor_grn FROM purchasing.grn WHERE id = ANY($2::uuid[]) AND is_active = true`, pos, grns)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var key, number string
+		if err := rows.Scan(&key, &number); err != nil {
+			return nil, err
+		}
+		out[key] = number
+	}
+	return out, rows.Err()
+}
+
+func collectAmounts(rows pgx.Rows) (map[string]float64, error) {
+	defer rows.Close()
+	out := map[string]float64{}
+	for rows.Next() {
+		var key string
+		var v float64
+		if err := rows.Scan(&key, &v); err != nil {
+			return nil, err
+		}
+		out[key] = v
 	}
 	return out, rows.Err()
 }

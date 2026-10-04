@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiHandler } from "@/lib/api/handler";
-import { requireIamMenuPrefix, successResponse, validateBody } from "@/lib/api/auth";
+import { createdResponse, requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
 import { IAM } from "@/lib/iam/prefixes";
-import { createServerPgClient } from "@/lib/pg/create-client";
 import {
   additionalCostSchema,
   createAdditionalCost,
@@ -10,24 +9,22 @@ import {
 } from "@/lib/purchasing/cogs-additional-cost";
 
 // POST /api/purchasing/cogs/additional-cost
-// Biaya tambahan (freight, handling, dll) per PO/GRN, dialokasikan ke item.
+// Biaya tambahan (freight, bea masuk, handling, dll) per PO/GRN; ikut HPP lewat landed cost.
 export const POST = apiHandler(async (request: NextRequest) => {
   const user = await requireIamMenuPrefix(IAM.items);
-  const db = await createServerPgClient();
   const input = await validateBody(request, additionalCostSchema);
-  const data = await createAdditionalCost(db, user.id, input);
-  return successResponse(data, "Biaya tambahan berhasil dialokasikan");
+  const data = await createAdditionalCost(user.id, input);
+  return createdResponse(data, "Biaya tambahan berhasil ditambahkan");
 }, "purchasing.cogs.additional-cost.create");
 
-// GET /api/purchasing/cogs/additional-cost
+// GET /api/purchasing/cogs/additional-cost?reference_type=&reference_id=&tipe_biaya=
 export const GET = apiHandler(async (request: NextRequest) => {
   await requireIamMenuPrefix(IAM.items);
-  const db = await createServerPgClient();
   const { searchParams } = new URL(request.url);
-  const { data, total } = await listAdditionalCosts(db, {
-    po_id: searchParams.get("po_id"),
-    grn_id: searchParams.get("grn_id"),
-    jenis_biaya: searchParams.get("jenis_biaya"),
+  const data = await listAdditionalCosts({
+    reference_type: searchParams.get("reference_type"),
+    reference_id: searchParams.get("reference_id"),
+    tipe_biaya: searchParams.get("tipe_biaya"),
   });
-  return NextResponse.json({ success: true, data, pagination: { total } });
+  return NextResponse.json({ success: true, data, pagination: { total: data.length } });
 }, "purchasing.cogs.additional-cost.list");

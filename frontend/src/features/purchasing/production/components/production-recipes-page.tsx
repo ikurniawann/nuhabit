@@ -18,6 +18,7 @@ import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { displayName, hasRecipe, matchesItemKeyword, paginate, toNumber } from "@/lib/purchasing/production-ui-display";
 import { getProductionModuleConfig } from "../production-module";
 import { useRecipeItems } from "../queries";
+import { PurchaseAdditionalCostsSection } from "./purchase-additional-costs-section";
 
 type BomFilter = "all" | "ready" | "incomplete";
 
@@ -321,6 +322,8 @@ export function ProductionRecipesPage({
           )}
         </div>
       </PurchasingListSection>
+
+      <PurchaseAdditionalCostsSection />
     </div>
   );
 }

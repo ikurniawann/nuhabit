@@ -22,10 +22,21 @@ import (
 // adapters are exercised in internal/app).
 
 type fakeEmployees struct {
-	byUser map[string]string
-	briefs map[string]EmployeeBrief
-	order  []string
-	roles  map[string]string // employee id → KPI role
+	byUser    map[string]string
+	briefs    map[string]EmployeeBrief
+	order     []string
+	roles     map[string]string // employee id → KPI role
+	companies map[string]string // employee id → company id
+}
+
+func (f *fakeEmployees) Companies(_ context.Context, _ database.Querier, ids []string) (map[string]string, error) {
+	out := map[string]string{}
+	for _, id := range ids {
+		if c, ok := f.companies[id]; ok {
+			out[id] = c
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeEmployees) IDByEmail(_ context.Context, _ database.Querier, email string) (string, error) {
@@ -152,7 +163,7 @@ func setup(t *testing.T) *env {
 	}
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
 	e := &env{t: t, ctx: ctx, tx: tx, hr: hr, staff: staff,
-		emps:  &fakeEmployees{byUser: map[string]string{}, briefs: map[string]EmployeeBrief{}, roles: map[string]string{}},
+		emps:  &fakeEmployees{byUser: map[string]string{}, briefs: map[string]EmployeeBrief{}, roles: map[string]string{}, companies: map[string]string{}},
 		depts: &fakeDepartments{},
 		work:  &fakeWorkforce{records: map[string]domain.WorkforceRecords{}, holidays: map[string]bool{}}}
 	e.mux = testutil.Mux(NewOn(deps, tx, Ports{Employees: e.emps, Departments: e.depts, Workforce: e.work}))
@@ -267,6 +278,7 @@ func TestRunLifecycle(t *testing.T) {
 	e := setup(t)
 	hrEmp := e.employee("HR Payroll", e.hr.UserID, true)
 	worker := e.employee("Budi Gaji", "", true)
+	e.emps.companies[worker] = "6f1d5c2e-3333-4a1b-9c1d-00000000000c"
 	e.employee("Tanpa Gaji", "", true)
 	e.exec(`INSERT INTO hris.employee_salary (employee_id, base_salary, fixed_allowance, ptkp_status, effective_date)
 		VALUES ($1, 10000000, 2000000, 'TK/0', '2026-01-01')`, worker)
@@ -370,6 +382,33 @@ func TestRunLifecycle(t *testing.T) {
 	if !strings.Contains(payload, `"total_net": "10361155.00"`) || !strings.Contains(payload, `"total_loan_deduction": 500000`) ||
 		!strings.Contains(payload, `"user_id": "`+e.hr.UserID+`"`) {
 		t.Fatalf("event %s", payload)
+	}
+	// Employer BPJS totals and the per-company split ride along for the journals.
+	var tk, kes float64
+	e.scalar(&tk, `SELECT (bpjs_tk_jht_employer + bpjs_tk_jp_employer + bpjs_tk_jkk_employer + bpjs_tk_jkm_employer)::float8
+		FROM hris.payroll_details WHERE payroll_run_id = $1`, runID)
+	e.scalar(&kes, `SELECT bpjs_kes_employer::float8 FROM hris.payroll_details WHERE payroll_run_id = $1`, runID)
+	var event struct {
+		TotalBpjsTkEmployer  float64 `json:"total_bpjs_tk_employer"`
+		TotalBpjsKesEmployer float64 `json:"total_bpjs_kes_employer"`
+		Companies            []struct {
+			CompanyID            *string `json:"company_id"`
+			TotalGross           float64 `json:"total_gross"`
+			TotalNet             float64 `json:"total_net"`
+			TotalLoanDeduction   float64 `json:"total_loan_deduction"`
+			TotalBpjsTkEmployer  float64 `json:"total_bpjs_tk_employer"`
+			TotalBpjsKesEmployer float64 `json:"total_bpjs_kes_employer"`
+		} `json:"companies"`
+	}
+	if err := json.Unmarshal([]byte(payload), &event); err != nil {
+		t.Fatal(err)
+	}
+	if tk <= 0 || kes <= 0 || event.TotalBpjsTkEmployer != tk || event.TotalBpjsKesEmployer != kes || len(event.Companies) != 1 {
+		t.Fatalf("bpjs %v %v event %+v", tk, kes, event)
+	}
+	if c := event.Companies[0]; c.CompanyID == nil || *c.CompanyID != e.emps.companies[worker] || c.TotalGross != 12000000 ||
+		c.TotalNet != 10361155 || c.TotalLoanDeduction != 500000 || c.TotalBpjsTkEmployer != tk || c.TotalBpjsKesEmployer != kes {
+		t.Fatalf("company split %+v", c)
 	}
 	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 400), "Payroll yang sudah dibayar tidak bisa dihapus")
 

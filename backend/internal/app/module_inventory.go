@@ -29,6 +29,6 @@ func inventoryPorts(now func() time.Time) inventory.Ports {
 			Journals:    stock.OutboxJournals{},
 		},
 		Catalog:    catalog.Ports{Pos: inventoryPosCatalog{now: now}, Procurement: inventoryGrns{}},
-		Production: production.Ports{Pos: inventoryPosOutput{catalog: inventoryPosCatalog{now: now}}},
+		Production: production.Ports{Pos: inventoryPosOutput{catalog: inventoryPosCatalog{now: now}}, Receipts: inventoryReceipts{}},
 	}
 }

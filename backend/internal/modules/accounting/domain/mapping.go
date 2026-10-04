@@ -35,6 +35,8 @@ var EventNames = map[string][2]string{
 	"PAYROLL_PAYMENT":           {"Payroll Payment", "Pembayaran gaji bersih ke karyawan via bank/kas"},
 	"PAYROLL_PPH21_WITHHOLDING": {"Payroll PPh 21 Withholding", "Potongan PPh 21 dari payroll"},
 	"PAYROLL_LOAN_DEDUCTION":    {"Payroll Loan Deduction", "Potongan cicilan pinjaman lewat payroll"},
+	"PAYROLL_BPJS_TK_EMPLOYER":  {"Payroll BPJS Ketenagakerjaan (Pemberi Kerja)", "Iuran BPJS Ketenagakerjaan bagian perusahaan (beban dan hutang BPJS)"},
+	"PAYROLL_BPJS_KES_EMPLOYER": {"Payroll BPJS Kesehatan (Pemberi Kerja)", "Iuran BPJS Kesehatan bagian perusahaan (beban dan hutang BPJS)"},
 	"PINJAMAN_DISBURSEMENT":     {"Pinjaman — Pencairan", "Pencairan pinjaman karyawan ke rekening/kas"},
 	"PINJAMAN_REPAYMENT":        {"Pinjaman — Pelunasan/Cicilan", "Cicilan atau pelunasan pinjaman di luar payroll"},
 	"SALE_AR_INVOICE":           {"Sale AR Invoice", "Pengakuan piutang dari invoice B2B / sales"},

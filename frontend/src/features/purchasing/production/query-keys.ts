@@ -9,4 +9,6 @@ export const productionQueryKeys = {
   rmBomEditorData: (id: string) =>
     ["purchasing", "production", "rm-bom-editor", id] as const,
   order: (id: string) => ["purchasing", "production", "order", id] as const,
+  additionalCosts: (referenceType: string) =>
+    ["purchasing", "production", "additional-costs", referenceType] as const,
 };

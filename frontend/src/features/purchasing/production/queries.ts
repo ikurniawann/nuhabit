@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import {
+  listAdditionalCosts,
   getProductionDashboard,
   getProductionCogs,
   listRecipeItems,
@@ -47,4 +49,10 @@ export const useProductionOrder = (id: string) =>
     queryKey: productionQueryKeys.order(id),
     queryFn: () => getProductionOrder(id),
     enabled: !!id,
+  });
+
+export const useAdditionalCosts = (referenceType?: AdditionalCostReferenceType) =>
+  useQuery({
+    queryKey: productionQueryKeys.additionalCosts(referenceType ?? "all"),
+    queryFn: () => listAdditionalCosts(referenceType),
   });

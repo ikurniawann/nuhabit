@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/api/auth";
 import { isRowInBusinessScope, type UserScope } from "@/lib/api/scope";
 import { MANUFACTURING_SCHEMA } from "@/lib/manufacturing/constants";
+import { loadLandedRates } from "@/lib/purchasing/cogs-additional-cost";
 import type { DbClient } from "@/lib/pg/types";
 import { toQty } from "@/lib/purchasing/utils";
 
@@ -64,14 +65,19 @@ export interface EstimateOptions {
   convertUnits: boolean;
 }
 
-/** HPP estimasi = sum(qty x (1 + waste) x unit cost) + overhead. */
+/**
+ * HPP estimasi = sum(qty x (1 + waste) x unit cost) + biaya tambahan pembelian
+ * (unit cost x tarif landed cost bahan) + overhead atas keduanya.
+ */
 export function estimateBomCost(
   lines: CogsBomLine[],
   stockByMaterialId: Map<string, CogsStockRow>,
   overheadRate: number,
-  { convertUnits }: EstimateOptions
+  { convertUnits }: EstimateOptions,
+  landedRates: Map<string, number> = new Map()
 ) {
   let totalBomCost = 0;
+  let totalAdditionalCost = 0;
   const breakdown = lines.map((line) => {
     const stock = stockByMaterialId.get(line.material_id);
     const qtyRequired = toQty(line.qty_required);
@@ -81,6 +87,9 @@ export function estimateBomCost(
     const unitCost = convertUnits ? unitCostForBomLine(avgCost, line.satuan_id, stock) : avgCost;
     const subtotal = effectiveQty * unitCost;
     totalBomCost += subtotal;
+    const landedRate = landedRates.get(line.material_id) ?? 0;
+    const additionalCost = subtotal * landedRate;
+    totalAdditionalCost += additionalCost;
 
     return {
       bahan_id: line.material_id,
@@ -98,14 +107,17 @@ export function estimateBomCost(
       waste_percentage: wasteFactor * 100,
       effective_qty: round3(effectiveQty),
       subtotal: round2(subtotal),
+      landed_cost_rate: round2(landedRate * 100),
+      additional_cost: round2(additionalCost),
     };
   });
 
-  const totalOverhead = totalBomCost * overheadRate;
+  const totalOverhead = (totalBomCost + totalAdditionalCost) * overheadRate;
   return {
     breakdown,
-    hpp_per_unit: round2(totalBomCost + totalOverhead),
+    hpp_per_unit: round2(totalBomCost + totalAdditionalCost + totalOverhead),
     total_bom_cost: round2(totalBomCost),
+    total_additional_cost: round2(totalAdditionalCost),
     overhead_rate: overheadRate * 100,
     total_overhead: round2(totalOverhead),
   };
@@ -211,6 +223,7 @@ export async function getProductCogs(db: DbClient, productId: string, scope: Use
       ...header,
       hpp_per_unit: 0,
       total_bom_cost: 0,
+      total_additional_cost: 0,
       total_overhead: 0,
       breakdown_bahan: [],
       stock_warnings: [],
@@ -223,13 +236,15 @@ export async function getProductCogs(db: DbClient, productId: string, scope: Use
     uniqueIds(lines),
     "id, qty_onhand, qty_on_order, avg_cost, material_type, source_product_id, konversi_factor, satuan_kecil_id, satuan_besar_id, satuan_kecil_nama, satuan_besar_nama"
   );
-  const estimate = estimateBomCost(lines, stockByMaterialId, await loadOverheadRate(db), { convertUnits: true });
+  const landedRates = await loadLandedRates(uniqueIds(lines));
+  const estimate = estimateBomCost(lines, stockByMaterialId, await loadOverheadRate(db), { convertUnits: true }, landedRates);
   const { margin, marginPct } = marginVsSellingPrice(toQty(product.harga_jual), estimate.hpp_per_unit);
 
   return {
     ...header,
     hpp_per_unit: estimate.hpp_per_unit,
     total_bom_cost: estimate.total_bom_cost,
+    total_additional_cost: estimate.total_additional_cost,
     overhead_rate: estimate.overhead_rate,
     total_overhead: estimate.total_overhead,
     breakdown_bahan: estimate.breakdown,
@@ -286,6 +301,7 @@ export async function getRawMaterialCogs(db: DbClient, materialId: string) {
       ...header,
       hpp_per_unit: 0,
       total_bom_cost: 0,
+      total_additional_cost: 0,
       total_overhead: 0,
       breakdown_bahan: [],
       warning: "This raw material does not have a bill of materials yet",
@@ -297,12 +313,14 @@ export async function getRawMaterialCogs(db: DbClient, materialId: string) {
     uniqueIds(lines),
     "id, qty_onhand, qty_on_order, avg_cost, material_type, satuan_kecil_nama, satuan_besar_nama"
   );
-  const estimate = estimateBomCost(lines, stockByMaterialId, await loadOverheadRate(db), { convertUnits: false });
+  const landedRates = await loadLandedRates(uniqueIds(lines));
+  const estimate = estimateBomCost(lines, stockByMaterialId, await loadOverheadRate(db), { convertUnits: false }, landedRates);
 
   return {
     ...header,
     hpp_per_unit: estimate.hpp_per_unit,
     total_bom_cost: estimate.total_bom_cost,
+    total_additional_cost: estimate.total_additional_cost,
     overhead_rate: estimate.overhead_rate,
     total_overhead: estimate.total_overhead,
     breakdown_bahan: estimate.breakdown,

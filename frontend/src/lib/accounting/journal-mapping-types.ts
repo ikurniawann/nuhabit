@@ -40,6 +40,9 @@ export const JOURNAL_LINE_ROLES = [
   "SALARY_EXPENSE",
   "SALARY_PAYABLE",
   "LOAN_RECEIVABLE",
+  "BPJS_EXPENSE",
+  "BPJS_TK_PAYABLE",
+  "BPJS_KES_PAYABLE",
   "OTHER",
 ] as const;
 export type JournalLineRole = (typeof JOURNAL_LINE_ROLES)[number];
@@ -65,6 +68,8 @@ export const JOURNAL_EVENT_CODES = [
   "PAYROLL_PAYMENT",
   "PAYROLL_PPH21_WITHHOLDING",
   "PAYROLL_LOAN_DEDUCTION",
+  "PAYROLL_BPJS_TK_EMPLOYER",
+  "PAYROLL_BPJS_KES_EMPLOYER",
   "PINJAMAN_DISBURSEMENT",
   "PINJAMAN_REPAYMENT",
   "SALE_AR_INVOICE",
@@ -180,6 +185,16 @@ export const JOURNAL_EVENT_META: Record<
     name: "Payroll Loan Deduction",
     module: "PAYROLL",
     description: "Potongan cicilan pinjaman lewat payroll",
+  },
+  PAYROLL_BPJS_TK_EMPLOYER: {
+    name: "Payroll BPJS Ketenagakerjaan (Pemberi Kerja)",
+    module: "PAYROLL",
+    description: "Iuran BPJS Ketenagakerjaan bagian perusahaan (beban dan hutang BPJS)",
+  },
+  PAYROLL_BPJS_KES_EMPLOYER: {
+    name: "Payroll BPJS Kesehatan (Pemberi Kerja)",
+    module: "PAYROLL",
+    description: "Iuran BPJS Kesehatan bagian perusahaan (beban dan hutang BPJS)",
   },
   PINJAMAN_DISBURSEMENT: {
     name: "Pinjaman — Pencairan",

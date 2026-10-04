@@ -333,8 +333,15 @@ async function main() {
       [companyId]
     );
 
+    // Point the company's empty payroll mapping lines at the accounts just
+    // seeded (migration 20261005180100; it never overwrites a chosen account).
+    const { rows: payroll } = await client.query(
+      "SELECT accounting.ensure_payroll_journal_mappings($1::uuid) AS filled",
+      [companyId]
+    );
+
     await client.query("COMMIT");
-    console.log(`Done. Upserted ${upserted} accounts.`);
+    console.log(`Done. Upserted ${upserted} accounts, ${payroll[0].filled} payroll mapping lines filled.`);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     console.error("FAILED:", err.message);

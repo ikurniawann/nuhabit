@@ -24,6 +24,10 @@ function createFakeDb(responses: Record<string, FakeResult[]>) {
   return { from: vi.fn((table: string) => builder(table)) };
 }
 
+// Landed cost reads (receipts, document totals, additional costs) run raw SQL.
+const queryMock = vi.fn();
+vi.mock("@/lib/db", () => ({ query: (...args: unknown[]) => queryMock(...args) }));
+
 let fakeDb: ReturnType<typeof createFakeDb>;
 vi.mock("@/lib/pg/create-client", () => ({
   createServerPgClient: vi.fn(async () => fakeDb),
@@ -39,6 +43,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireIamMenuPrefixMock.mockResolvedValue({ id: "user-1", role: "admin" });
   fakeDb = createFakeDb({});
+  queryMock.mockReset().mockResolvedValue([]);
 });
 
 describe("GET /api/purchasing/cogs/raw-material/[id]", () => {
@@ -63,7 +68,15 @@ describe("GET /api/purchasing/cogs/raw-material/[id]", () => {
     expect((await res.json()).error).toBe("Raw material not found");
   });
 
-  it("estimates COGS from the BOM components plus overhead", async () => {
+  it("estimates COGS from the BOM components plus landed cost and overhead", async () => {
+    // 10000 freight on a GRN that received 100000 of sugar: 10% landed cost.
+    queryMock
+      .mockResolvedValueOnce([{ grn_id: "g1", po_id: "p1", material_id: "rm-gula", value: 100000 }])
+      .mockResolvedValueOnce([
+        { key: "GRN:g1", value: 100000 },
+        { key: "PO:p1", value: 100000 },
+      ])
+      .mockResolvedValueOnce([{ reference_type: "GRN", reference_id: "g1", amount: 10000 }]);
     fakeDb = createFakeDb({
       v_raw_materials_stock: [
         { data: { id: MATERIAL_ID, kode: "SYR", nama: "Sirup" }, error: null },
@@ -97,10 +110,11 @@ describe("GET /api/purchasing/cogs/raw-material/[id]", () => {
       raw_material_id: MATERIAL_ID,
       kode: "SYR",
       nama: "Sirup",
-      hpp_per_unit: 54000,
+      hpp_per_unit: 59400,
       total_bom_cost: 45000,
+      total_additional_cost: 4500,
       overhead_rate: 20,
-      total_overhead: 9000,
+      total_overhead: 9900,
       breakdown_bahan: [
         {
           bahan_id: "rm-gula",
@@ -115,6 +129,8 @@ describe("GET /api/purchasing/cogs/raw-material/[id]", () => {
           waste_percentage: 50,
           effective_qty: 3,
           subtotal: 45000,
+          landed_cost_rate: 10,
+          additional_cost: 4500,
         },
       ],
     });

@@ -58,6 +58,20 @@ func TestPayrollAdapters(t *testing.T) {
 	if active, err := ports.Employees.Active(ctx, tx); err != nil || len(active) == 0 {
 		t.Fatalf("active %v", err)
 	}
+	// The company comes from the linked account, else from its branch.
+	var company, branch, branchCompany string
+	must(tx.QueryRow(ctx, `SELECT id::text FROM configuration.companies ORDER BY created_at LIMIT 1`).Scan(&company))
+	must(tx.QueryRow(ctx, `SELECT id::text, company_id::text FROM configuration.branches WHERE company_id IS NOT NULL LIMIT 1`).Scan(&branch, &branchCompany))
+	_, err = tx.Exec(ctx, `UPDATE configuration.users SET company_id = $2, branch_id = NULL WHERE id = $1`, staff.UserID, company)
+	must(err)
+	if got, err := ports.Employees.Companies(ctx, tx, []string{head, worker}); err != nil || len(got) != 1 || got[head] != company {
+		t.Fatalf("companies by user %v %v", got, err)
+	}
+	_, err = tx.Exec(ctx, `UPDATE configuration.users SET company_id = NULL, branch_id = $2 WHERE id = $1`, staff.UserID, branch)
+	must(err)
+	if got, err := ports.Employees.Companies(ctx, tx, []string{head}); err != nil || got[head] != branchCompany {
+		t.Fatalf("companies by branch %v %v", got, err)
+	}
 	if all, err := ports.Departments.All(ctx, tx); err != nil || len(all) == 0 {
 		t.Fatalf("departments %v", err)
 	}

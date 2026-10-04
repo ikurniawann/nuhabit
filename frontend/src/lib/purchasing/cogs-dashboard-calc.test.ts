@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { allocateByValue, allocateEqually, allocateManual } from "./cogs-additional-cost";
 import {
   buildStockWarnings,
   estimateBomCost,
@@ -55,25 +54,14 @@ describe("COGS estimate", () => {
   });
 });
 
-describe("additional cost allocation", () => {
-  it("allocates manually by amount share", () => {
-    expect(allocateManual([{ po_item_id: "a", amount: 30 }, { po_item_id: "b", amount: 10 }])).toEqual([
-      { po_item_id: "a", grn_item_id: undefined, jumlah_alokasi: 30, proportion: 0.75 },
-      { po_item_id: "b", grn_item_id: undefined, jumlah_alokasi: 10, proportion: 0.25 },
-    ]);
-  });
-
-  it("allocates by value and equally with 2-decimal rounding", () => {
-    expect(allocateByValue([{ target: { po_item_id: "a" }, value: 1 }, { target: { po_item_id: "b" }, value: 2 }], 3, 100)).toEqual([
-      { po_item_id: "a", jumlah_alokasi: 33.33, proportion: 1 / 3 },
-      { po_item_id: "b", jumlah_alokasi: 66.67, proportion: 2 / 3 },
-    ]);
-    expect(allocateByValue([{ target: { grn_item_id: "g" }, value: 5 }], 0, 100)[0].jumlah_alokasi).toBe(0);
-    expect(allocateEqually([{ grn_item_id: "x" }, { grn_item_id: "y" }, { grn_item_id: "z" }], 100)[0]).toEqual({
-      grn_item_id: "x",
-      jumlah_alokasi: 33.33,
-      proportion: 1 / 3,
-    });
+describe("COGS estimate with landed cost", () => {
+  it("adds each material's landed cost rate and overhead on top (same numbers as the Go route test)", () => {
+    const lines = [{ material_id: "rice", satuan_id: "kg", qty_required: 0.2, waste_factor: 0.1 }];
+    const stockMap = new Map([["rice", { id: "rice", avg_cost: "12000", satuan_besar_id: "kg" }]]);
+    const estimate = estimateBomCost(lines, stockMap, 0.1, { convertUnits: true }, new Map([["rice", 0.1]]));
+    expect(estimate).toMatchObject({ total_bom_cost: 2640, total_additional_cost: 264, total_overhead: 290.4, hpp_per_unit: 3194.4 });
+    expect(estimate.breakdown[0]).toMatchObject({ subtotal: 2640, landed_cost_rate: 10, additional_cost: 264 });
+    expect(estimateBomCost(lines, stockMap, 0.1, { convertUnits: true }).hpp_per_unit).toBe(2904);
   });
 });
 

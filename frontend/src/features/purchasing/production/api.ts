@@ -1,3 +1,4 @@
+import type { AdditionalCost, AdditionalCostPayload, AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import type { RawMaterialWithStock } from "@/types/purchasing";
 import type {
@@ -132,4 +133,23 @@ export async function updateRawMaterialBomItem(
 
 export async function deleteRawMaterialBomItem(id: string): Promise<void> {
   await requestJson(`/api/purchasing/raw-material-bom/${id}`, "Gagal menghapus komponen", { method: "DELETE" });
+}
+
+const ADDITIONAL_COST_URL = "/api/purchasing/cogs/additional-cost";
+
+/** Biaya tambahan pembelian aktif, opsional hanya satu jenis dokumen (PO/GRN). */
+export async function listAdditionalCosts(referenceType?: AdditionalCostReferenceType): Promise<AdditionalCost[]> {
+  const query = referenceType ? `?reference_type=${referenceType}` : "";
+  const json = await requestJson(`${ADDITIONAL_COST_URL}${query}`, "Gagal memuat biaya tambahan");
+  return (json.data as AdditionalCost[]) || [];
+}
+
+export async function createAdditionalCost(payload: AdditionalCostPayload): Promise<string | undefined> {
+  const json = await sendJson(ADDITIONAL_COST_URL, "POST", payload, "Gagal menambah biaya tambahan");
+  return json.message;
+}
+
+export async function deleteAdditionalCost(id: string): Promise<string | undefined> {
+  const json = await requestJson(`${ADDITIONAL_COST_URL}/${id}`, "Gagal menghapus biaya tambahan", { method: "DELETE" });
+  return json.message;
 }

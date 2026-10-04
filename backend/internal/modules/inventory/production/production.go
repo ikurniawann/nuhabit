@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 
+	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
@@ -15,7 +16,23 @@ import (
 
 // Ports are the other contexts production reaches; internal/app wires them.
 type Ports struct {
-	Pos PosOutput
+	Pos      PosOutput
+	Receipts Receipts
+}
+
+// DocRef names a purchase document an additional cost points at: Type is
+// "PO" or "GRN".
+type DocRef struct{ Type, ID string }
+
+// Receipts is what COGS reads from procurement.
+type Receipts interface {
+	// ReceivedValues lists the active GRN lines of the raw materials, valued
+	// at quantity received × PO unit price, and the received value of every
+	// GRN and PO those lines belong to (all lines), keyed by domain.DocKey.
+	ReceivedValues(ctx context.Context, q database.Querier, rawMaterialIDs []string) ([]domain.ReceiptLine, map[string]float64, error)
+	// DocumentNumbers maps the documents that exist among refs, keyed by
+	// domain.DocKey, to their number (nomor_po / nomor_grn).
+	DocumentNumbers(ctx context.Context, q database.Querier, refs []DocRef) (map[string]string, error)
 }
 
 // Sku is an active SKU of a merchandise POS product.
@@ -62,6 +79,7 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("GET /api/purchasing/production/wip", h.wip),
 		kit.Route("GET /api/purchasing/cogs/additional-cost", h.listAdditionalCosts),
 		kit.Route("POST /api/purchasing/cogs/additional-cost", h.createAdditionalCost),
+		kit.Route("DELETE /api/purchasing/cogs/additional-cost/{id}", h.deleteAdditionalCost),
 		kit.Route("GET /api/purchasing/cogs/product/{produk_id}", h.productCogs),
 		kit.Route("GET /api/purchasing/cogs/raw-material/{id}", h.rawMaterialCogs),
 	}

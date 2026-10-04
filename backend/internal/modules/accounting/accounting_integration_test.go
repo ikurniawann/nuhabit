@@ -810,3 +810,86 @@ func TestPayrollJournals(t *testing.T) {
 		t.Fatalf("closed period posts nothing: %v", got)
 	}
 }
+
+// The payroll mappings migration: ensure_payroll_journal_mappings creates the
+// company's payroll mappings, points their empty lines at the chart of
+// accounts by code and name and never overwrites a chosen account. A paid
+// run then posts balanced journals per company, employer BPJS included.
+func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
+	e := setup(t)
+	expense := e.account("6401012", "Human Capital Expense", "EXPENSE", false)
+	payable := e.account("2104001", "A/E - Payroll & Related", "LIABILITY", false)
+	e.account("2102003", "Tax - PPh 21 Kas Negara", "LIABILITY", false)
+	pph21 := e.account("2102002", "Tax - PPh 21", "LIABILITY", false)
+	loans := e.account("1203001", "AR - Employe Loan", "ASSET", false)
+	e.account("1102001", "BANK BCA 7319", "ASSET", true)
+	bpjsTk := e.account("2103002", "BPJS Ketenagakerjaan", "LIABILITY", false)
+	bpjsKes := e.account("2103003", "BPJS Kesehatan", "LIABILITY", false)
+	cashier := e.account("1101001", "House Bank - General Cashier", "ASSET", true)
+	e.fiscal2026()
+	e.exec(`UPDATE accounting.journal_mappings SET is_active = false WHERE event_code LIKE 'PAYROLL\_%' AND company_id IS DISTINCT FROM $1`, e.company)
+	// Payment already set up by hand to pay from the cashier: kept.
+	e.exec(`WITH m AS (INSERT INTO accounting.journal_mappings (company_id, event_code, name, module)
+		VALUES ($1, 'PAYROLL_PAYMENT', 'Payroll Payment', 'PAYROLL') RETURNING id)
+		INSERT INTO accounting.journal_mapping_lines (mapping_id, entry_side, line_role, account_id, amount_source, sort_order)
+		SELECT m.id, v.side, v.role, v.account::uuid, 'PAID', v.sort FROM m,
+		(VALUES ('DEBIT', 'SALARY_PAYABLE', NULL, 10), ('CREDIT', 'BANK', $2, 20)) AS v(side, role, account, sort)`, e.company, cashier)
+
+	var filled int
+	e.scalar(&filled, `SELECT accounting.ensure_payroll_journal_mappings($1::uuid)`, e.company)
+	if filled != 11 {
+		t.Fatalf("filled %d lines", filled)
+	}
+	rows, err := e.tx.Query(e.ctx, `SELECT m.event_code||' '||l.entry_side||' '||l.line_role||' '||COALESCE(l.account_id::text, '-')
+		FROM accounting.journal_mappings m JOIN accounting.journal_mapping_lines l ON l.mapping_id = m.id
+		WHERE m.company_id = $1 AND m.deleted_at IS NULL ORDER BY m.event_code, l.sort_order`, e.company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"PAYROLL_ACCRUAL DEBIT SALARY_EXPENSE " + expense, "PAYROLL_ACCRUAL CREDIT SALARY_PAYABLE " + payable,
+		"PAYROLL_BPJS_KES_EMPLOYER DEBIT BPJS_EXPENSE " + expense, "PAYROLL_BPJS_KES_EMPLOYER CREDIT BPJS_KES_PAYABLE " + bpjsKes,
+		"PAYROLL_BPJS_TK_EMPLOYER DEBIT BPJS_EXPENSE " + expense, "PAYROLL_BPJS_TK_EMPLOYER CREDIT BPJS_TK_PAYABLE " + bpjsTk,
+		"PAYROLL_LOAN_DEDUCTION DEBIT SALARY_PAYABLE " + payable, "PAYROLL_LOAN_DEDUCTION CREDIT LOAN_RECEIVABLE " + loans,
+		"PAYROLL_PAYMENT DEBIT SALARY_PAYABLE " + payable, "PAYROLL_PAYMENT CREDIT BANK " + cashier,
+		"PAYROLL_PPH21_WITHHOLDING DEBIT SALARY_PAYABLE " + payable, "PAYROLL_PPH21_WITHHOLDING CREDIT TAX " + pph21,
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("payroll mapping accounts:\n got %v\nwant %v", got, want)
+	}
+	if e.scalar(&filled, `SELECT accounting.ensure_payroll_journal_mappings($1::uuid)`, e.company); filled != 0 {
+		t.Fatalf("second run filled %d", filled)
+	}
+
+	// One company's employees plus some without a company: those fall back to
+	// the one company with ready payroll mappings and join its journals.
+	run := "6f1d5c2e-2222-4a1b-9c1d-000000000003"
+	e.publish(payroll.TopicRunPaid, run, payroll.RunPaid{RunID: run, PeriodMonth: 9, PeriodYear: 2026, UserID: e.staff.UserID,
+		PaidAt: time.Date(2026, 10, 4, 2, 0, 0, 0, time.UTC), TotalLoanDeduction: 500000,
+		Companies: []payroll.RunCompany{
+			{CompanyID: &e.company, TotalGross: 10000000, TotalNet: 9000000, TotalPph21: 250000, TotalLoanDeduction: 500000,
+				TotalBpjsTkEmployer: 600000, TotalBpjsKesEmployer: 400000},
+			{TotalGross: 1000000, TotalNet: 900000, TotalPph21: 100000},
+		}})
+	e.dispatch()
+	posted := []string{
+		"PAYROLL_ACCRUAL:DEBIT=11000000.00,CREDIT=11000000.00",
+		"PAYROLL_BPJS_KES_EMPLOYER:DEBIT=400000.00,CREDIT=400000.00",
+		"PAYROLL_BPJS_TK_EMPLOYER:DEBIT=600000.00,CREDIT=600000.00",
+		"PAYROLL_LOAN_DEDUCTION:DEBIT=500000.00,CREDIT=500000.00",
+		"PAYROLL_PAYMENT:DEBIT=9900000.00,CREDIT=9900000.00",
+		"PAYROLL_PPH21_WITHHOLDING:DEBIT=350000.00,CREDIT=350000.00",
+	}
+	if got := e.journals(run); fmt.Sprint(got) != fmt.Sprint(posted) {
+		t.Fatalf("payroll journals per company:\n got %v\nwant %v", got, posted)
+	}
+	var companies int
+	e.scalar(&companies, `SELECT count(DISTINCT company_id)::int FROM accounting.journal_entries WHERE source_document_id = $1 AND company_id = $2`, run, e.company)
+	if companies != 1 {
+		t.Fatal("journals post to the employees' company")
+	}
+}

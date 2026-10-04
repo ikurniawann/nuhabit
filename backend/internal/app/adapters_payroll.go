@@ -123,6 +123,32 @@ func (e payrollEmployees) DepartmentMembers(ctx context.Context, q database.Quer
 	return out, nil
 }
 
+// Companies resolves each employee's company through its account: the
+// user's company, else the company of the user's branch.
+func (payrollEmployees) Companies(ctx context.Context, q database.Querier, ids []string) (map[string]string, error) {
+	out := map[string]string{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(ctx, `SELECT e.id::text, COALESCE(u.company_id, b.company_id)::text
+		FROM hris.employees e
+		JOIN configuration.users u ON u.id = e.user_id
+		LEFT JOIN configuration.branches b ON b.id = u.branch_id
+		WHERE e.id = ANY($1::uuid[]) AND COALESCE(u.company_id, b.company_id) IS NOT NULL`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, company string
+		if err := rows.Scan(&id, &company); err != nil {
+			return nil, err
+		}
+		out[id] = company
+	}
+	return out, rows.Err()
+}
+
 type payrollDepartmentsSQL struct{}
 
 var _ payroll.Departments = payrollDepartmentsSQL{}

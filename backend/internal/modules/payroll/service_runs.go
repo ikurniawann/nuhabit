@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/payroll/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/jsmath"
 	"nuhabit/backend/internal/platform/outbox"
 )
 
@@ -165,6 +166,7 @@ func (s *service) markRunPaid(ctx context.Context, userID string, run *runHead, 
 		}
 		var shortfalls []shortfall
 		totalDeducted := 0.0
+		deductedBy := map[string]float64{}
 		for _, d := range deductions {
 			loans, err := lockDueLoans(ctx, tx, d.EmployeeID)
 			if err != nil {
@@ -193,6 +195,7 @@ func (s *service) markRunPaid(ctx context.Context, userID string, run *runHead, 
 				settled++
 			}
 			totalDeducted += allocated
+			deductedBy[d.EmployeeID] += allocated
 		}
 		if len(shortfalls) > 0 {
 			return &httpx.Error{Status: 409, Message: "Cicilan pinjaman di slip tidak lagi cocok dengan saldo pinjaman saat ini " +
@@ -200,14 +203,49 @@ func (s *service) markRunPaid(ctx context.Context, userID string, run *runHead, 
 				"Hapus run ini lalu buat & hitung ulang sebelum menandai dibayar.",
 				Details: map[string]any{"shortfalls": shortfalls}}
 		}
-		return outbox.Publish(ctx, tx, payrollevents.TopicRunPaid, run.ID, payrollevents.RunPaid{
+		event := payrollevents.RunPaid{
 			RunID: paid.ID, PeriodMonth: paid.PeriodMonth, PeriodYear: paid.PeriodYear, PaidAt: paid.PaidAt,
 			TotalEmployees: paid.TotalEmployees, TotalGross: paid.TotalGross, TotalDeductions: paid.TotalDeductions,
 			TotalNet: paid.TotalNet, TotalPph21: paid.TotalPph21, TotalBjtkEmployee: paid.TotalBjtkEmployee,
 			TotalBjtkEmployer: paid.TotalBjtkEmployer, TotalLoanDeduction: totalDeducted, SettledLoans: settled, UserID: userID,
-		})
+		}
+		if err := s.splitByCompany(ctx, tx, &event, deductedBy); err != nil {
+			return err
+		}
+		return outbox.Publish(ctx, tx, payrollevents.TopicRunPaid, run.ID, event)
 	})
 	return settled, err
+}
+
+// splitByCompany fills the employer BPJS totals and the per-company split
+// of a paid run from its slips and the installments settled per employee.
+func (s *service) splitByCompany(ctx context.Context, q database.Querier, event *payrollevents.RunPaid, deducted map[string]float64) error {
+	slips, err := runSlipShares(ctx, q, event.RunID)
+	if err != nil {
+		return err
+	}
+	ids := make([]string, len(slips))
+	for i, slip := range slips {
+		ids[i] = slip.EmployeeID
+	}
+	companies, err := s.ports.Employees.Companies(ctx, q, ids)
+	if err != nil {
+		return err
+	}
+	for _, g := range domain.SplitRunByCompany(slips, deducted, companies) {
+		var company *string
+		if g.CompanyID != "" {
+			company = &g.CompanyID
+		}
+		event.TotalBpjsTkEmployer += g.BpjsTkEmployer
+		event.TotalBpjsKesEmployer += g.BpjsKesEmployer
+		event.Companies = append(event.Companies, payrollevents.RunCompany{CompanyID: company, TotalGross: g.Gross,
+			TotalNet: g.Net, TotalPph21: g.Pph21, TotalLoanDeduction: g.LoanDeduction,
+			TotalBpjsTkEmployer: g.BpjsTkEmployer, TotalBpjsKesEmployer: g.BpjsKesEmployer})
+	}
+	event.TotalBpjsTkEmployer = jsmath.RoundTo(event.TotalBpjsTkEmployer, 2)
+	event.TotalBpjsKesEmployer = jsmath.RoundTo(event.TotalBpjsKesEmployer, 2)
+	return nil
 }
 
 func (s *service) deleteRun(ctx context.Context, id string) error {
