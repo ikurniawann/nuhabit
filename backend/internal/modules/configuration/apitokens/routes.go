@@ -114,7 +114,7 @@ func (h handler) create(w http.ResponseWriter, r *http.Request) error {
 		valid = valid && isValidScope(s)
 	}
 	if !valid {
-		return httpx.BadRequest("Scope tidak valid. Pakai '*' atau '<modul>:read|write' (modul: " + strings.Join(scopeModules, ", ") + ")")
+		return httpx.BadRequest("Scope tidak valid. Pakai '*' atau '<modul>:read|write' (modul: " + strings.Join(auth.APIScopeModules, ", ") + ")")
 	}
 
 	// The token runs as this account; the default is the admin creating it.

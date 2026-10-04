@@ -5,8 +5,8 @@ package master
 
 import (
 	"context"
+	"encoding/json"
 
-	"nuhabit/backend/internal/modules/configuration/kit"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -21,13 +21,13 @@ type Section struct {
 }
 
 // Sections is hris.sections, owned by the hris context. Rows come back as
-// `SELECT *` renders them so the response follows the table.
+// the JSON `SELECT *` renders, so the response follows the table.
 type Sections interface {
 	// List is every section (of one brand when brandID is set) with its
 	// brand name embedded as `brands`, ordered by name.
-	List(ctx context.Context, q database.Querier, brandID *string) ([]*kit.Row, error)
+	List(ctx context.Context, q database.Querier, brandID *string) ([]json.RawMessage, error)
 	// Create inserts a section and returns the row.
-	Create(ctx context.Context, q database.Querier, s Section) (*kit.Row, error)
+	Create(ctx context.Context, q database.Querier, s Section) (json.RawMessage, error)
 }
 
 // Ports are the capabilities of other bounded contexts this area uses;
@@ -55,13 +55,13 @@ func Routes(d module.Deps, db database.DB, p Ports) []module.Route {
 	}
 }
 
-// listBody is {data, count}.
+// listBody is {data, count}: brand rows or section JSON.
 type listBody struct {
-	Data  []*kit.Row `json:"data"`
-	Count int        `json:"count"`
+	Data  any `json:"data"`
+	Count int `json:"count"`
 }
 
 // dataBody is {data}.
 type dataBody struct {
-	Data *kit.Row `json:"data"`
+	Data any `json:"data"`
 }

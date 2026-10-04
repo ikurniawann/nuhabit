@@ -53,7 +53,7 @@ export async function listAdminUsers() {
   const [{ data: profiles, error }, authRows] = await Promise.all([
     db
       .from("users")
-      .select("id, full_name, email, role, brand_id, status, created_at, updated_at, brands(id, name), user_approval_permissions(*)")
+      .select("id, full_name, email, role, brand_id, status, created_at, updated_at, brands(id, name), user_approval_permissions!user_id(*)")
       .order("created_at", { ascending: false }),
     query<AuthStatusRow>(
       `SELECT id, email, banned_until::text, last_sign_in_at::text, email_verified_at::text FROM auth.users`

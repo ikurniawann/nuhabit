@@ -123,7 +123,7 @@ func (h *handler) putSalesTarget(w http.ResponseWriter, r *http.Request) error {
 	return httpx.JSON(w, http.StatusOK, dataBody{salesTargetBody{next}})
 }
 
-/* ── static QRIS (GET and PUT; upload and delete stay in Next) ───────── */
+/* ── static QRIS (GET and PUT; upload and delete in static_qris_upload.go) */
 
 // staticQris is StaticQrisConfig (lib/payments/static-qris.ts).
 type staticQris struct {

@@ -162,6 +162,18 @@ func TestCreateAndGetUser(t *testing.T) {
 		t.Fatalf("detail: %d %v", code, got)
 	}
 
+	// The manager embed follows reporting_to to the other employee.
+	report := employeeBody(uniqueEmail())
+	report["reporting_to"] = data["id"]
+	code, body, raw = e.do("POST", "/api/users", report)
+	if code != 201 {
+		t.Fatalf("create report: %d %s", code, raw)
+	}
+	code, got, _ = e.do("GET", "/api/users/"+body["data"].(map[string]any)["id"].(string), nil)
+	if m, _ := got["data"].(map[string]any)["manager"].(map[string]any); code != 200 || m == nil || m["id"] != data["id"] {
+		t.Fatalf("manager: %d %v", code, got["data"])
+	}
+
 	code, body, _ = e.do("POST", "/api/users", employeeBody(email))
 	wantError(t, code, body, 409, "Email sudah dipakai akun lain")
 }
@@ -193,6 +205,24 @@ func TestCreateUserWithAppAccount(t *testing.T) {
 	}
 	if n := e.scalar(`SELECT count(*) FROM configuration.user_approval_permissions WHERE user_id = $1 AND approval_limit = 150000.50`, userID); n != int64(1) {
 		t.Fatalf("permissions %v", n)
+	}
+	// The users list embeds the permissions granted to each user (user_id),
+	// not the ones the user created.
+	_, _, listRaw := e.do("GET", "/api/admin/users", nil)
+	var users struct {
+		Data []struct {
+			ID    string `json:"id"`
+			Perms []struct {
+				UserID   string `json:"user_id"`
+				Workflow string `json:"workflow"`
+			} `json:"user_approval_permissions"`
+		}
+	}
+	_ = json.Unmarshal([]byte(listRaw), &users)
+	for _, u := range users.Data {
+		if u.ID == userID && (len(u.Perms) != 1 || u.Perms[0].UserID != userID || u.Perms[0].Workflow != "pos_void") {
+			t.Fatalf("listed permissions of %s: %+v", userID, u.Perms)
+		}
 	}
 	if n := e.scalar(`SELECT count(*) FROM iam.user_roles ur JOIN iam.roles r ON r.id = ur.role_id
   WHERE ur.user_id = $1 AND r.code = 'super_admin' AND ur.is_primary`, userID); n != int64(1) {

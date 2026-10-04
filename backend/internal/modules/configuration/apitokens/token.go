@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -12,10 +13,6 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/validate"
 )
-
-// scopeModules is API_SCOPE_MODULES (lib/auth/api-token.ts), in order: the
-// error message lists them.
-var scopeModules = []string{"pos", "member", "hris", "inventory", "crm", "config", "reports", "other"}
 
 // isValidScope is isValidScope: '*' or '<module>:read|write'. Like the TS
 // split(":"), anything after a second colon is ignored.
@@ -27,11 +24,7 @@ func isValidScope(scope string) bool {
 	if len(parts) < 2 {
 		return false
 	}
-	known := false
-	for _, m := range scopeModules {
-		known = known || parts[0] == m
-	}
-	return known && (parts[1] == "read" || parts[1] == "write")
+	return slices.Contains(auth.APIScopeModules, parts[0]) && (parts[1] == "read" || parts[1] == "write")
 }
 
 // minted is mintApiToken's result: the raw token is shown once, the

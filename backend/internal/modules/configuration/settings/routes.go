@@ -2,8 +2,8 @@
 // configuration.app_settings and the configuration business tables:
 // company profile, sales target, static QRIS, AI voice (TTS), company
 // appearance, the business tree, receipt header/footer and order alerts
-// (frontend/src/app/api/settings/*). Static QRIS upload and delete write
-// Next's local storage, so they stay in Next.
+// (frontend/src/app/api/settings/*). The static QRIS image goes to the
+// shared storage (static_qris_upload.go).
 package settings
 
 import (
@@ -112,6 +112,8 @@ func Routes(d module.Deps, db database.DB, p Ports) []module.Route {
 		route("PUT /api/settings/sales-target", h.putSalesTarget),
 		route("GET /api/settings/static-qris", h.getStaticQris),
 		route("PUT /api/settings/static-qris", h.putStaticQris),
+		route("POST /api/settings/static-qris", h.postStaticQris),
+		route("DELETE /api/settings/static-qris", h.deleteStaticQris),
 		route("GET /api/settings/tts", h.getTts),
 		route("PUT /api/settings/tts", h.putTts),
 		route("POST /api/settings/tts/preview", h.previewTts),

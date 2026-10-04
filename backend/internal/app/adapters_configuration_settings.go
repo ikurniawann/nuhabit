@@ -2,13 +2,13 @@ package app
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/configuration/settings"
 	"nuhabit/backend/internal/modules/configuration/settings/domain"
+	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/whatsapp"
@@ -22,54 +22,27 @@ func configurationSettingsPorts(d module.Deps) settings.Ports {
 	}
 }
 
-// settingsReceipts is pos.pos_receipt_settings (pos-ops' table) with the
-// SQL of lib/pos/receipt-settings.ts and lib/settings/receipt-scope.ts.
-// pos-ops exposes no service that runs on the caller's querier, so the
-// adapter holds the SQL.
-type settingsReceipts struct{}
+// settingsReceipts adapts pos-ops' receipt settings store.
+type settingsReceipts struct{ pos posops.ReceiptStore }
 
-func (settingsReceipts) ActiveRows(ctx context.Context, q database.Querier) ([]domain.ReceiptRow, error) {
-	rows, err := q.Query(ctx, `SELECT id::text, branch_id::text, warehouse_id::text, header_lines::text,
-		footer_lines::text, show_stall_name FROM pos.pos_receipt_settings WHERE is_active = true`)
+func (r settingsReceipts) ActiveRows(ctx context.Context, q database.Querier) ([]domain.ReceiptRow, error) {
+	rows, err := r.pos.ActiveRows(ctx, q)
 	if err != nil {
-		if database.IsUndefinedTable(err) {
-			return []domain.ReceiptRow{}, nil
-		}
 		return nil, err
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.ReceiptRow, error) {
-		var r domain.ReceiptRow
-		var header, footer string
-		if err := row.Scan(&r.ID, &r.BranchID, &r.WarehouseID, &header, &footer, &r.ShowStallName); err != nil {
-			return r, err
-		}
-		_ = json.Unmarshal([]byte(header), &r.HeaderLines)
-		_ = json.Unmarshal([]byte(footer), &r.FooterLines)
-		return r, nil
-	})
+	out := make([]domain.ReceiptRow, len(rows))
+	for i, row := range rows {
+		out[i] = domain.ReceiptRow(row)
+	}
+	return out, nil
 }
 
-func receiptLines(in domain.ReceiptScope) (string, string) {
-	header, _ := json.Marshal(in.HeaderLines)
-	footer, _ := json.Marshal(in.FooterLines)
-	return string(header), string(footer)
+func (r settingsReceipts) Update(ctx context.Context, q database.Querier, id string, in domain.ReceiptScope, at time.Time) error {
+	return r.pos.Update(ctx, q, id, posops.ReceiptInput(in), at)
 }
 
-func (settingsReceipts) Update(ctx context.Context, q database.Querier, id string, in domain.ReceiptScope, at time.Time) error {
-	header, footer := receiptLines(in)
-	_, err := q.Exec(ctx, `UPDATE pos.pos_receipt_settings
-		SET header_lines = $1::jsonb, footer_lines = $2::jsonb, show_stall_name = $3, updated_at = $4
-		WHERE id = $5`, header, footer, in.ShowStallName, at, id)
-	return err
-}
-
-func (settingsReceipts) Insert(ctx context.Context, q database.Querier, id *string, in domain.ReceiptScope, at time.Time) error {
-	header, footer := receiptLines(in)
-	_, err := q.Exec(ctx, `INSERT INTO pos.pos_receipt_settings
-		(id, branch_id, warehouse_id, is_active, header_lines, footer_lines, show_stall_name, updated_at)
-		VALUES (COALESCE($1::uuid, uuid_generate_v4()), $2, $3, true, $4::jsonb, $5::jsonb, $6, $7)`,
-		id, in.BranchID, in.WarehouseID, header, footer, in.ShowStallName, at)
-	return err
+func (r settingsReceipts) Insert(ctx context.Context, q database.Querier, id *string, in domain.ReceiptScope, at time.Time) error {
+	return r.pos.Insert(ctx, q, id, posops.ReceiptInput(in), at)
 }
 
 // settingsStaff reads hris.employees (HRIS-PEOPLE's table) with

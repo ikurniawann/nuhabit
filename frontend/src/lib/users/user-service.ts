@@ -52,7 +52,7 @@ async function enrichWithAppUser(row: EmployeeUserRow): Promise<EmployeeUserRow>
     .select(
       `id, role, status, brand_id, business_scope, holding_id, company_id, branch_id,
        can_switch_stall, can_central_checkout, default_warehouse_id,
-       user_approval_permissions(*)`
+       user_approval_permissions!user_id(*)`
     )
     .eq("id", row.user_id)
     .maybeSingle();

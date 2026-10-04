@@ -129,10 +129,9 @@ type accountsEmployees struct{}
 
 var _ accounts.Employees = accountsEmployees{}
 
-// employeeSelect is EMPLOYEE_SELECT as the query builder renders it. The
-// manager embed's "employees"."reporting_to" binds to the inner employees
-// table, so it only finds an employee who reports to themself; that is
-// what the TS returns.
+// employeeSelect is EMPLOYEE_SELECT as the query builder renders it; the
+// manager embed aliases the inner employees so reporting_to is the outer
+// row's.
 const employeeSelect = `SELECT id::text, user_id::text, full_name, nip, email, phone, join_date, end_date,
   employment_status, is_active, is_access_app, department_id::text, section_id::text, job_title_id::text,
   reporting_to::text, ktp, npwp, birth_date, gender::text, marital_status::text, address, city, province,
@@ -141,7 +140,7 @@ const employeeSelect = `SELECT id::text, user_id::text, full_name, nip, email, p
   (SELECT row_to_json(e) FROM (SELECT "id", "name", "code" FROM "hris"."departments" WHERE "id" = "employees"."department_id") e) AS "department",
   (SELECT row_to_json(e) FROM (SELECT "id", "name", "code" FROM "hris"."sections" WHERE "id" = "employees"."section_id") e) AS "section",
   (SELECT row_to_json(e) FROM (SELECT "id", "title", "department" FROM "hris"."positions" WHERE "id" = "employees"."job_title_id") e) AS "job_title",
-  (SELECT row_to_json(e) FROM (SELECT "id", "full_name", "nip" FROM "hris"."employees" WHERE "id" = "employees"."reporting_to") e) AS "manager"
+  (SELECT row_to_json(e) FROM (SELECT "id", "full_name", "nip" FROM "hris"."employees" AS "m" WHERE "m"."id" = "employees"."reporting_to") e) AS "manager"
   FROM hris.employees`
 
 func scanEmployee(r pgx.CollectableRow) (accounts.Employee, error) {

@@ -18,10 +18,10 @@ import (
 // SQL on the tables this area owns: configuration.users and its approval
 // permissions, stalls and audit log, and iam.user_roles.
 
-// permissionsEmbed is the query builder's `user_approval_permissions(*)`
-// embed on users. The shim resolves it through the first foreign key by
-// column name, created_by, so it lists the permissions the user created.
-const permissionsEmbed = `COALESCE((SELECT json_agg(e) FROM (SELECT * FROM "configuration"."user_approval_permissions" WHERE "created_by" = "users"."id") e), '[]'::json) AS "user_approval_permissions"`
+// permissionsEmbed is the query builder's
+// `user_approval_permissions!user_id(*)` embed on users: the permissions
+// granted to the user.
+const permissionsEmbed = `COALESCE((SELECT json_agg(e) FROM (SELECT * FROM "configuration"."user_approval_permissions" WHERE "user_id" = "users"."id") e), '[]'::json) AS "user_approval_permissions"`
 
 // quietly runs fn in a savepoint and drops its error: a TS call whose
 // { error } nobody reads, which must not abort the caller's transaction.

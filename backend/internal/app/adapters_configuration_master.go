@@ -2,29 +2,39 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 
-	"nuhabit/backend/internal/modules/configuration/kit"
 	"nuhabit/backend/internal/modules/configuration/master"
+	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 )
 
 func configurationMasterPorts(module.Deps) master.Ports {
-	return master.Ports{Sections: configurationSectionsSQL{}}
+	return master.Ports{Sections: configurationSections{}}
 }
 
-// configurationSectionsSQL is hris.sections for /api/sections, with the SQL
-// of the TS route. Stopgap adapter: hris has no exported sections service.
-type configurationSectionsSQL struct{}
+// configurationSections adapts the hris.sections service to /api/sections.
+type configurationSections struct{ hris hris.Sections }
 
-func (configurationSectionsSQL) List(ctx context.Context, q database.Querier, brandID *string) ([]*kit.Row, error) {
-	return kit.Query(ctx, q, `SELECT s.*, CASE WHEN b.id IS NULL THEN NULL ELSE json_build_object('name', b.name) END AS brands
-       FROM hris.sections s LEFT JOIN item.brands b ON b.id = s.brand_id
-      WHERE $1::uuid IS NULL OR s.brand_id = $1
-      ORDER BY s.name`, brandID)
+func (s configurationSections) List(ctx context.Context, q database.Querier, brandID *string) ([]json.RawMessage, error) {
+	rows, err := s.hris.List(ctx, q, brandID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]json.RawMessage, len(rows))
+	for i, row := range rows {
+		if out[i], err = json.Marshal(row); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
-func (configurationSectionsSQL) Create(ctx context.Context, q database.Querier, s master.Section) (*kit.Row, error) {
-	return kit.QueryOne(ctx, q, `INSERT INTO hris.sections (brand_id, name, code, description, color)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`, s.BrandID, s.Name, s.Code, s.Description, s.Color)
+func (s configurationSections) Create(ctx context.Context, q database.Querier, in master.Section) (json.RawMessage, error) {
+	row, err := s.hris.Create(ctx, q, hris.NewSection(in))
+	if err != nil || row == nil {
+		return nil, err
+	}
+	return json.Marshal(row)
 }

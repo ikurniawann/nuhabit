@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import { describe, expect, it } from "vitest";
-import { parseInValues, QueryBuilder } from "@/lib/pg/query-builder";
+import { parseInValues, QueryBuilder, resetFkCache } from "@/lib/pg/query-builder";
 
 /** Fake `Pool` yang cuma menangkap SQL/params tiap query — dipakai lintas test. */
 function fakePoolCapturing(captured: { sql: string; params: unknown[] }[]): Pool {
@@ -226,6 +226,77 @@ describe("QueryBuilder serialisasi kolom json", () => {
   });
 });
 
+/** Pool palsu dengan katalog FK dan skema tabel; menangkap SQL SELECT. */
+function poolWithCatalog(
+  fks: { src: string; col: string; tgt: string; name: string }[],
+  schemas: Record<string, string>,
+  selects: string[]
+): Pool {
+  return {
+    query: async (sql: string, params: unknown[] = []) => {
+      if (sql.includes("pg_constraint")) {
+        return {
+          rows: fks.map((f) => {
+            const [srcSchema, srcTable] = f.src.split(".");
+            const [tgtSchema, tgtTable] = f.tgt.split(".");
+            return {
+              constraint_name: f.name,
+              src_schema: srcSchema,
+              src_table: srcTable,
+              src_col: f.col,
+              tgt_schema: tgtSchema,
+              tgt_table: tgtTable,
+              tgt_col: "id",
+            };
+          }),
+        };
+      }
+      if (sql.includes("to_regclass")) return { rows: [{ nspname: schemas[String(params[0])] ?? null }] };
+      selects.push(sql);
+      return { rows: [] };
+    },
+  } as unknown as Pool;
+}
+
+describe("QueryBuilder embed foreign keys", () => {
+  it("embed tanpa penunjuk memakai FK ke tabel di skema yang sama, bukan created_by ke auth.users", async () => {
+    resetFkCache();
+    const selects: string[] = [];
+    const pool = poolWithCatalog(
+      [
+        { src: "configuration.user_approval_permissions", col: "created_by", tgt: "auth.users", name: "uap_created_by_fkey" },
+        { src: "configuration.user_approval_permissions", col: "updated_by", tgt: "auth.users", name: "uap_updated_by_fkey" },
+        { src: "configuration.user_approval_permissions", col: "user_id", tgt: "configuration.users", name: "uap_user_id_fkey" },
+      ],
+      { users: "configuration" },
+      selects
+    );
+    await new QueryBuilder("users", "public", pool).select("id, user_approval_permissions(*)");
+    expect(selects[0]).toMatch(/WHERE "e\d+"\."user_id" = "users"\."id"/);
+    expect(selects[0]).not.toContain("created_by");
+  });
+
+  it("embed self-reference membandingkan dengan baris luar, bukan baris dalam", async () => {
+    resetFkCache();
+    const selects: string[] = [];
+    const pool = poolWithCatalog(
+      [
+        { src: "hris.employees", col: "reporting_to", tgt: "hris.employees", name: "employees_reporting_to_fkey" },
+        { src: "hris.employees", col: "department_id", tgt: "hris.departments", name: "employees_department_id_fkey" },
+      ],
+      { employees: "hris" },
+      selects
+    );
+    await new QueryBuilder("employees", "public", pool).select(
+      "id, manager:employees!reporting_to (id, full_name), department:departments!employees_department_id_fkey (id)"
+    );
+    expect(selects[0]).toMatch(
+      /FROM "hris"\."employees" AS "(e\d+)" WHERE "\1"\."id" = "employees"\."reporting_to"\) e\) AS "manager"/
+    );
+    expect(selects[0]).toMatch(/WHERE "e\d+"\."id" = "employees"\."department_id"\) e\) AS "department"/);
+  });
+});
+
 describe("QueryBuilder embed FK hints", () => {
   it.skipIf(!hasDb)("parses PostgREST table!fk_hint syntax for self-referential joins", async () => {
     const result = await new QueryBuilder("employees")
@@ -237,5 +308,15 @@ describe("QueryBuilder embed FK hints", () => {
 
     expect(result.error).toBeNull();
     expect(Array.isArray(result.data)).toBe(true);
+  });
+
+  it.skipIf(!hasDb)("manager embed returns the employee's own manager", async () => {
+    const result = await new QueryBuilder<{ reporting_to: string; manager: { id: string } | null }>("employees")
+      .select("id, reporting_to, manager:employees!reporting_to (id)")
+      .not("reporting_to", "is", null)
+      .limit(5);
+    expect(result.error).toBeNull();
+    const rows = (result.data ?? []) as Array<{ reporting_to: string; manager: { id: string } | null }>;
+    for (const row of rows) expect(row.manager?.id).toBe(row.reporting_to);
   });
 });

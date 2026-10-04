@@ -29,6 +29,7 @@ export interface PgResult<T = ShimRow> {
 type Filter = { col: string; op: string; value: unknown };
 
 interface ForeignKey {
+  name: string;
   srcSchema: string;
   srcTable: string;
   srcCol: string;
@@ -109,6 +110,7 @@ function pgValue(value: unknown, isJsonCol: boolean): unknown {
 async function loadForeignKeys(pool: Pool): Promise<ForeignKey[]> {
   if (fkCache) return fkCache;
   const { rows } = await pool.query<{
+    constraint_name: string;
     src_schema: string;
     src_table: string;
     src_col: string;
@@ -116,7 +118,7 @@ async function loadForeignKeys(pool: Pool): Promise<ForeignKey[]> {
     tgt_table: string;
     tgt_col: string;
   }>(
-    `SELECT src_ns.nspname AS src_schema, src.relname AS src_table, src_att.attname AS src_col,
+    `SELECT con.conname AS constraint_name, src_ns.nspname AS src_schema, src.relname AS src_table, src_att.attname AS src_col,
             tgt_ns.nspname AS tgt_schema, tgt.relname AS tgt_table, tgt_att.attname AS tgt_col
      FROM pg_constraint con
      JOIN pg_class src ON src.oid = con.conrelid
@@ -135,6 +137,7 @@ async function loadForeignKeys(pool: Pool): Promise<ForeignKey[]> {
      ORDER BY src_ns.nspname, src.relname, src_att.attname`
   );
   fkCache = rows.map((r) => ({
+    name: r.constraint_name,
     srcSchema: r.src_schema,
     srcTable: r.src_table,
     srcCol: r.src_col,
@@ -288,6 +291,8 @@ export class QueryBuilder<T = ShimRow> implements PromiseLike<PgResult<T>> {
   private singleMode: "single" | "maybe" | null = null;
   private wantCount: "exact" | null = null;
   private headOnly = false;
+  /** Penomoran alias tabel embed ("e1", "e2", ...). */
+  private embedSeq = 0;
 
   constructor(table: string, schema = "public", pool?: Pool) {
     this.pool = pool ?? getPool();
@@ -493,12 +498,28 @@ export class QueryBuilder<T = ShimRow> implements PromiseLike<PgResult<T>> {
     return sql;
   }
 
-  private async buildSelectList(sel: string, params: Params, ctxTable?: string): Promise<string> {
+  /** Skema tabel utama: eksplisit, hasil search_path, atau null bila tak dikenal. */
+  private async resolvedSchema(): Promise<string | null> {
+    if (this.schema && this.schema !== "public") return this.schema;
+    return resolveTableSchema(this.pool, this.table);
+  }
+
+  /**
+   * Daftar kolom SELECT. `ctx` adalah tabel tempat embed menempel: skemanya
+   * (agar FK ke tabel bernama sama di skema lain, mis. auth.users, tidak
+   * ikut terpilih) dan nama yang dipakai untuk merujuk barisnya. Tabel embed
+   * selalu diberi alias sendiri, sehingga embed ke tabel yang sama
+   * (manager:employees!reporting_to) merujuk baris luar, bukan dirinya.
+   */
+  private async buildSelectList(
+    sel: string,
+    params: Params,
+    ctx?: { schema: string | null; table: string; ref: string }
+  ): Promise<string> {
     const parts = parseSelect(sel);
     if (parts.length === 1 && parts[0].raw === "*") return "*";
     const fks = await loadForeignKeys(this.pool);
     const cols: string[] = [];
-    const table = ctxTable ?? this.table;
     for (const p of parts) {
       if (p.type === "column") {
         if (p.raw === "*") cols.push("*");
@@ -508,28 +529,39 @@ export class QueryBuilder<T = ShimRow> implements PromiseLike<PgResult<T>> {
         const embedTable = p.table!;
         const alias = p.alias || embedTable;
         const innerCols = (p.inner || "*").trim();
-        const fkHint = p.fkHint;
+        // Skema tabel utama baru dicari saat ada embed: SELECT kolom polos
+        // tidak menambah query katalog.
+        ctx ??= { schema: await this.resolvedSchema(), table: this.table, ref: qid(this.table) };
+        const { schema, table, ref } = ctx;
+        const hinted = (f: ForeignKey) => f.srcCol === p.fkHint || f.name === p.fkHint;
         const m2oCandidates = fks.filter(
-          (f) => f.srcTable === table && f.tgtTable === embedTable
+          (f) => (schema === null || f.srcSchema === schema) && f.srcTable === table && f.tgtTable === embedTable
         );
-        const m2o = fkHint
-          ? m2oCandidates.find((f) => f.srcCol === fkHint) ?? m2oCandidates[0]
-          : m2oCandidates[0];
         const o2mCandidates = fks.filter(
-          (f) => f.srcTable === embedTable && f.tgtTable === table
+          (f) => f.srcTable === embedTable && (schema === null || f.tgtSchema === schema) && f.tgtTable === table
         );
-        const o2m = fkHint
-          ? o2mCandidates.find((f) => f.srcCol === fkHint) ?? o2mCandidates[0]
-          : o2mCandidates[0];
+        // Penunjuk (kolom FK atau nama constraint) memilih arah relasinya;
+        // penunjuk yang bukan FK (mis. !inner) jatuh ke kandidat pertama.
+        let m2o = p.fkHint ? m2oCandidates.find(hinted) : undefined;
+        let o2m = p.fkHint && !m2o ? o2mCandidates.find(hinted) : undefined;
+        if (!m2o && !o2m) {
+          m2o = m2oCandidates[0];
+          o2m = o2mCandidates[0];
+        }
+        const inner = qid(`e${++this.embedSeq}`);
+        const innerSchema = m2o?.tgtSchema ?? o2m?.srcSchema ?? "public";
         const innerSelect =
-          innerCols === "*" ? "*" : await this.buildSelectList(innerCols, params, embedTable);
+          innerCols === "*"
+            ? "*"
+            : await this.buildSelectList(innerCols, params, { schema: innerSchema, table: embedTable, ref: inner });
+        const source = `${qid(innerSchema)}.${qid(embedTable)} AS ${inner}`;
         if (m2o) {
           cols.push(
-            `(SELECT row_to_json(e) FROM (SELECT ${innerSelect} FROM ${qid(m2o.tgtSchema)}.${qid(embedTable)} WHERE ${qid(m2o.tgtCol)} = ${qid(table)}.${qid(m2o.srcCol)}) e) AS ${qid(alias)}`
+            `(SELECT row_to_json(e) FROM (SELECT ${innerSelect} FROM ${source} WHERE ${inner}.${qid(m2o.tgtCol)} = ${ref}.${qid(m2o.srcCol)}) e) AS ${qid(alias)}`
           );
         } else if (o2m) {
           cols.push(
-            `COALESCE((SELECT json_agg(e) FROM (SELECT ${innerSelect} FROM ${qid(o2m.srcSchema)}.${qid(embedTable)} WHERE ${qid(o2m.srcCol)} = ${qid(table)}.${qid(o2m.tgtCol)}) e), '[]'::json) AS ${qid(alias)}`
+            `COALESCE((SELECT json_agg(e) FROM (SELECT ${innerSelect} FROM ${source} WHERE ${inner}.${qid(o2m.srcCol)} = ${ref}.${qid(o2m.tgtCol)}) e), '[]'::json) AS ${qid(alias)}`
           );
         } else {
           throw new Error(`Tidak ada relasi FK antara ${table} dan ${embedTable} untuk embed`);
