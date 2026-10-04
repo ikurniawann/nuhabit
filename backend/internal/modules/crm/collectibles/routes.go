@@ -1,8 +1,7 @@
 // Package collectibles is the CRM collectible catalog admin: badges,
 // avatars, wallpapers, member avatar inventory and the idle entitlement
 // report (api/crm/badges, avatars, avatar-inventory, wallpapers,
-// collectibles/idle-report). POST /api/crm/avatars/upload stays in TS: it
-// writes local storage.
+// collectibles/idle-report) and the avatar artwork upload.
 package collectibles
 
 import (
@@ -13,6 +12,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Ports are the capabilities of other bounded contexts this area uses;
@@ -24,6 +24,7 @@ type Ports struct{}
 type handler struct {
 	db    database.DB
 	guard kit.Guard
+	store *storage.Store
 	now   func() time.Time
 }
 
@@ -37,7 +38,7 @@ func newHandler(db database.DB, d module.Deps) *handler {
 	if now == nil {
 		now = time.Now
 	}
-	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, now: now}
+	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, store: storage.FromEnv(), now: now}
 }
 
 func (h *handler) routes() []module.Route {
@@ -52,6 +53,7 @@ func (h *handler) routes() []module.Route {
 		{Pattern: "GET /api/crm/avatars", Handler: httpx.Handle(h.listAvatars)},
 		{Pattern: "POST /api/crm/avatars", Handler: httpx.Handle(h.saveAvatar)},
 		{Pattern: "DELETE /api/crm/avatars", Handler: httpx.Handle(h.deleteAvatar)},
+		{Pattern: "POST /api/crm/avatars/upload", Handler: httpx.Handle(h.uploadAvatar)},
 		{Pattern: "GET /api/crm/avatar-inventory", Handler: httpx.Handle(h.listInventory)},
 		{Pattern: "POST /api/crm/avatar-inventory", Handler: httpx.Handle(h.grantAvatar)},
 		{Pattern: "PATCH /api/crm/avatar-inventory", Handler: httpx.Handle(h.equipAvatar)},

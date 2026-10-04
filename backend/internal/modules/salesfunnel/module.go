@@ -9,12 +9,13 @@ package salesfunnel
 
 import (
 	"log/slog"
-	"sync"
+	"net/http"
 	"time"
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/whatsapp"
 )
 
@@ -42,7 +43,7 @@ func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
 	if ports.Gateway == nil {
 		ports.Gateway = whatsapp.New(log)
 	}
-	return salesModule{h: &handler{db: db, auth: deps.Auth, ports: ports, log: log, now: now, limiter: newRateLimiter()}}
+	return salesModule{h: &handler{db: db, auth: deps.Auth, ports: ports, log: log, now: now, limiter: ratelimit.New(db)}}
 }
 
 type handler struct {
@@ -51,41 +52,19 @@ type handler struct {
 	ports   Ports
 	log     *slog.Logger
 	now     func() time.Time
-	limiter *rateLimiter
+	limiter *ratelimit.Limiter
 }
 
-// rateLimiter is lib/rate-limit.ts checkRateLimit: a fixed one-minute
-// window per key, per process.
-type rateLimiter struct {
-	mu      sync.Mutex
-	entries map[string]*rateEntry
-}
-
-type rateEntry struct {
-	count int
-	reset time.Time
-}
-
-func newRateLimiter() *rateLimiter { return &rateLimiter{entries: map[string]*rateEntry{}} }
-
-func (l *rateLimiter) allow(key string, limit int, now time.Time) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	e, ok := l.entries[key]
-	if !ok || now.After(e.reset) {
-		if len(l.entries) > 10_000 {
-			for k, v := range l.entries {
-				if now.After(v.reset) {
-					delete(l.entries, k)
-				}
-			}
-		}
-		l.entries[key] = &rateEntry{count: 1, reset: now.Add(time.Minute)}
-		return true
+// limit is lib/rate-limit.ts checkRateLimit answered with a 429 msg: a
+// fixed one-minute window per key, counted in platform.rate_limits so every
+// replica shares it.
+func (h *handler) limit(r *http.Request, key string, limit int, msg string) error {
+	w, err := h.limiter.Fixed(r.Context(), key, limit, time.Minute, h.now())
+	if err != nil {
+		return err
 	}
-	if e.count >= limit {
-		return false
+	if !w.Allowed {
+		return tooMany(msg)
 	}
-	e.count++
-	return true
+	return nil
 }

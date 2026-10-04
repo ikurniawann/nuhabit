@@ -60,8 +60,8 @@ func (h *handler) searchCustomers(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if !h.limiter.allow("sales-funnel-customers:"+u.ID, 30, h.now()) {
-		return tooMany("Terlalu banyak pencarian — coba lagi sebentar")
+	if err := h.limit(r, "sales-funnel-customers:"+u.ID, 30, "Terlalu banyak pencarian — coba lagi sebentar"); err != nil {
+		return err
 	}
 	q := domain.JSTrim(queryStr(r, "q"))
 	if validate.UTF16Len(q) < 3 {
@@ -83,8 +83,8 @@ func (h *handler) searchRawMaterials(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	if !h.limiter.allow("sales-funnel-raw-materials:"+u.ID, 60, h.now()) {
-		return tooMany("Terlalu banyak pencarian — coba lagi sebentar")
+	if err := h.limit(r, "sales-funnel-raw-materials:"+u.ID, 60, "Terlalu banyak pencarian — coba lagi sebentar"); err != nil {
+		return err
 	}
 	s, err := h.salesScope(r.Context(), u)
 	if err != nil {

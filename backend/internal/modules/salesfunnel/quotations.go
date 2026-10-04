@@ -511,8 +511,8 @@ func (h *handler) realizeQuotation(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if !h.limiter.allow("sales-funnel-realize:"+u.ID, 10, h.now()) {
-		return tooMany("Terlalu banyak percobaan realisasi — coba lagi sebentar")
+	if err := h.limit(r, "sales-funnel-realize:"+u.ID, 10, "Terlalu banyak percobaan realisasi — coba lagi sebentar"); err != nil {
+		return err
 	}
 	ctx, id := r.Context(), r.PathValue("id")
 	_, deal, err := h.requireQuotation(ctx, id, u)

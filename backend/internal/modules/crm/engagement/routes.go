@@ -14,6 +14,7 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // OrderSummary is the POS order a member review points at.
@@ -51,6 +52,7 @@ type handler struct {
 	guard  kit.Guard
 	orders OrderReads
 	push   Pusher
+	store  *storage.Store
 	now    func() time.Time
 }
 
@@ -64,7 +66,7 @@ func newHandler(db database.DB, d module.Deps, p Ports) *handler {
 	if now == nil {
 		now = time.Now
 	}
-	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, orders: p.Orders, push: p.Push, now: now}
+	return &handler{db: db, guard: kit.Guard{Auth: d.Auth, DB: db}, orders: p.Orders, push: p.Push, store: storage.FromEnv(), now: now}
 }
 
 func (h *handler) routes() []module.Route {
@@ -74,6 +76,7 @@ func (h *handler) routes() []module.Route {
 	return []module.Route{
 		r("GET /api/crm/engagement/announcements", h.listAnnouncements),
 		r("POST /api/crm/engagement/announcements", h.sendAnnouncement),
+		r("POST /api/crm/engagement/announcements/image", h.uploadAnnouncementImage),
 		r("GET /api/crm/engagement/challenges", h.getChallenges),
 		r("POST /api/crm/engagement/challenges", h.saveChallenge),
 		r("GET /api/crm/engagement/checkins", h.checkinLog),

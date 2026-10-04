@@ -7,9 +7,8 @@ import (
 	"nuhabit/backend/internal/platform/module"
 )
 
-// routes lists every ported /api/sales-funnel route. Left in Next:
-// POST leads/import (CSV/XLSX parsing with exceljs) and GET
-// quotations/{id}/pdf, invoices/{id}/pdf (pdfkit).
+// routes lists every /api/sales-funnel route; none is left in Next. The
+// lead import and the PDFs live in leadimport.go and pdf.go.
 func (h *handler) routes() []module.Route {
 	r := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
@@ -18,6 +17,7 @@ func (h *handler) routes() []module.Route {
 	return []module.Route{
 		r("GET "+p+"/leads", h.listLeads),
 		r("POST "+p+"/leads", h.createLead),
+		r("POST "+p+"/leads/import", h.importLeads),
 		r("GET "+p+"/leads/by-phone", h.leadByPhone),
 		r("GET "+p+"/leads/{id}", h.leadDetail),
 		r("PATCH "+p+"/leads/{id}", h.updateLead),
@@ -46,9 +46,11 @@ func (h *handler) routes() []module.Route {
 		r("POST "+p+"/quotations/{id}/revise", h.reviseQuotation),
 		r("POST "+p+"/quotations/{id}/realize", h.realizeQuotation),
 		r("POST "+p+"/quotations/{id}/send-wa", h.sendQuotationWa),
+		r("GET "+p+"/quotations/{id}/pdf", h.quotationPDF),
 
 		r("PATCH "+p+"/invoices/{id}", h.updateInvoice),
 		r("DELETE "+p+"/invoices/{id}", h.deleteInvoice),
+		r("GET "+p+"/invoices/{id}/pdf", h.invoicePDF),
 
 		r("GET "+p+"/activities", h.listActivities),
 		r("POST "+p+"/activities", h.createActivity),

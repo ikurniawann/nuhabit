@@ -1,6 +1,6 @@
 // Package reporting ports the CRM report builder (EPIC-050 phase 4): saved
 // reports and ad-hoc runs, dashboards of report widgets and scheduled
-// reports. GET /api/crm/report-builder/{id}/export stays in TS (xlsx).
+// reports, plus the xlsx export of a saved report.
 //
 // The report datasets read sales-funnel tables as read models; see
 // domain/registry.go.
@@ -95,6 +95,7 @@ func (h *handler) routes() []module.Route {
 		route("GET /api/crm/report-builder/datasets", h.datasets),
 		route("POST /api/crm/report-builder/run", h.runReport),
 		route("GET /api/crm/report-builder/{id}", h.getReport),
+		route("GET /api/crm/report-builder/{id}/export", h.exportReport),
 		route("PATCH /api/crm/report-builder/{id}", h.patchReport),
 		route("DELETE /api/crm/report-builder/{id}", h.deleteReport),
 

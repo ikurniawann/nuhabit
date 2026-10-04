@@ -368,3 +368,16 @@ func TestPipelinesAndCatalog(t *testing.T) {
 	e.expect(e.do(&super, "DELETE", "/api/sales-funnel/wa-templates/"+tpl, nil), 204, "")
 	e.expect(e.do(&super, "DELETE", "/api/sales-funnel/wa-templates/"+tpl, nil), 404, "Template tidak ditemukan")
 }
+
+// The per-user brakes count in platform.rate_limits, so a second replica
+// refuses what the first one filled.
+func TestRateLimitIsSharedAcrossReplicas(t *testing.T) {
+	e := newEnv(t)
+	s := e.seller()
+	for range 30 {
+		e.expect(e.do(&s, "GET", "/api/sales-funnel/customers?q=ab", nil), 200, "")
+	}
+	e.expect(e.do(&s, "GET", "/api/sales-funnel/customers?q=ab", nil), 429, "Terlalu banyak pencarian — coba lagi sebentar")
+	e.mux = e.replica()
+	e.expect(e.do(&s, "GET", "/api/sales-funnel/customers?q=ab", nil), 429, "Terlalu banyak pencarian — coba lagi sebentar")
+}

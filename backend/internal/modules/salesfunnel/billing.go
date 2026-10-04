@@ -111,8 +111,8 @@ func (h *handler) createInvoice(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !h.limiter.allow("sales-invoice:"+u.ID, 20, h.now()) {
-		return tooMany("Terlalu banyak pembuatan invoice — coba lagi sebentar")
+	if err := h.limit(r, "sales-invoice:"+u.ID, 20, "Terlalu banyak pembuatan invoice — coba lagi sebentar"); err != nil {
+		return err
 	}
 	ctx, id := r.Context(), r.PathValue("id")
 	deal, err := h.require(ctx, "deal", id, u)
@@ -320,8 +320,8 @@ func (h *handler) createPayment(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if !h.limiter.allow("sales-payment:"+u.ID, 20, h.now()) {
-		return tooMany("Terlalu banyak pencatatan — coba lagi sebentar")
+	if err := h.limit(r, "sales-payment:"+u.ID, 20, "Terlalu banyak pencatatan — coba lagi sebentar"); err != nil {
+		return err
 	}
 	ctx, id := r.Context(), r.PathValue("id")
 	deal, err := h.require(ctx, "deal", id, u)

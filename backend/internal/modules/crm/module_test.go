@@ -7,9 +7,9 @@ import (
 	"nuhabit/backend/internal/platform/testutil"
 )
 
-// Every area mounts on one ServeMux without conflicting patterns: 128 of
-// the 132 TS handlers (the four left in TS are not registered), plus the
-// two public form routes.
+// Every area mounts on one ServeMux without conflicting patterns: all 132
+// TS handlers, including the upload and xlsx routes, plus the two public
+// form routes.
 func TestRoutesMountTogether(t *testing.T) {
 	m := New(testutil.Deps(t, nil), Ports{})
 	mux := http.NewServeMux()
@@ -21,15 +21,15 @@ func TestRoutesMountTogether(t *testing.T) {
 		seen[r.Pattern] = true
 		mux.Handle(r.Pattern, r.Handler)
 	}
-	if len(seen) != 130 {
-		t.Fatalf("%d routes mounted, want 130", len(seen))
+	if len(seen) != 134 {
+		t.Fatalf("%d routes mounted, want 134", len(seen))
 	}
 	for _, p := range []string{
 		"POST /api/crm/avatars/upload", "POST /api/crm/engagement/announcements/image",
 		"GET /api/crm/report-builder/{id}/export", "GET /api/crm/reports/conversations",
 	} {
-		if seen[p] {
-			t.Errorf("%s must stay in TS", p)
+		if !seen[p] {
+			t.Errorf("%s is not registered", p)
 		}
 	}
 }

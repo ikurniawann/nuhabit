@@ -30,6 +30,7 @@ type env struct {
 	companyID string
 	branchID  string
 	waSent    []map[string]string
+	replica   func() *http.ServeMux // a second API process on the same database
 }
 
 type stubGateway struct{ g *whatsapp.Gateway }
@@ -55,7 +56,8 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(gw.Close)
 	ports := app.SalesFunnelPorts(deps)
 	ports.Gateway = stubGateway{g: &whatsapp.Gateway{BaseURL: gw.URL, Token: "t", Timeout: 5 * time.Second}}
-	e.mux = testutil.Mux(salesfunnel.NewOn(deps, e.tx, ports))
+	e.replica = func() *http.ServeMux { return testutil.Mux(salesfunnel.NewOn(deps, e.tx, ports)) }
+	e.mux = e.replica()
 	return e
 }
 
@@ -82,6 +84,7 @@ type resp struct {
 	Status int
 	Body   map[string]any
 	Raw    string
+	Header http.Header
 }
 
 func (r resp) data() map[string]any { m, _ := r.Body["data"].(map[string]any); return m }
@@ -89,7 +92,12 @@ func (r resp) list() []any          { l, _ := r.Body["data"].([]any); return l }
 
 func (e *env) do(s *testutil.Staff, method, target string, body any) resp {
 	e.t.Helper()
-	req := testutil.Request(method, target, body)
+	return e.send(s, testutil.Request(method, target, body))
+}
+
+// send serves req as s (anonymous when nil); a failed request rolls back.
+func (e *env) send(s *testutil.Staff, req *http.Request) resp {
+	e.t.Helper()
 	if s != nil {
 		req = testutil.AsStaff(req, *s)
 	}
@@ -102,7 +110,7 @@ func (e *env) do(s *testutil.Staff, method, target string, body any) resp {
 	e.exec(`RELEASE SAVEPOINT request`)
 	var parsed map[string]any
 	_ = json.Unmarshal(rec.Body.Bytes(), &parsed)
-	return resp{Status: rec.Code, Body: parsed, Raw: rec.Body.String()}
+	return resp{Status: rec.Code, Body: parsed, Raw: rec.Body.String(), Header: rec.Header()}
 }
 
 func (e *env) exec(sql string, args ...any) {

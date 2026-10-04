@@ -3,8 +3,15 @@
 package crmtest
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"image"
+	"image/png"
+	"mime/multipart"
 	"net/http"
+	"net/http/httptest"
+	"net/textproto"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -60,4 +67,40 @@ func MustExec(t testing.TB, tx pgx.Tx, sql string, args ...any) {
 	if _, err := tx.Exec(context.Background(), sql, args...); err != nil {
 		t.Fatalf("crmtest: %s: %v", sql, err)
 	}
+}
+
+// Upload posts data as the multipart file part "file" (the part is left out
+// when fileName is "") and returns the status and decoded JSON object.
+func Upload(t testing.TB, h http.Handler, path, fileName, contentType string, data []byte, s *testutil.Staff) (int, map[string]any) {
+	t.Helper()
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	if fileName != "" {
+		hdr := textproto.MIMEHeader{}
+		hdr.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename=%q`, fileName))
+		hdr.Set("Content-Type", contentType)
+		part, err := mw.CreatePart(hdr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = part.Write(data)
+	}
+	_ = mw.Close()
+	r := httptest.NewRequest(http.MethodPost, path, &body)
+	r.Header.Set("Content-Type", mw.FormDataContentType())
+	if s != nil {
+		r = testutil.AsStaff(r, *s)
+	}
+	rec, out := testutil.Do(t, h, r)
+	return rec.Code, out
+}
+
+// PNG is a real 2x2 PNG image.
+func PNG(t testing.TB) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

@@ -15,16 +15,16 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/extract"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ocr"
+	"nuhabit/backend/internal/platform/storage"
 )
 
 // Name is the MODULES key.
 const Name = "insights"
-
-// Left in TypeScript: POST /api/ai/assistant/attachment extracts text from
-// PDF, DOCX, XLSX and images (OCR), which needs libraries Go does not have.
 
 // Service runs the reports and the assistant.
 type Service struct {
@@ -34,6 +34,8 @@ type Service struct {
 	now   func() time.Time
 	log   *slog.Logger
 	llm   *openAI
+	// ocr reads images and scanned PDFs sent to the assistant.
+	ocr extract.OCR
 	// memoryDir receives the per-user assistant markdown log.
 	memoryDir string
 
@@ -54,34 +56,16 @@ func newService(deps module.Deps, db database.DB, ports Ports) *Service {
 	return &Service{
 		db: db, auth: deps.Auth, ports: ports, now: deps.Now, log: deps.Log,
 		llm:       newOpenAI(os.Getenv, http.DefaultClient),
+		ocr:       ocr.New(),
 		memoryDir: assistantMemoryDir(os.Getenv),
 	}
 }
 
 // assistantMemoryDir is <storage>/assistant-memory, the directory Next
 // writes (process.cwd()/storage/assistant-memory), so both append to the
-// same files. storage is STORAGE_DIR (the shared volume in the containers),
-// else the frontend's storage next to the backend checkout.
+// same files.
 func assistantMemoryDir(getenv func(string) string) string {
-	storage := getenv("STORAGE_DIR")
-	if storage == "" {
-		storage = filepath.Join(backendRoot(), "..", "frontend", "storage")
-	}
-	return filepath.Join(storage, "assistant-memory")
-}
-
-// backendRoot is the nearest directory holding go.mod from the working
-// directory, else the working directory.
-func backendRoot() string {
-	cwd, _ := os.Getwd()
-	for d := cwd; ; d = filepath.Dir(d) {
-		if _, err := os.Stat(filepath.Join(d, "go.mod")); err == nil {
-			return d
-		}
-		if filepath.Dir(d) == d {
-			return cwd
-		}
-	}
+	return filepath.Join(storage.Dir(getenv), "assistant-memory")
 }
 
 // recruitmentReaders are the dashboard readers: the recruitment team and
@@ -104,6 +88,7 @@ func (m mod) Routes() []module.Route {
 		{Pattern: "PATCH /api/ai/assistant", Handler: http.HandlerFunc(s.assistantRename)},
 		{Pattern: "POST /api/ai/assistant", Handler: http.HandlerFunc(s.assistantAsk)},
 		{Pattern: "POST /api/ai/assistant/actions", Handler: http.HandlerFunc(s.assistantAction)},
+		{Pattern: "POST /api/ai/assistant/attachment", Handler: http.HandlerFunc(s.assistantAttachment)},
 	}
 	if s.ports.Overview != nil {
 		routes = append(routes, module.Route{Pattern: "GET /api/dashboard/executive", Handler: httpx.Handle(s.executive)})

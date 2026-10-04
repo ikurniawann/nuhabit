@@ -1,6 +1,6 @@
 // Package reports ports the fixed CRM reports: loyalty (top spenders,
-// frequent visitors, ARK reconciliation per venue) and customer service.
-// GET /api/crm/reports/conversations stays in TS (it can return xlsx).
+// frequent visitors, ARK reconciliation per venue), customer service and
+// conversation insights (JSON or xlsx).
 package reports
 
 import (
@@ -60,6 +60,7 @@ func (h *handler) routes() []module.Route {
 	return []module.Route{
 		{Pattern: "GET /api/crm/reports", Handler: httpx.Handle(h.loyalty)},
 		{Pattern: "GET /api/crm/reports/cs", Handler: httpx.Handle(h.cs)},
+		{Pattern: "GET /api/crm/reports/conversations", Handler: httpx.Handle(h.conversations)},
 	}
 }
 
