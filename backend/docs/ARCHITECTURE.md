@@ -116,25 +116,65 @@ Dependencies point inward: `http.go -> service.go -> domain`, and
    one through a port, write an HTTP client that satisfies the same interface
    and change the wiring in `internal/app`. Module code does not change.
 4. **Decide what stops being atomic.** Any use case that wrote both modules in
-   one transaction must either move to the outbox below or keep the two
-   modules in one process.
+   one transaction through a port must either move to an outbox event or keep
+   the two modules in one process.
+5. **Point the dispatcher at a broker if needed.** Separate processes on one
+   database already work: each dispatcher serves its own subscribers. A broker
+   only matters once the databases split; publishers do not change.
 
-## Cross-module events: outbox plan
+## Cross-module effects: ports or the outbox
 
-Not built yet; this is the agreed shape for the first cross-module side effect.
+A use case that changes another bounded context picks one of two paths.
 
-- Table `platform.outbox_messages(id uuid, topic text, payload jsonb,
-  created_at, available_at, attempts int, delivered_at)`, created by a regular
-  migration in `database/migrations/deltas`.
-- A module publishes by inserting a row **inside the same transaction** as the
-  state change (`database.WithTx`), so the message exists exactly when the
-  change committed.
-- A dispatcher in `cmd/api` claims rows with `FOR UPDATE SKIP LOCKED`, calls
-  the subscribers registered in `internal/app`, sets `delivered_at`, and backs
-  off on failure. Several replicas can run it without double delivery.
-  Subscribers must be idempotent (key on the message id).
-- After a split the dispatcher publishes to a queue instead of calling a
-  function. Publishers do not change.
+- **Port, same transaction.** Use it when the HTTP response depends on the
+  other context's result or a business invariant spans both (a booking must
+  not exist without its credit deduction). The module declares the port;
+  `internal/app` adapts the other module's service; the call runs on the
+  caller's `database.Querier`. These modules must stay in one process.
+- **Outbox event.** Use it for effects that may land a moment later: journal
+  entries after a sale, loyalty XP, notifications, stock movements that no
+  response reads back. This is the default for new cross-module writes,
+  because it keeps the modules separable.
+
+`internal/platform/outbox`:
+
+- `outbox.Publish(ctx, tx, topic, key, payload)` inside the transaction that
+  made the change. It stores the event and one delivery per registered
+  subscriber, so the event exists exactly when the change committed.
+- A subscriber module calls `deps.Events.Subscribe(topic, "<module>.<what>",
+  handler)` in its constructor. The handler gets a `pgx.Tx`; its writes commit
+  together with the delivery mark, so database effects apply once. Effects
+  outside the database (push, HTTP) are at-least-once: key them on `Event.ID`.
+- `cmd/api` runs the dispatcher (`Bus.Run`): LISTEN/NOTIFY wakeups plus a
+  5 s poll, `FOR UPDATE SKIP LOCKED` claims so replicas never double-deliver,
+  backoff 2 s doubling to 10 min, dead after 10 attempts (`dead_at` set, row
+  kept), delivered events pruned after 7 days.
+- Each dispatcher registers only the subscribers of the modules it mounts, so
+  `MODULES=accounting` runs accounting's handlers. A subscriber receives
+  events published after its first registration; deploy subscribers before
+  publishers.
+- Tests: `bus.Register(ctx, tx)`, publish, then `bus.Dispatch(ctx, tx)` on a
+  `testutil.Tx` so nothing persists.
+
+**Event contracts** live in `internal/contracts/<publisher>`: topic constants
+and payload structs with JSON tags, no logic and no imports from modules. A
+subscriber may import a contracts package; it never imports the publisher's
+module. Topic names are `<context>.<entity>.<past-tense verb>`
+(`pos.sale.completed`). Changing a payload is a contract change: add fields,
+never repurpose them.
+
+During the strangler migration the TS routes still perform their side effects
+inline. A Go publisher's subscribers must leave the database in the state the
+TS route left it in, possibly a moment later.
+
+## Request validation
+
+`internal/platform/validate` mirrors zod v4: `validate.New(validate.ReadBody(r))`,
+then read fields in schema order (`Str`, `UUID`, `Enum`, `Int`, `Num`, `Bool`,
+`List`, `Child`, `Item`) with a `Rule` for optional, nullable and default.
+`Err("Validation failed")` reproduces `validateBody`'s 400 with the issue list;
+`ErrAtPath("Data tidak valid")` appends the first failing path. Do not write a
+module-local validator.
 
 ## IAM prefixes
 

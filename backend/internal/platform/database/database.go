@@ -63,9 +63,16 @@ type TxBeginner interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
+// DB is a pool or an open transaction: it runs queries and starts
+// (nested) transactions.
+type DB interface {
+	Querier
+	TxBeginner
+}
+
 var (
-	_ TxBeginner = (*pgxpool.Pool)(nil)
-	_ TxBeginner = (pgx.Tx)(nil)
+	_ DB = (*pgxpool.Pool)(nil)
+	_ DB = (pgx.Tx)(nil)
 )
 
 // WithTx runs fn inside a transaction (a savepoint when db is a pgx.Tx):

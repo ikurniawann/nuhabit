@@ -9,6 +9,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 type handlers struct {
@@ -37,7 +38,7 @@ func (h handlers) member(failMessage string, fn func(w http.ResponseWriter, r *h
 // memberID validates the {id} path segment of a member route.
 func memberID(r *http.Request, name string) (string, error) {
 	id := r.PathValue(name)
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return "", httpx.BadRequest("ID tidak valid")
 	}
 	return id, nil

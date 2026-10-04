@@ -11,6 +11,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/config"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 // Deps is everything a module may depend on. Modules never reach for
@@ -21,6 +22,9 @@ type Deps struct {
 	Log    *slog.Logger
 	Now    func() time.Time
 	Config config.Config
+	// Events dispatches outbox events to the handlers mounted modules
+	// subscribe in their constructors. Publish with outbox.Publish.
+	Events *outbox.Bus
 }
 
 // Route is one ServeMux pattern, e.g. "GET /api/gym/packages/{id}".

@@ -25,6 +25,7 @@ import (
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 var (
@@ -82,6 +83,7 @@ func Deps(t testing.TB, now func() time.Time) module.Deps {
 		Log:    log,
 		Now:    now,
 		Config: cfg,
+		Events: outbox.NewBus(db, log),
 	}
 }
 

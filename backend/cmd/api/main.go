@@ -22,6 +22,7 @@ import (
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 func main() {
@@ -68,8 +69,14 @@ func run(cfg config.Config, log *slog.Logger) error {
 		Log:    log,
 		Now:    time.Now,
 		Config: cfg,
+		Events: outbox.NewBus(db, log),
 	}
 	handler, mounted := app.Handler(deps, time.Now())
+	go func() {
+		if err := deps.Events.Run(ctx, 5*time.Second, 7*24*time.Hour); err != nil {
+			log.Error("outbox dispatcher stopped", "error", err)
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,

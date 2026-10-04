@@ -6,18 +6,19 @@ import (
 
 	"nuhabit/backend/internal/modules/gymtraining/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Request bodies, one parser per zod schema of the TS routes.
 
 var (
-	required = rule{}
-	optional = rule{optional: true}
-	nullable = rule{nullable: true}
+	required = validate.Rule{}
+	optional = validate.Rule{Optional: true}
+	nullable = validate.Rule{Nullable: true}
 	// nullDefault is .nullable().default(null): absent and null both mean nil.
-	nullDefault = rule{nullable: true, hasDefault: true}
+	nullDefault = validate.Rule{Nullable: true, HasDefault: true}
 	// optionalNull is .nullable().optional().
-	optionalNull = rule{nullable: true, optional: true}
+	optionalNull = validate.Rule{Nullable: true, Optional: true}
 )
 
 /* ── Staff: exercises ────────────────────────────────────────────────── */
@@ -51,24 +52,24 @@ type exerciseInput struct {
 }
 
 func parseExercise(r *http.Request) (exerciseInput, error) {
-	f := newForm(readBody(r))
-	in := exerciseInput{ID: f.uuid("id", optional)}
-	in.Code = deref(f.str("code", required, strOpts{trim: true, check: patternCheck(exerciseCodePattern)}))
-	in.Name = deref(f.str("name", required, strOpts{trim: true, min: 2, max: 80}))
-	in.Description = f.strDefault("description", "", strOpts{max: 1000})
-	in.Category = deref(f.enum("category", required, domain.ExerciseCategories))
-	in.Equipment = f.strings("equipment", rule{hasDefault: true}, 10, strOpts{trim: true, check: patternCheck(equipmentPattern)})
+	f := validate.New(validate.ReadBody(r))
+	in := exerciseInput{ID: f.UUID("id", optional)}
+	in.Code = deref(f.Str("code", required, validate.StrOpts{Trim: true, Check: patternCheck(exerciseCodePattern)}))
+	in.Name = deref(f.Str("name", required, validate.StrOpts{Trim: true, Min: 2, Max: 80}))
+	in.Description = f.StrDefault("description", "", validate.StrOpts{Max: 1000})
+	in.Category = deref(f.Enum("category", required, domain.ExerciseCategories))
+	in.Equipment = f.Strings("equipment", validate.Rule{HasDefault: true}, 10, validate.StrOpts{Trim: true, Check: patternCheck(equipmentPattern)})
 	if in.Equipment == nil {
 		in.Equipment = []string{}
 	}
-	in.HyroxStationOrder = f.integer("hyrox_station_order", nullDefault, numOpts{min: bound(1), max: bound(8)})
-	in.Difficulty = deref(f.integer("difficulty", required, numOpts{min: bound(1), max: bound(3)}))
-	spec := f.child("default_spec")
-	in.DefaultSpec.DistanceM = spec.integer("distanceM", nullable, numOpts{positive: true, max: bound(42_195)})
-	in.DefaultSpec.Reps = spec.integer("reps", nullable, numOpts{positive: true, max: bound(1_000)})
-	in.VideoURL = f.str("video_url", nullDefault, strOpts{trim: true, max: 500, check: urlCheck})
-	in.IsActive = f.boolDefault("is_active", true)
-	return in, f.err()
+	in.HyroxStationOrder = f.Int("hyrox_station_order", nullDefault, validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(8)})
+	in.Difficulty = deref(f.Int("difficulty", required, validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(3)}))
+	spec := f.Child("default_spec")
+	in.DefaultSpec.DistanceM = spec.Int("distanceM", nullable, validate.NumOpts{Positive: true, Max: validate.Bound(42_195)})
+	in.DefaultSpec.Reps = spec.Int("reps", nullable, validate.NumOpts{Positive: true, Max: validate.Bound(1_000)})
+	in.VideoURL = f.Str("video_url", nullDefault, validate.StrOpts{Trim: true, Max: 500, Check: validate.URLCheck})
+	in.IsActive = f.BoolDefault("is_active", true)
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 type substitutionInput struct {
@@ -80,21 +81,21 @@ type substitutionInput struct {
 }
 
 func parseSubstitution(r *http.Request) (substitutionInput, error) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := substitutionInput{
-		OriginalExerciseID:    deref(f.uuid("original_exercise_id", required)),
-		AlternativeExerciseID: deref(f.uuid("alternative_exercise_id", required)),
-		Similarity:            deref(f.num("similarity", required, numOpts{min: bound(0), max: bound(1)})),
+		OriginalExerciseID:    deref(f.UUID("original_exercise_id", required)),
+		AlternativeExerciseID: deref(f.UUID("alternative_exercise_id", required)),
+		Similarity:            deref(f.Num("similarity", required, validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(1)})),
 		VolumeFactor:          1,
 	}
-	if v := f.num("volume_factor", rule{hasDefault: true}, numOpts{positive: true, max: bound(10)}); v != nil {
+	if v := f.Num("volume_factor", validate.Rule{HasDefault: true}, validate.NumOpts{Positive: true, Max: validate.Bound(10)}); v != nil {
 		in.VolumeFactor = *v
 	}
-	in.ConversionNote = f.strDefault("conversion_note", "", strOpts{trim: true, max: 300})
-	if f.valid() && in.OriginalExerciseID == in.AlternativeExerciseID {
-		f.fail("alternative_exercise_id", "custom", "Latihan pengganti harus berbeda")
+	in.ConversionNote = f.StrDefault("conversion_note", "", validate.StrOpts{Trim: true, Max: 300})
+	if f.Valid() && in.OriginalExerciseID == in.AlternativeExerciseID {
+		f.Fail("alternative_exercise_id", "custom", "Latihan pengganti harus berbeda")
 	}
-	return in, f.err()
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 /* ── Staff: races ────────────────────────────────────────────────────── */
@@ -110,31 +111,31 @@ type raceInput struct {
 }
 
 func parseRace(r *http.Request) (raceInput, error) {
-	f := newForm(readBody(r))
-	in := raceInput{ID: f.uuid("id", optional)}
-	in.Name = deref(f.str("name", required, strOpts{trim: true, min: 3, max: 120}))
-	in.Country = deref(f.str("country", required, strOpts{trim: true, min: 2, max: 80}))
-	in.Region = deref(f.enum("region", required, domain.RaceRegions))
-	in.City = deref(f.str("city", required, strOpts{trim: true, min: 2, max: 80}))
-	in.Venue = f.strDefault("venue", "", strOpts{trim: true, max: 160})
-	in.StartsAt = deref(f.str("starts_at", required, strOpts{check: datetimeCheck}))
-	in.EndsAt = deref(f.str("ends_at", required, strOpts{check: datetimeCheck}))
-	in.RegistrationURL = f.strDefault("registration_url", "", strOpts{trim: true, max: 500})
-	in.ImageURL = f.str("image_url", nullDefault, strOpts{trim: true, max: 500, check: urlCheck})
-	in.Status = deref(f.enum("status", required, domain.RaceStatuses))
-	if f.valid() {
-		starts, _ := parseJSDate(in.StartsAt)
-		ends, _ := parseJSDate(in.EndsAt)
+	f := validate.New(validate.ReadBody(r))
+	in := raceInput{ID: f.UUID("id", optional)}
+	in.Name = deref(f.Str("name", required, validate.StrOpts{Trim: true, Min: 3, Max: 120}))
+	in.Country = deref(f.Str("country", required, validate.StrOpts{Trim: true, Min: 2, Max: 80}))
+	in.Region = deref(f.Enum("region", required, domain.RaceRegions))
+	in.City = deref(f.Str("city", required, validate.StrOpts{Trim: true, Min: 2, Max: 80}))
+	in.Venue = f.StrDefault("venue", "", validate.StrOpts{Trim: true, Max: 160})
+	in.StartsAt = deref(f.Str("starts_at", required, validate.StrOpts{Check: validate.DatetimeCheck}))
+	in.EndsAt = deref(f.Str("ends_at", required, validate.StrOpts{Check: validate.DatetimeCheck}))
+	in.RegistrationURL = f.StrDefault("registration_url", "", validate.StrOpts{Trim: true, Max: 500})
+	in.ImageURL = f.Str("image_url", nullDefault, validate.StrOpts{Trim: true, Max: 500, Check: validate.URLCheck})
+	in.Status = deref(f.Enum("status", required, domain.RaceStatuses))
+	if f.Valid() {
+		starts, _ := validate.ParseJSDate(in.StartsAt)
+		ends, _ := validate.ParseJSDate(in.EndsAt)
 		if ends.UnixMilli() < starts.UnixMilli() {
-			f.fail("ends_at", "custom", "Selesai harus setelah mulai")
+			f.Fail("ends_at", "custom", "Selesai harus setelah mulai")
 		}
 	}
-	return in, f.err()
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 /* ── Staff: incentives ───────────────────────────────────────────────── */
 
-var idr = numOpts{min: bound(0), max: bound(100_000_000)}
+var idr = validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(100_000_000)}
 
 type rateInput struct {
 	ClassTypeID    string  `json:"class_type_id"`
@@ -156,48 +157,48 @@ type schemeInput struct {
 }
 
 func parseScheme(r *http.Request) (schemeInput, error) {
-	f := newForm(readBody(r))
-	in := schemeInput{ID: f.uuid("id", optional)}
-	in.Name = deref(f.str("name", required, strOpts{trim: true, min: 2, max: 80}))
-	in.CoachID = f.uuid("coach_id", nullable)
-	in.SessionFeeIDR = deref(f.num("session_fee_idr", required, idr))
-	in.PerAttendeeIDR = deref(f.num("per_attendee_idr", required, idr))
-	in.FullClassBonusIDR = deref(f.num("full_class_bonus_idr", required, idr))
-	in.FullClassThresholdPercent = deref(f.integer("full_class_threshold_percent", required, numOpts{min: bound(0), max: bound(100)}))
-	in.NoShowPenaltyIDR = deref(f.num("no_show_penalty_idr", required, idr))
-	in.IsActive = f.boolDefault("is_active", true)
+	f := validate.New(validate.ReadBody(r))
+	in := schemeInput{ID: f.UUID("id", optional)}
+	in.Name = deref(f.Str("name", required, validate.StrOpts{Trim: true, Min: 2, Max: 80}))
+	in.CoachID = f.UUID("coach_id", nullable)
+	in.SessionFeeIDR = deref(f.Num("session_fee_idr", required, idr))
+	in.PerAttendeeIDR = deref(f.Num("per_attendee_idr", required, idr))
+	in.FullClassBonusIDR = deref(f.Num("full_class_bonus_idr", required, idr))
+	in.FullClassThresholdPercent = deref(f.Int("full_class_threshold_percent", required, validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(100)}))
+	in.NoShowPenaltyIDR = deref(f.Num("no_show_penalty_idr", required, idr))
+	in.IsActive = f.BoolDefault("is_active", true)
 	in.Rates = []rateInput{}
-	f.list("rates", rule{hasDefault: true}, 50, func(items *form, i int, v any) {
-		item := items.itemForm(i, v)
+	f.List("rates", validate.Rule{HasDefault: true}, 50, func(items *validate.Form, i int, v any) {
+		item := items.Item(i, v)
 		in.Rates = append(in.Rates, rateInput{
-			ClassTypeID:    deref(item.uuid("class_type_id", required)),
-			SessionFeeIDR:  deref(item.num("session_fee_idr", required, idr)),
-			PerAttendeeIDR: deref(item.num("per_attendee_idr", required, idr)),
+			ClassTypeID:    deref(item.UUID("class_type_id", required)),
+			SessionFeeIDR:  deref(item.Num("session_fee_idr", required, idr)),
+			PerAttendeeIDR: deref(item.Num("per_attendee_idr", required, idr)),
 		})
 	})
-	if f.valid() {
+	if f.Valid() {
 		seen := map[string]bool{}
 		for _, rate := range in.Rates {
 			seen[rate.ClassTypeID] = true
 		}
 		if len(seen) != len(in.Rates) {
-			f.fail("rates", "custom", "Satu tarif per jenis kelas")
+			f.Fail("rates", "custom", "Satu tarif per jenis kelas")
 		}
 	}
-	return in, f.err()
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 type payoutCreateInput struct{ CoachID, Month string }
 
 func parsePayoutCreate(r *http.Request) (payoutCreateInput, error) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := payoutCreateInput{
-		CoachID: deref(f.uuid("coach_id", required)),
-		Month: deref(f.str("month", required, strOpts{check: func(s string) (string, string, bool) {
+		CoachID: deref(f.UUID("coach_id", required)),
+		Month: deref(f.Str("month", required, validate.StrOpts{Check: func(s string) (string, string, bool) {
 			return "custom", "Bulan harus berformat YYYY-MM", domain.IsPeriodMonth(s)
 		}})),
 	}
-	return in, f.err()
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 type payoutActionInput struct {
@@ -207,13 +208,13 @@ type payoutActionInput struct {
 }
 
 func parsePayoutAction(r *http.Request) (payoutActionInput, error) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := payoutActionInput{
-		Action:           deref(f.enum("action", required, domain.PayoutActions)),
-		PaymentReference: f.str("payment_reference", optionalNull, strOpts{max: 120}),
-		Note:             f.str("note", optionalNull, strOpts{max: 500}),
+		Action:           deref(f.Enum("action", required, domain.PayoutActions)),
+		PaymentReference: f.Str("payment_reference", optionalNull, validate.StrOpts{Max: 120}),
+		Note:             f.Str("note", optionalNull, validate.StrOpts{Max: 500}),
 	}
-	return in, f.err()
+	return in, f.ErrAtPath("Data tidak valid")
 }
 
 /* ── Member: workouts ────────────────────────────────────────────────── */
@@ -229,13 +230,13 @@ type generateInput struct {
 
 // parseGenerate returns ok=false for "Pilihan workout tidak valid".
 func parseGenerate(r *http.Request) (generateInput, bool) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := generateInput{
-		Type:                deref(f.enum("type", required, domain.WorkoutTypes)),
-		Division:            deref(f.enum("division", required, domain.Divisions)),
-		StationOrders:       f.ints("station_orders", rule{hasDefault: true}, 8, numOpts{min: bound(1), max: bound(8)}),
-		ExcludedExerciseIDs: f.strings("excluded_exercise_ids", rule{hasDefault: true}, 20, strOpts{check: uuidCheck}),
-		AvailableEquipment:  f.strings("available_equipment", nullDefault, 30, strOpts{max: 30}),
+		Type:                deref(f.Enum("type", required, domain.WorkoutTypes)),
+		Division:            deref(f.Enum("division", required, domain.Divisions)),
+		StationOrders:       f.Ints("station_orders", validate.Rule{HasDefault: true}, 8, validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(8)}),
+		ExcludedExerciseIDs: f.Strings("excluded_exercise_ids", validate.Rule{HasDefault: true}, 20, validate.StrOpts{Check: validate.UUIDCheck}),
+		AvailableEquipment:  f.Strings("available_equipment", nullDefault, 30, validate.StrOpts{Max: 30}),
 	}
 	if in.StationOrders == nil {
 		in.StationOrders = []int{}
@@ -243,7 +244,7 @@ func parseGenerate(r *http.Request) (generateInput, bool) {
 	if in.ExcludedExerciseIDs == nil {
 		in.ExcludedExerciseIDs = []string{}
 	}
-	return in, f.valid()
+	return in, f.Valid()
 }
 
 type replaceInput struct {
@@ -252,12 +253,12 @@ type replaceInput struct {
 }
 
 func parseReplace(r *http.Request) (replaceInput, bool) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := replaceInput{
-		Order:      deref(f.integer("order", required, numOpts{min: bound(1)})),
-		ExerciseID: deref(f.uuid("exercise_id", required)),
+		Order:      deref(f.Int("order", required, validate.NumOpts{Min: validate.Bound(1)})),
+		ExerciseID: deref(f.UUID("exercise_id", required)),
 	}
-	return in, f.valid()
+	return in, f.Valid()
 }
 
 // sessionAction is the discriminated union of the session route.
@@ -268,37 +269,37 @@ type sessionAction struct {
 	Partial      bool
 }
 
-var blockDuration = numOpts{min: bound(0), max: bound(24 * 3600)}
+var blockDuration = validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(24 * 3600)}
 
 func parseSessionAction(r *http.Request) (sessionAction, bool) {
-	f := newForm(readBody(r))
-	in := sessionAction{Action: deref(f.enum("action", required, []string{"pause", "resume", "record", "complete"}))}
-	if !f.valid() {
+	f := validate.New(validate.ReadBody(r))
+	in := sessionAction{Action: deref(f.Enum("action", required, []string{"pause", "resume", "record", "complete"}))}
+	if !f.Valid() {
 		return in, false
 	}
 	switch in.Action {
 	case "record":
 		in.Block = domain.BlockResult{
-			Order:       deref(f.integer("order", required, numOpts{min: bound(1)})),
-			DurationSec: deref(f.num("duration_sec", required, blockDuration)),
+			Order:       deref(f.Int("order", required, validate.NumOpts{Min: validate.Bound(1)})),
+			DurationSec: deref(f.Num("duration_sec", required, blockDuration)),
 		}
 	case "complete":
 		in.BlockResults = []domain.BlockResult{}
-		f.list("block_results", rule{hasDefault: true}, 64, func(items *form, i int, v any) {
-			item := items.itemForm(i, v)
+		f.List("block_results", validate.Rule{HasDefault: true}, 64, func(items *validate.Form, i int, v any) {
+			item := items.Item(i, v)
 			in.BlockResults = append(in.BlockResults, domain.BlockResult{
-				Order:       deref(item.integer("order", required, numOpts{min: bound(1)})),
-				DurationSec: deref(item.num("duration_sec", required, blockDuration)),
+				Order:       deref(item.Int("order", required, validate.NumOpts{Min: validate.Bound(1)})),
+				DurationSec: deref(item.Num("duration_sec", required, blockDuration)),
 			})
 		})
-		in.Partial = f.boolDefault("partial", false)
+		in.Partial = f.BoolDefault("partial", false)
 	}
-	return in, f.valid()
+	return in, f.Valid()
 }
 
 /* ── Member: races ───────────────────────────────────────────────────── */
 
-var raceSeconds = numOpts{positive: true, max: bound(6 * 3600)}
+var raceSeconds = validate.NumOpts{Positive: true, Max: validate.Bound(6 * 3600)}
 
 type registerInput struct {
 	RaceEventID string
@@ -307,35 +308,35 @@ type registerInput struct {
 }
 
 func parseRegister(r *http.Request) (registerInput, bool) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	in := registerInput{
-		RaceEventID: deref(f.uuid("race_event_id", required)),
-		Division:    deref(f.enum("division", required, domain.Divisions)),
-		GoalSec:     f.integer("goal_sec", nullDefault, raceSeconds),
+		RaceEventID: deref(f.UUID("race_event_id", required)),
+		Division:    deref(f.Enum("division", required, domain.Divisions)),
+		GoalSec:     f.Int("goal_sec", nullDefault, raceSeconds),
 	}
-	return in, f.valid()
+	return in, f.Valid()
 }
 
 func parseRaceUpdate(r *http.Request) (domain.MemberRaceUpdate, bool) {
-	f := newForm(readBody(r))
+	f := validate.New(validate.ReadBody(r))
 	var u domain.MemberRaceUpdate
-	u.Division = f.enum("division", optional, domain.Divisions)
-	if f.obj != nil {
-		_, u.GoalSet = f.obj["goal_sec"]
+	u.Division = f.Enum("division", optional, domain.Divisions)
+	if f.Fields() != nil {
+		_, u.GoalSet = f.Fields()["goal_sec"]
 	}
-	u.GoalSec = f.integer("goal_sec", optionalNull, raceSeconds)
-	if result := f.integer("result_sec", optional, raceSeconds); result != nil {
+	u.GoalSec = f.Int("goal_sec", optionalNull, raceSeconds)
+	if result := f.Int("result_sec", optional, raceSeconds); result != nil {
 		u.ResultSec = ptrTo(float64(*result))
 	}
-	u.Cancel = deref(f.boolean("cancel", optional))
-	return u, f.valid()
+	u.Cancel = deref(f.Bool("cancel", optional))
+	return u, f.Valid()
 }
 
 /* ── query and path parameters ───────────────────────────────────────── */
 
 // requireUUID mirrors requireUuid in staff-route.ts.
 func requireUUID(value, message string) (string, error) {
-	if value == "" || !isUUID(value) {
+	if value == "" || !validate.IsUUID(value) {
 		return "", httpx.BadRequest(message)
 	}
 	return value, nil
