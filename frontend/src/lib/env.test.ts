@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assertServerEnv, databaseUrl, disabledIntegrations } from "./env";
+import { assertServerEnv, backendUrl, databaseUrl, disabledIntegrations } from "./env";
 
 const DB = "postgres://app@localhost:5432/nuhabit";
 
@@ -68,5 +68,19 @@ describe("disabledIntegrations", () => {
   it("NEXT_PUBLIC_BASE_URL lama tetap dihitung sebagai URL publik", () => {
     const legacy = { ...fullEnv, NEXT_PUBLIC_APP_URL: undefined, NEXT_PUBLIC_BASE_URL: "https://lama.nuhabit.id" };
     expect(disabledIntegrations(legacy)).toEqual([]);
+  });
+});
+
+describe("backendUrl", () => {
+  it("kosong bila tidak diset; trailing slash dibuang", () => {
+    expect(backendUrl({})).toBe("");
+    expect(backendUrl({ BACKEND_URL: " http://api:8080/ " })).toBe("http://api:8080");
+  });
+
+  it("assertServerEnv menolak BACKEND_URL yang bukan origin http(s)", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(() => assertServerEnv({ ...fullEnv, BACKEND_URL: "api:8080" })).toThrow(/BACKEND_URL/);
+    expect(() => assertServerEnv({ ...fullEnv, BACKEND_URL: "http://api:8080/v1" })).toThrow(/BACKEND_URL/);
+    expect(() => assertServerEnv({ ...fullEnv, BACKEND_URL: "http://api:8080" })).not.toThrow();
   });
 });

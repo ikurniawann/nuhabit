@@ -17,6 +17,14 @@ export function databaseUrl(env: Env = process.env): string {
   return env.DATABASE_URL?.trim() || env.MIGRATE_DATABASE_URL?.trim() || "";
 }
 
+/**
+ * Origin of the Go backend (backend/), e.g. http://api:8080. Optional: when
+ * empty every /api route is served by Next. Trailing slashes are dropped.
+ */
+export function backendUrl(env: Env = process.env): string {
+  return env.BACKEND_URL?.trim().replace(/\/+$/, "") || "";
+}
+
 const requiredSchema = z.object({
   databaseUrl: z
     .string()
@@ -53,6 +61,12 @@ export function assertServerEnv(env: Env = process.env): void {
   if (!parsed.success) {
     const issues = parsed.error.issues.map((issue) => `- ${issue.message}`).join("\n");
     throw new Error(`Konfigurasi env server tidak valid (lihat .env.example):\n${issues}`);
+  }
+  const backend = backendUrl(env);
+  if (backend && !/^https?:\/\/[^\s/]+$/.test(backend)) {
+    throw new Error(
+      "Konfigurasi env server tidak valid (lihat .env.example):\n- BACKEND_URL harus berupa origin http(s)://host[:port] tanpa path"
+    );
   }
   const disabled = disabledIntegrations(env);
   if (disabled.length > 0) {

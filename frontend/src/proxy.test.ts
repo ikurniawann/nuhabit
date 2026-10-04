@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "./proxy";
 
@@ -57,5 +57,50 @@ describe("proxy: other hostnames", () => {
     expect(await call(DASH, "/")).toBeNull();
     expect(await call(DASH, "/member/coins")).toBeNull();
     expect(await call(DASH_DEV, "/")).toBeNull();
+  });
+});
+
+describe("proxy: Go backend prefixes", () => {
+  test("rewrites a listed /api prefix to BACKEND_URL with its query", async () => {
+    vi.stubEnv("BACKEND_URL", "http://go-api:8080/");
+    vi.resetModules();
+    vi.doMock("@/lib/backend-routes", async (importOriginal) => {
+      const mod = await importOriginal<typeof import("@/lib/backend-routes")>();
+      return {
+        ...mod,
+        goBackendTarget: (pathname: string) =>
+          mod.goBackendTarget(pathname, { prefixes: ["/api/auth/me"] }),
+      };
+    });
+    try {
+      const { proxy: proxyWithGo } = await import("./proxy");
+      const req = new NextRequest(new URL(`https://${DASH}/api/auth/me?x=1`), {
+        method: "GET",
+        headers: { host: DASH, cookie: "nuhabit_session=abc" },
+      });
+      const res = await proxyWithGo(req);
+      expect(res.headers.get("x-middleware-rewrite")).toBe("http://go-api:8080/api/auth/me?x=1");
+
+      // Same rewrite on the member host, before its /member logic.
+      const member = new NextRequest(new URL(`https://${MEMBER}/api/auth/me`), {
+        headers: { host: MEMBER },
+      });
+      expect((await proxyWithGo(member)).headers.get("x-middleware-rewrite")).toBe(
+        "http://go-api:8080/api/auth/me"
+      );
+    } finally {
+      vi.doUnmock("@/lib/backend-routes");
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  test("changes nothing while BACKEND_URL is unset", async () => {
+    vi.stubEnv("BACKEND_URL", "");
+    try {
+      expect(await call(MEMBER, "/api/member-portal/me")).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

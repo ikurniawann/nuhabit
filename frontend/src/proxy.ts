@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/auth/middleware";
+import { goBackendTarget } from "@/lib/backend-routes";
 
 /**
  * Serves the member portal at its own hostname.
@@ -33,6 +34,14 @@ function isMemberHost(hostHeader: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Strangler migration: /api prefixes ported to the Go backend go there
+  // first, on every host. Method, query, body and cookies travel with the
+  // rewrite; the Go service applies the same auth gate as updateSession.
+  const goTarget = goBackendTarget(request.nextUrl.pathname);
+  if (goTarget) {
+    return NextResponse.rewrite(new URL(`${goTarget}${request.nextUrl.search}`));
+  }
+
   const host = request.headers.get("host") ?? "";
   if (!isMemberHost(host)) return updateSession(request);
 
