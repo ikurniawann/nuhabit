@@ -99,10 +99,18 @@ export function matchesGoPattern(pattern: string, pathname: string): boolean {
   return want.length === got.length;
 }
 
-function servedByGo(routes: readonly GoRoute[], method: string, pathname: string): boolean {
+function servedByGo(
+  routes: readonly GoRoute[],
+  method: string,
+  pathname: string,
+): boolean {
   const m = method.toUpperCase();
   return routes.some(
-    (r) => (r.method === m || (m === "HEAD" && r.method === "GET")) && matchesGoPattern(r.path, pathname)
+    (r) =>
+      (r.method === "*" ||
+        r.method === m ||
+        (m === "HEAD" && r.method === "GET")) &&
+      matchesGoPattern(r.path, pathname),
   );
 }
 
@@ -114,12 +122,17 @@ function servedByGo(routes: readonly GoRoute[], method: string, pathname: string
 export function goBackendTarget(
   pathname: string,
   method: string,
-  options: { prefixes?: readonly string[]; routes?: readonly GoRoute[]; env?: Env } = {}
+  options: {
+    prefixes?: readonly string[];
+    routes?: readonly GoRoute[];
+    env?: Env;
+  } = {},
 ): string | null {
   const base = backendUrl(options.env);
   if (!base || !pathname.startsWith("/api/")) return null;
   const prefixes = options.prefixes ?? GO_BACKEND_PREFIXES;
   if (!prefixes.some((prefix) => matchesPrefix(pathname, prefix))) return null;
-  if (!servedByGo(options.routes ?? (goRoutes as GoRoute[]), method, pathname)) return null;
+  if (!servedByGo(options.routes ?? (goRoutes as GoRoute[]), method, pathname))
+    return null;
   return `${base}${pathname}`;
 }

@@ -40,6 +40,7 @@ func Names() []string {
 }
 
 // RouteInfo is one registered route, as the Next proxy's manifest lists it.
+// Method is "*" for a pattern that matches every method.
 type RouteInfo struct {
 	Module string `json:"module"`
 	Method string `json:"method"`
@@ -57,7 +58,12 @@ func Routes() []RouteInfo {
 	var out []RouteInfo
 	for _, name := range Names() {
 		for _, rt := range registry[name](deps).Routes() {
-			method, path, _ := strings.Cut(rt.Pattern, " ")
+			// A pattern without a method ("/api/x/{id}/{sub}") serves every
+			// method; the manifest writes it as "*".
+			method, path, found := strings.Cut(rt.Pattern, " ")
+			if !found {
+				method, path = "*", rt.Pattern
+			}
 			out = append(out, RouteInfo{Module: name, Method: method, Path: path})
 		}
 	}

@@ -79,15 +79,17 @@ describe("proxy: Go backend prefixes", () => {
         headers: { host: DASH, cookie: "nuhabit_session=abc" },
       });
       const res = await proxyWithGo(req);
-      expect(res.headers.get("x-middleware-rewrite")).toBe("http://go-api:8080/api/auth/me?x=1");
+      expect(res.headers.get("x-middleware-rewrite")).toBe(
+        "http://go-api:8080/api/auth/me?x=1",
+      );
 
       // Same rewrite on the member host, before its /member logic.
       const member = new NextRequest(new URL(`https://${MEMBER}/api/auth/me`), {
         headers: { host: MEMBER },
       });
-      expect((await proxyWithGo(member)).headers.get("x-middleware-rewrite")).toBe(
-        "http://go-api:8080/api/auth/me"
-      );
+      expect(
+        (await proxyWithGo(member)).headers.get("x-middleware-rewrite"),
+      ).toBe("http://go-api:8080/api/auth/me");
     } finally {
       vi.doUnmock("@/lib/backend-routes");
       vi.unstubAllEnvs();
@@ -101,11 +103,22 @@ describe("proxy: Go backend prefixes", () => {
     try {
       const { proxy: proxyWithGo } = await import("./proxy");
       const at = (method: string, path: string) =>
-        proxyWithGo(new NextRequest(new URL(`https://${MEMBER}${path}`), { method, headers: { host: MEMBER } }));
-      expect((await at("PUT", "/api/member-portal/profile")).headers.get("x-middleware-rewrite")).toBe(
-        "http://go-api:8080/api/member-portal/profile"
-      );
-      expect((await at("POST", "/api/member-portal/profile/photo")).headers.get("x-middleware-rewrite")).toBeNull();
+        proxyWithGo(
+          new NextRequest(new URL(`https://${MEMBER}${path}`), {
+            method,
+            headers: { host: MEMBER },
+          }),
+        );
+      expect(
+        (await at("PUT", "/api/member-portal/profile")).headers.get(
+          "x-middleware-rewrite",
+        ),
+      ).toBe("http://go-api:8080/api/member-portal/profile");
+      expect(
+        (await at("POST", "/api/member-portal/profile/photo")).headers.get(
+          "x-middleware-rewrite",
+        ),
+      ).toBeNull();
     } finally {
       vi.unstubAllEnvs();
       vi.resetModules();
