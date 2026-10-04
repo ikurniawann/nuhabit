@@ -2,7 +2,13 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 import { query, queryOne } from "@/lib/db";
-import { SESSION_COOKIE, SESSION_TTL_DAYS } from "@/lib/auth/constants";
+import {
+  LEGACY_SESSION_COOKIE,
+  SESSION_COOKIE,
+  SESSION_TTL_DAYS,
+  readSessionToken,
+} from "@/lib/auth/constants";
+import { extractBearerToken } from "@/lib/auth/api-token-format";
 import { isSecureRequest } from "@/lib/auth/secure-cookie";
 
 export interface SessionUser {
@@ -98,13 +104,13 @@ export async function sessionTokenIsValid(token: string): Promise<boolean> {
 }
 
 export async function getSessionUserFromRequest(request: NextRequest) {
-  const token = request.cookies.get(SESSION_COOKIE)?.value;
+  const token = readSessionToken(request.cookies);
   if (token) return loadUserBySessionToken(token);
   // EPIC-042: fallback Bearer token (Open API) — path+method langsung dari
   // request, scope dicek di dalam loadUserByApiToken.
-  const { extractBearerToken, loadUserByApiToken } = await import("@/lib/auth/api-token");
   const bearer = extractBearerToken(request.headers.get("authorization"));
   if (!bearer) return null;
+  const { loadUserByApiToken } = await import("@/lib/auth/api-token");
   // audit=false: audit kanonik sudah terjadi di middleware.
   return loadUserByApiToken(bearer, {
     pathname: request.nextUrl.pathname,
@@ -113,22 +119,29 @@ export async function getSessionUserFromRequest(request: NextRequest) {
 }
 
 export async function getSessionUserFromCookies() {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  const token = readSessionToken(await cookies());
   if (token) return loadUserBySessionToken(token);
   // EPIC-042: fallback Bearer token. Route handler tidak tahu path/method-nya
   // sendiri — proxy (middleware) menyuntik x-pathname + x-request-method.
   const { headers } = await import("next/headers");
   const hdrs = await headers();
-  const { extractBearerToken, loadUserByApiToken } = await import("@/lib/auth/api-token");
   const bearer = extractBearerToken(hdrs.get("authorization"));
   if (!bearer) return null;
+  const { loadUserByApiToken } = await import("@/lib/auth/api-token");
   return loadUserByApiToken(bearer, {
     pathname: hdrs.get("x-pathname") || "/api",
     method: hdrs.get("x-request-method") || "POST",
   });
 }
 
+function expireCookie(response: NextResponse, name: string, request: Request) {
+  response.cookies.set(name, "", {
+    ...sessionCookieOptions(new Date(0), isSecureRequest(request)),
+    maxAge: 0,
+  });
+}
+
+/** Tulis cookie sesi baru; cookie nama lama ikut dihapus agar tidak tersisa. */
 export function setSessionCookie(
   response: NextResponse,
   token: string,
@@ -140,13 +153,12 @@ export function setSessionCookie(
     token,
     sessionCookieOptions(expiresAt, isSecureRequest(request))
   );
+  expireCookie(response, LEGACY_SESSION_COOKIE, request);
 }
 
 export function clearSessionCookie(response: NextResponse, request: Request) {
-  response.cookies.set(SESSION_COOKIE, "", {
-    ...sessionCookieOptions(new Date(0), isSecureRequest(request)),
-    maxAge: 0,
-  });
+  expireCookie(response, SESSION_COOKIE, request);
+  expireCookie(response, LEGACY_SESSION_COOKIE, request);
 }
 
 export async function authenticateCredentials(email: string, password: string) {

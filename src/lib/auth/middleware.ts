@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE } from "@/lib/auth/constants";
+import { extractBearerToken } from "@/lib/auth/api-token-format";
+import { readSessionToken } from "@/lib/auth/constants";
+import { OS_PATH } from "@/lib/desktop/deep-link";
 import {
   rejectionStatus,
   resolveHasSession,
@@ -18,6 +20,7 @@ const PUBLIC_AUTH_PREFIXES = [
   // halaman publik self-order meja (EPIC-048) sebelum ada sesi.
   "/products/",
   "/qris/",
+  // Desktop NüHabit OS (/os) & alamat lamanya: tampil juga untuk pengunjung.
   "/arkiv-os",
   "/qa",
   "/login",
@@ -45,7 +48,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/auth/login",
   "/api/auth/logout",
   "/api/settings/appearance",
-  // Daftar wallpaper desktop Arkiv OS — desktop tampil juga untuk pengunjung.
+  // Daftar wallpaper desktop NüHabit OS — desktop tampil juga untuk pengunjung.
   "/api/desktop/wallpapers",
   "/api/files",
   "/member",
@@ -72,6 +75,7 @@ const PUBLIC_AUTH_PREFIXES = [
 export function isPublicAuthPath(pathname: string): boolean {
   return (
     pathname === "/" ||
+    pathname === OS_PATH ||
     PUBLIC_AUTH_PREFIXES.some((route) => pathname.startsWith(route))
   );
 }
@@ -83,11 +87,11 @@ export function isPublicAuthPath(pathname: string): boolean {
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
   // Audit 2026-09-17: dulu gerbang ini hanya cek KEBERADAAN cookie, sehingga
-  // "Cookie: arkiv_session=apa_saja" lolos ke route yang tak memvalidasi sesi
+  // "Cookie: <sesi>=apa_saja" lolos ke route yang tak memvalidasi sesi
   // sendiri. Kini token divalidasi ke DB (indeks unik token_hash, 1 baris).
   // Fail-OPEN hanya bila query melempar (DB gangguan) supaya blip sesaat tidak
   // menendang semua kasir keluar; token palsu tetap ditolak saat DB sehat.
-  const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+  const sessionToken = readSessionToken(request.cookies);
   let validation: SessionValidation = "invalid";
   if (sessionToken) {
     try {
@@ -105,17 +109,17 @@ export async function updateSession(request: NextRequest) {
     pathname,
     method: request.method,
   });
-  // EPIC-042: request API dgn Bearer token Open API (arkiv_...) divalidasi DI
+  // EPIC-042: request API dgn Bearer token Open API (nh_/arkiv_) divalidasi DI
   // SINI (proxy Next 16 = Node runtime, DB bisa diakses) — wajib, karena
   // sebagian route lama tidak punya cek sesi sendiri dan mengandalkan gerbang
   // middleware. Token tidak dikenal / scope tidak cocok → 401 sebelum route.
-  const bearerMatch =
-    pathname.startsWith("/api/") &&
-    /^Bearer\s+(arkiv_\S+)$/i.exec(request.headers.get("authorization") ?? "");
+  const bearer = pathname.startsWith("/api/")
+    ? extractBearerToken(request.headers.get("authorization"))
+    : null;
   let hasApiBearer = false;
-  if (bearerMatch && !hasSession) {
+  if (bearer && !hasSession) {
     const { verifyApiTokenRequest } = await import("@/lib/auth/api-token");
-    hasApiBearer = await verifyApiTokenRequest(bearerMatch[1], {
+    hasApiBearer = await verifyApiTokenRequest(bearer, {
       pathname,
       method: request.method,
     });

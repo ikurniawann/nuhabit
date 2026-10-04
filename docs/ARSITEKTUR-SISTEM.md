@@ -30,7 +30,7 @@ Tenant referensi di dev: grup **SULU** (SULU-Dago / SULU-Bandung).
 | Data | **PostgreSQL** multi-schema (akses via `src/lib/db.ts` + `src/lib/pg/`, bukan ORM) |
 | State/data-fetching | TanStack Query (per-feature `queries.ts`/`mutations.ts`/`query-keys.ts`) |
 | UI | Tailwind + komponen `src/components/ui` (shadcn-style) + `src/components/shared` |
-| Auth | Session cookie `arkiv_session` (sha256 token) + IAM RBAC |
+| Auth | Session cookie `nuhabit_session` (sha256 token; `arkiv_session` lama masih dibaca) + IAM RBAC |
 | Deploy dev | **PM2** `next start -p 3459` (production build; wajib rebuild+restart) |
 | Public | **cloudflared** tunnel → `sulu.within.ventures` & `member.within.ventures` |
 | Service samping | `services/wa-gateway` (Baileys, PM2 port 3471), `services/pos-nfc-bridge` |
@@ -106,7 +106,7 @@ Watcher latar didaftarkan **sekali per proses server** di `src/instrumentation.t
 
 **Mekanik platform penting:**
 - **IAM fails-OPEN**: bila schema/DB IAM tak tersedia atau role belum di-seed, jatuh ke policy kode `isEssOnlyRole` agar tak terkunci; permission kosong → sidebar kosong (bukan error). `FULL_ACCESS_ROLES` = fast-path/fallback; keputusan asli dari data permission IAM (`src/lib/iam/get-user-menus.ts`).
-- **Auth**: shim native Supabase-shaped. `auth.sessions` (sha256 `token_hash`, TTL hari), cookie `arkiv_session` (httpOnly). `requireUser` redirect unauth ke `/api/auth/logout` (bukan `/login`) untuk bersihkan cookie basi. `banned_until` pakai interval 100-tahun (parity Supabase-admin).
+- **Auth**: shim native Supabase-shaped. `auth.sessions` (sha256 `token_hash`, TTL hari), cookie `nuhabit_session` (httpOnly; cookie lama `arkiv_session` masih dibaca, dihapus saat login/logout). `requireUser` redirect unauth ke `/api/auth/logout` (bukan `/login`) untuk bersihkan cookie basi. `banned_until` pakai interval 100-tahun (parity Supabase-admin).
 - **Proxy (Next 16)**: `src/proxy.ts` — rewrite host `member.*`→`/member`, redirect URL legacy, gate **cookie-presence saja** (Edge, tanpa validasi DB/role), suntik header **`x-pathname`** (satu-satunya cara guard ESS di layout tahu path aktif). Enforcement role penuh di server components.
 - **Exec Dashboard** (`src/lib/dashboard/executive.ts`): untuk `super_admin`/`direksi` (role `owner` belum ada di `iam.roles`, `direksi` penggantinya); tiap seksi `safe()` fail-safe → null + dicatat `gagal[]`; semua timestamp dipaksa Asia/Jakarta.
 - **Arkiv OS Desktop** (`src/lib/desktop/overview.ts`): notifikasi = **diff murni** dua snapshot 60s, hanya kenaikan yang memicu; definisi angka sengaja identik dengan nav-badge & tool "Do".
@@ -140,7 +140,7 @@ Kode: `src/features/hris`, `src/features/performance`, `src/features/users`, `sr
 - **Payroll**: `payslip-pdf.ts` + `terbilang.ts` (angka→kata Indonesia); prorate mid-period; cicilan pinjaman diamortisasi saat run. AWAS: status-flow payroll masih hardcode (deviasi dari `payroll_settings`) = backlog.
 - **KPI** (`src/lib/kpi/*`): `collectors.ts`+`collectors-wave2.ts` tarik metrik lintas-domain (sales, attendance); `auto-snapshot.ts` bekukan skor berkala — scorecard baca snapshot, bukan live.
 - **ESS** (`me/*`) scoped ke karyawan login via `employeeId`; akun non-karyawan tak lihat apa-apa.
-- **Member Portal** (`/member`) = self-service **customer/loyalty** (OTP, cookie `member_session` terpisah dari `arkiv_session`) — domain CRM, JANGAN dikelirukan dengan ESS karyawan.
+- **Member Portal** (`/member`) = self-service **customer/loyalty** (OTP, cookie `member_session` terpisah dari `nuhabit_session`) — domain CRM, JANGAN dikelirukan dengan ESS karyawan.
 
 **Gotcha:** kolom `date` PostgreSQL = objek `Date` (pakai `dateColToIso`); jangan andalkan `RETURNING "*"` embed dari respons insert pg (EPIC-009). Push HRIS pakai `~/.git-credentials-arkiv`.
 
@@ -258,7 +258,7 @@ QA finance butuh akun `finance_staff` ber-scope company.
 | Schema | Cakupan |
 |--------|---------|
 | `iam` | menus, roles, role_menu_permissions (RBAC per-menu) |
-| `auth` | sessions (cookie `arkiv_session`) |
+| `auth` | sessions (cookie `nuhabit_session`) |
 | `hris` / `payroll` | karyawan, kehadiran, cuti, kontrak, payroll, lembur, pinjaman, slip |
 | `recruitment` | job openings, kandidat, psikotes, interview, offer (16 tabel) |
 | `crm` | member global, XP/ARK coin, loyalty, collectibles, omnichannel/inbox (20 tabel) |

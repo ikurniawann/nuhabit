@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Upload, Download, FileText, CheckCircle, XCircle, AlertCircle, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 export interface CsvImporterHandle {
   import: () => Promise<void>;
@@ -40,13 +40,15 @@ interface CsvImporterProps {
   hideActions?: boolean;
   suppressSuccessToast?: boolean;
   expanded?: boolean;
-  columns: Array<{
-    key: string;
-    label: string;
-    required?: boolean;
-    type?: "text" | "number" | "date" | "email";
-    description?: string;
-  }>;
+  columns: CsvColumn[];
+}
+
+interface CsvColumn {
+  key: string;
+  label: string;
+  required?: boolean;
+  type?: "text" | "number" | "date" | "email";
+  description?: string;
 }
 
 interface PreviewRow {
@@ -67,6 +69,83 @@ export interface ImportResult {
   }>;
 }
 
+function escapeCsvValue(value: string) {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function buildDefaultExampleRow(columns: CsvColumn[]) {
+  return columns
+    .map((col) => {
+      if (col.key === "email") return "email@example.com";
+      if (col.key === "status") return "active";
+      if (col.key === "kategori") return "BAHAN_PANGAN";
+      if (col.key === "coa") return "PRODUCTION";
+      if (col.type === "number") return "0";
+      if (col.type === "date") return "YYYY-MM-DD";
+      if (col.key === "satuan_besar_kode") return "KG";
+      if (col.key === "satuan_kecil_kode") return "GR";
+      if (col.key === "konversi_factor") return "1000";
+      if (col.key === "opening_stock") return "0";
+      if (col.key === "stall_code" || col.key === "warehouse_code") return "MAIN";
+      return `sample_${col.key}`;
+    })
+    .join(",");
+}
+
+function parseCSV(text: string): string[][] {
+  const lines = text.split("\n").filter((line) => line.trim());
+  return lines.map((line) => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') inQuotes = !inQuotes;
+      else if (char === "," && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else current += char;
+    }
+    result.push(current.trim());
+    return result;
+  });
+}
+
+function validateRow(
+  columns: CsvColumn[],
+  row: Record<string, string>
+): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  columns.forEach((col) => {
+    const value = row[col.key]?.trim();
+
+    if (col.required && !value) {
+      errors.push(`${col.label} wajib diisi`);
+    }
+
+    if (value) {
+      if (col.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+        errors.push(`${col.label} harus berupa email yang valid`);
+      }
+
+      if (col.type === "number" && Number.isNaN(Number(value))) {
+        errors.push(`${col.label} harus berupa angka`);
+      }
+
+      if (col.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        errors.push(`${col.label} harus memakai format YYYY-MM-DD`);
+      }
+    }
+  });
+
+  return { isValid: errors.length === 0, errors };
+}
+
 export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(function CsvImporter(
   {
     title,
@@ -85,7 +164,6 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
   },
   ref
 ) {
-  const { toast } = useToast();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<PreviewRow[]>([]);
@@ -101,31 +179,6 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
     onStateChange?.({ isImporting, canImport, validCount, invalidCount });
   }, [isImporting, canImport, validCount, invalidCount, onStateChange]);
 
-  const escapeCsvValue = (value: string) => {
-    if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
-
-  const buildDefaultExampleRow = () =>
-    columns
-      .map((col) => {
-        if (col.key === "email") return "email@example.com";
-        if (col.key === "status") return "active";
-        if (col.key === "kategori") return "BAHAN_PANGAN";
-        if (col.key === "coa") return "PRODUCTION";
-        if (col.type === "number") return "0";
-        if (col.type === "date") return "YYYY-MM-DD";
-        if (col.key === "satuan_besar_kode") return "KG";
-        if (col.key === "satuan_kecil_kode") return "GR";
-        if (col.key === "konversi_factor") return "1000";
-        if (col.key === "opening_stock") return "0";
-        if (col.key === "stall_code" || col.key === "warehouse_code") return "MAIN";
-        return `sample_${col.key}`;
-      })
-      .join(",");
-
   const downloadTemplate = useCallback(() => {
     const headers = columns.map((col) => col.key).join(",");
     const dataRows =
@@ -133,7 +186,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
         ? sampleRows.map((row) =>
             columns.map((col) => escapeCsvValue(row[col.key] ?? "")).join(",")
           )
-        : [buildDefaultExampleRow()];
+        : [buildDefaultExampleRow(columns)];
 
     const csvContent = [headers, ...dataRows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -142,54 +195,6 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
     link.download = templateName;
     link.click();
   }, [columns, sampleRows, templateName]);
-
-  const parseCSV = (text: string): string[][] => {
-    const lines = text.split("\n").filter((line) => line.trim());
-    return lines.map((line) => {
-      const result: string[] = [];
-      let current = "";
-      let inQuotes = false;
-
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') inQuotes = !inQuotes;
-        else if (char === "," && !inQuotes) {
-          result.push(current.trim());
-          current = "";
-        } else current += char;
-      }
-      result.push(current.trim());
-      return result;
-    });
-  };
-
-  const validateRow = (row: Record<string, string>): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-
-    columns.forEach((col) => {
-      const value = row[col.key]?.trim();
-
-      if (col.required && !value) {
-        errors.push(`${col.label} wajib diisi`);
-      }
-
-      if (value) {
-        if (col.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          errors.push(`${col.label} harus berupa email yang valid`);
-        }
-
-        if (col.type === "number" && Number.isNaN(Number(value))) {
-          errors.push(`${col.label} harus berupa angka`);
-        }
-
-        if (col.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          errors.push(`${col.label} harus memakai format YYYY-MM-DD`);
-        }
-      }
-    });
-
-    return { isValid: errors.length === 0, errors };
-  };
 
   const resetImport = useCallback(() => {
     setFile(null);
@@ -211,10 +216,8 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
         lowerName.endsWith(".xls");
 
       if (!isCsv && !isXlsx) {
-        toast({
-          title: "Format file tidak valid",
+        toast.error("Format file tidak valid", {
           description: "Silakan unggah file CSV atau Excel (.xlsx).",
-          variant: "destructive",
         });
         return;
       }
@@ -236,10 +239,8 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
           await workbook.xlsx.load(buffer);
           const worksheet = workbook.worksheets[0];
           if (!worksheet) {
-            toast({
-              title: "File kosong",
+            toast.error("File kosong", {
               description: "File Excel tidak memiliki worksheet.",
-              variant: "destructive",
             });
             return;
           }
@@ -268,10 +269,8 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
         }
 
         if (rows.length < 2) {
-          toast({
-            title: "File kosong",
+          toast.error("File kosong", {
             description: "File harus memuat baris header dan minimal satu baris data.",
-            variant: "destructive",
           });
           return;
         }
@@ -285,7 +284,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
             rowData[header] = rows[i][index] || "";
           });
 
-          const validation = validateRow(rowData);
+          const validation = validateRow(columns, rowData);
           preview.push({
             rowNumber: i + 1,
             data: rowData,
@@ -299,7 +298,7 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
       if (isXlsx) reader.readAsArrayBuffer(selectedFile);
       else reader.readAsText(selectedFile);
     },
-    [columns, toast]
+    [columns]
   );
 
   const handleDrop = useCallback(
@@ -330,10 +329,10 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
         body: formData,
       });
 
-      const result = (await response.json()) as ImportResult & { message?: string };
+      const result = (await response.json()) as ImportResult & { error?: string; message?: string };
 
       if (!response.ok) {
-        throw new Error(result.message || "Impor gagal");
+        throw new Error(result.error || result.message || "Impor gagal");
       }
 
       setImportResult(result);
@@ -344,18 +343,15 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
         const parts: string[] = [];
         if (imported > 0) parts.push(`${imported} diimpor`);
         if (updated > 0) parts.push(`${updated} diperbarui`);
-        toast({
-          title: "Impor berhasil",
+        toast.success("Impor berhasil", {
           description: parts.length > 0 ? parts.join(", ") + "." : "Impor selesai.",
         });
       }
 
       onSuccess?.(result);
     } catch (error: unknown) {
-      toast({
-        title: "Impor gagal",
+      toast.error("Impor gagal", {
         description: error instanceof Error ? error.message : "Impor gagal",
-        variant: "destructive",
       });
     } finally {
       setIsImporting(false);
@@ -368,7 +364,6 @@ export const CsvImporter = forwardRef<CsvImporterHandle, CsvImporterProps>(funct
     onSuccess,
     previewData.length,
     suppressSuccessToast,
-    toast,
   ]);
 
   useImperativeHandle(ref, () => ({

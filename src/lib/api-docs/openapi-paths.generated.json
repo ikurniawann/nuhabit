@@ -3459,42 +3459,6 @@
     ]
    }
   },
-  "/api/db/query": {
-   "post": {
-    "tags": [
-     "db"
-    ],
-    "summary": "POST /api/db/query",
-    "responses": {
-     "200": {
-      "description": "OK"
-     }
-    },
-    "security": [
-     {
-      "bearerAuth": []
-     }
-    ]
-   }
-  },
-  "/api/db/rpc": {
-   "post": {
-    "tags": [
-     "db"
-    ],
-    "summary": "POST /api/db/rpc",
-    "responses": {
-     "200": {
-      "description": "OK"
-     }
-    },
-    "security": [
-     {
-      "bearerAuth": []
-     }
-    ]
-   }
-  },
   "/api/desktop/overview": {
    "get": {
     "tags": [

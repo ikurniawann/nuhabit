@@ -47,7 +47,7 @@ describe("QueryBuilder buildReturning", () => {
         captured.push({ sql });
         return { rows: [{ id: "x" }] };
       },
-    } as any;
+    } as unknown as Pool;
 
     const result = await new QueryBuilder("employee_salary", "public", fakePool)
       .insert({ employee_id: "e1", base_salary: 1000 })
@@ -71,7 +71,7 @@ describe("QueryBuilder count with pagination", () => {
         }
         return { rows: Array.from({ length: 10 }, (_, i) => ({ id: `row-${i}` })) };
       },
-    } as any;
+    } as unknown as Pool;
 
     const result = await new QueryBuilder("v_raw_materials_stock", "public", fakePool)
       .select("*", { count: "exact" })

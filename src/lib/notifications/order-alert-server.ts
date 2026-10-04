@@ -1,3 +1,4 @@
+import "server-only";
 import { randomBytes } from "crypto";
 import { query } from "@/lib/db";
 import { normalizeWaPhone } from "@/lib/pos/receipt-wa";

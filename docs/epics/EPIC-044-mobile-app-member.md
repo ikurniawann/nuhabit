@@ -184,7 +184,8 @@ Hasil diskusi perencanaan dengan owner:
     tampil berdampingan "Rp … / … ARK"), pull-to-refresh, empty/error state.
   - **BUG paritas tertangkap via data dev riil:** DB menyimpan amount wallet
     `payment` sebagai angka POSITIF — arah debit ditentukan TIPE
-    (`CREDIT_TXN_TYPES.has(type)`), persis nox-portal.tsx. Implementasi awal
+    (`CREDIT_TXN_TYPES.has(type)`), sama dengan `isCreditEntry` di
+    `src/lib/wallet/ledger.ts` (dipakai portal member web). Implementasi awal
     mewarnai dari tanda angka → payment tampil hijau "+23 ARK" (terbalik).
     Fix: helper `txnSignedArk`/`isCreditTxn` (kredit "+" abs, debit "−" abs)
     + test kasus data riil (payment +23000 → −23 ARK).

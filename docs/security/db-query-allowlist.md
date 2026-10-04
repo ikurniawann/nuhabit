@@ -1,6 +1,6 @@
 # `/api/db/query` allowlist
 
-`createBrowserClient()` (`src/lib/pg/browser-client.ts`) sends every `db.from(...)` call to `POST /api/db/query` and every `db.rpc(...)` call to `POST /api/db/rpc`. Before this change both routes ran any spec from any logged-in staff user. Both now run through `src/lib/pg/query-policy.ts`, which denies by default.
+`createBrowserClient()` (`src/lib/pg/browser-client.ts`) sends every `db.from(...)` call to `POST /api/db/query`. Before this change the route ran any spec from any logged-in staff user. It now runs through `src/lib/pg/query-policy.ts`, which denies by default.
 
 The `db.auth.*` methods do not use these routes. They call `/api/auth/login`, `/api/auth/me` and `/api/auth/logout`, and the policy does not touch them.
 
@@ -35,9 +35,13 @@ Hard rules that apply before the allowlist lookup:
 
 `configuration.users` self-row reads: the server appends `id = <session user id>` to the filters. The select list must name columns from `id, full_name, role, email, brand_id, status, company_id, branch_id`. `*`, embeds and `pos_pin` are refused.
 
-`/api/db/rpc` allowlist: empty. No live client calls `db.rpc`, so every call returns 403.
+`/api/db/rpc` was removed on 2026-10-04: no client called `db.rpc`.
 
-## Client inventory (2026-10-03)
+## Client inventory (2026-10-04)
+
+Only two callers remain, both reading the caller's own `configuration.users` row: `src/app/(auth)/login/page.tsx` (`role`) and `src/features/os-desktop/hooks/use-desktop-account.ts` (`full_name, role`). `/api/auth/me` returns both fields, so moving these two to it retires the browser client and this route. The HRIS rows in `DB_QUERY_POLICY` have no caller left and can go with it.
+
+## Client inventory (2026-10-03, historical)
 
 Static scan of every import of `@/lib/pg/browser-client` (and its deprecated re-export `@/lib/db-client/client`, which has no importers). Table names come from string literals; no call site builds a table name at runtime.
 

@@ -180,7 +180,7 @@ export default function QaReportPage() {
         <div className="relative mx-auto grid max-w-7xl gap-8 px-5 py-8 md:px-8 lg:grid-cols-[1fr_380px] lg:py-12">
           <div className="flex flex-col justify-between gap-8">
             <nav className="flex items-center justify-between">
-              <Link href="/arkiv-os" className="inline-flex items-center gap-3">
+              <Link href="/os" className="inline-flex items-center gap-3">
                 <span className="flex size-11 items-center justify-center rounded-xl bg-white shadow-sm">
                   <Image src="/brand/icon-192.png" alt="NüHabit OS" width={30} height={30} className="h-8 w-auto rounded-lg object-contain" />
                 </span>

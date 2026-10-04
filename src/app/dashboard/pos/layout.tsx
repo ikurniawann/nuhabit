@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Toaster } from "sonner";
 import { requireUser, type AuthUser } from "@/lib/auth/require-user";
 import { getUserMenus, isEssOnlyUser } from "@/lib/iam/get-user-menus";
 import { loadGrantedMenuCodesForUser } from "@/lib/iam/has-menu";
@@ -76,7 +75,6 @@ export default async function PosDashboardLayout({
       essOnly={essOnly}
     >
       {children}
-      <Toaster position="bottom-right" />
     </AppSidebar>
     </IamAccessProvider>
   );

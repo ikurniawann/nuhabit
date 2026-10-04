@@ -118,7 +118,6 @@ describe('Auth Middleware - requireApiUser', () => {
     const db = await createServerPgClient();
     const { data: { user } } = await db.auth.getUser();
     
-    expect(user).toBeDefined();
-    expect(user.id).toBe('test-user-id');
+    expect(user?.id).toBe('test-user-id');
   });
 });

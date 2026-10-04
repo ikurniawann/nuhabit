@@ -62,7 +62,16 @@ Logos live in `public/brand/` (dashboard and public pages) and `public/member-as
 | `PageHeader`, `Kicker` | `ui/page-header.tsx` | the page's `h1`, purpose sentence, actions that wrap on phones |
 | `Tabs` | `ui/tabs.tsx` | `default` = pill tabs with an ink active pill; `line` = underline tabs with an accent underline |
 
-`src/types/ui.d.ts` declares ambient types for several kit modules and shadows the real files. When you add a variant or an export to `button`, `card` or `badge`, add it there too, or TypeScript rejects it.
+The kit files carry their own types; there is no ambient declaration file. `Button` takes `asChild` to style a `<Link>` or `<a>` child as a button without nesting it in `<button>`. `Select` is generic over its value and defaults to `string`, so `onValueChange={setStatus}` type-checks.
+
+Toasts come from `sonner` (`import { toast } from "sonner"`). The root layout mounts the only `<Toaster />`; pages never mount their own.
+
+## Data access
+
+- New server code (routes, server components, `src/lib/**`) writes SQL through `@/lib/db`: `query<Row>()`, `queryOne<Row>()` and `withTransaction(fn)`, with typed row interfaces and `$1` parameters. Run side effects outside the database (push, WhatsApp) through `afterCommit`.
+- The PostgREST-style shim (`createPgClient` / `createServerPgClient` with `.from().select().eq()`) stays for existing routes only. Do not add new callers; convert a route to raw SQL when you rewrite it.
+- Server-only modules (`@/lib/db`, `@/lib/pg/create-client`, `@/lib/iam/pg-client`, every `*-server.ts`) start with `import "server-only"`, so a client component that imports one fails the build. Keep pure helpers that the browser needs in a separate file without that import.
+- Client components fetch through React Query hooks in the feature's `queries.ts` / `api.ts`, calling a dedicated API route. Never send SQL or table names from the browser.
 
 ## Rules
 

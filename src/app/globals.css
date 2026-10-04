@@ -151,6 +151,8 @@
   --color-accent-dark: var(--wit-accent-dark);
   --color-accent-soft: var(--wit-accent-soft);
   --color-accent-foreground: var(--wit-accent-foreground);
+  /* Teks/ikon merek di atas permukaan: forest di terang, lime di gelap (lime tak terbaca di latar terang). */
+  --color-brand-text: var(--wit-brand-text);
   --color-highlight: var(--brand-primary);
   --color-info: var(--wit-info);
   --color-info-soft: var(--wit-info-soft);
@@ -203,6 +205,7 @@
   --wit-accent-dark: color-mix(in oklch, var(--brand-primary) 88%, black);
   --wit-accent-soft: #eeffb1;
   --wit-accent-foreground: #00281a;
+  --wit-brand-text: #00281a;
   --wit-info: #203b32;
   --wit-info-soft: #e3ece6;
   --wit-success: #3f7a12;
@@ -276,6 +279,7 @@
 /* !important: ThemeProvider writes the Appearance colours inline on <html>,
    and inline values would otherwise keep light surfaces in dark mode. */
 [data-theme="dark"] {
+  --wit-brand-text: #daff59;
   --background: #0d1213 !important;
   --foreground: #eef1ea !important;
   --card: #172019 !important;
@@ -311,6 +315,7 @@
 /* Auto mode follows the OS when nothing explicit is chosen. */
 @media (prefers-color-scheme: dark) {
   [data-theme="auto"] {
+    --wit-brand-text: #daff59;
     --background: #0d1213 !important;
     --foreground: #eef1ea !important;
     --card: #172019 !important;

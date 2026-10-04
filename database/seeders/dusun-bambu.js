@@ -19,8 +19,6 @@
  *   npm run db:seed:dusun-bambu            (bagian 1 + resort + F&B + ticketing)
  */
 
-const fs = require("fs");
-const path = require("path");
 const bcrypt = require("bcryptjs");
 const { Client } = require("pg");
 const { sslForUrl, assertLocalTarget } = require("../scripts/pg-utils");

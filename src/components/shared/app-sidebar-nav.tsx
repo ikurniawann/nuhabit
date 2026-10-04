@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { CountBadge } from "@/components/ui/count-badge";
 import {
@@ -19,6 +20,21 @@ import type { NavItem } from "@/lib/iam/types";
 import { cn } from "@/lib/utils";
 import { AppSidebarNavIcon } from "./app-sidebar-nav-icons";
 import { NavLink, useNavigate } from "./nav-link";
+
+const NAV_BADGES_KEY = ["hris", "nav-badges"] as const;
+const NO_BADGES: Record<string, number> = {};
+
+/** Badge notifikasi menu; gagal jaringan = tanpa badge (hiasan, navigasi tetap utuh). */
+async function fetchNavBadges(): Promise<Record<string, number>> {
+  try {
+    const res = await fetch("/api/hris/nav-badges");
+    if (!res.ok) return NO_BADGES;
+    const json = (await res.json()) as { badges?: Record<string, number> };
+    return json.badges ?? NO_BADGES;
+  } catch {
+    return NO_BADGES;
+  }
+}
 
 interface AppSidebarNavProps {
   navItems: NavItem[];
@@ -110,32 +126,26 @@ export default function AppSidebarNav({
     [navItems, pathname, navFrom, allLeafHrefs]
   );
   const [expandedMenus, setExpandedMenus] = useState<string[]>(autoExpanded);
-
-  useEffect(() => {
+  // Pindah halaman membuka grup aktif yang baru; grup yang ditutup user tetap tertutup.
+  const [seenAutoExpanded, setSeenAutoExpanded] = useState(autoExpanded);
+  if (seenAutoExpanded !== autoExpanded) {
+    setSeenAutoExpanded(autoExpanded);
     setExpandedMenus((prev) => [...new Set([...prev, ...autoExpanded])]);
-  }, [autoExpanded]);
+  }
 
   /**
    * Badge notifikasi: antrean persetujuan (HR) dan pembaruan pengajuan (ESS).
    * Satu permintaan untuk semua menu; server yang memutuskan angka mana yang
    * boleh dilihat aktor ini.
    */
-  const [badges, setBadges] = useState<Record<string, number>>({});
-  const loadBadges = useCallback(async () => {
-    try {
-      const res = await fetch("/api/hris/nav-badges");
-      if (!res.ok) return;
-      const json = await res.json();
-      setBadges(json?.badges ?? {});
-    } catch {
-      // Badge hiasan — diamkan agar navigasi tetap utuh saat jaringan gagal.
-    }
-  }, []);
-
-  useEffect(() => {
-    // Dimuat ulang tiap pindah halaman agar angkanya menyusul aksi pengguna.
-    void loadBadges();
-  }, [loadBadges, pathname]);
+  const queryClient = useQueryClient();
+  // Dimuat ulang tiap pindah halaman agar angkanya menyusul aksi pengguna.
+  const { data: badges = NO_BADGES } = useQuery({
+    queryKey: [...NAV_BADGES_KEY, pathname],
+    queryFn: fetchNavBadges,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
 
   // Membuka halaman ESS berarti karyawan sudah melihat pembaruannya.
   useEffect(() => {
@@ -148,13 +158,13 @@ export default function AppSidebarNav({
       body: JSON.stringify({ module: essModule }),
     })
       .then(() => {
-        if (active) void loadBadges();
+        if (active) void queryClient.invalidateQueries({ queryKey: NAV_BADGES_KEY });
       })
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [pathname, loadBadges]);
+  }, [pathname, queryClient]);
 
   const toggleMenu = (key: string) => {
     setExpandedMenus((prev) =>

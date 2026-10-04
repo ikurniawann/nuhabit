@@ -36,3 +36,21 @@ describe("apiHandler", () => {
     expect((await fail()).status).toBe(403);
   });
 });
+
+describe("pemetaan galat Postgres", () => {
+  it.each([
+    ["23503", 400, "Referensi data tidak valid"],
+    ["23514", 400, "Data tidak memenuhi ketentuan"],
+    ["23502", 400, "Data wajib diisi"],
+    ["22P02", 400, "Format data tidak valid"],
+  ])("SQLSTATE %s jadi %i", async (code, status, error) => {
+    expect(await body(apiErrorResponse({ code, message: "internal" }))).toEqual({
+      status,
+      json: { success: false, error },
+    });
+  });
+
+  it("ApiError.tooManyRequests jadi 429", async () => {
+    expect((await body(apiErrorResponse(ApiError.tooManyRequests()))).status).toBe(429);
+  });
+});

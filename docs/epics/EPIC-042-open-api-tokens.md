@@ -13,7 +13,7 @@ langsung — CRUD penuh — tanpa membajak sesi manusia.
 ## Desain
 
 ### Autentikasi
-- Header `Authorization: Bearer arkiv_<64 hex>`; DB hanya menyimpan hash
+- Header `Authorization: Bearer nh_<64 hex>` (sejak Okt 2026; token lama `arkiv_` tetap diterima); DB hanya menyimpan hash
   SHA-256 (`configuration.api_tokens`), nilai token tampil SEKALI saat dibuat.
 - Token menempel ke satu akun user (service account) — request berjalan
   SEBAGAI akun itu sehingga IAM/menu grant tetap berlaku, lalu dibatasi lagi

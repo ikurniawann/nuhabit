@@ -24,7 +24,7 @@ export function HelpHint({
             type="button"
             aria-label="Bantuan"
             className={cn(
-              "inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-primary",
+              "inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-brand-text",
               className
             )}
           />

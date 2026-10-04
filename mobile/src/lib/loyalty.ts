@@ -32,7 +32,7 @@ export const CREDIT_TXN_TYPES = new Set(["topup", "topup_bonus", "refund", "bonu
 
 /**
  * Arah transaksi ditentukan TIPE, bukan tanda angka tersimpan — DB memakai
- * nilai positif untuk payment pun (paritas nox-portal.tsx: kredit ? "+" : "−").
+ * nilai positif untuk payment pun (paritas isCreditEntry di src/lib/wallet/ledger.ts: kredit "+", debit "−").
  */
 export function isCreditTxn(type: string): boolean {
   return CREDIT_TXN_TYPES.has(type);

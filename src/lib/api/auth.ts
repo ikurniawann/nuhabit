@@ -188,6 +188,12 @@ export class ApiError extends Error {
     return new ApiError(409, message);
   }
 
+  static tooManyRequests(
+    message = "Terlalu banyak permintaan. Silakan coba lagi dalam beberapa saat."
+  ) {
+    return new ApiError(429, message);
+  }
+
   static server(message = "Internal server error") {
     return new ApiError(500, message);
   }

@@ -28,7 +28,6 @@ import {
   mapUnit,
   indexByName,
   similarity,
-  dbUnitCost,
   compareRawMaterials,
   compareWip,
   compareProducts,

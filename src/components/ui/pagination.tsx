@@ -2,26 +2,22 @@ import * as React from "react"
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { ButtonProps, buttonVariants } from "@/components/ui/button"
+import { buttonVariants, type ButtonProps } from "@/components/ui/button"
 
 export interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  totalItems?: number;
-  onPageChange?: (page: number) => void;
 }
 
 const Pagination = ({
   className,
-  currentPage: _currentPage,
-  totalPages: _totalPages,
-  totalItems: _totalItems,
-  onPageChange: _onPageChange,
+  currentPage,
+  totalPages,
   ...props
 }: PaginationProps & React.ComponentProps<"nav">) => (
   <nav
     role="navigation"
-    aria-label="pagination"
+    aria-label={`Halaman ${currentPage} dari ${totalPages}`}
     className={cn("mx-auto flex w-full justify-center", className)}
     {...props}
   />

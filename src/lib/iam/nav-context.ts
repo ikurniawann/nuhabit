@@ -1,4 +1,4 @@
-import { PRODUCT_ROUTES, RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PRODUCT_ROUTES, RM_ROUTES } from "@/lib/purchasing/item-routes";
 
 /** Query param: keep Approval PR menu active on PR detail routes. */
 export const NAV_FROM_APPROVAL_PR = "approval-pr";

@@ -1,3 +1,4 @@
+import "server-only";
 import { queryOne } from "@/lib/db";
 import { brandName, pickBrandName } from "@/lib/branding";
 

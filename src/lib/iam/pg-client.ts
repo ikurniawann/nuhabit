@@ -1,3 +1,4 @@
+import "server-only";
 import { Pool, type QueryResultRow } from "pg";
 import { SEARCH_PATH } from "@/lib/db";
 import { databaseUrl } from "@/lib/env";

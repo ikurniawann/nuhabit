@@ -3,16 +3,30 @@ import type { Pool } from "pg";
 
 /**
  * Query builder Postgres (PostgREST-style subset) for server-side routes.
+ * Shim lama: kode baru memakai SQL langsung lewat @/lib/db (lihat
+ * docs/frontend-conventions.md, bagian "Akses data").
  */
 
-export interface PgResult<T = any> {
+/**
+ * Bentuk baris default shim. Sengaja longgar: ratusan route lama membaca
+ * `data` tanpa tipe dan tabelnya dipilih saat runtime (`from("nama")`).
+ * Kode baru yang butuh tipe baris memakai `query<Row>()` dari @/lib/db.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ShimRow = any;
+
+/** Payload insert/update/upsert: satu objek atau array objek kolom → nilai. */
+type Payload = object | readonly object[];
+type Params = unknown[];
+
+export interface PgResult<T = ShimRow> {
   data: T | null;
   error: { message: string; code?: string } | null;
   count: number | null;
   status: number;
 }
 
-type Filter = { col: string; op: string; value: any };
+type Filter = { col: string; op: string; value: unknown };
 
 interface ForeignKey {
   srcSchema: string;
@@ -94,7 +108,14 @@ function pgValue(value: unknown, isJsonCol: boolean): unknown {
 
 async function loadForeignKeys(pool: Pool): Promise<ForeignKey[]> {
   if (fkCache) return fkCache;
-  const { rows } = await pool.query(
+  const { rows } = await pool.query<{
+    src_schema: string;
+    src_table: string;
+    src_col: string;
+    tgt_schema: string;
+    tgt_table: string;
+    tgt_col: string;
+  }>(
     `SELECT src_ns.nspname AS src_schema, src.relname AS src_table, src_att.attname AS src_col,
             tgt_ns.nspname AS tgt_schema, tgt.relname AS tgt_table, tgt_att.attname AS tgt_col
      FROM pg_constraint con
@@ -182,7 +203,7 @@ export function parseInValues(value: unknown): unknown[] {
   return items;
 }
 
-function buildInClause(col: string, values: unknown[], params: any[], negate = false): string {
+function buildInClause(col: string, values: unknown[], params: Params, negate = false): string {
   if (values.length === 0) return negate ? "true" : "false";
   const ph = values.map((v) => {
     params.push(v);
@@ -250,7 +271,7 @@ function parseSelect(sel: string): SelectPart[] {
   });
 }
 
-export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
+export class QueryBuilder<T = ShimRow> implements PromiseLike<PgResult<T>> {
   private pool: Pool;
   private schema: string;
   private table: string;
@@ -262,7 +283,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
   private orderBy: { col: string; asc: boolean; nullsFirst?: boolean }[] = [];
   private limitN: number | null = null;
   private rangeFromTo: [number, number] | null = null;
-  private payload: any = null;
+  private payload: Payload | null = null;
   private upsertConflict: string | null = null;
   private singleMode: "single" | "maybe" | null = null;
   private wantCount: "exact" | null = null;
@@ -282,17 +303,17 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return this;
   }
 
-  insert(values: any) {
+  insert(values: Payload) {
     this.action = "insert";
     this.payload = values;
     return this;
   }
-  update(values: any) {
+  update(values: object) {
     this.action = "update";
     this.payload = values;
     return this;
   }
-  upsert(values: any, opts?: { onConflict?: string }) {
+  upsert(values: Payload, opts?: { onConflict?: string }) {
     this.action = "upsert";
     this.payload = values;
     this.upsertConflict = opts?.onConflict ?? null;
@@ -303,21 +324,21 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return this;
   }
 
-  private addFilter(col: string, op: string, value: any) {
+  private addFilter(col: string, op: string, value: unknown) {
     this.filters.push({ col, op, value });
     return this;
   }
-  eq(col: string, value: any) { return this.addFilter(col, "=", value); }
-  neq(col: string, value: any) { return this.addFilter(col, "<>", value); }
-  gt(col: string, value: any) { return this.addFilter(col, ">", value); }
-  gte(col: string, value: any) { return this.addFilter(col, ">=", value); }
-  lt(col: string, value: any) { return this.addFilter(col, "<", value); }
-  lte(col: string, value: any) { return this.addFilter(col, "<=", value); }
-  like(col: string, value: any) { return this.addFilter(col, "LIKE", value); }
-  ilike(col: string, value: any) { return this.addFilter(col, "ILIKE", value); }
-  is(col: string, value: any) { return this.addFilter(col, "IS", value); }
-  in(col: string, value: any[]) { return this.addFilter(col, "IN", value); }
-  contains(col: string, value: any) { return this.addFilter(col, "@>", value); }
+  eq(col: string, value: unknown) { return this.addFilter(col, "=", value); }
+  neq(col: string, value: unknown) { return this.addFilter(col, "<>", value); }
+  gt(col: string, value: unknown) { return this.addFilter(col, ">", value); }
+  gte(col: string, value: unknown) { return this.addFilter(col, ">=", value); }
+  lt(col: string, value: unknown) { return this.addFilter(col, "<", value); }
+  lte(col: string, value: unknown) { return this.addFilter(col, "<=", value); }
+  like(col: string, value: unknown) { return this.addFilter(col, "LIKE", value); }
+  ilike(col: string, value: unknown) { return this.addFilter(col, "ILIKE", value); }
+  is(col: string, value: unknown) { return this.addFilter(col, "IS", value); }
+  in(col: string, value: readonly unknown[]) { return this.addFilter(col, "IN", value); }
+  contains(col: string, value: unknown) { return this.addFilter(col, "@>", value); }
   /**
    * .not(col, op, value) — PostgREST-style: op boleh simbolik ('eq', 'neq',
    * 'gt', 'gte', 'lt', 'lte', 'like', 'ilike', 'is', 'in') atau operator SQL
@@ -325,7 +346,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
    * sebelum di-uppercase supaya `.not('status', 'eq', 'x')` menghasilkan
    * `NOT (status = $1)`, bukan `NOT (status EQ $1)` yang bukan SQL valid.
    */
-  not(col: string, op: string, value: any) {
+  not(col: string, op: string, value: unknown) {
     const sqlOp = NOT_OP_TRANSLATE[op.toLowerCase()] ?? op.toUpperCase();
     return this.addFilter(col, `NOT ${sqlOp}`, value);
   }
@@ -353,7 +374,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     orderBy?: { col: string; asc: boolean; nullsFirst?: boolean }[];
     limit?: number | null;
     range?: [number, number] | null;
-    payload?: any;
+    payload?: Payload | null;
     upsertConflict?: string | null;
     singleMode?: "single" | "maybe" | null;
     wantCount?: "exact" | null;
@@ -387,14 +408,8 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     // Hanya nilai objek/array yang bisa salah serialisasi. Bila payload hanya
     // berisi skalar, katalog tidak perlu dibaca sama sekali — menghemat satu
     // round-trip untuk mayoritas insert/update.
-    const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
-    const hasObjectValue = rows.some(
-      (r) =>
-        r &&
-        typeof r === "object" &&
-        Object.values(r as Record<string, unknown>).some(
-          (v) => v !== null && typeof v === "object"
-        )
+    const hasObjectValue = this.payloadRows().some((r) =>
+      Object.values(r).some((v) => v !== null && typeof v === "object")
     );
     if (!hasObjectValue) {
       this.jsonCols = new Set();
@@ -406,13 +421,19 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     this.jsonCols = map.get(`${schema}.${this.table}`) ?? new Set();
   }
 
+  /** Payload sebagai daftar baris kolom → nilai (insert tunggal jadi satu baris). */
+  private payloadRows(): Record<string, unknown>[] {
+    const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
+    return rows.filter((r): r is Record<string, unknown> => r !== null && typeof r === "object");
+  }
+
   private qt() {
     return this.schema && this.schema !== "public"
       ? `${qid(this.schema)}.${qid(this.table)}`
       : qid(this.table);
   }
 
-  private buildWhere(params: any[], alias?: string): string {
+  private buildWhere(params: Params, alias?: string): string {
     const prefix = alias ? `${alias}.` : "";
     const clauses: string[] = [];
     for (const f of this.filters) {
@@ -454,7 +475,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   }
 
-  private buildOrderLimit(params: any[]): string {
+  private buildOrderLimit(params: Params): string {
     let sql = "";
     if (this.orderBy.length) {
       sql += " ORDER BY " + this.orderBy
@@ -472,7 +493,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return sql;
   }
 
-  private async buildSelectList(sel: string, params: any[], ctxTable?: string): Promise<string> {
+  private async buildSelectList(sel: string, params: Params, ctxTable?: string): Promise<string> {
     const parts = parseSelect(sel);
     if (parts.length === 1 && parts[0].raw === "*") return "*";
     const fks = await loadForeignKeys(this.pool);
@@ -519,20 +540,20 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
   }
 
   private async exec(): Promise<PgResult<T>> {
-    const params: any[] = [];
+    const params: Params = [];
     let totalCount: number | null = null;
     try {
       let sql = "";
       if (this.action === "select") {
         if (this.wantCount && this.headOnly) {
           sql = `SELECT count(*)::int AS count FROM ${this.qt()} ${this.buildWhere(params)}`;
-          const { rows } = await this.pool.query(sql, params);
+          const { rows } = await this.pool.query<{ count: number }>(sql, params);
           return { data: null, error: null, count: rows[0]?.count ?? 0, status: 200 };
         }
         if (this.wantCount) {
-          const countParams: any[] = [];
+          const countParams: Params = [];
           const countSql = `SELECT count(*)::int AS count FROM ${this.qt()} ${this.buildWhere(countParams)}`;
-          const countResult = await this.pool.query(countSql, countParams);
+          const countResult = await this.pool.query<{ count: number }>(countSql, countParams);
           totalCount = countResult.rows[0]?.count ?? 0;
         }
 
@@ -540,12 +561,10 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
         sql = `SELECT ${selectList} FROM ${this.qt()} ${this.buildWhere(params)}${this.buildOrderLimit(params)}`;
       } else if (this.action === "insert") {
         await this.primeJsonCols();
-        const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
-        sql = this.buildInsert(rows, params);
+        sql = this.buildInsert(this.payloadRows(), params);
       } else if (this.action === "upsert") {
         await this.primeJsonCols();
-        const rows = Array.isArray(this.payload) ? this.payload : [this.payload];
-        sql = this.buildInsert(rows, params, true);
+        sql = this.buildInsert(this.payloadRows(), params, true);
       } else if (this.action === "update") {
         await this.primeJsonCols();
         sql = this.buildUpdate(params);
@@ -555,7 +574,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
       }
 
       const { rows } = await this.pool.query(sql, params);
-      let data: any = rows;
+      let data: unknown = rows;
       const count =
         this.action === "select" && this.wantCount
           ? (typeof totalCount === "number" ? totalCount : rows.length)
@@ -573,9 +592,10 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
       if ((this.action !== "select") && !this.returningSelect && !this.singleMode) {
         data = null;
       }
-      return { data, error: null, count, status: 200 };
-    } catch (err: any) {
-      return { data: null, error: { message: err.message, code: err.code }, count: null, status: 400 };
+      return { data: data as T, error: null, count, status: 200 };
+    } catch (err) {
+      const { message, code } = err as { message?: string; code?: string };
+      return { data: null, error: { message: message ?? String(err), code }, count: null, status: 400 };
     }
   }
 
@@ -590,7 +610,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return plain.map(qid).join(", ");
   }
 
-  private buildInsert(rows: any[], params: any[], upsert = false): string {
+  private buildInsert(rows: readonly Record<string, unknown>[], params: Params, upsert = false): string {
     const cols = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
     const colSql = cols.map(qid).join(", ");
     const valuesSql = rows
@@ -612,8 +632,8 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
     return sql;
   }
 
-  private buildUpdate(params: any[]): string {
-    const entries = Object.entries(this.payload);
+  private buildUpdate(params: Params): string {
+    const entries = Object.entries(this.payload ?? {});
     const setSql = entries.map(([k, v]) => { params.push(pgValue(v, this.jsonCols.has(k))); return `${qid(k)} = $${params.length}`; }).join(", ");
     let sql = `UPDATE ${this.qt()} SET ${setSql} ${this.buildWhere(params)}`;
     if (this.returningSelect || this.singleMode) {
@@ -625,7 +645,7 @@ export class QueryBuilder<T = any> implements PromiseLike<PgResult<T>> {
   // PromiseLike: await builder
   then<TResult1 = PgResult<T>, TResult2 = never>(
     onfulfilled?: ((value: PgResult<T>) => TResult1 | PromiseLike<TResult1>) | null,
-    onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
   ): PromiseLike<TResult1 | TResult2> {
     return this.exec().then(onfulfilled, onrejected);
   }

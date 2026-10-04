@@ -36,10 +36,17 @@ export function DatePicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const [displayDate, setDisplayDate] = useState<string>(value || "");
   const fpInstance = useRef<flatpickr.Instance | null>(null);
+  // flatpickr dibuat sekali; callback & nilai awal dibaca lewat ref agar selalu terbaru.
+  const onChangeRef = useRef(onChange);
+  const initialRef = useRef({ value, minDate, maxDate });
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
 
   // Initialize flatpickr
   useEffect(() => {
     if (inputRef.current && !fpInstance.current) {
+      const { value, minDate, maxDate } = initialRef.current;
       // Get today's date in Jakarta timezone
       const today = new Date();
       const jakartaTime = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
@@ -55,7 +62,7 @@ export function DatePicker({
         defaultDate: value || jakartaTime, // Force Jakarta timezone
         onChange: (selectedDates, dateStr) => {
           setDisplayDate(dateStr);
-          onChange?.(dateStr);
+          onChangeRef.current?.(dateStr);
         },
       });
     }

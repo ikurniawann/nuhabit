@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  APPEARANCE_STORAGE_KEY,
   applyAppearanceTokens,
   DEFAULT_APPEARANCE,
   parseAppearanceTokens,
@@ -30,59 +31,90 @@ type ThemeContextValue = {
 
 const ThemeContext = React.createContext<ThemeContextValue | null>(null);
 
+type ThemeSnapshot = { state: ThemeState; appearance: AppearanceTokens };
+
+const SERVER_SNAPSHOT: ThemeSnapshot = { state: DEFAULT_THEME_STATE, appearance: DEFAULT_APPEARANCE };
+
+/**
+ * Tema & appearance tersimpan di localStorage. Dibaca lewat
+ * useSyncExternalStore: render server/hidrasi memakai default, lalu klien
+ * langsung memakai nilai tersimpan tanpa setState di effect.
+ */
+const themeListeners = new Set<() => void>();
+let snapshotCache: { themeRaw: string | null; appearanceRaw: string | null; snapshot: ThemeSnapshot } | null =
+  null;
+
+function subscribeTheme(listener: () => void) {
+  themeListeners.add(listener);
+  return () => themeListeners.delete(listener);
+}
+
+function readThemeSnapshot(): ThemeSnapshot {
+  const themeRaw = window.localStorage.getItem(THEME_STORAGE_KEY);
+  const appearanceRaw = window.localStorage.getItem(APPEARANCE_STORAGE_KEY);
+  if (
+    !snapshotCache ||
+    snapshotCache.themeRaw !== themeRaw ||
+    snapshotCache.appearanceRaw !== appearanceRaw
+  ) {
+    snapshotCache = {
+      themeRaw,
+      appearanceRaw,
+      snapshot: { state: parseThemeState(themeRaw), appearance: readCachedAppearance() },
+    };
+  }
+  return snapshotCache.snapshot;
+}
+
+function persistTheme(next: Partial<ThemeSnapshot>) {
+  if (next.state) window.localStorage.setItem(THEME_STORAGE_KEY, serializeThemeState(next.state));
+  if (next.appearance) writeCachedAppearance(next.appearance);
+  themeListeners.forEach((listener) => listener());
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [state, setStateRaw] = React.useState<ThemeState>(DEFAULT_THEME_STATE);
-  const [appearance, setAppearance] = React.useState<AppearanceTokens>(DEFAULT_APPEARANCE);
+  const { state, appearance } = React.useSyncExternalStore(
+    subscribeTheme,
+    readThemeSnapshot,
+    () => SERVER_SNAPSHOT
+  );
 
   React.useEffect(() => {
-    const initial = parseThemeState(window.localStorage.getItem(THEME_STORAGE_KEY));
-    const cached = readCachedAppearance();
-    setStateRaw(initial);
-    setAppearance(cached);
-    applyThemeState(document.documentElement, initial);
-    applyAppearanceTokens(document.documentElement, cached);
+    applyThemeState(document.documentElement, state);
+  }, [state]);
 
+  React.useEffect(() => {
+    applyAppearanceTokens(document.documentElement, appearance);
+  }, [appearance]);
+
+  React.useEffect(() => {
     let cancelled = false;
-    if (typeof fetch === "function") {
-      fetch("/api/settings/appearance")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((json) => {
-          if (cancelled || !json?.data?.theme) return;
-          const next = parseAppearanceTokens(json.data.theme);
-          setAppearance(next);
-          applyAppearanceTokens(document.documentElement, next);
-          writeCachedAppearance(next);
-        })
-        .catch(() => {
-          /* guest / 401 — tetap pakai cache */
-        });
-    }
-
+    fetch("/api/settings/appearance")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled || !json?.data?.theme) return;
+        persistTheme({ appearance: parseAppearanceTokens(json.data.theme) });
+      })
+      .catch(() => {
+        /* guest / 401 — tetap pakai cache */
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const commit = React.useCallback((next: ThemeState) => {
-    setStateRaw(next);
-    applyThemeState(document.documentElement, next);
-    window.localStorage.setItem(THEME_STORAGE_KEY, serializeThemeState(next));
-  }, []);
+  const commit = React.useCallback((next: ThemeState) => persistTheme({ state: next }), []);
 
   const applyAppearance = React.useCallback((tokens: AppearanceTokens) => {
     const next = parseAppearanceTokens(tokens);
-    setAppearance(next);
-    applyAppearanceTokens(document.documentElement, next);
-    writeCachedAppearance(next);
-    setStateRaw((prev) => {
-      const synced: ThemeState = {
-        ...prev,
+    persistTheme({
+      appearance: next,
+      state: {
+        ...readThemeSnapshot().state,
         presetId: next.presetId,
         customPrimary: next.base.primary,
         customSecondary: next.base.secondary,
-      };
-      window.localStorage.setItem(THEME_STORAGE_KEY, serializeThemeState(synced));
-      return synced;
+      },
     });
   }, []);
 

@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -22,7 +23,7 @@ const buttonVariants = cva(
         onInk: "bg-white/10 text-white hover:bg-white/20",
         destructive:
           "bg-danger-soft text-danger hover:bg-danger hover:text-white dark:hover:text-ink focus-visible:ring-danger/30",
-        link: "text-forest underline-offset-4 hover:underline",
+        link: "text-brand-text underline-offset-4 hover:underline",
       },
       size: {
         default: "h-10 gap-2 px-4",
@@ -42,19 +43,33 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    /** Pakai elemen anak (mis. <Link>/<a>) sebagai tombol, tanpa membungkusnya dengan <button>. */
+    asChild?: boolean
+  }
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  asChild = false,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const classes = cn(buttonVariants({ variant, size, className }))
+  if (asChild && React.isValidElement<{ className?: string }>(children)) {
+    return React.cloneElement(children, {
+      ...(props as React.HTMLAttributes<HTMLElement>),
+      "data-slot": "button",
+      className: cn(classes, children.props.className),
+    } as React.HTMLAttributes<HTMLElement>)
+  }
   return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <ButtonPrimitive data-slot="button" className={classes} {...props}>
+      {children}
+    </ButtonPrimitive>
   )
 }
 
-export { Button, buttonVariants }
+export { Button, buttonVariants, type ButtonProps }

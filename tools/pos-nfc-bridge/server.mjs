@@ -74,8 +74,6 @@ pcsc.on("reader", (reader) => {
     const changes = reader.state ^ status.state;
     if (!changes) return;
 
-    const hasCard = Boolean(status.state & reader.SCARD_STATE_PRESENT);
-
     if (changes & reader.SCARD_STATE_EMPTY && status.state & reader.SCARD_STATE_EMPTY) {
       const edge = nextCardPresence({ hadCard, hasCard: false });
       hadCard = edge.hadCard;

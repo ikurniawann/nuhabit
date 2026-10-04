@@ -3,6 +3,8 @@
  * Uses native IndexedDB with promises (no external deps)
  */
 
+import type { CreateOrderRequest, Product, ProductModifier, ProductVariant, SplitBillRequest } from "@/lib/pos-api";
+
 const DB_NAME = 'arkiv-pos-db';
 const DB_VERSION = 1;
 
@@ -58,9 +60,11 @@ export interface OffProduct {
   is_available: boolean;
   image_url?: string;
   category?: { name: string };
-  variants?: any[];
-  modifiers?: any[];
+  variants?: ProductVariant[];
+  modifiers?: ProductModifier[];
   xp?: number;
+  station?: string;
+  product_kind?: Product["product_kind"];
   warehouse_id?: string | null;
   warehouse_name?: string | null;
   stall_warehouse_id?: string | null;
@@ -188,11 +192,16 @@ export interface OfflineOrderRequest {
   status: 'pending' | 'syncing' | 'failed' | 'completed';
   createdAt: string;
   errorMessage?: string;
-  orderPayload: any; // CreateOrderRequest or SplitBillRequest
+  orderPayload: OfflineOrderPayload;
   retryCount: number;
 }
 
-export async function queueOfflineOrder(orderPayload: any): Promise<number> {
+/** Payload order yang ditunda saat offline; `_offlineType` memilih endpoint saat sinkron. */
+export type OfflineOrderPayload =
+  | (CreateOrderRequest & { _offlineType?: "order" })
+  | (SplitBillRequest & { _offlineType: "split" });
+
+export async function queueOfflineOrder(orderPayload: OfflineOrderPayload): Promise<number> {
   const store = await getStore(STORES.offlineQueue, 'readwrite');
   return new Promise((resolve, reject) => {
     const request = store.add({

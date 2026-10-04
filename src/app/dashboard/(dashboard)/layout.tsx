@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { Toaster } from "sonner";
 import { requireUser } from "@/lib/auth/require-user";
 import {
   collectNavHrefs,
@@ -97,7 +96,6 @@ export default async function DashboardGroupLayout({
       essOnly={essOnly}
     >
       {children}
-      <Toaster position="bottom-right" />
     </AppSidebar>
     </IamAccessProvider>
   );

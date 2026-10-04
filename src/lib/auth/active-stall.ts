@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { queryOne } from "@/lib/db";
+import type { CookieReader } from "@/lib/auth/constants";
 
 /**
  * Stall (warehouse) aktif yang dipilih super_admin/admin lewat switcher di
@@ -10,8 +11,18 @@ import { queryOne } from "@/lib/db";
  * - "all" → eksplisit "Semua Stall"
  * - kosong/tidak ada → belum dipilih; caller boleh fallback ke penempatan user
  */
-export const ACTIVE_STALL_COOKIE = "arkiv-active-stall";
+export const ACTIVE_STALL_COOKIE = "nuhabit-active-stall";
+/** Nama lama sebelum rename NüHabit: masih dibaca, tidak ditulis lagi. */
+export const LEGACY_ACTIVE_STALL_COOKIE = "arkiv-active-stall";
 export const ACTIVE_STALL_ALL = "all";
+
+/** Nilai stall aktif dari cookie baru, jatuh ke cookie lama bila belum ada. */
+export function readActiveStallCookie(jar: CookieReader): string | undefined {
+  const value =
+    jar.get(ACTIVE_STALL_COOKIE)?.value?.trim() ||
+    jar.get(LEGACY_ACTIVE_STALL_COOKIE)?.value?.trim();
+  return value || undefined;
+}
 
 export type ActiveStall = {
   id: string;
@@ -38,8 +49,7 @@ export async function findActiveStall(warehouseId: string): Promise<ActiveStall 
 }
 
 export async function resolveActiveStallFromCookies(): Promise<ResolvedActiveStall> {
-  const store = await cookies();
-  const value = store.get(ACTIVE_STALL_COOKIE)?.value?.trim();
+  const value = readActiveStallCookie(await cookies());
   if (!value) return { mode: "unset" };
   if (value === ACTIVE_STALL_ALL) return { mode: "all" };
 

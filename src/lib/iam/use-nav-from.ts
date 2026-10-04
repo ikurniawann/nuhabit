@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { resolveNavFrom } from "./nav-context";
 
@@ -13,11 +13,12 @@ function readNavFrom(pathname: string): string | null {
 /** Reads `from` query param (with session fallback) without a Suspense boundary. */
 export function useNavFrom(): string | null {
   const pathname = usePathname();
-  const [navFrom, setNavFrom] = useState<string | null>(() => readNavFrom(pathname));
-
-  useLayoutEffect(() => {
-    setNavFrom(readNavFrom(pathname));
-  }, [pathname]);
-
-  return navFrom;
+  const [current, setCurrent] = useState(() => ({ pathname, navFrom: readNavFrom(pathname) }));
+  // Baca ulang saat pindah halaman (pola "sesuaikan state saat render", tanpa effect).
+  if (current.pathname !== pathname) {
+    const next = { pathname, navFrom: readNavFrom(pathname) };
+    setCurrent(next);
+    return next.navFrom;
+  }
+  return current.navFrom;
 }

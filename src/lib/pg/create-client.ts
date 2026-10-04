@@ -1,3 +1,4 @@
+import "server-only";
 import { getPool, query, queryOne } from "@/lib/db";
 import { QueryBuilder } from "@/lib/pg/query-builder";
 import {
@@ -9,12 +10,32 @@ import {
   type SessionUser,
 } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
+import { readSessionToken } from "@/lib/auth/constants";
 import type { NextRequest } from "next/server";
 import type { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 
 export type PgClient = ReturnType<typeof createPgClient>;
 
 const qid = (id: string) => `"${id.replace(/"/g, '""')}"`;
+
+/** Galat bentuk Supabase `{ message, code }` dari exception apa pun. */
+function shimError(err: unknown): { message: string; code?: string } {
+  const { message, code } = (err ?? {}) as { message?: unknown; code?: unknown };
+  return {
+    message: typeof message === "string" ? message : String(err),
+    ...(typeof code === "string" ? { code } : {}),
+  };
+}
+
+interface AuthUserRow {
+  id: string;
+  email: string;
+  created_at: string;
+  last_sign_in_at: string | null;
+  raw_user_meta_data: Record<string, unknown> | null;
+  raw_app_meta_data: Record<string, unknown> | null;
+  banned_until: string | null;
+}
 
 function wrapUser(user: SessionUser | null) {
   if (!user) return { data: { user: null }, error: null };
@@ -61,11 +82,11 @@ async function rpcCall(fn: string, params: Record<string, unknown> = {}) {
       values = keys.map((k) => params[k]);
       sql = `SELECT * FROM ${qid(fn)}(${args})`;
     }
-    const { rows } = await pool.query(sql, values);
+    const { rows } = await pool.query<Record<string, unknown>>(sql, values);
     const data = rows.length === 1 ? (Object.keys(rows[0]).length === 1 ? Object.values(rows[0])[0] : rows[0]) : rows;
     return { data, error: null };
-  } catch (err: any) {
-    return { data: null, error: { message: err.message, code: err.code } };
+  } catch (err) {
+    return { data: null, error: shimError(err) };
   }
 }
 
@@ -76,14 +97,7 @@ function buildAuthAdmin() {
         const perPage = opts?.perPage ?? 1000;
         const page = opts?.page ?? 1;
         const offset = (page - 1) * perPage;
-        const rows = await query<{
-          id: string;
-          email: string;
-          created_at: string;
-          last_sign_in_at: string | null;
-          raw_user_meta_data: Record<string, unknown>;
-          raw_app_meta_data: Record<string, unknown>;
-        }>(
+        const rows = await query<Omit<AuthUserRow, "banned_until">>(
           `SELECT id, email, created_at, last_sign_in_at, raw_user_meta_data, raw_app_meta_data
            FROM auth.users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
           [perPage, offset]
@@ -101,14 +115,14 @@ function buildAuthAdmin() {
           },
           error: null,
         };
-      } catch (err: any) {
-        return { data: { users: [] }, error: { message: err.message } };
+      } catch (err) {
+        return { data: { users: [] }, error: shimError(err) };
       }
     },
 
     async getUserById(id: string) {
       try {
-        const row = await queryOne<any>(
+        const row = await queryOne<AuthUserRow>(
           `SELECT id, email, created_at, last_sign_in_at, raw_user_meta_data, raw_app_meta_data, banned_until
            FROM auth.users WHERE id = $1`,
           [id]
@@ -128,8 +142,8 @@ function buildAuthAdmin() {
           },
           error: null,
         };
-      } catch (err: any) {
-        return { data: { user: null }, error: { message: err.message } };
+      } catch (err) {
+        return { data: { user: null }, error: shimError(err) };
       }
     },
 
@@ -165,8 +179,8 @@ function buildAuthAdmin() {
           },
           error: null,
         };
-      } catch (err: any) {
-        return { data: { user: null }, error: { message: err.message } };
+      } catch (err) {
+        return { data: { user: null }, error: shimError(err) };
       }
     },
 
@@ -217,8 +231,8 @@ function buildAuthAdmin() {
           await query(`UPDATE auth.users SET ${sets.join(", ")} WHERE id = $${n}`, params);
         }
         return this.getUserById(id);
-      } catch (err: any) {
-        return { data: { user: null }, error: { message: err.message } };
+      } catch (err) {
+        return { data: { user: null }, error: shimError(err) };
       }
     },
 
@@ -226,8 +240,8 @@ function buildAuthAdmin() {
       try {
         await query(`DELETE FROM auth.users WHERE id = $1`, [id]);
         return { data: {}, error: null };
-      } catch (err: any) {
-        return { data: {}, error: { message: err.message } };
+      } catch (err) {
+        return { data: {}, error: shimError(err) };
       }
     },
   };
@@ -267,16 +281,10 @@ export function createPgClient(ctx?: {
     async signOut() {
       const user = await resolveUser();
       if (user) {
-        const token =
-          ctx?.request?.cookies.get("arkiv_session")?.value ??
-          ctx?.cookies?.get("arkiv_session")?.value;
-        await destroySession(token);
+        const jar = ctx?.request?.cookies ?? ctx?.cookies;
+        await destroySession(jar ? readSessionToken(jar) : undefined);
       }
       return { error: null };
-    },
-    onAuthStateChange(_cb: (event: string, session: unknown) => void) {
-      const subscription = { unsubscribe: () => {} };
-      return { data: { subscription } };
     },
     admin: buildAuthAdmin(),
   };

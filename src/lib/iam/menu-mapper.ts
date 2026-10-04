@@ -1,4 +1,4 @@
-import type { MenuDetail, MenuItem, MenuPermissionContext } from "@/features/configuration/menus/types";
+import type { MenuDetail, MenuItem, MenuPermissionContext } from "./menu-types";
 
 type MenuRow = {
   id: string;

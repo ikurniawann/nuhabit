@@ -16,6 +16,15 @@ const eslintConfig = defineConfig([
     "mobile/**",
   ]),
   {
+    // Nama berawalan "_" dan field yang sengaja dibuang lewat rest (`{ a: _, ...rest }`) bukan sisa kode.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
+    },
+  },
+  {
     // Skrip Node CommonJS (migrasi, seeder, worker, layanan WA): require() memang benar di sini.
     files: ["database/**/*.{js,cjs}", "scripts/**/*.{js,cjs}", "services/**/*.{js,cjs}", "tools/**/*.{js,cjs}"],
     rules: { "@typescript-eslint/no-require-imports": "off" },

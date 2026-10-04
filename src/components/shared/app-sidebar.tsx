@@ -63,6 +63,8 @@ import AppSidebarNav from "./app-sidebar-nav";
 import { DashboardBreadcrumbs } from "./dashboard-breadcrumbs";
 import { GlobalSearch } from "./global-search";
 import { PhoneNav } from "./phone-nav";
+import Image from "next/image";
+import { signOut } from "@/lib/auth/client";
 
 export interface SidebarUser {
   full_name: string;
@@ -231,7 +233,7 @@ function AppSidebarContent({
             aria-label="Beranda"
             className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-ink shadow-card md:hidden"
           >
-            <img src="/brand/mark-lime.png" alt="" className="w-7 select-none" draggable={false} />
+            <Image src="/brand/mark-lime.png" width={600} height={210} alt="" className="h-auto w-7 select-none" draggable={false} />
           </Link>
           <HeaderTitle navItems={navItems} branchName={user.branch_name ?? user.company_name} />
           <GlobalSearch
@@ -250,7 +252,7 @@ function AppSidebarContent({
             </button>
             {!essOnly && (
               <Link
-                href="/arkiv-os"
+                href="/os"
                 className={cn(ROUND_BUTTON, "hidden sm:inline-flex")}
                 title="Buka NüHabit OS desktop"
                 aria-label="Buka desktop"
@@ -352,11 +354,11 @@ function RailHeader({ expanded }: { expanded: boolean }) {
       {expanded ? (
         <>
           {/* Wordmark putih di permukaan gelap (Logo Colorways, brand guideline). */}
-          <img src="/brand/wordmark-white.png" alt="" className="h-auto w-32 select-none" draggable={false} />
+          <Image src="/brand/wordmark-white.png" width={1200} height={165} alt="" className="h-auto w-32 select-none" draggable={false} />
           <span className="mt-2 block truncate text-[11px] text-on-ink-muted">Operasional bisnis</span>
         </>
       ) : (
-        <img src="/brand/mark-lime.png" alt="" className="w-9 select-none" draggable={false} />
+        <Image src="/brand/mark-lime.png" width={600} height={210} alt="" className="h-auto w-9 select-none" draggable={false} />
       )}
     </Link>
   );
@@ -589,7 +591,7 @@ function StallSwitcher({
               <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                 Semua Stall
               </span>
-              {activeStallId === null && <Check className="h-4 w-4 shrink-0 text-forest" />}
+              {activeStallId === null && <Check className="h-4 w-4 shrink-0 text-brand-text" />}
             </DropdownMenuItem>
           )}
           {hideAllStallsOption && (
@@ -621,7 +623,7 @@ function StallSwitcher({
                   {stall.name}
                 </span>
                 {activeStallId === stall.id && (
-                  <Check className="h-4 w-4 shrink-0 text-forest" />
+                  <Check className="h-4 w-4 shrink-0 text-brand-text" />
                 )}
               </DropdownMenuItem>
             ))
@@ -691,7 +693,9 @@ function AccountPopup({
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await signOut();
+      // Muat ulang penuh: buang cache React Query & state user sebelumnya.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = "/login";
     } catch {
       setLoggingOut(false);
@@ -772,7 +776,7 @@ function AccountPopup({
                 Ganti kata sandi
               </button>
               {!essOnly && (
-                <Link href="/arkiv-os" onClick={onClose} className={actionClass}>
+                <Link href="/os" onClick={onClose} className={actionClass}>
                   <MonitorSmartphone />
                   Desktop
                 </Link>

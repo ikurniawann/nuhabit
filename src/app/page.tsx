@@ -1,4 +1,4 @@
-import ArkivOsDesktopLoader from "@/components/arkiv/arkiv-os-desktop-loader";
+import { OsDesktopLoader } from "@/features/os-desktop/components/os-desktop-loader";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth/require-user";
 import { isEssOnlyUser } from "@/lib/iam/get-user-menus";
@@ -14,5 +14,5 @@ export default async function HomePage() {
     redirect("/dashboard/me");
   }
 
-  return <ArkivOsDesktopLoader />;
+  return <OsDesktopLoader />;
 }

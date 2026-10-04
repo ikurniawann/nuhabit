@@ -1,12 +1,11 @@
-# CI BCD — menjaga perlindungan keamanan tetap teruji setiap perubahan.
+# CI NüHabit: menjaga perlindungan keamanan tetap teruji setiap perubahan.
 #
 # Yang MEMBLOKIR (sudah diverifikasi hijau lokal):
-#   - unit test (2200+), termasuk negative test: gerbang sesi fail-closed,
-#     401/403 + allowlist field route dokumen karyawan, dan login 429.
+#   - unit test (5000+, TZ=UTC), termasuk negative test: gerbang sesi
+#     fail-closed, guard IAM per route, dan batas percobaan PIN/OTP/login.
 #   - audit dependensi produksi pada level high/critical.
+#   - lint: 0 error & 0 warning; jaga tetap bersih.
 # Yang TIDAK memblokir:
-#   - lint: repo masih punya ~770 error lama; dijalankan agar terlihat dan
-#     bisa dicicil, tapi belum layak jadi gate.
 #   - production build: butuh .env (terverifikasi gagal tanpanya) dan sudah
 #     diuji setiap deploy lewat `docker build`. Menyusul bila env CI disiapkan.
 
@@ -62,9 +61,8 @@ jobs:
         run: pnpm audit --prod --audit-level=high
 
   lint:
-    name: Lint (belum memblokir)
+    name: Lint
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import { Toaster } from "sonner";
 import "./globals.css";
 import { brandName, brandOsName } from "@/lib/branding";
 import "quill/dist/quill.snow.css";
 import QueryProvider from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ThemeScript } from "@/components/providers/theme-script";
-import { ToastProvider } from "@/components/providers/toast-provider";
 import { ActivityLogProvider } from "@/contexts/ActivityLogContext";
 import { ErrorBoundary } from "@/components/error-boundary";
 
@@ -34,9 +34,9 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <QueryProvider>
-              <ActivityLogProvider>
-                <ToastProvider>{children}</ToastProvider>
-              </ActivityLogProvider>
+              <ActivityLogProvider>{children}</ActivityLogProvider>
+              {/* Satu-satunya Toaster aplikasi; halaman cukup memanggil toast() dari sonner. */}
+              <Toaster position="bottom-right" />
             </QueryProvider>
           </ThemeProvider>
         </ErrorBoundary>

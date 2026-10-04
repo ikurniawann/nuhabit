@@ -6,6 +6,12 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
+// Lolos guard IAM; uji guard ada di src/test/api/purchasing-guard.test.ts.
+vi.mock("@/lib/api/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/auth")>()),
+  requireIamMenuPrefix: vi.fn(async () => ({ id: "user-1", full_name: "Admin", role: "admin", brand_id: null })),
+}));
+
 const STALL_A = "11111111-1111-4111-8111-111111111111";
 const STALL_B = "22222222-2222-4222-8222-222222222222";
 

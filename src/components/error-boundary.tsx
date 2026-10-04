@@ -43,6 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleGoHome = () => {
+    // Muat ulang penuh: pohon React yang crash tidak bisa dipercaya untuk navigasi klien.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/dashboard";
   };
 

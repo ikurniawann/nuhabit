@@ -72,10 +72,12 @@ export function NumericInput({
   const [displayValue, setDisplayValue] = React.useState(
     formatDisplayValue(value, decimalScale)
   );
-
-  React.useEffect(() => {
+  // Teks yang sedang diketik dipertahankan; baru ditimpa saat value/skala dari luar berubah.
+  const [synced, setSynced] = React.useState({ value, decimalScale });
+  if (synced.value !== value || synced.decimalScale !== decimalScale) {
+    setSynced({ value, decimalScale });
     setDisplayValue(formatDisplayValue(value, decimalScale));
-  }, [decimalScale, value]);
+  }
 
   const input = (
     <Input

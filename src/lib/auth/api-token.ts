@@ -1,13 +1,15 @@
 import crypto from "crypto";
 import { query, queryOne } from "@/lib/db";
 import type { SessionUser } from "@/lib/auth/session";
+import { API_TOKEN_PREFIX } from "@/lib/auth/api-token-format";
 
 /**
  * EPIC-042: Open API token — autentikasi machine-to-machine untuk SEMUA
  * endpoint /api/* (integrasi agent eksternal, mis. OpenClaw).
  *
  * Model:
- * - Token `arkiv_<64 hex>` — DB hanya menyimpan hash SHA-256-nya.
+ * - Token `nh_<64 hex>` (token lama `arkiv_` tetap diterima, lihat
+ *   api-token-format.ts) — DB hanya menyimpan hash SHA-256-nya.
  * - Token menempel ke satu akun user (service account): request Bearer
  *   berjalan SEBAGAI user itu, jadi seluruh IAM/menu grant tetap berlaku.
  * - Di atas IAM, token dibatasi lagi oleh SCOPES: '*' = semua, atau
@@ -17,8 +19,6 @@ import type { SessionUser } from "@/lib/auth/session";
  * Guardrail bisnis TIDAK dilewati token — mis. void tetap butuh PIN
  * supervisor; token hanya menggantikan cookie login, bukan aturan bisnis.
  */
-
-export const API_TOKEN_PREFIX = "arkiv_";
 
 /** Modul scope; path /api/<segmen> dipetakan ke salah satu kunci ini. */
 export const API_SCOPE_MODULES = [
@@ -88,12 +88,6 @@ export function mintApiToken(): { token: string; hash: string; prefix: string } 
     hash: hashApiToken(token),
     prefix: token.slice(0, API_TOKEN_PREFIX.length + 12),
   };
-}
-
-export function extractBearerToken(authorization: string | null): string | null {
-  const match = /^Bearer\s+(\S+)$/i.exec(String(authorization || "").trim());
-  const token = match?.[1] ?? null;
-  return token && token.startsWith(API_TOKEN_PREFIX) ? token : null;
 }
 
 export interface ApiTokenRow {

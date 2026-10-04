@@ -5,11 +5,25 @@ import { getApiUserScope } from "@/lib/api/scope";
 import {
   ACTIVE_STALL_ALL,
   ACTIVE_STALL_COOKIE,
+  LEGACY_ACTIVE_STALL_COOKIE,
   findActiveStall,
 } from "@/lib/auth/active-stall";
 import { getStallAccess } from "@/lib/auth/stall-access";
 import { isSecureRequest } from "@/lib/auth/secure-cookie";
 import { queryOne } from "@/lib/db";
+
+/** Simpan pilihan di cookie baru dan buang cookie nama lama. */
+function writeActiveStallCookie(response: NextResponse, value: string, request: NextRequest) {
+  const options = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: isSecureRequest(request),
+    path: "/",
+  };
+  response.cookies.set(ACTIVE_STALL_COOKIE, value, { ...options, maxAge: 60 * 60 * 24 * 30 });
+  response.cookies.set(LEGACY_ACTIVE_STALL_COOKIE, "", { ...options, maxAge: 0 });
+  return response;
+}
 
 const bodySchema = z.object({
   /** null = kembali ke "Semua Stall" */
@@ -39,15 +53,11 @@ export async function POST(request: NextRequest) {
         throw ApiError.forbidden("Anda hanya dapat memilih stall penempatan Anda");
       }
       // Simpan "all" agar berbeda dari cookie kosong (fallback ke penempatan).
-      const response = NextResponse.json({ success: true, data: { stall: null } });
-      response.cookies.set(ACTIVE_STALL_COOKIE, ACTIVE_STALL_ALL, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: isSecureRequest(request),
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
-      return response;
+      return writeActiveStallCookie(
+        NextResponse.json({ success: true, data: { stall: null } }),
+        ACTIVE_STALL_ALL,
+        request
+      );
     }
 
     if (!access.allAccess && !access.stalls.some((stall) => stall.id === warehouse_id)) {
@@ -68,15 +78,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const response = NextResponse.json({ success: true, data: { stall } });
-    response.cookies.set(ACTIVE_STALL_COOKIE, stall.id, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isSecureRequest(request),
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-    });
-    return response;
+    return writeActiveStallCookie(
+      NextResponse.json({ success: true, data: { stall } }),
+      stall.id,
+      request
+    );
   } catch (error) {
     if (error instanceof ApiError) return error.toResponse();
     const message = error instanceof Error ? error.message : "Failed to set active stall";

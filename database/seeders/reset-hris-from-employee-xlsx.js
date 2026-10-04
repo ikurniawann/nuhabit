@@ -572,7 +572,7 @@ async function provisionUser(client, { email, fullName, role, employeeId, scope,
   return userId;
 }
 
-async function ensureKeepEmployees(client, scope, passwordHash) {
+async function ensureKeepEmployees(client, scope) {
   for (const email of KEEP_EMAILS) {
     const auth = await client.query(
       `SELECT id, email, raw_app_meta_data->>'role' AS role FROM auth.users WHERE lower(email) = lower($1)`,
@@ -832,7 +832,7 @@ async function main() {
     }
     console.log(`reporting_to linked: ${linked}/${created.length}`);
 
-    await ensureKeepEmployees(client, scope, passwordHash);
+    await ensureKeepEmployees(client, scope);
 
     await client.query("COMMIT");
 

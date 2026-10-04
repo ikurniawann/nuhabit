@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createBrowserClient } from "@/lib/pg/browser-client";
-import { UserRole } from "@/types";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UserRole } from "@/types";
 
 export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
   full_name?: string;
-  avatar_url?: string;
 }
 
 interface UseAuthResult {
@@ -18,57 +16,41 @@ interface UseAuthResult {
   signOut: () => Promise<void>;
 }
 
-/**
- * Hook for accessing the current authenticated user.
- * Returns null when no active session exists.
- */
+interface MeResponse {
+  success: boolean;
+  data?: { id: string; email: string; role: UserRole | null; full_name: string | null };
+}
+
+export const authMeQueryKey = ["auth", "me"] as const;
+
+/** Profil user login dari /api/auth/me; null bila tidak ada sesi. */
+export async function fetchCurrentUser(): Promise<AuthUser | null> {
+  const res = await fetch("/api/auth/me");
+  if (!res.ok) return null;
+  const json = (await res.json()) as MeResponse;
+  if (!json.success || !json.data) return null;
+  return {
+    id: json.data.id,
+    email: json.data.email ?? "",
+    role: json.data.role ?? "purchasing_staff",
+    full_name: json.data.full_name ?? undefined,
+  };
+}
+
+/** User yang sedang login (null bila tidak ada sesi aktif). */
 export function useAuth(): UseAuthResult {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const db = createBrowserClient();
-
-    // Try to get session
-    db.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const u = session.user;
-        setUser({
-          id: u.id,
-          email: u.email ?? "",
-          role: (u.user_metadata?.role as UserRole) ?? "purchasing_staff",
-          full_name: u.user_metadata?.full_name,
-          avatar_url: u.user_metadata?.avatar_url,
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const u = session.user;
-        setUser({
-          id: u.id,
-          email: u.email ?? "",
-          role: (u.user_metadata?.role as UserRole) ?? "purchasing_staff",
-          full_name: u.user_metadata?.full_name,
-          avatar_url: u.user_metadata?.avatar_url,
-        });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const queryClient = useQueryClient();
+  const { data, isPending } = useQuery({
+    queryKey: authMeQueryKey,
+    queryFn: fetchCurrentUser,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
 
   async function signOut() {
-    const db = createBrowserClient();
-    await db.auth.signOut();
-    setUser(null);
+    await fetch("/api/auth/logout", { method: "POST" });
+    queryClient.setQueryData(authMeQueryKey, null);
   }
 
-  return { user, loading, signOut };
+  return { user: data ?? null, loading: isPending, signOut };
 }

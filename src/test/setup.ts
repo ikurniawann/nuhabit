@@ -1,8 +1,6 @@
-import { expect, vi } from 'vitest';
-import * as matchers from '@testing-library/jest-dom/matchers';
-
-// Extend expect with jest-dom matchers
-expect.extend(matchers as any);
+import { vi } from 'vitest';
+// Matcher jest-dom (toBeInTheDocument, dst.) beserta tipe untuk expect vitest.
+import '@testing-library/jest-dom/vitest';
 
 // Mock Next.js headers
 vi.mock('next/headers', () => ({

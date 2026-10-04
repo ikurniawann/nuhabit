@@ -7,14 +7,16 @@
  * logActivity('CREATE', 'PO', 'PO Created', 'PO-001 created successfully', 'PO-001');
  */
 
-import { ActivityType, ActivityModule } from "@/types/activity-log";
+import type { ActivityLog, ActivityLogState, ActivityModule } from "@/types/activity-log";
+
+type Metadata = ActivityLog["metadata"];
 
 // This will be called from components using useActivityLog
 // We'll create a custom hook wrapper
 
-export function createActivityLogger(addLog: (log: any) => void) {
+export function createActivityLogger(addLog: ActivityLogState["addLog"]) {
   return {
-    logCreate: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: any) => {
+    logCreate: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: Metadata) => {
       addLog({
         type: 'CREATE',
         module,
@@ -26,7 +28,7 @@ export function createActivityLogger(addLog: (log: any) => void) {
       });
     },
 
-    logUpdate: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, changes?: string, metadata?: any) => {
+    logUpdate: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, changes?: string, metadata?: Metadata) => {
       addLog({
         type: 'UPDATE',
         module,
@@ -38,7 +40,7 @@ export function createActivityLogger(addLog: (log: any) => void) {
       });
     },
 
-    logDelete: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: any) => {
+    logDelete: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: Metadata) => {
       addLog({
         type: 'DELETE',
         module,
@@ -50,7 +52,7 @@ export function createActivityLogger(addLog: (log: any) => void) {
       });
     },
 
-    logStatusChange: (module: ActivityModule, title: string, fromStatus: string, toStatus: string, recordId?: string, recordNumber?: string, metadata?: any) => {
+    logStatusChange: (module: ActivityModule, title: string, fromStatus: string, toStatus: string, recordId?: string, recordNumber?: string, metadata?: Metadata) => {
       addLog({
         type: 'STATUS_CHANGE',
         module,
@@ -62,7 +64,7 @@ export function createActivityLogger(addLog: (log: any) => void) {
       });
     },
 
-    logApprove: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: any) => {
+    logApprove: (module: ActivityModule, title: string, recordId?: string, recordNumber?: string, metadata?: Metadata) => {
       addLog({
         type: 'APPROVE',
         module,
@@ -74,7 +76,7 @@ export function createActivityLogger(addLog: (log: any) => void) {
       });
     },
 
-    logReject: (module: ActivityModule, title: string, reason: string, recordId?: string, recordNumber?: string, metadata?: any) => {
+    logReject: (module: ActivityModule, title: string, reason: string, recordId?: string, recordNumber?: string, metadata?: Metadata) => {
       addLog({
         type: 'REJECT',
         module,

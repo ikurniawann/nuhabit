@@ -106,6 +106,7 @@ describe("buildDigestMessage", () => {
         kemarin: { omzet: 1_000_000, pesanan: 8 },
         mingguLalu: { omzet: 0, pesanan: 0 },
         tujuhHari: [],
+        labaKotorHariIni: null,
       },
     };
     const msg = buildDigestMessage(overview, "2026-07-22");
@@ -121,6 +122,7 @@ describe("buildDigestMessage", () => {
         kemarin: { omzet: 0, pesanan: 0 },
         mingguLalu: { omzet: 0, pesanan: 0 },
         tujuhHari: [],
+        labaKotorHariIni: null,
       },
     };
     const msg = buildDigestMessage(overview, "2026-07-22");

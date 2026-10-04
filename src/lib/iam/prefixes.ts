@@ -100,6 +100,26 @@ export const IAM = {
    * .dept-tasks yang juga di-grant ke role employee (ESS).
    */
   hrisPerformanceAdmin: ["hris.performance.kpi-scorecard", "hris.performance.kpi-config"],
+  /** Tulis katalog produk POS (PATCH produk, SKU merchandise). */
+  posCatalogProducts: ["pos.catalog.products"],
+  /** Tulis pengaturan ARK & XP (kurs ARK, preset top-up). */
+  posLoyaltySettings: ["pos.loyalty.settings"],
+  /** Tulis profil Tax & Service (billing kasir). */
+  settingsBilling: ["settings.billing"],
+  /** Master produk/bahan & resep: halaman Items + POS katalog (picker produk, recipe-builder). */
+  itemsCatalog: ["items", "pos.catalog"],
+  /** Items → buat PR per modul (general, produk, bahan baku). */
+  itemsPr: [
+    "items.general.purchasing.pr",
+    "items.product.purchasing.pr",
+    "items.raw-material.purchasing.pr",
+  ],
+  /** Items → approval PR per modul. */
+  itemsPrApproval: [
+    "items.general.purchasing.approval-pr",
+    "items.product.approval.pr",
+    "items.raw-material.approval.pr",
+  ],
 } as const;
 
 export type IamPrefixGroup = (typeof IAM)[keyof typeof IAM];

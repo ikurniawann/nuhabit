@@ -27,7 +27,15 @@ function collectSelectItems(
   })
 }
 
-function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
+/**
+ * Select satu nilai. `onValueChange` menerima `Value` (default string): item di
+ * app ini selalu bernilai non-null, jadi null dari Base UI tidak pernah muncul.
+ */
+type SelectProps<Value = string> = Omit<SelectPrimitive.Root.Props<Value>, "onValueChange"> & {
+  onValueChange?: (value: Value, eventDetails: SelectPrimitive.Root.ChangeEventDetails) => void
+}
+
+function Select<Value = string>({ onValueChange, ...props }: SelectProps<Value>) {
   const { items: itemsProp, children } = props
   const items = React.useMemo(() => {
     if (itemsProp) return itemsProp
@@ -35,7 +43,13 @@ function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
     collectSelectItems(children, acc)
     return acc.length > 0 ? acc : undefined
   }, [itemsProp, children])
-  return <SelectPrimitive.Root {...props} items={items as never} />
+  return (
+    <SelectPrimitive.Root<Value>
+      {...props}
+      items={items as never}
+      onValueChange={onValueChange as SelectPrimitive.Root.Props<Value>["onValueChange"]}
+    />
+  )
 }
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
@@ -160,7 +174,7 @@ function SelectItem({
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
         }
       >
-        <CheckIcon className="pointer-events-none text-forest" />
+        <CheckIcon className="pointer-events-none text-brand-text" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
   )
