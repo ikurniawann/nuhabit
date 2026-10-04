@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"nuhabit/backend/internal/platform/database"
@@ -27,9 +26,6 @@ type fileHandler struct {
 	store *storage.Store
 	ai    aiClient
 	ocr   extract.OCR
-	// chunks serializes appends to one recording part, so the size check
-	// and the append of concurrent chunks cannot interleave.
-	chunks pathLocks
 }
 
 func newFileHandler(h *handler) *fileHandler {
@@ -114,40 +110,6 @@ func readForm(r *http.Request, limit int64, invalid, tooLarge string) (*storage.
 		return nil, httpx.BadRequest(invalid)
 	}
 	return form, nil
-}
-
-// pathLocks hands out one mutex per key, dropped when nobody holds it.
-type pathLocks struct {
-	mu   sync.Mutex
-	held map[string]*pathLock
-}
-
-type pathLock struct {
-	sync.Mutex
-	refs int
-}
-
-func (p *pathLocks) lock(key string) (unlock func()) {
-	p.mu.Lock()
-	if p.held == nil {
-		p.held = map[string]*pathLock{}
-	}
-	l := p.held[key]
-	if l == nil {
-		l = &pathLock{}
-		p.held[key] = l
-	}
-	l.refs++
-	p.mu.Unlock()
-	l.Lock()
-	return func() {
-		l.Unlock()
-		p.mu.Lock()
-		if l.refs--; l.refs == 0 {
-			delete(p.held, key)
-		}
-		p.mu.Unlock()
-	}
 }
 
 // aiError maps a missing API key to 400 with its message; anything else

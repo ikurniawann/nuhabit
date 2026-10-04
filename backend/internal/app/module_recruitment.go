@@ -22,8 +22,7 @@ func RecruitmentPorts(d module.Deps) recruitment.Ports {
 		Employees: recruitmentEmployees{},
 		Contracts: recruitmentContracts{now: d.Now},
 		Settings:  configuration.AppSettings{},
-		Speech: recruitmentSpeech{log: d.Log, ElevenLabs: "https://api.elevenlabs.io",
-			Azure: func(region string) string { return "https://" + region + ".tts.speech.microsoft.com" }},
-		Hired: recruitmentHired{},
+		Speech:    recruitmentSpeech{log: d.Log},
+		Hired:     recruitmentHired{},
 	}
 }

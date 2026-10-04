@@ -590,17 +590,33 @@ func (f *fileHandler) recordingChunk(w http.ResponseWriter, r *http.Request) err
 		return httpx.Status(http.StatusRequestEntityTooLarge, "Chunk terlalu besar")
 	}
 	rel := "interview/" + session.Str("id") + "/recording/part-" + part + ".webm"
-	unlock := f.chunks.lock(rel)
-	size, err := f.store.AppendPrivateChunk(rel, chunk.Data, maxPartBytes)
-	unlock()
+	size, appendErr, err := f.appendChunk(r.Context(), rel, chunk.Data)
 	if err != nil {
+		return err
+	}
+	if appendErr != nil {
 		status := http.StatusBadRequest
-		if strings.Contains(err.Error(), "Kuota") {
+		if strings.Contains(appendErr.Error(), "Kuota") {
 			status = http.StatusTooManyRequests
 		}
-		return httpx.Status(status, err.Error())
+		return httpx.Status(status, appendErr.Error())
 	}
 	return reply(w, http.StatusOK, "data", object("ok", true, "size", size))
+}
+
+// appendChunk appends under a transaction-scoped advisory lock keyed by
+// the part path, so the size check and the append of concurrent chunks do
+// not interleave on any API replica. appendErr is the storage refusal
+// (bad header, quota); err is a database failure.
+func (f *fileHandler) appendChunk(ctx context.Context, rel string, data []byte) (size int64, appendErr, err error) {
+	err = database.WithTx(ctx, f.db(), func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, rel); err != nil {
+			return err
+		}
+		size, appendErr = f.store.AppendPrivateChunk(rel, data, maxPartBytes)
+		return nil
+	})
+	return size, appendErr, err
 }
 
 // GET /api/interview/sessions/{id}/recordings: one session's video parts,

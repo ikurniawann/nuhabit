@@ -12,6 +12,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -575,7 +576,13 @@ func TestRecordingChunksAndList(t *testing.T) {
 
 // Concurrent chunks of one part run on the pool (the shared test
 // transaction is not safe for concurrent use).
-func TestConcurrentRecordingChunks(t *testing.T) {
+func TestConcurrentRecordingChunks(t *testing.T) { concurrentRecordingChunks(t, 1) }
+
+// Two module instances stand in for two API replicas: only the database
+// lock is shared between them.
+func TestConcurrentRecordingChunksAcrossInstances(t *testing.T) { concurrentRecordingChunks(t, 2) }
+
+func concurrentRecordingChunks(t *testing.T, instances int) {
 	dir := t.TempDir()
 	t.Setenv("STORAGE_DIR", dir)
 	deps := testutil.Deps(t, nil)
@@ -587,34 +594,45 @@ func TestConcurrentRecordingChunks(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM recruitment.candidates WHERE id = $1`, candidate) })
-	token := strings.Repeat("9f", 32)
+	token := strings.Repeat("9f", 31) + fmt.Sprintf("%02x", instances)
 	if err := pool.QueryRow(ctx, `INSERT INTO recruitment.interview_ai_sessions (candidate_id, token, status, invited_at, expires_at)
 		VALUES ($1, $2, 'in_progress', now(), now() + interval '1 day') RETURNING id::text`, candidate, token).Scan(&session); err != nil {
 		t.Fatal(err)
 	}
-	m := newModule(deps, pool, Ports{Settings: fakeSettings{}, Speech: &fakeSpeech{}, Hired: fakeHired{}})
-	mux := testutil.Mux(m)
-	send := func(data []byte) int {
+	muxes := make([]http.Handler, instances)
+	for i := range muxes {
+		muxes[i] = testutil.Mux(newModule(deps, pool, Ports{Settings: fakeSettings{}, Speech: &fakeSpeech{}, Hired: fakeHired{}}))
+	}
+	send := func(mux http.Handler, data []byte) (int, float64) {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, multipartRequest("POST", "/api/interview/session/"+token+"/recording-chunk",
 			map[string]string{"part": "1700000000001"}, part{"chunk", "b", "video/webm", data}))
-		return rec.Code
+		var out struct {
+			Data struct {
+				Size float64 `json:"size"`
+			} `json:"data"`
+		}
+		_ = json.Unmarshal(rec.Body.Bytes(), &out)
+		return rec.Code, out.Data.Size
 	}
 	header := append([]byte{0x1a, 0x45, 0xdf, 0xa3}, bytes.Repeat([]byte{'H'}, 100)...)
-	if code := send(header); code != 200 {
+	if code, _ := send(muxes[0], header); code != 200 {
 		t.Fatal(code)
 	}
-	const n = 12
+	const n, chunkLen = 12, 64 * 1024
 	chunks := make([][]byte, n)
+	sizes := make([]float64, n)
 	var wg sync.WaitGroup
 	for i := range n {
-		chunks[i] = bytes.Repeat([]byte{byte('a' + i)}, 64*1024)
+		chunks[i] = bytes.Repeat([]byte{byte('a' + i)}, chunkLen)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if code := send(chunks[i]); code != 200 {
+			code, size := send(muxes[i%instances], chunks[i])
+			if code != 200 {
 				t.Errorf("chunk %d: %d", i, code)
 			}
+			sizes[i] = size
 		}()
 	}
 	wg.Wait()
@@ -622,12 +640,20 @@ func TestConcurrentRecordingChunks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != len(header)+n*64*1024 || !bytes.HasPrefix(got, header) {
+	if len(got) != len(header)+n*chunkLen || !bytes.HasPrefix(got, header) {
 		t.Fatalf("size %d", len(got))
 	}
 	for i, c := range chunks {
 		if !bytes.Contains(got, c) {
 			t.Fatalf("chunk %d interleaved", i)
+		}
+	}
+	// Each size check saw the previous append: the reported sizes are the
+	// running totals, every one exactly once.
+	slices.Sort(sizes)
+	for i, size := range sizes {
+		if want := float64(len(header) + (i+1)*chunkLen); size != want {
+			t.Fatalf("reported sizes %v", sizes)
 		}
 	}
 }

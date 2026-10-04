@@ -14,6 +14,7 @@ import (
 
 	"nuhabit/backend/internal/modules/configuration/kit"
 	"nuhabit/backend/internal/modules/configuration/settings/domain"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/validate"
@@ -205,7 +206,7 @@ func (h *handler) previewTts(w http.ResponseWriter, r *http.Request) error {
 	if v, ok := body["model"].(string); ok {
 		override.model = &v
 	}
-	res, err := h.synthesize(r.Context(), text, override)
+	res, err := synthesize(r.Context(), h.db, h.urls, text, override)
 	var notConfigured ttsNotConfigured
 	switch {
 	case errors.As(err, &notConfigured):
@@ -258,10 +259,18 @@ const (
 		"HR interviewer yang menenangkan kandidat. Tempo sedang, artikulasi rapi."
 )
 
+// Synthesize is synthesizeSpeech: text as mp3 in the provider, voice and
+// model stored in configuration.app_settings, read on q. Zero Endpoints
+// use the production API roots.
+func Synthesize(ctx context.Context, q database.Querier, urls Endpoints, text string) ([]byte, error) {
+	res, err := synthesize(ctx, q, urls.withDefaults(), text, ttsOverride{})
+	return res.audio, err
+}
+
 // synthesize is synthesizeSpeech with the preview's override: stored voice
 // and model apply only while the provider stays the same.
-func (h *handler) synthesize(ctx context.Context, text string, o ttsOverride) (ttsResult, error) {
-	s, err := h.settings.GetMany(ctx, h.db, []string{"tts_provider", "tts_voice", "tts_model", "openai_api_key",
+func synthesize(ctx context.Context, q database.Querier, urls Endpoints, text string, o ttsOverride) (ttsResult, error) {
+	s, err := kit.AppSettings{}.GetMany(ctx, q, []string{"tts_provider", "tts_voice", "tts_model", "openai_api_key",
 		"openai_base_url", "azure_speech_key", "azure_speech_region", "elevenlabs_api_key"})
 	if err != nil {
 		return ttsResult{}, fmt.Errorf("%w: %w", errSettingsRead, err)
@@ -295,16 +304,16 @@ func (h *handler) synthesize(ctx context.Context, text string, o ttsOverride) (t
 	var audio []byte
 	switch cfg.provider {
 	case "azure":
-		audio, err = h.synthesizeAzure(ctx, input, cfg)
+		audio, err = synthesizeAzure(ctx, urls, input, cfg)
 	case "elevenlabs":
-		audio, err = h.synthesizeElevenLabs(ctx, input, cfg)
+		audio, err = synthesizeElevenLabs(ctx, urls, input, cfg)
 	default:
-		audio, err = h.synthesizeOpenAI(ctx, input, cfg)
+		audio, err = synthesizeOpenAI(ctx, input, cfg)
 	}
 	return ttsResult{audio: audio, provider: cfg.provider, voice: cfg.voice, model: cfg.model}, err
 }
 
-func (h *handler) synthesizeOpenAI(ctx context.Context, text string, cfg ttsConfig) ([]byte, error) {
+func synthesizeOpenAI(ctx context.Context, text string, cfg ttsConfig) ([]byte, error) {
 	if cfg.openAIKey == "" {
 		return nil, ttsNotConfigured("API key OpenAI belum diisi. Atur di Settings → Integrasi.")
 	}
@@ -329,7 +338,7 @@ func (h *handler) synthesizeOpenAI(ctx context.Context, text string, cfg ttsConf
 
 var ssmlEscaper = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;", `"`, "&quot;", "'", "&apos;")
 
-func (h *handler) synthesizeAzure(ctx context.Context, text string, cfg ttsConfig) ([]byte, error) {
+func synthesizeAzure(ctx context.Context, urls Endpoints, text string, cfg ttsConfig) ([]byte, error) {
 	if cfg.azureKey == "" || cfg.azureRegion == "" {
 		return nil, ttsNotConfigured("Azure Speech key atau region belum diisi. Atur di Settings → Suara AI.")
 	}
@@ -342,7 +351,7 @@ func (h *handler) synthesizeAzure(ctx context.Context, text string, cfg ttsConfi
 	ssml := `<speak version="1.0" xml:lang="` + locale + `">` +
 		`<voice name="` + ssmlEscaper.Replace(cfg.voice) + `">` + ssmlEscaper.Replace(text) + `</voice>` +
 		`</speak>`
-	return postAudio(ctx, "Azure", h.urls.Azure(cfg.azureRegion)+"/cognitiveservices/v1", []byte(ssml), map[string]string{
+	return postAudio(ctx, "Azure", urls.Azure(cfg.azureRegion)+"/cognitiveservices/v1", []byte(ssml), map[string]string{
 		"Ocp-Apim-Subscription-Key": cfg.azureKey,
 		"Content-Type":              "application/ssml+xml",
 		"X-Microsoft-OutputFormat":  "audio-24khz-48kbitrate-mono-mp3",
@@ -350,7 +359,7 @@ func (h *handler) synthesizeAzure(ctx context.Context, text string, cfg ttsConfi
 	})
 }
 
-func (h *handler) synthesizeElevenLabs(ctx context.Context, text string, cfg ttsConfig) ([]byte, error) {
+func synthesizeElevenLabs(ctx context.Context, urls Endpoints, text string, cfg ttsConfig) ([]byte, error) {
 	if cfg.elevenLabsKey == "" {
 		return nil, ttsNotConfigured("ElevenLabs API key belum diisi. Atur di Settings → Suara AI.")
 	}
@@ -364,7 +373,7 @@ func (h *handler) synthesizeElevenLabs(ctx context.Context, text string, cfg tts
 	if err != nil {
 		return nil, err
 	}
-	return postAudio(ctx, "ElevenLabs", h.urls.ElevenLabs+"/v1/text-to-speech/"+encodeURIComponent(cfg.voice), body,
+	return postAudio(ctx, "ElevenLabs", urls.ElevenLabs+"/v1/text-to-speech/"+encodeURIComponent(cfg.voice), body,
 		map[string]string{"xi-api-key": cfg.elevenLabsKey, "Content-Type": "application/json", "Accept": "audio/mpeg"})
 }
 

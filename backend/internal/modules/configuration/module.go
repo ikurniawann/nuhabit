@@ -7,6 +7,8 @@
 package configuration
 
 import (
+	"context"
+
 	"nuhabit/backend/internal/modules/configuration/access"
 	"nuhabit/backend/internal/modules/configuration/accounts"
 	"nuhabit/backend/internal/modules/configuration/apitokens"
@@ -24,6 +26,16 @@ const Name = "configuration"
 // getSettings, setSetting) on the caller's querier. Other modules reach it
 // through a port that internal/app adapts to this type.
 type AppSettings = kit.AppSettings
+
+// TtsEndpoints are the speech API roots of Synthesize; zero values use
+// production.
+type TtsEndpoints = settings.Endpoints
+
+// Synthesize is the configured text-to-speech (lib/tts/synthesize.ts): text
+// as mp3 in the provider, voice and model stored in app settings, read on q.
+func Synthesize(ctx context.Context, q database.Querier, urls TtsEndpoints, text string) ([]byte, error) {
+	return settings.Synthesize(ctx, q, urls, text)
+}
 
 // Ports are the adapters internal/app wires from other bounded contexts.
 type Ports struct {

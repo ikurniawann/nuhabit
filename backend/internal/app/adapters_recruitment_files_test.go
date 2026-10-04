@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"nuhabit/backend/internal/modules/configuration"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -61,7 +62,8 @@ func TestRecruitmentSpeechAdapter(t *testing.T) {
 	if _, err := tx.Exec(ctx, `DELETE FROM configuration.app_settings WHERE key LIKE 'tts\_%' OR key LIKE 'openai\_%' OR key LIKE 'azure\_%'`); err != nil {
 		t.Fatal(err)
 	}
-	speech := recruitmentSpeech{log: slog.New(slog.DiscardHandler), ElevenLabs: srv.URL, Azure: func(string) string { return srv.URL }}
+	speech := recruitmentSpeech{log: slog.New(slog.DiscardHandler),
+		urls: configuration.TtsEndpoints{ElevenLabs: srv.URL, Azure: func(string) string { return srv.URL }}}
 
 	if audio := speech.Synthesize(ctx, tx, "Halo"); audio != nil {
 		t.Fatal("no key: nil, the interview goes on as text")
@@ -82,6 +84,16 @@ func TestRecruitmentSpeechAdapter(t *testing.T) {
 	speech.Synthesize(ctx, tx, `Gaji <b>"anda"</b>?`)
 	if path != "/cognitiveservices/v1" || auth != "az" ||
 		got["ssml"] != `<speak version="1.0" xml:lang="id-ID"><voice name="id-ID-GadisNeural">Gaji &lt;b&gt;&quot;anda&quot;&lt;/b&gt;?</voice></speak>` {
+		t.Fatalf("%s %v", path, got)
+	}
+
+	set("tts_provider", "elevenlabs")
+	set("elevenlabs_api_key", "xi")
+	set("tts_voice", "voice id")
+	if audio := speech.Synthesize(ctx, tx, "Halo"); string(audio) != "ID3-mp3" {
+		t.Fatalf("%q", audio)
+	}
+	if path != "/v1/text-to-speech/voice id" || got["text"] != "Halo" || got["model_id"] == nil {
 		t.Fatalf("%s %v", path, got)
 	}
 }
