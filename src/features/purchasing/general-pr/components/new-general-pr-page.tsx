@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { GeneralPRForm } from "@/components/purchasing/general-pr-form";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { GeneralPRForm } from "@/features/purchasing/general-pr/components/general-pr-form";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { useGeneralPRFormData } from "../queries";
 import { useCreateGeneralPurchaseRequest } from "../mutations";
 import type { GeneralPRFormInput } from "../types";

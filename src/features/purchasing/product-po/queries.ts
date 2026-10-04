@@ -10,11 +10,12 @@ import {
 } from "./api";
 import { productPoQueryKeys } from "./query-keys";
 
-export function useProductPurchaseOrderList(params: ProductPOListParams) {
+export function useProductPurchaseOrderList(params: ProductPOListParams, enabled = true) {
   return useQuery({
     queryKey: productPoQueryKeys.list(params),
     queryFn: () => listProductPurchaseOrders(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

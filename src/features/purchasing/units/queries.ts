@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { listUnits } from "@/lib/purchasing";
+import { listUnits } from "@/lib/purchasing/api-client/units";
 import { unitsQueryKeys, type UnitListParams } from "./query-keys";
 
 export const useUnitList = (params: UnitListParams) =>

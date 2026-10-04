@@ -2,12 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { UnitFormData } from "@/types/purchasing";
-import {
-  createUnit,
-  updateUnit,
-  updateUnitStatus,
-  deleteUnit,
-} from "@/lib/purchasing";
+import { createUnit, updateUnit, updateUnitStatus, deleteUnit } from "@/lib/purchasing/api-client/units";
 import { unitsQueryKeys } from "./query-keys";
 
 export function useCreateUnit() {

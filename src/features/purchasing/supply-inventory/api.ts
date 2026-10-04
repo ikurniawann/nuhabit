@@ -12,7 +12,7 @@ import type {
 async function parseJson<T>(res: Response, fallback: string): Promise<T> {
   const json = await res.json().catch(() => null);
   if (!res.ok || json?.success === false) {
-    throw new Error(json?.message || fallback);
+    throw new Error(json?.error || json?.message || fallback);
   }
   return (json?.data ?? json) as T;
 }

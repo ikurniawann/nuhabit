@@ -4,65 +4,45 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { Switch } from "@/components/ui/switch";
-import { ITEMS_RAW_MATERIALS_PATH, RM_ROUTES } from "@/modules/purchasing/constants/items-nav";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { ITEMS_RAW_MATERIALS_PATH, RM_ROUTES } from "@/lib/purchasing/item-routes";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import {
   AlertCircle,
   CheckCircle2,
-  Eye,
   Filter,
   Loader2,
   Package,
   PackageX,
-  Pencil,
   Plus,
   Search,
-  Trash2,
   Upload,
   Download,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { downloadExport } from "@/lib/purchasing/api-client/download";
 import { RawMaterialWithStock, MaterialCategory } from "@/types/purchasing";
 import { useRawMaterialList, useRawMaterialCategoryOptions } from "../queries";
 import { useDeleteRawMaterial, useUpdateRawMaterialStatus } from "../mutations";
-import { getRawMaterialUnitInfo, largeToBaseUnit } from "../unit-math";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   buildLookupLabelMap,
   resolveCategoryLabel,
   toLookupOptions,
 } from "../master-lookups";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { formatNumber } from "@/lib/format";
+import { RawMaterialsTable } from "./raw-materials-table";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Semua Status Stok" },
   { value: "below_minimum", label: "Stok Menipis atau Habis" },
 ];
 
-const STOCK_STATUS_STYLES: Record<string, string> = {
-  AMAN: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  MENIPIS: "border-amber-200 bg-amber-50 text-amber-700",
-  HABIS: "border-red-200 bg-red-50 text-red-700",
-};
-
-const STOCK_STATUS_LABELS: Record<string, string> = {
-  AMAN: "Aman",
-  MENIPIS: "Stok Menipis",
-  HABIS: "Stok Habis",
-};
-
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function formatQty(value?: number | null) {
-  return Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 4 });
 }
 
 export function RawMaterialsPage() {
@@ -133,21 +113,6 @@ export function RawMaterialsPage() {
     return () => window.clearTimeout(timeout);
   }, [searchQuery]);
 
-  const getCategoryLabel = (category?: MaterialCategory | null) =>
-    resolveCategoryLabel(category, categoryMap);
-
-  const getStockStatusBadge = (status: string) => {
-    const normalized = status || "AMAN";
-    return (
-      <Badge variant="outline" className={STOCK_STATUS_STYLES[normalized] || STOCK_STATUS_STYLES.AMAN}>
-        {normalized === "MENIPIS" || normalized === "HABIS" ? (
-          <AlertCircle className="mr-1 inline h-3 w-3" />
-        ) : null}
-        {STOCK_STATUS_LABELS[normalized] || normalized}
-      </Badge>
-    );
-  };
-
   const handleResetFilters = () => {
     setSearchQuery("");
     setSearch("");
@@ -197,24 +162,10 @@ export function RawMaterialsPage() {
 
     setExporting(true);
     try {
-      const response = await fetch("/api/purchasing/export/raw-materials");
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message || "Ekspor gagal");
-      }
-
-      const blob = await response.blob();
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename =
-        match?.[1] || `raw-materials-${new Date().toISOString().split("T")[0]}.xlsx`;
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
+      await downloadExport(
+        "/api/purchasing/export/raw-materials",
+        `raw-materials-${new Date().toISOString().split("T")[0]}.xlsx`
+      );
 
       toast.success("Bahan baku berhasil diekspor ke Excel.");
     } catch (error: unknown) {
@@ -259,7 +210,7 @@ export function RawMaterialsPage() {
             label: "Total Bahan",
             value: stockSummary.total,
             className: "text-gray-900",
-            iconWrap: "bg-primary/10 text-primary",
+            iconWrap: "bg-primary/10 text-brand-text",
             icon: Package,
           },
           {
@@ -297,7 +248,7 @@ export function RawMaterialsPage() {
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-gray-500">{stat.label}</p>
                     <p className={`mt-0.5 text-2xl font-bold tabular-nums ${stat.className}`}>
-                      {stat.value.toLocaleString("id-ID")}
+                      {formatNumber(stat.value)}
                     </p>
                   </div>
                 </div>
@@ -444,143 +395,13 @@ export function RawMaterialsPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto px-4">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
-                      <th className="py-3 pr-4 text-left font-semibold">Kode</th>
-                      <th className="px-3 py-3 text-left font-semibold">Nama Bahan</th>
-                      <th className="px-3 py-3 text-left font-semibold">Kategori</th>
-                      <th className="px-3 py-3 text-left font-semibold">COA</th>
-                      <th className="px-3 py-3 text-right font-semibold">Stok Tersedia</th>
-                      <th className="px-3 py-3 text-right font-semibold">Stok Minimum</th>
-                      <th className="px-3 py-3 text-right font-semibold">Harga Rata-rata</th>
-                      <th className="px-3 py-3 text-center font-semibold">Status Stok</th>
-                      <th className="px-3 py-3 text-center font-semibold">Aktif</th>
-                      <th className="py-3 pl-3 text-right font-semibold">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200/70">
-                    {materials.map((material) => {
-                      const unitInfo = getRawMaterialUnitInfo(material);
-                      // qty_onhand & stok_minimum sama-sama tersimpan dalam SATUAN BESAR,
-                      // sementara kolom ini dilabeli satuan dasar. Sebelumnya hanya
-                      // stok minimum yang dikonversi, sehingga mis. beras 8 karung
-                      // tampil sebagai "8 Kilogram" berdampingan dengan minimum
-                      // "50 Kilogram" — terbaca seolah stok di bawah minimum.
-                      const qtyOnHand = largeToBaseUnit(
-                        material.qty_onhand ?? 0,
-                        unitInfo.konversiFactor
-                      );
-                      const minStock = largeToBaseUnit(
-                        material.stok_minimum ?? 0,
-                        unitInfo.konversiFactor
-                      );
-                      const unitLabel = unitInfo.baseUnitName;
-
-                      return (
-                        <tr key={material.id} className="transition-colors hover:bg-gray-50/80">
-                          <td className="py-3 pr-4">
-                            <span className="font-medium text-gray-900">{material.kode}</span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <Link
-                              href={`${ITEMS_RAW_MATERIALS_PATH}/${material.id}`}
-                              className="font-medium text-pink-700 hover:underline"
-                            >
-                              {material.nama}
-                            </Link>
-                          </td>
-                          <td className="px-3 py-3 text-gray-700">
-                            {getCategoryLabel(material.kategori)}
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {material.coa_production && (
-                                <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-                                  Produksi {material.coa_production}
-                                </Badge>
-                              )}
-                              {material.coa_rnd && (
-                                <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700">
-                                  R&amp;D {material.coa_rnd}
-                                </Badge>
-                              )}
-                              {material.coa_asset && (
-                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
-                                  Aset {material.coa_asset}
-                                </Badge>
-                              )}
-                              {!material.coa_production && !material.coa_rnd && !material.coa_asset && (
-                                <span className="text-sm text-gray-400">-</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 text-right">
-                            <span
-                              className={
-                                qtyOnHand <= 0
-                                  ? "font-semibold text-red-600"
-                                  : qtyOnHand <= minStock
-                                    ? "font-semibold text-amber-600"
-                                    : "text-gray-700"
-                              }
-                            >
-                              {formatQty(qtyOnHand)}
-                            </span>
-                            <span className="ml-1 text-xs text-gray-500">{unitLabel}</span>
-                          </td>
-                          <td className="px-3 py-3 text-right text-gray-700">
-                            {formatQty(minStock)}
-                            <span className="ml-1 text-xs text-gray-500">{unitLabel}</span>
-                          </td>
-                          <td className="px-3 py-3 text-right text-gray-700">
-                            {(material.avg_cost ?? 0) > 0 ? formatAmount(material.avg_cost) : "-"}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            {getStockStatusBadge(material.status_stok ?? "AMAN")}
-                          </td>
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex items-center justify-center">
-                              <Switch
-                                checked={material.is_active ?? true}
-                                disabled={statusUpdatingId === material.id}
-                                onCheckedChange={(checked) =>
-                                  setStatusDialog({ open: true, material, nextStatus: checked })
-                                }
-                                aria-label={`Ubah status aktif ${material.nama}`}
-                              />
-                            </div>
-                          </td>
-                          <td className="py-3 pl-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Link href={`${ITEMS_RAW_MATERIALS_PATH}/${material.id}`}>
-                                <Button variant="ghost" size="sm" className="cursor-pointer" title="Lihat Detail">
-                                  <Eye className="h-4 w-4 text-pink-600" />
-                                </Button>
-                              </Link>
-                              <Link href={`${ITEMS_RAW_MATERIALS_PATH}/edit/${material.id}`}>
-                                <Button variant="ghost" size="sm" className="cursor-pointer" title="Ubah">
-                                  <Pencil className="h-4 w-4 text-gray-600" />
-                                </Button>
-                              </Link>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="cursor-pointer text-red-500 hover:text-red-600"
-                                title="Hapus"
-                                onClick={() => handleOpenDelete(material)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <RawMaterialsTable
+                materials={materials}
+                categoryLabel={(kategori) => resolveCategoryLabel(kategori, categoryMap)}
+                statusUpdatingId={statusUpdatingId}
+                onToggleStatus={(material, nextStatus) => setStatusDialog({ open: true, material, nextStatus })}
+                onDelete={handleOpenDelete}
+              />
 
               <PurchasingTablePagination
                 page={page}

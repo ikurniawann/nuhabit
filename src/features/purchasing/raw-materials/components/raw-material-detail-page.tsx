@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ITEMS_RAW_MATERIALS_PATH } from "@/modules/purchasing/constants/items-nav";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { ITEMS_RAW_MATERIALS_PATH } from "@/lib/purchasing/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import {
   AlertCircle,
   Edit,
@@ -19,11 +19,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { RawMaterialWithStock } from "@/types/purchasing";
 import {
   useRawMaterial,
   useRawMaterialCategoryOptions,
-  useRawMaterialPriceHistory,
 } from "../queries";
 import { useDeleteRawMaterial } from "../mutations";
 import {
@@ -32,7 +30,9 @@ import {
 } from "../master-lookups";
 import { baseToLargeUnit, getRawMaterialUnitInfo, largeToBaseUnit } from "../unit-math";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { formatNumber } from "@/lib/format";
+import { RawMaterialConversionsTab } from "./raw-material-conversions-tab";
+import { RawMaterialPriceHistoryTab } from "./raw-material-price-history-tab";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -59,7 +59,6 @@ export function RawMaterialDetailPage() {
 
   const materialQuery = useRawMaterial(materialId);
   const categoriesQuery = useRawMaterialCategoryOptions();
-  const priceHistoryQuery = useRawMaterialPriceHistory(materialId);
   const categoryMap = buildLookupLabelMap(categoriesQuery.data);
   const material = materialQuery.data ?? null;
   const loading = materialQuery.isLoading;
@@ -76,20 +75,6 @@ export function RawMaterialDetailPage() {
       console.error("Error deleting material:", error);
       toast.error(getErrorMessage(error, "Gagal menghapus bahan baku"));
     }
-  };
-
-  const formatNumber = (num: number | undefined | null) => {
-    if (num === undefined || num === null) return "0";
-    return num.toLocaleString("en-US", { maximumFractionDigits: 4 });
-  };
-
-  const formatDate = (value?: string | null) => {
-    if (!value) return "-";
-    return new Date(value).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
   };
 
   const getStockStatusBadge = (status: string) => {
@@ -126,26 +111,6 @@ export function RawMaterialDetailPage() {
     unitInfo.hasSmallUnit ? (
       <p className="mt-0.5 text-xs text-gray-500">{label}</p>
     ) : null;
-
-  const priceHistory = priceHistoryQuery.data;
-  const priceHistoryLoading = priceHistoryQuery.isLoading;
-  const priceSummary = priceHistory?.summary;
-  const purchaseCosts = priceHistory?.purchase_costs ?? [];
-
-  const unitConversions = material?.unit_conversions?.filter((conversion) => conversion.is_active !== false) || [];
-  const baseConversion = unitConversions.find((conversion) => conversion.is_base) || unitConversions[0];
-  const baseUnitLabel =
-    baseConversion?.satuan?.simbol ||
-    baseConversion?.satuan?.kode ||
-    baseConversion?.satuan?.nama ||
-    (material?.satuan_kecil_id ? satuanKecilName : satuanBesarName);
-  const alternativeConversions = unitConversions.filter((conversion) => !conversion.is_base);
-
-  const getConversionUnitLabel = (conversion: NonNullable<RawMaterialWithStock["unit_conversions"]>[number]) =>
-    conversion.satuan?.simbol || conversion.satuan?.kode || conversion.satuan?.nama || "-";
-
-  const getConversionUnitName = (conversion: NonNullable<RawMaterialWithStock["unit_conversions"]>[number]) =>
-    conversion.satuan?.nama || getConversionUnitLabel(conversion);
 
   if (loading) {
     return (
@@ -206,10 +171,10 @@ export function RawMaterialDetailPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500">Stok Tersedia</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatNumber(qtyOnHandBase)} {baseUnitName}
+                  {formatNumber(qtyOnHandBase, 4)} {baseUnitName}
                 </p>
                 {renderUnitEquivalent(
-                  `≈ ${formatNumber(baseToLargeUnit(qtyOnHandBase, konversiFactor))} ${satuanBesarName}`
+                  `≈ ${formatNumber(baseToLargeUnit(qtyOnHandBase, konversiFactor), 4)} ${satuanBesarName}`
                 )}
               </div>
             </div>
@@ -224,10 +189,10 @@ export function RawMaterialDetailPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500">Stok Minimum</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatNumber(stokMinimumLarge)} {satuanBesarName}
+                  {formatNumber(stokMinimumLarge, 4)} {satuanBesarName}
                 </p>
                 {renderUnitEquivalent(
-                  `= ${formatNumber(largeToBaseUnit(stokMinimumLarge, konversiFactor))} ${baseUnitName}`
+                  `= ${formatNumber(largeToBaseUnit(stokMinimumLarge, konversiFactor), 4)} ${baseUnitName}`
                 )}
               </div>
             </div>
@@ -242,10 +207,10 @@ export function RawMaterialDetailPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500">Stok Maksimum</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatNumber(stokMaximumLarge)} {satuanBesarName}
+                  {formatNumber(stokMaximumLarge, 4)} {satuanBesarName}
                 </p>
                 {renderUnitEquivalent(
-                  `= ${formatNumber(largeToBaseUnit(stokMaximumLarge, konversiFactor))} ${baseUnitName}`
+                  `= ${formatNumber(largeToBaseUnit(stokMaximumLarge, konversiFactor), 4)} ${baseUnitName}`
                 )}
               </div>
             </div>
@@ -260,11 +225,11 @@ export function RawMaterialDetailPage() {
               <div>
                 <p className="text-xs font-medium text-gray-500">Harga Rata-rata</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {avgCostBase > 0 ? `${formatAmount(avgCostBase)} / ${baseUnitName}` : "-"}
+                  {avgCostBase > 0 ? `${formatNumber(avgCostBase)} / ${baseUnitName}` : "-"}
                 </p>
                 {avgCostBase > 0
                   ? renderUnitEquivalent(
-                      `≈ ${formatAmount(avgCostBase * konversiFactor)} / ${satuanBesarName}`
+                      `≈ ${formatNumber(avgCostBase * konversiFactor)} / ${satuanBesarName}`
                     )
                   : null}
               </div>
@@ -340,7 +305,7 @@ export function RawMaterialDetailPage() {
                     <p className="text-sm text-gray-500">Konversi</p>
                     <p className="font-medium text-gray-900">
                       {material.satuan_kecil_id
-                        ? `1 ${satuanBesarName} = ${formatNumber(material.konversi_factor || 1)} ${satuanKecilName}`
+                        ? `1 ${satuanBesarName} = ${formatNumber(material.konversi_factor || 1, 4)} ${satuanKecilName}`
                         : "Tanpa konversi"}
                     </p>
                   </div>
@@ -391,10 +356,10 @@ export function RawMaterialDetailPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Minimum</span>
                   <span className="text-right font-medium text-gray-900">
-                    {formatNumber(stokMinimumLarge)} {satuanBesarName}
+                    {formatNumber(stokMinimumLarge, 4)} {satuanBesarName}
                     {unitInfo.hasSmallUnit && (
                       <span className="block text-xs font-normal text-gray-500">
-                        = {formatNumber(largeToBaseUnit(stokMinimumLarge, konversiFactor))} {baseUnitName}
+                        = {formatNumber(largeToBaseUnit(stokMinimumLarge, konversiFactor), 4)} {baseUnitName}
                       </span>
                     )}
                   </span>
@@ -402,10 +367,10 @@ export function RawMaterialDetailPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-500">Maksimum</span>
                   <span className="text-right font-medium text-gray-900">
-                    {formatNumber(stokMaximumLarge)} {satuanBesarName}
+                    {formatNumber(stokMaximumLarge, 4)} {satuanBesarName}
                     {unitInfo.hasSmallUnit && (
                       <span className="block text-xs font-normal text-gray-500">
-                        = {formatNumber(largeToBaseUnit(stokMaximumLarge, konversiFactor))} {baseUnitName}
+                        = {formatNumber(largeToBaseUnit(stokMaximumLarge, konversiFactor), 4)} {baseUnitName}
                       </span>
                     )}
                   </span>
@@ -425,28 +390,28 @@ export function RawMaterialDetailPage() {
                 <div>
                   <p className="text-sm text-gray-500">Stok Tersedia</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatNumber(qtyOnHandBase)} {baseUnitName}
+                    {formatNumber(qtyOnHandBase, 4)} {baseUnitName}
                   </p>
                   {renderUnitEquivalent(
-                    `≈ ${formatNumber(baseToLargeUnit(qtyOnHandBase, konversiFactor))} ${satuanBesarName}`
+                    `≈ ${formatNumber(baseToLargeUnit(qtyOnHandBase, konversiFactor), 4)} ${satuanBesarName}`
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Stok Dipesan</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatNumber(qtyReservedBase)} {baseUnitName}
+                    {formatNumber(qtyReservedBase, 4)} {baseUnitName}
                   </p>
                   {renderUnitEquivalent(
-                    `≈ ${formatNumber(baseToLargeUnit(qtyReservedBase, konversiFactor))} ${satuanBesarName}`
+                    `≈ ${formatNumber(baseToLargeUnit(qtyReservedBase, konversiFactor), 4)} ${satuanBesarName}`
                   )}
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Stok Dalam Pemesanan</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatNumber(qtyOnOrderBase)} {baseUnitName}
+                    {formatNumber(qtyOnOrderBase, 4)} {baseUnitName}
                   </p>
                   {renderUnitEquivalent(
-                    `≈ ${formatNumber(baseToLargeUnit(qtyOnOrderBase, konversiFactor))} ${satuanBesarName}`
+                    `≈ ${formatNumber(baseToLargeUnit(qtyOnOrderBase, konversiFactor), 4)} ${satuanBesarName}`
                   )}
                 </div>
               </div>
@@ -454,10 +419,10 @@ export function RawMaterialDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Harga Rata-rata</span>
                   <span className="text-right text-xl font-semibold text-gray-900">
-                    {avgCostBase > 0 ? `${formatAmount(avgCostBase)} / ${baseUnitName}` : "-"}
+                    {avgCostBase > 0 ? `${formatNumber(avgCostBase)} / ${baseUnitName}` : "-"}
                     {avgCostBase > 0 && unitInfo.hasSmallUnit && (
                       <span className="block text-xs font-normal text-gray-500">
-                        ≈ {formatAmount(avgCostBase * konversiFactor)} / {satuanBesarName}
+                        ≈ {formatNumber(avgCostBase * konversiFactor)} / {satuanBesarName}
                       </span>
                     )}
                   </span>
@@ -466,10 +431,10 @@ export function RawMaterialDetailPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Harga Beli Acuan</span>
                     <span className="text-right text-lg font-medium text-gray-900">
-                      {formatAmount(hargaBeliLarge)} / {satuanBesarName}
+                      {formatNumber(hargaBeliLarge)} / {satuanBesarName}
                       {unitInfo.hasSmallUnit && (
                         <span className="block text-xs font-normal text-gray-500">
-                          = {formatAmount(hargaBeliLarge / konversiFactor)} / {baseUnitName}
+                          = {formatNumber(hargaBeliLarge / konversiFactor)} / {baseUnitName}
                         </span>
                       )}
                     </span>
@@ -478,7 +443,7 @@ export function RawMaterialDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Nilai Persediaan</span>
                   <span className="text-lg font-medium text-gray-900">
-                    {formatAmount(qtyOnHandBase * avgCostBase)}
+                    {formatNumber(qtyOnHandBase * avgCostBase)}
                   </span>
                 </div>
               </div>
@@ -487,178 +452,15 @@ export function RawMaterialDetailPage() {
         </TabsContent>
 
         <TabsContent value="prices" className="space-y-4">
-          {priceHistoryLoading ? (
-            <div className="flex items-center justify-center py-12 text-sm text-gray-500">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin text-pink-600" />
-              Memuat riwayat harga...
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[
-                  { label: "Harga Beli Terakhir", value: priceSummary?.last_cost },
-                  { label: "Terendah", value: priceSummary?.min_cost },
-                  { label: "Tertinggi", value: priceSummary?.max_cost },
-                  { label: "Rata-rata Pembelian", value: priceSummary?.avg_cost },
-                ].map((stat) => (
-                  <Card key={stat.label} className="border-gray-200/70 shadow-xs">
-                    <CardContent className="p-4">
-                      <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-                      <p className="mt-1 text-lg font-bold text-gray-900">
-                        {stat.value && stat.value > 0 ? formatAmount(stat.value) : "-"}
-                      </p>
-                      <p className="mt-0.5 text-xs text-gray-500">per {baseUnitName}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Card className="border-gray-200/70 shadow-xs">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Riwayat Harga Pembelian</CardTitle>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Harga aktual saat stok masuk dari GRN dan impor, dicatat per {baseUnitName}.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {purchaseCosts.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-gray-200/70 bg-white px-4 py-8 text-center">
-                      <p className="text-sm font-medium text-gray-700">Belum ada riwayat pembelian</p>
-                      <p className="mt-1 text-sm text-gray-500">
-                        Riwayat muncul setelah bahan baku diterima lewat GRN atau impor stok awal.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
-                            <th className="px-4 py-3 text-left font-semibold">Tanggal</th>
-                            <th className="px-4 py-3 text-left font-semibold">Referensi</th>
-                            <th className="px-4 py-3 text-right font-semibold">Jumlah</th>
-                            <th className="px-4 py-3 text-right font-semibold">Harga Satuan</th>
-                            <th className="px-4 py-3 text-right font-semibold">Total</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200/70">
-                          {purchaseCosts.map((movement) => (
-                            <tr key={movement.id} className="hover:bg-gray-50/80">
-                              <td className="px-4 py-3 text-gray-700">
-                                {formatDate(movement.created_at)}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="font-medium text-gray-900">
-                                  {movement.reference_number || "-"}
-                                </div>
-                                <div className="text-xs uppercase text-gray-500">
-                                  {movement.reference_type === "import" ? "Impor" : "GRN"}
-                                </div>
-                              </td>
-                              <td className="px-4 py-3 text-right text-gray-700">
-                                {formatNumber(movement.jumlah)} {baseUnitName}
-                              </td>
-                              <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                                {formatAmount(movement.unit_cost ?? 0)}
-                              </td>
-                              <td className="px-4 py-3 text-right text-gray-700">
-                                {formatAmount(
-                                  movement.total_cost ??
-                                    Number(movement.jumlah || 0) * Number(movement.unit_cost || 0)
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </>
-          )}
+          <RawMaterialPriceHistoryTab materialId={material.id} baseUnitName={baseUnitName} />
         </TabsContent>
 
         <TabsContent value="conversions" className="space-y-4">
-          <Card className="border-gray-200/70 shadow-xs">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <CardTitle className="text-base">Konversi Satuan</CardTitle>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Satuan yang tersedia untuk pembelian, daftar harga, dan acuan stok.
-                  </p>
-                </div>
-                <Link href={`${ITEMS_RAW_MATERIALS_PATH}/edit/${material.id}`}>
-                  <Button variant="outline" className="purchasing-secondary-button w-full sm:w-auto">
-                    <Edit className="mr-2 h-4 w-4" />
-                    Ubah Konversi
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-gray-200/70 bg-gray-50/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Satuan Dasar Stok</p>
-                  <p className="mt-2 text-lg font-bold text-gray-900">
-                    {baseConversion ? getConversionUnitName(baseConversion) : baseUnitLabel}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Nilai konversi dasar selalu dihitung sebagai 1 {baseUnitLabel}.
-                  </p>
-                </div>
-                <div className="rounded-xl border border-gray-200/70 bg-gray-50/60 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Konversi Utama</p>
-                  <p className="mt-2 text-lg font-bold text-gray-900">
-                    {material.satuan_kecil_id
-                      ? `1 ${satuanBesarName} = ${formatNumber(material.konversi_factor || 1)} ${baseUnitLabel}`
-                      : `1 ${satuanBesarName} = 1 ${baseUnitLabel}`}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Diturunkan dari satuan besar dan faktor konversi utama.
-                  </p>
-                </div>
-              </div>
-
-              {alternativeConversions.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-gray-200/70 bg-white px-4 py-8 text-center">
-                  <p className="text-sm font-medium text-gray-700">Belum ada satuan alternatif</p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Tambahkan satuan alternatif di halaman ubah jika supplier menjual bahan ini dalam satuan berbeda.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto px-0">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200/70 text-xs uppercase tracking-wide text-gray-500">
-                        <th className="px-4 py-3 text-left font-semibold">Satuan</th>
-                        <th className="px-4 py-3 text-left font-semibold">Jumlah dalam Satuan Dasar</th>
-                        <th className="px-4 py-3 text-left font-semibold">Keterangan</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200/70">
-                      {alternativeConversions.map((conversion) => (
-                        <tr key={conversion.id || conversion.satuan_id} className="hover:bg-gray-50/80">
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-gray-900">{getConversionUnitName(conversion)}</div>
-                            <div className="text-xs text-gray-500">{getConversionUnitLabel(conversion)}</div>
-                          </td>
-                          <td className="px-4 py-3 font-mono font-semibold text-gray-900">
-                            {formatNumber(conversion.qty_in_base_unit)} {baseUnitLabel}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">
-                            1 {getConversionUnitLabel(conversion)} = {formatNumber(conversion.qty_in_base_unit)}{" "}
-                            {baseUnitLabel}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <RawMaterialConversionsTab
+            material={material}
+            satuanBesarName={satuanBesarName}
+            satuanKecilName={satuanKecilName}
+          />
         </TabsContent>
       </Tabs>
 

@@ -1,12 +1,5 @@
-export {
-  listRawMaterials,
-  getRawMaterial,
-  createRawMaterial,
-  updateRawMaterial,
-  updateRawMaterialStatus,
-  deleteRawMaterial,
-  listUnits,
-} from "@/lib/purchasing";
+export { listRawMaterials, getRawMaterial, createRawMaterial, updateRawMaterial, updateRawMaterialStatus, deleteRawMaterial } from "@/lib/purchasing/api-client/raw-materials";
+export { listUnits } from "@/lib/purchasing/api-client/units";
 
 export type {
   RawMaterial,

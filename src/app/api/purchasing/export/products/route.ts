@@ -1,15 +1,10 @@
-import { NextResponse } from "next/server";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
-import { IAM } from "@/lib/iam/prefixes";
-import {
-  getApiUserScope,
-  companyScopeOr,
-  branchScopeOr,
-} from "@/lib/api/scope";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { getApiUserScope } from "@/lib/api/scope";
 import { query } from "@/lib/db";
-import {
-  buildProductWorkbookBuffer,
-} from "@/lib/purchasing/product-spreadsheet";
+import { IAM } from "@/lib/iam/prefixes";
+import { scopeSqlFilters, xlsxDownload } from "@/lib/purchasing/export-scope";
+import { buildProductWorkbookBuffer } from "@/lib/purchasing/product-spreadsheet";
 
 type ExportRow = {
   kode: string;
@@ -25,88 +20,31 @@ type ExportRow = {
   status: string;
 };
 
-export async function GET() {
-  try {
-    await requireIamMenuPrefix(IAM.items);
+// GET /api/purchasing/export/products — .xlsx sesuai kolom impor produk
+export const GET = apiHandler(async () => {
+  await requireIamMenuPrefix(IAM.items);
+  const { filters, params } = scopeSqlFilters(await getApiUserScope(), "p");
 
-    const scope = await getApiUserScope();
-    const params: unknown[] = [];
-    const filters: string[] = ["p.deleted_at IS NULL"];
+  const rows = await query<ExportRow>(
+    `SELECT
+       p.kode,
+       p.nama,
+       wh.code AS stall_code,
+       p.kategori,
+       u.kode AS satuan_kode,
+       p.deskripsi,
+       COALESCE(p.harga_jual, 0) AS harga_jual,
+       COALESCE(p.harga_modal, 0) AS harga_modal,
+       COALESCE(p.markup_persen, 30) AS markup_persen,
+       COALESCE(p.production_output_type, 'FINISHED_GOOD') AS production_output_type,
+       CASE WHEN COALESCE(p.is_active, true) THEN 'active' ELSE 'inactive' END AS status
+     FROM item.products p
+     LEFT JOIN item.units u ON u.id = p.satuan_id
+     LEFT JOIN configuration.warehouses wh ON wh.id = p.warehouse_id
+     WHERE ${filters.join(" AND ")}
+     ORDER BY wh.code ASC, p.nama ASC`,
+    params
+  );
 
-    const companyOr = companyScopeOr(scope);
-    if (companyOr) {
-      const companyId = scope?.companyId;
-      if (companyId) {
-        params.push(companyId);
-        filters.push(`p.company_id = $${params.length}`);
-      }
-    }
-
-    const branchOr = branchScopeOr(scope);
-    if (branchOr) {
-      const branchId = scope?.branchId;
-      if (branchId) {
-        params.push(branchId);
-        filters.push(`p.branch_id = $${params.length}`);
-      }
-    }
-
-    const rows = await query<ExportRow>(
-      `SELECT
-         p.kode,
-         p.nama,
-         wh.code AS stall_code,
-         p.kategori,
-         u.kode AS satuan_kode,
-         p.deskripsi,
-         COALESCE(p.harga_jual, 0) AS harga_jual,
-         COALESCE(p.harga_modal, 0) AS harga_modal,
-         COALESCE(p.markup_persen, 30) AS markup_persen,
-         COALESCE(p.production_output_type, 'FINISHED_GOOD') AS production_output_type,
-         CASE WHEN COALESCE(p.is_active, true) THEN 'active' ELSE 'inactive' END AS status
-       FROM item.products p
-       LEFT JOIN item.units u ON u.id = p.satuan_id
-       LEFT JOIN configuration.warehouses wh ON wh.id = p.warehouse_id
-       WHERE ${filters.join(" AND ")}
-       ORDER BY wh.code ASC, p.nama ASC`,
-      params
-    );
-
-    const buffer = await buildProductWorkbookBuffer(
-      rows.map((row) => ({
-        kode: row.kode,
-        nama: row.nama,
-        stall_code: row.stall_code ?? "",
-        kategori: row.kategori ?? "",
-        satuan_kode: row.satuan_kode ?? "",
-        deskripsi: row.deskripsi ?? "",
-        harga_jual: row.harga_jual,
-        harga_modal: row.harga_modal,
-        markup_persen: row.markup_persen,
-        production_output_type: row.production_output_type,
-        status: row.status,
-      }))
-    );
-
-    const date = new Date().toISOString().split("T")[0];
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
-
-    return new NextResponse(arrayBuffer as ArrayBuffer, {
-      headers: {
-        "Content-Type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="products-${date}.xlsx"`,
-      },
-    });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Export products error:", error);
-    return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Export failed" },
-      { status: 500 }
-    );
-  }
-}
+  return xlsxDownload(await buildProductWorkbookBuffer(rows), "products");
+}, "purchasing.export.products");

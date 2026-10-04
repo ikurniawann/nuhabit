@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Camera, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { VendorPayment } from "@/types/purchasing";
-import { formatAmount } from "@/lib/purchasing/utils";
 import { usePayPurchaseInvoice } from "../mutations";
 import type { PurchaseInvoiceRow } from "../types";
+import { formatNumber } from "@/lib/format";
 
 type PayDialogProps = {
   row: PurchaseInvoiceRow | null;
@@ -28,10 +28,17 @@ type PayDialogProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogProps) {
+/** Form dibangun ulang (key) setiap kali dialog dibuka untuk baris tertentu. */
+export function PurchaseInvoicePayDialog(props: PayDialogProps) {
+  return <PayDialogBody key={`${props.row?.purchase_order_id ?? ""}:${props.open}`} {...props} />;
+}
+
+function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
   const payMutation = usePayPurchaseInvoice();
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [amount, setAmount] = useState<number | undefined>(
+    row && row.outstanding_amount > 0 ? row.outstanding_amount : undefined
+  );
   const [method, setMethod] = useState<VendorPayment["method"]>("bank_transfer");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
@@ -46,18 +53,6 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
     if (value <= 0) return null;
     return value >= outstanding - 0.01 ? "full" : "installment";
   }, [amount, outstanding]);
-
-  useEffect(() => {
-    if (!open || !row) return;
-    setPaymentDate(new Date().toISOString().slice(0, 10));
-    setAmount(row.outstanding_amount > 0 ? row.outstanding_amount : undefined);
-    setMethod("bank_transfer");
-    setReferenceNumber("");
-    setNotes("");
-    setReceipt(null);
-    setScanning(false);
-    setScanNote(null);
-  }, [open, row]);
 
   /**
    * Unggah nota → server mengarsipkan file + membaca isinya (OCR), lalu field
@@ -82,6 +77,7 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
       const json = (await res.json().catch(() => ({}))) as {
         success?: boolean;
         message?: string;
+        error?: string;
         data?: {
           receipt_path: string;
           receipt_name: string;
@@ -89,7 +85,7 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
         };
       };
       if (!res.ok || !json.success || !json.data) {
-        setScanNote({ tone: "warn", text: json.message || "Nota tidak bisa diunggah. Periksa koneksi lalu coba lagi." });
+        setScanNote({ tone: "warn", text: json.error || json.message || "Nota tidak bisa diunggah. Periksa koneksi lalu coba lagi." });
         return;
       }
 
@@ -108,7 +104,7 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
       if (fields.total && fields.total > 0) {
         if (fields.total > outstanding + 0.01 && outstanding > 0) {
           setAmount(outstanding);
-          catatanJumlah = ` Total di nota (${formatAmount(fields.total)}) lebih besar dari sisa tagihan, jadi jumlah diisi sebesar sisa tagihan.`;
+          catatanJumlah = ` Total di nota (${formatNumber(fields.total)}) lebih besar dari sisa tagihan, jadi jumlah diisi sebesar sisa tagihan.`;
         } else {
           setAmount(fields.total);
         }
@@ -141,7 +137,7 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
       return;
     }
     if (paymentAmount > outstanding + 0.01) {
-      toast.error(`Nominal pembayaran tidak boleh melebihi sisa tagihan (${formatAmount(outstanding)})`);
+      toast.error(`Nominal pembayaran tidak boleh melebihi sisa tagihan (${formatNumber(outstanding)})`);
       return;
     }
 
@@ -184,16 +180,16 @@ export function PurchaseInvoicePayDialog({ row, open, onOpenChange }: PayDialogP
           <div className="grid gap-4 px-5 py-4">
             <div className="rounded-xl border border-pink-100 bg-pink-50 p-3">
               <div className="text-xs font-semibold text-pink-700">Sisa Tagihan</div>
-              <div className="mt-1 text-lg font-bold text-pink-700">{formatAmount(outstanding)}</div>
+              <div className="mt-1 text-lg font-bold text-pink-700">{formatNumber(outstanding)}</div>
               <div className="mt-1 text-xs text-pink-700/80">
-                Total PO {formatAmount(row.gross_payable_amount)}
+                Total PO {formatNumber(row.gross_payable_amount)}
                 {row.return_credit_amount > 0 && (
-                  <> · Retur -{formatAmount(row.return_credit_amount)}</>
+                  <> · Retur -{formatNumber(row.return_credit_amount)}</>
                 )}
                 {row.reject_credit_amount > 0 && (
-                  <> · Nota kredit reject -{formatAmount(row.reject_credit_amount)}</>
+                  <> · Nota kredit reject -{formatNumber(row.reject_credit_amount)}</>
                 )}
-                {" · "}Dibayar {formatAmount(row.paid_amount)}
+                {" · "}Dibayar {formatNumber(row.paid_amount)}
               </div>
             </div>
 

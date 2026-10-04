@@ -21,8 +21,8 @@ import {
 } from "@/types/supplier";
 import {
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useCreateSupplier } from "../mutations";
 import { toast } from "sonner";
 

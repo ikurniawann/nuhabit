@@ -1,20 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import { usePurchasingDashboard } from "@/modules/purchasing/hooks/usePurchasingDashboard";
-import {
-  KPICards,
-  TrendChart,
-  ActionPOPanel,
-  StockAlertPanel,
-  HPPTrendPanel,
-  SupplierPerfChart,
-} from "@/modules/purchasing/components/dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { usePurchasingDashboard } from "@/features/purchasing/dashboard/queries";
+import { KPICards } from "@/features/purchasing/dashboard/components/kpi-cards";
+import { TrendChart } from "@/features/purchasing/dashboard/components/trend-chart";
+import { ActionPOPanel } from "@/features/purchasing/dashboard/components/action-po-panel";
+import { StockAlertPanel } from "@/features/purchasing/dashboard/components/stock-alert-panel";
+import { HPPTrendPanel } from "@/features/purchasing/dashboard/components/hpp-trend-panel";
+import { SupplierPerfChart } from "@/features/purchasing/dashboard/components/supplier-perf-chart";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/datepicker";
-import { RefreshCw, Building2, Package, ShoppingCart, Truck, Archive } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 function DashboardSkeleton() {
   return (

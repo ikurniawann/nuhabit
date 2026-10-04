@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -15,9 +15,8 @@ import {
   DialogPanelTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import {
   NAV_FROM_APPROVAL_PO,
   persistNavFrom,
@@ -25,7 +24,8 @@ import {
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { getApprovalModuleConfig } from "../approval-module";
 import { CheckCircle, Loader2, ShoppingCart } from "lucide-react";
-import { formatAmount, formatDate, getPOStatusLabel } from "@/lib/purchasing/utils";
+import { formatDate, formatRupiah } from "@/lib/format";
+import { getPOStatusLabel } from "@/lib/purchasing/status-labels";
 import { usePurchaseOrderList } from "../../po/queries";
 import { useApprovePurchaseOrder } from "../../po/mutations";
 import { useProductPurchaseOrderList } from "../../product-po/queries";
@@ -53,17 +53,11 @@ export function POApprovalPage({ moduleType = "raw_material" }: POApprovalPagePr
   const [confirmingPO, setConfirmingPO] = useState<ApprovalPO | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const rmListQuery = usePurchaseOrderList({ status: "draft", page: 1, limit: 50 });
-  const productListQuery = useProductPurchaseOrderList({
-    status: "draft",
-    page: 1,
-    limit: 50,
-  });
-  const generalListQuery = useGeneralPurchaseOrderList({
-    status: "draft",
-    page: 1,
-    limit: 50,
-  });
+  // Hanya query milik modul aktif yang berjalan.
+  const draftParams = { status: "draft", page: 1, limit: 50 } as const;
+  const rmListQuery = usePurchaseOrderList(draftParams, !isProduct && !isGeneral);
+  const productListQuery = useProductPurchaseOrderList(draftParams, isProduct);
+  const generalListQuery = useGeneralPurchaseOrderList(draftParams, isGeneral);
   const listQuery = isGeneral ? generalListQuery : isProduct ? productListQuery : rmListQuery;
   const pos = (listQuery.data?.data ?? []) as ApprovalPO[];
   const loading = listQuery.isLoading;
@@ -77,16 +71,6 @@ export function POApprovalPage({ moduleType = "raw_material" }: POApprovalPagePr
       ? productApproveMutation
       : rmApproveMutation;
   const isProcessing = Boolean(processingId);
-
-  useEffect(() => {
-    if (listQuery.isError) {
-      toast.error(
-        listQuery.error instanceof Error
-          ? listQuery.error.message
-          : "Gagal memuat persetujuan PO"
-      );
-    }
-  }, [listQuery.isError, listQuery.error]);
 
   function poDetailHref(id: string) {
     persistNavFrom(NAV_FROM_APPROVAL_PO);
@@ -144,6 +128,10 @@ export function POApprovalPage({ moduleType = "raw_material" }: POApprovalPagePr
             <Loader2 className="mr-2 h-4 w-4 animate-spin text-pink-600" />
             Memuat persetujuan...
           </div>
+        ) : listQuery.isError ? (
+          <div className="py-12 text-center text-sm text-red-600">
+            {listQuery.error instanceof Error ? listQuery.error.message : "Gagal memuat persetujuan PO"}
+          </div>
         ) : pos.length === 0 ? (
           <div className="py-14 text-center">
             <CheckCircle className="mx-auto mb-3 h-12 w-12 text-emerald-300" />
@@ -190,7 +178,7 @@ export function POApprovalPage({ moduleType = "raw_material" }: POApprovalPagePr
                         <td className="px-4 py-3 text-gray-600">{config.poPartyName(po)}</td>
                         <td className="px-4 py-3 text-gray-600">{po.pr_number || "-"}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatAmount(po.grand_total || po.total || po.subtotal || 0)}
+                          {formatRupiah(po.grand_total || ("total" in po ? po.total : 0) || po.subtotal)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Badge variant="outline" className={DRAFT_STATUS_STYLE}>

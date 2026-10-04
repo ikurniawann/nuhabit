@@ -1,72 +1,24 @@
-// ============================================
-// API ROUTE: /api/purchasing/po/[id]/close
-// ============================================
-
-import { NextRequest } from "next/server";
-import { createServerPgClient } from "@/lib/pg/create-client";
-import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
+import { createServerPgClient } from "@/lib/pg/create-client";
 import { closePurchaseOrder } from "@/lib/purchasing/po";
-import { z } from "zod";
+import { poCloseSchema } from "@/lib/purchasing/po-schemas";
 
-const closeSchema = z.object({
-  reason: z.string().min(1, "Alasan penutupan wajib diisi"),
-});
-
-const CLOSE_ROLES = [
-  "admin",
-  "super_admin",
-  "purchasing_admin",
-  "purchasing_manager",
-] as const;
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
-// POST /api/purchasing/po/:id/close
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const POST = apiHandler(
+  async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireIamMenuPrefix(IAM.items);
     const { id } = await params;
-    const db = await createServerPgClient();
-    const body = await request.json();
-    const { reason } = closeSchema.parse(body);
+    const { reason } = await validateBody(request, poCloseSchema);
+    const data = await closePurchaseOrder(await createServerPgClient(), id, reason, user.id);
 
-    const result = await closePurchaseOrder(db, id, reason, user.id);
-
-    return Response.json({
+    return NextResponse.json({
       success: true,
-      data: result,
+      data,
       message:
         "Purchase order ditutup. Kekurangan qty tidak ditagihkan; pengiriman baru tidak lagi diizinkan.",
     });
-  } catch (error: unknown) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error closing PO:", error);
-
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        {
-          success: false,
-          message: "Validasi gagal",
-          errors: error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    const message = getErrorMessage(error, "Gagal menutup purchase order");
-    const status =
-      message.includes("tidak ditemukan") ||
-      message.includes("Invalid state") ||
-      message.includes("Alasan")
-        ? 400
-        : 500;
-
-    return Response.json({ success: false, message }, { status });
-  }
-}
+  },
+  "purchasing.po.close"
+);

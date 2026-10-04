@@ -40,7 +40,7 @@ export async function computePoFulfillmentProgress(
 
   if (grnError) throw grnError;
 
-  const grnIds = (grnRows || []).map((row) => row.id as string);
+  const grnIds = ((grnRows ?? []) as Array<{ id: string }>).map((row) => row.id);
   let total_qty_received_grn = 0;
   let total_qty_qc_posted = 0;
   let total_qty_returned = 0;

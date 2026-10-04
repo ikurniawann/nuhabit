@@ -86,7 +86,7 @@ export function ReportsHubPage() {
             <CardContent className="flex flex-1 flex-col space-y-4">
               <p className="flex-1 text-sm text-gray-600">{card.description}</p>
               <Link href={card.href} prefetch={false}>
-                <Button variant="outline" size="sm" className="h-10 w-full gap-2 rounded-lg border-border bg-card px-3 text-sm font-medium text-primary shadow-sm hover:bg-muted/50">
+                <Button variant="outline" size="sm" className="h-10 w-full gap-2 rounded-lg border-border bg-card px-3 text-sm font-medium text-brand-text shadow-sm hover:bg-muted/50">
                   Lihat Laporan
                   <ArrowRightIcon className="ml-2 h-4 w-4" />
                 </Button>

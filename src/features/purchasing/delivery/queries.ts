@@ -3,7 +3,7 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { DeliveryListParams } from "./types";
 import { listDeliveries, getDelivery, listDeliveryPOOptions } from "./api";
-import { listPOItems } from "@/lib/purchasing";
+import { listPOItems } from "@/lib/purchasing/api-client/purchase-orders";
 import { deliveryQueryKeys } from "./query-keys";
 
 export const useDeliveryList = (params: DeliveryListParams) =>

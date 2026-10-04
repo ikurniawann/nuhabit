@@ -7,6 +7,7 @@
 // Hanya dipanggil untuk item stockable=true. Costing memakai calculateWeightedAverage()
 // yang sudah ada di ./inventory.
 
+import { ApiError } from "@/lib/api/auth";
 import type { DbClient } from "@/lib/pg/types";
 import { toQty } from "@/lib/purchasing/utils";
 import { calculateWeightedAverage } from "@/lib/purchasing/inventory";
@@ -259,9 +260,7 @@ export async function reduceSupplyStock(
 
   const qtyBefore = inv.qty_available;
   if (qty > qtyBefore) {
-    throw new Error(
-      `Stok tidak cukup (tersedia ${qtyBefore}, diminta ${qty})`
-    );
+    throw ApiError.badRequest(`Stok tidak cukup (tersedia ${qtyBefore}, diminta ${qty})`);
   }
   const qtyAfter = qtyBefore - qty;
 

@@ -8,8 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useDelivery } from "../queries";
-import type { DeliveryStatus } from "../types";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
+import { formatDate } from "@/lib/format";
+import { DELIVERY_STATUS_LABELS, DELIVERY_STATUS_STYLES } from "@/lib/purchasing/receiving-ui-delivery";
 import {
   TruckIcon,
   ArrowLeftIcon,
@@ -18,31 +19,6 @@ import {
   Loader2Icon,
   ArrowRightIcon,
 } from "lucide-react";
-
-const STATUS_COLORS: Record<DeliveryStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  shipped: "bg-blue-50 text-blue-700 border-blue-200",
-  in_transit: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  pending: "Menunggu Penerimaan",
-  shipped: "Dikirim",
-  in_transit: "Dalam Pengiriman",
-  delivered: "Tiba",
-  cancelled: "Dibatalkan",
-};
-
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function DeliveryDetailPage() {
   const router = useRouter();
@@ -55,10 +31,9 @@ export function DeliveryDetailPage() {
 
   useEffect(() => {
     if (!detailQuery.isError) return;
-    console.error("Failed to fetch delivery:", detailQuery.error);
     toast.error("Pengiriman tidak ditemukan");
     router.push(RM_ROUTES.purchasingDelivery);
-  }, [detailQuery.isError, detailQuery.error, router]);
+  }, [detailQuery.isError, router]);
 
   if (loading) {
     return (
@@ -100,8 +75,8 @@ export function DeliveryDetailPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 {delivery.nomor_resi || "Detail Pengiriman"}
               </h1>
-              <Badge className={STATUS_COLORS[delivery.status]}>
-                {STATUS_LABELS[delivery.status]}
+              <Badge className={DELIVERY_STATUS_STYLES[delivery.status]}>
+                {DELIVERY_STATUS_LABELS[delivery.status]}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-gray-500">
@@ -120,8 +95,8 @@ export function DeliveryDetailPage() {
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500">Status Pengiriman</p>
             <div className="mt-2">
-              <Badge className={STATUS_COLORS[delivery.status]}>
-                {STATUS_LABELS[delivery.status]}
+              <Badge className={DELIVERY_STATUS_STYLES[delivery.status]}>
+                {DELIVERY_STATUS_LABELS[delivery.status]}
               </Badge>
             </div>
           </CardContent>

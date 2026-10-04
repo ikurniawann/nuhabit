@@ -1,5 +1,5 @@
 import { ComingSoonPage } from "@/components/dashboard/coming-soon-page";
-import { ITEMS_LANDING_PATH } from "@/modules/purchasing/constants/items-nav";
+import { ITEMS_LANDING_PATH } from "@/lib/purchasing/item-routes";
 
 type ProductPlaceholderPageProps = {
   title: string;

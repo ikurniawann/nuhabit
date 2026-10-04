@@ -1,221 +1,135 @@
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { RawMaterialWithStock } from "@/types/purchasing";
 import type {
   CogsData,
   CreateProductionOrderPayload,
   ProductionDashboardData,
-  ProductRecipe,
-  RawMaterialRecipe,
+  ProductionDetail,
+  RawMaterialBomRow,
+  RecipeItem,
 } from "./types";
 
-export type {
-  ProductionProduct,
-  CogsMaterial,
-  CogsData,
-  ProductionOrder,
-  WipInventory,
-  WipSummary,
-  ProductRecipe,
-  RawMaterialRecipe,
-  ProductionDashboardData,
-  CreateProductionOrderPayload,
-} from "./types";
+type ApiBody = { data?: unknown; summary?: unknown; message?: string; error?: string };
 
-function productionContext(moduleType: PurchasingModuleType) {
-  return moduleType === "product" ? "product" : "raw_material";
+/** Ambil JSON; respons gagal dilempar sebagai Error berisi `error` (format baru) atau `message`. */
+async function requestJson(url: string, fallback: string, init?: RequestInit): Promise<ApiBody> {
+  const response = await fetch(url, { cache: "no-store", ...init });
+  const json = ((await response.json().catch(() => null)) ?? {}) as ApiBody;
+  if (!response.ok) throw new Error(json.error || json.message || fallback);
+  return json;
+}
+
+function sendJson(url: string, method: string, payload: unknown, fallback: string) {
+  return requestJson(url, fallback, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Untuk data pelengkap: gagal dibaca sebagai kosong, sama seperti sebelumnya. */
+function optionalJson(url: string): Promise<ApiBody> {
+  return requestJson(url, "").catch(() => ({}));
+}
+
+function recipesUrl(moduleType: PurchasingModuleType) {
+  return moduleType === "product"
+    ? "/api/purchasing/production/product-recipes"
+    : "/api/purchasing/production/raw-material-recipes";
 }
 
 export async function getProductionDashboard(
   moduleType: PurchasingModuleType = "raw_material"
 ): Promise<ProductionDashboardData> {
-  const context = productionContext(moduleType);
-  const [ordersRes, itemsRes, wipRes] = await Promise.all([
-    fetch(`/api/purchasing/production/orders?production_context=${context}`, { cache: "no-store" }),
-    context === "product"
-      ? fetch("/api/purchasing/production/product-recipes", { cache: "no-store" })
-      : fetch("/api/purchasing/production/raw-material-recipes", { cache: "no-store" }),
-    fetch("/api/purchasing/production/wip", { cache: "no-store" }),
-  ]);
-  const [ordersJson, itemsJson, wipJson] = await Promise.all([
-    ordersRes.json(),
-    itemsRes.json(),
-    wipRes.json(),
+  const context = moduleType === "product" ? "product" : "raw_material";
+  const [orders, items, wip] = await Promise.all([
+    optionalJson(`/api/purchasing/production/orders?production_context=${context}`),
+    optionalJson(recipesUrl(moduleType)),
+    optionalJson("/api/purchasing/production/wip"),
   ]);
   return {
-    orders: ordersJson.data || [],
-    products: itemsJson.data || [],
-    wipInventory: wipJson.data || [],
-    wipSummary: wipJson.summary || null,
+    orders: (orders.data as ProductionDashboardData["orders"]) || [],
+    products: (items.data as ProductionDashboardData["products"]) || [],
+    wipInventory: (wip.data as ProductionDashboardData["wipInventory"]) || [],
+    wipSummary: (wip.summary as ProductionDashboardData["wipSummary"]) || null,
   };
-}
-
-export async function getProductCogs(id: string): Promise<CogsData | null> {
-  const response = await fetch(`/api/purchasing/cogs/product/${id}`, {
-    cache: "no-store",
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || json.error || "Failed to load product COGS");
-  }
-  return json.data || null;
-}
-
-export async function getRawMaterialCogs(id: string): Promise<CogsData | null> {
-  const response = await fetch(`/api/purchasing/cogs/raw-material/${id}`, {
-    cache: "no-store",
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || json.error || "Failed to load raw material COGS");
-  }
-  return json.data || null;
 }
 
 export async function getProductionCogs(
   moduleType: PurchasingModuleType,
   id: string
 ): Promise<CogsData | null> {
-  return moduleType === "product" ? getProductCogs(id) : getRawMaterialCogs(id);
+  const url =
+    moduleType === "product"
+      ? `/api/purchasing/cogs/product/${id}`
+      : `/api/purchasing/cogs/raw-material/${id}`;
+  const json = await requestJson(url, "Gagal memuat resep (BOM)");
+  return (json.data as CogsData) || null;
 }
 
-export async function listRecipeProducts(): Promise<ProductRecipe[]> {
-  const response = await fetch("/api/purchasing/production/product-recipes", {
-    cache: "no-store",
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || json.error || "Failed to load product recipes");
-  }
-  return json.data || [];
+export async function listRecipeItems(moduleType: PurchasingModuleType): Promise<RecipeItem[]> {
+  const json = await requestJson(recipesUrl(moduleType), "Gagal memuat daftar resep");
+  return (json.data as RecipeItem[]) || [];
 }
 
-export async function listRecipeRawMaterials(): Promise<RawMaterialRecipe[]> {
-  const response = await fetch("/api/purchasing/production/raw-material-recipes", {
-    cache: "no-store",
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || json.error || "Failed to load raw material recipes");
-  }
-  return json.data || [];
+/** Buat order produksi; mengembalikan pesan sukses dari API. */
+export async function createProductionOrder(payload: CreateProductionOrderPayload): Promise<string | undefined> {
+  const json = await sendJson("/api/purchasing/production/orders", "POST", payload, "Gagal membuat order produksi");
+  return json.message;
 }
 
-export async function listRecipeItems(
-  moduleType: PurchasingModuleType
-): Promise<Array<ProductRecipe | RawMaterialRecipe>> {
-  return moduleType === "product" ? listRecipeProducts() : listRecipeRawMaterials();
+export async function getProductionOrder(id: string): Promise<ProductionDetail> {
+  const json = await requestJson(`/api/purchasing/production/orders/${id}`, "Gagal memuat detail order produksi");
+  return json.data as ProductionDetail;
 }
 
-export interface CreateProductionOrderResult {
-  ok: boolean;
-  message: string;
-}
-
-export async function createProductionOrder(
-  payload: CreateProductionOrderPayload
-): Promise<CreateProductionOrderResult> {
-  const response = await fetch("/api/purchasing/production/orders", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await response.json();
-  return {
-    ok: response.ok,
-    message: json.message || json.error || "Production order created",
-  };
-}
-
-export async function getProductionOrder<T = unknown>(id: string): Promise<T> {
-  const response = await fetch(`/api/purchasing/production/orders/${id}`, {
-    cache: "no-store",
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || json.error || "Failed to load production order");
-  }
-  return json.data as T;
-}
-
-export interface ProductionOrderActionResult {
-  ok: boolean;
-  message: string;
+/** Jalankan aksi order (release/start/complete/...); mengembalikan pesan sukses dari API. */
+export async function updateProductionOrder(
+  id: string,
+  payload: Record<string, unknown>
+): Promise<string | undefined> {
+  const json = await sendJson(
+    `/api/purchasing/production/orders/${id}`,
+    "PATCH",
+    payload,
+    "Gagal memperbarui order produksi"
+  );
+  return json.message;
 }
 
 export async function getRawMaterialBomEditorData(materialId: string) {
-  const [materialRes, bomRes, materialsRes] = await Promise.all([
-    fetch(`/api/purchasing/raw-materials/${materialId}`, { cache: "no-store" }),
-    fetch(`/api/purchasing/raw-materials/${materialId}/bom`, { cache: "no-store" }),
-    fetch("/api/purchasing/raw-materials?limit=200&is_active=true", { cache: "no-store" }),
+  const [material, bom, materials] = await Promise.all([
+    requestJson(`/api/purchasing/raw-materials/${materialId}`, "Gagal memuat bahan baku"),
+    optionalJson(`/api/purchasing/raw-materials/${materialId}/bom`),
+    optionalJson("/api/purchasing/raw-materials?limit=200&is_active=true"),
   ]);
-
-  const [materialJson, bomJson, materialsJson] = await Promise.all([
-    materialRes.json(),
-    bomRes.json(),
-    materialsRes.json(),
-  ]);
-
-  if (!materialRes.ok) {
-    throw new Error(materialJson.message || "Failed to load raw material");
-  }
-
   return {
-    material: materialJson.data,
-    bom: bomJson.data || [],
-    materials: (materialsJson.data || []).filter(
-      (item: { id: string }) => item.id !== materialId
-    ),
+    material: material.data as RawMaterialWithStock,
+    bom: (bom.data as RawMaterialBomRow[]) || [],
+    materials: ((materials.data as RawMaterialWithStock[]) || []).filter((item) => item.id !== materialId),
   };
 }
 
 export async function createRawMaterialBomItem(
   materialId: string,
   payload: { component_raw_material_id: string; qty_required: number; waste_factor: number }
-) {
-  const response = await fetch(`/api/purchasing/raw-materials/${materialId}/bom`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await response.json();
-  if (!response.ok) throw new Error(json.message || "Failed to add component");
-  return json.data;
+): Promise<RawMaterialBomRow> {
+  const json = await sendJson(
+    `/api/purchasing/raw-materials/${materialId}/bom`,
+    "POST",
+    payload,
+    "Gagal menambah komponen"
+  );
+  return json.data as RawMaterialBomRow;
 }
 
 export async function updateRawMaterialBomItem(
   id: string,
   payload: { qty_required: number; waste_factor: number }
-) {
-  const response = await fetch(`/api/purchasing/raw-material-bom/${id}`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await response.json();
-  if (!response.ok) throw new Error(json.message || "Failed to update component");
-  return json.data;
+): Promise<void> {
+  await sendJson(`/api/purchasing/raw-material-bom/${id}`, "PUT", payload, "Gagal memperbarui komponen");
 }
 
-export async function deleteRawMaterialBomItem(id: string) {
-  const response = await fetch(`/api/purchasing/raw-material-bom/${id}`, {
-    method: "DELETE",
-  });
-  const json = await response.json();
-  if (!response.ok) throw new Error(json.message || "Failed to remove component");
-  return json;
-}
-
-export async function updateProductionOrder(
-  id: string,
-  payload: Record<string, unknown>
-): Promise<ProductionOrderActionResult> {
-  const response = await fetch(`/api/purchasing/production/orders/${id}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  const json = await response.json();
-  return {
-    ok: response.ok,
-    message: json.message || json.error || "Production status updated",
-  };
+export async function deleteRawMaterialBomItem(id: string): Promise<void> {
+  await requestJson(`/api/purchasing/raw-material-bom/${id}`, "Gagal menghapus komponen", { method: "DELETE" });
 }

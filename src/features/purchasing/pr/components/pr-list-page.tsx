@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import {
   Plus,
   Search,
@@ -21,12 +21,13 @@ import {
   Pencil,
   X,
 } from "lucide-react";
-import { formatDate, getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/utils";
+import { getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/status-labels";
 import { toast } from "sonner";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useAuth } from "@/hooks/use-auth";
 import { usePurchaseRequestList } from "../queries";
 import type { PRStatusFilter as PRStatus } from "../types";
+import { formatDate } from "@/lib/format";
 
 function canCreatePurchaseOrder(
   pr: { status: string; converted_po_id?: string | null },

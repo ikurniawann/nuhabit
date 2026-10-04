@@ -1,9 +1,11 @@
+import { apiErrorMessage } from "@/lib/purchasing/receiving-ui-http";
 import type {
   CreateProductDeliveryPayload,
   ProductDeliveryDetail,
   ProductDeliveryListParams,
   ProductDeliveryListResult,
   ProductDeliveryPOOption,
+  ProductPOItemRow,
 } from "./types";
 
 const MODULE_TYPE = "product";
@@ -22,7 +24,7 @@ export async function listProductDeliveries(
   const res = await fetch(`/api/purchasing/delivery?${sp.toString()}`);
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Failed to load deliveries");
+    throw new Error(apiErrorMessage(json, "Gagal memuat pengiriman"));
   }
   const total = json.pagination?.total || 0;
   const limit = params.limit || 10;
@@ -40,7 +42,7 @@ export async function getProductDelivery(id: string): Promise<ProductDeliveryDet
   const res = await fetch(`/api/purchasing/delivery/${id}`);
   const json = await res.json();
   if (!res.ok || !json.data) {
-    throw new Error(json.message || "Delivery not found");
+    throw new Error(apiErrorMessage(json, "Pengiriman tidak ditemukan"));
   }
   const data = json.data;
   return {
@@ -64,7 +66,7 @@ export async function listProductDeliveryPOOptions(
   });
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Failed to load purchase order options");
+    throw new Error(apiErrorMessage(json, "Gagal memuat opsi purchase order"));
   }
   return Array.isArray(json.data) ? json.data : [];
 }
@@ -77,17 +79,16 @@ export async function createProductDelivery(payload: CreateProductDeliveryPayloa
   });
   const json = await res.json();
   if (!res.ok) {
-    const apiError = typeof json.error === "string" ? json.error : json.error?.message;
-    throw new Error(apiError || json.message || "Failed to create delivery");
+    throw new Error(apiErrorMessage(json, "Gagal membuat pengiriman"));
   }
   return json.data || {};
 }
 
-export async function listProductPOItemsForDelivery(poId: string) {
-  const res = await fetch(`/api/purchasing/po-items?po_id=${poId}`);
+export async function listProductPOItemsForDelivery(poId: string): Promise<ProductPOItemRow[]> {
+  const res = await fetch(`/api/purchasing/po-items?po_id=${encodeURIComponent(poId)}`);
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || "Failed to load purchase order items");
+    throw new Error(apiErrorMessage(json, "Gagal memuat item purchase order"));
   }
   return Array.isArray(json.data) ? json.data : [];
 }

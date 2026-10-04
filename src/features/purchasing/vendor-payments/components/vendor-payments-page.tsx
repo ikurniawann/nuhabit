@@ -22,13 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { RM_ROUTES, PRODUCT_ROUTES, GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { formatAmount, formatDate } from "@/lib/purchasing/utils";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { RM_ROUTES, PRODUCT_ROUTES, GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { usePurchaseInvoiceList } from "../queries";
 import type { PurchaseInvoicePaymentStatus, PurchaseInvoiceRow } from "../types";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const AP_PAYMENTS_HREF = "/dashboard/accounting/accounts-payable/payments";
 
@@ -53,10 +53,6 @@ const STATUS_OPTIONS = [
   { value: "paid", label: "Lunas" },
   { value: "overdue", label: "Lewat Jatuh Tempo" },
 ];
-
-function formatPct(value: number) {
-  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(value)}%`;
-}
 
 export function PurchaseInvoicesPage({
   moduleType = "raw_material",
@@ -90,7 +86,7 @@ export function PurchaseInvoicesPage({
     },
     moduleType
   );
-  const allRows = listQuery.data ?? [];
+  const allRows = useMemo(() => listQuery.data ?? [], [listQuery.data]);
   const loading = listQuery.isLoading;
 
   useEffect(() => {
@@ -159,7 +155,7 @@ export function PurchaseInvoicesPage({
               </span>
               <div>
                 <p className="text-xs font-medium text-gray-500">Total Tagihan</p>
-                <p className="text-lg font-bold text-gray-900">{formatAmount(summary.payable)}</p>
+                <p className="text-lg font-bold text-gray-900">{formatNumber(summary.payable)}</p>
               </div>
             </div>
           </CardContent>
@@ -172,7 +168,7 @@ export function PurchaseInvoicesPage({
               </span>
               <div>
                 <p className="text-xs font-medium text-gray-500">Nominal Dibayar</p>
-                <p className="text-lg font-bold text-emerald-700">{formatAmount(summary.paid)}</p>
+                <p className="text-lg font-bold text-emerald-700">{formatNumber(summary.paid)}</p>
               </div>
             </div>
           </CardContent>
@@ -186,7 +182,7 @@ export function PurchaseInvoicesPage({
               <div>
                 <p className="text-xs font-medium text-gray-500">Sisa Tagihan</p>
                 <p className="text-lg font-bold text-gray-900">
-                  {formatAmount(summary.outstanding)}
+                  {formatNumber(summary.outstanding)}
                 </p>
               </div>
             </div>
@@ -380,27 +376,27 @@ function InvoiceTableRow({
       <td className="px-4 py-3 text-gray-600">{formatDate(row.tanggal_po)}</td>
       <td className="px-4 py-3 text-gray-700">{row.nama_supplier || "-"}</td>
       <td className="px-4 py-3 text-right font-medium text-gray-900">
-        {formatAmount(row.gross_payable_amount)}
+        {formatNumber(row.gross_payable_amount)}
       </td>
       <td className="px-4 py-3 text-right text-red-600">
-        {row.return_credit_amount > 0 ? `-${formatAmount(row.return_credit_amount)}` : "-"}
+        {row.return_credit_amount > 0 ? `-${formatNumber(row.return_credit_amount)}` : "-"}
       </td>
       <td className="px-4 py-3 text-right text-red-600">
-        {row.reject_credit_amount > 0 ? `-${formatAmount(row.reject_credit_amount)}` : "-"}
+        {row.reject_credit_amount > 0 ? `-${formatNumber(row.reject_credit_amount)}` : "-"}
       </td>
       <td className="px-4 py-3 text-right font-medium text-gray-900">
-        {formatAmount(row.payable_amount)}
+        {formatNumber(row.payable_amount)}
       </td>
-      <td className="px-4 py-3 text-right text-emerald-700">{formatAmount(row.paid_amount)}</td>
+      <td className="px-4 py-3 text-right text-emerald-700">{formatNumber(row.paid_amount)}</td>
       <td className="px-4 py-3 text-right font-semibold text-gray-900">
-        {formatAmount(row.outstanding_amount)}
+        {formatNumber(row.outstanding_amount)}
       </td>
       <td className="px-4 py-3 text-center text-gray-600">{row.payment_term_count || 0}</td>
       <td className="px-4 py-3 text-center text-gray-600">
-        {formatPct(Number(row.received_percentage || 0))}
+        {`${formatNumber(Number(row.received_percentage || 0), 1)}%`}
       </td>
       <td className="px-4 py-3 text-center font-medium text-pink-700">
-        {formatPct(Number(row.payment_progress_pct || 0))}
+        {`${formatNumber(Number(row.payment_progress_pct || 0), 1)}%`}
       </td>
       <td className="px-4 py-3 text-gray-700">
         <div className="flex items-center gap-2">
@@ -420,7 +416,7 @@ function InvoiceTableRow({
               variant="outline"
               size="sm"
               title="Bayar di Accounting AP Payment"
-              className="h-8 rounded-lg border-primary/20 px-3 text-xs font-medium text-primary hover:bg-primary/5"
+              className="h-8 rounded-lg border-primary/20 px-3 text-xs font-medium text-brand-text hover:bg-primary/5"
               onClick={onPay}
             >
               <Banknote className="mr-1.5 h-3.5 w-3.5" />

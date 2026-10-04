@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   ClipboardDocumentCheckIcon,
   PlusIcon,
@@ -14,7 +13,8 @@ import {
   PencilIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { formatDate } from "@/lib/format";
 import { useGrnList } from "../queries";
 import { useDeleteGrn } from "../mutations";
 import type { GrnStatus, GrnListRow } from "../types";
@@ -34,7 +34,6 @@ const STATUS_LABELS: Record<GrnStatus, string> = {
 };
 
 export function GrnContinueListPage() {
-  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -52,15 +51,8 @@ export function GrnContinueListPage() {
   const deleteMutation = useDeleteGrn();
 
   useEffect(() => {
-    if (listQuery.isError) {
-      console.error(listQuery.error);
-      toast({
-        title: "Gagal",
-        description: "Gagal memuat data GRN",
-        variant: "destructive",
-      });
-    }
-  }, [listQuery.isError, listQuery.error, toast]);
+    if (listQuery.isError) toast.error("Gagal memuat data GRN");
+  }, [listQuery.isError]);
 
   function applySearch() {
     setAppliedSearch(search.trim());
@@ -72,16 +64,9 @@ export function GrnContinueListPage() {
 
     try {
       const data = await deleteMutation.mutateAsync(id);
-      toast({
-        title: "✅ Berhasil",
-        description: data.message || "GRN berhasil dihapus",
-      });
-    } catch (error: any) {
-      toast({
-        title: "❌ Gagal",
-        description: error.message || "Gagal menghapus GRN",
-        variant: "destructive",
-      });
+      toast.success(data.message || "GRN berhasil dihapus");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal menghapus GRN");
     }
   }
 
@@ -188,7 +173,7 @@ export function GrnContinueListPage() {
                         {g.po_number || "—"}
                       </td>
                       <td className="py-3 px-4 text-sm">
-                        {new Date(g.tanggal_penerimaan).toLocaleDateString("id-ID")}
+                        {formatDate(g.tanggal_penerimaan)}
                       </td>
                       <td className="py-3 px-4">
                         <span

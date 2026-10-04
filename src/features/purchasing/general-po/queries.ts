@@ -10,11 +10,12 @@ import {
 } from "./api";
 import { generalPoQueryKeys } from "./query-keys";
 
-export function useGeneralPurchaseOrderList(params: GeneralPOListParams) {
+export function useGeneralPurchaseOrderList(params: GeneralPOListParams, enabled = true) {
   return useQuery({
     queryKey: generalPoQueryKeys.list(params),
     queryFn: () => listGeneralPurchaseOrders(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 }
 

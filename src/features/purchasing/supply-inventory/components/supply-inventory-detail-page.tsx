@@ -5,15 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { ArrowLeft, PackageMinus } from "lucide-react";
-import { formatRp, formatDate } from "@/lib/purchasing/utils";
 import { useSupplyStockDetail } from "../queries";
 import { MOVEMENT_LABELS, MOVEMENT_STYLES } from "../types";
-
-const fmtQty = (n: number) =>
-  new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(n || 0);
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
 function StatBox({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
@@ -75,12 +72,12 @@ export function SupplyInventoryDetailPage({ params }: { params: Promise<{ id: st
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatBox label="Saldo Tersedia" value={`${fmtQty(data.qty_available)} ${data.satuan_nama || ""}`} />
-        <StatBox label="Stok Minimum" value={fmtQty(data.qty_minimum)} />
-        <StatBox label="HPP Rata²" value={formatRp(data.unit_cost)} hint="rata-rata tertimbang" />
+        <StatBox label="Saldo Tersedia" value={`${formatNumber(data.qty_available, 3)} ${data.satuan_nama || ""}`} />
+        <StatBox label="Stok Minimum" value={formatNumber(data.qty_minimum, 3)} />
+        <StatBox label="HPP Rata²" value={formatRupiah(data.unit_cost)} hint="rata-rata tertimbang" />
         <StatBox
           label="Nilai Persediaan"
-          value={formatRp(data.qty_available * data.unit_cost)}
+          value={formatRupiah(data.qty_available * data.unit_cost)}
         />
       </div>
 
@@ -117,10 +114,10 @@ export function SupplyInventoryDetailPage({ params }: { params: Promise<{ id: st
                       <td className="px-4 py-3 text-gray-600">{m.reference_number || m.reference_type || "-"}</td>
                       <td className="px-4 py-3 text-right font-medium text-gray-900">
                         {m.tipe === "out" ? "-" : m.tipe === "in" ? "+" : ""}
-                        {fmtQty(m.jumlah)}
+                        {formatNumber(m.jumlah, 3)}
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-500">{fmtQty(m.qty_before)}</td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-700">{fmtQty(m.qty_after)}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{formatNumber(m.qty_before, 3)}</td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-700">{formatNumber(m.qty_after, 3)}</td>
                       <td className="px-4 py-3 text-gray-500">{m.alasan || m.catatan || "-"}</td>
                     </tr>
                   ))}

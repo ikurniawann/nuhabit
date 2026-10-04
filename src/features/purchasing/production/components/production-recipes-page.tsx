@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BeakerIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Filter, Pencil, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { getProductionModuleConfig } from "../production-module";
+import { Input } from "@/components/ui/input";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { useErrorToast } from "@/features/purchasing/reports/use-error-toast";
+import { formatNumber } from "@/lib/format";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { Filter, Pencil, Plus, Search, X } from "lucide-react";
-import { toast } from "sonner";
+import { displayName, hasRecipe, matchesItemKeyword, paginate, toNumber } from "@/lib/purchasing/production-ui-display";
+import { getProductionModuleConfig } from "../production-module";
 import { useRecipeItems } from "../queries";
 
 type BomFilter = "all" | "ready" | "incomplete";
@@ -26,14 +27,7 @@ const BOM_FILTER_OPTIONS = [
   { value: "incomplete", label: "Belum lengkap" },
 ];
 
-function toNumber(value: unknown) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
-function displayName(value?: string | null) {
-  return (value || "-").replace(/\s+\d{8,}$/g, "").trim();
-}
+const PAGE_SIZE = 10;
 
 export function ProductionRecipesPage({
   moduleType = "raw_material",
@@ -47,57 +41,29 @@ export function ProductionRecipesPage({
   const [bomFilter, setBomFilter] = useState<BomFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const limit = 10;
 
   const productsQuery = useRecipeItems(moduleType);
+  useErrorToast(productsQuery.error, "Gagal memuat daftar resep");
   const products = productsQuery.data ?? [];
   const loading = productsQuery.isLoading;
 
   useEffect(() => {
-    if (productsQuery.isError) {
-      console.error("Error loading recipe products:", productsQuery.error);
-      toast.error(
-        productsQuery.error instanceof Error
-          ? productsQuery.error.message
-          : "Gagal memuat daftar resep"
-      );
-    }
-  }, [productsQuery.isError, productsQuery.error]);
-
-  useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setSearch(searchQuery.trim());
+      setSearch(searchQuery.trim().toLowerCase());
       setPage(1);
     }, 300);
 
     return () => window.clearTimeout(timeout);
   }, [searchQuery]);
 
-  const filteredProducts = useMemo(() => {
-    const keyword = search.toLowerCase();
-    return products.filter((product) => {
-      const componentCount = toNumber(product.total_bahan_baku);
-      const hasBom = componentCount > 0;
+  const filteredProducts = products.filter(
+    (product) =>
+      matchesItemKeyword(product, search) &&
+      (bomFilter === "all" || (bomFilter === "ready") === hasRecipe(product))
+  );
+  const { rows: paginatedProducts, totalPages } = paginate(filteredProducts, page, PAGE_SIZE);
 
-      const matchesSearch =
-        !keyword ||
-        [product.nama, product.kode, product.kategori]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(keyword));
-
-      const matchesBom =
-        bomFilter === "all" ||
-        (bomFilter === "ready" && hasBom) ||
-        (bomFilter === "incomplete" && !hasBom);
-
-      return matchesSearch && matchesBom;
-    });
-  }, [products, search, bomFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / limit));
-  const paginatedProducts = filteredProducts.slice((page - 1) * limit, page * limit);
-
-  const withBom = products.filter((product) => toNumber(product.total_bahan_baku) > 0).length;
+  const withBom = products.filter(hasRecipe).length;
   const withoutBom = products.length - withBom;
   const isFilterActive = bomFilter !== "all";
 
@@ -290,7 +256,7 @@ export function ProductionRecipesPage({
                 ) : (
                   paginatedProducts.map((product) => {
                     const componentCount = toNumber(product.total_bahan_baku);
-                    const hasBom = componentCount > 0;
+                    const hasBom = hasRecipe(product);
 
                     return (
                       <tr key={product.id} className="hover:bg-gray-50">
@@ -317,11 +283,11 @@ export function ProductionRecipesPage({
                           {componentCount}
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-pink-700">
-                          {formatAmount(product.hpp_estimasi)}
+                          {formatNumber(product.hpp_estimasi)}
                         </td>
                         {isProduct && (
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatAmount(product.harga_jual)}
+                            {formatNumber(product.harga_jual)}
                           </td>
                         )}
                         <td className="px-4 py-3 text-right">
@@ -349,7 +315,7 @@ export function ProductionRecipesPage({
               page={page}
               totalPages={totalPages}
               totalItems={filteredProducts.length}
-              pageSize={limit}
+              pageSize={PAGE_SIZE}
               onPageChange={setPage}
             />
           )}

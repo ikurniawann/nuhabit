@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
 import { Download, Eye, Filter, Loader2, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import {
@@ -22,9 +22,10 @@ import {
 import { useSupplierList } from "../queries";
 import { useDeleteSupplier, useUpdateSupplierStatus } from "../mutations";
 import { PaymentTermsBadge, PaymentTermsBadgeFilter } from "./payment-terms-badge";
-import PurchasingGuard from "@/modules/purchasing/components/auth/PurchasingGuard";
+import PurchasingGuard from "@/features/purchasing/components/shared/purchasing-guard";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { downloadExport } from "@/lib/purchasing/api-client/download";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -134,24 +135,10 @@ function SuppliersListInner() {
 
     setExporting(true);
     try {
-      const response = await fetch("/api/purchasing/export/suppliers");
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message || "Ekspor gagal");
-      }
-
-      const blob = await response.blob();
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename =
-        match?.[1] || `suppliers-${new Date().toISOString().split("T")[0]}.xlsx`;
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
+      await downloadExport(
+        "/api/purchasing/export/suppliers",
+        `suppliers-${new Date().toISOString().split("T")[0]}.xlsx`
+      );
 
       toast.success("Supplier berhasil diekspor ke Excel.");
     } catch (err: unknown) {

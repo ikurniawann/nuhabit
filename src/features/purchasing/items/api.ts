@@ -12,7 +12,7 @@ function apiBase(type: ItemsLookupType) {
 
 async function parseJson<T>(res: Response, fallback: string): Promise<T> {
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || fallback);
+  if (!res.ok) throw new Error(json.error || json.message || fallback);
   return json as T;
 }
 

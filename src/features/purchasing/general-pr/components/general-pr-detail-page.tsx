@@ -14,15 +14,16 @@ import {
   Printer,
   XCircle,
 } from "lucide-react";
-import { formatRp, formatDate, getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/utils";
-import { PRRevisionButton } from "@/components/purchasing/pr-revision-button";
-import { PRDetailToast } from "@/components/purchasing/pr-detail-toast";
-import { PRApprovalActions } from "@/components/purchasing/pr-approval-actions";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/status-labels";
+import { PRRevisionButton } from "@/features/purchasing/components/shared/pr-revision-button";
+import { PRDetailToast } from "@/features/purchasing/components/shared/pr-detail-toast";
+import { PRApprovalActions } from "@/features/purchasing/components/shared/pr-approval-actions";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { NAV_FROM_APPROVAL_PR, appendNavFrom } from "@/lib/iam/nav-context";
 import { useNavFrom } from "@/lib/iam/use-nav-from";
 import { useGeneralPurchaseRequest } from "../queries";
 import type { GeneralPRDetailItem } from "../types";
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
 const PR_STATUS_LABEL_OVERRIDES: Record<string, string> = {
   rejected: "Ditolak",
@@ -64,10 +65,6 @@ function DetailField({ label, value }: { label: string; value: string }) {
       <dd className="mt-0.5 text-sm font-medium text-gray-900">{value}</dd>
     </div>
   );
-}
-
-function formatQty(value?: number | null) {
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(Number(value || 0));
 }
 
 export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
@@ -247,15 +244,15 @@ export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
                               <div className="text-xs text-gray-500">{item.supply_item.kode}</div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">{formatQty(item.qty)}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{formatNumber(item.qty, 4)}</td>
                           <td className="px-4 py-3 text-center text-gray-600">
                             {item.satuan?.nama || item.unit || "-"}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatRp(item.estimated_price || 0)}
+                            {formatRupiah(item.estimated_price || 0)}
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatRp(item.total || 0)}
+                            {formatRupiah(item.total || 0)}
                           </td>
                         </tr>
                       ))}
@@ -281,11 +278,11 @@ export function GeneralPRDetailPage({ params }: GeneralPRDetailPageProps) {
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <dt className="text-gray-500">Total Kuantitas</dt>
-                  <dd className="font-medium text-gray-900">{formatQty(totalQty)}</dd>
+                  <dd className="font-medium text-gray-900">{formatNumber(totalQty, 4)}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-3 border-t border-gray-200/70 pt-3">
                   <dt className="font-medium text-gray-900">Estimasi Total</dt>
-                  <dd className="font-semibold text-pink-700">{formatRp(pr.total_amount)}</dd>
+                  <dd className="font-semibold text-pink-700">{formatRupiah(pr.total_amount)}</dd>
                 </div>
               </dl>
               {pr.status === "rejected" && pr.rejection_reason && (

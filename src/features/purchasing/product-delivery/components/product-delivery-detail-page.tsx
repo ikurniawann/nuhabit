@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/purchasing/utils";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { formatDate } from "@/lib/format";
+import { DELIVERY_STATUS_LABELS, DELIVERY_STATUS_STYLES } from "@/lib/purchasing/receiving-ui-delivery";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { useProductDelivery } from "../queries";
-import type { ProductDeliveryStatus } from "../types";
 import {
   ArrowLeft,
   ArrowRight,
@@ -21,22 +21,6 @@ import {
 } from "lucide-react";
 
 const RECEIVE_INSERT = PRODUCT_ROUTES.purchasingReceiveInsert;
-
-const STATUS_COLORS: Record<ProductDeliveryStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  shipped: "bg-blue-50 text-blue-700 border-blue-200",
-  in_transit: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const STATUS_LABELS: Record<ProductDeliveryStatus, string> = {
-  pending: "Menunggu Penerimaan",
-  shipped: "Dikirim",
-  in_transit: "Dalam Pengiriman",
-  delivered: "Tiba",
-  cancelled: "Dibatalkan",
-};
 
 export function ProductDeliveryDetailPage() {
   const router = useRouter();
@@ -93,8 +77,8 @@ export function ProductDeliveryDetailPage() {
               <h1 className="text-2xl font-bold text-gray-900">
                 {delivery.nomor_resi || "Detail Pengiriman"}
               </h1>
-              <Badge className={STATUS_COLORS[delivery.status]}>
-                {STATUS_LABELS[delivery.status]}
+              <Badge className={DELIVERY_STATUS_STYLES[delivery.status]}>
+                {DELIVERY_STATUS_LABELS[delivery.status]}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-gray-500">
@@ -113,8 +97,8 @@ export function ProductDeliveryDetailPage() {
           <CardContent className="p-4">
             <p className="text-xs font-medium text-gray-500">Status Pengiriman</p>
             <div className="mt-2">
-              <Badge className={STATUS_COLORS[delivery.status]}>
-                {STATUS_LABELS[delivery.status]}
+              <Badge className={DELIVERY_STATUS_STYLES[delivery.status]}>
+                {DELIVERY_STATUS_LABELS[delivery.status]}
               </Badge>
             </div>
           </CardContent>

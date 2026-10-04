@@ -13,8 +13,8 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { useVendorPriceListDetail, useVendorPriceListFormData } from "../queries";
 import { useUpdateVendorPriceList } from "../mutations";
 import type { VendorPriceListFormData } from "../types";
@@ -23,56 +23,63 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+type PriceListDetailData = NonNullable<ReturnType<typeof useVendorPriceListDetail>["data"]>;
+
+function priceListFormFromData(priceList: PriceListDetailData) {
+  return {
+    vendor_id: priceList.vendor_id || "",
+    product_id: priceList.product_id || "",
+    harga: priceList.harga || 0,
+    satuan_id: priceList.satuan_id || "",
+    minimum_qty: priceList.minimum_qty || 1,
+    lead_time_days: priceList.lead_time_days || 0,
+    is_preferred: priceList.is_preferred || false,
+    berlaku_dari: priceList.berlaku_dari ? priceList.berlaku_dari.split("T")[0] : "",
+    berlaku_sampai: priceList.berlaku_sampai ? priceList.berlaku_sampai.split("T")[0] : "",
+    catatan: priceList.catatan || "",
+  };
+}
+
 export function EditVendorPriceListPage() {
-  const router = useRouter();
   const params = useParams();
   const priceListId = params.id as string;
-
-  const formDataQuery = useVendorPriceListFormData();
   const priceListQuery = useVendorPriceListDetail(priceListId);
+
+  useEffect(() => {
+    if (priceListQuery.isError) toast.error(getErrorMessage(priceListQuery.error, "Failed to load data."));
+  }, [priceListQuery.isError, priceListQuery.error]);
+
+  if (priceListQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+      </div>
+    );
+  }
+
+  if (!priceListQuery.data) {
+    return <div className="py-12 text-center text-red-500">Price list not found.</div>;
+  }
+
+  // key: form diisi ulang bila data server berubah.
+  return <EditVendorPriceListForm key={priceListQuery.dataUpdatedAt} priceListId={priceListId} data={priceListQuery.data} />;
+}
+
+function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; data: PriceListDetailData }) {
+  const router = useRouter();
+  const formDataQuery = useVendorPriceListFormData();
   const updateMutation = useUpdateVendorPriceList();
 
   const vendors = formDataQuery.data?.vendors ?? [];
   const products = formDataQuery.data?.products ?? [];
   const units = formDataQuery.data?.units ?? [];
-  const loading = formDataQuery.isLoading || priceListQuery.isLoading;
   const isSubmitting = updateMutation.isPending;
 
-  const [formData, setFormData] = useState<VendorPriceListFormData>({
-    vendor_id: "",
-    product_id: "",
-    harga: 0,
-    satuan_id: "",
-    minimum_qty: 1,
-    lead_time_days: 0,
-    is_preferred: false,
-    berlaku_dari: "",
-    berlaku_sampai: "",
-    catatan: "",
-  });
+  const [formData, setFormData] = useState<VendorPriceListFormData>(() => priceListFormFromData(data));
 
   useEffect(() => {
-    const priceList = priceListQuery.data;
-    if (!priceList) return;
-    setFormData({
-      vendor_id: priceList.vendor_id || "",
-      product_id: priceList.product_id || "",
-      harga: priceList.harga || 0,
-      satuan_id: priceList.satuan_id || "",
-      minimum_qty: priceList.minimum_qty || 1,
-      lead_time_days: priceList.lead_time_days || 0,
-      is_preferred: priceList.is_preferred || false,
-      berlaku_dari: priceList.berlaku_dari ? priceList.berlaku_dari.split("T")[0] : "",
-      berlaku_sampai: priceList.berlaku_sampai ? priceList.berlaku_sampai.split("T")[0] : "",
-      catatan: priceList.catatan || "",
-    });
-  }, [priceListQuery.data]);
-
-  useEffect(() => {
-    if (formDataQuery.isError || priceListQuery.isError) {
-      toast.error(getErrorMessage(formDataQuery.error || priceListQuery.error, "Failed to load data."));
-    }
-  }, [formDataQuery.isError, priceListQuery.isError, formDataQuery.error, priceListQuery.error]);
+    if (formDataQuery.isError) toast.error(getErrorMessage(formDataQuery.error, "Failed to load data."));
+  }, [formDataQuery.isError, formDataQuery.error]);
 
   const selectedProduct = products.find((product) => product.id === formData.product_id);
   const selectedUnit =
@@ -122,18 +129,6 @@ export function EditVendorPriceListPage() {
       toast.error(getErrorMessage(error, "Failed to update price list."));
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
-      </div>
-    );
-  }
-
-  if (!priceListQuery.data) {
-    return <div className="py-12 text-center text-red-500">Price list not found.</div>;
-  }
 
   return (
     <div className="space-y-6">

@@ -8,67 +8,63 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Calculator, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { ProductFormData, BOMItem, RawMaterialWithStock } from "@/types/purchasing";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import type { ProductFormData } from "@/types/purchasing";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { formatAmount } from "@/lib/purchasing/utils";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useProductEditData, useProductCategoryOptions, useProductWarehouses } from "../queries";
 import { useUpdateProduct } from "../mutations";
 import { mapUnitComboboxOptions } from "../product-unit";
 import { ProductInfoFields } from "./product-info-fields";
 import { ProductPriceFields } from "./product-price-fields";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
-import { resolvePosStation } from "@/lib/pos/kitchen-station";
-
-function getBomQty(item: Partial<BOMItem>) {
-  return item.qty_needed ?? item.qty_required ?? item.qty ?? 0;
-}
-
-function getBomWastePercent(item: Partial<BOMItem>) {
-  if (item.waste_persen !== undefined && item.waste_persen !== null) {
-    return item.waste_persen;
-  }
-  return (item.waste_factor ?? 0) * 100;
-}
-
-function getMaterialSmallUnitLabel(material?: RawMaterialWithStock) {
-  return material?.satuan_kecil_nama || material?.satuan || "Satuan";
-}
-
-function formatQuantity(value: number | string | null | undefined, maxFractionDigits = 4) {
-  return new Intl.NumberFormat("id-ID", {
-    maximumFractionDigits: maxFractionDigits,
-  }).format(Number(value) || 0);
-}
-
-function getMaterialCost(material?: RawMaterialWithStock) {
-  const baseCost = Number(material?.avg_cost ?? material?.harga_avg ?? material?.harga_terakhir ?? 0);
-  const hasSmallUnit = Boolean(material?.satuan_kecil_nama || material?.satuan_kecil_id);
-  const factor = Number(material?.konversi_factor ?? 0);
-  if (hasSmallUnit && factor > 0) return baseCost / factor;
-  return baseCost;
-}
-
-function calculateMarkupFromPrice(hpp: number, price: number) {
-  if (hpp <= 0) return 0;
-  return Number((((price - hpp) / hpp) * 100).toFixed(2));
-}
+import {
+  EMPTY_PRODUCT_FORM,
+  bomLineCost,
+  calculateMarkupFromPrice,
+  getBomQty,
+  getBomWastePercent,
+  materialSmallUnitLabel,
+  productFormFromProduct,
+} from "@/lib/purchasing/product-ui-form";
+import { formatNumber } from "@/lib/format";
 
 export function EditProductPage() {
-  const router = useRouter();
   const params = useParams();
   const productId = params.id as string;
-
   const editQuery = useProductEditData(productId);
-  const product = editQuery.data?.product ?? null;
-  const materials = editQuery.data?.materials ?? [];
-  const units = editQuery.data?.units ?? [];
-  const unitOptions = mapUnitComboboxOptions(units);
-  const bomItems = editQuery.data?.bom ?? [];
-  const loading = editQuery.isLoading;
+
+  useEffect(() => {
+    if (editQuery.isError) toast.error("Gagal memuat data produk");
+  }, [editQuery.isError]);
+
+  if (editQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand-text" />
+        Memuat produk...
+      </div>
+    );
+  }
+
+  const data = editQuery.data;
+  // key: form diinisialisasi ulang dari data server yang baru dimuat.
+  return <EditProductForm key={editQuery.dataUpdatedAt} productId={productId} data={data} />;
+}
+
+interface EditProductFormProps {
+  productId: string;
+  data: ReturnType<typeof useProductEditData>["data"];
+}
+
+function EditProductForm({ productId, data }: EditProductFormProps) {
+  const router = useRouter();
+  const product = data?.product ?? null;
+  const materials = data?.materials ?? [];
+  const unitOptions = mapUnitComboboxOptions(data?.units ?? []);
+  const bomItems = data?.bom ?? [];
 
   const categoriesQuery = useProductCategoryOptions();
   const warehousesQuery = useProductWarehouses();
@@ -81,77 +77,20 @@ export function EditProductPage() {
   const updateMutation = useUpdateProduct();
   const isSubmitting = updateMutation.isPending;
 
-  const [formData, setFormData] = useState<ProductFormData>({
-    nama: "",
-    kategori: "",
-    satuan_id: "",
-    warehouse_id: "",
-    deskripsi: "",
-    harga_jual: 0,
-    markup_persen: 0,
-    is_active: true,
-    production_output_type: "FINISHED_GOOD",
-    station: "kitchen",
-  });
+  const [formData, setFormData] = useState<ProductFormData>(() =>
+    product ? productFormFromProduct(product) : EMPTY_PRODUCT_FORM
+  );
   const stallOptions = (warehousesQuery.data ?? []).map((w) => ({
     value: w.id,
     label: w.name,
     description: w.code,
   }));
 
-  useEffect(() => {
-    if (editQuery.isError) {
-      console.error("Error loading data:", editQuery.error);
-      toast.error("Gagal memuat data produk");
-    }
-  }, [editQuery.isError, editQuery.error]);
-
-  useEffect(() => {
-    const productData = editQuery.data?.product;
-    if (!productData) return;
-    setFormData({
-      nama: productData.nama || "",
-      kategori: productData.kategori || "",
-      satuan_id: productData.satuan_id || productData.unit_id || "",
-      warehouse_id: productData.warehouse_id || "",
-      deskripsi: productData.deskripsi || "",
-      // pg numeric often arrives as string — coerce before submit/Zod
-      harga_jual: Number(productData.harga_jual) || 0,
-      markup_persen:
-        productData.markup_persen == null || productData.markup_persen === ""
-          ? 0
-          : Number(productData.markup_persen),
-      is_active: productData.is_active ?? true,
-      production_output_type:
-        productData.production_output_type === "WIP" ? "WIP" : "FINISHED_GOOD",
-      station: resolvePosStation(productData.station, productData.kategori),
-    });
-  }, [editQuery.data]);
-
   const totalCost = bomItems.reduce((sum, item) => {
     const material = materials.find((m) => m.id === item.raw_material_id);
-    const qty = getBomQty(item);
-    const waste = getBomWastePercent(item);
-    const price = getMaterialCost(material);
-    return sum + price * qty * (1 + waste / 100);
+    return sum + bomLineCost(material, getBomQty(item), getBomWastePercent(item));
   }, 0);
-
-  useEffect(() => {
-    if (loading) return;
-
-    setFormData((prev) => {
-      const nextMarkup = calculateMarkupFromPrice(totalCost, prev.harga_jual || 0);
-      return prev.markup_persen === nextMarkup ? prev : { ...prev, markup_persen: nextMarkup };
-    });
-  }, [loading, totalCost, formData.harga_jual]);
-
-  const handlePriceChange = (value: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      harga_jual: value,
-      markup_persen: calculateMarkupFromPrice(totalCost, value),
-    }));
-  };
+  const markupPersen = calculateMarkupFromPrice(totalCost, formData.harga_jual || 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,26 +118,16 @@ export function EditProductPage() {
         payload: {
           ...formData,
           harga_jual: Number(formData.harga_jual) || 0,
-          markup_persen: Number(formData.markup_persen) || 0,
+          markup_persen: markupPersen,
           harga_modal: Number(totalCost) || 0,
         },
       });
       toast.success("Produk berhasil diperbarui");
       router.push(PRODUCT_ROUTES.productsDetail(productId));
     } catch (error: unknown) {
-      console.error("Error updating product:", error);
       toast.error(error instanceof Error ? error.message : "Gagal memperbarui produk");
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
-        Memuat produk...
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -235,7 +164,7 @@ export function EditProductPage() {
                   unitOptions={unitOptions}
                   warehousesLoading={warehousesQuery.isLoading}
                   categoriesLoading={categoriesQuery.isLoading}
-                  unitsLoading={loading}
+                  unitsLoading={false}
                 />
               </CardContent>
             </Card>
@@ -256,7 +185,7 @@ export function EditProductPage() {
                     Belum ada resep (BOM).{" "}
                     <Link
                       href={PRODUCT_ROUTES.productsBom(productId)}
-                      className="font-medium text-primary hover:underline"
+                      className="font-medium text-brand-text hover:underline"
                     >
                       Ubah resep (BOM)
                     </Link>{" "}
@@ -280,9 +209,8 @@ export function EditProductPage() {
                           const material = materials.find((m) => m.id === item.raw_material_id);
                           const qty = getBomQty(item);
                           const wastePercent = getBomWastePercent(item);
-                          const smallUnitLabel = getMaterialSmallUnitLabel(material);
-                          const subtotal =
-                            getMaterialCost(material) * qty * (1 + wastePercent / 100);
+                          const smallUnitLabel = materialSmallUnitLabel(material);
+                          const subtotal = bomLineCost(material, qty, wastePercent);
 
                           return (
                             <tr key={item.id} className="border-b border-gray-200/70 last:border-0">
@@ -293,16 +221,16 @@ export function EditProductPage() {
                                 <p className="text-xs text-muted-foreground">{material?.kode}</p>
                               </td>
                               <td className="py-2.5 pr-3 text-right align-middle tabular-nums text-foreground">
-                                {formatQuantity(qty)}{" "}
+                                {formatNumber(qty, 4)}{" "}
                                 <span className="text-xs uppercase text-muted-foreground">
                                   {smallUnitLabel}
                                 </span>
                               </td>
                               <td className="py-2.5 pr-3 text-right align-middle tabular-nums text-foreground">
-                                {formatQuantity(wastePercent, 2)}%
+                                {formatNumber(wastePercent, 2)}%
                               </td>
                               <td className="py-2.5 text-right align-middle font-mono text-foreground">
-                                {formatAmount(subtotal)}
+                                {formatNumber(subtotal)}
                               </td>
                             </tr>
                           );
@@ -313,7 +241,7 @@ export function EditProductPage() {
                   <div className="flex justify-end border-t border-gray-200/70 px-4 py-3">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total Estimasi HPP</p>
-                      <p className="text-lg font-semibold text-foreground">{formatAmount(totalCost)}</p>
+                      <p className="text-lg font-semibold text-foreground">{formatNumber(totalCost)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -331,9 +259,9 @@ export function EditProductPage() {
             <CardContent>
               <ProductPriceFields
                 totalCost={totalCost}
-                markupPersen={formData.markup_persen}
+                markupPersen={markupPersen}
                 hargaJual={formData.harga_jual}
-                onHargaJualChange={handlePriceChange}
+                onHargaJualChange={(harga_jual) => setFormData((prev) => ({ ...prev, harga_jual }))}
               />
             </CardContent>
           </Card>

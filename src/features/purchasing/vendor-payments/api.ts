@@ -27,12 +27,12 @@ export async function listPurchaseInvoices(
   if (moduleType && moduleType !== "raw_material") sp.set("module_type", moduleType);
 
   const response = await fetch(`/api/purchasing/vendor-payments?${sp.toString()}`);
-  const result = await parseJsonResponse<{ success?: boolean; message?: string; data?: PurchaseInvoiceRow[] }>(
+  const result = await parseJsonResponse<{ success?: boolean; message?: string; error?: string; data?: PurchaseInvoiceRow[] }>(
     response
   );
 
   if (!response.ok || !result.success) {
-    throw new Error(result.message || "Failed to load purchase invoices");
+    throw new Error(result.error || result.message || "Failed to load purchase invoices");
   }
 
   return result.data || [];

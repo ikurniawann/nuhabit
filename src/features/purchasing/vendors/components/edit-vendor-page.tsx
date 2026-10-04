@@ -11,8 +11,8 @@ import { Building2, User, CreditCard, FileText, Loader2 } from "lucide-react";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { toast } from "sonner";
 import { useVendor } from "../queries";
 import { useUpdateVendor } from "../mutations";
@@ -28,55 +28,55 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+type VendorDetailData = NonNullable<ReturnType<typeof useVendor>["data"]>;
+
+function vendorFormFromData(vendor: VendorDetailData) {
+  return {
+    name: vendor.name,
+    contact_person: vendor.contact_person,
+    phone: vendor.phone,
+    email: vendor.email,
+    address: vendor.address,
+    category: vendor.category,
+    usage_scope: vendor.usage_scope ?? "keduanya",
+    npwp: vendor.npwp || "",
+    bank_name: vendor.bank_name || "",
+    bank_account: vendor.bank_account || "",
+    bank_account_name: vendor.bank_account_name || "",
+    notes: vendor.notes || "",
+  };
+}
+
 export function EditVendorPage() {
-  const router = useRouter();
   const params = useParams();
   const vendorId = params.id as string;
-
   const vendorQuery = useVendor(vendorId);
+
+  useEffect(() => {
+    if (vendorQuery.isError) toast.error(getErrorMessage(vendorQuery.error, "Failed to load vendor"));
+  }, [vendorQuery.isError, vendorQuery.error]);
+
+  if (vendorQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin text-pink-600" />
+        Loading vendor...
+      </div>
+    );
+  }
+
+  if (!vendorQuery.data) return null;
+
+  // key: form diisi ulang bila data server berubah.
+  return <EditVendorForm key={vendorQuery.dataUpdatedAt} vendorId={vendorId} data={vendorQuery.data} />;
+}
+
+function EditVendorForm({ vendorId, data }: { vendorId: string; data: VendorDetailData }) {
+  const router = useRouter();
   const updateMutation = useUpdateVendor();
-  const loading = vendorQuery.isLoading;
   const saving = updateMutation.isPending;
 
-  const [formData, setFormData] = useState<VendorFormData>({
-    name: "",
-    contact_person: "",
-    phone: "",
-    email: "",
-    address: "",
-    category: "other",
-    usage_scope: "keduanya",
-    npwp: "",
-    bank_name: "",
-    bank_account: "",
-    bank_account_name: "",
-    notes: "",
-  });
-
-  useEffect(() => {
-    const vendor = vendorQuery.data;
-    if (!vendor) return;
-    setFormData({
-      name: vendor.name,
-      contact_person: vendor.contact_person,
-      phone: vendor.phone,
-      email: vendor.email,
-      address: vendor.address,
-      category: vendor.category,
-      usage_scope: vendor.usage_scope ?? "keduanya",
-      npwp: vendor.npwp || "",
-      bank_name: vendor.bank_name || "",
-      bank_account: vendor.bank_account || "",
-      bank_account_name: vendor.bank_account_name || "",
-      notes: vendor.notes || "",
-    });
-  }, [vendorQuery.data]);
-
-  useEffect(() => {
-    if (vendorQuery.isError) {
-      toast.error(getErrorMessage(vendorQuery.error, "Failed to load vendor"));
-    }
-  }, [vendorQuery.isError, vendorQuery.error]);
+  const [formData, setFormData] = useState<VendorFormData>(() => vendorFormFromData(data));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,21 +105,12 @@ export function EditVendorPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16 text-sm text-gray-500">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin text-pink-600" />
-        Loading vendor...
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PurchasingFormHeader
         backHref={PRODUCT_ROUTES.purchasingVendorDetail(vendorId)}
         title="Edit Vendor"
-        description={vendorQuery.data?.name ? `Update details for ${vendorQuery.data.name}` : "Update vendor details"}
+        description={data.name ? `Update details for ${data.name}` : "Update vendor details"}
       />
 
       <form id="edit-vendor-form" onSubmit={handleSubmit} className="space-y-6">

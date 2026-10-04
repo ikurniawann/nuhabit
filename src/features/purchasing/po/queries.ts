@@ -2,20 +2,15 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { POListParams } from "@/types/purchasing";
-import {
-  listPurchaseOrders,
-  getPurchaseOrder,
-  getPurchaseOrderPaymentTerms,
-  getPOFormData,
-  listApprovedPRsForPO,
-} from "./api";
+import { listPurchaseOrders, getPurchaseOrder, getPurchaseOrderPaymentTerms, getPOFormData } from "./api";
 import { poQueryKeys } from "./query-keys";
 
-export const usePurchaseOrderList = (params: POListParams) =>
+export const usePurchaseOrderList = (params: POListParams, enabled = true) =>
   useQuery({
     queryKey: poQueryKeys.list(params),
     queryFn: () => listPurchaseOrders(params),
     placeholderData: keepPreviousData,
+    enabled,
   });
 
 export const usePurchaseOrder = (id: string) =>
@@ -25,23 +20,15 @@ export const usePurchaseOrder = (id: string) =>
     enabled: !!id,
   });
 
-export const usePurchaseOrderPayments = (id: string, enabled = true) =>
+export const usePurchaseOrderPayments = (id: string) =>
   useQuery({
     queryKey: poQueryKeys.payments(id),
     queryFn: () => getPurchaseOrderPaymentTerms(id),
-    enabled: !!id && enabled,
+    enabled: !!id,
   });
 
 export const usePOFormData = () =>
   useQuery({
     queryKey: poQueryKeys.formData,
     queryFn: getPOFormData,
-  });
-
-export const useApprovedPRsForPO = () =>
-  useQuery({
-    queryKey: poQueryKeys.approvedPRs,
-    queryFn: listApprovedPRsForPO,
-    staleTime: 0,
-    refetchOnMount: "always",
   });

@@ -12,7 +12,7 @@ const MODULE_TYPE = "general";
 async function parseJson<T>(res: Response, fallback: string): Promise<T> {
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || fallback);
+    throw new Error(json.error || json.message || fallback);
   }
   return json;
 }
@@ -66,7 +66,7 @@ export async function approveGeneralPurchaseOrder(id: string) {
   const res = await fetch(`/api/purchasing/po/${id}/approve`, { method: "POST" });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json.message || json.error || "Gagal menyetujui purchase order");
+    throw new Error(json.error || json.message || "Gagal menyetujui purchase order");
   }
 }
 
@@ -81,7 +81,7 @@ export async function sendGeneralPurchaseOrder(
   });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json.message || json.error || "Gagal mengirim purchase order");
+    throw new Error(json.error || json.message || "Gagal mengirim purchase order");
   }
 }
 
@@ -93,6 +93,6 @@ export async function cancelGeneralPurchaseOrder(id: string, reason: string) {
   });
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json.message || json.error || "Gagal membatalkan purchase order");
+    throw new Error(json.error || json.message || "Gagal membatalkan purchase order");
   }
 }

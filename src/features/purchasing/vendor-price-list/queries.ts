@@ -46,13 +46,13 @@ export function useVendorPriceListFormData() {
       const unitsJson = await unitsRes.json();
 
       if (!vendorsRes.ok) {
-        throw new Error(vendorsJson.message || "Failed to load vendors");
+        throw new Error(vendorsJson.error || vendorsJson.message || "Failed to load vendors");
       }
       if (!productsRes.ok) {
-        throw new Error(productsJson.message || "Failed to load products");
+        throw new Error(productsJson.error || productsJson.message || "Failed to load products");
       }
       if (!unitsRes.ok) {
-        throw new Error(unitsJson.message || "Failed to load units");
+        throw new Error(unitsJson.error || unitsJson.message || "Failed to load units");
       }
 
       return {

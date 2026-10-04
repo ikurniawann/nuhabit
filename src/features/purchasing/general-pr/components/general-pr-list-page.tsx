@@ -7,15 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { Plus, Search, Filter, FileText, Eye, Printer, Pencil, X } from "lucide-react";
-import { formatRp, formatDate, getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/utils";
+import { getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/status-labels";
 import { toast } from "sonner";
 import { useGeneralPurchaseRequestList } from "../queries";
 import type { GeneralPRStatusFilter } from "../types";
+import { formatDate, formatRupiah } from "@/lib/format";
 
 const PR_STATUS_LABEL_OVERRIDES: Record<string, string> = {
   rejected: "Ditolak",
@@ -218,7 +219,7 @@ export function GeneralPRListPage() {
                           <td className="px-4 py-3 text-gray-600">{formatDate(pr.created_at)}</td>
                           <td className="px-4 py-3 text-gray-600">{pr.department_name || "-"}</td>
                           <td className="px-4 py-3 text-gray-600">{pr.requester_name || "-"}</td>
-                          <td className="px-4 py-3 text-right font-medium">{formatRp(pr.total_amount)}</td>
+                          <td className="px-4 py-3 text-right font-medium">{formatRupiah(pr.total_amount)}</td>
                           <td className="px-4 py-3 text-center">
                             <Badge className={priorityBadge.color}>{priorityLabel}</Badge>
                           </td>

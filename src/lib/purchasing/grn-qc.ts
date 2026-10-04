@@ -138,7 +138,7 @@ async function postProductMerchSkuStock(
   }
 
   if (Number(updatedCount) === 0) {
-    throw new Error(
+    throw ApiError.badRequest(
       `SKU ${skuId} tidak aktif atau tidak ditemukan — stok tidak dapat diposting`
     );
   }
@@ -220,11 +220,11 @@ export async function submitGrnQcInspection(
     .single();
 
   if (grnError || !grn) {
-    throw new Error("GRN not found");
+    throw ApiError.badRequest("GRN not found");
   }
 
   if (grn.status !== "pending") {
-    throw new Error("GRN is not awaiting quality control");
+    throw ApiError.badRequest("GRN is not awaiting quality control");
   }
 
   const { data: existingQc } = await db
@@ -234,7 +234,7 @@ export async function submitGrnQcInspection(
     .maybeSingle();
 
   if (existingQc?.inventory_posted) {
-    throw new Error("Quality control has already been completed for this goods receipt");
+    throw ApiError.badRequest("Quality control has already been completed for this goods receipt");
   }
 
   const { data: grnItems, error: itemsError } = await db
@@ -286,14 +286,14 @@ export async function submitGrnQcInspection(
   for (const item of items) {
     const grnItem = grnItemMap.get(item.grn_item_id);
     if (!grnItem) {
-      throw new Error(`GRN item ${item.grn_item_id} not found`);
+      throw ApiError.badRequest(`GRN item ${item.grn_item_id} not found`);
     }
 
     const rawMaterialId = item.raw_material_id ?? grnItem.raw_material_id ?? null;
     const productId = item.product_id ?? grnItem.product_id ?? null;
 
     if (!rawMaterialId && !productId) {
-      throw new Error(`GRN item ${item.grn_item_id} has no raw material or product`);
+      throw ApiError.badRequest(`GRN item ${item.grn_item_id} has no raw material or product`);
     }
 
     const inspected = toQty(item.qty_inspected);
@@ -302,19 +302,19 @@ export async function submitGrnQcInspection(
     const receivedQty = toQty(grnItem.qty_diterima);
 
     if (inspected <= 0) {
-      throw new Error("Inspected quantity must be greater than zero");
+      throw ApiError.badRequest("Inspected quantity must be greater than zero");
     }
 
     if (Math.abs(accepted + rejected - inspected) > 0.0001) {
-      throw new Error("Accepted and rejected quantities must equal inspected quantity");
+      throw ApiError.badRequest("Accepted and rejected quantities must equal inspected quantity");
     }
 
     if (inspected > receivedQty + 0.0001) {
-      throw new Error("Inspected quantity cannot exceed received good quantity");
+      throw ApiError.badRequest("Inspected quantity cannot exceed received good quantity");
     }
 
     if (accepted > receivedQty + 0.0001) {
-      throw new Error("Accepted quantity cannot exceed received good quantity");
+      throw ApiError.badRequest("Accepted quantity cannot exceed received good quantity");
     }
 
     if (

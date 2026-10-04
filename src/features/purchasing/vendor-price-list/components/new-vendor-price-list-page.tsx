@@ -13,8 +13,8 @@ import { NumericInput } from "@/components/ui/numeric-input";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { useVendorPriceListFormData } from "../queries";
 import { useCreateVendorPriceList } from "../mutations";
 import type { VendorPriceListFormData } from "../types";

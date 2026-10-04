@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   PRODUCT_NAV_GROUPS,
   RAW_MATERIAL_NAV_GROUPS,
-} from "@/modules/purchasing/constants/items-nav";
+} from "@/features/purchasing/items/items-nav";
 import {
   ArrowRight,
   Box,

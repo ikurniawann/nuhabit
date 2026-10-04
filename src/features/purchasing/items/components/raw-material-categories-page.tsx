@@ -1,4 +1,4 @@
-import { ItemsLookupPage } from "@/modules/purchasing/components/items-lookup/ItemsLookupPage";
+import { ItemsLookupPage } from "@/features/purchasing/items/components/items-lookup-page";
 
 export function RawMaterialCategoriesPage() {
   return (

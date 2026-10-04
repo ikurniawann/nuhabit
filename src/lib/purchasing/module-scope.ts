@@ -13,7 +13,7 @@ export async function getPurchaseOrderIdsByModuleType(
     .eq("is_active", true);
 
   if (error) throw error;
-  return (data || []).map((row) => row.id as string);
+  return ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
 }
 
 export function parsePurchasingModuleType(

@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { PackageCheck, Search, X, Truck } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/purchasing/utils";
-import { listReceivableGeneralPOs, type ReceivableGeneralPO } from "../api";
+import { formatDate } from "@/lib/format";
+import { useReceivableGeneralPOs } from "../queries";
 
 const STATUS_LABELS: Record<string, string> = {
   approved: "Disetujui",
@@ -31,8 +31,9 @@ export function GeneralReceiveListPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [rows, setRows] = useState<ReceivableGeneralPO[]>([]);
-  const [loading, setLoading] = useState(true);
+  const listQuery = useReceivableGeneralPOs(search);
+  const rows = listQuery.data ?? [];
+  const loading = listQuery.isLoading;
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setSearch(searchQuery.trim()), 300);
@@ -40,22 +41,8 @@ export function GeneralReceiveListPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    listReceivableGeneralPOs(search || undefined)
-      .then((data) => {
-        if (!cancelled) setRows(data);
-      })
-      .catch(() => {
-        if (!cancelled) toast.error("Gagal memuat purchase order untuk penerimaan");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [search]);
+    if (listQuery.isError) toast.error("Gagal memuat purchase order untuk penerimaan");
+  }, [listQuery.isError]);
 
   return (
     <div className="space-y-6">
@@ -113,7 +100,7 @@ export function GeneralReceiveListPage() {
                 {rows.map((po) => (
                   <tr key={po.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{po.nomor_po}</td>
-                    <td className="px-4 py-3 text-gray-600">{formatDate(po.tanggal_po)}</td>
+                    <td className="px-4 py-3 text-gray-600">{formatDate(po.tanggal_po, "—")}</td>
                     <td className="px-4 py-3 text-gray-900">{po.vendor_name}</td>
                     <td className="px-4 py-3 text-center text-gray-600">{po.total_items}</td>
                     <td className="px-4 py-3 text-center">

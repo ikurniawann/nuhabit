@@ -1,9 +1,6 @@
-export type ProductDeliveryStatus =
-  | "pending"
-  | "shipped"
-  | "in_transit"
-  | "delivered"
-  | "cancelled";
+import type { DeliveryStatus } from "@/lib/purchasing/receiving-ui-delivery";
+
+export type ProductDeliveryStatus = DeliveryStatus;
 
 export interface ProductDeliveryRow {
   id: string;
@@ -70,4 +67,14 @@ export interface CreateProductDeliveryPayload {
   tanggal_estimasi_tiba: string;
   catatan: string;
   module_type?: "product";
+}
+
+/** Item PO produk dari GET /api/purchasing/po-items. */
+export interface ProductPOItemRow {
+  id: string;
+  qty_ordered?: number | string | null;
+  harga_satuan?: number | string | null;
+  subtotal?: number | string | null;
+  product?: { id: string; nama: string; kode?: string | null } | null;
+  satuan?: { nama?: string; nama_satuan?: string } | null;
 }

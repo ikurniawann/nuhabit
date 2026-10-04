@@ -2,24 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
-import { NumericInput } from "@/components/ui/numeric-input";
 import { DsDateTimePicker } from "@/components/design-system";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
 import { getReturnsModuleConfig } from "../returns-module";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { useReturnFormData, useReturnGrnOptions } from "../queries";
 import { useCreateReturn } from "../mutations";
 import { ReturnReasonType, ReturnableItem } from "@/types/purchasing";
-import { formatAmount } from "@/lib/purchasing/utils";
 import {
   AlertCircle,
   ClipboardList,
@@ -29,6 +25,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
+import { ReturnItemsTable } from "./return-items-table";
 
 const RETURN_REASON_OPTIONS: { value: ReturnReasonType; label: string }[] = [
   { value: "damaged", label: "Barang Rusak" },
@@ -49,15 +47,13 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-function formatQty(value: number) {
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(value);
-}
-
-interface ReturnItem extends ReturnableItem {
+interface ItemEdit {
   selected: boolean;
   qty_return: number;
   condition_notes: string;
 }
+
+type ReturnItem = ReturnableItem & ItemEdit;
 
 export function NewReturnPage({
   moduleType = "raw_material",
@@ -69,12 +65,11 @@ export function NewReturnPage({
   const searchParams = useSearchParams();
   const initialGrnId = searchParams.get("grn_id") || "";
 
-  const [selectedGrnId, setSelectedGrnId] = useState(initialGrnId);
-  const [returnableItems, setReturnableItems] = useState<ReturnItem[]>([]);
+  // grn_id dari URL mengunci pilihan penerimaan barang.
+  const [pickedGrnId, setPickedGrnId] = useState(initialGrnId);
+  const selectedGrnId = initialGrnId || pickedGrnId;
+  const [itemEdits, setItemEdits] = useState<Record<string, ItemEdit>>({});
   const [formData, setFormData] = useState({
-    grn_id: initialGrnId,
-    supplier_id: "",
-    vendor_id: "",
     return_date: new Date().toISOString().split("T")[0],
     reason_type: "" as ReturnReasonType | "",
     reason_notes: "",
@@ -100,105 +95,73 @@ export function NewReturnPage({
 
   useEffect(() => {
     if (formDataQuery.isError) {
-      console.error("Error loading return items:", formDataQuery.error);
       toast.error("Gagal memuat item yang dapat diretur");
     }
   }, [formDataQuery.isError, formDataQuery.error]);
 
-  useEffect(() => {
-    if (initialGrnId && initialGrnId !== selectedGrnId) {
-      setSelectedGrnId(initialGrnId);
-    }
-  }, [initialGrnId, selectedGrnId]);
+  const itemsData = selectedGrnId ? formDataQuery.data?.returnableItems : undefined;
+  const returnableItems: ReturnItem[] = (itemsData ?? []).map((item) => ({
+    ...item,
+    selected: false,
+    qty_return: 0,
+    condition_notes: "",
+    ...(itemEdits[item.grn_item_id] as ItemEdit | undefined),
+  }));
+  // Pihak retur (supplier/vendor) mengikuti item pertama, atau GRN terpilih bila belum ada item.
+  const party = itemsData?.[0] ?? selectedGrn;
+  const grnId = itemsData?.[0]?.grn_id ?? selectedGrnId;
+  const supplierId = config.isProduct ? "" : party?.supplier_id || "";
+  const vendorId = config.isProduct ? party?.vendor_id || "" : "";
 
-  useEffect(() => {
-    const itemsData = formDataQuery.data?.returnableItems;
-    if (!selectedGrnId) {
-      setReturnableItems([]);
-      return;
-    }
+  const handleGrnChange = (nextGrnId: string) => {
+    setPickedGrnId(nextGrnId);
+    setItemEdits({});
+  };
 
-    if (!itemsData) return;
-
-    setReturnableItems(
-      itemsData.map((item: ReturnableItem) => ({
-        ...item,
-        selected: false,
-        qty_return: 0,
-        condition_notes: "",
-      }))
-    );
-
-    if (itemsData.length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        grn_id: itemsData[0].grn_id,
-        supplier_id: config.isProduct ? "" : itemsData[0].supplier_id || "",
-        vendor_id: config.isProduct ? itemsData[0].vendor_id || "" : "",
-      }));
-    } else if (selectedGrn) {
-      setFormData((prev) => ({
-        ...prev,
-        grn_id: selectedGrn.id,
-        supplier_id: config.isProduct ? "" : selectedGrn.supplier_id || "",
-        vendor_id: config.isProduct ? selectedGrn.vendor_id || "" : "",
-      }));
-    }
-  }, [formDataQuery.data, selectedGrnId, selectedGrn, config.isProduct]);
-
-  const handleGrnChange = (grnId: string) => {
-    setSelectedGrnId(grnId);
-    setReturnableItems([]);
-    setFormData((prev) => ({
-      ...prev,
-      grn_id: grnId,
-      supplier_id: "",
-      vendor_id: "",
+  const editItem = (grnItemId: string, patch: (item: ReturnItem) => Partial<ItemEdit>) => {
+    const item = returnableItems.find((row) => row.grn_item_id === grnItemId);
+    if (!item) return;
+    setItemEdits((edits) => ({
+      ...edits,
+      [grnItemId]: {
+        selected: item.selected,
+        qty_return: item.qty_return,
+        condition_notes: item.condition_notes,
+        ...patch(item),
+      },
     }));
   };
 
-  const toggleItem = (grnItemId: string) => {
-    setReturnableItems((items) =>
-      items.map((item) =>
-        item.grn_item_id === grnItemId ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
+  const toggleItem = (grnItemId: string) => editItem(grnItemId, (item) => ({ selected: !item.selected }));
 
   const toggleAllItems = (checked: boolean) => {
-    setReturnableItems((items) => items.map((item) => ({ ...item, selected: checked })));
-  };
-
-  const updateQtyReturn = (grnItemId: string, qty: number) => {
-    setReturnableItems((items) =>
-      items.map((item) =>
-        item.grn_item_id === grnItemId
-          ? {
-              ...item,
-              qty_return: Math.min(Math.max(0, qty), item.qty_available_to_return),
-              selected: qty > 0 ? true : item.selected,
-            }
-          : item
+    setItemEdits(
+      Object.fromEntries(
+        returnableItems.map((item) => [
+          item.grn_item_id,
+          { selected: checked, qty_return: item.qty_return, condition_notes: item.condition_notes },
+        ])
       )
     );
   };
 
-  const updateConditionNotes = (grnItemId: string, notes: string) => {
-    setReturnableItems((items) =>
-      items.map((item) =>
-        item.grn_item_id === grnItemId ? { ...item, condition_notes: notes } : item
-      )
-    );
-  };
+  const updateQtyReturn = (grnItemId: string, qty: number) =>
+    editItem(grnItemId, (item) => ({
+      qty_return: Math.min(Math.max(0, qty), item.qty_available_to_return),
+      selected: qty > 0 ? true : item.selected,
+    }));
+
+  const updateConditionNotes = (grnItemId: string, notes: string) =>
+    editItem(grnItemId, () => ({ condition_notes: notes }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.grn_id) {
+    if (!grnId) {
       toast.error("Penerimaan barang wajib diisi");
       return;
     }
-    if (config.isProduct ? !formData.vendor_id : !formData.supplier_id) {
+    if (config.isProduct ? !vendorId : !supplierId) {
       toast.error(`${config.partyLabel} wajib diisi`);
       return;
     }
@@ -226,10 +189,10 @@ export function NewReturnPage({
 
     try {
       await createMutation.mutateAsync({
-        grn_id: formData.grn_id,
+        grn_id: grnId,
         ...(config.isProduct
-          ? { vendor_id: formData.vendor_id, module_type: "product" as const }
-          : { supplier_id: formData.supplier_id }),
+          ? { vendor_id: vendorId, module_type: "product" as const }
+          : { supplier_id: supplierId }),
         return_date: formData.return_date,
         reason_type: formData.reason_type as ReturnReasonType,
         reason_notes: formData.reason_notes,
@@ -249,7 +212,6 @@ export function NewReturnPage({
       toast.success("Retur pembelian berhasil dibuat dan menunggu persetujuan");
       router.push(config.listRoute);
     } catch (error: unknown) {
-      console.error("Error creating return:", error);
       toast.error(getErrorMessage(error, "Gagal membuat retur pembelian"));
     }
   };
@@ -262,8 +224,6 @@ export function NewReturnPage({
     .filter((i) => i.selected)
     .reduce((sum, i) => sum + i.qty_return * i.unit_price, 0);
 
-  const allSelected =
-    returnableItems.length > 0 && returnableItems.every((item) => item.selected);
 
   if (loadingGrnOptions && !grnOptions.length) {
     return (
@@ -426,92 +386,16 @@ export function NewReturnPage({
                   </div>
                 ) : (
                   <div className="overflow-x-auto p-4">
-                    <table className="w-full table-fixed border-collapse text-sm [&_td]:border [&_td]:border-gray-200/70 [&_th]:border [&_th]:border-gray-200/70">
-                      <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                        <tr>
-                          <th className="w-10 px-2 py-3 text-center font-semibold">
-                            <Checkbox
-                              checked={allSelected}
-                              onCheckedChange={(checked) => toggleAllItems(checked === true)}
-                              aria-label="Pilih semua item"
-                            />
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold">
-                            {config.isProduct ? "Produk" : "Bahan Baku"}
-                          </th>
-                          <th className="w-[88px] px-2 py-3 text-center font-semibold">Diterima</th>
-                          <th className="w-[88px] px-2 py-3 text-center font-semibold">Diretur</th>
-                          <th className="w-[96px] px-2 py-3 text-center font-semibold">Tersedia</th>
-                          <th className="w-[112px] px-2 py-3 text-center font-semibold">
-                            Qty Retur
-                          </th>
-                          <th className="min-w-[140px] px-3 py-3 text-left font-semibold">
-                            Kondisi
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {returnableItems.map((item) => {
-                          const itemDisplay = config.itemName(item);
-                          return (
-                          <tr
-                            key={item.grn_item_id}
-                            className={`bg-white ${item.selected ? "bg-pink-50/40" : "hover:bg-gray-50/80"}`}
-                          >
-                            <td className="px-2 py-3 text-center align-middle">
-                              <Checkbox
-                                checked={item.selected}
-                                onCheckedChange={() => toggleItem(item.grn_item_id)}
-                                aria-label={`Pilih ${itemDisplay.nama}`}
-                              />
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="font-medium text-gray-900">
-                                {itemDisplay.nama}
-                              </div>
-                              <div className="mt-0.5 text-xs text-gray-500">
-                                {itemDisplay.kode}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center align-middle text-gray-700">
-                              {formatQty(item.qty_diterima)}
-                            </td>
-                            <td className="px-2 py-3 text-center align-middle text-gray-500">
-                              {formatQty(item.qty_returned)}
-                            </td>
-                            <td className="px-2 py-3 text-center align-middle font-semibold text-pink-700">
-                              {formatQty(item.qty_available_to_return)}
-                            </td>
-                            <td className="px-1.5 py-1.5 align-middle">
-                              <NumericInput
-                                min={0}
-                                max={item.qty_available_to_return}
-                                value={item.selected ? item.qty_return : 0}
-                                onValueChange={(value) =>
-                                  updateQtyReturn(item.grn_item_id, value || 0)
-                                }
-                                decimalScale={4}
-                                disabled={!item.selected}
-                                className="h-9 w-full border-gray-200/80 bg-white px-2 text-center text-sm focus-visible:border-pink-300 focus-visible:ring-1 focus-visible:ring-pink-200/80 disabled:bg-gray-50"
-                              />
-                            </td>
-                            <td className="px-1.5 py-1.5 align-middle">
-                              <input
-                                type="text"
-                                value={item.condition_notes}
-                                onChange={(e) =>
-                                  updateConditionNotes(item.grn_item_id, e.target.value)
-                                }
-                                disabled={!item.selected}
-                                placeholder="Kondisi item..."
-                                className="h-9 w-full rounded-lg border border-gray-200/80 bg-white px-2 text-sm focus:border-pink-300 focus:outline-none focus:ring-1 focus:ring-pink-200/80 disabled:bg-gray-50"
-                              />
-                            </td>
-                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <ReturnItemsTable
+                      variant="create"
+                      items={returnableItems}
+                      isProduct={config.isProduct}
+                      itemName={config.itemName}
+                      onToggle={toggleItem}
+                      onToggleAll={toggleAllItems}
+                      onQtyChange={updateQtyReturn}
+                      onNotesChange={updateConditionNotes}
+                    />
                   </div>
                 )}
               </CardContent>
@@ -531,12 +415,12 @@ export function NewReturnPage({
                   </div>
                   <div className="flex items-start justify-between gap-3">
                     <dt className="text-gray-500">Total Qty</dt>
-                    <dd className="font-medium text-gray-900">{formatQty(totalQty)}</dd>
+                    <dd className="font-medium text-gray-900">{formatNumber(totalQty, 4)}</dd>
                   </div>
                   <div className="flex items-start justify-between gap-3 border-t border-gray-200/70 pt-3">
                     <dt className="font-medium text-gray-900">Nilai Total</dt>
                     <dd className="font-semibold text-pink-700">
-                      {formatAmount(totalAmount)}
+                      {formatNumber(totalAmount)}
                     </dd>
                   </div>
                 </dl>
@@ -575,7 +459,7 @@ export function NewReturnPage({
                           >
                             <span className="truncate">{itemDisplay.nama}</span>
                             <span className="shrink-0 font-medium text-gray-900">
-                              {formatQty(item.qty_return)}
+                              {formatNumber(item.qty_return, 4)}
                             </span>
                           </li>
                           );

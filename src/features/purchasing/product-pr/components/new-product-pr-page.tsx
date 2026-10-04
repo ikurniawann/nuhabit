@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ProductPRForm } from "@/components/purchasing/product-pr-form";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { ProductPRForm } from "@/features/purchasing/product-pr/components/product-pr-form";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { useProductPRFormData } from "../queries";
 import { useCreateProductPurchaseRequest } from "../mutations";
 import type { ProductPRFormInput } from "../types";

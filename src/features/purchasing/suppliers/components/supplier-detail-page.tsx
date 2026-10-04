@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import PurchasingGuard from "@/modules/purchasing/components/auth/PurchasingGuard";
-import { SupplierPriceHistoryPanel } from "@/modules/purchasing/components/supplier-price-history/SupplierPriceHistoryPanel";
+import PurchasingGuard from "@/features/purchasing/components/shared/purchasing-guard";
+import { SupplierPriceHistoryPanel } from "@/features/purchasing/suppliers/components/supplier-price-history-panel";
 import {
   Building2,
   Pencil,
@@ -24,13 +24,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { SupplierPOSummary } from "@/types/supplier";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useSupplier, useSupplierPOHistory } from "../queries";
 import { useDeleteSupplier } from "../mutations";
 import { suppliersQueryKeys } from "../query-keys";
 import { useAuth } from "@/hooks/use-auth";
-import { formatAmount } from "@/lib/purchasing/utils";
 import { toast } from "sonner";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const PO_STATUS_STYLES: Record<string, string> = {
   draft: "border-gray-200 bg-gray-50 text-gray-700",
@@ -58,17 +58,8 @@ const PO_STATUS_LABELS: Record<string, string> = {
   cancelled: "Dibatalkan",
 };
 
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function formatMoney(amount: number, currency = "IDR") {
-  return `${formatAmount(amount)} ${currency}`;
+  return `${formatNumber(amount)} ${currency}`;
 }
 
 function formatPaymentTerms(value?: string | null) {

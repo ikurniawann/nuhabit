@@ -3,6 +3,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 
+// Lolos guard IAM; uji guard ada di src/test/api/purchasing-guard.test.ts.
+vi.mock("@/lib/api/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/auth")>()),
+  requireIamMenuPrefix: vi.fn(async () => ({ id: "user-1", full_name: "Admin", role: "admin", brand_id: null })),
+}));
+
 vi.mock("@/lib/api/scope", () => ({
   getApiUserScope: vi.fn(async () => ({
     userId: "user-1",
@@ -17,10 +23,6 @@ vi.mock("@/lib/api/scope", () => ({
   branchScopeOr: vi.fn(() => null),
   effectiveCompanyId: vi.fn(() => "company-1"),
   effectiveBranchId: vi.fn(() => "branch-1"),
-}));
-
-vi.mock("@/lib/purchasing/delivery", () => ({
-  isOpenDeliveryStatus: vi.fn(() => false),
 }));
 
 // ---- Fake query-builder db (FIFO respons per tabel, meniru urutan
@@ -134,7 +136,7 @@ describe("POST /api/purchasing/po — variant SKU validation (EPIC-047 Fase 2)",
 
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.message).toBe("Produk ber-varian wajib memilih SKU");
+    expect(json).toMatchObject({ success: false, error: "Produk ber-varian wajib memilih SKU" });
     // Gagal SEBELUM insert apa pun.
     expect(fakeDbRef.calls.some((c) => c.table === "purchase_orders")).toBe(false);
   });
@@ -169,7 +171,7 @@ describe("POST /api/purchasing/po — variant SKU validation (EPIC-047 Fase 2)",
 
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.message).toBe("Varian tidak sesuai produk");
+    expect(json.error).toBe("Varian tidak sesuai produk");
     expect(fakeDbRef.calls.some((c) => c.table === "purchase_orders")).toBe(false);
   });
 
@@ -199,7 +201,7 @@ describe("POST /api/purchasing/po — variant SKU validation (EPIC-047 Fase 2)",
 
     expect(res.status).toBe(400);
     const json = await res.json();
-    expect(json.message).toBe("Baris SKU ganda");
+    expect(json.error).toBe("Baris SKU ganda");
   });
 
   it("creates the PO and writes pos_sku_id on variant lines (201)", async () => {
@@ -253,5 +255,22 @@ describe("POST /api/purchasing/po — variant SKU validation (EPIC-047 Fase 2)",
       expect.objectContaining({ product_id: KAOS_001, pos_sku_id: SKU_B }),
       expect.objectContaining({ product_id: KAOS_003, pos_sku_id: null }),
     ]);
+  });
+  it("rejects a raw-material PO without an approved PR before any query (400)", async () => {
+    fakeDbRef = createFakeDb({});
+    const { POST } = await import("./route");
+    const res = await POST(
+      makeRequest({
+        supplier_id: VENDOR_ID,
+        tanggal_po: "2026-09-10",
+        items: [{ raw_material_id: KAOS_001, qty_ordered: 1, harga_satuan: 1000 }],
+      })
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      success: false,
+      error: "Purchase order must be created from an approved purchase request",
+    });
+    expect(fakeDbRef.calls).toEqual([]);
   });
 });

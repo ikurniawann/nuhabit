@@ -3,36 +3,22 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { FormModal } from "@/components/ui/form-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
-import {
-  FormFieldLabel,
-  formComboboxClassName,
-  formInputClassName,
-} from "@/components/layout/form-field";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { Loader2, Pencil, Plus, Scale, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { useActivityLogger } from "@/hooks/useActivityLogger";
-import { Unit, UnitFormData } from "@/types/purchasing";
+import type { Unit } from "@/types/purchasing";
 import { useUnitList } from "../queries";
-import { useCreateUnit, useUpdateUnit, useUpdateUnitStatus, useDeleteUnit } from "../mutations";
+import { useUpdateUnitStatus, useDeleteUnit } from "../mutations";
+import { UnitFormDialog } from "./unit-form-dialog";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
-
-const TYPE_OPTIONS = [
-  { value: "BESAR", label: "Satuan Besar" },
-  { value: "KECIL", label: "Satuan Kecil" },
-  { value: "KONVERSI", label: "Satuan Konversi" },
-];
 
 const TYPE_BADGE_STYLES: Record<string, string> = {
   BESAR: "border-blue-200 bg-blue-50 text-blue-700",
@@ -46,18 +32,7 @@ const TYPE_LABELS: Record<string, string> = {
   KONVERSI: "Satuan Konversi",
 };
 
-function normalizeUnitFormData(formData: UnitFormData): UnitFormData {
-  return {
-    kode: formData.kode.trim().toUpperCase(),
-    nama: formData.nama.trim(),
-    tipe: formData.tipe,
-    deskripsi: formData.deskripsi?.trim() || undefined,
-  };
-}
-
 export function UnitsPage() {
-  const logger = useActivityLogger();
-
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -67,12 +42,7 @@ export function UnitsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
-  const [formData, setFormData] = useState<UnitFormData>({
-    kode: "",
-    nama: "",
-    tipe: "BESAR",
-    deskripsi: "",
-  });
+  const [dialogKey, setDialogKey] = useState(0);
   const [statusDialog, setStatusDialog] = useState<{
     open: boolean;
     unit: Unit | null;
@@ -89,11 +59,8 @@ export function UnitsPage() {
   const totalPages = listQuery.data?.pagination.total_pages ?? 1;
   const loading = listQuery.isLoading;
 
-  const createMutation = useCreateUnit();
-  const updateMutation = useUpdateUnit();
   const statusMutation = useUpdateUnitStatus();
   const deleteMutation = useDeleteUnit();
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
   const isDeleting = deleteMutation.isPending;
   const statusUpdatingId = statusMutation.isPending
     ? statusMutation.variables?.id ?? null
@@ -115,69 +82,17 @@ export function UnitsPage() {
     return () => window.clearTimeout(timeout);
   }, [searchQuery]);
 
-  const handleOpenAdd = () => {
-    setEditingUnit(null);
-    setFormData({
-      kode: "",
-      nama: "",
-      tipe: "BESAR",
-      deskripsi: "",
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleOpenEdit = (unit: Unit) => {
+  const openDialog = (unit: Unit | null) => {
     setEditingUnit(unit);
-    setFormData({
-      kode: unit.kode,
-      nama: unit.nama,
-      tipe: unit.tipe,
-      deskripsi: unit.deskripsi || "",
-    });
+    setDialogKey((k) => k + 1);
     setIsDialogOpen(true);
   };
+  const handleOpenAdd = () => openDialog(null);
+  const handleOpenEdit = (unit: Unit) => openDialog(unit);
 
   const handleOpenDelete = (unit: Unit) => {
     setDeletingUnit(unit);
     setIsDeleteDialogOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
-    const payload = normalizeUnitFormData(formData);
-    if (!payload.kode) {
-      toast.error("Kode satuan wajib diisi");
-      return;
-    }
-    if (!payload.nama) {
-      toast.error("Nama satuan wajib diisi");
-      return;
-    }
-    if (!payload.tipe) {
-      toast.error("Tipe satuan wajib diisi");
-      return;
-    }
-
-    try {
-      if (editingUnit) {
-        await updateMutation.mutateAsync({ id: editingUnit.id, payload });
-        logger.updateRawMaterial("Unit Updated", payload.kode || "N/A", `Updated ${payload.nama}`);
-        toast.success("Satuan berhasil diperbarui");
-      } else {
-        await createMutation.mutateAsync(payload);
-        logger.createRawMaterial("Unit Created", payload.kode || "N/A", {
-          nama: payload.nama,
-          tipe: payload.tipe,
-        });
-        toast.success("Satuan berhasil ditambahkan");
-      }
-      setIsDialogOpen(false);
-    } catch (error: unknown) {
-      console.error("Error saving unit:", error);
-      toast.error(getErrorMessage(error, "Gagal menyimpan satuan"));
-    }
   };
 
   const handleDelete = async () => {
@@ -362,77 +277,12 @@ export function UnitsPage() {
         </div>
       </PurchasingListSection>
 
-      <FormModal
+      <UnitFormDialog
+        key={dialogKey}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        title={editingUnit ? "Ubah Satuan" : "Tambah Satuan"}
-        description={
-          editingUnit
-            ? "Perbarui data satuan yang dipilih"
-            : "Tambah satuan pengukuran baru untuk bahan baku"
-        }
-        onSubmit={handleSubmit}
-        loading={isSubmitting}
-        submitLabel={editingUnit ? "Simpan Perubahan" : "Simpan"}
-        cancelLabel="Batal"
-        loadingLabel="Menyimpan..."
-      >
-        <div>
-          <FormFieldLabel htmlFor="kode" required>
-            Kode Satuan
-          </FormFieldLabel>
-          <Input
-            id="kode"
-            value={formData.kode}
-            onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
-            placeholder="Contoh: KG"
-            maxLength={10}
-            required
-            className={formInputClassName}
-          />
-        </div>
-        <div>
-          <FormFieldLabel htmlFor="nama" required>
-            Nama Satuan
-          </FormFieldLabel>
-          <Input
-            id="nama"
-            value={formData.nama}
-            onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
-            placeholder="Contoh: Kilogram"
-            maxLength={50}
-            required
-            className={formInputClassName}
-          />
-        </div>
-        <div>
-          <FormFieldLabel htmlFor="tipe" required>
-            Tipe Satuan
-          </FormFieldLabel>
-          <Combobox
-            options={TYPE_OPTIONS}
-            value={formData.tipe}
-            onChange={(value) =>
-              setFormData({ ...formData, tipe: value as "BESAR" | "KECIL" | "KONVERSI" })
-            }
-            placeholder="Pilih tipe satuan..."
-            searchPlaceholder="Cari tipe satuan..."
-            emptyMessage="Tipe satuan tidak ditemukan"
-            className={formComboboxClassName}
-          />
-        </div>
-        <div>
-          <FormFieldLabel htmlFor="deskripsi">Deskripsi</FormFieldLabel>
-          <Textarea
-            id="deskripsi"
-            value={formData.deskripsi}
-            onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
-            placeholder="Deskripsi opsional"
-            rows={3}
-            className="min-h-24 resize-none bg-white text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100"
-          />
-        </div>
-      </FormModal>
+        editingUnit={editingUnit}
+      />
 
       <ConfirmDialog
         open={statusDialog.open}

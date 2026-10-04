@@ -1,42 +1,19 @@
-// ============================================
-// API ROUTE: /api/purchasing/inventory/[id]
-// ============================================
-
-import { NextRequest } from "next/server";
-import { createServerPgClient } from "@/lib/pg/create-client";
+// GET /api/purchasing/inventory/:id — stok satu bahan baku (id = raw_material_id).
+import { NextRequest, NextResponse } from "next/server";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { rawMaterialStockSource } from "@/lib/api/stall-scope";
+import { IAM } from "@/lib/iam/prefixes";
+import { createServerPgClient } from "@/lib/pg/create-client";
+import { getRawMaterialStock } from "@/lib/purchasing/inventory-queries";
 
-// GET /api/purchasing/inventory/:id
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const GET = apiHandler(
+  async (_request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
+    await requireIamMenuPrefix(IAM.items);
     const { id } = await params;
     const db = await createServerPgClient();
-
-    // Get inventory dengan detail bahan
-    const { view: stockView, warehouseId } = await rawMaterialStockSource();
-    let inventoryQuery = db.from(stockView).select("*").eq("id", id);
-    if (warehouseId) inventoryQuery = inventoryQuery.eq("warehouse_id", warehouseId);
-    const { data: inventory, error: invError } = await inventoryQuery.single();
-
-    if (invError) {
-      if (invError.code === "PGRST116") {
-        return Response.json(
-          { success: false, message: "Inventory tidak ditemukan" },
-          { status: 404 }
-        );
-      }
-      throw invError;
-    }
-
-    return Response.json({ success: true, data: inventory });
-  } catch (error: any) {
-    console.error("Error fetching inventory:", error);
-    return Response.json(
-      { success: false, message: error.message || "Gagal mengambil data inventory" },
-      { status: 500 }
-    );
-  }
-}
+    const data = await getRawMaterialStock(db, await rawMaterialStockSource(), id);
+    return NextResponse.json({ success: true, data });
+  },
+  "purchasing.inventory.detail"
+);

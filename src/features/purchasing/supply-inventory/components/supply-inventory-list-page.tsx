@@ -7,15 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { Boxes, Eye, PackageMinus, Search, SlidersHorizontal, X } from "lucide-react";
 import { toast } from "sonner";
-import { formatRp, formatDate } from "@/lib/purchasing/utils";
 import { useSupplyStockList, useSupplyInventoryFormData } from "../queries";
+import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 
-const fmtQty = (n: number) => new Intl.NumberFormat("id-ID", { maximumFractionDigits: 3 }).format(n || 0);
 
 export function SupplyInventoryListPage() {
   const router = useRouter();
@@ -168,10 +167,10 @@ export function SupplyInventoryListPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-700">{r.warehouse_nama || "-"}</td>
                       <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                        {fmtQty(r.qty_available)} <span className="text-xs text-gray-400">{r.satuan_nama || ""}</span>
+                        {formatNumber(r.qty_available, 3)} <span className="text-xs text-gray-400">{r.satuan_nama || ""}</span>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-500">{fmtQty(r.qty_minimum)}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">{formatRp(r.unit_cost)}</td>
+                      <td className="px-4 py-3 text-right text-gray-500">{formatNumber(r.qty_minimum, 3)}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">{formatRupiah(r.unit_cost)}</td>
                       <td className="px-4 py-3 text-center">
                         {low ? (
                           <Badge className="border-0 bg-amber-100 text-amber-700">Menipis</Badge>

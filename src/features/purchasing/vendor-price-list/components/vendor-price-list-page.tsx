@@ -6,28 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/ui/combobox";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { DollarSign, Eye, Filter, Loader2, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { formatAmount } from "@/lib/purchasing/utils";
 import { useVendorPriceList } from "../queries";
 import { useDeleteVendorPriceList } from "../mutations";
 import type { VendorPriceList } from "../types";
+import { formatDate, formatNumber } from "@/lib/format";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 const STATUS_OPTIONS = [
@@ -223,7 +214,7 @@ export function VendorPriceListPage() {
                           <div className="text-sm text-gray-500">{item.product?.kode || "-"}</div>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="font-medium text-gray-900">{formatAmount(item.harga || 0)}</div>
+                          <div className="font-medium text-gray-900">{formatNumber(item.harga || 0)}</div>
                           <div className="text-xs text-gray-500">per {item.unit?.nama || "unit"}</div>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-700">

@@ -1,156 +1,79 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { ArrowLeft, PackageCheck, Boxes, Receipt } from "lucide-react";
+import { ArrowLeft, Boxes, PackageCheck, Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { toQty } from "@/lib/purchasing/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import {
-  getGeneralPOForReceive,
-  listWarehouses,
-  createGeneralGrn,
-  type GeneralGrnItemPayload,
-} from "../api";
-import type { GeneralPODetail, GeneralPODetailItem } from "../../general-po/types";
-
-interface ReceiveLine {
-  poItemId: string;
-  supplyItemId: string;
-  satuanId?: string;
-  kode: string;
-  nama: string;
-  stockable: boolean;
-  ordered: number;
-  received: number;
-  remaining: number;
-  qtyDiterima: string;
-}
-
-function buildLines(items: GeneralPODetailItem[]): ReceiveLine[] {
-  return items
-    .filter((item) => item.supply_item_id)
-    .map((item) => {
-      const ordered = toQty(item.qty_ordered);
-      const received = toQty(item.qty_received);
-      const remaining = Math.max(0, ordered - received);
-      return {
-        poItemId: item.id,
-        supplyItemId: item.supply_item_id as string,
-        satuanId: item.satuan_id ?? undefined,
-        kode: item.supply_item?.kode ?? "-",
-        nama: item.supply_item?.nama ?? "Item",
-        stockable: Boolean(item.supply_item?.stockable),
-        ordered,
-        received,
-        remaining,
-        qtyDiterima: remaining > 0 ? String(remaining) : "0",
-      };
-    });
-}
+  buildGeneralGrnItems,
+  buildGeneralReceiveLines,
+  totalGeneralReceived,
+} from "@/lib/purchasing/receiving-ui-general";
+import { useGeneralPurchaseOrder } from "../../general-po/queries";
+import type { GeneralPODetail } from "../../general-po/types";
+import type { Warehouse } from "../../grn/api";
+import { useWarehouses } from "../../grn/queries";
+import { useCreateGeneralGrn } from "../queries";
 
 export function GeneralReceiveFormPage({ poId }: { poId: string }) {
+  const poQuery = useGeneralPurchaseOrder(poId);
+  const warehousesQuery = useWarehouses(null);
+
+  if (poQuery.isLoading || warehousesQuery.isLoading) {
+    return <div className="py-16 text-center text-sm text-gray-500">Memuat data penerimaan...</div>;
+  }
+  if (!poQuery.data) {
+    return <div className="py-16 text-center text-sm text-gray-500">Purchase order tidak ditemukan.</div>;
+  }
+  // key: baris form diisi ulang dari PO yang dibuka.
+  return <GeneralReceiveForm key={poQuery.data.id} po={poQuery.data} warehouses={warehousesQuery.data ?? []} />;
+}
+
+function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouses: Warehouse[] }) {
   const router = useRouter();
-  const [po, setPo] = useState<GeneralPODetail | null>(null);
-  const [lines, setLines] = useState<ReceiveLine[]>([]);
-  const [warehouses, setWarehouses] = useState<{ id: string; name: string; code: string }[]>([]);
-  const [warehouseId, setWarehouseId] = useState("");
+  const createMutation = useCreateGeneralGrn();
+  const [lines, setLines] = useState(() => buildGeneralReceiveLines(po.items));
+  // null = belum dipilih: gudang tunggal dipilih otomatis.
+  const [warehouseChoice, setWarehouseChoice] = useState<string | null>(null);
   const [catatan, setCatatan] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    Promise.all([getGeneralPOForReceive(poId), listWarehouses()])
-      .then(([poDetail, warehouseList]) => {
-        if (cancelled) return;
-        setPo(poDetail);
-        setLines(buildLines(poDetail.items ?? []));
-        setWarehouses(warehouseList);
-        if (warehouseList.length === 1) setWarehouseId(warehouseList[0].id);
-      })
-      .catch((err) => {
-        if (!cancelled) toast.error(err instanceof Error ? err.message : "Gagal memuat data penerimaan");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [poId]);
-
-  const warehouseOptions = useMemo(
-    () => warehouses.map((w) => ({ value: w.id, label: w.code ? `${w.name} (${w.code})` : w.name })),
-    [warehouses]
-  );
+  const warehouseId = warehouseChoice ?? (warehouses.length === 1 ? warehouses[0].id : "");
+  const totalDiterima = totalGeneralReceived(lines);
+  const listRoute = GENERAL_ROUTES.purchasingReceive;
 
   function updateQty(poItemId: string, value: string) {
-    setLines((prev) =>
-      prev.map((line) => (line.poItemId === poItemId ? { ...line, qtyDiterima: value } : line))
-    );
+    setLines((prev) => prev.map((line) => (line.poItemId === poItemId ? { ...line, qtyDiterima: value } : line)));
   }
-
-  const totalDiterima = lines.reduce((sum, line) => sum + toQty(line.qtyDiterima), 0);
 
   async function handleSubmit() {
     if (!warehouseId) {
       toast.error("Pilih gudang penerimaan terlebih dahulu");
       return;
     }
-
-    const items: GeneralGrnItemPayload[] = [];
-    for (const line of lines) {
-      const qty = toQty(line.qtyDiterima);
-      if (qty <= 0) continue;
-      if (qty > line.remaining + 0.0001) {
-        toast.error(`Qty ${line.nama} melebihi sisa PO (maks ${line.remaining})`);
-        return;
-      }
-      items.push({
-        purchase_order_item_id: line.poItemId,
-        supply_item_id: line.supplyItemId,
-        satuan_id: line.satuanId,
-        qty_diterima: qty,
-        qty_ditolak: 0,
-      });
-    }
-
-    if (items.length === 0) {
-      toast.error("Isi minimal satu qty diterima");
+    const built = buildGeneralGrnItems(lines);
+    if ("error" in built) {
+      toast.error(built.error);
       return;
     }
-
-    setSubmitting(true);
     try {
-      const result = await createGeneralGrn({
-        po_id: poId,
+      const result = await createMutation.mutateAsync({
+        po_id: po.id,
         warehouse_id: warehouseId,
         catatan: catatan || undefined,
-        items,
+        items: built.items,
       });
       toast.success(`Penerimaan ${result.nomor_grn ?? ""} tercatat`);
-      router.push(GENERAL_ROUTES.purchasingReceive);
+      router.push(listRoute);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal menyimpan penerimaan");
-    } finally {
-      setSubmitting(false);
     }
-  }
-
-  if (loading) {
-    return <div className="py-16 text-center text-sm text-gray-500">Memuat data penerimaan...</div>;
-  }
-
-  if (!po) {
-    return <div className="py-16 text-center text-sm text-gray-500">Purchase order tidak ditemukan.</div>;
   }
 
   return (
@@ -159,7 +82,7 @@ export function GeneralReceiveFormPage({ poId }: { poId: string }) {
         title={`Terima Barang — ${po.nomor_po}`}
         description={`Vendor ${po.vendor_name ?? "-"}. Barang operasional dicatat diterima tanpa langkah pengiriman terpisah.`}
         actions={
-          <Button variant="outline" onClick={() => router.push(GENERAL_ROUTES.purchasingReceive)}>
+          <Button variant="outline" onClick={() => router.push(listRoute)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali
           </Button>
@@ -177,9 +100,9 @@ export function GeneralReceiveFormPage({ poId }: { poId: string }) {
               Gudang Penerimaan <span className="text-red-500">*</span>
             </label>
             <Combobox
-              options={warehouseOptions}
+              options={warehouses.map((w) => ({ value: w.id, label: w.code ? `${w.name} (${w.code})` : w.name }))}
               value={warehouseId}
-              onChange={setWarehouseId}
+              onChange={setWarehouseChoice}
               placeholder="Pilih gudang..."
               className="h-10 text-sm"
             />
@@ -253,10 +176,10 @@ export function GeneralReceiveFormPage({ poId }: { poId: string }) {
             <Button
               className="purchasing-main-button"
               onClick={handleSubmit}
-              disabled={submitting || totalDiterima <= 0}
+              disabled={createMutation.isPending || totalDiterima <= 0}
             >
               <PackageCheck className="mr-2 h-4 w-4" />
-              {submitting ? "Menyimpan..." : "Simpan Penerimaan"}
+              {createMutation.isPending ? "Menyimpan..." : "Simpan Penerimaan"}
             </Button>
           </div>
         </div>

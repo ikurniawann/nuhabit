@@ -5,23 +5,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 
-vi.mock("@/lib/api/auth", () => ({
+vi.mock("@/lib/api/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/auth")>()),
   requireIamMenuPrefix: vi.fn(async () => ({ id: "user-1", role: "admin" })),
-  ApiError: class ApiError extends Error {
-    status: number;
-    constructor(status: number, message: string) {
-      super(message);
-      this.status = status;
-    }
-    static badRequest(message: string) {
-      return new ApiError(400, message);
-    }
-    toResponse() {
-      return new Response(JSON.stringify({ success: false, message: this.message }), {
-        status: this.status,
-      });
-    }
-  },
 }));
 
 vi.mock("@/lib/api/stall-scope", () => ({
@@ -194,5 +180,15 @@ describe("GET .../reports/stock-card — item_type=product tidak double-count ba
       col: "pos_sku_id",
       value: null,
     });
+  });
+
+  it("400 { success: false, error } for an invalid item_type", async () => {
+    fakeDbRef = createFakeDb({});
+    const { GET } = await import("./route");
+    const res = await GET(makeRequest({ item_type: "service" }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toBe("Invalid query params");
   });
 });

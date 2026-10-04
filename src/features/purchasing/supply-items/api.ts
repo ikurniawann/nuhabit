@@ -1,4 +1,4 @@
-import { listUnits } from "@/lib/purchasing";
+import { listUnits } from "@/lib/purchasing/api-client/units";
 import { listActiveItemsLookup } from "@/features/purchasing/items/api";
 import type { Unit } from "@/types/purchasing";
 import type {
@@ -13,7 +13,7 @@ const BASE = "/api/purchasing/supply-items";
 async function parseJson<T>(res: Response, fallback: string): Promise<T> {
   const json = await res.json();
   if (!res.ok || json?.success === false) {
-    throw new Error(json?.message || fallback);
+    throw new Error(json?.error || json?.message || fallback);
   }
   return json as T;
 }

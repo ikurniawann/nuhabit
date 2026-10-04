@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { DbClient } from "@/lib/pg/types";
 import { toQty } from "@/lib/purchasing/utils";
 
@@ -68,7 +69,7 @@ export function resolvePoPaymentParty(ctx: {
 }): PoPaymentParty {
   if (ctx.vendorId) return { supplier_id: null, vendor_id: ctx.vendorId };
   if (ctx.supplierId) return { supplier_id: ctx.supplierId, vendor_id: null };
-  throw new Error("Purchase order has no supplier or vendor assigned");
+  throw ApiError.badRequest("Purchase order has no supplier or vendor assigned");
 }
 
 export type PoInvoiceAmounts = {
@@ -144,7 +145,9 @@ export async function getPoReturnCreditAmount(db: DbClient, poId: string): Promi
 
   if (grnError) throw grnError;
 
-  const grnIds = (grns || []).map((row) => row.id).filter(Boolean) as string[];
+  const grnIds = ((grns ?? []) as Array<{ id: string | null }>)
+    .map((row) => row.id)
+    .filter(Boolean) as string[];
   if (!grnIds.length) return 0;
 
   const { data: returns, error } = await db
@@ -155,7 +158,10 @@ export async function getPoReturnCreditAmount(db: DbClient, poId: string): Promi
 
   if (error) throw error;
 
-  return (returns || []).reduce((sum, row) => sum + toAmount(row.total_amount), 0);
+  return ((returns ?? []) as Array<{ total_amount: unknown }>).reduce(
+    (sum, row) => sum + toAmount(row.total_amount),
+    0
+  );
 }
 
 export async function getReturnCreditsByPoIds(
@@ -329,7 +335,13 @@ export async function resolvePaymentTermId(
 
   if (termsError) throw termsError;
 
-  const activeTerms = terms || [];
+  const activeTerms = (terms ?? []) as Array<{
+    id: string;
+    amount: unknown;
+    paid_amount: unknown;
+    status: string | null;
+    term_no: number | null;
+  }>;
   const openTerm = activeTerms.find((term) => {
     if (term.status === "paid") return false;
     const remaining = Math.max(0, toAmount(term.amount) - toAmount(term.paid_amount));

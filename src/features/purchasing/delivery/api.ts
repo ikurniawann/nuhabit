@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "@/lib/purchasing/receiving-ui-http";
 import type {
   CreateDeliveryPayload,
   DeliveryDetail,
@@ -5,7 +6,6 @@ import type {
   DeliveryListResult,
   DeliveryPOOption,
 } from "./types";
-import { DeliveryNotFoundError } from "./types";
 
 export type {
   DeliveryStatus,
@@ -16,7 +16,6 @@ export type {
   DeliveryListResult,
   CreateDeliveryPayload,
 } from "./types";
-export { DeliveryNotFoundError } from "./types";
 
 export async function listDeliveries(
   params: DeliveryListParams = {}
@@ -31,7 +30,7 @@ export async function listDeliveries(
   const res = await fetch(`/api/purchasing/delivery?${sp.toString()}`);
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Failed to load deliveries");
+    throw new Error(apiErrorMessage(json, "Gagal memuat pengiriman"));
   }
   const total = json.pagination?.total || 0;
   const limit = params.limit || 10;
@@ -49,7 +48,7 @@ export async function getDelivery(id: string): Promise<DeliveryDetail> {
   const res = await fetch(`/api/purchasing/delivery/${id}`);
   const json = await res.json();
   if (!res.ok || !json.data) {
-    throw new DeliveryNotFoundError();
+    throw new Error(apiErrorMessage(json, "Pengiriman tidak ditemukan"));
   }
   return json.data;
 }
@@ -65,7 +64,7 @@ export async function listDeliveryPOOptions(
   });
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || "Failed to load purchase order options");
+    throw new Error(apiErrorMessage(json, "Gagal memuat opsi purchase order"));
   }
   return Array.isArray(json.data) ? json.data : [];
 }
@@ -85,9 +84,7 @@ export async function createDelivery(
   });
   const json = await res.json();
   if (!res.ok) {
-    const apiError =
-      typeof json.error === "string" ? json.error : json.error?.message;
-    throw new Error(apiError || json.message || "Failed to create delivery");
+    throw new Error(apiErrorMessage(json, "Gagal membuat pengiriman"));
   }
   return json.data || {};
 }

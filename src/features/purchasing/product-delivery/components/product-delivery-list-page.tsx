@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { formatDate } from "@/lib/purchasing/utils";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import { formatDate } from "@/lib/format";
+import {
+  DELIVERY_STATUS_LABELS,
+  DELIVERY_STATUS_OPTIONS,
+  DELIVERY_STATUS_STYLES,
+} from "@/lib/purchasing/receiving-ui-delivery";
 import { useProductDeliveryList, useProductDeliveryPOOptions } from "../queries";
 import type { ProductDeliveryStatus } from "../types";
 import { Eye, Filter, Plus, Search, Truck, X } from "lucide-react";
@@ -20,34 +25,13 @@ import { toast } from "sonner";
 const DELIVERY_INSERT = `${PRODUCT_ROUTES.purchasingDelivery}/insert`;
 const deliveryDetailHref = (id: string) => `${PRODUCT_ROUTES.purchasingDelivery}/${id}`;
 
-const STATUS_COLORS: Record<ProductDeliveryStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  shipped: "bg-blue-50 text-blue-700 border-blue-200",
-  in_transit: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const STATUS_LABELS: Record<ProductDeliveryStatus, string> = {
-  pending: "Menunggu Penerimaan",
-  shipped: "Dikirim",
-  in_transit: "Dalam Pengiriman",
-  delivered: "Tiba",
-  cancelled: "Dibatalkan",
-};
-
-const STATUS_OPTIONS: { value: ProductDeliveryStatus | "all"; label: string }[] = [
-  { value: "all", label: "Semua Status" },
-  { value: "pending", label: "Menunggu Penerimaan" },
-  { value: "shipped", label: "Dikirim" },
-  { value: "in_transit", label: "Dalam Pengiriman" },
-  { value: "delivered", label: "Tiba" },
-  { value: "cancelled", label: "Dibatalkan" },
-];
-
 export function ProductDeliveryListPage() {
-  const searchParams = useSearchParams();
-  const urlPoId = searchParams.get("po_id");
+  const urlPoId = useSearchParams().get("po_id");
+  // key: filter PO diisi ulang bila ?po_id= berubah.
+  return <ProductDeliveryListContent key={urlPoId ?? ""} urlPoId={urlPoId} />;
+}
+
+function ProductDeliveryListContent({ urlPoId }: { urlPoId: string | null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProductDeliveryStatus | "all">("all");
@@ -78,13 +62,6 @@ export function ProductDeliveryListPage() {
       );
     }
   }, [listQuery.isError, listQuery.error]);
-
-  useEffect(() => {
-    if (!urlPoId) return;
-    setPoFilter(urlPoId);
-    setFilterOpen(true);
-    setPage(1);
-  }, [urlPoId]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -192,7 +169,7 @@ export function ProductDeliveryListPage() {
                     Status
                   </div>
                   <Combobox
-                    options={STATUS_OPTIONS}
+                    options={DELIVERY_STATUS_OPTIONS}
                     value={statusFilter}
                     onChange={(value) => {
                       setStatusFilter(value as ProductDeliveryStatus | "all");
@@ -286,8 +263,8 @@ export function ProductDeliveryListPage() {
                         <td className="px-4 py-3 text-sm">{formatDate(d.tanggal_kirim)}</td>
                         <td className="px-4 py-3 text-sm">{formatDate(d.tanggal_estimasi_tiba)}</td>
                         <td className="px-4 py-3 text-center">
-                          <Badge variant="outline" className={STATUS_COLORS[d.status]}>
-                            {STATUS_LABELS[d.status]}
+                          <Badge variant="outline" className={DELIVERY_STATUS_STYLES[d.status]}>
+                            {DELIVERY_STATUS_LABELS[d.status]}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">

@@ -13,11 +13,11 @@ import {
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { SUPPLIER_IMPORT_COLUMNS } from "../import-config";
+import { SUPPLIER_IMPORT_COLUMNS } from "@/lib/purchasing/import-columns";
 import { SUPPLIER_IMPORT_SAMPLE_ROWS } from "../import-sample-rows";
 
 export function SuppliersImportPage() {

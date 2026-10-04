@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   TruckIcon,
   PlusIcon,
@@ -19,44 +19,20 @@ import {
 } from "@heroicons/react/24/outline";
 import { Filter, Search, X } from "lucide-react";
 import { toast } from "sonner";
-
-const STATUS_COLORS: Record<DeliveryStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  shipped: "bg-blue-50 text-blue-700 border-blue-200",
-  in_transit: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const STATUS_LABELS: Record<DeliveryStatus, string> = {
-  pending: "Menunggu Penerimaan",
-  shipped: "Dikirim",
-  in_transit: "Dalam Pengiriman",
-  delivered: "Tiba",
-  cancelled: "Dibatalkan",
-};
-
-const STATUS_OPTIONS: { value: DeliveryStatus | "all"; label: string }[] = [
-  { value: "all", label: "Semua Status" },
-  { value: "pending", label: "Menunggu Penerimaan" },
-  { value: "shipped", label: "Dikirim" },
-  { value: "in_transit", label: "Dalam Pengiriman" },
-  { value: "delivered", label: "Tiba" },
-  { value: "cancelled", label: "Dibatalkan" },
-];
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate } from "@/lib/format";
+import {
+  DELIVERY_STATUS_LABELS,
+  DELIVERY_STATUS_OPTIONS,
+  DELIVERY_STATUS_STYLES,
+} from "@/lib/purchasing/receiving-ui-delivery";
 
 export function DeliveryListPage() {
-  const searchParams = useSearchParams();
-  const urlPoId = searchParams.get("po_id");
+  const urlPoId = useSearchParams().get("po_id");
+  // key: filter PO diisi ulang bila ?po_id= berubah.
+  return <DeliveryListContent key={urlPoId ?? ""} urlPoId={urlPoId} />;
+}
+
+function DeliveryListContent({ urlPoId }: { urlPoId: string | null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "all">("all");
@@ -83,17 +59,9 @@ export function DeliveryListPage() {
 
   useEffect(() => {
     if (listQuery.isError) {
-      console.error(listQuery.error);
       toast.error(listQuery.error instanceof Error ? listQuery.error.message : "Gagal memuat pengiriman");
     }
   }, [listQuery.isError, listQuery.error]);
-
-  useEffect(() => {
-    if (!urlPoId) return;
-    setPoFilter(urlPoId);
-    setFilterOpen(true);
-    setPage(1);
-  }, [urlPoId]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -202,7 +170,7 @@ export function DeliveryListPage() {
                     Status
                   </div>
                   <Combobox
-                    options={STATUS_OPTIONS}
+                    options={DELIVERY_STATUS_OPTIONS}
                     value={statusFilter}
                     onChange={(value) => {
                       setStatusFilter(value as DeliveryStatus | "all");
@@ -296,8 +264,8 @@ export function DeliveryListPage() {
                     <td className="px-4 py-3 text-sm">{formatDate(d.tanggal_kirim)}</td>
                     <td className="px-4 py-3 text-sm">{formatDate(d.tanggal_estimasi_tiba)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Badge variant="outline" className={STATUS_COLORS[d.status]}>
-                          {STATUS_LABELS[d.status]}
+                      <Badge variant="outline" className={DELIVERY_STATUS_STYLES[d.status]}>
+                          {DELIVERY_STATUS_LABELS[d.status]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">

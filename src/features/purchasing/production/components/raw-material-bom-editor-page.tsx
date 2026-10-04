@@ -1,200 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/ui/combobox";
-import { NumericInput } from "@/components/ui/numeric-input";
 import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { useRawMaterialBomEditorData } from "../queries";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Combobox } from "@/components/ui/combobox";
+import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { useErrorToast } from "@/features/purchasing/reports/use-error-toast";
+import { formatNumber } from "@/lib/format";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import {
-  createRawMaterialBomItem,
-  deleteRawMaterialBomItem,
-  updateRawMaterialBomItem,
-} from "../api";
+  bomDraftError,
+  bomDraftFromRow,
+  newBomDraft,
+  recalculateBomDraft,
+  type BomDraft,
+} from "@/lib/purchasing/production-ui-bom";
+import { displayName, toNumber } from "@/lib/purchasing/production-ui-display";
 import type { RawMaterialWithStock } from "@/types/purchasing";
+import { createRawMaterialBomItem, deleteRawMaterialBomItem, updateRawMaterialBomItem } from "../api";
+import { useRawMaterialBomEditorData } from "../queries";
+import type { RawMaterialBomRow } from "../types";
 
-type BomDraft = {
-  id: string;
-  raw_material_id: string;
-  qty_required: number;
-  waste_factor: number;
-  cost_per_unit: number;
-  total_cost: number;
-  persisted: boolean;
-};
-
-function toNumber(value: unknown) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
-function displayName(value?: string | null) {
-  return (value || "-").replace(/\s+\d{8,}$/g, "").trim();
-}
-
-function getMaterialUnitCost(material?: RawMaterialWithStock) {
-  const baseCost = toNumber(material?.avg_cost ?? material?.harga_avg ?? material?.harga_terakhir);
-  const factor = toNumber(material?.konversi_factor);
-  if (material?.satuan_kecil_id && factor > 0) return baseCost / factor;
-  return baseCost;
-}
-
-function mapBomItem(item: {
-  id: string;
-  raw_material_id?: string;
-  component_raw_material_id?: string;
-  qty_required?: number;
-  waste_factor?: number;
-  cost_per_unit?: number;
-  total_cost?: number;
-}): BomDraft {
-  const qtyRequired = toNumber(item.qty_required);
-  const wasteFactor = toNumber(item.waste_factor);
-  const costPerUnit = toNumber(item.cost_per_unit);
-  return {
-    id: item.id,
-    raw_material_id: item.raw_material_id || item.component_raw_material_id || "",
-    qty_required: qtyRequired,
-    waste_factor: wasteFactor,
-    cost_per_unit: costPerUnit,
-    total_cost: toNumber(item.total_cost) || costPerUnit * qtyRequired * (1 + wasteFactor),
-    persisted: true,
-  };
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function RawMaterialBomEditorPage() {
-  const { id } = useParams();
-  const searchParams = useSearchParams();
-  const materialId = id as string;
-  const fromProduction = searchParams.get("from") === "production";
-
-  const [bomItems, setBomItems] = useState<BomDraft[]>([]);
-  const [savingAll, setSavingAll] = useState(false);
-
+  const materialId = useParams<{ id: string }>().id;
+  const fromProduction = useSearchParams().get("from") === "production";
   const editorQuery = useRawMaterialBomEditorData(materialId);
-  const material = editorQuery.data?.material ?? null;
-  const materials = useMemo<RawMaterialWithStock[]>(
-    () => editorQuery.data?.materials ?? [],
-    [editorQuery.data]
-  );
-
-  const materialMap = useMemo(
-    () => new Map(materials.map((item) => [item.id, item])),
-    [materials]
-  );
-
-  const totalHpp = bomItems.reduce((sum, item) => sum + item.total_cost, 0);
-
-  useEffect(() => {
-    if (editorQuery.isError) {
-      toast.error(
-        editorQuery.error instanceof Error
-          ? editorQuery.error.message
-          : "Gagal memuat resep (BOM)"
-      );
-    }
-  }, [editorQuery.isError, editorQuery.error]);
-
-  useEffect(() => {
-    const bomData = editorQuery.data?.bom;
-    if (!bomData) return;
-    setBomItems(bomData.map((item) => recalculate(mapBomItem(item))));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorQuery.data]);
-
-  function recalculate(item: BomDraft, componentId = item.raw_material_id) {
-    const component = materialMap.get(componentId);
-    const costPerUnit = getMaterialUnitCost(component);
-    return {
-      ...item,
-      raw_material_id: componentId,
-      cost_per_unit: costPerUnit,
-      total_cost: costPerUnit * item.qty_required * (1 + item.waste_factor),
-    };
-  }
-
-  function addItem() {
-    setBomItems((items) => [
-      ...items,
-      recalculate({
-        id: crypto.randomUUID(),
-        raw_material_id: "",
-        qty_required: 1,
-        waste_factor: 0,
-        cost_per_unit: 0,
-        total_cost: 0,
-        persisted: false,
-      }),
-    ]);
-  }
-
-  function updateItem(id: string, changes: Partial<BomDraft>) {
-    setBomItems((items) =>
-      items.map((item) =>
-        item.id === id ? recalculate({ ...item, ...changes }, changes.raw_material_id) : item
-      )
-    );
-  }
-
-  async function saveItem(item: BomDraft, options?: { silent?: boolean }) {
-    if (!item.raw_material_id) throw new Error("Bahan komponen wajib diisi");
-    if (item.qty_required <= 0) throw new Error("Qty harus lebih dari 0");
-
-    if (item.persisted) {
-      await updateRawMaterialBomItem(item.id, {
-        qty_required: item.qty_required,
-        waste_factor: item.waste_factor,
-      });
-    } else {
-      const created = await createRawMaterialBomItem(materialId, {
-        component_raw_material_id: item.raw_material_id,
-        qty_required: item.qty_required,
-        waste_factor: item.waste_factor,
-      });
-      setBomItems((items) =>
-        items.map((current) => (current.id === item.id ? mapBomItem(created) : current))
-      );
-    }
-
-    if (!options?.silent) {
-      toast.success("Resep (BOM) disimpan");
-      await editorQuery.refetch();
-    }
-  }
-
-  async function removeItem(item: BomDraft) {
-    if (!item.persisted) {
-      setBomItems((items) => items.filter((current) => current.id !== item.id));
-      return;
-    }
-
-    await deleteRawMaterialBomItem(item.id);
-    setBomItems((items) => items.filter((current) => current.id !== item.id));
-    toast.success("Komponen dihapus");
-  }
-
-  async function saveAll() {
-    if (bomItems.length === 0) return;
-    setSavingAll(true);
-    try {
-      for (const item of bomItems) {
-        await saveItem(item, { silent: true });
-      }
-      toast.success("Resep (BOM) disimpan");
-      await editorQuery.refetch();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Gagal menyimpan resep (BOM)");
-    } finally {
-      setSavingAll(false);
-    }
-  }
+  useErrorToast(editorQuery.error, "Gagal memuat resep (BOM)");
 
   if (editorQuery.isLoading) {
     return (
@@ -205,9 +45,84 @@ export function RawMaterialBomEditorPage() {
     );
   }
 
-  const backHref = fromProduction
-    ? RM_ROUTES.productionRecipes
-    : RM_ROUTES.materialsDetail(materialId);
+  return (
+    // Setiap data baru dari server (muat ulang / setelah simpan) me-reset draf lokal.
+    <BomEditor
+      key={editorQuery.dataUpdatedAt}
+      materialId={materialId}
+      materialName={editorQuery.data?.material?.nama}
+      bom={editorQuery.data?.bom ?? []}
+      components={editorQuery.data?.materials ?? []}
+      backHref={fromProduction ? RM_ROUTES.productionRecipes : RM_ROUTES.materialsDetail(materialId)}
+      refreshing={editorQuery.isFetching}
+      onRefresh={() => void editorQuery.refetch()}
+    />
+  );
+}
+
+type BomEditorProps = {
+  materialId: string;
+  materialName?: string;
+  bom: RawMaterialBomRow[];
+  components: RawMaterialWithStock[];
+  backHref: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+};
+
+function BomEditor({ materialId, materialName, bom, components, backHref, refreshing, onRefresh }: BomEditorProps) {
+  const componentById = new Map(components.map((item) => [item.id, item]));
+  const recalc = (item: BomDraft) => recalculateBomDraft(item, componentById.get(item.raw_material_id));
+
+  const [items, setItems] = useState<BomDraft[]>(() => bom.map((row) => recalc(bomDraftFromRow(row))));
+  const [savingAll, setSavingAll] = useState(false);
+  const totalHpp = items.reduce((sum, item) => sum + item.total_cost, 0);
+  const options = components.map((component) => ({
+    value: component.id,
+    label: `${displayName(component.nama)} (${component.kode || "-"})`,
+  }));
+
+  const updateItem = (id: string, changes: Partial<BomDraft>) =>
+    setItems((current) => current.map((item) => (item.id === id ? recalc({ ...item, ...changes }) : item)));
+
+  async function saveItem(item: BomDraft) {
+    const invalid = bomDraftError(item);
+    if (invalid) throw new Error(invalid);
+    const payload = { qty_required: item.qty_required, waste_factor: item.waste_factor };
+    if (item.persisted) {
+      await updateRawMaterialBomItem(item.id, payload);
+      return;
+    }
+    const created = await createRawMaterialBomItem(materialId, {
+      component_raw_material_id: item.raw_material_id,
+      ...payload,
+    });
+    // Tandai tersimpan supaya percobaan ulang setelah gagal tidak membuat duplikat.
+    setItems((current) => current.map((row) => (row.id === item.id ? bomDraftFromRow(created) : row)));
+  }
+
+  async function removeItem(item: BomDraft) {
+    try {
+      if (item.persisted) await deleteRawMaterialBomItem(item.id);
+      setItems((current) => current.filter((row) => row.id !== item.id));
+      if (item.persisted) toast.success("Komponen dihapus");
+    } catch (error) {
+      toast.error(errorMessage(error, "Gagal menghapus komponen"));
+    }
+  }
+
+  async function saveAll() {
+    setSavingAll(true);
+    try {
+      for (const item of items) await saveItem(item);
+      toast.success("Resep (BOM) disimpan");
+      onRefresh();
+    } catch (error) {
+      toast.error(errorMessage(error, "Gagal menyimpan resep (BOM)"));
+    } finally {
+      setSavingAll(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -216,18 +131,18 @@ export function RawMaterialBomEditorPage() {
         title="Resep (BOM) Bahan Baku"
         description={
           <>
-            {displayName(material?.nama)} · Total estimasi HPP {formatAmount(totalHpp)}
+            {displayName(materialName)} · Total estimasi HPP {formatNumber(totalHpp)}
           </>
         }
         actions={
           <Button
             type="button"
             variant="outline"
-            onClick={() => editorQuery.refetch()}
-            disabled={editorQuery.isFetching}
+            onClick={onRefresh}
+            disabled={refreshing}
             className="purchasing-secondary-button w-full sm:w-auto"
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${editorQuery.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Muat Ulang
           </Button>
         }
@@ -246,7 +161,7 @@ export function RawMaterialBomEditorPage() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={addItem}
+              onClick={() => setItems((current) => [...current, recalc(newBomDraft(crypto.randomUUID()))])}
               className="border-pink-200 text-pink-700 hover:bg-pink-50"
             >
               <Plus className="mr-1 h-4 w-4" />
@@ -268,73 +183,62 @@ export function RawMaterialBomEditorPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {bomItems.length === 0 ? (
+                {items.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-10 text-center text-sm text-gray-400">
                       Belum ada komponen. Klik &quot;Tambah Komponen&quot; untuk memulai.
                     </td>
                   </tr>
                 ) : (
-                  bomItems.map((item) => {
-                    const options = materials.map((component) => ({
-                      value: component.id,
-                      label: `${displayName(component.nama)} (${component.kode || "-"})`,
-                    }));
-
-                    return (
-                      <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-gray-500">Komponen</Label>
-                            <Combobox
-                              options={options}
-                              value={item.raw_material_id}
-                              onChange={(value) => updateItem(item.id, { raw_material_id: value })}
-                              placeholder="Pilih komponen..."
-                              searchPlaceholder="Cari bahan baku..."
-                              emptyMessage="Bahan baku tidak ditemukan"
-                              className="w-full! h-9 text-sm"
-                            />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 align-bottom">
-                          <NumericInput
-                            value={item.qty_required}
-                            onValueChange={(value) =>
-                              updateItem(item.id, { qty_required: toNumber(value) })
-                            }
-                            className="h-9 text-sm"
+                  items.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-gray-500">Komponen</Label>
+                          <Combobox
+                            options={options}
+                            value={item.raw_material_id}
+                            onChange={(value) => updateItem(item.id, { raw_material_id: value })}
+                            placeholder="Pilih komponen..."
+                            searchPlaceholder="Cari bahan baku..."
+                            emptyMessage="Bahan baku tidak ditemukan"
+                            className="w-full! h-9 text-sm"
                           />
-                        </td>
-                        <td className="px-4 py-3 align-bottom">
-                          <NumericInput
-                            value={item.waste_factor * 100}
-                            onValueChange={(value) =>
-                              updateItem(item.id, { waste_factor: toNumber(value) / 100 })
-                            }
-                            className="h-9 text-sm"
-                          />
-                        </td>
-                        <td className="px-4 py-3 text-right align-bottom font-medium">
-                          {formatAmount(item.cost_per_unit)}
-                        </td>
-                        <td className="px-4 py-3 text-right align-bottom font-semibold text-pink-700">
-                          {formatAmount(item.total_cost)}
-                        </td>
-                        <td className="px-4 py-3 text-right align-bottom">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(item)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-bottom">
+                        <NumericInput
+                          value={item.qty_required}
+                          onValueChange={(value) => updateItem(item.id, { qty_required: toNumber(value) })}
+                          className="h-9 text-sm"
+                        />
+                      </td>
+                      <td className="px-4 py-3 align-bottom">
+                        <NumericInput
+                          value={item.waste_factor * 100}
+                          onValueChange={(value) => updateItem(item.id, { waste_factor: toNumber(value) / 100 })}
+                          className="h-9 text-sm"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right align-bottom font-medium">
+                        {formatNumber(item.cost_per_unit)}
+                      </td>
+                      <td className="px-4 py-3 text-right align-bottom font-semibold text-pink-700">
+                        {formatNumber(item.total_cost)}
+                      </td>
+                      <td className="px-4 py-3 text-right align-bottom">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => void removeItem(item)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -344,8 +248,8 @@ export function RawMaterialBomEditorPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={saveAll}
-              disabled={savingAll || bomItems.length === 0}
+              onClick={() => void saveAll()}
+              disabled={savingAll || items.length === 0}
               className="purchasing-main-button"
             >
               {savingAll ? (

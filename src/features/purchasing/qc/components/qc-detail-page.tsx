@@ -28,6 +28,7 @@ import {
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
 import { ArrowLeft, ClipboardCheck, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate, formatDateLong, formatTime } from "@/lib/format";
 
 const REKOMENDASI_COLORS: Record<string, string> = {
   ACCEPT: "text-green-700 bg-green-50",
@@ -35,11 +36,11 @@ const REKOMENDASI_COLORS: Record<string, string> = {
   REWORK: "text-yellow-700 bg-yellow-50",
 };
 
-function getStatusIcon(hasil: string) {
-  const key = hasil.toLowerCase();
-  if (key === "approved" || key === "passed") return CheckCircleSolid;
-  if (key === "rejected") return XCircleIcon;
-  return AlertTriangle;
+function statusIcon(hasil: string) {
+  const className = "mr-1.5 h-4 w-4";
+  if (hasil === "approved" || hasil === "passed") return <CheckCircleSolid className={className} />;
+  if (hasil === "rejected") return <XCircleIcon className={className} />;
+  return <AlertTriangle className={className} />;
 }
 
 export function QCDetailPage() {
@@ -75,7 +76,6 @@ export function QCDetailPage() {
   }
 
   const hasilKey = String(qc.hasil || qc.status || "partial").toLowerCase();
-  const StatusIcon = getStatusIcon(hasilKey);
   const totals = getQcTotals(qc);
   const grnId = getQcGrnId(qc);
   const items = qc.items || [];
@@ -89,7 +89,7 @@ export function QCDetailPage() {
             <Badge
               className={`${QC_HASIL_COLORS[hasilKey] || "bg-gray-100 text-gray-800"} border px-3 py-1.5 text-sm font-medium`}
             >
-              <StatusIcon className="mr-1.5 h-4 w-4" />
+              {statusIcon(hasilKey)}
               {QC_HASIL_LABELS[hasilKey] || hasilKey}
             </Badge>
           </div>
@@ -300,14 +300,7 @@ export function QCDetailPage() {
                 <div>
                   <div className="text-xs text-gray-500">Tanggal Inspeksi</div>
                   <div className="text-sm font-medium">
-                    {new Date(qc.tanggal_inspeksi).toLocaleDateString("id-ID", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {formatDateLong(qc.tanggal_inspeksi)}, {formatTime(qc.tanggal_inspeksi)}
                   </div>
                 </div>
               </div>
@@ -328,11 +321,7 @@ export function QCDetailPage() {
                 <div>
                   <div className="text-xs text-gray-500">Dibuat</div>
                   <div className="text-sm font-medium">
-                    {new Date(qc.created_at).toLocaleDateString("id-ID", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {formatDate(qc.created_at)}
                   </div>
                 </div>
               </div>

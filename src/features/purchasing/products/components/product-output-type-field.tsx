@@ -18,7 +18,7 @@ export function ProductOutputTypeField({ value, onChange }: ProductOutputTypeFie
           onClick={() => onChange("WIP")}
           className={`rounded-md text-xs font-semibold transition ${
             value === "WIP"
-              ? "bg-card text-primary shadow-xs"
+              ? "bg-card text-brand-text shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -29,7 +29,7 @@ export function ProductOutputTypeField({ value, onChange }: ProductOutputTypeFie
           onClick={() => onChange("FINISHED_GOOD")}
           className={`rounded-md text-xs font-semibold transition ${
             value === "FINISHED_GOOD"
-              ? "bg-card text-primary shadow-xs"
+              ? "bg-card text-brand-text shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >

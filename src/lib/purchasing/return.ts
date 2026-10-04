@@ -41,13 +41,14 @@ export async function listReturns(params: ReturnListParams) {
 
   const response = await fetch(`${API_BASE}?${searchParams}`);
   const result = await parseJsonResponse<{
+    error?: string;
     message?: string;
     data?: unknown;
     pagination?: unknown;
   }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to load purchase returns");
+    throw new Error(result.error || result.message || "Failed to load purchase returns");
   }
 
   return result;
@@ -58,10 +59,10 @@ export async function listReturns(params: ReturnListParams) {
  */
 export async function getReturn(id: string): Promise<PurchaseReturn> {
   const response = await fetch(`${API_BASE}/${id}`);
-  const result = await parseJsonResponse<{ message?: string; data: PurchaseReturn }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string; data: PurchaseReturn }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to load purchase return");
+    throw new Error(result.error || result.message || "Failed to load purchase return");
   }
 
   return result.data;
@@ -77,10 +78,10 @@ export async function createReturn(data: PurchaseReturnFormData) {
     body: JSON.stringify(data),
   });
 
-  const result = await parseJsonResponse<{ message?: string; data?: unknown }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string; data?: unknown }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to create purchase return");
+    throw new Error(result.error || result.message || "Failed to create purchase return");
   }
 
   return result;
@@ -95,10 +96,10 @@ export async function approveReturn(id: string) {
     headers: { "Content-Type": "application/json" },
   });
 
-  const result = await parseJsonResponse<{ message?: string }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to approve purchase return");
+    throw new Error(result.error || result.message || "Failed to approve purchase return");
   }
 
   return result;
@@ -114,10 +115,10 @@ export async function rejectReturn(id: string, reason: string) {
     body: JSON.stringify({ rejection_reason: reason }),
   });
 
-  const result = await parseJsonResponse<{ message?: string }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to reject purchase return");
+    throw new Error(result.error || result.message || "Failed to reject purchase return");
   }
 
   return result;
@@ -134,10 +135,10 @@ export async function getReturnableItems(
     ? `?exclude_return_id=${encodeURIComponent(excludeReturnId)}`
     : "";
   const response = await fetch(`/api/purchasing/grn/${grnId}/returnable-items${params}`);
-  const result = await parseJsonResponse<{ message?: string; data?: ReturnableItem[] }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string; data?: ReturnableItem[] }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to load returnable items");
+    throw new Error(result.error || result.message || "Failed to load returnable items");
   }
 
   return result.data || [];
@@ -153,10 +154,10 @@ export async function updateReturn(id: string, data: Partial<PurchaseReturnFormD
     body: JSON.stringify(data),
   });
 
-  const result = await parseJsonResponse<{ message?: string }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to update purchase return");
+    throw new Error(result.error || result.message || "Failed to update purchase return");
   }
 
   return result;
@@ -170,10 +171,10 @@ export async function cancelReturn(id: string) {
     method: "PATCH",
   });
 
-  const result = await parseJsonResponse<{ message?: string }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to cancel purchase return");
+    throw new Error(result.error || result.message || "Failed to cancel purchase return");
   }
 
   return result;
@@ -189,10 +190,10 @@ export async function shipReturn(id: string, shippingDate: string, trackingNumbe
     body: JSON.stringify({ shipping_date: shippingDate, tracking_number: trackingNumber }),
   });
 
-  const result = await parseJsonResponse<{ message?: string }>(response);
+  const result = await parseJsonResponse<{ error?: string; message?: string }>(response);
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to update shipping status");
+    throw new Error(result.error || result.message || "Failed to update shipping status");
   }
 
   return result;
@@ -205,12 +206,13 @@ export async function shipReturn(id: string, shippingDate: string, trackingNumbe
 export async function reviseReturn(id: string) {
   const response = await fetch(`${API_BASE}/${id}/revise`, { method: "POST" });
   const result = await parseJsonResponse<{
+    error?: string;
     message?: string;
     data?: { id: string; return_number: string; revision_no: number };
   }>(response);
 
   if (!response.ok || !result.data) {
-    throw new Error(result.message || "Gagal membuat revisi retur");
+    throw new Error(result.error || result.message || "Gagal membuat revisi retur");
   }
 
   return result.data;

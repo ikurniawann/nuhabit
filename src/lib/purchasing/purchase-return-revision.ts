@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import { withTransaction } from "@/lib/db";
 import { recordAudit, type AuditActor } from "@/lib/audit";
 
@@ -26,12 +27,6 @@ export function revisionNumber(returnNumber: string, revisionNo: number): string
   return `${returnNumber.replace(/-R\d+$/, "")}-R${revisionNo}`;
 }
 
-export class ReturnRevisionError extends Error {
-  constructor(public status: 404 | 409, message: string) {
-    super(message);
-  }
-}
-
 type ReturnRow = ReturnForRevision & {
   id: string;
   return_number: string;
@@ -53,7 +48,7 @@ export async function revisePurchaseReturn(opts: {
     );
     const current = rows[0] ?? null;
     const rejection = evaluateReturnRevision(current);
-    if (rejection) throw new ReturnRevisionError(rejection.status, rejection.message);
+    if (rejection) throw new ApiError(rejection.status, rejection.message);
 
     const revisionNo = current!.revision_no + 1;
     const number = revisionNumber(current!.return_number, revisionNo);

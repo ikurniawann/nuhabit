@@ -10,7 +10,7 @@ import {
   shipReturn,
   reviseReturn,
 } from "@/lib/purchasing/return";
-import { listSuppliers } from "@/lib/purchasing";
+import { listSuppliers } from "@/lib/purchasing/api-client/suppliers";
 import type {
   PurchaseReturn,
   ReturnListParams,
@@ -39,7 +39,10 @@ export interface ReturnListResult {
 export async function listReturnsPaged(
   params: ReturnListParams
 ): Promise<ReturnListResult> {
-  const result = await listReturns(params);
+  const result = (await listReturns(params)) as {
+    data?: PurchaseReturn[];
+    pagination?: Partial<ReturnListResult["pagination"]>;
+  };
   return {
     data: result.data || [],
     pagination: {
@@ -75,7 +78,7 @@ export async function listReturnGrnOptions(
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.message || "Failed to load goods receipt options");
+    throw new Error(result.error || result.message || "Failed to load goods receipt options");
   }
 
   return result.data || [];

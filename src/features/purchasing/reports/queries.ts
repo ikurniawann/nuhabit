@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { listStockWarehouses } from "@/features/inventory/stock/api";
+import { useSupplierList } from "@/features/purchasing/suppliers/queries";
 import {
   getSupplierPerformance,
-  getHppBreakdown,
   getPoSummary,
   getStockCard,
   getInventoryValuation,
@@ -30,12 +32,6 @@ export const useSupplierPerformance = (params: {
     placeholderData: keepPreviousData,
   });
 
-export const useHppBreakdown = () =>
-  useQuery({
-    queryKey: reportsQueryKeys.hppBreakdown,
-    queryFn: getHppBreakdown,
-  });
-
 export const usePoSummary = (params: POSummaryParams) =>
   useQuery({
     queryKey: reportsQueryKeys.poSummary(params),
@@ -43,11 +39,10 @@ export const usePoSummary = (params: POSummaryParams) =>
     placeholderData: keepPreviousData,
   });
 
-export const useStockCard = (params: StockCardParams, enabled = true) =>
+export const useStockCard = (params: StockCardParams) =>
   useQuery({
     queryKey: reportsQueryKeys.stockCard(params),
     queryFn: () => getStockCard(params),
-    enabled,
     placeholderData: keepPreviousData,
   });
 
@@ -71,3 +66,25 @@ export const useProductionInHouseReport = (params: ProductionInHouseParams) =>
     queryFn: () => getProductionInHouseReport(params),
     placeholderData: keepPreviousData,
   });
+
+export const useStockWarehouses = () =>
+  useQuery({
+    queryKey: reportsQueryKeys.warehouses,
+    queryFn: listStockWarehouses,
+  });
+
+/** Opsi combobox supplier aktif ("Semua Supplier" + kode — nama). */
+export function useSupplierFilterOptions() {
+  const suppliersQuery = useSupplierList({ is_active: true, limit: 100 });
+  const suppliers = suppliersQuery.data?.data;
+  return useMemo(
+    () => [
+      { value: "all", label: "Semua Supplier" },
+      ...(suppliers ?? []).map((supplier) => ({
+        value: supplier.id,
+        label: `${supplier.kode || supplier.kode_supplier || "-"} — ${supplier.nama_supplier}`,
+      })),
+    ],
+    [suppliers]
+  );
+}

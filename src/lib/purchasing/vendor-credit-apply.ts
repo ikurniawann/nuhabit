@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import { query, withTransaction } from "@/lib/db";
 import { recordAudit, type AuditActor } from "@/lib/audit";
 import { todayJakarta } from "@/lib/inventory/batches";
@@ -13,12 +14,6 @@ import {
  * Pakai kredit vendor yang sudah disetujui ke PO lain milik pemasok yang sama.
  * Kredit tertua dulu, kredit kedaluwarsa dilewati (allocateCredits).
  */
-
-export class CreditApplyError extends Error {
-  constructor(public status: 400 | 404 | 409, message: string) {
-    super(message);
-  }
-}
 
 type PoParty = { id: string; nomor_po: string; supplier_id: string | null; vendor_id: string | null };
 
@@ -47,7 +42,7 @@ async function loadPo(poId: string): Promise<PoParty> {
     `SELECT id, nomor_po, supplier_id, vendor_id FROM purchasing.purchase_orders WHERE id = $1`,
     [poId]
   );
-  if (!rows[0]) throw new CreditApplyError(404, "PO tidak ditemukan");
+  if (!rows[0]) throw ApiError.notFound("PO tidak ditemukan");
   return rows[0];
 }
 
@@ -69,7 +64,7 @@ export async function applyVendorCredits(opts: {
   ip?: string | null;
   userAgent?: string | null;
 }): Promise<{ allocations: CreditAllocation[]; remaining: number }> {
-  if (!(opts.amount > 0)) throw new CreditApplyError(400, "Jumlah kredit yang dipakai harus lebih dari 0");
+  if (!(opts.amount > 0)) throw ApiError.badRequest("Jumlah kredit yang dipakai harus lebih dari 0");
   const po = await loadPo(opts.purchaseOrderId);
   const today = todayJakarta();
 
@@ -81,7 +76,7 @@ export async function applyVendorCredits(opts: {
     ]);
     const result = allocateCredits(rows, opts.amount, today);
     if (result.allocations.length === 0) {
-      throw new CreditApplyError(409, "Tidak ada kredit vendor yang masih berlaku untuk pemasok ini");
+      throw ApiError.conflict("Tidak ada kredit vendor yang masih berlaku untuk pemasok ini");
     }
     if (opts.dryRun) return result;
 

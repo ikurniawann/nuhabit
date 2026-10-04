@@ -3,7 +3,7 @@ import {
   GENERAL_ROUTES,
   PRODUCT_ROUTES,
   RM_ROUTES,
-} from "@/modules/purchasing/constants/item-routes";
+} from "@/lib/purchasing/item-routes";
 import {
   NAV_FROM_APPROVAL_PO,
   NAV_FROM_APPROVAL_PR,
@@ -22,10 +22,7 @@ export function getApprovalModuleConfig(moduleType: PurchasingModuleType = "raw_
   return {
     isProduct,
     isGeneral,
-    routes,
     partyLabel: usesVendor ? "Vendor" : "Supplier",
-    approvalPrRoute: routes.approvalPr,
-    approvalPoRoute: routes.approvalPo,
     purchasingPrRoute: routes.purchasingPr,
     purchasingPoRoute: routes.purchasingPo,
     prDetailFromApproval: (id: string) =>
@@ -34,12 +31,5 @@ export function getApprovalModuleConfig(moduleType: PurchasingModuleType = "raw_
       purchaseOrderDetailFromApproval(routes.purchasingPoDetail(id), NAV_FROM_APPROVAL_PO),
     poPartyName: (po: { vendor_name?: string | null; nama_supplier?: string | null }) =>
       (usesVendor ? po.vendor_name : po.nama_supplier) || "-",
-    approvePoDescription: (nomorPo: string) =>
-      usesVendor
-        ? `${nomorPo} will be approved and can be sent to the vendor.`
-        : `${nomorPo} will be approved and can be sent to the supplier.`,
-    emptyPoDescription: usesVendor
-      ? "This purchase order will be approved and can be sent to the vendor."
-      : "This purchase order will be approved and can be sent to the supplier.",
   };
 }

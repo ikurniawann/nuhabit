@@ -8,14 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { ArrowLeft, Loader2, Plus, Trash2, PackageMinus } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/purchasing/utils";
 import { useSupplyInventoryFormData, useSupplyUsageList } from "../queries";
 import { useCreateSupplyUsage } from "../mutations";
 import type { SupplyUsageItemInput } from "../types";
+import { formatDate } from "@/lib/format";
 
 type Line = SupplyUsageItemInput & { key: number };
 

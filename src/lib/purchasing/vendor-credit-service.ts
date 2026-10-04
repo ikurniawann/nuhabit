@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { DbClient } from "@/lib/pg/types";
 
 const QTY_EPSILON = 0.0001;
@@ -212,16 +213,21 @@ export async function syncReceiveRejectCredits(
 
   if (error) throw error;
 
-  const lines: CreditLineInput[] = (items || [])
+  type ReceiveRejectRow = {
+    id: string;
+    raw_material_id: string | null;
+    qty_ditolak: unknown;
+    catatan: string | null;
+    purchase_order_item: { harga_satuan?: number | null } | null;
+  };
+  const lines: CreditLineInput[] = ((items ?? []) as ReceiveRejectRow[])
     .filter((item) => Boolean(item.raw_material_id))
     .map((item) => ({
-      grn_item_id: item.id as string,
+      grn_item_id: item.id,
       raw_material_id: item.raw_material_id as string,
       qty: toQty(item.qty_ditolak),
-      unit_price: toAmount(
-        (item.purchase_order_item as { harga_satuan?: number | null } | null)?.harga_satuan
-      ),
-      notes: (item.catatan as string | null) ?? null,
+      unit_price: toAmount(item.purchase_order_item?.harga_satuan),
+      notes: item.catatan ?? null,
     }));
 
   return upsertVendorCredit(db, {
@@ -272,21 +278,22 @@ export async function syncQcRejectCredits(
 
   if (error) throw error;
 
-  const lines: CreditLineInput[] = (qcItems || [])
+  type QcRejectRow = {
+    grn_item_id: string;
+    raw_material_id: string | null;
+    qty_rejected: unknown;
+    catatan: string | null;
+    grn_item: { purchase_order_item?: { harga_satuan?: number | null } | null } | null;
+  };
+  const lines: CreditLineInput[] = ((qcItems ?? []) as QcRejectRow[])
     .filter((item) => Boolean(item.raw_material_id))
-    .map((item) => {
-      const grnItem = item.grn_item as {
-        purchase_order_item?: { harga_satuan?: number | null } | null;
-      } | null;
-
-      return {
-        grn_item_id: item.grn_item_id as string,
-        raw_material_id: item.raw_material_id as string,
-        qty: toQty(item.qty_rejected),
-        unit_price: toAmount(grnItem?.purchase_order_item?.harga_satuan),
-        notes: (item.catatan as string | null) ?? null,
-      };
-    });
+    .map((item) => ({
+      grn_item_id: item.grn_item_id,
+      raw_material_id: item.raw_material_id as string,
+      qty: toQty(item.qty_rejected),
+      unit_price: toAmount(item.grn_item?.purchase_order_item?.harga_satuan),
+      notes: item.catatan ?? null,
+    }));
 
   return upsertVendorCredit(db, {
     grn,
@@ -307,7 +314,7 @@ export async function cancelDraftRejectCreditsForPo(db: DbClient, poId: string) 
       .eq("is_active", true);
 
     if (grnError) throw grnError;
-    const grnIds = (grns || []).map((g) => g.id).filter(Boolean) as string[];
+    const grnIds = ((grns ?? []) as Array<{ id: string | null }>).map((g) => g.id).filter(Boolean) as string[];
     if (!grnIds.length) return;
 
     const { data: credits, error } = await db
@@ -395,23 +402,23 @@ export async function approveVendorCredit(
     .maybeSingle();
 
   if (error) throw error;
-  if (!credit) throw new Error("Vendor credit not found");
+  if (!credit) throw ApiError.notFound("Vendor credit not found");
 
   if (
     credit.source_type === "receive_reject" ||
     credit.source_type === "qc_reject"
   ) {
-    throw new Error(
+    throw ApiError.badRequest(
       "Kredit tolak penerimaan/QC tidak disetujui dari GRN. Kekurangan ditagihkan lewat sisa qty PO; tutup PO bila supplier tidak mengganti."
     );
   }
 
   if (!EDITABLE_STATUSES.includes(credit.status as (typeof EDITABLE_STATUSES)[number])) {
-    throw new Error("Vendor credit can only be approved from draft or pending approval");
+    throw ApiError.badRequest("Vendor credit can only be approved from draft or pending approval");
   }
 
   if (toAmount(credit.total_amount) <= QTY_EPSILON) {
-    throw new Error("Vendor credit has no amount to approve");
+    throw ApiError.badRequest("Vendor credit has no amount to approve");
   }
 
   const { data: updated, error: updateError } = await db

@@ -7,20 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/ui/combobox";
-import { NumericInput } from "@/components/ui/numeric-input";
 import { DsDateTimePicker } from "@/components/design-system";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
 import { getReturnsModuleConfig } from "../returns-module";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { useReturn, useReturnFormData } from "../queries";
 import { useUpdateReturn } from "../mutations";
 import { ReturnReasonType, ReturnableItem, ReturnStatus } from "@/types/purchasing";
-import { formatAmount } from "@/lib/purchasing/utils";
 import {
   AlertCircle,
   ArrowLeftIcon,
@@ -30,6 +27,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { formatNumber } from "@/lib/format";
+import { ReturnItemsTable } from "./return-items-table";
 
 const EDITABLE_STATUSES: ReturnStatus[] = ["draft", "pending_approval"];
 
@@ -44,10 +43,6 @@ const RETURN_REASON_OPTIONS: { value: ReturnReasonType; label: string }[] = [
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function formatQty(value: number) {
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(value);
 }
 
 interface ReturnItem extends ReturnableItem {
@@ -210,8 +205,8 @@ export function EditReturnPage({
         data: {
           grn_id: existingReturn.grn_id,
           ...(config.isProduct
-            ? { vendor_id: existingReturn.vendor_id, module_type: "product" as const }
-            : { supplier_id: existingReturn.supplier_id }),
+            ? { vendor_id: existingReturn.vendor_id ?? undefined, module_type: "product" as const }
+            : { supplier_id: existingReturn.supplier_id ?? undefined }),
           return_date: formData.return_date,
           reason_type: formData.reason_type as ReturnReasonType,
           reason_notes: formData.reason_notes,
@@ -244,8 +239,6 @@ export function EditReturnPage({
     .filter((i) => i.selected)
     .reduce((sum, i) => sum + i.qty_return * i.unit_price, 0);
 
-  const allSelected =
-    returnableItems.length > 0 && returnableItems.every((item) => item.selected);
 
   if (detailQuery.isLoading) {
     return (
@@ -412,86 +405,16 @@ export function EditReturnPage({
                   </div>
                 ) : (
                   <div className="overflow-x-auto p-4">
-                    <table className="w-full table-fixed border-collapse text-sm [&_td]:border [&_td]:border-gray-200/70 [&_th]:border [&_th]:border-gray-200/70">
-                      <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                        <tr>
-                          <th className="w-10 px-2 py-3 text-center font-semibold">
-                            <Checkbox
-                              checked={allSelected}
-                              onCheckedChange={(checked) => toggleAllItems(checked === true)}
-                              aria-label="Pilih semua item"
-                            />
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold">
-                            {config.isProduct ? "Produk" : "Bahan Baku"}
-                          </th>
-                          <th className="w-[100px] px-2 py-3 text-center font-semibold">Stall</th>
-                          <th className="w-[88px] px-2 py-3 text-center font-semibold">Tersedia</th>
-                          <th className="w-[112px] px-2 py-3 text-center font-semibold">Qty Retur</th>
-                          <th className="min-w-[140px] px-3 py-3 text-left font-semibold">
-                            Kondisi
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {returnableItems.map((item) => {
-                          const itemDisplay = config.itemName(item);
-                          return (
-                          <tr
-                            key={item.grn_item_id}
-                            className={`bg-white ${item.selected ? "bg-pink-50/40" : "hover:bg-gray-50/80"}`}
-                          >
-                            <td className="px-2 py-3 text-center align-middle">
-                              <Checkbox
-                                checked={item.selected}
-                                onCheckedChange={() => toggleItem(item.grn_item_id)}
-                                aria-label={`Pilih ${itemDisplay.nama}`}
-                              />
-                            </td>
-                            <td className="px-4 py-3 align-top">
-                              <div className="font-medium text-gray-900">
-                                {itemDisplay.nama}
-                              </div>
-                              <div className="mt-0.5 text-xs text-gray-500">
-                                {itemDisplay.kode}
-                              </div>
-                            </td>
-                            <td className="px-2 py-3 text-center align-middle text-xs text-gray-600">
-                              {item.warehouse_name || "-"}
-                            </td>
-                            <td className="px-2 py-3 text-center align-middle font-semibold text-pink-700">
-                              {formatQty(item.qty_available_to_return)}
-                            </td>
-                            <td className="px-1.5 py-1.5 align-middle">
-                              <NumericInput
-                                min={0}
-                                max={item.qty_available_to_return}
-                                value={item.selected ? item.qty_return : 0}
-                                onValueChange={(value) =>
-                                  updateQtyReturn(item.grn_item_id, value || 0)
-                                }
-                                decimalScale={4}
-                                disabled={!item.selected}
-                                className="h-9 w-full border-gray-200/80 bg-white px-2 text-center text-sm focus-visible:border-pink-300 focus-visible:ring-1 focus-visible:ring-pink-200/80 disabled:bg-gray-50"
-                              />
-                            </td>
-                            <td className="px-1.5 py-1.5 align-middle">
-                              <input
-                                type="text"
-                                value={item.condition_notes}
-                                onChange={(e) =>
-                                  updateConditionNotes(item.grn_item_id, e.target.value)
-                                }
-                                disabled={!item.selected}
-                                placeholder="Kondisi item..."
-                                className="h-9 w-full rounded-lg border border-gray-200/80 bg-white px-2 text-sm focus:border-pink-300 focus:outline-none focus:ring-1 focus:ring-pink-200/80 disabled:bg-gray-50"
-                              />
-                            </td>
-                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                    <ReturnItemsTable
+                      variant="edit"
+                      items={returnableItems}
+                      isProduct={config.isProduct}
+                      itemName={config.itemName}
+                      onToggle={toggleItem}
+                      onToggleAll={toggleAllItems}
+                      onQtyChange={updateQtyReturn}
+                      onNotesChange={updateConditionNotes}
+                    />
                   </div>
                 )}
               </CardContent>
@@ -511,11 +434,11 @@ export function EditReturnPage({
                   </div>
                   <div className="flex items-start justify-between gap-3">
                     <dt className="text-gray-500">Total Qty</dt>
-                    <dd className="font-medium text-gray-900">{formatQty(totalQty)}</dd>
+                    <dd className="font-medium text-gray-900">{formatNumber(totalQty, 4)}</dd>
                   </div>
                   <div className="flex items-start justify-between gap-3 border-t border-gray-200/70 pt-3">
                     <dt className="font-medium text-gray-900">Nilai Total</dt>
-                    <dd className="font-semibold text-pink-700">{formatAmount(totalAmount)}</dd>
+                    <dd className="font-semibold text-pink-700">{formatNumber(totalAmount)}</dd>
                   </div>
                 </dl>
 
@@ -536,7 +459,7 @@ export function EditReturnPage({
         <PurchasingFormFooter
           formId="purchase-return-edit-form"
           submitLabel={isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
-          isSubmitting={isSubmitting}
+          loading={isSubmitting}
           onCancel={() => router.push(config.detailRoute(returnId))}
         />
       </form>

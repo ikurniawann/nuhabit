@@ -1,9 +1,6 @@
-export type DeliveryStatus =
-  | "pending"
-  | "shipped"
-  | "in_transit"
-  | "delivered"
-  | "cancelled";
+import type { DeliveryStatus } from "@/lib/purchasing/receiving-ui-delivery";
+
+export type { DeliveryStatus };
 
 export interface DeliveryRow {
   id: string;
@@ -69,11 +66,4 @@ export interface CreateDeliveryPayload {
   tanggal_kirim: string;
   tanggal_estimasi_tiba: string;
   catatan: string;
-}
-
-export class DeliveryNotFoundError extends Error {
-  constructor() {
-    super("Delivery tidak ditemukan");
-    this.name = "DeliveryNotFoundError";
-  }
 }

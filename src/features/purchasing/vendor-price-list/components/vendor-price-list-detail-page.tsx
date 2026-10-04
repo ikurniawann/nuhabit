@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   ArrowLeft,
   Edit,
@@ -20,18 +20,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatAmount } from "@/lib/purchasing/utils";
 import { useVendorPriceListDetail } from "../queries";
 import { useDeleteVendorPriceList } from "../mutations";
-
-function formatDate(dateStr?: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+import { formatDate, formatNumber } from "@/lib/format";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -98,7 +89,7 @@ export function VendorPriceListDetailPage({ id: idProp }: { id?: string }) {
               {priceList.product?.kode || "-"}
             </span>
             <span className="text-gray-300">•</span>
-            <span>{formatAmount(priceList.harga || 0)}</span>
+            <span>{formatNumber(priceList.harga || 0)}</span>
           </div>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -133,7 +124,7 @@ export function VendorPriceListDetailPage({ id: idProp }: { id?: string }) {
             </div>
             <div>
               <p className="text-xs text-gray-500">Unit Price</p>
-              <p className="text-lg font-semibold text-gray-900">{formatAmount(priceList.harga)}</p>
+              <p className="text-lg font-semibold text-gray-900">{formatNumber(priceList.harga)}</p>
               <p className="text-xs text-gray-500">per {unitName}</p>
             </div>
           </CardContent>

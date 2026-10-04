@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -16,12 +15,13 @@ import {
   CURRENCY_OPTIONS,
   KOTA_OPTIONS,
   formatNPWP,
+  type SupplierDetail,
 } from "@/types/supplier";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { RM_ROUTES } from "@/lib/purchasing/item-routes";
 import { useSupplier } from "../queries";
 import { useUpdateSupplier } from "../mutations";
 import { toast } from "sonner";
@@ -30,57 +30,53 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function supplierFormFromData(data: SupplierDetail) {
+  return {
+    nama_supplier: data.nama_supplier || "",
+    kode_supplier: data.kode_supplier || "",
+    kota: data.kota || "",
+    alamat: data.alamat || "",
+    telepon: data.telepon || "",
+    email: data.email || "",
+    pic_name: data.pic_name || "",
+    pic_phone: data.pic_phone || "",
+    pic_email: data.pic_email || "",
+    payment_terms: (data.payment_terms as PaymentTerms) || "TOP30",
+    currency: (data.currency as Currency) || "IDR",
+    npwp: data.npwp || "",
+    catatan: data.catatan || "",
+  };
+}
+
 export function EditSupplierPage() {
-  const router = useRouter();
   const params = useParams();
   const supplierId = params.id as string;
-
   const supplierQuery = useSupplier(supplierId);
+
+  useEffect(() => {
+    if (supplierQuery.isError) toast.error("Gagal memuat data supplier.");
+  }, [supplierQuery.isError]);
+
+  if (supplierQuery.isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+      </div>
+    );
+  }
+
+  if (!supplierQuery.data) return null;
+
+  // key: form diisi ulang bila data server berubah.
+  return <EditSupplierForm key={supplierQuery.dataUpdatedAt} supplierId={supplierId} data={supplierQuery.data} />;
+}
+
+function EditSupplierForm({ supplierId, data }: { supplierId: string; data: SupplierDetail }) {
+  const router = useRouter();
   const updateMutation = useUpdateSupplier();
-  const loading = supplierQuery.isLoading;
   const isSubmitting = updateMutation.isPending;
 
-  const [formData, setFormData] = useState({
-    nama_supplier: "",
-    kode_supplier: "",
-    kota: "",
-    alamat: "",
-    telepon: "",
-    email: "",
-    pic_name: "",
-    pic_phone: "",
-    pic_email: "",
-    payment_terms: "TOP30" as PaymentTerms,
-    currency: "IDR" as Currency,
-    npwp: "",
-    catatan: "",
-  });
-
-  useEffect(() => {
-    const data = supplierQuery.data;
-    if (!data) return;
-    setFormData({
-      nama_supplier: data.nama_supplier || "",
-      kode_supplier: data.kode_supplier || "",
-      kota: data.kota || "",
-      alamat: data.alamat || "",
-      telepon: data.telepon || "",
-      email: data.email || "",
-      pic_name: data.pic_name || "",
-      pic_phone: data.pic_phone || "",
-      pic_email: data.pic_email || "",
-      payment_terms: (data.payment_terms as PaymentTerms) || "TOP30",
-      currency: (data.currency as Currency) || "IDR",
-      npwp: data.npwp || "",
-      catatan: data.catatan || "",
-    });
-  }, [supplierQuery.data]);
-
-  useEffect(() => {
-    if (supplierQuery.isError) {
-      toast.error("Gagal memuat data supplier.");
-    }
-  }, [supplierQuery.isError]);
+  const [formData, setFormData] = useState(() => supplierFormFromData(data));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,14 +95,6 @@ export function EditSupplierPage() {
       toast.error(getErrorMessage(error, "Gagal memperbarui supplier."));
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

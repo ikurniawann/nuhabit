@@ -8,4 +8,6 @@ export const suppliersQueryKeys = {
   poHistory: (id: string) =>
     ["purchasing", "suppliers", "po-history", id] as const,
   prices: (id: string) => ["purchasing", "suppliers", "prices", id] as const,
+  priceHistory: (id: string, months: number, materialId: string) =>
+    ["purchasing", "suppliers", "price-history", id, months, materialId] as const,
 };

@@ -22,20 +22,12 @@ export const useProductionDashboard = (moduleType: PurchasingModuleType = "raw_m
     staleTime: 0,
   });
 
-export const useProductionCogs = (
-  moduleType: PurchasingModuleType,
-  itemId: string,
-  enabled = true
-) =>
+export const useProductionCogs = (moduleType: PurchasingModuleType, itemId: string) =>
   useQuery({
     queryKey: productionQueryKeys.cogs(contextKey(moduleType), itemId),
     queryFn: () => getProductionCogs(moduleType, itemId),
-    enabled: enabled && !!itemId,
+    enabled: !!itemId,
   });
-
-/** @deprecated Use useProductionCogs */
-export const useProductCogs = (productId: string, enabled = true) =>
-  useProductionCogs("product", productId, enabled);
 
 export const useRecipeItems = (moduleType: PurchasingModuleType = "raw_material") =>
   useQuery({
@@ -50,12 +42,9 @@ export const useRawMaterialBomEditorData = (materialId: string) =>
     enabled: !!materialId,
   });
 
-/** @deprecated Use useRecipeItems */
-export const useRecipeProducts = () => useRecipeItems("product");
-
-export const useProductionOrder = <T = unknown>(id: string) =>
+export const useProductionOrder = (id: string) =>
   useQuery({
     queryKey: productionQueryKeys.order(id),
-    queryFn: () => getProductionOrder<T>(id),
+    queryFn: () => getProductionOrder(id),
     enabled: !!id,
   });

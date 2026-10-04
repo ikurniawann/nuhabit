@@ -3,8 +3,8 @@
 import { useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { PRForm } from "@/components/purchasing/pr-form";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PRForm } from "@/features/purchasing/pr/components/pr-form";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { usePRFormData } from "../queries";
 import { useCreatePurchaseRequest } from "../mutations";
 import type { PRFormData, PRFormInput } from "../types";

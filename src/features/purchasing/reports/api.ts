@@ -1,6 +1,7 @@
+import { normalizePoDetailRows } from "@/lib/purchasing/report-ui-po";
 import type {
-  HPPRow,
   InventoryApiRow,
+  PODetailRow,
   InventoryValuationParams,
   PODetailParams,
   POSummaryParams,
@@ -28,6 +29,23 @@ function buildParams(record: Record<string, string | number | undefined>) {
   return params;
 }
 
+type ReportBody = { success?: boolean; data?: unknown; items?: unknown; message?: string; error?: string } | null;
+
+/** Baca JSON laporan; gagal (HTTP atau success:false) dilempar dengan `error` (format baru) atau `message`. */
+async function readReport(response: Response, fallback: string): Promise<NonNullable<ReportBody>> {
+  const body = (await response.json().catch(() => null)) as ReportBody;
+  if (!response.ok || !body || body.success === false) {
+    throw new Error(body?.error || body?.message || fallback);
+  }
+  return body;
+}
+
+/** Pesan error dari respons ekspor yang gagal (body JSON bila ada). */
+async function exportError(response: Response, fallback: string): Promise<Error> {
+  const body = (await response.json().catch(() => null)) as ReportBody;
+  return new Error(body?.error || body?.message || fallback);
+}
+
 export async function getSupplierPerformance(params: {
   date_from?: string;
   date_to?: string;
@@ -38,12 +56,12 @@ export async function getSupplierPerformance(params: {
     date_to: params.date_to,
     supplier_id: params.supplier_id,
   });
-  const res = await fetch(`${BASE}/supplier-performance?${sp.toString()}`);
-  const data = await res.json().catch(() => null);
-  if (!res.ok || data?.success === false) {
-    throw new Error(data?.message || data?.error || "Gagal memuat data performa supplier");
-  }
-  const rows = data.data?.suppliers ?? data.data?.vendors ?? data.items ?? [];
+  const body = await readReport(
+    await fetch(`${BASE}/supplier-performance?${sp.toString()}`),
+    "Gagal memuat data performa supplier"
+  );
+  const data = body.data as { suppliers?: unknown[]; vendors?: unknown[] } | undefined;
+  const rows = data?.suppliers ?? data?.vendors ?? (body.items as unknown[] | undefined) ?? [];
   return (rows as Record<string, unknown>[]).map((row) => ({
     id: String(row.id || row.supplier_id || row.vendor_id || ""),
     rank: row.rank != null ? Number(row.rank) : undefined,
@@ -72,26 +90,23 @@ export async function getSupplierPerformance(params: {
   }));
 }
 
-export async function getHppBreakdown(): Promise<HPPRow[]> {
-  const res = await fetch(`${BASE}/hpp-breakdown`);
-  if (!res.ok) throw new Error("Gagal memuat data HPP");
-  const data = await res.json();
-  return data.items || [];
-}
-
 export async function getPoSummary(
   params: POSummaryParams
 ): Promise<POSummaryResult> {
   const sp = buildParams({ ...params });
-  const response = await fetch(`${BASE}/po-summary?${sp.toString()}`);
-  const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.success) {
-    throw new Error(result?.message || "Gagal memuat laporan PO Summary");
-  }
+  const body = await readReport(
+    await fetch(`${BASE}/po-summary?${sp.toString()}`),
+    "Gagal memuat laporan PO Summary"
+  );
+  const data = (body.data ?? {}) as {
+    summary?: POSummaryResult["summary"];
+    by_status?: POSummaryResult["byStatus"];
+    grand_total?: number;
+  };
   return {
-    summary: result.data.summary || [],
-    byStatus: result.data.by_status || [],
-    grandTotal: result.data.grand_total || 0,
+    summary: data.summary || [],
+    byStatus: data.by_status || [],
+    grandTotal: data.grand_total || 0,
   };
 }
 
@@ -101,9 +116,7 @@ export async function exportPoSummary(
 ): Promise<PoSummaryExportResult> {
   const sp = buildParams({ ...params, export: format });
   const response = await fetch(`${BASE}/po-summary?${sp.toString()}`);
-  if (!response.ok) {
-    throw new Error("Gagal export laporan PO Summary");
-  }
+  if (!response.ok) throw await exportError(response, "Gagal export laporan PO Summary");
   if (format === "csv") {
     return { blob: await response.blob(), extension: "csv" };
   }
@@ -120,55 +133,49 @@ export async function getStockCard(
   params: StockCardParams
 ): Promise<StockCardResponse> {
   const sp = buildParams({ ...params, limit: params.limit ?? 500 });
-  const response = await fetch(`${BASE}/stock-card?${sp.toString()}`);
-  const result = await response.json();
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || "Gagal memuat stock card");
-  }
-  return result.data;
+  const body = await readReport(await fetch(`${BASE}/stock-card?${sp.toString()}`), "Gagal memuat stock card");
+  return body.data as StockCardResponse;
 }
 
 export async function getInventoryValuation(
   params: InventoryValuationParams
 ): Promise<InventoryApiRow[]> {
   const sp = buildParams({ date_from: params.date_from, date_to: params.date_to });
-  const res = await fetch(`${BASE}/inventory-valuation?${sp.toString()}`, {
-    credentials: "same-origin",
-  });
-  const result = await res.json().catch(() => ({}));
-  if (!res.ok || result.success === false) {
-    throw new Error(result.message || "Gagal memuat valuasi inventory");
-  }
-  return (result.data || []) as InventoryApiRow[];
+  const body = await readReport(
+    await fetch(`${BASE}/inventory-valuation?${sp.toString()}`, { credentials: "same-origin" }),
+    "Gagal memuat valuasi inventory"
+  );
+  return (body.data || []) as InventoryApiRow[];
 }
 
 export async function getPoDetailReport(
   params: PODetailParams
-): Promise<unknown[]> {
+): Promise<PODetailRow[]> {
   const sp = buildParams({ ...params });
-  const response = await fetch(`${BASE}/po-detail?${sp.toString()}`);
-  const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.success) {
-    throw new Error(result?.message || result?.error || "Gagal memuat laporan Detail PO");
-  }
-  return result.data.summary || [];
+  const body = await readReport(
+    await fetch(`${BASE}/po-detail?${sp.toString()}`),
+    "Gagal memuat laporan Detail PO"
+  );
+  return normalizePoDetailRows((body.data as { summary?: unknown[] } | undefined)?.summary || []);
 }
 
 export async function getProductionInHouseReport(
   params: ProductionInHouseParams
 ): Promise<ProductionInHouseResult> {
   const sp = buildParams({ ...params });
-  const response = await fetch(`${BASE}/production-in-house?${sp.toString()}`);
-  const result = await response.json().catch(() => null);
-  if (!response.ok || !result?.success) {
-    throw new Error(
-      result?.message || result?.error || "Gagal memuat laporan Produksi Internal"
-    );
-  }
+  const body = await readReport(
+    await fetch(`${BASE}/production-in-house?${sp.toString()}`),
+    "Gagal memuat laporan Produksi Internal"
+  );
+  const data = (body.data ?? {}) as {
+    orders?: ProductionInHouseResult["orders"];
+    by_status?: ProductionInHouseResult["byStatus"];
+    summary?: ProductionInHouseResult["summary"];
+  };
   return {
-    orders: result.data.orders || [],
-    byStatus: result.data.by_status || [],
-    summary: result.data.summary || {
+    orders: data.orders || [],
+    byStatus: data.by_status || [],
+    summary: data.summary || {
       total_orders: 0,
       total_planned_qty: 0,
       total_actual_qty: 0,
@@ -183,8 +190,6 @@ export async function exportProductionInHouseReport(
 ): Promise<Blob> {
   const sp = buildParams({ ...params, export: "csv" });
   const response = await fetch(`${BASE}/production-in-house?${sp.toString()}`);
-  if (!response.ok) {
-    throw new Error("Gagal mengekspor laporan Produksi Internal");
-  }
+  if (!response.ok) throw await exportError(response, "Gagal mengekspor laporan Produksi Internal");
   return response.blob();
 }

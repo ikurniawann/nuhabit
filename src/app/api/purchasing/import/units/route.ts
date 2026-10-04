@@ -1,73 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { IAM } from "@/lib/iam/prefixes";
 import { createServerPgClient } from "@/lib/pg/create-client";
+import {
+  createHeaderNormalizer,
+  ImportTally,
+  matrixToRows,
+  parseCsvMatrix,
+} from "@/lib/purchasing/import-spreadsheet";
 
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    if (!file) return NextResponse.json({ message: "File tidak ditemukan" }, { status: 400 });
+const normalizeHeader = createHeaderNormalizer({});
 
-    const text = await file.text();
-    const parseCSV = (text: string): string[][] => {
-      const lines = text.split("\n").filter((l) => l.trim());
-      return lines.map((line) => {
-        const result: string[] = [];
-        let current = "", inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-          const char = line[i];
-          if (char === '"') inQuotes = !inQuotes;
-          else if (char === "," && !inQuotes) { result.push(current.trim()); current = ""; }
-          else current += char;
-        }
-        result.push(current.trim());
-        return result;
-      });
-    };
+/** Kolom units dari satu baris CSV; hanya status "active" yang aktif. */
+function buildUnitPayload(data: Record<string, string>) {
+  return {
+    kode: data.kode,
+    nama: data.nama,
+    tipe: data.tipe || null,
+    faktor_konversi: parseFloat(data.faktor_konversi) || 1,
+    satuan_induk: data.satuan_induk || null,
+    deskripsi: data.deskripsi || null,
+    is_active: data.status?.toLowerCase() === "active",
+  };
+}
 
-    const rows = parseCSV(text);
-    if (rows.length < 2) return NextResponse.json({ message: "File CSV harus memiliki header dan minimal 1 data" }, { status: 400 });
+// POST /api/purchasing/import/units — CSV saja; kode yang sudah ada dilewati.
+export const POST = apiHandler(async (request: NextRequest) => {
+  await requireIamMenuPrefix(IAM.items);
+  const file = (await request.formData()).get("file");
+  if (!(file instanceof File)) throw ApiError.badRequest("File tidak ditemukan");
 
-    const headers = rows[0].map((h) => h.toLowerCase().replace(/\s+/g, "_"));
-    const db = await createServerPgClient();
-    const imported: any[] = [], skipped: any[] = [], errors: Array<{ row: number; message: string }> = [];
+  const matrix = parseCsvMatrix(await file.text());
+  if (matrix.length < 2) throw ApiError.badRequest("File CSV harus memiliki header dan minimal 1 data");
 
-    for (let i = 1; i < rows.length; i++) {
-      const rowData: Record<string, string> = {};
-      headers.forEach((header, idx) => { rowData[header] = rows[i][idx] || ""; });
-      const rowNumber = i + 1;
+  const db = await createServerPgClient();
+  const tally = new ImportTally();
 
-      const required = ["kode", "nama"];
-      const missing = required.filter((f) => !rowData[f]?.trim());
-      if (missing.length > 0) {
-        errors.push({ row: rowNumber, message: `Field wajib kosong: ${missing.join(", ")}` });
-        skipped.push({ row: rowNumber, data: rowData });
-        continue;
-      }
-
-      const { data: existing } = await db.from("units").select("id").eq("kode", rowData.kode).single();
-      if (existing) {
-        errors.push({ row: rowNumber, message: `Kode satuan ${rowData.kode} sudah ada` });
-        skipped.push({ row: rowNumber, data: rowData });
-        continue;
-      }
-
-      const unitData = {
-        kode: rowData.kode, nama: rowData.nama,
-        tipe: rowData.tipe || null,
-        faktor_konversi: parseFloat(rowData.faktor_konversi) || 1,
-        satuan_induk: rowData.satuan_induk || null,
-        deskripsi: rowData.deskripsi || null,
-        is_active: rowData.status?.toLowerCase() === "active",
-      };
-
-      const { error } = await db.from("units").insert(unitData);
-      if (error) { errors.push({ row: rowNumber, message: error.message }); skipped.push({ row: rowNumber, data: rowData }); }
-      else imported.push({ row: rowNumber, data: rowData });
+  for (const { rowNumber, data } of matrixToRows(matrix, normalizeHeader)) {
+    const missing = ["kode", "nama"].filter((field) => !data[field]?.trim());
+    if (missing.length > 0) {
+      tally.skip(rowNumber, `Field wajib kosong: ${missing.join(", ")}`);
+      continue;
     }
 
-    return NextResponse.json({ success: true, imported: imported.length, skipped: skipped.length, errors });
-  } catch (error: any) {
-    console.error("Import error:", error);
-    return NextResponse.json({ message: error.message || "Import gagal" }, { status: 500 });
+    const { data: existing } = await db.from("units").select("id").eq("kode", data.kode).single();
+    if (existing) {
+      tally.skip(rowNumber, `Kode satuan ${data.kode} sudah ada`);
+      continue;
+    }
+
+    const { error } = await db.from("units").insert(buildUnitPayload(data));
+    if (error) tally.skip(rowNumber, error.message);
+    else tally.imported += 1;
   }
-}
+
+  return NextResponse.json({
+    success: true,
+    imported: tally.imported,
+    skipped: tally.skipped,
+    errors: tally.errors,
+  });
+}, "purchasing.import.units");

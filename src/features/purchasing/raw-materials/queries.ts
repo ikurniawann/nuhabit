@@ -2,12 +2,8 @@
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import type { RawMaterialListParams } from "@/types/purchasing";
-import {
-  listRawMaterials,
-  getRawMaterial,
-  getRawMaterialPriceHistory,
-  listUnits,
-} from "@/lib/purchasing";
+import { listRawMaterials, getRawMaterial, getRawMaterialPriceHistory } from "@/lib/purchasing/api-client/raw-materials";
+import { listUnits } from "@/lib/purchasing/api-client/units";
 import { listActiveItemsLookup } from "@/features/purchasing/items/api";
 import { rawMaterialsQueryKeys } from "./query-keys";
 

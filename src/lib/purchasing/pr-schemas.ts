@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { ApiError } from "@/lib/api/auth";
+import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import {
   clampMoney,
   MAX_NUMERIC_15_2,
@@ -89,8 +91,6 @@ export const generalPrWriteSchema = z.object({
   action: z.enum(["draft", "submit"]).optional().default("draft"),
 });
 
-export type PrModuleType = "raw_material" | "product" | "general";
-
 // Union item PR lintas-scope. Dipakai untuk meng-collapse union-of-arrays
 // (hasil parsePrWriteBody 3-arah) menjadi array-of-union sebelum di-normalize +
 // insert, supaya TS menerima satu tipe baris, bukan union tiga array.
@@ -99,10 +99,10 @@ export type PrWriteItem =
   | z.infer<typeof productPrItemSchema>
   | z.infer<typeof generalPrItemSchema>;
 
-export function parsePrWriteBody(body: unknown, moduleType: PrModuleType = "raw_material") {
-  if (moduleType === "product") return productPrWriteSchema.parse(body);
-  if (moduleType === "general") return generalPrWriteSchema.parse(body);
-  return prWriteSchema.parse(body);
+export function parsePrWriteBody(body: unknown, moduleType: PurchasingModuleType = "raw_material") {
+  if (moduleType === "product") return parseBodyOrThrow(productPrWriteSchema, body);
+  if (moduleType === "general") return parseBodyOrThrow(generalPrWriteSchema, body);
+  return parseBodyOrThrow(prWriteSchema, body);
 }
 
 export function formatZodError(error: z.ZodError) {
@@ -110,14 +110,17 @@ export function formatZodError(error: z.ZodError) {
   return first?.message || "Validasi gagal";
 }
 
-export function isZodValidationError(error: unknown): error is z.ZodError {
-  if (error instanceof z.ZodError) return true;
-  return (
-    !!error &&
-    typeof error === "object" &&
-    "issues" in error &&
-    Array.isArray((error as z.ZodError).issues)
-  );
+/**
+ * Parse body/query dengan skema zod. Galat → 400
+ * `{ success: false, error: <pesan isu pertama>, details: issues }`.
+ * Dipakai saat skema dipilih runtime (module_type) atau untuk query string.
+ */
+export function parseBodyOrThrow<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+  if (!parsed.success) {
+    throw ApiError.badRequest(formatZodError(parsed.error), parsed.error.issues);
+  }
+  return parsed.data;
 }
 
 export function mapPrPgErrorMessage(message: string): string {
@@ -146,7 +149,6 @@ export function mapPrPgErrorMessage(message: string): string {
 }
 
 export function extractPrErrorMessage(error: unknown, fallback = "Gagal membuat PR"): string {
-  if (isZodValidationError(error)) return formatZodError(error);
   if (error instanceof Error && error.message) {
     return mapPrPgErrorMessage(error.message);
   }

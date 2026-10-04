@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "@/lib/purchasing/receiving-ui-http";
 import type {
   QCInspection,
   QCListParams,
@@ -45,7 +46,7 @@ export async function listQC(params: QCListParams = {}): Promise<QCListResult> {
   const res = await fetch(`/api/purchasing/qc?${sp.toString()}`);
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || json.error || `HTTP ${res.status}`);
+    throw new Error(apiErrorMessage(json, "Gagal memuat daftar QC"));
   }
 
   const rows = (json.data || []) as QCRecord[];
@@ -62,7 +63,7 @@ export async function getQC(id: string): Promise<QCInspection> {
 
   if (!res.ok) {
     if (res.status === 404) throw new QCNotFoundError();
-    throw new Error(json.message || json.error || "Gagal memuat data QC");
+    throw new Error(apiErrorMessage(json, "Gagal memuat data QC"));
   }
 
   const row = normalizeRecord(json.data as QCRecord);

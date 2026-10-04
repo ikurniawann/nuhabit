@@ -4,23 +4,21 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { formatAmount } from "@/lib/purchasing/utils";
-import { Badge } from "@/components/ui/badge";
-import { Calculator, Download, Eye, Loader2, Package, Pencil, Plus, RefreshCw, Search, Trash2, Upload, X } from "lucide-react";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import { Download, Loader2, Package, Plus, Search, Upload, X } from "lucide-react";
 import { toast } from "sonner";
+import { downloadExport } from "@/lib/purchasing/api-client/download";
 import { Combobox } from "@/components/ui/combobox";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
 import { ProductWithCOGS } from "@/types/purchasing";
 import { useProductList, useProductCategoryOptions, useProductWarehouses } from "../queries";
 import { useApplyProductRecipeHpp, useDeleteProduct, useUpdateProductStatus } from "../mutations";
-import { getProductUnitLabel } from "../product-unit";
 import { ProductHppCompare } from "./product-hpp-compare";
+import { ProductsTable } from "./products-table";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -72,9 +70,6 @@ export function ProductsPage() {
   );
   const getCategoryLabel = (code?: string | null) =>
     code ? categoryLabelMap.get(code) ?? code : "-";
-
-  const getStallLabel = (product: ProductWithCOGS) =>
-    product.warehouse_name || product.warehouse_code || "-";
 
   const products = listQuery.data?.data ?? [];
   const loading = listQuery.isLoading;
@@ -165,24 +160,10 @@ export function ProductsPage() {
 
     setExporting(true);
     try {
-      const response = await fetch("/api/purchasing/export/products");
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message || "Ekspor gagal");
-      }
-
-      const blob = await response.blob();
-      const disposition = response.headers.get("Content-Disposition") || "";
-      const match = disposition.match(/filename="([^"]+)"/);
-      const filename =
-        match?.[1] || `products-${new Date().toISOString().split("T")[0]}.xlsx`;
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
+      await downloadExport(
+        "/api/purchasing/export/products",
+        `products-${new Date().toISOString().split("T")[0]}.xlsx`
+      );
 
       toast.success("Produk berhasil diekspor ke Excel.");
     } catch (error: unknown) {
@@ -333,148 +314,15 @@ export function ProductsPage() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-semibold">Kode</th>
-                      <th className="px-4 py-3 text-left font-semibold">Nama Produk</th>
-                      <th className="px-4 py-3 text-left font-semibold">Stall</th>
-                      <th className="px-4 py-3 text-left font-semibold">Kategori</th>
-                      <th className="px-4 py-3 text-left font-semibold">Satuan</th>
-                      <th className="px-4 py-3 text-right font-semibold">HPP Saat Ini</th>
-                      <th className="px-4 py-3 text-right font-semibold">HPP Seharusnya</th>
-                      <th className="px-4 py-3 text-right font-semibold">Harga Jual</th>
-                      <th className="px-4 py-3 text-center font-semibold">Aktif</th>
-                      <th className="px-4 py-3 text-right font-semibold">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {products.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <span className="font-medium text-gray-900">
-                            {product.kode_produk || product.kode || "-"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={PRODUCT_ROUTES.productsDetail(product.id)}
-                              className="font-medium text-pink-700 hover:underline"
-                            >
-                              {product.nama}
-                            </Link>
-                            {product.hpp_perlu_review ? (
-                              <Badge
-                                variant="outline"
-                                className="border-amber-200/80 bg-amber-50 text-amber-800"
-                              >
-                                Perlu update
-                              </Badge>
-                            ) : null}
-                            {/* EPIC-047 Fase 1A — badge varian SKU POS merchandise tertaut */}
-                            {(product.variant_count ?? 0) > 0 ? (
-                              <Badge
-                                variant="outline"
-                                className="border-indigo-200/80 bg-indigo-50 text-indigo-700"
-                              >
-                                {product.variant_count} varian
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{getStallLabel(product)}</td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {getCategoryLabel(product.kategori)}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{getProductUnitLabel(product)}</td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatAmount(product.hpp_tersimpan ?? product.harga_modal ?? 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-pink-700">
-                          {formatAmount(product.hpp_resep ?? product.hpp_estimasi ?? 0)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatAmount(product.harga_jual || 0)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex items-center justify-center">
-                            <Switch
-                              checked={product.is_active ?? true}
-                              disabled={statusUpdatingId === product.id}
-                              onCheckedChange={(checked) =>
-                                setStatusDialog({ open: true, product, nextStatus: checked })
-                              }
-                              aria-label={`Ubah status aktif ${product.nama}`}
-                            />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link href={PRODUCT_ROUTES.productsDetail(product.id)}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Lihat detail"
-                                className="cursor-pointer"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            <Link href={PRODUCT_ROUTES.productsEdit(product.id)}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Ubah produk"
-                                className="cursor-pointer"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            <Link href={PRODUCT_ROUTES.productsBom(product.id)}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Ubah resep (BOM)"
-                                className="cursor-pointer"
-                              >
-                                <Calculator className="h-4 w-4 text-pink-600" />
-                              </Button>
-                            </Link>
-                            {product.hpp_perlu_review ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                title="Update ke HPP seharusnya"
-                                className="cursor-pointer text-amber-700 hover:text-amber-800"
-                                disabled={applyHppMutation.isPending}
-                                onClick={() => setHppDialog({ open: true, product })}
-                              >
-                                {applyHppMutation.isPending &&
-                                applyHppMutation.variables === product.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4" />
-                                )}
-                              </Button>
-                            ) : null}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="Hapus produk"
-                              className="cursor-pointer text-red-500 hover:text-red-600"
-                              onClick={() => handleOpenDelete(product)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ProductsTable
+                products={products}
+                categoryLabel={getCategoryLabel}
+                statusUpdatingId={statusUpdatingId}
+                applyingHppId={applyHppMutation.isPending ? (applyHppMutation.variables ?? null) : null}
+                onToggleStatus={(product, nextStatus) => setStatusDialog({ open: true, product, nextStatus })}
+                onApplyHpp={(product) => setHppDialog({ open: true, product })}
+                onDelete={handleOpenDelete}
+              />
 
               <PurchasingTablePagination
                 page={page}

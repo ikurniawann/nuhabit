@@ -3,10 +3,10 @@
 import { use, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ProductPRForm } from "@/components/purchasing/product-pr-form";
-import { PRDetailToast } from "@/components/purchasing/pr-detail-toast";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { ProductPRForm } from "@/features/purchasing/product-pr/components/product-pr-form";
+import { PRDetailToast } from "@/features/purchasing/components/shared/pr-detail-toast";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { useProductPRFormData, useProductPurchaseRequest } from "../queries";
 import { useUpdateProductPurchaseRequest } from "../mutations";
 import type { ProductPRFormInput } from "../types";

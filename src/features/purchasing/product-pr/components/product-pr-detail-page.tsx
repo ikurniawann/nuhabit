@@ -7,24 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeftIcon,
-  CheckCircle2,
   ClipboardList,
   FileText,
   Loader2,
   Pencil,
   Printer,
-  User,
-  XCircle,
 } from "lucide-react";
-import { formatAmount, formatDate, getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/utils";
-import { PRRevisionButton } from "@/components/purchasing/pr-revision-button";
-import { PRDetailToast } from "@/components/purchasing/pr-detail-toast";
-import { PRApprovalActions } from "@/components/purchasing/pr-approval-actions";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { getPRStatusLabel, getPriorityBadge } from "@/lib/purchasing/status-labels";
+import { PRRevisionButton } from "@/features/purchasing/components/shared/pr-revision-button";
+import { PRDetailToast } from "@/features/purchasing/components/shared/pr-detail-toast";
+import { PRApprovalActions } from "@/features/purchasing/components/shared/pr-approval-actions";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { NAV_FROM_APPROVAL_PR, appendNavFrom } from "@/lib/iam/nav-context";
 import { useNavFrom } from "@/lib/iam/use-nav-from";
 import { useProductPurchaseRequest } from "../queries";
 import type { ProductPRDetailItem } from "../types";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const PR_STATUS_LABEL_OVERRIDES: Record<string, string> = {
   rejected: "Rejected",
@@ -59,10 +57,6 @@ function DetailField({ label, value }: { label: string; value: string }) {
       <dd className="mt-0.5 text-sm font-medium text-gray-900">{value}</dd>
     </div>
   );
-}
-
-function formatQty(value?: number | null) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(Number(value || 0));
 }
 
 export function ProductPRDetailPage({ params }: ProductPRDetailPageProps) {
@@ -242,15 +236,15 @@ export function ProductPRDetailPage({ params }: ProductPRDetailPageProps) {
                               <div className="text-xs text-gray-500">{item.product.kode}</div>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">{formatQty(item.qty)}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{formatNumber(item.qty, 4)}</td>
                           <td className="px-4 py-3 text-center text-gray-600">
                             {item.satuan?.nama || item.unit || "-"}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatAmount(item.estimated_price || 0)}
+                            {formatNumber(item.estimated_price || 0)}
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatAmount(item.total || 0)}
+                            {formatNumber(item.total || 0)}
                           </td>
                         </tr>
                       ))}
@@ -276,11 +270,11 @@ export function ProductPRDetailPage({ params }: ProductPRDetailPageProps) {
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <dt className="text-gray-500">Total Quantity</dt>
-                  <dd className="font-medium text-gray-900">{formatQty(totalQty)}</dd>
+                  <dd className="font-medium text-gray-900">{formatNumber(totalQty, 4)}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-3 border-t border-gray-200/70 pt-3">
                   <dt className="font-medium text-gray-900">Estimated Total</dt>
-                  <dd className="font-semibold text-pink-700">{formatAmount(pr.total_amount)}</dd>
+                  <dd className="font-semibold text-pink-700">{formatNumber(pr.total_amount)}</dd>
                 </div>
               </dl>
               {pr.status === "pending_head" && (

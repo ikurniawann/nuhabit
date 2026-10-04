@@ -1,31 +1,22 @@
 "use client";
 
-import { useSearchParams, useRouter } from "next/navigation";
-import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { PurchasingFormHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { GeneralPOForm } from "@/components/purchasing/general-po-form";
-import { GENERAL_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { useApprovedGeneralPRsForPO, useGeneralPOFormData } from "../queries";
+import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { GENERAL_ROUTES } from "@/lib/purchasing/item-routes";
 import { useCreateGeneralPurchaseOrder } from "../mutations";
+import { useApprovedGeneralPRsForPO, useGeneralPOFormData } from "../queries";
+import { GeneralPOForm } from "./general-po-form";
 
 export function NewGeneralPOPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialPRId = searchParams.get("pr_id") || undefined;
-
+  const initialPRId = useSearchParams().get("pr_id") || undefined;
   const formQuery = useGeneralPOFormData();
   const prsQuery = useApprovedGeneralPRsForPO();
   const createMutation = useCreateGeneralPurchaseOrder();
 
-  const approvedPRs = useMemo(() => {
-    const all = prsQuery.data ?? [];
-    if (!initialPRId) return all;
-    const selected = all.find((pr) => pr.id === initialPRId);
-    return selected ? [selected, ...all.filter((pr) => pr.id !== initialPRId)] : all;
-  }, [prsQuery.data, initialPRId]);
-
-  if (formQuery.isLoading) {
+  // Tunggu daftar PR bila ?pr_id= ada, supaya item PR terisi saat form pertama kali dibuat.
+  if (formQuery.isLoading || (initialPRId && prsQuery.isLoading)) {
     return <div className="py-20 text-center text-sm text-gray-500">Memuat form purchase order...</div>;
   }
 
@@ -41,10 +32,8 @@ export function NewGeneralPOPage() {
         description="Buat purchase order barang operasional ke vendor"
       />
       <GeneralPOForm
-        vendors={formQuery.data.vendors}
-        supplies={formQuery.data.supplies}
-        units={formQuery.data.units}
-        approvedPRs={approvedPRs}
+        lookups={formQuery.data}
+        approvedPRs={prsQuery.data ?? []}
         initialPRId={initialPRId}
         isLoading={createMutation.isPending}
         cancelHref={GENERAL_ROUTES.purchasingPo}
@@ -55,7 +44,6 @@ export function NewGeneralPOPage() {
             router.push(GENERAL_ROUTES.purchasingPoDetail(result.data.id));
           } catch (error) {
             toast.error(error instanceof Error ? error.message : "Gagal membuat purchase order.");
-            throw error;
           }
         }}
       />

@@ -11,8 +11,8 @@ import { Building2, User, CreditCard, FileText, Loader2 } from "lucide-react";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { toast } from "sonner";
 import { useCreateVendor } from "../mutations";
 import {

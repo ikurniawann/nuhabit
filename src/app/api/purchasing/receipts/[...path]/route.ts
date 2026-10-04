@@ -1,32 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
 import { IAM } from "@/lib/iam/prefixes";
 import { readPrivateFile } from "@/lib/storage-private";
 
 /**
  * Penyaji arsip nota vendor (storage/private/purchasing-receipts). Berbeda
- * dengan /api/files (publik): nota keuangan hanya untuk role purchasing/
- * finance, jadi wajib lewat route ber-auth ini.
+ * dengan /api/files (publik): nota keuangan wajib lewat route ber-auth ini.
  */
-const VIEW_ROLES = ["admin", "super_admin", "purchasing_admin", "finance_staff", "direksi"] as const;
-
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
-) {
-  try {
+export const GET = apiHandler(
+  async (_request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => {
     await requireIamMenuPrefix(IAM.items);
     const { path: segments } = await params;
 
     const decoded = segments.map(decodeURIComponent);
     if (decoded.some((s) => s.includes("..") || s.startsWith(".") || s.includes("\\"))) {
-      return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
+      throw ApiError.notFound("File tidak ditemukan");
     }
 
     // readPrivateFile sudah menolak traversal; prefix folder dikunci di sini.
-    const rel = ["purchasing-receipts", ...decoded].join("/");
-    const { data, mime } = await readPrivateFile(rel);
-    if (!data) return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
+    const { data, mime } = await readPrivateFile(["purchasing-receipts", ...decoded].join("/"));
+    if (!data) throw ApiError.notFound("File tidak ditemukan");
 
     return new NextResponse(new Uint8Array(data), {
       headers: {
@@ -36,9 +30,6 @@ export async function GET(
         "Cache-Control": "private, max-age=3600",
       },
     });
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error serving receipt:", error);
-    return NextResponse.json({ error: "Gagal memuat file" }, { status: 500 });
-  }
-}
+  },
+  "purchasing.receipts"
+);

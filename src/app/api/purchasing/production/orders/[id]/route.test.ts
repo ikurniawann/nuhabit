@@ -6,27 +6,18 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 
-vi.mock("@/lib/api/auth", () => ({
+vi.mock("@/lib/api/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/auth")>()),
   requireIamMenuPrefix: vi.fn(async () => ({ id: "user-1", role: "admin" })),
-  ApiError: class ApiError extends Error {
-    status: number;
-    constructor(message: string, status = 400) {
-      super(message);
-      this.status = status;
-    }
-    toResponse() {
-      return new Response(JSON.stringify({ success: false, message: this.message }), {
-        status: this.status,
-      });
-    }
-  },
 }));
 
 vi.mock("@/lib/inventory", () => ({
   addInventoryFromProduction: vi.fn(async () => ({})),
 }));
 
-const recordFinishedGoodsMovementMock = vi.fn(async () => ({ id: "movement-1" }));
+const recordFinishedGoodsMovementMock = vi.fn<(...args: unknown[]) => Promise<{ id: string }>>(
+  async () => ({ id: "movement-1" })
+);
 vi.mock("@/lib/inventory/finished-goods-movements", () => ({
   recordFinishedGoodsMovement: (...args: unknown[]) =>
     (recordFinishedGoodsMovementMock as unknown as (...a: unknown[]) => unknown)(...args),
@@ -177,9 +168,9 @@ describe("PATCH .../orders/[id] action complete — EPIC-047 Fase 1B variant_out
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toBe("Rincian varian wajib diisi");
-    expect(body.available_skus).toHaveLength(4);
-    expect(body.available_skus.map((s: { id: string }) => s.id)).toEqual([
+    expect(body.error).toBe("Rincian varian wajib diisi");
+    expect(body.details.available_skus).toHaveLength(4);
+    expect(body.details.available_skus.map((s: { id: string }) => s.id)).toEqual([
       SKU_S,
       SKU_M,
       SKU_L,
@@ -215,7 +206,7 @@ describe("PATCH .../orders/[id] action complete — EPIC-047 Fase 1B variant_out
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toBe(
+    expect(body.error).toBe(
       "Rincian varian harus berjumlah sama dengan jumlah aktual (90 vs 100)"
     );
     expect(recordFinishedGoodsMovementMock).not.toHaveBeenCalled();
@@ -328,7 +319,7 @@ describe("PATCH .../orders/[id] action complete — EPIC-047 Fase 1B variant_out
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toBe("Produksi harus IN_PROGRESS sebelum completed");
+    expect(body.error).toBe("Produksi harus IN_PROGRESS sebelum completed");
     expect(recordFinishedGoodsMovementMock).not.toHaveBeenCalled();
     expect(queryOneMock).not.toHaveBeenCalled();
   });
@@ -351,7 +342,7 @@ describe("PATCH .../orders/[id] action complete — EPIC-047 Fase 1B variant_out
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.success).toBe(false);
-    expect(body.message).toBe("Validasi gagal");
+    expect(body.error).toBe("Validation failed");
     expect(fakeDbRef.db.from).not.toHaveBeenCalled();
   });
 });

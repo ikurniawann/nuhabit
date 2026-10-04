@@ -6,8 +6,9 @@ import {
   updateGrn,
   createGrn,
   createQCInspection,
-  approveVendorCredit,
+  type CreateGrnPayload,
   type SubmitGrnQcPayload,
+  type UpdateGrnPayload,
 } from "./api";
 import { grnQueryKeys } from "./query-keys";
 
@@ -24,7 +25,7 @@ export const useDeleteGrn = () => {
 export const useUpdateGrn = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: unknown }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateGrnPayload }) =>
       updateGrn(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: grnQueryKeys.all });
@@ -35,7 +36,7 @@ export const useUpdateGrn = () => {
 export const useCreateGrn = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: unknown) => createGrn(payload),
+    mutationFn: (payload: CreateGrnPayload) => createGrn(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: grnQueryKeys.all });
     },
@@ -47,25 +48,9 @@ export const useCreateQCInspection = () => {
   return useMutation({
     mutationFn: ({ grnId, payload }: { grnId: string; payload: SubmitGrnQcPayload }) =>
       createQCInspection(grnId, payload),
-    onSuccess: (_data, variables) => {
+    onSuccess: () => {
+      // Prefiks "all" mencakup detail, QC dan vendor credit GRN ini.
       queryClient.invalidateQueries({ queryKey: grnQueryKeys.all });
-      queryClient.invalidateQueries({ queryKey: grnQueryKeys.detail(variables.grnId) });
-      queryClient.invalidateQueries({ queryKey: grnQueryKeys.qc(variables.grnId) });
-      queryClient.invalidateQueries({ queryKey: grnQueryKeys.vendorCredits(variables.grnId) });
-    },
-  });
-};
-
-export const useApproveVendorCredit = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ creditId }: { creditId: string; grnId: string }) =>
-      approveVendorCredit(creditId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: grnQueryKeys.vendorCredits(variables.grnId) });
-      queryClient.invalidateQueries({ queryKey: grnQueryKeys.detail(variables.grnId) });
-      queryClient.invalidateQueries({ queryKey: ["purchasing", "vendor-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["purchasing", "po"] });
     },
   });
 };

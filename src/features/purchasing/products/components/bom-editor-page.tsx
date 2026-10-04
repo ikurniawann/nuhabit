@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProductBomEditorData } from "../queries";
 import { useCreateBOMItem, useUpdateBOMItem, useDeleteBOMItem } from "../mutations";
@@ -8,7 +8,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import { Combobox } from "@/components/ui/combobox";
 import { NumericInput } from "@/components/ui/numeric-input";
 import {
@@ -20,12 +20,13 @@ import {
 import { toast } from "sonner";
 import {
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { formatAmount } from "@/lib/purchasing/utils";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
 import {
   BOMItem,
   RawMaterialWithStock,
 } from "@/types/purchasing";
+import { formatNumber } from "@/lib/format";
+import { materialSmallUnitLabel, materialUnitCost } from "@/lib/purchasing/product-ui-form";
 
 type BomDraft = {
   id: string;
@@ -42,30 +43,12 @@ function toNumber(value: unknown) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-function formatRupiah(value: number) {
-  return formatAmount(value);
-}
-
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
 function displayName(value?: string | null) {
   return (value || "-").replace(/\s+\d{8,}$/g, "").trim();
-}
-
-function getMaterialSmallUnitLabel(material?: RawMaterialWithStock) {
-  return material?.satuan_kecil_nama || material?.satuan || "Unit";
-}
-
-// Harga acuan (avg_cost/harga_beli) disimpan per satuan BESAR. BOM memakai qty
-// dalam satuan KECIL, jadi cost di-normalisasi ke satuan kecil (÷ konversi_factor).
-function getMaterialUnitCost(material?: RawMaterialWithStock) {
-  const baseCost = toNumber(material?.avg_cost ?? material?.harga_avg ?? material?.harga_terakhir);
-  const hasSmallUnit = Boolean(material?.satuan_kecil_nama || material?.satuan_kecil_id);
-  const factor = toNumber(material?.konversi_factor);
-  if (hasSmallUnit && factor > 0) return baseCost / factor;
-  return baseCost;
 }
 
 function mapBomItem(item: BOMItem): BomDraft {
@@ -85,67 +68,80 @@ function mapBomItem(item: BOMItem): BomDraft {
   };
 }
 
+function recalculateDraft(
+  item: BomDraft,
+  material: RawMaterialWithStock | undefined,
+  materialId = item.raw_material_id
+): BomDraft {
+  const costPerUnit = materialUnitCost(material);
+  return {
+    ...item,
+    raw_material_id: materialId,
+    cost_per_unit: costPerUnit,
+    total_cost: costPerUnit * item.qty_required * (1 + item.waste_factor),
+  };
+}
+
 export function BOMEditorPage() {
   const { id } = useParams();
-  const searchParams = useSearchParams();
   const productId = id as string;
-  const fromProduction = searchParams.get("from") === "production";
-
-  const [bomItems, setBomItems] = useState<BomDraft[]>([]);
-  const [savingAll, setSavingAll] = useState(false);
-
   const editorQuery = useProductBomEditorData(productId);
-  const product = editorQuery.data?.product ?? null;
-  const loading = editorQuery.isLoading;
-  const materials = useMemo<RawMaterialWithStock[]>(
-    () =>
-      (editorQuery.data?.materials ?? []).filter(
-        (material) => material.source_product_id !== productId
-      ),
-    [editorQuery.data, productId]
+
+  useEffect(() => {
+    if (editorQuery.isError) {
+      toast.error(getErrorMessage(editorQuery.error, "Gagal memuat resep (BOM)"));
+    }
+  }, [editorQuery.isError, editorQuery.error]);
+
+  if (editorQuery.isLoading) {
+    return (
+      <div className="flex min-h-[360px] items-center justify-center text-sm text-gray-500">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Memuat resep (BOM)...
+      </div>
+    );
+  }
+
+  // key: draf dibangun ulang dari server setiap kali data dimuat ulang.
+  return (
+    <BomEditor
+      key={editorQuery.dataUpdatedAt}
+      productId={productId}
+      data={editorQuery.data}
+      reloading={editorQuery.isFetching}
+      onReload={() => editorQuery.refetch()}
+    />
   );
+}
+
+interface BomEditorProps {
+  productId: string;
+  data: ReturnType<typeof useProductBomEditorData>["data"];
+  reloading: boolean;
+  onReload: () => Promise<unknown>;
+}
+
+function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
+  const searchParams = useSearchParams();
+  const fromProduction = searchParams.get("from") === "production";
+  const product = data?.product ?? null;
+  const materials = (data?.materials ?? []).filter((material) => material.source_product_id !== productId);
+  const materialMap = new Map(materials.map((material) => [material.id, material]));
+  const recalculate = (item: BomDraft, materialId = item.raw_material_id) =>
+    recalculateDraft(item, materialMap.get(materialId), materialId);
+
+  const [bomItems, setBomItems] = useState<BomDraft[]>(() =>
+    (data?.bom ?? []).map((bomItem) => recalculate(mapBomItem(bomItem)))
+  );
+  const [savingAll, setSavingAll] = useState(false);
 
   const createBomMutation = useCreateBOMItem();
   const updateBomMutation = useUpdateBOMItem();
   const deleteBomMutation = useDeleteBOMItem();
 
-  const materialMap = useMemo(
-    () => new Map(materials.map((material) => [material.id, material])),
-    [materials]
-  );
-
   const totalHpp = bomItems.reduce((sum, item) => sum + item.total_cost, 0);
   const wipCount = bomItems.filter((item) => materialMap.get(item.raw_material_id)?.material_type === "WIP").length;
   const rawCount = bomItems.length - wipCount;
-
-  const loadData = () => editorQuery.refetch();
-
-  useEffect(() => {
-    if (editorQuery.isError) {
-      console.error("Error loading BOM:", editorQuery.error);
-      toast.error(getErrorMessage(editorQuery.error, "Gagal memuat resep (BOM)"));
-    }
-  }, [editorQuery.isError, editorQuery.error]);
-
-  useEffect(() => {
-    const bomData = editorQuery.data?.bom;
-    if (!bomData) return;
-    setBomItems(bomData.map((bomItem) => recalculate(mapBomItem(bomItem))));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorQuery.data]);
-
-  function recalculate(item: BomDraft, materialId = item.raw_material_id) {
-    const material = materialMap.get(materialId);
-    const costPerUnit = getMaterialUnitCost(material);
-    const totalCost = costPerUnit * item.qty_required * (1 + item.waste_factor);
-
-    return {
-      ...item,
-      raw_material_id: materialId,
-      cost_per_unit: costPerUnit,
-      total_cost: totalCost,
-    };
-  }
 
   function addItem() {
     setBomItems((items) => [
@@ -195,7 +191,7 @@ export function BOMEditorPage() {
 
     if (!options?.silent) {
       toast.success("Resep (BOM) berhasil disimpan");
-      await loadData();
+      await onReload();
     }
   }
 
@@ -233,22 +229,13 @@ export function BOMEditorPage() {
         await saveItem(item, { silent: true });
       }
       toast.success("Resep (BOM) berhasil disimpan");
-      await loadData();
+      await onReload();
     } catch (error: unknown) {
       console.error("Error saving BOM:", error);
       toast.error(getErrorMessage(error, "Gagal menyimpan resep (BOM)"));
     } finally {
       setSavingAll(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[360px] items-center justify-center text-sm text-gray-500">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Memuat resep (BOM)...
-      </div>
-    );
   }
 
   const backHref = fromProduction
@@ -262,18 +249,18 @@ export function BOMEditorPage() {
         title="Editor Resep (BOM)"
         description={
           <>
-            {displayName(product?.nama)} · Total estimasi HPP {formatRupiah(totalHpp)}
+            {displayName(product?.nama)} · Total estimasi HPP {formatNumber(totalHpp)}
           </>
         }
         actions={
           <Button
             type="button"
             variant="outline"
-            onClick={loadData}
-            disabled={editorQuery.isFetching}
+            onClick={onReload}
+            disabled={reloading}
             className="purchasing-secondary-button w-full sm:w-auto"
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${editorQuery.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`mr-2 h-4 w-4 ${reloading ? "animate-spin" : ""}`} />
             Muat Ulang
           </Button>
         }
@@ -378,7 +365,7 @@ export function BOMEditorPage() {
                               className="h-9 rounded-r-none border-0 text-sm shadow-none focus-visible:ring-0"
                             />
                             <div className="flex min-w-14 items-center justify-center rounded-r-lg border-l border-gray-200/70 bg-gray-50 px-3 text-xs font-semibold uppercase text-gray-500">
-                              {getMaterialSmallUnitLabel(material)}
+                              {materialSmallUnitLabel(material, "Unit")}
                             </div>
                           </div>
                         </td>
@@ -400,14 +387,14 @@ export function BOMEditorPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right align-middle">
-                          <div className="font-mono text-sm text-gray-700">{formatRupiah(item.cost_per_unit)}</div>
+                          <div className="font-mono text-sm text-gray-700">{formatNumber(item.cost_per_unit)}</div>
                           {material && (
-                            <div className="text-[11px] text-gray-400">/ {getMaterialSmallUnitLabel(material)}</div>
+                            <div className="text-[11px] text-gray-400">/ {materialSmallUnitLabel(material, "Unit")}</div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right align-middle">
                           <span className="font-mono text-sm font-semibold text-gray-900">
-                            {formatRupiah(item.total_cost)}
+                            {formatNumber(item.total_cost)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right align-middle">
@@ -434,7 +421,7 @@ export function BOMEditorPage() {
                     Total Estimasi HPP
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-sm font-bold text-gray-900">
-                    {formatRupiah(totalHpp)}
+                    {formatNumber(totalHpp)}
                   </td>
                   <td className="px-4 py-3" />
                 </tr>

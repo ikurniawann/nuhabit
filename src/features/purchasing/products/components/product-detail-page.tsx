@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useProduct, useProductBOM, useProductCategoryOptions } from "../queries";
@@ -12,27 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, Edit, Trash2, Package, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { BOMItem } from "@/types/purchasing";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatAmount } from "@/lib/purchasing/utils";
 import { getProductUnitLabel } from "../product-unit";
 import { posStationLabel } from "@/lib/pos/kitchen-station";
 import { ProductHppCompare } from "./product-hpp-compare";
+import { formatNumber } from "@/lib/format";
+import { getBomQty, getBomWastePercent } from "@/lib/purchasing/product-ui-form";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function getBomQty(item: BOMItem) {
-  return item.qty_needed ?? item.qty_required ?? item.qty ?? 0;
-}
-
-function getBomWastePercent(item: BOMItem) {
-  if (item.waste_persen !== undefined && item.waste_persen !== null) {
-    return item.waste_persen;
-  }
-  return (item.waste_factor ?? 0) * 100;
 }
 
 function getBomUnitLabel(item: BOMItem) {
@@ -55,10 +45,6 @@ function getBomSubtotal(item: BOMItem) {
   return item.subtotal ?? item.total_cost ?? 0;
 }
 
-function formatQuantity(value: number) {
-  return value.toLocaleString("id-ID", { maximumFractionDigits: 4 });
-}
-
 export function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -73,22 +59,16 @@ export function ProductDetailPage() {
   const product = productQuery.data ?? null;
   const loading = productQuery.isLoading || bomQuery.isLoading;
 
-  const categoryLabel = useMemo(() => {
-    if (!product?.kategori) return "-";
-    const match = (categoriesQuery.data ?? []).find((row) => row.code === product.kategori);
-    return match?.nama ?? product.kategori;
-  }, [categoriesQuery.data, product?.kategori]);
+  const categoryLabel = product?.kategori
+    ? ((categoriesQuery.data ?? []).find((row) => row.code === product.kategori)?.nama ?? product.kategori)
+    : "-";
 
-  const bomItems = useMemo<BOMItem[]>(
-    () =>
-      (bomQuery.data ?? []).map((item) => ({
-        ...item,
-        qty_needed: getBomQty(item),
-        waste_persen: getBomWastePercent(item),
-        subtotal: getBomSubtotal(item),
-      })),
-    [bomQuery.data]
-  );
+  const bomItems: BOMItem[] = (bomQuery.data ?? []).map((item) => ({
+    ...item,
+    qty_needed: getBomQty(item),
+    waste_persen: getBomWastePercent(item),
+    subtotal: getBomSubtotal(item),
+  }));
 
   const deleteMutation = useDeleteProduct();
   const applyHppMutation = useApplyProductRecipeHpp();
@@ -250,11 +230,11 @@ export function ProductDetailPage() {
           <CardContent className="space-y-4 p-4">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">HPP saat ini</span>
-              <span className="font-medium text-foreground">{formatAmount(hppTersimpan)}</span>
+              <span className="font-medium text-foreground">{formatNumber(hppTersimpan)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">HPP seharusnya</span>
-              <span className="font-medium text-foreground">{formatAmount(hppResep)}</span>
+              <span className="font-medium text-foreground">{formatNumber(hppResep)}</span>
             </div>
             {bomItems.length > 0 ? (
               <div className="flex justify-between text-sm">
@@ -269,7 +249,7 @@ export function ProductDetailPage() {
                   }`}
                 >
                   {hppSelisih > 0 ? "+" : ""}
-                  {formatAmount(hppSelisih)}
+                  {formatNumber(hppSelisih)}
                 </span>
               </div>
             ) : (
@@ -279,14 +259,14 @@ export function ProductDetailPage() {
             )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Harga Jual</span>
-              <span className="font-medium text-foreground">{formatAmount(product.harga_jual)}</span>
+              <span className="font-medium text-foreground">{formatNumber(product.harga_jual)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-200/70 pt-2 text-sm">
               <span className="text-muted-foreground">Margin (seharusnya)</span>
               <span
                 className={`font-medium ${margin.amount >= 0 ? "text-emerald-600" : "text-red-600"}`}
               >
-                {formatAmount(margin.amount)} ({margin.percentage.toFixed(1)}%)
+                {formatNumber(margin.amount)} ({margin.percentage.toFixed(1)}%)
               </span>
             </div>
             {perluReview ? (
@@ -389,14 +369,14 @@ export function ProductDetailPage() {
                             <div className="text-xs text-gray-500">{item.raw_material?.kode}</div>
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatQuantity(getBomQty(item))}
+                            {formatNumber(getBomQty(item), 4)}
                           </td>
                           <td className="px-4 py-3 text-gray-700">{getBomUnitLabel(item)}</td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {getBomWastePercent(item).toFixed(2)}%
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatAmount(getBomSubtotal(item))}
+                            {formatNumber(getBomSubtotal(item))}
                           </td>
                         </tr>
                       ))}
@@ -405,7 +385,7 @@ export function ProductDetailPage() {
                           Total Estimasi HPP
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                          {formatAmount(totalBomCost)}
+                          {formatNumber(totalBomCost)}
                         </td>
                       </tr>
                     </tbody>

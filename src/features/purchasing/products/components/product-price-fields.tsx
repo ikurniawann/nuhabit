@@ -2,7 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { formatAmount } from "@/lib/purchasing/utils";
+import { formatNumber } from "@/lib/format";
 
 const mutedGroupClass =
   "flex rounded-lg border border-gray-200/70 bg-muted/50";
@@ -83,7 +83,7 @@ export function ProductPriceFields({
       <div className="flex items-center justify-between border-t border-gray-200/70 pt-3 text-sm">
         <span className="text-muted-foreground">Margin</span>
         <span className={`font-medium ${margin < 0 ? "text-amber-700" : "text-foreground"}`}>
-          {formatAmount(margin)}
+          {formatNumber(margin)}
         </span>
       </div>
     </div>

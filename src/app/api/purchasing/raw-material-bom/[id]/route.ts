@@ -1,78 +1,30 @@
-import { NextRequest } from "next/server";
+// /api/purchasing/raw-material-bom/:id — ubah / hapus (soft) komponen bahan baku.
+import { NextRequest, NextResponse } from "next/server";
+import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { IAM } from "@/lib/iam/prefixes";
 import { createServerPgClient } from "@/lib/pg/create-client";
-import { MANUFACTURING_SCHEMA } from "@/lib/manufacturing/constants";
-import { z } from "zod";
+import {
+  deactivateRawMaterialBomItem,
+  updateRawMaterialBomItem,
+} from "@/lib/purchasing/bom-api";
+import { rawMaterialBomUpdateSchema } from "@/lib/purchasing/bom-schemas";
+import { parseBodyOrThrow } from "@/lib/purchasing/pr-schemas";
 
-const bomSchema = z.object({
-  qty_required: z.number().min(0.0001).optional(),
-  satuan_id: z.string().uuid().optional().nullable(),
-  waste_factor: z.number().min(0).max(1).optional(),
-  is_active: z.boolean().optional(),
-});
+type RouteContext = { params: Promise<{ id: string }> };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { id } = await params;
+  const db = await createServerPgClient();
+  const patch = parseBodyOrThrow(rawMaterialBomUpdateSchema, await request.json());
+  const data = await updateRawMaterialBomItem(db, id, patch);
+  return NextResponse.json({ success: true, data, message: "Bill of materials item updated" });
+}, "purchasing.raw-material-bom.update");
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const db = await createServerPgClient();
-    const validated = bomSchema.parse(await request.json());
-
-    const { data: existingItem, error: findError } = await db
-      .from("raw_material_bom_items", MANUFACTURING_SCHEMA)
-      .select("id")
-      .eq("id", id)
-      .single();
-
-    if (findError || !existingItem) {
-      return Response.json({ success: false, message: "Bill of materials item not found" }, { status: 404 });
-    }
-
-    const { data, error } = await db
-      .from("raw_material_bom_items", MANUFACTURING_SCHEMA)
-      .update({ ...validated, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return Response.json({ success: true, data, message: "Bill of materials item updated" });
-  } catch (error: unknown) {
-    console.error("Error updating raw material BOM item:", error);
-    return Response.json(
-      { success: false, message: getErrorMessage(error, "Failed to update bill of materials item") },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const db = await createServerPgClient();
-
-    const { error } = await db
-      .from("raw_material_bom_items", MANUFACTURING_SCHEMA)
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) throw error;
-
-    return Response.json({ success: true, message: "Bill of materials item removed" });
-  } catch (error: unknown) {
-    console.error("Error deleting raw material BOM item:", error);
-    return Response.json(
-      { success: false, message: getErrorMessage(error, "Failed to remove bill of materials item") },
-      { status: 500 }
-    );
-  }
-}
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { id } = await params;
+  await deactivateRawMaterialBomItem(await createServerPgClient(), id);
+  return NextResponse.json({ success: true, message: "Bill of materials item removed" });
+}, "purchasing.raw-material-bom.delete");

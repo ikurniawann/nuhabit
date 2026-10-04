@@ -1,5 +1,5 @@
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
-import { PRODUCT_ROUTES, RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PRODUCT_ROUTES, RM_ROUTES } from "@/lib/purchasing/item-routes";
 
 export function getProductionModuleConfig(moduleType: PurchasingModuleType = "raw_material") {
   const isProduct = moduleType === "product";

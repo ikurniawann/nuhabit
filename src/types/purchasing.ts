@@ -65,6 +65,8 @@ export interface RawMaterialUnitConversion {
   qty_in_base_unit: number;
   is_base?: boolean;
   is_active?: boolean;
+  /** Pack bawaan baris PO baru. */
+  is_purchase_default?: boolean;
   satuan?: Unit;
 }
 
@@ -88,16 +90,6 @@ export interface RawMaterialStockSummary {
   aman: number;
   menipis: number;
   habis: number;
-}
-
-export interface POListParams {
-  search?: string;
-  status?: POStatus;
-  supplier_id?: string;
-  tanggal_mulai?: string;
-  tanggal_sampai?: string;
-  page?: number;
-  limit?: number;
 }
 
 // ============================================
@@ -413,9 +405,9 @@ export interface RawMaterialFormData {
   stok_maximum?: number | null;
   shelf_life_days?: number;
   storage_condition?: string;
-  coa_production?: string;
-  coa_rnd?: string;
-  coa_asset?: string;
+  coa_production?: string | null;
+  coa_rnd?: string | null;
+  coa_asset?: string | null;
   deskripsi?: string;
   is_active?: boolean;
   unit_conversions?: RawMaterialUnitConversion[];
@@ -647,6 +639,10 @@ export interface PurchaseOrderWithStats extends PurchaseOrder {
   lifecycle_status?: "draft" | "in_progress" | "waiting_payment" | "waiting_receipt" | "completed" | "cancelled";
   overall_progress_pct?: number;
   order_progress_pct?: number;
+  receipt_progress_pct?: number;
+  gross_payable_amount?: number;
+  return_credit_amount?: number;
+  reject_credit_amount?: number;
   qc_progress_pct?: number;
   return_progress_pct?: number;
   fulfillment_progress_pct?: number;

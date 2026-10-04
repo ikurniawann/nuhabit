@@ -1,151 +1,24 @@
-// ============================================
-// API ROUTE: /api/purchasing/po/items/[item_id]
-// ============================================
-
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { IAM } from "@/lib/iam/prefixes";
 import { createServerPgClient } from "@/lib/pg/create-client";
-import { z } from "zod";
+import { removePurchaseOrderItem, updatePurchaseOrderItem } from "@/lib/purchasing/po-lifecycle";
+import { poItemUpdateSchema } from "@/lib/purchasing/po-schemas";
 
-const poItemSchema = z.object({
-  qty_ordered: z.number().min(0.0001).optional(),
-  satuan_id: z.string().uuid().optional().nullable(),
-  harga_satuan: z.number().min(0).optional(),
-  diskon_item: z.number().min(0).optional(),
-  catatan: z.string().optional().nullable(),
-});
+type RouteContext = { params: Promise<{ item_id: string }> };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { item_id } = await params;
+  const input = await validateBody(request, poItemUpdateSchema);
+  const data = await updatePurchaseOrderItem(await createServerPgClient(), item_id, input);
+  return NextResponse.json({ success: true, data, message: "Item berhasil diupdate" });
+}, "purchasing.po.items.update");
 
-// PUT /api/purchasing/po/items/:item_id
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ item_id: string }> }
-) {
-  try {
-    const { item_id } = await params;
-    const db = await createServerPgClient();
-    const body = await request.json();
-
-    // Validasi input
-    const validated = poItemSchema.parse(body);
-
-    // Get item dengan info PO
-    const { data: item, error: findError } = await db
-      .from("purchase_order_items")
-      .select(`
-        *,
-        purchase_order:purchase_order_id (*)
-      `)
-      .eq("id", item_id)
-      .single();
-
-    if (findError || !item) {
-      return Response.json(
-        { success: false, message: "Item tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    // Cek status PO - hanya bisa edit jika draft
-    if (item.purchase_order.status !== "draft") {
-      return Response.json(
-        { success: false, message: "Item hanya bisa diedit saat PO status draft" },
-        { status: 400 }
-      );
-    }
-
-    // Update item
-    const { data, error } = await db
-      .from("purchase_order_items")
-      .update({
-        ...validated,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", item_id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return Response.json({
-      success: true,
-      data,
-      message: "Item berhasil diupdate",
-    });
-  } catch (error: unknown) {
-    console.error("Error updating PO item:", error);
-
-    if (error instanceof z.ZodError) {
-      return Response.json(
-        {
-          success: false,
-          message: "Validasi gagal",
-          errors: error.flatten().fieldErrors,
-        },
-        { status: 400 }
-      );
-    }
-
-    return Response.json(
-      { success: false, message: getErrorMessage(error, "Gagal mengupdate item PO") },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE /api/purchasing/po/items/:item_id
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ item_id: string }> }
-) {
-  try {
-    const { item_id } = await params;
-    const db = await createServerPgClient();
-
-    // Get item dengan info PO
-    const { data: item, error: findError } = await db
-      .from("purchase_order_items")
-      .select(`
-        *,
-        purchase_order:purchase_order_id (*)
-      `)
-      .eq("id", item_id)
-      .single();
-
-    if (findError || !item) {
-      return Response.json(
-        { success: false, message: "Item tidak ditemukan" },
-        { status: 404 }
-      );
-    }
-
-    // Cek status PO - hanya bisa hapus jika draft
-    if (item.purchase_order.status !== "draft") {
-      return Response.json(
-        { success: false, message: "Item hanya bisa dihapus saat PO status draft" },
-        { status: 400 }
-      );
-    }
-
-    // Soft delete
-    const { error } = await db
-      .from("purchase_order_items")
-      .update({ is_active: false })
-      .eq("id", item_id);
-
-    if (error) throw error;
-
-    return Response.json({
-      success: true,
-      message: "Item berhasil dihapus dari PO",
-    });
-  } catch (error: unknown) {
-    console.error("Error deleting PO item:", error);
-    return Response.json(
-      { success: false, message: getErrorMessage(error, "Gagal menghapus item PO") },
-      { status: 500 }
-    );
-  }
-}
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { item_id } = await params;
+  await removePurchaseOrderItem(await createServerPgClient(), item_id);
+  return NextResponse.json({ success: true, message: "Item berhasil dihapus dari PO" });
+}, "purchasing.po.items.remove");

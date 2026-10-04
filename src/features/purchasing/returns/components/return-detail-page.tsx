@@ -36,8 +36,8 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
-import { formatAmount, formatDate } from "@/lib/purchasing/utils";
 import { toast } from "sonner";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const STATUS_LABELS: Record<ReturnStatus, string> = {
   draft: "Draf",
@@ -65,10 +65,6 @@ const REASON_LABELS: Record<ReturnReasonType, string> = {
   specification_mismatch: "Tidak Sesuai Spesifikasi",
   other: "Lainnya",
 };
-
-function formatQty(value: number) {
-  return new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 }).format(value);
-}
 
 function getGrnNumber(ret: {
   grn_number?: string | null;
@@ -407,13 +403,13 @@ export function ReturnDetailPage({
                             {item.expiry_date ? formatDate(item.expiry_date) : "-"}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatQty(Number(item.qty_returned))}
+                            {formatNumber(Number(item.qty_returned), 4)}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {formatAmount(item.unit_cost)}
+                            {formatNumber(item.unit_cost)}
                           </td>
                           <td className="px-4 py-3 text-right font-medium text-gray-900">
-                            {formatAmount(item.subtotal)}
+                            {formatNumber(item.subtotal)}
                           </td>
                         </tr>
                         );
@@ -425,7 +421,7 @@ export function ReturnDetailPage({
                           Total
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-pink-700">
-                          {formatAmount(ret.total_amount)}
+                          {formatNumber(ret.total_amount)}
                         </td>
                       </tr>
                     </tfoot>
@@ -452,11 +448,11 @@ export function ReturnDetailPage({
                 </div>
                 <div className="flex items-start justify-between gap-3">
                   <dt className="text-gray-500">Total Qty</dt>
-                  <dd className="font-medium text-gray-900">{formatQty(totalQty)}</dd>
+                  <dd className="font-medium text-gray-900">{formatNumber(totalQty, 4)}</dd>
                 </div>
                 <div className="flex items-start justify-between gap-3 border-t border-gray-200/70 pt-3">
                   <dt className="font-medium text-gray-900">Nilai Total</dt>
-                  <dd className="font-semibold text-pink-700">{formatAmount(ret.total_amount)}</dd>
+                  <dd className="font-semibold text-pink-700">{formatNumber(ret.total_amount)}</dd>
                 </div>
               </dl>
 

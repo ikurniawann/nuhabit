@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
-import { PURCHASING_ITEMS_LANDING } from "@/modules/purchasing/constants/items-nav";
+import { ITEMS_LANDING_PATH } from "@/lib/purchasing/item-routes";
 
 export default function PurchasingMainRedirectPage() {
-  redirect(PURCHASING_ITEMS_LANDING);
+  redirect(ITEMS_LANDING_PATH);
 }

@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { getReturnsModuleConfig } from "../returns-module";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import {
@@ -20,9 +20,9 @@ import {
   ReturnStatus,
   ReturnReasonType,
 } from "@/types/purchasing";
-import { formatAmount, formatDate } from "@/lib/purchasing/utils";
 import { Plus, Search, Filter, RotateCcw, Eye, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
+import { formatDate, formatNumber } from "@/lib/format";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Semua Status" },
@@ -324,7 +324,7 @@ export function PurchaseReturnsPage({
                             )}
                           </td>
                           <td className="px-4 py-3 text-right font-medium">
-                            {formatAmount(ret.total_amount)}
+                            {formatNumber(ret.total_amount)}
                           </td>
                           <td className="px-4 py-3 text-center">
                             <Badge className={RETURN_STATUS_COLORS[ret.status as ReturnStatus]}>

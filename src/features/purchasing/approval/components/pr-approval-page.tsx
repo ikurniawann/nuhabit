@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -17,14 +17,14 @@ import {
   DialogPanelTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { PurchasingPageHeader } from "@/modules/purchasing/components/page/purchasing-page-header";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { RM_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { persistNavFrom, NAV_FROM_APPROVAL_PR } from "@/lib/iam/nav-context";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { getApprovalModuleConfig } from "../approval-module";
 import { CheckCircle, FileText, Loader2, XCircle } from "lucide-react";
-import { formatAmount, formatDate, getPriorityBadge, getPRStatusLabel } from "@/lib/purchasing/utils";
+import { formatDate, formatRupiah } from "@/lib/format";
+import { getPriorityBadge, getPRStatusLabel } from "@/lib/purchasing/status-labels";
 import { usePendingPRApprovals } from "../queries";
 import { useApprovePRApproval, useRejectPRApproval } from "../mutations";
 import type { ApprovalPR } from "../types";
@@ -70,16 +70,6 @@ export function PRApprovalPage({ moduleType = "raw_material" }: PRApprovalPagePr
   const approveMutation = useApprovePRApproval(moduleType);
   const rejectMutation = useRejectPRApproval(moduleType);
   const isProcessing = Boolean(processing);
-
-  useEffect(() => {
-    if (listQuery.isError) {
-      toast.error(
-        listQuery.error instanceof Error
-          ? listQuery.error.message
-          : "Gagal memuat persetujuan permintaan pembelian"
-      );
-    }
-  }, [listQuery.isError, listQuery.error]);
 
   async function approvePR() {
     if (!confirmingPR) return;
@@ -155,6 +145,12 @@ export function PRApprovalPage({ moduleType = "raw_material" }: PRApprovalPagePr
             <Loader2 className="mr-2 h-4 w-4 animate-spin text-pink-600" />
             Memuat persetujuan...
           </div>
+        ) : listQuery.isError ? (
+          <div className="py-12 text-center text-sm text-red-600">
+            {listQuery.error instanceof Error
+              ? listQuery.error.message
+              : "Gagal memuat persetujuan permintaan pembelian"}
+          </div>
         ) : prs.length === 0 ? (
           <div className="py-14 text-center">
             <CheckCircle className="mx-auto mb-3 h-12 w-12 text-emerald-300" />
@@ -209,7 +205,7 @@ export function PRApprovalPage({ moduleType = "raw_material" }: PRApprovalPagePr
                         <td className="px-4 py-3 text-gray-600">{pr.department_name || "-"}</td>
                         <td className="px-4 py-3 text-gray-600">{pr.requester_name || "-"}</td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatAmount(pr.total_amount || 0)}
+                          {formatRupiah(pr.total_amount)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Badge variant="outline" className={priorityStyle}>

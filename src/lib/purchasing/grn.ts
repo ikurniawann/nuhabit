@@ -1,3 +1,4 @@
+import { ApiError } from "@/lib/api/auth";
 import type { DbClient } from "@/lib/pg/types";
 import { toQty } from "@/lib/purchasing/utils";
 
@@ -45,7 +46,7 @@ export const GRN_TRANSITIONS: Record<GrnStatus, GrnStatus[]> = {
 export function validateGrnTransition(from: GrnStatus, to: GrnStatus): void {
   const allowed = GRN_TRANSITIONS[from];
   if (!allowed.includes(to)) {
-    throw new Error(`Invalid GRN transition: ${from} → ${to}`);
+    throw ApiError.badRequest(`Invalid GRN transition: ${from} → ${to}`);
   }
 }
 

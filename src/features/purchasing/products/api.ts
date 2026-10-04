@@ -1,18 +1,6 @@
-import {
-  listProducts,
-  getProduct,
-  createProduct,
-  updateProduct,
-  applyProductRecipeHpp,
-  updateProductStatus,
-  deleteProduct,
-  listBOMItems,
-  createBOMItem,
-  updateBOMItem,
-  deleteBOMItem,
-  listRawMaterials,
-  listUnits,
-} from "@/lib/purchasing";
+import { listProducts, getProduct, createProduct, updateProduct, applyProductRecipeHpp, updateProductStatus, deleteProduct, listBOMItems, createBOMItem, updateBOMItem, deleteBOMItem } from "@/lib/purchasing/api-client/products";
+import { listRawMaterials } from "@/lib/purchasing/api-client/raw-materials";
+import { listUnits } from "@/lib/purchasing/api-client/units";
 import type {
   BOMItem,
   ProductWithCOGS,
@@ -106,9 +94,10 @@ export async function listProductWarehouses(): Promise<ProductWarehouseOption[]>
     success?: boolean;
     data?: ProductWarehouseOption[];
     message?: string;
+    error?: string;
   };
   if (!res.ok) {
-    throw new Error(json.message || "Failed to load stalls");
+    throw new Error(json.error || json.message || "Failed to load stalls");
   }
   return json.data ?? [];
 }

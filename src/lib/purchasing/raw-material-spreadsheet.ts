@@ -1,11 +1,7 @@
-import { buildXlsxBuffer, parseXlsxToMatrix } from "@/lib/spreadsheet/exceljs-safe";
-import { RAW_MATERIAL_IMPORT_COLUMNS } from "@/features/purchasing/raw-materials/import-config";
+import { RAW_MATERIAL_IMPORT_COLUMNS } from "@/lib/purchasing/import-columns";
+import { buildSingleSheetWorkbook, createHeaderNormalizer } from "@/lib/purchasing/import-spreadsheet";
 
-export const RAW_MATERIAL_EXPORT_COLUMNS = RAW_MATERIAL_IMPORT_COLUMNS;
-
-export const RAW_MATERIAL_SPREADSHEET_HEADERS = RAW_MATERIAL_IMPORT_COLUMNS.map(
-  (col) => col.key
-);
+const HEADERS = RAW_MATERIAL_IMPORT_COLUMNS.map((col) => col.key);
 
 const HEADER_ALIASES: Record<string, string> = {
   code: "kode",
@@ -39,55 +35,10 @@ const HEADER_ALIASES: Record<string, string> = {
   gudang_kode: "stall_code",
 };
 
-export function normalizeSpreadsheetHeader(header: string) {
-  const key = header.toLowerCase().replace(/\s+/g, "_");
-  return HEADER_ALIASES[key] || key;
+export const normalizeSpreadsheetHeader = createHeaderNormalizer(HEADER_ALIASES);
+
+/** Buffer .xlsx ekspor Raw Materials (ExcelJS). */
+export function buildRawMaterialWorkbookBuffer(rows: Record<string, unknown>[]): Promise<Buffer> {
+  return buildSingleSheetWorkbook("Raw Materials", HEADERS, rows);
 }
 
-export function spreadsheetCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "number") return String(value);
-  return String(value).trim();
-}
-
-export function buildRawMaterialExportRow(row: Record<string, unknown>) {
-  return RAW_MATERIAL_SPREADSHEET_HEADERS.map((key) => spreadsheetCell(row[key]));
-}
-
-/** Bangun buffer .xlsx ekspor Raw Materials (ExcelJS, gantikan xlsx). */
-export async function buildRawMaterialWorkbookBuffer(rows: Record<string, unknown>[]): Promise<Buffer> {
-  const sheetRows = [
-    RAW_MATERIAL_SPREADSHEET_HEADERS,
-    ...rows.map((row) => buildRawMaterialExportRow(row)),
-  ];
-  return buildXlsxBuffer([{ name: "Raw Materials", rows: sheetRows }]);
-}
-
-function parseCSV(text: string): string[][] {
-  const lines = text.split("\n").filter((line) => line.trim());
-  return lines.map((line) => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') inQuotes = !inQuotes;
-      else if (char === "," && !inQuotes) {
-        result.push(current.trim());
-        current = "";
-      } else current += char;
-    }
-    result.push(current.trim());
-    return result;
-  });
-}
-
-export async function parseSpreadsheetFile(buffer: Buffer, fileName: string): Promise<string[][]> {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith(".csv")) {
-    return parseCSV(buffer.toString("utf-8"));
-  }
-  const rows = await parseXlsxToMatrix(buffer);
-  return rows.map((row) => row.map((cell) => spreadsheetCell(cell)));
-}

@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PurchasingListSection } from "@/modules/purchasing/components/list/PurchasingListSection";
-import { PurchasingTablePagination } from "@/modules/purchasing/components/pagination/PurchasingTablePagination";
+import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
+import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import {
   BeakerIcon,
   MagnifyingGlassIcon,
@@ -23,7 +23,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import { formatDate } from "@/lib/purchasing/utils";
+import { formatDate } from "@/lib/format";
 
 export function QCListPage() {
   const [search, setSearch] = useState("");
@@ -171,9 +171,7 @@ export function QCListPage() {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">
-                            {q.tanggal_inspeksi || q.created_at
-                              ? formatDate(String(q.tanggal_inspeksi || q.created_at).slice(0, 10))
-                              : "—"}
+                            {formatDate(q.tanggal_inspeksi || q.created_at, "—")}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <Link href={`/dashboard/purchasing/qc/${q.id}`}>

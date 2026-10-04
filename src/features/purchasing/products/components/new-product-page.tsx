@@ -8,42 +8,31 @@ import { Package, Calculator, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Combobox } from "@/components/ui/combobox";
 import { NumericInput } from "@/components/ui/numeric-input";
-import { ProductFormData, RawMaterialWithStock, BOMItemFormData } from "@/types/purchasing";
-import { PRODUCT_ROUTES } from "@/modules/purchasing/constants/item-routes";
+import type { BOMItemFormData, ProductFormData } from "@/types/purchasing";
+import { PRODUCT_ROUTES } from "@/lib/purchasing/item-routes";
 import {
   PurchasingFormFooter,
   PurchasingFormHeader,
-} from "@/modules/purchasing/components/page/purchasing-page-header";
-import { formatAmount } from "@/lib/purchasing/utils";
+} from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useProductFormData, useProductCategoryOptions, useProductWarehouses } from "../queries";
 import { useCreateProduct, useCreateBOMItem } from "../mutations";
 import { mapUnitComboboxOptions } from "../product-unit";
 import { ProductInfoFields } from "./product-info-fields";
 import { ProductPriceFields } from "./product-price-fields";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
+import { formatNumber } from "@/lib/format";
+import {
+  EMPTY_PRODUCT_FORM,
+  bomLineCost,
+  calculateMarkupFromPrice,
+  materialSmallUnitLabel,
+} from "@/lib/purchasing/product-ui-form";
 
 interface BOMFormItem extends Partial<BOMItemFormData> {
   id: string;
   raw_material_name?: string;
   raw_material_unit?: string;
   subtotal: number;
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
-
-function getMaterialCost(material?: RawMaterialWithStock) {
-  const baseCost = Number(material?.avg_cost ?? material?.harga_avg ?? material?.harga_terakhir ?? 0);
-  const hasSmallUnit = Boolean(material?.satuan_kecil_nama || material?.satuan_kecil_id);
-  const factor = Number(material?.konversi_factor ?? 0);
-  if (hasSmallUnit && factor > 0) return baseCost / factor;
-  return baseCost;
-}
-
-function calculateMarkupFromPrice(hpp: number, price: number) {
-  if (hpp <= 0) return 0;
-  return Number((((price - hpp) / hpp) * 100).toFixed(2));
 }
 
 export function NewProductPage() {
@@ -67,18 +56,7 @@ export function NewProductPage() {
   const createBomMutation = useCreateBOMItem();
   const isSubmitting = createMutation.isPending || createBomMutation.isPending;
 
-  const [formData, setFormData] = useState<ProductFormData>({
-    nama: "",
-    kategori: "",
-    satuan_id: "",
-    warehouse_id: "",
-    deskripsi: "",
-    harga_jual: 0,
-    markup_persen: 0,
-    is_active: true,
-    production_output_type: "FINISHED_GOOD",
-    station: "kitchen",
-  });
+  const [formData, setFormData] = useState<ProductFormData>(EMPTY_PRODUCT_FORM);
   const stallOptions = (warehousesQuery.data ?? []).map((w) => ({
     value: w.id,
     label: w.name,
@@ -88,17 +66,15 @@ export function NewProductPage() {
 
   useEffect(() => {
     if (formDataQuery.isError) {
-      console.error("Error loading data:", formDataQuery.error);
-      toast.error(getErrorMessage(formDataQuery.error, "Gagal memuat data formulir"));
+      toast.error(formDataQuery.error instanceof Error ? formDataQuery.error.message : "Gagal memuat data formulir");
     }
   }, [formDataQuery.isError, formDataQuery.error]);
 
-  useEffect(() => {
-    const warehouses = warehousesQuery.data;
-    if (!warehouses?.length || formData.warehouse_id) return;
-    const defaultWarehouse = warehouses.find((w) => w.is_default) ?? warehouses[0];
-    setFormData((prev) => ({ ...prev, warehouse_id: defaultWarehouse.id }));
-  }, [warehousesQuery.data, formData.warehouse_id]);
+  // Gudang bawaan dipakai selama user belum memilih sendiri.
+  const warehouses = warehousesQuery.data ?? [];
+  const defaultWarehouseId = (warehouses.find((w) => w.is_default) ?? warehouses[0])?.id ?? "";
+  const warehouseId = formData.warehouse_id || defaultWarehouseId;
+  const effectiveForm = { ...formData, warehouse_id: warehouseId };
 
   const addBOMItem = () => {
     setBomItems([
@@ -123,10 +99,7 @@ export function NewProductPage() {
         if (item.id === id) {
           const updated = { ...item, ...updates };
           const material = materials.find((m) => m.id === updated.raw_material_id);
-          const qty = updated.qty_needed || 0;
-          const waste = updated.waste_persen || 0;
-          const price = getMaterialCost(material);
-          updated.subtotal = price * qty * (1 + waste / 100);
+          updated.subtotal = bomLineCost(material, updated.qty_needed || 0, updated.waste_persen || 0);
           return updated;
         }
         return item;
@@ -136,24 +109,7 @@ export function NewProductPage() {
 
   const totalCost = bomItems.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
-  useEffect(() => {
-    setFormData((prev) => {
-      const nextMarkup = calculateMarkupFromPrice(totalCost, prev.harga_jual || 0);
-      return prev.markup_persen === nextMarkup ? prev : { ...prev, markup_persen: nextMarkup };
-    });
-  }, [totalCost]);
-
-  const handlePriceChange = (value: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      harga_jual: value,
-      markup_persen: calculateMarkupFromPrice(totalCost, value),
-    }));
-  };
-
-  const getMaterialSmallUnitLabel = (material?: RawMaterialWithStock) => {
-    return material?.satuan_kecil_nama || material?.satuan || "Satuan";
-  };
+  const markupPersen = calculateMarkupFromPrice(totalCost, formData.harga_jual || 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,7 +122,7 @@ export function NewProductPage() {
       toast.error("Satuan wajib diisi");
       return;
     }
-    if (!formData.warehouse_id) {
+    if (!warehouseId) {
       toast.error(`${STALL_LABELS.singular} wajib dipilih`);
       return;
     }
@@ -177,7 +133,8 @@ export function NewProductPage() {
 
     try {
       const productData = {
-        ...formData,
+        ...effectiveForm,
+        markup_persen: markupPersen,
         harga_modal: totalCost,
       };
       const product = await createMutation.mutateAsync(productData);
@@ -198,15 +155,14 @@ export function NewProductPage() {
       toast.success("Produk berhasil ditambahkan");
       router.push(PRODUCT_ROUTES.products);
     } catch (error: unknown) {
-      console.error("Error creating product:", error);
-      toast.error(getErrorMessage(error, "Gagal menambahkan produk"));
+      toast.error(error instanceof Error ? error.message : "Gagal menambahkan produk");
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-sm text-gray-500">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin text-primary" />
+        <Loader2 className="mr-2 h-5 w-5 animate-spin text-brand-text" />
         Memuat data formulir...
       </div>
     );
@@ -232,7 +188,7 @@ export function NewProductPage() {
               </CardHeader>
               <CardContent>
                 <ProductInfoFields
-                  formData={formData}
+                  formData={effectiveForm}
                   onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
                   stallOptions={stallOptions}
                   categoryOptions={categoryOptions}
@@ -255,7 +211,7 @@ export function NewProductPage() {
                   size="sm"
                   variant="outline"
                   onClick={addBOMItem}
-                  className="h-8 border-primary/20 text-xs text-primary hover:bg-primary/5"
+                  className="h-8 border-primary/20 text-xs text-brand-text hover:bg-primary/5"
                 >
                   <Plus className="mr-1 h-3 w-3" />
                   Tambah Bahan
@@ -287,7 +243,7 @@ export function NewProductPage() {
                           const selectedMaterial = materials.find(
                             (material) => material.id === item.raw_material_id
                           );
-                          const smallUnitLabel = getMaterialSmallUnitLabel(selectedMaterial);
+                          const smallUnitLabel = materialSmallUnitLabel(selectedMaterial);
 
                           return (
                             <tr key={item.id} className="border-b border-gray-200/70 last:border-0">
@@ -343,7 +299,7 @@ export function NewProductPage() {
                               </td>
                               <td className="py-2.5 pr-3 align-middle">
                                 <div className="flex h-9 items-center justify-end rounded-lg border border-gray-200/70 bg-muted/50 px-3 font-mono text-sm">
-                                  {formatAmount(item.subtotal)}
+                                  {formatNumber(item.subtotal)}
                                 </div>
                               </td>
                               <td className="py-2.5 text-right align-middle">
@@ -367,7 +323,7 @@ export function NewProductPage() {
                   <div className="flex justify-end border-t border-gray-200/70 px-4 py-3">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">Total Estimasi HPP</p>
-                      <p className="text-lg font-semibold text-foreground">{formatAmount(totalCost)}</p>
+                      <p className="text-lg font-semibold text-foreground">{formatNumber(totalCost)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -385,9 +341,9 @@ export function NewProductPage() {
             <CardContent>
               <ProductPriceFields
                 totalCost={totalCost}
-                markupPersen={formData.markup_persen}
+                markupPersen={markupPersen}
                 hargaJual={formData.harga_jual}
-                onHargaJualChange={handlePriceChange}
+                onHargaJualChange={(harga_jual) => setFormData((prev) => ({ ...prev, harga_jual }))}
               />
             </CardContent>
           </Card>

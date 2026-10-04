@@ -1,152 +1,41 @@
-import { createServerPgClient } from "@/lib/pg/create-client";
 import { NextRequest } from "next/server";
-import { z } from "zod";
-import { ApiError, successResponse, noContentResponse, requireIamMenuPrefix } from "@/lib/api/auth";
-import { IAM } from "@/lib/iam/prefixes";
 import {
-  getApiUserScope,
-  companyScopeOr,
-  branchScopeOr,
-  isRowInBusinessScope,
-} from "@/lib/api/scope";
+  noContentResponse,
+  requireIamMenuPrefix,
+  successResponse,
+  validateBody,
+} from "@/lib/api/auth";
+import { apiHandler } from "@/lib/api/handler";
+import { getApiUserScope } from "@/lib/api/scope";
+import { IAM } from "@/lib/iam/prefixes";
+import { createServerPgClient } from "@/lib/pg/create-client";
+import {
+  deactivateVendor,
+  getScopedVendor,
+  updateVendor,
+  vendorUpdateSchema,
+} from "@/lib/purchasing/vendor-directory";
 
-const vendorCategoryEnum = z.enum([
-  "it",
-  "office",
-  "stationery",
-  "services",
-  "raw_material",
-  "other",
-]);
+type RouteContext = { params: Promise<{ id: string }> };
 
-const vendorUsageEnum = z.enum(["fnb", "operasional", "keduanya"]);
+export const GET = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { id } = await params;
+  const vendor = await getScopedVendor(await createServerPgClient(), id, await getApiUserScope());
+  return successResponse(vendor);
+}, "purchasing.vendors.detail");
 
-const updateVendorSchema = z.object({
-  name: z.string().min(1).optional(),
-  contact_person: z.string().min(1).optional(),
-  phone: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  address: z.string().min(1).optional(),
-  category: vendorCategoryEnum.optional(),
-  usage_scope: vendorUsageEnum.optional(),
-  npwp: z.string().optional(),
-  bank_name: z.string().optional(),
-  bank_account: z.string().optional(),
-  bank_account_name: z.string().optional(),
-  notes: z.string().optional(),
-  is_active: z.boolean().optional(),
-});
+export const PUT = apiHandler(async (request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { id } = await params;
+  const input = await validateBody(request, vendorUpdateSchema);
+  const data = await updateVendor(await createServerPgClient(), id, input, await getApiUserScope());
+  return successResponse(data, "Vendor updated successfully");
+}, "purchasing.vendors.update");
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await requireIamMenuPrefix(IAM.items);
-
-    const { id } = await params;
-    const db = await createServerPgClient();
-    const scope = await getApiUserScope();
-
-    const { data: vendor, error } = await db.from("vendors").select("*").eq("id", id).single();
-
-    if (error || !vendor) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    if (!isRowInBusinessScope(vendor, scope)) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    return successResponse(vendor);
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error fetching vendor:", error);
-    return ApiError.server("Failed to load vendor").toResponse();
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await requireIamMenuPrefix(IAM.items);
-
-    const { id } = await params;
-    const body = await request.json();
-    const validated = updateVendorSchema.parse(body);
-
-    const db = await createServerPgClient();
-    const scope = await getApiUserScope();
-
-    const { data: existing, error: existingError } = await db
-      .from("vendors")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (existingError || !existing) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    if (!isRowInBusinessScope(existing, scope)) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    const { data, error } = await db
-      .from("vendors")
-      .update(validated)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return successResponse(data, "Vendor updated successfully");
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    if (error instanceof z.ZodError) {
-      return ApiError.badRequest("Validation failed", error.issues).toResponse();
-    }
-    console.error("Error updating vendor:", error);
-    return ApiError.server("Failed to update vendor").toResponse();
-  }
-}
-
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await requireIamMenuPrefix(IAM.items);
-
-    const { id } = await params;
-    const db = await createServerPgClient();
-    const scope = await getApiUserScope();
-
-    const { data: existing, error: existingError } = await db
-      .from("vendors")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (existingError || !existing) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    if (!isRowInBusinessScope(existing, scope)) {
-      throw ApiError.notFound("Vendor not found");
-    }
-
-    const { error } = await db.from("vendors").update({ is_active: false }).eq("id", id);
-
-    if (error) throw error;
-
-    return noContentResponse();
-  } catch (error) {
-    if (error instanceof ApiError) return error.toResponse();
-    console.error("Error deactivating vendor:", error);
-    return ApiError.server("Failed to deactivate vendor").toResponse();
-  }
-}
+export const DELETE = apiHandler(async (_request: NextRequest, { params }: RouteContext) => {
+  await requireIamMenuPrefix(IAM.items);
+  const { id } = await params;
+  await deactivateVendor(await createServerPgClient(), id, await getApiUserScope());
+  return noContentResponse();
+}, "purchasing.vendors.deactivate");
