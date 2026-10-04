@@ -165,6 +165,8 @@ describe("Go route manifest", () => {
       "/api/hris/employees/{id}/{sub}",
       "/api/inventory/{id}/{sub}",
       "/api/purchasing/inventory/{id}/{sub}",
+      "/api/public/booking/{a}/{b}",
+      "/api/public/shop/{a}/{b}",
     ];
     const missing = switched
       .filter(

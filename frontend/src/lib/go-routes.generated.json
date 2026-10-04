@@ -275,9 +275,144 @@
     "path": "/api/accounting/reports/{report}"
   },
   {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/admin/api-tokens"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/api-tokens"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/admin/api-tokens/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/admin/users"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/users"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/admin/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/users/{id}/reset-password"
+  },
+  {
+    "module": "insights",
+    "method": "DELETE",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "PATCH",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant/actions"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/brands"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/overview"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/sources"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/audit"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/active-stall"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/change-password"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/impersonate"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/login"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/logout"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/logout"
+  },
+  {
     "module": "identity",
     "method": "GET",
     "path": "/api/auth/me"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/scope"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/stall-options"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/brands"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/brands"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/brands/{id}"
   },
   {
     "module": "recruitment",
@@ -1008,6 +1143,131 @@
     "module": "crm",
     "method": "POST",
     "path": "/api/crm/xp-rules"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/attention"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/executive"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/funnel"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/sources"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/stats"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/weekly"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/departments"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes"
+  },
+  {
+    "module": "dataroom",
+    "method": "PATCH",
+    "path": "/api/dataroom/nodes/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/access"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/nodes/{id}/access"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/shares"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/shares"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/shares/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/shares/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/tree"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/inbox"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/overview"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/preferences"
+  },
+  {
+    "module": "desktop",
+    "method": "PUT",
+    "path": "/api/desktop/preferences"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/search"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/status"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/stream"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/wallpapers"
   },
   {
     "module": "accounting",
@@ -1970,6 +2230,21 @@
     "path": "/api/hris/shifts/{id}"
   },
   {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/gobiz/webhook/{token}"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/loyalty-events/{partner}"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/telegram/webhook/{secret}"
+  },
+  {
     "module": "recruitment",
     "method": "GET",
     "path": "/api/interview/session/{token}/chat"
@@ -2701,6 +2976,11 @@
   },
   {
     "module": "recruitment",
+    "method": "POST",
+    "path": "/api/notifications/send"
+  },
+  {
+    "module": "recruitment",
     "method": "GET",
     "path": "/api/offer/session/{token}"
   },
@@ -2713,6 +2993,21 @@
     "module": "recruitment",
     "method": "PUT",
     "path": "/api/offers/{id}/response"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/payments/xendit/webhook"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/payments/xendit/webhook"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/portal/options"
   },
   {
     "module": "pos-ops",
@@ -3440,6 +3735,71 @@
     "path": "/api/psikotes/sessions/{id}/proctor-events"
   },
   {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/webhook/xendit"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/public/booking/{a}/{b}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}/pass"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}/promo-check"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/webhook/biteship"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/webhook/xendit"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/public/shop/{a}/{b}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/checkout"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/public/shop/{slug}/shipping/areas"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/shipping/rates"
+  },
+  {
     "module": "inventory",
     "method": "DELETE",
     "path": "/api/purchasing/bom/{id}"
@@ -3458,6 +3818,11 @@
     "module": "inventory",
     "method": "POST",
     "path": "/api/purchasing/cogs/additional-cost"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/cogs/additional-cost/{id}"
   },
   {
     "module": "inventory",
@@ -4305,6 +4670,801 @@
     "path": "/api/recruitment/live-monitoring/{type}/{id}/webrtc"
   },
   {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/availability"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/front-office"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/reservations"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/reservations/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/reservations/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations/{id}/charges"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations/{id}/status"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/room-types"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/room-types"
+  },
+  {
+    "module": "resort",
+    "method": "DELETE",
+    "path": "/api/resort/room-types/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/room-types/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/rooms"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/rooms"
+  },
+  {
+    "module": "resort",
+    "method": "DELETE",
+    "path": "/api/resort/rooms/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/rooms/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/accounts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/accounts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/activities"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/activities"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/activities/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/activities/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/contacts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/contacts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/custom-fields"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/customers"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/deals/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/invoices"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/invoices"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/payments"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/payments"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}/payments/{paymentId}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/quotations"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/quotations"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/send-wa"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/forecast"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/invoices/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/invoices/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads/by-phone"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/leads/{id}/link-customer"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads/{id}/link-customer"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/lost-reasons"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/owners"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/pipelines"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/pipelines"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/pipelines/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/products"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/realize"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/revise"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/send-wa"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/raw-materials"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/recipes"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PUT",
+    "path": "/api/sales-funnel/recipes"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/reports"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/stages"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/stages"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/stages/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/targets"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PUT",
+    "path": "/api/sales-funnel/targets"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/timeline"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/wa-templates"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/wa-templates"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/wa-templates/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/wa-templates/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/sections"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/sections"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/appearance"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/appearance"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/business"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/business"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/business/{type}/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/settings/business/{type}/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/company-profile"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/company-profile"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/gobiz"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/gobiz"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/gobiz/actions"
+  },
+  {
+    "module": "integrations",
+    "method": "DELETE",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/menus"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/iam/menus"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/iam/roles"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles/{id}/permissions"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/roles/{id}/permissions"
+  },
+  {
+    "module": "integrations",
+    "method": "DELETE",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/integrations"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/integrations"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/payment-gateways"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/payment-gateways"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/receipt"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/receipt"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/sales-target"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/sales-target"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/tts"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/tts"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/tts/preview"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-gateway"
+  },
+  {
+    "module": "integrations",
+    "method": "PATCH",
+    "path": "/api/settings/wa-gateway"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-gateway/messages"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/wa-gateway/messages"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-notifications"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/wa-notifications"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/wa-notifications/test"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}/list"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/share/{token}/request-code"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/share/{token}/verify"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/marketplace/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/callback"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/connect"
+  },
+  {
+    "module": "shop",
+    "method": "DELETE",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/listings"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/marketplace/sync"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/orders/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/orders/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/orders/{id}/shipment"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/areas"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/shipping/rates"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/settings"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/shipping/settings"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/track"
+  },
+  {
     "module": "pos-sales",
     "method": "POST",
     "path": "/api/table-order/orders"
@@ -4603,6 +5763,36 @@
     "module": "ticketing",
     "method": "POST",
     "path": "/api/ticketing/visits/{id}/settle"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/users"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/users"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/users/{id}/reset-password"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/wa/inbound"
   },
   {
     "module": "stored-value",
