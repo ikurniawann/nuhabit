@@ -14,8 +14,7 @@ import (
 
 // The public career form options (GET /api/portal/options) and the HR
 // candidate notification (POST /api/notifications/send). POST
-// /api/portal/submit stays in TS: it writes the CV and photo to Next's
-// local storage.
+// /api/portal/submit is in portal_submit.go.
 
 // portalRoutes lists the routes of this file and notify_send.go.
 func (h *handler) portalRoutes() []module.Route {

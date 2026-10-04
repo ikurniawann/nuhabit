@@ -21,8 +21,7 @@ type handler struct {
 	guard Guard
 }
 
-// Routes lists every ported route. Paths that write Next's local storage,
-// generate PDFs or call AI with new dependencies stay in TS (see module.go).
+// Routes lists the JSON routes; the file, PDF and AI routes are in files.go.
 func (h *handler) Routes() []module.Route {
 	rec := iam.HrisRecruitment
 	return []module.Route{

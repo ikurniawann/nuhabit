@@ -8,12 +8,38 @@ import (
 	"nuhabit/backend/internal/platform/database"
 )
 
-// Ports reach the HRIS people context during a candidate promotion. Both
-// results appear in the promotion response, so they run synchronously on
-// the caller's Querier (not through the outbox). internal/app wires them.
+// Ports reach other contexts. Employees and Contracts serve a candidate
+// promotion; both results appear in the promotion response, so they run
+// synchronously on the caller's Querier (not through the outbox).
+// internal/app wires them.
 type Ports struct {
 	Employees Employees
 	Contracts ContractDrafts
+	// Settings, Speech and Hired are reads for the file and AI routes.
+	Settings Settings
+	Speech   Speech
+	Hired    HiredEmployees
+}
+
+// Settings reads configuration.app_settings (AI keys and models).
+type Settings interface {
+	GetMany(ctx context.Context, q database.Querier, keys []string) (map[string]*string, error)
+}
+
+// Speech is synthesizeSpeechOrNull: the question as mp3 in the voice set in
+// Settings → Suara AI, nil when synthesis failed (the adapter logs why).
+type Speech interface {
+	Synthesize(ctx context.Context, q database.Querier, text string) []byte
+}
+
+// HiredEmployees reads the employee a candidate was promoted to, for the
+// pipeline report's "Hired" section (hris.employees and its onboarding).
+type HiredEmployees interface {
+	// Hired returns promotion_date, nip, join_date, employment_status,
+	// is_active, has_account, department_name, job_title,
+	// reporting_to_name, onboarding_total and onboarding_completed; nil
+	// when the candidate was not promoted.
+	Hired(ctx context.Context, q database.Querier, candidateID string) (*Row, error)
 }
 
 // Employees reads hris.employees.

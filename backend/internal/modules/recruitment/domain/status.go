@@ -1,7 +1,7 @@
 // Package domain holds the recruitment rules: candidate statuses and
 // sources, portal link validity, psikotes scoring, offer responses, job
-// opening normalization, promotion contract drafts and the per-process rate
-// limiter and WebRTC signaling store. Pure Go, no database or HTTP.
+// opening normalization, promotion contract drafts, the rate-limit windows
+// and the WebRTC signaling store. Pure Go, no database or HTTP.
 package domain
 
 import (
