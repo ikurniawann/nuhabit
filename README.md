@@ -1,637 +1,126 @@
-# BCD Coffee OS
+# NüHabit
 
-BCD Coffee OS adalah ERP terpadu berbasis Next.js dan PostgreSQL native untuk operasional Aapex Technology. Sistem ini mencakup HRIS, rekrutmen, POS, CRM loyalty, purchasing, inventory, produksi, reporting QA, BCD Coffee OS desktop, serta beberapa self-service flow untuk customer.
+Platform pengelolaan venue **Hyrox** — kelas, Personal Training, member pass, komisi coach, dan loyalitas — dalam satu
+sistem dengan backoffice & accounting. Dikembangkan dari codebase BCD Coffee OS (Next.js + PostgreSQL native) dan
+disesuaikan untuk kebutuhan studio fitness.
 
-Database memakai PostgreSQL biasa (driver `pg`), auth/session di-handle di application layer (bcrypt + cookie session), dan data layer memakai shim ringan di `src/lib/db-client` yang meniru subset API PostgREST.
+**DEV:** https://nuhabitdev.reddie.id · Brand & UI: [DESIGN.md](DESIGN.md) · Kebutuhan: [docs/product/PRD.md](docs/product/PRD.md)
 
-## Tech Stack
+## Tiga sistem
+
+| Sistem | Rute | Pengguna | Bahasa |
+| --- | --- | --- | --- |
+| **Backoffice** | `/dashboard` (menu **Kelas & Coach**) | Owner, admin, front desk, finance | Indonesia |
+| **Member App** | `/member` | Member (login OTP WhatsApp) | **Inggris** |
+| **Coach Portal** | `/coach` | Coach & Head Coach (akun karyawan yang ditautkan ke profil coach) | Indonesia |
+
+## Fitur utama
+
+| Area | Ringkasan | Epic |
+| --- | --- | --- |
+| Coach, program & jadwal | Profil coach, program kelas, template mingguan → generate sesi, kalender kelas, cegah bentrok coach | [052](docs/epics/EPIC-052-studio-coach-program-jadwal.md) |
+| Member Pass | Paket kredit Class / Class + Personal Training / + Facility, masa berlaku, utang pass (liability) & pengakuan revenue saat dipakai | [053](docs/epics/EPIC-053-member-pass.md) |
+| Booking & check-in | Kredit dikunci saat booking, batal ≥ 12 jam kredit kembali, waitlist otomatis, scan check-in, no-show | [054](docs/epics/EPIC-054-booking-kelas-checkin.md) |
+| Personal Training | Ketersediaan & cuti coach, slot otomatis, booking pilih coach + tanggal + jam | [055](docs/epics/EPIC-055-personal-training.md) |
+| Komisi coach | Di luar payroll: pool 10% revenue kelas + 40% Personal Training, dibagi per peran, approve & bayar per coach, jurnal | [056](docs/epics/EPIC-056-komisi-coach-coach-portal.md) |
+| Member App | Booking kelas & Personal Training, pass & beli paket online (QRIS / Virtual Account / kartu), profil coach, News Hyrox | [057](docs/epics/EPIC-057-member-app-nuhabit.md) |
+| Otomasi | Tutup hari otomatis (selesaikan sesi, kedaluwarsakan pass) & pengingat WhatsApp member | [058](docs/epics/EPIC-058-job-harian-notifikasi-wa.md) |
+| NüHabit Progress | XP dari konsistensi latihan, tier Starter/Open/Pro/Elite dengan benefit booking, leaderboard | [066](docs/epics/EPIC-066-nuhabit-progress-loyalitas.md) |
+
+Status semua epic: [docs/epics/README.md](docs/epics/README.md) · Prioritas berikutnya: [docs/BACKLOG.md](docs/BACKLOG.md).
+
+Modul warisan BCD yang tetap dipakai: HRIS & payroll (gaji tetap), Accounting (COA, jurnal, laporan), POS F&B,
+Inventory, CRM. Menu BCD yang tidak relevan (resort, photobooth, table order, rekrutmen, dll.) disembunyikan.
+
+## Tech stack
 
 | Layer | Teknologi |
 | --- | --- |
-| Framework | Next.js App Router, React |
-| Database | PostgreSQL (driver `pg`), schema-per-domain |
-| Auth | Custom (bcrypt + cookie session), schema `auth` |
-| Styling | Tailwind CSS v4, shadcn/ui, custom BCD Coffee OS design system |
-| Data & Form | React Hook Form, Zod, TanStack Query |
-| Charts | Recharts |
-| Drag & Drop | @hello-pangea/dnd |
-| Email | Resend |
-| WhatsApp | Fonnte API |
-| Deployment | Vercel |
-| AI | Ollama cloud models untuk BCD Coffee OS AI Assistant |
-
-## Module Overview
-
-### BCD Coffee OS Desktop
-
-Route utama:
-- `/arkiv-os`
-- `/qa`
-
-Fitur:
-- Desktop-style launcher untuk membuka module bisnis dalam window.
-- AI Assistant dengan mode context project atau general knowledge.
-- Pengaturan AI Assistant di BCD Coffee OS Settings, termasuk pilihan LLM.
-- QA progress dashboard sementara di `/qa` untuk ringkasan progress dan test result.
-
-Dokumentasi terkait:
-- `Arkiv_progress.md`
-- `docs/qa/QA_REPORT_ARKIV_OS_PROGRESS_2026-05-24.md`
-
-### HRIS
-
-Route utama:
-- `/dashboard/hris`
-- `/dashboard/employees`
-- `/dashboard/hris/attendance`
-- `/dashboard/hris/leaves`
-- `/dashboard/hris/payroll`
-- `/dashboard/hris/performance`
-- `/dashboard/hris/reports`
-
-Fitur:
-- Master karyawan, department, position, employment status.
-- Attendance, leave request, leave balance, salary, payroll, payslip.
-- Onboarding dan offboarding.
-- Performance management, KPI templates, employee KPI, review, behavioral score, development plan.
-- HRIS reporting.
-- Integrasi Talent Pool ke employee.
-
-Dokumentasi terkait:
-- `docs/hris/HRIS_FASE_0_COMPLETION.md`
-- `docs/hris/HRIS_FASE1_COMPLETE.md`
-- `docs/hris/HRIS_FASE2_PAYROLL_COMPLETE.md`
-- `docs/hris/HRIS_FASE3_KPI_PERFORMANCE.md`
-
-### Recruitment dan Career Portal
-
-Route utama:
-- `/career`
-- `/portal`
-- `/dashboard/hris/candidates`
-- `/dashboard/hris/pipeline`
-- `/dashboard/hris/talent-pool`
-- `/dashboard/hris/job-portal`
-
-Fitur:
-- Portal publik untuk kandidat.
-- Candidate management.
-- Pipeline rekrutmen.
-- Talent pool.
-- Job opening dan job portal management.
-- Candidate promotion ke HRIS employee.
-
-Dokumentasi terkait:
-- `docs/recruitment/TASK_COMPLETION_REPORT.md`
-- `docs/360-feedback-system.md`
-
-### POS F&B
-
-Route utama:
-- `/dashboard/pos`
-- `/dashboard/pos/cashier-new`
-- `/dashboard/pos/products`
-- `/dashboard/pos/open-bills`
-- `/dashboard/pos/kds`
-- `/dashboard/pos/orders`
-- `/dashboard/pos/print-queue`
-- `/dashboard/pos/printer-settings`
-- `/dashboard/pos/topup`
-- `/dashboard/pos/reservation`
-
-Fitur:
-- Cashier POS untuk F&B.
-- Product management, category, variant, modifier, station routing.
-- Dine-in, takeaway, customer search, add customer/member dari POS.
-- Table management dan open bill.
-- Save/open bill, bayar bill, dan status order.
-- KDS station routing untuk kitchen, bar, bakery, dessert, merchandise, photobooth.
-- Print queue untuk kitchen/bar/customer ticket.
-- Shift open/close flow.
-- ARK Coin top-up.
-- Reservation.
-- Sinkron produk purchasing ke POS.
-- Sinkron HPP aktual produksi ke `pos_products.cost_price`.
-- Snapshot profit item order: `cost_price`, `cost_total`, `gross_profit`, `gross_margin_pct`.
-
-Dokumentasi terkait:
-- `docs/pos/POS.md`
-- `docs/pos/POS_DEVELOPMENT_PLAN.md`
-- `docs/pos/POS-BACKEND-SETUP.md`
-- `docs/pos/POS_INTEGRATION_GUIDE.md`
-- `docs/pos-print-queue-worker.md`
-- `SPLIT_BILL_PLAN.md`
-
-### Table Self-Service Ordering
-
-Route utama:
-- `/table-order/[tableCode]`
-
-Fitur:
-- QR table ordering untuk customer dine-in.
-- Member lookup atau guest checkout.
-- Menu 2 kolom mobile dengan XP per produk.
-- Variant modal saat add to cart.
-- Floating order summary.
-- Payment method options: QRIS, ARK Coin, VA, bayar di kasir.
-- Order status dan repeat order setelah transaksi terkirim.
-- Auto routing order ke kitchen/bar melalui POS/KDS backend.
-
-Dokumentasi terkait:
-- `docs/pos/TABLE_SELF_SERVICE_ORDERING_PLAN.md`
-
-### Photobooth Self-Service POS
-
-Route utama:
-- `/photobooth/self-service`
-
-Fitur:
-- UI self-service POS khusus photobooth, terpisah dari POS F&B.
-- Tap Member Card.
-- Payment melalui POS payment layer.
-- Disiapkan untuk integrasi partner/vendor photobooth.
-- Partner callback akan dipakai untuk update XP setelah sesi photobooth sukses.
-
-Dokumentasi terkait:
-- `docs/crm/PHOTOBOOTH_SELF_SERVICE_POS_PLAN.md`
-- `docs/crm/PHOTOBOOTH_PARTNER_INTEGRATION_GUIDE.md`
-
-### CRM, Membership, Loyalty, dan Rewards
-
-Route utama:
-- `/dashboard/crm`
-- `/dashboard/crm/members`
-- `/dashboard/crm/members/[id]`
-- `/dashboard/crm/rewards`
-- `/dashboard/crm/avatars`
-
-Fitur:
-- Customer dan member database.
-- Membership tiering.
-- XP dan ARK Coin loyalty engine.
-- XP rules dari POS products.
-- Member loyal, top spender ARK Coin, top spender transaksi.
-- Reward redeem: discount, merchandise, avatar collectible.
-- Avatar catalog dan customer-owned avatar collection concept.
-- Integrasi XP dari POS, photobooth, dan future third-party game partner.
-
-Dokumentasi terkait:
-- `docs/crm/CRM_MEMBERSHIP_LOYALTY_PLAN.md`
-- `docs/crm/CRM_DEVELOPMENT_PROGRESS.md`
-- `docs/xp-system/XP_SYSTEM_SUMMARY.md`
-- `docs/xp-system/XP_SYSTEM_INTEGRATION.md`
-- `docs/xp-system/XP_INTEGRATION_EXAMPLES.md`
-
-### Purchasing dan Procurement
-
-Route utama:
-- `/dashboard/purchasing`
-- `/dashboard/purchasing/suppliers`
-- `/dashboard/items/raw-materials`
-- `/dashboard/items/units`
-- `/dashboard/purchasing/products`
-- `/dashboard/purchasing/products/[id]/bom`
-- `/dashboard/purchasing/price-list`
-- `/dashboard/purchasing/pr`
-- `/dashboard/purchasing/po`
-- `/dashboard/purchasing/grn`
-- `/dashboard/purchasing/delivery`
-- `/dashboard/purchasing/qc`
-- `/dashboard/purchasing/returns`
-- `/dashboard/purchasing/reports`
-
-Fitur:
-- Supplier master data.
-- Raw material master data, termasuk material type `PURCHASED` dan `WIP`.
-- Unit management.
-- Product master untuk produk yang diproduksi atau disinkronkan ke POS.
-- Recipe/BOM editor dengan support WIP sebagai bahan BOM.
-- Price list supplier.
-- Purchase Request.
-- Purchase Order.
-- Barang Masuk workspace: delivery dan receiving digabung berbasis status.
-- QC dan return.
-- Inventory adjustment dan movement.
-- Reports: inventory valuation, PO summary, PO detail, supplier performance, stock card.
-
-Dokumentasi terkait:
-- `docs/purchasing/README.md`
-- `docs/purchasing/PURCHASING_DEVELOPMENT_PLAN.md`
-- `docs/purchasing/PURCHASING_PRODUCTION_PROGRESS_2026-05-24.md`
-- `docs/purchasing/GRN-LOGIC-REVIEW.md`
-
-### Production, WIP, HPP, dan COGS
-
-Route utama:
-- `/dashboard/purchasing/production`
-- `/dashboard/purchasing/production/orders/[id]`
-- `/dashboard/purchasing/production/recipes`
-- `/dashboard/purchasing/reports/hpp-breakdown`
-- `/dashboard/purchasing/reports/stock-card`
-
-Fitur:
-- List produk yang bisa diproduksi.
-- Production order lifecycle: draft, release, start, complete, cancel.
-- Cek ulang stok bahan.
-- Complete production mengurangi stok bahan baku.
-- Output produk jadi masuk finished goods inventory.
-- Output WIP masuk stok bahan sebagai raw material type `WIP`.
-- WIP bisa dipakai sebagai komponen BOM produk final.
-- HPP WIP terbawa ke HPP produk final melalui average cost inventory.
-- HPP aktual produk jadi tersinkron ke POS `cost_price`.
-- Stock card untuk audit movement raw material dan WIP.
-
-### Inventory
-
-Route utama:
-- `/dashboard/inventory`
-- `/dashboard/inventory/low-stock`
-- `/dashboard/inventory/[id]`
-- `/dashboard/purchasing/reports/stock-card`
-
-Fitur:
-- Stok bahan baku.
-- Low stock.
-- Inventory movement.
-- Stock adjustment.
-- Stock card per material.
-- Valuation report.
-- Integrasi receiving, return, production consumption, dan WIP output.
-
-Dokumentasi terkait:
-- `docs/inventory/INVENTORY-ANALYSIS.md`
-- `docs/inventory/INVENTORY-TEST-PLAN.md`
-- `docs/inventory/QUICK-INVENTORY-TEST.md`
-
-### Reporting dan QA
-
-Route utama:
-- `/qa`
-- `/dashboard/purchasing/reports`
-- `/dashboard/hris/reports`
-- `/dashboard/pos`
-
-Fitur:
-- QA progress page.
-- Purchasing reports.
-- HRIS reports.
-- POS dashboard.
-- Profit-ready POS data via item-level cost snapshot.
-
-### Master Data dan Settings
-
-Route utama:
-- `/dashboard/master/departments`
-- `/dashboard/master/positions`
-- `/dashboard/master/employment-statuses`
-- `/dashboard/settings`
-
-Fitur:
-- Department.
-- Position.
-- Employment status.
-- Global settings.
-- BCD Coffee OS settings.
-
-## API Surface
-
-### HRIS
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET/POST | `/api/hris/employees` | Employee list dan create |
-| GET/PUT/DELETE | `/api/hris/employees/[id]` | Detail, update, soft delete employee |
-| GET/POST | `/api/hris/attendance` | Attendance |
-| GET/POST | `/api/hris/leaves` | Leave request |
-| POST | `/api/hris/leaves/approve` | Approve/reject leave |
-| GET/POST | `/api/hris/payroll` | Payroll |
-| GET/POST | `/api/hris/performance/reviews` | Performance review |
-| GET/POST | `/api/hris/performance/employee-kpis` | Employee KPI |
-| GET | `/api/hris/reports` | HRIS report |
-| POST | `/api/hris/promote` | Promote kandidat ke employee |
-
-### Recruitment
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET/POST | `/api/candidates` | Candidate list dan create |
-| GET/PUT/DELETE | `/api/candidates/[id]` | Candidate detail dan update |
-| POST | `/api/candidates/[id]/cv-upload` | Upload CV |
-| POST | `/api/portal/submit` | Submit lamaran publik |
-
-### POS
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET/POST | `/api/pos/products` | POS product list dan create |
-| GET/PUT/DELETE | `/api/pos/products/[id]` | POS product detail dan update |
-| POST | `/api/pos/products/sync-purchasing` | Sync purchasing product ke POS |
-| GET/POST | `/api/pos/orders` | POS order list dan create paid order |
-| PATCH | `/api/pos/orders/[id]` | Update order/payment |
-| POST | `/api/pos/orders/open-bill` | Create open bill |
-| GET | `/api/pos/kds` | Kitchen display data |
-| GET/POST | `/api/pos/print-jobs` | Print queue |
-| GET/POST | `/api/pos/shifts` | POS shift |
-| POST | `/api/pos/shifts/[id]/close` | Close shift |
-| GET/POST | `/api/pos/topup` | ARK Coin top-up |
-
-### Table Order
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET | `/api/table-order/session/[tableCode]` | Resolve table order session |
-| GET | `/api/table-order/products` | Product list untuk table order |
-| POST | `/api/table-order/orders` | Submit customer table order |
-| POST | `/api/table-order/customers/lookup` | Lookup member/customer |
-
-### CRM
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET | `/api/crm/dashboard` | CRM dashboard summary |
-| GET/POST | `/api/crm/members` | Member list dan create |
-| GET/PUT/DELETE | `/api/crm/members/[id]` | Member detail dan update |
-| GET/POST | `/api/crm/tiers` | Membership tier |
-| GET/POST | `/api/crm/xp-rules` | XP rules |
-| GET/POST | `/api/crm/rewards` | Reward catalog |
-| GET/POST | `/api/crm/redemptions` | Reward redemption |
-| GET/POST | `/api/crm/avatars` | Avatar catalog |
-| GET | `/api/crm/avatar-inventory` | Avatar ownership inventory |
-| GET/POST | `/api/pos/topup` | ARK Coin integration |
-| GET/POST | `/api/pos/products` | XP per product integration |
-
-Catatan: sebagian logic CRM berada di `src/lib/crm/loyalty-engine.ts` dan dipanggil dari POS order flow.
-
-### Purchasing, Inventory, Production
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| GET/POST | `/api/purchasing/suppliers` | Supplier |
-| GET/POST | `/api/purchasing/raw-materials` | Raw material |
-| GET/POST | `/api/purchasing/units` | Unit |
-| GET/POST | `/api/purchasing/products` | Purchasing product |
-| GET/POST | `/api/purchasing/products/[id]/bom` | Product BOM |
-| GET/POST | `/api/purchasing/price-list` | Supplier price list |
-| GET/POST | `/api/purchasing/pr` | Purchase Request |
-| GET/POST | `/api/purchasing/po` | Purchase Order |
-| GET/POST | `/api/purchasing/delivery` | Supplier delivery |
-| GET/POST | `/api/purchasing/grn` | Receiving / Barang Masuk |
-| GET/POST | `/api/purchasing/qc` | Quality Control |
-| GET/POST | `/api/purchasing/returns` | Return |
-| GET/POST | `/api/purchasing/inventory/adjustment` | Inventory adjustment |
-| GET | `/api/purchasing/inventory/movements` | Inventory movement |
-| GET | `/api/purchasing/cogs/product/[id]` | Product COGS |
-| GET/POST | `/api/purchasing/production/orders` | Production order |
-| PATCH | `/api/purchasing/production/orders/[id]` | Release, start, complete, cancel, recheck stock |
-| GET | `/api/purchasing/production/wip` | WIP inventory |
-| GET | `/api/purchasing/reports/stock-card` | Inventory stock card |
-| GET | `/api/purchasing/reports/inventory-valuation` | Inventory valuation |
-| GET | `/api/purchasing/reports/po-summary` | PO summary |
-| GET | `/api/purchasing/reports/supplier-performance` | Supplier performance |
-
-### AI Assistant
-
-| Method | Endpoint | Deskripsi |
-| --- | --- | --- |
-| POST | `/api/ai/assistant` | BCD Coffee OS AI Assistant |
-
-## Database Highlights
-
-Tabel diorganisir per **schema PostgreSQL** sesuai domain. Referensi tabel di app layer diakses "bare" dan diresolve lewat `search_path` global (`public, iam, configuration, hris, performance, recruitment, item, purchasing, inventory, manufacturing, pos, crm, auth`).
-
-| Schema | Domain |
-| --- | --- |
-| `auth` | Identitas login & session (`auth.users`, `auth.sessions`) |
-| `configuration` | Profil user app, audit, activity log |
-| `iam` | Role, menu, permission, user-role |
-| `hris` | Karyawan, attendance, leave, payroll, dll. |
-| `performance` | KPI, review, 360 feedback |
-| `recruitment` | Kandidat, interview, job opening |
-| `item` | Master material/produk/satuan |
-| `purchasing` | Supplier, PR/PO, GRN, QC, return |
-| `inventory` | Stok, movement, finished goods |
-| `manufacturing` | Production order, BOM, batch |
-| `pos` | POS order, produk, shift, KDS |
-| `crm` | Member, tier, reward, XP |
-| `public` | Lintas domain (notifications, AI assistant) |
-
-> File migrasi & pipeline ada di `database/` — lihat `database/README.md` untuk detail.
-
-### HRIS
-- `employees`
-- `departments`
-- `employment_statuses`
-- `employee_salaries`
-- `attendance`
-- `leaves`
-- `payroll`
-- `employee_kpis`
-- `performance_reviews`
-- `development_plans`
-
-### Recruitment
-- `candidates`
-- `job_openings`
-- `feedback_cycles`
-- `feedback_assignments`
-- `feedback_responses`
-
-### POS
-- `pos_products`
-- `pos_categories`
-- `pos_product_variants`
-- `pos_modifier_groups`
-- `pos_modifiers`
-- `pos_orders`
-- `pos_order_items`
-- `pos_tables`
-- `pos_print_jobs`
-- `pos_shifts`
-- `pos_customers`
-
-Profit-related POS order item fields:
-- `cost_price`
-- `cost_total`
-- `gross_profit`
-- `gross_margin_pct`
-
-### CRM
-- `crm_members`
-- `crm_xp_rules`
-- `crm_xp_transactions`
-- `crm_rewards`
-- `crm_reward_redemptions`
-- `crm_avatars`
-- `crm_member_avatars`
-
-### Purchasing, Inventory, Production
-- `suppliers`
-- `raw_materials`
-- `units`
-- `supplier_price_lists`
-- `products`
-- `bom_items`
-- `purchase_requests`
-- `purchase_orders`
-- `po_items`
-- `deliveries`
-- `grn`
-- `gr_items`
-- `qc_inspections`
-- `returns`
-- `inventory`
-- `inventory_movements`
-- `production_orders`
-- `production_order_materials`
-- `production_batches`
-- `finished_goods_inventory`
-
-## Environment Variables
-
-```env
-# Database (PostgreSQL native)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arkiv
-MIGRATE_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/arkiv
-
-# AI Assistant (Ollama)
-OLLAMA_API_BASE=http://localhost:11434
-OLLAMA_API_KEY=
-OLLAMA_MODEL=
-
-# Integrasi opsional
-FONNTE_API_KEY=
-RESEND_API_KEY=
-NEXT_PUBLIC_APP_URL=
-```
-
-| Variabel | Dipakai oleh | Keterangan |
-| --- | --- | --- |
-| `DATABASE_URL` | App Next.js (`pg`) | Koneksi utama aplikasi |
-| `MIGRATE_DATABASE_URL` | `db:migrate*`, seeder | Target migrasi (Postgres lokal) |
-
-## Getting Started
-
-### 1. Install Dependencies
+| Framework | Next.js 16 (App Router, Turbopack), React 19, TypeScript |
+| Database | PostgreSQL (driver `pg`), schema-per-domain — modul NüHabit di schema `studio` |
+| Auth | Custom (bcrypt + cookie session) untuk staf; OTP WhatsApp untuk member |
+| UI | Tailwind CSS v4, shadcn/ui, design system NüHabit (Manrope + Outfit) |
+| Validasi | Zod 4 |
+| Pembayaran | Xendit (QRIS); simulator untuk DEV |
+| WhatsApp | WA Gateway / Meta Cloud API / Fonnte |
+| Test | Vitest (unit), skrip E2E API terhadap database uji |
+| Deploy DEV | Docker (standalone) + Cloudflare Tunnel |
+
+## Menjalankan secara lokal
 
 ```bash
 npm install
 ```
 
-### 2. Setup Environment
+Buat `.env.local` minimal:
 
-Buat `.env` (atau `.env.local`) dan set minimal `DATABASE_URL` + `MIGRATE_DATABASE_URL` ke Postgres lokal, plus konfigurasi AI/email/WhatsApp sesuai kebutuhan. Lihat tabel [Environment Variables](#environment-variables).
-
-### 3. Database Setup
-
-Pastikan database target sudah ada di Postgres lokal (mis. `CREATE DATABASE arkiv;`).
+```env
+DATABASE_URL=postgresql://<user>:<password>@localhost:5432/<db>
+MIGRATE_DATABASE_URL=postgresql://<user>:<password>@localhost:5432/<db>
+NEXT_PUBLIC_APP_NAME=NüHabit
+```
 
 ```bash
-# Lihat migrasi pending (dry-run, read-only)
-npm run db:migrate
-
-# Terapkan migrasi ke database
-npm run db:migrate:apply
-
-# Seed akun Super Admin (idempoten)
-npm run db:seed:super-admin
+npm run db:migrate          # lihat migrasi pending (dry-run)
+npm run db:migrate:apply    # terapkan migrasi
+npm run db:seed:super-admin # akun Super Admin (atur SUPER_USER_EMAIL / SUPER_USER_PASSWORD)
+npm run dev                 # http://localhost:3000
 ```
 
-Kredensial default Super Admin: `super@arkivworld.com` / `Arkiv2026*#` (override via `SUPER_USER_EMAIL`, `SUPER_USER_PASSWORD`).
+Migrasi baru: `database/migrations/deltas/YYYYMMDDHHMMSS_<nama>.sql` (idempoten). Menu IAM baru wajib ditambahkan
+ke keep-list di `database/seeders/iam-menus.sql`. Panduan lengkap: [database/README.md](database/README.md).
 
-Panduan lengkap pipeline migrasi: [database/README.md](database/README.md)
-
-### 4. Run Development Server
+## Pengujian
 
 ```bash
-npm run dev
+npm test                              # semua unit test
+npx vitest run src/lib/studio         # logika studio (booking, pass, komisi, loyalitas, job)
 ```
 
-Buka:
+E2E dijalankan ke database terpisah **`nuhabit_test`** — jangan pernah ke database DEV yang berisi data owner.
+Resep lengkap ada di [docs/DEPLOY-DEV.md](docs/DEPLOY-DEV.md).
+
+## Deploy DEV
+
+Container `nuhabitdev-app` (port 8141) di belakang Cloudflare Tunnel → https://nuhabitdev.reddie.id. Resep build &
+redeploy: [docs/DEPLOY-DEV.md](docs/DEPLOY-DEV.md).
+
+Pengaturan **khusus DEV** (wajib dihapus sebelum produksi):
+
+| Variabel | Fungsi |
+| --- | --- |
+| `MEMBER_OTP_FIXED_CODE=123456` | Login Member App memakai kode tetap selama WA Gateway belum terhubung |
+| `MEMBER_PREVIEW_ENABLED=1` | Tombol **Buka Member App** di backoffice (staf membuka Member App tanpa OTP) |
+| `PAYMENT_SIMULATOR=1` | Beli paket dengan QRIS / Virtual Account / kartu diperlakukan sukses tanpa uang sungguhan |
+
+## Struktur kode NüHabit
 
 ```text
-http://localhost:3000
-http://localhost:3000/arkiv-os
-http://localhost:3000/dashboard/pos/products
-http://localhost:3000/dashboard/purchasing
-```
-
-## Project Structure
-
-App Router hanya berisi routing + layout shell (thin wrapper); logic UI ada di `src/features/` per domain.
-
-```text
-database/
-├── migrations/                 # baseline + incremental (schema-per-domain)
-│   ├── bootstrap/              # app_auth, prelude, functions, FK, views, triggers
-│   ├── schemas/<domain>/       # satu file per tabel (public = schema PostgreSQL public)
-│   ├── deltas/                 # migrasi incremental YYYYMMDD…
-│   └── ...
-├── seeders/                    # super-admin.js, dll.
-└── scripts/                    # generate-from-db, apply-migrations, ...
-
 src/
 ├── app/
-│   ├── arkiv-os
-│   ├── dashboard/              # routing + layout (thin-wrap ke @/features)
-│   │   ├── (dashboard)/        # shell AppSidebar (hris, crm, purchasing, ...)
-│   │   ├── employees           # pindah dari hris/employees
-│   │   └── pos
-│   ├── photobooth/self-service
-│   ├── table-order/[tableCode]
-│   ├── (public)/career
-│   ├── (public)/portal
+│   ├── dashboard/(dashboard)/studio/   # halaman backoffice Kelas & Coach
+│   ├── member/                         # Member App
+│   ├── coach/                          # Coach Portal
 │   └── api/
-├── features/                   # UI domain (pola: index.ts + components/*-page.tsx)
-│   ├── users/                  # employee/user (data layer + pages)
-│   ├── hris/  performance/  recruitment-related/
-│   ├── purchasing/  inventory/  master-data/
-│   ├── crm/  pos/  configuration/  design-system/
-│   └── finance/  accounting/  integration/
-├── components/
-│   ├── ui/  pos/  layout/
-├── hooks/
-├── lib/
-│   ├── db.ts                   # pool pg + search_path global
-│   ├── db-client/              # shim data layer (PostgREST-like)
-│   ├── pg/                     # query-builder PostgREST-like
-│   ├── auth/                   # session + password (bcrypt)
-│   ├── api/  crm/  inventory/  pos/  purchasing/
-├── modules/
-│   └── purchasing/             # shared UI legacy purchasing
-└── types/
+│       ├── studio/                     # API backoffice
+│       ├── member-portal/studio/       # API Member App
+│       └── coach/                      # API Coach Portal
+├── features/
+│   ├── studio/                         # UI backoffice studio
+│   └── member-app/                     # UI Member App (+ i18n.ts: terjemahan pesan server)
+└── lib/studio/                         # logika murni (*.ts + *.test.ts) & server (*-server.ts)
 ```
 
-## Roles
+Konvensi: logika murni tanpa DB di `src/lib/studio/*.ts` beserta tes; akses DB di `*-server.ts`; route hanya
+mengekspor handler (schema Zod di `src/lib/studio/schemas.ts`). Tulis **"Personal Training"** lengkap di semua teks
+UI (jangan "PT").
 
-Role valid mengikuti constraint `configuration.users.role`:
+## Dokumen penting
 
-| Role | Akses Utama |
-| --- | --- |
-| `super_admin` / `admin` | Semua module |
-| `hrd` / `hiring_manager` | HRIS, recruitment, employee, performance |
-| `direksi` | Dashboard dan report |
-| `purchasing_admin` | Purchasing, procurement, inventory, production |
-| `purchasing_manager` | Approval, purchasing report, production |
-| `purchasing_staff` | PR/PO, purchasing operasional |
-| `warehouse_admin` / `warehouse_staff` | Receiving, inventory, QC, stock card |
-| `qc_staff` | Quality control |
-| `finance_staff` | COGS, report, finance-related approval |
-| `pos` / `pos_supervisor` | POS cashier, order, payment, shift |
-
-## Design Notes
-
-- BCD Coffee OS memakai aksen pink sebagai primary action.
-- Dashboard operasional dibuat padat, scannable, dan action-oriented.
-- POS dan self-service flow mengutamakan touch-friendly controls.
-- Purchasing memakai istilah operasional Indonesia seperti Barang Masuk, Produksi, dan Recipe/BOM.
-- Dropdown dan clickable UI harus memiliki cursor/action affordance yang jelas.
-
-## Important Docs
-
-- `docs/purchasing/README.md`
-- `docs/purchasing/PURCHASING_PRODUCTION_PROGRESS_2026-05-24.md`
-- `docs/crm/CRM_DEVELOPMENT_PROGRESS.md`
-- `docs/pos/POS_DEVELOPMENT_PLAN.md`
-- `docs/qa/QA_REPORT_ARKIV_OS_PROGRESS_2026-05-24.md`
-- `docs/purchasing/PROJECT_STANDARDS.md`
-- `docs/AGENTS.md`
+- [DESIGN.md](DESIGN.md) — brand guideline, warna, tipografi, aturan copy
+- [docs/product/PRD.md](docs/product/PRD.md) — kebutuhan owner & pertanyaan terbuka
+- [docs/epics/README.md](docs/epics/README.md) — status epic (sumber kebenaran)
+- [docs/BACKLOG.md](docs/BACKLOG.md) — prioritas & checklist di luar development
+- [docs/DEPLOY-DEV.md](docs/DEPLOY-DEV.md) — deploy DEV & database uji
+- [docs/design/nuhabit-ui/NUHABIT-UI-STYLING.md](docs/design/nuhabit-ui/NUHABIT-UI-STYLING.md) — panduan styling UI untuk tim
+- [AGENTS.md](AGENTS.md) — panduan untuk agen/kontributor
