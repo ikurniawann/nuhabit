@@ -123,3 +123,40 @@ build-api-development:
 build-api-production:
   extends: build-production
   script: *api_build_script
+
+# ---------------------------------------------------------------------------
+# Checks that gate every pipeline. They run in `.pre`, which GitLab always
+# has, so they work whatever stages the template defines, and a failure stops
+# the builds and deploys after it. Go integration tests need a seeded
+# database and run locally (`make -C backend test`).
+test-api:
+  stage: .pre
+  image: golang:1.26-alpine
+  variables:
+    CGO_ENABLED: "0"
+    TEST_DATABASE_URL: ""
+  script:
+    - cd backend
+    - test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+    - go vet ./...
+    - go test ./...
+    # The Next proxy forwards only routes in this manifest; a Go route
+    # missing from it would stay on the TS handler. Fix: make -C backend generate.
+    - go run ./cmd/api -routes | diff -u ../frontend/src/lib/go-routes.generated.json -
+
+test-web:
+  stage: .pre
+  image: node:22-alpine
+  variables:
+    # tsc over the whole app outgrows Node's default heap and aborts.
+    NODE_OPTIONS: --max-old-space-size=4096
+  script:
+    - corepack enable && corepack prepare pnpm@9.15.0 --activate
+    - cd frontend
+    - pnpm install --frozen-lockfile
+    - pnpm lint
+    # next build skips type checking (ignoreBuildErrors), so tsc is the only
+    # type gate. typegen writes the .next/types files next-env.d.ts imports.
+    - pnpm exec next typegen
+    - pnpm exec tsc --noEmit
+    - pnpm test
