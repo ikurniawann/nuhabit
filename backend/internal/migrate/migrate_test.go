@@ -3,11 +3,14 @@ package migrate
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -134,5 +137,63 @@ func TestRunAppliesAndRecords(t *testing.T) {
 	}
 	if err := db.QueryRow(ctx, "SELECT count(*) FROM schema_migrations WHERE filename = $1", bad).Scan(&n); err != nil || n != 0 {
 		t.Fatal("failed file must not be recorded")
+	}
+}
+
+func TestVerifyReportsDrift(t *testing.T) {
+	testutil.DB(t) // skips without TEST_DATABASE_URL
+	ctx := context.Background()
+	target, drop, err := createScratch(ctx, os.Getenv("TEST_DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(drop)
+	dir := t.TempDir()
+	write(t, filepath.Join(dir, "deltas", "20990101000000_verify.sql"), `
+CREATE SCHEMA s;
+CREATE TABLE s.t (id int NOT NULL, name text);
+CREATE FUNCTION s.f() RETURNS int LANGUAGE sql AS 'SELECT 1';`)
+	var out bytes.Buffer
+	if err := Run(ctx, Options{URL: target, Dir: dir, Apply: true, Out: &out, Err: &out}); err != nil {
+		t.Fatalf("%v\n%s", err, out.String())
+	}
+
+	out.Reset()
+	if err := Verify(ctx, VerifyOptions{URL: target, Dir: dir, Out: &out}); err != nil {
+		t.Fatalf("clean target: %v\n%s", err, out.String())
+	}
+
+	conn, err := pgx.Connect(ctx, target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = conn.Exec(ctx, `
+ALTER TABLE s.t DROP COLUMN name;
+CREATE OR REPLACE FUNCTION s.f() RETURNS int LANGUAGE sql AS 'SELECT 2';
+CREATE TABLE s.extra (id int);`)
+	conn.Close(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out.Reset()
+	if err := Verify(ctx, VerifyOptions{URL: target, Dir: dir, Out: &out}); !errors.Is(err, ErrDrift) {
+		t.Fatalf("err = %v, want ErrDrift\n%s", err, out.String())
+	}
+	for _, want := range []string{"[missing] column s.t.name\n", "[differs] function s.f()\n", "[extra]   relation s.extra\n"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("output lacks %q:\n%s", want, out.String())
+		}
+	}
+}
+
+func TestCanonicalIgnoresDeparseShape(t *testing.T) {
+	a := `CHECK (((status)::text = ANY ((ARRAY['open'::character varying, 'void'::character varying])::text[])))`
+	b := `CHECK (((status)::text = ANY (ARRAY[('open'::character varying)::text, ('void'::character varying)::text])))`
+	if canonical(a) != canonical(b) {
+		t.Fatalf("%s\n%s", canonical(a), canonical(b))
+	}
+	changed := `CHECK (((status)::text = ANY (ARRAY[('open'::character varying)::text, ('closed'::character varying)::text])))`
+	if canonical(a) == canonical(changed) {
+		t.Fatal("a changed value must still differ")
 	}
 }

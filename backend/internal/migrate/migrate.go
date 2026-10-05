@@ -102,6 +102,9 @@ func Checksum(sql []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// applyLockKey is the pg_advisory_lock key held while Run applies files.
+const applyLockKey int64 = 0x6e75686162697401 // "nuhabit" + 1
+
 // Options configure Run.
 type Options struct {
 	URL   string
@@ -134,6 +137,14 @@ func Run(ctx context.Context, opts Options) error {
 
 	if _, err := conn.Exec(ctx, "SET search_path TO "+strings.Join(SearchPath, ", ")); err != nil {
 		return err
+	}
+	// Two deploys racing (or a deploy and a manual run) would both see the
+	// same file as pending. The session lock serializes them; the second
+	// waits, then finds the file recorded. Closing the connection releases it.
+	if opts.Apply {
+		if _, err := conn.Exec(ctx, "SELECT pg_advisory_lock($1)", applyLockKey); err != nil {
+			return err
+		}
 	}
 
 	// Dry run is read-only: never create the bookkeeping table.
