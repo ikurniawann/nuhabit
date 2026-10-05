@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -23,7 +24,9 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ocr"
 	"nuhabit/backend/internal/platform/outbox"
 )
 
@@ -51,6 +54,17 @@ func main() {
 
 	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel()}))
 	slog.SetDefault(log)
+	if err := cfg.Validate(); err != nil {
+		log.Error("api stopped", "error", err)
+		os.Exit(1)
+	}
+	disabled := config.DisabledIntegrations(os.Getenv)
+	if !ocr.New().Available() {
+		disabled = append(disabled, "OCR struk dan lampiran (tesseract tidak ditemukan)")
+	}
+	if len(disabled) > 0 {
+		log.Warn("integrasi opsional nonaktif", "disabled", disabled)
+	}
 	if err := run(cfg, log); err != nil {
 		log.Error("api stopped", "error", err)
 		os.Exit(1)
@@ -98,6 +112,10 @@ func run(cfg config.Config, log *slog.Logger) error {
 		WriteTimeout:      120 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	// Streams end when shutdown starts instead of holding it for 20 s.
+	draining := make(chan struct{})
+	srv.BaseContext = func(net.Listener) context.Context { return httpx.WithShutdown(context.Background(), draining) }
+	srv.RegisterOnShutdown(func() { close(draining) })
 	errCh := make(chan error, 1)
 	go func() {
 		log.Info("api listening", "addr", srv.Addr, "env", cfg.AppEnv, "modules", mounted)

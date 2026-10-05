@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"nuhabit/backend/internal/platform/httpx"
 )
 
 // Stream timings: the board is rebuilt every 30 seconds while anyone
@@ -190,6 +192,8 @@ func (h handlers) stream(w http.ResponseWriter, r *http.Request) error {
 	for {
 		select {
 		case <-r.Context().Done():
+			return nil
+		case <-httpx.Draining(r.Context()):
 			return nil
 		case ev := <-events:
 			if send("overview", ev) != nil {

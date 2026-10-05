@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -119,5 +120,19 @@ func TestJSTime(t *testing.T) {
 	_ = JSON(rec, 200, map[string]any{"at": JSTime(ts), "none": NewJSTime(nil)})
 	if rec.Body.String() != `{"at":"2026-10-04T08:56:52.984Z","none":null}` {
 		t.Fatal(rec.Body.String())
+	}
+}
+
+func TestDraining(t *testing.T) {
+	if Draining(context.Background()) != nil {
+		t.Fatal("no server: nil channel, which blocks forever in select")
+	}
+	draining := make(chan struct{})
+	ctx := WithShutdown(context.Background(), draining)
+	close(draining)
+	select {
+	case <-Draining(ctx):
+	default:
+		t.Fatal("closed channel must be visible through the context")
 	}
 }

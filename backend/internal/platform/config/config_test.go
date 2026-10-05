@@ -46,3 +46,31 @@ func TestLoadDefaults(t *testing.T) {
 		t.Fatalf("%+v", c)
 	}
 }
+
+func TestValidate(t *testing.T) {
+	for url, ok := range map[string]bool{
+		"postgres://u@h:5432/db":   true,
+		"postgresql://u:p@h/db":    true,
+		"":                         false,
+		"mysql://u@h/db":           false,
+		"postgres://with space/db": false,
+	} {
+		if err := (Config{DatabaseURL: url}).Validate(); (err == nil) != ok {
+			t.Errorf("Validate(%q) = %v, want ok=%v", url, err, ok)
+		}
+	}
+}
+
+func TestDisabledIntegrations(t *testing.T) {
+	all := DisabledIntegrations(func(string) string { return "" })
+	if len(all) != 5 {
+		t.Fatalf("empty env: %v", all)
+	}
+	env := map[string]string{
+		"NEXT_PUBLIC_BASE_URL": "https://x", "RESEND_API_KEY": "k", "XENDIT_MOCK": "1",
+		"VAPID_PUBLIC_KEY": "a", "VAPID_PRIVATE_KEY": "b", "PUBLIC_ORIGIN": "http://next:3000",
+	}
+	if off := DisabledIntegrations(func(k string) string { return env[k] }); len(off) != 0 {
+		t.Fatalf("configured env: %v", off)
+	}
+}

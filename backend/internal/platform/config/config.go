@@ -3,8 +3,10 @@ package config
 
 import (
 	"bufio"
+	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -23,6 +25,41 @@ type Config struct {
 
 // IsProduction reports whether APP_ENV (or NODE_ENV) says production.
 func (c Config) IsProduction() bool { return c.AppEnv == "production" }
+
+var postgresURL = regexp.MustCompile(`^postgres(ql)?://\S+$`)
+
+// Validate mirrors assertServerEnv in frontend/src/lib/env.ts: the API does
+// not start without a postgres:// URL.
+func (c Config) Validate() error {
+	if !postgresURL.MatchString(c.DatabaseURL) {
+		return errors.New("konfigurasi env server tidak valid: DATABASE_URL (atau MIGRATE_DATABASE_URL) wajib berisi URL postgres://")
+	}
+	return nil
+}
+
+// DisabledIntegrations mirrors disabledIntegrations in
+// frontend/src/lib/env.ts: env-only integrations that stay off because
+// their variables are empty. PUBLIC_ORIGIN is the API's own addition.
+func DisabledIntegrations(getenv func(string) string) []string {
+	has := func(key string) bool { return strings.TrimSpace(getenv(key)) != "" }
+	checks := []struct {
+		label   string
+		enabled bool
+	}{
+		{"URL publik NEXT_PUBLIC_APP_URL (tautan di WA/email dari job latar jadi relatif)", has("NEXT_PUBLIC_APP_URL") || has("NEXT_PUBLIC_BASE_URL")},
+		{"email Resend (RESEND_API_KEY)", has("RESEND_API_KEY")},
+		{"pembayaran Xendit (XENDIT_SECRET_KEY + XENDIT_WEBHOOK_TOKEN)", getenv("XENDIT_MOCK") == "1" || (has("XENDIT_SECRET_KEY") && has("XENDIT_WEBHOOK_TOKEN"))},
+		{"web push portal member (VAPID_PUBLIC_KEY + VAPID_PRIVATE_KEY)", has("VAPID_PUBLIC_KEY") && has("VAPID_PRIVATE_KEY")},
+		{"foto produk GoFood dari public/ Next (PUBLIC_ORIGIN atau PUBLIC_DIR)", has("PUBLIC_ORIGIN") || has("PUBLIC_DIR")},
+	}
+	var off []string
+	for _, c := range checks {
+		if !c.enabled {
+			off = append(off, c.label)
+		}
+	}
+	return off
+}
 
 // ModuleEnabled reports whether a module name is selected by MODULES.
 func (c Config) ModuleEnabled(name string) bool {
