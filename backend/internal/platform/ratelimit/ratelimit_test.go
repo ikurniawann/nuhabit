@@ -30,7 +30,7 @@ func TestFixedWindowIsSharedAcrossReplicas(t *testing.T) {
 	a, b := replicas(t)
 	ctx := context.Background()
 	k := key(t)
-	now := time.Now()
+	now := time.Now().Truncate(time.Microsecond)
 	for i, l := range []*ratelimit.Limiter{a, b, a} {
 		w, err := l.Fixed(ctx, k, 3, time.Minute, now)
 		if err != nil || !w.Allowed || w.Count != i+1 {
@@ -59,7 +59,7 @@ func TestSlidingWindowIsSharedAcrossReplicas(t *testing.T) {
 	a, b := replicas(t)
 	ctx := context.Background()
 	k := key(t)
-	start := time.Now()
+	start := time.Now().Truncate(time.Microsecond)
 	if ok, _, err := a.Sliding(ctx, k, 2, time.Minute, start); err != nil || !ok {
 		t.Fatalf("1st: %v %v", ok, err)
 	}
@@ -83,7 +83,7 @@ func TestSlidingCountReadsWithoutRecording(t *testing.T) {
 	a, b := replicas(t)
 	ctx := context.Background()
 	k := key(t)
-	start := time.Now()
+	start := time.Now().Truncate(time.Microsecond)
 	if n, err := a.SlidingCount(ctx, k, time.Minute, start); err != nil || n != 0 {
 		t.Fatalf("unknown key: %d %v", n, err)
 	}
@@ -106,7 +106,7 @@ func TestConcurrentHitsNeverExceedTheLimit(t *testing.T) {
 	a, b := replicas(t)
 	ctx := context.Background()
 	fixed, sliding := key(t), key(t)
-	now := time.Now()
+	now := time.Now().Truncate(time.Microsecond)
 	var fixedOK, slidingOK atomic.Int32
 	var wg sync.WaitGroup
 	for i := range 20 {

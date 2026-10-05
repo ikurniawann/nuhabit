@@ -36,7 +36,7 @@ func (p *fakePayments) CreateInvoice(_ context.Context, in InvoiceRequest) (Invo
 	if p.fail {
 		return Invoice{}, errors.New("xendit down")
 	}
-	return Invoice{ID: "inv-" + testutil.RandomHex(3), URL: "https://pay.example/inv", ExpiresAt: time.Date(2026, 10, 5, 3, 0, 0, 0, time.UTC)}, nil
+	return Invoice{ID: "inv-" + testutil.RandomHex(3), URL: "https://pay.example/inv", ExpiresAt: time.Date(2099, 1, 1, 3, 0, 0, 0, time.UTC)}, nil
 }
 
 func (*fakePayments) ValidWebhookToken(token string) bool { return token == "rahasia" }
@@ -200,7 +200,7 @@ func TestPublicBookingFlowAndWebhook(t *testing.T) {
 	d := created.data()
 	token := d["access_token"].(string)
 	eq(t, []any{d["total"], d["discount_amount"], d["payable"], d["invoice_url"], d["expires_at"], d["status_url"]},
-		[]any{100000, 25000, 75000, "https://pay.example/inv", "2026-10-05T03:00:00.000Z", "https://tiket.example/booking/status/" + token})
+		[]any{100000, 25000, 75000, "https://pay.example/inv", "2099-01-01T03:00:00.000Z", "https://tiket.example/booking/status/" + token})
 	inv := p.pay.invoices[0]
 	if inv.Amount != 75000 || !strings.HasPrefix(inv.ExternalID, "tkt-booking-") || inv.Description != "Tiket "+d["booking_code"].(string)+" — kunjungan "+tomorrow() {
 		t.Fatalf("invoice = %+v", inv)

@@ -310,7 +310,7 @@ func TestWalletSettingsPackagesSweep(t *testing.T) {
 
 	// An expired lot is swept: expiration row, balance down, event published.
 	e.exec(`INSERT INTO pos.pos_wallet_transactions (customer_id, type, amount, ark_coins, balance_before, balance_after, status, created_at, expires_at)
-	        VALUES ($1, 'topup', 30000, 30, 0, 30000, 'completed', now() - interval '40 days', now() - interval '1 day')`, e.member.CustomerID)
+	        VALUES ($1, 'topup', 30000, 30, 0, 30000, 'completed', $2, $3)`, e.member.CustomerID, fixedNow.AddDate(0, 0, -40), fixedNow.AddDate(0, 0, -1))
 	e.exec(`UPDATE pos.pos_customers SET ark_coin_balance = 30000 WHERE id = $1`, e.member.CustomerID)
 	code, body, raw = e.do(e.admin, "POST", "/api/wallet/sweep", nil)
 	expect(t, "sweep", code, 200, raw)

@@ -197,29 +197,58 @@ func CreateStaff(t testing.TB, opts StaffOptions) Staff {
 	return s
 }
 
-// GrantMenu grants menuCode (created when missing) to roleID.
+// testMenuMark is iam.menus.description on menus GrantMenu created, so
+// cleanup never removes a seeded menu.
+const testMenuMark = "testutil.GrantMenu fixture"
+
+// GrantMenu grants menuCode to roleID, creating the menu when the database
+// has no seed for it. Packages run in parallel against one database and
+// share menu codes, so a created menu belongs to every grant of that code:
+// grants and cleanups take a per-code lock, and the last grant to go
+// removes the menu.
 func GrantMenu(t testing.TB, roleID, menuCode string, actions []string) {
 	t.Helper()
 	db := DB(t)
-	ctx := context.Background()
 	if actions == nil {
 		actions = []string{"read"}
 	}
-	var menuID string
-	var created bool
-	err := db.QueryRow(ctx, `WITH ins AS (
-		INSERT INTO iam.menus (code, menu_name) VALUES ($1, $1)
-		ON CONFLICT (code) DO NOTHING RETURNING id::text)
-		SELECT id, true FROM ins UNION ALL SELECT id::text, false FROM iam.menus WHERE code = $1 LIMIT 1`, menuCode).
-		Scan(&menuID, &created)
-	must(t, err)
-	if created {
-		t.Cleanup(func() { _, _ = db.Exec(context.Background(), `DELETE FROM iam.menus WHERE id = $1`, menuID) })
-	}
 	raw, _ := json.Marshal(actions)
-	_, err = db.Exec(ctx, `INSERT INTO iam.role_menu_permissions (role_id, menu_id, granted_actions) VALUES ($1, $2, $3::jsonb)`,
-		roleID, menuID, string(raw))
-	must(t, err)
+	must(t, withMenuLock(db, menuCode, func(ctx context.Context, tx pgx.Tx) error {
+		var menuID string
+		if err := tx.QueryRow(ctx, `WITH ins AS (
+			INSERT INTO iam.menus (code, menu_name, description) VALUES ($1, $1, $2)
+			ON CONFLICT (code) DO NOTHING RETURNING id::text)
+			SELECT id FROM ins UNION ALL SELECT id::text FROM iam.menus WHERE code = $1 LIMIT 1`, menuCode, testMenuMark).
+			Scan(&menuID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO iam.role_menu_permissions (role_id, menu_id, granted_actions) VALUES ($1, $2, $3::jsonb)`,
+			roleID, menuID, string(raw))
+		return err
+	}))
+	t.Cleanup(func() {
+		_ = withMenuLock(db, menuCode, func(ctx context.Context, tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `DELETE FROM iam.role_menu_permissions p USING iam.menus m
+				WHERE p.menu_id = m.id AND m.code = $1 AND p.role_id = $2`, menuCode, roleID); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `DELETE FROM iam.menus m WHERE m.code = $1 AND m.description = $2
+				AND NOT EXISTS (SELECT 1 FROM iam.role_menu_permissions p WHERE p.menu_id = m.id)`, menuCode, testMenuMark)
+			return err
+		})
+	})
+}
+
+// withMenuLock runs fn in a transaction holding an advisory lock on the
+// menu code.
+func withMenuLock(db *pgxpool.Pool, code string, fn func(context.Context, pgx.Tx) error) error {
+	ctx := context.Background()
+	return pgx.BeginFunc(ctx, db, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('testutil.menu:' || $1))`, code); err != nil {
+			return err
+		}
+		return fn(ctx, tx)
+	})
 }
 
 // Member is a throwaway pos.pos_customers row with a portal session.
