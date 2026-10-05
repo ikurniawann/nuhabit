@@ -26,10 +26,11 @@ const row = {
   expires_at: null,
 };
 
-describe("konversi datetime-local (TZ=UTC)", () => {
+// Round trips hold in any process timezone (CI runs UTC, dev machines WIB).
+describe("konversi datetime-local", () => {
   it("bolak-balik ISO ↔ input lokal", () => {
-    expect(isoToLocalInput("2026-03-01T02:30:00.000Z")).toBe("2026-03-01T02:30");
-    expect(localInputToIso("2026-03-01T02:30")).toBe("2026-03-01T02:30:00.000Z");
+    expect(localInputToIso(isoToLocalInput("2026-03-01T02:30:00.000Z"))).toBe("2026-03-01T02:30:00.000Z");
+    expect(isoToLocalInput(localInputToIso("2026-03-01T02:30"))).toBe("2026-03-01T02:30");
   });
 
   it("kosong atau tidak valid", () => {
@@ -45,7 +46,7 @@ describe("announcementFormFrom", () => {
     expect(form.video_url).toBe("https://youtu.be/dQw4w9WgXcQ");
     expect(form.tags).toEqual([]);
     expect(form.target_scope).toBe("department");
-    expect(form.publish_at).toBe("2026-03-01T02:30");
+    expect(localInputToIso(form.publish_at)).toBe(row.publish_at);
     expect(form.expires_at).toBe("");
   });
 

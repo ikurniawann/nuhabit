@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const queryMock = vi.fn();
 const queryOneMock = vi.fn();
@@ -23,6 +23,15 @@ describe("todayJakarta", () => {
 });
 
 describe("buildDesktopOverview", () => {
+  // Pin the clock so the test's todayJakarta() and the module's cannot straddle WIB midnight.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-04T05:00:00Z"));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("mengisi semua seksi saat query sehat", async () => {
     queryMock.mockResolvedValue([]); // sales rows & stok rows kosong tapi valid
     queryOneMock.mockResolvedValue({

@@ -436,10 +436,12 @@ func TestOpenAIAdapter(t *testing.T) {
 
 /* ── reviews ──────────────────────────────────────────────────────────── */
 
+// review is published two days before testNow, past the one-day reply SLA
+// that the list evaluates against the pinned clock.
 func (e *env) review(rating int, name string) string {
 	e.t.Helper()
 	return crmtest.Scalar[string](e.t, e.tx, `INSERT INTO crm.google_reviews (review_id, review_name, reviewer_name, star_rating, review_created_at)
-		VALUES ($1, $2, 'Budi', $3, now() - interval '2 days') RETURNING id::text`, name, "accounts/1/locations/9/reviews/"+name, rating)
+		VALUES ($1, $2, 'Budi', $3, $4) RETURNING id::text`, name, "accounts/1/locations/9/reviews/"+name, rating, testNow.AddDate(0, 0, -2))
 }
 
 func TestReviewList(t *testing.T) {

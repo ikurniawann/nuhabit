@@ -276,7 +276,8 @@ func TestSegmentPreview(t *testing.T) {
 		"source": "member",
 		"filters": []any{tierFilter,
 			map[string]any{"field": "total_xp", "op": "gte", "value": "100"},
-			map[string]any{"field": "last_visit", "op": "lt", "value": testNow.AddDate(0, 0, -10).Format("2006-01-02")},
+			// customer() dates last_visit from the database clock, so the cutoff uses the real clock too.
+			map[string]any{"field": "last_visit", "op": "lt", "value": time.Now().AddDate(0, 0, -10).Format("2006-01-02")},
 			map[string]any{"field": "name", "op": "in", "value": []any{"Budi", "Cici", ""}},
 		},
 	})
