@@ -9,12 +9,6 @@ import (
 	"nuhabit/backend/internal/platform/testutil"
 )
 
-// Fixed venue of the local seed (crm_settings default_company_id/branch_id).
-const (
-	seedCompany = "8a3a46b7-53b9-4052-b168-7a5f0b71c356"
-	seedBranch  = "e3ca52e6-b4a7-47cc-b0c9-d2c68be76004"
-)
-
 func mustExec(t *testing.T, tx pgx.Tx, sql string, args ...any) {
 	t.Helper()
 	if _, err := tx.Exec(context.Background(), sql, args...); err != nil {
@@ -60,9 +54,9 @@ func newCustomer(t *testing.T, tx pgx.Tx, phone string) string {
 	return mustID(t, tx, `INSERT INTO pos.pos_customers (name, phone) VALUES ('Tester', $1) RETURNING id::text`, phone)
 }
 
-func newOrder(t *testing.T, tx pgx.Tx, customerID *string) string {
+func newOrder(t *testing.T, tx pgx.Tx, venue testutil.Org, customerID *string) string {
 	t.Helper()
 	return mustID(t, tx, `INSERT INTO pos.pos_orders (order_number, cashier_id, customer_id, company_id, branch_id, total_amount, subtotal)
 		VALUES ($1, gen_random_uuid(), $2, $3, $4, 50000, 50000) RETURNING id::text`,
-		"T-"+testutil.RandomHex(4), customerID, seedCompany, seedBranch)
+		"T-"+testutil.RandomHex(4), customerID, venue.CompanyID, venue.BranchID)
 }

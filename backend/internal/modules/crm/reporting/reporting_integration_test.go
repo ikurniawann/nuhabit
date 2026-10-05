@@ -15,11 +15,6 @@ import (
 	"nuhabit/backend/internal/platform/testutil"
 )
 
-const (
-	company = "8a3a46b7-53b9-4052-b168-7a5f0b71c356"
-	branch  = "e3ca52e6-b4a7-47cc-b0c9-d2c68be76004"
-)
-
 type fakeWA struct {
 	mu   sync.Mutex
 	sent []string
@@ -43,28 +38,28 @@ type env struct {
 	wa           *fakeWA
 }
 
-func staff(t *testing.T, role string) testutil.Staff {
-	c, b := company, branch
+func staff(t *testing.T, role string, venue testutil.Org) testutil.Staff {
 	all := []string{"read", "create", "update", "delete"}
 	return testutil.CreateStaff(t, testutil.StaffOptions{Role: role, Menus: map[string][]string{"crm.reports": all},
-		CompanyID: &c, BranchID: &b})
+		CompanyID: &venue.CompanyID, BranchID: &venue.BranchID})
 }
 
-// setup creates staff before the transaction so the rollback runs before
-// the staff cleanup.
+// setup creates the venue, then staff, before the transaction so the
+// rollback runs first on cleanup, then the staff and venue deletes.
 func setup(t *testing.T) *env {
 	t.Helper()
-	e := &env{admin: staff(t, "admin"), plain: staff(t, "pos"), other: crmtest.Staff(t, "crm.settings"), wa: &fakeWA{}}
+	venue := testutil.CreateOrg(t, nil)
+	e := &env{admin: staff(t, "admin", venue), plain: staff(t, "pos", venue), other: crmtest.Staff(t, "crm.settings"), wa: &fakeWA{}}
 	e.tx = testutil.Tx(t)
 	d := testutil.Deps(t, nil)
 	e.mux = crmtest.Mux(newHandler(e.tx, d, Ports{WhatsApp: e.wa}).routes())
 	e.org = "Go Report " + testutil.RandomHex(4)
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_sales_leads (company_id, branch_id, org_name, pic_name, pic_phone, score, status, owner_user_id)
 		VALUES ($1, $2, $3, 'PIC', '0811', 7, 'baru', $4), ($1, $2, $3 || ' B', 'PIC', '0812', 3, 'baru', $5)`,
-		company, branch, e.org, e.plain.UserID, e.admin.UserID)
+		venue.CompanyID, venue.BranchID, e.org, e.plain.UserID, e.admin.UserID)
 	crmtest.MustExec(t, e.tx, `INSERT INTO crm.crm_sales_deals (company_id, branch_id, lead_id, title, stage_id, value_estimate, owner_user_id)
 		SELECT $1, $2, l.id, 'Deal ' || l.org_name, (SELECT id FROM crm.crm_sales_stages WHERE code = 'prospek-baru'), 5000000, l.owner_user_id
-		FROM crm.crm_sales_leads l WHERE l.org_name LIKE $3 || '%'`, company, branch, e.org)
+		FROM crm.crm_sales_leads l WHERE l.org_name LIKE $3 || '%'`, venue.CompanyID, venue.BranchID, e.org)
 	return e
 }
 

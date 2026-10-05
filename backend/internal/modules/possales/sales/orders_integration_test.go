@@ -42,7 +42,11 @@ func TestCreateSingleCashOrder(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("items %v", data["items"])
 	}
+	// Items are embedded unordered; check the Kopi line.
 	first := items[0].(map[string]any)
+	if first["product_id"] != e.fx.prodA {
+		first = items[1].(map[string]any)
+	}
 	if first["station"] != "bar" || first["quantity"] != float64(2) || first["total_amount"] != float64(40000) {
 		t.Fatalf("item %v", first)
 	}

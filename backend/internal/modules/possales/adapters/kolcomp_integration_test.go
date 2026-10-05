@@ -11,6 +11,7 @@ import (
 func TestKolComp(t *testing.T) {
 	tx := testutil.Tx(t)
 	ctx := context.Background()
+	venue := testutil.CreateOrg(t, tx)
 	k := KolComp{Now: func() time.Time { return time.Date(2026, 10, 15, 3, 0, 0, 0, time.UTC) }}
 	check := func(customer string, gross float64, want string) {
 		t.Helper()
@@ -30,7 +31,7 @@ func TestKolComp(t *testing.T) {
 	mustExec(t, tx, `UPDATE pos.pos_customers SET is_kol = true WHERE id = $1`, cust)
 	check(cust, 1e9, "") // no limit
 	mustExec(t, tx, `UPDATE pos.pos_customers SET kol_monthly_limit_idr = 100000 WHERE id = $1`, cust)
-	thisMonth, lastMonth, voided := newOrder(t, tx, &cust), newOrder(t, tx, &cust), newOrder(t, tx, &cust)
+	thisMonth, lastMonth, voided := newOrder(t, tx, venue, &cust), newOrder(t, tx, venue, &cust), newOrder(t, tx, venue, &cust)
 	mustExec(t, tx, `UPDATE pos.pos_orders SET comp_type = 'kol_comp', subtotal = 60000, ordered_at = '2026-10-01 00:30:00+07' WHERE id = $1`, thisMonth)
 	// Before 1 Oct WIB and voided orders do not count.
 	mustExec(t, tx, `UPDATE pos.pos_orders SET comp_type = 'kol_comp', subtotal = 90000, ordered_at = '2026-09-30 23:30:00+07' WHERE id = $1`, lastMonth)

@@ -11,7 +11,8 @@ import (
 func TestCatalog(t *testing.T) {
 	tx := testutil.Tx(t)
 	ctx := context.Background()
-	wh := mustID(t, tx, `INSERT INTO configuration.warehouses (branch_id, name, code) VALUES ($1, 'Stall T', $2) RETURNING id::text`, seedBranch, "ST-"+testutil.RandomHex(3))
+	venue := testutil.CreateOrg(t, tx)
+	wh := mustID(t, tx, `INSERT INTO configuration.warehouses (branch_id, name, code) VALUES ($1, 'Stall T', $2) RETURNING id::text`, venue.BranchID, "ST-"+testutil.RandomHex(3))
 	kode := "K" + testutil.RandomHex(4)
 	master := mustID(t, tx, `INSERT INTO item.products (kode, nama, warehouse_id) VALUES ($1, 'Master', $2) RETURNING id::text`, kode, wh)
 	linked := newProduct(t, tx, "Linked", map[string]any{"source_product_id": master, "cost_price": 1234.5})

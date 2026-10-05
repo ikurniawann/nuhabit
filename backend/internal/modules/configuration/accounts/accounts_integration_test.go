@@ -180,6 +180,10 @@ func TestCreateAndGetUser(t *testing.T) {
 
 func TestCreateUserWithAppAccount(t *testing.T) {
 	e := settingsUsers(t)
+	if _, err := e.tx.Exec(context.Background(), `INSERT INTO iam.roles (code, name, is_system) VALUES ('super_admin', 'Super Admin', true)
+		ON CONFLICT (code) DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
 	email := uniqueEmail()
 	b := employeeBody(email)
 	b["is_access_app"] = true
@@ -363,6 +367,9 @@ func TestUserValidationAndMissing(t *testing.T) {
 
 func TestMalformedEmployeeID(t *testing.T) {
 	e := settingsUsers(t)
+	// The id cast runs per row, so an empty employees table would answer 404.
+	e.scalar(`INSERT INTO hris.employees (full_name, nip, email, phone, join_date) VALUES ('Go Test', $1, $2, '0811', current_date) RETURNING id`,
+		"NIP"+testutil.RandomHex(3), uniqueEmail())
 	code, body, _ := e.do("GET", "/api/users/abc", nil)
 	wantError(t, code, body, 400, "Format data tidak valid")
 }

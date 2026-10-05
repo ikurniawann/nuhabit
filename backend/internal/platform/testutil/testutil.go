@@ -103,6 +103,39 @@ func RandomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
+// Org is a throwaway holding with one company and one branch.
+type Org struct {
+	HoldingID, CompanyID, BranchID string
+}
+
+// CreateOrg inserts a holding, company and branch. Given a transaction from
+// Tx the rows roll back with it. With tx nil they are committed and the
+// holding (cascading to company and branch) is deleted on cleanup; create
+// such an org before the staff and the Tx that reference it, since cleanups
+// run in reverse.
+func CreateOrg(t testing.TB, tx pgx.Tx) Org {
+	t.Helper()
+	db := DB(t)
+	var q database.Querier = db
+	if tx != nil {
+		q = tx
+	}
+	ctx := context.Background()
+	sfx := RandomHex(4)
+	var o Org
+	must(t, q.QueryRow(ctx, `INSERT INTO configuration.holdings (name, code) VALUES ('Go Test H '||$1, 'GOH'||$1) RETURNING id::text`, sfx).Scan(&o.HoldingID))
+	if tx == nil {
+		t.Cleanup(func() {
+			_, _ = db.Exec(context.Background(), `DELETE FROM configuration.holdings WHERE id = $1`, o.HoldingID)
+		})
+	}
+	must(t, q.QueryRow(ctx, `INSERT INTO configuration.companies (holding_id, name, code) VALUES ($1, 'Go Test C '||$2, 'GOC'||$2) RETURNING id::text`,
+		o.HoldingID, sfx).Scan(&o.CompanyID))
+	must(t, q.QueryRow(ctx, `INSERT INTO configuration.branches (company_id, name, code) VALUES ($1, 'Go Test B '||$2, 'GOB'||$2) RETURNING id::text`,
+		o.CompanyID, sfx).Scan(&o.BranchID))
+	return o
+}
+
 // Staff is a throwaway staff account with a live session.
 type Staff struct {
 	UserID   string
