@@ -44,20 +44,23 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
 
   return (
     <>
-      <button type="button" onClick={() => { setMsg(null); setOpen(true); }} className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-nh-jungle px-4 py-3 text-left">
-        <div className="w-14 shrink-0">
-          <p className="font-display text-lg font-semibold tabular-nums">{jam(b.start_time)}</p>
-          <p className="text-[11px] text-nh-beige/50">{friendlyDay(b.session_date)}</p>
+      <button type="button" onClick={() => { setMsg(null); setOpen(true); }} className="flex w-full items-center gap-4 border-b border-white/15 py-3.5 text-left transition hover:bg-white/[0.03]">
+        <div className="flex w-20 shrink-0 items-stretch gap-2.5">
+          <span className="w-0.5 bg-white" />
+          <div>
+            <p className="font-display text-xl font-bold leading-none tabular-nums text-white">{jam(b.start_time)}</p>
+            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.1em] text-nh-beige/55">{friendlyDay(b.session_date)}</p>
+          </div>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{b.program_name}</p>
-          <p className="truncate text-xs text-nh-beige/60">{b.coach_name ?? ""}</p>
+          <p className="truncate text-sm font-bold uppercase tracking-[0.03em] text-white">{b.program_name}</p>
+          <p className="truncate text-[11px] uppercase tracking-wide text-nh-beige/55">{b.coach_name ?? ""}</p>
         </div>
         <Tag tone={b.status === "waitlisted" ? "warn" : "lime"}>{b.status === "waitlisted" ? "Waitlist" : "Locked in"}</Tag>
       </button>
 
       <Sheet open={open} onClose={() => setOpen(false)} title={b.program_name}>
-        <p className="text-sm text-nh-beige/70">
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-nh-beige/70">
           {friendlyDay(b.session_date)} · {jam(b.start_time)}–{jam(b.end_time)}
           {b.coach_name ? ` · ${b.coach_name}` : ""}
         </p>
@@ -68,7 +71,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
           </div>
         ) : (
           <div className="mt-5 space-y-4">
-            <div className={`rounded-2xl px-4 py-3 text-sm ${late ? "bg-nh-ochre/20 text-nh-lemon" : "bg-white/5 text-nh-beige/80"}`}>
+            <div className={`border-l-2 px-4 py-3 text-sm ${late ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
               {cancelNote(b.status, b.session_date, b.start_time, cancelWindowHours)}
             </div>
             <PillButton variant="danger" className="w-full" disabled={busy} onClick={cancel}>

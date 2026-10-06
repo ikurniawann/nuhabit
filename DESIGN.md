@@ -207,12 +207,12 @@ Contoh microcopy:
 | Varian | Light mode | Dark mode / di atas foto |
 |--------|-----------|---------------------------|
 | **Primary** | bg Forest `#00281a`, teks Beige | bg Lime `#daff59`, teks Forest |
-| **Accent CTA** (aksi utama Member App) | bg Lime, teks Forest, **bentuk pill** | sama |
+| **Accent CTA** (aksi utama Member App) | bg Lime, teks hitam, **kotak (sudut tajam), UPPERCASE** — lihat §10 Member App | sama |
 | **Secondary** | border `--border`, teks Ink, bg transparan | border lime/16%, teks Beige |
 | **Destructive** | `--destructive` | sama |
 
-Tombol CTA di Member App/landing memakai **pill (`rounded-full`)** seperti tombol
-*Download/Click Here* di guideline. Backoffice boleh tetap `rounded-lg` untuk kepadatan.
+Tombol CTA di Member App memakai **kotak bersudut tajam, UPPERCASE, tracking lebar** (keputusan owner 2026-10-06, lihat §10).
+Pill (`rounded-full`) di Member App hanya untuk chip/tag kecil.
 
 ### Kartu & permukaan
 
@@ -273,11 +273,22 @@ Urutan warna seri (light mode):
   "No sessions yet. Start with one." Istilah "Personal Training" tetap ditulis lengkap.
   Pesan WhatsApp ke member (pengingat H-1, waitlist, paket) juga berbahasa Inggris (`src/lib/studio/jobs.ts`).
 
-- **Mobile-first**. Boleh lebih ekspresif: hero dengan sapuan grafis, foto atlet, headline Outfit besar.
-- Layar beranda: kartu **"Sesi berikutnya"** (Forest + Lime), **sisa sesi paket** (progress),
-  tombol pill Lime **"Booking kelas"**, news Hyrox, profil coach.
-- Rayakan progres: streak mingguan, milestone kehadiran.
-- Dark mode cocok untuk member (mengikuti slide guideline: Ink + Lime).
+- **Gaya editorial** (keputusan owner 2026-10-06, referensi UI/UX theyardgym.com dari `referensiapp.pdf`) —
+  pola layout & interaksinya diadopsi, identitas NüHabit dipertahankan (logo, palet, font):
+  - Kanvas **hitam**; **beige** sebagai "krem" (tombol sekunder, strip CTA, label vertikal); **lime** aksen aksi utama.
+  - **Sudut tajam** di semua kartu/tombol/panel; pill hanya untuk chip (mis. kategori, level).
+  - Judul **UPPERCASE besar & rapat** (Outfit bold, tracking negatif); label kecil uppercase berjarak (eyebrow).
+  - **Garis tipis (hairline)** untuk daftar & tabel; **accordion bernomor** "01. Title  +".
+  - **Label vertikal** di tepi blok (Next up, Your tier, Coaches); foto **hitam-putih**.
+  - **Panel geser dari kanan** (detail sesi, beli paket, coach, news) — layar penuh di HP, Esc/klik luar menutup.
+  - **Timetable**: navigasi minggu "‹ 5 Oct – 11 Oct ›", strip hari (aktif = blok lime), baris jam dengan garis
+    vertikal + kartu sesi abu-abu kotak; sesi di jam sama dihubungkan "+".
+  - **Pass options**: daftar kotak bergaris — nama UPPERCASE kiri, harga aksen kanan (pola "Membership Options").
+  - Header: wordmark + menu hamburger layar penuh (daftar besar bernomor); strip CTA beige di atas
+    ("Book a class | Buy a pass"); bottom nav kotak; kaki halaman: blok CTA beige + wordmark berjalan (marquee).
+  - Implementasi: primitif di `src/features/member-app/ui.tsx`; animasi di `globals.css` (`nh-slide-in`,
+    `nh-marquee`, menghormati `prefers-reduced-motion`).
+- **Mobile-first**; rayakan progres: streak mingguan, milestone kehadiran, leaderboard konsistensi.
 
 ### Coach Portal (coach & head coach)
 

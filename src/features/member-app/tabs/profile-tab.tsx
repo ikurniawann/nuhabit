@@ -3,115 +3,56 @@
 import { useEffect, useState } from "react";
 import { LogOut } from "lucide-react";
 import { useMember } from "../member-app";
-import { type CoachProfile, memberFetch } from "../lib";
-import { Avatar, Card, CenterSpinner, PillButton, SectionTitle, Sheet, Tag } from "../ui";
+import { firstName, memberFetch } from "../lib";
+import { Eyebrow, PageTitle, PillButton } from "../ui";
 import { ProgressSection } from "./progress-section";
 
+/** Tab Progress: tier, XP, streak, leaderboard, pengaturan pengingat, keluar. */
 export function ProfileTab() {
-  const { profile, logout, go } = useMember();
-  const [coaches, setCoaches] = useState<CoachProfile[] | null>(null);
-  const [open, setOpen] = useState<CoachProfile | null>(null);
-
-  useEffect(() => {
-    memberFetch<{ data: CoachProfile[] }>("/api/member-portal/studio/coaches")
-      .then((r) => setCoaches(r.data))
-      .catch(() => setCoaches([]));
-  }, []);
+  const { profile, logout } = useMember();
 
   return (
-    <div className="space-y-7 pt-2">
-      <section className="flex items-center gap-4">
-        <Avatar name={profile.name ?? "Member"} size={64} />
-        <div className="min-w-0">
-          <p className="truncate font-display text-2xl font-semibold">{profile.name ?? "Member"}</p>
-          <p className="text-sm text-nh-beige/60">{profile.phone}</p>
-        </div>
-      </section>
+    <div className="space-y-8">
+      <PageTitle sub={`${profile.name ?? "Member"} · ${profile.phone ?? ""}`}>
+        Keep going,
+        <br />
+        {firstName(profile.name)}.
+      </PageTitle>
 
       <ProgressSection />
 
-      <section>
-        <SectionTitle>Our coaches</SectionTitle>
-        {!coaches ? (
-          <CenterSpinner />
-        ) : coaches.length === 0 ? (
-          <p className="text-sm text-nh-beige/50">Coach profiles coming soon.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {coaches.map((c) => (
-              <Card key={c.id} onClick={() => setOpen(c)} className="text-center">
-                <span className="mx-auto block w-fit">
-                  <Avatar name={c.name} photo={c.photo_url} size={80} />
-                </span>
-                <p className="mt-3 truncate font-semibold">{c.name}</p>
-                <p className="text-xs text-nh-beige/55">{c.level === "head_coach" ? "Head Coach" : "Coach"}</p>
-              </Card>
-            ))}
-          </div>
-        )}
+      <section className="border-t border-white/15">
+        <Eyebrow className="pb-2 pt-6">Settings</Eyebrow>
+        <ReminderToggle />
       </section>
-
-      <ReminderToggle />
 
       <PillButton variant="ghost" className="w-full" onClick={logout}>
         <LogOut className="size-4" /> Sign out
       </PillButton>
-
-      <Sheet open={!!open} onClose={() => setOpen(null)} title={open?.name ?? ""}>
-        {open && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar name={open.name} photo={open.photo_url} size={88} />
-              <div className="space-y-1">
-                <Tag tone={open.level === "head_coach" ? "lime" : "muted"}>{open.level === "head_coach" ? "Head Coach" : "Coach"}</Tag>
-                {open.offers_pt && <p className="text-xs text-nh-beige/60">Offers Personal Training</p>}
-              </div>
-            </div>
-            {open.bio && <p className="whitespace-pre-line text-sm leading-relaxed text-nh-beige/85">{open.bio}</p>}
-            {open.specialties && open.specialties.length > 0 && (
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Specialties</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {open.specialties.map((s) => (
-                    <Tag key={s}>{s}</Tag>
-                  ))}
-                </div>
-              </div>
-            )}
-            {open.certifications && (
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-nh-beige/50">Certifications</p>
-                <p className="whitespace-pre-line text-sm text-nh-beige/80">{open.certifications}</p>
-              </div>
-            )}
-            {open.offers_pt && (
-              <PillButton className="w-full" onClick={() => { setOpen(null); go("pt"); }}>
-                Book Personal Training
-              </PillButton>
-            )}
-          </div>
-        )}
-      </Sheet>
     </div>
   );
 }
 
 /** Pengingat WhatsApp (H-1 sesi, waitlist, paket) — member bisa mematikannya. */
 function ReminderToggle() {
+  return <ToggleRow label="WhatsApp reminders" hint="Tomorrow's sessions, waitlist spots, and passes running low." prefKey="wa_reminders" defaultValue />;
+}
+
+function ToggleRow({ label, hint, prefKey, defaultValue }: { label: string; hint: string; prefKey: "wa_reminders" | "leaderboard_opt_in"; defaultValue: boolean }) {
   const [on, setOn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    memberFetch<{ data: { wa_reminders: boolean } }>("/api/member-portal/studio/prefs")
-      .then((r) => setOn(r.data.wa_reminders))
-      .catch(() => setOn(true));
-  }, []);
+    memberFetch<{ data: Record<string, boolean> }>("/api/member-portal/studio/prefs")
+      .then((r) => setOn(r.data[prefKey] ?? defaultValue))
+      .catch(() => setOn(defaultValue));
+  }, [prefKey, defaultValue]);
 
   async function toggle() {
     if (on === null) return;
     setBusy(true);
     try {
-      await memberFetch("/api/member-portal/studio/prefs", { method: "PUT", body: { wa_reminders: !on } });
+      await memberFetch("/api/member-portal/studio/prefs", { method: "PUT", body: { [prefKey]: !on } });
       setOn(!on);
     } finally {
       setBusy(false);
@@ -119,24 +60,22 @@ function ReminderToggle() {
   }
 
   return (
-    <Card>
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="font-semibold">WhatsApp reminders</p>
-          <p className="mt-0.5 text-xs text-nh-beige/60">Tomorrow's sessions, waitlist spots, and passes running low.</p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on === true}
-          aria-label="WhatsApp reminders"
-          disabled={on === null || busy}
-          onClick={toggle}
-          className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-nh-lime" : "bg-white/15"} disabled:opacity-60`}
-        >
-          <span className={`absolute top-1 size-5 rounded-full transition-all ${on ? "left-6 bg-nh-forest" : "left-1 bg-nh-beige"}`} />
-        </button>
+    <div className="flex items-center justify-between gap-4 border-b border-white/15 py-4">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-[0.04em] text-white">{label}</p>
+        <p className="mt-1 text-xs text-nh-beige/60">{hint}</p>
       </div>
-    </Card>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on === true}
+        aria-label={label}
+        disabled={on === null || busy}
+        onClick={toggle}
+        className={`relative h-7 w-12 shrink-0 border transition disabled:opacity-60 ${on ? "border-nh-lime bg-nh-lime" : "border-white/30 bg-transparent"}`}
+      >
+        <span className={`absolute top-1 size-[18px] transition-all ${on ? "left-[26px] bg-black" : "left-1 bg-nh-beige"}`} />
+      </button>
+    </div>
   );
 }

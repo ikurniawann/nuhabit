@@ -5,7 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Building2, CheckCircle2, Copy, CreditCard, FlaskConical, Loader2, QrCode } from "lucide-react";
 import { useMember } from "../member-app";
 import { memberFetch, rupiah } from "../lib";
-import { Card, CenterSpinner, Notice, PillButton, SectionTitle, Sheet, Tag } from "../ui";
+import { CenterSpinner, Eyebrow, Notice, PillButton, SectionTitle, Sheet, Tag } from "../ui";
 
 interface ShopProduct {
   id: string;
@@ -85,20 +85,24 @@ export function BuyPackages() {
 
   return (
     <section>
-      <SectionTitle>Choose a pass</SectionTitle>
+      <SectionTitle>Pass options</SectionTitle>
+      <p className="-mt-2 mb-4 text-sm text-nh-beige/65">The passes available at this studio are listed below. Choose the one that suits you best.</p>
       <div className="space-y-2">
         {products.map((p) => (
-          <Card key={p.id} onClick={() => setSelected(p)}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold">{p.name}</p>
-                <p className="mt-0.5 text-xs text-nh-beige/60">
-                  {contents(p)} · valid {p.validity_days} days
-                </p>
-              </div>
-              <p className="shrink-0 font-display text-lg font-semibold tabular-nums text-nh-lime">{rupiah(p.price)}</p>
-            </div>
-          </Card>
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setSelected(p)}
+            className="flex w-full items-center justify-between gap-4 border border-white/15 px-5 py-5 text-left transition hover:border-white/45 hover:bg-white/[0.03]"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-bold uppercase leading-snug tracking-[0.03em] text-white">
+                {p.name} | {contents(p)}
+              </span>
+              <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-nh-beige/55">Valid {p.validity_days} days</span>
+            </span>
+            <span className="shrink-0 font-display text-lg font-bold tabular-nums text-nh-lime">{rupiah(p.price)}</span>
+          </button>
         ))}
       </div>
       {payment.methods.length === 0 && <p className="mt-3 text-xs text-nh-beige/50">Online payment is coming soon — you can buy any pass at the front desk.</p>}
@@ -109,7 +113,7 @@ export function BuyPackages() {
 
 function SimulatorNote() {
   return (
-    <p className="flex items-start gap-2 rounded-2xl bg-nh-ochre/15 px-3 py-2 text-xs text-nh-lemon">
+    <p className="flex items-start gap-2 border-l-2 border-nh-ochre bg-nh-ochre/10 px-3 py-2 text-xs text-nh-lemon">
       <FlaskConical className="mt-0.5 size-3.5 shrink-0" /> Development mode — payments are simulated and no money is charged.
     </p>
   );
@@ -203,8 +207,8 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
     <Sheet open onClose={onClose} title={p.name}>
       {!order ? (
         <div className="space-y-4">
-          <div className="rounded-2xl bg-white/5 p-4">
-            <p className="font-display text-3xl font-bold tabular-nums text-nh-lime">{rupiah(p.price)}</p>
+          <div className="border border-white/15 p-4">
+            <p className="font-display text-4xl font-bold tabular-nums text-nh-lime">{rupiah(p.price)}</p>
             <p className="mt-1 text-sm text-nh-beige/80">{contents(p)}</p>
             <p className="text-sm text-nh-beige/60">Valid for {p.validity_days} days from today</p>
           </div>
@@ -215,7 +219,7 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
           ) : (
             <>
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Payment method</p>
+                <Eyebrow className="mb-2">Payment method</Eyebrow>
                 <div className="space-y-2">
                   {payment.methods.map((m) => {
                     const info = METHOD_INFO[m];
@@ -226,14 +230,14 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
                         key={m}
                         type="button"
                         onClick={() => setMethod(m)}
-                        className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${active ? "border-nh-lime bg-nh-lime/10" : "border-white/10 bg-nh-jungle"}`}
+                        className={`flex w-full items-center gap-3 border px-4 py-3.5 text-left transition ${active ? "border-nh-lime bg-nh-lime/10" : "border-white/15 hover:border-white/40"}`}
                       >
                         <Icon className={`size-5 ${active ? "text-nh-lime" : "text-nh-beige/60"}`} />
                         <span className="min-w-0 flex-1">
-                          <span className="block font-semibold">{info.label}</span>
+                          <span className="block text-sm font-bold uppercase tracking-[0.04em] text-white">{info.label}</span>
                           <span className="block text-xs text-nh-beige/55">{info.hint}</span>
                         </span>
-                        <span className={`size-4 rounded-full border-2 ${active ? "border-nh-lime bg-nh-lime" : "border-white/30"}`} />
+                        <span className={`size-4 border-2 ${active ? "border-nh-lime bg-nh-lime" : "border-white/35"}`} />
                       </button>
                     );
                   })}
@@ -241,14 +245,14 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
               </div>
               {method === "va" && (
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-nh-beige/60">Bank</p>
+                  <Eyebrow className="mb-2">Bank</Eyebrow>
                   <div className="grid grid-cols-3 gap-2">
                     {payment.banks.map((b) => (
                       <button
                         key={b}
                         type="button"
                         onClick={() => setBank(b)}
-                        className={`rounded-xl py-2.5 text-sm font-semibold ${b === bank ? "bg-nh-lime text-nh-forest" : "border border-white/10 bg-nh-jungle"}`}
+                        className={`py-3 text-xs font-bold uppercase tracking-[0.08em] ${b === bank ? "bg-nh-lime text-black" : "border border-white/15 text-white hover:border-white/40"}`}
                       >
                         {bankName(b)}
                       </button>
@@ -282,7 +286,7 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
 
           {order.payment_method === "qris" && order.qr_string && (
             <div className="space-y-3 text-center">
-              <div className="mx-auto w-fit rounded-3xl bg-white p-4">
+              <div className="mx-auto w-fit bg-white p-4">
                 <QRCodeSVG value={order.qr_string} size={216} />
               </div>
               <p className="text-sm text-nh-beige/70">Scan this QRIS with your banking or e-wallet app.</p>
@@ -291,11 +295,11 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
 
           {order.payment_method === "va" && order.va_number && (
             <div className="space-y-3">
-              <div className="rounded-2xl bg-white/5 p-4">
+              <div className="border border-white/15 p-4">
                 <p className="text-xs uppercase tracking-wide text-nh-beige/60">{bankName(order.va_bank)} Virtual Account</p>
                 <div className="mt-1 flex items-center justify-between gap-3">
                   <p className="whitespace-nowrap font-display text-xl font-bold tracking-wide tabular-nums">{order.va_number.replace(/(\d{4})(?=\d)/g, "$1 ")}</p>
-                  <button type="button" onClick={copyVa} className="flex shrink-0 items-center gap-1 rounded-full border border-white/15 px-3 py-1 text-xs">
+                  <button type="button" onClick={copyVa} className="flex shrink-0 items-center gap-1 border border-white/25 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em]">
                     <Copy className="size-3.5" /> {copied ? "Copied" : "Copy"}
                   </button>
                 </div>
@@ -311,7 +315,7 @@ function BuySheet({ product: p, payment, onClose }: { product: ShopProduct; paym
 
           {order.payment_method === "card" && (
             <div className="space-y-3">
-              <div className="rounded-2xl bg-gradient-to-br from-nh-everglade to-nh-forest p-4">
+              <div className="border border-white/15 bg-gradient-to-br from-nh-everglade to-black p-4">
                 <p className="text-xs text-nh-beige/60">{order.simulated ? "Test card" : "Card"}</p>
                 <p className="mt-2 font-display text-xl tracking-widest">•••• •••• •••• {order.card_last4}</p>
                 <p className="mt-1 text-xs text-nh-beige/60">Visa · secured payment</p>

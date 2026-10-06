@@ -1,17 +1,41 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
 import { useMember } from "../member-app";
-import { addDaysIso, type ClassSlot, dateLabel, dayShort, friendlyDay, jam, memberFetch, type ScheduleRules, wibToday } from "../lib";
-import { Avatar, CenterSpinner, Empty, Notice, PillButton, Sheet, Tag } from "../ui";
+import { addDaysIso, type ClassSlot, dateLabel, friendlyDay, jam, memberFetch, type ScheduleRules, wibToday } from "../lib";
+import { Avatar, CenterSpinner, Empty, Eyebrow, Notice, PageTitle, PillButton, Sheet, Tag } from "../ui";
 import { cancelNote, hoursUntil } from "./booking-row";
 
+const DAY_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
+
+/** Senin dari minggu tanggal ini. */
+function mondayOf(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  const wd = d.getUTCDay() === 0 ? 7 : d.getUTCDay();
+  return addDaysIso(date, -(wd - 1));
+}
+
+function minutesBetween(a: string, b: string): number {
+  const [ah, am] = a.split(":").map(Number);
+  const [bh, bm] = b.split(":").map(Number);
+  return bh * 60 + bm - (ah * 60 + am);
+}
+
+function durationLabel(m: number): string {
+  if (m === 60) return "1 hour";
+  if (m > 60 && m % 60 === 0) return `${m / 60} hours`;
+  return `${m} mins`;
+}
+
+/** Timetable mingguan — pola referensi: navigasi minggu, strip hari, baris jam + kartu sesi. */
 export function ScheduleTab() {
   const { refresh, passes, go } = useMember();
   const [slots, setSlots] = useState<ClassSlot[] | null>(null);
   const [rules, setRules] = useState<ScheduleRules>({ cancel_window_hours: 12, booking_open_days: 7 });
-  const [day, setDay] = useState(wibToday());
+  const today = wibToday();
+  const [day, setDay] = useState(today);
+  const [week, setWeek] = useState(mondayOf(today));
   const [selected, setSelected] = useState<ClassSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,10 +55,10 @@ export function ScheduleTab() {
     void load();
   }, [load]);
 
-  const days = useMemo(() => {
-    const today = wibToday();
-    return Array.from({ length: rules.booking_open_days + 1 }, (_, i) => addDaysIso(today, i));
-  }, [rules.booking_open_days]);
+  const lastBookable = addDaysIso(today, rules.booking_open_days);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysIso(week, i)), [week]);
+  const canPrev = week > mondayOf(today);
+  const canNext = addDaysIso(week, 7) <= lastBookable;
 
   const countByDay = useMemo(() => {
     const m = new Map<string, number>();
@@ -42,48 +66,85 @@ export function ScheduleTab() {
     return m;
   }, [slots]);
 
-  const list = (slots ?? []).filter((s) => s.session_date === day);
+  // Sesi hari terpilih, dikelompokkan per jam mulai.
+  const rows = useMemo(() => {
+    const byTime = new Map<string, ClassSlot[]>();
+    for (const s of (slots ?? []).filter((x) => x.session_date === day)) byTime.set(s.start_time, [...(byTime.get(s.start_time) ?? []), s]);
+    return [...byTime.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [slots, day]);
+
   const classCredits = (passes ?? []).filter((p) => p.status === "active" || p.status === "scheduled").reduce((s, p) => s + p.class_left, 0);
 
-  return (
-    <div className="space-y-5 pt-2">
-      <div>
-        <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Class schedule</h1>
-        <p className="mt-1 text-sm text-nh-beige/60">
-          {classCredits} {classCredits === 1 ? "class" : "classes"} left · free cancellation up to {rules.cancel_window_hours} hours before.
-        </p>
-      </div>
+  function shiftWeek(delta: number) {
+    const next = addDaysIso(week, delta * 7);
+    setWeek(next);
+    const first = [0, 1, 2, 3, 4, 5, 6].map((i) => addDaysIso(next, i)).find((d) => d >= today && d <= lastBookable);
+    if (first) setDay(first);
+  }
 
-      <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
-        {days.map((d) => {
-          const active = d === day;
-          const n = countByDay.get(d) ?? 0;
-          return (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDay(d)}
-              className={`flex w-14 shrink-0 flex-col items-center rounded-2xl py-2.5 transition ${active ? "bg-nh-lime text-nh-forest" : "bg-nh-jungle text-nh-beige"}`}
-            >
-              <span className={`text-[11px] font-semibold ${active ? "" : "text-nh-beige/60"}`}>{dayShort(d)}</span>
-              <span className="font-display text-lg font-bold">{dateLabel(d).split(" ")[0]}</span>
-              <span className={`mt-0.5 size-1.5 rounded-full ${n > 0 ? (active ? "bg-nh-forest" : "bg-nh-lime") : "bg-transparent"}`} />
-            </button>
-          );
-        })}
-      </div>
+  return (
+    <div className="space-y-8">
+      <PageTitle sub={`${classCredits} ${classCredits === 1 ? "class" : "classes"} left · free cancellation up to ${rules.cancel_window_hours} hours before`}>Timetable</PageTitle>
+
+      <section>
+        <p className="text-center text-sm font-bold uppercase tracking-[0.06em] text-white">NüHabit Hyrox Studio</p>
+        <div className="mt-3 flex items-center justify-center gap-6">
+          <button type="button" onClick={() => shiftWeek(-1)} disabled={!canPrev} aria-label="Previous week" className="p-1 text-white disabled:opacity-25">
+            <ChevronLeft className="size-5" />
+          </button>
+          <p className="min-w-40 text-center text-lg font-semibold text-white">
+            {dateLabel(weekDays[0])} – {dateLabel(weekDays[6])}
+          </p>
+          <button type="button" onClick={() => shiftWeek(1)} disabled={!canNext} aria-label="Next week" className="p-1 text-white disabled:opacity-25">
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-7">
+          {weekDays.map((d) => {
+            const active = d === day;
+            const bookable = d >= today && d <= lastBookable;
+            const n = countByDay.get(d) ?? 0;
+            const dow = new Date(`${d}T00:00:00Z`).getUTCDay();
+            return (
+              <button
+                key={d}
+                type="button"
+                disabled={!bookable}
+                onClick={() => setDay(d)}
+                className={`relative flex flex-col items-center py-2.5 transition disabled:opacity-30 ${active ? "bg-nh-lime text-black" : "text-white hover:bg-white/[0.06]"}`}
+              >
+                <span className="text-[11px] font-semibold">{DAY_LETTER[dow]}</span>
+                <span className="font-display text-xl font-bold leading-tight">{dateLabel(d).split(" ")[0]}</span>
+                <span className={`mt-0.5 h-0.5 w-5 ${active ? "bg-black" : n > 0 && bookable ? "bg-white/50" : "bg-transparent"}`} />
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {error && <Notice tone="error">{error}</Notice>}
       {!slots ? (
         <CenterSpinner />
-      ) : list.length === 0 ? (
+      ) : rows.length === 0 ? (
         <Empty title="No classes on this day." hint="Try another day." />
       ) : (
-        <div className="space-y-2">
-          {list.map((s) => (
-            <SlotRow key={s.id} slot={s} onOpen={() => setSelected(s)} />
+        <section className="space-y-2">
+          <Eyebrow>{friendlyDay(day)}</Eyebrow>
+          {rows.map(([time, list]) => (
+            <div key={time} className="flex gap-3">
+              <div className="flex w-16 shrink-0 gap-2.5 py-1">
+                <span className="w-0.5 bg-white" />
+                <p className="font-display text-xl font-bold leading-none tabular-nums text-white">{jam(time)}</p>
+              </div>
+              <div className="relative grid flex-1 grid-cols-2 gap-1.5">
+                {list.map((s, i) => (
+                  <SessionCard key={s.id} slot={s} onOpen={() => setSelected(s)} joiner={i % 2 === 1} />
+                ))}
+              </div>
+            </div>
           ))}
-        </div>
+        </section>
       )}
 
       {selected && (
@@ -102,39 +163,44 @@ export function ScheduleTab() {
   );
 }
 
-/** "See you tomorrow at 06:30" / "See you Saturday, 4 Oct at 06:30". */
-function seeYou(date: string): string {
-  const d = friendlyDay(date);
-  return d === "Today" ? "later today" : d === "Tomorrow" ? "tomorrow" : d;
-}
-
-function SlotRow({ slot: s, onOpen }: { slot: ClassSlot; onOpen: () => void }) {
+/** Kartu sesi kotak abu-abu; kartu kedua di jam sama diberi penghubung "+" seperti referensi. */
+function SessionCard({ slot: s, onOpen, joiner }: { slot: ClassSlot; onOpen: () => void; joiner: boolean }) {
   const full = s.spots_left <= 0;
+  const mins = minutesBetween(s.start_time, s.end_time);
   return (
-    <button type="button" onClick={onOpen} className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-3.5 text-left transition ${s.my_status ? "border-nh-lime/50 bg-nh-lime/5" : "border-white/10 bg-nh-jungle hover:border-white/20"}`}>
-      <div className="w-14 shrink-0">
-        <p className="font-display text-lg font-semibold tabular-nums">{jam(s.start_time)}</p>
-        <p className="text-[11px] text-nh-beige/50">{jam(s.end_time)}</p>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-semibold">{s.program_name}</p>
-        <p className="truncate text-xs text-nh-beige/60">{s.coach_name ?? "Coach to be announced"}</p>
-      </div>
-      <div className="shrink-0 text-right">
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`relative min-h-[5.5rem] p-2.5 text-left transition ${s.my_status ? "bg-nh-lime/15 outline outline-1 outline-nh-lime" : "bg-white/[0.09] hover:bg-white/[0.15]"}`}
+    >
+      {joiner && (
+        <span className="absolute -left-[13px] top-1/2 z-10 flex size-5 -translate-y-1/2 items-center justify-center rounded-full bg-black text-white">
+          <Plus className="size-3" strokeWidth={3} />
+        </span>
+      )}
+      <p className="line-clamp-2 text-xs font-bold uppercase leading-tight tracking-[0.02em] text-white">{s.program_name}</p>
+      {s.level_label && <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-nh-beige/60">{s.level_label}</p>}
+      <p className="mt-0.5 text-[9px] uppercase tracking-[0.08em] text-nh-beige/60">{durationLabel(mins)}</p>
+      <div className="mt-2 flex items-center justify-between gap-1">
+        <span className="truncate text-[9px] uppercase tracking-[0.06em] text-nh-beige/50">{s.coach_name ?? "Coach TBA"}</span>
         {s.my_status === "booked" ? (
-          <Tag tone="lime">Locked in</Tag>
+          <span className="shrink-0 text-[9px] font-bold uppercase text-nh-lime">Booked</span>
         ) : s.my_status === "waitlisted" ? (
-          <Tag tone="warn">Waitlist</Tag>
+          <span className="shrink-0 text-[9px] font-bold uppercase text-nh-lemon">Waitlist</span>
         ) : full ? (
-          <Tag tone="danger">Full</Tag>
+          <span className="shrink-0 text-[9px] font-bold uppercase text-red-200">Full</span>
         ) : (
-          <span className={`flex items-center gap-1 text-xs ${s.spots_left <= 2 ? "text-nh-lime" : "text-nh-beige/60"}`}>
-            <Users className="size-3.5" /> {s.spots_left} {s.spots_left === 1 ? "spot" : "spots"}
-          </span>
+          <span className={`shrink-0 text-[9px] font-bold uppercase ${s.spots_left <= 2 ? "text-nh-lime" : "text-nh-beige/60"}`}>{s.spots_left} left</span>
         )}
       </div>
     </button>
   );
+}
+
+/** "See you tomorrow at 06:30" / "See you Saturday, 4 Oct at 06:30". */
+function seeYou(date: string): string {
+  const d = friendlyDay(date);
+  return d === "Today" ? "later today" : d === "Tomorrow" ? "tomorrow" : d;
 }
 
 function SlotSheet({
@@ -177,53 +243,66 @@ function SlotSheet({
 
   return (
     <Sheet open onClose={onClose} title={s.program_name}>
-      <p className="text-sm text-nh-beige/70">
-        {friendlyDay(s.session_date)} · {jam(s.start_time)}–{jam(s.end_time)}
-        {s.level_label ? ` · ${s.level_label}` : ""}
-      </p>
-      {s.program_description && <p className="mt-3 text-sm leading-relaxed text-nh-beige/80">{s.program_description}</p>}
-      {s.coach_name && (
-        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/5 p-3">
-          <Avatar name={s.coach_name} photo={s.coach_photo} size={44} />
-          <div>
-            <p className="text-xs text-nh-beige/60">Coach</p>
-            <p className="font-semibold">{s.coach_name}</p>
-          </div>
+      <div className="space-y-6">
+        <div className="grid grid-cols-3 border border-white/15">
+          <Fact label="Day" value={friendlyDay(s.session_date)} />
+          <Fact label="Time" value={`${jam(s.start_time)}–${jam(s.end_time)}`} border />
+          <Fact label="Spots" value={full ? "Full" : `${s.spots_left}/${s.capacity}`} border />
         </div>
-      )}
-      <p className="mt-4 text-sm text-nh-beige/70">
-        {full ? `Class full · ${s.waitlist_count} on the waitlist` : s.spots_left === 1 ? "There's room for one more." : `${s.spots_left} of ${s.capacity} spots left`}
-      </p>
-
-      <div className="mt-5 space-y-3">
-        {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
-        {msg?.tone === "ok" ? (
-          <PillButton variant="ghost" className="w-full" onClick={onClose}>Close</PillButton>
-        ) : s.my_status ? (
-          <>
-            <div className={`rounded-2xl px-4 py-3 text-sm ${late && s.my_status === "booked" ? "bg-nh-ochre/20 text-nh-lemon" : "bg-white/5 text-nh-beige/80"}`}>
-              {cancelNote(s.my_status, s.session_date, s.start_time, rules.cancel_window_hours)}
+        {s.level_label && <Tag>{s.level_label}</Tag>}
+        {s.program_description && <p className="text-sm leading-relaxed text-nh-beige/85">{s.program_description}</p>}
+        {s.coach_name && (
+          <div className="flex items-center gap-4 border-y border-white/15 py-4">
+            <Avatar name={s.coach_name} photo={s.coach_photo} size={56} />
+            <div>
+              <Eyebrow>Coach</Eyebrow>
+              <p className="mt-1 font-display text-xl font-bold uppercase leading-none text-white">{s.coach_name}</p>
             </div>
-            <PillButton variant="danger" className="w-full" disabled={busy} onClick={() => act("cancel")}>
-              {busy && <Loader2 className="size-4 animate-spin" />}
-              {s.my_status === "waitlisted" ? "Leave waitlist" : "Cancel booking"}
-            </PillButton>
-          </>
-        ) : !hasCredit ? (
-          <>
-            <div className="rounded-2xl bg-white/5 px-4 py-3 text-sm text-nh-beige/80">You're out of class credits. Choose a pass to keep training.</div>
-            <PillButton className="w-full" onClick={onBuy}>See passes</PillButton>
-          </>
-        ) : (
-          <>
-            <p className="text-xs text-nh-beige/50">Booking locks in 1 class credit. Cancel at least {rules.cancel_window_hours} hours before and it's returned.</p>
-            <PillButton className="w-full" disabled={busy} onClick={() => act("book")}>
-              {busy && <Loader2 className="size-4 animate-spin" />}
-              {full ? "Join waitlist" : "Book this session"}
-            </PillButton>
-          </>
+          </div>
         )}
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-nh-beige/70">
+          {full ? `Class full · ${s.waitlist_count} on the waitlist` : s.spots_left === 1 ? "There's room for one more." : `${s.spots_left} of ${s.capacity} spots left`}
+        </p>
+
+        <div className="space-y-3">
+          {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+          {msg?.tone === "ok" ? (
+            <PillButton variant="ghost" className="w-full" onClick={onClose}>Close</PillButton>
+          ) : s.my_status ? (
+            <>
+              <div className={`border-l-2 px-4 py-3 text-sm ${late && s.my_status === "booked" ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
+                {cancelNote(s.my_status, s.session_date, s.start_time, rules.cancel_window_hours)}
+              </div>
+              <PillButton variant="danger" className="w-full" disabled={busy} onClick={() => act("cancel")}>
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                {s.my_status === "waitlisted" ? "Leave waitlist" : "Cancel booking"}
+              </PillButton>
+            </>
+          ) : !hasCredit ? (
+            <>
+              <div className="border-l-2 border-white/30 bg-white/[0.04] px-4 py-3 text-sm text-nh-beige/80">You&apos;re out of class credits. Choose a pass to keep training.</div>
+              <PillButton className="w-full" onClick={onBuy}>See passes</PillButton>
+            </>
+          ) : (
+            <>
+              <p className="text-xs text-nh-beige/55">Booking locks in 1 class credit. Cancel at least {rules.cancel_window_hours} hours before and it&apos;s returned.</p>
+              <PillButton className="w-full" disabled={busy} onClick={() => act("book")}>
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                {full ? "Join waitlist" : "Book this session"}
+              </PillButton>
+            </>
+          )}
+        </div>
       </div>
     </Sheet>
+  );
+}
+
+function Fact({ label, value, border }: { label: string; value: string; border?: boolean }) {
+  return (
+    <div className={`px-3 py-3 ${border ? "border-l border-white/15" : ""}`}>
+      <Eyebrow className="text-[9px]">{label}</Eyebrow>
+      <p className="mt-1 text-sm font-bold uppercase leading-tight text-white">{value}</p>
+    </div>
   );
 }

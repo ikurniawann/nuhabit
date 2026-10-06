@@ -2906,3 +2906,43 @@ hr {
   color-scheme: dark;
 }
 .arkiv-drive-filter input[type="date"].arkiv-drive-date::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.8; }
+
+/* ── Member App NüHabit — gaya editorial (referensi The Yard Gym, 2026-10-06) ──
+   Panel geser dari kanan + marquee wordmark footer. Hormati prefers-reduced-motion. */
+@keyframes nh-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes nh-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes nh-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.nh-slide-in { animation: nh-slide-in 0.24s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.nh-fade-in { animation: nh-fade-in 0.2s ease-out; }
+.nh-marquee { animation: nh-marquee 28s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .nh-slide-in, .nh-fade-in, .nh-marquee { animation: none; }
+}
+/* Input garis bawah (form login Member App) — mengalahkan gaya input global. */
+input.nh-line-input.nh-line-input,
+input.nh-line-input.nh-line-input:hover,
+input.nh-line-input.nh-line-input:focus {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(243, 236, 226, 0.35) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #f3ece2 !important;
+  -webkit-text-fill-color: #f3ece2 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+input.nh-line-input.nh-line-input:focus { border-bottom-color: #daff59 !important; outline: none !important; }
+input.nh-line-input.nh-line-input::placeholder {
+  color: rgba(243, 236, 226, 0.3) !important;
+  -webkit-text-fill-color: rgba(243, 236, 226, 0.3) !important;
+}
