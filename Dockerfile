@@ -29,8 +29,10 @@ ENV NODE_ENV=production
 # NEXT_PUBLIC_* are read from the .env the CI build job renders out of
 # RUNTIME_CONFIG_CONTENT and inlined into the client bundle right here — see
 # the note in .dockerignore about why .env must NOT be excluded.
-RUN --mount=type=cache,target=/app/.next/cache \
-    pnpm build
+# Tanpa cache mount .next/cache: cache Turbopack di BuildKit sempat menyajikan
+# CSS basi (globals.css versi BCD) walau sumber berubah — hasil build harus
+# selalu sesuai kode (NüHabit 2026-10-06).
+RUN pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app

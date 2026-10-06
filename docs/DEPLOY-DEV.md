@@ -33,6 +33,12 @@ docker run -d --name nuhabitdev-app --restart unless-stopped --network host \
   nuhabitdev:local
 ```
 
+**Catatan build (2026-10-06):** Dockerfile tidak lagi memakai cache mount `.next/cache`. Cache Turbopack di
+BuildKit sempat menyajikan CSS basi (`globals.css` versi BCD, `pink-700 = #e3066f`), sehingga kelas warna NüHabit
+(`nh-*`) hilang di DEV. Cek cepat setelah build:
+`docker run --rm --entrypoint sh nuhabitdev:local -c 'grep -ho "color-pink-700:[^;]*" .next/static/chunks/*.css'`
+→ harus `#00281a`.
+
 `MEMBER_PREVIEW_ENABLED=1` (khusus DEV) menyalakan tombol **Buka Member App** di backoffice — staf membuka Member App
 atas nama member tanpa OTP (sesi 4 jam, tercatat di `studio.member_preview_log`). **Jangan** disetel di produksi.
 
