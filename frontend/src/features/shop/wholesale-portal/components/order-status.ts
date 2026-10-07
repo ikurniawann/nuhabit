@@ -1,4 +1,4 @@
-export const WHOLESALE_STATUS: Record<string, { label: string; tone: string }> = {
+const WHOLESALE_STATUS: Record<string, { label: string; tone: string }> = {
   pending: { label: "Menunggu Pembayaran", tone: "bg-warning-soft text-warning" },
   paid: { label: "Dibayar", tone: "bg-success-soft text-success" },
   packing: { label: "Dikemas", tone: "bg-info-soft text-info" },

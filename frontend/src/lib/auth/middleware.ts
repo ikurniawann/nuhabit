@@ -63,6 +63,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/public/booking",
   "/pass",
   "/shop",
+  "/apparel",
   "/api/public/shop",
   // Portal mitra wholesale (B2B): sesi sendiri lewat cookie nh_wholesale.
   "/wholesale",

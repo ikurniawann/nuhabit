@@ -123,11 +123,16 @@ export const useWholesaleOrder = (id: string, enabled: boolean) =>
     refetchInterval: (query) => (query.state.data?.status === "pending" ? 10_000 : false),
   });
 
+/**
+ * Masuk. Tanpa retry: percobaan gagal tidak boleh dikirim ulang (setiap
+ * kiriman dihitung oleh pembatas percobaan di server).
+ */
 export function useWholesaleLogin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { email: string; password: string }) =>
       apiPost<{ data: WholesaleAccount }>("/api/wholesale/login", input).then((res) => res.data),
+    retry: false,
     onSuccess: (account) => queryClient.setQueryData(wholesaleKeys.me, account),
   });
 }
@@ -136,6 +141,7 @@ export function useWholesaleLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => apiPost("/api/wholesale/logout", {}),
+    retry: false,
     onSuccess: () => {
       queryClient.setQueryData(wholesaleKeys.me, null);
       queryClient.removeQueries({ queryKey: wholesaleKeys.catalog });
@@ -158,11 +164,13 @@ export type WholesaleOrderResult = {
   status_url: string;
 };
 
+/** Buat pesanan. Tanpa retry supaya satu klik tidak pernah jadi dua pesanan. */
 export function usePlaceWholesaleOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: WholesaleOrderPayload) =>
       apiPost<{ data: WholesaleOrderResult }>("/api/wholesale/orders", payload).then((res) => res.data),
+    retry: false,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: wholesaleKeys.orders }),
   });
 }

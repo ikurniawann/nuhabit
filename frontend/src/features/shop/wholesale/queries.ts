@@ -69,6 +69,8 @@ export function useSaveWholesaleAccount() {
           })
         : apiPost<{ data: WholesaleAccountResult }>("/api/shop/wholesale/accounts", toBody(form))
       ).then((res) => res.data),
+    // Tanpa retry: akun yang sudah dibuat akan ditolak 409 saat dikirim ulang.
+    retry: false,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: keys.accounts });
     },

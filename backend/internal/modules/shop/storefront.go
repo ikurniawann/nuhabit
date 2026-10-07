@@ -167,10 +167,18 @@ func skuPrice(product float64, override *string) float64 {
 
 // BuildCatalog is buildShopCatalog, plus collections and pre-order flags.
 func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
+	catalog, _, err := s.buildCatalog(ctx)
+	return catalog, err
+}
+
+// buildCatalog also hands back the product settings it read, for the
+// wholesale views that price the same products.
+func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]ProductSettings, error) {
 	catalog := CatalogView{Collections: []CatalogCollection{}, Products: []CatalogProductView{}}
+	settings := map[string]ProductSettings{}
 	products, err := s.ports.Catalog.WebProducts(ctx, s.db)
 	if err != nil || len(products) == 0 {
-		return catalog, err
+		return catalog, settings, err
 	}
 	ids := make([]string, len(products))
 	for i, p := range products {
@@ -178,15 +186,15 @@ func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
 	}
 	skus, err := s.ports.Catalog.ActiveSKUs(ctx, s.db, ids)
 	if err != nil {
-		return catalog, err
+		return catalog, settings, err
 	}
 	images, err := s.ports.Catalog.Images(ctx, s.db, ids)
 	if err != nil {
-		return catalog, err
+		return catalog, settings, err
 	}
-	settings, err := s.productSettings(ctx, ids)
+	settings, err = s.productSettings(ctx, ids)
 	if err != nil {
-		return catalog, err
+		return catalog, settings, err
 	}
 	skusByProduct := map[string][]CatalogSKU{}
 	for _, sku := range skus {
@@ -250,7 +258,7 @@ func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
 		}
 		return a.Name < b.Name
 	})
-	return catalog, nil
+	return catalog, settings, nil
 }
 
 // unitWeight is the product weight, 1000 g when unset or zero.

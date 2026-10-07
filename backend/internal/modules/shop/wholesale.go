@@ -307,15 +307,7 @@ type WholesaleProductView struct {
 
 // WholesaleCatalog is the web catalog priced for the account.
 func (s *Service) WholesaleCatalog(ctx context.Context, acct WholesaleAccount) ([]WholesaleProductView, error) {
-	catalog, err := s.BuildCatalog(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, len(catalog.Products))
-	for i, p := range catalog.Products {
-		ids[i] = p.ID
-	}
-	settings, err := s.productSettings(ctx, ids)
+	catalog, settings, err := s.buildCatalog(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -498,15 +490,7 @@ type WholesaleProductRow struct {
 
 // ListWholesaleProducts lists the web products with their settings.
 func (s *Service) ListWholesaleProducts(ctx context.Context) ([]WholesaleProductRow, error) {
-	catalog, err := s.BuildCatalog(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, len(catalog.Products))
-	for i, p := range catalog.Products {
-		ids[i] = p.ID
-	}
-	settings, err := s.productSettings(ctx, ids)
+	catalog, settings, err := s.buildCatalog(ctx)
 	if err != nil {
 		return nil, err
 	}
