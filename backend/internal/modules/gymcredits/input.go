@@ -511,6 +511,9 @@ type memberPurchaseBody struct {
 	PackageID string
 	Method    string
 	BranchID  *string
+	// FromSite marks the public /join checkout, whose invoice returns to
+	// /join/status instead of the member wallet.
+	FromSite bool
 }
 
 func parseMemberPurchase(body any) (memberPurchaseBody, error) {
@@ -519,5 +522,6 @@ func parseMemberPurchase(body any) (memberPurchaseBody, error) {
 	b.PackageID, _ = f.str("package_id", strRule{uuid: true, uuidMsg: "Pilih paket"})
 	b.Method = f.enum("method", []string{"qris", "ark_coin", "invoice"})
 	b.BranchID = optString(f.str("branch_id", strRule{uuid: true, uuidMsg: "Cabang tidak valid", optional: true, nullable: true}))
+	b.FromSite = f.get("source") == "site"
 	return b, f.memberErr()
 }

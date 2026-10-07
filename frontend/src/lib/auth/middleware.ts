@@ -78,6 +78,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/locations",
   "/news",
   "/events",
+  "/join",
   "/privacy",
   "/terms",
   "/franchise",

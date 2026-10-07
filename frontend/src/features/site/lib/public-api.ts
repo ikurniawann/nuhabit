@@ -2,7 +2,7 @@ import "server-only";
 import { appOrigin } from "@/lib/app-origin";
 import { backendUrl } from "@/lib/env";
 import { withDefaults } from "../content-defaults";
-import type { Article, BranchProfile, BranchSummary, ContentByKey, ContentKey, SiteEvent } from "../types";
+import type { Article, BranchProfile, BranchSummary, ContentByKey, ContentKey, PublicPlansView, SiteEvent } from "../types";
 
 /**
  * Server-side reads of the public site API. Pages render from these; a
@@ -53,4 +53,15 @@ export async function fetchEvents(): Promise<SiteEvent[]> {
 
 export function fetchEvent(slug: string): Promise<SiteEvent | null> {
   return read<SiteEvent>(`/events/${encodeURIComponent(slug)}`);
+}
+
+const NO_PLANS: PublicPlansView = { branch: null, plans: [] };
+
+/** The price list of a branch; an unknown slug falls back to the base prices. */
+export async function fetchPlans(branchSlug?: string): Promise<PublicPlansView> {
+  if (branchSlug) {
+    const priced = await read<PublicPlansView>(`/plans?branch=${encodeURIComponent(branchSlug)}`);
+    if (priced) return priced;
+  }
+  return (await read<PublicPlansView>("/plans")) ?? NO_PLANS;
 }

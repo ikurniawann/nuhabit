@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Camera, Mail, MessageCircle, Music2, Play } from "lucide-react";
 import type { BranchSummary, SocialContent } from "../types";
-import { BRANCH_COOKIE, readBranchCookie, writeBranchCookie } from "./panels";
+import { BRANCH_COOKIE, readBranchCookie, useSitePanels, writeBranchCookie } from "./panels";
 import { BRAND_NAV, BUSINESS_NAV } from "./site-header";
 
 const listeners = new Set<() => void>();
@@ -78,6 +78,7 @@ function SocialLinks({ social }: { social: SocialContent }) {
 
 export function SiteFooter({ branches, social }: { branches: BranchSummary[]; social: SocialContent }) {
   const year = new Date().getFullYear();
+  const panels = useSitePanels();
   return (
     <footer className="mt-16 bg-surface">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-12 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] lg:px-6">
@@ -102,6 +103,11 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
                 </Link>
               </li>
             ))}
+            <li>
+              <button type="button" onClick={() => panels.open("membership")} className="text-body hover:text-foreground">
+                Membership
+              </button>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Bisnis" className="text-sm">

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { BRANCH_COOKIE } from "../lib/branch-cookie";
 import CartPanel from "../panels/cart-panel";
 import MembershipPanel from "../panels/membership-panel";
 import TimetablePanel from "../panels/timetable-panel";
@@ -28,7 +29,7 @@ export const PANELS: Record<PanelKind, PanelEntry> = {
   cart: { title: "Keranjang", Component: CartPanel },
 };
 
-export const BRANCH_COOKIE = "nh_branch";
+export { BRANCH_COOKIE };
 
 /** The branch slug the visitor picked in the footer, from document.cookie. */
 export function readBranchCookie(cookie: string): string | undefined {
