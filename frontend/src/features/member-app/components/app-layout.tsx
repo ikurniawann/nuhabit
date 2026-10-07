@@ -39,7 +39,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (error && !unauthenticated) {
     return (
       <div className="flex min-h-dvh items-center justify-center px-8 text-center text-sm text-nh-muted">
-        NüHabit belum bisa dimuat. Periksa koneksi lalu muat ulang.
+        NüHabit could not load. Check your connection and reload the page.
       </div>
     );
   }

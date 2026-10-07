@@ -12,21 +12,21 @@ import (
 
 // OrderShippedMessage is the waybill message (sendShopOrderShippedWa).
 func OrderShippedMessage(origin, orderNumber, accessToken, waybill, courierLabel string) string {
-	msg := "*Pesanan dikirim* 📦\n\n" + "Order: *" + orderNumber + "*\n"
+	msg := "*Order shipped* 📦\n\n" + "Order: *" + orderNumber + "*\n"
 	if courierLabel != "" {
-		msg += "Kurir: " + courierLabel + "\n"
+		msg += "Courier: " + courierLabel + "\n"
 	}
-	return msg + "Resi: *" + waybill + "*\n\n" +
-		"Lacak status pengiriman di:\n" + origin + "/shop/order/" + accessToken
+	return msg + "Tracking number: *" + waybill + "*\n\n" +
+		"Track your order here:\n" + origin + "/shop/order/" + accessToken
 }
 
 // OrderPaidMessage is the payment confirmation (sendShopOrderPaidWa).
 func OrderPaidMessage(origin, orderNumber, customerName, accessToken string, total float64) string {
-	return "*Pembayaran diterima* ✅\n\n" +
+	return "*Payment received* ✅\n\n" +
 		"Order: *" + orderNumber + "*\n" +
-		"Atas nama: " + customerName + "\n" +
+		"Name: " + customerName + "\n" +
 		"Total: " + FormatRupiah(total) + "\n\n" +
-		"Pesananmu sedang disiapkan. Pantau status & resi di:\n" + origin + "/shop/order/" + accessToken
+		"Your order is being prepared. Check its status and tracking number here:\n" + origin + "/shop/order/" + accessToken
 }
 
 // FormatRupiah is formatRupiah: "Rp1.250.000", rounded to the rupiah.

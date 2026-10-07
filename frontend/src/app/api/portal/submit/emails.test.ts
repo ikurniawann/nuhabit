@@ -25,6 +25,7 @@ describe("portal application emails", () => {
     expect(html).not.toContain('<a href="https://evil.example">');
     expect(html).toContain("&lt;a href=&quot;https://evil.example&quot;&gt;Klik&lt;/a&gt;");
     expect(html).toContain("Kopi &amp; Co");
+    expect(html).toContain("We have received your application");
   });
 
   it("escapes applicant values in the HRD email and links to the candidate page", () => {

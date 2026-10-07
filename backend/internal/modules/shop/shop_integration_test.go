@@ -379,7 +379,7 @@ func TestBiteshipWebhookShipsAndCompletes(t *testing.T) {
 	if got := f.scalar(`SELECT status || '|' || jsonb_array_length(tracking_history) FROM shop.shipments WHERE order_id = $1`, id); got != "in_transit|1" {
 		t.Errorf("shipment = %s", got)
 	}
-	if len(f.wa.sent) != 1 || !strings.Contains(f.wa.sent[0], "Resi: *WB123456*") || !strings.Contains(f.wa.sent[0], "Kurir: jne reg") {
+	if len(f.wa.sent) != 1 || !strings.Contains(f.wa.sent[0], "Tracking number: *WB123456*") || !strings.Contains(f.wa.sent[0], "Courier: jne reg") {
 		t.Errorf("wa = %v", f.wa.sent)
 	}
 

@@ -18,7 +18,7 @@ export const GET = apiHandler(
     const order = z.string().uuid().safeParse(token).success
       ? await loadPublicOrderStatus(token)
       : null;
-    if (!order) throw ApiError.notFound('Order tidak ditemukan');
+    if (!order) throw ApiError.notFound('Order not found');
     return NextResponse.json({ success: true, data: order });
   },
   'shop.public.order-status.GET'

@@ -31,11 +31,11 @@ export async function sendShopOrderShippedWa(
   const baseUrl = appOrigin();
   const statusUrl = `${baseUrl}/shop/order/${order.accessToken}`;
   const message =
-    `*Pesanan dikirim* 📦\n\n` +
+    `*Order shipped* 📦\n\n` +
     `Order: *${order.orderNumber}*\n` +
-    (order.courierLabel ? `Kurir: ${order.courierLabel}\n` : "") +
-    `Resi: *${order.waybill}*\n\n` +
-    `Lacak status pengiriman di:\n${statusUrl}`;
+    (order.courierLabel ? `Courier: ${order.courierLabel}\n` : "") +
+    `Tracking number: *${order.waybill}*\n\n` +
+    `Track your order here:\n${statusUrl}`;
 
   const result = await sendGatewayText(config, {
     target: order.customerPhone,
@@ -59,11 +59,11 @@ export async function sendShopOrderPaidWa(
   const baseUrl = appOrigin();
   const statusUrl = `${baseUrl}/shop/order/${order.accessToken}`;
   const message =
-    `*Pembayaran diterima* ✅\n\n` +
+    `*Payment received* ✅\n\n` +
     `Order: *${order.orderNumber}*\n` +
-    `Atas nama: ${order.customerName}\n` +
+    `Name: ${order.customerName}\n` +
     `Total: ${formatRupiah(order.total)}\n\n` +
-    `Pesananmu sedang disiapkan. Pantau status & resi di:\n${statusUrl}`;
+    `Your order is being prepared. Check its status and tracking number here:\n${statusUrl}`;
 
   const result = await sendGatewayText(config, {
     target: order.customerPhone,

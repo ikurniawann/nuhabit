@@ -15,7 +15,7 @@ export const GET = apiHandler(
     }
 
     const { slug } = await params;
-    if (!(await resolveStorefront(slug))) throw ApiError.notFound('Toko tidak ditemukan');
+    if (!(await resolveStorefront(slug))) throw ApiError.notFound('Store not found');
 
     const query = String(request.nextUrl.searchParams.get('q') || '').trim();
     if (query.length < 3) {

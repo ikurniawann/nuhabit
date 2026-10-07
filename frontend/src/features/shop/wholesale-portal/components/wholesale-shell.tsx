@@ -25,7 +25,7 @@ export function WholesaleShell({ children }: { children: React.ReactNode }) {
     });
 
   return (
-    <div className="min-h-screen bg-surface text-foreground">
+    <div lang="en" className="min-h-screen bg-surface text-foreground">
       <header className="bg-card shadow-card">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Link href={account ? "/wholesale/catalog" : "/wholesale"} className="flex items-center gap-3">

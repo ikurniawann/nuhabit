@@ -17,7 +17,7 @@ const SUBMIT_LIMIT = { limit: 5, windowMs: 10 * 60_000 };
 /** POST /api/portal/submit: lamaran publik (multipart) → kandidat baru + email. */
 export const POST = apiHandler(async (request: NextRequest) => {
   if (!checkRateLimit(`portal-submit:${clientIp(request)}`, SUBMIT_LIMIT)) {
-    throw ApiError.tooManyRequests("Terlalu banyak lamaran dari jaringan ini. Coba lagi beberapa menit lagi.");
+    throw ApiError.tooManyRequests("Too many applications from this network. Try again in a few minutes.");
   }
   const form = await request.formData();
   const input = parseApplicationFields(form);
@@ -39,7 +39,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
 
   return NextResponse.json({
     success: true,
-    message: "Lamaran berhasil dikirim",
+    message: "Application submitted",
     candidate_id: saved.candidateId,
   });
 }, "portal-submit");

@@ -27,11 +27,11 @@ const messageOf = (fields: Record<string, string>) => {
 
 describe("parseApplicationFields", () => {
   it("field wajib kosong didahulukan dari galat format email", () => {
-    expect(messageOf({ ...complete, email: "bukan-email", phone: "" })).toBe("Field wajib belum lengkap");
+    expect(messageOf({ ...complete, email: "bukan-email", phone: "" })).toBe("Required fields are missing");
   });
 
   it("email tidak valid", () => {
-    expect(messageOf({ ...complete, email: 'x"@evil' })).toBe("Format email tidak valid");
+    expect(messageOf({ ...complete, email: 'x"@evil' })).toBe("Invalid email format");
   });
 
   it("opsional kosong jadi null, gaji jadi angka", () => {

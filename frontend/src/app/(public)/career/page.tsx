@@ -62,7 +62,7 @@ export default function CareerPage() {
   }, [jobs]);
 
   return (
-    <div id="top" className="min-h-screen bg-[#f8f4ee] text-[#131a1c] career-roundo">
+    <div id="top" lang="en" className="min-h-screen bg-[#f8f4ee] text-[#131a1c] career-roundo">
       <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-[#f8f4ee]/95 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/career" className="flex h-full items-center" aria-label="NüHabit careers">

@@ -231,14 +231,14 @@ async function resolveLines(items: CheckoutItemInput[]): Promise<
   | { ok: true; lines: ResolvedLine[] }
   | { ok: false; reason: string }
 > {
-  if (items.length === 0) return { ok: false, reason: "Keranjang kosong" };
-  if (items.length > 50) return { ok: false, reason: "Terlalu banyak baris keranjang" };
+  if (items.length === 0) return { ok: false, reason: "Your cart is empty" };
+  if (items.length > 50) return { ok: false, reason: "Too many items in the cart" };
 
   const lines: ResolvedLine[] = [];
   for (const item of items) {
     const qty = Math.floor(Number(item.quantity));
     if (!Number.isFinite(qty) || qty <= 0 || qty > 999) {
-      return { ok: false, reason: "Jumlah item tidak valid" };
+      return { ok: false, reason: "Invalid item quantity" };
     }
 
     const product = await queryOne<{
@@ -263,7 +263,7 @@ async function resolveLines(items: CheckoutItemInput[]): Promise<
       [item.product_id]
     );
     if (!product) {
-      return { ok: false, reason: "Ada produk yang sudah tidak tersedia — muat ulang katalog" };
+      return { ok: false, reason: "A product is no longer available. Reload the catalog." };
     }
 
     const basePrice = Number(product.channel_price ?? product.base_price) || 0;
@@ -284,7 +284,7 @@ async function resolveLines(items: CheckoutItemInput[]): Promise<
         [item.sku_id, item.product_id]
       );
       if (!sku) {
-        return { ok: false, reason: "Ada varian yang sudah tidak tersedia — muat ulang katalog" };
+        return { ok: false, reason: "A variant is no longer available. Reload the catalog." };
       }
       lines.push({
         productId: product.id,
@@ -298,7 +298,7 @@ async function resolveLines(items: CheckoutItemInput[]): Promise<
       });
     } else {
       if (product.has_active_sku) {
-        return { ok: false, reason: `${product.name} punya varian — pilih varian dulu` };
+        return { ok: false, reason: `Choose a variant for ${product.name}` };
       }
       lines.push({
         productId: product.id,
@@ -344,7 +344,7 @@ export async function computeCartWeightAndValue(
 
 export async function processShopCheckout(input: CheckoutInput): Promise<CheckoutResult> {
   if (!isXenditConfigured()) {
-    return { ok: false, status: 503, reason: "Pembayaran online belum dikonfigurasi" };
+    return { ok: false, status: 503, reason: "Online payment is not available yet" };
   }
 
   const resolved = await resolveLines(input.items);
@@ -354,7 +354,7 @@ export async function processShopCheckout(input: CheckoutInput): Promise<Checkou
   const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
   const shippingCost = Math.max(0, Math.round(Number(input.courier.cost) || 0));
   const total = subtotal + shippingCost;
-  if (total <= 0) return { ok: false, status: 400, reason: "Total order tidak valid" };
+  if (total <= 0) return { ok: false, status: 400, reason: "Invalid order total" };
 
   // Klaim stok SEBELUM order dibuat (pola kasir Fase A). Gagal di tengah →
   // klaim yang sudah jadi dikembalikan.
@@ -370,8 +370,8 @@ export async function processShopCheckout(input: CheckoutInput): Promise<Checkou
         status: 400,
         reason:
           result.reason === "variant_required"
-            ? `${line.productName} punya varian — pilih varian dulu`
-            : `Stok ${label} tidak cukup`,
+            ? `Choose a variant for ${line.productName}`
+            : `Not enough stock for ${label}`,
       };
     }
     claims.push(claim);
@@ -453,7 +453,7 @@ export async function processShopCheckout(input: CheckoutInput): Promise<Checkou
   } catch (error) {
     console.error("[shop] checkout order insert failed:", error);
     await restoreClaims(claims);
-    return { ok: false, status: 500, reason: "Gagal membuat order — coba lagi" };
+    return { ok: false, status: 500, reason: "Could not place the order. Try again." };
   }
 
   try {
@@ -486,7 +486,7 @@ export async function processShopCheckout(input: CheckoutInput): Promise<Checkou
       `UPDATE shop.orders SET status='cancelled', updated_at=now() WHERE id = $1::uuid`,
       [orderId]
     ).catch(() => {});
-    return { ok: false, status: 502, reason: "Gagal membuat invoice pembayaran — coba lagi" };
+    return { ok: false, status: 502, reason: "Could not create the payment invoice. Try again." };
   }
 }
 

@@ -10,7 +10,7 @@ import { isUuid } from "./candidate-query";
  * tipe & ukuran sebelum diunggah.
  */
 
-const REQUIRED = "Field wajib belum lengkap";
+const REQUIRED = "Required fields are missing";
 const EMAIL_RE = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const CV_MIME_TYPES = [
@@ -28,7 +28,7 @@ const optionalText = z
 
 const applicationSchema = z.object({
   full_name: requiredText,
-  email: requiredText.pipe(z.string().max(255, "Format email tidak valid").regex(EMAIL_RE, "Format email tidak valid")),
+  email: requiredText.pipe(z.string().max(255, "Invalid email format").regex(EMAIL_RE, "Invalid email format")),
   phone: requiredText,
   domicile: requiredText,
   source: requiredText,
@@ -80,23 +80,23 @@ async function uploadChecked(
 /** Pas foto wajib, CV opsional (PDF/DOC); keduanya maks 2MB. */
 export async function uploadApplicationFiles(form: FormData) {
   const photo = fileField(form, "photo");
-  if (!photo) throw ApiError.badRequest("Pas foto wajib diupload");
+  if (!photo) throw ApiError.badRequest("A photo is required");
   const cv = fileField(form, "cv");
   const cvUrl = cv
     ? await uploadChecked(cv, {
         types: CV_MIME_TYPES,
-        typeError: "CV harus format PDF atau DOC",
-        sizeError: "CV maksimal 2MB",
+        typeError: "CV must be a PDF or DOC file",
+        sizeError: "CV must be 2MB or smaller",
         bucket: "cv",
-        uploadError: "Gagal upload CV",
+        uploadError: "CV upload failed",
       })
     : null;
   const photoUrl = await uploadChecked(photo, {
     types: PHOTO_MIME_TYPES,
-    typeError: "Foto harus format JPG/PNG",
-    sizeError: "Foto maksimal 2MB",
+    typeError: "Photo must be a JPG or PNG file",
+    sizeError: "Photo must be 2MB or smaller",
     bucket: "photos",
-    uploadError: "Gagal upload foto",
+    uploadError: "Photo upload failed",
   });
   return { cvUrl, photoUrl };
 }
@@ -139,11 +139,11 @@ export async function createPortalApplication(
       input.expected_salary,
     ]
   );
-  if (!candidate) throw new ApiError(500, "Gagal simpan lamaran");
+  if (!candidate) throw new ApiError(500, "Could not save the application");
   return {
     candidateId: candidate.id,
-    positionTitle: position?.title ?? "Belum ditentukan",
-    brandName: brand?.name ?? "Umum",
+    positionTitle: position?.title ?? "Not specified",
+    brandName: brand?.name ?? "General",
   };
 }
 

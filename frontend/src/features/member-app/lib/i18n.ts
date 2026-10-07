@@ -11,7 +11,7 @@ import { ID_WORKOUT } from "./i18n-workout";
 /**
  * i18n aplikasi member (port 1:1 apps/member/src/lib/i18n.ts NüHabit): teks
  * Inggris adalah kunci, kamus ID menerjemahkannya. Bahasa mengikuti pilihan
- * portal member (default Indonesia); kunci tanpa terjemahan tampil apa adanya.
+ * portal member (default English); kunci tanpa terjemahan tampil apa adanya.
  */
 const BASE_ID: Record<string, string> = {
   // Navigation & chrome

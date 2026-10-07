@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { MemberLanguage } from "@/features/member-app/components/member-language";
 
 export const metadata: Metadata = {
   title: "Portal Member — NüHabit",
-  description: "Cek saldo ARK Coin, XP, tier, dan riwayat transaksi Anda.",
+  description: "Check your ARK Coin balance, XP, tier, and transaction history.",
   // PWA "NüHabit Member": manifest + ikon di public/member-assets (lolos proxy host member).
   manifest: "/member-assets/manifest.webmanifest",
   applicationName: "NüHabit Member",
@@ -17,5 +18,5 @@ export const viewport: Viewport = {
 
 /** Layout portal member: berdiri sendiri, tanpa chrome dashboard internal. */
 export default function MemberPortalLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <MemberLanguage>{children}</MemberLanguage>;
 }

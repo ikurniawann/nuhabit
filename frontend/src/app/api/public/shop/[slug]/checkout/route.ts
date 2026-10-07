@@ -54,20 +54,20 @@ export const POST = apiHandler(
 
     const { slug } = await params;
     const storefront = await resolveStorefront(slug);
-    if (!storefront) throw ApiError.notFound('Toko tidak ditemukan');
+    if (!storefront) throw ApiError.notFound('Store not found');
 
     const parsed = bodySchema.safeParse(await request.json());
-    if (!parsed.success) throw ApiError.badRequest('Data checkout tidak lengkap/valid');
+    if (!parsed.success) throw ApiError.badRequest('Checkout data is incomplete or invalid');
     const body = parsed.data;
 
     await releaseExpiredReservations();
 
     // Ongkir otoritatif: hitung ulang dari provider, cocokkan pilihan klien
     const cargo = await computeCartWeightAndValue(body.items);
-    if (cargo.weightGram <= 0) throw ApiError.badRequest('Keranjang tidak valid');
+    if (cargo.weightGram <= 0) throw ApiError.badRequest('Invalid cart');
 
     const context = await loadShippingContext();
-    if (!context.originId) throw new ApiError(503, 'Toko belum mengatur alamat pengiriman');
+    if (!context.originId) throw new ApiError(503, 'The store has not set a shipping origin yet');
 
     const quotes = await quoteFromOrigin(
       context,
@@ -77,7 +77,7 @@ export const POST = apiHandler(
     );
     const chosen = findQuote(quotes, body.courier.code, body.courier.service_code);
     if (!chosen) {
-      throw ApiError.conflict('Layanan kurir tidak tersedia lagi — pilih ulang ongkir');
+      throw ApiError.conflict('That courier service is no longer available. Pick a shipping rate again.');
     }
 
     const baseUrl = appOrigin(request);

@@ -19,7 +19,7 @@ export const GET = apiHandler(
 
     const { slug } = await params;
     const storefront = await resolveStorefront(slug);
-    if (!storefront) throw ApiError.notFound('Toko tidak ditemukan');
+    if (!storefront) throw ApiError.notFound('Store not found');
 
     // Opportunistik: reservasi kedaluwarsa dirilis supaya stok katalog akurat
     await releaseExpiredReservations();

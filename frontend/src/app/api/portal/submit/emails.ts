@@ -28,11 +28,11 @@ export function emailSubject(text: string): string {
 export function candidateConfirmationHtml(d: ApplicationEmailData): string {
   return `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a1a1a;">Terima Kasih, ${escapeHtml(d.fullName)}!</h2>
-              <p style="color: #555;">Lamaran kamu untuk posisi <strong>${escapeHtml(d.positionTitle)}</strong> di <strong>${escapeHtml(d.brandName)}</strong> sudah kami terima.</p>
-              <p style="color: #555;">Tim HRD akan menghubungi kamu melalui WhatsApp atau email dalam 1-3 hari kerja.</p>
+              <h2 style="color: #1a1a1a;">Thank you, ${escapeHtml(d.fullName)}!</h2>
+              <p style="color: #555;">We have received your application for <strong>${escapeHtml(d.positionTitle)}</strong> at <strong>${escapeHtml(d.brandName)}</strong>.</p>
+              <p style="color: #555;">Our HR team will reach you by WhatsApp or email within 1 to 3 business days.</p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="color: #888; font-size: 12px;">Pesan ini dikirim otomatis. Mohon tidak membalas email ini.</p>
+              <p style="color: #888; font-size: 12px;">This message was sent automatically. Please do not reply to this email.</p>
             </div>
           `;
 }
@@ -82,7 +82,7 @@ export async function sendApplicationEmails(d: ApplicationEmailData): Promise<vo
   const from = process.env.FROM_EMAIL ?? "noreply@aapextechnology.com";
   const hrdEmail = process.env.HRD_EMAIL;
   const messages = [
-    { label: "Candidate", to: d.email, subject: "Lamaran Kamu Sudah Kami Terima", html: candidateConfirmationHtml(d) },
+    { label: "Candidate", to: d.email, subject: "We received your application", html: candidateConfirmationHtml(d) },
     ...(hrdEmail
       ? [
           {

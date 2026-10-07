@@ -31,17 +31,17 @@ export const POST = apiHandler(
     }
 
     const { slug } = await params;
-    if (!(await resolveStorefront(slug))) throw ApiError.notFound('Toko tidak ditemukan');
+    if (!(await resolveStorefront(slug))) throw ApiError.notFound('Store not found');
 
     const parsed = bodySchema.safeParse(await request.json());
-    if (!parsed.success) throw ApiError.badRequest('Payload tidak valid');
+    if (!parsed.success) throw ApiError.badRequest('Invalid payload');
 
     // Berat & nilai barang dihitung dari katalog server
     const cargo = await computeCartWeightAndValue(parsed.data.items);
-    if (cargo.weightGram <= 0) throw ApiError.badRequest('Keranjang tidak valid');
+    if (cargo.weightGram <= 0) throw ApiError.badRequest('Invalid cart');
 
     const context = await loadShippingContext();
-    if (!context.originId) throw new ApiError(503, 'Toko belum mengatur alamat pengiriman');
+    if (!context.originId) throw new ApiError(503, 'The store has not set a shipping origin yet');
 
     const quotes = await quoteFromOrigin(
       context,

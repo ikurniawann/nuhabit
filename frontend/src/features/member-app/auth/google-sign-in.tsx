@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "../lib/i18n";
+import { useLang } from "../lib/lang";
 
 /** Identitas Google yang belum punya member: lanjut ke pendaftaran dengan tiket. */
 export interface GoogleNeedsPhone {
@@ -74,6 +75,7 @@ export function GoogleSignIn({
   text?: GsiButtonConfig["text"];
 }) {
   const t = useT();
+  const lang = useLang();
   const slot = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,6 +87,7 @@ export function GoogleSignIn({
     loadGsi()
       .then((google) => {
         if (cancelled) return;
+        parent.replaceChildren();
         google.accounts.id.initialize({
           client_id: CLIENT_ID,
           callback: async ({ credential }) => {
@@ -113,14 +116,14 @@ export function GoogleSignIn({
           width: Math.min(parent.clientWidth || 320, 400),
           text,
           shape: "pill",
-          locale: "id",
+          locale: lang,
         });
       })
       .catch(() => setError(t("Google sign-in is unavailable right now.")));
     return () => {
       cancelled = true;
     };
-  }, [onSignedIn, onNeedsPhone, t, text]);
+  }, [onSignedIn, onNeedsPhone, t, text, lang]);
 
   if (!CLIENT_ID) return null;
 
