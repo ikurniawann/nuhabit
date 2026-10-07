@@ -1,8 +1,8 @@
 'use client';
 
-// Storefront publik: katalog per koleksi → ukuran → keranjang (atau Beli
-// Sekarang) → checkout (area + ongkir live) → redirect invoice Xendit.
-// Keranjang hidup di cart-store (localStorage per slug toko).
+// Public storefront: catalog by collection, size picker, cart (or Buy Now),
+// checkout (area plus live shipping rates), redirect to the Xendit invoice.
+// The cart lives in cart-store (localStorage per store slug).
 
 import { useEffect, useState } from 'react';
 import { Loader2, Package, ShoppingBag, ShoppingCart } from 'lucide-react';
@@ -32,12 +32,12 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   const catalog = useStorefrontCatalog(slug);
   const cart = useCart();
   const [detailProduct, setDetailProduct] = useState<CatalogProduct | null>(null);
-  // Baris "Beli Sekarang": keranjang satu baris di memori, terpisah dari
-  // keranjang tersimpan. null berarti checkout memakai keranjang.
+  // "Buy Now" lines: a one-line cart held in memory, apart from the stored
+  // cart. null means checkout uses the cart.
   const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string } | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
-  // Keranjang mengikuti slug asli toko (/apparel memuat slug "default").
+  // The cart follows the store's real slug (/apparel loads slug "default").
   const shopSlug = catalog.data?.storefront.slug;
   useEffect(() => {
     if (shopSlug) bindCart(shopSlug);
@@ -94,7 +94,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-50 px-6 text-center">
         <Package className="h-10 w-10 text-gray-300" />
-        <p className="text-sm text-gray-500">{catalog.error.message || 'Toko tidak ditemukan'}</p>
+        <p className="text-sm text-gray-500">{catalog.error.message || 'Store not found'}</p>
       </div>
     );
   }
@@ -117,7 +117,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
             type="button"
             onClick={openCart}
             className="relative rounded-full bg-ink p-2.5 text-on-ink shadow hover:bg-ink-3"
-            aria-label={`Keranjang, ${count} item`}
+            aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
           >
             <ShoppingCart className="h-5 w-5" />
             {count > 0 ? (
@@ -134,11 +134,11 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         {products.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-24 text-gray-400">
             <ShoppingBag className="h-10 w-10 opacity-40" />
-            <p className="text-sm">Belum ada produk di toko ini</p>
+            <p className="text-sm">No products in this store yet</p>
           </div>
         ) : (
           groups.map((group) => (
-            <section key={group.id} id={`koleksi-${group.id}`} className="scroll-mt-32 mb-8">
+            <section key={group.id} id={`collection-${group.id}`} className="scroll-mt-32 mb-8">
               {grouped ? <h2 className="mb-3 text-base font-semibold text-gray-900">{group.name}</h2> : null}
               <ProductGrid products={group.products} onSelect={setDetailProduct} />
             </section>
@@ -219,7 +219,7 @@ function ProductGrid({
               <p className="line-clamp-2 text-sm font-medium text-gray-900">{product.name}</p>
               <p className="text-sm font-semibold text-gray-900">{formatRupiah(product.price)}</p>
               <p className="text-xs text-gray-400">
-                {product.stock > 0 ? `Stok ${product.stock}` : product.preorder ? 'Pre-order' : 'Stok habis'}
+                {product.stock > 0 ? `${product.stock} in stock` : product.preorder ? 'Pre-order' : 'Sold out'}
               </p>
             </div>
           </button>

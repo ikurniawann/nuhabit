@@ -389,10 +389,10 @@ func (s *Service) restoreClaims(ctx context.Context, claims []claim) {
 // pre-order window is open becomes a pre-order line.
 func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolvedLine, string, error) {
 	if len(items) == 0 {
-		return nil, "Keranjang kosong", nil
+		return nil, "Your cart is empty", nil
 	}
 	if len(items) > 50 {
-		return nil, "Terlalu banyak baris keranjang", nil
+		return nil, "Too many cart lines", nil
 	}
 	ids := make([]string, len(items))
 	for i, it := range items {
@@ -407,14 +407,14 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 	for _, it := range items {
 		qty := math.Floor(it.Quantity)
 		if qty <= 0 || qty > 999 {
-			return nil, "Jumlah item tidak valid", nil
+			return nil, "Invalid item quantity", nil
 		}
 		p, err := s.ports.Catalog.WebProduct(ctx, s.db, it.ProductID)
 		if err != nil {
 			return nil, "", err
 		}
 		if p == nil {
-			return nil, "Ada produk yang sudah tidak tersedia — muat ulang katalog", nil
+			return nil, "A product is no longer available. Reload the catalog.", nil
 		}
 		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: basePrice(*p),
 			weightGram: unitWeight(p.WeightGram), stock: numOr0(p.InventoryQuantity), settings: settingsOf(settings, p.ID)}
@@ -424,7 +424,7 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 				return nil, "", err
 			}
 			if sku == nil {
-				return nil, "Ada varian yang sudah tidak tersedia — muat ulang katalog", nil
+				return nil, "A variant is no longer available. Reload the catalog.", nil
 			}
 			if sku.PriceOverride != nil {
 				if n := numOr0(sku.PriceOverride); n != 0 {
@@ -434,7 +434,7 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 			line.skuID, line.skuName, line.skuCode = &sku.ID, &sku.Name, &sku.SKU
 			line.stock = numOr0(&sku.StockQuantity)
 		} else if p.HasActiveSKU {
-			return nil, p.Name + " punya varian — pilih varian dulu", nil
+			return nil, p.Name + " has variants. Choose one first.", nil
 		}
 		line.isPreorder = domain.PreorderOpen(line.stock, line.settings.PreorderUntil, now)
 		lines = append(lines, line)
@@ -506,9 +506,9 @@ func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, er
 		if !ok {
 			s.restoreClaims(ctx, claims)
 			if why == "variant_required" {
-				return placedOrder{}, &checkoutError{400, l.productName + " punya varian — pilih varian dulu"}
+				return placedOrder{}, &checkoutError{400, l.productName + " has variants. Choose one first."}
 			}
-			return placedOrder{}, &checkoutError{400, "Stok " + l.label() + " tidak cukup"}
+			return placedOrder{}, &checkoutError{400, "Not enough stock for " + l.label()}
 		}
 		claims = append(claims, c)
 	}
@@ -561,7 +561,7 @@ func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, er
 	if err != nil {
 		s.log.Error("[shop] checkout order insert failed", "error", err)
 		s.restoreClaims(ctx, claims)
-		return placedOrder{}, &checkoutError{500, "Gagal membuat order — coba lagi"}
+		return placedOrder{}, &checkoutError{500, "Could not create the order. Try again."}
 	}
 	return res, nil
 }
@@ -590,14 +590,14 @@ func (s *Service) issueInvoice(ctx context.Context, o placedOrder, amount float6
 	if _, err := s.db.Exec(ctx, `UPDATE shop.orders SET status='cancelled', updated_at=now() WHERE id = $1::uuid`, o.id); err != nil {
 		s.log.Error("[shop] cancel order failed", "order", o.id, "error", err)
 	}
-	return "", &checkoutError{502, "Gagal membuat invoice pembayaran — coba lagi"}
+	return "", &checkoutError{502, "Could not create the payment invoice. Try again."}
 }
 
 // Checkout is processShopCheckout. A *checkoutError carries the TS status
 // and reason.
 func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResult, error) {
 	if !s.ports.Payments.Configured() {
-		return CheckoutResult{}, &checkoutError{503, "Pembayaran online belum dikonfigurasi"}
+		return CheckoutResult{}, &checkoutError{503, "Online payment is not configured"}
 	}
 	lines, reason, err := s.resolveLines(ctx, in.Items)
 	if err != nil {
@@ -616,7 +616,7 @@ func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResul
 		notes:        in.Notes, invoiceExpiresAt: &expiresAt,
 	}
 	if d.total() <= 0 {
-		return CheckoutResult{}, &checkoutError{400, "Total order tidak valid"}
+		return CheckoutResult{}, &checkoutError{400, "Invalid order total"}
 	}
 	placed, err := s.placeOrder(ctx, d)
 	if err != nil {

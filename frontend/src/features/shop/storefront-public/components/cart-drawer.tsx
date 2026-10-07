@@ -5,8 +5,8 @@ import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
 
 /**
- * Drawer keranjang: ganti ukuran di tempat, stepper qty, hapus baris dan
- * catatan pesanan. `products` dipakai untuk menawarkan ukuran lain.
+ * Cart drawer: change the size in place, quantity stepper, remove a line
+ * and an order note. `products` supplies the other sizes on offer.
  */
 export function CartDrawer({
   cart,
@@ -35,19 +35,19 @@ export function CartDrawer({
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
       <div
         role="dialog"
-        aria-label="Keranjang"
+        aria-label="Cart"
         className="flex h-full w-full max-w-md flex-col bg-white"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Keranjang</h2>
-          <button type="button" onClick={onClose} aria-label="Tutup">
+          <h2 className="text-base font-semibold text-gray-900">Cart</h2>
+          <button type="button" onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {cart.length === 0 ? (
-            <p className="py-16 text-center text-sm text-gray-400">Keranjang kosong</p>
+            <p className="py-16 text-center text-sm text-gray-400">Your cart is empty</p>
           ) : (
             cart.map((line) => {
               const product = productOf(line);
@@ -60,17 +60,17 @@ export function CartDrawer({
                       <p className="text-sm font-semibold text-gray-900">{formatRupiah(line.price)}</p>
                       {line.preorderUntil ? <PreorderBadge until={line.preorderUntil} className="mt-1" /> : null}
                     </div>
-                    <button type="button" onClick={() => onRemove(line.key)} aria-label={`Hapus ${line.name}`}>
+                    <button type="button" onClick={() => onRemove(line.key)} aria-label={`Remove ${line.name}`}>
                       <Trash2 className="h-4 w-4 text-red-400" />
                     </button>
                   </div>
                   <div className="mt-2 flex items-center justify-between gap-3">
                     {line.skuId && sizes.length > 0 ? (
                       <label className="flex items-center gap-2 text-xs text-gray-500">
-                        Ukuran
+                        Size
                         <select
                           value={line.skuId}
-                          aria-label={`Ukuran ${line.name}`}
+                          aria-label={`Size for ${line.name}`}
                           onChange={(event) => {
                             const sku = sizes.find((candidate) => candidate.id === event.target.value);
                             if (product && sku) onChangeVariant(line.key, product, sku);
@@ -80,7 +80,7 @@ export function CartDrawer({
                           {sizes.map((sku) => (
                             <option key={sku.id} value={sku.id} disabled={sku.stock <= 0 && !sku.preorder}>
                               {sku.name}
-                              {sku.stock <= 0 ? (sku.preorder ? ' (pre-order)' : ' (habis)') : ''}
+                              {sku.stock <= 0 ? (sku.preorder ? ' (pre-order)' : ' (sold out)') : ''}
                             </option>
                           ))}
                         </select>
@@ -93,7 +93,7 @@ export function CartDrawer({
                         type="button"
                         onClick={() => onChangeQty(line.key, -1)}
                         className="rounded-full border border-gray-200 p-1"
-                        aria-label="Kurangi"
+                        aria-label="Decrease quantity"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
@@ -102,7 +102,7 @@ export function CartDrawer({
                         type="button"
                         onClick={() => onChangeQty(line.key, 1)}
                         className="rounded-full border border-gray-200 p-1"
-                        aria-label="Tambah"
+                        aria-label="Increase quantity"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -116,7 +116,7 @@ export function CartDrawer({
             <textarea
               value={note}
               onChange={(event) => onNoteChange(event.target.value)}
-              placeholder="Catatan pesanan (opsional)"
+              placeholder="Order note (optional)"
               rows={2}
               className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-forest"
             />
@@ -133,7 +133,7 @@ export function CartDrawer({
               onClick={onCheckout}
               className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark"
             >
-              Lanjut ke Pengiriman
+              Continue to Shipping
             </button>
           </div>
         ) : null}

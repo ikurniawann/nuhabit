@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- wordmark statis, sama dgn halaman karir */
+/* eslint-disable @next/next/no-img-element -- static wordmark, same as the careers page */
 "use client";
 
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { SuccessDialog } from "./success-dialog";
 
 const logoUrl = "/brand/wordmark-black.png";
 
-/** Halaman lamaran publik (/portal): header karir, form, footer, modal sukses. */
+/** Public application page (/portal): careers header, form, footer, success modal. */
 export function ApplicationPage(prefill: ApplicationPrefill) {
   const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
@@ -43,14 +43,14 @@ export function ApplicationPage(prefill: ApplicationPrefill) {
           </div>
           <h1 className="mb-3 text-2xl font-semibold leading-tight sm:text-3xl">Submit Your Application</h1>
           <p className="mx-auto max-w-xl text-base leading-relaxed text-[#2a332e]">
-            Isi formulir di bawah untuk melamar posisi yang tersedia.
+            Fill in the form below to apply for an open position.
           </p>
         </section>
 
         <section className="mx-auto max-w-[700px] px-4 sm:px-6 lg:px-10">
           <ApplicationForm prefill={prefill} onSubmitted={() => setSubmitted(true)} />
           <p className="mt-6 text-center text-xs text-[#2a332e]">
-            Dengan mengirim lamaran, kamu menyetujui kebijakan privasi NüHabit
+            By submitting an application you agree to the NüHabit privacy policy
           </p>
         </section>
       </main>

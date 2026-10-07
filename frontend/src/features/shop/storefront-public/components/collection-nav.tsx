@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import type { CollectionGroup } from '@/lib/shop/storefront-cart';
 
 /**
- * Navigasi koleksi yang menempel di bawah header: chip per koleksi,
- * menggulir ke seksinya; chip aktif mengikuti seksi yang sedang terlihat.
+ * Collection chips pinned under the header: each chip scrolls to its
+ * section; the active chip follows the section in view.
  */
 export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
   const [active, setActive] = useState(groups[0]?.id ?? '');
 
   useEffect(() => {
     const sections = groups
-      .map((group) => document.getElementById(`koleksi-${group.id}`))
+      .map((group) => document.getElementById(`collection-${group.id}`))
       .filter((el): el is HTMLElement => el !== null);
     if (sections.length === 0) return;
     const observer = new IntersectionObserver(
@@ -20,7 +20,7 @@ export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
         const visible = entries
           .filter((entry) => entry.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) setActive(visible.target.id.replace('koleksi-', ''));
+        if (visible) setActive(visible.target.id.replace('collection-', ''));
       },
       { rootMargin: '-40% 0px -50% 0px' }
     );
@@ -30,11 +30,11 @@ export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
 
   const jump = (id: string) => {
     setActive(id);
-    document.getElementById(`koleksi-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById(`collection-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   return (
-    <nav aria-label="Koleksi" className="border-t border-gray-100">
+    <nav aria-label="Collections" className="border-t border-gray-100">
       <div className="no-scrollbar mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-2">
         {groups.map((group) => {
           const current = group.id === active;

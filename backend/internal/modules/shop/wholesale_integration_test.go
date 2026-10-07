@@ -88,7 +88,7 @@ func TestWholesaleLoginAndLockout(t *testing.T) {
 
 	res, token := f.login("salah")
 	expectStatus(t, res, 401)
-	expectJSON(t, res, `{"success":false,"error":"Email atau kata sandi salah"}`)
+	expectJSON(t, res, `{"success":false,"error":"Incorrect email or password"}`)
 	if token != "" {
 		t.Fatal("no cookie on a failed login")
 	}
@@ -116,7 +116,7 @@ func TestWholesaleLoginAndLockout(t *testing.T) {
 	}
 	res, _ = f.login(f.password)
 	expectStatus(t, res, 429)
-	if !strings.Contains(res.Body.String(), "Terlalu banyak percobaan masuk") {
+	if !strings.Contains(res.Body.String(), "Too many sign-in attempts") {
 		t.Errorf("body = %s", res.Body.String())
 	}
 
@@ -200,13 +200,13 @@ func TestWholesaleOrderValidationAndInvoice(t *testing.T) {
 
 	res, body := f.partner(token, "POST", "/api/wholesale/orders", order(5))
 	expectStatus(t, res, 400)
-	if body["error"] != "Minimal pesanan Kaos adalah 6 pcs" {
+	if body["error"] != "Minimum order for Kaos is 6 pcs" {
 		t.Errorf("min qty error = %v", body["error"])
 	}
 	// 6 x 80000 = 480000, under the 500000 minimum order.
 	res, body = f.partner(token, "POST", "/api/wholesale/orders", order(6))
 	expectStatus(t, res, 400)
-	if body["error"] != "Minimal nilai pesanan Rp 500.000" {
+	if body["error"] != "Minimum order value is Rp 500.000" {
 		t.Errorf("min order error = %v", body["error"])
 	}
 	res, _ = f.partner(token, "POST", "/api/wholesale/orders", map[string]any{"items": []any{}, "shipping_address": "x"})
@@ -352,7 +352,7 @@ func TestPreorderCheckoutSkipsStock(t *testing.T) {
 	f.exec(`UPDATE shop.product_settings SET preorder_until = (now() AT TIME ZONE 'Asia/Jakarta')::date - 1 WHERE product_id = $1::uuid`, product)
 	res, out = f.do("POST", "/api/public/shop/"+slug+"/checkout", body)
 	expectStatus(t, res, 400)
-	if out["error"] != "Stok Jaket tidak cukup" {
+	if out["error"] != "Not enough stock for Jaket" {
 		t.Errorf("error = %v", out["error"])
 	}
 }

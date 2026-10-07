@@ -1,6 +1,6 @@
 import { ShopOrderStatusPage } from "@/features/shop/storefront-public";
 
-export const metadata = { title: "Status Pesanan", robots: { index: false } };
+export const metadata = { title: "Order Status | NüHabit", robots: { index: false } };
 
 export default async function Page({
   params,

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWholesaleMe, type WholesaleAccount } from "../queries";
 
-/** Halaman portal yang butuh sesi: tanpa akun kembali ke /wholesale. */
+/** Portal pages that need a session: without an account, back to /wholesale. */
 export function useRequireAccount(): { account: WholesaleAccount | null; loading: boolean } {
   const router = useRouter();
   const me = useWholesaleMe();

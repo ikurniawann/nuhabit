@@ -333,7 +333,7 @@ func TestPublicOrderStatus(t *testing.T) {
 
 	res, _ = f.do("GET", "/api/public/shop/order/bukan-token", nil)
 	expectStatus(t, res, 404)
-	expectJSON(t, res, `{"success":false,"error":"Order tidak ditemukan"}`)
+	expectJSON(t, res, `{"success":false,"error":"Order not found"}`)
 }
 
 // Ported from app/api/public/shop/webhook/biteship/route.test.ts.
@@ -542,7 +542,7 @@ func TestCheckoutFlow(t *testing.T) {
 	body["courier"] = map[string]any{"code": "jnt", "service_code": "ez"}
 	res, out = f.do("POST", base+"/checkout", body)
 	expectStatus(t, res, 409)
-	if out["error"] != "Layanan kurir tidak tersedia lagi — pilih ulang ongkir" {
+	if out["error"] != "That courier service is no longer available. Pick a shipping rate again." {
 		t.Errorf("error = %v", out["error"])
 	}
 
@@ -551,7 +551,7 @@ func TestCheckoutFlow(t *testing.T) {
 	f.stock.fail[product] = true
 	res, out = f.do("POST", base+"/checkout", body)
 	expectStatus(t, res, 400)
-	if out["error"] != "Stok Kaos tidak cukup" {
+	if out["error"] != "Not enough stock for Kaos" {
 		t.Errorf("error = %v", out["error"])
 	}
 	delete(f.stock.fail, product)
@@ -560,16 +560,16 @@ func TestCheckoutFlow(t *testing.T) {
 	f.pay.fail = true
 	res, out = f.do("POST", base+"/checkout", body)
 	expectStatus(t, res, 502)
-	if out["error"] != "Gagal membuat invoice pembayaran — coba lagi" {
+	if out["error"] != "Could not create the payment invoice. Try again." {
 		t.Errorf("error = %v", out["error"])
 	}
 
 	res, _ = f.do("POST", base+"/checkout", map[string]any{"items": []any{}})
 	expectStatus(t, res, 400)
-	expectJSON(t, res, `{"success":false,"error":"Data checkout tidak lengkap/valid"}`)
+	expectJSON(t, res, `{"success":false,"error":"Checkout data is incomplete or invalid"}`)
 	res, _ = f.do("POST", "/api/public/shop/tidak-ada/checkout", body)
 	expectStatus(t, res, 404)
-	expectJSON(t, res, `{"success":false,"error":"Toko tidak ditemukan"}`)
+	expectJSON(t, res, `{"success":false,"error":"Store not found"}`)
 
 	// The checkout limit is 10 per minute per IP (6 used above).
 	for i := 0; i < 4; i++ {

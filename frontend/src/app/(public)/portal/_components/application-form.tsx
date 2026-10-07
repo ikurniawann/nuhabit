@@ -19,8 +19,9 @@ export interface ApplicationPrefill {
 }
 
 /**
- * Form lamaran publik. brand/posisi dari URL diutamakan; bila datang dari job
- * opening, nilai opening mengisi yang kosong dan outlet dikunci.
+ * Public application form. Brand and position from the URL win; when the
+ * applicant arrives from a job opening, the opening fills the blanks and
+ * locks the outlet.
  */
 export function ApplicationForm({ prefill, onSubmitted }: { prefill: ApplicationPrefill; onSubmitted: () => void }) {
   const { data: options, isPending: optionsLoading } = usePortalOptions(prefill.jobOpeningId);
@@ -30,7 +31,7 @@ export function ApplicationForm({ prefill, onSubmitted }: { prefill: Application
   const form = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationFormSchema),
     defaultValues: { source: "portal" },
-    // auto-fill sekali data opsi datang; field yang sudah diubah pelamar tidak ditimpa
+    // Auto-fill once the options arrive; fields the applicant already edited stay.
     values: {
       source: "portal",
       brand_id: prefill.brandId ?? opening?.brand_id ?? undefined,
@@ -65,9 +66,9 @@ export function ApplicationForm({ prefill, onSubmitted }: { prefill: Application
       <DocumentSection files={files} />
 
       <div className="rounded-lg border border-[#e3dbcc] bg-white p-5 sm:p-6">
-        <h2 className="mb-4 text-base font-medium leading-tight">Catatan (Opsional)</h2>
+        <h2 className="mb-4 text-base font-medium leading-tight">Notes (Optional)</h2>
         <textarea
-          placeholder="Info tambahan..."
+          placeholder="Anything else you want us to know..."
           rows={3}
           {...form.register("notes")}
           className={`min-h-[100px] w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none transition-colors focus:border-[#00281a] disabled:cursor-not-allowed disabled:opacity-50 ${form.formState.errors.notes ? "border-[#00281a]" : "border-[#e3dbcc]"}`}
@@ -91,15 +92,15 @@ export function ApplicationForm({ prefill, onSubmitted }: { prefill: Application
         {submit.isPending ? (
           <>
             <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-            Mengirim...
+            Submitting...
           </>
         ) : (
-          "Kirim Lamaran"
+          "Submit Application"
         )}
       </button>
 
       {!files.cvFile && (
-        <p className="-mt-3 text-center text-xs text-[#2a332e]">* Wajib upload CV untuk mengirim lamaran</p>
+        <p className="-mt-3 text-center text-xs text-[#2a332e]">* Upload your CV to submit the application</p>
       )}
     </form>
   );

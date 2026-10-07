@@ -21,11 +21,11 @@ const sameRate = (a: RateQuote, b: RateQuote) =>
   a.courierCode === b.courierCode && a.serviceCode === b.serviceCode;
 
 /**
- * Pengiriman & pembayaran: area tujuan → ongkir live → invoice Xendit.
- * Tetap ter-mount saat ditutup (render null) supaya isian form tidak hilang.
- * Tarif hanya berlaku untuk isi keranjang saat dihitung (sidik keranjang).
- * `cart` bisa keranjang tersimpan atau satu baris "Beli Sekarang"; catatan
- * pesanan ikut dari pemanggil.
+ * Shipping and payment: destination area, live shipping rates, Xendit
+ * invoice. Stays mounted while closed (renders null) so the form keeps its
+ * values. Rates only apply to the cart they were quoted for (cart
+ * signature). `cart` is the stored cart or a single "Buy Now" line; the
+ * order note comes from the caller.
  */
 export function CheckoutDrawer({
   open,
@@ -65,7 +65,7 @@ export function CheckoutDrawer({
 
   const checkout = useMutation({
     mutationFn: async () => {
-      if (!selectedArea || !selectedRate) throw new Error('Pilih kurir dulu');
+      if (!selectedArea || !selectedRate) throw new Error('Choose a courier first');
       return submitShopCheckout(slug, {
         items: cart.map((line) => ({ product_id: line.productId, sku_id: line.skuId, quantity: line.quantity })),
         customer: { name: custName.trim(), phone: custPhone.trim(), email: custEmail.trim() || null },
@@ -83,7 +83,7 @@ export function CheckoutDrawer({
       onPaid();
       window.location.assign(invoice_url);
     },
-    onError: (error) => setFormError(error instanceof Error ? error.message : 'Checkout gagal'),
+    onError: (error) => setFormError(error instanceof Error ? error.message : 'Checkout failed'),
   });
 
   if (!open) return null;
@@ -108,9 +108,9 @@ export function CheckoutDrawer({
   };
 
   const ratesError = ratesMutation.isError
-    ? ratesMutation.error.message || 'Gagal cek ongkir'
+    ? ratesMutation.error.message || 'Could not fetch shipping rates'
     : ratesMutation.isSuccess && rates.length === 0 && ratesMutation.data.signature === signature
-      ? 'Tidak ada layanan kurir ke area ini'
+      ? 'No courier service ships to this area'
       : null;
   const message = formError ?? ratesError;
   const subtotal = cartSubtotal(cart);
@@ -119,8 +119,8 @@ export function CheckoutDrawer({
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40">
       <div className="flex h-full w-full max-w-md flex-col bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Pengiriman & Pembayaran</h2>
-          <button type="button" onClick={onClose} aria-label="Tutup">
+          <h2 className="text-base font-semibold text-gray-900">Shipping & Payment</h2>
+          <button type="button" onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
@@ -129,20 +129,20 @@ export function CheckoutDrawer({
             <input
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
-              placeholder="Nama penerima"
+              placeholder="Recipient name"
               className={INPUT_CLASS}
             />
             <input
               value={custPhone}
               onChange={(e) => setCustPhone(e.target.value)}
-              placeholder="No. WhatsApp (utk konfirmasi & member)"
+              placeholder="WhatsApp number (for confirmation and membership)"
               inputMode="tel"
               className={INPUT_CLASS}
             />
             <input
               value={custEmail}
               onChange={(e) => setCustEmail(e.target.value)}
-              placeholder="Email (opsional)"
+              placeholder="Email (optional)"
               inputMode="email"
               className={INPUT_CLASS}
             />
@@ -157,7 +157,7 @@ export function CheckoutDrawer({
                 ratesMutation.reset();
                 setAreaQuery(e.target.value);
               }}
-              placeholder="Cari kecamatan/kota tujuan..."
+              placeholder="Search destination district or city..."
               className={INPUT_CLASS}
             />
             <AreaSuggestions areas={areas} onSelect={selectArea} />
@@ -166,20 +166,20 @@ export function CheckoutDrawer({
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Alamat lengkap (jalan, nomor, RT/RW, patokan)"
+            placeholder="Full address (street, number, RT/RW, landmark)"
             rows={3}
             className={INPUT_CLASS}
           />
 
-          {/* Pilihan kurir */}
+          {/* Courier choice */}
           {ratesMutation.isPending ? (
             <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
-              <Loader2 className="h-4 w-4 animate-spin" /> Menghitung ongkir...
+              <Loader2 className="h-4 w-4 animate-spin" /> Calculating shipping...
             </div>
           ) : rates.length > 0 ? (
             <div className="space-y-2">
               <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
-                <Truck className="h-3.5 w-3.5" /> Pilih kurir
+                <Truck className="h-3.5 w-3.5" /> Choose a courier
               </p>
               {rates.map((rate, index) => (
                 <button
@@ -204,7 +204,7 @@ export function CheckoutDrawer({
           ) : null}
 
           {note.trim() ? (
-            <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">Catatan: {note.trim()}</p>
+            <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">Note: {note.trim()}</p>
           ) : null}
 
           {message ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{message}</p> : null}
@@ -216,8 +216,8 @@ export function CheckoutDrawer({
             <span className="text-gray-900">{formatRupiah(subtotal)}</span>
           </div>
           <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-gray-500">Ongkir</span>
-            <span className="text-gray-900">{selectedRate ? formatRupiah(selectedRate.total_price) : '—'}</span>
+            <span className="text-gray-500">Shipping</span>
+            <span className="text-gray-900">{selectedRate ? formatRupiah(selectedRate.total_price) : '-'}</span>
           </div>
           <div className="mb-3 flex items-center justify-between text-base font-semibold">
             <span>Total</span>
@@ -230,10 +230,10 @@ export function CheckoutDrawer({
             className="flex w-full items-center justify-center gap-2 rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:opacity-60"
           >
             {checkout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Bayar Sekarang
+            Pay Now
           </button>
           <p className="mt-2 text-center text-xs text-gray-400">
-            Pembayaran aman via Xendit (QRIS, VA, e-wallet, kartu)
+            Secure payment via Xendit (QRIS, virtual account, e-wallet, card)
           </p>
         </div>
       </div>

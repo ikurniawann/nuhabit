@@ -56,12 +56,12 @@ func WholesaleOrderError(lines []WholesaleLine, minOrder float64) string {
 	subtotal := 0.0
 	for _, l := range lines {
 		if l.Quantity < l.MinQty {
-			return "Minimal pesanan " + l.Name + " adalah " + formatJSNumber(l.MinQty) + " pcs"
+			return "Minimum order for " + l.Name + " is " + formatJSNumber(l.MinQty) + " pcs"
 		}
 		subtotal += l.Subtotal
 	}
 	if subtotal < minOrder {
-		return "Minimal nilai pesanan Rp " + thousands(minOrder)
+		return "Minimum order value is Rp " + thousands(minOrder)
 	}
 	return ""
 }

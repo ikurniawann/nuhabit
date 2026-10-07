@@ -250,7 +250,7 @@ func (h *handler) placeWholesaleOrder(w http.ResponseWriter, r *http.Request, ac
 	address := f.Str("shipping_address", validate.Rule{}, validate.StrOpts{Trim: true, Min: 10, Max: 500})
 	in.Notes = f.Str("notes", validate.Rule{Optional: true, Nullable: true}, validate.StrOpts{Trim: true, Max: 500})
 	if !f.Valid() {
-		return httpx.BadRequest("Data pesanan tidak lengkap/valid")
+		return httpx.BadRequest("Order data is incomplete or invalid")
 	}
 	in.Address = *address
 	ctx := r.Context()
@@ -284,7 +284,7 @@ func (h *handler) wholesaleOrderDetail(w http.ResponseWriter, r *http.Request, a
 		return err
 	}
 	if order == nil {
-		return httpx.NotFound(orderNotFound)
+		return httpx.NotFound(publicOrderNotFound)
 	}
 	return ok(w, order)
 }

@@ -49,7 +49,7 @@ async function fetchPublicJobs(): Promise<JobOpening[]> {
 
 export default function CareerPage() {
   const [showNotice, setShowNotice] = useState(true);
-  // gagal muat = daftar kosong ("No open positions"), sama seperti sebelumnya
+  // A failed load shows an empty list ("No open positions"), as before.
   const { data: jobs, isPending: jobsLoading } = useQuery({ queryKey: ["career-jobs"], queryFn: fetchPublicJobs });
 
   const departments = useMemo(() => {

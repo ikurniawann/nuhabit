@@ -15,7 +15,7 @@ export type RateQuote = {
   total_price: number;
 };
 
-/** Katalog toko; slug "default" memuat toko utama (/apparel). */
+/** Store catalog; slug "default" loads the main store (/apparel). */
 export const useStorefrontCatalog = (slug: string) =>
   useQuery({
     queryKey: ["shop", "storefront", slug],
@@ -24,7 +24,7 @@ export const useStorefrontCatalog = (slug: string) =>
     retry: false,
   });
 
-/** Status order publik; selama masih pending di-poll tiap 5 dtk menunggu webhook paid. */
+/** Public order status; polled every 5 s while pending, waiting for the paid webhook. */
 export const useShopOrderStatus = (token: string) =>
   useQuery({
     queryKey: ["shop", "order-status", token],

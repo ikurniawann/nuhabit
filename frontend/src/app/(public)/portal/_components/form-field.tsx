@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 const CONTROL_BASE =
   "flex h-10 w-full rounded-md border bg-transparent py-2 text-sm outline-none transition-colors focus:border-[#00281a] disabled:cursor-not-allowed disabled:opacity-50";
 
-/** Kelas input/select form karir; `withIcon` memberi ruang ikon di kiri. */
+/** Input and select classes for the careers form; `withIcon` leaves room for an icon on the left. */
 export function controlClass(hasError = false, withIcon = false) {
   return `${CONTROL_BASE} ${withIcon ? "pl-9" : "px-3"} ${hasError ? "border-[#00281a]" : "border-[#e3dbcc]"}`;
 }

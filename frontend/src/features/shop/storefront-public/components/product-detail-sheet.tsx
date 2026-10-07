@@ -7,9 +7,9 @@ import { PreorderBadge } from './preorder-note';
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
 /**
- * Detail produk + pilih varian (bottom sheet di ponsel, modal di layar lebar).
- * "Tambah ke Keranjang" menyimpan ke keranjang; "Beli Sekarang" langsung ke
- * checkout tanpa menyentuh keranjang.
+ * Product detail and size picker (bottom sheet on phones, modal on wide
+ * screens). "Add to Cart" stores the line; "Buy Now" goes straight to
+ * checkout without touching the cart.
  */
 export function ProductDetailSheet({
   product,
@@ -45,7 +45,7 @@ export function ProductDetailSheet({
             <h2 className="text-base font-semibold text-gray-900">{product.name}</h2>
             {product.collection ? <p className="text-xs text-gray-400">{product.collection.name}</p> : null}
           </div>
-          <button type="button" onClick={onClose} aria-label="Tutup">
+          <button type="button" onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
@@ -53,7 +53,7 @@ export function ProductDetailSheet({
 
         {hasVariants ? (
           <div className="mb-4 space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Pilih ukuran</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Choose a size</p>
             <div className="flex flex-wrap gap-2">
               {product.skus.map((sku) => {
                 const available = sellable(sku.stock, sku.preorder);
@@ -76,10 +76,10 @@ export function ProductDetailSheet({
             </div>
             {chosen ? (
               <p className="text-xs text-gray-500">
-                {chosen.preorder ? 'Stok kosong, bisa pre-order' : `Stok ${chosen.stock}`}
+                {chosen.preorder ? 'Out of stock, available for pre-order' : `${chosen.stock} in stock`}
               </p>
             ) : (
-              <p className="text-xs text-red-500">Semua ukuran habis</p>
+              <p className="text-xs text-red-500">All sizes are sold out</p>
             )}
           </div>
         ) : null}
@@ -96,7 +96,7 @@ export function ProductDetailSheet({
             onClick={() => onAdd(product, chosen)}
             className="rounded-full border border-forest px-4 py-3 text-sm font-semibold text-forest hover:bg-surface disabled:opacity-50"
           >
-            Tambah ke Keranjang
+            Add to Cart
           </button>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function ProductDetailSheet({
             className="inline-flex items-center justify-center gap-1.5 rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:opacity-50"
           >
             <Zap className="h-4 w-4" />
-            Beli Sekarang
+            Buy Now
           </button>
         </div>
       </div>

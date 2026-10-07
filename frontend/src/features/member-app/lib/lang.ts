@@ -4,17 +4,20 @@ import { useSyncExternalStore } from "react";
 import { readStorage, STORAGE_KEYS, writeStorage } from "@/lib/storage-keys";
 
 /**
- * Bahasa aplikasi member, disimpan per perangkat di localStorage. Semua
- * komponen yang memakai useT() ikut berganti saat bahasa diubah, tanpa
- * provider: store kecil + useSyncExternalStore. Default Indonesia.
+ * Member app language, stored per device in localStorage. Every component
+ * that uses useT() re-renders when the language changes, with no provider:
+ * a small store plus useSyncExternalStore. English by default; a stored
+ * "id" keeps Indonesian.
  */
 export type Lang = "id" | "en";
 
-const listeners = new Set<() => void>();
-/** Cadangan bila localStorage tidak bisa dipakai (mode privat dsb.). */
-let memoryLang: Lang = "id";
+const DEFAULT_LANG: Lang = "en";
 
-const parseLang = (value: unknown): Lang => (value === "en" ? "en" : "id");
+const listeners = new Set<() => void>();
+/** Fallback when localStorage is unavailable (private mode and the like). */
+let memoryLang: Lang = DEFAULT_LANG;
+
+const parseLang = (value: unknown): Lang => (value === "id" ? "id" : "en");
 
 function readLang(): Lang {
   return parseLang(readStorage(STORAGE_KEYS.memberLang) ?? memoryLang);
@@ -37,5 +40,5 @@ export function setLang(lang: Lang) {
 }
 
 export function useLang(): Lang {
-  return useSyncExternalStore(subscribe, readLang, () => "id");
+  return useSyncExternalStore(subscribe, readLang, () => DEFAULT_LANG);
 }

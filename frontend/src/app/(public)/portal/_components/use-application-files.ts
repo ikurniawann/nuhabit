@@ -10,14 +10,14 @@ const CV_TYPES = [
 ];
 const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-/** Pilihan CV & pas foto + validasi tipe/ukuran (maks 2MB) + pratinjau foto. */
+/** CV and photo selection, type and size checks (2MB max) and the photo preview. */
 export function useApplicationFiles() {
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  // object URL pratinjau dilepas saat diganti atau halaman dilepas
+  // The preview object URL is released when replaced or when the page unmounts.
   useEffect(() => () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
   }, [photoPreview]);
@@ -36,10 +36,10 @@ export function useApplicationFiles() {
   };
 
   const onCvChange = (e: ChangeEvent<HTMLInputElement>) =>
-    pick(e, { types: CV_TYPES, typeError: "CV harus format PDF atau DOC", sizeError: "CV maksimal 2MB" }, setCvFile);
+    pick(e, { types: CV_TYPES, typeError: "CV must be a PDF or DOC file", sizeError: "CV must be 2MB or smaller" }, setCvFile);
 
   const onPhotoChange = (e: ChangeEvent<HTMLInputElement>) =>
-    pick(e, { types: PHOTO_TYPES, typeError: "Foto harus format JPG/PNG", sizeError: "Foto maksimal 2MB" }, (file) => {
+    pick(e, { types: PHOTO_TYPES, typeError: "Photo must be a JPG or PNG file", sizeError: "Photo must be 2MB or smaller" }, (file) => {
       setPhotoFile(file);
       setPhotoPreview(URL.createObjectURL(file));
     });

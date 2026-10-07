@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { WholesaleShell } from "@/features/shop/wholesale-portal";
 
 export const metadata: Metadata = {
-  title: "Portal Mitra Wholesale — NüHabit",
+  title: "Wholesale Partner Portal | NüHabit",
   robots: { index: false },
 };
 
-/** Portal mitra (B2B): kerangka sendiri, tanpa chrome dashboard. */
+/** Partner portal (B2B): its own shell, no dashboard chrome. */
 export default function WholesaleLayout({ children }: { children: React.ReactNode }) {
   return <WholesaleShell>{children}</WholesaleShell>;
 }

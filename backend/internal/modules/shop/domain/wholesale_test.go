@@ -46,11 +46,11 @@ func TestWholesaleOrderError(t *testing.T) {
 		{Name: "Kaos", Quantity: 12, MinQty: 12, Subtotal: 960000},
 		{Name: "Topi", Quantity: 5, MinQty: 6, Subtotal: 250000},
 	}
-	if got := WholesaleOrderError(lines, 0); got != "Minimal pesanan Topi adalah 6 pcs" {
+	if got := WholesaleOrderError(lines, 0); got != "Minimum order for Topi is 6 pcs" {
 		t.Errorf("min qty: %q", got)
 	}
 	lines[1].Quantity = 6
-	if got := WholesaleOrderError(lines, 1500000); got != "Minimal nilai pesanan Rp 1.500.000" {
+	if got := WholesaleOrderError(lines, 1500000); got != "Minimum order value is Rp 1.500.000" {
 		t.Errorf("min order: %q", got)
 	}
 	if got := WholesaleOrderError(lines, 1210000); got != "" {

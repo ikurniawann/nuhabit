@@ -1,20 +1,20 @@
 import { z } from "zod";
 
-/** Validasi sisi klien form lamaran publik (server memvalidasi ulang). */
+/** Client-side validation for the public application form (the server validates again). */
 export const applicationFormSchema = z.object({
-  full_name: z.string().min(2, "Nama minimal 2 karakter").max(100, "Nama maksimal 100 karakter"),
-  email: z.string().email("Format email tidak valid"),
+  full_name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be 100 characters or fewer"),
+  email: z.string().email("Enter a valid email address"),
   phone: z
     .string()
-    .min(9, "Nomor terlalu pendek")
-    .regex(/^(\+62|62|0)[0-9]{9,12}$/, "Format nomor WA tidak valid (contoh: 081234567890)"),
-  domicile: z.string().min(2, "Domisili harus diisi").max(100, "Maksimal 100 karakter"),
+    .min(9, "Number is too short")
+    .regex(/^(\+62|62|0)[0-9]{9,12}$/, "Enter a valid WhatsApp number (example: 081234567890)"),
+  domicile: z.string().min(2, "City of residence is required").max(100, "100 characters or fewer"),
   source: z.enum(["portal", "instagram", "jobstreet", "referral", "walk_in", "other"]),
   position_id: z.string().optional(),
   brand_id: z.string().optional(),
-  notes: z.string().max(1000, "Catatan maksimal 1000 karakter").optional(),
-  last_experience: z.string().max(200, "Maksimal 200 karakter").optional(),
-  last_education: z.string().max(200, "Maksimal 200 karakter").optional(),
+  notes: z.string().max(1000, "Notes must be 1000 characters or fewer").optional(),
+  last_experience: z.string().max(200, "200 characters or fewer").optional(),
+  last_education: z.string().max(200, "200 characters or fewer").optional(),
   availability: z.enum(["immediate", "1_week", "2_weeks", "1_month"]).optional(),
   expected_salary: z.string().optional(),
 });
@@ -31,7 +31,7 @@ const OPTIONAL_FIELDS = [
   "expected_salary",
 ] as const;
 
-/** Payload multipart untuk POST /api/portal/submit; field opsional kosong tidak dikirim. */
+/** Multipart payload for POST /api/portal/submit; empty optional fields are left out. */
 export function toSubmitFormData(
   values: ApplicationFormValues,
   extra: { jobOpeningId: string | null; cv: File | null; photo: File | null }

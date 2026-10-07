@@ -1,17 +1,17 @@
 const WHOLESALE_STATUS: Record<string, { label: string; tone: string }> = {
-  pending: { label: "Menunggu Pembayaran", tone: "bg-warning-soft text-warning" },
-  paid: { label: "Dibayar", tone: "bg-success-soft text-success" },
-  packing: { label: "Dikemas", tone: "bg-info-soft text-info" },
-  shipped: { label: "Dikirim", tone: "bg-info-soft text-info" },
-  completed: { label: "Selesai", tone: "bg-success-soft text-success" },
-  cancelled: { label: "Dibatalkan", tone: "bg-danger-soft text-danger" },
-  refund: { label: "Refund", tone: "bg-surface text-muted-foreground" },
+  pending: { label: "Awaiting Payment", tone: "bg-warning-soft text-warning" },
+  paid: { label: "Paid", tone: "bg-success-soft text-success" },
+  packing: { label: "Packing", tone: "bg-info-soft text-info" },
+  shipped: { label: "Shipped", tone: "bg-info-soft text-info" },
+  completed: { label: "Completed", tone: "bg-success-soft text-success" },
+  cancelled: { label: "Cancelled", tone: "bg-danger-soft text-danger" },
+  refund: { label: "Refunded", tone: "bg-surface text-muted-foreground" },
 };
 
 export const statusOf = (status: string) =>
   WHOLESALE_STATUS[status] ?? { label: status, tone: "bg-surface text-muted-foreground" };
 
-/** Label status pesanan pay_later yang belum dibayar. */
-export const payLaterPendingLabel = "Belum dibayar (jatuh tempo)";
+/** Status label for an unpaid pay_later order. */
+export const payLaterPendingLabel = "Unpaid (due later)";
 
-export const TERMS_LABEL = { invoice: "Invoice Xendit", pay_later: "Bayar nanti (30 hari)" } as const;
+export const TERMS_LABEL = { invoice: "Xendit invoice", pay_later: "Pay later (30 days)" } as const;

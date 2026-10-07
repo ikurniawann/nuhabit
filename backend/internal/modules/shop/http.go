@@ -517,10 +517,20 @@ func (h *handler) limit(r *http.Request, bucket string, limit int) error {
 func (h *handler) storefront(r *http.Request) (*Storefront, error) {
 	sf, err := h.svc.ResolveStorefront(r.Context(), r.PathValue("slug"))
 	if err == nil && sf == nil {
-		return nil, httpx.NotFound("Toko tidak ditemukan")
+		return nil, httpx.NotFound("Store not found")
 	}
 	return sf, err
 }
+
+// Messages for the public storefront and the partner portal, in English;
+// staff routes keep orderNotFound.
+const (
+	publicOrderNotFound   = "Order not found"
+	publicCartInvalid     = "Invalid cart"
+	publicOriginNotSet    = "The store has not set a shipping origin yet"
+	publicCourierGone     = "That courier service is no longer available. Pick a shipping rate again."
+	publicCheckoutInvalid = "Checkout data is incomplete or invalid"
+)
 
 // publicGet dispatches GET /api/public/shop/order/{token} and
 // GET /api/public/shop/{slug}/catalog.
@@ -575,7 +585,7 @@ func (h *handler) orderStatus(w http.ResponseWriter, r *http.Request, token stri
 		}
 	}
 	if view == nil {
-		return httpx.NotFound(orderNotFound)
+		return httpx.NotFound(publicOrderNotFound)
 	}
 	return ok(w, view)
 }
@@ -638,7 +648,7 @@ func (h *handler) publicRates(w http.ResponseWriter, r *http.Request) error {
 	postal := f.Str("destination_postal_code", validate.Rule{Optional: true, Nullable: true}, validate.StrOpts{})
 	items := cartItems(f, false)
 	if !f.Valid() {
-		return httpx.BadRequest("Payload tidak valid")
+		return httpx.BadRequest("Invalid payload")
 	}
 	ctx := r.Context()
 	weight, value, err := h.svc.CartWeightAndValue(ctx, items)
@@ -646,14 +656,14 @@ func (h *handler) publicRates(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if weight <= 0 {
-		return httpx.BadRequest("Keranjang tidak valid")
+		return httpx.BadRequest(publicCartInvalid)
 	}
 	sc, err := h.svc.loadShippingContext(ctx)
 	if err != nil {
 		return err
 	}
 	if sc.originID == "" {
-		return httpx.Status(http.StatusServiceUnavailable, "Toko belum mengatur alamat pengiriman")
+		return httpx.Status(http.StatusServiceUnavailable, publicOriginNotSet)
 	}
 	quotes, err := h.svc.quoteFromOrigin(ctx, sc, *destID, postal, weight, value)
 	if err != nil {
@@ -692,7 +702,7 @@ func (h *handler) checkout(w http.ResponseWriter, r *http.Request) error {
 	}
 	in, valid := parseCheckout(raw)
 	if !valid {
-		return httpx.BadRequest("Data checkout tidak lengkap/valid")
+		return httpx.BadRequest(publicCheckoutInvalid)
 	}
 	ctx := r.Context()
 	h.svc.releaseExpiredReservations(ctx)
@@ -704,14 +714,14 @@ func (h *handler) checkout(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if weight <= 0 {
-		return httpx.BadRequest("Keranjang tidak valid")
+		return httpx.BadRequest(publicCartInvalid)
 	}
 	sc, err := h.svc.loadShippingContext(ctx)
 	if err != nil {
 		return err
 	}
 	if sc.originID == "" {
-		return httpx.Status(http.StatusServiceUnavailable, "Toko belum mengatur alamat pengiriman")
+		return httpx.Status(http.StatusServiceUnavailable, publicOriginNotSet)
 	}
 	quotes, err := h.svc.quoteFromOrigin(ctx, sc, in.Destination.AreaID, in.Destination.PostalCode, weight, value)
 	if err != nil {
@@ -719,7 +729,7 @@ func (h *handler) checkout(w http.ResponseWriter, r *http.Request) error {
 	}
 	chosen, found := domain.FindQuote(quotes, in.Courier.Code, in.Courier.ServiceCode)
 	if !found {
-		return httpx.Conflict("Layanan kurir tidak tersedia lagi — pilih ulang ongkir")
+		return httpx.Conflict(publicCourierGone)
 	}
 	base := requestOrigin(r, h.svc.ports.AppOrigin)
 	in.Storefront = *sf
