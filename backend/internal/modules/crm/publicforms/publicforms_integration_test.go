@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"nuhabit/backend/internal/modules/crm/advance"
 	"nuhabit/backend/internal/platform/database"
@@ -37,10 +38,21 @@ func (sqlLeads) AppendNote(ctx context.Context, q database.Querier, leadID, note
 func (sqlLeads) Create(ctx context.Context, q database.Querier, in NewLead) (string, error) {
 	var id string
 	err := q.QueryRow(ctx, `INSERT INTO crm.crm_sales_leads (company_id, branch_id, org_name, org_type, pic_name, pic_phone,
-		  pic_email, city, notes, source, temperature, status, custom, utm_source, utm_campaign)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'hangat', 'baru', $11::jsonb, $12, $13) RETURNING id::text`,
+		  pic_email, city, notes, source, temperature, status, custom, utm_source, utm_campaign, landing_page)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE(NULLIF($14, ''), 'hangat'), 'baru', $11::jsonb, $12, $13, $15) RETURNING id::text`,
 		in.CompanyID, in.BranchID, in.OrgName, in.OrgType, in.PicName, in.PicPhone, in.PicEmail, in.City, in.Notes,
-		in.Source, in.Custom, in.Attribution.UtmSource, in.Attribution.UtmCampaign).Scan(&id)
+		in.Source, in.Custom, in.Attribution.UtmSource, in.Attribution.UtmCampaign, in.Temperature, in.Attribution.LandingPage).Scan(&id)
+	return id, err
+}
+
+func (sqlLeads) RecentByPhone(ctx context.Context, q database.Querier, companyID, phone string, since time.Time) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `SELECT id::text FROM crm.crm_sales_leads
+		WHERE company_id = $1 AND pic_phone = $2 AND created_at > $3 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+		companyID, phone, since).Scan(&id)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
 	return id, err
 }
 

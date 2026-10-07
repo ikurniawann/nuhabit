@@ -29,8 +29,12 @@ type Leads interface {
 	Duplicate(ctx context.Context, q database.Querier, companyID, phone, orgName string) (string, error)
 	// AppendNote appends a paragraph to the lead's notes.
 	AppendNote(ctx context.Context, q database.Querier, leadID, note string) error
-	// Create inserts a 'hangat' / 'baru' lead and returns its id.
+	// Create inserts a 'baru' lead with the given temperature and returns
+	// its id.
 	Create(ctx context.Context, q database.Querier, in NewLead) (string, error)
+	// RecentByPhone is the newest live lead of the company with this phone
+	// created after since, "" when none.
+	RecentByPhone(ctx context.Context, q database.Querier, companyID, phone string, since time.Time) (string, error)
 }
 
 // NewLead is a lead created from a form.
@@ -38,6 +42,7 @@ type NewLead struct {
 	CompanyID                   string
 	BranchID                    *string
 	OrgName, OrgType, Source    string
+	Temperature                 string
 	PicName, PicPhone, PicEmail *string
 	City, Notes                 *string
 	Custom                      string // jsonb text
@@ -75,6 +80,7 @@ func (h *handler) routes() []module.Route {
 	return []module.Route{
 		{Pattern: "GET /api/public/crm/forms/{slug}", Handler: httpx.Handle(h.get)},
 		{Pattern: "POST /api/public/crm/forms/{slug}", Handler: httpx.Handle(h.submit)},
+		{Pattern: "POST /api/public/site/trial", Handler: httpx.Handle(h.trial)},
 	}
 }
 
@@ -86,6 +92,7 @@ type form struct {
 	Fields                       []domain.PublicField
 	SubmitLabel, SuccessMessage  string
 	DefaultSource                string
+	LeadTemperature              string
 	NotifyUserIDs, NotifyNumbers []string
 }
 
@@ -101,10 +108,10 @@ func (h *handler) loadForm(ctx context.Context, slug string) (*form, error) {
 	var f form
 	var fields, userIDs, numbers []byte
 	err := h.db.QueryRow(ctx, `SELECT id::text, company_id::text, branch_id::text, slug, name, title, description, fields,
-		  submit_label, success_message, redirect_url, default_source, notify_user_ids, notify_numbers
+		  submit_label, success_message, redirect_url, default_source, lead_temperature, notify_user_ids, notify_numbers
 		FROM crm.crm_forms
 		WHERE slug = $1 AND is_active AND deleted_at IS NULL`, slug).Scan(&f.ID, &f.CompanyID, &f.BranchID, &f.Slug, &f.Name,
-		&f.Title, &f.Description, &fields, &f.SubmitLabel, &f.SuccessMessage, &f.RedirectURL, &f.DefaultSource, &userIDs, &numbers)
+		&f.Title, &f.Description, &fields, &f.SubmitLabel, &f.SuccessMessage, &f.RedirectURL, &f.DefaultSource, &f.LeadTemperature, &userIDs, &numbers)
 	if database.IsNoRows(err) {
 		return nil, notFound
 	}
@@ -302,6 +309,11 @@ func (h *handler) submitForm(ctx context.Context, f *form, raw any, ip string, u
 	return done, nil
 }
 
+func customText(custom map[string]any, key string) string {
+	s, _ := custom[key].(string)
+	return s
+}
+
 // leadValue is `submission.lead[key] ?? null`.
 func leadValue(lead map[string]string, key string) *string {
 	if v, ok := lead[key]; ok {
@@ -325,7 +337,17 @@ func (h *handler) createLead(ctx context.Context, f *form, sub Submission, a Att
 	if companyID == nil {
 		return "", false, nil
 	}
+	// A form may split the name (first_name, last_name); the lead keeps one.
+	if sub.Lead["pic_name"] == "" {
+		if n := jsTrim(customText(sub.Custom, "first_name") + " " + customText(sub.Custom, "last_name")); n != "" {
+			sub.Lead["pic_name"] = n
+		}
+	}
 	orgName := LeadOrgName(sub.Lead)
+	picName := orgName
+	if n := sub.Lead["pic_name"]; n != "" {
+		picName = n
+	}
 	var phone *string
 	if p := sub.Lead["pic_phone"]; p != "" {
 		n := NormalizePhone(p)
@@ -353,8 +375,8 @@ func (h *handler) createLead(ctx context.Context, f *form, sub Submission, a Att
 	}
 	id, err = h.leads.Create(ctx, h.db, NewLead{
 		CompanyID: *companyID, BranchID: branchID, OrgName: orgName, OrgType: orgType,
-		Source:  SourceFromAttribution(a, f.DefaultSource),
-		PicName: leadValue(sub.Lead, "pic_name"), PicPhone: phone, PicEmail: leadValue(sub.Lead, "pic_email"),
+		Source: SourceFromAttribution(a, f.DefaultSource), Temperature: f.LeadTemperature,
+		PicName: &picName, PicPhone: phone, PicEmail: leadValue(sub.Lead, "pic_email"),
 		City: leadValue(sub.Lead, "city"), Notes: leadValue(sub.Lead, "notes"), Custom: string(custom), Attribution: a,
 	})
 	if err != nil || id == "" {

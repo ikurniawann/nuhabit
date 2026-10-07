@@ -270,7 +270,11 @@ func (h *handler) leadDetail(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, pgrow.New("lead", lead, "deals", deals, "activities", activities, "customer", customer, "recent_orders", orders))
+	consents, err := h.ports.CRM.LeadConsents(ctx, h.db, id)
+	if err != nil {
+		return err
+	}
+	return ok(w, pgrow.New("lead", lead, "deals", deals, "activities", activities, "customer", customer, "recent_orders", orders, "consents", consents))
 }
 
 // memberCard is the loyalty summary of a linked member (and, for leads,

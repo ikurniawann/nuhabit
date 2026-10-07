@@ -392,6 +392,12 @@ func (salesFunnelCRM) WaMessages(ctx context.Context, q database.Querier, suffix
        ORDER BY m.created_at DESC LIMIT 100`, suffixes)
 }
 
+func (salesFunnelCRM) LeadConsents(ctx context.Context, q database.Querier, leadID string) ([]*pgrow.Row, error) {
+	return pgrow.Query(ctx, q, `SELECT id, channel, granted, consent_text_version, source_path, created_at
+       FROM crm.lead_consents WHERE lead_id = $1
+       ORDER BY created_at DESC, channel`, leadID)
+}
+
 /* ── Receivables (accounting AR) ──────────────────────────────────────── */
 
 // salesFunnelReceivables posts the AR invoice through accounting's service

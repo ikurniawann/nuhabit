@@ -4070,6 +4070,11 @@
     "path": "/api/public/site/sessions"
   },
   {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/public/site/trial"
+  },
+  {
     "module": "inventory",
     "method": "DELETE",
     "path": "/api/purchasing/bom/{id}"

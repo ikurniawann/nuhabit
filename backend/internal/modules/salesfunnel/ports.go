@@ -132,6 +132,9 @@ type CRM interface {
 	// WaMessages lists crm.wa_messages whose phone ends with one of the
 	// 9-digit suffixes, newest first, at most 100.
 	WaMessages(ctx context.Context, q database.Querier, suffixes []string) ([]*pgrow.Row, error)
+	// LeadConsents lists the marketing consents a lead gave or refused on
+	// the public site (crm.lead_consents), newest first.
+	LeadConsents(ctx context.Context, q database.Querier, leadID string) ([]*pgrow.Row, error)
 }
 
 // Receivables posts the AR invoice of a sent sales invoice. The PATCH

@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDate, formatRupiah } from "@/lib/format";
+import { formatDate, formatDateTime, formatRupiah } from "@/lib/format";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -18,6 +18,7 @@ import { DealFormDialog } from "../../pipeline";
 import { formatRupiahOrDash } from "../../pipeline/types";
 import { useLeadDetail, usePicLookup } from "../queries";
 import {
+  CONSENT_CHANNEL_LABELS,
   ORG_TYPE_LABELS,
   SOURCE_LABELS,
   STATUS_LABELS,
@@ -114,7 +115,7 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
     );
   }
 
-  const { lead, deals, customer, recent_orders } = detail;
+  const { lead, deals, customer, recent_orders, consents = [] } = detail;
   const wonDeals = deals.filter((d) => d.is_won);
   const openDeals = deals.filter((d) => !d.closed_at);
   const totalWonValue = wonDeals.reduce(
@@ -317,6 +318,26 @@ export function LeadDetailPage({ leadId }: { leadId: string }) {
               {lead.referrer ? (
                 <p className="mt-1 break-all text-xs text-gray-500">Referrer: {lead.referrer}</p>
               ) : null}
+            </div>
+          ) : null}
+          {consents.length > 0 ? (
+            <div className="mb-4 rounded-xl border border-gray-200/80 bg-white p-4 text-sm">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Persetujuan pemasaran</p>
+              <ul className="space-y-1.5">
+                {consents.map((c) => (
+                  <li key={c.id} className="flex items-start justify-between gap-3 text-gray-700">
+                    <span>
+                      {CONSENT_CHANNEL_LABELS[c.channel]}
+                      <span className="block text-xs text-gray-500">
+                        {formatDateTime(c.created_at, "—")} · teks {c.consent_text_version}
+                      </span>
+                    </span>
+                    <Badge className={`border-0 font-normal ${c.granted ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                      {c.granted ? "Setuju" : "Menolak"}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
             </div>
           ) : null}
           {lead.score_breakdown && lead.score_breakdown.length > 0 ? (

@@ -127,11 +127,25 @@ func (Records) AppendLeadNote(ctx context.Context, q database.Querier, leadID, n
 	return err
 }
 
+// LeadByPhoneSince is the newest live lead of the company with this phone
+// created after since, "" when none.
+func (Records) LeadByPhoneSince(ctx context.Context, q database.Querier, companyID, phone string, since time.Time) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `SELECT id::text FROM crm.crm_sales_leads
+		WHERE company_id = $1 AND pic_phone = $2 AND created_at > $3 AND deleted_at IS NULL
+		ORDER BY created_at DESC LIMIT 1`, companyID, phone, since).Scan(&id)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
+	return id, err
+}
+
 // FormLead is a lead a public web form submits (CRM public forms).
 type FormLead struct {
 	CompanyID                   string
 	BranchID                    *string
 	OrgName, OrgType, Source    string
+	Temperature                 string // 'hangat' when empty
 	PicName, PicPhone, PicEmail *string
 	City, Notes                 *string
 	Custom                      string // jsonb text
@@ -141,18 +155,19 @@ type FormLead struct {
 	LandingPage, Referrer       *string
 }
 
-// CreateFormLead inserts a 'hangat' / 'baru' lead with its attribution and
-// returns its id.
+// CreateFormLead inserts a 'baru' lead with its attribution and returns its
+// id.
 func (Records) CreateFormLead(ctx context.Context, q database.Querier, in FormLead) (string, error) {
 	var id string
 	err := q.QueryRow(ctx, `INSERT INTO crm.crm_sales_leads
 		  (company_id, branch_id, org_name, org_type, pic_name, pic_phone, pic_email, city, notes,
 		   source, temperature, status, custom,
 		   utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page, referrer)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'hangat', 'baru', $11::jsonb,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE(NULLIF($19, ''), 'hangat'), 'baru', $11::jsonb,
 		        $12, $13, $14, $15, $16, $17, $18)
 		RETURNING id::text`,
 		in.CompanyID, in.BranchID, in.OrgName, in.OrgType, in.PicName, in.PicPhone, in.PicEmail, in.City, in.Notes,
-		in.Source, in.Custom, in.UtmSource, in.UtmMedium, in.UtmCampaign, in.UtmContent, in.UtmTerm, in.LandingPage, in.Referrer).Scan(&id)
+		in.Source, in.Custom, in.UtmSource, in.UtmMedium, in.UtmCampaign, in.UtmContent, in.UtmTerm, in.LandingPage, in.Referrer,
+		in.Temperature).Scan(&id)
 	return id, err
 }
