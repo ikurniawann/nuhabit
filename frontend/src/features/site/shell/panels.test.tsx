@@ -1,8 +1,17 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { PANELS, readBranchCookie, resolvePanel, SitePanelsProvider, useSitePanels, type PanelKind } from "./panels";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+
+beforeEach(() => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify({ success: true, data: [{ slug: "bandung", name: "NüHabit Bandung" }] }), { status: 200 }),
+  );
+});
+
+afterEach(() => vi.restoreAllMocks());
 
 const KINDS: PanelKind[] = ["timetable", "trial", "membership", "cart"];
 
@@ -40,18 +49,21 @@ function Opener() {
 describe("SitePanelsProvider", () => {
   it("opens the requested panel in a dialog and closes it again", async () => {
     render(
-      <SitePanelsProvider>
-        <Opener />
-      </SitePanelsProvider>,
+      <QueryClientProvider client={new QueryClient()}>
+        <SitePanelsProvider>
+          <Opener />
+        </SitePanelsProvider>
+      </QueryClientProvider>,
     );
     expect(screen.queryByRole("dialog")).toBeNull();
 
     fireEvent.click(screen.getByText("open trial"));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Coba gratis");
-    expect(dialog).toHaveTextContent("bandung");
+    expect(await screen.findByRole("option", { name: "NüHabit Bandung" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Cabang")).toHaveValue("bandung");
 
-    fireEvent.click(screen.getByText("Tutup"));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
 
     fireEvent.click(screen.getByText("open membership"));

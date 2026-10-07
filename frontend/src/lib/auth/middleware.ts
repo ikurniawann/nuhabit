@@ -80,6 +80,9 @@ const PUBLIC_AUTH_PREFIXES = [
   "/events",
   "/privacy",
   "/terms",
+  "/franchise",
+  "/equipment",
+  "/contact",
   "/api/public/site",
   // Probe liveness/readiness untuk Docker HEALTHCHECK & load balancer.
   "/api/health",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, MapPin } from "lucide-react";
+import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { BranchSummary, HomeContent } from "../types";
 import { PanelButton } from "./panel-button";
@@ -32,6 +32,9 @@ function Hero({ hero }: { hero: HomeContent["hero"] }) {
         <div className="flex flex-wrap gap-3">
           <PanelButton panel="trial" size="lg">
             {hero.cta_label || "Coba Gratis"}
+          </PanelButton>
+          <PanelButton panel="timetable" size="lg" variant="onInk">
+            <CalendarDays /> Jadwal kelas
           </PanelButton>
           <Button asChild variant="onInk" size="lg">
             <Link href="/locations">

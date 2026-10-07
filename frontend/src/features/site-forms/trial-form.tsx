@@ -8,26 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { HONEYPOT_FIELD, readPageAttribution } from "@/lib/crm/public-forms";
 import { CONSENT_EMAIL_TEXT, CONSENT_SMS_TEXT, CONSENT_TEXT_VERSION } from "./consent";
+import { fetchPublicBranches, type PublicBranch } from "./branches";
 import { COUNTRY_CODES } from "./phone";
 import { pushDataLayer } from "./track";
 import { EMPTY_TRIAL, type TrialField, type TrialValues, trialPayload, validateTrial } from "./trial-validation";
 
-export interface TrialBranch {
-  slug: string;
-  name: string;
-}
-
-/** Cabang dari GET /api/public/site/branches: daftar langsung atau di bawah `branches`. */
-async function fetchBranches(): Promise<TrialBranch[]> {
-  const res = await fetch("/api/public/site/branches", { cache: "no-store" });
-  const json = (await res.json().catch(() => ({}))) as {
-    success?: boolean;
-    data?: TrialBranch[] | { branches?: TrialBranch[] };
-  };
-  if (!res.ok || !json.success || !json.data) return [];
-  const list = Array.isArray(json.data) ? json.data : (json.data.branches ?? []);
-  return list.filter((b) => typeof b.slug === "string" && typeof b.name === "string");
-}
+export type TrialBranch = PublicBranch;
 
 const selectClass =
   "h-11 w-full rounded-2xl border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/20 aria-invalid:border-destructive";
@@ -59,7 +45,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
   useEffect(() => {
     if (given) return;
     let active = true;
-    fetchBranches().then((list) => {
+    fetchPublicBranches().then((list) => {
       if (active) setBranches(list);
     });
     return () => {

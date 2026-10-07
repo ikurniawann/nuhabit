@@ -20,6 +20,7 @@ export const BRAND_NAV = [
 
 export const BUSINESS_NAV = [
   { href: "/apparel", label: "Toko" },
+  { href: "/equipment", label: "Peralatan" },
   { href: "/career", label: "Karir" },
   { href: "/contact", label: "Kontak" },
 ] as const;
