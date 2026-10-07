@@ -31,6 +31,11 @@ func AllowedFromStatuses(next string) (from []string, ok bool) {
 // CanShipOrder is canShipOrder: a paid order not yet shipped.
 func CanShipOrder(status string) bool { return status == "paid" || status == "packing" }
 
+// PayLaterFromPending reports whether a pending pay_later order may move to
+// next without a payment: packing (goods ship before payment) or paid
+// (staff record the transfer).
+func PayLaterFromPending(next string) bool { return next == "packing" || next == "paid" }
+
 // OrderListFilter is ShopOrderListFilter.
 type OrderListFilter struct {
 	Status string

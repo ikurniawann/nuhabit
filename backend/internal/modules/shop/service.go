@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Service holds the shop use cases.
@@ -23,6 +24,8 @@ type Service struct {
 	now   func() time.Time
 	log   *slog.Logger
 	http  *http.Client
+	// limits brakes the public routes and the wholesale login.
+	limits *ratelimit.Limiter
 	// Provider base URLs; tests point them at httptest servers.
 	biteshipBase   string
 	rajaongkirBase string
@@ -44,6 +47,7 @@ func NewService(db database.DB, ports Ports, now func() time.Time, log *slog.Log
 	}
 	return &Service{
 		db: db, ports: ports, now: now, log: log,
+		limits:         ratelimit.New(db),
 		http:           &http.Client{},
 		biteshipBase:   "https://api.biteship.com",
 		rajaongkirBase: "https://rajaongkir.komerce.id/api/v1",

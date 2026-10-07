@@ -1,9 +1,6 @@
 package shop
 
-import (
-	"nuhabit/backend/internal/platform/module"
-	"nuhabit/backend/internal/platform/ratelimit"
-)
+import "nuhabit/backend/internal/platform/module"
 
 // Name is the MODULES key.
 const Name = "shop"
@@ -19,5 +16,5 @@ func New(deps module.Deps, ports Ports) module.Module {
 }
 
 func newModule(deps module.Deps, svc *Service) mod {
-	return mod{h: &handler{svc: svc, guard: deps.Auth, limiter: ratelimit.New(svc.db)}}
+	return mod{h: &handler{svc: svc, guard: deps.Auth}}
 }

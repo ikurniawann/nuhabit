@@ -15,7 +15,7 @@ import { AreaSuggestions } from '@/features/shop/shared/area-suggestions';
 import { fetchShippingRates, submitShopCheckout, type RateQuote } from '../queries';
 
 const INPUT_CLASS =
-  'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-pink-400';
+  'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-forest';
 
 const sameRate = (a: RateQuote, b: RateQuote) =>
   a.courierCode === b.courierCode && a.serviceCode === b.serviceCode;
@@ -24,17 +24,21 @@ const sameRate = (a: RateQuote, b: RateQuote) =>
  * Pengiriman & pembayaran: area tujuan → ongkir live → invoice Xendit.
  * Tetap ter-mount saat ditutup (render null) supaya isian form tidak hilang.
  * Tarif hanya berlaku untuk isi keranjang saat dihitung (sidik keranjang).
+ * `cart` bisa keranjang tersimpan atau satu baris "Beli Sekarang"; catatan
+ * pesanan ikut dari pemanggil.
  */
 export function CheckoutDrawer({
   open,
   slug,
   cart,
+  note,
   onPaid,
   onClose,
 }: {
   open: boolean;
   slug: string;
   cart: CartLine[];
+  note: string;
   onPaid: () => void;
   onClose: () => void;
 }) {
@@ -42,7 +46,6 @@ export function CheckoutDrawer({
   const [custPhone, setCustPhone] = useState('');
   const [custEmail, setCustEmail] = useState('');
   const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
   const [areaQuery, setAreaQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<AreaSuggestion | null>(null);
   const [pickedRate, setPickedRate] = useState<RateQuote | null>(null);
@@ -73,7 +76,7 @@ export function CheckoutDrawer({
           address: address.trim(),
         },
         courier: { code: selectedRate.courierCode, service_code: selectedRate.serviceCode },
-        notes: notes.trim() || null,
+        notes: note.trim() || null,
       });
     },
     onSuccess: ({ invoice_url }) => {
@@ -185,8 +188,8 @@ export function CheckoutDrawer({
                   onClick={() => setPickedRate(rate)}
                   className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition ${
                     selectedRate && sameRate(selectedRate, rate)
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 hover:border-pink-300'
+                      ? 'border-forest bg-surface'
+                      : 'border-gray-200 hover:border-forest'
                   }`}
                 >
                   <span>
@@ -200,13 +203,9 @@ export function CheckoutDrawer({
             </div>
           ) : null}
 
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Catatan (opsional)"
-            rows={2}
-            className={INPUT_CLASS}
-          />
+          {note.trim() ? (
+            <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">Catatan: {note.trim()}</p>
+          ) : null}
 
           {message ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{message}</p> : null}
         </div>
@@ -222,13 +221,13 @@ export function CheckoutDrawer({
           </div>
           <div className="mb-3 flex items-center justify-between text-base font-semibold">
             <span>Total</span>
-            <span className="text-pink-600">{formatRupiah(subtotal + (selectedRate?.total_price ?? 0))}</span>
+            <span className="text-forest">{formatRupiah(subtotal + (selectedRate?.total_price ?? 0))}</span>
           </div>
           <button
             type="button"
             onClick={submit}
             disabled={checkout.isPending || checkout.isSuccess}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-700 disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:opacity-60"
           >
             {checkout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Bayar Sekarang

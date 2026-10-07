@@ -168,9 +168,17 @@ describe("Go route manifest", () => {
       "/api/public/booking/{a}/{b}",
       "/api/public/shop/{a}/{b}",
     ];
+    // Routes born in Go: no TypeScript route ever existed under these
+    // prefixes, so there is nothing to fall back to.
+    const goNativePrefixes = ["/api/shop/wholesale", "/api/wholesale", "/api/public/site", "/api/site"];
+    const goNative = (p: string) =>
+      goNativePrefixes.some((n) => p === n || p.startsWith(`${n}/`));
     const missing = switched
       .filter(
-        (r) => !sharedPatterns.includes(r.path) && !dirExists(tsPath(r.path)),
+        (r) =>
+          !sharedPatterns.includes(r.path) &&
+          !goNative(r.path) &&
+          !dirExists(tsPath(r.path)),
       )
       .map((r) => `${r.method} ${r.path}`);
     expect(missing).toEqual([]);
