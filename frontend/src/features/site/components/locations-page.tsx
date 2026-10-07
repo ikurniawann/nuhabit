@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import dynamic from "next/dynamic";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Crosshair, LoaderCircle, MapPin, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import { useMyLocation } from "@/features/member-app/lib/geolocation";
 import { formatKm, sortByDistance, type LatLng } from "../lib/distance";
 import type { BranchSummary } from "../types";
-import type { MapPin as Pin } from "./branch-map";
+import { BranchMap, type MapPin as Pin } from "./branch-map";
 import { Container, EmptyNote, Picture, Section, SectionHeading } from "./site-section";
 
-const BranchMap = dynamic(() => import("./branch-map").then((m) => m.BranchMap), {
-  ssr: false,
-  loading: () => <div className="h-[360px] animate-pulse rounded-card bg-surface-2" />,
-});
+const noSubscribe = () => () => {};
+
+/** False during server rendering and hydration; the map needs a real DOM. */
+function useMounted(): boolean {
+  return useSyncExternalStore(noSubscribe, () => true, () => false);
+}
 
 function matches(branch: BranchSummary, query: string): boolean {
   const q = query.trim().toLowerCase();
@@ -26,6 +27,7 @@ function matches(branch: BranchSummary, query: string): boolean {
 export function LocationsPage({ branches }: { branches: BranchSummary[] }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
+  const mounted = useMounted();
   const me = useMyLocation();
   const fix = me.fix;
   const origin = useMemo<LatLng | null>(() => (fix ? { lat: fix.lat, lng: fix.lng } : null), [fix]);
@@ -69,7 +71,13 @@ export function LocationsPage({ branches }: { branches: BranchSummary[] }) {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="space-y-3 lg:order-2">
-            {pins.length > 0 ? <BranchMap pins={pins} me={origin} selected={selected} onSelect={setSelected} /> : null}
+            {pins.length > 0 ? (
+              mounted ? (
+                <BranchMap pins={pins} me={origin} selected={selected} onSelect={setSelected} />
+              ) : (
+                <div className="h-[360px] animate-pulse rounded-card bg-surface-2" />
+              )
+            ) : null}
           </div>
           <ul className="space-y-3 lg:order-1">
             {ranked.length === 0 ? (

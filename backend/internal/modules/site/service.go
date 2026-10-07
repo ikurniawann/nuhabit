@@ -116,8 +116,8 @@ type ArticleFilter struct {
 
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
-// Slugify is the URL form of a title.
-func Slugify(title string) string {
+// slugify is the URL form of a title.
+func slugify(title string) string {
 	return strings.Trim(nonSlug.ReplaceAllString(strings.ToLower(title), "-"), "-")
 }
 
@@ -126,7 +126,7 @@ func slugFor(slug, title string) string {
 	if slug != "" {
 		return slug
 	}
-	if s := Slugify(title); s != "" {
+	if s := slugify(title); s != "" {
 		return s
 	}
 	return "artikel"

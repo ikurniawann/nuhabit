@@ -45,7 +45,7 @@ export function EventPage({ event, form }: { event: SiteEvent; form: PublicFormV
           <Markdown source={event.body_md} className="prose-site" />
           {form ? (
             <div id="daftar" className="rounded-card bg-card p-2 shadow-card">
-              <PublicFormPage form={form} />
+              <PublicFormPage form={form} embedded />
             </div>
           ) : null}
         </Container>

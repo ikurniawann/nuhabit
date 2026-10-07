@@ -125,7 +125,7 @@ function Reel({ reel }: { reel: HomeContent["reel"] }) {
 function Branches({ branches }: { branches: BranchSummary[] }) {
   if (branches.length === 0) return null;
   return (
-    <Section className="pt-0">
+    <Section>
       <Container className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <SectionHeading kicker="Lokasi" title="Cabang kami" />

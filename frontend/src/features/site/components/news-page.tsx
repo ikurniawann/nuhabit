@@ -88,7 +88,7 @@ export function ArticlePage({ article }: { article: Article }) {
           <Picture src={article.cover_image_url} alt="" className="aspect-[16/9] w-full rounded-card" />
         </Container>
       ) : null}
-      <Section className="pt-8">
+      <Section className="pt-2">
         <Container className="max-w-3xl">
           <Markdown source={article.body_md} className="prose-site" />
         </Container>

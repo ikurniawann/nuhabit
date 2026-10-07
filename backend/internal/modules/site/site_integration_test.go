@@ -66,6 +66,17 @@ func (e *env) list(as *testutil.Staff, path string) []any {
 	return l
 }
 
+// has reports whether a listing contains the row with slug; the local
+// database may hold other rows, so tests never count the whole list.
+func has(list []any, slug string) bool {
+	for _, item := range list {
+		if row, _ := item.(map[string]any); row["slug"] == slug {
+			return true
+		}
+	}
+	return false
+}
+
 func TestContentDefaultsAndRoundTrip(t *testing.T) {
 	e := setup(t)
 
@@ -106,34 +117,36 @@ func TestArticlesPublishAndPublicVisibility(t *testing.T) {
 	e.call(&e.viewer, "GET", path, nil, http.StatusForbidden)
 	e.call(&e.editor, "POST", path, map[string]any{"title": "", "category": "x"}, http.StatusBadRequest)
 
-	out := e.call(&e.editor, "POST", path, map[string]any{"title": "Blok 8 Minggu: Fase 1", "category": "training", "body_md": "# Halo"}, http.StatusCreated)
+	title := "Go Test Blok " + testutil.RandomHex(3)
+	slug := "go-test-blok-" + title[len(title)-6:]
+	out := e.call(&e.editor, "POST", path, map[string]any{"title": title, "category": "training", "body_md": "# Halo"}, http.StatusCreated)
 	a := out["data"].(map[string]any)
 	id := a["id"].(string)
-	if a["slug"] != "blok-8-minggu-fase-1" || a["status"] != "draft" || a["published_at"] != nil {
-		t.Fatalf("created %v", a)
+	if a["slug"] != slug || a["status"] != "draft" || a["published_at"] != nil {
+		t.Fatalf("created %v (want slug %s)", a, slug)
 	}
-	e.call(&e.editor, "POST", path, map[string]any{"title": "Dup", "slug": "blok-8-minggu-fase-1"}, http.StatusConflict)
+	e.call(&e.editor, "POST", path, map[string]any{"title": "Dup", "slug": slug}, http.StatusConflict)
 
-	if l := e.list(nil, "/api/public/site/articles"); len(l) != 0 {
-		t.Fatalf("draft visible publicly: %v", l)
+	if has(e.list(nil, "/api/public/site/articles"), slug) {
+		t.Fatal("draft visible publicly")
 	}
-	e.call(nil, "GET", "/api/public/site/articles/blok-8-minggu-fase-1", nil, http.StatusNotFound)
-	if l := e.list(&e.editor, path); len(l) != 1 {
-		t.Fatalf("staff list %v", l)
+	e.call(nil, "GET", "/api/public/site/articles/"+slug, nil, http.StatusNotFound)
+	if !has(e.list(&e.editor, path), slug) {
+		t.Fatal("draft missing from the staff list")
 	}
 
 	patched := e.data(&e.editor, "PATCH", path+"/"+id, map[string]any{"status": "published", "excerpt": "Ringkasan"})
 	if patched["published_at"] != fixedNow.Format("2006-01-02T15:04:05.000Z") || patched["excerpt"] != "Ringkasan" {
 		t.Fatalf("published %v", patched)
 	}
-	if l := e.list(nil, "/api/public/site/articles?category=training"); len(l) != 1 {
-		t.Fatalf("public list %v", l)
+	if !has(e.list(nil, "/api/public/site/articles?category=training"), slug) {
+		t.Fatal("published article missing from the public list")
 	}
-	if l := e.list(nil, "/api/public/site/articles?category=news"); len(l) != 0 {
-		t.Fatalf("category filter %v", l)
+	if has(e.list(nil, "/api/public/site/articles?category=news"), slug) {
+		t.Fatal("category filter ignored")
 	}
 	e.call(nil, "GET", "/api/public/site/articles?category=bogus", nil, http.StatusBadRequest)
-	pub := e.data(nil, "GET", "/api/public/site/articles/blok-8-minggu-fase-1", nil)
+	pub := e.data(nil, "GET", "/api/public/site/articles/"+slug, nil)
 	if pub["body_md"] != "# Halo" {
 		t.Fatalf("public article %v", pub)
 	}
@@ -143,7 +156,7 @@ func TestArticlesPublishAndPublicVisibility(t *testing.T) {
 	if patched["excerpt"] != nil {
 		t.Fatalf("excerpt not cleared %v", patched)
 	}
-	e.call(nil, "GET", "/api/public/site/articles/blok-8-minggu-fase-1", nil, http.StatusNotFound)
+	e.call(nil, "GET", "/api/public/site/articles/"+slug, nil, http.StatusNotFound)
 
 	e.call(&e.editor, "DELETE", path+"/"+id, nil, http.StatusOK)
 	e.call(&e.editor, "DELETE", path+"/"+id, nil, http.StatusNotFound)
@@ -154,22 +167,25 @@ func TestEvents(t *testing.T) {
 	e := setup(t)
 	const path = "/api/site/events"
 
+	slug := "go-test-race-" + testutil.RandomHex(3)
+	draftSlug := slug + "-draft"
 	e.call(&e.editor, "POST", path, map[string]any{"title": "Race Day"}, http.StatusBadRequest)
 	out := e.call(&e.editor, "POST", path, map[string]any{
-		"title": "Race Day", "starts_at": "2026-11-01T02:00:00Z", "form_slug": "race-day", "status": "published",
+		"title": "Race Day", "slug": slug, "starts_at": "2026-11-01T02:00:00Z", "form_slug": "race-day", "status": "published",
 	}, http.StatusCreated)
 	ev := out["data"].(map[string]any)
-	if ev["slug"] != "race-day" || ev["form_slug"] != "race-day" || ev["starts_at"] != "2026-11-01T02:00:00.000Z" {
+	if ev["slug"] != slug || ev["form_slug"] != "race-day" || ev["starts_at"] != "2026-11-01T02:00:00.000Z" {
 		t.Fatalf("event %v", ev)
 	}
-	e.call(&e.editor, "POST", path, map[string]any{"title": "Draft", "starts_at": "2026-12-01T02:00:00Z"}, http.StatusCreated)
-	if l := e.list(nil, "/api/public/site/events"); len(l) != 1 {
-		t.Fatalf("public events %v", l)
+	e.call(&e.editor, "POST", path, map[string]any{"title": "Draft", "slug": draftSlug, "starts_at": "2026-12-01T02:00:00Z"}, http.StatusCreated)
+	public := e.list(nil, "/api/public/site/events")
+	if !has(public, slug) || has(public, draftSlug) {
+		t.Fatalf("public events %v", public)
 	}
-	if l := e.list(&e.editor, path); len(l) != 2 {
-		t.Fatalf("staff events %v", l)
+	if staff := e.list(&e.editor, path); !has(staff, slug) || !has(staff, draftSlug) {
+		t.Fatalf("staff events %v", staff)
 	}
-	pub := e.data(nil, "GET", "/api/public/site/events/race-day", nil)
+	pub := e.data(nil, "GET", "/api/public/site/events/"+slug, nil)
 	if pub["title"] != "Race Day" {
 		t.Fatalf("public event %v", pub)
 	}
@@ -177,7 +193,7 @@ func TestEvents(t *testing.T) {
 	if patched["form_slug"] != nil {
 		t.Fatalf("form_slug not cleared %v", patched)
 	}
-	e.call(nil, "GET", "/api/public/site/events/race-day", nil, http.StatusNotFound)
+	e.call(nil, "GET", "/api/public/site/events/"+slug, nil, http.StatusNotFound)
 }
 
 func TestPublicBranches(t *testing.T) {

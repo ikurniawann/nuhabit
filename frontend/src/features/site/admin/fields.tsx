@@ -93,7 +93,7 @@ export interface ItemField {
 
 export type Item = Record<string, string>;
 
-export function emptyItem(fields: ItemField[]): Item {
+function emptyItem(fields: ItemField[]): Item {
   return Object.fromEntries(fields.map((f) => [f.key, ""]));
 }
 

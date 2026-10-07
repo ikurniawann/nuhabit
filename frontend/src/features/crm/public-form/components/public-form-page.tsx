@@ -102,17 +102,19 @@ export function PublicFormPage({ form, embedded = false }: { form: PublicFormVie
 
   const grouped = useMemo(() => form.fields, [form.fields]);
 
+  // Inside another page the form is a section, so its title drops a level.
+  const Title = embedded ? "h2" : "h1";
   const card = (
     <div className={embedded ? "p-1 sm:p-2" : "mt-8 rounded-2xl border border-white/10 bg-white/95 p-6 shadow-2xl backdrop-blur sm:p-8"}>
           {status === "sent" ? (
             <div className="py-10 text-center">
               <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-              <h1 className="mt-4 text-2xl font-bold text-gray-900">Terkirim</h1>
+              <Title className="mt-4 text-2xl font-bold text-gray-900">Terkirim</Title>
               <p className="mx-auto mt-2 max-w-md text-sm text-gray-600">{form.success_message}</p>
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">{form.title}</h1>
+              <Title className="text-2xl font-bold text-gray-900 sm:text-3xl">{form.title}</Title>
               {form.description ? <p className="mt-2 text-sm leading-relaxed text-gray-600">{form.description}</p> : null}
 
               {banner ? (
