@@ -6,7 +6,12 @@ export type CatalogSku = {
   name: string;
   price: number;
   stock: number;
+  /** Stok 0 tetapi masa pre-order produk masih terbuka. */
+  preorder: boolean;
 };
+
+/** Koleksi storefront = kategori produk POS. */
+export type CatalogCollection = { id: string; name: string };
 
 export type CatalogProduct = {
   id: string;
@@ -18,10 +23,21 @@ export type CatalogProduct = {
   price: number;
   weightGram: number | null;
   stock: number;
+  collection: CatalogCollection | null;
+  /** Batas pre-order (YYYY-MM-DD) atau null. */
+  preorderUntil: string | null;
+  /** Produk (atau salah satu variannya) dijual sebagai pre-order. */
+  preorder: boolean;
   skus: CatalogSku[];
 };
 
 export type PublicStorefront = { slug: string; name: string; description: string | null };
+
+export type PublicCatalog = {
+  storefront: PublicStorefront;
+  collections: CatalogCollection[];
+  products: CatalogProduct[];
+};
 
 export type PublicOrderStatus = {
   order_number: string;

@@ -18,6 +18,10 @@ export type ShopOrderRow = {
   item_count: string;
   customer_id: string | null;
   created_at: string;
+  /** Hanya pada daftar pesanan wholesale. */
+  company_name?: string;
+  payment_terms?: "invoice" | "pay_later" | null;
+  due_at?: string | null;
 };
 
 export type ShopOrderDetail = ShopOrderRow & {
@@ -47,20 +51,21 @@ export type ShopOrderAction =
 
 const keys = {
   all: ["shop", "orders"] as const,
-  list: (status: string, search: string) => ["shop", "orders", "list", status, search] as const,
+  list: (status: string, search: string, wholesale: boolean) =>
+    ["shop", "orders", "list", status, search, wholesale] as const,
   detail: (id: string) => ["shop", "orders", "detail", id] as const,
 };
 
-export const useShopOrders = (status: string, search: string) =>
+/** Daftar pesanan toko; `wholesale` membaca pesanan mitra B2B saja. */
+export const useShopOrders = (status: string, search: string, wholesale = false) =>
   useQuery({
-    queryKey: keys.list(status, search),
+    queryKey: keys.list(status, search, wholesale),
     queryFn: () => {
       const params = new URLSearchParams();
       if (status) params.set("status", status);
       if (search) params.set("search", search);
-      return apiGet<{ data: ShopOrderRow[] }>(`/api/shop/orders?${params.toString()}`).then(
-        (res) => res.data ?? []
-      );
+      const base = wholesale ? "/api/shop/wholesale/orders" : "/api/shop/orders";
+      return apiGet<{ data: ShopOrderRow[] }>(`${base}?${params.toString()}`).then((res) => res.data ?? []);
     },
     placeholderData: keepPreviousData,
   });
