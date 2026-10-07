@@ -114,6 +114,11 @@ export const IAM = {
     "items.product.purchasing.pr",
     "items.raw-material.purchasing.pr",
   ],
+  /** Situs → Konten, Artikel, Event (site publik). */
+  site: ["site"],
+  siteContent: ["site.content"],
+  siteArticles: ["site.articles"],
+  siteEvents: ["site.events"],
   /** Items → approval PR per modul. */
   itemsPrApproval: [
     "items.general.purchasing.approval-pr",

@@ -54,6 +54,7 @@ const PUBLIC_BUCKETS = new Set([
   "desktop-wallpapers",
   "crm-announcements",
   "crm-avatars",
+  "site",
 ]);
 
 export function bucketAccess(bucket: string): BucketAccess {

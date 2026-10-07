@@ -123,6 +123,8 @@ func Routes(d module.Deps, db database.DB, p Ports) []module.Route {
 		route("POST /api/settings/business", h.createBusiness),
 		route("PATCH /api/settings/business/{type}/{id}", h.updateBusiness),
 		route("DELETE /api/settings/business/{type}/{id}", h.deleteBusiness),
+		route("GET /api/settings/business/branch/{id}/profile", h.getBranchProfile),
+		route("PUT /api/settings/business/branch/{id}/profile", h.putBranchProfile),
 		route("GET /api/settings/receipt", h.getReceipt),
 		route("PUT /api/settings/receipt", h.putReceipt),
 		route("GET /api/settings/order-alerts", h.getOrderAlerts),

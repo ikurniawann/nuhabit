@@ -4065,6 +4065,41 @@
     "path": "/api/public/shop/{slug}/shipping/rates"
   },
   {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/articles/{slug}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/branches"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/branches/{slug}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/events"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/events/{slug}"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/public/site/sessions"
@@ -5451,6 +5486,16 @@
   },
   {
     "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/business/branch/{id}/profile"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/business/branch/{id}/profile"
+  },
+  {
+    "module": "configuration",
     "method": "DELETE",
     "path": "/api/settings/business/{type}/{id}"
   },
@@ -5843,6 +5888,71 @@
     "module": "shop",
     "method": "PATCH",
     "path": "/api/shop/wholesale/products/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "DELETE",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "PATCH",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "PUT",
+    "path": "/api/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/events"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/events"
+  },
+  {
+    "module": "site",
+    "method": "DELETE",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "PATCH",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/uploads"
   },
   {
     "module": "pos-sales",

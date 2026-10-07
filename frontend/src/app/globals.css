@@ -398,6 +398,65 @@ body {
   }
 }
 
+/* Markdown copy on the public site (articles, legal pages, brand story). */
+@utility prose-site {
+  color: var(--color-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  & > * + * {
+    margin-top: 1em;
+  }
+  & h2,
+  & h3,
+  & h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+    margin-top: 1.6em;
+  }
+  & h2 {
+    font-size: 1.5rem;
+  }
+  & h3 {
+    font-size: 1.25rem;
+  }
+  & h4 {
+    font-size: 1.1rem;
+  }
+  & a {
+    color: var(--color-forest);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  & ul,
+  & ol {
+    padding-left: 1.4em;
+  }
+  & ul {
+    list-style: disc;
+  }
+  & ol {
+    list-style: decimal;
+  }
+  & li + li {
+    margin-top: 0.35em;
+  }
+  & blockquote {
+    border-left: 3px solid var(--color-accent-strong);
+    padding-left: 1em;
+    font-style: italic;
+  }
+  & code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--color-surface-2);
+    border-radius: 0.35rem;
+    padding: 0.1em 0.35em;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

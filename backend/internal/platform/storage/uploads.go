@@ -83,6 +83,7 @@ var publicBuckets = map[string]bool{
 	"desktop-wallpapers": true,
 	"crm-announcements":  true,
 	"crm-avatars":        true,
+	"site":               true,
 }
 
 // BucketAccess is bucketAccess in lib/storage.ts.
