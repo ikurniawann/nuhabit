@@ -14,6 +14,7 @@ export type LeadSource =
   | "google"
   | "pameran"
   | "canvassing"
+  | "website"
   | "lainnya";
 
 export type LeadTemperature = "panas" | "hangat" | "dingin";
@@ -104,6 +105,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   google: "Google",
   pameran: "Pameran",
   canvassing: "Canvassing",
+  website: "Website",
   lainnya: "Lainnya",
 };
 

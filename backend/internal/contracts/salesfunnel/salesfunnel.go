@@ -37,4 +37,4 @@ type QuotationPriced struct {
 
 // LeadSources are the values crm_sales_leads_source_check accepts. CRM's
 // public forms and the sales-funnel module both validate against them.
-var LeadSources = []string{"wa", "instagram", "referral", "google", "pameran", "canvassing", "lainnya"}
+var LeadSources = []string{"wa", "instagram", "referral", "google", "pameran", "canvassing", "website", "lainnya"}

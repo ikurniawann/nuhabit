@@ -67,6 +67,8 @@ const PUBLIC_AUTH_PREFIXES = [
   // EPIC-050 T-5.3 — form publik CRM (web-to-lead)
   "/public",
   "/api/public/crm/forms",
+  // Situs publik: jadwal kelas, lead coba gratis, profil cabang.
+  "/api/public/site",
   // Probe liveness/readiness untuk Docker HEALTHCHECK & load balancer.
   "/api/health",
   "/api/ready",

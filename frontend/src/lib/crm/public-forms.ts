@@ -62,7 +62,7 @@ export const publicFormSchema = z
     success_message: z.string().trim().min(1).max(500).default("Terima kasih! Tim kami akan menghubungi Anda."),
     redirect_url: z.string().url().max(500).optional().nullable(),
     /** Lead baru diberi sumber ini bila form tidak membawa UTM. */
-    default_source: z.enum(LEAD_SOURCES).default("lainnya"),
+    default_source: z.enum(LEAD_SOURCES).default("website"),
     notify_user_ids: z.array(z.string().uuid()).max(20).default([]),
     notify_numbers: z.array(z.string().trim().min(8).max(20)).max(10).default([]),
     is_active: z.boolean().default(true),
@@ -138,6 +138,7 @@ export function toLeadSource(value: string | null | undefined): LeadSource {
  * Sumber lead dari UTM. utm_source bebas diisi siapa pun, jadi dipetakan ke
  * daftar sumber yang sah (crm_sales_leads_source_check); yang tak dikenal
  * jatuh ke default form, dan default yang tidak sah menjadi "lainnya".
+ * Lalu lintas web (website, web, organic) menjadi "website".
  */
 export function sourceFromAttribution(a: Attribution, fallback: string): LeadSource {
   const known: Record<string, string> = {
@@ -146,7 +147,7 @@ export function sourceFromAttribution(a: Attribution, fallback: string): LeadSou
     wa: "wa", whatsapp: "wa",
     referral: "referral", refferal: "referral",
     pameran: "pameran", event: "pameran", expo: "pameran",
-    website: "lainnya", web: "lainnya", organic: "lainnya",
+    website: "website", web: "website", organic: "website",
   };
   const key = (a.utm_source ?? "").toLowerCase().replace(/[^a-z_]/g, "");
   return toLeadSource(known[key] ?? fallback);

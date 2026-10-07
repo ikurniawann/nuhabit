@@ -19,7 +19,7 @@ export const LEAD_IMPORT_COLUMNS: Array<{
   {
     key: "sumber",
     label: "Sumber",
-    description: "wa | instagram | referral | google | pameran | canvassing | lainnya",
+    description: "wa | instagram | referral | google | pameran | canvassing | website | lainnya",
   },
   { key: "suhu", label: "Suhu", description: "panas | hangat | dingin" },
   { key: "catatan", label: "Catatan" },

@@ -80,7 +80,7 @@ var knownSources = map[string]string{
 	"wa": "wa", "whatsapp": "wa",
 	"referral": "referral", "refferal": "referral",
 	"pameran": "pameran", "event": "pameran", "expo": "pameran",
-	"website": "lainnya", "web": "lainnya", "organic": "lainnya",
+	"website": "website", "web": "website", "organic": "website",
 }
 
 var notSourceChar = regexp.MustCompile(`[^a-z_]`)
@@ -99,8 +99,7 @@ func SourceFromAttribution(a Attribution, fallback string) string {
 }
 
 // ToLeadSource is toLeadSource: a valid lead source, or "lainnya" for
-// anything crm_sales_leads_source_check rejects (forms once defaulted to
-// "website", which failed every submission without a known utm_source).
+// anything crm_sales_leads_source_check rejects.
 func ToLeadSource(v string) string {
 	if slices.Contains(contractsales.LeadSources, v) {
 		return v

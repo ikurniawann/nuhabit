@@ -54,6 +54,7 @@ var PublicAuthPrefixes = []string{
 	"/api/public/shop",
 	"/public",
 	"/api/public/crm/forms",
+	"/api/public/site",
 	"/api/health",
 	"/api/ready",
 }
