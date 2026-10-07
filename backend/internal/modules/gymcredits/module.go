@@ -23,11 +23,13 @@ func New(deps module.Deps) module.Module {
 // NewDefaultService builds the service on db with the default adapters; other
 // modules (gym scheduling, check-in) reach the ledger through it.
 func NewDefaultService(deps module.Deps, db DB) *Service {
+	xendit := NewXenditGateway()
 	ports := Ports{
 		Members:   SQLMembers{},
 		Wallet:    SQLArkWallet{Log: deps.Log},
 		Directory: SQLDirectory{},
-		Gateway:   NewXenditGateway(),
+		Gateway:   xendit,
+		Invoices:  xendit,
 	}
 	canSimulate := func() bool { return deps.Auth != nil && deps.Auth.MemberOTPDevCode() != "" }
 	return NewService(db, Postgres{}, ports, deps.Now, deps.Log, canSimulate)

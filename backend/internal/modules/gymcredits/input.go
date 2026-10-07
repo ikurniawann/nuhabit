@@ -363,14 +363,27 @@ func parsePackageStatus(body any) (string, error) {
 	return status, f.staffErr()
 }
 
+var packageKinds = []string{KindCredits, KindPass}
+
 func parsePackage(body any) (PackageInput, error) {
 	f := newForm(body)
 	var p PackageInput
 	p.ID = optString(f.str("id", strRule{uuid: true, optional: true}))
 	p.Name, _ = f.str("name", strRule{trim: true, min: 2, minMsg: "Nama paket minimal 2 huruf", max: 120})
 	p.Description, _ = f.str("description", strRule{max: 1000, optional: true})
-	credits, _ := f.num("credits", numRule{integer: true, min: bound(1), minMsg: "Kredit minimal 1", max: bound(1000)})
-	p.Credits = int(credits)
+	p.Kind = KindCredits
+	if f.get("kind") != undefined {
+		p.Kind = f.enum("kind", packageKinds)
+	}
+	// A pass carries no credits; a credit pack needs at least one.
+	minCredits := 1.0
+	if p.Kind == KindPass {
+		minCredits = 0
+	}
+	credits, _ := f.num("credits", numRule{integer: true, min: bound(minCredits), minMsg: "Kredit minimal 1", max: bound(1000), optional: p.Kind == KindPass})
+	if p.Kind != KindPass {
+		p.Credits = int(credits)
+	}
 	p.PriceIdr, _ = f.num("price_idr", numRule{min: bound(0), max: bound(1_000_000_000)})
 	validity, _ := f.num("validity_days", numRule{integer: true, min: bound(1), minMsg: "Masa berlaku minimal 1 hari", max: bound(3650)})
 	p.ValidityDays = int(validity)
@@ -380,9 +393,56 @@ func parsePackage(body any) (PackageInput, error) {
 	}
 	p.ApplicableClassTypeIDs = f.uuidList("applicable_class_type_ids")
 	p.BranchID = optString(f.str("branch_id", strRule{uuid: true, optional: true, nullable: true}))
+	p.IsPublic = true
+	if v := f.get("is_public"); v != undefined {
+		b, ok := v.(bool)
+		if !ok {
+			f.add(typeIssue([]any{"is_public"}, "boolean", v, ""))
+		}
+		p.IsPublic = ok && b
+	}
+	p.Badge = optString(f.str("badge", strRule{trim: true, max: 40, optional: true, nullable: true}))
+	if p.Badge != nil && *p.Badge == "" {
+		p.Badge = nil
+	}
+	p.BranchPrices = f.branchPrices("branch_prices")
 	sortOrder, _ := f.num("sort_order", numRule{integer: true, min: bound(0), max: bound(10_000), optional: true})
 	p.SortOrder = int(sortOrder)
 	return p, f.staffErr()
+}
+
+// branchPrices validates z.array({branch_id: uuid, price_idr: number >= 0}).optional().
+func (f *form) branchPrices(key string) []BranchPrice {
+	v := f.get(key)
+	if f.skip(v, true, true) {
+		return nil
+	}
+	arr, ok := v.([]any)
+	if !ok {
+		f.add(typeIssue([]any{key}, "array", v, ""))
+		return nil
+	}
+	out := make([]BranchPrice, 0, len(arr))
+	before := len(f.issues)
+	for i, el := range arr {
+		obj, ok := el.(map[string]any)
+		if !ok {
+			f.add(typeIssue([]any{key, i}, "object", el, ""))
+			continue
+		}
+		item := &form{obj: obj}
+		branchID, _ := item.str("branch_id", strRule{uuid: true})
+		price, _ := item.num("price_idr", numRule{min: bound(0), max: bound(1_000_000_000)})
+		for _, is := range item.issues {
+			is.Path = append([]any{key, i}, is.Path...)
+			f.add(is)
+		}
+		out = append(out, BranchPrice{BranchID: branchID, PriceIdr: price})
+	}
+	if len(f.issues) > before {
+		return nil
+	}
+	return out
 }
 
 type rulesBody struct {
@@ -450,12 +510,14 @@ func orderedObject(raw []byte) ([]domain.KV, error) {
 type memberPurchaseBody struct {
 	PackageID string
 	Method    string
+	BranchID  *string
 }
 
 func parseMemberPurchase(body any) (memberPurchaseBody, error) {
 	f := newForm(body)
 	var b memberPurchaseBody
 	b.PackageID, _ = f.str("package_id", strRule{uuid: true, uuidMsg: "Pilih paket"})
-	b.Method = f.enum("method", []string{"qris", "ark_coin"})
+	b.Method = f.enum("method", []string{"qris", "ark_coin", "invoice"})
+	b.BranchID = optString(f.str("branch_id", strRule{uuid: true, uuidMsg: "Cabang tidak valid", optional: true, nullable: true}))
 	return b, f.memberErr()
 }

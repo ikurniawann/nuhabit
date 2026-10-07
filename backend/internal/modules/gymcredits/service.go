@@ -101,6 +101,9 @@ type ArkWallet interface {
 type Directory interface {
 	ActiveBranches(ctx context.Context, db database.Querier) ([]Branch, error)
 	BranchNames(ctx context.Context, db database.Querier, ids []string) (map[string]string, error)
+	// PublicBranch resolves an active branch by its public slug, code or id;
+	// nil when none matches.
+	PublicBranch(ctx context.Context, db database.Querier, key string) (*PublicBranch, error)
 	// ActiveClassTypes is empty while gym.class_types does not exist.
 	ActiveClassTypes(ctx context.Context, db database.Querier) ([]ClassType, error)
 	StaffNames(ctx context.Context, db database.Querier, ids []string) (map[string]*string, error)
@@ -150,6 +153,33 @@ type QRISGateway interface {
 	QRPayments(ctx context.Context, secretKey, qrID string) ([]map[string]any, error)
 }
 
+// InvoiceRequest creates a hosted Xendit invoice (checkout page).
+type InvoiceRequest struct {
+	ExternalID  string
+	Amount      float64
+	PayerName   string
+	Description string
+	RedirectURL string
+}
+
+// Invoice is a created invoice; Mock is set in XENDIT_MOCK mode.
+type Invoice struct {
+	ID        string
+	URL       string
+	ExpiresAt time.Time
+	Mock      bool
+}
+
+// InvoiceGateway is the Xendit invoice API (XENDIT_SECRET_KEY, XENDIT_MOCK).
+type InvoiceGateway interface {
+	// InvoiceConfigured reports whether invoices can be created.
+	InvoiceConfigured() bool
+	CreateInvoice(ctx context.Context, req InvoiceRequest) (*Invoice, error)
+	// InvoiceStatus is the upper-cased Xendit invoice status (PENDING, PAID,
+	// SETTLED, EXPIRED).
+	InvoiceStatus(ctx context.Context, invoiceID string) (string, error)
+}
+
 /* ── Service ─────────────────────────────────────────────────────────── */
 
 // Ports bundles the adapters the service needs from other contexts.
@@ -158,6 +188,7 @@ type Ports struct {
 	Wallet    ArkWallet
 	Directory Directory
 	Gateway   QRISGateway
+	Invoices  InvoiceGateway
 }
 
 // Service holds the credit use cases.
@@ -241,10 +272,20 @@ type RecentEntry struct {
 type PackageForPurchase struct {
 	ID                     string
 	Status                 string
+	Kind                   string
 	Credits                int
 	PriceIdr               float64
 	PurchaseLimitPerMember *int
 	BranchID               *string
+}
+
+// NewPass is a member pass to insert when a pass purchase is paid.
+type NewPass struct {
+	CustomerID string
+	PackageID  string
+	PurchaseID string
+	StartsAt   time.Time
+	EndsAt     time.Time
 }
 
 // NewPurchase is a pending purchase to insert.
@@ -267,12 +308,16 @@ type PackageInput struct {
 	ID                     *string
 	Name                   string
 	Description            string
+	Kind                   string
 	Credits                int
 	PriceIdr               float64
 	ValidityDays           int
 	PurchaseLimitPerMember *int
 	ApplicableClassTypeIDs []string
 	BranchID               *string
+	IsPublic               bool
+	Badge                  *string
+	BranchPrices           []BranchPrice
 	SortOrder              int
 }
 
@@ -301,6 +346,8 @@ type Repository interface {
 	RecentlyActive(ctx context.Context, q database.Querier, limit int) ([]string, error)
 
 	PackageForPurchase(ctx context.Context, q database.Querier, id string) (*PackageForPurchase, error)
+	// BranchPrice is the package's price override at branchID, nil when none.
+	BranchPrice(ctx context.Context, q database.Querier, packageID, branchID string) (*float64, error)
 	LivePurchaseCounts(ctx context.Context, q database.Querier, customerID string) (map[string]int, error)
 	InsertPurchase(ctx context.Context, q database.Querier, p NewPurchase) (string, error)
 	Purchase(ctx context.Context, q database.Querier, id string, lock bool) (*Purchase, error)
@@ -312,9 +359,22 @@ type Repository interface {
 	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string) error
 	AttachQR(ctx context.Context, q database.Querier, id, referenceID string, meta map[string]any) error
 
+	// InsertPass returns "" when the purchase already issued a pass.
+	InsertPass(ctx context.Context, q database.Querier, p NewPass) (string, error)
+	// ExpireLapsedPasses flips active passes past ends_at to expired.
+	ExpireLapsedPasses(ctx context.Context, q database.Querier, customerID string, now time.Time) error
+	Passes(ctx context.Context, q database.Querier, customerID string) ([]PassRow, error)
+	// ActivePassAt is the active pass covering at, nil when none.
+	ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*PassRow, error)
+	RefundPassByPurchase(ctx context.Context, q database.Querier, purchaseID string) error
+
 	Packages(ctx context.Context, q database.Querier) ([]PackageRow, error)
 	ActivePackages(ctx context.Context, q database.Querier) ([]PortalPackageRow, error)
+	// PublicPackages lists public active packages sold at branchID (or
+	// everywhere), with the branch price applied.
+	PublicPackages(ctx context.Context, q database.Querier, branchID *string) ([]PublicPlan, error)
 	SavePackage(ctx context.Context, q database.Querier, p PackageInput, actorID string) (string, error)
+	ReplaceBranchPrices(ctx context.Context, q database.Querier, packageID string, prices []BranchPrice) error
 	// SetPackageStatus returns nil when the package does not exist.
 	SetPackageStatus(ctx context.Context, q database.Querier, id, status string) (*PackageStatus, error)
 	DeleteUnusedPackage(ctx context.Context, q database.Querier, id string) (deleted, exists bool, err error)

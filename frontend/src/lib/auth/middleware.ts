@@ -64,6 +64,8 @@ const PUBLIC_AUTH_PREFIXES = [
   "/pass",
   "/shop",
   "/api/public/shop",
+  // Situs publik: daftar harga paket & pass per cabang.
+  "/api/public/site",
   // EPIC-050 T-5.3 — form publik CRM (web-to-lead)
   "/public",
   "/api/public/crm/forms",

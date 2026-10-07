@@ -71,6 +71,16 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 	if problem != "" {
 		return nil, fail(http.StatusConflict, domain.PurchaseProblemMessages[problem])
 	}
+	// The branch the member buys at may price the package differently.
+	if in.BranchID != nil {
+		price, err := s.repo.BranchPrice(ctx, tx, pkg.ID, *in.BranchID)
+		if err != nil {
+			return nil, err
+		}
+		if price != nil {
+			pkg.PriceIdr = *price
+		}
+	}
 
 	discount, total := domain.PurchaseTotal(pkg.PriceIdr, in.DiscountIdr)
 	var note *string
@@ -89,9 +99,10 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 	return s.repo.Purchase(ctx, tx, id, false)
 }
 
-// markPaid marks the purchase paid and issues its credits (top_up + lot) in
-// the caller's transaction. A duplicate webhook is safe: the row is locked
-// and the second call sees status paid.
+// markPaid marks the purchase paid and issues what it bought in the
+// caller's transaction: a credit lot with its top_up entry, or a pass that
+// starts at payment time and runs for the package validity. A duplicate
+// webhook is safe: the row is locked and the second call sees status paid.
 func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID string, meta map[string]any) (alreadyPaid bool, p *Purchase, err error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
@@ -112,12 +123,21 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	if err != nil {
 		return false, nil, err
 	}
-	if _, _, err := s.GrantCredits(ctx, tx, Grant{
-		CustomerID: purchase.CustomerID, Type: domain.TopUp, Credits: purchase.Credits,
-		ExpiresAt: domain.LotExpiry(paidAt.Truncate(time.Millisecond), validityDays),
-		PackageID: purchase.PackageID, PurchaseID: purchaseID, SourceType: "purchase", SourceID: purchaseID,
-		Note: purchase.PackageName, IdempotencyKey: topUpKey(purchaseID), CreatedBy: deref(purchase.CreatedBy),
-	}); err != nil {
+	paidAt = paidAt.Truncate(time.Millisecond)
+	if purchase.Kind == KindPass {
+		_, err = s.repo.InsertPass(ctx, tx, NewPass{
+			CustomerID: purchase.CustomerID, PackageID: purchase.PackageID, PurchaseID: purchaseID,
+			StartsAt: paidAt, EndsAt: domain.LotExpiry(paidAt, validityDays),
+		})
+	} else {
+		_, _, err = s.GrantCredits(ctx, tx, Grant{
+			CustomerID: purchase.CustomerID, Type: domain.TopUp, Credits: purchase.Credits,
+			ExpiresAt: domain.LotExpiry(paidAt, validityDays),
+			PackageID: purchase.PackageID, PurchaseID: purchaseID, SourceType: "purchase", SourceID: purchaseID,
+			Note: purchase.PackageName, IdempotencyKey: topUpKey(purchaseID), CreatedBy: deref(purchase.CreatedBy),
+		})
+	}
+	if err != nil {
 		return false, nil, err
 	}
 	p, err = s.repo.Purchase(ctx, tx, purchaseID, false)
@@ -149,8 +169,9 @@ func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purcha
 }
 
 // RefundPurchase refunds a paid purchase: status refunded plus a reversal of
-// its top_up. Used credits make the balance short and the reversal fails.
-// ARK Coin goes back to the wallet; other methods are paid back by the cashier.
+// its top_up, or the pass it issued marked refunded. Used credits make the
+// balance short and the reversal fails. ARK Coin goes back to the wallet;
+// other methods are paid back by the cashier.
 func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purchaseID, reason, actorID string) (*Purchase, error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
@@ -161,6 +182,11 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 	}
 	if purchase.Status != "paid" {
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
+	}
+	if purchase.Kind == KindPass {
+		if err := s.repo.RefundPassByPurchase(ctx, tx, purchaseID); err != nil {
+			return nil, err
+		}
 	}
 	entryID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(purchaseID))
 	if err != nil {
@@ -242,17 +268,64 @@ func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID string) 
 	return view, err
 }
 
+// MemberPurchase is a package bought from the member portal or the public
+// checkout: BranchID applies that branch's price.
+type MemberPurchase struct {
+	CustomerID string
+	PackageID  string
+	BranchID   *string
+}
+
 // StartQRISPurchase buys a package through a dynamic QRIS. Without an active
 // gateway only local dev (the dev-bypass guard) gets a simulated QR.
 // callbackURL maps the configured gateway callback ("" when unset) to the
 // webhook URL Xendit should call.
-func (s *Service) StartQRISPurchase(ctx context.Context, customerID, packageID string, callbackURL func(configured string) string) (*MemberPurchaseView, error) {
+func (s *Service) StartQRISPurchase(ctx context.Context, in MemberPurchase, callbackURL func(configured string) string) (*MemberPurchaseView, error) {
+	return s.startPendingPurchase(ctx, in, "qris", func(purchase *Purchase, referenceID string) (map[string]any, error) {
+		return s.createQR(ctx, purchase, referenceID, callbackURL)
+	})
+}
+
+// StartInvoicePurchase buys a package through a hosted Xendit invoice: the
+// member pays on the invoice URL and lands on redirectURL(purchaseID), the
+// status page, which polls until the invoice is paid.
+func (s *Service) StartInvoicePurchase(ctx context.Context, in MemberPurchase, redirectURL func(purchaseID string) string) (*MemberPurchaseView, error) {
+	if !s.ports.Invoices.InvoiceConfigured() {
+		return nil, fail(http.StatusServiceUnavailable, "Pembayaran online belum tersedia: XENDIT_SECRET_KEY belum dikonfigurasi")
+	}
+	return s.startPendingPurchase(ctx, in, "invoice", func(purchase *Purchase, referenceID string) (map[string]any, error) {
+		profile, err := s.ports.Members.Profile(ctx, s.db, purchase.CustomerID)
+		if err != nil {
+			return nil, err
+		}
+		payer := "Member"
+		if profile != nil && profile.Name != nil && *profile.Name != "" {
+			payer = *profile.Name
+		}
+		inv, err := s.ports.Invoices.CreateInvoice(ctx, InvoiceRequest{
+			ExternalID: referenceID, Amount: purchase.TotalIdr, PayerName: payer,
+			Description: "Paket " + purchase.PackageName, RedirectURL: redirectURL(purchase.ID),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{
+			"provider": "xendit_invoice", "invoice_id": inv.ID, "invoice_url": inv.URL,
+			"expires_at": isoString(inv.ExpiresAt), "simulated": inv.Mock,
+		}, nil
+	})
+}
+
+// startPendingPurchase records the purchase, settles a free one at once,
+// else asks the gateway for its payment handle (QR or invoice) and stores it
+// in payment_meta under the gymcp_ reference.
+func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, method string, handle func(*Purchase, string) (map[string]any, error)) (*MemberPurchaseView, error) {
 	referenceID := GymPurchaseRefPrefix + randomHex(12)
 	var purchase *Purchase
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		var err error
 		purchase, err = s.createPurchase(ctx, tx, purchaseInput{
-			CustomerID: customerID, PackageID: packageID, Channel: "member_portal", PaymentMethod: "qris",
+			CustomerID: in.CustomerID, PackageID: in.PackageID, Channel: "member_portal", PaymentMethod: method, BranchID: in.BranchID,
 		})
 		return err
 	})
@@ -272,7 +345,7 @@ func (s *Service) StartQRISPurchase(ctx context.Context, customerID, packageID s
 		return memberPurchaseView(paid), nil
 	}
 
-	meta, err := s.createQR(ctx, purchase, referenceID, callbackURL)
+	meta, err := handle(purchase, referenceID)
 	if err != nil {
 		if closeErr := s.repo.ClosePurchase(ctx, s.db, purchase.ID, "failed"); closeErr != nil {
 			s.log.ErrorContext(ctx, "gym-credits: close failed purchase", "purchase_id", purchase.ID, "error", closeErr)
@@ -417,6 +490,14 @@ func (s *Service) RefreshMemberPurchase(ctx context.Context, customerID, purchas
 			return memberPurchaseView(settled), nil
 		}
 	}
+	if invoiceID, _ := meta["invoice_id"].(string); invoiceID != "" {
+		settled, err := s.reconcileInvoice(ctx, purchaseID, invoiceID)
+		if err != nil {
+			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi invoice gagal", "invoice_id", invoiceID, "error", err)
+		} else if settled != nil {
+			return memberPurchaseView(settled), nil
+		}
+	}
 	if expiresAt, ok := meta["expires_at"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, expiresAt); err == nil && t.Before(s.clock()) {
 			if err := s.repo.ClosePurchase(ctx, s.db, purchaseID, "expired"); err != nil {
@@ -449,6 +530,32 @@ func (s *Service) reconcileQR(ctx context.Context, purchaseID, qrID string) (*Pu
 	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		var err error
 		_, settled, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"xendit_payment_id": paymentID, "reconciled": true})
+		return err
+	})
+	return settled, err
+}
+
+// reconcileInvoice asks Xendit for the invoice status and settles a paid
+// one; nil means still pending (an expired invoice closes the purchase).
+func (s *Service) reconcileInvoice(ctx context.Context, purchaseID, invoiceID string) (*Purchase, error) {
+	status, err := s.ports.Invoices.InvoiceStatus(ctx, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	switch status {
+	case "PAID", "SETTLED":
+	case "EXPIRED":
+		if err := s.repo.ClosePurchase(ctx, s.db, purchaseID, "expired"); err != nil {
+			return nil, err
+		}
+		return s.repo.Purchase(ctx, s.db, purchaseID, false)
+	default:
+		return nil, nil
+	}
+	var settled *Purchase
+	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		var err error
+		_, settled, err = s.markPaid(ctx, tx, purchaseID, map[string]any{"xendit_invoice_status": status, "reconciled": true})
 		return err
 	})
 	return settled, err

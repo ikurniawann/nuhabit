@@ -106,6 +106,29 @@ func (SQLDirectory) BranchNames(ctx context.Context, db database.Querier, ids []
 	return out, err
 }
 
+// PublicBranch matches the public slug when configuration.branches has one
+// (the site module adds it), else the branch code or id.
+func (SQLDirectory) PublicBranch(ctx context.Context, db database.Querier, key string) (*PublicBranch, error) {
+	var hasSlug bool
+	if err := db.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+		WHERE table_schema = 'configuration' AND table_name = 'branches' AND column_name = 'slug')`).Scan(&hasSlug); err != nil {
+		return nil, err
+	}
+	slugCol, slugMatch := "NULL::text", ""
+	if hasSlug {
+		slugCol, slugMatch = "slug", " OR lower(slug) = lower($1)"
+	}
+	var b PublicBranch
+	err := db.QueryRow(ctx,
+		`SELECT id, name, `+slugCol+` FROM configuration.branches
+		  WHERE COALESCE(is_active, true) AND (id::text = $1 OR lower(code) = lower($1)`+slugMatch+`)
+		  ORDER BY created_at LIMIT 1`, key).Scan(&b.ID, &b.Name, &b.Slug)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	return &b, err
+}
+
 func (SQLDirectory) ActiveClassTypes(ctx context.Context, db database.Querier) ([]ClassType, error) {
 	var ready bool
 	if err := db.QueryRow(ctx, `SELECT to_regclass('gym.class_types') IS NOT NULL`).Scan(&ready); err != nil {
