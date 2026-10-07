@@ -40,7 +40,7 @@ export default function CartPanel({ onClose }: { branchSlug?: string; onClose():
   return (
     <div className="space-y-4 text-sm text-body">
       {lines.length === 0 ? (
-        <p>Keranjangmu masih kosong.</p>
+        <p>Your cart is empty.</p>
       ) : (
         <ul className="divide-y divide-border">
           {lines.map((line) => (
@@ -61,7 +61,7 @@ export default function CartPanel({ onClose }: { branchSlug?: string; onClose():
         </ul>
       )}
       <Button asChild>
-        <a href={`/${DEFAULT_SHOP}`}>{lines.length === 0 ? "Belanja di Toko" : "Lanjut ke checkout"}</a>
+        <a href={`/${DEFAULT_SHOP}`}>{lines.length === 0 ? "Go to the shop" : "Go to checkout"}</a>
       </Button>
     </div>
   );

@@ -112,7 +112,7 @@ func TestTrialLead(t *testing.T) {
 		FROM crm.lead_consents WHERE lead_id = $1`, lead); got != "email:true:"+ConsentTextVersion+":go-test-browser:/locations/"+f.slug+":64,sms:false:"+ConsentTextVersion+":go-test-browser:/locations/"+f.slug+":64" {
 		t.Errorf("consents = %s", got)
 	}
-	if len(f.wa) != 1 || f.wa[0]["target"] != "628123450001" || !strings.Contains(f.wa[0]["message"], "Terima kasih, Ani!") || !strings.Contains(f.wa[0]["message"], "Tim "+f.branchName+" akan menghubungi") {
+	if len(f.wa) != 1 || f.wa[0]["target"] != "628123450001" || !strings.Contains(f.wa[0]["message"], "Thanks, Ani!") || !strings.Contains(f.wa[0]["message"], "The "+f.branchName+" team will contact you") {
 		t.Errorf("whatsapp = %v", f.wa)
 	}
 
@@ -152,19 +152,19 @@ func TestTrialRejections(t *testing.T) {
 	if code, _, raw := f.trial(bot, "10.2.0.1"); code != 200 || raw != `{"success":true,"data":{"lead_id":null,"branch_name":null}}` {
 		t.Fatalf("bot %d %s", code, raw)
 	}
-	if code, _, raw := f.trial("bukan-json", "10.2.0.2"); code != 400 || raw != `{"success":false,"error":"Isian tidak terbaca"}` {
+	if code, _, raw := f.trial("bukan-json", "10.2.0.2"); code != 400 || raw != `{"success":false,"error":"The request body could not be read"}` {
 		t.Fatalf("body %d %s", code, raw)
 	}
 	bad := f.body("08123450003")
 	bad["email"] = "bukan-email"
 	code, _, raw := f.trial(bad, "10.2.0.3")
-	if code != 400 || !strings.HasPrefix(raw, `{"success":false,"error":"Periksa kembali isian Anda","details":[`) ||
+	if code != 400 || !strings.HasPrefix(raw, `{"success":false,"error":"Please check your details","details":[`) ||
 		!strings.Contains(raw, `"path":["email"]`) || !strings.Contains(raw, `"path":["phone"]`) {
 		t.Fatalf("invalid %d %s", code, raw)
 	}
 	unknown := f.body("+628123450004")
 	unknown["branch_slug"] = "tidak-ada-" + testutil.RandomHex(2)
-	if code, _, raw := f.trial(unknown, "10.2.0.4"); code != 404 || raw != `{"success":false,"error":"Cabang tidak ditemukan"}` {
+	if code, _, raw := f.trial(unknown, "10.2.0.4"); code != 404 || raw != `{"success":false,"error":"Branch not found"}` {
 		t.Fatalf("branch %d %s", code, raw)
 	}
 	if leads() != "0" || len(f.wa) != 0 {
@@ -175,7 +175,7 @@ func TestTrialRejections(t *testing.T) {
 	for range 5 {
 		f.trial(map[string]any{}, "10.2.0.9")
 	}
-	if code, _, raw := f.trial(f.body("+628123450005"), "10.2.0.9"); code != 429 || raw != `{"success":false,"error":"Terlalu banyak percobaan. Coba lagi beberapa menit lagi."}` {
+	if code, _, raw := f.trial(f.body("+628123450005"), "10.2.0.9"); code != 429 || raw != `{"success":false,"error":"Too many attempts. Try again in a few minutes."}` {
 		t.Fatalf("limit %d %s", code, raw)
 	}
 }

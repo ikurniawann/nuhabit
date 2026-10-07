@@ -101,7 +101,7 @@ var slugPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,49}$`)
 // loadForm is loadPublicForm + requirePublicForm: an active form by slug,
 // 404 otherwise (a bad slug never reaches the database).
 func (h *handler) loadForm(ctx context.Context, slug string) (*form, error) {
-	notFound := httpx.NotFound("Form tidak ditemukan")
+	notFound := httpx.NotFound("Form not found")
 	if !slugPattern.MatchString(slug) {
 		return nil, notFound
 	}
@@ -230,7 +230,7 @@ func (h *handler) submit(w http.ResponseWriter, r *http.Request) error {
 	}
 	raw, present := validate.ReadBody(r)
 	if !present {
-		return httpx.BadRequest("Isian tidak terbaca")
+		return httpx.BadRequest("The request body could not be read")
 	}
 	var userAgent *string
 	if ua := r.Header.Get("user-agent"); ua != "" {
@@ -282,7 +282,7 @@ func (h *handler) submitForm(ctx context.Context, f *form, raw any, ip string, u
 		if err := record(nil, "rejected", "validasi gagal"); err != nil {
 			return done, err
 		}
-		return done, httpx.BadRequest("Periksa kembali isian Anda", sub.Errors)
+		return done, httpx.BadRequest("Please check your details", sub.Errors)
 	}
 	leadID, duplicate, err := h.createLead(ctx, f, sub, attribution)
 	if err != nil {
@@ -292,7 +292,7 @@ func (h *handler) submitForm(ctx context.Context, f *form, raw any, ip string, u
 		if err := record(nil, "rejected", "venue belum dikonfigurasi"); err != nil {
 			return done, err
 		}
-		return done, httpx.Status(http.StatusServiceUnavailable, "Form belum siap menerima kiriman. Hubungi kami lewat WhatsApp.")
+		return done, httpx.Status(http.StatusServiceUnavailable, "This form is not ready to accept submissions yet. Reach us on WhatsApp instead.")
 	}
 	status := "ok"
 	if duplicate {

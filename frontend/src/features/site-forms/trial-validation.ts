@@ -26,22 +26,22 @@ export const EMPTY_TRIAL: TrialValues = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Pesan galat per field; kosong berarti form siap dikirim. */
+/** One message per invalid field; empty means the form can be sent. */
 export function validateTrial(values: TrialValues): Partial<Record<TrialField, string>> {
   const errors: Partial<Record<TrialField, string>> = {};
-  if (!values.branch_slug) errors.branch_slug = "Pilih cabang";
-  if (values.first_name.trim().length === 0) errors.first_name = "Nama depan wajib diisi";
-  if (values.first_name.trim().length > 80) errors.first_name = "Nama depan terlalu panjang";
-  if (values.last_name.trim().length > 80) errors.last_name = "Nama belakang terlalu panjang";
+  if (!values.branch_slug) errors.branch_slug = "Choose a branch";
+  if (values.first_name.trim().length === 0) errors.first_name = "First name is required";
+  if (values.first_name.trim().length > 80) errors.first_name = "First name is too long";
+  if (values.last_name.trim().length > 80) errors.last_name = "Last name is too long";
   const email = values.email.trim();
-  if (email.length === 0) errors.email = "Email wajib diisi";
-  else if (email.length > 150 || !EMAIL_RE.test(email)) errors.email = "Email tidak valid";
-  if (values.phone_local.trim().length === 0) errors.phone_local = "Nomor telepon wajib diisi";
-  else if (!toE164(values.phone_country, values.phone_local)) errors.phone_local = "Nomor telepon tidak valid";
+  if (email.length === 0) errors.email = "Email is required";
+  else if (email.length > 150 || !EMAIL_RE.test(email)) errors.email = "Enter a valid email";
+  if (values.phone_local.trim().length === 0) errors.phone_local = "Phone number is required";
+  else if (!toE164(values.phone_country, values.phone_local)) errors.phone_local = "Enter a valid phone number";
   return errors;
 }
 
-/** Body POST /api/public/site/trial dari isian yang sudah valid. */
+/** The POST /api/public/site/trial body from validated values. */
 export function trialPayload(values: TrialValues, extra: { utm: Record<string, string>; source_path: string; form_started_at: number }) {
   return {
     branch_slug: values.branch_slug,

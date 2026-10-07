@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JoinStatus } from "@/features/site/components/join-status";
 
-export const metadata: Metadata = { title: "Status pembelian" };
+export const metadata: Metadata = { title: "Purchase status" };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

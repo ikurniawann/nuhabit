@@ -1,4 +1,4 @@
-/** Kode negara yang ditawarkan pemilih nomor telepon; +62 jadi bawaan. */
+/** Country codes the phone picker offers; +62 is the default. */
 export interface CountryCode {
   code: string;
   dial: string;
@@ -8,32 +8,32 @@ export interface CountryCode {
 export const COUNTRY_CODES: readonly CountryCode[] = [
   { code: "ID", dial: "+62", name: "Indonesia" },
   { code: "MY", dial: "+60", name: "Malaysia" },
-  { code: "SG", dial: "+65", name: "Singapura" },
+  { code: "SG", dial: "+65", name: "Singapore" },
   { code: "TH", dial: "+66", name: "Thailand" },
   { code: "VN", dial: "+84", name: "Vietnam" },
-  { code: "PH", dial: "+63", name: "Filipina" },
+  { code: "PH", dial: "+63", name: "Philippines" },
   { code: "BN", dial: "+673", name: "Brunei" },
-  { code: "KH", dial: "+855", name: "Kamboja" },
+  { code: "KH", dial: "+855", name: "Cambodia" },
   { code: "LA", dial: "+856", name: "Laos" },
   { code: "MM", dial: "+95", name: "Myanmar" },
   { code: "AU", dial: "+61", name: "Australia" },
-  { code: "US", dial: "+1", name: "Amerika Serikat" },
-  { code: "GB", dial: "+44", name: "Inggris" },
+  { code: "US", dial: "+1", name: "United States" },
+  { code: "GB", dial: "+44", name: "United Kingdom" },
 ];
 
 export const DEFAULT_COUNTRY = "ID";
 
 const E164 = /^\+[1-9]\d{7,14}$/;
 
-/** Nomor lokal dibersihkan: hanya digit, nol awal dibuang (0812 -> 812). */
+/** The local number cleaned: digits only, leading zeros dropped (0812 -> 812). */
 export function localDigits(raw: string): string {
   return raw.replace(/\D/g, "").replace(/^0+/, "");
 }
 
 /**
- * Gabungkan kode negara dan nomor lokal menjadi E.164 (+628123456789).
- * Nomor lokal yang sudah diawali kode negara yang sama tidak digandakan.
- * null bila hasilnya bukan E.164 yang sah.
+ * Joins the country code and the local number into E.164 (+628123456789).
+ * A local number that already starts with the same country code is not
+ * doubled. null when the result is not valid E.164.
  */
 export function toE164(countryCode: string, local: string): string | null {
   const country = COUNTRY_CODES.find((c) => c.code === countryCode);

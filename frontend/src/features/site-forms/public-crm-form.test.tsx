@@ -5,16 +5,16 @@ import { PublicCrmForm } from "./public-crm-form";
 
 const definition = {
   slug: "contact",
-  title: "Hubungi kami",
+  title: "Get in touch",
   description: null,
-  submit_label: "Kirim",
-  success_message: "Terima kasih! Kami membalas lewat email.",
+  submit_label: "Send",
+  success_message: "Thank you! We reply by email.",
   redirect_url: null,
   fields: [
-    { key: "pic_name", label: "Nama", type: "text", required: true, placeholder: null, help_text: null, options: [], width: 1 },
+    { key: "pic_name", label: "Name", type: "text", required: true, placeholder: null, help_text: null, options: [], width: 1 },
     { key: "pic_email", label: "Email", type: "email", required: true, placeholder: null, help_text: null, options: [], width: 1 },
-    { key: "topic", label: "Topik", type: "select", required: false, placeholder: null, help_text: null, options: ["Kelas", "Apparel"], width: 1 },
-    { key: "agree", label: "Setuju", type: "checkbox", required: false, placeholder: null, help_text: "Saya setuju dihubungi", options: [], width: 1 },
+    { key: "topic", label: "Topic", type: "select", required: false, placeholder: null, help_text: null, options: ["Classes", "Apparel"], width: 1 },
+    { key: "agree", label: "Agree", type: "checkbox", required: false, placeholder: null, help_text: "I agree to be contacted", options: [], width: 1 },
   ],
 };
 
@@ -26,7 +26,7 @@ function renderWithQuery(ui: React.ReactElement) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("PublicCrmForm", () => {
-  test("mengambil definisi lewat slug, merender pilihan dan centang, lalu mengirim", async () => {
+  test("loads the definition by slug, renders selects and checkboxes, then submits", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: definition }), { status: 200 }))
@@ -34,16 +34,16 @@ describe("PublicCrmForm", () => {
     const onSubmitted = vi.fn();
     renderWithQuery(<PublicCrmForm slug="contact" onSubmitted={onSubmitted} />);
 
-    await waitFor(() => expect(screen.getByLabelText(/Nama/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Name/)).toBeInTheDocument());
     expect(fetchMock.mock.calls[0][0]).toBe("/api/public/crm/forms/contact");
     expect(screen.getByRole("option", { name: "Apparel" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Saya setuju dihubungi")).toBeInTheDocument();
+    expect(screen.getByLabelText("I agree to be contacted")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/Nama/), { target: { value: "Ani" } });
+    fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Ani" } });
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "ani@example.test" } });
-    fireEvent.change(screen.getByLabelText("Topik"), { target: { value: "Apparel" } });
-    fireEvent.click(screen.getByLabelText("Saya setuju dihubungi"));
-    fireEvent.click(screen.getByRole("button", { name: "Kirim" }));
+    fireEvent.change(screen.getByLabelText("Topic"), { target: { value: "Apparel" } });
+    fireEvent.click(screen.getByLabelText("I agree to be contacted"));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent(definition.success_message));
     const body = JSON.parse(String((fetchMock.mock.calls[1][1] as RequestInit).body));
@@ -51,11 +51,11 @@ describe("PublicCrmForm", () => {
     expect(onSubmitted).toHaveBeenCalledTimes(1);
   });
 
-  test("slug tak dikenal menampilkan galat", async () => {
+  test("shows an error for an unknown slug", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ success: false, error: "Form tidak ditemukan" }), { status: 404 }),
+      new Response(JSON.stringify({ success: false, error: "Form not found" }), { status: 404 }),
     );
-    renderWithQuery(<PublicCrmForm slug="tidak-ada" />);
-    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Form tidak ditemukan"));
+    renderWithQuery(<PublicCrmForm slug="missing" />);
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Form not found"));
   });
 });

@@ -39,8 +39,8 @@ export function sortByDistance<T extends Located>(items: T[], origin: LatLng): {
   return ranked.map(({ item, km }) => ({ item, km }));
 }
 
-/** "1,2 km" or "850 m". */
+/** "1.2 km" or "850 m". */
 export function formatKm(km: number): string {
   if (km < 1) return `${Math.round(km * 1000)} m`;
-  return `${km.toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`;
+  return `${km.toLocaleString("en-US", { maximumFractionDigits: 1 })} km`;
 }

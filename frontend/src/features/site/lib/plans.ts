@@ -1,6 +1,6 @@
 import type { PublicPlan, PublicPlanBranch } from "../types";
 
-export const PLAN_GROUP_LABELS = { pass: "Pass", credits: "Paket Kredit" } as const;
+export const PLAN_GROUP_LABELS = { pass: "Passes", credits: "Credit Packs" } as const;
 export type PlanKind = keyof typeof PLAN_GROUP_LABELS;
 
 export interface PlanGroup {
@@ -16,15 +16,19 @@ export function groupPlans(plans: PublicPlan[]): PlanGroup[] {
     .filter((group) => group.plans.length > 0);
 }
 
-/** "7 hari", "4 minggu", "6 bulan". */
+function count(n: number, unit: string): string {
+  return `${n} ${unit}${n === 1 ? "" : "s"}`;
+}
+
+/** "7 days", "4 weeks", "6 months". */
 export function validityLabel(days: number): string {
-  if (days >= 180) return `${Math.round(days / 30.4)} bulan`;
-  if (days >= 28 && days % 7 === 0) return `${days / 7} minggu`;
-  return `${days} hari`;
+  if (days >= 180) return count(Math.round(days / 30.4), "month");
+  if (days >= 28 && days % 7 === 0) return count(days / 7, "week");
+  return count(days, "day");
 }
 
 export function creditsLabel(plan: Pick<PublicPlan, "kind" | "credits">): string {
-  return plan.kind === "pass" ? "Booking kelas tanpa batas" : `${plan.credits} kredit kelas`;
+  return plan.kind === "pass" ? "Unlimited class bookings" : count(plan.credits, "class credit");
 }
 
 export function joinHref(planId: string, branchSlug?: string | null): string {
@@ -35,5 +39,5 @@ export function joinHref(planId: string, branchSlug?: string | null): string {
 
 /** Under a price list: whose prices these are. */
 export function branchPriceNote(branch: PublicPlanBranch | null): string {
-  return branch ? `Harga berlaku di ${branch.name}. Ganti cabang lewat pilihan di footer.` : "Harga dasar. Pilih cabang di footer untuk harga cabang.";
+  return branch ? `Prices for ${branch.name}. Change branch in the footer.` : "Base prices. Choose a branch in the footer for branch pricing.";
 }

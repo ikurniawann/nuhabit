@@ -23,10 +23,10 @@ export interface PanelEntry {
 
 /** The four slide-overs of the public shell, keyed by what opens them. */
 export const PANELS: Record<PanelKind, PanelEntry> = {
-  timetable: { title: "Jadwal kelas", Component: TimetablePanel },
-  trial: { title: "Coba gratis", Component: TrialPanel },
+  timetable: { title: "Class timetable", Component: TimetablePanel },
+  trial: { title: "Start a trial", Component: TrialPanel },
   membership: { title: "Membership", Component: MembershipPanel },
-  cart: { title: "Keranjang", Component: CartPanel },
+  cart: { title: "Cart", Component: CartPanel },
 };
 
 export { BRANCH_COOKIE };

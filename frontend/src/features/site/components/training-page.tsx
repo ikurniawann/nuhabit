@@ -10,7 +10,7 @@ export function TrainingPage({ training }: { training: TrainingContent }) {
         <Container className="space-y-6">
           <SectionHeading as="h1" kicker="Training" title={intro.title} text={intro.text} />
           <PanelButton panel="timetable" variant="ink">
-            Lihat jadwal kelas
+            See the class timetable
           </PanelButton>
         </Container>
       </Section>
@@ -51,7 +51,7 @@ export function TrainingPage({ training }: { training: TrainingContent }) {
       {laws.items.length > 0 ? (
         <Section>
           <Container className="space-y-6">
-            <SectionHeading kicker="Aturan main" title={laws.title} />
+            <SectionHeading kicker="House rules" title={laws.title} />
             <ol className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {laws.items.map((item, i) => (
                 <li key={i} className="flex gap-4 rounded-card bg-card p-5 shadow-card">

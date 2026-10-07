@@ -59,9 +59,9 @@ describe("SitePanelsProvider", () => {
 
     fireEvent.click(screen.getByText("open trial"));
     const dialog = await screen.findByRole("dialog");
-    expect(dialog).toHaveTextContent("Coba gratis");
+    expect(dialog).toHaveTextContent("Start a trial");
     expect(await screen.findByRole("option", { name: "NüHabit Bandung" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Cabang")).toHaveValue("bandung");
+    expect(screen.getByLabelText("Branch")).toHaveValue("bandung");
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();

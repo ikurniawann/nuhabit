@@ -9,8 +9,8 @@ import { todayWib } from "@/lib/dates";
 /** How many weeks past the current one the API serves. */
 export const WEEKS_AHEAD = 8;
 
-export const DAY_LABELS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"] as const;
-export const DAY_SHORT = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"] as const;
+export const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+export const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 /** `color` is a scheduling colour token (see CLASS_COLOR in features/gym/scheduling/api). */
 export interface PublicClassType {
@@ -87,9 +87,9 @@ export function groupByDay(sessions: PublicSession[], monday: string): Map<strin
   return groups;
 }
 
-/** "6 Okt" for a day tab. */
+/** "Oct 6" for a day tab. */
 export function shortDate(day: string): string {
-  return utcNoon(day).toLocaleDateString("id-ID", { day: "numeric", month: "short", timeZone: "UTC" });
+  return utcNoon(day).toLocaleDateString("en-US", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 export function sessionHref(id: string): string {

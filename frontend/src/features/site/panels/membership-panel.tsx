@@ -9,7 +9,7 @@ import type { BranchSummary, PublicPlansView } from "../types";
 async function readPublic<T>(path: string): Promise<T> {
   const res = await fetch(`/api/public/site${path}`);
   const json = (await res.json().catch(() => null)) as { success?: boolean; data?: T; error?: string } | null;
-  if (!res.ok || !json?.success || json.data === undefined) throw new Error(json?.error ?? "Gagal memuat paket");
+  if (!res.ok || !json?.success || json.data === undefined) throw new Error(json?.error ?? "Could not load plans");
   return json.data;
 }
 
@@ -33,7 +33,7 @@ function useLoaded<T>(path: string | null): Loaded<T> {
 
 /**
  * The membership slide-over: a branch picker (prop, then the remembered
- * cookie, then the first public branch) and that branch's plans. "Pilih"
+ * cookie, then the first public branch) and that branch's plans. "Choose"
  * closes the panel and goes to /join with one plan.
  */
 export default function MembershipPanel({ branchSlug, onClose }: { branchSlug?: string; onClose(): void }) {
@@ -47,7 +47,7 @@ export default function MembershipPanel({ branchSlug, onClose }: { branchSlug?: 
     <div className="space-y-5">
       {branches.status === "ready" && branches.data.length > 0 ? (
         <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-semibold text-foreground">Cabang</span>
+          <span className="font-semibold text-foreground">Branch</span>
           <select
             value={slug ?? ""}
             onChange={(e) => setPicked(e.target.value)}
@@ -64,7 +64,7 @@ export default function MembershipPanel({ branchSlug, onClose }: { branchSlug?: 
       ) : null}
 
       {plans.status === "error" || branches.status === "error" ? (
-        <p className="text-sm text-danger">Paket belum bisa dimuat. Coba lagi sebentar.</p>
+        <p className="text-sm text-danger">Plans could not be loaded. Try again in a moment.</p>
       ) : plans.status === "ready" ? (
         <PlanGroups plans={plans.data.plans} branchSlug={plans.data.branch?.slug} columns="" onSelect={onClose} />
       ) : (

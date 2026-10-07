@@ -79,9 +79,14 @@ func has(list []any, slug string) bool {
 
 func TestContentDefaultsAndRoundTrip(t *testing.T) {
 	e := setup(t)
+	// The local database may hold a saved home; inside the rolled-back
+	// transaction the test starts from the defaults.
+	if _, err := e.tx.Exec(e.ctx, `DELETE FROM site.content WHERE key = 'home'`); err != nil {
+		t.Fatal(err)
+	}
 
 	home := e.data(nil, "GET", "/api/public/site/content/home", nil)
-	if home["hero"].(map[string]any)["cta_label"] != "Coba Gratis" || len(home["pillars"].([]any)) != 3 {
+	if home["hero"].(map[string]any)["cta_label"] != "Start a Trial" || len(home["pillars"].([]any)) != 3 {
 		t.Fatalf("defaults %v", home)
 	}
 	e.call(nil, "GET", "/api/public/site/content/nope", nil, http.StatusNotFound)
@@ -96,7 +101,7 @@ func TestContentDefaultsAndRoundTrip(t *testing.T) {
 		"partners": []map[string]any{{"name": "Rogue", "logo_url": "/api/files/site/rogue.png"}},
 	})
 	hero := saved["hero"].(map[string]any)
-	if hero["title"] != "Judul baru" || hero["cta_label"] != "Coba Gratis" || len(saved["partners"].([]any)) != 1 {
+	if hero["title"] != "Judul baru" || hero["cta_label"] != "Start a Trial" || len(saved["partners"].([]any)) != 1 {
 		t.Fatalf("saved %v", saved)
 	}
 	public := e.data(nil, "GET", "/api/public/site/content/home", nil)

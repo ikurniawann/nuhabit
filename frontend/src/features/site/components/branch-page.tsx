@@ -4,10 +4,10 @@ import { PanelButton } from "./panel-button";
 import { Container, Kicker, Picture, Section, SectionHeading, Tile } from "./site-section";
 
 const ACCORDION_LABELS: { key: keyof BranchProfile["accordions"]; label: string }[] = [
-  { key: "facilities", label: "Fasilitas" },
-  { key: "parking", label: "Parkir & akses" },
-  { key: "team", label: "Tim coach" },
-  { key: "community", label: "Komunitas" },
+  { key: "facilities", label: "Facilities" },
+  { key: "parking", label: "Parking & access" },
+  { key: "team", label: "Coaching team" },
+  { key: "community", label: "Community" },
 ];
 
 function instagramHref(handle: string): string {
@@ -19,13 +19,13 @@ function BranchActions({ slug }: { slug: string }) {
   return (
     <div className="flex flex-wrap gap-3">
       <PanelButton panel="trial" branchSlug={slug} size="lg">
-        Coba Gratis
+        Start a Trial
       </PanelButton>
       <PanelButton panel="membership" branchSlug={slug} size="lg" variant="onInk">
         Membership
       </PanelButton>
       <PanelButton panel="timetable" branchSlug={slug} size="lg" variant="onInk">
-        Jadwal kelas
+        Class timetable
       </PanelButton>
     </div>
   );
@@ -61,7 +61,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
       {branch.benefits.length > 0 ? (
         <Section>
           <Container className="space-y-6">
-            <SectionHeading kicker="Kenapa di sini" title="Yang kamu dapat di cabang ini" />
+            <SectionHeading kicker="Why here" title="What you get at this branch" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {branch.benefits.map((b, i) => (
                 <Tile key={`${b.title}-${i}`} className="space-y-2">
@@ -77,7 +77,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
       <Section className="pt-0">
         <Container className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <Tile className="space-y-4">
-            <h2 className="font-display text-xl font-semibold">Info cabang</h2>
+            <h2 className="font-display text-xl font-semibold">Branch info</h2>
             <ul className="space-y-3 text-sm">
               {address ? (
                 <li className="flex gap-3">
@@ -88,7 +88,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
                       <>
                         {" "}
                         <a href={mapsHref} target="_blank" rel="noopener noreferrer" className="font-semibold text-forest hover:underline dark:text-accent">
-                          Buka peta
+                          Open map
                         </a>
                       </>
                     ) : null}
@@ -122,7 +122,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
             </ul>
             {branch.directions ? (
               <div className="space-y-1 border-t border-border/60 pt-4 text-sm">
-                <p className="font-semibold">Petunjuk arah</p>
+                <p className="font-semibold">Directions</p>
                 <p className="text-body whitespace-pre-line">{branch.directions}</p>
               </div>
             ) : null}
@@ -156,7 +156,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
       {branch.extras.length > 0 ? (
         <Section className="pt-0">
           <Container className="space-y-6">
-            <SectionHeading kicker="Tambahan" title="Layanan ekstra" />
+            <SectionHeading kicker="Extras" title="Extra services" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {branch.extras.map((x, i) => (
                 <Tile key={`${x.name}-${i}`} className="space-y-1">
@@ -172,7 +172,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
       {branch.testimonials.length > 0 ? (
         <Section className="bg-surface">
           <Container className="space-y-6">
-            <SectionHeading kicker="Kata member" title="Mereka yang sudah latihan di sini" />
+            <SectionHeading kicker="From our members" title="People who train here" />
             <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {branch.testimonials.map((t, i) => (
                 <li key={`${t.name}-${i}`}>

@@ -10,11 +10,11 @@ export const CONTENT_DEFAULTS: ContentByKey = {
   home: {
     hero: {
       kicker: "HYROX training gym",
-      title: "Latihan yang bikin kamu kuat buat hidup, bukan cuma buat gym.",
-      subtitle: "Kelas kecil, coach bersertifikat, dan program 8 minggu yang terukur.",
+      title: "Training that makes you strong for life, not only for the gym.",
+      subtitle: "Small classes, certified coaches and a measurable 8-week program.",
       video_url: "",
       image_url: "",
-      cta_label: "Coba Gratis",
+      cta_label: "Start a Trial",
     },
     partners: [],
     pillars: [],
@@ -22,16 +22,16 @@ export const CONTENT_DEFAULTS: ContentByKey = {
     reel: [],
   },
   training: {
-    intro: { title: "Satu metode, tiga jenis kelas.", text: "" },
+    intro: { title: "One method, three class types.", text: "" },
     class_types: [],
-    block: { title: "Blok 8 minggu, 4 fase", text: "", phases: [] },
-    laws: { title: "Hukum NüHabit", items: [] },
+    block: { title: "An 8-week block in 4 phases", text: "", phases: [] },
+    laws: { title: "The NüHabit Laws", items: [] },
   },
-  space: { title: "Ruang latihan", intro: "", sections: [] },
-  brand: { title: "Cerita kami", intro: "", story_md: "", values: [], image_url: "" },
+  space: { title: "The Space", intro: "", sections: [] },
+  brand: { title: "Our story", intro: "", story_md: "", values: [], image_url: "" },
   social: { instagram: "", tiktok: "", youtube: "", whatsapp: "", email: "" },
-  legal_privacy: { title: "Kebijakan Privasi", body_md: "" },
-  legal_terms: { title: "Syarat & Ketentuan", body_md: "" },
+  legal_privacy: { title: "Privacy Policy", body_md: "" },
+  legal_terms: { title: "Terms & Conditions", body_md: "" },
   analytics: { gtm_id: "", meta_pixel_id: "" },
 };
 

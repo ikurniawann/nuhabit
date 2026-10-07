@@ -19,7 +19,7 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 )
 
-// POST /api/public/site/trial: the website's "Coba Gratis" form. A
+// POST /api/public/site/trial: the website's "Start a Trial" form. A
 // prospect picks a branch and leaves name, email, phone and two marketing
 // consents; the result is a warm 'website' lead with its consents on
 // record, a lead.created event for the workflow rules, and a WhatsApp
@@ -28,7 +28,7 @@ import (
 // ConsentTextVersion names the consent wording the trial form shows
 // (features/site-forms/consent.ts carries the same constant). Bump both
 // when the wording changes.
-const ConsentTextVersion = "2026-10-07.v1"
+const ConsentTextVersion = "2026-10-07.v2"
 
 // trialDedupeWindow: a phone that asked for a trial this recently gets the
 // same lead back instead of a second one.
@@ -37,11 +37,11 @@ const trialDedupeWindow = 24 * time.Hour
 var e164Pattern = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
 
 func e164Check(s string) (string, string, bool) {
-	return "invalid_format", "Nomor telepon harus format internasional, cth. +628123456789", e164Pattern.MatchString(s)
+	return "invalid_format", "Phone number must be in international format, e.g. +628123456789", e164Pattern.MatchString(s)
 }
 
 func emailCheck(s string) (string, string, bool) {
-	return "invalid_format", "Email tidak valid", emailRe.MatchString(s)
+	return "invalid_format", "Enter a valid email", emailRe.MatchString(s)
 }
 
 // trialBranch is the branch the prospect picked.
@@ -92,11 +92,11 @@ func (h *handler) trial(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if !allowed {
-		return httpx.TooManyRequests("Terlalu banyak percobaan. Coba lagi beberapa menit lagi.")
+		return httpx.TooManyRequests("Too many attempts. Try again in a few minutes.")
 	}
 	raw, present := validate.ReadBody(r)
 	if !present {
-		return httpx.BadRequest("Isian tidak terbaca")
+		return httpx.BadRequest("The request body could not be read")
 	}
 	payload, _ := raw.(map[string]any)
 	if bot, _ := IsLikelyBot(payload, h.now()); bot {
@@ -113,7 +113,7 @@ func (h *handler) trial(w http.ResponseWriter, r *http.Request) error {
 		ConsentSMS:   f.BoolDefault("consent_sms", false),
 		SourcePath:   f.Str("source_path", validate.Rule{Optional: true, Nullable: true}, validate.StrOpts{Trim: true, Max: 500}),
 	}
-	if err := f.Err("Periksa kembali isian Anda"); err != nil {
+	if err := f.Err("Please check your details"); err != nil {
 		return err
 	}
 	utm, _ := payload["utm"].(map[string]any)
@@ -127,7 +127,7 @@ func (h *handler) trial(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if branch == nil {
-		return httpx.NotFound("Cabang tidak ditemukan")
+		return httpx.NotFound("Branch not found")
 	}
 	var userAgent *string
 	if ua := r.Header.Get("user-agent"); ua != "" {
@@ -217,8 +217,8 @@ func (h *handler) recordConsents(ctx context.Context, q database.Querier, leadID
 // confirmTrial tells the prospect on WhatsApp; a failure is logged, never
 // shown to them.
 func (h *handler) confirmTrial(ctx context.Context, branch *trialBranch, in trialInput) {
-	message := "Terima kasih, " + in.FirstName + "! Permintaan coba gratis Anda sudah kami terima. " +
-		"Tim " + branch.Name + " akan menghubungi Anda lewat WhatsApp untuk mengatur jadwal sesi pertama."
+	message := "Thanks, " + in.FirstName + "! We have received your free trial request. " +
+		"The " + branch.Name + " team will contact you on WhatsApp to set up your first session."
 	if configured, err := h.engine.WhatsApp(ctx, in.phoneDigits(), message); configured && err != nil {
 		h.log.Error("[site-trial] WA konfirmasi gagal", "error", err)
 	}

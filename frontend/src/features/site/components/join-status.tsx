@@ -12,19 +12,19 @@ import { Container, Section, Tile } from "./site-section";
 
 const OUTCOMES = {
   pending: {
-    title: "Menunggu pembayaran",
-    text: "Selesaikan pembayaran di halaman Xendit. Status di sini ikut berubah begitu pembayaran diterima.",
+    title: "Awaiting payment",
+    text: "Complete the payment on the Xendit page. The status here updates as soon as the payment arrives.",
     Icon: Clock,
     tone: "text-muted-foreground",
   },
-  paid: { title: "Pembayaran berhasil", text: "Paketmu sudah aktif. Pesan kelas pertamamu di Area Member.", Icon: CheckCircle2, tone: "text-success" },
+  paid: { title: "Payment received", text: "Your plan is active. Book your first class in the Member Area.", Icon: CheckCircle2, tone: "text-success" },
   expired: {
-    title: "Invoice kedaluwarsa",
-    text: "Batas waktu pembayaran lewat. Pilih paketnya lagi untuk membuat invoice baru.",
+    title: "Invoice expired",
+    text: "The payment window has passed. Pick the plan again to create a new invoice.",
     Icon: XCircle,
     tone: "text-danger",
   },
-  failed: { title: "Pembayaran gagal", text: "Pembayaran tidak selesai. Pilih paketnya lagi atau hubungi cabang.", Icon: XCircle, tone: "text-danger" },
+  failed: { title: "Payment failed", text: "The payment did not go through. Pick the plan again or contact the branch.", Icon: XCircle, tone: "text-danger" },
 } as const;
 
 /** Step 3 of /join: polls the purchase until the invoice is paid, expired or failed. */
@@ -40,19 +40,19 @@ export function JoinStatus({ purchaseId }: { purchaseId: string }) {
   if (query.isPending) {
     body = (
       <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-busy>
-        <LoaderCircle className="size-4 animate-spin" /> Memuat status pembayaran
+        <LoaderCircle className="size-4 animate-spin" /> Loading payment status
       </p>
     );
   } else if (query.isError) {
     const signedOut = query.error instanceof ApiError && query.error.status === 401;
     body = (
       <div className="space-y-4">
-        <h2 className="font-display text-xl font-semibold">{signedOut ? "Sesi berakhir" : "Status belum bisa dimuat"}</h2>
+        <h2 className="font-display text-xl font-semibold">{signedOut ? "Session expired" : "Status could not be loaded"}</h2>
         <p className="text-sm text-body">
-          {signedOut ? "Masuk ke Area Member untuk melihat status pembelianmu." : query.error.message}
+          {signedOut ? "Sign in to the Member Area to see your purchase status." : query.error.message}
         </p>
         <Button asChild>
-          <Link href="/member">Buka Area Member</Link>
+          <Link href="/member">Open Member Area</Link>
         </Button>
       </div>
     );
@@ -72,28 +72,28 @@ export function JoinStatus({ purchaseId }: { purchaseId: string }) {
         <ul className="space-y-1 text-sm text-body">
           <li className="font-semibold text-foreground">{purchase.package_name}</li>
           <li>{creditsLabel(purchase)}</li>
-          <li>Berlaku {validityLabel(purchase.validity_days)}</li>
+          <li>Valid for {validityLabel(purchase.validity_days)}</li>
           <li className="tabular-nums">{formatRupiah(purchase.total_idr)}</li>
         </ul>
         <div className="flex flex-wrap gap-3">
           {outcome === "paid" ? (
             <Button asChild size="lg">
-              <Link href="/member">Buka Area Member</Link>
+              <Link href="/member">Open Member Area</Link>
             </Button>
           ) : null}
           {outcome === "pending" && purchase.invoice_url ? (
             <Button asChild size="lg">
-              <a href={purchase.invoice_url}>Lanjutkan pembayaran</a>
+              <a href={purchase.invoice_url}>Continue payment</a>
             </Button>
           ) : null}
           {outcome === "expired" || outcome === "failed" ? (
             <Button asChild size="lg">
-              <Link href="/join">Pilih paket lagi</Link>
+              <Link href="/join">Pick a plan again</Link>
             </Button>
           ) : null}
           {outcome !== "paid" ? (
             <Button asChild variant="outline" size="lg">
-              <Link href="/member">Area Member</Link>
+              <Link href="/member">Member Area</Link>
             </Button>
           ) : null}
         </div>
@@ -104,7 +104,7 @@ export function JoinStatus({ purchaseId }: { purchaseId: string }) {
   return (
     <Section>
       <Container className="max-w-2xl space-y-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Status pembelian</h1>
+        <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Purchase status</h1>
         <Tile>{body}</Tile>
       </Container>
     </Section>

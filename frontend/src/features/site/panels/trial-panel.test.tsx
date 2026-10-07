@@ -17,8 +17,8 @@ describe("TrialPanel", () => {
     );
     render(<TrialPanel branchSlug="bsd" onClose={() => {}} />);
     await waitFor(() => expect(screen.getByRole("option", { name: "NüHabit BSD" })).toBeInTheDocument());
-    expect(screen.getByLabelText("Cabang")).toHaveValue("bsd");
-    expect(screen.getByRole("button", { name: /Ajukan coba gratis/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Branch")).toHaveValue("bsd");
+    expect(screen.getByRole("button", { name: /Request a free trial/ })).toBeInTheDocument();
     expect(window.dataLayer).toEqual([{ event: "trial_open", branch: "bsd" }]);
   });
 });
