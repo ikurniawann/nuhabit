@@ -330,12 +330,7 @@ function PackageDialog({
               <Input type="number" min={0} value={form.sort_order} onChange={set("sort_order")} />
             </Field>
             <div className="flex items-end">
-              {isPass ? (
-                <label className="flex items-center gap-3 pb-2 text-sm">
-                  <Switch checked={isPublic} onCheckedChange={setIsPublic} aria-label="Tampil di daftar harga situs" />
-                  Tampil di daftar harga situs
-                </label>
-              ) : (
+              {!isPass && (
                 <p className="flex items-center gap-2 pb-2 text-sm text-muted-foreground">
                   <Layers className="size-4" />
                   {Number(form.credits) > 0 && Number(form.price_idr) > 0
@@ -344,12 +339,10 @@ function PackageDialog({
                 </p>
               )}
             </div>
-            {!isPass && (
-              <label className="flex items-center gap-3 text-sm sm:col-span-2">
-                <Switch checked={isPublic} onCheckedChange={setIsPublic} aria-label="Tampil di daftar harga situs" />
-                Tampil di daftar harga situs
-              </label>
-            )}
+            <label className="flex items-center gap-3 text-sm sm:col-span-2">
+              <Switch checked={isPublic} onCheckedChange={setIsPublic} aria-label="Tampil di daftar harga situs" />
+              Tampil di daftar harga situs
+            </label>
             {branches.length > 0 && (
               <fieldset className="sm:col-span-2">
                 <legend className="mb-1.5 text-sm font-medium text-foreground">Harga per cabang</legend>

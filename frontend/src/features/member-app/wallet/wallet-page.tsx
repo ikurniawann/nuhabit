@@ -28,31 +28,32 @@ export function WalletPage() {
     <div className="flex flex-col gap-5">
       <h1 className="nh-display text-3xl font-black">{t("Wallet")}</h1>
 
-      {wallet.activePass ? (
-        <div className="nh-card nh-surface-ink relative overflow-hidden !border-0 !p-6 text-white">
-          <div className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-nh-lime/20 blur-3xl" />
-          <p className="text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Active pass")}</p>
-          <p className="nh-display mt-1 text-3xl leading-tight">{wallet.activePass.name}</p>
-          <p className="mt-3 flex items-baseline gap-2">
-            <span className="nh-display text-6xl leading-none">{wallet.activePass.daysLeft}</span>
-            <span className="text-sm font-bold text-white/70">{t("days left")}</span>
-          </p>
-          <p className="mt-2 rounded-lg bg-black/25 px-3 py-1.5 text-xs font-bold">
-            {t("Unlimited bookings until")} {formatDay(wallet.activePass.endsAt)}
-          </p>
-        </div>
-      ) : (
-        <div className="nh-card nh-surface-ink relative overflow-hidden !border-0 !p-6 text-white">
-          <div className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-nh-lime/20 blur-3xl" />
-          <p className="text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Credit balance")}</p>
-          <p className="nh-display mt-1 text-7xl leading-none">{wallet.balance}</p>
-          {wallet.expiringCredits > 0 ? (
-            <p className="mt-2 rounded-lg bg-black/25 px-3 py-1.5 text-xs font-bold">
-              {wallet.expiringCredits} {t("expiring within the reminder window")}
+      <div className="nh-card nh-surface-ink relative overflow-hidden !border-0 !p-6 text-white">
+        <div className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-nh-lime/20 blur-3xl" />
+        {wallet.activePass ? (
+          <>
+            <p className="text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Active pass")}</p>
+            <p className="nh-display mt-1 text-3xl leading-tight">{wallet.activePass.name}</p>
+            <p className="mt-3 flex items-baseline gap-2">
+              <span className="nh-display text-6xl leading-none">{wallet.activePass.daysLeft}</span>
+              <span className="text-sm font-bold text-white/70">{t("days left")}</span>
             </p>
-          ) : null}
-        </div>
-      )}
+            <p className="mt-2 rounded-lg bg-black/25 px-3 py-1.5 text-xs font-bold">
+              {t("Unlimited bookings until")} {formatDay(wallet.activePass.endsAt)}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Credit balance")}</p>
+            <p className="nh-display mt-1 text-7xl leading-none">{wallet.balance}</p>
+            {wallet.expiringCredits > 0 ? (
+              <p className="mt-2 rounded-lg bg-black/25 px-3 py-1.5 text-xs font-bold">
+                {wallet.expiringCredits} {t("expiring within the reminder window")}
+              </p>
+            ) : null}
+          </>
+        )}
+      </div>
 
       <Link href={m("/wallet/topup")} className="nh-btn-brand">
         {wallet.activePass ? t("Buy a package or pass") : t("Top up credits")}
