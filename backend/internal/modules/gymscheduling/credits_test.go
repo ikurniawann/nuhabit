@@ -3,6 +3,7 @@ package gymscheduling
 import (
 	"context"
 	"errors"
+	"time"
 
 	"nuhabit/backend/internal/modules/gymcredits"
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
@@ -59,6 +60,14 @@ func (testCredits) Coverage(ctx context.Context, q database.Querier) ([]PackageC
 		out = append(out, PackageCoverage{ID: id, ClassTypeIDs: ids})
 	}
 	return out, err
+}
+
+func (c testCredits) ActivePassAt(ctx context.Context, q database.Querier, id string, at time.Time) (*ActivePass, error) {
+	p, err := c.svc.ActivePassAt(ctx, q, id, at)
+	if err != nil || p == nil {
+		return nil, creditErr(err)
+	}
+	return &ActivePass{ID: p.ID, EndsAt: p.EndsAt}, nil
 }
 
 func (c testCredits) ForBranch(ctx context.Context, q database.Querier, branchID *string) (domain.Rules, error) {

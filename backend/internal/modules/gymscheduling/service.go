@@ -67,6 +67,19 @@ type RulesSource interface {
 	ForBranch(ctx context.Context, q database.Querier, branchID *string) (domain.Rules, error)
 }
 
+// ActivePass is a membership pass covering one instant (owned by gym-credits).
+type ActivePass struct {
+	ID     string
+	EndsAt time.Time
+}
+
+// Passes reads member passes: a pass covering a session start replaces the
+// credit requirement at booking and the deduction at check-in.
+type Passes interface {
+	// ActivePassAt is the pass covering at, nil when none.
+	ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*ActivePass, error)
+}
+
 // Member is what scheduling needs to know about a POS customer.
 type Member struct {
 	Name     *string
@@ -123,6 +136,7 @@ type DB interface {
 type Ports struct {
 	Credits  CreditLedger
 	Packages CreditPackages
+	Passes   Passes
 	Rules    RulesSource
 	Members  Members
 	Qr       QrTokens

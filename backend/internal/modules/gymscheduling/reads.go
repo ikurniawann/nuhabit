@@ -61,11 +61,12 @@ func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]Mem
 }
 
 // cancelInfo is the member portal's cancel preview: the free deadline and
-// what cancelling now would forfeit.
+// what cancelling now would forfeit (credits, or a strike on a pass).
 type cancelInfo struct {
 	Deadline       jsTime              `json:"deadline"`
 	Late           bool                `json:"late"`
 	PenaltyCredits int                 `json:"penalty_credits"`
+	PassStrike     bool                `json:"pass_strike"`
 	Policy         domain.CreditPolicy `json:"policy"`
 }
 
@@ -86,7 +87,7 @@ func bookingStatusColumn(r *Row) domain.BookingStatus { return domain.BookingSta
 
 // attachCancelInfo adds cancel_info to each row: null unless the member's
 // booking is confirmed. Rules are read once per branch.
-func (s *Service) attachCancelInfo(ctx context.Context, rows []*Row, status func(*Row) domain.BookingStatus, now time.Time) error {
+func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows []*Row, status func(*Row) domain.BookingStatus, now time.Time) error {
 	rulesFor := s.branchRules(s.db)
 	for _, r := range rows {
 		st := status(r)
@@ -98,12 +99,27 @@ func (s *Service) attachCancelInfo(ctx context.Context, rows []*Row, status func
 		if err != nil {
 			return err
 		}
-		out := domain.EvaluateCancellation(st, r.Time("starts_at"), r.Int("credit_cost"), rules, now)
+		pass, err := s.Passes.ActivePassAt(ctx, s.db, customerID, r.Time("starts_at"))
+		if err != nil {
+			return err
+		}
+		out := domain.EvaluateCancellation(st, r.Time("starts_at"), r.Int("credit_cost"), pass != nil, rules, now)
 		r.Set("cancel_info", cancelInfo{
-			Deadline: jsTime(out.Deadline), Late: out.Late, PenaltyCredits: out.PenaltyCredits, Policy: rules.LateCancelPolicy,
+			Deadline: jsTime(out.Deadline), Late: out.Late, PenaltyCredits: out.PenaltyCredits, PassStrike: out.PassStrike,
+			Policy: rules.LateCancelPolicy,
 		})
 	}
 	return nil
+}
+
+// activePass is the member's pass covering now, as the member views list
+// it (null when none).
+func (s *Service) activePass(ctx context.Context, customerID string, now time.Time) (any, error) {
+	pass, err := s.Passes.ActivePassAt(ctx, s.db, customerID, now)
+	if err != nil || pass == nil {
+		return nil, err
+	}
+	return object("id", pass.ID, "ends_at", jsTime(pass.EndsAt)), nil
 }
 
 var bookableStatuses = []domain.SessionStatus{domain.SessionPublished, domain.SessionFull}
@@ -123,10 +139,14 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string, from, t
 	if err != nil {
 		return nil, err
 	}
-	if err := s.attachCancelInfo(ctx, sessions, myBookingStatus, now); err != nil {
+	if err := s.attachCancelInfo(ctx, customerID, sessions, myBookingStatus, now); err != nil {
 		return nil, err
 	}
 	credits, err := s.Credits.GetBalance(ctx, s.db, customerID)
+	if err != nil {
+		return nil, err
+	}
+	pass, err := s.activePass(ctx, customerID, now)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +154,7 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string, from, t
 	if err != nil {
 		return nil, err
 	}
-	return object("sessions", sessions, "credits", credits, "class_types", classTypes), nil
+	return object("sessions", sessions, "credits", credits, "active_pass", pass, "class_types", classTypes), nil
 }
 
 // MemberSession is one class with description, coach profile and cancel
@@ -144,7 +164,7 @@ func (s *Service) MemberSession(ctx context.Context, customerID, id string) (*Ro
 	if err != nil || session == nil || session.Str("status") == string(domain.SessionDraft) {
 		return nil, err
 	}
-	if err := s.attachCancelInfo(ctx, []*Row{session}, myBookingStatus, s.now()); err != nil {
+	if err := s.attachCancelInfo(ctx, customerID, []*Row{session}, myBookingStatus, s.now()); err != nil {
 		return nil, err
 	}
 	details, err := s.repo.ClassDetails(ctx, s.db, session.Str("class_type_id"), session.StrPtr("coach_id"))
@@ -166,7 +186,7 @@ func (s *Service) MemberBookings(ctx context.Context, customerID string, past bo
 	if err != nil {
 		return nil, err
 	}
-	return rows, s.attachCancelInfo(ctx, rows, bookingStatusColumn, s.now())
+	return rows, s.attachCancelInfo(ctx, customerID, rows, bookingStatusColumn, s.now())
 }
 
 func (s *Service) MemberCoaches(ctx context.Context) ([]*Row, error) {

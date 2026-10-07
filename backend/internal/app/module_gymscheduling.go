@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"time"
 
 	"nuhabit/backend/internal/modules/gymcredits"
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
@@ -26,6 +27,7 @@ func init() {
 		return gymscheduling.New(d, gymscheduling.Ports{
 			Credits:  credits,
 			Packages: credits,
+			Passes:   credits,
 			Rules:    credits,
 			Members:  gymscheduling.MembersSQL{},
 			Qr:       gymscheduling.QrTokensSQL{},
@@ -40,6 +42,7 @@ type schedulingCredits struct{ svc *gymcredits.Service }
 var (
 	_ gymscheduling.CreditLedger   = schedulingCredits{}
 	_ gymscheduling.CreditPackages = schedulingCredits{}
+	_ gymscheduling.Passes         = schedulingCredits{}
 	_ gymscheduling.RulesSource    = schedulingCredits{}
 )
 
@@ -72,6 +75,14 @@ func (c schedulingCredits) Deduct(ctx context.Context, q database.Querier, in gy
 
 func (c schedulingCredits) Refund(ctx context.Context, q database.Querier, in gymscheduling.CreditMovement) error {
 	return creditErr(c.svc.RefundClass(ctx, q, move(in)))
+}
+
+func (c schedulingCredits) ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*gymscheduling.ActivePass, error) {
+	p, err := c.svc.ActivePassAt(ctx, q, customerID, at)
+	if err != nil || p == nil {
+		return nil, creditErr(err)
+	}
+	return &gymscheduling.ActivePass{ID: p.ID, EndsAt: p.EndsAt}, nil
 }
 
 func (c schedulingCredits) CoveredClassTypeIDs(ctx context.Context, q database.Querier, customerID string) ([]string, error) {

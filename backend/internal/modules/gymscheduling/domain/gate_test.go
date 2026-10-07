@@ -33,6 +33,17 @@ func TestGateTokenProblemsHaveNoEffects(t *testing.T) {
 	}
 }
 
+func TestGatePassSkipsCredits(t *testing.T) {
+	out := scan(func(in *GateScanInput) { in.Balance, in.Candidate.HasPass = 0, true })
+	want := []GateEffect{{Kind: EffectConsumeToken}, {Kind: EffectCheckIn, BookingID: "bk1"}}
+	if out.Decision != Allowed || out.EntryKind != EntryBooking || !reflect.DeepEqual(out.Effects, want) {
+		t.Errorf("pass: %+v", out)
+	}
+	if got := DescribeGateDecision(Allowed, "", EntryBooking, GateDetail{ClassName: "Engine", Pass: true}); got != "Check-in Engine · pass aktif, tanpa potong kredit" {
+		t.Errorf("message: %q", got)
+	}
+}
+
 func TestGateInactiveMemberConsumesToken(t *testing.T) {
 	want := GateScanEvaluation{Decision: Denied, Reason: GateMemberNotActive, Effects: []GateEffect{{Kind: EffectConsumeToken}}}
 	if got := scan(func(in *GateScanInput) { in.MemberActive = false }); !reflect.DeepEqual(got, want) {

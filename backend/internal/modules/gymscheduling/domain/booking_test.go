@@ -149,23 +149,38 @@ func TestEligibilityOrder(t *testing.T) {
 }
 
 func TestCancellationAndNoShow(t *testing.T) {
-	out := EvaluateCancellation(BookingConfirmed, start, 2, rules, at("2026-10-05T06:59:00Z"))
+	out := EvaluateCancellation(BookingConfirmed, start, 2, false, rules, at("2026-10-05T06:59:00Z"))
 	if out.Late || out.PenaltyCredits != 0 || !out.Deadline.Equal(at("2026-10-05T07:00:00Z")) {
 		t.Errorf("before deadline: %+v", out)
 	}
-	if out := EvaluateCancellation(BookingConfirmed, start, 2, rules, at("2026-10-05T07:00:01Z")); !out.Late || out.PenaltyCredits != 2 {
+	if out := EvaluateCancellation(BookingConfirmed, start, 2, false, rules, at("2026-10-05T07:00:01Z")); !out.Late || out.PenaltyCredits != 2 || out.PassStrike {
 		t.Errorf("late forfeit: %+v", out)
+	}
+	if out := EvaluateCancellation(BookingConfirmed, start, 2, true, rules, at("2026-10-05T07:00:01Z")); !out.Late || out.PenaltyCredits != 0 || !out.PassStrike {
+		t.Errorf("late with pass: %+v", out)
 	}
 	free := rules
 	free.LateCancelPolicy = PolicyFree
-	if out := EvaluateCancellation(BookingConfirmed, start, 2, free, at("2026-10-05T10:00:00Z")); !out.Late || out.PenaltyCredits != 0 {
+	if out := EvaluateCancellation(BookingConfirmed, start, 2, false, free, at("2026-10-05T10:00:00Z")); !out.Late || out.PenaltyCredits != 0 {
 		t.Errorf("late free: %+v", out)
 	}
-	if out := EvaluateCancellation(BookingWaitlist, start, 2, rules, at("2026-10-05T10:59:00Z")); out.Late || out.PenaltyCredits != 0 {
+	if out := EvaluateCancellation(BookingConfirmed, start, 2, true, free, at("2026-10-05T10:00:00Z")); out.PassStrike {
+		t.Errorf("late free with pass: %+v", out)
+	}
+	if out := EvaluateCancellation(BookingWaitlist, start, 2, false, rules, at("2026-10-05T10:59:00Z")); out.Late || out.PenaltyCredits != 0 {
 		t.Errorf("waitlist: %+v", out)
 	}
-	if NoShowPenalty(2, rules) != 2 || NoShowPenalty(2, Rules{NoShowPolicy: PolicyFree}) != 0 {
-		t.Error("no-show policy")
+	if p, s := NoShowPenalty(2, false, rules); p != 2 || s {
+		t.Error("no-show forfeit")
+	}
+	if p, s := NoShowPenalty(2, true, rules); p != 0 || !s {
+		t.Error("no-show with pass")
+	}
+	if p, s := NoShowPenalty(2, true, Rules{NoShowPolicy: PolicyFree}); p != 0 || s {
+		t.Error("no-show free")
+	}
+	if got := eligibility(func(in *EligibilityInput) { in.Balance, in.HasPass = 0, true }); got.Kind != DecisionConfirm {
+		t.Errorf("pass without credits: %+v", got)
 	}
 	for from, want := range map[BookingStatus]BookingStatus{
 		BookingCheckedIn: BookingCompleted, BookingConfirmed: BookingNoShow,

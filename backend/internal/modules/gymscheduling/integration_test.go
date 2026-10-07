@@ -62,7 +62,7 @@ func newFixture(t *testing.T) *fixture {
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
 	credits := newTestCredits(tx)
 	svc := NewService(tx, Postgres{}, Ports{
-		Credits: credits, Packages: credits, Rules: credits,
+		Credits: credits, Packages: credits, Passes: credits, Rules: credits,
 		Members: MembersSQL{}, Qr: QrTokensSQL{}, Notifier: NotificationsSQL{},
 	}, nil)
 	h := &handler{svc: svc, guard: headerGuard{}, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
@@ -429,6 +429,87 @@ func TestGateScan(t *testing.T) {
 	}
 	if n := f.scalar(`SELECT count(*)::text FROM crm.member_notifications WHERE customer_id = $1`, m); n != "2" {
 		t.Fatalf("notifications (booked + checked in) = %s", n)
+	}
+}
+
+// passFor issues an active pass of `days` days to the member, starting now.
+func (f *fixture) passFor(customerID string, days int) string {
+	f.t.Helper()
+	pkg := f.scalar(`INSERT INTO gym.credit_packages (name, kind, credits, price_idr, validity_days)
+		VALUES ($1, 'pass', 0, 1000000, $2) RETURNING id::text`, "Go Pass "+testutil.RandomHex(4), days)
+	return f.scalar(`INSERT INTO gym.member_passes (customer_id, package_id, starts_at, ends_at)
+		VALUES ($1, $2, now(), now() + make_interval(days => $3)) RETURNING id::text`, customerID, pkg, days)
+}
+
+func TestPassBookingAndCheckIn(t *testing.T) {
+	f := newFixture(t)
+	rules, err := f.credits.ForBranch(f.ctx, f.tx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	typeID, typeName := f.classType(2)
+	holder := f.member(0)
+	f.passFor(holder, 2)
+
+	// No credits, but the pass covers a class inside its window.
+	soon := f.session(typeID, time.Now().Add(20*time.Minute), 5)
+	res := f.asMember(holder, "POST", "/api/member-portal/gym/bookings", map[string]any{"session_id": soon})
+	if res.Status != 200 || res.data()["status"] != "confirmed" {
+		t.Fatalf("book with pass: %s", res.Raw)
+	}
+	bookingSoon := res.data()["bookingId"].(string)
+	listed := f.asMember(holder, "GET", "/api/member-portal/gym/sessions", nil).data()
+	if listed["credits"] != float64(0) || listed["active_pass"] == nil {
+		t.Fatalf("member sessions: %v", listed)
+	}
+
+	// A class after the pass ends still needs credits.
+	later := f.session(typeID, time.Now().Add(3*24*time.Hour), 5)
+	expectError(t, f.asMember(holder, "POST", "/api/member-portal/gym/bookings", map[string]any{"session_id": later}), 409,
+		"Kredit tidak cukup untuk kelas ini")
+
+	// Check-in deducts nothing.
+	res = f.asStaff("POST", "/api/gym/bookings/"+bookingSoon, map[string]any{"action": "check_in"})
+	if d := res.data(); d["decision"] != "allowed" || d["creditsDeducted"] != float64(0) || d["balanceAfter"] != nil ||
+		d["message"] != "Check-in "+typeName+" · pass aktif, tanpa potong kredit" {
+		t.Fatalf("pass check-in: %s", res.Raw)
+	}
+	if f.balance(holder) != 0 {
+		t.Fatalf("balance %d", f.balance(holder))
+	}
+
+	// The gate admits a pass holder for a confirmed booking without credits.
+	gateSession := f.session(typeID, time.Now().Add(40*time.Minute), 5)
+	f.asMember(holder, "POST", "/api/member-portal/gym/bookings", map[string]any{"session_id": gateSession})
+	tok := "nhqr_" + testutil.RandomHex(8)
+	f.exec(`INSERT INTO crm.member_qr_tokens (token, customer_id, expires_at) VALUES ($1, $2, now() + interval '5 minutes')`, tok, holder)
+	f.exec(`DELETE FROM gym.access_logs WHERE customer_id = $1`, holder)
+	res = f.asStaff("POST", "/api/gym/checkin", map[string]any{"token": tok})
+	if d := res.data(); d["decision"] != "allowed" || d["entryKind"] != "booking" || d["creditsDeducted"] != float64(0) {
+		t.Fatalf("gate with pass: %s", res.Raw)
+	}
+
+	// A late cancel records a strike instead of a credit penalty.
+	if rules.CancellationDeadlineHours > 0 && rules.LateCancelPolicy == "forfeit" {
+		lateSession := f.session(typeID, time.Now().Add(time.Duration(rules.CancellationDeadlineHours)*time.Hour-30*time.Minute), 5)
+		bookLate := f.asStaff("POST", "/api/gym/bookings", map[string]any{"session_id": lateSession, "customer_id": holder}).data()["bookingId"].(string)
+		preview := f.asMember(holder, "GET", "/api/member-portal/gym/bookings", nil).list()
+		var info map[string]any
+		for _, b := range preview {
+			if m := b.(map[string]any); m["id"] == bookLate {
+				info, _ = m["cancel_info"].(map[string]any)
+			}
+		}
+		if info == nil || info["late"] != true || info["pass_strike"] != true || info["penalty_credits"] != float64(0) {
+			t.Fatalf("cancel preview: %v", preview)
+		}
+		res = f.asMember(holder, "DELETE", "/api/member-portal/gym/bookings/"+bookLate, nil)
+		if d := res.data(); d["late"] != true || d["penalty_credits"] != float64(0) || d["pass_strike"] != true {
+			t.Fatalf("late cancel with pass: %s", res.Raw)
+		}
+		if got := f.scalar(`SELECT pass_strike::text FROM gym.bookings WHERE id = $1`, bookLate); got != "true" {
+			t.Fatalf("strike flag = %s", got)
+		}
 	}
 }
 
