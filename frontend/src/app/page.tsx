@@ -1,7 +1,9 @@
 import { OsDesktopLoader } from "@/features/os-desktop/components/os-desktop-loader";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { HomePage } from "@/features/site/components/home-page";
-import { fetchBranches, fetchContent } from "@/features/site/lib/public-api";
+import { BRANCH_COOKIE } from "@/features/site/lib/branch-cookie";
+import { fetchBranches, fetchContent, fetchPlans } from "@/features/site/lib/public-api";
 import { SiteLayout } from "@/features/site/site-layout";
 import { getUser } from "@/lib/auth/require-user";
 import { isEssOnlyUser } from "@/lib/iam/get-user-menus";
@@ -13,10 +15,11 @@ export default async function HomeRoute() {
   const { user } = await getUser();
 
   if (!user) {
-    const [home, branches] = await Promise.all([fetchContent("home"), fetchBranches()]);
+    const branchSlug = (await cookies()).get(BRANCH_COOKIE)?.value || undefined;
+    const [home, branches, plans] = await Promise.all([fetchContent("home"), fetchBranches(), fetchPlans(branchSlug)]);
     return (
       <SiteLayout>
-        <HomePage home={home} branches={branches} />
+        <HomePage home={home} branches={branches} plans={plans} />
       </SiteLayout>
     );
   }

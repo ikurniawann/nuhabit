@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { BranchSummary, HomeContent } from "../types";
+import type { BranchSummary, HomeContent, PublicPlansView } from "../types";
+import { MembershipSection } from "./membership-section";
 import { PanelButton } from "./panel-button";
 import { Container, Kicker, Picture, Section, SectionHeading, Tile } from "./site-section";
 
@@ -149,13 +150,14 @@ function Branches({ branches }: { branches: BranchSummary[] }) {
   );
 }
 
-export function HomePage({ home, branches }: { home: HomeContent; branches: BranchSummary[] }) {
+export function HomePage({ home, branches, plans }: { home: HomeContent; branches: BranchSummary[]; plans: PublicPlansView }) {
   return (
     <>
       <Hero hero={home.hero} />
       <Partners partners={home.partners} />
       <Pillars pillars={home.pillars} />
       <Mission mission={home.mission} />
+      <MembershipSection plans={plans} />
       <Reel reel={home.reel} />
       <Branches branches={branches} />
     </>

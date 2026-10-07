@@ -122,3 +122,27 @@ export interface SiteEvent {
   created_at: string;
   updated_at: string;
 }
+
+/** One package of the public price list (GET /api/public/site/plans). */
+export interface PublicPlan {
+  id: string;
+  name: string;
+  kind: "credits" | "pass";
+  description: string;
+  credits: number;
+  validity_days: number;
+  price_idr: number;
+  badge: string | null;
+  sort_order: number;
+}
+
+export interface PublicPlanBranch {
+  id: string;
+  name: string;
+  slug: string | null;
+}
+
+export interface PublicPlansView {
+  branch: PublicPlanBranch | null;
+  plans: PublicPlan[];
+}
