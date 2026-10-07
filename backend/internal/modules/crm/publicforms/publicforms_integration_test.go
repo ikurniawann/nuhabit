@@ -141,6 +141,14 @@ func TestPublicFormDefinition(t *testing.T) {
 	if code != 400 || raw != `{"success":false,"error":"Periksa kembali isian Anda","details":[{"key":"topic","message":"Topik wajib diisi"}]}` {
 		t.Fatalf("stored validation %d %s", code, raw)
 	}
+	// An email-only form (no phone, no org name) still becomes a lead.
+	if code, raw = f.post(slug, map[string]any{"pic_email": "ani@example.test", "topic": "Kelas"}, "10.0.0.8"); code != 200 {
+		t.Fatalf("email-only %d %s", code, raw)
+	}
+	if got := f.val(`SELECT org_name || '|' || pic_name || '|' || pic_phone || '|' || (custom->>'topic') FROM crm.crm_sales_leads
+		WHERE pic_email = 'ani@example.test' AND company_id = (SELECT company_id FROM crm.crm_forms WHERE slug = $1)`, slug); got != "Kiriman Form Publik|Kiriman Form Publik||Kelas" {
+		t.Fatalf("email-only lead = %s", got)
+	}
 }
 
 func TestPublicFormSubmissions(t *testing.T) {

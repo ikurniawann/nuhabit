@@ -350,25 +350,21 @@ func (h *handler) createLead(ctx context.Context, f *form, sub Submission, a Att
 	if n := sub.Lead["pic_name"]; n != "" {
 		picName = n
 	}
-	var phone *string
-	if p := sub.Lead["pic_phone"]; p != "" {
-		n := NormalizePhone(p)
-		phone = &n
+	// pic_phone is NOT NULL on the lead: an email-only form stores "", and
+	// the (company, phone, org name) duplicate check runs on that too.
+	phone := NormalizePhone(sub.Lead["pic_phone"])
+	existing, err := h.leads.Duplicate(ctx, h.db, *companyID, phone, orgName)
+	if err != nil {
+		return "", false, err
 	}
-	if phone != nil {
-		existing, err := h.leads.Duplicate(ctx, h.db, *companyID, *phone, orgName)
-		if err != nil {
-			return "", false, err
-		}
-		if existing != "" {
-			if note := jsTrim(sub.Lead["notes"]); note != "" {
-				text := sliceUTF16("[Form publik "+FormatDate(h.now())+"] "+note, 4000)
-				if err := h.leads.AppendNote(ctx, h.db, existing, text); err != nil {
-					return "", false, err
-				}
+	if existing != "" {
+		if note := jsTrim(sub.Lead["notes"]); note != "" {
+			text := sliceUTF16("[Form publik "+FormatDate(h.now())+"] "+note, 4000)
+			if err := h.leads.AppendNote(ctx, h.db, existing, text); err != nil {
+				return "", false, err
 			}
-			return existing, true, nil
 		}
+		return existing, true, nil
 	}
 	custom, _ := json.Marshal(sub.Custom)
 	orgType := "lainnya"
@@ -378,7 +374,7 @@ func (h *handler) createLead(ctx context.Context, f *form, sub Submission, a Att
 	id, err = h.leads.Create(ctx, h.db, NewLead{
 		CompanyID: *companyID, BranchID: branchID, OrgName: orgName, OrgType: orgType,
 		Source: SourceFromAttribution(a, f.DefaultSource), Temperature: f.LeadTemperature,
-		PicName: &picName, PicPhone: phone, PicEmail: leadValue(sub.Lead, "pic_email"),
+		PicName: &picName, PicPhone: &phone, PicEmail: leadValue(sub.Lead, "pic_email"),
 		City: leadValue(sub.Lead, "city"), Notes: leadValue(sub.Lead, "notes"), Custom: string(custom), Attribution: a,
 	})
 	if err != nil || id == "" {
