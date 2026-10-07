@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/crm/advance"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/testutil"
@@ -67,10 +69,8 @@ type fixture struct {
 	val  func(sql string, args ...any) string
 }
 
-func newFixture(t *testing.T) (*fixture, string, string) {
-	t.Helper()
-	staff := testutil.CreateStaff(t, testutil.StaffOptions{}) // before the transaction (cleanup order)
-	tx := testutil.Tx(t)
+// sqlFixture wraps tx with exec and val helpers that fail the test.
+func sqlFixture(t *testing.T, tx pgx.Tx) *fixture {
 	ctx := context.Background()
 	f := &fixture{t: t}
 	f.exec = func(sql string, args ...any) {
@@ -90,13 +90,25 @@ func newFixture(t *testing.T) (*fixture, string, string) {
 		}
 		return *v
 	}
-	company := f.val(`SELECT id::text FROM configuration.companies ORDER BY created_at LIMIT 1`)
-	branch := f.val(`SELECT id::text FROM configuration.branches WHERE company_id = $1 ORDER BY created_at LIMIT 1`, company)
-	h := newHandler(tx, testutil.Deps(t, nil), advance.Ports{WhatsApp: noGateway{}}, sqlLeads{})
+	return f
+}
+
+// mount serves the handler's routes on the fixture.
+func (f *fixture) mount(h *handler) {
 	f.mux = http.NewServeMux()
 	for _, r := range h.routes() {
 		f.mux.Handle(r.Pattern, r.Handler)
 	}
+}
+
+func newFixture(t *testing.T) (*fixture, string, string) {
+	t.Helper()
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{}) // before the transaction (cleanup order)
+	tx := testutil.Tx(t)
+	f := sqlFixture(t, tx)
+	company := f.val(`SELECT id::text FROM configuration.companies ORDER BY created_at LIMIT 1`)
+	branch := f.val(`SELECT id::text FROM configuration.branches WHERE company_id = $1 ORDER BY created_at LIMIT 1`, company)
+	f.mount(newHandler(tx, testutil.Deps(t, nil), advance.Ports{WhatsApp: noGateway{}}, sqlLeads{}))
 	slug := "go-" + testutil.RandomHex(4)
 	f.exec(`INSERT INTO crm.crm_forms (company_id, branch_id, slug, name, title, success_message, redirect_url, notify_user_ids)
 		VALUES ($1, $2, $3, 'Kontak', 'Hubungi kami', 'Terima kasih!', 'https://example.com/ok', jsonb_build_array($4::text))`,

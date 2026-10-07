@@ -41,10 +41,6 @@ export function validateTrial(values: TrialValues): Partial<Record<TrialField, s
   return errors;
 }
 
-export function isTrialValid(values: TrialValues): boolean {
-  return Object.keys(validateTrial(values)).length === 0;
-}
-
 /** Body POST /api/public/site/trial dari isian yang sudah valid. */
 export function trialPayload(values: TrialValues, extra: { utm: Record<string, string>; source_path: string; form_started_at: number }) {
   return {

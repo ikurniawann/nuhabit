@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { HONEYPOT_FIELD, UTM_KEYS } from "@/lib/crm/public-forms";
+import { HONEYPOT_FIELD, readPageAttribution } from "@/lib/crm/public-forms";
 import { CONSENT_EMAIL_TEXT, CONSENT_SMS_TEXT, CONSENT_TEXT_VERSION } from "./consent";
 import { COUNTRY_CODES } from "./phone";
 import { pushDataLayer } from "./track";
@@ -27,18 +27,6 @@ async function fetchBranches(): Promise<TrialBranch[]> {
   if (!res.ok || !json.success || !json.data) return [];
   const list = Array.isArray(json.data) ? json.data : (json.data.branches ?? []);
   return list.filter((b) => typeof b.slug === "string" && typeof b.name === "string");
-}
-
-function readUtm(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const sp = new URLSearchParams(window.location.search);
-  const found: Record<string, string> = {};
-  for (const k of UTM_KEYS) {
-    const v = sp.get(k);
-    if (v) found[k] = v;
-  }
-  if (document.referrer) found.referrer = document.referrer.slice(0, 500);
-  return found;
 }
 
 const selectClass =
@@ -96,7 +84,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...trialPayload(values, { utm: readUtm(), source_path: path, form_started_at: startedAt }),
+          ...trialPayload(values, { utm: readPageAttribution(), source_path: path, form_started_at: startedAt }),
           [HONEYPOT_FIELD]: honeypot,
         }),
       });

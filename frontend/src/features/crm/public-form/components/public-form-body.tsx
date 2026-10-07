@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { HONEYPOT_FIELD, UTM_KEYS, type PublicFieldDef } from "@/lib/crm/public-forms";
+import { HONEYPOT_FIELD, readPageAttribution, type PublicFieldDef } from "@/lib/crm/public-forms";
 
 /** Definisi form seperti dijawab GET /api/public/crm/forms/<slug>. */
 export interface PublicFormDefinition {
@@ -28,20 +28,6 @@ const ORG_TYPE_LABELS: Record<string, string> = {
   perorangan: "Perorangan",
   lainnya: "Lainnya",
 };
-
-/** UTM dibaca dari URL saat kirim, bukan lewat efek, supaya tidak ada state tambahan. */
-function readAttribution(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const sp = new URLSearchParams(window.location.search);
-  const found: Record<string, string> = {};
-  for (const k of UTM_KEYS) {
-    const v = sp.get(k);
-    if (v) found[k] = v;
-  }
-  found.landing_page = window.location.href.slice(0, 500);
-  if (document.referrer) found.referrer = document.referrer.slice(0, 500);
-  return found;
-}
 
 /**
  * Isi form publik CRM tanpa bingkai halaman: field, jebakan bot, tombol kirim
@@ -71,7 +57,7 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
       const res = await fetch(`/api/public/crm/forms/${form.slug}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...values, ...readAttribution(), form_started_at: startedAt }),
+        body: JSON.stringify({ ...values, ...readPageAttribution(), form_started_at: startedAt }),
       });
       const body = (await res.json()) as {
         success: boolean;

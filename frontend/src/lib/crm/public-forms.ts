@@ -97,6 +97,23 @@ export const UTM_LABELS: Record<UtmKey, string> = {
   utm_term: "Kata kunci (utm_term)",
 };
 
+/**
+ * UTM dari URL halaman saat ini plus halaman masuk dan referrer, dibaca di
+ * titik kirim (bukan lewat efek). Kosong di server.
+ */
+export function readPageAttribution(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const sp = new URLSearchParams(window.location.search);
+  const found: Record<string, string> = {};
+  for (const k of UTM_KEYS) {
+    const v = sp.get(k);
+    if (v) found[k] = v;
+  }
+  found.landing_page = window.location.href.slice(0, 500);
+  if (document.referrer) found.referrer = document.referrer.slice(0, 500);
+  return found;
+}
+
 export interface Attribution {
   utm_source: string | null;
   utm_medium: string | null;

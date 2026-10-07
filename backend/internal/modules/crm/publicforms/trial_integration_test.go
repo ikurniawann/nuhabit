@@ -45,24 +45,7 @@ func newTrialFixture(t *testing.T) *trialFixture {
 	tx := testutil.Tx(t)
 	ctx := context.Background()
 	org := testutil.CreateOrg(t, tx)
-	f := &trialFixture{fixture: &fixture{t: t}, slug: "go-trial-" + testutil.RandomHex(3), companyID: org.CompanyID, branchID: org.BranchID}
-	f.exec = func(sql string, args ...any) {
-		t.Helper()
-		if _, err := tx.Exec(ctx, sql, args...); err != nil {
-			t.Fatalf("%s: %v", sql, err)
-		}
-	}
-	f.val = func(sql string, args ...any) string {
-		t.Helper()
-		var v *string
-		if err := tx.QueryRow(ctx, sql, args...).Scan(&v); err != nil {
-			t.Fatalf("%s: %v", sql, err)
-		}
-		if v == nil {
-			return "<nil>"
-		}
-		return *v
-	}
+	f := &trialFixture{fixture: sqlFixture(t, tx), slug: "go-trial-" + testutil.RandomHex(3), companyID: org.CompanyID, branchID: org.BranchID}
 	f.exec(`UPDATE configuration.branches SET slug = $2 WHERE id = $1`, org.BranchID, f.slug)
 	f.branchName = f.val(`SELECT name FROM configuration.branches WHERE id = $1`, org.BranchID)
 	gw := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,11 +58,7 @@ func newTrialFixture(t *testing.T) *trialFixture {
 	t.Cleanup(gw.Close)
 	deps := testutil.Deps(t, nil)
 	ports := advance.Ports{Records: scoreRecords{}, WhatsApp: stubGateway{g: &whatsapp.Gateway{BaseURL: gw.URL, Token: "t", Timeout: 5 * time.Second}}}
-	h := newHandler(tx, deps, ports, sqlLeads{})
-	f.mux = http.NewServeMux()
-	for _, r := range h.routes() {
-		f.mux.Handle(r.Pattern, r.Handler)
-	}
+	f.mount(newHandler(tx, deps, ports, sqlLeads{}))
 	f.bus = outbox.NewBus(nil, deps.Log)
 	advance.Subscribe(f.bus, deps, ports)
 	if err := f.bus.Register(ctx, tx); err != nil {

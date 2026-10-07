@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { EMPTY_TRIAL, isTrialValid, trialPayload, validateTrial, type TrialValues } from "./trial-validation";
+import { EMPTY_TRIAL, trialPayload, validateTrial, type TrialValues } from "./trial-validation";
 
 const filled: TrialValues = {
   ...EMPTY_TRIAL,
@@ -19,12 +19,11 @@ describe("validateTrial", () => {
       email: "Email wajib diisi",
       phone_local: "Nomor telepon wajib diisi",
     });
-    expect(isTrialValid(EMPTY_TRIAL)).toBe(false);
   });
 
   test("isian lengkap lolos tanpa persetujuan pemasaran", () => {
     expect(validateTrial(filled)).toEqual({});
-    expect(isTrialValid({ ...filled, consent_email: false, consent_sms: false })).toBe(true);
+    expect(validateTrial({ ...filled, consent_email: false, consent_sms: false })).toEqual({});
   });
 
   test("email dan nomor diperiksa bentuknya", () => {
