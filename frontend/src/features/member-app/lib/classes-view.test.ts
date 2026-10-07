@@ -139,10 +139,20 @@ describe("wallet coverage", () => {
     created_at: "2026-10-01T00:00:00.000Z",
     expired,
   });
-  const raw = (lots: ReturnType<typeof lot>[]) => ({
+  const pass = (status: "active" | "expired") => ({
+    id: `pass-${status}`,
+    package_id: "pk-pass",
+    package_name: "Pass 4 Minggu",
+    starts_at: "2026-10-01T00:00:00.000Z",
+    ends_at: "2026-10-29T00:00:00.000Z",
+    status,
+    days_left: status === "active" ? 12 : 0,
+  });
+  const raw = (lots: ReturnType<typeof lot>[], passes: ReturnType<typeof pass>[] = []) => ({
     balance: 4,
     expiring_credits: 0,
     lots,
+    passes,
     entries: [{ id: "e1", type: "class_deduction", amount: -2, note: null, created_at: "2026-10-02T00:00:00.000Z" }],
   });
 
@@ -160,13 +170,36 @@ describe("wallet coverage", () => {
     expect(coverageFor(toWalletView(raw([lot("l1", "pk-race")]), catalog), "ct-sim")).toBe(true);
     expect(coverageFor(toWalletView(raw([lot("l1", "pk-race"), lot("l2", "pk-all")]), catalog), "ct-mob")).toBe(true);
   });
+
+  it("an active pass covers every class and heads the pass list", () => {
+    const w = toWalletView(raw([lot("l1", "pk-race")], [pass("expired"), pass("active")]), catalog);
+    expect(w.activePass).toMatchObject({ id: "pass-active", name: "Pass 4 Minggu", daysLeft: 12 });
+    expect(w.passes).toHaveLength(2);
+    expect(coverageFor(w, "ct-mob")).toBe(true);
+    expect(toWalletView(raw([], [pass("expired")]), catalog).activePass).toBeNull();
+  });
 });
 
 describe("toPackageView / toPaymentView", () => {
+  const pkg = {
+    name: "X",
+    kind: "credits" as const,
+    credits: 5,
+    price_idr: 500_000,
+    validity_days: 30,
+    badge: null,
+    can_buy: true,
+    blocked_reason: null,
+  };
+
   it("names the classes a restricted package covers", () => {
-    const base = { name: "X", credits: 5, price_idr: 500_000, validity_days: 30, can_buy: true, blocked_reason: null };
-    expect(toPackageView({ ...base, id: "pk-race" }, catalog).coverageNames).toEqual(["Race Simulation"]);
-    expect(toPackageView({ ...base, id: "pk-all" }, catalog).coverageNames).toBeNull();
+    expect(toPackageView({ ...pkg, id: "pk-race" }, catalog).coverageNames).toEqual(["Race Simulation"]);
+    expect(toPackageView({ ...pkg, id: "pk-all" }, catalog).coverageNames).toBeNull();
+  });
+
+  it("a pass has no class coverage and keeps its badge", () => {
+    const view = toPackageView({ ...pkg, id: "pk-race", kind: "pass", credits: 0, badge: "Paling laris" }, catalog);
+    expect(view).toMatchObject({ kind: "pass", badge: "Paling laris", coverageNames: null });
   });
 
   it("maps the purchase method to a channel", () => {
@@ -174,14 +207,19 @@ describe("toPackageView / toPaymentView", () => {
       id: "p1",
       status: "pending" as const,
       package_name: "Starter 5",
+      kind: "credits" as const,
       credits: 5,
+      validity_days: 30,
       total_idr: 450_000,
       qr_string: "QR",
+      invoice_url: null,
       expires_at: null,
       simulated: true,
     };
     expect(toPaymentView({ ...base, payment_method: "qris" }).payment.channel).toBe("QRIS");
     expect(toPaymentView({ ...base, payment_method: "ark_coin" }).payment.channel).toBe("ARK_COIN");
+    const invoice = toPaymentView({ ...base, payment_method: "invoice", invoice_url: "https://checkout.test/x" }).payment;
+    expect(invoice).toMatchObject({ channel: "INVOICE", invoiceUrl: "https://checkout.test/x" });
   });
 });
 

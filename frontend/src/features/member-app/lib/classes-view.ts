@@ -72,19 +72,35 @@ export interface RawLot {
   expired: boolean;
 }
 
+/** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
+export type PackageKind = 'credits' | 'pass';
+
+export interface RawPass {
+  id: string;
+  package_id: string;
+  package_name: string;
+  starts_at: string;
+  ends_at: string;
+  status: 'active' | 'expired' | 'refunded';
+  days_left: number;
+}
+
 export interface RawWallet {
   balance: number;
   expiring_credits: number;
   lots: RawLot[];
+  passes: RawPass[];
   entries: { id: string; type: string; amount: number; note: string | null; created_at: string }[];
 }
 
 export interface RawPackage {
   id: string;
   name: string;
+  kind: PackageKind;
   credits: number;
   price_idr: number;
   validity_days: number;
+  badge: string | null;
   can_buy: boolean;
   blocked_reason: string | null;
 }
@@ -93,10 +109,13 @@ export interface RawPurchase {
   id: string;
   status: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
   package_name: string;
+  kind: PackageKind;
   credits: number;
+  validity_days: number;
   total_idr: number;
   payment_method: string;
   qr_string: string | null;
+  invoice_url: string | null;
   expires_at: string | null;
   simulated: boolean;
 }
@@ -156,9 +175,21 @@ export interface MyPackageView {
   coverageNames: string[] | null;
 }
 
+export interface PassView {
+  id: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  status: RawPass['status'];
+  daysLeft: number;
+}
+
 export interface WalletView {
   balance: number;
   expiringCredits: number;
+  /** The pass covering today, if any. */
+  activePass: PassView | null;
+  passes: PassView[];
   myPackages: MyPackageView[];
   entries: { id: string; type: string; amount: number; description: string | null; createdAt: string }[];
 }
@@ -166,9 +197,11 @@ export interface WalletView {
 export interface PackageView {
   id: string;
   name: string;
+  kind: PackageKind;
   credits: number;
   priceIdr: number;
   validityDays: number;
+  badge: string | null;
   coverageNames: string[] | null;
   canBuy: boolean;
   blockedReason: string | null;
@@ -177,11 +210,14 @@ export interface PackageView {
 export interface PaymentView {
   payment: {
     id: string;
-    channel: 'QRIS' | 'ARK_COIN';
+    channel: 'QRIS' | 'ARK_COIN' | 'INVOICE';
     status: RawPurchase['status'];
+    kind: PackageKind;
     credits: number;
+    validityDays: number;
     totalIdr: number;
     qrString: string | null;
+    invoiceUrl: string | null;
     expiresAt: string | null;
     simulated: boolean;
   };
@@ -293,10 +329,22 @@ function coverageNamesOf(catalog: RawCatalog | undefined, ids: string[] | null):
   return ids.map((id) => names.get(id)).filter((n): n is string => Boolean(n));
 }
 
+const toPassView = (p: RawPass): PassView => ({
+  id: p.id,
+  name: p.package_name,
+  startsAt: p.starts_at,
+  endsAt: p.ends_at,
+  status: p.status,
+  daysLeft: p.days_left,
+});
+
 export function toWalletView(raw: RawWallet, catalog: RawCatalog | undefined): WalletView {
+  const passes = (raw.passes ?? []).map(toPassView);
   return {
     balance: raw.balance,
     expiringCredits: raw.expiring_credits,
+    activePass: passes.find((p) => p.status === 'active') ?? null,
+    passes,
     myPackages: raw.lots.map((lot) => {
       const coverageIds = coverageOf(catalog, lot.package_id);
       return {
@@ -324,24 +372,31 @@ export function toPackageView(raw: RawPackage, catalog: RawCatalog | undefined):
   return {
     id: raw.id,
     name: raw.name,
+    kind: raw.kind ?? 'credits',
     credits: raw.credits,
     priceIdr: raw.price_idr,
     validityDays: raw.validity_days,
-    coverageNames: coverageNamesOf(catalog, coverageOf(catalog, raw.id)),
+    badge: raw.badge ?? null,
+    coverageNames: raw.kind === 'pass' ? null : coverageNamesOf(catalog, coverageOf(catalog, raw.id)),
     canBuy: raw.can_buy,
     blockedReason: raw.blocked_reason,
   };
 }
 
+const CHANNELS: Record<string, PaymentView['payment']['channel']> = { ark_coin: 'ARK_COIN', invoice: 'INVOICE' };
+
 export function toPaymentView(raw: RawPurchase): PaymentView {
   return {
     payment: {
       id: raw.id,
-      channel: raw.payment_method === 'ark_coin' ? 'ARK_COIN' : 'QRIS',
+      channel: CHANNELS[raw.payment_method] ?? 'QRIS',
       status: raw.status,
+      kind: raw.kind ?? 'credits',
       credits: raw.credits,
+      validityDays: raw.validity_days,
       totalIdr: raw.total_idr,
       qrString: raw.qr_string,
+      invoiceUrl: raw.invoice_url ?? null,
       expiresAt: raw.expires_at,
       simulated: raw.simulated,
     },
@@ -354,9 +409,11 @@ export const activePackages = (wallet: WalletView | undefined) => (wallet?.myPac
 
 /**
  * Package coverage indicator for a class type: null = no package credits (no
- * restriction shown), true/false = whether any active package covers it.
+ * restriction shown), true/false = whether any active package covers it. An
+ * active pass covers every class.
  */
 export function coverageFor(wallet: WalletView | undefined, classTypeId: string): boolean | null {
+  if (wallet?.activePass) return true;
   const active = activePackages(wallet);
   if (active.length === 0) return null;
   return active.some((p) => p.coverageIds === null || p.coverageIds.includes(classTypeId));

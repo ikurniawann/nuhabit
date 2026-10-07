@@ -2,12 +2,13 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
+import { Spinner } from "../ui";
 import "../member-app.css";
 
 const STEPS = ["Contact", "Verify", "Personal", "Emergency", "Waiver"] as const;
@@ -30,19 +31,32 @@ async function post<T = object>(path: string, body: unknown): Promise<PostResult
   }
 }
 
+/** useSearchParams needs a Suspense boundary for prerendering. */
 export function RegisterPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <Register />
+    </Suspense>
+  );
+}
+
+function Register() {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
+  const searchParams = useSearchParams();
+  // Datang dari "Masuk dengan Google": email dan nama sudah terverifikasi,
+  // tiketnya ikut dikirim saat mendaftar.
+  const googleTicket = searchParams.get("ticket") ?? "";
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [phone, setPhone] = useState("");
   const [devBypass, setDevBypass] = useState(false);
   const [code, setCode] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [fullName, setFullName] = useState(searchParams.get("name") ?? "");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
   const [ecName, setEcName] = useState("");
@@ -81,10 +95,12 @@ export function RegisterPage() {
         email,
         birth_date: dateOfBirth,
         wa_consent: false,
+        ...(googleTicket ? { google_ticket: googleTicket } : {}),
       });
       if (!res.success) {
         setError(res.error ?? t("Something went wrong."));
         if (res.field === "code") setStep(1);
+        if (res.field === "google_ticket") router.replace(m("/auth/login"));
         return;
       }
       // Akun sudah dibuat dan sesi aktif; kontak darurat, waiver, dan gender menyusul.
@@ -134,7 +150,11 @@ export function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                readOnly={Boolean(googleTicket)}
               />
+              {googleTicket ? (
+                <p className="mt-2 text-xs text-nh-muted">{t("Verified by Google. Add your WhatsApp number to finish.")}</p>
+              ) : null}
             </div>
             <div>
               <label className="nh-label">{t("WhatsApp number")}</label>

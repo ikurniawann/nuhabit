@@ -88,12 +88,21 @@ function TopUp() {
             }`}
           >
             <div>
-              <p className="font-black">{p.name}</p>
+              <p className="font-black">
+                {p.name}
+                {p.badge ? <span className="nh-chip ml-2 bg-nh-forest/10 text-nh-forest">{p.badge}</span> : null}
+              </p>
               <p className="text-sm text-nh-muted">
-                {p.credits} {t("credits")} · {t("valid")} {p.validityDays} {t("days")}
+                {p.kind === "pass"
+                  ? `${t("Unlimited bookings")} · ${p.validityDays} ${t("days")}`
+                  : `${p.credits} ${t("credits")} · ${t("valid")} ${p.validityDays} ${t("days")}`}
               </p>
               <p className="mt-0.5 text-xs font-bold text-nh-muted">
-                {p.coverageNames ? `${t("Covers:")} ${p.coverageNames.join(", ")}` : t("Valid for every class")}
+                {p.kind === "pass"
+                  ? t("Pass starts the moment you pay")
+                  : p.coverageNames
+                    ? `${t("Covers:")} ${p.coverageNames.join(", ")}`
+                    : t("Valid for every class")}
               </p>
               {p.blockedReason ? <p className="mt-0.5 text-xs font-bold text-nh-warn">{p.blockedReason}</p> : null}
             </div>

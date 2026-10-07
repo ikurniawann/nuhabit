@@ -108,6 +108,10 @@ export const HOME_ID: Record<string, string> = {
   "Something went wrong.": "Terjadi kesalahan.",
   // Daftar
   "Join the studio": "Gabung studio",
+  or: "atau",
+  "Google sign-in failed.": "Masuk dengan Google gagal.",
+  "Google sign-in is unavailable right now.": "Masuk dengan Google sedang tidak tersedia.",
+  "Verified by Google. Add your WhatsApp number to finish.": "Terverifikasi lewat Google. Lengkapi nomor WhatsApp untuk menyelesaikan.",
   "Step {n} of {total} - {step}": "Langkah {n} dari {total} - {step}",
   Contact: "Kontak",
   Verify: "Verifikasi",
