@@ -63,6 +63,16 @@ func TestValidateCleansAndRejects(t *testing.T) {
 	if len(got["pillars"].([]any)) != 1 {
 		t.Fatalf("pillars %v", got["pillars"])
 	}
+	f = decode(t, `{"stories":[{"name":"  Ayu  ","quote":" My first race ","outcome":"Finished 8 weeks","image_url":"/member-photo.jpg"}]}`)
+	got = Validate("home", f)
+	if !f.Valid() || got["stories"].([]any)[0].(map[string]any)["name"] != "Ayu" {
+		t.Fatalf("stories %v %v", got["stories"], f.Issues())
+	}
+	f = decode(t, `{"stories":[{"name":"Ayu","quote":"Hello","image_url":"javascript:alert(1)"}]}`)
+	Validate("home", f)
+	if f.Valid() {
+		t.Fatal("unsafe story image URL accepted")
+	}
 
 	f = decode(t, `{"hero":{"image_url":"javascript:alert(1)"}}`)
 	Validate("home", f)

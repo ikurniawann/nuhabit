@@ -68,6 +68,7 @@ export type PosCatalogProduct = {
   inventoryTracking: boolean;
   inventoryQuantity: number;
   weightGram: number | null;
+  sizeGuide: string | null;
   /** Varian ber-SKU (Fase B); stok produk ber-varian = SUM stok SKU */
   merchSkus: PosMerchSku[];
   /** Fase D — tampil di katalog toko online (channel 'web') */
@@ -94,6 +95,7 @@ export type ApiPosProduct = {
   inventory_tracking?: boolean | null;
   inventory_quantity?: number | string | null;
   weight_gram?: number | string | null;
+  size_guide?: string | null;
   skus?: ApiPosProductSku[] | null;
   channels?: Array<{ channel_code?: string | null; is_distributed?: boolean | null }> | null;
   sales_channels?: string[] | string | null;
@@ -132,6 +134,7 @@ export interface PatchPosProductPayload {
   inventory_tracking?: boolean;
   inventory_quantity?: number;
   weight_gram?: number | null;
+  size_guide?: string | null;
   /** Fase D — upsert shop.product_channels channel 'web' */
   web_distributed?: boolean;
   /** null = semua channel; mis. ["gofood"] = hanya GoFood */

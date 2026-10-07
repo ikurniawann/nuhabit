@@ -21,6 +21,7 @@ type MerchProduct struct {
 	Name              string
 	Description       *string
 	LongDescription   *string
+	SizeGuide         *string
 	ImageURL          *string
 	BasePrice         string
 	WeightGram        *string
@@ -51,7 +52,7 @@ type MerchSKULabel struct{ Name, Code string }
 
 // Products lists the active, available merchandise among ids, by name.
 func (Merchandise) Products(ctx context.Context, q database.Querier, ids []string) ([]MerchProduct, error) {
-	rows, err := q.Query(ctx, `SELECT p.id::text, p.name, p.description, p.long_description, p.image_url,
+	rows, err := q.Query(ctx, `SELECT p.id::text, p.name, p.description, p.long_description, p.size_guide, p.image_url,
 	  p.base_price::text, p.weight_gram::text, p.inventory_quantity::text,
 	  EXISTS (SELECT 1 FROM pos.pos_product_skus s WHERE s.product_id = p.id AND s.is_active = true),
 	  c.id::text, c.name, c.display_order

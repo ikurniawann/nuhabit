@@ -121,6 +121,7 @@ type CatalogProductView struct {
 	Name            string             `json:"name"`
 	Description     *string            `json:"description"`
 	LongDescription *string            `json:"longDescription"`
+	SizeGuide       *string            `json:"sizeGuide"`
 	ImageURL        *string            `json:"imageUrl"`
 	Images          []string           `json:"images"`
 	Price           float64            `json:"price"`
@@ -242,7 +243,7 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 			collection = &CatalogCollection{ID: c.ID, Name: c.Name}
 		}
 		catalog.Products = append(catalog.Products, CatalogProductView{
-			ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription,
+			ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription, SizeGuide: p.SizeGuide,
 			ImageURL: p.ImageURL, Images: imgs, Price: price, WeightGram: weight, Stock: stock,
 			Collection: collection, PreorderUntil: domain.DateString(until),
 			Preorder: anyPreorder || (preorderOpen && stock <= 0), SKUs: views,

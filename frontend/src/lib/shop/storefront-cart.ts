@@ -161,6 +161,59 @@ export function groupByCollection(
   return filled;
 }
 
+export type CatalogSort = "featured" | "price-asc" | "price-desc" | "name";
+
+/** Keep discovery consistent with the selected size's price and availability. */
+export function productStartingPrice(product: CatalogProduct): number {
+  const prices = product.skus.length > 0
+    ? product.skus.filter((sku) => sku.stock > 0 || sku.preorder).map((sku) => sku.price)
+    : [product.price];
+  return Math.min(...(prices.length > 0 ? prices : [product.price]));
+}
+
+export function productIsAvailable(product: CatalogProduct): boolean {
+  return product.skus.length > 0
+    ? product.skus.some((sku) => sku.stock > 0 || sku.preorder)
+    : product.stock > 0 || product.preorder;
+}
+
+export function filterAndSortProducts(
+  products: CatalogProduct[],
+  search: string,
+  availableOnly: boolean,
+  sort: CatalogSort
+): CatalogProduct[] {
+  const terms = search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const found = products.filter((product) => {
+    if (availableOnly && !productIsAvailable(product)) return false;
+    const searchable = [product.name, product.description, product.collection?.name, ...product.skus.map((sku) => sku.name)]
+      .filter(Boolean).join(" ").toLocaleLowerCase();
+    return terms.every((term) => searchable.includes(term));
+  });
+  if (sort === "featured") return found;
+  return [...found].sort((a, b) => {
+    if (sort === "name") return a.name.localeCompare(b.name);
+    const difference = productStartingPrice(a) - productStartingPrice(b);
+    return sort === "price-asc" ? difference : -difference;
+  });
+}
+
+/** A saved cart may outlive a catalog update. Block checkout until fixed. */
+export function cartLineIssue(line: CartLine, products: CatalogProduct[]): string | null {
+  const product = products.find((item) => item.id === line.productId);
+  if (!product) return "This product is no longer available";
+  const sku = line.skuId ? product.skus.find((item) => item.id === line.skuId) : null;
+  if (line.skuId && !sku) return "This size is no longer available";
+  if (!line.skuId && product.skus.length > 0) return "Choose a size again";
+  const stock = sku ? sku.stock : product.stock;
+  const preorder = sku ? sku.preorder : product.preorder;
+  if (stock <= 0 && !preorder) return "Sold out";
+  if (!preorder && line.quantity > stock) return `Only ${stock} available`;
+  const price = sku ? sku.price : product.price;
+  if (line.price !== price) return "Price changed. Remove and add this item again";
+  return null;
+}
+
 export type CheckoutForm = {
   name: string;
   phone: string;

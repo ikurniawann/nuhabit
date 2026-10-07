@@ -15,6 +15,7 @@ describe("withDefaults", () => {
     expect(home.hero.cta_label).toBe("Start a Trial");
     expect(home.partners).toEqual([{ name: "A", logo_url: "/a.png" }]);
     expect(home.mission).toEqual({ quote: "", author: "" });
+    expect(home.stories).toEqual([]);
   });
 
   it("lets a stored list replace the default list", () => {

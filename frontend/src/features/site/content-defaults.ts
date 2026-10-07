@@ -20,6 +20,7 @@ export const CONTENT_DEFAULTS: ContentByKey = {
     pillars: [],
     mission: { quote: "", author: "" },
     reel: [],
+    stories: [],
   },
   training: {
     intro: { title: "One method, three class types.", text: "" },

@@ -57,7 +57,7 @@ func (c shopCatalog) webProducts(ctx context.Context, q database.Querier, produc
 	}
 	out := make([]shop.WebProduct, len(products))
 	for i, p := range products {
-		out[i] = shop.WebProduct{ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription,
+		out[i] = shop.WebProduct{ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription, SizeGuide: p.SizeGuide,
 			ImageURL: p.ImageURL, BasePrice: p.BasePrice, ChannelPrice: prices[p.ID], WeightGram: p.WeightGram,
 			InventoryQuantity: p.InventoryQuantity, HasActiveSKU: p.HasActiveSKU,
 			CategoryID: p.CategoryID, CategoryName: p.CategoryName, CategoryOrder: p.CategoryOrder}

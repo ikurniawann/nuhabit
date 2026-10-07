@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { BranchSummary, HomeContent, PublicPlansView } from "../types";
+import type { Article, BranchSummary, HomeContent, PublicPlansView, SiteEvent, TrainingContent } from "../types";
+import type { PublicSession } from "../lib/timetable";
+import { FirstSession, HomeLatest, MemberStories } from "./home-discovery";
 import { MembershipSection } from "./membership-section";
 import { PanelButton } from "./panel-button";
 import { Container, Kicker, Picture, Section, SectionHeading, Tile } from "./site-section";
@@ -107,10 +109,11 @@ function Mission({ mission }: { mission: HomeContent["mission"] }) {
 
 function Reel({ reel }: { reel: HomeContent["reel"] }) {
   if (reel.length === 0) return null;
+  const hasSamples = reel.some((item) => item.caption.startsWith("Sample photo:"));
   return (
     <Section>
       <Container className="space-y-6">
-        <SectionHeading kicker="Community" title="What happens on the training floor" />
+        <SectionHeading kicker={hasSamples ? "Sample content" : "Community"} title={hasSamples ? "Preview of the training gallery" : "What happens on the training floor"} text={hasSamples ? "AI-generated sample images. Replace them with approved photos from real classes." : undefined} />
         <ul className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:-mx-6 lg:px-6">
           {reel.map((item, i) => (
             <li key={`${item.image_url}-${i}`} className="w-[78vw] shrink-0 snap-start sm:w-80">
@@ -153,15 +156,27 @@ function Branches({ branches }: { branches: BranchSummary[] }) {
   );
 }
 
-export function HomePage({ home, branches, plans }: { home: HomeContent; branches: BranchSummary[]; plans: PublicPlansView }) {
+export function HomePage({ home, branches, plans, training, sessions, selectedBranch, articles, events }: {
+  home: HomeContent;
+  branches: BranchSummary[];
+  plans: PublicPlansView;
+  training: TrainingContent;
+  sessions: PublicSession[];
+  selectedBranch: BranchSummary | null;
+  articles: Article[];
+  events: SiteEvent[];
+}) {
   return (
     <>
       <Hero hero={home.hero} />
+      <FirstSession training={training} branch={selectedBranch} sessions={sessions} />
       <Partners partners={home.partners} />
       <Pillars pillars={home.pillars} />
       <Mission mission={home.mission} />
-      <MembershipSection plans={plans} />
+      <MemberStories stories={home.stories ?? []} />
       <Reel reel={home.reel} />
+      <MembershipSection plans={plans} />
+      <HomeLatest articles={articles} events={events} />
       <Branches branches={branches} />
     </>
   );

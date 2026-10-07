@@ -20,6 +20,7 @@ const PUBLIC_AUTH_PREFIXES = [
   // halaman publik self-order meja (EPIC-048) sebelum ada sesi.
   "/products/",
   "/qris/",
+  "/site/sample/",
   // Desktop NüHabit OS (/os) & alamat lamanya: tampil juga untuk pengunjung.
   "/arkiv-os",
   "/qa",

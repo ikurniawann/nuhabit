@@ -32,6 +32,15 @@ export async function releaseExpiredReservations(): Promise<void> {
 }
 
 export async function resolveStorefront(slug: string): Promise<StorefrontRow | null> {
+  if (slug.toLowerCase() === "default") {
+    return queryOne<StorefrontRow>(
+      `SELECT id, slug, name, description, venue_ids
+       FROM shop.storefronts
+       WHERE is_active = true
+       ORDER BY is_default DESC, created_at, id
+       LIMIT 1`
+    );
+  }
   return queryOne<StorefrontRow>(
     `SELECT id, slug, name, description, venue_ids
      FROM shop.storefronts
@@ -47,13 +56,14 @@ export async function buildShopCatalog(): Promise<CatalogProduct[]> {
     name: string;
     description: string | null;
     long_description: string | null;
+    size_guide: string | null;
     image_url: string | null;
     base_price: string;
     channel_price: string | null;
     weight_gram: string | null;
     inventory_quantity: string | null;
   }>(
-    `SELECT p.id, p.name, p.description, p.long_description, p.image_url,
+    `SELECT p.id, p.name, p.description, p.long_description, p.size_guide, p.image_url,
             p.base_price, pc.price_override AS channel_price,
             p.weight_gram, p.inventory_quantity
      FROM pos.pos_products p
@@ -127,6 +137,7 @@ export async function buildShopCatalog(): Promise<CatalogProduct[]> {
       name: row.name,
       description: row.description,
       longDescription: row.long_description,
+      sizeGuide: row.size_guide,
       imageUrl: row.image_url,
       images: imagesByProduct.get(row.id) ?? [],
       price: basePrice,

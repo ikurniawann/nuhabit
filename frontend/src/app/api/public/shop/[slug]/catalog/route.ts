@@ -33,6 +33,7 @@ export const GET = apiHandler(
           name: storefront.name,
           description: storefront.description,
         },
+        collections: [],
         products,
       },
     });

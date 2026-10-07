@@ -18,6 +18,7 @@ export type CatalogProduct = {
   name: string;
   description: string | null;
   longDescription: string | null;
+  sizeGuide?: string | null;
   imageUrl: string | null;
   images: string[];
   price: number;

@@ -2,6 +2,7 @@ import "server-only";
 import { appOrigin } from "@/lib/app-origin";
 import { backendUrl } from "@/lib/env";
 import { withDefaults } from "../content-defaults";
+import { addDays, weekWindow, type PublicSession, type PublicTimetable } from "./timetable";
 import type { Article, BranchProfile, BranchSummary, ContentByKey, ContentKey, PublicPlansView, SiteEvent } from "../types";
 
 /**
@@ -49,6 +50,19 @@ export function fetchArticle(slug: string): Promise<Article | null> {
 
 export async function fetchEvents(): Promise<SiteEvent[]> {
   return (await read<SiteEvent[]>("/events")) ?? [];
+}
+
+/** The next bookable classes at the visitor's branch, across the current and next week. */
+export async function fetchUpcomingSessions(branchSlug: string, now = new Date()): Promise<PublicSession[]> {
+  const monday = weekWindow(now).first;
+  const weeks = [monday, addDays(monday, 7)];
+  const timetables = await Promise.all(weeks.map((week) =>
+    read<PublicTimetable>(`/sessions?branch=${encodeURIComponent(branchSlug)}&week=${week}`)
+  ));
+  return timetables.flatMap((table) => table?.sessions ?? [])
+    .filter((session) => new Date(session.starts_at).getTime() > now.getTime())
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+    .slice(0, 3);
 }
 
 export function fetchEvent(slug: string): Promise<SiteEvent | null> {

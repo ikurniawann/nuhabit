@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   addCartLine,
   cartCount,
+  cartLineIssue,
   cartSignature,
   cartSubtotal,
   changeCartQuantity,
   changeCartVariant,
   checkoutFormError,
+  filterAndSortProducts,
   groupByCollection,
   parseStoredCart,
   removeCartLine,
@@ -96,6 +98,37 @@ describe("groupByCollection", () => {
     expect(groupByCollection([product("a", null)], [])).toEqual([
       { id: "other", name: "Other", products: [product("a", null)] },
     ]);
+  });
+
+  it("searches names, collections and sizes, and sorts by available variant price", () => {
+    const cap = product("Cap", accessories);
+    cap.price = 90_000;
+    const shirt = product("Training Shirt", tops);
+    shirt.price = 150_000;
+    shirt.skus = [
+      { id: "sold", sku: "S", name: "Small", price: 80_000, stock: 0, preorder: false },
+      { id: "medium", sku: "M", name: "Medium", price: 120_000, stock: 2, preorder: false },
+    ];
+    expect(filterAndSortProducts([shirt, cap], "medium", false, "featured")).toEqual([shirt]);
+    expect(filterAndSortProducts([shirt, cap], "accessories", false, "featured")).toEqual([cap]);
+    expect(filterAndSortProducts([shirt, cap], "", false, "price-asc")).toEqual([cap, shirt]);
+    expect(filterAndSortProducts([shirt, cap], "", false, "price-desc")).toEqual([shirt, cap]);
+    cap.stock = 0;
+    expect(filterAndSortProducts([shirt, cap], "", true, "featured")).toEqual([shirt]);
+  });
+
+  it("flags saved cart lines when stock, variants or prices change", () => {
+    const shirt = product("Training Shirt", tops);
+    shirt.id = "p1";
+    shirt.name = "Tee";
+    shirt.skus = [{ ...sizeL, sku: "L", stock: 2, preorder: false }];
+    const line = addCartLine([], tee, sizeL, 2)[0];
+    expect(cartLineIssue(line, [shirt])).toBeNull();
+    expect(cartLineIssue({ ...line, quantity: 3 }, [shirt])).toBe("Only 2 available");
+    expect(cartLineIssue({ ...line, price: 100_000 }, [shirt])).toMatch(/Price changed/);
+    expect(cartLineIssue(line, [])).toMatch(/no longer available/);
+    shirt.skus = [];
+    expect(cartLineIssue(line, [shirt])).toMatch(/size is no longer available/);
   });
 });
 

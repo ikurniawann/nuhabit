@@ -33,6 +33,7 @@ type WebProduct struct {
 	Name              string
 	Description       *string
 	LongDescription   *string
+	SizeGuide         *string
 	ImageURL          *string
 	BasePrice         string
 	ChannelPrice      *string

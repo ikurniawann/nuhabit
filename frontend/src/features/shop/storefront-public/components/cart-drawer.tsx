@@ -1,6 +1,6 @@
 import { Minus, Plus, Trash2, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
-import { cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
+import { cartLineIssue, cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
 import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
 
@@ -30,6 +30,7 @@ export function CartDrawer({
   onClose: () => void;
 }) {
   const productOf = (line: CartLine) => products.find((product) => product.id === line.productId);
+  const hasIssue = cart.some((line) => cartLineIssue(line, products));
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
@@ -52,13 +53,21 @@ export function CartDrawer({
             cart.map((line) => {
               const product = productOf(line);
               const sizes = product?.skus ?? [];
+              const image = product?.images[0] || product?.imageUrl;
+              const issue = cartLineIssue(line, products);
               return (
                 <div key={line.key} className="rounded-lg border border-gray-100 p-3">
                   <div className="flex items-start gap-3">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={image} alt="" className="h-16 w-16 shrink-0 rounded-lg bg-gray-100 object-cover" />
+                    ) : null}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">{line.name}</p>
+                      <p className="text-sm font-medium text-gray-900">{line.name}</p>
+                      {line.variantName ? <p className="text-xs text-gray-500">{line.variantName}</p> : null}
                       <p className="text-sm font-semibold text-gray-900">{formatRupiah(line.price)}</p>
                       {line.preorderUntil ? <PreorderBadge until={line.preorderUntil} className="mt-1" /> : null}
+                      {issue ? <p className="mt-1 text-xs font-medium text-red-600">{issue}</p> : null}
                     </div>
                     <button type="button" onClick={() => onRemove(line.key)} aria-label={`Remove ${line.name}`}>
                       <Trash2 className="h-4 w-4 text-red-400" />
@@ -131,10 +140,12 @@ export function CartDrawer({
             <button
               type="button"
               onClick={onCheckout}
-              className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark"
+              disabled={hasIssue}
+              className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               Continue to Shipping
             </button>
+            {hasIssue ? <p className="mt-2 text-center text-xs text-red-600">Update or remove the marked items to continue.</p> : null}
           </div>
         ) : null}
       </div>

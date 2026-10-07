@@ -22,7 +22,7 @@ const url = (name: string, label: string): SchemaField => ({ name, label, kind: 
 export const CONTENT_SCHEMAS: Record<ContentKey, ContentSchema> = {
   home: {
     label: "Beranda",
-    description: "Hero, strip partner, pilar, kutipan misi dan reel komunitas.",
+    description: "Hero, partner, pilar, cerita anggota dan foto latihan. Gunakan hanya foto dan testimoni asli yang sudah diizinkan untuk tayang.",
     fields: [
       {
         name: "hero",
@@ -40,6 +40,7 @@ export const CONTENT_SCHEMAS: Record<ContentKey, ContentSchema> = {
       },
       { name: "mission", label: "Misi", kind: "object", fields: [long("quote", "Kutipan"), text("author", "Penulis")] },
       { name: "reel", label: "Reel komunitas", kind: "objects", addLabel: "Tambah foto", fields: [{ name: "image_url", label: "Foto", kind: "url" }, { name: "caption", label: "Keterangan", kind: "text" }] },
+      { name: "stories", label: "Cerita anggota terverifikasi", kind: "objects", addLabel: "Tambah cerita", fields: [{ name: "name", label: "Nama yang disetujui", kind: "text" }, { name: "role", label: "Keterangan anggota", kind: "text" }, { name: "quote", label: "Kutipan asli", kind: "long" }, { name: "outcome", label: "Hasil atau tonggak nyata (opsional)", kind: "text" }, { name: "image_url", label: "Foto berizin (opsional)", kind: "url" }] },
     ],
   },
   training: {

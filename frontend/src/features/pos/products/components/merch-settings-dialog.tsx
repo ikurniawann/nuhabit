@@ -50,6 +50,7 @@ export function MerchSettingsDialog({
   const [form, setForm] = useState<MerchFormState>(() => merchFormFromProduct(product));
   const [skuRows, setSkuRows] = useState(() => skuRowsFromProduct(product));
   const [busy, setBusy] = useState(false);
+  const [sizeGuide, setSizeGuide] = useState(product.sizeGuide ?? '');
   const options = usePurchasingProductOptions(true);
   const hasLiveSkus = skuRows.some((row) => !row.deleted);
   const patchForm = (patch: Partial<MerchFormState>) => setForm((prev) => ({ ...prev, ...patch }));
@@ -76,6 +77,7 @@ export function MerchSettingsDialog({
         inventory_quantity: checked.stock,
         inventory_tracking: true,
         weight_gram: checked.weightGram,
+        size_guide: sizeGuide.trim() || null,
         web_distributed: form.webDistributed,
       });
       toast.success('Pengaturan merchandise tersimpan');
@@ -117,6 +119,12 @@ export function MerchSettingsDialog({
             <p className="mt-1 text-xs text-gray-400">
               Bila tertaut, penerimaan barang (GRN) purchasing jalur Product otomatis menambah stok produk ini.
             </p>
+          </div>
+
+          <div>
+            <label htmlFor="merch-size-guide" className="mb-1 block text-xs text-gray-500">Panduan ukuran untuk toko online</label>
+            <textarea id="merch-size-guide" value={sizeGuide} onChange={(event) => setSizeGuide(event.target.value)} rows={4} className="w-full rounded-lg border border-gray-200/80 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-pink-300" placeholder={'Contoh format: S — lingkar dada … cm, panjang … cm\nM — lingkar dada … cm, panjang … cm'} />
+            <p className="mt-1 text-xs text-gray-400">Isi ukuran produk yang sudah diukur. Kosongkan bila belum tersedia.</p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>

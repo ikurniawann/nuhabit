@@ -14,6 +14,7 @@ export type MerchandiseFieldsPayload = {
   width_cm?: number | string | null;
   height_cm?: number | string | null;
   long_description?: string | null;
+  size_guide?: string | null;
 };
 
 export function normalizeProductKind(value?: string): ProductKind | null {
@@ -78,6 +79,9 @@ export function buildMerchandiseColumns(body: MerchandiseFieldsPayload):
     columns.long_description = body.long_description
       ? String(body.long_description)
       : null;
+  }
+  if (body.size_guide !== undefined) {
+    columns.size_guide = body.size_guide?.trim() || null;
   }
 
   return { ok: true, columns };

@@ -40,6 +40,7 @@ const product = (over: Partial<PosCatalogProduct> = {}): PosCatalogProduct => ({
   inventoryTracking: false,
   inventoryQuantity: 7,
   weightGram: null,
+  sizeGuide: null,
   merchSkus: [],
   webDistributed: false,
   salesChannels: null,

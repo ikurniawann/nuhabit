@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:users": "vitest run src/lib/users src/features/users src/components/layout/form-page-layout.test.tsx",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "seed:home-preview": "node scripts/seed-home-preview.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

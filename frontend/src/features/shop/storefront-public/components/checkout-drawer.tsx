@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Truck, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
@@ -48,7 +48,7 @@ export function CheckoutDrawer({
   const [address, setAddress] = useState('');
   const [areaQuery, setAreaQuery] = useState('');
   const [selectedArea, setSelectedArea] = useState<AreaSuggestion | null>(null);
-  const [pickedRate, setPickedRate] = useState<RateQuote | null>(null);
+  const [pickedRate, setPickedRate] = useState<{ rate: RateQuote; signature: string; areaId: string } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const { areas } = useAreaSearch(`/api/public/shop/${slug}/shipping/areas`, areaQuery, selectedArea === null);
@@ -60,8 +60,16 @@ export function CheckoutDrawer({
       quotes: await fetchShippingRates(slug, area, cart),
     }),
   });
+  useEffect(() => {
+    if (!selectedArea) return;
+    ratesMutation.mutate(selectedArea);
+    // A new cart signature needs a new quote, even if the destination is unchanged.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedArea, signature]);
   const rates = ratesMutation.data?.signature === signature ? ratesMutation.data.quotes : [];
-  const selectedRate = pickedRate ? (rates.find((rate) => sameRate(rate, pickedRate)) ?? null) : null;
+  const selectedRate = pickedRate && pickedRate.signature === signature && pickedRate.areaId === selectedArea?.id
+    ? (rates.find((rate) => sameRate(rate, pickedRate.rate)) ?? null)
+    : null;
 
   const checkout = useMutation({
     mutationFn: async () => {
@@ -92,7 +100,6 @@ export function CheckoutDrawer({
     setSelectedArea(area);
     setPickedRate(null);
     setFormError(null);
-    ratesMutation.mutate(area);
   };
 
   const submit = () => {
@@ -124,32 +131,56 @@ export function CheckoutDrawer({
             <X className="h-5 w-5 text-gray-400" />
           </button>
         </div>
-        <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+          <div className="rounded-xl bg-gray-50 p-4">
+            <p className="mb-3 text-sm font-semibold text-gray-900">Your order</p>
+            <ul className="space-y-2">
+              {cart.map((line) => (
+                <li key={line.key} className="flex justify-between gap-3 text-sm">
+                  <span className="text-gray-600">{line.quantity} × {line.name}{line.variantName ? ` · ${line.variantName}` : ''}</span>
+                  <span className="shrink-0 font-medium text-gray-900">{formatRupiah(line.price * line.quantity)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900">Delivery details</h3>
           <div className="space-y-3">
+            <label className="block text-xs font-medium text-gray-600">Recipient name
             <input
               value={custName}
               onChange={(e) => setCustName(e.target.value)}
               placeholder="Recipient name"
+              autoComplete="name"
               className={INPUT_CLASS}
             />
+            </label>
+            <label className="block text-xs font-medium text-gray-600">WhatsApp number
             <input
               value={custPhone}
               onChange={(e) => setCustPhone(e.target.value)}
               placeholder="WhatsApp number (for confirmation and membership)"
               inputMode="tel"
+              autoComplete="tel"
               className={INPUT_CLASS}
             />
+            </label>
+            <label className="block text-xs font-medium text-gray-600">Email (optional)
             <input
               value={custEmail}
               onChange={(e) => setCustEmail(e.target.value)}
               placeholder="Email (optional)"
               inputMode="email"
+              type="email"
+              autoComplete="email"
               className={INPUT_CLASS}
             />
+            </label>
           </div>
 
           <div className="relative">
+            <label htmlFor="shop-destination" className="mb-1 block text-xs font-medium text-gray-600">Destination area</label>
             <input
+              id="shop-destination"
               value={selectedArea ? selectedArea.label : areaQuery}
               onChange={(e) => {
                 setSelectedArea(null);
@@ -163,13 +194,16 @@ export function CheckoutDrawer({
             <AreaSuggestions areas={areas} onSelect={selectArea} />
           </div>
 
+          <label className="block text-xs font-medium text-gray-600">Full address
           <textarea
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Full address (street, number, RT/RW, landmark)"
             rows={3}
+            autoComplete="street-address"
             className={INPUT_CLASS}
           />
+          </label>
 
           {/* Courier choice */}
           {ratesMutation.isPending ? (
@@ -185,7 +219,7 @@ export function CheckoutDrawer({
                 <button
                   key={index}
                   type="button"
-                  onClick={() => setPickedRate(rate)}
+                  onClick={() => setPickedRate({ rate, signature, areaId: selectedArea?.id ?? '' })}
                   className={`flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm transition ${
                     selectedRate && sameRate(selectedRate, rate)
                       ? 'border-forest bg-surface'
@@ -207,7 +241,7 @@ export function CheckoutDrawer({
             <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">Note: {note.trim()}</p>
           ) : null}
 
-          {message ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{message}</p> : null}
+          {message ? <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{message}</p> : null}
         </div>
 
         <div className="border-t border-gray-100 px-5 py-4">

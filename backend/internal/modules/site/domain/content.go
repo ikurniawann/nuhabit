@@ -63,6 +63,7 @@ var Schemas = map[string][]Field{
 		objects("pillars", text("code"), text("title"), long("text")),
 		object("mission", long("quote"), text("author")),
 		objects("reel", link("image_url"), text("caption")),
+		objects("stories", text("name"), text("role"), long("quote"), text("outcome"), link("image_url")),
 	},
 	"training": {
 		object("intro", text("title"), long("text")),
@@ -120,7 +121,8 @@ var Defaults = map[string]map[string]any{
 			"quote":  "We believe small, consistent habits change bodies and lives. NüHabit exists so you have the place, the program and the people to keep them.",
 			"author": "The NüHabit team",
 		},
-		"reel": []any{},
+		"reel":    []any{},
+		"stories": []any{},
 	},
 	"training": {
 		"intro": map[string]any{

@@ -6,6 +6,7 @@ export interface HomeContent {
   pillars: { code: string; title: string; text: string }[];
   mission: { quote: string; author: string };
   reel: { image_url: string; caption: string }[];
+  stories: { name: string; role: string; quote: string; outcome: string; image_url: string }[];
 }
 
 export interface TrainingContent {

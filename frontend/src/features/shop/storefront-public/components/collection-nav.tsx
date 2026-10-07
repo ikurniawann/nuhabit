@@ -35,7 +35,7 @@ export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
 
   return (
     <nav aria-label="Collections" className="border-t border-gray-100">
-      <div className="no-scrollbar mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-2">
+      <div className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6">
         {groups.map((group) => {
           const current = group.id === active;
           return (
