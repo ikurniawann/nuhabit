@@ -165,7 +165,7 @@ var Defaults = map[string]map[string]any{
 	"brand": {
 		"title":    "Our story",
 		"intro":    "NüHabit started with one question: why does good training so rarely turn into a habit?",
-		"story_md": "We started in one small room with one rig and a handful of members who wanted to finish their first HYROX race. What we learned was simple: a clear program, coaches who show up, and training partners who expect you bring people back.\n\nToday every NüHabit branch runs the same method, and every member has a progress record they can take to any branch.",
+		"story_md": "We started in one small room with one rig and a handful of members who wanted to finish their first HYROX race. What we learned was simple: a clear program, coaches who show up, and training partners who expect you to be there bring people back.\n\nToday every NüHabit branch runs the same method, and every member has a progress record they can take to any branch.",
 		"values": []any{
 			map[string]any{"title": "Consistent", "text": "Habits beat motivation."},
 			map[string]any{"title": "Measurable", "text": "Every block has a starting number and a finishing number."},
