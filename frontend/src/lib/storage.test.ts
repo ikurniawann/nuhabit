@@ -3,7 +3,7 @@ import { bucketAccess, randomFileToken } from "./storage";
 
 describe("bucketAccess", () => {
   it("aset tampilan publik terbuka", () => {
-    for (const b of ["products", "ticketing", "payment-qris", "desktop-wallpapers", "crm-announcements", "crm-avatars"]) {
+    for (const b of ["products", "ticketing", "payment-qris", "desktop-wallpapers", "crm-announcements", "crm-avatars", "site"]) {
       expect(bucketAccess(b)).toBe("public");
     }
   });

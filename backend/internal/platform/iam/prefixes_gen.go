@@ -75,6 +75,10 @@ var (
 	SettingsBilling         = []string{"settings.billing"}
 	ItemsCatalog            = []string{"items", "pos.catalog"}
 	ItemsPr                 = []string{"items.general.purchasing.pr", "items.product.purchasing.pr", "items.raw-material.purchasing.pr"}
+	Site                    = []string{"site"}
+	SiteContent             = []string{"site.content"}
+	SiteArticles            = []string{"site.articles"}
+	SiteEvents              = []string{"site.events"}
 	ItemsPrApproval         = []string{"items.general.purchasing.approval-pr", "items.product.approval.pr", "items.raw-material.approval.pr"}
 )
 
@@ -150,5 +154,9 @@ var ByKey = map[string][]string{
 	"settingsBilling":         SettingsBilling,
 	"itemsCatalog":            ItemsCatalog,
 	"itemsPr":                 ItemsPr,
+	"site":                    Site,
+	"siteContent":             SiteContent,
+	"siteArticles":            SiteArticles,
+	"siteEvents":              SiteEvents,
 	"itemsPrApproval":         ItemsPrApproval,
 }

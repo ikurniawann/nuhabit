@@ -68,6 +68,8 @@ export const GO_BACKEND_PREFIXES: readonly string[] = [
   "/api/resort",
   "/api/dataroom",
   "/api/share",
+  // site (public site content, articles, events)
+  "/api/site",
 ];
 
 /**
