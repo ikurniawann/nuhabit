@@ -47,6 +47,10 @@ func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source
 		if err != nil {
 			return err
 		}
+		pass, err := s.Passes.ActivePassAt(ctx, q, customerID, session.StartsAt)
+		if err != nil {
+			return err
+		}
 		decision := domain.EvaluateBookingEligibility(domain.EligibilityInput{
 			MemberActive: member.Active(),
 			Session: domain.BookableSession{
@@ -54,6 +58,7 @@ func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source
 				BookingOpensAt: session.BookingOpensAt, BookingClosesAt: session.BookingClosesAt,
 			},
 			Balance:              balance,
+			HasPass:              pass != nil,
 			ConfirmedCount:       stats.Confirmed,
 			LastWaitlistPosition: stats.LastWaitlist,
 			HasActiveBooking:     stats.Mine,
@@ -62,13 +67,16 @@ func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source
 		if decision.Kind == domain.DecisionDeny {
 			return denial(decision.Reason)
 		}
-		// A package may limit class types: the balance exists but not for this class.
-		covered, err := s.Credits.CoveredClassTypeIDs(ctx, q, customerID)
-		if err != nil {
-			return err
-		}
-		if !domain.IsClassTypeCovered(covered, session.ClassTypeID) {
-			return schedulingError("Paket kredit Anda tidak mencakup kelas ini")
+		// A package may limit class types: the balance exists but not for
+		// this class. A pass covers every class.
+		if pass == nil {
+			covered, err := s.Credits.CoveredClassTypeIDs(ctx, q, customerID)
+			if err != nil {
+				return err
+			}
+			if !domain.IsClassTypeCovered(covered, session.ClassTypeID) {
+				return schedulingError("Paket kredit Anda tidak mencakup kelas ini")
+			}
 		}
 
 		status := domain.BookingConfirmed
@@ -88,11 +96,14 @@ func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source
 				return err
 			}
 		}
+		charge := strconv.Itoa(session.CreditCost) + " kredit dipotong saat check-in."
+		if pass != nil {
+			charge = "Pass aktif, tanpa potong kredit."
+		}
 		n := Notification{
 			Type:  "gym_booking_confirmed",
 			Title: "Terdaftar: " + session.ClassTypeName,
-			Body: "Sampai jumpa " + domain.FormatWib(session.StartsAt) + ". " +
-				strconv.Itoa(session.CreditCost) + " kredit dipotong saat check-in.",
+			Body:  "Sampai jumpa " + domain.FormatWib(session.StartsAt) + ". " + charge,
 		}
 		if status == domain.BookingWaitlist {
 			n = Notification{
@@ -116,11 +127,13 @@ type Promoted struct {
 	Mode       domain.PromotionMode `json:"mode"`
 }
 
-// CancelResult: PenaltyCredits were actually deducted for the late cancel.
+// CancelResult: PenaltyCredits were actually deducted for the late cancel,
+// or PassStrike recorded against a pass holder.
 type CancelResult struct {
 	Late           bool
 	Deadline       time.Time
 	PenaltyCredits int
+	PassStrike     bool
 	Promoted       *Promoted
 }
 
@@ -130,13 +143,15 @@ func (c CancelResult) MarshalJSON() ([]byte, error) {
 		Late           bool      `json:"late"`
 		Deadline       jsTime    `json:"deadline"`
 		PenaltyCredits int       `json:"penaltyCredits"`
+		PassStrike     bool      `json:"passStrike"`
 		Promoted       *Promoted `json:"promoted"`
-	}{c.Late, jsTime(c.Deadline), c.PenaltyCredits, c.Promoted})
+	}{c.Late, jsTime(c.Deadline), c.PenaltyCredits, c.PassStrike, c.Promoted})
 }
 
 // CancelBooking frees the seat. Cancelling after the free deadline forfeits
-// the session credits under the forfeit policy; the freed seat goes to the
-// head of the waitlist. customerID is set when members cancel their own.
+// the session credits under the forfeit policy (a strike for pass holders);
+// the freed seat goes to the head of the waitlist. customerID is set when
+// members cancel their own.
 func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID string) (out CancelResult, err error) {
 	now := s.now()
 	err = s.inTx(ctx, func(q Q) error {
@@ -151,9 +166,18 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 		if err != nil {
 			return err
 		}
-		outcome := domain.EvaluateCancellation(booking.Status, session.StartsAt, session.CreditCost, rules, now)
+		pass, err := s.Passes.ActivePassAt(ctx, q, booking.CustomerID, session.StartsAt)
+		if err != nil {
+			return err
+		}
+		outcome := domain.EvaluateCancellation(booking.Status, session.StartsAt, session.CreditCost, pass != nil, rules, now)
 		if err := s.repo.CancelBooking(ctx, q, booking.ID, outcome.Late, now); err != nil {
 			return err
+		}
+		if outcome.PassStrike {
+			if err := s.repo.MarkPassStrike(ctx, q, booking.ID); err != nil {
+				return err
+			}
 		}
 		penalty, err := s.chargePenalty(ctx, q, booking.CustomerID, outcome.PenaltyCredits, "late_cancel", booking.ID,
 			"Batal terlambat: "+session.label())
@@ -174,9 +198,12 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 		// A member cancelling their own booking already sees the result on screen.
 		if customerID == "" {
 			body := "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan."
-			if penalty > 0 {
+			switch {
+			case penalty > 0:
 				body = "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan setelah batas gratis; " +
 					strconv.Itoa(penalty) + " kredit hangus."
+			case outcome.PassStrike:
+				body = "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan setelah batas gratis; tercatat satu strike pada pass Anda."
 			}
 			if err := s.Notifier.NotifyMember(ctx, q, booking.CustomerID, Notification{
 				Type: "gym_booking_cancelled", Title: "Booking dibatalkan: " + session.ClassTypeName, Body: body,
@@ -184,7 +211,7 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 				return err
 			}
 		}
-		out = CancelResult{Late: outcome.Late, Deadline: outcome.Deadline, PenaltyCredits: penalty, Promoted: promoted}
+		out = CancelResult{Late: outcome.Late, Deadline: outcome.Deadline, PenaltyCredits: penalty, PassStrike: outcome.PassStrike, Promoted: promoted}
 		return nil
 	})
 	return out, err

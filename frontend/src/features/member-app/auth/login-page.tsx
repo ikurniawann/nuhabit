@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import { useMemberOtp } from "../lib/use-member-otp";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
+import { GoogleSignIn, type GoogleNeedsPhone } from "./google-sign-in";
 import "../member-app.css";
 
 /** Tujuan setelah masuk: `?from=` dari guard aplikasi, hanya path aplikasi member. */
@@ -26,6 +27,11 @@ export function LoginPage() {
     router.replace(returnPath());
   }, [qc, router]);
   const otp = useMemberOtp({ onSignedIn });
+  // Akun Google tanpa member: lengkapi nomor WhatsApp di pendaftaran.
+  const onNeedsPhone = useCallback(
+    (identity: GoogleNeedsPhone) => router.push(`${m("/auth/register")}?${new URLSearchParams({ ...identity })}`),
+    [router]
+  );
 
   const canSubmit = otp.step === "phone" ? otp.phone.trim().length >= 6 : otp.code.length === 6;
 
@@ -118,6 +124,11 @@ export function LoginPage() {
               ) : null}
               {otp.error ? <p className="text-sm font-bold text-nh-danger">{otp.error}</p> : null}
             </form>
+            {otp.step === "phone" ? (
+              <div className="mt-4">
+                <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} />
+              </div>
+            ) : null}
           </div>
 
           <Link href={m("/auth/register")} className="nh-btn-ghost mt-3 w-full">

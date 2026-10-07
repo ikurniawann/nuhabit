@@ -3,6 +3,7 @@ package memberportal
 import (
 	"context"
 	"crypto/rand"
+	"crypto/rsa"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -34,6 +35,11 @@ type Venue struct {
 // AuthRepository is the OTP, session and registration storage.
 type AuthRepository interface {
 	FindMemberByPhone(ctx context.Context, phone string) (*MemberRef, error)
+	// FindMemberByGoogle matches the linked Google subject first, then an
+	// active member with that email.
+	FindMemberByGoogle(ctx context.Context, sub, email string) (*MemberRef, error)
+	// LinkGoogle stores the Google subject on a member that has none.
+	LinkGoogle(ctx context.Context, customerID, sub string) error
 	CountRecentOTP(ctx context.Context, phone string, window time.Duration) (int, error)
 	InsertOTP(ctx context.Context, phone, codeHash string, ttl time.Duration) error
 	LatestOTP(ctx context.Context, phone string) (*OTPRecord, error)
@@ -57,8 +63,8 @@ var (
 	errTooManyFromIP    = fail(429, domain.TooManyFromIP)
 )
 
-// ipBrake applies the per-IP brake for kind "otp" or "verify", shared by
-// every replica.
+// ipBrake applies the per-IP brake for kind "otp", "verify" or "google",
+// shared by every replica.
 func (s *Service) ipBrake(ctx context.Context, kind, ip string) error {
 	rule := domain.IPRuleOTP
 	if kind == "verify" {
@@ -244,16 +250,83 @@ func (s *Service) Verify(ctx context.Context, ip string, rawPhone any, code stri
 	return &SignedIn{Name: member.Name, Token: token}, nil
 }
 
+// GoogleSignInResult is a session for a known member, or the ticket a new
+// one carries into registration.
+type GoogleSignInResult struct {
+	SignedIn    *SignedIn
+	Ticket      domain.GoogleTicket
+	TicketValue string
+}
+
+// GoogleSignIn verifies a Google ID token. A member linked to the Google
+// account, or holding that verified email, gets a session; otherwise the
+// identity is signed into a short-lived ticket for Register.
+func (s *Service) GoogleSignIn(ctx context.Context, ip, idToken string) (*GoogleSignInResult, error) {
+	if s.google == nil {
+		return nil, fail(503, "Masuk dengan Google belum diaktifkan")
+	}
+	if err := s.ipBrake(ctx, "google", ip); err != nil {
+		return nil, err
+	}
+	if idToken == "" {
+		return nil, fail(400, "Token Google wajib diisi")
+	}
+	var lookupErr error
+	claims, err := domain.ParseGoogleIDToken(idToken, func(kid string) *rsa.PublicKey {
+		key, err := s.google.Key(ctx, kid)
+		lookupErr = err
+		return key
+	}, s.googleAudience, s.now())
+	if lookupErr != nil {
+		return nil, lookupErr
+	}
+	if err != nil {
+		return nil, fail(401, err.Error())
+	}
+	if !claims.EmailVerified || claims.Email == "" {
+		return nil, fail(401, "Email akun Google belum terverifikasi")
+	}
+	member, err := s.repo.FindMemberByGoogle(ctx, claims.Sub, claims.Email)
+	if err != nil {
+		return nil, err
+	}
+	if member == nil {
+		ticket := domain.GoogleTicket{Sub: claims.Sub, Email: claims.Email, Name: claims.Name}
+		return &GoogleSignInResult{Ticket: ticket, TicketValue: domain.SignGoogleTicket(s.ticketSecret, ticket, s.now())}, nil
+	}
+	if err := s.repo.LinkGoogle(ctx, member.ID, claims.Sub); err != nil {
+		return nil, err
+	}
+	token, err := s.createSession(ctx, member.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &GoogleSignInResult{SignedIn: &SignedIn{Name: member.Name, Token: token}}, nil
+}
+
 // Register verifies the code, creates the member and its CRM profile and
 // opens a session. One transaction with an advisory lock per number, so two
-// concurrent requests cannot create the same member twice.
+// concurrent requests cannot create the same member twice. A Google ticket
+// supplies the verified email and links the Google account.
 func (s *Service) Register(ctx context.Context, ip string, body map[string]any) (*SignedIn, error) {
+	var google *domain.GoogleTicket
+	if raw := jsString(body["google_ticket"]); raw != "" {
+		t, err := domain.ParseGoogleTicket(s.ticketSecret, raw, s.now())
+		if err != nil {
+			return nil, &failure{Status: 401, Message: err.Error(), Field: "google_ticket"}
+		}
+		google = &t
+		body["email"] = t.Email
+	}
 	reg, verr := domain.ValidateRegistration(domain.RegistrationInput{
 		Phone: body["phone"], Name: body["name"], Email: body["email"],
 		BirthDate: body["birth_date"], WAConsent: body["wa_consent"],
 	}, s.now())
 	if verr != nil {
 		return nil, &failure{Status: 400, Message: verr.Message, Field: verr.Field}
+	}
+	if google != nil {
+		reg.GoogleSub = &google.Sub
 	}
 	code := jsString(body["code"])
 	devBypass := s.bypass().CanBypass(code)
@@ -293,6 +366,16 @@ func (s *Service) Register(ctx context.Context, ip string, body map[string]any) 
 		if existing != nil {
 			rejected = &failure{Status: 409, Message: "Nomor ini sudah terdaftar. Silakan masuk.", Field: "phone"}
 			return nil
+		}
+		if google != nil {
+			linked, err := tx.FindMemberByGoogle(ctx, google.Sub, "")
+			if err != nil {
+				return err
+			}
+			if linked != nil {
+				rejected = &failure{Status: 409, Message: "Akun Google ini sudah terhubung ke member lain. Silakan masuk.", Field: "google_ticket"}
+				return nil
+			}
 		}
 		member, err = tx.InsertRegisteredMember(ctx, reg)
 		if err != nil {

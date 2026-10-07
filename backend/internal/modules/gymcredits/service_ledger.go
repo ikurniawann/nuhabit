@@ -292,6 +292,10 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 	if err != nil {
 		return nil, err
 	}
+	passes, err := s.Passes(ctx, q, customerID)
+	if err != nil {
+		return nil, err
+	}
 
 	toView := func(r domain.LotRemainder) LotView {
 		v := LotView{
@@ -315,6 +319,7 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 		LowBalanceThreshold: rules.LowBalanceThreshold,
 		Lots:                []LotView{},
 		ExpiringLots:        []LotView{},
+		Passes:              passes,
 		Entries:             make([]EntryView, 0, len(recent)),
 	}
 	for _, r := range domain.LotRemainders(state.lots, state.entries) {
@@ -336,6 +341,40 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 		})
 	}
 	return view, nil
+}
+
+// Passes lists the member's passes, newest active first, after lapsed
+// ones are marked expired.
+func (s *Service) Passes(ctx context.Context, q database.Querier, customerID string) ([]PassView, error) {
+	now := s.clock()
+	if err := s.repo.ExpireLapsedPasses(ctx, q, customerID, now); err != nil {
+		return nil, err
+	}
+	rows, err := s.repo.Passes(ctx, q, customerID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]PassView, 0, len(rows))
+	for _, p := range rows {
+		out = append(out, passView(p, now))
+	}
+	return out, nil
+}
+
+// ActivePass is a pass that covers one instant (booking or check-in time).
+type ActivePass struct {
+	ID     string
+	EndsAt time.Time
+}
+
+// ActivePassAt returns the member's pass covering at, nil when none. Other
+// contexts (scheduling) call it on their own transaction.
+func (s *Service) ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*ActivePass, error) {
+	row, err := s.repo.ActivePassAt(ctx, q, customerID, at)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	return &ActivePass{ID: row.ID, EndsAt: row.EndsAt}, nil
 }
 
 func recentCreators(entries []RecentEntry) []string {

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -588,6 +589,174 @@ func TestSimulatePaidInDev(t *testing.T) {
 	paid := e.data(asMember, "POST", "/api/member-portal/gym/credits/purchases/"+pending["id"].(string)+"/simulate-paid", nil)
 	if paid["status"] != "paid" {
 		t.Fatalf("paid %v", paid)
+	}
+	if b := e.balance(); b != 2 {
+		t.Fatalf("credits %d", b)
+	}
+}
+
+/* ── Passes, branch prices, public price list ───────────────────────── */
+
+func TestPassesAndPublicPlans(t *testing.T) {
+	e := setup(t)
+	org := testutil.CreateOrg(t, e.tx)
+	c := e.member.CustomerID
+
+	created := e.data(asStaff, "POST", "/api/gym/packages", map[string]any{
+		"name": "Go Pass 4 Minggu", "kind": "pass", "price_idr": 1_200_000, "validity_days": 28, "badge": "Paling laris",
+		"branch_prices": []map[string]any{{"branch_id": org.BranchID, "price_idr": 1_000_000}},
+	})
+	pass := created["id"].(string)
+	hidden := e.data(asStaff, "POST", "/api/gym/packages", map[string]any{
+		"name": "Go Hidden Pack", "credits": 4, "price_idr": 400_000, "validity_days": 30, "is_public": false,
+	})["id"].(string)
+
+	var row map[string]any
+	for _, p := range e.data(asStaff, "GET", "/api/gym/packages", nil)["packages"].([]any) {
+		if m := p.(map[string]any); m["id"] == pass {
+			row = m
+		}
+	}
+	prices, _ := row["branch_prices"].([]any)
+	if row["kind"] != "pass" || row["credits"] != 0.0 || row["badge"] != "Paling laris" || row["is_public"] != true ||
+		len(prices) != 1 || prices[0].(map[string]any)["price_idr"] != 1000000.0 {
+		t.Fatalf("pass row %v", row)
+	}
+
+	// Public price list: branch price applied, hidden packages left out.
+	e.fail(anon, "GET", "/api/public/site/plans?branch=nope", nil, 404, "Cabang tidak ditemukan")
+	plans := e.data(anon, "GET", "/api/public/site/plans?branch="+org.BranchID, nil)
+	if plans["branch"].(map[string]any)["id"] != org.BranchID {
+		t.Fatalf("branch %v", plans["branch"])
+	}
+	priced := map[string]map[string]any{}
+	for _, p := range plans["plans"].([]any) {
+		m := p.(map[string]any)
+		priced[m["id"].(string)] = m
+	}
+	if priced[pass]["price_idr"] != 1000000.0 || priced[pass]["kind"] != "pass" || priced[pass]["validity_days"] != 28.0 || priced[hidden] != nil {
+		t.Fatalf("plans %v", plans["plans"])
+	}
+	base := e.data(anon, "GET", "/api/public/site/plans", nil)
+	if base["branch"] != nil {
+		t.Fatalf("base branch %v", base["branch"])
+	}
+	for _, p := range base["plans"].([]any) {
+		if m := p.(map[string]any); m["id"] == pass && m["price_idr"] != 1200000.0 {
+			t.Fatalf("base price %v", m)
+		}
+	}
+
+	// Selling a pass at the branch takes the branch price and issues a pass
+	// instead of credits.
+	sale := e.data(asStaff, "POST", "/api/gym/credits/"+c+"/sell", map[string]any{
+		"package_id": pass, "payment_method": "cash", "branch_id": org.BranchID,
+	})
+	if sale["status"] != "paid" || sale["kind"] != "pass" || sale["credits"] != 0.0 || sale["total_idr"] != 1000000.0 {
+		t.Fatalf("pass sale %v", sale)
+	}
+	if b := e.balance(); b != 0 {
+		t.Fatalf("balance %d", b)
+	}
+	page := e.data(asStaff, "GET", "/api/gym/credits/"+c, nil)
+	passes := page["passes"].([]any)
+	if len(passes) != 1 || passes[0].(map[string]any)["status"] != "active" || passes[0].(map[string]any)["days_left"] != 28.0 ||
+		passes[0].(map[string]any)["package_name"] != "Go Pass 4 Minggu" {
+		t.Fatalf("passes %v", passes)
+	}
+	active, err := e.svc.ActivePassAt(e.ctx, e.tx, c, e.svc.clock().Add(27*24*time.Hour))
+	if err != nil || active == nil {
+		t.Fatalf("active pass %v %v", active, err)
+	}
+	if later, err := e.svc.ActivePassAt(e.ctx, e.tx, c, e.svc.clock().Add(29*24*time.Hour)); err != nil || later != nil {
+		t.Fatalf("pass after expiry %v %v", later, err)
+	}
+	// Paying twice never issues a second pass.
+	if already, _, err := e.svc.markPaid(e.ctx, e.tx, sale["id"].(string), nil); err != nil || !already {
+		t.Fatalf("second markPaid %v %v", already, err)
+	}
+
+	refunded := e.data(asStaff, "POST", "/api/gym/credits/purchases/"+sale["id"].(string)+"/refund", map[string]any{"reason": "batal ikut"})
+	if refunded["status"] != "refunded" {
+		t.Fatalf("refund %v", refunded)
+	}
+	var passStatus string
+	e.scalar(&passStatus, `SELECT status FROM gym.member_passes WHERE purchase_id = $1`, sale["id"])
+	if passStatus != "refunded" {
+		t.Fatalf("pass status %s", passStatus)
+	}
+	wallet := e.data(asMember, "GET", "/api/member-portal/gym/credits", nil)
+	if p := wallet["passes"].([]any)[0].(map[string]any); p["status"] != "refunded" || p["days_left"] != 0.0 {
+		t.Fatalf("member passes %v", wallet["passes"])
+	}
+}
+
+func TestInvoicePurchase(t *testing.T) {
+	invoiceStatus := "PENDING"
+	xendit := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == "POST" && r.URL.Path == "/v2/invoices":
+			var body map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["external_id"] == nil || body["amount"] != 1000000.0 || body["success_redirect_url"] == nil {
+				http.Error(w, "bad invoice", 400)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": "inv_test_1", "invoice_url": "https://checkout.test/inv_test_1", "expiry_date": "2030-01-01T00:00:00.000Z"})
+		case r.URL.Path == "/v2/invoices/inv_test_1":
+			_ = json.NewEncoder(w).Encode(map[string]any{"id": "inv_test_1", "status": invoiceStatus})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer xendit.Close()
+	t.Setenv("XENDIT_API_BASE_URL", xendit.URL)
+	t.Setenv("XENDIT_SECRET_KEY", "")
+	t.Setenv("XENDIT_MOCK", "")
+
+	e := setup(t)
+	org := testutil.CreateOrg(t, e.tx)
+	var pass string
+	e.scalar(&pass, `INSERT INTO gym.credit_packages (name, kind, credits, price_idr, validity_days)
+		VALUES ('Go Pass Invoice', 'pass', 0, 1200000, 14) RETURNING id`)
+	e.exec(`INSERT INTO gym.package_branch_prices (package_id, branch_id, price_idr) VALUES ($1, $2, 1000000)`, pass, org.BranchID)
+
+	e.fail(asMember, "POST", "/api/member-portal/gym/credits/purchases", map[string]any{"package_id": pass, "method": "invoice"}, 503,
+		"Pembayaran online belum tersedia: XENDIT_SECRET_KEY belum dikonfigurasi")
+
+	t.Setenv("XENDIT_SECRET_KEY", "xnd_test")
+	pending := e.data(asMember, "POST", "/api/member-portal/gym/credits/purchases", map[string]any{
+		"package_id": pass, "method": "invoice", "branch_id": org.BranchID,
+	})
+	if pending["status"] != "pending" || pending["invoice_url"] != "https://checkout.test/inv_test_1" || pending["total_idr"] != 1000000.0 ||
+		pending["kind"] != "pass" || pending["simulated"] != false || pending["expires_at"] != "2030-01-01T00:00:00.000Z" {
+		t.Fatalf("invoice purchase %v", pending)
+	}
+	id := pending["id"].(string)
+	still := e.data(asMember, "GET", "/api/member-portal/gym/credits/purchases/"+id, nil)
+	if still["status"] != "pending" {
+		t.Fatalf("still pending %v", still)
+	}
+	invoiceStatus = "PAID"
+	paid := e.data(asMember, "GET", "/api/member-portal/gym/credits/purchases/"+id, nil)
+	if paid["status"] != "paid" || paid["invoice_url"] != nil {
+		t.Fatalf("paid %v", paid)
+	}
+	wallet := e.data(asMember, "GET", "/api/member-portal/gym/credits", nil)
+	if p := wallet["passes"].([]any)[0].(map[string]any); p["status"] != "active" || p["days_left"] != 14.0 {
+		t.Fatalf("pass %v", wallet["passes"])
+	}
+
+	// Mock mode: the invoice URL is the status page and the first poll settles.
+	t.Setenv("XENDIT_MOCK", "1")
+	pack := e.pkg("Go Mock Pack", 2, 50_000, 30, nil)
+	mock := e.data(asMember, "POST", "/api/member-portal/gym/credits/purchases", map[string]any{"package_id": pack, "method": "invoice"})
+	mockID := mock["id"].(string)
+	if mock["simulated"] != true || !strings.HasSuffix(mock["invoice_url"].(string), "/member/wallet/pay/"+mockID) {
+		t.Fatalf("mock purchase %v", mock)
+	}
+	if settled := e.data(asMember, "GET", "/api/member-portal/gym/credits/purchases/"+mockID, nil); settled["status"] != "paid" {
+		t.Fatalf("mock settle %v", settled)
 	}
 	if b := e.balance(); b != 2 {
 		t.Fatalf("credits %d", b)

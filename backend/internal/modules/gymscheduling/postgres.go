@@ -389,6 +389,11 @@ func (Postgres) MarkNoShow(ctx context.Context, q Q, id string) error {
 	return err
 }
 
+func (Postgres) MarkPassStrike(ctx context.Context, q Q, id string) error {
+	_, err := q.Exec(ctx, `UPDATE gym.bookings SET pass_strike = true, updated_at = now() WHERE id = $1`, id)
+	return err
+}
+
 func (Postgres) MarkCheckedIn(ctx context.Context, q Q, id string, at time.Time) error {
 	_, err := q.Exec(ctx,
 		`UPDATE gym.bookings SET status = 'checked_in', checked_in_at = $2, updated_at = now() WHERE id = $1`, id, at)

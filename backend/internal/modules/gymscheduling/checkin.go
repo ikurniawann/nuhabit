@@ -89,17 +89,24 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, br
 	if err != nil {
 		return res, err
 	}
-	// Credits from a package that does not cover this class cannot pay for it.
+	// A pass covers the class; otherwise credits from a package that does
+	// not cover this class cannot pay for it.
+	var pass *ActivePass
 	covered := true
 	if candidate != nil {
-		ids, err := s.Credits.CoveredClassTypeIDs(ctx, q, customerID)
-		if err != nil {
+		if pass, err = s.Passes.ActivePassAt(ctx, q, customerID, candidate.StartsAt); err != nil {
 			return res, err
 		}
-		covered = domain.IsClassTypeCovered(ids, candidate.ClassTypeID)
+		if pass == nil {
+			ids, err := s.Credits.CoveredClassTypeIDs(ctx, q, customerID)
+			if err != nil {
+				return res, err
+			}
+			covered = domain.IsClassTypeCovered(ids, candidate.ClassTypeID)
+		}
 	}
 	balance := 0
-	if covered {
+	if covered && pass == nil {
 		if balance, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
 			return res, err
 		}
@@ -113,7 +120,7 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, br
 		Now:                now,
 	}
 	if candidate != nil {
-		in.Candidate = &domain.GateCandidate{BookingID: candidate.ID, CreditCost: candidate.CreditCost}
+		in.Candidate = &domain.GateCandidate{BookingID: candidate.ID, CreditCost: candidate.CreditCost, HasPass: pass != nil}
 	}
 	eval := domain.EvaluateGateScan(in)
 
@@ -167,7 +174,7 @@ effects:
 		Reason:    nonEmpty(reason),
 		EntryKind: nonEmpty(entryKind),
 		Message: domain.DescribeGateDecision(decision, reason, entryKind,
-			domain.GateDetail{ClassName: className, Credits: creditsDeducted, BalanceAfter: &balanceAfter}),
+			domain.GateDetail{ClassName: className, Credits: creditsDeducted, BalanceAfter: &balanceAfter, Pass: pass != nil}),
 		CustomerID:      &customerID,
 		CreditsDeducted: creditsDeducted,
 		BalanceAfter:    &balanceAfter,
@@ -186,11 +193,12 @@ effects:
 		return res, err
 	}
 	if entryKind == domain.EntryBooking {
+		body := strconv.Itoa(creditsDeducted) + " kredit dipotong. Sisa " + strconv.Itoa(balanceAfter) + " kredit. Selamat berlatih!"
+		if pass != nil {
+			body = "Pass aktif, tanpa potong kredit. Selamat berlatih!"
+		}
 		if err := s.Notifier.NotifyMember(ctx, q, customerID, Notification{
-			Type:  "gym_checked_in",
-			Title: "Check-in: " + candidate.ClassName,
-			Body: strconv.Itoa(creditsDeducted) + " kredit dipotong. Sisa " + strconv.Itoa(balanceAfter) +
-				" kredit. Selamat berlatih!",
+			Type: "gym_checked_in", Title: "Check-in: " + candidate.ClassName, Body: body,
 		}); err != nil {
 			return res, err
 		}
@@ -249,41 +257,49 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 		if !domain.CanTransitionBooking(booking.Status, domain.BookingCheckedIn) {
 			return schedulingError("Hanya booking terkonfirmasi yang bisa check-in")
 		}
-		covered, err := s.Credits.CoveredClassTypeIDs(ctx, q, booking.CustomerID)
+		pass, err := s.Passes.ActivePassAt(ctx, q, booking.CustomerID, session.StartsAt)
 		if err != nil {
 			return err
 		}
-		if !domain.IsClassTypeCovered(covered, session.ClassTypeID) {
-			return schedulingError("Paket kredit member tidak mencakup kelas ini")
-		}
-		charged, err := s.Credits.Deduct(ctx, q, CreditMovement{
-			CustomerID:     booking.CustomerID,
-			Amount:         session.CreditCost,
-			SourceType:     "class_booking",
-			SourceID:       booking.ID,
-			IdempotencyKey: "gym:checkin:" + booking.ID,
-			Note:           "Check-in " + session.label() + " (front desk)",
-		})
-		if err != nil {
-			return err
-		}
-		if !charged.OK {
-			return schedulingError("Kredit member tidak cukup untuk kelas ini")
+		detail := domain.GateDetail{ClassName: session.ClassTypeName, Pass: pass != nil}
+		creditsDeducted := 0
+		if pass == nil {
+			covered, err := s.Credits.CoveredClassTypeIDs(ctx, q, booking.CustomerID)
+			if err != nil {
+				return err
+			}
+			if !domain.IsClassTypeCovered(covered, session.ClassTypeID) {
+				return schedulingError("Paket kredit member tidak mencakup kelas ini")
+			}
+			charged, err := s.Credits.Deduct(ctx, q, CreditMovement{
+				CustomerID:     booking.CustomerID,
+				Amount:         session.CreditCost,
+				SourceType:     "class_booking",
+				SourceID:       booking.ID,
+				IdempotencyKey: "gym:checkin:" + booking.ID,
+				Note:           "Check-in " + session.label() + " (front desk)",
+			})
+			if err != nil {
+				return err
+			}
+			if !charged.OK {
+				return schedulingError("Kredit member tidak cukup untuk kelas ini")
+			}
+			creditsDeducted = session.CreditCost
+			detail.Credits, detail.BalanceAfter = session.CreditCost, &charged.BalanceAfter
 		}
 		if err := s.repo.MarkCheckedIn(ctx, q, booking.ID, now); err != nil {
 			return err
 		}
 		kind := domain.EntryBooking
 		res = CheckInResult{
-			Decision:  domain.Allowed,
-			EntryKind: &kind,
-			Message: domain.DescribeGateDecision(domain.Allowed, "", kind, domain.GateDetail{
-				ClassName: session.ClassTypeName, Credits: session.CreditCost, BalanceAfter: &charged.BalanceAfter,
-			}),
+			Decision:        domain.Allowed,
+			EntryKind:       &kind,
+			Message:         domain.DescribeGateDecision(domain.Allowed, "", kind, detail),
 			CustomerID:      &booking.CustomerID,
 			Booking:         &CheckInBookingRef{ID: booking.ID, SessionID: session.ID, ClassName: session.ClassTypeName, StartsAt: session.StartsAt},
-			CreditsDeducted: session.CreditCost,
-			BalanceAfter:    &charged.BalanceAfter,
+			CreditsDeducted: creditsDeducted,
+			BalanceAfter:    detail.BalanceAfter,
 		}
 		return s.logAccess(ctx, q, res, &booking.ID, session.BranchID, "manual", scannedBy)
 	})

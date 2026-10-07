@@ -346,14 +346,16 @@ const nextConfig: NextConfig = {
     // bawaan — enforce langsung berisiko memutus halaman. Report-only memantau
     // pelanggaran (console) tanpa memblokir; ketatkan + tambah report endpoint
     // sebelum dipindah ke Content-Security-Policy yang menegakkan.
+    // accounts.google.com: Google Identity Services (masuk dengan Google di
+    // portal member) memuat skrip dan iframe tombolnya dari sana.
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "connect-src 'self' https:",
-      "frame-src 'self'",
+      "frame-src 'self' https://accounts.google.com",
       "frame-ancestors 'self'",
       "base-uri 'self'",
       "form-action 'self'",

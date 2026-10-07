@@ -56,6 +56,8 @@ type Repository interface {
 	AutoPromote(ctx context.Context, q Q, id string) error
 	OfferPromotion(ctx context.Context, q Q, id string, at time.Time) error
 	MarkNoShow(ctx context.Context, q Q, id string) error
+	// MarkPassStrike flags a late cancel or no-show by a pass holder.
+	MarkPassStrike(ctx context.Context, q Q, id string) error
 	MarkCheckedIn(ctx context.Context, q Q, id string, at time.Time) error
 	CloseBooking(ctx context.Context, q Q, id string, status domain.BookingStatus) error
 	ActiveBookingCustomers(ctx context.Context, q Q, sessionID string) ([]string, error)

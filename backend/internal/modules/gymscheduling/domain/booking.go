@@ -157,9 +157,11 @@ type BookableSession struct {
 
 // EligibilityInput collects the facts eligibility is decided on.
 type EligibilityInput struct {
-	MemberActive         bool
-	Session              BookableSession
-	Balance              int
+	MemberActive bool
+	Session      BookableSession
+	Balance      int
+	// HasPass: a pass covers the session start, so no credits are needed.
+	HasPass              bool
 	ConfirmedCount       int
 	LastWaitlistPosition int
 	HasActiveBooking     bool
@@ -167,8 +169,8 @@ type EligibilityInput struct {
 }
 
 // EvaluateBookingEligibility checks, in this order: active member, bookable
-// session, booking window, no active booking, enough credits, then a seat or
-// the waitlist.
+// session, booking window, no active booking, enough credits (unless a pass
+// covers the session), then a seat or the waitlist.
 func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 	deny := func(r BookingDenialReason) BookingDecision { return BookingDecision{Kind: DecisionDeny, Reason: r} }
 	switch {
@@ -182,7 +184,7 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 		return deny(DenyBookingWindowClosed)
 	case in.HasActiveBooking:
 		return deny(DenyAlreadyBooked)
-	case in.Balance < in.Session.CreditCost:
+	case !in.HasPass && in.Balance < in.Session.CreditCost:
 		return deny(DenyInsufficientCredits)
 	case in.ConfirmedCount >= in.Session.Capacity:
 		return BookingDecision{Kind: DecisionWaitlist, Position: in.LastWaitlistPosition + 1}
@@ -197,31 +199,42 @@ func CancellationDeadline(startsAt time.Time, rules Rules) time.Time {
 }
 
 // CancellationOutcome: Late means past the free-cancel deadline;
-// PenaltyCredits are forfeited because of it.
+// PenaltyCredits are forfeited because of it, or PassStrike is recorded
+// when a pass covers the session (a pass holder has no credits to forfeit).
 type CancellationOutcome struct {
 	Late           bool
 	Deadline       time.Time
 	PenaltyCredits int
+	PassStrike     bool
 }
 
 // EvaluateCancellation: cancelling a confirmed booking after the deadline is
-// late and forfeits the session credits under the forfeit policy. Leaving the
-// waitlist is always free.
-func EvaluateCancellation(status BookingStatus, startsAt time.Time, creditCost int, rules Rules, now time.Time) CancellationOutcome {
+// late and forfeits the session credits under the forfeit policy, or counts
+// a strike against a pass. Leaving the waitlist is always free.
+func EvaluateCancellation(status BookingStatus, startsAt time.Time, creditCost int, hasPass bool, rules Rules, now time.Time) CancellationOutcome {
 	deadline := CancellationDeadline(startsAt, rules)
 	late := status == BookingConfirmed && now.After(deadline)
-	penalty := 0
+	out := CancellationOutcome{Late: late, Deadline: deadline}
 	if late && rules.LateCancelPolicy == PolicyForfeit {
-		penalty = creditCost
+		if hasPass {
+			out.PassStrike = true
+		} else {
+			out.PenaltyCredits = creditCost
+		}
 	}
-	return CancellationOutcome{Late: late, Deadline: deadline, PenaltyCredits: penalty}
+	return out
 }
 
-func NoShowPenalty(creditCost int, rules Rules) int {
-	if rules.NoShowPolicy == PolicyForfeit {
-		return creditCost
+// NoShowPenalty is the credits forfeited for not turning up; a pass holder
+// gets a strike instead (PassStrike).
+func NoShowPenalty(creditCost int, hasPass bool, rules Rules) (penalty int, passStrike bool) {
+	if rules.NoShowPolicy != PolicyForfeit {
+		return 0, false
 	}
-	return 0
+	if hasPass {
+		return 0, true
+	}
+	return creditCost, false
 }
 
 // ── Waitlist ────────────────────────────────────────────────────────────────

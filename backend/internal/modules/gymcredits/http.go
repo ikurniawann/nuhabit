@@ -21,18 +21,20 @@ type Handler struct {
 // Routes lists every route of the module.
 func (h *Handler) Routes() []module.Route {
 	return []module.Route{
-		{Pattern: "GET /api/gym/packages", Handler: h.staff(h.listPackages)},
-		{Pattern: "POST /api/gym/packages", Handler: h.staff(h.savePackage)},
-		{Pattern: "PATCH /api/gym/packages/{id}", Handler: h.staff(h.setPackageStatus)},
-		{Pattern: "DELETE /api/gym/packages/{id}", Handler: h.staff(h.deletePackage)},
-		{Pattern: "GET /api/gym/credits", Handler: h.staff(h.searchMembers)},
-		{Pattern: "GET /api/gym/credits/{customerId}", Handler: h.staff(h.memberCredits)},
-		{Pattern: "POST /api/gym/credits/{customerId}/adjust", Handler: h.staff(h.adjust)},
-		{Pattern: "POST /api/gym/credits/{customerId}/sell", Handler: h.staff(h.sell)},
-		{Pattern: "POST /api/gym/credits/reverse", Handler: h.staff(h.reverse)},
-		{Pattern: "POST /api/gym/credits/purchases/{id}/refund", Handler: h.staff(h.refund)},
-		{Pattern: "GET /api/gym/rules", Handler: h.staff(h.rules)},
-		{Pattern: "PUT /api/gym/rules", Handler: h.staff(h.saveRules)},
+		{Pattern: "GET /api/gym/packages", Handler: h.api(h.listPackages)},
+		{Pattern: "POST /api/gym/packages", Handler: h.api(h.savePackage)},
+		{Pattern: "PATCH /api/gym/packages/{id}", Handler: h.api(h.setPackageStatus)},
+		{Pattern: "DELETE /api/gym/packages/{id}", Handler: h.api(h.deletePackage)},
+		{Pattern: "GET /api/gym/credits", Handler: h.api(h.searchMembers)},
+		{Pattern: "GET /api/gym/credits/{customerId}", Handler: h.api(h.memberCredits)},
+		{Pattern: "POST /api/gym/credits/{customerId}/adjust", Handler: h.api(h.adjust)},
+		{Pattern: "POST /api/gym/credits/{customerId}/sell", Handler: h.api(h.sell)},
+		{Pattern: "POST /api/gym/credits/reverse", Handler: h.api(h.reverse)},
+		{Pattern: "POST /api/gym/credits/purchases/{id}/refund", Handler: h.api(h.refund)},
+		{Pattern: "GET /api/gym/rules", Handler: h.api(h.rules)},
+		{Pattern: "PUT /api/gym/rules", Handler: h.api(h.saveRules)},
+
+		{Pattern: "GET /api/public/site/plans", Handler: h.api(h.publicPlans)},
 
 		{Pattern: "GET /api/member-portal/gym/credits", Handler: h.auth.MemberHandler("Gagal memuat kredit kelas", h.memberWallet)},
 		{Pattern: "GET /api/member-portal/gym/credits/packages", Handler: h.auth.MemberHandler("Gagal memuat paket kredit", h.portalPackages)},
@@ -62,9 +64,9 @@ func asHTTP(err error) error {
 	return err
 }
 
-// staff wraps a handler like apiHandler: *Error and *httpx.Error keep their
+// api wraps a handler like apiHandler: *Error and *httpx.Error keep their
 // status, Postgres constraint errors become friendly 4xx, the rest is 500.
-func (h *Handler) staff(fn httpx.HandlerFunc) http.Handler {
+func (h *Handler) api(fn httpx.HandlerFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error { return asHTTP(fn(w, r)) })
 }
 
@@ -302,6 +304,18 @@ func (h *Handler) saveRules(w http.ResponseWriter, r *http.Request) error {
 	return ok(w, view)
 }
 
+/* ── Public site ─────────────────────────────────────────────────────── */
+
+// publicPlans is the price list of /join: public packages priced for the
+// branch in ?branch= (slug, code or id).
+func (h *Handler) publicPlans(w http.ResponseWriter, r *http.Request) error {
+	view, err := h.svc.PublicPlans(r.Context(), strings.TrimSpace(r.URL.Query().Get("branch")))
+	if err != nil {
+		return err
+	}
+	return ok(w, view)
+}
+
 /* ── Member portal ───────────────────────────────────────────────────── */
 
 func (h *Handler) memberWallet(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -330,11 +344,17 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 		return err
 	}
 	var view *MemberPurchaseView
-	if in.Method == "ark_coin" {
+	purchase := MemberPurchase{CustomerID: customerID, PackageID: in.PackageID, BranchID: in.BranchID}
+	origin := appOrigin(r)
+	switch in.Method {
+	case "ark_coin":
 		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID)
-	} else {
-		origin := appOrigin(r)
-		view, err = h.svc.StartQRISPurchase(r.Context(), customerID, in.PackageID, func(configured string) string {
+	case "invoice":
+		view, err = h.svc.StartInvoicePurchase(r.Context(), purchase, func(purchaseID string) string {
+			return origin + "/member/wallet/pay/" + purchaseID
+		})
+	default:
+		view, err = h.svc.StartQRISPurchase(r.Context(), purchase, func(configured string) string {
 			if configured != "" {
 				return configured
 			}

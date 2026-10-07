@@ -1,6 +1,7 @@
 package memberportal
 
 import (
+	"crypto/sha256"
 	"os"
 	"strings"
 	"time"
@@ -46,7 +47,22 @@ func New(deps module.Deps, opts Options) *Module {
 	svc.wallet = &sqlWallet{pool: deps.DB, now: deps.Now}
 	svc.payments = newXenditPayments(deps.DB, getenv)
 	svc.pusher = &webPusher{db: deps.DB, getenv: getenv, client: safehttp.NewClient(30 * time.Second), log: deps.Log, now: deps.Now}
+	if svc.googleAudience = strings.TrimSpace(getenv("GOOGLE_CLIENT_ID")); svc.googleAudience != "" {
+		svc.google = newGoogleKeys(GoogleJWKSURL, safehttp.NewClient(10*time.Second), deps.Now)
+	}
+	svc.ticketSecret = ticketSecret(getenv("MEMBER_TICKET_SECRET"), deps.Config.DatabaseURL)
 	return &Module{handler: &Handler{svc: svc, auth: deps.Auth, log: deps.Log, credits: opts.Credits}}
+}
+
+// ticketSecret signs Google tickets: MEMBER_TICKET_SECRET, else a key
+// derived from the database URL so every replica agrees without extra
+// configuration.
+func ticketSecret(configured, databaseURL string) []byte {
+	if configured = strings.TrimSpace(configured); configured != "" {
+		return []byte(configured)
+	}
+	sum := sha256.Sum256([]byte("member-portal-ticket:" + databaseURL))
+	return sum[:]
 }
 
 func firstNonEmpty(values ...string) string {

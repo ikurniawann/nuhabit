@@ -19,14 +19,20 @@ import (
 
 // XenditGateway is the QRIS adapter: the calls of
 // frontend/src/lib/payments/xendit.ts that gym purchases use, with the
-// gateway row read from configuration.payment_gateways.
+// gateway row read from configuration.payment_gateways. It is also the
+// invoice adapter (lib/xendit/client.ts): hosted checkout pages keyed by
+// XENDIT_SECRET_KEY, with the dev-only XENDIT_MOCK=1 mode.
 type XenditGateway struct {
 	// BaseURL defaults to XENDIT_API_BASE_URL or https://api.xendit.co.
 	BaseURL string
 	Client  *http.Client
+	Getenv  func(string) string
 }
 
-var _ QRISGateway = (*XenditGateway)(nil)
+var (
+	_ QRISGateway    = (*XenditGateway)(nil)
+	_ InvoiceGateway = (*XenditGateway)(nil)
+)
 
 // NewXenditGateway reads XENDIT_API_BASE_URL (a local mock in tests).
 func NewXenditGateway() *XenditGateway {
@@ -34,7 +40,70 @@ func NewXenditGateway() *XenditGateway {
 	if base == "" {
 		base = "https://api.xendit.co"
 	}
-	return &XenditGateway{BaseURL: strings.TrimRight(base, "/"), Client: &http.Client{Timeout: 30 * time.Second}}
+	return &XenditGateway{BaseURL: strings.TrimRight(base, "/"), Client: &http.Client{Timeout: 30 * time.Second}, Getenv: os.Getenv}
+}
+
+const invoiceExpiryHours = 2
+
+// mockInvoices is isXenditMock.
+func (g *XenditGateway) mockInvoices() bool { return g.Getenv("XENDIT_MOCK") == "1" }
+
+func (g *XenditGateway) InvoiceConfigured() bool {
+	return g.Getenv("XENDIT_SECRET_KEY") != "" || g.mockInvoices()
+}
+
+// CreateInvoice mirrors createInvoice (POST /v2/invoices). In mock mode the
+// invoice URL is the redirect URL itself and InvoiceStatus reports it paid.
+func (g *XenditGateway) CreateInvoice(ctx context.Context, in InvoiceRequest) (*Invoice, error) {
+	expiresAt := time.Now().Add(invoiceExpiryHours * time.Hour)
+	if g.mockInvoices() {
+		return &Invoice{ID: "mock-" + in.ExternalID, URL: in.RedirectURL, ExpiresAt: expiresAt, Mock: true}, nil
+	}
+	secret := g.Getenv("XENDIT_SECRET_KEY")
+	if secret == "" {
+		return nil, errors.New("XENDIT_SECRET_KEY belum dikonfigurasi")
+	}
+	status, raw, err := g.do(ctx, http.MethodPost, "/v2/invoices", secret, map[string]any{
+		"external_id":          in.ExternalID,
+		"amount":               in.Amount,
+		"description":          in.Description,
+		"invoice_duration":     invoiceExpiryHours * 60 * 60,
+		"success_redirect_url": in.RedirectURL,
+		"failure_redirect_url": in.RedirectURL,
+		"currency":             "IDR",
+		"customer":             map[string]string{"given_names": in.PayerName},
+	})
+	if err != nil {
+		return nil, err
+	}
+	payload, _ := raw.(map[string]any)
+	if status < 200 || status > 299 {
+		return nil, fmt.Errorf("Xendit menolak pembuatan invoice (HTTP %d): %s", status, jsString(payload["message"]))
+	}
+	inv := &Invoice{ID: jsString(payload["id"]), URL: jsString(payload["invoice_url"]), ExpiresAt: expiresAt}
+	if inv.ID == "" || inv.URL == "" {
+		return nil, errors.New("Incomplete payment gateway response")
+	}
+	if t, err := time.Parse(time.RFC3339Nano, jsString(payload["expiry_date"])); err == nil {
+		inv.ExpiresAt = t
+	}
+	return inv, nil
+}
+
+// InvoiceStatus mirrors GET /v2/invoices/{id}.
+func (g *XenditGateway) InvoiceStatus(ctx context.Context, invoiceID string) (string, error) {
+	if g.mockInvoices() && strings.HasPrefix(invoiceID, "mock-") {
+		return "PAID", nil
+	}
+	status, raw, err := g.do(ctx, http.MethodGet, "/v2/invoices/"+url.PathEscape(invoiceID), g.Getenv("XENDIT_SECRET_KEY"), nil)
+	if err != nil {
+		return "", err
+	}
+	payload, _ := raw.(map[string]any)
+	if status < 200 || status > 299 {
+		return "", fmt.Errorf("Failed to fetch invoice (%d)", status)
+	}
+	return strings.ToUpper(jsString(payload["status"])), nil
 }
 
 // ActiveConfig mirrors loadActiveXenditConfig, with its error messages.

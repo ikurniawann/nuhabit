@@ -18,10 +18,11 @@ import (
 type PackagesView struct {
 	Packages   []PackageRow `json:"packages"`
 	ClassTypes []ClassType  `json:"class_types"`
+	Branches   []Branch     `json:"branches"`
 }
 
-// ListPackages returns every package (active first) and the active class
-// types offered as coverage.
+// ListPackages returns every package (active first), the active class
+// types offered as coverage and the active branches for per-branch prices.
 func (s *Service) ListPackages(ctx context.Context) (*PackagesView, error) {
 	packages, err := s.repo.Packages(ctx, s.db)
 	if err != nil {
@@ -48,7 +49,14 @@ func (s *Service) ListPackages(ctx context.Context) (*PackagesView, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &PackagesView{Packages: packages, ClassTypes: classTypes}, nil
+	branches, err := s.ports.Directory.ActiveBranches(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
+	if branches == nil {
+		branches = []Branch{}
+	}
+	return &PackagesView{Packages: packages, ClassTypes: classTypes, Branches: branches}, nil
 }
 
 // IDResult is { id }.
@@ -56,10 +64,17 @@ type IDResult struct {
 	ID string `json:"id"`
 }
 
-// SavePackage creates or updates a package. Earlier purchases keep the
-// credits and price they were bought with.
+// SavePackage creates or updates a package and its branch prices. Earlier
+// purchases keep the credits and price they were bought with.
 func (s *Service) SavePackage(ctx context.Context, p PackageInput, actorID string) (*IDResult, error) {
-	id, err := s.repo.SavePackage(ctx, s.db, p, actorID)
+	var id string
+	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		var err error
+		if id, err = s.repo.SavePackage(ctx, tx, p, actorID); err != nil || id == "" {
+			return err
+		}
+		return s.repo.ReplaceBranchPrices(ctx, tx, id, p.BranchPrices)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -67,6 +82,28 @@ func (s *Service) SavePackage(ctx context.Context, p PackageInput, actorID strin
 		return nil, fail(http.StatusNotFound, "Paket tidak ditemukan")
 	}
 	return &IDResult{ID: id}, nil
+}
+
+// PublicPlans is the public price list for a branch (slug, code or id).
+// Without a branch the base prices apply.
+func (s *Service) PublicPlans(ctx context.Context, branchKey string) (*PublicPlansView, error) {
+	var branch *PublicBranch
+	var branchID *string
+	if branchKey != "" {
+		var err error
+		if branch, err = s.ports.Directory.PublicBranch(ctx, s.db, branchKey); err != nil {
+			return nil, err
+		}
+		if branch == nil {
+			return nil, fail(http.StatusNotFound, "Cabang tidak ditemukan")
+		}
+		branchID = &branch.ID
+	}
+	plans, err := s.repo.PublicPackages(ctx, s.db, branchID)
+	if err != nil {
+		return nil, err
+	}
+	return &PublicPlansView{Branch: branch, Plans: plans}, nil
 }
 
 // PackageStatus is { id, status }.
@@ -340,8 +377,8 @@ func (s *Service) PortalPackages(ctx context.Context, customerID string) (*Porta
 			reason = &msg
 		}
 		view.Packages = append(view.Packages, PortalPackage{
-			ID: p.ID, Name: p.Name, Description: p.Description, Credits: p.Credits, PriceIdr: p.PriceIdr,
-			ValidityDays: p.ValidityDays, PurchaseLimitPerMember: p.PurchaseLimitPerMember,
+			ID: p.ID, Name: p.Name, Description: p.Description, Kind: p.Kind, Credits: p.Credits, PriceIdr: p.PriceIdr,
+			ValidityDays: p.ValidityDays, PurchaseLimitPerMember: p.PurchaseLimitPerMember, Badge: p.Badge,
 			Restricted: p.ApplicableClassTypeIDs != nil, CanBuy: problem == "", BlockedReason: reason,
 		})
 	}

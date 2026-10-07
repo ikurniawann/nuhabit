@@ -4,10 +4,19 @@ import { call, send } from "../shared";
 
 export type { GymRules };
 
+/** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
+export type PackageKind = "credits" | "pass";
+
+export interface BranchPrice {
+  branch_id: string;
+  price_idr: number;
+}
+
 export interface CreditPackage {
   id: string;
   name: string;
   description: string;
+  kind: PackageKind;
   credits: number;
   price_idr: number;
   validity_days: number;
@@ -15,6 +24,9 @@ export interface CreditPackage {
   applicable_class_type_ids: string[] | null;
   branch_id: string | null;
   branch_name: string | null;
+  is_public: boolean;
+  badge: string | null;
+  branch_prices: BranchPrice[];
   status: "active" | "archived";
   sort_order: number;
   sold_count: number;
@@ -26,7 +38,23 @@ export interface ClassTypeOption {
   name: string;
 }
 
+export interface BranchOption {
+  id: string;
+  name: string;
+}
+
 export type PackageInput = Omit<CreditPackage, "id" | "branch_name" | "status" | "sold_count" | "referenced"> & { id?: string };
+
+export interface MemberPass {
+  id: string;
+  package_id: string;
+  package_name: string;
+  starts_at: string;
+  ends_at: string;
+  status: "active" | "expired" | "refunded";
+  days_left: number;
+  purchase_id: string | null;
+}
 
 export interface MemberHit {
   id: string;
@@ -68,6 +96,7 @@ export type PaymentMethod = "cash" | "card" | "transfer" | "qris" | "ark_coin" |
 export interface CreditPurchase {
   id: string;
   package_name: string;
+  kind: PackageKind;
   credits: number;
   total_idr: number;
   discount_idr: number;
@@ -95,6 +124,7 @@ export interface MemberCredits {
   low_balance: boolean;
   low_balance_threshold: number;
   lots: CreditLot[];
+  passes: MemberPass[];
   entries: CreditEntry[];
   purchases: CreditPurchase[];
 }
@@ -106,7 +136,8 @@ export interface RulesAdmin {
 }
 
 export const gymCreditsApi = {
-  packages: () => call<{ packages: CreditPackage[]; class_types: ClassTypeOption[] }>("/api/gym/packages"),
+  packages: () =>
+    call<{ packages: CreditPackage[]; class_types: ClassTypeOption[]; branches: BranchOption[] }>("/api/gym/packages"),
   savePackage: (input: PackageInput) => send<{ id: string }>("/api/gym/packages", input),
   setPackageStatus: (id: string, status: CreditPackage["status"]) => send(`/api/gym/packages/${id}`, { status }, "PATCH"),
   deletePackage: (id: string) => call(`/api/gym/packages/${id}`, { method: "DELETE" }),
@@ -145,4 +176,9 @@ export const METHOD_LABELS: Record<PaymentMethod, string> = {
   qris: "QRIS",
   ark_coin: "ARK Coin",
   complimentary: "Komplimen",
+};
+
+export const KIND_LABELS: Record<PackageKind, string> = {
+  credits: "Paket kredit",
+  pass: "Pass",
 };

@@ -116,6 +116,8 @@ type GateScanEvaluation struct {
 type GateCandidate struct {
 	BookingID  string
 	CreditCost int
+	// HasPass: a pass covers the class, so entry costs no credits.
+	HasPass bool
 }
 
 type GateScanInput struct {
@@ -167,7 +169,14 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 		return denied(GateNoBooking, consume)
 	}
 
-	// 5. The balance covers the class.
+	// 5. A pass covers the class, or the balance does.
+	if in.Candidate.HasPass {
+		return GateScanEvaluation{
+			Decision:  Allowed,
+			EntryKind: EntryBooking,
+			Effects:   []GateEffect{consume, {Kind: EffectCheckIn, BookingID: in.Candidate.BookingID}},
+		}
+	}
 	if in.Balance < in.Candidate.CreditCost {
 		return denied(GateInsufficientCredits, consume)
 	}
@@ -183,11 +192,13 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 	}
 }
 
-// GateDetail feeds DescribeGateDecision. Zero Credits and nil BalanceAfter are omitted.
+// GateDetail feeds DescribeGateDecision. Zero Credits and nil BalanceAfter
+// are omitted; Pass says the entry was covered by a pass.
 type GateDetail struct {
 	ClassName    string
 	Credits      int
 	BalanceAfter *int
+	Pass         bool
 }
 
 // DescribeGateDecision is the staff-facing sentence: why the member got in,
@@ -207,6 +218,9 @@ func DescribeGateDecision(decision Decision, reason GateDenialReason, entryKind 
 		className = "kelas"
 	}
 	parts := []string{"Check-in " + className}
+	if d.Pass {
+		return strings.Join(append(parts, "pass aktif, tanpa potong kredit"), " · ")
+	}
 	if d.Credits != 0 {
 		parts = append(parts, strconv.Itoa(d.Credits)+" kredit dipotong")
 	}

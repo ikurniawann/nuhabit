@@ -673,7 +673,7 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, object("late", out.Late, "deadline", jsTime(out.Deadline), "penalty_credits", out.PenaltyCredits))
+	return ok(w, object("late", out.Late, "deadline", jsTime(out.Deadline), "penalty_credits", out.PenaltyCredits, "pass_strike", out.PassStrike))
 }
 
 func (h *handler) memberConfirmOffer(w http.ResponseWriter, r *http.Request, customerID string) error {

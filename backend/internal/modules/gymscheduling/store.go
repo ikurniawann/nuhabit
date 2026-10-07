@@ -80,17 +80,25 @@ func (s *Service) chargePenalty(ctx context.Context, q Q, customerID string, amo
 	return amount, nil
 }
 
-// applyNoShow marks the booking no-show and charges per the no-show policy.
+// applyNoShow marks the booking no-show and charges per the no-show policy:
+// credits, or a strike when a pass covered the class.
 func (s *Service) applyNoShow(ctx context.Context, q Q, booking *BookingRow, session *SessionRow) (int, error) {
 	rules, err := s.Rules.ForBranch(ctx, q, session.BranchID)
+	if err != nil {
+		return 0, err
+	}
+	pass, err := s.Passes.ActivePassAt(ctx, q, booking.CustomerID, session.StartsAt)
 	if err != nil {
 		return 0, err
 	}
 	if err := s.repo.MarkNoShow(ctx, q, booking.ID); err != nil {
 		return 0, err
 	}
-	return s.chargePenalty(ctx, q, booking.CustomerID, domain.NoShowPenalty(session.CreditCost, rules),
-		"no_show", booking.ID, "Tidak hadir: "+session.label())
+	penalty, strike := domain.NoShowPenalty(session.CreditCost, pass != nil, rules)
+	if strike {
+		return 0, s.repo.MarkPassStrike(ctx, q, booking.ID)
+	}
+	return s.chargePenalty(ctx, q, booking.CustomerID, penalty, "no_show", booking.ID, "Tidak hadir: "+session.label())
 }
 
 // branchRules reads the rules once per branch for the length of one operation.

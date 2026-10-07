@@ -138,13 +138,43 @@ func TestMemberPurchaseSchema(t *testing.T) {
 	for body, want := range map[string]string{
 		`{}`:                              "Invalid input: expected string, received undefined",
 		`{"package_id":"nope"}`:           "Pilih paket",
-		`{"package_id":"` + uuidOK + `"}`: `Invalid option: expected one of "qris"|"ark_coin"`,
+		`{"package_id":"` + uuidOK + `"}`: `Invalid option: expected one of "qris"|"ark_coin"|"invoice"`,
+		`{"package_id":"` + uuidOK + `","method":"invoice","branch_id":"x"}`: "Cabang tidak valid",
 	} {
 		_, err := parseMemberPurchase(decodeBody(t, body))
 		var he *httpx.Error
 		if !errors.As(err, &he) || he.Message != want || he.Details != nil {
 			t.Errorf("%s: got %+v, want %q", body, err, want)
 		}
+	}
+	in, err := parseMemberPurchase(decodeBody(t, `{"package_id":"`+uuidOK+`","method":"invoice","branch_id":"`+uuidOK+`"}`))
+	if err != nil || in.Method != "invoice" || in.BranchID == nil || *in.BranchID != uuidOK {
+		t.Fatalf("got %+v %v", in, err)
+	}
+}
+
+func TestPackageSchemaKinds(t *testing.T) {
+	base := `"name":"Pass","price_idr":100,"validity_days":28`
+	for body, want := range map[string]string{
+		`{` + base + `,"kind":"weekly"}`:                                                               `Invalid option: expected one of "credits"|"pass"`,
+		`{` + base + `,"kind":"credits","credits":0}`:                                                  "Kredit minimal 1",
+		`{` + base + `,"kind":"pass","is_public":"yes"}`:                                               "Invalid input: expected boolean, received string",
+		`{` + base + `,"kind":"pass","branch_prices":[{"price_idr":1}]}`:                               "Invalid input: expected string, received undefined",
+		`{` + base + `,"kind":"pass","branch_prices":[{"branch_id":"` + uuidOK + `","price_idr":-1}]}`: "Too small: expected number to be >=0",
+	} {
+		_, err := parsePackage(decodeBody(t, body))
+		if got := message(t, err); got != want {
+			t.Errorf("%s: got %q, want %q", body, got, want)
+		}
+	}
+	in, err := parsePackage(decodeBody(t, `{`+base+`,"kind":"pass","credits":5,"badge":" Paling laris ","is_public":false,"branch_prices":[{"branch_id":"`+uuidOK+`","price_idr":90}]}`))
+	if err != nil || in.Kind != "pass" || in.Credits != 0 || in.IsPublic || in.Badge == nil || *in.Badge != "Paling laris" ||
+		len(in.BranchPrices) != 1 || in.BranchPrices[0].PriceIdr != 90 {
+		t.Fatalf("got %+v %v", in, err)
+	}
+	in, err = parsePackage(decodeBody(t, `{"name":"Pack","credits":3,"price_idr":100,"validity_days":30,"badge":""}`))
+	if err != nil || in.Kind != "credits" || in.Credits != 3 || !in.IsPublic || in.Badge != nil || in.BranchPrices != nil {
+		t.Fatalf("defaults %+v %v", in, err)
 	}
 }
 

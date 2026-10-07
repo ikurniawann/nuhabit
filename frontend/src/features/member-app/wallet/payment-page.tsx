@@ -15,6 +15,7 @@ import { Spinner, formatIdr } from "../ui";
 const CHANNEL_TITLE: Record<PaymentView["payment"]["channel"], string> = {
   QRIS: "Scan to pay with QRIS",
   ARK_COIN: "Pay with ARK Coin",
+  INVOICE: "Pay on the secure checkout page",
 };
 
 /** Fallback checkout window when the gateway gives no QR expiry. */
@@ -66,7 +67,10 @@ export function PaymentPage() {
         <div>
           <h1 className="nh-display text-3xl font-black">{t("Payment successful")}</h1>
           <p className="mt-1 text-nh-muted">
-            {data.payment.credits} {t("credits added")} · {formatIdr(data.payment.totalIdr)}
+            {data.payment.kind === "pass"
+              ? `${t("Pass active for")} ${data.payment.validityDays} ${t("days")}`
+              : `${data.payment.credits} ${t("credits added")}`}{" "}
+            · {formatIdr(data.payment.totalIdr)}
           </p>
         </div>
         <Link href={m("/wallet")} className="nh-btn-brand w-full">
@@ -123,7 +127,7 @@ export function PaymentPage() {
         <div>
           <p className="font-extrabold">{packageName}</p>
           <p className="text-nh-muted">
-            {payment.credits} {t("credits")}
+            {payment.kind === "pass" ? `${t("Unlimited bookings")} · ${payment.validityDays} ${t("days")}` : `${payment.credits} ${t("credits")}`}
           </p>
         </div>
         <div className="text-right">
@@ -143,6 +147,11 @@ export function PaymentPage() {
             {t("Scan with any banking or e-wallet app that supports QRIS.")}
           </p>
         </div>
+      ) : null}
+      {payment.channel === "INVOICE" && payment.invoiceUrl ? (
+        <a href={payment.invoiceUrl} className="nh-btn-ghost">
+          {t("Open the payment page")}
+        </a>
       ) : null}
 
       {error ? <p className="text-sm font-bold text-nh-danger">{error}</p> : null}

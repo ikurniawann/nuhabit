@@ -46,6 +46,29 @@ func (s *store) FindMemberByPhone(ctx context.Context, phone string) (*MemberRef
 	return &m, nil
 }
 
+func (s *store) FindMemberByGoogle(ctx context.Context, sub, email string) (*MemberRef, error) {
+	var m MemberRef
+	err := s.q.QueryRow(ctx,
+		`SELECT id, name FROM pos.pos_customers
+		  WHERE is_active IS NOT FALSE
+		    AND (google_sub = $1 OR ($2 <> '' AND google_sub IS NULL AND lower(email) = $2))
+		  ORDER BY (google_sub = $1) DESC, created_at
+		  LIMIT 1`, sub, email).Scan(&m.ID, &m.Name)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (s *store) LinkGoogle(ctx context.Context, customerID, sub string) error {
+	_, err := s.q.Exec(ctx,
+		`UPDATE pos.pos_customers SET google_sub = $2, updated_at = now() WHERE id = $1 AND google_sub IS NULL`, customerID, sub)
+	return err
+}
+
 func (s *store) CountRecentOTP(ctx context.Context, phone string, window time.Duration) (int, error) {
 	var n int
 	err := s.q.QueryRow(ctx,
@@ -127,10 +150,10 @@ func (s *store) InsertRegisteredMember(ctx context.Context, reg domain.Registrat
 	var m MemberRef
 	err := s.q.QueryRow(ctx,
 		`INSERT INTO pos.pos_customers
-		   (phone, name, email, birth_date, member_type, wa_consent, wa_verified_at)
-		 VALUES ($1, $2, $3, $4, 'registered', $5, now())
+		   (phone, name, email, birth_date, member_type, wa_consent, wa_verified_at, google_sub)
+		 VALUES ($1, $2, $3, $4, 'registered', $5, now(), $6)
 		 RETURNING id, name`,
-		reg.PhoneLocal, reg.Name, reg.Email, reg.BirthDate, reg.WAConsent).Scan(&m.ID, &m.Name)
+		reg.PhoneLocal, reg.Name, reg.Email, reg.BirthDate, reg.WAConsent, reg.GoogleSub).Scan(&m.ID, &m.Name)
 	if err != nil {
 		return nil, err
 	}
