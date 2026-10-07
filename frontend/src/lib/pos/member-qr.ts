@@ -1,0 +1,14 @@
+/**
+ * QR code member portal untuk bagian bawah struk customer.
+ *
+ * SVG di-generate SEKALI dari MEMBER_PORTAL_URL (lib `qrcode`, EC level M,
+ * margin 0) lalu ditanam statis: URL-nya konstan, jadi tidak perlu dependency
+ * QR di runtime. Kalau URL berubah, generate ulang SVG-nya juga —
+ * npx qrcode -t svg -e M -m 0 "<url>" — jangan hanya mengganti string URL.
+ */
+export const MEMBER_PORTAL_URL = "https://member.suluinwounderland.com/";
+
+/** Teks di bawah QR — tanpa protokol biar muat & terbaca di kertas 80mm. */
+export const MEMBER_PORTAL_QR_CAPTION = "member.suluinwounderland.com";
+
+export const MEMBER_PORTAL_QR_SVG = `<svg style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><path fill="#ffffff" d="M0 0h29v29H0z"/><path stroke="#000000" d="M0 0.5h7m2 0h2m1 0h2m3 0h4m1 0h7M0 1.5h1m5 0h1m2 0h2m1 0h6m2 0h1m1 0h1m5 0h1M0 2.5h1m1 0h3m1 0h1m1 0h1m2 0h2m1 0h3m2 0h2m1 0h1m1 0h3m1 0h1M0 3.5h1m1 0h3m1 0h1m1 0h2m2 0h1m4 0h1m2 0h1m1 0h1m1 0h3m1 0h1M0 4.5h1m1 0h3m1 0h1m1 0h1m2 0h1m1 0h1m2 0h1m2 0h2m1 0h1m1 0h3m1 0h1M0 5.5h1m5 0h1m1 0h2m2 0h5m5 0h1m5 0h1M0 6.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M8 7.5h3m1 0h2m2 0h1m2 0h2M0 8.5h1m1 0h5m5 0h1m1 0h1m2 0h1m1 0h1m2 0h5M0 9.5h3m2 0h1m3 0h1m2 0h1m3 0h9m3 0h1M1 10.5h1m4 0h2m1 0h1m5 0h3m2 0h1M1 11.5h1m3 0h1m1 0h2m1 0h3m1 0h1m3 0h1m5 0h2m1 0h1M0 12.5h1m2 0h1m1 0h2m1 0h3m1 0h1m2 0h1m1 0h1m1 0h1m5 0h2M0 13.5h3m1 0h2m1 0h3m3 0h2m1 0h1m1 0h3m1 0h3m3 0h1M0 14.5h2m2 0h7m1 0h4m4 0h2m1 0h4M2 15.5h2m1 0h1m1 0h2m2 0h1m1 0h1m2 0h1m1 0h1m1 0h4m3 0h1M1 16.5h1m1 0h2m1 0h2m1 0h4m1 0h1m2 0h1m2 0h2m3 0h2M0 17.5h1m3 0h2m1 0h2m1 0h1m1 0h1m5 0h7m1 0h1m1 0h1M0 18.5h1m1 0h1m1 0h1m1 0h1m1 0h4m3 0h1m6 0h3m1 0h1M0 19.5h1m1 0h4m4 0h3m1 0h3m3 0h5m2 0h1M0 20.5h1m1 0h1m3 0h1m2 0h2m1 0h1m2 0h1m1 0h1m1 0h6m1 0h3M8 21.5h3m2 0h2m1 0h1m3 0h1m3 0h5M0 22.5h7m2 0h7m1 0h4m1 0h1m1 0h3M0 23.5h1m5 0h1m1 0h1m4 0h1m2 0h1m1 0h3m3 0h1M0 24.5h1m1 0h3m1 0h1m1 0h1m2 0h1m2 0h1m2 0h1m2 0h5m1 0h1M0 25.5h1m1 0h3m1 0h1m1 0h1m2 0h3m2 0h4m5 0h4M0 26.5h1m1 0h3m1 0h1m1 0h2m1 0h1m1 0h1m1 0h2m2 0h1m2 0h6M0 27.5h1m5 0h1m3 0h2m2 0h2m2 0h4m1 0h3m1 0h1M0 28.5h7m1 0h4m3 0h1m1 0h1m1 0h1m2 0h2m2 0h1"/></svg>`;

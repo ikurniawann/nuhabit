@@ -1,0 +1,6 @@
+Priority,Recommendation,Reason,Target Area
+1,Buat Production Complete UI,Flow produksi belum benar-benar selesai dari sisi user,Production
+2,Tambahkan Production Movement History,User perlu audit status dan perubahan stok,Production/Inventory
+3,Buat Inventory Stock Card,Semua perubahan stok harus bisa ditelusuri,Inventory
+4,QA WIP end-to-end,WIP adalah konsep penting untuk bahan dari bahan,Production/WIP
+5,Lakukan QA regression formal Purchasing + Production,Memastikan PO-Barang Masuk-Produksi-Stok-HPP stabil sebelum lanjut module besar berikutnya,Purchasing/Production

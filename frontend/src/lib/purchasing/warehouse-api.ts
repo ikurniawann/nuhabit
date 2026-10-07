@@ -1,0 +1,43 @@
+// Daftar stall/gudang (configuration.warehouses) sesuai scope user untuk
+// /api/purchasing/warehouses (picker Items, POS katalog, pengaturan user).
+import { z } from "zod";
+import {
+  resolveWarehouseBranchFilter,
+  resolveWarehouseCompanyFilter,
+  type UserScope,
+} from "@/lib/api/scope";
+import type { DbClient } from "@/lib/pg/types";
+
+export const warehouseListQuerySchema = z.object({
+  branch_id: z.string().uuid("Branch ID harus valid").optional(),
+  is_active: z.coerce.boolean().optional().default(true),
+});
+
+export async function listWarehouses(
+  db: DbClient,
+  scope: UserScope | null,
+  params: z.infer<typeof warehouseListQuerySchema>
+): Promise<unknown[]> {
+  const branchFilter = resolveWarehouseBranchFilter(scope, params.branch_id);
+  const companyFilter = resolveWarehouseCompanyFilter(scope);
+
+  let query = db.from("warehouses", "configuration").select("*").eq("is_active", params.is_active);
+
+  if (branchFilter) {
+    query = query.eq("branch_id", branchFilter);
+  } else if (companyFilter) {
+    // User bercope company: hanya gudang milik cabang company-nya.
+    const { data: branches, error: branchError } = await db
+      .from("branches", "configuration")
+      .select("id")
+      .eq("company_id", companyFilter);
+    if (branchError) throw branchError;
+    const branchIds = ((branches ?? []) as Array<{ id: string }>).map((branch) => branch.id);
+    if (branchIds.length === 0) return [];
+    query = query.in("branch_id", branchIds);
+  }
+
+  const { data, error } = await query.order("name", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}

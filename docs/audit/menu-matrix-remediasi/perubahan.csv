@@ -1,0 +1,636 @@
+﻿phase,action,target,detail
+2,rename bahan baku,MM-RM-0173,"""Tteokboki Frozen"" → ""Tteokbokki Frozen"" (94%)"
+2,rename WIP,MM-WIP-0032,"""Minched Beef WIP"" → ""Minced Beef WIP"" (94%)"
+2,rename produk,MM-STALL-04-014,"""Spicy Tteokboki Gyoza"" → ""Spicy Tteokbokki Gyoza"" (95%)"
+2,rename produk,MM-STALL-05-028,"""Salmon Philadelpia"" → ""Salmon Philadelphia"" (95%)"
+2,rename produk,MM-STALL-06-033,"""Shuffle Pancake Mochi Chocolate"" → ""Souffle Pancake Mochi Chocolate"" (97%)"
+2,rename produk,MM-STALL-06-035,"""Shuffle Pancake Mochi Hojicha"" → ""Souffle Pancake Mochi Hojicha"" (97%)"
+2,rename produk,MM-STALL-06-034,"""Shuffle Pancake Mochi Matcha"" → ""Souffle Pancake Mochi Matcha"" (96%)"
+2,rename produk,MM-STALL-06-036,"""Shuffle Pancake Mochi Vanilla"" → ""Souffle Pancake Mochi Vanilla"" (97%)"
+2,rename produk,MM-STALL-08-052,"""Cheese Minched Katsu"" → ""Cheese Minced Katsu"" (95%)"
+2,rename produk,MM-STALL-11-069,"""Beefu Udon"" → ""Beef Udon"" (90%)"
+2,rename produk,MM-STALL-13-073,"""Beefu Hikiniku"" → ""Beef Hikiniku"" (93%)"
+1,update bahan baku,MM-RM-0002 Garam,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 16"
+1,update bahan baku,MM-RM-0004 Rice Vinegar,"satuan_besar ML → BTL, konversi 1.0000 → 600 — biaya/satuan → 48,83"
+1,update bahan baku,MM-RM-0006 Sesame Oil,"satuan_besar ML → BTL, konversi 1.0000 → 620 — biaya/satuan → 62,9"
+1,update bahan baku,MM-RM-0007 Air,"satuan_besar L → GAL — biaya/satuan → 1,06"
+1,update bahan baku,MM-RM-0008 Telur Ayam,"satuan_besar BUTIR → KG, konversi 1.0000 → 14 — biaya/satuan → 1.785,71"
+1,update bahan baku,MM-RM-0012 Hondashi,"satuan_besar KG → PACK — biaya/satuan → 155,5"
+1,update bahan baku,MM-RM-0013 Gochujang Paste,"satuan_besar GR → PACK, konversi 1.0000 → 900 — biaya/satuan → 138,78"
+1,update bahan baku,MM-RM-0018 Togarashi / Chili Powder,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0020 Royco,"satuan_besar GR → PACK, konversi 1.0000 → 220 — biaya/satuan → 43,18"
+1,update bahan baku,MM-RM-0023 Shoyu,satuan_besar L → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0024 Curry Powder,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 136"
+1,update bahan baku,MM-RM-0027 Soy Sauce Kikkoman,satuan_besar L → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0029 Soy Sauce Kikkoman Halal,satuan_besar L → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0035 Yakinori Sheets,"satuan_besar LBR → PACK, konversi 1.0000 → 50 — biaya/satuan → 3.290"
+1,update bahan baku,MM-RM-0036 Kikkoman Soy Sauce Halal,satuan_besar KG → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0038 Katsuobushi,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 478,4"
+1,update bahan baku,MM-RM-0039 Ichimi Togarashi,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 340,67"
+1,update bahan baku,MM-RM-0042 Soy Kikkoman,satuan_besar KG → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0043 Lada Putih Bubuk,"satuan_besar GR → PACK, konversi 1.0000 → 250 — biaya/satuan → 114,4"
+1,update bahan baku,MM-RM-0046 Mentaiko Paste,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 520"
+1,update bahan baku,MM-RM-0047 Madu,"satuan_besar KG → BTL, konversi 1000.0000 → 660 — biaya/satuan → 128,71"
+1,update bahan baku,MM-RM-0048 Chili Sauce,"satuan_besar KG → GAL — biaya/satuan → 20,64"
+1,update bahan baku,MM-RM-0049 Togarashi,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0050 Shoyu Kikkoman,satuan_besar KG → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0052 Fresh Milk,"satuan_besar ML → PCS, konversi 1.0000 → 950 — biaya/satuan → 38,42"
+1,update bahan baku,MM-RM-0056 Minyak Sesame,"satuan_besar ML → BTL, konversi 1.0000 → 620 — biaya/satuan → 62,9"
+1,update bahan baku,MM-RM-0058 Dry Shitake,"satuan_besar PCS → PACK, konversi 1.0000 → 1000 — biaya/satuan → 320"
+1,update bahan baku,MM-RM-0061 Tepung Tapioka,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 16"
+1,update bahan baku,MM-RM-0062 Tepung Roti,"satuan_besar GR → PACK, konversi 1.0000 → 200 — biaya/satuan → 117,25"
+1,update bahan baku,MM-RM-0063 Aonori,"satuan_besar GR → PACK, konversi 1.0000 → 50 — biaya/satuan → 496"
+1,update bahan baku,MM-RM-0065 Bawang Putih Goreng,"satuan_besar GR → PACK, konversi 1.0000 → 100 — biaya/satuan → 150"
+1,update bahan baku,MM-RM-0066 Chili Flakes/ Dry Chili Chop,"satuan_besar GR → PACK, konversi 1.0000 → 50 — biaya/satuan → 256"
+1,update bahan baku,MM-RM-0067 Shicimi Togarashi / Chili Powder,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0068 Hondasi,"satuan_besar KG → PACK — biaya/satuan → 155,5"
+1,update bahan baku,MM-RM-0070 Minyak Goreng,"satuan_besar L → GAL — biaya/satuan → 21,94"
+1,update bahan baku,MM-RM-0071 Yuzu Syrup,"satuan_besar ML → BTL, konversi 1.0000 → 300 — biaya/satuan → 733,33"
+1,update bahan baku,MM-RM-0072 Air Mineral,"satuan_besar L → GAL — biaya/satuan → 3,15"
+1,update bahan baku,MM-RM-0077 Oyster Sauce,"satuan_besar GR → BTL, konversi 1.0000 → 770 — biaya/satuan → 64,94"
+1,update bahan baku,MM-RM-0079 Tepung Roti (Ditempat Berbeda),"satuan_besar KG → PACK, konversi 1000.0000 → 200 — biaya/satuan → 117,25"
+1,update bahan baku,MM-RM-0087 Minyak,"satuan_besar KG → GAL — biaya/satuan → 21,94"
+1,update bahan baku,MM-RM-0089 Shayou Kikkoman,satuan_besar KG → BTL — biaya/satuan → 75
+1,update bahan baku,MM-RM-0091 Truffle Oil,"satuan_besar GR → BTL, konversi 1.0000 → 250 — biaya/satuan → 971,8"
+1,update bahan baku,MM-RM-0092 Nori Sheets,"satuan_besar LBR → PACK, konversi 1.0000 → 50 — biaya/satuan → 3.300"
+1,update bahan baku,MM-RM-0093 Sichimi,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0097 Bulldog Tonkotsu Sauce,"satuan_besar KG → PACK — biaya/satuan → 95,94"
+1,update bahan baku,MM-RM-0098 Madu Nusantara,"satuan_besar KG → BTL — biaya/satuan → 84,95"
+1,update bahan baku,MM-RM-0099 Bulldog Wonchester Sauce,"satuan_besar GR → PACK, konversi 1.0000 → 283.5 — biaya/satuan → 227,87"
+1,update bahan baku,MM-RM-0103 Baking Powder,"satuan_besar GR → PACK, konversi 1.0000 → 450 — biaya/satuan → 111,11"
+1,update bahan baku,MM-RM-0104 Sichimi Togarashi,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0108 Minyak Sayur,"satuan_besar L → GAL — biaya/satuan → 21,94"
+1,update bahan baku,MM-RM-0109 Sauce Tiram,"satuan_besar GR → BTL, konversi 1.0000 → 770 — biaya/satuan → 64,94"
+1,update bahan baku,MM-RM-0110 Gelatine Powder,"satuan_besar GR → PACK, konversi 1.0000 → 250 — biaya/satuan → 211,6"
+1,update bahan baku,MM-RM-0111 Whipping Cream,"satuan_besar KG → L — biaya/satuan → 75,5"
+1,update bahan baku,MM-RM-0113 Dark Chocolate 54%,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 136"
+1,update bahan baku,MM-RM-0114 Dark Chocolate 70%,"satuan_besar KG → PACK — biaya/satuan → 321,6"
+1,update bahan baku,MM-RM-0115 Chocolate Powder,"satuan_besar GR → PACK, konversi 1.0000 → 165 — biaya/satuan → 283,64"
+1,update bahan baku,MM-RM-0118 Hojicha Powder,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 999"
+1,update bahan baku,MM-RM-0120 Vanilla Extra,"satuan_besar GR → BTL, konversi 1.0000 → 100 — biaya/satuan → 900"
+1,update bahan baku,MM-RM-0122 RAP Instan,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 105"
+1,update bahan baku,MM-RM-0123 Water,"satuan_besar KG → GAL — biaya/satuan → 1,06"
+1,update bahan baku,MM-RM-0124 Icing Sugar,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 24"
+1,update bahan baku,MM-RM-0126 Strawberry Puree,"satuan_besar KG → BTL — biaya/satuan → 208,9"
+1,update bahan baku,MM-RM-0128 Ragi Instan,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 100"
+1,update bahan baku,MM-RM-0131 Milk Powder,"satuan_besar GR → PACK, konversi 1.0000 → 800 — biaya/satuan → 137,5"
+1,update bahan baku,MM-RM-0132 Improver,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 96"
+1,update bahan baku,MM-RM-0133 Salted Butter,satuan_besar KG → PACK — biaya/satuan → 115
+1,update bahan baku,MM-RM-0134 Tepung Ketan Putih,satuan_besar KG → PACK — biaya/satuan → 34
+1,update bahan baku,MM-RM-0135 Olive Oil Classic,satuan_besar L → KG — biaya/satuan → 100
+1,update bahan baku,MM-RM-0138 Tusuk Sate Yakitori 18Cm,"satuan_besar PCS → PACK, konversi 1.0000 → 100 — biaya/satuan → 217,92"
+2,buat satuan,JAR,dipakai di Market List tapi belum ada di item.units
+1,update bahan baku,MM-RM-0139 Onion Pickles,"satuan_besar GR → JAR, konversi 1.0000 → 250 — biaya/satuan → 91,76"
+1,update bahan baku,MM-RM-0140 Sayap Ayam Utuh,"satuan_besar PCS → KG, konversi 1.0000 → 12 — biaya/satuan → 3.583,33"
+1,update bahan baku,MM-RM-0142 Enoki Mushroom,"satuan_besar GR → PACK, konversi 1.0000 → 100 — biaya/satuan → 45"
+1,update bahan baku,MM-RM-0143 Mochi Block,"satuan_besar PCS → PACK, konversi 1.0000 → 16 — biaya/satuan → 9.925"
+1,update bahan baku,MM-RM-0144 Lime Sichimi,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 351,67"
+1,update bahan baku,MM-RM-0145 Cheese,"satuan_besar KG → PACK — biaya/satuan → 91,05"
+1,update bahan baku,MM-RM-0148 Wasabi Mayo,"satuan_besar GR → PACK, konversi 1.0000 → 90 — biaya/satuan → 627,78"
+1,update bahan baku,MM-RM-0149 Jagung Manis,"satuan_besar PCS → KG, konversi 1.0000 → 3 — biaya/satuan → 4.333,33"
+1,update bahan baku,MM-RM-0151 Udang Tempura,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 132"
+1,update bahan baku,MM-RM-0153 Smocked Duck,"satuan_besar GR → PACK, konversi 1.0000 → 200 — biaya/satuan → 254,5"
+1,update bahan baku,MM-RM-0154 Ramen,"satuan_besar GR → PCS, konversi 1.0000 → 1000, harga_beli 16.000 → 34.000 — biaya/satuan → 34"
+1,update bahan baku,MM-RM-0155 Garlic Oil,"satuan_besar GR → BTL, konversi 1.0000 → 500 — biaya/satuan → 86"
+1,update bahan baku,MM-RM-0156 Smoked Duck Slice,"satuan_besar GR → PACK, konversi 1.0000 → 200 — biaya/satuan → 254,5"
+1,update bahan baku,MM-RM-0158 Telur Omega,"satuan_besar BUTIR → KG, konversi 1.0000 → 10 — biaya/satuan → 3.600"
+1,update bahan baku,MM-RM-0161 Smoked Beef,"satuan_besar GR → PACK, konversi 1.0000 → 250 — biaya/satuan → 90"
+1,update bahan baku,MM-RM-0162 Garlic Chip,"satuan_besar GR → PACK, konversi 1.0000 → 50 — biaya/satuan → 1.000"
+1,update bahan baku,MM-RM-0163 Udon,"satuan_besar GR → PACK, konversi 1.0000 → 125 — biaya/satuan → 394,4"
+1,update bahan baku,MM-RM-0165 Plum Syrup,"satuan_besar GR → BTL, konversi 1.0000 → 800 — biaya/satuan → 125"
+1,update bahan baku,MM-RM-0166 Grenadine Syrup,satuan_besar L → BTL — biaya/satuan → 170
+1,update bahan baku,MM-RM-0167 Soda,"satuan_besar GR → CAN, konversi 1.0000 → 250 — biaya/satuan → 12,33"
+1,update bahan baku,MM-RM-0168 Orange Juice,"satuan_besar KG → BTL — biaya/satuan → 18,5"
+1,update bahan baku,MM-RM-0169 Milac Cream,satuan_besar KG → L — biaya/satuan → 75
+1,update bahan baku,MM-RM-0170 Peach Syrup,"satuan_besar GR → BTL, konversi 1.0000 → 760 — biaya/satuan → 131,58"
+1,update bahan baku,MM-RM-0172 Tuna Saku,satuan_besar KG → PACK — biaya/satuan → 113
+1,update bahan baku,MM-RM-0173 Tteokbokki Frozen,"satuan_besar GR → PACK, konversi 1.0000 → 300 — biaya/satuan → 80"
+1,update bahan baku,MM-RM-0174 Beef Sausage,"satuan_besar PCS → PACK, konversi 1.0000 → 12.5 — biaya/satuan → 23.616"
+1,update bahan baku,MM-RM-0175 Chicken Sausage,"satuan_besar PCS → PACK, konversi 1.0000 → 12.5 — biaya/satuan → 15.088"
+1,update bahan baku,MM-RM-0176 Oolong Tea,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 366"
+1,update bahan baku,MM-RM-0178 Crabstick,satuan_besar KG → PACK — biaya/satuan → 150
+1,update bahan baku,MM-RM-0183 Cream Cheese,"satuan_besar GR → PACK, konversi 1.0000 → 800 — biaya/satuan → 433,75"
+1,update bahan baku,MM-RM-0184 Unagi,"satuan_besar GR → PACK, konversi 1.0000 → 200 — biaya/satuan → 750"
+1,update bahan baku,MM-RM-0185 Tobiko Orange,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 790"
+1,update bahan baku,MM-RM-0188 Tobiko Hitam,"satuan_besar GR → PACK, konversi 1.0000 → 500 — biaya/satuan → 790"
+2,buat bahan baku,MM-RM-0191 Tepung Terigu Protein Tinggi (Bakerstar Biru),"KG/GR konversi 1000, harga 13.500"
+2,buat bahan baku,MM-RM-0192 Charcoal Powder,"PACK/GR konversi 50, harga 56.000"
+2,buat bahan baku,MM-RM-0193 Oyster Black Angus,"KG/GR konversi 1000, harga 355.000"
+2,buat bahan baku,MM-RM-0194 Chuka Idako,"GR/GR konversi 1, harga 0"
+2,harga WIP,MM-WIP-0018 Furikake WIP,"522,32 → 571,67 per satuan"
+2,harga WIP,MM-WIP-0031 Mentaiko Mayo WIP,"167,35 → 167,88 per satuan"
+2,harga WIP,MM-WIP-0037 Nori Sauce WIP,"89,8 → 54,44 per satuan"
+2,harga WIP,MM-WIP-0049 Spicy Mayo WIP,"93,3 → 93,88 per satuan"
+2,buat WIP,MM-WIP-0077 Yuzu Dressing WIP,"batch 300 ML, biaya/satuan 247,07"
+2,harga WIP,MM-WIP-0068 Gyutan Marinasi WIP,"159,27 → 144,79 per satuan"
+2,buat WIP,MM-WIP-0078 Tapioka Charcoal WIP,"batch 515 GR, biaya/satuan 48,16"
+2,buat WIP,MM-WIP-0079 Nasi Onigiri Aonori WIP,"batch 100 GR, biaya/satuan 37,71"
+2,buat WIP,MM-WIP-0080 Nasi Onigiri Butter WIP,"batch 100 GR, biaya/satuan 102,56"
+2,buat WIP,MM-WIP-0081 Nori Crispy WIP,"batch 10 Porsi, biaya/satuan 1.891,78"
+2,buat WIP,MM-WIP-0082 Cakalang Spicy WIP,"batch 50 GR, biaya/satuan 313,83"
+2,buat WIP,MM-WIP-0083 Salmon Mayo WIP,"batch 130 GR, biaya/satuan 254,13"
+2,buat WIP,MM-WIP-0084 Spicy Tuna WIP,"batch 128 GR, biaya/satuan 100,72"
+2,buat WIP,MM-WIP-0085 Beef Steak WIP,"batch 1760 GR, biaya/satuan 228,13"
+2,buat WIP,MM-WIP-0086 Nasi Goreng WIP,"batch 180 GR, biaya/satuan 62,62"
+2,buat WIP,MM-WIP-0087 Kinoko Butter WIP,"batch 510 GR, biaya/satuan 55,09"
+2,buat WIP,MM-WIP-0088 WIP Beverage 1,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0089 WIP Beverage 2,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0090 WIP Beverage 3,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0091 WIP Beverage 4,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0092 WIP Beverage 5,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0093 WIP Beverage 6,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0094 WIP Beverage 7,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0095 WIP Beverage 8,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0096 WIP Beverage 9,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0097 WIP Beverage 10,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0098 WIP Beverage 11,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0099 WIP Beverage 12,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0100 WIP Beverage 13,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0101 WIP Beverage 14,"batch null , biaya/satuan 0"
+2,buat WIP,MM-WIP-0102 WIP Beverage 15,"batch null , biaya/satuan 0"
+2,buat bahan (dari resep),MM-RM-0195 Cold Drip Arabica,"tidak ada di Market List — satuan ML, biaya 0 diambil dari baris resep"
+2,buat bahan (dari resep),MM-RM-0196 White Grappe Juice,"tidak ada di Market List — satuan ML, biaya 0 diambil dari baris resep"
+2,buat bahan (dari resep),MM-RM-0197 Apple Juice,"tidak ada di Market List — satuan ML, biaya 0 diambil dari baris resep"
+2,buat bahan (dari resep),MM-RM-0198 Choco Cookies Syrup,"tidak ada di Market List — satuan ML, biaya 0 diambil dari baris resep"
+2,buat bahan (dari resep),MM-RM-0199 Ceremonial Matcha,"tidak ada di Market List — satuan GR, biaya 0 diambil dari baris resep"
+2,buat bahan (dari resep),MM-RM-0200 Oat Milk,"tidak ada di Market List — satuan ML, biaya 0 diambil dari baris resep"
+2,buat warehouse,STALL-17 Coffee Matcha Bar Beverage,stall belum ada di configuration.warehouses
+2,buat produk,MM-STALL-03-085 Teppanyaki 1,STALL-03 · TEPPANYAKI-STALL · station kitchen · harga 0
+2,buat produk,MM-STALL-03-086 Teppanyaki 2,STALL-03 · TEPPANYAKI-STALL · station kitchen · harga 0
+2,buat produk,MM-STALL-03-087 Teppanyaki 3,STALL-03 · TEPPANYAKI-STALL · station kitchen · harga 0
+2,buat produk,MM-STALL-07-088 Large Sausage Beef Hotdog,STALL-07 · BURGER-SANDWICHES-STALL · station kitchen · harga 75.000
+2,buat produk,MM-STALL-07-089 Large Sausage Chicken Hotdog,STALL-07 · BURGER-SANDWICHES-STALL · station kitchen · harga 60.000
+2,buat produk,MM-STALL-07-090 Ebi Furai Hotdog,STALL-07 · BURGER-SANDWICHES-STALL · station kitchen · harga 0
+2,buat produk,MM-STALL-12-091 Beef Okayu,STALL-12 · JAPANESE-PORIDGE-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-092 Onigiri Spicy Tuna (Butter - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-093 Onigiri Cakalang (Butter - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-094 Onigiri Salmon Mayo (Butter - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-095 Onigiri Yakiniku (Butter - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-096 Onigiri Spicy Tuna (Aonori - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-097 Onigiri Cakalang (Aonori - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-098 Onigiri Salmon Mayo (Aonori - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-099 Onigiri Yakiniku (Aonori - Nori Sheet),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 30.000
+2,buat produk,MM-STALL-14-100 Onigiri Spicy Tuna (Butter - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-101 Onigiri Cakalang (Butter - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-102 Onigiri Salmon Mayo (Butter - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 40.000
+2,buat produk,MM-STALL-14-103 Onigiri Yakiniku (Butter - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-104 Onigiri Spicy Tuna (Aonori - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-105 Onigiri Cakalang (Aonori - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-106 Onigiri Salmon Mayo (Aonori - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 35.000
+2,buat produk,MM-STALL-14-107 Onigiri Yakiniku (Aonori - Nori Crispy),STALL-14 · ONIGIRI-CORNER-STALL · station kitchen · harga 30.000
+2,buat kategori produk,COFFEE-MATCHA-BAR-STALL,belum ada di item.product_categories
+2,buat produk,MM-STALL-17-108 MATCHA COOKIES,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-109 MATCHA LATTE,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-110 CMBB 3,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-111 CMBB 4,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-112 CMBB 5,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-113 CMBB 6,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-114 CMBB 7,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-115 CMBB 8,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-116 CMBB 9,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-117 CMBB 10,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-118 CMBB 11,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-119 CMBB 12,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-120 CMBB 13,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-121 CMBB 14,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-122 CMBB 15,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-123 CMBB 16,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-124 CMBB 17,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-125 CMBB 18,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-126 CMBB 19,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+2,buat produk,MM-STALL-17-127 CMBB 20,STALL-17 · COFFEE-MATCHA-BAR-STALL · station bar · harga 0
+3,resep WIP,MM-WIP-0001 Adonan Gyoza WIP,10 → 10 komponen
+3,resep WIP,MM-WIP-0002 Adonan Okonomiyaki WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0003 Adonan Takoyaki WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0004 Adonan Tamagoyaki WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0062 Brioche Burger Bun WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0005 Cheese Sauce WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0006 Chili Oil WIP,12 → 12 komponen
+3,resep WIP,MM-WIP-0007 Chocolate Base WIP,1 → 7 komponen
+3,resep WIP,MM-WIP-0008 Chocolate Filling WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0009 Chocolate Sauce WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0010 Cucumber Pickles WIP,4 → 7 komponen
+3,resep WIP,MM-WIP-0011 Dashi Udon WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0012 Diplomat Filling WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0013 Donat / Bomboloni WIP,12 → 12 komponen
+3,resep WIP,MM-WIP-0014 Dry Flour Dry Mix WIP,10 → 10 komponen
+3,resep WIP,MM-WIP-0015 Ebi Furai/Katsu WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0016 Ebi Shinjo WIP,12 → 12 komponen
+3,resep WIP,MM-WIP-0017 Egg Tartar WIP,2 → 7 komponen
+3,resep WIP,MM-WIP-0018 Furikake WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0019 Gyoza Tuile WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0020 Hojicha Base WIP,1 → 7 komponen
+3,resep WIP,MM-WIP-0021 Hojicha Filling WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0022 Hojicha Sauce WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0023 Kimchi Based WIP,0 → 14 komponen
+3,resep WIP,MM-WIP-0024 Kol Kimchi WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0025 Marinasi Beef (Noodles) WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0026 Marinated Cumi WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0027 Matcha Base WIP,1 → 7 komponen
+3,resep WIP,MM-WIP-0028 Matcha Filling WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0029 Matcha Sauce WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0030 Mazesoba Sauce WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0031 Mentaiko Mayo WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0032 Minced Beef WIP,15 → 15 komponen
+3,resep WIP,MM-WIP-0033 Miso Soup WIP,4 → 3 komponen
+3,resep WIP,MM-WIP-0034 Mochi Plain WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0035 Namban Sauce WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0036 Nasi Sushi WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0037 Nori Sauce WIP,2 → 5 komponen
+3,resep WIP,MM-WIP-0038 Okayu WIP,0 → 7 komponen
+3,resep WIP,MM-WIP-0039 Okonomiyaki Sauce WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0040 Pastry Cream WIP,5 → 5 komponen
+3,resep WIP,MM-WIP-0041 Salt Bread WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0042 Sambal Hijau WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0043 Sawi Kimchi WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0044 SFC Marinated WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0045 Shoyu Gyoza WIP,4 → 4 komponen
+3,gabung baris kembar,Souffle Pancake WIP → Telur Ayam,"muncul >1× di workbook, qty digabung jadi 2"
+3,resep WIP,MM-WIP-0046 Souffle Pancake WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0047 Soy Chicken Sauce WIP,0 → 4 komponen
+3,resep WIP,MM-WIP-0048 Spicy Goma Sauce WIP,10 → 10 komponen
+3,resep WIP,MM-WIP-0049 Spicy Mayo WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0050 Strawberry Filling WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0051 Strawberry Jam WIP,5 → 5 komponen
+3,gabung baris kembar,Strawberry Sauce WIP → Water,"muncul >1× di workbook, qty digabung jadi 45"
+3,resep WIP,MM-WIP-0052 Strawberry Sauce WIP,5 → 5 komponen
+3,resep WIP,MM-WIP-0053 Sulu Spice WIP,6 → 6 komponen
+3,resep WIP,MM-WIP-0054 Sushi Vinegar WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0055 Tare Sauce WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0056 Tendon Sauce WIP,4 → 4 komponen
+3,resep WIP,MM-WIP-0057 Tteokbokki Sauce WIP,10 → 10 komponen
+3,resep WIP,MM-WIP-0058 Vanilla Sauce WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0059 Yakiniku Sauce WIP,0 → 12 komponen
+3,resep WIP,MM-WIP-0060 Yakitori Butter WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0077 Yuzu Dressing WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0063 Brioche Hot Dog WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0064 Brioche Sandwich Toast WIP,7 → 7 komponen
+3,resep WIP,MM-WIP-0074 Orange Simple Syrup WIP,3 → 3 komponen
+3,resep WIP,MM-WIP-0075 Oolong Tea WIP,2 → 2 komponen
+3,resep WIP,MM-WIP-0065 Nasi Putih WIP,2 → 2 komponen
+3,resep WIP,MM-WIP-0076 Lemon Squeeze Juice WIP,1 → 1 komponen
+3,resep WIP,MM-WIP-0069 Wasabi WIP,2 → 2 komponen
+3,resep WIP,MM-WIP-0070 Wasabi Mayo WIP,2 → 2 komponen
+3,resep WIP,MM-WIP-0071 Adonan Tempura WIP,3 → 3 komponen
+3,resep WIP,MM-WIP-0066 Tsukune WIP,9 → 9 komponen
+3,resep WIP,MM-WIP-0067 Beef Yakiniku WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0068 Gyutan Marinasi WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0072 Chicken Marinated Fillet WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0073 Chicken Marinated Wings WIP,1 → 2 komponen
+3,resep WIP,MM-WIP-0078 Tapioka Charcoal WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0079 Nasi Onigiri Aonori WIP,0 → 4 komponen
+3,resep WIP,MM-WIP-0080 Nasi Onigiri Butter WIP,0 → 5 komponen
+3,resep WIP,MM-WIP-0081 Nori Crispy WIP,0 → 6 komponen
+3,resep WIP,MM-WIP-0082 Cakalang Spicy WIP,0 → 3 komponen
+3,resep WIP,MM-WIP-0083 Salmon Mayo WIP,0 → 2 komponen
+3,resep WIP,MM-WIP-0084 Spicy Tuna WIP,0 → 5 komponen
+3,resep WIP,MM-WIP-0085 Beef Steak WIP,0 → 5 komponen
+3,resep WIP,MM-WIP-0086 Nasi Goreng WIP,0 → 9 komponen
+3,resep WIP,MM-WIP-0087 Kinoko Butter WIP,0 → 6 komponen
+3,resep WIP,MM-WIP-0074 Orange Simple Syrup WIP,3 → 3 komponen
+3,resep WIP,MM-WIP-0075 Oolong Tea WIP,2 → 2 komponen
+3,resep WIP,MM-WIP-0076 Lemon Squeeze Juice WIP,1 → 1 komponen
+3,BOM produk,MM-STALL-03-008 Yasai Itame,15 → 15 baris
+3,BOM produk,MM-STALL-03-009 Ika Sugatayaki,4 → 4 baris
+3,BOM produk,MM-STALL-03-010 Ika Okonomiyaki,10 → 10 baris
+3,BOM produk,MM-STALL-03-011 Beef Okonomiyaki,10 → 10 baris
+3,BOM produk,MM-STALL-03-007 Takoyaki,0 → 10 baris
+3,BOM produk,MM-STALL-13-075 Unagimeshi,0 → 3 baris
+3,BOM produk,MM-STALL-13-076 Gyudon,0 → 3 baris
+3,BOM produk,MM-STALL-04-012 Okonomiyaki Gyoza,0 → 7 baris
+3,BOM produk,MM-STALL-04-013 Slider Gyoza Mentai,6 → 6 baris
+3,BOM produk,MM-STALL-04-014 Spicy Tteokbokki Gyoza,7 → 7 baris
+3,BOM produk,MM-STALL-04-015 Yaki Gyoza,3 → 3 baris
+3,BOM produk,MM-STALL-04-016 Age Gyoza,2 → 2 baris
+3,BOM produk,MM-STALL-05-018 Tuna Wasabi Mayo Taco,6 → 6 baris
+3,BOM produk,MM-STALL-05-019 Unagi Nigiri,3 → 3 baris
+3,BOM produk,MM-STALL-05-020 Chuka Idako Gunkan,0 → 3 baris
+3,BOM produk,MM-STALL-05-021 Chuka Idako Tsumami,0 → 4 baris
+3,BOM produk,MM-STALL-05-022 Unagi Sushi Roll,7 → 7 baris
+3,gabung baris kembar,Crispy Salmon Roll → Crunchy Tanuki,"muncul >1× di workbook, qty digabung jadi 21"
+3,BOM produk,MM-STALL-05-023 Crispy Salmon Roll,10 → 9 baris
+3,BOM produk,MM-STALL-05-024 Salmon Cured Yuzu,0 → 4 baris
+3,BOM produk,MM-STALL-05-025 Tuna Cured Yuzu,0 → 4 baris
+3,BOM produk,MM-STALL-05-026 Maguro Maki,3 → 3 baris
+3,BOM produk,MM-STALL-05-027 Salmon Maki,3 → 3 baris
+3,gabung baris kembar,Salmon Philadelphia → Fresh Salmon,"muncul >1× di workbook, qty digabung jadi 48"
+3,BOM produk,MM-STALL-05-028 Salmon Philadelphia,7 → 6 baris
+3,BOM produk,MM-STALL-05-029 Crispy Temaki Sushi,4 → 4 baris
+3,BOM produk,MM-STALL-05-030 California Roll,7 → 7 baris
+3,BOM produk,MM-STALL-06-031 Doughnut Matcha,0 → 2 baris
+3,BOM produk,MM-STALL-06-032 Doughnut Hojicha,2 → 2 baris
+3,BOM produk,MM-STALL-06-033 Souffle Pancake Mochi Chocolate,3 → 3 baris
+3,BOM produk,MM-STALL-06-034 Souffle Pancake Mochi Matcha,3 → 3 baris
+3,BOM produk,MM-STALL-06-035 Souffle Pancake Mochi Hojicha,3 → 3 baris
+3,BOM produk,MM-STALL-06-036 Souffle Pancake Mochi Vanilla,3 → 3 baris
+3,BOM produk,MM-STALL-06-037 Bomboloni Mochi Chocolate,3 → 3 baris
+3,BOM produk,MM-STALL-06-038 Bomboloni Mochi Matcha,3 → 3 baris
+3,BOM produk,MM-STALL-06-039 Bomboloni Mochi Hojicha,3 → 3 baris
+3,BOM produk,MM-STALL-06-040 Bomboloni Mochi Strawberry,3 → 3 baris
+3,BOM produk,MM-STALL-06-041 Shio Pan OG,1 → 2 baris
+3,BOM produk,MM-STALL-06-042 Shio Pan Cheese Furikake,3 → 3 baris
+3,BOM produk,MM-STALL-06-043 Egg Tartar Shio Pan,2 → 2 baris
+3,BOM produk,MM-STALL-07-044 Gyuniku Burger,0 → 4 baris
+3,BOM produk,MM-STALL-07-045 Chicken Namban Burger,8 → 8 baris
+3,BOM produk,MM-STALL-07-046 Tempura Kimchi Hotdog,5 → 6 baris
+3,BOM produk,MM-STALL-07-088 Large Sausage Beef Hotdog,0 → 5 baris
+3,BOM produk,MM-STALL-07-089 Large Sausage Chicken Hotdog,0 → 5 baris
+3,BOM produk,MM-STALL-07-048 Yakiniku Hotdog,4 → 4 baris
+3,BOM produk,MM-STALL-07-049 Ebi Shinjo Toasted,6 → 6 baris
+3,BOM produk,MM-STALL-16-084 Beef Katsu Sando,0 → 5 baris
+3,BOM produk,MM-STALL-07-090 Ebi Furai Hotdog,0 → 6 baris
+3,BOM produk,MM-STALL-08-050 Chicken Namban,0 → 6 baris
+3,BOM produk,MM-STALL-08-051 Signature Torikaraage,6 → 6 baris
+3,BOM produk,MM-STALL-08-052 Cheese Minced Katsu,5 → 5 baris
+3,BOM produk,MM-STALL-08-053 Ebi Furai Signature,4 → 4 baris
+3,BOM produk,MM-STALL-08-054 Tomorokoshi Ribs,4 → 5 baris
+3,BOM produk,MM-STALL-08-055 SFC Signature,7 → 7 baris
+3,BOM produk,MM-STALL-08-056 Crispy Wings,4 → 4 baris
+3,BOM produk,MM-STALL-09-058 Gyutan Donburi,0 → 8 baris
+3,BOM produk,MM-STALL-09-059 Beef Yakiniku Bowl,8 → 8 baris
+3,BOM produk,MM-STALL-09-060 Smoked Duck Donburi,8 → 8 baris
+3,BOM produk,MM-STALL-10-062 Spicy Goma Ramen,11 → 11 baris
+3,BOM produk,MM-STALL-10-063 Signature Shoyu Ramen,10 → 11 baris
+3,BOM produk,MM-STALL-10-064 Beef Abura Soba,14 → 14 baris
+3,BOM produk,MM-STALL-10-065 Smoked Duck Abura Soba,14 → 14 baris
+3,BOM produk,MM-STALL-10-066 Tori Abura Soba,14 → 14 baris
+3,BOM produk,MM-STALL-11-067 Udon Carbonara,0 → 11 baris
+3,BOM produk,MM-STALL-11-068 Gyutan Udon,0 → 4 baris
+3,BOM produk,MM-STALL-11-069 Beef Udon,0 → 4 baris
+3,BOM produk,MM-STALL-12-091 Beef Okayu,0 → 6 baris
+3,BOM produk,MM-STALL-12-071 Smoked Duck Okayu,0 → 6 baris
+3,BOM produk,MM-STALL-12-072 Tori Okayu,0 → 6 baris
+3,BOM produk,MM-STALL-13-073 Beef Hikiniku,0 → 8 baris
+3,BOM produk,MM-STALL-13-074 Salmon Don,0 → 9 baris
+3,BOM produk,MM-STALL-02-001 Negima,0 → 8 baris
+3,BOM produk,MM-STALL-02-002 Tsukune,6 → 6 baris
+3,BOM produk,MM-STALL-02-003 Torikawa,6 → 6 baris
+3,BOM produk,MM-STALL-02-004 Tebasaki,6 → 6 baris
+3,BOM produk,MM-STALL-02-005 Beef Enoki Roll,7 → 7 baris
+3,BOM produk,MM-STALL-02-006 Beef Mochi,6 → 6 baris
+3,BOM produk,MM-STALL-14-092 Onigiri Spicy Tuna (Butter - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-093 Onigiri Cakalang (Butter - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-094 Onigiri Salmon Mayo (Butter - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-095 Onigiri Yakiniku (Butter - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-096 Onigiri Spicy Tuna (Aonori - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-097 Onigiri Cakalang (Aonori - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-098 Onigiri Salmon Mayo (Aonori - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-099 Onigiri Yakiniku (Aonori - Nori Sheet),0 → 3 baris
+3,BOM produk,MM-STALL-14-100 Onigiri Spicy Tuna (Butter - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-101 Onigiri Cakalang (Butter - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-102 Onigiri Salmon Mayo (Butter - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-103 Onigiri Yakiniku (Butter - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-104 Onigiri Spicy Tuna (Aonori - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-105 Onigiri Cakalang (Aonori - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-106 Onigiri Salmon Mayo (Aonori - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-14-107 Onigiri Yakiniku (Aonori - Nori Crispy),0 → 3 baris
+3,BOM produk,MM-STALL-15-081 Sour Plum,0 → 4 baris
+3,BOM produk,MM-STALL-15-082 Yuzu Milk,5 → 5 baris
+3,BOM produk,MM-STALL-15-083 Oolong Peach,4 → 4 baris
+3,BOM produk,MM-STALL-17-108 MATCHA COOKIES,0 → 7 baris
+4,harga produk,MM-STALL-02-002 Tsukune,"harga_modal 10.772,13 → 5.315,63"
+4,harga produk,MM-STALL-02-003 Torikawa,"harga_modal 5.733,73 → 3.959,67"
+4,harga produk,MM-STALL-03-007 Takoyaki,"harga_modal 16.487,15 → 10.599,79"
+4,harga produk,MM-STALL-03-008 Yasai Itame,"harga_modal 0 → 16.812,29"
+4,harga produk,MM-STALL-03-009 Ika Sugatayaki,"harga_modal 21.275 → 21.552,6"
+4,harga produk,MM-STALL-03-010 Ika Okonomiyaki,"harga_modal 0 → 25.490,39"
+4,harga produk,MM-STALL-04-012 Okonomiyaki Gyoza,"harga_modal 12.606,18 → 11.258,89"
+4,harga produk,MM-STALL-04-013 Slider Gyoza Mentai,"harga_modal 11.933,94 → 11.102,64"
+4,harga produk,MM-STALL-05-018 Tuna Wasabi Mayo Taco,"harga_modal 11.582,42 → 29.605, harga_jual 0 → 80.000"
+4,harga produk,MM-STALL-05-020 Chuka Idako Gunkan,"harga_modal 0 → 2.565,18"
+4,harga produk,MM-STALL-05-021 Chuka Idako Tsumami,"harga_modal 0 → 2.732,8"
+4,harga produk,MM-STALL-05-024 Salmon Cured Yuzu,"harga_modal 0 → 44.385,56, harga_jual 0 → 80.000"
+4,harga produk,MM-STALL-05-025 Tuna Cured Yuzu,"harga_modal 0 → 33.530,56, harga_jual 0 → 70.000"
+4,harga produk,MM-STALL-05-030 California Roll,"harga_modal 11.148.270 → 29.540,21"
+4,harga produk,MM-STALL-02-005 Beef Enoki Roll,"harga_modal 109.731 → 6.869,67"
+4,harga produk,MM-STALL-03-011 Beef Okonomiyaki,"harga_modal 151.290 → 19.777,07"
+4,harga produk,MM-STALL-05-023 Crispy Salmon Roll,harga_modal 99.354 → 18.519
+4,harga produk,MM-STALL-05-019 Unagi Nigiri,"harga_modal 2.714.477 → 14.507,03"
+4,harga produk,MM-STALL-05-022 Unagi Sushi Roll,"harga_modal 6.718.790,27 → 32.987,07"
+4,harga produk,MM-STALL-05-026 Maguro Maki,"harga_modal 87.200,47 → 6.350,47"
+4,harga produk,MM-STALL-05-027 Salmon Maki,"harga_modal 90.540,47 → 9.690,47"
+4,harga produk,MM-STALL-04-015 Yaki Gyoza,"harga_modal 658,33 → 6.952,48"
+4,harga produk,MM-STALL-04-014 Spicy Tteokbokki Gyoza,"harga_modal 478,89 → 18.494,63"
+4,harga produk,MM-STALL-04-016 Age Gyoza,"harga_modal 0 → 6.294,14"
+4,harga produk,MM-STALL-02-006 Beef Mochi,"harga_modal 4.677,7 → 8.773"
+4,harga produk,MM-STALL-02-004 Tebasaki,"harga_modal 627,7 → 6.043"
+4,harga produk,MM-STALL-06-031 Doughnut Matcha,"harga_modal 3.044,91 → 3.038,49"
+4,harga produk,MM-STALL-07-044 Gyuniku Burger,"harga_modal 344.894,27 → 16.447,8, harga_jual 0 → 50.000"
+4,harga produk,MM-STALL-07-046 Tempura Kimchi Hotdog,"harga_modal 6.774,52 → 15.341,86, harga_jual 0 → 55.000"
+4,harga produk,MM-STALL-07-047 Large Sausage Hotdog,"harga_modal 19.937,55 → 18.017,55"
+4,harga produk,MM-STALL-07-048 Yakiniku Hotdog,"harga_modal 3.490,66 → 7.660,37"
+4,harga produk,MM-STALL-07-049 Ebi Shinjo Toasted,"harga_modal 20.933,89 → 24.363,16, harga_jual 55.000 → 60.000"
+4,harga produk,MM-STALL-08-053 Ebi Furai Signature,"harga_modal 30.894,87 → 19.716,36"
+4,harga produk,MM-STALL-08-054 Tomorokoshi Ribs,"harga_modal 3.464,93 → 4.438,83"
+4,harga produk,MM-STALL-06-037 Bomboloni Mochi Chocolate,"harga_modal 5.835 → 5.835,3"
+4,harga produk,MM-STALL-06-039 Bomboloni Mochi Hojicha,"harga_modal 4.931 → 4.930,54"
+4,harga produk,MM-STALL-06-038 Bomboloni Mochi Matcha,"harga_modal 4.922 → 4.921,5"
+4,harga produk,MM-STALL-06-040 Bomboloni Mochi Strawberry,"harga_modal 5.239 → 5.239,2"
+4,harga produk,MM-STALL-07-045 Chicken Namban Burger,"harga_modal 815.556 → 17.204,99, harga_jual 0 → 60.000"
+4,harga produk,MM-STALL-05-029 Crispy Temaki Sushi,"harga_modal 2.479.176 → 5.825,77, harga_jual 0 → 30.000"
+4,harga produk,MM-STALL-08-055 SFC Signature,"harga_modal 0 → 21.136,56"
+4,harga produk,MM-STALL-05-028 Salmon Philadelphia,"harga_modal 2.876.087,71 → 22.707,71"
+4,harga produk,MM-STALL-06-042 Shio Pan Cheese Furikake,"harga_modal 6.997,27 → 7.095,97"
+4,harga produk,MM-STALL-06-041 Shio Pan OG,"harga_modal 1.059 → 2.439,12"
+4,harga produk,MM-STALL-06-033 Souffle Pancake Mochi Chocolate,"harga_modal 4.256 → 4.256,47, harga_jual 0 → 25.000"
+4,harga produk,MM-STALL-06-035 Souffle Pancake Mochi Hojicha,"harga_modal 5.056 → 5.055,84, harga_jual 0 → 30.000"
+4,harga produk,MM-STALL-06-034 Souffle Pancake Mochi Matcha,"harga_modal 4.839 → 4.838,83, harga_jual 0 → 30.000"
+4,harga produk,MM-STALL-06-036 Souffle Pancake Mochi Vanilla,"harga_modal 3.638 → 3.638,05, harga_jual 0 → 25.000"
+4,harga produk,MM-STALL-08-051 Signature Torikaraage,"harga_modal 5.609.419,2 → 14.333,44"
+4,harga produk,MM-STALL-08-052 Cheese Minced Katsu,"harga_modal 4.514,51 → 18.522,63"
+4,harga produk,MM-STALL-02-001 Negima,"harga_modal 0 → 6.549,67"
+4,harga produk,MM-STALL-06-032 Doughnut Hojicha,"harga_modal 3.045 → 3.045,11"
+4,harga produk,MM-STALL-08-050 Chicken Namban,"harga_modal 0 → 11.278,96"
+4,harga produk,PRD-20260823-001 Aka Miso Ramen,"harga_modal 0 → 0, harga_jual 65.000 → 75.000"
+4,harga produk,MM-STALL-09-059 Beef Yakiniku Bowl,"harga_modal 43.852 → 20.786,17"
+4,harga produk,MM-STALL-08-056 Crispy Wings,"harga_modal 0 → 13.328,72"
+4,harga produk,MM-STALL-10-064 Beef Abura Soba,"harga_modal 2.649.285,26 → 30.314,04"
+4,harga produk,MM-STALL-10-063 Signature Shoyu Ramen,"harga_modal 1.365.905,45 → 20.879,63"
+4,harga produk,MM-STALL-09-058 Gyutan Donburi,"harga_modal 14.647,84 → 21.731,62"
+4,harga produk,MM-STALL-09-060 Smoked Duck Donburi,"harga_modal 38.061,84 → 28.993,05"
+4,harga produk,MM-STALL-10-061 Aka Miso Ramen,"harga_modal 54.600,39 → 54.600,39, harga_jual 0 → 75.000"
+4,harga produk,MM-STALL-10-062 Spicy Goma Ramen,"harga_modal 20.207,98 → 31.404,34, harga_jual 0 → 90.000"
+4,harga produk,MM-STALL-11-067 Udon Carbonara,"harga_modal 81.640,8 → 89.273,97, harga_jual 0 → 95.000"
+4,harga produk,MM-STALL-11-068 Gyutan Udon,"harga_modal 0 → 56.016,45, harga_jual 0 → 80.000"
+4,harga produk,MM-STALL-11-069 Beef Udon,"harga_modal 0 → 55.661,91, harga_jual 0 → 80.000"
+4,harga produk,MM-STALL-12-071 Smoked Duck Okayu,"harga_modal 0 → 14.581,44, harga_jual 0 → 40.000"
+4,harga produk,MM-STALL-12-072 Tori Okayu,"harga_modal 0 → 9.159,79, harga_jual 0 → 40.000"
+4,harga produk,MM-STALL-13-073 Beef Hikiniku,"harga_modal 0 → 20.189,44, harga_jual 0 → 80.000"
+4,harga produk,MM-STALL-13-074 Salmon Don,"harga_modal 0 → 34.912,01, harga_jual 0 → 90.000"
+4,harga produk,MM-STALL-13-075 Unagimeshi,"harga_modal 0 → 62.556,66, harga_jual 0 → 160.000"
+4,harga produk,MM-STALL-13-076 Gyudon,"harga_modal 0 → 21.832,7, harga_jual 0 → 85.000"
+4,harga produk,MM-STALL-15-083 Oolong Peach,"harga_modal 24.753,96 → 2.566,85"
+4,harga produk,MM-STALL-16-084 Beef Katsu Sando,"harga_modal 0 → 23.294,26, harga_jual 0 → 60.000"
+4,harga produk,MM-STALL-15-081 Sour Plum,"harga_modal 0 → 6.519,76"
+4,harga produk,MM-STALL-15-082 Yuzu Milk,"harga_modal 1.825.000 → 10.001,05"
+4,harga produk,MM-STALL-10-066 Tori Abura Soba,"harga_modal 1.975.480,61 → 28.809,39"
+4,harga produk,MM-STALL-10-065 Smoked Duck Abura Soba,"harga_modal 3.501.285,26 → 35.249,04"
+4,harga produk,MM-STALL-07-088 Large Sausage Beef Hotdog,"harga_modal 0 → 29.825,55"
+4,harga produk,MM-STALL-07-089 Large Sausage Chicken Hotdog,"harga_modal 0 → 21.297,55"
+4,harga produk,MM-STALL-07-090 Ebi Furai Hotdog,"harga_modal 0 → 23.709,48"
+4,harga produk,MM-STALL-12-091 Beef Okayu,"harga_modal 0 → 10.304,44"
+4,harga produk,MM-STALL-14-092 Onigiri Spicy Tuna (Butter - Nori Sheet),"harga_modal 0 → 11.365,59"
+4,harga produk,MM-STALL-14-093 Onigiri Cakalang (Butter - Nori Sheet),"harga_modal 0 → 14.562,24"
+4,harga produk,MM-STALL-14-094 Onigiri Salmon Mayo (Butter - Nori Sheet),"harga_modal 0 → 13.666,72"
+4,harga produk,MM-STALL-14-095 Onigiri Yakiniku (Butter - Nori Sheet),"harga_modal 0 → 11.849,38"
+4,harga produk,MM-STALL-14-096 Onigiri Spicy Tuna (Aonori - Nori Sheet),"harga_modal 0 → 6.177,84"
+4,harga produk,MM-STALL-14-097 Onigiri Cakalang (Aonori - Nori Sheet),"harga_modal 0 → 9.374,5"
+4,harga produk,MM-STALL-14-098 Onigiri Salmon Mayo (Aonori - Nori Sheet),"harga_modal 0 → 8.478,97"
+4,harga produk,MM-STALL-14-099 Onigiri Yakiniku (Aonori - Nori Sheet),"harga_modal 0 → 6.661,63"
+4,harga produk,MM-STALL-14-100 Onigiri Spicy Tuna (Butter - Nori Crispy),"harga_modal 0 → 11.607,37"
+4,harga produk,MM-STALL-14-101 Onigiri Cakalang (Butter - Nori Crispy),"harga_modal 0 → 14.804,02"
+4,harga produk,MM-STALL-14-102 Onigiri Salmon Mayo (Butter - Nori Crispy),"harga_modal 0 → 13.908,5"
+4,harga produk,MM-STALL-14-103 Onigiri Yakiniku (Butter - Nori Crispy),"harga_modal 0 → 12.091,16"
+4,harga produk,MM-STALL-14-104 Onigiri Spicy Tuna (Aonori - Nori Crispy),"harga_modal 0 → 6.419,62"
+4,harga produk,MM-STALL-14-105 Onigiri Cakalang (Aonori - Nori Crispy),"harga_modal 0 → 9.616,28"
+4,harga produk,MM-STALL-14-106 Onigiri Salmon Mayo (Aonori - Nori Crispy),"harga_modal 0 → 8.720,76"
+4,harga produk,MM-STALL-14-107 Onigiri Yakiniku (Aonori - Nori Crispy),"harga_modal 0 → 6.903,42"
+4,harga produk,MM-STALL-17-108 MATCHA COOKIES,harga_modal 0 → 555
+4,sync POS,PUR-MM-STALL-02-002 Tsukune,"cost_price → 5.315,63, base_price → 25.000"
+4,sync POS,PUR-MM-STALL-02-003 Torikawa,"cost_price → 3.959,67, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-03-007 Takoyaki,"cost_price → 10.599,79, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-03-008 Yasai Itame,"cost_price → 16.812,29, base_price → 65.000"
+4,sync POS,PUR-MM-STALL-03-009 Ika Sugatayaki,"cost_price → 21.552,6, base_price → 55.000"
+4,sync POS,PUR-MM-STALL-03-010 Ika Okonomiyaki,"cost_price → 25.490,39, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-04-012 Okonomiyaki Gyoza,"cost_price → 11.258,89, base_price → 35.000"
+4,sync POS,PUR-MM-STALL-04-013 Slider Gyoza Mentai,"cost_price → 11.102,64, base_price → 35.000"
+4,sync POS,PUR-MM-STALL-05-018 Tuna Wasabi Mayo Taco,"cost_price → 29.605, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-05-020 Chuka Idako Gunkan,"cost_price → 2.565,18, base_price → 0"
+4,sync POS,PUR-MM-STALL-05-021 Chuka Idako Tsumami,"cost_price → 2.732,8, base_price → 0"
+4,sync POS,PUR-MM-STALL-05-024 Salmon Cured Yuzu,"cost_price → 44.385,56, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-05-025 Tuna Cured Yuzu,"cost_price → 33.530,56, base_price → 70.000"
+4,sync POS,PUR-MM-STALL-05-030 California Roll,"cost_price → 29.540,21, base_price → 75.000"
+4,sync POS,PUR-MM-STALL-02-005 Beef Enoki Roll,"cost_price → 6.869,67, base_price → 25.000"
+4,sync POS,PUR-MM-STALL-03-011 Beef Okonomiyaki,"cost_price → 19.777,07, base_price → 65.000"
+4,sync POS,PUR-MM-STALL-05-023 Crispy Salmon Roll,"cost_price → 18.519, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-05-019 Unagi Nigiri,"cost_price → 14.507,03, base_price → 65.000"
+4,sync POS,PUR-MM-STALL-05-022 Unagi Sushi Roll,"cost_price → 32.987,07, base_price → 95.000"
+4,sync POS,PUR-MM-STALL-05-026 Maguro Maki,"cost_price → 6.350,47, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-05-027 Salmon Maki,"cost_price → 9.690,47, base_price → 35.000"
+4,sync POS,PUR-MM-STALL-04-015 Yaki Gyoza,"cost_price → 6.952,48, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-04-014 Spicy Tteokbokki Gyoza,"cost_price → 18.494,63, base_price → 40.000"
+4,sync POS,PUR-MM-STALL-04-016 Age Gyoza,"cost_price → 6.294,14, base_price → 30.000"
+4,sync POS,PUR-PRD-20260822-002 Steam Rice,"cost_price → 0, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-02-006 Beef Mochi,"cost_price → 8.773, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-02-004 Tebasaki,"cost_price → 6.043, base_price → 20.000"
+4,buat kategori POS,BAKERY-STALL,belum ada di pos.pos_categories
+4,sync POS,PUR-PRD-20260824-001 Doughnat Vanilla,"cost_price → 0, base_price → 15.000"
+4,sync POS,PUR-PRD-20260825-002 Onigiri Butter Cakalang,"cost_price → 0, base_price → 0"
+4,sync POS,PUR-MM-STALL-06-031 Doughnut Matcha,"cost_price → 3.038,49, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-07-044 Gyuniku Burger,"cost_price → 16.447,8, base_price → 50.000"
+4,sync POS,PUR-MM-STALL-07-046 Tempura Kimchi Hotdog,"cost_price → 15.341,86, base_price → 55.000"
+4,sync POS,PUR-MM-STALL-07-047 Large Sausage Hotdog,"cost_price → 18.017,55, base_price → 55.000"
+4,sync POS,PUR-MM-STALL-07-048 Yakiniku Hotdog,"cost_price → 7.660,37, base_price → 50.000"
+4,sync POS,PUR-MM-STALL-07-049 Ebi Shinjo Toasted,"cost_price → 24.363,16, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-08-053 Ebi Furai Signature,"cost_price → 19.716,36, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-08-054 Tomorokoshi Ribs,"cost_price → 4.438,83, base_price → 25.000"
+4,sync POS,PUR-PRD-20260816-002 Cofe Peach,"cost_price → 0, base_price → 36.000"
+4,sync POS,PUR-MM-STALL-06-037 Bomboloni Mochi Chocolate,"cost_price → 5.835,3, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-06-039 Bomboloni Mochi Hojicha,"cost_price → 4.930,54, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-06-038 Bomboloni Mochi Matcha,"cost_price → 4.921,5, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-06-040 Bomboloni Mochi Strawberry,"cost_price → 5.239,2, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-07-045 Chicken Namban Burger,"cost_price → 17.204,99, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-05-029 Crispy Temaki Sushi,"cost_price → 5.825,77, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-08-055 SFC Signature,"cost_price → 21.136,56, base_price → 40.000"
+4,sync POS,PUR-MM-STALL-05-028 Salmon Philadelphia,"cost_price → 22.707,71, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-06-043 Egg Tartar Shio Pan,"cost_price → 4.147,43, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-06-042 Shio Pan Cheese Furikake,"cost_price → 7.095,97, base_price → 20.000"
+4,sync POS,PUR-PRD-20260824-002 Doughnat Strawberry,"cost_price → 0, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-06-041 Shio Pan OG,"cost_price → 2.439,12, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-06-033 Souffle Pancake Mochi Chocolate,"cost_price → 4.256,47, base_price → 25.000"
+4,sync POS,PUR-MM-STALL-06-035 Souffle Pancake Mochi Hojicha,"cost_price → 5.055,84, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-06-034 Souffle Pancake Mochi Matcha,"cost_price → 4.838,83, base_price → 30.000"
+4,sync POS,PUR-MM-STALL-06-036 Souffle Pancake Mochi Vanilla,"cost_price → 3.638,05, base_price → 25.000"
+4,sync POS,PUR-PRD-20260829-001 Ebi Shinjo,"cost_price → 0, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-08-051 Signature Torikaraage,"cost_price → 14.333,44, base_price → 40.000"
+4,sync POS,PUR-PRD-20260816-003 Mineral Water,"cost_price → 0, base_price → 5.000"
+4,sync POS,PUR-MM-STALL-08-052 Cheese Minced Katsu,"cost_price → 18.522,63, base_price → 60.000"
+4,sync POS,PUR-PRD-20260822-002 Matchaaa Pistachio ,"cost_price → 0, base_price → 36.000"
+4,sync POS,PUR-MM-STALL-02-001 Negima,"cost_price → 6.549,67, base_price → 25.000"
+4,sync POS,PUR-PRD-20260825-001 Onigiri Butter Salmon,"cost_price → 0, base_price → 0"
+4,sync POS,PUR-PRD-20260829-002 Large Sausage Hotdog,"cost_price → 0, base_price → 75.000"
+4,sync POS,PUR-PRD-20260822-001 Tamagoyaki Mentai ,"cost_price → 0, base_price → 50.000"
+4,buat kategori POS,BAKERY-BAR,belum ada di pos.pos_categories
+4,sync POS,PUR-PRD-20260816-001 Bomboloni Vanilla,"cost_price → 0, base_price → 20.000"
+4,sync POS,PUR-MM-STALL-06-032 Doughnut Hojicha,"cost_price → 3.045,11, base_price → 15.000"
+4,sync POS,PUR-PRD-20260822-001 Onigiri Katsuobushi Spicy,"cost_price → 0, base_price → 35.000"
+4,sync POS,PUR-MM-STALL-08-050 Chicken Namban,"cost_price → 11.278,96, base_price → 50.000"
+4,sync POS,PUR-PRD-20260824-003 Doughnat Chocolate,"cost_price → 0, base_price → 15.000"
+4,buat kategori POS,TEPPANYAKI,belum ada di pos.pos_categories
+4,sync POS,PUR-PRD-20260822-001 Unagi Meshi,"cost_price → 0, base_price → 65.000"
+4,sync POS,PUR-PRD-20260823-001 Aka Miso Ramen,"cost_price → 0, base_price → 75.000"
+4,sync POS,PUR-PRD-20260824-001 Steam Rice,"cost_price → 0, base_price → 15.000"
+4,sync POS,PUR-MM-STALL-09-059 Beef Yakiniku Bowl,"cost_price → 20.786,17, base_price → 70.000"
+4,sync POS,PUR-MM-STALL-08-056 Crispy Wings,"cost_price → 13.328,72, base_price → 40.000"
+4,sync POS,PUR-PRD-20260824-001 Hikiniku,"cost_price → 0, base_price → 0"
+4,sync POS,PUR-PRD-20260823-002 Spicy Goma,"cost_price → 0, base_price → 90.000"
+4,sync POS,PUR-MM-STALL-10-064 Beef Abura Soba,"cost_price → 30.314,04, base_price → 90.000"
+4,sync POS,PUR-MM-STALL-10-063 Signature Shoyu Ramen,"cost_price → 20.879,63, base_price → 70.000"
+4,sync POS,PUR-MM-STALL-09-058 Gyutan Donburi,"cost_price → 21.731,62, base_price → 75.000"
+4,sync POS,PUR-MM-STALL-09-060 Smoked Duck Donburi,"cost_price → 28.993,05, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-10-061 Aka Miso Ramen,"cost_price → 54.600,39, base_price → 75.000"
+4,sync POS,PUR-MM-STALL-10-062 Spicy Goma Ramen,"cost_price → 31.404,34, base_price → 90.000"
+4,buat kategori POS,UDON-NOODLES-STALL,belum ada di pos.pos_categories
+4,sync POS,PUR-MM-STALL-11-067 Udon Carbonara,"cost_price → 89.273,97, base_price → 95.000"
+4,sync POS,PUR-MM-STALL-11-068 Gyutan Udon,"cost_price → 56.016,45, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-11-069 Beef Udon,"cost_price → 55.661,91, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-12-071 Smoked Duck Okayu,"cost_price → 14.581,44, base_price → 40.000"
+4,sync POS,PUR-MM-STALL-12-072 Tori Okayu,"cost_price → 9.159,79, base_price → 40.000"
+4,buat kategori POS,YAKIMONO-GRIILED-STALL,belum ada di pos.pos_categories
+4,sync POS,PUR-MM-STALL-13-073 Beef Hikiniku,"cost_price → 20.189,44, base_price → 80.000"
+4,sync POS,PUR-MM-STALL-13-074 Salmon Don,"cost_price → 34.912,01, base_price → 90.000"
+4,sync POS,PUR-MM-STALL-13-075 Unagimeshi,"cost_price → 62.556,66, base_price → 160.000"
+4,sync POS,PUR-MM-STALL-13-076 Gyudon,"cost_price → 21.832,7, base_price → 85.000"
+4,sync POS,PUR-MM-STALL-15-083 Oolong Peach,"cost_price → 2.566,85, base_price → 25.000"
+4,sync POS,PUR-MM-STALL-16-084 Beef Katsu Sando,"cost_price → 23.294,26, base_price → 60.000"
+4,sync POS,PUR-MM-STALL-15-081 Sour Plum,"cost_price → 6.519,76, base_price → 25.000"
+4,sync POS,PUR-PRD-20260823-003 Dry Ramen Smoked Duck,"cost_price → 0, base_price → 65.000"
+4,sync POS,PUR-MM-STALL-15-082 Yuzu Milk,"cost_price → 10.001,05, base_price → 35.000"
+4,sync POS,PUR-PRD-20260825-001 Onigiri Chili Oil,"cost_price → 0, base_price → 0"
+4,sync POS,PUR-MM-STALL-10-066 Tori Abura Soba,"cost_price → 28.809,39, base_price → 90.000"
+4,sync POS,PUR-MM-STALL-10-065 Smoked Duck Abura Soba,"cost_price → 35.249,04, base_price → 95.000"
+4,buat produk POS,PUR-MM-STALL-03-085 Teppanyaki 1,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-03-086 Teppanyaki 2,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-03-087 Teppanyaki 3,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-07-088 Large Sausage Beef Hotdog,"harga 75.000, HPP 29.825,55"
+4,buat produk POS,PUR-MM-STALL-07-089 Large Sausage Chicken Hotdog,"harga 60.000, HPP 21.297,55"
+4,buat produk POS,PUR-MM-STALL-07-090 Ebi Furai Hotdog,"harga 0, HPP 23.709,48"
+4,buat produk POS,PUR-MM-STALL-12-091 Beef Okayu,"harga 40.000, HPP 10.304,44"
+4,buat produk POS,PUR-MM-STALL-14-092 Onigiri Spicy Tuna (Butter - Nori Sheet),"harga 40.000, HPP 11.365,59"
+4,buat produk POS,PUR-MM-STALL-14-093 Onigiri Cakalang (Butter - Nori Sheet),"harga 40.000, HPP 14.562,24"
+4,buat produk POS,PUR-MM-STALL-14-094 Onigiri Salmon Mayo (Butter - Nori Sheet),"harga 40.000, HPP 13.666,72"
+4,buat produk POS,PUR-MM-STALL-14-095 Onigiri Yakiniku (Butter - Nori Sheet),"harga 35.000, HPP 11.849,38"
+4,buat produk POS,PUR-MM-STALL-14-096 Onigiri Spicy Tuna (Aonori - Nori Sheet),"harga 35.000, HPP 6.177,84"
+4,buat produk POS,PUR-MM-STALL-14-097 Onigiri Cakalang (Aonori - Nori Sheet),"harga 35.000, HPP 9.374,5"
+4,buat produk POS,PUR-MM-STALL-14-098 Onigiri Salmon Mayo (Aonori - Nori Sheet),"harga 35.000, HPP 8.478,97"
+4,buat produk POS,PUR-MM-STALL-14-099 Onigiri Yakiniku (Aonori - Nori Sheet),"harga 30.000, HPP 6.661,63"
+4,buat produk POS,PUR-MM-STALL-14-100 Onigiri Spicy Tuna (Butter - Nori Crispy),"harga 40.000, HPP 11.607,37"
+4,buat produk POS,PUR-MM-STALL-14-101 Onigiri Cakalang (Butter - Nori Crispy),"harga 40.000, HPP 14.804,02"
+4,buat produk POS,PUR-MM-STALL-14-102 Onigiri Salmon Mayo (Butter - Nori Crispy),"harga 40.000, HPP 13.908,5"
+4,buat produk POS,PUR-MM-STALL-14-103 Onigiri Yakiniku (Butter - Nori Crispy),"harga 35.000, HPP 12.091,16"
+4,buat produk POS,PUR-MM-STALL-14-104 Onigiri Spicy Tuna (Aonori - Nori Crispy),"harga 35.000, HPP 6.419,62"
+4,buat produk POS,PUR-MM-STALL-14-105 Onigiri Cakalang (Aonori - Nori Crispy),"harga 35.000, HPP 9.616,28"
+4,buat produk POS,PUR-MM-STALL-14-106 Onigiri Salmon Mayo (Aonori - Nori Crispy),"harga 35.000, HPP 8.720,76"
+4,buat produk POS,PUR-MM-STALL-14-107 Onigiri Yakiniku (Aonori - Nori Crispy),"harga 30.000, HPP 6.903,42"
+4,buat kategori POS,COFFEE-MATCHA-BAR-STALL,belum ada di pos.pos_categories
+4,buat produk POS,PUR-MM-STALL-17-108 MATCHA COOKIES,"harga 0, HPP 555"
+4,buat produk POS,PUR-MM-STALL-17-109 MATCHA LATTE,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-110 CMBB 3,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-111 CMBB 4,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-112 CMBB 5,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-113 CMBB 6,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-114 CMBB 7,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-115 CMBB 8,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-116 CMBB 9,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-117 CMBB 10,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-118 CMBB 11,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-119 CMBB 12,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-120 CMBB 13,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-121 CMBB 14,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-122 CMBB 15,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-123 CMBB 16,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-124 CMBB 17,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-125 CMBB 18,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-126 CMBB 19,"harga 0, HPP 0"
+4,buat produk POS,PUR-MM-STALL-17-127 CMBB 20,"harga 0, HPP 0"
+4,backfill POS,pos_order_items,2643 baris riwayat dihitung ulang

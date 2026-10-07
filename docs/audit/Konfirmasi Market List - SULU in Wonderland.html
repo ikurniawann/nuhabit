@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Konfirmasi Market List SULU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --paper:      #FAFBF8;
+    --surface:    #F0F3EE;
+    --surface-2:  #E7EBE4;
+    --ink:        #17211C;
+    --ink-soft:   #4A574F;
+    --ink-faint:  #7C8A81;
+    --rule:       #D4DBD2;
+    --rule-soft:  #E4E9E1;
+    --accent:     #1B6B58;
+    --accent-bg:  #E2EFE9;
+    --critical:   #9C3A21;
+    --critical-bg:#F6E5DF;
+    --attention:  #8A6414;
+    --attention-bg:#F4ECD8;
+    --calm:       #35607F;
+    --calm-bg:    #E3EDF4;
+
+    --f-display: "Zilla Slab", Georgia, "Times New Roman", serif;
+    --f-body:    "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #12160F;
+      --surface:    #1A2019;
+      --surface-2:  #232B22;
+      --ink:        #E4EAE1;
+      --ink-soft:   #A7B3A8;
+      --ink-faint:  #78857A;
+      --rule:       #2E382E;
+      --rule-soft:  #242C24;
+      --accent:     #5FBCA0;
+      --accent-bg:  #16302A;
+      --critical:   #E0876A;
+      --critical-bg:#331C15;
+      --attention:  #D3A84A;
+      --attention-bg:#2F2715;
+      --calm:       #7FB3D0;
+      --calm-bg:    #17272F;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #12160F;
+    --surface:    #1A2019;
+    --surface-2:  #232B22;
+    --ink:        #E4EAE1;
+    --ink-soft:   #A7B3A8;
+    --ink-faint:  #78857A;
+    --rule:       #2E382E;
+    --rule-soft:  #242C24;
+    --accent:     #5FBCA0;
+    --accent-bg:  #16302A;
+    --critical:   #E0876A;
+    --critical-bg:#331C15;
+    --attention:  #D3A84A;
+    --attention-bg:#2F2715;
+    --calm:       #7FB3D0;
+    --calm-bg:    #17272F;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16.5px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 24px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 56px 0 22px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    margin-top: 20px;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+  .meta b { color: var(--ink-soft); font-weight: 500; }
+
+
+  /* ---------- sections ---------- */
+
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+  }
+  .sec-mark {
+    font-family: var(--f-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--paper);
+    background: var(--ink);
+    padding: 3px 9px;
+    letter-spacing: 0.04em;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(21px, 3vw, 27px);
+    letter-spacing: -0.01em;
+    margin: 0;
+    flex: 1 1 320px;
+    text-wrap: balance;
+  }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .chip.p1 { background: var(--critical-bg); color: var(--critical); }
+  .chip.p2 { background: var(--attention-bg); color: var(--attention); }
+  .chip.p3 { background: var(--calm-bg); color: var(--calm); }
+
+  .lede { color: var(--ink-soft); max-width: 68ch; margin: 0 0 22px; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .ask {
+    background: var(--accent-bg);
+    border-left: 3px solid var(--accent);
+    padding: 14px 18px;
+    margin: 0 0 24px;
+    font-size: 16px;
+  }
+  .ask b {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+
+  /* ---------- tables ---------- */
+
+  .scroller { overflow-x: auto; border: 1px solid var(--rule); }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 620px;
+    font-size: 14.5px;
+  }
+  thead th {
+    background: var(--surface-2);
+    font-family: var(--f-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.grp-start td { border-top: 1px solid var(--rule); }
+  tbody tr:nth-child(odd) td { background: var(--surface); }
+  tbody tr:nth-child(even) td { background: var(--paper); }
+
+  .num, .unit { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .num { text-align: right; }
+  .unit { font-size: 13px; color: var(--ink-soft); }
+  .name { font-weight: 600; }
+  .grp { font-family: var(--f-display); font-weight: 600; white-space: nowrap; }
+  .miss { color: var(--critical); font-style: italic; }
+  .warnflag { color: var(--critical); font-weight: 600; }
+
+  .note {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    margin: 18px 0 0;
+    padding-left: 14px;
+    border-left: 2px solid var(--rule);
+    max-width: 68ch;
+  }
+
+
+  code {
+    font-family: var(--f-mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+
+  @media (max-width: 620px) {
+    body { padding: 0 16px 64px; font-size: 16px; }
+    .masthead { padding-top: 36px; }
+  }
+
+  /* ---------- cetak / simpan sebagai PDF ---------- */
+
+  @media print {
+    @page { size: A4; margin: 14mm 12mm 16mm; }
+
+    /* Cetakan selalu memakai palet terang, apa pun tema perangkat pembaca. */
+    :root {
+      --paper: #FFFFFF; --surface: #F0F3EE; --surface-2: #E7EBE4;
+      --ink: #17211C; --ink-soft: #4A574F; --ink-faint: #7C8A81;
+      --rule: #D4DBD2; --rule-soft: #E4E9E1;
+      --accent: #1B6B58; --accent-bg: #E2EFE9;
+      --critical: #9C3A21; --critical-bg: #F6E5DF;
+      --attention: #8A6414; --attention-bg: #F4ECD8;
+      --calm: #35607F; --calm-bg: #E3EDF4;
+    }
+
+    /* Warna penanda selisih harga harus ikut tercetak, bukan hilang jadi hitam. */
+    html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    body { padding: 0; font-size: 10.5pt; }
+    .wrap { max-width: none; }
+    .masthead { padding-top: 0; }
+    h1 { font-size: 26pt; }
+    h2 { font-size: 14pt; }
+    table { min-width: 0; font-size: 9pt; }
+    thead th { font-size: 7.5pt; }
+    tbody td { padding: 5px 9px; }
+    .scroller { overflow: visible; }
+    .lede, .note, .ask { font-size: 10pt; }
+    section { margin-bottom: 30px; }
+
+    /* Bagian A dan B panjang, boleh terpotong antar halaman. Bagian C, D, E
+       muat dalam satu halaman — dijaga utuh supaya judulnya tidak tertinggal
+       sendirian di kaki halaman. */
+    section:nth-of-type(n+3) { break-inside: avoid; }
+    .sec-head { break-inside: avoid; break-after: avoid; }
+    .ask { break-inside: avoid; break-after: avoid; }
+    .lede { break-after: avoid; }
+    .note { break-before: avoid; break-inside: avoid; }
+    thead { display: table-header-group; }
+    tbody tr { break-inside: avoid; }
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">SULU in Wonderland &middot; Bandung</p>
+    <h1>Konfirmasi Data Market List</h1>
+    <div class="meta">
+      <span>Sumber: <b>SIW - Menu Matrix_31-08-2026.xlsx</b></span>
+      <span>Baris diperiksa: <b>186 bahan beli + 103 WIP</b></span>
+      <span>Tanggal: <b>2 September 2026</b></span>
+    </div>
+  </header>
+
+
+  <!-- ============ A ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">A</span>
+      <h2>Bahan yang terdaftar lebih dari sekali</h2>
+      <span class="chip p1">Prioritas 1</span>
+    </div>
+    <p class="lede">Beberapa bahan muncul dengan beberapa ejaan atau penamaan berbeda. Karena resep merujuk ke nama, satu bahan yang sama bisa masuk stok sebagai <strong>beberapa item terpisah</strong> — pembelian terpecah, dan kartu stoknya tidak pernah menyatu. Tiga grup bahkan punya harga yang berbeda-beda.</p>
+
+    <div class="ask">
+      <b>Yang kami butuhkan</b>
+      Untuk tiap grup: nama mana yang dipakai sebagai <em>satu-satunya</em> nama resmi? Nama lain akan digabung ke situ. Kolom <em>Dipakai</em> menunjukkan berapa baris resep yang merujuk ke tiap nama.
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Grup</th>
+            <th>Nama di Market List</th>
+            <th class="num">Harga / satuan</th>
+            <th>Satuan</th>
+            <th class="num">Dipakai</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="grp-start"><td rowspan="6" class="grp">Kecap asin<br>Kikkoman</td><td class="name">Shoyu</td><td class="num">75</td><td class="unit">ML</td><td class="num">9</td></tr>
+          <tr><td class="name">Shoyu Kikkoman</td><td class="num">75</td><td class="unit">GR</td><td class="num">7</td></tr>
+          <tr><td class="name">Soy Sauce Kikkoman</td><td class="num">75</td><td class="unit">ML</td><td class="num">3</td></tr>
+          <tr><td class="name">Soy Kikkoman</td><td class="num">75</td><td class="unit">GR</td><td class="num">1</td></tr>
+          <tr><td class="name">Shayou Kikkoman</td><td class="num">75</td><td class="unit">GR</td><td class="num">1</td></tr>
+          <tr><td class="name">Soy Sauce Kikkoman Halal</td><td class="num">75</td><td class="unit">ML</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="4" class="grp">Gula pasir</td><td class="name">Gula Pasir</td><td class="num">18</td><td class="unit">GR</td><td class="num">18</td></tr>
+          <tr><td class="name">Gula</td><td class="num">18</td><td class="unit">GR</td><td class="num">16</td></tr>
+          <tr><td class="name">Gula Putih</td><td class="num">18</td><td class="unit">GR</td><td class="num">5</td></tr>
+          <tr><td class="name">Sugar/Gula Putih</td><td class="num">18</td><td class="unit">GR</td><td class="num">2</td></tr>
+
+          <tr class="grp-start"><td rowspan="5" class="grp">Togarashi /<br>chili powder</td><td class="name">Sichimi</td><td class="num">351,67</td><td class="unit">GR</td><td class="num">3</td></tr>
+          <tr><td class="name">Sichimi Togarashi</td><td class="num">351,67</td><td class="unit">GR</td><td class="num">2</td></tr>
+          <tr><td class="name">Togarashi / Chili Powder</td><td class="num">351,67</td><td class="unit">GR</td><td class="num">1</td></tr>
+          <tr><td class="name">Shicimi Togarashi / Chili Powder</td><td class="num">351,67</td><td class="unit">GR</td><td class="num">1</td></tr>
+          <tr><td class="name">Ichimi Togarashi</td><td class="num warnflag">340,67</td><td class="unit">GR</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="3" class="grp">Wijen putih</td><td class="name">Sesame Seed</td><td class="num">51,02</td><td class="unit">GR</td><td class="num">5</td></tr>
+          <tr><td class="name">Wijen Putih</td><td class="num">51,02</td><td class="unit">GR</td><td class="num">3</td></tr>
+          <tr><td class="name">White Sesame</td><td class="num">51,02</td><td class="unit">GR</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="3" class="grp">Minyak goreng</td><td class="name">Minyak Goreng</td><td class="num">21,94</td><td class="unit">ML</td><td class="num">7</td></tr>
+          <tr><td class="name">Minyak</td><td class="num">21,94</td><td class="unit warnflag">GR</td><td class="num">3</td></tr>
+          <tr><td class="name">Minyak Sayur</td><td class="num">21,94</td><td class="unit">ML</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Hondashi</td><td class="name">Hondashi</td><td class="num">155,50</td><td class="unit">GR</td><td class="num">30</td></tr>
+          <tr><td class="name">Hondasi</td><td class="num">155,50</td><td class="unit">GR</td><td class="num">2</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Daun bawang</td><td class="name">Daun Bawang</td><td class="num">20</td><td class="unit">GR</td><td class="num">19</td></tr>
+          <tr><td class="name">Daun Bawang Slice</td><td class="num">20</td><td class="unit">GR</td><td class="num">5</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Lada putih</td><td class="name">Lada Putih</td><td class="num">200</td><td class="unit">GR</td><td class="num">17</td></tr>
+          <tr><td class="name">Lada Putih Bubuk</td><td class="num warnflag">114,40</td><td class="unit">GR</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Nori lembaran</td><td class="name">Nori Sheets</td><td class="num">3.300</td><td class="unit">LEMBAR</td><td class="num">21</td></tr>
+          <tr><td class="name">Yakinori Sheets</td><td class="num warnflag">3.290</td><td class="unit">SHEETS</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Tepung<br>Segitiga Biru</td><td class="name">Tepung Segitiga Biru</td><td class="num">13</td><td class="unit">GR</td><td class="num">7</td></tr>
+          <tr><td class="name">Segitiga Biru</td><td class="num">13</td><td class="unit">GR</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Maizena</td><td class="name">Maizena</td><td class="num">22,50</td><td class="unit">GR</td><td class="num">6</td></tr>
+          <tr><td class="name">Meizena</td><td class="num">22,50</td><td class="unit">GR</td><td class="num">2</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Ragi instan</td><td class="name">Ragi Instan</td><td class="num">100</td><td class="unit">GR</td><td class="num">5</td></tr>
+          <tr><td class="name">RAP Instan</td><td class="num warnflag">105</td><td class="unit">GR</td><td class="num">1</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Beef shortplate</td><td class="name">Beef Shortplate Slice</td><td class="num">135</td><td class="unit">GR</td><td class="num">3</td></tr>
+          <tr><td class="name">Beef Shorplate</td><td class="num">135</td><td class="unit">GR</td><td class="num">2</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Minyak wijen</td><td class="name">Sesame Oil</td><td class="num">62,90</td><td class="unit">ML</td><td class="num">3</td></tr>
+          <tr><td class="name">Minyak Sesame</td><td class="num">62,90</td><td class="unit">ML</td><td class="num">2</td></tr>
+
+          <tr class="grp-start"><td rowspan="2" class="grp">Tepung roti</td><td class="name">Tepung Roti</td><td class="num">117,25</td><td class="unit">GR</td><td class="num">3</td></tr>
+          <tr><td class="name">Tepung Roti (Ditempat Berbeda)</td><td class="num">117,25</td><td class="unit warnflag">KG</td><td class="num">2</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">Angka merah menandai perbedaan yang belum bisa kami jelaskan. Khusus <b>Ichimi Togarashi</b>: <em>ichimi</em> (cabai tunggal) dan <em>shichimi</em> (tujuh rempah) sebenarnya bumbu yang berbeda — mohon dipastikan apakah ini memang dua bahan terpisah, bukan salah ketik.</p>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">B</span>
+      <h2>Harga atau satuan pembelian belum lengkap</h2>
+      <span class="chip p1">Prioritas 1</span>
+    </div>
+    <p class="lede">Tanpa <strong>Purchase UOM</strong> dan <strong>Weight</strong>, sistem tidak bisa menghitung harga per gram. Yang paling terasa: <strong>Lada Bubuk</strong> saat ini terbaca <strong>Rp 28.600 per gram</strong> — 250&times; lipat dari yang seharusnya — karena isi kemasannya diketahui (250) tapi satuan kemasannya tidak.</p>
+
+    <div class="ask">
+      <b>Yang kami butuhkan</b>
+      Isi sel yang kosong: satuan pembeliannya apa (Pack, Kg, Botol, Ikat&hellip;), berapa isi per kemasan, dan berapa harga belinya.
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Bahan</th>
+            <th>UOM</th>
+            <th class="num">Weight</th>
+            <th class="num">Unit Cost</th>
+            <th>Purchase UOM</th>
+            <th>Yang perlu diisi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Lada Bubuk</td><td class="unit">GR</td><td class="num">250</td><td class="num">28.600</td><td class="miss">kosong</td><td>Satuan kemasan &mdash; Pack atau Kg?</td></tr>
+          <tr><td class="name">Es Batu</td><td class="unit">GR</td><td class="num">5.000</td><td class="num">13.500</td><td class="miss">kosong</td><td>Satuan kemasan &mdash; Pack atau Kg?</td></tr>
+          <tr><td class="name">Jukut</td><td class="unit">GR</td><td class="num miss">kosong</td><td class="num">3.000</td><td class="unit">Iket</td><td>Berapa gram per ikat?</td></tr>
+          <tr><td class="name">Udang Tempura</td><td class="unit miss">kosong</td><td class="num">500</td><td class="num">66.000</td><td class="unit">Pack</td><td>Satuan terkecil &mdash; gram atau pcs?</td></tr>
+          <tr><td class="name">Chuka Idako</td><td class="unit">GR</td><td class="num miss">kosong</td><td class="num miss">kosong</td><td class="miss">kosong</td><td>Harga, isi kemasan, satuan kemasan</td></tr>
+          <tr><td class="name">Crunchy Tanuki</td><td class="unit">GR</td><td class="num miss">kosong</td><td class="num miss">kosong</td><td class="miss">kosong</td><td>Harga, isi kemasan, satuan kemasan</td></tr>
+          <tr><td class="name">Minyak Kulit Ayam (Minyak Nya Aja)</td><td class="unit">GR</td><td class="num miss">kosong</td><td class="num miss">kosong</td><td class="miss">kosong</td><td>Harga, isi kemasan, satuan kemasan</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">Tiga bahan terakhir harganya masih Rp 0. Setiap menu yang memakainya akan menampilkan HPP lebih rendah dari kenyataan &mdash; termasuk <b>Tendon Club</b>, yang memakai Udang Tempura.</p>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">C</span>
+      <h2>Satuan yang perlu dipastikan</h2>
+      <span class="chip p2">Prioritas 2</span>
+    </div>
+    <p class="lede">Dua bahan mencantumkan <strong>UOM = KG</strong>, tapi kolom <strong>Unit Price / Unit</strong> di baris yang sama menunjukkan harga per <strong>gram</strong>. Kalau KG dipakai apa adanya, harga ayam terbaca Rp 40 per kilogram.</p>
+
+    <div class="ask">
+      <b>Yang kami butuhkan</b>
+      Konfirmasi bahwa UOM untuk kedua bahan ini seharusnya <strong>GR</strong>, bukan KG.
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Bahan</th>
+            <th>UOM tertulis</th>
+            <th class="num">Weight</th>
+            <th class="num">Unit Cost</th>
+            <th class="num">Unit Price / Unit</th>
+            <th>Artinya</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Ayam</td><td class="unit warnflag">KG</td><td class="num">1.000</td><td class="num">39.999</td><td class="num">39,999</td><td>Rp 39.999 per <b>kg</b> &rarr; UOM mestinya GR</td></tr>
+          <tr><td class="name">Tepung Roti (Ditempat Berbeda)</td><td class="unit warnflag">KG</td><td class="num">200</td><td class="num">23.450</td><td class="num">117,25</td><td>Rp 23.450 per pack 200 <b>gram</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ D ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">D</span>
+      <h2>Bahan yang dipakai resep tapi belum terdaftar</h2>
+      <span class="chip p2">Prioritas 2</span>
+    </div>
+    <p class="lede">Tujuh bahan muncul di kartu resep tapi tidak ada barisnya di Market List — jadi tidak punya vendor, satuan pembelian, maupun harga acuan. Enam di antaranya bahan Coffee Matcha Bar.</p>
+
+    <div class="ask">
+      <b>Yang kami butuhkan</b>
+      Tambahkan ketujuhnya ke Market List, lengkap dengan vendor, satuan pembelian, isi kemasan, dan harga beli.
+    </div>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th>Bahan</th>
+            <th class="num">Dipakai di</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Air Dashi</td><td class="num">3 resep</td><td>Dashi Udon WIP, Okayu WIP, Udon Carbonara</td></tr>
+          <tr><td class="name">Ceremonial Matcha</td><td class="num">2 resep</td><td>Matcha Cookies, Matcha Latte</td></tr>
+          <tr><td class="name">Cold Drip Arabica</td><td class="num">1 resep</td><td>Coffee Matcha Bar</td></tr>
+          <tr><td class="name">Oat Milk</td><td class="num">1 resep</td><td>Coffee Matcha Bar</td></tr>
+          <tr><td class="name">Apple Juice</td><td class="num">1 resep</td><td>Coffee Matcha Bar</td></tr>
+          <tr><td class="name">Choco Cookies Syrup</td><td class="num">1 resep</td><td>Coffee Matcha Bar</td></tr>
+          <tr><td class="name">White Grappe Juice</td><td class="num">1 resep</td><td>Ejaan &mdash; maksudnya <b>White Grape Juice</b>?</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ E ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-mark">E</span>
+      <h2>WIP yang belum punya resep</h2>
+      <span class="chip p2">Prioritas 2</span>
+    </div>
+    <p class="lede"><strong>Chicken Broth</strong> dan <strong>Shoyu Ramen Sauce</strong> terdaftar di Market List sebagai WIP dan sudah dipakai di resep ramen, tapi belum ada kartu sub-resepnya. Biayanya karena itu tercatat <strong>Rp 0</strong>, dan HPP <strong>Signature Shoyu Ramen</strong> beserta menu ramen lain jadi lebih rendah dari kenyataan.</p>
+
+    <div class="ask">
+      <b>Yang kami butuhkan</b>
+      Apakah keduanya diproduksi sendiri di dapur &mdash; sehingga perlu kartu sub-resep seperti WIP lain &mdash; atau dibeli jadi, sehingga cukup dicantumkan harga belinya di Market List?
+    </div>
+  </section>
+
+
+</div>
+</body>
+</html>

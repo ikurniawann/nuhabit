@@ -1,0 +1,26 @@
+﻿severity,dimension,entity,key,field,excel_value,db_value,delta,near_match,note
+MISSING_IN_DB,E. BOM Produk,product_bom,Tamagoyaki Mentai → Adonan Tamagoyaki WIP,component,45 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Tamagoyaki Mentai → Mentaiko Mayo WIP,component,20 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Tamagoyaki Mentai → Tobiko Orange,component,5 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+VALUE_MISMATCH,E. BOM Produk,product_bom,Unagi Nigiri,Direct Cost (rekalkulasi BOM),14507.14149,14507.03148768,0.11000231999969401,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+MISSING_IN_DB,E. BOM Produk,product_bom,Tempura Kimchi Hotdog → Daun Ketumbar,component, ,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Yakiniku Hotdog → Daun Ketumbar,component, ,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Tendon Club → Udang Tempura,component, PCS,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Ramen,component,80 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Miso Soup WIP,component,240 ML,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Garlic Oil,component,1 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Lada Putih,component,0.5 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Chili Oil WIP,component,35 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Chicken Marinated Fillet WIP,component,28 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Smoked Duck Slice,component,10 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Jukut,component,4 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Daun Bawang,component,4 GR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+MISSING_IN_DB,E. BOM Produk,product_bom,Aka Miso Ramen → Telur Omega,component,0.5 BUTIR,,,,Bahan ada di master tapi tidak terpasang di BOM produk
+VALUE_MISMATCH,E. BOM Produk,product_bom,Spicy Goma Ramen,Direct Cost (rekalkulasi BOM),19404.33627,31404.336270581818,-12000.000000581818,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Signature Shoyu Ramen,Direct Cost (rekalkulasi BOM),8879.627056,20879.627057181817,-12000.000001181817,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Beef Abura Soba,Direct Cost (rekalkulasi BOM),18314.04164,30314.041636421818,-11999.999996421819,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Smoked Duck Abura Soba,Direct Cost (rekalkulasi BOM),23249.04164,35249.04163642182,-11999.999996421819,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Tori Abura Soba,Direct Cost (rekalkulasi BOM),16809.38847,28809.38846966182,-11999.999999661817,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Yuzu Milk,Direct Cost (rekalkulasi BOM),11501.05263,10001.052631578947,1499.9999984210535,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+VALUE_MISMATCH,E. BOM Produk,product_bom,Oolong Peach,Direct Cost (rekalkulasi BOM),4066.850426,2566.8504260242107,1499.9999999757893,,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+MISSING_IN_DB,E. BOM Produk,product_bom,MATCHA LATTE → Ceremonial Matcha,component, ,,,,Bahan ada di master tapi tidak terpasang di BOM produk

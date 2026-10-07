@@ -1,0 +1,1316 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "NüHabit OS Purchasing Module API",
+    "description": "REST API untuk modul Purchasing / Procurement pada NüHabit OS ERP. Mencakup master data (Vendor, Supplier, Product, Unit), Purchase Request, Purchase Order, Delivery, Goods Receipt (GRN), Quality Control, Inventory, Returns, COGS, dan Reports.\n\n## Authentication\nSemua endpoint membutuhkan Bearer JWT token di header:\n```\nAuthorization: Bearer <access_token>\n```\n\nToken diperoleh dari app auth (cookie session). Lihat `/api/auth/login` untuk login dan `/api/auth/refresh` untuk refresh.\n\n## Response Format\nSemua response mengikuti format standar:\n\n**Sukses (200/201):**\n```json\n{\n  \"success\": true,\n  \"data\": { ... },\n  \"message\": \"Optional message\"\n}\n```\n\n**Paginated:**\n```json\n{\n  \"success\": true,\n  \"data\": [ ... ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 100,\n    \"totalPages\": 5\n  }\n}\n```\n\n**Error:**\n```json\n{\n  \"success\": false,\n  \"error\": \"Error message\",\n  \"details\": { ... }\n}\n```\n\n## User Roles\n- `purchasing_admin` - Akses penuh\n- `purchasing_staff` - Staff purchasing\n- `purchasing_manager` - Manager purchasing\n- `warehouse_staff` - Staff gudang\n- `finance_staff` - Staff finance\n- `hrd` - HRD\n- `direksi` - Direksi\n\n## Approval Flow\n1. Purchase Request (PR) dibuat oleh staff → status: `draft`\n2. PR di-submit → status: `pending_head`\n3. Head Dept / Purchasing Manager / HRD approve → `pending_finance` (jika amount >= threshold)\n4. Finance approve → `pending_direksi` (jika amount >= threshold)\n5. Direksi approve → `approved`\n6. PR yang approved bisa di-convert ke Purchase Order (PO)",
+    "version": "1.0.0",
+    "contact": {
+      "name": "WIT.ID Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "{baseUrl}/api/purchasing",
+      "variables": {
+        "baseUrl": {
+          "default": "http://localhost:3000",
+          "description": "Application base URL (Next.js)"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Suppliers", "description": "Master data Supplier/Vendor" },
+    { "name": "Products", "description": "Master data Produk/Bahan Baku" },
+    { "name": "Units", "description": "Master data Satuan" },
+    { "name": "Purchase Requests", "description": "Purchase Request (PR) - pengajuan pembelian" },
+    { "name": "Purchase Orders", "description": "Purchase Order (PO) - pesanan pembelian" },
+    { "name": "Delivery", "description": "Pengiriman dari supplier" },
+    { "name": "Goods Receipt", "description": "Penerimaan barang (GRN)" },
+    { "name": "Quality Control", "description": "Quality Control inspection" },
+    { "name": "Returns", "description": "Retur barang" },
+    { "name": "Inventory", "description": "Inventory management" },
+    { "name": "COGS", "description": "Cost of Goods Sold & additional costs" },
+    { "name": "Reports", "description": "Reporting endpoints" }
+  ],
+  "paths": {
+    "/suppliers": {
+      "get": {
+        "tags": ["Suppliers"],
+        "summary": "List suppliers",
+        "description": "Mengambil daftar supplier dengan filter dan pagination.",
+        "operationId": "listSuppliers",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive", "blacklisted"] }, "description": "Filter berdasarkan status" },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" }, "description": "Filter berdasarkan kategori supplier" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Suppliers"],
+        "summary": "Create supplier",
+        "description": "Membuat supplier baru. Hanya untuk role `purchasing_admin` dan `purchasing_staff`.",
+        "operationId": "createSupplier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SupplierCreate" },
+              "example": {
+                "nama": "PT Makmur Sentosa",
+                "alamat": "Jl. Industri No. 10, Jakarta",
+                "telepon": "021-5551234",
+                "email": "purchasing@makmur.co.id",
+                "npwp": "01.234.567.8-901.000",
+                "bank_nama": "Bank Central Asia",
+                "bank_rekening": "1234567890",
+                "bank_atas_nama": "PT Makmur Sentosa",
+                "kategori": "raw_material",
+                "status": "active"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/suppliers/{id}": {
+      "get": {
+        "tags": ["Suppliers"],
+        "summary": "Get supplier by ID",
+        "operationId": "getSupplierById",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "put": {
+        "tags": ["Suppliers"],
+        "summary": "Update supplier",
+        "operationId": "updateSupplier",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SupplierUpdate" } } }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "delete": {
+        "tags": ["Suppliers"],
+        "summary": "Delete supplier (soft delete)",
+        "description": "Soft delete - mengubah is_active menjadi false. Hanya `purchasing_admin`.",
+        "operationId": "deleteSupplier",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/204NoContent" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "List products / bahan baku",
+        "operationId": "listProducts",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" } },
+          { "name": "vendor_id", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Products"],
+        "summary": "Create product",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductCreate" },
+              "example": {
+                "nama": "Besi Beton 10mm",
+                "deskripsi": "Besi beton polos diameter 10mm, panjang 12m",
+                "kategori": "raw_material",
+                "satuan_id": "uuid-satuan-pcs",
+                "harga_estimasi": 85000,
+                "vendor_id": "uuid-vendor"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "Get product by ID",
+        "operationId": "getProductById",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "put": {
+        "tags": ["Products"],
+        "summary": "Update product",
+        "operationId": "updateProduct",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductUpdate" } } }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "delete": {
+        "tags": ["Products"],
+        "summary": "Delete product (soft delete)",
+        "operationId": "deleteProduct",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "204": { "$ref": "#/components/responses/204NoContent" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/units": {
+      "get": {
+        "tags": ["Units"],
+        "summary": "List units of measurement",
+        "operationId": "listUnits",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Units"],
+        "summary": "Create unit",
+        "operationId": "createUnit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UnitCreate" },
+              "example": { "nama": "Kilogram", "singkatan": "kg", "deskripsi": "Satuan berat" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/units/{id}": {
+      "get": { "tags": ["Units"], "summary": "Get unit by ID", "operationId": "getUnitById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "put": { "tags": ["Units"], "summary": "Update unit", "operationId": "updateUnit", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UnitUpdate" } } } }, "responses": { "200": { "$ref": "#/components/responses/200Success" }, "400": { "$ref": "#/components/responses/400" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "delete": { "tags": ["Units"], "summary": "Delete unit (soft delete)", "operationId": "deleteUnit", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "204": { "$ref": "#/components/responses/204NoContent" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    },
+    "/pr": {
+      "get": {
+        "tags": ["Purchase Requests"],
+        "summary": "List purchase requests",
+        "description": "Mengambil daftar PR. hiring_manager hanya melihat PR miliknya sendiri.",
+        "operationId": "listPurchaseRequests",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["draft", "pending_head", "pending_finance", "pending_direksi", "approved", "rejected", "converted", "all"] }, "description": "Filter status PR" },
+          { "name": "department_id", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Filter department" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Purchase Requests"],
+        "summary": "Create purchase request",
+        "description": "Membuat PR baru. Role yang diizinkan: purchasing_staff, purchasing_manager, hrd.",
+        "operationId": "createPurchaseRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PRCreate" },
+              "example": {
+                "department_id": "uuid-dept",
+                "priority": "high",
+                "required_date": "2025-02-15",
+                "notes": "Butuh cepat untuk proyek baru",
+                "items": [
+                  { "product_id": "uuid-product", "description": "Besi Beton 10mm", "qty": 50, "unit": "batang", "estimated_price": 85000 }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/pr/{id}": {
+      "get": {
+        "tags": ["Purchase Requests"],
+        "summary": "Get PR by ID",
+        "operationId": "getPurchaseRequestById",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "401": { "$ref": "#/components/responses/401" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "put": {
+        "tags": ["Purchase Requests"],
+        "summary": "Update PR",
+        "description": "Update PR. Hanya bisa dilakukan jika status masih `draft`.",
+        "operationId": "updatePurchaseRequest",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PRUpdate" } } }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/pr/{id}/submit": {
+      "post": {
+        "tags": ["Purchase Requests"],
+        "summary": "Submit PR for approval",
+        "description": "Mengubah status PR dari `draft` menjadi `pending_head`. Setelah di-submit, PR tidak bisa diedit lagi.",
+        "operationId": "submitPurchaseRequest",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/pr/{id}/approve": {
+      "post": {
+        "tags": ["Purchase Requests"],
+        "summary": "Approve or reject PR",
+        "description": "Approval PR berdasarkan current approval level dan role user. supports multi-level approval: head dept -> finance -> direksi.",
+        "operationId": "approvePurchaseRequest",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApprovalAction" },
+              "examples": {
+                "approve": { "value": { "action": "approve", "reason": "Disetujui sesuai budget" } },
+                "reject": { "value": { "action": "reject", "reason": "Budget tidak tersedia" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/po": {
+      "get": {
+        "tags": ["Purchase Orders"],
+        "summary": "List purchase orders",
+        "operationId": "listPurchaseOrders",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["draft", "approved", "sent", "partial", "received", "cancelled", "closed"] } },
+          { "name": "supplier_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Filter dari tanggal order (YYYY-MM-DD)" },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Filter sampai tanggal order (YYYY-MM-DD)" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Purchase Orders"],
+        "summary": "Create purchase order",
+        "description": "Membuat PO baru. Bisa dibuat dari PR yang sudah approved, atau standalone.",
+        "operationId": "createPurchaseOrder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/POCreate" },
+              "example": {
+                "supplier_id": "uuid-supplier",
+                "pr_id": "uuid-pr",
+                "items": [
+                  { "bahan_baku_id": "uuid-bahan", "description": "Besi Beton 10mm", "qty": 50, "satuan_id": "uuid-satuan", "unit_price": 85000, "discount": 0 }
+                ],
+                "tax_percent": 11,
+                "shipping_cost": 500000,
+                "payment_terms": "30 hari",
+                "delivery_address": "Gudang Utama, Jl. Industri No. 1",
+                "delivery_date": "2025-02-20"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/po/{id}": {
+      "get": { "tags": ["Purchase Orders"], "summary": "Get PO by ID", "operationId": "getPurchaseOrderById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "put": { "tags": ["Purchase Orders"], "summary": "Update PO", "description": "Update PO. Hanya bisa dilakukan jika status `draft`.", "operationId": "updatePurchaseOrder", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/POUpdate" } } } }, "responses": { "200": { "$ref": "#/components/responses/200Success" }, "400": { "$ref": "#/components/responses/400" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "delete": { "tags": ["Purchase Orders"], "summary": "Cancel PO", "description": "Membatalkan PO. Hanya bisa jika status `draft` atau `sent`.", "operationId": "cancelPurchaseOrder", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "204": { "$ref": "#/components/responses/204NoContent" }, "400": { "$ref": "#/components/responses/400" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    },
+    "/po/{id}/approve": {
+      "post": {
+        "tags": ["Purchase Orders"],
+        "summary": "Approve PO",
+        "description": "Mengubah status PO dari `draft` menjadi `approved`. Setelah approved, inventory qty_on_order akan diupdate.",
+        "operationId": "approvePurchaseOrder",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/po/{id}/send": {
+      "post": {
+        "tags": ["Purchase Orders"],
+        "summary": "Send PO to supplier",
+        "description": "Mengirim PO ke supplier. Mengubah status menjadi `sent`. Bisa dilakukan setelah PO di-approve.",
+        "operationId": "sendPurchaseOrder",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/po/{id}/receive": {
+      "post": {
+        "tags": ["Purchase Orders"],
+        "summary": "Mark PO as received (partial or full)",
+        "description": "Menandai PO sudah diterima. Bisa partial atau full. Jika full, status berubah menjadi `received`. Jika partial, status menjadi `partial`.",
+        "operationId": "receivePurchaseOrder",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["items"],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["po_item_id", "qty_received"],
+                      "properties": {
+                        "po_item_id": { "type": "string", "format": "uuid" },
+                        "qty_received": { "type": "number", "minimum": 0 }
+                      }
+                    }
+                  },
+                  "receive_date": { "type": "string", "format": "date" },
+                  "notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/delivery": {
+      "get": {
+        "tags": ["Delivery"],
+        "summary": "List deliveries",
+        "operationId": "listDeliveries",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "shipped", "in_transit", "delivered", "cancelled"] } },
+          { "name": "po_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "supplier_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Delivery"],
+        "summary": "Create delivery record",
+        "description": "Membuat record pengiriman dari supplier. Validasi PO harus approved dan belum sepenuhnya diterima.",
+        "operationId": "createDelivery",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeliveryCreate" },
+              "example": {
+                "po_id": "uuid-po",
+                "no_surat_jalan": "SJ-2025-001",
+                "ekspedisi": "JNE",
+                "no_resi": "JNE123456789",
+                "tanggal_kirim": "2025-02-18",
+                "tanggal_estimasi_tiba": "2025-02-22"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/delivery/{id}": {
+      "get": { "tags": ["Delivery"], "summary": "Get delivery by ID", "operationId": "getDeliveryById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "put": { "tags": ["Delivery"], "summary": "Update delivery", "operationId": "updateDelivery", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeliveryUpdate" } } } }, "responses": { "200": { "$ref": "#/components/responses/200Success" }, "400": { "$ref": "#/components/responses/400" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    },
+    "/delivery/{id}/arrive": {
+      "post": {
+        "tags": ["Delivery"],
+        "summary": "Mark delivery as arrived",
+        "description": "Menandai barang sudah tiba di tujuan. Membuat GRN record secara otomatis.",
+        "operationId": "arriveDelivery",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tanggal_aktual_tiba": { "type": "string", "format": "date" },
+                  "catatan": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/grn": {
+      "get": {
+        "tags": ["Goods Receipt"],
+        "summary": "List goods receipt notes (GRN)",
+        "operationId": "listGRNs",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "partial", "completed", "rejected"] } },
+          { "name": "po_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/grn/{id}": {
+      "get": { "tags": ["Goods Receipt"], "summary": "Get GRN by ID", "operationId": "getGRNById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    },
+    "/qc": {
+      "get": {
+        "tags": ["Quality Control"],
+        "summary": "List QC inspections",
+        "operationId": "listQCInspections",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "passed", "failed", "conditional"] } },
+          { "name": "grn_id", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Quality Control"],
+        "summary": "Create QC inspection",
+        "description": "Membuat record inspeksi QC untuk GRN. Bisa approve, reject, atau conditional.",
+        "operationId": "createQCInspection",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QCCreate" },
+              "example": {
+                "grn_id": "uuid-grn",
+                "results": [
+                  { "grn_item_id": "uuid-grn-item", "qty_inspected": 50, "qty_accepted": 48, "qty_rejected": 2, "notes": "2 unit lecet" }
+                ],
+                "overall_status": "conditional",
+                "notes": "Disetujui dengan catatan 2 unit perlu rework"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/return": {
+      "get": {
+        "tags": ["Returns"],
+        "summary": "List returns",
+        "operationId": "listReturns",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "shipped", "completed", "rejected"] } },
+          { "name": "po_id", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      },
+      "post": {
+        "tags": ["Returns"],
+        "summary": "Create return request",
+        "description": "Membuat request retur barang. Bisa dari GRN atau langsung dari PO.",
+        "operationId": "createReturn",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReturnCreate" },
+              "example": {
+                "po_id": "uuid-po",
+                "grn_id": "uuid-grn",
+                "reason": "Barang tidak sesuai spesifikasi",
+                "items": [
+                  { "po_item_id": "uuid-po-item", "qty_return": 5, "reason": "Warna salah" }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/return/{id}": {
+      "get": { "tags": ["Returns"], "summary": "Get return by ID", "operationId": "getReturnById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } },
+      "put": { "tags": ["Returns"], "summary": "Update return", "operationId": "updateReturn", "parameters": [{ "$ref": "#/components/parameters/Id" }], "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReturnUpdate" } } } }, "responses": { "200": { "$ref": "#/components/responses/200Success" }, "400": { "$ref": "#/components/responses/400" }, "401": { "$ref": "#/components/responses/401" }, "403": { "$ref": "#/components/responses/403" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    },
+    "/inventory": {
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "List inventory",
+        "description": "Mengambil data inventory stock. Akses: purchasing_admin, purchasing_staff, warehouse_staff.",
+        "operationId": "listInventory",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" } },
+          { "name": "below_minimum", "in": "query", "schema": { "type": "boolean" }, "description": "Filter hanya stock yang di bawah minimum" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/inventory/movements": {
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "List inventory movements",
+        "description": "Mengambil history movement inventory (in/out).",
+        "operationId": "listInventoryMovements",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "inventory_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["in", "out", "adjustment"] } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/inventory/adjustment": {
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "Create inventory adjustment",
+        "description": "Membuat penyesuaian inventory (stock opname). Bisa increase atau decrease.",
+        "operationId": "createInventoryAdjustment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["inventory_id", "adjustment_type", "qty", "reason"],
+                "properties": {
+                  "inventory_id": { "type": "string", "format": "uuid" },
+                  "adjustment_type": { "type": "string", "enum": ["increase", "decrease"] },
+                  "qty": { "type": "number", "minimum": 1 },
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/cogs/product/{produk_id}": {
+      "get": {
+        "tags": ["COGS"],
+        "summary": "Get product COGS (average cost)",
+        "description": "Menghitung dan mengembalikan average cost suatu produk berdasarkan semua GRN yang sudah di-QC.",
+        "operationId": "getProductCOGS",
+        "parameters": [
+          { "name": "produk_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Hitung COGS dari tanggal ini" },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Hitung COGS sampai tanggal ini" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Success" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/cogs/additional-cost": {
+      "post": {
+        "tags": ["COGS"],
+        "summary": "Allocate additional costs to products",
+        "description": "Mendistribusikan biaya tambahan (ongkos kirim, asuransi, dll) ke produk-produk dalam PO.",
+        "operationId": "allocateAdditionalCosts",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["po_id", "costs"],
+                "properties": {
+                  "po_id": { "type": "string", "format": "uuid" },
+                  "costs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["description", "amount"],
+                      "properties": {
+                        "description": { "type": "string" },
+                        "amount": { "type": "number", "minimum": 0 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "$ref": "#/components/responses/201Created" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "404": { "$ref": "#/components/responses/404" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/reports/inventory-valuation": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Inventory valuation report",
+        "description": "Mengembalikan laporan valuation inventory (stock + nilai uang) berdasarkan COGS.",
+        "operationId": "getInventoryValuation",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/reports/po-summary": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "PO summary report",
+        "description": "Mengembalikan summary semua PO dalam periode tertentu.",
+        "operationId": "getPOSummary",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["draft", "approved", "sent", "partial", "received", "cancelled", "closed"] } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/reports/supplier-performance": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Supplier performance report",
+        "description": "Mengembalikan laporan performance supplier (on-time delivery rate, quality rate, total spending).",
+        "operationId": "getSupplierPerformance",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/vendors": {
+      "get": {
+        "tags": ["Suppliers"],
+        "summary": "List vendors (suppliers)",
+        "description": "Alias endpoint untuk /suppliers. Mengambil daftar vendor/supplier.",
+        "operationId": "listVendors",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "inactive", "blacklisted"] } },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/materials": {
+      "get": {
+        "tags": ["Products"],
+        "summary": "List materials / bahan baku",
+        "description": "Alias endpoint untuk /products. Mengambil daftar bahan baku.",
+        "operationId": "listMaterials",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Search" },
+          { "name": "kategori", "in": "query", "schema": { "type": "string" } },
+          { "name": "vendor_id", "in": "query", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/200Paginated" },
+          "400": { "$ref": "#/components/responses/400" },
+          "401": { "$ref": "#/components/responses/401" },
+          "403": { "$ref": "#/components/responses/403" },
+          "500": { "$ref": "#/components/responses/500" }
+        }
+      }
+    },
+    "/materials/{id}": {
+      "get": { "tags": ["Products"], "summary": "Get material by ID", "operationId": "getMaterialById", "parameters": [{ "$ref": "#/components/parameters/Id" }], "responses": { "200": { "$ref": "#/components/responses/200Success" }, "401": { "$ref": "#/components/responses/401" }, "404": { "$ref": "#/components/responses/404" }, "500": { "$ref": "#/components/responses/500" } } }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token dari app auth (cookie session)"
+      }
+    },
+    "parameters": {
+      "Page": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 }, "description": "Halaman" },
+      "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }, "description": "Items per halaman" },
+      "Search": { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Search by nama, kode, atau deskripsi" },
+      "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" }, "description": "Resource ID" }
+    },
+    "responses": {
+      "200Success": {
+        "description": "Success",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SuccessResponse" },
+            "example": { "success": true, "data": { "id": "uuid", "nama": "PT Makmur" } }
+          }
+        }
+      },
+      "200Paginated": {
+        "description": "Success (Paginated)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/PaginatedResponse" },
+            "example": { "success": true, "data": [], "pagination": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 } }
+          }
+        }
+      },
+      "201Created": {
+        "description": "Created",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/CreatedResponse" },
+            "example": { "success": true, "data": { "id": "uuid" }, "message": "Resource berhasil dibuat" }
+          }
+        }
+      },
+      "204NoContent": { "description": "No Content" },
+      "400": {
+        "description": "Bad Request - Invalid input atau validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+            "example": { "success": false, "error": "Validation failed", "details": [{ "message": "nama wajib diisi", "path": ["body", "nama"] }] }
+          }
+        }
+      },
+      "401": {
+        "description": "Unauthorized - Token tidak valid atau expired",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "success": false, "error": "Authentication required" } } }
+      },
+      "403": {
+        "description": "Forbidden - User tidak punya role yang diizinkan",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "success": false, "error": "Insufficient permissions" } } }
+      },
+      "404": {
+        "description": "Not Found",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "success": false, "error": "Resource tidak ditemukan" } } }
+      },
+      "500": {
+        "description": "Internal Server Error",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" }, "example": { "success": false, "error": "Internal server error" } } }
+      }
+    },
+    "schemas": {
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object" },
+          "message": { "type": "string", "example": "Operation successful" }
+        }
+      },
+      "CreatedResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object" },
+          "message": { "type": "string", "example": "Created successfully" }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "array", "items": { "type": "object" } },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": { "type": "integer", "example": 1 },
+              "limit": { "type": "integer", "example": 20 },
+              "total": { "type": "integer", "example": 100 },
+              "totalPages": { "type": "integer", "example": 5 }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "Error message" },
+          "details": { "type": "object", "description": "Optional additional error details" }
+        }
+      },
+      "SupplierCreate": {
+        "type": "object",
+        "required": ["nama"],
+        "properties": {
+          "nama": { "type": "string", "minLength": 1, "description": "Nama supplier" },
+          "alamat": { "type": "string" },
+          "telepon": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "npwp": { "type": "string" },
+          "bank_nama": { "type": "string", "description": "Nama bank" },
+          "bank_rekening": { "type": "string", "description": "Nomor rekening" },
+          "bank_atas_nama": { "type": "string", "description": "Nama pemilik rekening" },
+          "kategori": { "type": "string", "description": "Kategori: raw_material, it, office, stationery, services, other" },
+          "status": { "type": "string", "enum": ["active", "inactive", "blacklisted"], "default": "active" }
+        }
+      },
+      "SupplierUpdate": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SupplierCreate" },
+          { "type": "object", "properties": { "status": { "type": "string", "enum": ["active", "inactive", "blacklisted"] } } }
+        ]
+      },
+      "ProductCreate": {
+        "type": "object",
+        "required": ["nama", "kategori", "satuan_id", "harga_estimasi"],
+        "properties": {
+          "nama": { "type": "string", "minLength": 1 },
+          "deskripsi": { "type": "string" },
+          "kategori": { "type": "string" },
+          "satuan_id": { "type": "string", "format": "uuid" },
+          "harga_estimasi": { "type": "number", "minimum": 0 },
+          "vendor_id": { "type": "string", "format": "uuid", "description": "Preferred vendor" }
+        }
+      },
+      "ProductUpdate": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProductCreate" },
+          { "type": "object", "properties": { "is_active": { "type": "boolean" } } }
+        ]
+      },
+      "UnitCreate": {
+        "type": "object",
+        "required": ["nama", "singkatan"],
+        "properties": {
+          "nama": { "type": "string", "minLength": 1, "description": "Nama satuan (contoh: Kilogram)" },
+          "singkatan": { "type": "string", "minLength": 1, "description": "Singatan (contoh: kg)" },
+          "deskripsi": { "type": "string" }
+        }
+      },
+      "UnitUpdate": {
+        "allOf": [
+          { "$ref": "#/components/schemas/UnitCreate" },
+          { "type": "object", "properties": { "is_active": { "type": "boolean" } } }
+        ]
+      },
+      "PRCreate": {
+        "type": "object",
+        "required": ["department_id", "priority", "items"],
+        "properties": {
+          "department_id": { "type": "string", "format": "uuid" },
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+          "required_date": { "type": "string", "format": "date", "description": "YYYY-MM-DD" },
+          "notes": { "type": "string" },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["description", "qty", "unit", "estimated_price"],
+              "properties": {
+                "product_id": { "type": "string", "format": "uuid", "description": "Dari master produk (opsional)" },
+                "description": { "type": "string", "minLength": 1 },
+                "qty": { "type": "number", "minimum": 1 },
+                "unit": { "type": "string" },
+                "estimated_price": { "type": "number", "minimum": 0 }
+              }
+            }
+          }
+        }
+      },
+      "PRUpdate": {
+        "type": "object",
+        "properties": {
+          "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+          "required_date": { "type": "string", "format": "date" },
+          "notes": { "type": "string" },
+          "items": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "product_id": { "type": "string", "format": "uuid" }, "description": { "type": "string" }, "qty": { "type": "number", "minimum": 1 }, "unit": { "type": "string" }, "estimated_price": { "type": "number", "minimum": 0 } } } }
+        }
+      },
+      "ApprovalAction": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": { "type": "string", "enum": ["approve", "reject"] },
+          "reason": { "type": "string", "description": "Alasan approval/rejection" }
+        }
+      },
+      "POCreate": {
+        "type": "object",
+        "required": ["supplier_id", "items"],
+        "properties": {
+          "pr_id": { "type": "string", "format": "uuid", "description": "Reference ke PR (opsional)" },
+          "supplier_id": { "type": "string", "format": "uuid" },
+          "items": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["qty", "satuan_id", "unit_price"], "properties": { "bahan_baku_id": { "type": "string", "format": "uuid" }, "description": { "type": "string" }, "qty": { "type": "number", "minimum": 1 }, "satuan_id": { "type": "string", "format": "uuid" }, "unit_price": { "type": "number", "minimum": 0 }, "discount": { "type": "number", "minimum": 0, "default": 0 }, "notes": { "type": "string" } } } },
+          "tax_percent": { "type": "number", "minimum": 0, "maximum": 100, "default": 11 },
+          "shipping_cost": { "type": "number", "minimum": 0, "default": 0 },
+          "payment_terms": { "type": "string" },
+          "delivery_address": { "type": "string" },
+          "delivery_date": { "type": "string", "format": "date" },
+          "notes": { "type": "string" }
+        }
+      },
+      "POUpdate": {
+        "type": "object",
+        "properties": {
+          "tax_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+          "shipping_cost": { "type": "number", "minimum": 0 },
+          "payment_terms": { "type": "string" },
+          "delivery_address": { "type": "string" },
+          "delivery_date": { "type": "string", "format": "date" },
+          "notes": { "type": "string" },
+          "items": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "bahan_baku_id": { "type": "string", "format": "uuid" }, "description": { "type": "string" }, "qty": { "type": "number", "minimum": 1 }, "satuan_id": { "type": "string", "format": "uuid" }, "unit_price": { "type": "number", "minimum": 0 }, "discount": { "type": "number", "minimum": 0 }, "notes": { "type": "string" } } } }
+        }
+      },
+      "DeliveryCreate": {
+        "type": "object",
+        "required": ["po_id", "no_surat_jalan"],
+        "properties": {
+          "po_id": { "type": "string", "format": "uuid" },
+          "no_surat_jalan": { "type": "string", "minLength": 1 },
+          "ekspedisi": { "type": "string" },
+          "no_resi": { "type": "string" },
+          "tanggal_kirim": { "type": "string", "format": "date" },
+          "tanggal_estimasi_tiba": { "type": "string", "format": "date" },
+          "catatan": { "type": "string" }
+        }
+      },
+      "DeliveryUpdate": {
+        "type": "object",
+        "properties": {
+          "no_surat_jalan": { "type": "string", "minLength": 1 },
+          "ekspedisi": { "type": "string" },
+          "no_resi": { "type": "string" },
+          "tanggal_kirim": { "type": "string", "format": "date" },
+          "tanggal_estimasi_tiba": { "type": "string", "format": "date" },
+          "tanggal_aktual_tiba": { "type": "string", "format": "date" },
+          "status": { "type": "string", "enum": ["pending", "shipped", "in_transit", "delivered", "cancelled"] },
+          "catatan": { "type": "string" }
+        }
+      },
+      "QCCreate": {
+        "type": "object",
+        "required": ["grn_id", "results", "overall_status"],
+        "properties": {
+          "grn_id": { "type": "string", "format": "uuid" },
+          "results": { "type": "array", "items": { "type": "object", "required": ["grn_item_id", "qty_inspected", "qty_accepted"], "properties": { "grn_item_id": { "type": "string", "format": "uuid" }, "qty_inspected": { "type": "number", "minimum": 0 }, "qty_accepted": { "type": "number", "minimum": 0 }, "qty_rejected": { "type": "number", "minimum": 0, "default": 0 }, "notes": { "type": "string" } } } },
+          "overall_status": { "type": "string", "enum": ["pending", "passed", "failed", "conditional"] },
+          "notes": { "type": "string" }
+        }
+      },
+      "ReturnCreate": {
+        "type": "object",
+        "required": ["reason", "items"],
+        "properties": {
+          "po_id": { "type": "string", "format": "uuid" },
+          "grn_id": { "type": "string", "format": "uuid" },
+          "reason": { "type": "string", "minLength": 1 },
+          "items": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["po_item_id", "qty_return"], "properties": { "po_item_id": { "type": "string", "format": "uuid" }, "qty_return": { "type": "number", "minimum": 1 }, "reason": { "type": "string" } } } }
+        }
+      },
+      "ReturnUpdate": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "enum": ["pending", "approved", "shipped", "completed", "rejected"] },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}

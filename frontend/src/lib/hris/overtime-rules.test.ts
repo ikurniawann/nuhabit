@@ -1,0 +1,105 @@
+import { describe, it, expect } from "vitest";
+import {
+  canDecideOvertime,
+  type OvertimeDecisionActor,
+  type OvertimeDecisionRequest,
+} from "./overtime-rules";
+
+const EMPLOYEE = "emp-1";
+const MANAGER = "mgr-1";
+const HR = "hr-1";
+const OTHER = "emp-2";
+
+function employeeRequest(
+  overrides: Partial<OvertimeDecisionRequest> = {}
+): OvertimeDecisionRequest {
+  return {
+    employee_id: EMPLOYEE,
+    requested_by: EMPLOYEE,
+    source: "employee",
+    reporting_to: MANAGER,
+    ...overrides,
+  };
+}
+
+function companyAssignment(
+  overrides: Partial<OvertimeDecisionRequest> = {}
+): OvertimeDecisionRequest {
+  return {
+    employee_id: EMPLOYEE,
+    requested_by: HR,
+    source: "company",
+    reporting_to: MANAGER,
+    ...overrides,
+  };
+}
+
+const hrActor: OvertimeDecisionActor = { employeeId: HR, isHr: true };
+const managerActor: OvertimeDecisionActor = { employeeId: MANAGER, isHr: false };
+const selfActor: OvertimeDecisionActor = { employeeId: EMPLOYEE, isHr: false };
+const otherActor: OvertimeDecisionActor = { employeeId: OTHER, isHr: false };
+
+describe("canDecideOvertime — pengajuan karyawan", () => {
+  it("HR dapat approve/reject pengajuan orang lain", () => {
+    expect(canDecideOvertime(hrActor, employeeRequest(), "approve").allowed).toBe(true);
+    expect(canDecideOvertime(hrActor, employeeRequest(), "reject").allowed).toBe(true);
+  });
+
+  it("atasan langsung dapat approve", () => {
+    expect(canDecideOvertime(managerActor, employeeRequest(), "approve").allowed).toBe(true);
+  });
+
+  it("rekan biasa TIDAK dapat memutuskan", () => {
+    const result = canDecideOvertime(otherActor, employeeRequest(), "approve");
+    expect(result.allowed).toBe(false);
+  });
+
+  it("pengaju TIDAK bisa approve pengajuannya sendiri — bahkan bila HR (regression)", () => {
+    const hrSelf: OvertimeDecisionActor = { employeeId: EMPLOYEE, isHr: true };
+    const result = canDecideOvertime(
+      hrSelf,
+      employeeRequest({ requested_by: EMPLOYEE }),
+      "approve"
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/sendiri/);
+  });
+
+  it("pengaju dapat membatalkan pengajuannya yang pending", () => {
+    expect(canDecideOvertime(selfActor, employeeRequest(), "cancel").allowed).toBe(true);
+  });
+
+  it("orang lain tidak bisa membatalkan pengajuan karyawan", () => {
+    expect(canDecideOvertime(otherActor, employeeRequest(), "cancel").allowed).toBe(false);
+  });
+});
+
+describe("canDecideOvertime — penugasan perusahaan", () => {
+  it("hanya karyawan yang ditugaskan yang bisa konfirmasi/menolak", () => {
+    expect(canDecideOvertime(selfActor, companyAssignment(), "approve").allowed).toBe(true);
+    expect(canDecideOvertime(selfActor, companyAssignment(), "reject").allowed).toBe(true);
+  });
+
+  it("HR pembuat TIDAK bisa mengonfirmasi atas nama karyawan", () => {
+    expect(canDecideOvertime(hrActor, companyAssignment(), "approve").allowed).toBe(false);
+  });
+
+  it("HR dapat membatalkan penugasan yang belum dikonfirmasi", () => {
+    const otherHr: OvertimeDecisionActor = { employeeId: "hr-2", isHr: true };
+    expect(canDecideOvertime(otherHr, companyAssignment(), "cancel").allowed).toBe(true);
+  });
+});
+
+describe("canDecideOvertime — akun tanpa record karyawan", () => {
+  it("HR tanpa employeeId tetap bisa memutuskan pengajuan karyawan", () => {
+    const hrNoEmployee: OvertimeDecisionActor = { employeeId: null, isHr: true };
+    expect(canDecideOvertime(hrNoEmployee, employeeRequest(), "approve").allowed).toBe(true);
+  });
+
+  it("non-HR tanpa employeeId tidak bisa apa-apa", () => {
+    const anon: OvertimeDecisionActor = { employeeId: null, isHr: false };
+    expect(canDecideOvertime(anon, employeeRequest(), "approve").allowed).toBe(false);
+    expect(canDecideOvertime(anon, employeeRequest(), "cancel").allowed).toBe(false);
+    expect(canDecideOvertime(anon, companyAssignment(), "approve").allowed).toBe(false);
+  });
+});

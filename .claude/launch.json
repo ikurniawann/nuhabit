@@ -1,0 +1,57 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Next.js Dev Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "Next.js Verify",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "frontend",
+        "run",
+        "dev:next",
+        "--port",
+        "3100"
+      ],
+      "port": 3100,
+      "autoPort": true
+    },
+    {
+      "name": "E2 API",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd backend && PORT=8188 exec go run ./cmd/api"
+      ],
+      "port": 8188
+    },
+    {
+      "name": "E2 Site",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && BACKEND_URL=http://127.0.0.1:8188 exec pnpm run dev:next --port 3108 --hostname 127.0.0.1"
+      ],
+      "port": 3108,
+      "url": "http://127.0.0.1:3108"
+    },
+    {
+      "name": "Site Verify",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd frontend && BACKEND_URL=http://127.0.0.1:8190 exec pnpm run dev:next --port 3100 --hostname 127.0.0.1"
+      ],
+      "port": 3100,
+      "url": "http://127.0.0.1:3100"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+/* Flatpickr overrides for design-system date picker */
+
+.ds-flatpickr.flatpickr-calendar {
+  border: 1px solid rgb(229 231 235 / 0.8);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.08);
+}
+
+.ds-flatpickr .flatpickr-months {
+  background: transparent;
+}
+
+.ds-flatpickr .flatpickr-months .flatpickr-month {
+  background: transparent;
+  color: #111827;
+  fill: #6b7280;
+  height: 40px;
+}
+
+.ds-flatpickr .flatpickr-current-month {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.ds-flatpickr .flatpickr-current-month .flatpickr-monthDropdown-months {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+  padding: 0 0.125rem;
+}
+
+.ds-flatpickr .flatpickr-current-month .numInputWrapper {
+  width: 4rem;
+}
+
+.ds-flatpickr .flatpickr-current-month .numInputWrapper input.cur-year {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0;
+}
+
+.ds-flatpickr .flatpickr-current-month .numInputWrapper span.arrowUp,
+.ds-flatpickr .flatpickr-current-month .numInputWrapper span.arrowDown {
+  display: none;
+}
+
+.ds-flatpickr .flatpickr-weekdays {
+  background: transparent;
+}
+
+.ds-flatpickr .flatpickr-weekday {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ds-flatpickr .flatpickr-day.selected,
+.ds-flatpickr .flatpickr-day.startRange,
+.ds-flatpickr .flatpickr-day.endRange {
+  background: #00281a;
+  border-color: #00281a;
+}
+
+.ds-flatpickr .flatpickr-day.selected:hover,
+.ds-flatpickr .flatpickr-day.startRange:hover,
+.ds-flatpickr .flatpickr-day.endRange:hover {
+  background: #121296;
+  border-color: #121296;
+}
+
+.ds-flatpickr .flatpickr-day.today {
+  border-color: #acc3ff;
+}
+
+.ds-flatpickr .flatpickr-day.today:hover {
+  border-color: #00281a;
+}

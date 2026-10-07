@@ -1,0 +1,10 @@
+ID,Severity,Module,Issue,Resolution,Status
+BUG-001,High,KDS/POS,Order pending dari Simpan/Buka bill tidak muncul di KDS,Flow pending/open bill dihubungkan ke KDS,Resolved
+BUG-002,High,Production BOM,Add BOM gagal dengan response 400 Validasi gagal,API/UX BOM diperbaiki dan konsep dipindah ke Recipe/BOM,Resolved
+BUG-003,Medium,Production DB View,Migration gagal karena rename kolom view product_kode ke output_type,Migration disesuaikan dan berhasil diterapkan,Resolved
+BUG-004,Medium,Barang Masuk,Nested button menyebabkan hydration error,Trigger popover/dropdown diperbaiki agar tidak nested button,Resolved
+BUG-005,Medium,Barang Masuk,Warna tombol action tetap pink semua,Button action dibuat custom color sesuai action,Resolved
+BUG-006,Low,Barang Masuk,Istilah GRN kurang umum untuk user,UI diganti ke Penerimaan/Barang Masuk,Resolved
+BUG-007,Low,Global UI,Clickable element kurang terasa bisa diklik,Global cursor pointer ditambahkan untuk action elements,Resolved
+BUG-008,Medium,POS Cashier,Table modal terlalu sempit dan kurang jelas,Modal/card table beberapa kali disesuaikan,Resolved
+BUG-009,Medium,POS Product Search,Search produk belum autocomplete dan enter behavior belum jelas,Autocomplete dan enter behavior ditambahkan,Resolved

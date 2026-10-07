@@ -1,0 +1,6432 @@
+[
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/account-types"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/account-types"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/accounting/account-types/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PUT",
+    "path": "/api/accounting/account-types/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ap/aging"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ap/invoices"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ap/invoices/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ap/payable"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ap/payments"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/ap/payments"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/ap/payments/{id}/void"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ar/aging"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ar/by-sales-invoice/{salesInvoiceId}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ar/invoices"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ar/receipts"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/ar/receipts"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ar/receivable"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank/accounts-options"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank/cash-in"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/cash-bank/cash-in"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank/cash-out"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/cash-bank/cash-out"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank/transfer"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/cash-bank/transfer"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cash-bank/{accountId}/ledger"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/chart-of-accounts"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/chart-of-accounts"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/chart-of-accounts/import"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/accounting/chart-of-accounts/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PUT",
+    "path": "/api/accounting/chart-of-accounts/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/dashboard"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/fiscal-periods"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/fiscal-periods/{id}/close"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/fiscal-periods/{id}/close"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/fiscal-periods/{id}/open"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/fiscal-years"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/fiscal-years"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/accounting/fiscal-years/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/fiscal-years/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PUT",
+    "path": "/api/accounting/fiscal-years/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/fiscal-years/{id}/beginning-balance"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/fiscal-years/{id}/beginning-balance"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-entries"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/journal-entries"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/accounting/journal-entries/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-entries/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PUT",
+    "path": "/api/accounting/journal-entries/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/journal-entries/{id}/post"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-mappings"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/journal-mappings"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/accounting/journal-mappings/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-mappings/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PUT",
+    "path": "/api/accounting/journal-mappings/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ledger/subsidiary"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/reports/{report}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/admin/api-tokens"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/api-tokens"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/admin/api-tokens/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/admin/users"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/users"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/admin/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/admin/users/{id}/reset-password"
+  },
+  {
+    "module": "insights",
+    "method": "DELETE",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "PATCH",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant"
+  },
+  {
+    "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant/actions"
+  },
+  {
+    "module": "insights",
+    "method": "POST",
+    "path": "/api/ai/assistant/attachment"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/brands"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/overview"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/analytics/sources"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/audit"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/active-stall"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/change-password"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/impersonate"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/login"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/logout"
+  },
+  {
+    "module": "identity",
+    "method": "POST",
+    "path": "/api/auth/logout"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/me"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/scope"
+  },
+  {
+    "module": "identity",
+    "method": "GET",
+    "path": "/api/auth/stall-options"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/brands"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/brands"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/brands/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/cv-extract"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/candidates/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/candidates/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/activities"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/activities"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/ai-analysis"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/ai-analysis"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/candidates/{id}/cv-upload"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/cv-upload"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/interview"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/interview/sessions"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/notes"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/notes"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/offers"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/offers"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/psikotes"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/psikotes/sessions"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/candidates/{id}/psikotes/summary"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/report"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/candidates/{id}/screening"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/candidates/{id}/screening"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/candidates/{id}/stage"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/approval-rules"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/approval-rules"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/approval-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/approval-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/approvals"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/approvals/{id}/decide"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/avatar-inventory"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/avatar-inventory"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/avatar-inventory"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/avatars"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/avatars"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/avatars"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/avatars/upload"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/badges"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/badges"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/badges"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/campaign-config"
+  },
+  {
+    "module": "crm",
+    "method": "PUT",
+    "path": "/api/crm/campaign-config"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/campaign-optouts"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/campaign-optouts"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/campaign-optouts"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/campaigns"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/campaigns"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/campaigns/preview"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/campaigns/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/campaigns/{id}/report"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/collectibles/idle-report"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/custom-fields"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/custom-fields"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/custom-fields/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/custom-fields/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/dashboard"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/dashboards"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/dashboards"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/dashboards/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/dashboards/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/dashboards/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/engagement/announcements"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/announcements"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/announcements/image"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/engagement/challenges"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/challenges"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/engagement/checkins"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/engagement/events"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/engagement/events"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/events"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/engagement/events/bookings"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/engagement/events/bookings"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/forms"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/forms"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/forms/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/forms/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/forms/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/inbox/analytics"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/inbox/analytics"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/inbox/conversations"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/inbox/conversations/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/inbox/conversations/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/inbox/templates"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/inbox/templates"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/inbox/templates"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/instagram/webhook"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/instagram/webhook"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/loyalty-features"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/member-reviews"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/member-reviews/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/members"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/members"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/members/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/members/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/members/{id}/activity"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/members/{id}/badges"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/members/{id}/badges"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/members/{id}/consent"
+  },
+  {
+    "module": "crm",
+    "method": "PUT",
+    "path": "/api/crm/members/{id}/consent"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/members/{id}/xp-adjust"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/partners"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/partners"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/partners/events"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/partners/events/rematch"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/partners/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/redemptions"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/redemptions"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/redemptions"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/report-builder"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/report-builder"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/report-builder/datasets"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/report-builder/run"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/report-builder/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/report-builder/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/report-builder/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/report-builder/{id}/export"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/report-schedules"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/report-schedules"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/report-schedules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/report-schedules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/report-schedules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/reports"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/reports/conversations"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/reports/cs"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/reviews"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/reviews"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/rewards"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/rewards"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/rewards"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/scoring-rules"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/scoring-rules"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/scoring-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/scoring-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/scoring/recalculate"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/segments"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/segments"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/segments/preview"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/segments/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/segments/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/segments/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/segments/{id}/preview"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/settings"
+  },
+  {
+    "module": "crm",
+    "method": "PUT",
+    "path": "/api/crm/settings"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/tiers"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/tiers"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/wallpapers"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/wallpapers"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/wallpapers"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/workflow-rules"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/workflow-rules"
+  },
+  {
+    "module": "crm",
+    "method": "DELETE",
+    "path": "/api/crm/workflow-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/workflow-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/workflow-rules/{id}"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/workflow-rules/{id}/runs"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/crm/xp-rules"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/crm/xp-rules"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/attention"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/executive"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/funnel"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/sources"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/stats"
+  },
+  {
+    "module": "insights",
+    "method": "GET",
+    "path": "/api/dashboard/weekly"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/departments"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/nodes"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/nodes/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "PATCH",
+    "path": "/api/dataroom/nodes/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/access"
+  },
+  {
+    "module": "dataroom",
+    "method": "PUT",
+    "path": "/api/dataroom/nodes/{id}/access"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/nodes/{id}/download"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/shares"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/shares"
+  },
+  {
+    "module": "dataroom",
+    "method": "DELETE",
+    "path": "/api/dataroom/shares/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/shares/{id}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/dataroom/tree"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/dataroom/upload"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/inbox"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/overview"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/preferences"
+  },
+  {
+    "module": "desktop",
+    "method": "PUT",
+    "path": "/api/desktop/preferences"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/search"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/status"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/stream"
+  },
+  {
+    "module": "desktop",
+    "method": "DELETE",
+    "path": "/api/desktop/wallpapers"
+  },
+  {
+    "module": "desktop",
+    "method": "GET",
+    "path": "/api/desktop/wallpapers"
+  },
+  {
+    "module": "desktop",
+    "method": "POST",
+    "path": "/api/desktop/wallpapers"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/finance/invoices"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/finance/invoices/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "PATCH",
+    "path": "/api/finance/invoices/{id}"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/finance/invoices/{id}/faktur-pajak"
+  },
+  {
+    "module": "accounting",
+    "method": "GET",
+    "path": "/api/finance/invoices/{id}/payments"
+  },
+  {
+    "module": "accounting",
+    "method": "POST",
+    "path": "/api/finance/invoices/{id}/payments"
+  },
+  {
+    "module": "accounting",
+    "method": "DELETE",
+    "path": "/api/finance/payments/{paymentId}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/bookings/members"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/checkin"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/checkin"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/class-types"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/class-types"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/gym/class-types/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/class-types/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/coaches/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/purchases/{id}/refund"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/reverse"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits/{customerId}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/adjust"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/sell"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/exercises/substitutions"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/exercises/substitutions"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/payouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/payouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/payouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/payouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/incentives/schemes"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/incentives/statements"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "DELETE",
+    "path": "/api/gym/packages/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PATCH",
+    "path": "/api/gym/packages/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "DELETE",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/races/{id}/entrants"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/rules"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PUT",
+    "path": "/api/gym/rules"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions/duplicate-week"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/sessions/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/announcements"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/announcements/cover"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements/cover/{path...}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements/feed"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements/unread-count"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/announcements/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/announcements/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PATCH",
+    "path": "/api/hris/announcements/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/announcements/{id}/read"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/attendance"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/daily-roster"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/export"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/photo/{path...}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/schedule"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/stats"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/attendance/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/attendance/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/attendance/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts/expiring"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/contracts/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PATCH",
+    "path": "/api/hris/contracts/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts/{id}/document"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/contracts/{id}/signed-document"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/contracts/{id}/signed-document"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/contracts/{id}/signed-document"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/departments"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/dept-tasks"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/dept-tasks"
+  },
+  {
+    "module": "payroll",
+    "method": "PATCH",
+    "path": "/api/hris/dept-tasks/occurrences/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PATCH",
+    "path": "/api/hris/dept-tasks/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/employee-salary"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/employee-salary"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/employee-salary/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/employee-salary/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/employee-salary/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/employees"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/employees"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/employees/documents"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/employees/documents"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/employees/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/employees/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/employees/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "*",
+    "path": "/api/hris/employees/{id}/{sub}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/employment-history"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/employment-history"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-approvals"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-approvals"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-approvals/approve"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-approvals/reject"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-assignments"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-assignments"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/feedback-assignments/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-assignments/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/feedback-assignments/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-categories"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-categories"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-cycles"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-cycles"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/feedback-cycles/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-cycles/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/feedback-cycles/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-responses"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-responses"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/feedback-responses/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-responses/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PATCH",
+    "path": "/api/hris/feedback-responses/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-responses/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/feedback-responses/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/feedback-summaries"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/feedback-summaries"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/holidays"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/holidays"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/holidays/import"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/holidays/import"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/holidays/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PATCH",
+    "path": "/api/hris/holidays/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/hris/job-openings"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/hris/job-openings"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/hris/job-openings/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "PATCH",
+    "path": "/api/hris/job-openings/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/kpi-config"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/kpi-config"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/kpi/recommendation"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/kpi/rubric"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/kpi/scorecards"
+  },
+  {
+    "module": "payroll",
+    "method": "PATCH",
+    "path": "/api/hris/kpi/scorecards"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/kpi/snapshot"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/kpi/targets"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/kpi/targets"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/kpi/targets"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leave-balances/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/leave-balances/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leaves"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/leaves"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/leaves/approve"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/leaves/attachment"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leaves/attachment/{path...}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leaves/export"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/leaves/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/leaves/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/leaves/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/loans"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/loans"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/loans/{id}/approve"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/logbook"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/logbook"
+  },
+  {
+    "module": "hris",
+    "method": "PATCH",
+    "path": "/api/hris/logbook"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/logbook"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/me"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/me/beranda"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/me/team"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/nav-badges"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/nav-badges"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/notifications"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/notifications"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/offboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/offboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/offboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/onboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/onboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/hris/onboarding/{employee_id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/overtime"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/overtime"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/overtime/decide"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/payroll"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/payroll"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/payroll-settings"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/payroll-settings"
+  },
+  {
+    "module": "payroll",
+    "method": "DELETE",
+    "path": "/api/hris/payroll/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/payroll/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PUT",
+    "path": "/api/hris/payroll/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/payroll/{id}/calculate"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/payslips"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/payslips/notify"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/payslips/{id}/pdf"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/performance/cycles"
+  },
+  {
+    "module": "payroll",
+    "method": "POST",
+    "path": "/api/hris/performance/cycles"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/performance/realtime"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/performance/reviews"
+  },
+  {
+    "module": "payroll",
+    "method": "GET",
+    "path": "/api/hris/performance/reviews/{id}"
+  },
+  {
+    "module": "payroll",
+    "method": "PATCH",
+    "path": "/api/hris/performance/reviews/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/hris/promote"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/reports"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/hris/shifts"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/hris/shifts"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/hris/shifts/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PATCH",
+    "path": "/api/hris/shifts/{id}"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/gobiz/webhook/{token}"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/loyalty-events/{partner}"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/integrations/telegram/webhook/{secret}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/files/{path...}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/session/{token}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/answer"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/session/{token}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/live-frame"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/proctor-event"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/recording-chunk"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/start"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/session/{token}/webrtc"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/interview/session/{token}/webrtc"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/sessions/{id}/proctor-events"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/interview/sessions/{id}/recordings"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/batches"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/expiry"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/finished-goods"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/finished-goods/adjustment"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/low-stock"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/materials"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/movements"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/product-stock-opnames"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/product-stock-opnames"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/product-stock-opnames/preview"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/product-stock-opnames/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/product-stock-opnames/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/product-stock-opnames/{id}/complete"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/raw-materials"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/scrap"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/scrap"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/stock-opnames"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/stock-opnames"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/stock-opnames/preview"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/stock-opnames/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/stock-opnames/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/stock-opnames/{id}/complete"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/{id}/{sub}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/job-openings/public"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/master/departments"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/master/departments"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/master/departments/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/master/departments/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/master/employment-statuses"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/master/employment-statuses"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/master/employment-statuses/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/master/employment-statuses/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "GET",
+    "path": "/api/master/positions"
+  },
+  {
+    "module": "hris",
+    "method": "POST",
+    "path": "/api/master/positions"
+  },
+  {
+    "module": "hris",
+    "method": "DELETE",
+    "path": "/api/master/positions/{id}"
+  },
+  {
+    "module": "hris",
+    "method": "PUT",
+    "path": "/api/master/positions/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/app/classes/catalog"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/announcements/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/bookings"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/me"
+  },
+  {
+    "module": "member-portal",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/home/me"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/home/settings"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/home/visits"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/activities"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/train/activities/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities/{id}/comments"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/activities/{id}/kudos"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/athletes/{memberId}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/challenges"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/challenges/{id}/join"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/challenges/{id}/join"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/clubs"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/clubs/{id}/toggle"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/feed"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/follow/{memberId}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/gear"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/gear"
+  },
+  {
+    "module": "athlete",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/train/gear/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/heatmap"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/routes"
+  },
+  {
+    "module": "athlete",
+    "method": "POST",
+    "path": "/api/member-portal/app/train/routes"
+  },
+  {
+    "module": "athlete",
+    "method": "DELETE",
+    "path": "/api/member-portal/app/train/routes/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/segments"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/segments/{id}"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "PUT",
+    "path": "/api/member-portal/app/train/settings"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/social"
+  },
+  {
+    "module": "athlete",
+    "method": "GET",
+    "path": "/api/member-portal/app/train/stats"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/exercises"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races/mine"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/races/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/workouts/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "PATCH",
+    "path": "/api/member-portal/app/workout/workouts/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/auth/google"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/badges"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/badges"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/bills"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/challenges"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/challenges"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/collectibles"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/collectibles/equip"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/collectibles/redeem"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/member-portal/consent"
+  },
+  {
+    "module": "member-portal",
+    "method": "DELETE",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/events"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/member-portal/gym/bookings"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/member-portal/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/member-portal/gym/bookings/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/coaches/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits/packages"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/purchases"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/credits/purchases/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/purchases/{id}/simulate-paid"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/races"
+  },
+  {
+    "module": "gym-training",
+    "method": "PATCH",
+    "path": "/api/member-portal/gym/races/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/sessions"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/member-portal/gym/sessions/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/workouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/workouts"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/gym/workouts/sessions/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/workouts/{a}/{b}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/logout"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/me"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/notifications"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/notifications"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/notifications/track"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/orders/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/otp"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/member-portal/profile"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/profile/photo"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/promos"
+  },
+  {
+    "module": "member-portal",
+    "method": "DELETE",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/push"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/qr"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/register"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/register/otp"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/reviews"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/reviews"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/rewards"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/rewards"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/topup"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/topup"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/topup/{id}"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/topup/{id}/simulate-paid"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/transactions"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/verify"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/visits"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/wallpapers"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/wallpapers/redeem"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/notifications/send"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/offer/session/{token}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/offer/session/{token}/respond"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/offers/{id}/response"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/payments/xendit/webhook"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/payments/xendit/webhook"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/portal/options"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/portal/submit"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/billing-settings"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PUT",
+    "path": "/api/pos/billing-settings"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/channel-prices"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PUT",
+    "path": "/api/pos/channel-prices"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/checkouts"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/checkouts/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/checkouts/{id}/cancel"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/checkouts/{id}/complete"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/customers"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/customers"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/dashboard"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/gift-card-check"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/gift-card-config"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/gift-card-reload"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/gofood/orders"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/gofood/orders/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/kds"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/loyalty-settings"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PUT",
+    "path": "/api/pos/loyalty-settings"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/pos/member-bills"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/pos/member-bills/{customerId}"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-bills/{customerId}/payments"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-bills/{customerId}/send-wa"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-bills/{customerId}/settle"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/pos/member-cards"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-cards/{id}/refund"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-cards/{id}/unlink"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/member-qr"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-refunds/{id}/cancel"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/member-refunds/{id}/complete"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/offer-rules"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/orders"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/open-bill"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/orders/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "PATCH",
+    "path": "/api/pos/orders/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/accept"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/merge"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/orders/{id}/payment-proof"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/pre-settle"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/send-wa"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/orders/{id}/splits"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/splits"
+  },
+  {
+    "module": "pos-sales",
+    "method": "PATCH",
+    "path": "/api/pos/orders/{id}/splits/{splitId}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/splits/{splitId}/pay"
+  },
+  {
+    "module": "pos-sales",
+    "method": "PATCH",
+    "path": "/api/pos/orders/{id}/status"
+  },
+  {
+    "module": "pos-sales",
+    "method": "PATCH",
+    "path": "/api/pos/orders/{id}/table"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/transfer-items"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/orders/{id}/void"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/pass-lookup"
+  },
+  {
+    "module": "pos-ops",
+    "method": "DELETE",
+    "path": "/api/pos/payment-methods"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/payment-methods"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/payment-methods"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/payment-methods"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/print-jobs"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/print-jobs"
+  },
+  {
+    "module": "pos-sales",
+    "method": "PATCH",
+    "path": "/api/pos/print-jobs/{id}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/products"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/products"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/products/sync-purchasing"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/products/{id}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/products/{id}/skus"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/products/{id}/skus"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/products/{id}/skus/matrix"
+  },
+  {
+    "module": "pos-ops",
+    "method": "DELETE",
+    "path": "/api/pos/products/{id}/skus/{skuId}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/products/{id}/skus/{skuId}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/promo-check"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/qris"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/qris/{id}/status"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/receipt-settings"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/closing"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/export"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/payment-methods"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/product-sales"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/profit"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/revenue-composition"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/rush-hour"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/rush-hour/export"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/transactions"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reports/voids"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/reservations"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/reservations"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/reservations/{id}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/reservations/{id}/seat"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PUT",
+    "path": "/api/pos/sales-channels/{code}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/shifts"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/shifts"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/shifts/current"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/shifts/{id}/close"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/shifts/{id}/send-report"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/stock-alerts"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/pos/supervisors"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/pos/supervisors"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/tables"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/tables"
+  },
+  {
+    "module": "pos-ops",
+    "method": "DELETE",
+    "path": "/api/pos/tables/{id}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/tables/{id}"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/tables/{id}/position"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/pos/topup"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/topup"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/topup/{id}/cancel"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/topup/{id}/reconcile"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/pos/topup/{id}/send-wa"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/pos/topup/{id}/status"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/positions"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/positions"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/campaigns"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/campaigns"
+  },
+  {
+    "module": "stored-value",
+    "method": "PATCH",
+    "path": "/api/promo/campaigns/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/campaigns/{id}/codes"
+  },
+  {
+    "module": "stored-value",
+    "method": "PATCH",
+    "path": "/api/promo/campaigns/{id}/codes"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/campaigns/{id}/codes"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/campaigns/{id}/redemptions"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/catalog"
+  },
+  {
+    "module": "stored-value",
+    "method": "DELETE",
+    "path": "/api/promo/codes/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "PATCH",
+    "path": "/api/promo/codes/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/gift-card-config"
+  },
+  {
+    "module": "stored-value",
+    "method": "PUT",
+    "path": "/api/promo/gift-card-config"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/gift-cards"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/gift-cards"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/gift-cards/member-lookup"
+  },
+  {
+    "module": "stored-value",
+    "method": "PATCH",
+    "path": "/api/promo/gift-cards/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/gift-cards/{id}/adjust"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/gift-cards/{id}/ledger"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/gift-cards/{id}/reload"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/offers"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/promo/offers"
+  },
+  {
+    "module": "stored-value",
+    "method": "DELETE",
+    "path": "/api/promo/offers/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/promo/offers/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "PATCH",
+    "path": "/api/promo/offers/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/files/{path...}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/instruments"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/psikotes/instruments/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/instruments/{id}/questions"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/instruments/{id}/questions"
+  },
+  {
+    "module": "recruitment",
+    "method": "DELETE",
+    "path": "/api/psikotes/questions/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/psikotes/questions/{id}"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session-tests/{id}/ai-insight"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/session-tests/{id}/answers"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/psikotes/session-tests/{id}/review"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/session/{token}"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/session/{token}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/finish"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/live-frame"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/proctor-event"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/start"
+  },
+  {
+    "module": "recruitment",
+    "method": "PUT",
+    "path": "/api/psikotes/session/{token}/tests/{testId}/answers"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/tests/{testId}/finish"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/tests/{testId}/start"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/tests/{testId}/upload"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/session/{token}/webrtc"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/psikotes/session/{token}/webrtc"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/psikotes/sessions/{id}/proctor-events"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/webhook/xendit"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/public/booking/{a}/{b}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}/pass"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/public/booking/{slug}/promo-check"
+  },
+  {
+    "module": "crm",
+    "method": "GET",
+    "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/public/crm/forms/{slug}"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/public/gofood-image/{file}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/webhook/biteship"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/webhook/xendit"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/public/shop/{a}/{b}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/checkout"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/public/shop/{slug}/shipping/areas"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/shipping/rates"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/articles/{slug}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/branches"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/branches/{slug}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/events"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/public/site/events/{slug}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/public/site/plans"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/public/site/sessions"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/public/site/trial"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/bom/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/bom/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/cogs/additional-cost"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/cogs/additional-cost"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/cogs/additional-cost/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/cogs/product/{produk_id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/cogs/raw-material/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/dashboard"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/deliveries"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/deliveries"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/deliveries/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/deliveries/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/deliveries/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/delivery"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/delivery"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/delivery/for-grn"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/delivery/po-options"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/delivery/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/delivery/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/delivery/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/delivery/{id}/arrive"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/docs/spec"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/export/products"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/export/raw-materials"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/export/suppliers"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/grn"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/grn"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/grn/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/grn/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn/{id}/items"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/grn/{id}/items"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn/{id}/qc"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/grn/{id}/qc"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn/{id}/returnable-items"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/grn/{id}/vendor-credits"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/products"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/raw-materials"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/import/suppliers"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/import/units"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/inventory/adjustment"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/movements"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/supply"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/inventory/supply-adjustment"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/supply-usage"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/inventory/supply-usage"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/supply/form-data"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/supply/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/transfer"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/inventory/transfer"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/transfer/preview"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/inventory/{id}/{sub}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/items/{lookup}"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/items/{lookup}"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/items/{lookup}/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/items/{lookup}/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/materials"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/materials"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/materials/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po-items"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po/form-data"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/po/items/{item_id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/po/items/{item_id}"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/po/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/po/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/approve"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/cancel"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/close"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po/{id}/items"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/items"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/po/{id}/payment-terms"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/payment-terms"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/po/{id}/payment-terms/{termId}"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/payments"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/receive"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/po/{id}/send"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/pr"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/pr"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/pr/for-po"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/pr/form-data"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/pr/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/pr/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/pr/{id}/approve"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/pr/{id}/convert-to-po"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/pr/{id}/revise"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/pr/{id}/submit"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/production/orders"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/production/orders"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/production/orders/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PATCH",
+    "path": "/api/purchasing/production/orders/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/production/product-recipes"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/production/raw-material-recipes"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/production/wip"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/products"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/products"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/products/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/products/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/products/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/products/{id}/apply-recipe-hpp"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/products/{id}/bom"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/products/{id}/bom"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/qc"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/qc"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/qc/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/raw-material-bom/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/raw-material-bom/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/raw-materials"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/raw-materials"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/raw-materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/raw-materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PATCH",
+    "path": "/api/purchasing/raw-materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/raw-materials/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/raw-materials/{id}/bom"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/raw-materials/{id}/bom"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/raw-materials/{id}/price-history"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/raw-materials/{id}/purchase-price"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/receipt-scan"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/receipts/{path...}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/receiving-workspace"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/reports/inventory-valuation"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/reports/po-detail"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/reports/po-summary"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/reports/production-in-house"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/reports/stock-card"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/reports/supplier-performance"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/return"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/return"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/return/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/return/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/return/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/returns"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/returns"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/returns/grn-options"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/returns/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/returns/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/returns/{id}/approve"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/returns/{id}/reject"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/returns/{id}/revise"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/suppliers"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/suppliers"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/suppliers/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/suppliers/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/suppliers/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/suppliers/{id}/price-history"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/supply-items"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/supply-items"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/supply-items/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/supply-items/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PATCH",
+    "path": "/api/purchasing/supply-items/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/units"
+  },
+  {
+    "module": "inventory",
+    "method": "POST",
+    "path": "/api/purchasing/units"
+  },
+  {
+    "module": "inventory",
+    "method": "DELETE",
+    "path": "/api/purchasing/units/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/units/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "PUT",
+    "path": "/api/purchasing/units/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendor-credits/apply"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/vendor-credits/apply"
+  },
+  {
+    "module": "procurement",
+    "method": "PATCH",
+    "path": "/api/purchasing/vendor-credits/{id}/approve"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendor-payments"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendor-price-list"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/vendor-price-list"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/vendor-price-list/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendor-price-list/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/vendor-price-list/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendors"
+  },
+  {
+    "module": "procurement",
+    "method": "POST",
+    "path": "/api/purchasing/vendors"
+  },
+  {
+    "module": "procurement",
+    "method": "DELETE",
+    "path": "/api/purchasing/vendors/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "GET",
+    "path": "/api/purchasing/vendors/{id}"
+  },
+  {
+    "module": "procurement",
+    "method": "PUT",
+    "path": "/api/purchasing/vendors/{id}"
+  },
+  {
+    "module": "inventory",
+    "method": "GET",
+    "path": "/api/purchasing/warehouses"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/recruitment/live-monitoring"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/recruitment/live-monitoring/{type}/{id}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/recruitment/live-monitoring/{type}/{id}/chat"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/recruitment/live-monitoring/{type}/{id}/frame"
+  },
+  {
+    "module": "recruitment",
+    "method": "GET",
+    "path": "/api/recruitment/live-monitoring/{type}/{id}/webrtc"
+  },
+  {
+    "module": "recruitment",
+    "method": "POST",
+    "path": "/api/recruitment/live-monitoring/{type}/{id}/webrtc"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/availability"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/front-office"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/reservations"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/reservations/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/reservations/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations/{id}/charges"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/reservations/{id}/status"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/room-types"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/room-types"
+  },
+  {
+    "module": "resort",
+    "method": "DELETE",
+    "path": "/api/resort/room-types/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/room-types/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "GET",
+    "path": "/api/resort/rooms"
+  },
+  {
+    "module": "resort",
+    "method": "POST",
+    "path": "/api/resort/rooms"
+  },
+  {
+    "module": "resort",
+    "method": "DELETE",
+    "path": "/api/resort/rooms/{id}"
+  },
+  {
+    "module": "resort",
+    "method": "PATCH",
+    "path": "/api/resort/rooms/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/accounts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/accounts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/accounts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/activities"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/activities"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/activities/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/activities/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/contacts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/contacts"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/contacts/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/custom-fields"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/customers"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/deals/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/invoices"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/invoices"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/members"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/payments"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/payments"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/deals/{id}/payments/{paymentId}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/deals/{id}/quotations"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/quotations"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/deals/{id}/send-wa"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/forecast"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/invoices/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/invoices/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/invoices/{id}/pdf"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads/by-phone"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads/import"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/leads/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/leads/{id}/link-customer"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/leads/{id}/link-customer"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/lost-reasons"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/owners"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/pipelines"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/pipelines"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/pipelines/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/products"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/quotations/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/quotations/{id}/pdf"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/realize"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/revise"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/quotations/{id}/send-wa"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/raw-materials"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/recipes"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PUT",
+    "path": "/api/sales-funnel/recipes"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/reports"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/stages"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/stages"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/stages/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/targets"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PUT",
+    "path": "/api/sales-funnel/targets"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/timeline"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "GET",
+    "path": "/api/sales-funnel/wa-templates"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "POST",
+    "path": "/api/sales-funnel/wa-templates"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "DELETE",
+    "path": "/api/sales-funnel/wa-templates/{id}"
+  },
+  {
+    "module": "sales-funnel",
+    "method": "PATCH",
+    "path": "/api/sales-funnel/wa-templates/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/sections"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/sections"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/appearance"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/appearance"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/business"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/business"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/business/branch/{id}/profile"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/business/branch/{id}/profile"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/business/{type}/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PATCH",
+    "path": "/api/settings/business/{type}/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/company-profile"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/company-profile"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/gobiz"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/gobiz"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/gobiz/actions"
+  },
+  {
+    "module": "integrations",
+    "method": "DELETE",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/google-business"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/menus"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/iam/menus"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/menus/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/iam/roles"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/roles/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/iam/roles/{id}/permissions"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/iam/roles/{id}/permissions"
+  },
+  {
+    "module": "integrations",
+    "method": "DELETE",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/instagram"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/integrations"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/integrations"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/order-alerts"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/payment-gateways"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/payment-gateways"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/receipt"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/receipt"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/sales-target"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/sales-target"
+  },
+  {
+    "module": "configuration",
+    "method": "DELETE",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/static-qris"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/settings/tts"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/settings/tts"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/settings/tts/preview"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-gateway"
+  },
+  {
+    "module": "integrations",
+    "method": "PATCH",
+    "path": "/api/settings/wa-gateway"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-gateway/messages"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/wa-gateway/messages"
+  },
+  {
+    "module": "integrations",
+    "method": "GET",
+    "path": "/api/settings/wa-notifications"
+  },
+  {
+    "module": "integrations",
+    "method": "PUT",
+    "path": "/api/settings/wa-notifications"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/settings/wa-notifications/test"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}/files/{nodeId}"
+  },
+  {
+    "module": "dataroom",
+    "method": "GET",
+    "path": "/api/share/{token}/list"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/share/{token}/request-code"
+  },
+  {
+    "module": "dataroom",
+    "method": "POST",
+    "path": "/api/share/{token}/verify"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/marketplace/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/callback"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/connect"
+  },
+  {
+    "module": "shop",
+    "method": "DELETE",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/marketplace/links"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/marketplace/listings"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/marketplace/sync"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/orders/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/orders/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/orders/{id}/shipment"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/areas"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/shipping/rates"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/settings"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/shipping/settings"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/shipping/track"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/wholesale/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/wholesale/accounts/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/products"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/wholesale/products/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/articles"
+  },
+  {
+    "module": "site",
+    "method": "DELETE",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "PATCH",
+    "path": "/api/site/articles/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "PUT",
+    "path": "/api/site/content/{key}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/events"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/events"
+  },
+  {
+    "module": "site",
+    "method": "DELETE",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "GET",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "PATCH",
+    "path": "/api/site/events/{id}"
+  },
+  {
+    "module": "site",
+    "method": "POST",
+    "path": "/api/site/uploads"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/table-order/orders"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/table-order/orders/{id}"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/table-order/orders/{id}/payment-proof"
+  },
+  {
+    "module": "pos-sales",
+    "method": "POST",
+    "path": "/api/table-order/orders/{id}/payment-proof"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/table-order/products"
+  },
+  {
+    "module": "pos-sales",
+    "method": "GET",
+    "path": "/api/table-order/session/{tableCode}"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/bands"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/bands"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/bands/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/bookings"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/bookings/lookup"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/bookings/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/bookings/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/bookings/{id}/cancel"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/bookings/{id}/redeem"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/bookings/{id}/resend-wa"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/capacity-dates"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/capacity-dates"
+  },
+  {
+    "module": "ticketing",
+    "method": "DELETE",
+    "path": "/api/ticketing/capacity-dates/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/capacity-dates/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/categories"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/categories"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/channel-manager"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/channels"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/channels/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/gate/pass-tap"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/gate/tap"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/occupancy"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/products"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/products"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/products/loket-options"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/products/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/products/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "PUT",
+    "path": "/api/ticketing/products/{id}/bundle-items"
+  },
+  {
+    "module": "ticketing",
+    "method": "PUT",
+    "path": "/api/ticketing/products/{id}/channel-prices"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/products/{id}/channels"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/products/{id}/dates"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/products/{id}/dates/bulk"
+  },
+  {
+    "module": "ticketing",
+    "method": "DELETE",
+    "path": "/api/ticketing/products/{id}/dates/{dateId}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/products/{id}/thumbnail"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/reports"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/season-passes"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/season-passes"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/season-passes/pass-options"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/season-passes/{id}/renew"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/settings"
+  },
+  {
+    "module": "ticketing",
+    "method": "PUT",
+    "path": "/api/ticketing/settings"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/staff-passes"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/staff-passes"
+  },
+  {
+    "module": "ticketing",
+    "method": "DELETE",
+    "path": "/api/ticketing/staff-passes/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/tab/check"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/tab/stats"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/time-slots"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/time-slots"
+  },
+  {
+    "module": "ticketing",
+    "method": "DELETE",
+    "path": "/api/ticketing/time-slots/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "PATCH",
+    "path": "/api/ticketing/time-slots/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/visits"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/visits"
+  },
+  {
+    "module": "ticketing",
+    "method": "GET",
+    "path": "/api/ticketing/visits/{id}"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/visits/{id}/bands/{bandId}/lost"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/visits/{id}/charges/{chargeId}/void"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/visits/{id}/deposit"
+  },
+  {
+    "module": "ticketing",
+    "method": "POST",
+    "path": "/api/ticketing/visits/{id}/settle"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/users"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/users"
+  },
+  {
+    "module": "configuration",
+    "method": "GET",
+    "path": "/api/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "PUT",
+    "path": "/api/users/{id}"
+  },
+  {
+    "module": "configuration",
+    "method": "POST",
+    "path": "/api/users/{id}/reset-password"
+  },
+  {
+    "module": "integrations",
+    "method": "POST",
+    "path": "/api/wa/inbound"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/branches"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/entries/{id}/refund"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/entries/{id}/reverse"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/members"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/members/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/members/{id}/adjust"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/packages"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/packages"
+  },
+  {
+    "module": "stored-value",
+    "method": "DELETE",
+    "path": "/api/wallet/packages/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "PUT",
+    "path": "/api/wallet/packages/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/payments"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/payments/{id}"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/payments/{id}/reconcile"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/settings"
+  },
+  {
+    "module": "stored-value",
+    "method": "PUT",
+    "path": "/api/wallet/settings"
+  },
+  {
+    "module": "stored-value",
+    "method": "GET",
+    "path": "/api/wallet/sweep"
+  },
+  {
+    "module": "stored-value",
+    "method": "POST",
+    "path": "/api/wallet/sweep"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/catalog"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/login"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/logout"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/me"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/orders/{id}"
+  }
+]

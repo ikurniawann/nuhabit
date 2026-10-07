@@ -1,0 +1,40 @@
+ID,Module,Scenario,Steps,Expected Result,Actual Result,Status,Notes
+QA-CRM-001,CRM,Buka dashboard CRM,Open /dashboard/crm,Dashboard CRM tampil,Dashboard tampil,Passed with Notes,Data masih dummy/test
+QA-CRM-002,CRM,Buka list member,Open /dashboard/crm/members,List member tampil,List member tampil,Passed with Notes,Detail member sudah dipindah ke page sendiri
+QA-CRM-003,CRM,Buka detail member,Open /dashboard/crm/members/[id],Detail member tampil,Detail tampil,Passed with Notes,Bisa lanjut ownership avatar
+QA-CRM-004,CRM,Buka rewards,Open /dashboard/crm/rewards,Rewards tampil,Rewards tampil,Passed with Notes,Perlu redemption flow lengkap
+QA-CRM-005,CRM,Buka avatars,Open /dashboard/crm/avatars,Avatar list tampil,Avatar list tampil,Passed with Notes,Sudah ada sample avatar
+QA-POS-001,POS F&B,Buka POS cashier,Open /dashboard/pos/cashier-new,POS cashier tampil,Tampil,Passed with Notes,UI sudah beberapa kali dirapikan
+QA-POS-002,POS F&B,Dine-in table selector,Aktifkan dine-in,Modal pilih meja tampil,Modal tampil,Passed with Notes,Data meja sudah diarahkan ke real table
+QA-POS-003,POS F&B,Cari produk autocomplete,"Ketik produk, enter",Varian terbuka atau item masuk cart,Flow dibuat,Passed with Notes,Perlu regression lebih luas untuk semua jenis produk
+QA-POS-004,POS F&B,Tambah customer/member baru,Dari POS tambah customer,Customer tersimpan dan bisa dipakai,Flow dibuat,Passed with Notes,Terhubung ke CRM concept
+QA-POS-005,POS F&B,Simpan/Buka bill,Buat order pending,Bill tersimpan,Bill tersimpan,Passed with Notes,Diperbaiki agar masuk KDS
+QA-OB-001,Open Bills,Order meja masuk open bill,Buat order dari table/POS,Open bill muncul,Muncul,Passed with Notes,Sudah QA end-to-end
+QA-OB-002,Open Bills,Pindah meja,Dari open bill pindah meja,Table berubah,Berjalan,Passed with Notes,Perlu audit history nanti
+QA-OB-003,Open Bills,Bayar open bill,Pilih bayar,Status completed dan open bill berkurang,Berjalan,Passed with Notes,Perlu payment gateway real
+QA-KDS-001,KDS,Pending order masuk KDS,Simpan/Buka bill,Order tampil di KDS,Gap ditemukan lalu diperbaiki,Passed with Notes,Flow kitchen/bar station perlu QA lanjutan
+QA-KDS-002,KDS,Station product config,Set station produk,KDS bisa route per station,API real disiapkan,Passed with Notes,Perlu data station lebih lengkap
+QA-TBL-001,Table Ordering,Buka QR table order,Open /table-order/T-01,Page order tampil untuk meja T-01,Tampil,Passed with Notes,Dine-in otomatis dari table ID
+QA-TBL-002,Table Ordering,Product grid 2 kolom,Lihat menu list,Thumbnail lebih kecil dan 2 kolom,Berubah,Passed with Notes,Sesuai request mobile
+QA-TBL-003,Table Ordering,Add to cart dengan varian,Klik produk,Modal varian tampil,Tampil,Passed with Notes,Flow dibuat lebih sederhana
+QA-TBL-004,Table Ordering,Summary order,Klik info order bawah,Halaman summary tampil,Tampil,Passed with Notes,Summary bawah langsung dihapus
+QA-TBL-005,Table Ordering,Submit order,Pilih metode bayar/order,Order terkirim dan status tampil,Berjalan,Passed with Notes,Backend API dibuat
+QA-TBL-006,Table Ordering,Order lagi setelah submit,Klik order lagi,Bisa mulai order baru,Ditambahkan,Passed with Notes,Perlu regression multi-order
+QA-PUR-MD-001,Purchasing Master Data,Supplier CRUD,Create/edit/delete supplier,Data tersimpan,Distabilkan,Passed with Notes,Data test boleh berubah
+QA-PUR-MD-002,Purchasing Master Data,Raw material create/edit/detail,Kelola raw material,Data tersimpan dan detail tampil,Distabilkan,Passed with Notes,Ditambahkan sample 5 raw material
+QA-PUR-MD-003,Purchasing Master Data,Price list create/edit/detail,Kelola harga supplier,Data tersimpan,Distabilkan,Passed with Notes,Perlu QA multi-supplier
+QA-PUR-MD-004,Purchasing Master Data,Product detail tab,Buka product detail,Tab informasi/BOM familiar,Diperbaiki,Passed with Notes,BOM dipindahkan lebih proper ke Recipe/BOM
+QA-PO-001,Purchase Order,Create PO dari production shortage,Klik Buatkan PO,PO form terisi item shortage,Berjalan,Passed with Notes,"Current flow PO dulu, PR menyusul"
+QA-PO-002,Purchase Order,Flow PO ke delivery,Buat delivery dari PO,Delivery tersimpan,Berjalan,Passed with Notes,UI awal sempat membingungkan
+QA-GRN-001,Barang Masuk,Barang Masuk workspace,Open /dashboard/purchasing/grn,Delivery dan penerimaan satu workspace,Berjalan,Passed with Notes,Menu diganti menjadi Barang Masuk
+QA-GRN-002,Barang Masuk,Input penerimaan,Open /dashboard/purchasing/grn/new?delivery_id=...,Form penerimaan tampil,Tampil,Passed with Notes,Nested button error diperbaiki
+QA-GRN-003,Barang Masuk,Action button colors,Lihat action table,Button beda warna,Diperbaiki,Passed with Notes,Pink/biru/hijau
+QA-GRN-004,Barang Masuk,Common wording,Lihat UI Barang Masuk,Istilah GRN diganti bahasa umum,Diperbaiki,Passed with Notes,Masih nama route /grn untuk kompatibilitas
+QA-BOM-001,Recipe/BOM,Add BOM item,Tambahkan BOM,BOM tersimpan,Error 400 ditemukan lalu diperbaiki,Passed with Notes,UX dipindah ke area lebih proper
+QA-BOM-002,Recipe/BOM,BOM untuk WIP,Setup bahan dari bahan baku/WIP,WIP bisa jadi bahan,Didukung secara konsep/schema,Passed with Notes,Perlu QA produksi WIP end-to-end
+QA-PROD-001,Production Order,Production list,Open /dashboard/purchasing/production,List produk yang mau diproduksi,Diperbaiki sesuai konsep,Passed with Notes,Perlu filtering/status
+QA-PROD-002,Production Order,Production detail shortage,Buka order detail,Material shortage tampil,Tampil,Passed with Notes,QA order PROD-202605-0004
+QA-PROD-003,Production Order,Create PO dari shortage,Klik action dari bahan kurang,Redirect ke PO,Berjalan,Passed with Notes,Item shortage terbawa di query
+QA-PROD-004,Production Order,Recheck stock,Klik Cek Ulang Stok,Backend cek ulang stok,Berhasil,Passed with Notes,Muncul pesan masih ada 3 bahan kurang
+QA-PROD-005,Production Order,Release blocked if shortage,Shortage masih ada,Release disabled/ditahan,Sesuai,Passed with Notes,Validasi backend dan UI ada
+QA-PROD-006,Production Order,Complete production backend,Complete order,"Stok bahan berkurang, output masuk, HPP dihitung",Logic backend tersedia,Not Tested,Perlu UI complete dan QA end-to-end

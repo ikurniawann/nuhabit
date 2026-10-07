@@ -1,0 +1,229 @@
+/* Aplikasi member 1:1 (apps/member NüHabit). Warna memakai token
+   --color-nh-* dari globals.css. */
+
+.nh-app {
+  min-height: 100dvh;
+  background: var(--color-nh-beige);
+  color: var(--color-nh-ink);
+  font-family: var(--font-nh-body);
+  -webkit-font-smoothing: antialiased;
+  color-scheme: light;
+}
+
+.nh-display {
+  font-family: var(--font-nh-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Kartu lembut: hairline + bayangan berlapis yang nyaris tak terlihat. */
+.nh-card {
+  background: var(--color-nh-cream);
+  border: 1px solid rgb(0 40 26 / 0.04);
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 2px rgb(0 40 26 / 0.03), 0 10px 30px rgb(0 40 26 / 0.05);
+}
+
+/* Permukaan gelap premium: Dark Jungle ke Deep Forest Green. */
+.nh-surface-ink {
+  background: linear-gradient(150deg, #1c261b 0%, #00281a 55%, #001b12 100%);
+}
+
+/* Gradien lime khas (tombol tengah, tile utama). Selalu dengan teks gelap. */
+.nh-surface-brand {
+  background: linear-gradient(140deg, #eeffb1 0%, #daff59 45%, #abde67 100%);
+}
+
+.nh-btn-brand,
+.nh-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  padding: 0.875rem 1.25rem;
+  font-weight: 800;
+  text-align: center;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms;
+}
+.nh-btn-brand {
+  background: var(--color-nh-lime);
+  color: var(--color-nh-ink);
+  box-shadow: 0 10px 24px rgb(0 40 26 / 0.14);
+}
+.nh-btn-ghost {
+  background: var(--color-nh-raised);
+  color: var(--color-nh-ink);
+}
+.nh-btn-brand:active,
+.nh-btn-ghost:active {
+  transform: scale(0.97);
+}
+.nh-btn-brand:disabled,
+.nh-btn-ghost:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.nh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Field terisi; border hanya muncul saat fokus. Kelas ganda + selektor input
+   supaya menang atas aturan input global di globals.css. */
+input.nh-input.nh-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 2px solid transparent !important;
+  background: var(--color-nh-raised) !important;
+  padding: 0.75rem 1rem;
+  font-size: 16px;
+  color: var(--color-nh-ink);
+  box-shadow: none !important;
+  outline: none !important;
+}
+input.nh-input.nh-input:focus {
+  border-color: var(--color-nh-forest) !important;
+  background: var(--color-nh-cream) !important;
+}
+input.nh-input.nh-input::placeholder {
+  color: var(--color-nh-muted);
+}
+
+.nh-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-nh-muted);
+}
+
+/* Fokus keyboard: cincin lettuce, hanya untuk pengguna keyboard. */
+.nh-app button:focus-visible,
+.nh-app a:focus-visible,
+.nh-app [role="button"]:focus-visible {
+  outline: 2px solid var(--color-nh-lettuce);
+  outline-offset: 2px;
+}
+
+@keyframes nh-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes nh-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes nh-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nh-page-enter {
+    animation: nh-page-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .nh-sheet-backdrop {
+    animation: nh-fade-in 0.22s ease-out both;
+  }
+  .nh-sheet-panel {
+    animation: nh-sheet-up 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Aksi sekunder: Deep Forest Green dengan teks lime. */
+.nh-btn-forest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1rem;
+  padding: 0.875rem 1.25rem;
+  background: var(--color-nh-forest);
+  color: var(--color-nh-lime);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 10px 24px rgb(0 40 26 / 0.18);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nh-btn-forest:active {
+  transform: scale(0.97);
+}
+.nh-btn-forest:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Textarea & select dengan gaya input terisi. */
+textarea.nh-input,
+select.nh-input {
+  width: 100%;
+  border-radius: 1rem;
+  border: 2px solid transparent;
+  background: var(--color-nh-raised);
+  padding: 0.75rem 1rem;
+  font-size: 16px;
+  color: var(--color-nh-ink);
+  outline: none;
+}
+textarea.nh-input:focus,
+select.nh-input:focus {
+  border-color: var(--color-nh-forest);
+  background: var(--color-nh-cream);
+}
+
+/* Logo merek dicat Pale Lime: PNG putih dipakai sebagai mask. */
+.nh-logo-lime {
+  background-color: var(--color-nh-lime);
+  mask: url("/member-assets/brand/wordmark-white.png") left center / contain no-repeat;
+  -webkit-mask: url("/member-assets/brand/wordmark-white.png") left center / contain no-repeat;
+}
+
+/* Tekstur pola merek di permukaan gelap (jangan di belakang teks isi). */
+.nh-pattern-brand {
+  background-image: url("/member-assets/brand/pattern.png");
+  background-size: 420px auto;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+}
+
+/* Primitif @nuhabit/ui (StatusBadge, Spinner). */
+.hx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.hx-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 3px solid rgb(0 40 26 / 0.15);
+  border-top-color: currentColor;
+  animation: hx-spin 0.7s linear infinite;
+}
+@keyframes hx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

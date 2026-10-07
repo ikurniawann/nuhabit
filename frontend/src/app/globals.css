@@ -1,0 +1,2966 @@
+@import url("https://api.fontshare.com/v2/css?f[]=roundo@400,500,600,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Karla:wght@400;500;600;700&family=Lato:wght@400;700&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@400;700&family=Mulish:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Nunito:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Rubik:wght@400;500;600;700&family=Sora:wght@400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Urbanist:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap");
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* NüHabit Brand Guideline 2026 (docs/frontend-conventions.md), di atas tata letak WIT.
+   Warna utama: White Beige #f3ece2, Deep Forest Green #00281a, Pale Lime #daff59.
+   Fungsional: Dark Jungle #1c261b, Everglade #203b32, Lettuce #abde67,
+   Lemon Lime #eeffb1, Mint Cream #fdfff2, Golden Ochre #c9a227. Judul Outfit, isi Manrope.
+   Palet `pink-*` (dipakai ratusan halaman lama sebagai warna merek) ditimpa skala
+   lime → forest; `gray-*`, `slate-*`, `zinc-*`, `neutral-*` ditimpa tangga netral
+   hangat dari beige ke ink. Ribuan kelas lama ikut tanpa menyentuh tiap file. */
+@theme {
+  --color-pink-50: #f7ffe0;
+  --color-pink-100: #eeffb1;
+  --color-pink-200: #e3ff8a;
+  --color-pink-300: #daff59;
+  --color-pink-400: #abde67;
+  --color-pink-500: #4d8a1c;
+  --color-pink-600: #203b32;
+  --color-pink-700: #00281a;
+  --color-pink-800: #001f14;
+  --color-pink-900: #00160e;
+  --color-pink-950: #000d08;
+
+  --color-gray-50: #f8f4ee;
+  --color-gray-100: #f3ece2;
+  --color-gray-200: #e3dbcc;
+  --color-gray-300: #d4cbbb;
+  --color-gray-400: #9a958a;
+  --color-gray-500: #5f6b62;
+  --color-gray-600: #4a544d;
+  --color-gray-700: #2a332e;
+  --color-gray-800: #1c261b;
+  --color-gray-900: #131a1c;
+  --color-gray-950: #0b100f;
+  --color-slate-50: #f8f4ee;
+  --color-slate-100: #f3ece2;
+  --color-slate-200: #e3dbcc;
+  --color-slate-300: #d4cbbb;
+  --color-slate-400: #9a958a;
+  --color-slate-500: #5f6b62;
+  --color-slate-600: #4a544d;
+  --color-slate-700: #2a332e;
+  --color-slate-800: #1c261b;
+  --color-slate-900: #131a1c;
+  --color-slate-950: #0b100f;
+  --color-zinc-50: #f8f4ee;
+  --color-zinc-100: #f3ece2;
+  --color-zinc-200: #e3dbcc;
+  --color-zinc-300: #d4cbbb;
+  --color-zinc-400: #9a958a;
+  --color-zinc-500: #5f6b62;
+  --color-zinc-600: #4a544d;
+  --color-zinc-700: #2a332e;
+  --color-zinc-800: #1c261b;
+  --color-zinc-900: #131a1c;
+  --color-zinc-950: #0b100f;
+  --color-neutral-50: #f8f4ee;
+  --color-neutral-100: #f3ece2;
+  --color-neutral-200: #e3dbcc;
+  --color-neutral-300: #d4cbbb;
+  --color-neutral-400: #9a958a;
+  --color-neutral-500: #5f6b62;
+  --color-neutral-600: #4a544d;
+  --color-neutral-700: #2a332e;
+  --color-neutral-800: #1c261b;
+  --color-neutral-900: #131a1c;
+  --color-neutral-950: #0b100f;
+
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Portal member (/member): palet NüHabit mobile — White Beige ground, Deep
+     Forest Green, Pale Lime accent; Outfit untuk judul, Manrope untuk isi. */
+  --color-nh-beige: #f3ece2;
+  --color-nh-cream: #fdfff2;
+  --color-nh-raised: #ece5d8;
+  --color-nh-line: #e3dbcc;
+  --color-nh-ink: #131a1c;
+  --color-nh-ink-soft: #1c261b;
+  --color-nh-forest: #00281a;
+  --color-nh-lime: #daff59;
+  --color-nh-lime-soft: #eeffb1;
+  --color-nh-lettuce: #abde67;
+  --color-nh-muted: #5f6b62;
+  --color-nh-ok: #4d8a1c;
+  --color-nh-warn: #9c7a14;
+  --color-nh-danger: #d13b40;
+  --font-nh-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-nh-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1.5rem;
+  --radius-hero: 1.75rem;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 1px 2px rgb(0 40 26 / 0.03), 0 10px 30px -14px rgb(0 40 26 / 0.12);
+  --shadow-float: 0 14px 40px -12px rgb(19 26 28 / 0.28);
+  --shadow-up: 0 -10px 30px -14px rgb(19 26 28 / 0.25);
+
+  /* Warna merek bernama, untuk kode baru. */
+  --color-forest: #00281a;
+  --color-everglade: #203b32;
+  --color-jungle: #1c261b;
+  --color-lettuce: #abde67;
+  --color-lemon: #eeffb1;
+  --color-mint: #fdfff2;
+  --color-ochre: #c9a227;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Bind the `dark:` variant to our explicit theme attribute (manual + auto). */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where([data-theme="auto"], [data-theme="auto"] *) {
+      @slot;
+    }
+  }
+}
+
+/* Expose CSS variables to Tailwind's utility generator.
+   Penamaan: shadcn `muted` tetap latar abu (bg-muted) dan teks sekunder memakai
+   `text-muted-foreground`. `accent` = isian Pale Lime; teks di atasnya selalu
+   `text-accent-foreground` (Deep Forest). Lime tidak pernah jadi teks/ikon di
+   permukaan terang (kontras 1.03 di beige); di sana pakai `text-forest`. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-md: var(--radius);
+  --font-sans: var(--font-sans-stack);
+
+  --color-accent: var(--brand-primary);
+  --color-accent-strong: var(--wit-accent-strong);
+  --color-accent-dark: var(--wit-accent-dark);
+  --color-accent-soft: var(--wit-accent-soft);
+  --color-accent-foreground: var(--wit-accent-foreground);
+  /* Teks/ikon merek di atas permukaan: forest di terang, lime di gelap (lime tak terbaca di latar terang). */
+  --color-brand-text: var(--wit-brand-text);
+  --color-highlight: var(--brand-primary);
+  --color-info: var(--wit-info);
+  --color-info-soft: var(--wit-info-soft);
+  --color-success: var(--wit-success);
+  --color-success-soft: var(--wit-success-soft);
+  --color-warning: var(--wit-warning);
+  --color-warning-soft: var(--wit-warning-soft);
+  --color-danger: var(--wit-danger);
+  --color-danger-soft: var(--wit-danger-soft);
+  --color-ink: var(--wit-ink);
+  --color-ink-2: var(--wit-ink-2);
+  --color-ink-3: var(--wit-ink-3);
+  --color-on-ink: #ffffff;
+  --color-on-ink-muted: var(--wit-on-ink-muted);
+  --color-surface: var(--wit-surface);
+  --color-surface-2: var(--wit-surface-2);
+  --color-body: var(--wit-body);
+  --color-silver: var(--wit-silver);
+  --color-chart-muted: var(--wit-chart-muted);
+  --shadow-glow: 0 8px 20px -8px color-mix(in srgb, var(--brand-primary) 60%, transparent);
+}
+
+:root {
+  /* Brand inputs — overridden at runtime by ThemeProvider. */
+  --brand-primary: #daff59;
+  --brand-secondary: #00281a;
+  --primary-foreground: #00281a;
+
+  /* Derived brand scales (perceptual mix in OKLCH). */
+  --primary-50: color-mix(in oklch, var(--brand-primary) 8%, white);
+  --primary-100: color-mix(in oklch, var(--brand-primary) 16%, white);
+  --primary-200: color-mix(in oklch, var(--brand-primary) 30%, white);
+  --primary-300: color-mix(in oklch, var(--brand-primary) 46%, white);
+  --primary-400: color-mix(in oklch, var(--brand-primary) 70%, white);
+  --primary-500: var(--brand-primary);
+  --primary-600: color-mix(in oklch, var(--brand-primary) 88%, black);
+  --primary-700: color-mix(in oklch, var(--brand-primary) 74%, black);
+  --primary-800: color-mix(in oklch, var(--brand-primary) 60%, black);
+  --primary-900: color-mix(in oklch, var(--brand-primary) 46%, black);
+  --primary-950: color-mix(in oklch, var(--brand-primary) 34%, black);
+
+  --brand-secondary-400: color-mix(in oklch, var(--brand-secondary) 70%, white);
+  --brand-secondary-500: var(--brand-secondary);
+  --brand-secondary-600: color-mix(in oklch, var(--brand-secondary) 88%, black);
+
+  /* Token merek. Kontras (WCAG 2.x): forest di lime 14.0, muted di beige 4.75,
+     muted di mint 5.5, on-ink-muted di ink 9.6, lime di ink 15.5, info di
+     info-soft 10.0, success 4.5, warning 4.9, danger 5.4 pada tint masing-masing. */
+  --wit-accent-strong: var(--brand-primary);
+  --wit-accent-dark: color-mix(in oklch, var(--brand-primary) 88%, black);
+  --wit-accent-soft: #eeffb1;
+  --wit-accent-foreground: #00281a;
+  --wit-brand-text: #00281a;
+  --wit-info: #203b32;
+  --wit-info-soft: #e3ece6;
+  --wit-success: #3f7a12;
+  --wit-success-soft: #e6f2d8;
+  --wit-warning: #835f00;
+  --wit-warning-soft: #f7ecc8;
+  --wit-danger: #b3262c;
+  --wit-danger-soft: #fbe5e5;
+  --wit-ink: #131a1c;
+  --wit-ink-2: #1c261b;
+  --wit-ink-3: #203b32;
+  --wit-on-ink-muted: #b9c2b4;
+  --wit-surface: #f3ece2;
+  --wit-surface-2: #f8f4ee;
+  --wit-body: #2a332e;
+  --wit-silver: #b9b0a2;
+  --wit-chart-muted: #d4cbbb;
+
+  /* Semantic — light (shadcn). */
+  --background: #fdfff2;
+  --foreground: #131a1c;
+  --card: #fdfff2;
+  --card-foreground: #131a1c;
+  --popover: #fdfff2;
+  --popover-foreground: #131a1c;
+  --primary: var(--wit-accent-strong);
+  --secondary: #f3ece2;
+  --secondary-foreground: #131a1c;
+  --muted: #f8f4ee;
+  --muted-foreground: #5f6b62;
+  --destructive: #b3262c;
+  --success: #3f7a12;
+  --warning: #835f00;
+  --border: #e3dbcc;
+  --input: #e3dbcc;
+  --ring: #203b32;
+
+  /* Legacy glass tokens: kartu WIT tidak memakai kaca, tapi beberapa modul
+     (Arkiv OS desktop) masih membacanya. */
+  --glass-bg: #fdfff2;
+  --glass-border: transparent;
+  --glass-blur: 0px;
+  --glass-saturate: 1;
+  --glass-shadow: var(--shadow-card);
+  --glass-highlight: 0 0 #0000;
+
+  /* Chrome — overridden by company appearance. */
+  --sidebar-background: #131a1c;
+  --sidebar-foreground: #fdfff2;
+  --sidebar-active-background: #daff59;
+  --sidebar-active-foreground: #00281a;
+  --sidebar-border: transparent;
+  --navbar-background: transparent;
+  --navbar-foreground: #131a1c;
+  --navbar-border: transparent;
+  --font-sans-stack: "Manrope", Inter, system-ui, sans-serif;
+  --font-size-base: 16px;
+
+  /* Shape + motion. */
+  --radius: 1rem;
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --ease-glass: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Kanvas halaman: White Beige polos. */
+  --page-mesh: var(--wit-surface);
+}
+
+/* !important: ThemeProvider writes the Appearance colours inline on <html>,
+   and inline values would otherwise keep light surfaces in dark mode. */
+[data-theme="dark"] {
+  --wit-brand-text: #daff59;
+  --background: #0d1213 !important;
+  --foreground: #eef1ea !important;
+  --card: #172019 !important;
+  --card-foreground: #eef1ea !important;
+  --popover: #172019;
+  --popover-foreground: #eef1ea;
+  --secondary: #1f2a24;
+  --secondary-foreground: #eef1ea;
+  --muted: #1f2a24;
+  --muted-foreground: #a4ada6;
+  --border: #2a3530 !important;
+  --input: #33403a !important;
+
+  --wit-surface: #0d1213;
+  --wit-surface-2: #1f2a24;
+  --wit-body: #d6dbd2;
+  --wit-accent-soft: #2c3a12;
+  --wit-info: #a8d5bd;
+  --wit-info-soft: #16261f;
+  --wit-success: #abde67;
+  --wit-success-soft: #182a12;
+  --wit-warning: #e5b93a;
+  --wit-warning-soft: #2e2208;
+  --wit-danger: #f28b8f;
+  --wit-danger-soft: #331415;
+  --wit-ink: #070b0b;
+
+  --glass-bg: #172019;
+  --surface-subtle: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.1);
+}
+
+/* Auto mode follows the OS when nothing explicit is chosen. */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --wit-brand-text: #daff59;
+    --background: #0d1213 !important;
+    --foreground: #eef1ea !important;
+    --card: #172019 !important;
+    --card-foreground: #eef1ea !important;
+    --popover: #172019;
+    --popover-foreground: #eef1ea;
+    --secondary: #1f2a24;
+    --secondary-foreground: #eef1ea;
+    --muted: #1f2a24;
+    --muted-foreground: #a4ada6;
+    --border: #2a3530 !important;
+    --input: #33403a !important;
+
+    --wit-surface: #0d1213;
+    --wit-surface-2: #1f2a24;
+    --wit-body: #d6dbd2;
+    --wit-accent-soft: #2c3a12;
+    --wit-info: #a8d5bd;
+    --wit-info-soft: #16261f;
+    --wit-success: #abde67;
+    --wit-success-soft: #182a12;
+    --wit-warning: #e5b93a;
+    --wit-warning-soft: #2e2208;
+    --wit-danger: #f28b8f;
+    --wit-danger-soft: #331415;
+    --wit-ink: #070b0b;
+
+    --glass-bg: #172019;
+    --surface-subtle: rgba(255, 255, 255, 0.06);
+    --surface-hover: rgba(255, 255, 255, 0.1);
+  }
+}
+
+html {
+  /* --ui-scale: pengali skala tampilan (rem) di atas ukuran huruf Appearance. */
+  font-size: calc(var(--font-size-base) * var(--ui-scale, 1));
+  font-family: var(--font-sans-stack);
+}
+
+/* Dashboard di tablet/iPad (layar sentuh ±700–1400px): skala default dikecilkan
+   supaya layar terasa lega (permintaan owner 2026-09-29). Laptop/PC (pointer
+   halus), HP portrait, dan halaman publik (self-order) tidak terpengaruh.
+   Breakpoint media query tetap memakai ukuran huruf bawaan browser, jadi
+   susunan responsif tidak ikut bergeser. */
+@media (pointer: coarse) and (min-width: 700px) and (max-width: 1400px) {
+  html:has([data-dashboard-shell]) {
+    --ui-scale: 0.875;
+  }
+}
+
+body {
+  font-family: var(--font-sans-stack);
+  background-color: var(--wit-surface);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #daff59;
+  color: #00281a;
+}
+
+/* Judul memakai Outfit (brand guideline: Title), isi Manrope. */
+:where(h1, h2, h3, [data-slot="card-title"], [data-slot="dialog-title"]) {
+  font-family: var(--font-display);
+}
+
+@utility safe-b {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility safe-t {
+  padding-top: env(safe-area-inset-top);
+}
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Markdown copy on the public site (articles, legal pages, brand story). */
+@utility prose-site {
+  color: var(--color-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  & > * + * {
+    margin-top: 1em;
+  }
+  & h2,
+  & h3,
+  & h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+    margin-top: 1.6em;
+  }
+  & h2 {
+    font-size: 1.5rem;
+  }
+  & h3 {
+    font-size: 1.25rem;
+  }
+  & h4 {
+    font-size: 1.1rem;
+  }
+  & a {
+    color: var(--color-forest);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  & ul,
+  & ol {
+    padding-left: 1.4em;
+  }
+  & ul {
+    list-style: disc;
+  }
+  & ol {
+    list-style: decimal;
+  }
+  & li + li {
+    margin-top: 0.35em;
+  }
+  & blockquote {
+    border-left: 3px solid var(--color-accent-strong);
+    padding-left: 1em;
+    font-style: italic;
+  }
+  & code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--color-surface-2);
+    border-radius: 0.35rem;
+    padding: 0.1em 0.35em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes career-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes stock-alerts-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes stock-alerts-marquee-y {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes arkiv-assistant-shortcut-in {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes arkiv-assistant-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scaleX(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1.04);
+  }
+}
+
+.arkiv-assistant-shortcut-shell {
+  animation: arkiv-assistant-shortcut-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.arkiv-assistant-shortcut-glow {
+  animation: arkiv-assistant-glow-pulse 2.2s ease-in-out infinite;
+}
+
+.arkiv-assistant-shortcut-input,
+.arkiv-assistant-shortcut-input:hover,
+.arkiv-assistant-shortcut-input:focus,
+.arkiv-assistant-shortcut-input:active {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  -webkit-text-fill-color: #b9b5c4 !important;
+}
+
+.arkiv-assistant-shortcut-input::selection {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #b9b5c4 !important;
+  -webkit-text-fill-color: #b9b5c4 !important;
+}
+
+.arkiv-assistant-shortcut-input::-moz-selection {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #b9b5c4 !important;
+}
+
+.arkiv-assistant-shortcut-input:-webkit-autofill,
+.arkiv-assistant-shortcut-input:-webkit-autofill:hover,
+.arkiv-assistant-shortcut-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #b9b5c4;
+  box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.career-roundo {
+  font-family: "Roundo", var(--font-inter, Inter), system-ui, sans-serif;
+}
+
+.career-marquee {
+  animation: career-marquee 40s linear infinite;
+}
+
+.stock-alerts-marquee {
+  animation: stock-alerts-marquee 40s linear infinite;
+}
+
+.stock-alerts-marquee-y {
+  animation: stock-alerts-marquee-y 50s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stock-alerts-marquee,
+  .stock-alerts-marquee-y {
+    animation: none;
+  }
+}
+
+.career-roundo details > summary {
+  list-style: none;
+}
+
+.career-roundo details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.purchasing-main-button {
+  height: 2.5rem !important;
+  gap: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  background-color: var(--brand-primary) !important;
+  padding-inline: 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: var(--primary-foreground) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.purchasing-main-button:hover {
+  background-color: var(--primary-700) !important;
+}
+
+.purchasing-secondary-button {
+  height: 2.5rem !important;
+  gap: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  border-color: color-mix(in oklch, var(--brand-primary) 30%, white) !important;
+  background-color: var(--background) !important;
+  padding-inline: 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: var(--primary-700) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.purchasing-secondary-button:hover {
+  border-color: color-mix(in oklch, var(--brand-primary) 30%, white) !important;
+  background-color: var(--primary-50) !important;
+  color: var(--primary-700) !important;
+}
+
+/* Make interactive UI communicate clickability consistently. */
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]):not([data-disabled="true"]),
+[data-slot="button"]:not(:disabled),
+[data-slot="select-trigger"]:not(:disabled),
+[data-slot="dropdown-menu-trigger"]:not(:disabled),
+[data-slot="popover-trigger"]:not(:disabled),
+[data-slot="command-item"]:not([data-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"],
+[data-disabled="true"],
+[disabled] {
+  cursor: not-allowed;
+}
+
+/* ── WIT surfaces ──
+   Aturan tak berlapis ini sengaja: kelas utilitas di ratusan halaman lama
+   (border-gray-200, bg-white/70, shadow-sm) memberi kartu bingkai dan kaca.
+   Di sini semua kartu jadi putih tanpa border dengan shadow-card, dan semua
+   field memakai border hairline dengan ring aksen saat fokus. */
+.flex.min-h-screen {
+  background: var(--page-mesh);
+}
+
+[data-slot="card"] {
+  background: var(--card);
+  border: 0;
+  box-shadow: var(--shadow-card);
+}
+
+[data-slot="card-footer"] {
+  background: var(--wit-surface-2);
+  border-top: 1px solid var(--border);
+}
+
+/* Table — hairline row dividers */
+[data-slot="table-header"] tr,
+[data-slot="table-body"] tr,
+[data-slot="table-row"],
+[data-slot="table-footer"] {
+  border-color: var(--border) !important;
+}
+
+/* Inputs, textareas, selects — hairline border on white */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select,
+[data-slot="input"],
+[data-slot="select-trigger"],
+[data-slot="textarea"] {
+  border-color: var(--border) !important;
+  background: var(--card) !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+[data-slot="input"]:focus,
+[data-slot="input"]:focus-visible,
+[data-slot="select-trigger"]:focus,
+[data-slot="select-trigger"]:focus-visible,
+[data-slot="textarea"]:focus,
+[data-slot="textarea"]:focus-visible {
+  border-color: #203b32 !important;
+  box-shadow: 0 0 0 3px rgb(32 59 50 / 0.18) !important;
+  outline: none !important;
+}
+
+/* Input di jendela kaca Arkiv OS (mis. Settings → Notifikasi WA): global rule
+   di bawah memaksa semua input berlatar putih 70% + border terang dengan
+   !important, sehingga utility Tailwind tidak bisa menang. Kelas ini adalah
+   penawarnya — specificity input.class.class menyamai input:not():not() dan
+   menang karena ditulis BELAKANGAN. Pola sama dgn .arkiv-assistant-shortcut-input. */
+input.arkiv-glass-input.arkiv-glass-input,
+input.arkiv-glass-input.arkiv-glass-input:hover,
+input.arkiv-glass-input.arkiv-glass-input:focus,
+input.arkiv-glass-input.arkiv-glass-input:focus-visible {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+input.arkiv-glass-input.arkiv-glass-input:focus,
+input.arkiv-glass-input.arkiv-glass-input:focus-visible {
+  border-color: rgba(249, 168, 212, 0.6) !important;
+}
+
+input.arkiv-glass-input.arkiv-glass-input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+input[data-combobox-search="true"],
+input[data-combobox-search="true"]:focus,
+input[data-combobox-search="true"]:focus-visible {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+input[data-master-readonly="true"] {
+  background: rgba(229, 231, 235, 0.9) !important;
+  color: #4b5563 !important;
+  border-color: rgba(209, 213, 219, 0.9) !important;
+}
+
+body.purchasing-ui input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([data-combobox-search="true"]),
+body.purchasing-ui [data-slot="input"],
+body.purchasing-ui [data-slot="select-trigger"] {
+  min-height: 2.25rem !important;
+  height: 2.25rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+body.purchasing-ui input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([data-combobox-search="true"]):not([class*="pl-"]),
+body.purchasing-ui [data-slot="input"]:not([class*="pl-"]),
+body.purchasing-ui [data-slot="select-trigger"] {
+  padding-inline: 0.75rem !important;
+}
+
+body.purchasing-ui .relative > svg.absolute ~ input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+body.purchasing-ui .relative > svg.absolute ~ [data-slot="input"] {
+  padding-left: 2.5rem !important;
+}
+
+body.purchasing-ui textarea,
+body.purchasing-ui [data-slot="textarea"] {
+  min-height: 5rem !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+body.purchasing-ui [data-slot="dialog-content"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([data-combobox-search="true"]),
+body.purchasing-ui [data-slot="dialog-content"] [data-slot="input"],
+body.purchasing-ui [data-slot="dialog-content"] [data-slot="select-trigger"] {
+  min-height: 2.25rem !important;
+  height: 2.25rem !important;
+}
+
+/* Separator / dividers */
+[data-slot="separator"],
+hr {
+  border-color: var(--border) !important;
+  background-color: var(--border) !important;
+}
+
+/* Hide scrollbar but keep scrollable */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Force solid white backgrounds for ALL dropdowns/popovers */
+[data-slot="popover"],
+[data-slot="dropdown-menu"],
+[data-slot="combobox"],
+.popover,
+.dropdown-menu,
+[role="listbox"] {
+  background-color: var(--popover) !important;
+  background: var(--popover) !important;
+}
+
+[role="listbox"][data-arkiv-ai-listbox="true"] {
+  background-color: rgba(9, 9, 11, 0.96) !important;
+  background: rgba(9, 9, 11, 0.96) !important;
+  color: #ffffff !important;
+}
+
+.arkiv-dashboard-theme { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] { color-scheme: dark; }
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Dark-mode compatibility for dashboard pages not yet migrated to
+   design tokens. `data-theme` lives on <html>; `.arkiv-dashboard-theme`
+   is the dashboard shell. Declarations use the semantic tokens (which
+   are already dark in this context), so these rules only take effect
+   under explicit dark or auto + OS-dark. As each module migrates to
+   tokens, its selectors here can be removed.
+   Note: popovers/dropdowns/datepicker are portaled to <body>, so they
+   are scoped to [data-theme="dark"] rather than the shell.
+   ────────────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-white, .bg-white\/50, .bg-white\/60, .bg-white\/70, .bg-white\/80, .bg-white\/90,
+    [data-slot="card"], [data-slot="dialog-content"]
+  ) {
+    background-color: var(--card) !important;
+    color: var(--card-foreground);
+    border-color: var(--border) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme aside {
+    background: var(--wit-ink) !important;
+    border-color: var(--border) !important;
+  }
+  /* Permukaan & teks bertint di dark mode.
+     Latar jadi tint gelap sesuai hue-nya (merah tetap kemerahan) dan teks
+     dinaikkan ke versi terang, sehingga semantik warna terjaga sekaligus
+     kontras aman. Selector atribut ikut menangkap varian opasitas.
+     Digenerate untuk 17 hue — jangan diedit satu per satu. */
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-red-50,
+    [class^="bg-red-50/"],
+    [class*=" bg-red-50/"],
+    .bg-red-100,
+    [class^="bg-red-100/"],
+    [class*=" bg-red-100/"]
+  ) {
+    background-color: color-mix(in oklch, #ef4444 14%, transparent) !important;
+    border-color: color-mix(in oklch, #ef4444 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-red-50:hover,
+    [class*="hover:bg-red-50/"]:hover,
+    .hover\:bg-red-100:hover,
+    [class*="hover:bg-red-100/"]:hover
+  ) { background-color: color-mix(in oklch, #ef4444 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-red-600,
+    .text-red-700,
+    .text-red-800,
+    .text-red-900
+  ) { color: color-mix(in oklch, #ef4444 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-red-100,
+    [class*=" border-red-100/"],
+    .border-red-200,
+    [class*=" border-red-200/"],
+    .border-red-300,
+    [class*=" border-red-300/"]
+  ) { border-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-orange-50,
+    [class^="bg-orange-50/"],
+    [class*=" bg-orange-50/"],
+    .bg-orange-100,
+    [class^="bg-orange-100/"],
+    [class*=" bg-orange-100/"]
+  ) {
+    background-color: color-mix(in oklch, #f97316 14%, transparent) !important;
+    border-color: color-mix(in oklch, #f97316 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-orange-50:hover,
+    [class*="hover:bg-orange-50/"]:hover,
+    .hover\:bg-orange-100:hover,
+    [class*="hover:bg-orange-100/"]:hover
+  ) { background-color: color-mix(in oklch, #f97316 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-orange-600,
+    .text-orange-700,
+    .text-orange-800,
+    .text-orange-900
+  ) { color: color-mix(in oklch, #f97316 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-orange-100,
+    [class*=" border-orange-100/"],
+    .border-orange-200,
+    [class*=" border-orange-200/"],
+    .border-orange-300,
+    [class*=" border-orange-300/"]
+  ) { border-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-amber-50,
+    [class^="bg-amber-50/"],
+    [class*=" bg-amber-50/"],
+    .bg-amber-100,
+    [class^="bg-amber-100/"],
+    [class*=" bg-amber-100/"]
+  ) {
+    background-color: color-mix(in oklch, #f59e0b 14%, transparent) !important;
+    border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-amber-50:hover,
+    [class*="hover:bg-amber-50/"]:hover,
+    .hover\:bg-amber-100:hover,
+    [class*="hover:bg-amber-100/"]:hover
+  ) { background-color: color-mix(in oklch, #f59e0b 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-amber-600,
+    .text-amber-700,
+    .text-amber-800,
+    .text-amber-900
+  ) { color: color-mix(in oklch, #f59e0b 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-amber-100,
+    [class*=" border-amber-100/"],
+    .border-amber-200,
+    [class*=" border-amber-200/"],
+    .border-amber-300,
+    [class*=" border-amber-300/"]
+  ) { border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-yellow-50,
+    [class^="bg-yellow-50/"],
+    [class*=" bg-yellow-50/"],
+    .bg-yellow-100,
+    [class^="bg-yellow-100/"],
+    [class*=" bg-yellow-100/"]
+  ) {
+    background-color: color-mix(in oklch, #eab308 14%, transparent) !important;
+    border-color: color-mix(in oklch, #eab308 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-yellow-50:hover,
+    [class*="hover:bg-yellow-50/"]:hover,
+    .hover\:bg-yellow-100:hover,
+    [class*="hover:bg-yellow-100/"]:hover
+  ) { background-color: color-mix(in oklch, #eab308 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-yellow-600,
+    .text-yellow-700,
+    .text-yellow-800,
+    .text-yellow-900
+  ) { color: color-mix(in oklch, #eab308 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-yellow-100,
+    [class*=" border-yellow-100/"],
+    .border-yellow-200,
+    [class*=" border-yellow-200/"],
+    .border-yellow-300,
+    [class*=" border-yellow-300/"]
+  ) { border-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-lime-50,
+    [class^="bg-lime-50/"],
+    [class*=" bg-lime-50/"],
+    .bg-lime-100,
+    [class^="bg-lime-100/"],
+    [class*=" bg-lime-100/"]
+  ) {
+    background-color: color-mix(in oklch, #84cc16 14%, transparent) !important;
+    border-color: color-mix(in oklch, #84cc16 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-lime-50:hover,
+    [class*="hover:bg-lime-50/"]:hover,
+    .hover\:bg-lime-100:hover,
+    [class*="hover:bg-lime-100/"]:hover
+  ) { background-color: color-mix(in oklch, #84cc16 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-lime-600,
+    .text-lime-700,
+    .text-lime-800,
+    .text-lime-900
+  ) { color: color-mix(in oklch, #84cc16 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-lime-100,
+    [class*=" border-lime-100/"],
+    .border-lime-200,
+    [class*=" border-lime-200/"],
+    .border-lime-300,
+    [class*=" border-lime-300/"]
+  ) { border-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-green-50,
+    [class^="bg-green-50/"],
+    [class*=" bg-green-50/"],
+    .bg-green-100,
+    [class^="bg-green-100/"],
+    [class*=" bg-green-100/"]
+  ) {
+    background-color: color-mix(in oklch, #22c55e 14%, transparent) !important;
+    border-color: color-mix(in oklch, #22c55e 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-green-50:hover,
+    [class*="hover:bg-green-50/"]:hover,
+    .hover\:bg-green-100:hover,
+    [class*="hover:bg-green-100/"]:hover
+  ) { background-color: color-mix(in oklch, #22c55e 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-green-600,
+    .text-green-700,
+    .text-green-800,
+    .text-green-900
+  ) { color: color-mix(in oklch, #22c55e 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-green-100,
+    [class*=" border-green-100/"],
+    .border-green-200,
+    [class*=" border-green-200/"],
+    .border-green-300,
+    [class*=" border-green-300/"]
+  ) { border-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-emerald-50,
+    [class^="bg-emerald-50/"],
+    [class*=" bg-emerald-50/"],
+    .bg-emerald-100,
+    [class^="bg-emerald-100/"],
+    [class*=" bg-emerald-100/"]
+  ) {
+    background-color: color-mix(in oklch, #10b981 14%, transparent) !important;
+    border-color: color-mix(in oklch, #10b981 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-emerald-50:hover,
+    [class*="hover:bg-emerald-50/"]:hover,
+    .hover\:bg-emerald-100:hover,
+    [class*="hover:bg-emerald-100/"]:hover
+  ) { background-color: color-mix(in oklch, #10b981 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-emerald-600,
+    .text-emerald-700,
+    .text-emerald-800,
+    .text-emerald-900
+  ) { color: color-mix(in oklch, #10b981 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-emerald-100,
+    [class*=" border-emerald-100/"],
+    .border-emerald-200,
+    [class*=" border-emerald-200/"],
+    .border-emerald-300,
+    [class*=" border-emerald-300/"]
+  ) { border-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-teal-50,
+    [class^="bg-teal-50/"],
+    [class*=" bg-teal-50/"],
+    .bg-teal-100,
+    [class^="bg-teal-100/"],
+    [class*=" bg-teal-100/"]
+  ) {
+    background-color: color-mix(in oklch, #14b8a6 14%, transparent) !important;
+    border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-teal-50:hover,
+    [class*="hover:bg-teal-50/"]:hover,
+    .hover\:bg-teal-100:hover,
+    [class*="hover:bg-teal-100/"]:hover
+  ) { background-color: color-mix(in oklch, #14b8a6 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-teal-600,
+    .text-teal-700,
+    .text-teal-800,
+    .text-teal-900
+  ) { color: color-mix(in oklch, #14b8a6 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-teal-100,
+    [class*=" border-teal-100/"],
+    .border-teal-200,
+    [class*=" border-teal-200/"],
+    .border-teal-300,
+    [class*=" border-teal-300/"]
+  ) { border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-cyan-50,
+    [class^="bg-cyan-50/"],
+    [class*=" bg-cyan-50/"],
+    .bg-cyan-100,
+    [class^="bg-cyan-100/"],
+    [class*=" bg-cyan-100/"]
+  ) {
+    background-color: color-mix(in oklch, #06b6d4 14%, transparent) !important;
+    border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-cyan-50:hover,
+    [class*="hover:bg-cyan-50/"]:hover,
+    .hover\:bg-cyan-100:hover,
+    [class*="hover:bg-cyan-100/"]:hover
+  ) { background-color: color-mix(in oklch, #06b6d4 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-cyan-600,
+    .text-cyan-700,
+    .text-cyan-800,
+    .text-cyan-900
+  ) { color: color-mix(in oklch, #06b6d4 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-cyan-100,
+    [class*=" border-cyan-100/"],
+    .border-cyan-200,
+    [class*=" border-cyan-200/"],
+    .border-cyan-300,
+    [class*=" border-cyan-300/"]
+  ) { border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-sky-50,
+    [class^="bg-sky-50/"],
+    [class*=" bg-sky-50/"],
+    .bg-sky-100,
+    [class^="bg-sky-100/"],
+    [class*=" bg-sky-100/"]
+  ) {
+    background-color: color-mix(in oklch, #0ea5e9 14%, transparent) !important;
+    border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-sky-50:hover,
+    [class*="hover:bg-sky-50/"]:hover,
+    .hover\:bg-sky-100:hover,
+    [class*="hover:bg-sky-100/"]:hover
+  ) { background-color: color-mix(in oklch, #0ea5e9 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-sky-600,
+    .text-sky-700,
+    .text-sky-800,
+    .text-sky-900
+  ) { color: color-mix(in oklch, #0ea5e9 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-sky-100,
+    [class*=" border-sky-100/"],
+    .border-sky-200,
+    [class*=" border-sky-200/"],
+    .border-sky-300,
+    [class*=" border-sky-300/"]
+  ) { border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-blue-50,
+    [class^="bg-blue-50/"],
+    [class*=" bg-blue-50/"],
+    .bg-blue-100,
+    [class^="bg-blue-100/"],
+    [class*=" bg-blue-100/"]
+  ) {
+    background-color: color-mix(in oklch, #3b82f6 14%, transparent) !important;
+    border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-blue-50:hover,
+    [class*="hover:bg-blue-50/"]:hover,
+    .hover\:bg-blue-100:hover,
+    [class*="hover:bg-blue-100/"]:hover
+  ) { background-color: color-mix(in oklch, #3b82f6 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-blue-600,
+    .text-blue-700,
+    .text-blue-800,
+    .text-blue-900
+  ) { color: color-mix(in oklch, #3b82f6 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-blue-100,
+    [class*=" border-blue-100/"],
+    .border-blue-200,
+    [class*=" border-blue-200/"],
+    .border-blue-300,
+    [class*=" border-blue-300/"]
+  ) { border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-indigo-50,
+    [class^="bg-indigo-50/"],
+    [class*=" bg-indigo-50/"],
+    .bg-indigo-100,
+    [class^="bg-indigo-100/"],
+    [class*=" bg-indigo-100/"]
+  ) {
+    background-color: color-mix(in oklch, #6366f1 14%, transparent) !important;
+    border-color: color-mix(in oklch, #6366f1 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-indigo-50:hover,
+    [class*="hover:bg-indigo-50/"]:hover,
+    .hover\:bg-indigo-100:hover,
+    [class*="hover:bg-indigo-100/"]:hover
+  ) { background-color: color-mix(in oklch, #6366f1 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-indigo-600,
+    .text-indigo-700,
+    .text-indigo-800,
+    .text-indigo-900
+  ) { color: color-mix(in oklch, #6366f1 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-indigo-100,
+    [class*=" border-indigo-100/"],
+    .border-indigo-200,
+    [class*=" border-indigo-200/"],
+    .border-indigo-300,
+    [class*=" border-indigo-300/"]
+  ) { border-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-violet-50,
+    [class^="bg-violet-50/"],
+    [class*=" bg-violet-50/"],
+    .bg-violet-100,
+    [class^="bg-violet-100/"],
+    [class*=" bg-violet-100/"]
+  ) {
+    background-color: color-mix(in oklch, #8b5cf6 14%, transparent) !important;
+    border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-violet-50:hover,
+    [class*="hover:bg-violet-50/"]:hover,
+    .hover\:bg-violet-100:hover,
+    [class*="hover:bg-violet-100/"]:hover
+  ) { background-color: color-mix(in oklch, #8b5cf6 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-violet-600,
+    .text-violet-700,
+    .text-violet-800,
+    .text-violet-900
+  ) { color: color-mix(in oklch, #8b5cf6 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-violet-100,
+    [class*=" border-violet-100/"],
+    .border-violet-200,
+    [class*=" border-violet-200/"],
+    .border-violet-300,
+    [class*=" border-violet-300/"]
+  ) { border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-purple-50,
+    [class^="bg-purple-50/"],
+    [class*=" bg-purple-50/"],
+    .bg-purple-100,
+    [class^="bg-purple-100/"],
+    [class*=" bg-purple-100/"]
+  ) {
+    background-color: color-mix(in oklch, #a855f7 14%, transparent) !important;
+    border-color: color-mix(in oklch, #a855f7 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-purple-50:hover,
+    [class*="hover:bg-purple-50/"]:hover,
+    .hover\:bg-purple-100:hover,
+    [class*="hover:bg-purple-100/"]:hover
+  ) { background-color: color-mix(in oklch, #a855f7 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-purple-600,
+    .text-purple-700,
+    .text-purple-800,
+    .text-purple-900
+  ) { color: color-mix(in oklch, #a855f7 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-purple-100,
+    [class*=" border-purple-100/"],
+    .border-purple-200,
+    [class*=" border-purple-200/"],
+    .border-purple-300,
+    [class*=" border-purple-300/"]
+  ) { border-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-fuchsia-50,
+    [class^="bg-fuchsia-50/"],
+    [class*=" bg-fuchsia-50/"],
+    .bg-fuchsia-100,
+    [class^="bg-fuchsia-100/"],
+    [class*=" bg-fuchsia-100/"]
+  ) {
+    background-color: color-mix(in oklch, #d946ef 14%, transparent) !important;
+    border-color: color-mix(in oklch, #d946ef 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-fuchsia-50:hover,
+    [class*="hover:bg-fuchsia-50/"]:hover,
+    .hover\:bg-fuchsia-100:hover,
+    [class*="hover:bg-fuchsia-100/"]:hover
+  ) { background-color: color-mix(in oklch, #d946ef 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-fuchsia-600,
+    .text-fuchsia-700,
+    .text-fuchsia-800,
+    .text-fuchsia-900
+  ) { color: color-mix(in oklch, #d946ef 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-fuchsia-100,
+    [class*=" border-fuchsia-100/"],
+    .border-fuchsia-200,
+    [class*=" border-fuchsia-200/"],
+    .border-fuchsia-300,
+    [class*=" border-fuchsia-300/"]
+  ) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-pink-50,
+    [class^="bg-pink-50/"],
+    [class*=" bg-pink-50/"],
+    .bg-pink-100,
+    [class^="bg-pink-100/"],
+    [class*=" bg-pink-100/"]
+  ) {
+    background-color: color-mix(in oklch, #abde67 14%, transparent) !important;
+    border-color: color-mix(in oklch, #abde67 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-pink-50:hover,
+    [class*="hover:bg-pink-50/"]:hover,
+    .hover\:bg-pink-100:hover,
+    [class*="hover:bg-pink-100/"]:hover
+  ) { background-color: color-mix(in oklch, #abde67 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-pink-600,
+    .text-pink-700,
+    .text-pink-800,
+    .text-pink-900
+  ) { color: color-mix(in oklch, #abde67 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-pink-100,
+    [class*=" border-pink-100/"],
+    .border-pink-200,
+    [class*=" border-pink-200/"],
+    .border-pink-300,
+    [class*=" border-pink-300/"]
+  ) { border-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-rose-50,
+    [class^="bg-rose-50/"],
+    [class*=" bg-rose-50/"],
+    .bg-rose-100,
+    [class^="bg-rose-100/"],
+    [class*=" bg-rose-100/"]
+  ) {
+    background-color: color-mix(in oklch, #f43f5e 14%, transparent) !important;
+    border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .hover\:bg-rose-50:hover,
+    [class*="hover:bg-rose-50/"]:hover,
+    .hover\:bg-rose-100:hover,
+    [class*="hover:bg-rose-100/"]:hover
+  ) { background-color: color-mix(in oklch, #f43f5e 22%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-rose-600,
+    .text-rose-700,
+    .text-rose-800,
+    .text-rose-900
+  ) { color: color-mix(in oklch, #f43f5e 42%, white) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-rose-100,
+    [class*=" border-rose-100/"],
+    .border-rose-200,
+    [class*=" border-rose-200/"],
+    .border-rose-300,
+    [class*=" border-rose-300/"]
+  ) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-gray-950, .text-gray-900, .text-gray-800,
+    .text-slate-950, .text-slate-900, .text-slate-800, .text-black
+  ) { color: #f8fafc !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-gray-700, .text-gray-600, .text-slate-700, .text-slate-600
+  ) { color: #cbd5e1 !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .text-gray-500, .text-gray-400, .text-slate-500, .text-slate-400
+  ) { color: #94a3b8 !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .border-gray-50, .border-gray-100, .border-gray-200, .border-gray-200\/70,
+    .border-gray-300, .border-slate-100, .border-slate-200, .border-pink-100,
+    .border-pink-200, .border-black\/5
+  ) { border-color: var(--border) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(table thead, tr, th, td) {
+    border-color: rgba(148, 163, 184, 0.22) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    tr:hover, .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover,
+    .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover,
+    .hover\:bg-gray-200:hover, .hover\:bg-slate-200:hover,
+    [class*="hover:bg-gray-50/"]:hover, [class*="hover:bg-gray-100/"]:hover,
+    [class*="hover:bg-gray-200/"]:hover, [class*="hover:bg-slate-50/"]:hover,
+    [class*="hover:bg-slate-100/"]:hover
+  ) { background-color: var(--surface-hover) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    input:not([type="checkbox"]):not([type="radio"]), textarea, select,
+    [data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]
+  ) {
+    background: rgba(15, 23, 42, 0.94) !important;
+    border-color: var(--input) !important;
+    color: var(--foreground) !important;
+  }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(input, textarea)::placeholder { color: #94a3b8 !important; }
+
+  /* Permukaan abu-abu -> overlay putih transparan (bukan abu terang).
+     Selector atribut ikut menangkap varian opasitas (`bg-gray-50/80`) yang
+     tidak punya kelas polos. Prefiks varian seperti `hover:` sengaja tidak
+     cocok karena pola menuntut awal-atribut atau spasi di depan. */
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .bg-gray-50, .bg-gray-100, .bg-gray-200, .bg-slate-50, .bg-slate-100, .bg-slate-200,
+    [class^="bg-gray-50/"], [class*=" bg-gray-50/"],
+    [class^="bg-gray-100/"], [class*=" bg-gray-100/"],
+    [class^="bg-gray-200/"], [class*=" bg-gray-200/"],
+    [class^="bg-slate-50/"], [class*=" bg-slate-50/"],
+    [class^="bg-slate-100/"], [class*=" bg-slate-100/"]
+  ) {
+    background-color: var(--surface-subtle) !important;
+    border-color: var(--border) !important;
+  }
+  /* Gradien terang di dark mode.
+     Utilitas gradien tidak menyetel `background-color` melainkan variabel
+     `--tw-gradient-*`, sehingga aturan permukaan di atas sama sekali tidak
+     menyentuhnya dan latar tetap pucat. Stop terang di sini diturunkan ke
+     tint gelap dengan hue yang sama. Stop pekat (600/700 dst.) sengaja
+     dibiarkan — gradien brand seperti hero memang dirancang gelap. */
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-white,
+    .from-slate-50,
+    .from-slate-100,
+    .from-slate-200,
+    .from-gray-50,
+    .from-gray-100,
+    .from-gray-200
+  ) { --tw-gradient-from: var(--surface-subtle) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-white,
+    .via-slate-50,
+    .via-slate-100,
+    .via-slate-200,
+    .via-gray-50,
+    .via-gray-100,
+    .via-gray-200
+  ) { --tw-gradient-via: var(--surface-subtle) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-white,
+    .to-slate-50,
+    .to-slate-100,
+    .to-slate-200,
+    .to-gray-50,
+    .to-gray-100,
+    .to-gray-200
+  ) { --tw-gradient-to: var(--surface-subtle) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-pink-50,
+    .from-pink-100,
+    .from-pink-200
+  ) { --tw-gradient-from: color-mix(in oklch, #abde67 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-pink-50,
+    .via-pink-100,
+    .via-pink-200
+  ) { --tw-gradient-via: color-mix(in oklch, #abde67 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-pink-50,
+    .to-pink-100,
+    .to-pink-200
+  ) { --tw-gradient-to: color-mix(in oklch, #abde67 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-amber-50,
+    .from-amber-100,
+    .from-amber-200
+  ) { --tw-gradient-from: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-amber-50,
+    .via-amber-100,
+    .via-amber-200
+  ) { --tw-gradient-via: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-amber-50,
+    .to-amber-100,
+    .to-amber-200
+  ) { --tw-gradient-to: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-green-50,
+    .from-green-100,
+    .from-green-200
+  ) { --tw-gradient-from: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-green-50,
+    .via-green-100,
+    .via-green-200
+  ) { --tw-gradient-via: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-green-50,
+    .to-green-100,
+    .to-green-200
+  ) { --tw-gradient-to: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-orange-50,
+    .from-orange-100,
+    .from-orange-200
+  ) { --tw-gradient-from: color-mix(in oklch, #f97316 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-orange-50,
+    .via-orange-100,
+    .via-orange-200
+  ) { --tw-gradient-via: color-mix(in oklch, #f97316 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-orange-50,
+    .to-orange-100,
+    .to-orange-200
+  ) { --tw-gradient-to: color-mix(in oklch, #f97316 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-indigo-50,
+    .from-indigo-100,
+    .from-indigo-200
+  ) { --tw-gradient-from: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-indigo-50,
+    .via-indigo-100,
+    .via-indigo-200
+  ) { --tw-gradient-via: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-indigo-50,
+    .to-indigo-100,
+    .to-indigo-200
+  ) { --tw-gradient-to: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .from-emerald-50,
+    .from-emerald-100,
+    .from-emerald-200
+  ) { --tw-gradient-from: color-mix(in oklch, #10b981 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .via-emerald-50,
+    .via-emerald-100,
+    .via-emerald-200
+  ) { --tw-gradient-via: color-mix(in oklch, #10b981 14%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .to-emerald-50,
+    .to-emerald-100,
+    .to-emerald-200
+  ) { --tw-gradient-to: color-mix(in oklch, #10b981 14%, transparent) !important; }
+  /* Garis rambut: divide-* dan ring-* di dark mode.
+     Keduanya tidak menyetel `border-color` pada elemen itu sendiri —
+     `divide-*` menyetelnya pada anak lewat kombinator, dan `ring-*` memakai
+     variabel `--tw-ring-color`. Karena itu aturan border di atas tidak
+     menyentuhnya, dan garis terang tetap menyala di latar gelap. */
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-slate-50,
+    .divide-slate-100,
+    .divide-slate-200,
+    .divide-slate-300,
+    .divide-gray-50,
+    .divide-gray-100,
+    .divide-gray-200,
+    .divide-gray-300,
+    .divide-zinc-50,
+    .divide-zinc-100,
+    .divide-zinc-200,
+    .divide-zinc-300,
+    .divide-neutral-50,
+    .divide-neutral-100,
+    .divide-neutral-200,
+    .divide-neutral-300,
+    .divide-stone-50,
+    .divide-stone-100,
+    .divide-stone-200,
+    .divide-stone-300
+  ) > :not(:last-child) { border-color: var(--border) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-slate-50,
+    .ring-slate-100,
+    .ring-slate-200,
+    .ring-slate-300,
+    .ring-gray-50,
+    .ring-gray-100,
+    .ring-gray-200,
+    .ring-gray-300,
+    .ring-zinc-50,
+    .ring-zinc-100,
+    .ring-zinc-200,
+    .ring-zinc-300,
+    .ring-neutral-50,
+    .ring-neutral-100,
+    .ring-neutral-200,
+    .ring-neutral-300,
+    .ring-stone-50,
+    .ring-stone-100,
+    .ring-stone-200,
+    .ring-stone-300
+  ) { --tw-ring-color: var(--border) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-red-50,
+    .divide-red-100,
+    .divide-red-200,
+    .divide-red-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-red-50,
+    .ring-red-100,
+    .ring-red-200,
+    .ring-red-300
+  ) { --tw-ring-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-orange-50,
+    .divide-orange-100,
+    .divide-orange-200,
+    .divide-orange-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-orange-50,
+    .ring-orange-100,
+    .ring-orange-200,
+    .ring-orange-300
+  ) { --tw-ring-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-amber-50,
+    .divide-amber-100,
+    .divide-amber-200,
+    .divide-amber-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-amber-50,
+    .ring-amber-100,
+    .ring-amber-200,
+    .ring-amber-300
+  ) { --tw-ring-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-yellow-50,
+    .divide-yellow-100,
+    .divide-yellow-200,
+    .divide-yellow-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-yellow-50,
+    .ring-yellow-100,
+    .ring-yellow-200,
+    .ring-yellow-300
+  ) { --tw-ring-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-lime-50,
+    .divide-lime-100,
+    .divide-lime-200,
+    .divide-lime-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-lime-50,
+    .ring-lime-100,
+    .ring-lime-200,
+    .ring-lime-300
+  ) { --tw-ring-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-green-50,
+    .divide-green-100,
+    .divide-green-200,
+    .divide-green-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-green-50,
+    .ring-green-100,
+    .ring-green-200,
+    .ring-green-300
+  ) { --tw-ring-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-emerald-50,
+    .divide-emerald-100,
+    .divide-emerald-200,
+    .divide-emerald-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-emerald-50,
+    .ring-emerald-100,
+    .ring-emerald-200,
+    .ring-emerald-300
+  ) { --tw-ring-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-teal-50,
+    .divide-teal-100,
+    .divide-teal-200,
+    .divide-teal-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-teal-50,
+    .ring-teal-100,
+    .ring-teal-200,
+    .ring-teal-300
+  ) { --tw-ring-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-cyan-50,
+    .divide-cyan-100,
+    .divide-cyan-200,
+    .divide-cyan-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-cyan-50,
+    .ring-cyan-100,
+    .ring-cyan-200,
+    .ring-cyan-300
+  ) { --tw-ring-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-sky-50,
+    .divide-sky-100,
+    .divide-sky-200,
+    .divide-sky-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-sky-50,
+    .ring-sky-100,
+    .ring-sky-200,
+    .ring-sky-300
+  ) { --tw-ring-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-blue-50,
+    .divide-blue-100,
+    .divide-blue-200,
+    .divide-blue-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-blue-50,
+    .ring-blue-100,
+    .ring-blue-200,
+    .ring-blue-300
+  ) { --tw-ring-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-indigo-50,
+    .divide-indigo-100,
+    .divide-indigo-200,
+    .divide-indigo-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-indigo-50,
+    .ring-indigo-100,
+    .ring-indigo-200,
+    .ring-indigo-300
+  ) { --tw-ring-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-violet-50,
+    .divide-violet-100,
+    .divide-violet-200,
+    .divide-violet-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-violet-50,
+    .ring-violet-100,
+    .ring-violet-200,
+    .ring-violet-300
+  ) { --tw-ring-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-purple-50,
+    .divide-purple-100,
+    .divide-purple-200,
+    .divide-purple-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-purple-50,
+    .ring-purple-100,
+    .ring-purple-200,
+    .ring-purple-300
+  ) { --tw-ring-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-fuchsia-50,
+    .divide-fuchsia-100,
+    .divide-fuchsia-200,
+    .divide-fuchsia-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-fuchsia-50,
+    .ring-fuchsia-100,
+    .ring-fuchsia-200,
+    .ring-fuchsia-300
+  ) { --tw-ring-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-pink-50,
+    .divide-pink-100,
+    .divide-pink-200,
+    .divide-pink-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-pink-50,
+    .ring-pink-100,
+    .ring-pink-200,
+    .ring-pink-300
+  ) { --tw-ring-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .divide-rose-50,
+    .divide-rose-100,
+    .divide-rose-200,
+    .divide-rose-300
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  [data-theme="auto"] .arkiv-dashboard-theme :is(
+    .ring-rose-50,
+    .ring-rose-100,
+    .ring-rose-200,
+    .ring-rose-300
+  ) { --tw-ring-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  [data-theme="auto"] :is(
+    [data-slot="popover"], [data-slot="dropdown-menu"], [data-slot="combobox"],
+    .popover, .dropdown-menu, [role="listbox"]:not([data-arkiv-ai-listbox="true"])
+  ) {
+    background: var(--popover) !important;
+    background-color: var(--popover) !important;
+    border-color: var(--border) !important;
+    color: var(--popover-foreground) !important;
+  }
+}
+
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-white, .bg-white\/50, .bg-white\/60, .bg-white\/70, .bg-white\/80, .bg-white\/90,
+  [data-slot="card"], [data-slot="dialog-content"]
+) {
+  background-color: var(--card) !important;
+  color: var(--card-foreground);
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme aside {
+  background: var(--wit-ink) !important;
+  border-color: var(--border) !important;
+}
+/* Permukaan & teks bertint di dark mode.
+   Latar jadi tint gelap sesuai hue-nya (merah tetap kemerahan) dan teks
+   dinaikkan ke versi terang, sehingga semantik warna terjaga sekaligus
+   kontras aman. Selector atribut ikut menangkap varian opasitas.
+   Digenerate untuk 17 hue — jangan diedit satu per satu. */
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-red-50,
+  [class^="bg-red-50/"],
+  [class*=" bg-red-50/"],
+  .bg-red-100,
+  [class^="bg-red-100/"],
+  [class*=" bg-red-100/"]
+) {
+  background-color: color-mix(in oklch, #ef4444 14%, transparent) !important;
+  border-color: color-mix(in oklch, #ef4444 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-red-50:hover,
+  [class*="hover:bg-red-50/"]:hover,
+  .hover\:bg-red-100:hover,
+  [class*="hover:bg-red-100/"]:hover
+) { background-color: color-mix(in oklch, #ef4444 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-red-600,
+  .text-red-700,
+  .text-red-800,
+  .text-red-900
+) { color: color-mix(in oklch, #ef4444 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-red-100,
+  [class*=" border-red-100/"],
+  .border-red-200,
+  [class*=" border-red-200/"],
+  .border-red-300,
+  [class*=" border-red-300/"]
+) { border-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-orange-50,
+  [class^="bg-orange-50/"],
+  [class*=" bg-orange-50/"],
+  .bg-orange-100,
+  [class^="bg-orange-100/"],
+  [class*=" bg-orange-100/"]
+) {
+  background-color: color-mix(in oklch, #f97316 14%, transparent) !important;
+  border-color: color-mix(in oklch, #f97316 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-orange-50:hover,
+  [class*="hover:bg-orange-50/"]:hover,
+  .hover\:bg-orange-100:hover,
+  [class*="hover:bg-orange-100/"]:hover
+) { background-color: color-mix(in oklch, #f97316 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-orange-600,
+  .text-orange-700,
+  .text-orange-800,
+  .text-orange-900
+) { color: color-mix(in oklch, #f97316 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-orange-100,
+  [class*=" border-orange-100/"],
+  .border-orange-200,
+  [class*=" border-orange-200/"],
+  .border-orange-300,
+  [class*=" border-orange-300/"]
+) { border-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-amber-50,
+  [class^="bg-amber-50/"],
+  [class*=" bg-amber-50/"],
+  .bg-amber-100,
+  [class^="bg-amber-100/"],
+  [class*=" bg-amber-100/"]
+) {
+  background-color: color-mix(in oklch, #f59e0b 14%, transparent) !important;
+  border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-amber-50:hover,
+  [class*="hover:bg-amber-50/"]:hover,
+  .hover\:bg-amber-100:hover,
+  [class*="hover:bg-amber-100/"]:hover
+) { background-color: color-mix(in oklch, #f59e0b 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-800,
+  .text-amber-900
+) { color: color-mix(in oklch, #f59e0b 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-amber-100,
+  [class*=" border-amber-100/"],
+  .border-amber-200,
+  [class*=" border-amber-200/"],
+  .border-amber-300,
+  [class*=" border-amber-300/"]
+) { border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-yellow-50,
+  [class^="bg-yellow-50/"],
+  [class*=" bg-yellow-50/"],
+  .bg-yellow-100,
+  [class^="bg-yellow-100/"],
+  [class*=" bg-yellow-100/"]
+) {
+  background-color: color-mix(in oklch, #eab308 14%, transparent) !important;
+  border-color: color-mix(in oklch, #eab308 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-yellow-50:hover,
+  [class*="hover:bg-yellow-50/"]:hover,
+  .hover\:bg-yellow-100:hover,
+  [class*="hover:bg-yellow-100/"]:hover
+) { background-color: color-mix(in oklch, #eab308 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-yellow-600,
+  .text-yellow-700,
+  .text-yellow-800,
+  .text-yellow-900
+) { color: color-mix(in oklch, #eab308 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-yellow-100,
+  [class*=" border-yellow-100/"],
+  .border-yellow-200,
+  [class*=" border-yellow-200/"],
+  .border-yellow-300,
+  [class*=" border-yellow-300/"]
+) { border-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-lime-50,
+  [class^="bg-lime-50/"],
+  [class*=" bg-lime-50/"],
+  .bg-lime-100,
+  [class^="bg-lime-100/"],
+  [class*=" bg-lime-100/"]
+) {
+  background-color: color-mix(in oklch, #84cc16 14%, transparent) !important;
+  border-color: color-mix(in oklch, #84cc16 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-lime-50:hover,
+  [class*="hover:bg-lime-50/"]:hover,
+  .hover\:bg-lime-100:hover,
+  [class*="hover:bg-lime-100/"]:hover
+) { background-color: color-mix(in oklch, #84cc16 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-lime-600,
+  .text-lime-700,
+  .text-lime-800,
+  .text-lime-900
+) { color: color-mix(in oklch, #84cc16 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-lime-100,
+  [class*=" border-lime-100/"],
+  .border-lime-200,
+  [class*=" border-lime-200/"],
+  .border-lime-300,
+  [class*=" border-lime-300/"]
+) { border-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-green-50,
+  [class^="bg-green-50/"],
+  [class*=" bg-green-50/"],
+  .bg-green-100,
+  [class^="bg-green-100/"],
+  [class*=" bg-green-100/"]
+) {
+  background-color: color-mix(in oklch, #22c55e 14%, transparent) !important;
+  border-color: color-mix(in oklch, #22c55e 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-green-50:hover,
+  [class*="hover:bg-green-50/"]:hover,
+  .hover\:bg-green-100:hover,
+  [class*="hover:bg-green-100/"]:hover
+) { background-color: color-mix(in oklch, #22c55e 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-green-600,
+  .text-green-700,
+  .text-green-800,
+  .text-green-900
+) { color: color-mix(in oklch, #22c55e 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-green-100,
+  [class*=" border-green-100/"],
+  .border-green-200,
+  [class*=" border-green-200/"],
+  .border-green-300,
+  [class*=" border-green-300/"]
+) { border-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-emerald-50,
+  [class^="bg-emerald-50/"],
+  [class*=" bg-emerald-50/"],
+  .bg-emerald-100,
+  [class^="bg-emerald-100/"],
+  [class*=" bg-emerald-100/"]
+) {
+  background-color: color-mix(in oklch, #10b981 14%, transparent) !important;
+  border-color: color-mix(in oklch, #10b981 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-emerald-50:hover,
+  [class*="hover:bg-emerald-50/"]:hover,
+  .hover\:bg-emerald-100:hover,
+  [class*="hover:bg-emerald-100/"]:hover
+) { background-color: color-mix(in oklch, #10b981 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-emerald-600,
+  .text-emerald-700,
+  .text-emerald-800,
+  .text-emerald-900
+) { color: color-mix(in oklch, #10b981 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-emerald-100,
+  [class*=" border-emerald-100/"],
+  .border-emerald-200,
+  [class*=" border-emerald-200/"],
+  .border-emerald-300,
+  [class*=" border-emerald-300/"]
+) { border-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-teal-50,
+  [class^="bg-teal-50/"],
+  [class*=" bg-teal-50/"],
+  .bg-teal-100,
+  [class^="bg-teal-100/"],
+  [class*=" bg-teal-100/"]
+) {
+  background-color: color-mix(in oklch, #14b8a6 14%, transparent) !important;
+  border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-teal-50:hover,
+  [class*="hover:bg-teal-50/"]:hover,
+  .hover\:bg-teal-100:hover,
+  [class*="hover:bg-teal-100/"]:hover
+) { background-color: color-mix(in oklch, #14b8a6 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-teal-600,
+  .text-teal-700,
+  .text-teal-800,
+  .text-teal-900
+) { color: color-mix(in oklch, #14b8a6 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-teal-100,
+  [class*=" border-teal-100/"],
+  .border-teal-200,
+  [class*=" border-teal-200/"],
+  .border-teal-300,
+  [class*=" border-teal-300/"]
+) { border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-cyan-50,
+  [class^="bg-cyan-50/"],
+  [class*=" bg-cyan-50/"],
+  .bg-cyan-100,
+  [class^="bg-cyan-100/"],
+  [class*=" bg-cyan-100/"]
+) {
+  background-color: color-mix(in oklch, #06b6d4 14%, transparent) !important;
+  border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-cyan-50:hover,
+  [class*="hover:bg-cyan-50/"]:hover,
+  .hover\:bg-cyan-100:hover,
+  [class*="hover:bg-cyan-100/"]:hover
+) { background-color: color-mix(in oklch, #06b6d4 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-cyan-600,
+  .text-cyan-700,
+  .text-cyan-800,
+  .text-cyan-900
+) { color: color-mix(in oklch, #06b6d4 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-cyan-100,
+  [class*=" border-cyan-100/"],
+  .border-cyan-200,
+  [class*=" border-cyan-200/"],
+  .border-cyan-300,
+  [class*=" border-cyan-300/"]
+) { border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-sky-50,
+  [class^="bg-sky-50/"],
+  [class*=" bg-sky-50/"],
+  .bg-sky-100,
+  [class^="bg-sky-100/"],
+  [class*=" bg-sky-100/"]
+) {
+  background-color: color-mix(in oklch, #0ea5e9 14%, transparent) !important;
+  border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-sky-50:hover,
+  [class*="hover:bg-sky-50/"]:hover,
+  .hover\:bg-sky-100:hover,
+  [class*="hover:bg-sky-100/"]:hover
+) { background-color: color-mix(in oklch, #0ea5e9 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-sky-600,
+  .text-sky-700,
+  .text-sky-800,
+  .text-sky-900
+) { color: color-mix(in oklch, #0ea5e9 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-sky-100,
+  [class*=" border-sky-100/"],
+  .border-sky-200,
+  [class*=" border-sky-200/"],
+  .border-sky-300,
+  [class*=" border-sky-300/"]
+) { border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-blue-50,
+  [class^="bg-blue-50/"],
+  [class*=" bg-blue-50/"],
+  .bg-blue-100,
+  [class^="bg-blue-100/"],
+  [class*=" bg-blue-100/"]
+) {
+  background-color: color-mix(in oklch, #3b82f6 14%, transparent) !important;
+  border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-blue-50:hover,
+  [class*="hover:bg-blue-50/"]:hover,
+  .hover\:bg-blue-100:hover,
+  [class*="hover:bg-blue-100/"]:hover
+) { background-color: color-mix(in oklch, #3b82f6 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-blue-600,
+  .text-blue-700,
+  .text-blue-800,
+  .text-blue-900
+) { color: color-mix(in oklch, #3b82f6 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-blue-100,
+  [class*=" border-blue-100/"],
+  .border-blue-200,
+  [class*=" border-blue-200/"],
+  .border-blue-300,
+  [class*=" border-blue-300/"]
+) { border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-indigo-50,
+  [class^="bg-indigo-50/"],
+  [class*=" bg-indigo-50/"],
+  .bg-indigo-100,
+  [class^="bg-indigo-100/"],
+  [class*=" bg-indigo-100/"]
+) {
+  background-color: color-mix(in oklch, #6366f1 14%, transparent) !important;
+  border-color: color-mix(in oklch, #6366f1 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-indigo-50:hover,
+  [class*="hover:bg-indigo-50/"]:hover,
+  .hover\:bg-indigo-100:hover,
+  [class*="hover:bg-indigo-100/"]:hover
+) { background-color: color-mix(in oklch, #6366f1 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-indigo-600,
+  .text-indigo-700,
+  .text-indigo-800,
+  .text-indigo-900
+) { color: color-mix(in oklch, #6366f1 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-indigo-100,
+  [class*=" border-indigo-100/"],
+  .border-indigo-200,
+  [class*=" border-indigo-200/"],
+  .border-indigo-300,
+  [class*=" border-indigo-300/"]
+) { border-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-violet-50,
+  [class^="bg-violet-50/"],
+  [class*=" bg-violet-50/"],
+  .bg-violet-100,
+  [class^="bg-violet-100/"],
+  [class*=" bg-violet-100/"]
+) {
+  background-color: color-mix(in oklch, #8b5cf6 14%, transparent) !important;
+  border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-violet-50:hover,
+  [class*="hover:bg-violet-50/"]:hover,
+  .hover\:bg-violet-100:hover,
+  [class*="hover:bg-violet-100/"]:hover
+) { background-color: color-mix(in oklch, #8b5cf6 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-violet-600,
+  .text-violet-700,
+  .text-violet-800,
+  .text-violet-900
+) { color: color-mix(in oklch, #8b5cf6 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-violet-100,
+  [class*=" border-violet-100/"],
+  .border-violet-200,
+  [class*=" border-violet-200/"],
+  .border-violet-300,
+  [class*=" border-violet-300/"]
+) { border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-purple-50,
+  [class^="bg-purple-50/"],
+  [class*=" bg-purple-50/"],
+  .bg-purple-100,
+  [class^="bg-purple-100/"],
+  [class*=" bg-purple-100/"]
+) {
+  background-color: color-mix(in oklch, #a855f7 14%, transparent) !important;
+  border-color: color-mix(in oklch, #a855f7 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-purple-50:hover,
+  [class*="hover:bg-purple-50/"]:hover,
+  .hover\:bg-purple-100:hover,
+  [class*="hover:bg-purple-100/"]:hover
+) { background-color: color-mix(in oklch, #a855f7 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-purple-600,
+  .text-purple-700,
+  .text-purple-800,
+  .text-purple-900
+) { color: color-mix(in oklch, #a855f7 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-purple-100,
+  [class*=" border-purple-100/"],
+  .border-purple-200,
+  [class*=" border-purple-200/"],
+  .border-purple-300,
+  [class*=" border-purple-300/"]
+) { border-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-fuchsia-50,
+  [class^="bg-fuchsia-50/"],
+  [class*=" bg-fuchsia-50/"],
+  .bg-fuchsia-100,
+  [class^="bg-fuchsia-100/"],
+  [class*=" bg-fuchsia-100/"]
+) {
+  background-color: color-mix(in oklch, #d946ef 14%, transparent) !important;
+  border-color: color-mix(in oklch, #d946ef 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-fuchsia-50:hover,
+  [class*="hover:bg-fuchsia-50/"]:hover,
+  .hover\:bg-fuchsia-100:hover,
+  [class*="hover:bg-fuchsia-100/"]:hover
+) { background-color: color-mix(in oklch, #d946ef 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-fuchsia-600,
+  .text-fuchsia-700,
+  .text-fuchsia-800,
+  .text-fuchsia-900
+) { color: color-mix(in oklch, #d946ef 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-fuchsia-100,
+  [class*=" border-fuchsia-100/"],
+  .border-fuchsia-200,
+  [class*=" border-fuchsia-200/"],
+  .border-fuchsia-300,
+  [class*=" border-fuchsia-300/"]
+) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-pink-50,
+  [class^="bg-pink-50/"],
+  [class*=" bg-pink-50/"],
+  .bg-pink-100,
+  [class^="bg-pink-100/"],
+  [class*=" bg-pink-100/"]
+) {
+  background-color: color-mix(in oklch, #abde67 14%, transparent) !important;
+  border-color: color-mix(in oklch, #abde67 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-pink-50:hover,
+  [class*="hover:bg-pink-50/"]:hover,
+  .hover\:bg-pink-100:hover,
+  [class*="hover:bg-pink-100/"]:hover
+) { background-color: color-mix(in oklch, #abde67 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-pink-600,
+  .text-pink-700,
+  .text-pink-800,
+  .text-pink-900
+) { color: color-mix(in oklch, #abde67 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-pink-100,
+  [class*=" border-pink-100/"],
+  .border-pink-200,
+  [class*=" border-pink-200/"],
+  .border-pink-300,
+  [class*=" border-pink-300/"]
+) { border-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-rose-50,
+  [class^="bg-rose-50/"],
+  [class*=" bg-rose-50/"],
+  .bg-rose-100,
+  [class^="bg-rose-100/"],
+  [class*=" bg-rose-100/"]
+) {
+  background-color: color-mix(in oklch, #f43f5e 14%, transparent) !important;
+  border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .hover\:bg-rose-50:hover,
+  [class*="hover:bg-rose-50/"]:hover,
+  .hover\:bg-rose-100:hover,
+  [class*="hover:bg-rose-100/"]:hover
+) { background-color: color-mix(in oklch, #f43f5e 22%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-rose-600,
+  .text-rose-700,
+  .text-rose-800,
+  .text-rose-900
+) { color: color-mix(in oklch, #f43f5e 42%, white) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-rose-100,
+  [class*=" border-rose-100/"],
+  .border-rose-200,
+  [class*=" border-rose-200/"],
+  .border-rose-300,
+  [class*=" border-rose-300/"]
+) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-gray-950, .text-gray-900, .text-gray-800,
+  .text-slate-950, .text-slate-900, .text-slate-800, .text-black
+) { color: #f8fafc !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-gray-700, .text-gray-600, .text-slate-700, .text-slate-600
+) { color: #cbd5e1 !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .text-gray-500, .text-gray-400, .text-slate-500, .text-slate-400
+) { color: #94a3b8 !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .border-gray-50, .border-gray-100, .border-gray-200, .border-gray-200\/70,
+  .border-gray-300, .border-slate-100, .border-slate-200, .border-pink-100,
+  .border-pink-200, .border-black\/5
+) { border-color: var(--border) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(table thead, tr, th, td) {
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  tr:hover, .hover\:bg-gray-50:hover, .hover\:bg-gray-100:hover,
+  .hover\:bg-slate-50:hover, .hover\:bg-slate-100:hover,
+  .hover\:bg-gray-200:hover, .hover\:bg-slate-200:hover,
+  [class*="hover:bg-gray-50/"]:hover, [class*="hover:bg-gray-100/"]:hover,
+  [class*="hover:bg-gray-200/"]:hover, [class*="hover:bg-slate-50/"]:hover,
+  [class*="hover:bg-slate-100/"]:hover
+) { background-color: var(--surface-hover) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select,
+  [data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]
+) {
+  background: rgba(15, 23, 42, 0.94) !important;
+  border-color: var(--input) !important;
+  color: var(--foreground) !important;
+}
+[data-theme="dark"] .arkiv-dashboard-theme :is(input, textarea)::placeholder { color: #94a3b8 !important; }
+
+/* Permukaan abu-abu -> overlay putih transparan (bukan abu terang).
+   Selector atribut ikut menangkap varian opasitas (`bg-gray-50/80`) yang
+   tidak punya kelas polos. Prefiks varian seperti `hover:` sengaja tidak
+   cocok karena pola menuntut awal-atribut atau spasi di depan. */
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .bg-gray-50, .bg-gray-100, .bg-gray-200, .bg-slate-50, .bg-slate-100, .bg-slate-200,
+  [class^="bg-gray-50/"], [class*=" bg-gray-50/"],
+  [class^="bg-gray-100/"], [class*=" bg-gray-100/"],
+  [class^="bg-gray-200/"], [class*=" bg-gray-200/"],
+  [class^="bg-slate-50/"], [class*=" bg-slate-50/"],
+  [class^="bg-slate-100/"], [class*=" bg-slate-100/"]
+) {
+  background-color: var(--surface-subtle) !important;
+  border-color: var(--border) !important;
+}
+/* Gradien terang di dark mode.
+   Utilitas gradien tidak menyetel `background-color` melainkan variabel
+   `--tw-gradient-*`, sehingga aturan permukaan di atas sama sekali tidak
+   menyentuhnya dan latar tetap pucat. Stop terang di sini diturunkan ke
+   tint gelap dengan hue yang sama. Stop pekat (600/700 dst.) sengaja
+   dibiarkan — gradien brand seperti hero memang dirancang gelap. */
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-white,
+  .from-slate-50,
+  .from-slate-100,
+  .from-slate-200,
+  .from-gray-50,
+  .from-gray-100,
+  .from-gray-200
+) { --tw-gradient-from: var(--surface-subtle) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-white,
+  .via-slate-50,
+  .via-slate-100,
+  .via-slate-200,
+  .via-gray-50,
+  .via-gray-100,
+  .via-gray-200
+) { --tw-gradient-via: var(--surface-subtle) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-white,
+  .to-slate-50,
+  .to-slate-100,
+  .to-slate-200,
+  .to-gray-50,
+  .to-gray-100,
+  .to-gray-200
+) { --tw-gradient-to: var(--surface-subtle) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-pink-50,
+  .from-pink-100,
+  .from-pink-200
+) { --tw-gradient-from: color-mix(in oklch, #abde67 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-pink-50,
+  .via-pink-100,
+  .via-pink-200
+) { --tw-gradient-via: color-mix(in oklch, #abde67 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-pink-50,
+  .to-pink-100,
+  .to-pink-200
+) { --tw-gradient-to: color-mix(in oklch, #abde67 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-amber-50,
+  .from-amber-100,
+  .from-amber-200
+) { --tw-gradient-from: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-amber-50,
+  .via-amber-100,
+  .via-amber-200
+) { --tw-gradient-via: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-amber-50,
+  .to-amber-100,
+  .to-amber-200
+) { --tw-gradient-to: color-mix(in oklch, #f59e0b 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-green-50,
+  .from-green-100,
+  .from-green-200
+) { --tw-gradient-from: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-green-50,
+  .via-green-100,
+  .via-green-200
+) { --tw-gradient-via: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-green-50,
+  .to-green-100,
+  .to-green-200
+) { --tw-gradient-to: color-mix(in oklch, #22c55e 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-orange-50,
+  .from-orange-100,
+  .from-orange-200
+) { --tw-gradient-from: color-mix(in oklch, #f97316 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-orange-50,
+  .via-orange-100,
+  .via-orange-200
+) { --tw-gradient-via: color-mix(in oklch, #f97316 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-orange-50,
+  .to-orange-100,
+  .to-orange-200
+) { --tw-gradient-to: color-mix(in oklch, #f97316 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-indigo-50,
+  .from-indigo-100,
+  .from-indigo-200
+) { --tw-gradient-from: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-indigo-50,
+  .via-indigo-100,
+  .via-indigo-200
+) { --tw-gradient-via: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-indigo-50,
+  .to-indigo-100,
+  .to-indigo-200
+) { --tw-gradient-to: color-mix(in oklch, #6366f1 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .from-emerald-50,
+  .from-emerald-100,
+  .from-emerald-200
+) { --tw-gradient-from: color-mix(in oklch, #10b981 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .via-emerald-50,
+  .via-emerald-100,
+  .via-emerald-200
+) { --tw-gradient-via: color-mix(in oklch, #10b981 14%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .to-emerald-50,
+  .to-emerald-100,
+  .to-emerald-200
+) { --tw-gradient-to: color-mix(in oklch, #10b981 14%, transparent) !important; }
+/* Garis rambut: divide-* dan ring-* di dark mode.
+   Keduanya tidak menyetel `border-color` pada elemen itu sendiri —
+   `divide-*` menyetelnya pada anak lewat kombinator, dan `ring-*` memakai
+   variabel `--tw-ring-color`. Karena itu aturan border di atas tidak
+   menyentuhnya, dan garis terang tetap menyala di latar gelap. */
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-slate-50,
+  .divide-slate-100,
+  .divide-slate-200,
+  .divide-slate-300,
+  .divide-gray-50,
+  .divide-gray-100,
+  .divide-gray-200,
+  .divide-gray-300,
+  .divide-zinc-50,
+  .divide-zinc-100,
+  .divide-zinc-200,
+  .divide-zinc-300,
+  .divide-neutral-50,
+  .divide-neutral-100,
+  .divide-neutral-200,
+  .divide-neutral-300,
+  .divide-stone-50,
+  .divide-stone-100,
+  .divide-stone-200,
+  .divide-stone-300
+) > :not(:last-child) { border-color: var(--border) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-slate-50,
+  .ring-slate-100,
+  .ring-slate-200,
+  .ring-slate-300,
+  .ring-gray-50,
+  .ring-gray-100,
+  .ring-gray-200,
+  .ring-gray-300,
+  .ring-zinc-50,
+  .ring-zinc-100,
+  .ring-zinc-200,
+  .ring-zinc-300,
+  .ring-neutral-50,
+  .ring-neutral-100,
+  .ring-neutral-200,
+  .ring-neutral-300,
+  .ring-stone-50,
+  .ring-stone-100,
+  .ring-stone-200,
+  .ring-stone-300
+) { --tw-ring-color: var(--border) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-red-50,
+  .divide-red-100,
+  .divide-red-200,
+  .divide-red-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-red-50,
+  .ring-red-100,
+  .ring-red-200,
+  .ring-red-300
+) { --tw-ring-color: color-mix(in oklch, #ef4444 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-orange-50,
+  .divide-orange-100,
+  .divide-orange-200,
+  .divide-orange-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-orange-50,
+  .ring-orange-100,
+  .ring-orange-200,
+  .ring-orange-300
+) { --tw-ring-color: color-mix(in oklch, #f97316 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-amber-50,
+  .divide-amber-100,
+  .divide-amber-200,
+  .divide-amber-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-amber-50,
+  .ring-amber-100,
+  .ring-amber-200,
+  .ring-amber-300
+) { --tw-ring-color: color-mix(in oklch, #f59e0b 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-yellow-50,
+  .divide-yellow-100,
+  .divide-yellow-200,
+  .divide-yellow-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-yellow-50,
+  .ring-yellow-100,
+  .ring-yellow-200,
+  .ring-yellow-300
+) { --tw-ring-color: color-mix(in oklch, #eab308 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-lime-50,
+  .divide-lime-100,
+  .divide-lime-200,
+  .divide-lime-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-lime-50,
+  .ring-lime-100,
+  .ring-lime-200,
+  .ring-lime-300
+) { --tw-ring-color: color-mix(in oklch, #84cc16 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-green-50,
+  .divide-green-100,
+  .divide-green-200,
+  .divide-green-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-green-50,
+  .ring-green-100,
+  .ring-green-200,
+  .ring-green-300
+) { --tw-ring-color: color-mix(in oklch, #22c55e 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-emerald-50,
+  .divide-emerald-100,
+  .divide-emerald-200,
+  .divide-emerald-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-emerald-50,
+  .ring-emerald-100,
+  .ring-emerald-200,
+  .ring-emerald-300
+) { --tw-ring-color: color-mix(in oklch, #10b981 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-teal-50,
+  .divide-teal-100,
+  .divide-teal-200,
+  .divide-teal-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-teal-50,
+  .ring-teal-100,
+  .ring-teal-200,
+  .ring-teal-300
+) { --tw-ring-color: color-mix(in oklch, #14b8a6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-cyan-50,
+  .divide-cyan-100,
+  .divide-cyan-200,
+  .divide-cyan-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-cyan-50,
+  .ring-cyan-100,
+  .ring-cyan-200,
+  .ring-cyan-300
+) { --tw-ring-color: color-mix(in oklch, #06b6d4 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-sky-50,
+  .divide-sky-100,
+  .divide-sky-200,
+  .divide-sky-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-sky-50,
+  .ring-sky-100,
+  .ring-sky-200,
+  .ring-sky-300
+) { --tw-ring-color: color-mix(in oklch, #0ea5e9 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-blue-50,
+  .divide-blue-100,
+  .divide-blue-200,
+  .divide-blue-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-blue-50,
+  .ring-blue-100,
+  .ring-blue-200,
+  .ring-blue-300
+) { --tw-ring-color: color-mix(in oklch, #3b82f6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-indigo-50,
+  .divide-indigo-100,
+  .divide-indigo-200,
+  .divide-indigo-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-indigo-50,
+  .ring-indigo-100,
+  .ring-indigo-200,
+  .ring-indigo-300
+) { --tw-ring-color: color-mix(in oklch, #6366f1 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-violet-50,
+  .divide-violet-100,
+  .divide-violet-200,
+  .divide-violet-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-violet-50,
+  .ring-violet-100,
+  .ring-violet-200,
+  .ring-violet-300
+) { --tw-ring-color: color-mix(in oklch, #8b5cf6 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-purple-50,
+  .divide-purple-100,
+  .divide-purple-200,
+  .divide-purple-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-purple-50,
+  .ring-purple-100,
+  .ring-purple-200,
+  .ring-purple-300
+) { --tw-ring-color: color-mix(in oklch, #a855f7 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-fuchsia-50,
+  .divide-fuchsia-100,
+  .divide-fuchsia-200,
+  .divide-fuchsia-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-fuchsia-50,
+  .ring-fuchsia-100,
+  .ring-fuchsia-200,
+  .ring-fuchsia-300
+) { --tw-ring-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-pink-50,
+  .divide-pink-100,
+  .divide-pink-200,
+  .divide-pink-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-pink-50,
+  .ring-pink-100,
+  .ring-pink-200,
+  .ring-pink-300
+) { --tw-ring-color: color-mix(in oklch, #abde67 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .divide-rose-50,
+  .divide-rose-100,
+  .divide-rose-200,
+  .divide-rose-300
+) > :not(:last-child) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+[data-theme="dark"] .arkiv-dashboard-theme :is(
+  .ring-rose-50,
+  .ring-rose-100,
+  .ring-rose-200,
+  .ring-rose-300
+) { --tw-ring-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+[data-theme="dark"] :is(
+  [data-slot="popover"], [data-slot="dropdown-menu"], [data-slot="combobox"],
+  .popover, .dropdown-menu, [role="listbox"]:not([data-arkiv-ai-listbox="true"])
+) {
+  background: var(--popover) !important;
+  background-color: var(--popover) !important;
+  border-color: var(--border) !important;
+  color: var(--popover-foreground) !important;
+}
+
+/* Datepicker — dark surface when portaled inside a dark theme. */
+[data-theme="dark"] .react-datepicker {
+  background-color: #0f172a;
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #e5e7eb;
+}
+[data-theme="dark"] .react-datepicker__header { background-color: #0f172a; }
+[data-theme="dark"] .react-datepicker__current-month { color: #f1f5f9; }
+[data-theme="dark"] .react-datepicker__day-name { color: #94a3b8; }
+[data-theme="dark"] .react-datepicker__day { color: #cbd5e1; }
+[data-theme="dark"] .react-datepicker__day:hover { background-color: rgba(30, 41, 59, 0.9); }
+[data-theme="dark"] .react-datepicker__day--outside-month { color: #475569; }
+
+/* Custom react-datepicker styles */
+.react-datepicker {
+  font-family: inherit;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+.react-datepicker__header {
+  background-color: white;
+  border-bottom: none;
+  padding-top: 0.5rem;
+}
+
+.react-datepicker__current-month {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+.react-datepicker__day-names {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.react-datepicker__day-name {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  width: 2.25rem;
+  text-align: center;
+}
+
+.react-datepicker__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.react-datepicker__day {
+  width: 2.25rem;
+  height: 2.25rem;
+  line-height: 2.25rem;
+  font-size: 0.875rem;
+  color: #374151;
+  border-radius: 0.375rem;
+  transition: all 0.15s ease;
+}
+
+.react-datepicker__day:hover {
+  background-color: #f3f4f6;
+}
+
+.react-datepicker__day--selected {
+  background-color: #2563eb !important;
+  color: white !important;
+}
+
+.react-datepicker__day--today {
+  font-weight: 600;
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.react-datepicker__day--outside-month {
+  color: #d1d5db;
+}
+
+.react-datepicker__day--disabled {
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.react-datepicker__navigation {
+  top: 0.75rem;
+}
+
+.react-datepicker__navigation--previous {
+  left: 0.75rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 19l-7-7 7-7'%3e%3c/path%3e%3c/svg%3e");
+  background-size: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.react-datepicker__navigation--next {
+  right: 0.75rem;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 5l7 7-7 7'%3e%3c/path%3e%3c/svg%3e");
+  background-size: 1.25rem;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.react-datepicker__navigation:hover {
+  opacity: 0.8;
+}
+
+.react-datepicker__navigation-icon::before {
+  display: none;
+}
+
+/* Logbook fullscreen Quill editor */
+.quill-fullscreen-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.quill-fullscreen-editor .ql-toolbar {
+  flex-shrink: 0;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+}
+
+.quill-fullscreen-editor .ql-container {
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  font-size: 15px;
+}
+
+.quill-fullscreen-editor .ql-editor {
+  min-height: 100%;
+  padding: 24px;
+}
+
+/* Desktop → Drive → Reports: input tanggal gelap (aturan input global
+   memaksa latar putih transparan, jadi butuh !important di sini). */
+/* Aturan global input:not():not() di atas memutihkan input dengan !important;
+   kelas berulang (.a.a.a) diciutkan minifier, jadi spesifisitas ditambah lewat
+   leluhur .arkiv-drive-filter + [type="date"]. */
+.arkiv-drive-filter input[type="date"].arkiv-drive-date,
+.arkiv-drive-filter input[type="date"].arkiv-drive-date:hover,
+.arkiv-drive-filter input[type="date"].arkiv-drive-date:focus {
+  background: rgba(17, 24, 39, 0.92) !important;
+  background-color: rgba(17, 24, 39, 0.92) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  color-scheme: dark;
+}
+.arkiv-drive-filter input[type="date"].arkiv-drive-date::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.8; }

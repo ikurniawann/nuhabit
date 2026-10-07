@@ -1,0 +1,162 @@
+include:
+  - project: 'devops/ci-cd-template'
+    ref: development          # pin to a tag once this repo starts tagging releases
+    file: '.gitlab-ci.yml'
+
+# COMPOSE_SERVICE_NAME is baked into each deploy-*/rollback-* job's own
+# `variables:` (default "CHANGE-ME") -- GitLab's include-merge deep-merges a
+# job redeclared locally with the included one (local wins per key, rest of
+# the job -- stage/image/script/rules/needs -- comes from the include), so
+# redeclaring just `variables:` here is enough; no need to copy the whole job.
+#
+# Runtime env: the image no longer contains a .env (see the build script
+# below). The compose service on the deploy host must load the runtime env
+# itself, e.g. `env_file: /etc/arkiv/<channel>.env` (mode 600) holding the
+# same content as RUNTIME_CONFIG_CONTENT. Without it the container stops at
+# boot with "Konfigurasi env server tidak valid" (src/lib/env.ts).
+deploy-development:
+  variables: {COMPOSE_SERVICE_NAME: "arkiv"}
+
+deploy-production:
+  variables: {COMPOSE_SERVICE_NAME: "arkiv"}
+
+rollback-development:
+  variables: {COMPOSE_SERVICE_NAME: "arkiv"}
+
+rollback-production:
+  variables: {COMPOSE_SERVICE_NAME: "arkiv"}
+
+# ---------------------------------------------------------------------------
+# Local cache override — see docs/ci-cache.md for the full writeup.
+#
+# ci-cd-template's build_job does `docker build --cache-from "$IMAGE:$CHANNEL"`,
+# which can only ever reuse layers from the FINAL stage (the only one pushed
+# to the registry) — deps/builder (pnpm install, pnpm build) never get a cache
+# hit, cold or not. Only `script:` is redeclared here — GitLab's include-merge
+# keeps stage/image/services/rules/environment from the template job
+# untouched (same deep-merge pattern as the COMPOSE_SERVICE_NAME overrides
+# above: local wins per key, the rest comes from the include).
+#
+# Registry cache export (--cache-to) needs the docker-container buildx
+# driver — this fleet's default "docker" driver has no containerd snapshotter
+# and fails with "Cache export is not supported for the docker driver"
+# (confirmed 2026-08-20). `cibuilder` is a pre-provisioned docker-container
+# builder on GITLAB-RUNNER (host-socket mode, reachable via the
+# /root/.docker/buildx volume mount added to its config.toml). WIT-HQ — the
+# other runner that can pick up this project's untagged jobs — builds through
+# an ephemeral dind service instead of the host socket, so it can never see
+# a host-side builder; the `docker buildx inspect cibuilder` check below
+# fails there and falls back to the original template behavior (still
+# correct, just without the registry cache win). Nothing breaks either way.
+.cached_build_script: &cached_build_script
+  - |
+    if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+      echo "Host Docker socket available on this runner -- using it directly, skipping dind."
+      export DOCKER_HOST=unix:///var/run/docker.sock
+    else
+      echo "No usable host socket on this runner -- waiting for the dind service instead."
+      export DOCKER_HOST=tcp://docker:2375
+      until docker info >/dev/null 2>&1; do sleep 1; done
+    fi
+  - echo "$REGISTRY_DEPLOY_TOKEN" | docker login -u "$REGISTRY_DEPLOY_USER" --password-stdin "$DOCKER_REGISTRY_PUSH"
+  # RUNTIME_CONFIG_CONTENT goes to `next build` as a BuildKit secret, written
+  # OUTSIDE the build context. It used to be written to ./.env, which COPY . .
+  # put into a builder layer (exported to the registry by --cache-to mode=max)
+  # and Next's standalone output copied into the pushed image. The image now
+  # carries no .env*: the deploy host must hand the same content to the
+  # container at run time (docker run --env-file, or env_file: for the compose
+  # service). See .gitlab/deploy-docker.sh.
+  - |
+    if [ -z "${RUNTIME_CONFIG_CONTENT:-}" ]; then
+      echo "ERROR: RUNTIME_CONFIG_CONTENT is empty (required for Node/Next.js builds)"
+      exit 1
+    fi
+    BUILD_ENV_FILE="$(mktemp)"
+    printf '%s\n' "$RUNTIME_CONFIG_CONTENT" > "$BUILD_ENV_FILE"
+    trap 'rm -f "$BUILD_ENV_FILE"' EXIT
+    if docker buildx inspect cibuilder >/dev/null 2>&1; then
+      echo "cibuilder available on this runner -- building with registry cache export (all stages, mode=max)."
+      docker buildx build --builder cibuilder \
+        --secret "id=dotenv,src=$BUILD_ENV_FILE" \
+        --cache-to "type=registry,ref=$CI_REGISTRY_IMAGE_PUSH:buildcache-$CHANNEL,mode=max" \
+        --cache-from "type=registry,ref=$CI_REGISTRY_IMAGE_PUSH:buildcache-$CHANNEL" \
+        -t "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG" \
+        -t "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" \
+        --push .
+    else
+      echo "cibuilder not available on this runner -- falling back to the ci-cd-template default (no registry cache)."
+      DOCKER_BUILDKIT=1 docker build --secret "id=dotenv,src=$BUILD_ENV_FILE" \
+        --cache-from "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" -t "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG" -t "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL" .
+      docker push "$CI_REGISTRY_IMAGE_PUSH:$CI_COMMIT_TAG"
+      docker push "$CI_REGISTRY_IMAGE_PUSH:$CHANNEL"
+    fi
+
+build-development:
+  script: *cached_build_script
+
+build-production:
+  script: *cached_build_script
+
+# ---------------------------------------------------------------------------
+# Go API image (backend/), pushed next to the Next image as
+# $CI_REGISTRY_IMAGE_PUSH/api:<tag|channel>. It runs on the same host as the
+# Next container; see backend/docs/DEPLOY.md for the compose service and the
+# BACKEND_URL switch. `extends` keeps the template build job's stage, rules
+# and runner settings; only the script differs (no Next build secret).
+.api_build_script: &api_build_script
+  - |
+    if docker -H unix:///var/run/docker.sock info >/dev/null 2>&1; then
+      export DOCKER_HOST=unix:///var/run/docker.sock
+    else
+      export DOCKER_HOST=tcp://docker:2375
+      until docker info >/dev/null 2>&1; do sleep 1; done
+    fi
+  - echo "$REGISTRY_DEPLOY_TOKEN" | docker login -u "$REGISTRY_DEPLOY_USER" --password-stdin "$DOCKER_REGISTRY_PUSH"
+  - DOCKER_BUILDKIT=1 docker build --cache-from "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL" -t "$CI_REGISTRY_IMAGE_PUSH/api:$CI_COMMIT_TAG" -t "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL" backend
+  - docker push "$CI_REGISTRY_IMAGE_PUSH/api:$CI_COMMIT_TAG"
+  - docker push "$CI_REGISTRY_IMAGE_PUSH/api:$CHANNEL"
+
+build-api-development:
+  extends: build-development
+  script: *api_build_script
+
+build-api-production:
+  extends: build-production
+  script: *api_build_script
+
+# ---------------------------------------------------------------------------
+# Checks that gate every pipeline. They run in `.pre`, which GitLab always
+# has, so they work whatever stages the template defines, and a failure stops
+# the builds and deploys after it. Go integration tests need a seeded
+# database and run locally (`make -C backend test`).
+test-api:
+  stage: .pre
+  image: golang:1.26-alpine
+  variables:
+    CGO_ENABLED: "0"
+    TEST_DATABASE_URL: ""
+  script:
+    - cd backend
+    - test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+    - go vet ./...
+    - go test ./...
+    # The Next proxy forwards only routes in this manifest; a Go route
+    # missing from it would stay on the TS handler. Fix: make -C backend generate.
+    - go run ./cmd/api -routes | diff -u ../frontend/src/lib/go-routes.generated.json -
+
+test-web:
+  stage: .pre
+  image: node:22-alpine
+  variables:
+    # tsc over the whole app outgrows Node's default heap and aborts.
+    NODE_OPTIONS: --max-old-space-size=4096
+  script:
+    - corepack enable && corepack prepare pnpm@9.15.0 --activate
+    - cd frontend
+    - pnpm install --frozen-lockfile
+    - pnpm lint
+    # next build skips type checking (ignoreBuildErrors), so tsc is the only
+    # type gate. typegen writes the .next/types files next-env.d.ts imports.
+    - pnpm exec next typegen
+    - pnpm exec tsc --noEmit
+    - pnpm test

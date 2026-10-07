@@ -1,0 +1,253 @@
+import { NextRequest, NextResponse } from "next/server";
+import { queryOne } from "@/lib/db";
+import { createPgClient } from "@/lib/pg/create-client";
+import { isGymPurchaseReference, settleGymPurchaseByReference } from "@/lib/gym/credit-payments-server";
+import {
+  MixedCheckoutError,
+  completeMixedCheckout,
+  resolveXenditPaidWebhookAction,
+} from "@/lib/pos/create-mixed-checkout";
+import { creditPendingTopup } from "@/lib/pos/topup-credit";
+import { settleOrderQrisPayment } from "@/lib/pos/settle-order-qris";
+import {
+  extractXenditWebhookToken,
+  loadActiveXenditConfig,
+  parseXenditQrWebhook,
+  verifyXenditWebhookToken,
+  xenditAmountMatches,
+} from "@/lib/payments/xendit";
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+/**
+ * Nominal callback tidak sama dengan catatan pending → jangan kredit/lunasi.
+ * Tetap ACK 200 (Xendit me-retry setiap non-2xx, dan selisih tidak akan
+ * sembuh dengan retry); kasir/rekonsiliasi yang menyelesaikan.
+ */
+function amountMismatch(kind: string, id: string, expected: unknown, received: number) {
+  console.error(`[xendit webhook] amount mismatch: ${kind}=${id} expected=${expected} got=${received}`);
+  return NextResponse.json({ success: true, ignored: true, reason: "amount_mismatch" });
+}
+
+/**
+ * Xendit QR paid / payment callback.
+ * Configure this URL in Xendit Dashboard → Callbacks → QR code,
+ * and optionally in Settings → Payment Gateways → Callback URL.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const db = createPgClient();
+    let config;
+    try {
+      config = await loadActiveXenditConfig(db);
+    } catch {
+      // ACK 200 supaya dashboard Xendit tidak "failed"; proses via poll kasir.
+      return NextResponse.json({
+        success: true,
+        ignored: true,
+        reason: "xendit_not_configured",
+      });
+    }
+
+    const incomingToken = extractXenditWebhookToken(request);
+    if (!verifyXenditWebhookToken(incomingToken, config.webhookToken)) {
+      return NextResponse.json({ success: false, error: "Invalid callback token" }, { status: 401 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const parsed = parseXenditQrWebhook(body);
+
+    if (!parsed.paid) {
+      return NextResponse.json({
+        success: true,
+        ignored: true,
+        reason: "not_paid",
+        status: parsed.status,
+      });
+    }
+
+    // Pembelian paket kredit gym (reference_id berprefix gymcp_).
+    if (isGymPurchaseReference(parsed.referenceId)) {
+      const purchase = await queryOne<{ id: string; total_idr: string }>(
+        `SELECT id, total_idr FROM gym.credit_purchases WHERE external_id = $1`,
+        [parsed.referenceId]
+      );
+      if (purchase && !xenditAmountMatches(purchase.total_idr, parsed.amount)) {
+        return amountMismatch("gym_purchase", purchase.id, purchase.total_idr, parsed.amount);
+      }
+      const result = await settleGymPurchaseByReference(parsed.referenceId, parsed.paymentId || parsed.qrId || null);
+      return NextResponse.json({ success: true, data: { gym_purchase: result } });
+    }
+
+    // Resolve pending topup by QR id, merchant reference, atau payment id
+    // (sebagian payload menaruh QR id di `id` dan payment id bersarang).
+    type Pending = { id: string; amount: unknown };
+    const findTopup = async (column: string, value: string): Promise<Pending | null> => {
+      if (!value) return null;
+      const { data } = await db
+        .from("pos_wallet_transactions")
+        .select("id, amount")
+        .eq(column, value)
+        .eq("type", "topup")
+        .maybeSingle();
+      return data?.id ? { id: String(data.id), amount: data.amount } : null;
+    };
+    const topup =
+      (await findTopup("xendit_transaction_id", parsed.qrId)) ??
+      (await findTopup("reference_id", parsed.referenceId)) ??
+      (parsed.paymentId !== parsed.qrId ? await findTopup("xendit_transaction_id", parsed.paymentId) : null);
+    const txId = topup?.id ?? null;
+
+    let checkout: Pending | null = null;
+    if (!txId && parsed.referenceId) {
+      try {
+        const { data, error: checkoutError } = await db
+          .from("pos_checkouts")
+          .select("id, total_amount")
+          .eq("xendit_external_id", parsed.referenceId)
+          .maybeSingle();
+        if (checkoutError) {
+          console.warn("[xendit webhook] checkout lookup skipped:", checkoutError.message);
+        } else if (data?.id) {
+          checkout = { id: String(data.id), amount: data.total_amount };
+        }
+      } catch (error) {
+        console.warn(
+          "[xendit webhook] checkout lookup skipped:",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+    const checkoutId = checkout?.id ?? null;
+
+    let childCount = 0;
+    if (checkoutId) {
+      const { data: children } = await db
+        .from("pos_orders")
+        .select("id")
+        .eq("checkout_id", checkoutId);
+      childCount = (children || []).length;
+    }
+
+    // Bug #2 fix (insiden 2026-08-25): QRIS diikat ke SATU order open bill
+    // (bukan checkout) sejak 2026-08-23 — webhook belum pernah mengenali
+    // kasus ini, jadi pembayaran yang lunas di Xendit tidak pernah
+    // auto-settle di sini (hanya lewat polling client, yang gagal kalau tab
+    // kasir ditutup). Dicari HANYA kalau bukan topup & bukan checkout.
+    let standaloneOrder: Pending | null = null;
+    if (!txId && !checkoutId && parsed.referenceId) {
+      try {
+        const { data, error: orderLookupError } = await db
+          .from("pos_orders")
+          .select("id, total_amount")
+          .eq("xendit_external_id", parsed.referenceId)
+          .maybeSingle();
+        if (orderLookupError) {
+          console.warn("[xendit webhook] order lookup skipped:", orderLookupError.message);
+        } else if (data?.id) {
+          standaloneOrder = { id: String(data.id), amount: data.total_amount };
+        }
+      } catch (error) {
+        console.warn(
+          "[xendit webhook] order lookup skipped:",
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+
+    const action = resolveXenditPaidWebhookAction({
+      topupId: txId,
+      checkoutId,
+      childCount,
+      orderId: standaloneOrder?.id ?? null,
+    });
+
+    const pendingByAction: Partial<Record<typeof action.type, Pending | null>> = {
+      credit_topup: topup,
+      complete_checkout: checkout,
+      complete_order: standaloneOrder,
+    };
+    const target = pendingByAction[action.type] ?? null;
+    if (target && !xenditAmountMatches(target.amount, parsed.amount)) {
+      return amountMismatch(action.type, target.id, target.amount, parsed.amount);
+    }
+
+    if (action.type === "credit_topup" && txId) {
+      const result = await creditPendingTopup(db, {
+        transactionId: txId,
+        xenditPaymentId: parsed.paymentId || parsed.qrId,
+        notes: "Top-up QRIS",
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          topup_id: txId,
+          credit_status: result.status,
+          balance_after: "balance_after" in result ? result.balance_after : undefined,
+        },
+      });
+    }
+
+    if (action.type === "noop_checkout") {
+      return NextResponse.json({
+        success: true,
+        ignored: true,
+        reason: "checkout_children_exist",
+        data: { checkout_id: action.checkoutId },
+      });
+    }
+
+    if (action.type === "complete_checkout") {
+      const result = await completeMixedCheckout(action.checkoutId, {}, {
+        paymentAlreadyConfirmed: true,
+      });
+      return NextResponse.json({
+        success: true,
+        data: {
+          checkout_id: action.checkoutId,
+          order_ids: result.orderIds,
+        },
+      });
+    }
+
+    if (action.type === "complete_order") {
+      const result = await settleOrderQrisPayment(db, action.orderId);
+      return NextResponse.json({
+        success: true,
+        data: {
+          order_id: action.orderId,
+          settle_status: result.status,
+        },
+      });
+    }
+
+    console.warn("[xendit webhook] no matching topup", {
+      qrId: parsed.qrId,
+      referenceId: parsed.referenceId,
+      paymentId: parsed.paymentId,
+    });
+    return NextResponse.json({
+      success: true,
+      ignored: true,
+      reason: "topup_not_found",
+    });
+  } catch (error: unknown) {
+    // Xendit menandai webhook failed untuk setiap non-2xx. ACK tetap 200;
+    // kasir/poll atau retry manual yang menyelesaikan bisnis.
+    console.error("Xendit webhook error:", error);
+    return NextResponse.json({
+      success: true,
+      ignored: true,
+      reason: error instanceof MixedCheckoutError ? "checkout_error" : "handler_error",
+      error: getErrorMessage(error),
+    });
+  }
+}
+
+/** Xendit sometimes probes with GET when saving callback URL */
+export async function GET() {
+  return NextResponse.json({ success: true, service: "xendit-webhook" });
+}

@@ -1,0 +1,28 @@
+export const PRODUCT_IMPORT_SAMPLE_ROWS: Array<Record<string, string>> = [
+  {
+    kode: "PRD-20260707-001",
+    nama: "Nasi Goreng Spesial",
+    stall_code: "MAIN",
+    kategori: "RICE",
+    satuan_kode: "PORSI",
+    deskripsi: "Nasi goreng dengan telur dan ayam",
+    harga_jual: "45000",
+    harga_modal: "18000",
+    markup_persen: "30",
+    production_output_type: "FINISHED_GOOD",
+    status: "active",
+  },
+  {
+    kode: "PRD-20260707-002",
+    nama: "Es Teh Manis",
+    stall_code: "STALL-01",
+    kategori: "BEVERAGE",
+    satuan_kode: "CUP",
+    deskripsi: "Teh manis dingin",
+    harga_jual: "12000",
+    harga_modal: "3500",
+    markup_persen: "30",
+    production_output_type: "FINISHED_GOOD",
+    status: "active",
+  },
+];

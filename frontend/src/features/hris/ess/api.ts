@@ -1,0 +1,94 @@
+import { apiGet, apiPost } from "@/lib/api-client";
+import { todayWib } from "@/lib/dates";
+import type {
+  EssAnnouncementDetail,
+  EssAnnouncementItem,
+  EssBeranda,
+  EssClockPayload,
+  EssLeaveForm,
+  EssLeaveRow,
+  EssLoanPayload,
+  EssLoanRow,
+  EssMe,
+  EssOvertimeDecision,
+  EssOvertimeForm,
+  EssOvertimeRow,
+  EssPayslip,
+  EssTeamMember,
+  EssTodayAttendance,
+} from "./types";
+
+/**
+ * Bacaan ESS sengaja "lunak": gagal memuat = data kosong, sama seperti
+ * perilaku halaman sebelumnya (karyawan tidak melihat pesan error mentah).
+ */
+function softGet<T>(url: string, fallback: T): Promise<T> {
+  return apiGet<{ data?: T | null }>(url)
+    .then((res) => res.data ?? fallback)
+    .catch(() => fallback);
+}
+
+export const fetchEssMe = () => softGet<EssMe | null>("/api/hris/me", null);
+
+export const fetchEssBeranda = () => softGet<EssBeranda | null>("/api/hris/me/beranda", null);
+
+export const fetchTodayAttendance = () =>
+  softGet<EssTodayAttendance[]>(
+    `/api/hris/attendance?employee_id=me&date=${todayWib()}&limit=1`,
+    []
+  ).then((rows) => rows[0] ?? null);
+
+export const submitClock = (payload: EssClockPayload) =>
+  apiPost<{ data?: { is_late?: boolean; late_minutes?: number } }>("/api/hris/attendance", payload);
+
+export const fetchMyLeaves = () => softGet<EssLeaveRow[]>("/api/hris/leaves?limit=20", []);
+
+/** Upload lampiran (bila ada) lalu kirim pengajuan dengan path-nya. */
+export async function submitMyLeave(form: EssLeaveForm, attachmentDataUrl?: string) {
+  let attachmentUrl: string | undefined;
+  if (attachmentDataUrl) {
+    const upload = await apiPost<{ data: { path: string } }>("/api/hris/leaves/attachment", {
+      photo: attachmentDataUrl,
+    });
+    attachmentUrl = upload.data.path;
+  }
+  return apiPost<{ data: unknown }>("/api/hris/leaves", { ...form, attachment_url: attachmentUrl });
+}
+
+export const fetchMyOvertime = () => softGet<EssOvertimeRow[]>("/api/hris/overtime", []);
+
+export const submitOvertime = (form: EssOvertimeForm) =>
+  apiPost<{ data: unknown }>("/api/hris/overtime", form);
+
+export const decideOvertime = (
+  id: string,
+  action: EssOvertimeDecision,
+  rejectionReason?: string
+) =>
+  apiPost<{ message?: string }>("/api/hris/overtime/decide", {
+    overtime_id: id,
+    action,
+    rejection_reason: rejectionReason,
+  });
+
+export const fetchMyLoans = () => softGet<EssLoanRow[]>("/api/hris/loans?employee_id=me", []);
+
+export const submitLoan = (payload: EssLoanPayload) =>
+  apiPost<{ data: unknown }>("/api/hris/loans", payload);
+
+export const fetchMyPayslips = () =>
+  softGet<EssPayslip[]>("/api/hris/payslips?employee_id=me", []);
+
+export const fetchAnnouncementFeed = () =>
+  softGet<EssAnnouncementItem[]>("/api/hris/announcements/feed", []);
+
+export const fetchAnnouncement = (id: string) =>
+  apiGet<{ data: EssAnnouncementDetail }>(`/api/hris/announcements/${id}`).then((res) => res.data);
+
+export const markAnnouncementRead = (id: string) =>
+  apiPost<unknown>(`/api/hris/announcements/${id}/read`, {});
+
+export const fetchMyTeam = () =>
+  apiGet<{ data: { members: EssTeamMember[] } }>("/api/hris/me/team").then(
+    (res) => res.data.members
+  );

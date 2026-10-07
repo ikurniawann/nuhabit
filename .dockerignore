@@ -1,0 +1,20 @@
+**/node_modules
+.git
+**/.next
+# Hanya frontend/ yang dibangun di image ini.
+backend/
+mobile/
+services/
+tools/
+docs/
+# Every env file stays out of the build context: anything COPY'd lands in a
+# layer (and in the registry build cache). The build gets its env as a BuildKit
+# secret instead (see the builder stage in the Dockerfile).
+**/.env*
+*.md
+**/Dockerfile
+.dockerignore
+# pnpm-workspace.yaml hanya berisi allowBuilds untuk pnpm >=10 di host. Dockerfile
+# memakai pnpm 9, yang membaca file ini sebagai definisi workspace dan gagal
+# dengan "packages field missing or empty" saat `pnpm build`.
+**/pnpm-workspace.yaml

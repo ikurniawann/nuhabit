@@ -1,0 +1,3 @@
+bin/
+# Coordination marker for parallel agents; never commit.
+internal/platform/READY

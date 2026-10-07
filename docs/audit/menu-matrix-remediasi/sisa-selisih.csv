@@ -1,0 +1,84 @@
+﻿dimension,severity,entity,key,field,excel_value,db_value,delta,note
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Lada Bubuk,konversi_factor,250,1,249,Weight (gr/ea/ml) vs konversi_factor — kode MM-RM-0025
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Lada Bubuk,biaya per satuan kecil,114.4,28600,-28485.6,Unit Price/Unit vs harga_beli/konversi_factor — kode MM-RM-0025
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Tepung Roti (Ditempat Berbeda),satuan_kecil,KG → KG,GR,,kode MM-RM-0079
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Ayam,satuan_kecil,KG → KG,GR,,kode MM-RM-0100
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Jukut,satuan_besar,Iket → IKAT,GR,,kode MM-RM-0157
+A. Bahan Baku (Market List),VALUE_MISMATCH,raw_material,Jukut,biaya per satuan kecil,0,3000,-3000,Unit Price/Unit vs harga_beli/konversi_factor — kode MM-RM-0157
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Cold Drip Arabica,existence,,MM-RM-0195 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,White Grappe Juice,existence,,MM-RM-0196 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Apple Juice,existence,,MM-RM-0197 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Choco Cookies Syrup,existence,,MM-RM-0198 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Ceremonial Matcha,existence,,MM-RM-0199 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Oat Milk,existence,,MM-RM-0200 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Air Dashi,existence,,MM-RM-0075 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Beef Steak,existence,,MM-RM-0190 | DAGING | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Nasi,existence,,MM-RM-0090 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Nasi Panas,existence,,MM-RM-0081 | LAIN | 0,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Tapioka Charcoal,existence,,MM-RM-0147 | KERING | 56000,,Ada di DB tapi tidak ada di Market List
+A. Bahan Baku (Market List),EXTRA_IN_DB,raw_material,Tepung Terigu Protein Tinggi (Cakra),existence,,MM-RM-0127 | KERING | 13500,,Ada di DB tapi tidak ada di Market List
+B. Master WIP,VALUE_MISMATCH,wip,Chicken Broth,material_type,WIP,PURCHASED,,kode MM-RM-0159 — punya blok resep di workbook tapi di DB dicatat sebagai bahan beli
+B. Master WIP,VALUE_MISMATCH,wip,Shoyu Ramen Sauce,material_type,WIP,PURCHASED,,kode MM-RM-0160 — punya blok resep di workbook tapi di DB dicatat sebagai bahan beli
+B. Master WIP,EXTRA_IN_DB,wip,Yuzu Sauce WIP,existence,,MM-WIP-0061 | 247.0694444,,WIP di DB tanpa blok resep di workbook
+C. Resep WIP,MISSING_IN_DB,wip_bom,Adonan Tamagoyaki WIP → Hondashi,component, GR,,,Komponen ada di master tapi tidak terpasang di resep WIP
+C. Resep WIP,MISSING_IN_DB,wip_bom,Adonan Tamagoyaki WIP → Minyak Goreng,component, ML,,,Komponen ada di master tapi tidak terpasang di resep WIP
+D. Produk / Menu,VALUE_MISMATCH,product,Tamagoyaki Mentai,harga_modal,10929.43906,0,10929.43906,Direct Cost workbook vs harga_modal — kode PRD-20260822-001
+D. Produk / Menu,VALUE_MISMATCH,product,Unagi Nigiri,harga_modal,14507.14149,14507.03148768,0.11000231999969401,Direct Cost workbook vs harga_modal — kode MM-STALL-05-019
+D. Produk / Menu,VALUE_MISMATCH,product,Aka Miso Ramen,harga_modal,16069.30964,0,16069.30964,Direct Cost workbook vs harga_modal — kode PRD-20260823-001
+D. Produk / Menu,VALUE_MISMATCH,product,Spicy Goma Ramen,harga_modal,19404.33627,31404.336270581818,-12000.000000581818,Direct Cost workbook vs harga_modal — kode MM-STALL-10-062
+D. Produk / Menu,VALUE_MISMATCH,product,Signature Shoyu Ramen,harga_modal,8879.627056,20879.627057181817,-12000.000001181817,Direct Cost workbook vs harga_modal — kode MM-STALL-10-063
+D. Produk / Menu,VALUE_MISMATCH,product,Beef Abura Soba,harga_modal,18314.04164,30314.041636421818,-11999.999996421819,Direct Cost workbook vs harga_modal — kode MM-STALL-10-064
+D. Produk / Menu,VALUE_MISMATCH,product,Smoked Duck Abura Soba,harga_modal,23249.04164,35249.04163642182,-11999.999996421819,Direct Cost workbook vs harga_modal — kode MM-STALL-10-065
+D. Produk / Menu,VALUE_MISMATCH,product,Tori Abura Soba,harga_modal,16809.38847,28809.38846966182,-11999.999999661817,Direct Cost workbook vs harga_modal — kode MM-STALL-10-066
+D. Produk / Menu,VALUE_MISMATCH,product,Yuzu Milk,harga_modal,11501.05263,10001.052631578947,1499.9999984210535,Direct Cost workbook vs harga_modal — kode MM-STALL-15-082
+D. Produk / Menu,VALUE_MISMATCH,product,Oolong Peach,harga_modal,4066.850426,2566.8504260242107,1499.9999999757893,Direct Cost workbook vs harga_modal — kode MM-STALL-15-083
+D. Produk / Menu,EXTRA_IN_DB,product,Steam Rice,existence,,PRD-20260822-002 | AGEMONO-FRYING-SECTION-STALL | 15000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Doughnat Vanilla,existence,,PRD-20260824-001 | BAKERY-STALL | 15000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Butter Cakalang,existence,,PRD-20260825-002 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Cofe Peach,existence,,PRD-20260816-002 | YOKOCO-BEVERAGE-STALL | 36000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Doughnat Strawberry,existence,,PRD-20260824-002 | BAKERY-STALL | 15000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Ebi Shinjo,existence,,PRD-20260829-001 | SANDO-STALL | 60000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Mineral Water,existence,,PRD-20260816-003 | YOKOCO-BEVERAGE-STALL | 5000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Matchaaa Pistachio ,existence,,PRD-20260822-002 | YOKOCO-BEVERAGE-STALL | 36000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Butter Salmon,existence,,PRD-20260825-001 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Large Sausage Hotdog,existence,,PRD-20260829-002 | SANDO-STALL | 75000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Bomboloni Vanilla,existence,,PRD-20260816-001 | BAKERY-BAR | 20000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Katsuobushi Spicy,existence,,PRD-20260822-001 | ONIGIRI-CORNER-STALL | 35000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Doughnat Chocolate,existence,,PRD-20260824-003 | BAKERY-STALL | 15000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Large Sausage Hotdog,existence,,MM-STALL-07-047 | BURGER-SANDWICHES-STALL | 55000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Unagi Meshi,existence,,PRD-20260822-001 | TEPPANYAKI | 65000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Steam Rice,existence,,PRD-20260824-001 | RICE-BOWL-STALL | 15000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Hikiniku,existence,,PRD-20260824-001 | JAPANESE-PORIDGE-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Spicy Goma,existence,,PRD-20260823-002 | RAMEN-NOODLES-STALL | 90000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Okayu Beef,existence,,MM-STALL-12-070 | JAPANESE-PORIDGE-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Spicy Tuna,existence,,MM-STALL-14-077 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Cakalang Onigiri,existence,,MM-STALL-14-078 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Salmon Mayo Onigiri,existence,,MM-STALL-14-079 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Yakiniku,existence,,MM-STALL-14-080 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Dry Ramen Smoked Duck,existence,,PRD-20260823-003 | RAMEN-NOODLES-STALL | 65000.00,,Produk di DB tanpa resep di workbook
+D. Produk / Menu,EXTRA_IN_DB,product,Onigiri Chili Oil,existence,,PRD-20260825-001 | ONIGIRI-CORNER-STALL | 0.00,,Produk di DB tanpa resep di workbook
+E. BOM Produk,MISSING_IN_DB,product_bom,Tamagoyaki Mentai → Adonan Tamagoyaki WIP,component,45 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Tamagoyaki Mentai → Mentaiko Mayo WIP,component,20 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Tamagoyaki Mentai → Tobiko Orange,component,5 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,VALUE_MISMATCH,product_bom,Unagi Nigiri,Direct Cost (rekalkulasi BOM),14507.14149,14507.03148768,0.11000231999969401,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,MISSING_IN_DB,product_bom,Tempura Kimchi Hotdog → Daun Ketumbar,component, ,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Yakiniku Hotdog → Daun Ketumbar,component, ,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Tendon Club → Udang Tempura,component, PCS,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Ramen,component,80 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Miso Soup WIP,component,240 ML,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Garlic Oil,component,1 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Lada Putih,component,0.5 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Chili Oil WIP,component,35 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Chicken Marinated Fillet WIP,component,28 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Smoked Duck Slice,component,10 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Jukut,component,4 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Daun Bawang,component,4 GR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,MISSING_IN_DB,product_bom,Aka Miso Ramen → Telur Omega,component,0.5 BUTIR,,,Bahan ada di master tapi tidak terpasang di BOM produk
+E. BOM Produk,VALUE_MISMATCH,product_bom,Spicy Goma Ramen,Direct Cost (rekalkulasi BOM),19404.33627,31404.336270581818,-12000.000000581818,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Signature Shoyu Ramen,Direct Cost (rekalkulasi BOM),8879.627056,20879.627057181817,-12000.000001181817,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Beef Abura Soba,Direct Cost (rekalkulasi BOM),18314.04164,30314.041636421818,-11999.999996421819,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Smoked Duck Abura Soba,Direct Cost (rekalkulasi BOM),23249.04164,35249.04163642182,-11999.999996421819,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Tori Abura Soba,Direct Cost (rekalkulasi BOM),16809.38847,28809.38846966182,-11999.999999661817,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Yuzu Milk,Direct Cost (rekalkulasi BOM),11501.05263,10001.052631578947,1499.9999984210535,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,VALUE_MISMATCH,product_bom,Oolong Peach,Direct Cost (rekalkulasi BOM),4066.850426,2566.8504260242107,1499.9999999757893,Direct Cost workbook vs Σ(qty_required × biaya per satuan) dari BOM DB
+E. BOM Produk,MISSING_IN_DB,product_bom,MATCHA LATTE → Ceremonial Matcha,component, ,,,Bahan ada di master tapi tidak terpasang di BOM produk

@@ -1,0 +1,36 @@
+﻿severity,dimension,entity,key,field,excel_value,db_value,delta,near_match,note
+VALUE_MISMATCH,D. Produk / Menu,product,Tamagoyaki Mentai,harga_modal,10929.43906,0,10929.43906,,Direct Cost workbook vs harga_modal — kode PRD-20260822-001
+VALUE_MISMATCH,D. Produk / Menu,product,Unagi Nigiri,harga_modal,14507.14149,14507.03148768,0.11000231999969401,,Direct Cost workbook vs harga_modal — kode MM-STALL-05-019
+VALUE_MISMATCH,D. Produk / Menu,product,Aka Miso Ramen,harga_modal,16069.30964,0,16069.30964,,Direct Cost workbook vs harga_modal — kode PRD-20260823-001
+VALUE_MISMATCH,D. Produk / Menu,product,Spicy Goma Ramen,harga_modal,19404.33627,31404.336270581818,-12000.000000581818,,Direct Cost workbook vs harga_modal — kode MM-STALL-10-062
+VALUE_MISMATCH,D. Produk / Menu,product,Signature Shoyu Ramen,harga_modal,8879.627056,20879.627057181817,-12000.000001181817,,Direct Cost workbook vs harga_modal — kode MM-STALL-10-063
+VALUE_MISMATCH,D. Produk / Menu,product,Beef Abura Soba,harga_modal,18314.04164,30314.041636421818,-11999.999996421819,,Direct Cost workbook vs harga_modal — kode MM-STALL-10-064
+VALUE_MISMATCH,D. Produk / Menu,product,Smoked Duck Abura Soba,harga_modal,23249.04164,35249.04163642182,-11999.999996421819,,Direct Cost workbook vs harga_modal — kode MM-STALL-10-065
+VALUE_MISMATCH,D. Produk / Menu,product,Tori Abura Soba,harga_modal,16809.38847,28809.38846966182,-11999.999999661817,,Direct Cost workbook vs harga_modal — kode MM-STALL-10-066
+VALUE_MISMATCH,D. Produk / Menu,product,Yuzu Milk,harga_modal,11501.05263,10001.052631578947,1499.9999984210535,,Direct Cost workbook vs harga_modal — kode MM-STALL-15-082
+VALUE_MISMATCH,D. Produk / Menu,product,Oolong Peach,harga_modal,4066.850426,2566.8504260242107,1499.9999999757893,,Direct Cost workbook vs harga_modal — kode MM-STALL-15-083
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Butter Cakalang,existence,,PRD-20260825-002 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Steam Rice,existence,,PRD-20260822-002 | AGEMONO-FRYING-SECTION-STALL | 15000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Doughnat Vanilla,existence,,PRD-20260824-001 | BAKERY-STALL | 15000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Cofe Peach,existence,,PRD-20260816-002 | YOKOCO-BEVERAGE-STALL | 36000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Doughnat Strawberry,existence,,PRD-20260824-002 | BAKERY-STALL | 15000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Ebi Shinjo,existence,,PRD-20260829-001 | SANDO-STALL | 60000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Mineral Water,existence,,PRD-20260816-003 | YOKOCO-BEVERAGE-STALL | 5000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Matchaaa Pistachio ,existence,,PRD-20260822-002 | YOKOCO-BEVERAGE-STALL | 36000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Butter Salmon,existence,,PRD-20260825-001 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Large Sausage Hotdog,existence,,PRD-20260829-002 | SANDO-STALL | 75000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Bomboloni Vanilla,existence,,PRD-20260816-001 | BAKERY-BAR | 20000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Katsuobushi Spicy,existence,,PRD-20260822-001 | ONIGIRI-CORNER-STALL | 35000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Doughnat Chocolate,existence,,PRD-20260824-003 | BAKERY-STALL | 15000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Large Sausage Hotdog,existence,,MM-STALL-07-047 | BURGER-SANDWICHES-STALL | 55000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Unagi Meshi,existence,,PRD-20260822-001 | TEPPANYAKI | 65000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Steam Rice,existence,,PRD-20260824-001 | RICE-BOWL-STALL | 15000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Hikiniku,existence,,PRD-20260824-001 | JAPANESE-PORIDGE-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Spicy Goma,existence,,PRD-20260823-002 | RAMEN-NOODLES-STALL | 90000.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Okayu Beef,existence,,MM-STALL-12-070 | JAPANESE-PORIDGE-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Spicy Tuna,existence,,MM-STALL-14-077 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Yakiniku,existence,,MM-STALL-14-080 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Onigiri Chili Oil,existence,,PRD-20260825-001 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Cakalang Onigiri,existence,,MM-STALL-14-078 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Salmon Mayo Onigiri,existence,,MM-STALL-14-079 | ONIGIRI-CORNER-STALL | 0.00,,,Produk di DB tanpa resep di workbook
+EXTRA_IN_DB,D. Produk / Menu,product,Dry Ramen Smoked Duck,existence,,PRD-20260823-003 | RAMEN-NOODLES-STALL | 65000.00,,,Produk di DB tanpa resep di workbook

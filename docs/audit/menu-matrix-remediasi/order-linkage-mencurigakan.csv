@@ -1,0 +1,14 @@
+﻿nama_di_order,sku_di_order,nama_di_katalog,sku_di_katalog,baris,qty,omzet
+Salmon Philadelpia,SKU-45807fd0-9dfc-416a-bb21-1b504d5af143,Salmon Philadelphia,PUR-MM-STALL-05-028,48,49,3900000
+Spicy Tteokboki Gyoza,SKU-ee27052d-7fc0-4f99-9684-7d5be558720f,Spicy Tteokbokki Gyoza,PUR-MM-STALL-04-014,41,46,1765000
+Salmon Philadelpia,45807fd0-9dfc-416a-bb21-1b504d5af143,Salmon Philadelphia,PUR-MM-STALL-05-028,40,45,3592500
+Spicy Tteokboki Gyoza,ee27052d-7fc0-4f99-9684-7d5be558720f,Spicy Tteokbokki Gyoza,PUR-MM-STALL-04-014,25,33,1230000
+Steam Rice,ea539da1-cd48-4506-9f21-d8fb4cbbc8ce,Hikiniku,PUR-PRD-20260824-001,10,13,195000
+Matcha Pistachio,SKU-e3274029-e039-424d-89e1-e12ade236049,Bomboloni Vanilla,PUR-PRD-20260816-001,7,10,360000
+Steam Rice,SKU-ea539da1-cd48-4506-9f21-d8fb4cbbc8ce,Hikiniku,PUR-PRD-20260824-001,7,13,195000
+Matcha Pistachio,e3274029-e039-424d-89e1-e12ade236049,Bomboloni Vanilla,PUR-PRD-20260816-001,7,20,450000
+Cheese Minched Katsu,4c010c64-df3d-42b9-b1f7-1afbeef24077,Cheese Minced Katsu,PUR-MM-STALL-08-052,6,8,470000
+Cheese Minched Katsu,SKU-4c010c64-df3d-42b9-b1f7-1afbeef24077,Cheese Minced Katsu,PUR-MM-STALL-08-052,6,7,390000
+Doughnat Vanilla,SKU-ea539da1-cd48-4506-9f21-d8fb4cbbc8ce,Hikiniku,PUR-PRD-20260824-001,4,4,60000
+Doughnat Chocolate,1255f2dd-9a46-44e8-821d-e49e91ff612a,Unagi Meshi,PUR-PRD-20260822-001,1,1,15000
+Onigiri Katsuobushi Spicy,SKU-1255f2dd-9a46-44e8-821d-e49e91ff612a,Unagi Meshi,PUR-PRD-20260822-001,1,6,210000

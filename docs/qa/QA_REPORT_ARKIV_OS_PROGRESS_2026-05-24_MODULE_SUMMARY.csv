@@ -1,0 +1,12 @@
+Module,Area QA,Status
+CRM,"Members, rewards, avatars, XP concept",Passed with Notes
+POS F&B,"Cashier, dine-in table modal, customer add/search, product autocomplete",Passed with Notes
+POS Open Bills,"Table order masuk open bill, pindah meja, bayar bill",Passed with Notes
+POS KDS,"Pending/open bill masuk KDS, station flow",Passed with Notes
+Table Ordering,"Customer scan QR table, pilih menu, varian, cart, payment option, order status",Passed with Notes
+Photobooth POS,Self-service UI draft,Prototype Ready
+Purchasing Master Data,"Supplier, raw material, price list, products",Passed with Notes
+Purchase Order,"Create PO, PO dari shortage production, link ke barang masuk",Passed with Notes
+Barang Masuk,"Delivery + receiving workspace, input penerimaan, status penerimaan",Passed with Notes
+Recipe/BOM,"BOM product/WIP, UX relocation ke Recipe/BOM",Passed with Notes
+Production Order,"Material requirement, shortage, create PO, recheck stock",Passed with Notes

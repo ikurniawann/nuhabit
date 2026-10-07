@@ -1,0 +1,14 @@
+﻿severity,dimension,entity,key,field,excel_value,db_value,delta,near_match,note
+DATA_QUALITY,F. Integritas Workbook,reference,Dashi Udon WIP → Air Dashi,unresolved reference,WIP FOOD baris 132,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,Okayu WIP → Air Dashi,unresolved reference,WIP FOOD baris 444,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,Udon Carbonara → Air Dashi,unresolved reference,Noodles - Udon - Japanese Porri baris 166,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → Cold Drip Arabica,unresolved reference,Coffee Matcha Bar Beverage baris 4,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → White Grappe Juice,unresolved reference,Coffee Matcha Bar Beverage baris 5,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → Apple Juice,unresolved reference,Coffee Matcha Bar Beverage baris 6,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → Choco Cookies Syrup,unresolved reference,Coffee Matcha Bar Beverage baris 7,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → Ceremonial Matcha,unresolved reference,Coffee Matcha Bar Beverage baris 9,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA COOKIES → Oat Milk,unresolved reference,Coffee Matcha Bar Beverage baris 10,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,reference,MATCHA LATTE → Ceremonial Matcha,unresolved reference,Coffee Matcha Bar Beverage baris 24,,,,Bahan tidak ditemukan di Market List maupun judul blok WIP
+DATA_QUALITY,F. Integritas Workbook,duplicate,Orange Simple Syrup WIP,judul WIP duplikat,WIP FOOD baris 734 ; WIP Beverage baris 3,,,,Muncul 2× di workbook
+DATA_QUALITY,F. Integritas Workbook,duplicate,Oolong Tea WIP,judul WIP duplikat,WIP FOOD baris 744 ; WIP Beverage baris 17,,,,Muncul 2× di workbook
+DATA_QUALITY,F. Integritas Workbook,duplicate,Lemon Squeeze Juice WIP,judul WIP duplikat,WIP FOOD baris 765 ; WIP Beverage baris 31,,,,Muncul 2× di workbook

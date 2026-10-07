@@ -1,0 +1,20 @@
+{
+  "name": "nuhabit",
+  "private": true,
+  "description": "Monorepo NüHabit: frontend (Next.js) di frontend/, backend (Go) di backend/, tooling database di backend/database.",
+  "scripts": {
+    "dev": "pnpm --dir frontend dev",
+    "build": "pnpm --dir frontend build",
+    "test": "pnpm --dir frontend test && go -C backend test ./...",
+    "lint": "pnpm --dir frontend lint && go -C backend vet ./...",
+    "backend:dev": "go -C backend run ./cmd/api",
+    "backend:test": "go -C backend test ./...",
+    "db:migrate": "go -C backend run ./cmd/migrate",
+    "db:migrate:apply": "go -C backend run ./cmd/migrate -apply",
+    "db:seed": "pnpm --dir backend/database run",
+    "pos:nfc-bridge": "npm --prefix tools/pos-nfc-bridge start",
+    "pos:nfc-bridge:install": "npm install --prefix tools/pos-nfc-bridge",
+    "pos:print-worker": "node tools/pos-print-worker/pos-print-worker.mjs"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

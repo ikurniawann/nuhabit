@@ -1,0 +1,14 @@
+﻿phase,target,reason
+1,Lada Bubuk,Market List tidak mengisi Purchase UOM padahal isi kemasan 250 — konversi tidak bisa dibetulkan otomatis
+1,Es Batu,Market List tidak mengisi Purchase UOM padahal isi kemasan 5000 — konversi tidak bisa dibetulkan otomatis
+1,Jukut,Market List tidak mengisi Weight — konversi tidak bisa dihitung
+2,Tamagoyaki Mentai,ada lebih dari satu produk dengan nama ini di database
+2,Aka Miso Ramen,ada lebih dari satu produk dengan nama ini di database
+3,Adonan Tamagoyaki WIP → Hondashi,qty kosong di workbook
+3,Adonan Tamagoyaki WIP → Minyak Goreng,qty kosong di workbook
+3,Tamagoyaki Mentai,nama produk ganda di database
+3,Tempura Kimchi Hotdog → Daun Ketumbar,qty kosong di workbook
+3,Yakiniku Hotdog → Daun Ketumbar,qty kosong di workbook
+3,Tendon Club → Udang Tempura,qty kosong di workbook
+3,Aka Miso Ramen,nama produk ganda di database
+3,MATCHA LATTE → Ceremonial Matcha,qty kosong di workbook

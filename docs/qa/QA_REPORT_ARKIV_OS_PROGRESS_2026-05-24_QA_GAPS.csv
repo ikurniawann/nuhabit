@@ -1,0 +1,11 @@
+ID,Area,Gap,Priority,Recommendation
+GAP-001,Production,Production complete end-to-end dari UI belum dites,High,Buat Production Complete UI lalu QA end-to-end
+GAP-002,Production,Actual material consumption dan waste/susut belum tersedia di UI,High,Masukkan field actual consumption dan waste pada complete production
+GAP-003,Inventory,Inventory stock card per raw material/WIP/product belum ada,High,Buat halaman kartu stok dengan saldo dan movement history
+GAP-004,WIP,WIP production end-to-end belum dites,High,QA produksi WIP sampai dipakai sebagai BOM produk final
+GAP-005,Purchase Order,Multi-supplier PO dari shortage belum ada,Medium,Group shortage by supplier dan generate beberapa PO jika perlu
+GAP-006,Payment,Payment real QRIS/VA/Ark Coin belum diverifikasi,High,Lakukan integrasi dan QA payment end-to-end
+GAP-007,Permission,Permission matrix per role belum dites formal,Medium,Buat checklist akses per role dan jalankan regression
+GAP-008,Printing,Print kitchen/bar dan printer queue belum dites production-like,Medium,QA printer queue dengan sample station kitchen/bar
+GAP-009,Responsive,Responsive QA tablet/mobile belum lengkap,Medium,Buat device matrix dan screenshot evidence
+GAP-010,Release,Regression build/deploy belum dilakukan setelah seluruh flow stabil,High,Jalankan build dan deploy QA setelah phase production selesai

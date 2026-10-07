@@ -1,0 +1,12 @@
+# Only cmd/, internal/, go.mod/go.sum and database/migrations reach the image.
+.env
+.env.*
+!.env.example
+bin/
+**/*_test.go
+database/node_modules
+database/seeders
+database/scripts
+database/sql
+database/backups
+internal/platform/READY

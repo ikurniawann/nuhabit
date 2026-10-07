@@ -1,0 +1,19 @@
+﻿severity,dimension,entity,key,field,excel_value,db_value,delta,near_match,note
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Lada Bubuk,konversi_factor,250,1,249,,Weight (gr/ea/ml) vs konversi_factor — kode MM-RM-0025
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Lada Bubuk,biaya per satuan kecil,114.4,28600,-28485.6,,Unit Price/Unit vs harga_beli/konversi_factor — kode MM-RM-0025
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Tepung Roti (Ditempat Berbeda),satuan_kecil,KG → KG,GR,,,kode MM-RM-0079
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Ayam,satuan_kecil,KG → KG,GR,,,kode MM-RM-0100
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Jukut,satuan_besar,Iket → IKAT,GR,,,kode MM-RM-0157
+VALUE_MISMATCH,A. Bahan Baku (Market List),raw_material,Jukut,biaya per satuan kecil,0,3000,-3000,,Unit Price/Unit vs harga_beli/konversi_factor — kode MM-RM-0157
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Cold Drip Arabica,existence,,MM-RM-0195 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,White Grappe Juice,existence,,MM-RM-0196 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Apple Juice,existence,,MM-RM-0197 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Choco Cookies Syrup,existence,,MM-RM-0198 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Ceremonial Matcha,existence,,MM-RM-0199 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Oat Milk,existence,,MM-RM-0200 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Air Dashi,existence,,MM-RM-0075 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Beef Steak,existence,,MM-RM-0190 | DAGING | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Nasi,existence,,MM-RM-0090 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Nasi Panas,existence,,MM-RM-0081 | LAIN | 0,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Tapioka Charcoal,existence,,MM-RM-0147 | KERING | 56000,,,Ada di DB tapi tidak ada di Market List
+EXTRA_IN_DB,A. Bahan Baku (Market List),raw_material,Tepung Terigu Protein Tinggi (Cakra),existence,,MM-RM-0127 | KERING | 13500,,,Ada di DB tapi tidak ada di Market List

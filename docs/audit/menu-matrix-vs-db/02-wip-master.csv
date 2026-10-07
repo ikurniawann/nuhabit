@@ -1,0 +1,4 @@
+﻿severity,dimension,entity,key,field,excel_value,db_value,delta,near_match,note
+VALUE_MISMATCH,B. Master WIP,wip,Chicken Broth,material_type,WIP,PURCHASED,,,kode MM-RM-0159 — punya blok resep di workbook tapi di DB dicatat sebagai bahan beli
+VALUE_MISMATCH,B. Master WIP,wip,Shoyu Ramen Sauce,material_type,WIP,PURCHASED,,,kode MM-RM-0160 — punya blok resep di workbook tapi di DB dicatat sebagai bahan beli
+EXTRA_IN_DB,B. Master WIP,wip,Yuzu Sauce WIP,existence,,MM-WIP-0061 | 247.0694444,,,WIP di DB tanpa blok resep di workbook
