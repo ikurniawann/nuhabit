@@ -62,6 +62,7 @@ export const GO_BACKEND_PREFIXES: readonly string[] = [
   "/api/ai",
   "/api/sales-funnel",
   "/api/shop",
+  "/api/wholesale",
   "/api/public",
   "/api/portal",
   "/api/notifications",

@@ -26,6 +26,11 @@ type MerchProduct struct {
 	WeightGram        *string
 	InventoryQuantity *string
 	HasActiveSKU      bool
+	// CategoryID and CategoryName are the product's pos_categories row
+	// (nil without one); the storefront groups products by it.
+	CategoryID    *string
+	CategoryName  *string
+	CategoryOrder *int
 }
 
 // MerchSKU is an active pos.pos_product_skus row.
@@ -48,8 +53,10 @@ type MerchSKULabel struct{ Name, Code string }
 func (Merchandise) Products(ctx context.Context, q database.Querier, ids []string) ([]MerchProduct, error) {
 	rows, err := q.Query(ctx, `SELECT p.id::text, p.name, p.description, p.long_description, p.image_url,
 	  p.base_price::text, p.weight_gram::text, p.inventory_quantity::text,
-	  EXISTS (SELECT 1 FROM pos.pos_product_skus s WHERE s.product_id = p.id AND s.is_active = true)
+	  EXISTS (SELECT 1 FROM pos.pos_product_skus s WHERE s.product_id = p.id AND s.is_active = true),
+	  c.id::text, c.name, c.display_order
 	FROM pos.pos_products p
+	LEFT JOIN pos.pos_categories c ON c.id = p.category_id
 	WHERE p.id = ANY($1::uuid[]) AND p.product_kind = 'merchandise'
 	  AND p.is_active = true AND p.is_available = true
 	ORDER BY p.name`, ids)

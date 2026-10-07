@@ -18,7 +18,6 @@ import (
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/outbox"
-	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -172,7 +171,7 @@ func newFixture(t *testing.T) *fixture {
 		AppOrigin: "https://app.example", Getenv: func(k string) string { return f.env[k] },
 	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	f.svc.async = func(fn func()) { fn() }
-	f.mux = testutil.Mux(mod{h: &handler{svc: f.svc, guard: headerGuard{}, limiter: ratelimit.New(tx)}})
+	f.mux = testutil.Mux(mod{h: &handler{svc: f.svc, guard: headerGuard{}}})
 	return f
 }
 
@@ -594,9 +593,10 @@ func TestCatalogAndProviderErrors(t *testing.T) {
 	}}
 	res, _ := f.do("GET", "/api/public/shop/"+strings.ToUpper(slug)+"/catalog", nil)
 	expectStatus(t, res, 200)
-	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null},"products":[`+
+	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null},"collections":[],"products":[`+
 		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"imageUrl":null,"images":[],"price":50000,"weightGram":null,"stock":5,`+
-		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"stock":3},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"stock":2}]}]}}`)
+		`"collection":null,"preorderUntil":null,"preorder":false,`+
+		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"stock":3,"preorder":false},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"stock":2,"preorder":false}]}]}}`)
 
 	// No API key: the provider's 503 reaches the client.
 	res, _ = f.do("GET", "/api/public/shop/"+slug+"/shipping/areas?q=coblong", nil)

@@ -3,6 +3,7 @@ package shop
 import (
 	"context"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -16,12 +17,17 @@ import (
 // (claim stock first, reserve it with a TTL, then a Xendit invoice), and
 // committing or releasing the reservations. Expired reservations are
 // released opportunistically through shop.release_expired_reservations().
+// The wholesale portal places its orders through the same steps.
 
 // InvoicePrefix is SHOP_INVOICE_PREFIX: the Xendit external_id prefix of
 // shop orders.
 const InvoicePrefix = "shop-order-"
 
 const defaultItemWeightGram = 1000
+
+// DefaultStorefrontSlug asks ResolveStorefront for the default storefront
+// (/apparel).
+const DefaultStorefrontSlug = "default"
 
 // Storefront is a shop.storefronts row.
 type Storefront struct {
@@ -32,39 +38,105 @@ type Storefront struct {
 }
 
 // ResolveStorefront is resolveStorefront: an active storefront by slug
-// (case-insensitive), nil when none.
+// (case-insensitive), nil when none. DefaultStorefrontSlug resolves the
+// is_default storefront, else the oldest active one.
 func (s *Service) ResolveStorefront(ctx context.Context, slug string) (*Storefront, error) {
 	var sf Storefront
-	err := s.db.QueryRow(ctx, `SELECT id::text, slug, name, description
-		FROM shop.storefronts
-		WHERE lower(slug) = lower($1) AND is_active = true`, slug).Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
+	var err error
+	if slug == DefaultStorefrontSlug {
+		err = s.db.QueryRow(ctx, `SELECT id::text, slug, name, description FROM shop.storefronts
+			WHERE is_active = true ORDER BY is_default DESC, created_at, id LIMIT 1`).Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
+	} else {
+		err = s.db.QueryRow(ctx, `SELECT id::text, slug, name, description
+			FROM shop.storefronts
+			WHERE lower(slug) = lower($1) AND is_active = true`, slug).Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
+	}
 	if database.IsNoRows(err) {
 		return nil, nil
 	}
 	return &sf, err
 }
 
+// ProductSettings is a shop.product_settings row; the zero value is a
+// product without one.
+type ProductSettings struct {
+	PreorderUntil     *time.Time
+	WholesalePriceIDR *float64
+	WholesaleMinQty   float64
+}
+
+// productSettings reads the settings of the products (missing rows give
+// the zero value with a minimum quantity of 1).
+func (s *Service) productSettings(ctx context.Context, ids []string) (map[string]ProductSettings, error) {
+	out := map[string]ProductSettings{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := s.db.Query(ctx, `SELECT product_id::text, preorder_until, wholesale_price_idr::float8, wholesale_min_qty
+		FROM shop.product_settings WHERE product_id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var ps ProductSettings
+		var minQty int
+		if err := rows.Scan(&id, &ps.PreorderUntil, &ps.WholesalePriceIDR, &minQty); err != nil {
+			return nil, err
+		}
+		ps.WholesaleMinQty = float64(minQty)
+		out[id] = ps
+	}
+	return out, rows.Err()
+}
+
+func settingsOf(all map[string]ProductSettings, id string) ProductSettings {
+	if ps, ok := all[id]; ok {
+		return ps
+	}
+	return ProductSettings{WholesaleMinQty: 1}
+}
+
 // CatalogSKUView is CatalogSku.
 type CatalogSKUView struct {
-	ID    string  `json:"id"`
-	SKU   string  `json:"sku"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
-	Stock float64 `json:"stock"`
+	ID       string  `json:"id"`
+	SKU      string  `json:"sku"`
+	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
+	Stock    float64 `json:"stock"`
+	Preorder bool    `json:"preorder"`
+}
+
+// CatalogCollection is a storefront collection (a POS category).
+type CatalogCollection struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	order int
 }
 
 // CatalogProductView is CatalogProduct.
 type CatalogProductView struct {
-	ID              string           `json:"id"`
-	Name            string           `json:"name"`
-	Description     *string          `json:"description"`
-	LongDescription *string          `json:"longDescription"`
-	ImageURL        *string          `json:"imageUrl"`
-	Images          []string         `json:"images"`
-	Price           float64          `json:"price"`
-	WeightGram      *float64         `json:"weightGram"`
-	Stock           float64          `json:"stock"`
-	SKUs            []CatalogSKUView `json:"skus"`
+	ID              string             `json:"id"`
+	Name            string             `json:"name"`
+	Description     *string            `json:"description"`
+	LongDescription *string            `json:"longDescription"`
+	ImageURL        *string            `json:"imageUrl"`
+	Images          []string           `json:"images"`
+	Price           float64            `json:"price"`
+	WeightGram      *float64           `json:"weightGram"`
+	Stock           float64            `json:"stock"`
+	Collection      *CatalogCollection `json:"collection"`
+	PreorderUntil   *string            `json:"preorderUntil"`
+	Preorder        bool               `json:"preorder"`
+	SKUs            []CatalogSKUView   `json:"skus"`
+}
+
+// Catalog is the storefront catalog: products with their collections in
+// display order.
+type CatalogView struct {
+	Collections []CatalogCollection  `json:"collections"`
+	Products    []CatalogProductView `json:"products"`
 }
 
 // numOr0 is `Number(x) || 0` on a nullable numeric string.
@@ -83,11 +155,22 @@ func basePrice(p WebProduct) float64 {
 	return numOr0(&p.BasePrice)
 }
 
-// BuildCatalog is buildShopCatalog.
-func (s *Service) BuildCatalog(ctx context.Context) ([]CatalogProductView, error) {
+// skuPrice is the SKU's override when it is a number, else the product price.
+func skuPrice(product float64, override *string) float64 {
+	if override != nil {
+		if n := domain.JSNumber(*override); !math.IsNaN(n) && !math.IsInf(n, 0) {
+			return n
+		}
+	}
+	return product
+}
+
+// BuildCatalog is buildShopCatalog, plus collections and pre-order flags.
+func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
+	catalog := CatalogView{Collections: []CatalogCollection{}, Products: []CatalogProductView{}}
 	products, err := s.ports.Catalog.WebProducts(ctx, s.db)
 	if err != nil || len(products) == 0 {
-		return []CatalogProductView{}, err
+		return catalog, err
 	}
 	ids := make([]string, len(products))
 	for i, p := range products {
@@ -95,11 +178,15 @@ func (s *Service) BuildCatalog(ctx context.Context) ([]CatalogProductView, error
 	}
 	skus, err := s.ports.Catalog.ActiveSKUs(ctx, s.db, ids)
 	if err != nil {
-		return nil, err
+		return catalog, err
 	}
 	images, err := s.ports.Catalog.Images(ctx, s.db, ids)
 	if err != nil {
-		return nil, err
+		return catalog, err
+	}
+	settings, err := s.productSettings(ctx, ids)
+	if err != nil {
+		return catalog, err
 	}
 	skusByProduct := map[string][]CatalogSKU{}
 	for _, sku := range skus {
@@ -109,19 +196,19 @@ func (s *Service) BuildCatalog(ctx context.Context) ([]CatalogProductView, error
 	for _, img := range images {
 		imagesByProduct[img.ProductID] = append(imagesByProduct[img.ProductID], img.URL)
 	}
-	out := make([]CatalogProductView, 0, len(products))
+	now := s.now()
+	collections := map[string]CatalogCollection{}
 	for _, p := range products {
 		price := basePrice(p)
+		until := settingsOf(settings, p.ID).PreorderUntil
+		preorderOpen := domain.PreorderOpen(0, until, now)
 		views := []CatalogSKUView{}
 		stock := 0.0
+		anyPreorder := false
 		for _, sku := range skusByProduct[p.ID] {
-			skuPrice := price
-			if sku.PriceOverride != nil {
-				if n := domain.JSNumber(*sku.PriceOverride); !math.IsNaN(n) && !math.IsInf(n, 0) {
-					skuPrice = n
-				}
-			}
-			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPrice, Stock: numOr0(&sku.StockQuantity)}
+			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPrice(price, sku.PriceOverride), Stock: numOr0(&sku.StockQuantity)}
+			v.Preorder = preorderOpen && v.Stock <= 0
+			anyPreorder = anyPreorder || v.Preorder
 			views = append(views, v)
 			stock += v.Stock
 		}
@@ -137,12 +224,33 @@ func (s *Service) BuildCatalog(ctx context.Context) ([]CatalogProductView, error
 		if imgs == nil {
 			imgs = []string{}
 		}
-		out = append(out, CatalogProductView{
+		var collection *CatalogCollection
+		if p.CategoryID != nil && p.CategoryName != nil {
+			c := CatalogCollection{ID: *p.CategoryID, Name: *p.CategoryName}
+			if p.CategoryOrder != nil {
+				c.order = *p.CategoryOrder
+			}
+			collections[c.ID] = c
+			collection = &CatalogCollection{ID: c.ID, Name: c.Name}
+		}
+		catalog.Products = append(catalog.Products, CatalogProductView{
 			ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription,
-			ImageURL: p.ImageURL, Images: imgs, Price: price, WeightGram: weight, Stock: stock, SKUs: views,
+			ImageURL: p.ImageURL, Images: imgs, Price: price, WeightGram: weight, Stock: stock,
+			Collection: collection, PreorderUntil: domain.DateString(until),
+			Preorder: anyPreorder || (preorderOpen && stock <= 0), SKUs: views,
 		})
 	}
-	return out, nil
+	for _, c := range collections {
+		catalog.Collections = append(catalog.Collections, c)
+	}
+	sort.Slice(catalog.Collections, func(i, j int) bool {
+		a, b := catalog.Collections[i], catalog.Collections[j]
+		if a.order != b.order {
+			return a.order < b.order
+		}
+		return a.Name < b.Name
+	})
+	return catalog, nil
 }
 
 // unitWeight is the product weight, 1000 g when unset or zero.
@@ -223,6 +331,19 @@ type resolvedLine struct {
 	quantity    float64
 	unitPrice   float64
 	weightGram  float64
+	// stock is what the catalog shows for the SKU (or the product).
+	stock float64
+	// settings are the product's shop settings.
+	settings ProductSettings
+	// isPreorder lines sell at zero stock: no claim, no reservation.
+	isPreorder bool
+}
+
+func (l resolvedLine) label() string {
+	if l.skuName != nil {
+		return l.productName + " (" + *l.skuName + ")"
+	}
+	return l.productName
 }
 
 type claim struct {
@@ -256,7 +377,8 @@ func (s *Service) restoreClaims(ctx context.Context, claims []claim) {
 }
 
 // resolveLines is resolveLines: the cart re-priced from the catalog (the
-// client's prices are never trusted).
+// client's prices are never trusted). A zero-stock line of a product whose
+// pre-order window is open becomes a pre-order line.
 func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolvedLine, string, error) {
 	if len(items) == 0 {
 		return nil, "Keranjang kosong", nil
@@ -264,6 +386,15 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 	if len(items) > 50 {
 		return nil, "Terlalu banyak baris keranjang", nil
 	}
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ProductID
+	}
+	settings, err := s.productSettings(ctx, ids)
+	if err != nil {
+		return nil, "", err
+	}
+	now := s.now()
 	var lines []resolvedLine
 	for _, it := range items {
 		qty := math.Floor(it.Quantity)
@@ -277,8 +408,8 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 		if p == nil {
 			return nil, "Ada produk yang sudah tidak tersedia — muat ulang katalog", nil
 		}
-		price := basePrice(*p)
-		weight := unitWeight(p.WeightGram)
+		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: basePrice(*p),
+			weightGram: unitWeight(p.WeightGram), stock: numOr0(p.InventoryQuantity), settings: settingsOf(settings, p.ID)}
 		if it.SkuID != nil && *it.SkuID != "" {
 			sku, err := s.ports.Catalog.ActiveSKU(ctx, s.db, *it.SkuID, it.ProductID)
 			if err != nil {
@@ -287,22 +418,171 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 			if sku == nil {
 				return nil, "Ada varian yang sudah tidak tersedia — muat ulang katalog", nil
 			}
-			unit := price
 			if sku.PriceOverride != nil {
 				if n := numOr0(sku.PriceOverride); n != 0 {
-					unit = n
+					line.unitPrice = n
 				}
 			}
-			lines = append(lines, resolvedLine{productID: p.ID, skuID: &sku.ID, productName: p.Name, skuName: &sku.Name,
-				skuCode: &sku.SKU, quantity: qty, unitPrice: unit, weightGram: weight})
-			continue
-		}
-		if p.HasActiveSKU {
+			line.skuID, line.skuName, line.skuCode = &sku.ID, &sku.Name, &sku.SKU
+			line.stock = numOr0(&sku.StockQuantity)
+		} else if p.HasActiveSKU {
 			return nil, p.Name + " punya varian — pilih varian dulu", nil
 		}
-		lines = append(lines, resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: price, weightGram: weight})
+		line.isPreorder = domain.PreorderOpen(line.stock, line.settings.PreorderUntil, now)
+		lines = append(lines, line)
 	}
 	return lines, "", nil
+}
+
+// orderDraft is an order about to be written: the resolved lines plus the
+// buyer, destination and terms. Retail checkout and the wholesale portal
+// both build one.
+type orderDraft struct {
+	storefront    Storefront
+	lines         []resolvedLine
+	customerName  string
+	customerPhone string
+	customerEmail *string
+	address       string
+	areaID        *string
+	areaLabel     *string
+	postalCode    *string
+	provider      *string
+	courierCode   *string
+	courierSvc    *string
+	shippingCost  float64
+	notes         *string
+	// Wholesale orders carry the account and its terms; pay_later ones a
+	// due date instead of an invoice expiry.
+	wholesaleAccountID *string
+	paymentTerms       *string
+	dueAt              *time.Time
+	invoiceExpiresAt   *time.Time
+	// reservationStatus is held for orders awaiting payment, committed when
+	// the goods ship before payment (pay_later).
+	reservationStatus string
+}
+
+func (d orderDraft) subtotal() float64 {
+	sum := 0.0
+	for _, l := range d.lines {
+		sum += float64(l.unitPrice * l.quantity)
+	}
+	return sum
+}
+
+func (d orderDraft) total() float64 { return d.subtotal() + d.shippingCost }
+
+// placedOrder is a written order and the stock it claimed.
+type placedOrder struct {
+	id, number, token string
+	claims            []claim
+}
+
+// placeOrder claims stock for the non-pre-order lines BEFORE the order
+// exists (the cashier pattern), then writes the order, its items and the
+// reservations in one transaction. A failure part-way gives the claims
+// back.
+func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, error) {
+	var claims []claim
+	for _, l := range d.lines {
+		if l.isPreorder {
+			continue
+		}
+		c := claim{productID: l.productID, skuID: l.skuID, qty: l.quantity}
+		ok, why, err := s.claimLine(ctx, c)
+		if err != nil {
+			s.restoreClaims(ctx, claims)
+			return placedOrder{}, err
+		}
+		if !ok {
+			s.restoreClaims(ctx, claims)
+			if why == "variant_required" {
+				return placedOrder{}, &checkoutError{400, l.productName + " punya varian — pilih varian dulu"}
+			}
+			return placedOrder{}, &checkoutError{400, "Stok " + l.label() + " tidak cukup"}
+		}
+		claims = append(claims, c)
+	}
+	if d.reservationStatus == "" {
+		d.reservationStatus = "held"
+	}
+	reservationExpiry := d.invoiceExpiresAt
+	if reservationExpiry == nil {
+		reservationExpiry = d.dueAt
+	}
+	if reservationExpiry == nil {
+		t := s.now().Add(InvoiceExpiryHours * time.Hour)
+		reservationExpiry = &t
+	}
+	res := placedOrder{claims: claims}
+	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `INSERT INTO shop.orders (
+			  storefront_id, customer_name, customer_phone, customer_email,
+			  shipping_address, shipping_area_id, shipping_area_label,
+			  shipping_postal_code, shipping_provider, courier_code,
+			  courier_service, subtotal, shipping_cost, total,
+			  invoice_expires_at, notes, wholesale_account_id, payment_terms, due_at
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid,$18,$19)
+			RETURNING id::text, order_number, access_token::text`,
+			d.storefront.ID, d.customerName, d.customerPhone, orNil(d.customerEmail),
+			d.address, d.areaID, d.areaLabel, orNil(d.postalCode), d.provider, d.courierCode,
+			d.courierSvc, d.subtotal(), d.shippingCost, d.total(), d.invoiceExpiresAt, orNil(d.notes),
+			d.wholesaleAccountID, d.paymentTerms, d.dueAt,
+		).Scan(&res.id, &res.number, &res.token); err != nil {
+			return err
+		}
+		for _, l := range d.lines {
+			if _, err := tx.Exec(ctx, `INSERT INTO shop.order_items (
+				  order_id, product_id, sku_id, product_name, sku_name, sku_code,
+				  quantity, unit_price, total, weight_gram, is_preorder
+				) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+				res.id, l.productID, l.skuID, l.productName, l.skuName, l.skuCode,
+				l.quantity, l.unitPrice, float64(l.unitPrice*l.quantity), l.weightGram, l.isPreorder); err != nil {
+				return err
+			}
+		}
+		for _, c := range claims {
+			if _, err := tx.Exec(ctx, `INSERT INTO shop.stock_reservations (order_id, product_id, sku_id, qty, status, expires_at)
+				VALUES ($1,$2,$3,$4,$5,$6)`, res.id, c.productID, c.skuID, c.qty, d.reservationStatus, reservationExpiry); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		s.log.Error("[shop] checkout order insert failed", "error", err)
+		s.restoreClaims(ctx, claims)
+		return placedOrder{}, &checkoutError{500, "Gagal membuat order — coba lagi"}
+	}
+	return res, nil
+}
+
+// issueInvoice creates the Xendit invoice of a placed order and stores its
+// link. A failure compensates fully: stock back, reservations released,
+// order cancelled.
+func (s *Service) issueInvoice(ctx context.Context, o placedOrder, amount float64, payer, description, redirectURL string) (string, error) {
+	invoice, err := s.ports.Payments.CreateInvoice(ctx, InvoiceRequest{
+		ExternalID: InvoicePrefix + o.id, Amount: amount, PayerName: payer, Description: description, RedirectURL: redirectURL,
+	})
+	if err == nil {
+		_, err = s.db.Exec(ctx, `UPDATE shop.orders
+			SET xendit_invoice_id = $2, xendit_invoice_url = $3, updated_at = now()
+			WHERE id = $1::uuid`, o.id, invoice.ID, invoice.URL)
+	}
+	if err == nil {
+		return invoice.URL, nil
+	}
+	s.log.Error("[shop] xendit invoice failed", "order", o.id, "error", err)
+	s.restoreClaims(ctx, o.claims)
+	if _, err := s.db.Exec(ctx, `UPDATE shop.stock_reservations SET status='released', updated_at=now()
+		WHERE order_id = $1::uuid AND status='held'`, o.id); err != nil {
+		s.log.Error("[shop] release reservations failed", "order", o.id, "error", err)
+	}
+	if _, err := s.db.Exec(ctx, `UPDATE shop.orders SET status='cancelled', updated_at=now() WHERE id = $1::uuid`, o.id); err != nil {
+		s.log.Error("[shop] cancel order failed", "order", o.id, "error", err)
+	}
+	return "", &checkoutError{502, "Gagal membuat invoice pembayaran — coba lagi"}
 }
 
 // Checkout is processShopCheckout. A *checkoutError carries the TS status
@@ -318,109 +598,27 @@ func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResul
 	if reason != "" {
 		return CheckoutResult{}, &checkoutError{400, reason}
 	}
-	subtotal := 0.0
-	for _, l := range lines {
-		subtotal += float64(l.unitPrice * l.quantity)
+	expiresAt := s.now().Add(InvoiceExpiryHours * time.Hour)
+	d := orderDraft{
+		storefront: in.Storefront, lines: lines,
+		customerName: in.Customer.Name, customerPhone: in.Customer.Phone, customerEmail: in.Customer.Email,
+		address: in.Destination.Address, areaID: &in.Destination.AreaID, areaLabel: &in.Destination.Label, postalCode: in.Destination.PostalCode,
+		provider: &in.Courier.Provider, courierCode: &in.Courier.Code, courierSvc: &in.Courier.ServiceCode,
+		shippingCost: math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost))),
+		notes:        in.Notes, invoiceExpiresAt: &expiresAt,
 	}
-	shippingCost := math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost)))
-	total := subtotal + shippingCost
-	if total <= 0 {
+	if d.total() <= 0 {
 		return CheckoutResult{}, &checkoutError{400, "Total order tidak valid"}
 	}
-
-	// Claim stock BEFORE the order exists (the cashier pattern); a failure
-	// part-way gives the earlier claims back.
-	var claims []claim
-	for _, l := range lines {
-		c := claim{productID: l.productID, skuID: l.skuID, qty: l.quantity}
-		ok, why, err := s.claimLine(ctx, c)
-		if err != nil {
-			s.restoreClaims(ctx, claims)
-			return CheckoutResult{}, err
-		}
-		if !ok {
-			s.restoreClaims(ctx, claims)
-			if why == "variant_required" {
-				return CheckoutResult{}, &checkoutError{400, l.productName + " punya varian — pilih varian dulu"}
-			}
-			label := l.productName
-			if l.skuName != nil {
-				label += " (" + *l.skuName + ")"
-			}
-			return CheckoutResult{}, &checkoutError{400, "Stok " + label + " tidak cukup"}
-		}
-		claims = append(claims, c)
-	}
-
-	expiresAt := s.now().Add(InvoiceExpiryHours * time.Hour)
-	var res CheckoutResult
-	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `INSERT INTO shop.orders (
-			  storefront_id, customer_name, customer_phone, customer_email,
-			  shipping_address, shipping_area_id, shipping_area_label,
-			  shipping_postal_code, shipping_provider, courier_code,
-			  courier_service, subtotal, shipping_cost, total,
-			  invoice_expires_at, notes
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
-			RETURNING id::text, order_number, access_token::text`,
-			in.Storefront.ID, in.Customer.Name, in.Customer.Phone, orNil(in.Customer.Email),
-			in.Destination.Address, in.Destination.AreaID, in.Destination.Label,
-			orNil(in.Destination.PostalCode), in.Courier.Provider, in.Courier.Code,
-			in.Courier.ServiceCode, subtotal, shippingCost, total, expiresAt, orNil(in.Notes),
-		).Scan(&res.OrderID, &res.OrderNumber, &res.AccessToken); err != nil {
-			return err
-		}
-		for _, l := range lines {
-			if _, err := tx.Exec(ctx, `INSERT INTO shop.order_items (
-				  order_id, product_id, sku_id, product_name, sku_name, sku_code,
-				  quantity, unit_price, total, weight_gram
-				) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-				res.OrderID, l.productID, l.skuID, l.productName, l.skuName, l.skuCode,
-				l.quantity, l.unitPrice, float64(l.unitPrice*l.quantity), l.weightGram); err != nil {
-				return err
-			}
-		}
-		for _, c := range claims {
-			if _, err := tx.Exec(ctx, `INSERT INTO shop.stock_reservations (order_id, product_id, sku_id, qty, expires_at)
-				VALUES ($1,$2,$3,$4,$5)`, res.OrderID, c.productID, c.skuID, c.qty, expiresAt); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	placed, err := s.placeOrder(ctx, d)
 	if err != nil {
-		s.log.Error("[shop] checkout order insert failed", "error", err)
-		s.restoreClaims(ctx, claims)
-		return CheckoutResult{}, &checkoutError{500, "Gagal membuat order — coba lagi"}
+		return CheckoutResult{}, err
 	}
-
-	invoice, err := s.ports.Payments.CreateInvoice(ctx, InvoiceRequest{
-		ExternalID:  InvoicePrefix + res.OrderID,
-		Amount:      total,
-		PayerName:   in.Customer.Name,
-		Description: "Order " + res.OrderNumber + " — " + in.Storefront.Name,
-		RedirectURL: in.BaseURL + "/shop/order/" + res.AccessToken,
-	})
-	if err == nil {
-		_, err = s.db.Exec(ctx, `UPDATE shop.orders
-			SET xendit_invoice_id = $2, xendit_invoice_url = $3, updated_at = now()
-			WHERE id = $1::uuid`, res.OrderID, invoice.ID, invoice.URL)
-	}
+	url, err := s.issueInvoice(ctx, placed, d.total(), in.Customer.Name, "Order "+placed.number+" — "+in.Storefront.Name, in.BaseURL+"/shop/order/"+placed.token)
 	if err != nil {
-		s.log.Error("[shop] xendit invoice failed", "order", res.OrderID, "error", err)
-		// Full compensation: stock back, reservations released, order cancelled.
-		s.restoreClaims(ctx, claims)
-		if _, err := s.db.Exec(ctx, `UPDATE shop.stock_reservations SET status='released', updated_at=now()
-			WHERE order_id = $1::uuid AND status='held'`, res.OrderID); err != nil {
-			s.log.Error("[shop] release reservations failed", "order", res.OrderID, "error", err)
-		}
-		if _, err := s.db.Exec(ctx, `UPDATE shop.orders SET status='cancelled', updated_at=now() WHERE id = $1::uuid`, res.OrderID); err != nil {
-			s.log.Error("[shop] cancel order failed", "order", res.OrderID, "error", err)
-		}
-		return CheckoutResult{}, &checkoutError{502, "Gagal membuat invoice pembayaran — coba lagi"}
+		return CheckoutResult{}, err
 	}
-	res.InvoiceURL = invoice.URL
-	return res, nil
+	return CheckoutResult{OrderID: placed.id, OrderNumber: placed.number, AccessToken: placed.token, InvoiceURL: url}, nil
 }
 
 // orNil is `value || null`.

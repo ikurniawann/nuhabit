@@ -64,6 +64,9 @@ const PUBLIC_AUTH_PREFIXES = [
   "/pass",
   "/shop",
   "/api/public/shop",
+  // Portal mitra wholesale (B2B): sesi sendiri lewat cookie nh_wholesale.
+  "/wholesale",
+  "/api/wholesale",
   // EPIC-050 T-5.3 — form publik CRM (web-to-lead)
   "/public",
   "/api/public/crm/forms",
