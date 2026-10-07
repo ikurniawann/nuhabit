@@ -4065,6 +4065,11 @@
     "path": "/api/public/shop/{slug}/shipping/rates"
   },
   {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/public/site/sessions"
+  },
+  {
     "module": "inventory",
     "method": "DELETE",
     "path": "/api/purchasing/bom/{id}"
