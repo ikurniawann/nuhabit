@@ -493,7 +493,7 @@ func (h *Handler) publicBranch(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := notFound(b, "Cabang tidak ditemukan"); err != nil {
+	if err := notFound(b, "Branch not found"); err != nil {
 		return err
 	}
 	return ok(w, b)
@@ -502,7 +502,7 @@ func (h *Handler) publicBranch(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) publicArticles(w http.ResponseWriter, r *http.Request) error {
 	category := r.URL.Query().Get("category")
 	if category != "" && !slices.Contains(Categories, category) {
-		return httpx.BadRequest("Kategori tidak valid")
+		return httpx.BadRequest("Invalid category")
 	}
 	list, err := h.svc.PublishedArticles(r.Context(), category)
 	if err != nil {
@@ -516,7 +516,7 @@ func (h *Handler) publicArticle(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := notFound(a, "Artikel tidak ditemukan"); err != nil {
+	if err := notFound(a, "Article not found"); err != nil {
 		return err
 	}
 	return ok(w, a)
@@ -535,7 +535,7 @@ func (h *Handler) publicEvent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := notFound(e, "Event tidak ditemukan"); err != nil {
+	if err := notFound(e, "Event not found"); err != nil {
 		return err
 	}
 	return ok(w, e)

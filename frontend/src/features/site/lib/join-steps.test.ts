@@ -3,8 +3,8 @@ import { accountTransition, initialAccountPhase, isCodeAccepted, resolveJoinStep
 
 describe("resolveJoinStep", () => {
   it("skips the account step when a member session exists", () => {
-    expect(resolveJoinStep("present")).toBe("bayar");
-    expect(resolveJoinStep("absent")).toBe("akun");
+    expect(resolveJoinStep("present")).toBe("pay");
+    expect(resolveJoinStep("absent")).toBe("account");
     expect(resolveJoinStep("unknown")).toBe("loading");
   });
 });

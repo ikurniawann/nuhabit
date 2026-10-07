@@ -28,14 +28,14 @@ function BranchSwitcher({ branches }: { branches: BranchSummary[] }) {
   if (branches.length === 0) return null;
   return (
     <label className="flex flex-col gap-1.5 text-sm">
-      <span className="font-semibold text-foreground">Cabang kamu</span>
+      <span className="font-semibold text-foreground">Your branch</span>
       <select
         name={BRANCH_COOKIE}
         value={slug}
         onChange={(e) => setSlug(e.target.value)}
         className="h-10 rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
       >
-        <option value="">Pilih cabang</option>
+        <option value="">Choose a branch</option>
         {branches.map((b) => (
           <option key={b.slug} value={b.slug}>
             {b.name}
@@ -43,7 +43,7 @@ function BranchSwitcher({ branches }: { branches: BranchSummary[] }) {
           </option>
         ))}
       </select>
-      <span className="text-xs text-muted-foreground">Jadwal, trial dan membership mengikuti cabang ini.</span>
+      <span className="text-xs text-muted-foreground">The timetable, trial and membership follow this branch.</span>
     </label>
   );
 }
@@ -88,13 +88,13 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/wordmark-white.png" alt="NüHabit" className="hidden h-6 w-auto dark:block" />
           <p className="max-w-sm text-sm text-body">
-            Gym HYROX dengan program 8 minggu yang terukur. Latihan yang jadi kebiasaan, bukan acara sesekali.
+            A HYROX gym built around a measurable 8-week program. Training that turns into a habit.
           </p>
           <BranchSwitcher branches={branches} />
           <SocialLinks social={social} />
         </div>
-        <nav aria-label="Halaman" className="text-sm">
-          <p className="mb-3 font-semibold text-foreground">Jelajahi</p>
+        <nav aria-label="Pages" className="text-sm">
+          <p className="mb-3 font-semibold text-foreground">Explore</p>
           <ul className="space-y-2">
             {BRAND_NAV.map((item) => (
               <li key={item.href}>
@@ -110,7 +110,7 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
             </li>
           </ul>
         </nav>
-        <nav aria-label="Bisnis" className="text-sm">
+        <nav aria-label="Business" className="text-sm">
           <p className="mb-3 font-semibold text-foreground">NüHabit</p>
           <ul className="space-y-2">
             {BUSINESS_NAV.map((item) => (
@@ -122,17 +122,17 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
             ))}
             <li>
               <Link href="/franchise" className="text-body hover:text-foreground">
-                Buka Cabang
+                Own a Gym
               </Link>
             </li>
             <li>
               <Link href="/wholesale" className="font-semibold text-forest hover:underline">
-                Portal Mitra
+                Partner Portal
               </Link>
             </li>
             <li>
               <Link href="/member" className="text-body hover:text-foreground">
-                Area Member
+                Member Area
               </Link>
             </li>
           </ul>
@@ -140,13 +140,13 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-6">
-          <p>© {year} NüHabit. Semua hak dilindungi.</p>
+          <p>© {year} NüHabit. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground">
-              Kebijakan Privasi
+              Privacy Policy
             </Link>
             <Link href="/terms" className="hover:text-foreground">
-              Syarat & Ketentuan
+              Terms & Conditions
             </Link>
           </div>
         </div>

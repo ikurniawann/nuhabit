@@ -19,20 +19,20 @@ export function ContactPage({ social, branches }: { social: SocialContent; branc
 
   return (
     <LeadFormPage
-      kicker="Kontak"
-      title="Hubungi kami"
-      intro="Pertanyaan soal kelas, pesanan apparel, atau hal lain. Kami membalas lewat email pada jam kerja; untuk yang mendesak, WhatsApp lebih cepat."
+      kicker="Contact"
+      title="Get in touch"
+      intro="Questions about classes, apparel orders or anything else. We reply by email during business hours; for anything urgent, WhatsApp is faster."
       slug="contact"
       aside={
         <>
           <Tile className="space-y-4">
-            <h2 className="font-display text-lg font-semibold">Kantor pusat</h2>
+            <h2 className="font-display text-lg font-semibold">Head office</h2>
             <dl className="space-y-3 text-sm">
               {hq ? (
                 <div className="flex gap-3">
                   <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <div>
-                    <dt className="sr-only">Alamat</dt>
+                    <dt className="sr-only">Address</dt>
                     <dd className="text-body">
                       <span className="font-semibold text-foreground">{hq.name}</span>
                       <br />
@@ -88,7 +88,7 @@ export function ContactPage({ social, branches }: { social: SocialContent; branc
           </Tile>
           {branches.length > 1 ? (
             <Tile className="space-y-3">
-              <h2 className="font-display text-lg font-semibold">Cabang kami</h2>
+              <h2 className="font-display text-lg font-semibold">Our gyms</h2>
               <ul className="space-y-2 text-sm">
                 {branches.map((b) => (
                   <li key={b.slug}>

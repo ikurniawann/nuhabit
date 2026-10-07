@@ -7,7 +7,7 @@ export function BrandPage({ brand }: { brand: BrandContent }) {
     <>
       <Section className="pb-6">
         <Container>
-          <SectionHeading as="h1" kicker="Cerita Kami" title={brand.title} text={brand.intro} />
+          <SectionHeading as="h1" kicker="Our Story" title={brand.title} text={brand.intro} />
         </Container>
       </Section>
       <Section className="pt-4">

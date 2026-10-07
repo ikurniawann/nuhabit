@@ -3,7 +3,7 @@ import { NewsPage } from "@/features/site/components/news-page";
 import { fetchArticles } from "@/features/site/lib/public-api";
 import { ARTICLE_CATEGORIES, type ArticleCategory } from "@/features/site/types";
 
-export const metadata: Metadata = { title: "Berita" };
+export const metadata: Metadata = { title: "News" };
 
 function asCategory(value: string | string[] | undefined): ArticleCategory | null {
   const v = Array.isArray(value) ? value[0] : value;

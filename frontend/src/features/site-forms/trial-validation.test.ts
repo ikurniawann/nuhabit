@@ -12,32 +12,32 @@ const filled: TrialValues = {
 };
 
 describe("validateTrial", () => {
-  test("isian kosong menyebut setiap field wajib", () => {
+  test("names every required field when the values are empty", () => {
     expect(validateTrial(EMPTY_TRIAL)).toEqual({
-      branch_slug: "Pilih cabang",
-      first_name: "Nama depan wajib diisi",
-      email: "Email wajib diisi",
-      phone_local: "Nomor telepon wajib diisi",
+      branch_slug: "Choose a branch",
+      first_name: "First name is required",
+      email: "Email is required",
+      phone_local: "Phone number is required",
     });
   });
 
-  test("isian lengkap lolos tanpa persetujuan pemasaran", () => {
+  test("passes complete values without marketing consent", () => {
     expect(validateTrial(filled)).toEqual({});
     expect(validateTrial({ ...filled, consent_email: false, consent_sms: false })).toEqual({});
   });
 
-  test("email dan nomor diperiksa bentuknya", () => {
-    expect(validateTrial({ ...filled, email: "bukan-email" }).email).toBe("Email tidak valid");
-    expect(validateTrial({ ...filled, phone_local: "812" }).phone_local).toBe("Nomor telepon tidak valid");
+  test("checks the shape of the email and the phone number", () => {
+    expect(validateTrial({ ...filled, email: "bukan-email" }).email).toBe("Enter a valid email");
+    expect(validateTrial({ ...filled, phone_local: "812" }).phone_local).toBe("Enter a valid phone number");
     expect(validateTrial({ ...filled, phone_country: "AU", phone_local: "0412 345 678" })).toEqual({});
   });
 
-  test("nama dibatasi 80 karakter, nama belakang boleh kosong", () => {
+  test("caps names at 80 characters and allows an empty last name", () => {
     expect(validateTrial({ ...filled, last_name: "" })).toEqual({});
-    expect(validateTrial({ ...filled, first_name: "a".repeat(81) }).first_name).toBe("Nama depan terlalu panjang");
+    expect(validateTrial({ ...filled, first_name: "a".repeat(81) }).first_name).toBe("First name is too long");
   });
 
-  test("payload membawa nomor E.164, UTM, halaman asal dan stempel mulai", () => {
+  test("carries the E.164 number, UTM, source page and start timestamp in the payload", () => {
     expect(trialPayload(filled, { utm: { utm_source: "ig" }, source_path: "/locations/kemang", form_started_at: 123 })).toEqual({
       branch_slug: "kemang",
       first_name: "Ani",

@@ -87,9 +87,9 @@ export type ArticleCategory = (typeof ARTICLE_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<ArticleCategory, string> = {
   training: "Training",
-  events: "Event",
+  events: "Events",
   apparel: "Apparel",
-  news: "Berita",
+  news: "News",
 };
 
 export type PublishStatus = "draft" | "published";

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { HONEYPOT_FIELD, readPageAttribution, type PublicFieldDef } from "@/lib/crm/public-forms";
 
-/** Definisi form seperti dijawab GET /api/public/crm/forms/<slug>. */
+/** The form definition as GET /api/public/crm/forms/<slug> answers it. */
 export interface PublicFormDefinition {
   slug: string;
   title: string;
@@ -20,19 +20,19 @@ export interface PublicFormDefinition {
 }
 
 const ORG_TYPE_LABELS: Record<string, string> = {
-  corporate: "Perusahaan",
-  sekolah: "Sekolah / Kampus",
-  komunitas: "Komunitas",
+  corporate: "Company",
+  sekolah: "School / Campus",
+  komunitas: "Community",
   "travel-agent": "Travel Agent",
-  pemerintah: "Instansi Pemerintah",
-  perorangan: "Perorangan",
-  lainnya: "Lainnya",
+  pemerintah: "Government Agency",
+  perorangan: "Individual",
+  lainnya: "Other",
 };
 
 /**
- * Isi form publik CRM tanpa bingkai halaman: field, jebakan bot, tombol kirim
- * dan pesan sukses. `startedAt` adalah stempel waktu render (dasar ukur lama
- * pengisian untuk anti-bot).
+ * The body of a public CRM form without page chrome: fields, honeypot,
+ * submit button and success message. `startedAt` is the render timestamp
+ * the anti-bot fill-time check measures from.
  */
 export function PublicFormBody({ form, startedAt, onSubmitted }: {
   form: PublicFormDefinition;
@@ -69,7 +69,7 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
         const fieldErrors: Record<string, string> = {};
         for (const d of body.details ?? []) fieldErrors[d.key] = d.message;
         setErrors(fieldErrors);
-        setBanner(body.error ?? "Gagal mengirim. Coba lagi sebentar lagi.");
+        setBanner(body.error ?? "Could not send. Try again in a moment.");
         setStatus("idle");
         return;
       }
@@ -80,7 +80,7 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
       setStatus("sent");
       onSubmitted?.();
     } catch {
-      setBanner("Jaringan bermasalah. Coba lagi sebentar lagi.");
+      setBanner("Network problem. Try again in a moment.");
       setStatus("idle");
     }
   };
@@ -89,7 +89,7 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
     return (
       <div className="py-10 text-center" role="status">
         <CheckCircle2 className="mx-auto h-14 w-14 text-forest" />
-        <p className="mt-4 text-2xl font-bold text-foreground">Terkirim</p>
+        <p className="mt-4 text-2xl font-bold text-foreground">Sent</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{form.success_message}</p>
       </div>
     );
@@ -107,9 +107,9 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
         ))}
       </div>
 
-      {/* Jebakan bot: tersembunyi dari manusia, tapi terisi oleh pengisi otomatis. */}
+      {/* Honeypot: hidden from people, filled by bots. */}
       <div className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-        <label htmlFor={`${form.slug}-${HONEYPOT_FIELD}`}>Jangan diisi</label>
+        <label htmlFor={`${form.slug}-${HONEYPOT_FIELD}`}>Leave this empty</label>
         <input
           id={`${form.slug}-${HONEYPOT_FIELD}`}
           name={HONEYPOT_FIELD}
@@ -126,7 +126,7 @@ export function PublicFormBody({ form, startedAt, onSubmitted }: {
         {form.submit_label}
       </Button>
       <p className="mt-3 text-xs text-muted-foreground">
-        Dengan mengirim, Anda setuju dihubungi tim NüHabit terkait permintaan ini.
+        By sending this, you agree that the NüHabit team may contact you about your request.
       </p>
     </form>
   );
@@ -162,14 +162,14 @@ function FormField({ field, value, error, onChange }: {
           value={String(value ?? "")}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">Pilih…</option>
+          <option value="">Choose…</option>
           {field.options.map((o) => <option key={o} value={o}>{ORG_TYPE_LABELS[o] ?? o}</option>)}
         </select>
       ) : field.type === "checkbox" ? (
         <label className="inline-flex items-center gap-2 text-sm text-foreground">
           <input id={id} type="checkbox" className="h-4 w-4 rounded border-border accent-forest"
             checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />
-          {field.help_text ?? "Ya"}
+          {field.help_text ?? "Yes"}
         </label>
       ) : (
         <Input

@@ -49,22 +49,22 @@ export function LocationsPage({ branches }: { branches: BranchSummary[] }) {
   return (
     <Section>
       <Container className="space-y-8">
-        <SectionHeading as="h1" kicker="Lokasi" title="Cari cabang NüHabit terdekat" text="Setiap cabang memakai program dan standar ruang yang sama." />
+        <SectionHeading as="h1" kicker="Locations" title="Find your nearest NüHabit" text="Every branch runs the same program and the same standard of space." />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-            <span className="sr-only">Cari nama cabang, kota atau kode pos</span>
+            <span className="sr-only">Search by branch name, city or postcode</span>
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nama cabang, kota, atau kode pos"
+              placeholder="Branch name, city or postcode"
               className="h-11 rounded-full pl-11"
             />
           </label>
           <Button variant="ink" className="h-11" disabled={me.locating} onClick={() => void me.request()}>
             {me.locating ? <LoaderCircle className="animate-spin" /> : <Crosshair />}
-            Gunakan lokasi saya
+            Use my location
           </Button>
         </div>
         {me.error ? <p className="text-sm text-danger">{me.error}</p> : null}
@@ -82,7 +82,7 @@ export function LocationsPage({ branches }: { branches: BranchSummary[] }) {
           <ul className="space-y-3 lg:order-1">
             {ranked.length === 0 ? (
               <li>
-                <EmptyNote>{branches.length === 0 ? "Belum ada cabang yang dipublikasikan." : "Tidak ada cabang yang cocok."}</EmptyNote>
+                <EmptyNote>{branches.length === 0 ? "No branches published yet." : "No branches match your search."}</EmptyNote>
               </li>
             ) : (
               ranked.map(({ item, km }) => (
@@ -99,15 +99,15 @@ export function LocationsPage({ branches }: { branches: BranchSummary[] }) {
                       </div>
                       <p className="mt-0.5 flex items-start gap-1.5 text-sm text-body">
                         <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                        <span>{[item.address, item.city, item.postcode].filter(Boolean).join(", ") || "Alamat menyusul"}</span>
+                        <span>{[item.address, item.city, item.postcode].filter(Boolean).join(", ") || "Address coming soon"}</span>
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
                         <Button asChild size="sm">
-                          <Link href={`/locations/${item.slug}`}>Lihat cabang</Link>
+                          <Link href={`/locations/${item.slug}`}>View branch</Link>
                         </Button>
                         {item.phone ? (
                           <Button asChild size="sm" variant="outline">
-                            <a href={`tel:${item.phone.replace(/\s+/g, "")}`}>Telepon</a>
+                            <a href={`tel:${item.phone.replace(/\s+/g, "")}`}>Call</a>
                           </Button>
                         ) : null}
                       </div>

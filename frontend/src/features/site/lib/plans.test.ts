@@ -19,8 +19,8 @@ describe("groupPlans", () => {
   it("puts passes before credit packs and drops empty groups", () => {
     const groups = groupPlans([plan({ id: "c" }), plan({ id: "p", kind: "pass", credits: 0, validity_days: 28 })]);
     expect(groups.map((g) => [g.label, g.plans.map((p) => p.id)])).toEqual([
-      ["Pass", ["p"]],
-      ["Paket Kredit", ["c"]],
+      ["Passes", ["p"]],
+      ["Credit Packs", ["c"]],
     ]);
     expect(groupPlans([plan({})]).map((g) => g.kind)).toEqual(["credits"]);
     expect(groupPlans([])).toEqual([]);
@@ -29,17 +29,19 @@ describe("groupPlans", () => {
 
 describe("labels", () => {
   it("names validity in days, weeks or months", () => {
-    expect(validityLabel(7)).toBe("7 hari");
-    expect(validityLabel(14)).toBe("14 hari");
-    expect(validityLabel(28)).toBe("4 minggu");
-    expect(validityLabel(56)).toBe("8 minggu");
-    expect(validityLabel(60)).toBe("60 hari");
-    expect(validityLabel(182)).toBe("6 bulan");
+    expect(validityLabel(1)).toBe("1 day");
+    expect(validityLabel(7)).toBe("7 days");
+    expect(validityLabel(14)).toBe("14 days");
+    expect(validityLabel(28)).toBe("4 weeks");
+    expect(validityLabel(56)).toBe("8 weeks");
+    expect(validityLabel(60)).toBe("60 days");
+    expect(validityLabel(182)).toBe("6 months");
   });
 
   it("describes what the plan grants", () => {
-    expect(creditsLabel({ kind: "pass", credits: 0 })).toBe("Booking kelas tanpa batas");
-    expect(creditsLabel({ kind: "credits", credits: 10 })).toBe("10 kredit kelas");
+    expect(creditsLabel({ kind: "pass", credits: 0 })).toBe("Unlimited class bookings");
+    expect(creditsLabel({ kind: "credits", credits: 10 })).toBe("10 class credits");
+    expect(creditsLabel({ kind: "credits", credits: 1 })).toBe("1 class credit");
   });
 
   it("links to the checkout with the branch when known", () => {

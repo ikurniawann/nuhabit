@@ -1,17 +1,17 @@
 import Link from "next/link";
-import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ARTICLE_CATEGORIES, CATEGORY_LABELS, type Article, type ArticleCategory } from "../types";
+import { formatSiteDate } from "../lib/dates";
 import { Markdown } from "../lib/markdown";
 import { Container, EmptyNote, Picture, Section, SectionHeading } from "./site-section";
 
 function CategoryChips({ active }: { active: ArticleCategory | null }) {
   const chips: { value: ArticleCategory | null; label: string }[] = [
-    { value: null, label: "Semua" },
+    { value: null, label: "All" },
     ...ARTICLE_CATEGORIES.map((c) => ({ value: c, label: CATEGORY_LABELS[c] })),
   ];
   return (
-    <nav aria-label="Kategori" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+    <nav aria-label="Categories" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
       {chips.map((chip) => {
         const selected = chip.value === active;
         return (
@@ -40,7 +40,7 @@ export function ArticleCard({ article }: { article: Article }) {
         <div className="space-y-2 p-5">
           <p className="text-xs font-semibold tracking-wider text-forest uppercase dark:text-accent">
             {CATEGORY_LABELS[article.category]}
-            {article.published_at ? <span className="ml-2 font-normal text-muted-foreground normal-case">{formatDate(article.published_at)}</span> : null}
+            {article.published_at ? <span className="ml-2 font-normal text-muted-foreground normal-case">{formatSiteDate(article.published_at)}</span> : null}
           </p>
           <h2 className="font-display text-lg font-semibold text-balance">{article.title}</h2>
           {article.excerpt ? <p className="line-clamp-3 text-sm text-body">{article.excerpt}</p> : null}
@@ -54,10 +54,10 @@ export function NewsPage({ articles, category }: { articles: Article[]; category
   return (
     <Section>
       <Container className="space-y-8">
-        <SectionHeading as="h1" kicker="Berita" title="Cerita, event dan rilis terbaru" />
+        <SectionHeading as="h1" kicker="News" title="Stories, events and the latest releases" />
         <CategoryChips active={category} />
         {articles.length === 0 ? (
-          <EmptyNote>Belum ada artikel{category ? ` di kategori ${CATEGORY_LABELS[category]}` : ""}.</EmptyNote>
+          <EmptyNote>No articles yet{category ? ` in ${CATEGORY_LABELS[category]}` : ""}.</EmptyNote>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {articles.map((a) => (
@@ -79,7 +79,7 @@ export function ArticlePage({ article }: { article: Article }) {
             {CATEGORY_LABELS[article.category]}
           </Link>
           <h1 className="font-display text-3xl font-bold tracking-tight text-balance md:text-5xl">{article.title}</h1>
-          {article.published_at ? <p className="text-sm text-muted-foreground">{formatDate(article.published_at)}</p> : null}
+          {article.published_at ? <p className="text-sm text-muted-foreground">{formatSiteDate(article.published_at)}</p> : null}
           {article.excerpt ? <p className="text-lg text-body">{article.excerpt}</p> : null}
         </Container>
       </Section>

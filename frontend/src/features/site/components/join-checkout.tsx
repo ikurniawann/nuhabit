@@ -27,9 +27,9 @@ import { creditsLabel, validityLabel } from "../lib/plans";
 import type { PublicPlan, PublicPlanBranch } from "../types";
 import { Container, Section, Tile } from "./site-section";
 
-const STEPS: { key: "akun" | "bayar" | "status"; label: string }[] = [
-  { key: "akun", label: "Akun" },
-  { key: "bayar", label: "Bayar" },
+const STEPS: { key: "account" | "pay" | "status"; label: string }[] = [
+  { key: "account", label: "Account" },
+  { key: "pay", label: "Pay" },
   { key: "status", label: "Status" },
 ];
 
@@ -71,7 +71,7 @@ async function postAuth<T extends object>(path: string, body: unknown): Promise<
     body: JSON.stringify(body),
   });
   const json = (await res.json().catch(() => null)) as (T & { success?: boolean; error?: string }) | null;
-  if (!res.ok || !json?.success) throw new ApiError(res.status, json?.error ?? `Permintaan gagal (${res.status})`);
+  if (!res.ok || !json?.success) throw new ApiError(res.status, json?.error ?? `Request failed (${res.status})`);
   return json;
 }
 
@@ -82,7 +82,7 @@ interface OtpSent {
 function CodeField({ code, setCode, devBypass, phone }: { code: string; setCode(code: string): void; devBypass: boolean; phone: string }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="join-code">Kode OTP WhatsApp</Label>
+      <Label htmlFor="join-code">WhatsApp OTP code</Label>
       <Input
         id="join-code"
         inputMode={devBypass ? "text" : "numeric"}
@@ -93,7 +93,7 @@ function CodeField({ code, setCode, devBypass, phone }: { code: string; setCode(
         className="text-center text-xl tracking-[0.4em]"
       />
       <p className="text-xs text-muted-foreground">
-        {devBypass ? "Dev lokal: isi kode dev atau kosongkan." : `Kami mengirim kode 6 digit ke WhatsApp ${phone}.`}
+        {devBypass ? "Local dev: enter the dev code or leave it blank." : `We sent a 6-digit code to WhatsApp ${phone}.`}
       </p>
     </div>
   );
@@ -128,15 +128,15 @@ function PlanSummary({ plan, branch }: { plan: PublicPlan; branch: PublicPlanBra
     <Tile className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Paket pilihanmu</p>
+          <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Your plan</p>
           <h2 className="font-display text-xl font-semibold">{plan.name}</h2>
         </div>
         <p className="font-display text-xl font-bold tabular-nums">{formatRupiah(plan.price_idr)}</p>
       </div>
       <ul className="space-y-1 text-sm text-body">
         <li>{creditsLabel(plan)}</li>
-        <li>Berlaku {validityLabel(plan.validity_days)} sejak aktif</li>
-        <li>{branch ? `Harga cabang ${branch.name}` : "Harga dasar semua cabang"}</li>
+        <li>Valid for {validityLabel(plan.validity_days)} from activation</li>
+        <li>{branch ? `${branch.name} price` : "Base price at every branch"}</li>
       </ul>
     </Tile>
   );
@@ -159,7 +159,7 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
     try {
       await work();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan. Coba lagi.");
+      setError(e instanceof Error ? e.message : "Something went wrong. Try again.");
     } finally {
       setBusy(false);
     }
@@ -228,15 +228,15 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
     return (
       <form onSubmit={requestCode} className="space-y-4">
         <div>
-          <h2 className="font-display text-xl font-semibold">Masuk atau daftar</h2>
+          <h2 className="font-display text-xl font-semibold">Sign in or sign up</h2>
           <p className="text-sm text-body">
             {google
-              ? `Halo ${google.name}. Tambahkan nomor WhatsApp untuk menyelesaikan pendaftaran.`
-              : "Pakai nomor WhatsApp yang aktif. Member lama langsung masuk, member baru kami daftarkan."}
+              ? `Hi ${google.name}. Add your WhatsApp number to finish signing up.`
+              : "Use an active WhatsApp number. Existing members sign in; new members get an account."}
           </p>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="join-phone">Nomor WhatsApp</Label>
+          <Label htmlFor="join-phone">WhatsApp number</Label>
           <Input
             id="join-phone"
             type="tel"
@@ -249,7 +249,7 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
         </div>
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <Button type="submit" size="lg" className="w-full" disabled={busy || phone.trim().length < 6}>
-          {busy ? <LoaderCircle className="animate-spin" /> : null} Kirim kode
+          {busy ? <LoaderCircle className="animate-spin" /> : null} Send code
         </Button>
         {google ? null : <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} text="continue_with" />}
       </form>
@@ -260,16 +260,16 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
     return (
       <form onSubmit={verify} className="space-y-4">
         <div>
-          <h2 className="font-display text-xl font-semibold">Masukkan kode</h2>
-          <p className="text-sm text-body">Nomor {phase.phone} sudah terdaftar sebagai member.</p>
+          <h2 className="font-display text-xl font-semibold">Enter the code</h2>
+          <p className="text-sm text-body">{phase.phone} is already registered as a member.</p>
         </div>
         <CodeField code={code} setCode={setCode} devBypass={phase.devBypass} phone={phase.phone} />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <Button type="submit" size="lg" className="w-full" disabled={busy || !isCodeAccepted(code, phase.devBypass)}>
-          {busy ? <LoaderCircle className="animate-spin" /> : null} Masuk
+          {busy ? <LoaderCircle className="animate-spin" /> : null} Sign in
         </Button>
         <Button type="button" variant="ghost" className="w-full" onClick={() => dispatch({ type: "back" })}>
-          Ganti nomor
+          Change number
         </Button>
       </form>
     );
@@ -278,11 +278,11 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
   return (
     <form onSubmit={register} className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-semibold">Lengkapi data</h2>
-        <p className="text-sm text-body">Nomor {phase.phone} belum terdaftar. Isi nama dan email untuk membuat akun member.</p>
+        <h2 className="font-display text-xl font-semibold">Complete your details</h2>
+        <p className="text-sm text-body">{phase.phone} is not registered yet. Enter your name and email to create a member account.</p>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="join-name">Nama lengkap</Label>
+        <Label htmlFor="join-name">Full name</Label>
         <Input id="join-name" autoComplete="name" value={google?.name ?? name} onChange={(e) => setName(e.target.value)} readOnly={Boolean(google)} />
       </div>
       <div className="space-y-1.5">
@@ -295,7 +295,7 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
           onChange={(e) => setEmail(e.target.value)}
           readOnly={Boolean(google)}
         />
-        {google ? <p className="text-xs text-muted-foreground">Terverifikasi lewat Google.</p> : null}
+        {google ? <p className="text-xs text-muted-foreground">Verified through Google.</p> : null}
       </div>
       <CodeField code={code} setCode={setCode} devBypass={phase.devBypass} phone={phase.phone} />
       {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -305,10 +305,10 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
         className="w-full"
         disabled={busy || (google?.name ?? name).trim().length < 2 || !isCodeAccepted(code, phase.devBypass)}
       >
-        {busy ? <LoaderCircle className="animate-spin" /> : null} Daftar dan lanjut
+        {busy ? <LoaderCircle className="animate-spin" /> : null} Sign up and continue
       </Button>
       <Button type="button" variant="ghost" className="w-full" onClick={() => dispatch({ type: "back" })}>
-        Ganti nomor
+        Change number
       </Button>
     </form>
   );
@@ -344,7 +344,7 @@ function PayStep({ plan, branch, onSessionLost }: { plan: PublicPlan; branch: Pu
         onSessionLost();
         return;
       }
-      setError(e instanceof Error ? e.message : "Pembayaran belum bisa dimulai. Coba lagi.");
+      setError(e instanceof Error ? e.message : "Payment could not start. Try again.");
       setBusy(false);
     }
   };
@@ -352,17 +352,17 @@ function PayStep({ plan, branch, onSessionLost }: { plan: PublicPlan; branch: Pu
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-display text-xl font-semibold">Bayar</h2>
-        <p className="text-sm text-body">Kamu akan diarahkan ke halaman pembayaran Xendit, lalu kembali ke sini setelah selesai.</p>
+        <h2 className="font-display text-xl font-semibold">Pay</h2>
+        <p className="text-sm text-body">You will be taken to the Xendit payment page and brought back here when you are done.</p>
       </div>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       <Button size="lg" className="w-full" onClick={() => void pay()} disabled={busy}>
-        {busy ? <LoaderCircle className="animate-spin" /> : null} Bayar {formatRupiah(plan.price_idr)}
+        {busy ? <LoaderCircle className="animate-spin" /> : null} Pay {formatRupiah(plan.price_idr)}
       </Button>
       <p className="text-xs text-muted-foreground">
-        Paket aktif begitu pembayaran diterima. Lihat statusnya di{" "}
+        Your plan activates as soon as the payment arrives. Track it in the{" "}
         <Link href="/member" className="font-semibold text-forest hover:underline dark:text-accent">
-          Area Member
+          Member Area
         </Link>
         .
       </p>
@@ -398,7 +398,7 @@ export function JoinCheckout({
     <Section>
       <Container className="max-w-3xl space-y-8">
         <div className="space-y-4">
-          <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Gabung NüHabit</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Join NüHabit</h1>
           <Stepper current={step} />
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
@@ -406,9 +406,9 @@ export function JoinCheckout({
           <Tile>
             {step === "loading" ? (
               <p className="flex items-center gap-2 text-sm text-muted-foreground" aria-busy>
-                <LoaderCircle className="size-4 animate-spin" /> Memeriksa sesi member
+                <LoaderCircle className="size-4 animate-spin" /> Checking your member session
               </p>
-            ) : step === "akun" ? (
+            ) : step === "account" ? (
               <AccountStep onSignedIn={session.markPresent} />
             ) : (
               <PayStep plan={plan} branch={branch} onSessionLost={session.markAbsent} />

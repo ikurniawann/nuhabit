@@ -19,10 +19,10 @@ const selectClass =
   "h-11 w-full rounded-2xl border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest focus-visible:ring-2 focus-visible:ring-forest/20 aria-invalid:border-destructive";
 
 /**
- * Form coba gratis: cabang, nama, email, nomor telepon dengan kode negara,
- * dua persetujuan pemasaran. Tombol kirim aktif hanya saat isian valid.
- * `branches` boleh diberikan oleh halaman; tanpa itu diambil dari
- * /api/public/site/branches.
+ * The trial form: branch, name, email, phone with a country code and two
+ * marketing consents. The submit button is enabled only when the values
+ * are valid. `branches` may come from the page; otherwise they are read
+ * from /api/public/site/branches.
  */
 export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
   branches?: TrialBranch[];
@@ -80,7 +80,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
         data?: { lead_id: string | null; branch_name: string | null };
       };
       if (!res.ok || !body.success) {
-        setBanner(body.error ?? "Gagal mengirim. Coba lagi sebentar lagi.");
+        setBanner(body.error ?? "Could not send. Try again in a moment.");
         setStatus("idle");
         return;
       }
@@ -89,7 +89,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
       setStatus("sent");
       pushDataLayer("lead_submit", { form: "trial", branch: values.branch_slug, lead_id: body.data?.lead_id ?? null });
     } catch {
-      setBanner("Jaringan bermasalah. Coba lagi sebentar lagi.");
+      setBanner("Network problem. Try again in a moment.");
       setStatus("idle");
     }
   };
@@ -98,9 +98,9 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
     return (
       <div className="py-8 text-center" role="status">
         <CheckCircle2 className="mx-auto h-14 w-14 text-forest" />
-        <p className="mt-4 text-2xl font-bold text-foreground">Permintaan diterima</p>
+        <p className="mt-4 text-2xl font-bold text-foreground">Request received</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Terima kasih, {values.first_name.trim()}. Tim {sentBranch || "NüHabit"} akan menghubungi Anda lewat WhatsApp untuk mengatur sesi pertama.
+          Thanks, {values.first_name.trim()}. The {sentBranch || "NüHabit"} team will contact you on WhatsApp to set up your first session.
         </p>
       </div>
     );
@@ -113,7 +113,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
       ) : null}
 
       <div>
-        <Label htmlFor="trial-branch" className="mb-1.5">Cabang</Label>
+        <Label htmlFor="trial-branch" className="mb-1.5">Branch</Label>
         <select
           id="trial-branch"
           className={selectClass}
@@ -126,7 +126,7 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
             if (e.target.value) pushDataLayer("studio_select", { branch: e.target.value });
           }}
         >
-          <option value="">Pilih cabang</option>
+          <option value="">Choose a branch</option>
           {branches.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
         </select>
         <FieldError message={shown("branch_slug")} />
@@ -134,13 +134,13 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="trial-first-name" className="mb-1.5">Nama depan</Label>
+          <Label htmlFor="trial-first-name" className="mb-1.5">First name</Label>
           <Input id="trial-first-name" autoComplete="given-name" value={values.first_name} aria-invalid={Boolean(shown("first_name"))}
             onBlur={() => touch("first_name")} onChange={(e) => set("first_name", e.target.value)} />
           <FieldError message={shown("first_name")} />
         </div>
         <div>
-          <Label htmlFor="trial-last-name" className="mb-1.5">Nama belakang</Label>
+          <Label htmlFor="trial-last-name" className="mb-1.5">Last name</Label>
           <Input id="trial-last-name" autoComplete="family-name" value={values.last_name} aria-invalid={Boolean(shown("last_name"))}
             onBlur={() => touch("last_name")} onChange={(e) => set("last_name", e.target.value)} />
           <FieldError message={shown("last_name")} />
@@ -155,10 +155,10 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
       </div>
 
       <div>
-        <Label htmlFor="trial-phone" className="mb-1.5">Nomor WhatsApp</Label>
+        <Label htmlFor="trial-phone" className="mb-1.5">WhatsApp number</Label>
         <div className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] gap-2">
           <select
-            aria-label="Kode negara"
+            aria-label="Country code"
             className={selectClass}
             value={values.phone_country}
             onChange={(e) => set("phone_country", e.target.value)}
@@ -175,19 +175,19 @@ export function TrialForm({ branches: given, defaultBranch, sourcePath }: {
       <ConsentToggle id="trial-consent-email" checked={values.consent_email} onChange={(v) => set("consent_email", v)} text={CONSENT_EMAIL_TEXT} />
       <ConsentToggle id="trial-consent-sms" checked={values.consent_sms} onChange={(v) => set("consent_sms", v)} text={CONSENT_SMS_TEXT} />
 
-      {/* Jebakan bot: tersembunyi dari manusia, terisi oleh pengisi otomatis. */}
+      {/* Honeypot: hidden from people, filled by bots. */}
       <div className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
-        <label htmlFor={`trial-${HONEYPOT_FIELD}`}>Jangan diisi</label>
+        <label htmlFor={`trial-${HONEYPOT_FIELD}`}>Leave this empty</label>
         <input id={`trial-${HONEYPOT_FIELD}`} name={HONEYPOT_FIELD} type="text" tabIndex={-1} autoComplete="off"
           value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
       </div>
 
       <Button type="submit" variant="primary" size="lg" className="w-full" disabled={!valid || status === "sending"}>
         {status === "sending" ? <Loader2 className="animate-spin" /> : null}
-        Ajukan coba gratis
+        Request a free trial
       </Button>
       <p className="text-xs text-muted-foreground">
-        Tim cabang menghubungi lewat WhatsApp untuk mengatur jadwal. Versi persetujuan {CONSENT_TEXT_VERSION}.
+        The branch team will contact you on WhatsApp to set a time. Consent version {CONSENT_TEXT_VERSION}.
       </p>
     </form>
   );

@@ -32,14 +32,14 @@ function Hero({ hero }: { hero: HomeContent["hero"] }) {
         </div>
         <div className="flex flex-wrap gap-3">
           <PanelButton panel="trial" size="lg">
-            {hero.cta_label || "Coba Gratis"}
+            {hero.cta_label || "Start a Trial"}
           </PanelButton>
           <PanelButton panel="timetable" size="lg" variant="onInk">
-            <CalendarDays /> Jadwal kelas
+            <CalendarDays /> Class timetable
           </PanelButton>
           <Button asChild variant="onInk" size="lg">
             <Link href="/locations">
-              <MapPin /> Cari cabang
+              <MapPin /> Find a gym
             </Link>
           </Button>
         </div>
@@ -73,7 +73,7 @@ function Pillars({ pillars }: { pillars: HomeContent["pillars"] }) {
   return (
     <Section>
       <Container className="space-y-8">
-        <SectionHeading kicker="Metode" title="Tiga pilar latihan NüHabit" />
+        <SectionHeading kicker="Method" title="The three pillars of NüHabit training" />
         <div className="space-y-3">
           {pillars.map((p, i) => (
             <details key={`${p.code}-${i}`} open={i === 0} className="group rounded-card bg-card shadow-card">
@@ -110,7 +110,7 @@ function Reel({ reel }: { reel: HomeContent["reel"] }) {
   return (
     <Section>
       <Container className="space-y-6">
-        <SectionHeading kicker="Komunitas" title="Yang terjadi di lantai latihan" />
+        <SectionHeading kicker="Community" title="What happens on the training floor" />
         <ul className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:-mx-6 lg:px-6">
           {reel.map((item, i) => (
             <li key={`${item.image_url}-${i}`} className="w-[78vw] shrink-0 snap-start sm:w-80">
@@ -132,9 +132,9 @@ function Branches({ branches }: { branches: BranchSummary[] }) {
     <Section>
       <Container className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <SectionHeading kicker="Lokasi" title="Cabang kami" />
+          <SectionHeading kicker="Locations" title="Our gyms" />
           <Button asChild variant="outline">
-            <Link href="/locations">Semua lokasi</Link>
+            <Link href="/locations">All locations</Link>
           </Button>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

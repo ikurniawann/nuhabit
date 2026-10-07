@@ -22,7 +22,7 @@ export function SiteShell({
     <SitePanelsProvider>
       <div className="flex min-h-dvh flex-col bg-background text-foreground">
         <SiteHeader memberLinked={memberLinked} />
-        <main id="konten" className="flex-1">
+        <main id="content" className="flex-1">
           {children}
         </main>
         <SiteFooter branches={branches} social={social} />

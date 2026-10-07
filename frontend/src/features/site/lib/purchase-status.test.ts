@@ -4,7 +4,7 @@ import { POLL_INTERVAL_MS, pollInterval, purchaseOutcome, type PurchaseView } fr
 const view = (status: string): PurchaseView => ({
   id: "p",
   status,
-  package_name: "Pass 4 Minggu",
+  package_name: "4-Week Pass",
   kind: "pass",
   credits: 0,
   validity_days: 28,

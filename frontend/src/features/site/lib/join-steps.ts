@@ -4,12 +4,12 @@
  */
 
 export type SessionState = "unknown" | "absent" | "present";
-export type JoinStep = "loading" | "akun" | "bayar";
+export type JoinStep = "loading" | "account" | "pay";
 
 /** A member session lands on payment; without one the account step cannot be skipped. */
 export function resolveJoinStep(session: SessionState): JoinStep {
   if (session === "unknown") return "loading";
-  return session === "present" ? "bayar" : "akun";
+  return session === "present" ? "pay" : "account";
 }
 
 /** A Google identity without a member: name and email are verified, the phone is still needed. */

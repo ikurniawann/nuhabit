@@ -3,7 +3,7 @@ import { SiteLayout } from "@/features/site/site-layout";
 
 export const metadata: Metadata = {
   title: { default: "NüHabit", template: "%s | NüHabit" },
-  description: "Gym HYROX dengan program 8 minggu yang terukur. Coba gratis di cabang terdekat.",
+  description: "A HYROX gym with a measurable 8-week program. Start a free trial at your nearest branch.",
 };
 
 export const dynamic = "force-dynamic";

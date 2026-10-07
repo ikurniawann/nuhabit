@@ -12,22 +12,22 @@ import { useSitePanels } from "./panels";
 
 export const BRAND_NAV = [
   { href: "/training", label: "Training" },
-  { href: "/space", label: "Ruang Latihan" },
-  { href: "/brand", label: "Cerita Kami" },
-  { href: "/locations", label: "Lokasi" },
-  { href: "/news", label: "Berita" },
+  { href: "/space", label: "The Space" },
+  { href: "/brand", label: "Our Story" },
+  { href: "/locations", label: "Locations" },
+  { href: "/news", label: "News" },
 ] as const;
 
 export const BUSINESS_NAV = [
-  { href: "/apparel", label: "Toko" },
-  { href: "/equipment", label: "Peralatan" },
-  { href: "/career", label: "Karir" },
-  { href: "/contact", label: "Kontak" },
+  { href: "/apparel", label: "Shop" },
+  { href: "/equipment", label: "Equipment" },
+  { href: "/career", label: "Careers" },
+  { href: "/contact", label: "Contact" },
 ] as const;
 
 function Wordmark() {
   return (
-    <Link href="/" className="flex shrink-0 items-center" aria-label="NüHabit, ke beranda">
+    <Link href="/" className="flex shrink-0 items-center" aria-label="NüHabit, go to the home page">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/brand/wordmark-black.png" alt="" className="h-6 w-auto dark:hidden" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -76,7 +76,7 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
     <Button
       variant="ghost"
       size="icon"
-      aria-label={cartCount > 0 ? `Keranjang, ${cartCount} barang` : "Keranjang"}
+      aria-label={cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart"}
       onClick={() => panels.open("cart")}
       className="relative"
     >
@@ -96,25 +96,25 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
           <NavLinks items={BUSINESS_NAV} current={pathname} className="px-2.5 py-1" />
           {memberLinked ? (
             <Link href="/member" className="ml-2 rounded-full bg-ink px-3 py-1 font-semibold text-on-ink">
-              Area Member
+              Member Area
             </Link>
           ) : null}
         </div>
       </div>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 lg:px-6">
         <Wordmark />
-        <nav aria-label="Navigasi utama" className="ml-4 hidden items-center gap-1 text-sm md:flex">
+        <nav aria-label="Main navigation" className="ml-4 hidden items-center gap-1 text-sm md:flex">
           <NavLinks items={BRAND_NAV} current={pathname} />
         </nav>
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
           {cartButton}
           <Button className="hidden sm:inline-flex" onClick={() => panels.open("trial")}>
-            Coba Gratis
+            Start a Trial
           </Button>
           <Button asChild variant="ink" className="hidden lg:inline-flex">
-            <Link href="/franchise">Buka Cabang</Link>
+            <Link href="/franchise">Own a Gym</Link>
           </Button>
-          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Buka menu" onClick={() => setMenuOpen(true)}>
+          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
             <Menu />
           </Button>
         </div>
@@ -124,17 +124,17 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
         <SheetContent side="right" showCloseButton={false} aria-describedby={undefined}>
           <SheetHeader className="flex-row items-center justify-between">
             <SheetTitle>Menu</SheetTitle>
-            <Button variant="ghost" size="icon" aria-label="Tutup menu" onClick={() => setMenuOpen(false)}>
+            <Button variant="ghost" size="icon" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
               <X />
             </Button>
           </SheetHeader>
-          <nav aria-label="Navigasi" className="flex flex-col gap-1 px-2 text-base">
+          <nav aria-label="Navigation" className="flex flex-col gap-1 px-2 text-base">
             <NavLinks items={BRAND_NAV} current={pathname} onNavigate={() => setMenuOpen(false)} className="px-3 py-2.5" />
             <div className="my-2 h-px bg-border" />
             <NavLinks items={BUSINESS_NAV} current={pathname} onNavigate={() => setMenuOpen(false)} className="px-3 py-2.5 text-sm" />
             {memberLinked ? (
               <Link href="/member" onClick={() => setMenuOpen(false)} className="px-3 py-2.5 text-sm font-semibold text-forest">
-                Area Member
+                Member Area
               </Link>
             ) : null}
           </nav>
@@ -145,11 +145,11 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
                 panels.open("trial");
               }}
             >
-              Coba Gratis
+              Start a Trial
             </Button>
             <Button asChild variant="ink">
               <Link href="/franchise" onClick={() => setMenuOpen(false)}>
-                Buka Cabang
+                Own a Gym
               </Link>
             </Button>
           </div>

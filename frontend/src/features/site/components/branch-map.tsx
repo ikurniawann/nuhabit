@@ -143,7 +143,7 @@ export function BranchMap({
 
   return (
     <div className={`overflow-hidden rounded-card bg-surface-2 shadow-card ${className}`} style={{ height }}>
-      <div ref={containerRef} className="h-full w-full" role="img" aria-label="Peta cabang" />
+      <div ref={containerRef} className="h-full w-full" role="img" aria-label="Branch map" />
     </div>
   );
 }

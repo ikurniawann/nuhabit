@@ -16,7 +16,7 @@ interface PlanCardProps {
   onSelect?: () => void;
 }
 
-/** One plan: name, badge, branch price, what it grants, and the "Pilih" link to /join. */
+/** One plan: name, badge, branch price, what it grants, and the "Choose" link to /join. */
 export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
   const select = () => {
     pushSiteEvent("plan_select", planPayload(plan, branchSlug));
@@ -31,19 +31,19 @@ export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
       <p className="font-display text-2xl font-bold tabular-nums">{formatRupiah(plan.price_idr)}</p>
       <ul className="space-y-1 text-sm text-body">
         <li>{creditsLabel(plan)}</li>
-        <li>Berlaku {validityLabel(plan.validity_days)}</li>
+        <li>Valid for {validityLabel(plan.validity_days)}</li>
       </ul>
       {plan.description ? <p className="text-sm text-muted-foreground">{plan.description}</p> : null}
       <Button asChild className="mt-auto">
         <Link href={joinHref(plan.id, branchSlug)} onClick={select}>
-          Pilih
+          Choose
         </Link>
       </Button>
     </article>
   );
 }
 
-/** The plans of a branch in two groups, "Pass" then "Paket Kredit". */
+/** The plans of a branch in two groups, "Passes" then "Credit Packs". */
 export function PlanGroups({
   plans,
   branchSlug,
@@ -57,7 +57,7 @@ export function PlanGroups({
   onSelect?: () => void;
 }) {
   const groups = groupPlans(plans);
-  if (groups.length === 0) return <EmptyNote>Belum ada paket membership untuk cabang ini.</EmptyNote>;
+  if (groups.length === 0) return <EmptyNote>No membership plans for this branch yet.</EmptyNote>;
   return (
     <div className="space-y-8">
       {groups.map((group) => (

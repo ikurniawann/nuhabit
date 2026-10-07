@@ -179,7 +179,7 @@ func ValidateSubmission(fields []domain.PublicField, payload map[string]any) Sub
 		raw := payload[f.Key]
 		if raw == nil || raw == "" || raw == false {
 			if f.Required {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " wajib diisi"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " is required"})
 			}
 			continue
 		}
@@ -188,14 +188,14 @@ func ValidateSubmission(fields []domain.PublicField, payload map[string]any) Sub
 		case "email":
 			s := sliceUTF16(jsTrim(jsString(raw)), 150)
 			if !emailRe.MatchString(s) {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " bukan email yang valid"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " is not a valid email"})
 				continue
 			}
 			value = s
 		case "phone":
 			digits := nonPhn.ReplaceAllString(jsString(raw), "")
 			if len(nonDig.ReplaceAllString(digits, "")) < 8 {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " terlalu pendek"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " is too short"})
 				continue
 			}
 			value = sliceUTF16(digits, 20)
@@ -204,21 +204,21 @@ func ValidateSubmission(fields []domain.PublicField, payload map[string]any) Sub
 			digits := nonNum.ReplaceAllString(jsString(raw), "")
 			n := jsNumber(digits)
 			if digits == "" || math.IsNaN(n) || math.IsInf(n, 0) {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " harus angka"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " must be a number"})
 				continue
 			}
 			value = n
 		case "date":
 			s := jsTrim(jsString(raw))
 			if !dateRe.MatchString(s) || !v8ParsesDate(s) {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " harus tanggal"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " must be a date"})
 				continue
 			}
 			value = s
 		case "select":
 			s := jsTrim(jsString(raw))
 			if len(f.Options) > 0 && !contains(f.Options, s) {
-				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " bukan pilihan yang tersedia"})
+				out.Errors = append(out.Errors, FieldError{f.Key, f.Label + " is not one of the available options"})
 				continue
 			}
 			value = s
@@ -244,7 +244,7 @@ func ValidateSubmission(fields []domain.PublicField, payload map[string]any) Sub
 		}
 	}
 	if out.Lead["pic_phone"] == "" && out.Lead["pic_email"] == "" && !flagged {
-		out.Errors = append(out.Errors, FieldError{"pic_phone", "Isi nomor WhatsApp atau email agar kami bisa menghubungi Anda"})
+		out.Errors = append(out.Errors, FieldError{"pic_phone", "Enter a WhatsApp number or an email so we can reach you"})
 	}
 	return out
 }

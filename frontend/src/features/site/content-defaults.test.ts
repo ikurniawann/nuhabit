@@ -12,14 +12,14 @@ describe("withDefaults", () => {
   it("keeps stored values and fills missing nested fields", () => {
     const home = withDefaults("home", { hero: { title: "Judul" }, partners: [{ name: "A", logo_url: "/a.png" }] });
     expect(home.hero.title).toBe("Judul");
-    expect(home.hero.cta_label).toBe("Coba Gratis");
+    expect(home.hero.cta_label).toBe("Start a Trial");
     expect(home.partners).toEqual([{ name: "A", logo_url: "/a.png" }]);
     expect(home.mission).toEqual({ quote: "", author: "" });
   });
 
   it("lets a stored list replace the default list", () => {
     const training = withDefaults("training", { laws: { items: ["Satu"] } });
-    expect(training.laws).toEqual({ title: "Hukum NüHabit", items: ["Satu"] });
+    expect(training.laws).toEqual({ title: "The NüHabit Laws", items: ["Satu"] });
   });
 
   it("does not mutate the defaults", () => {

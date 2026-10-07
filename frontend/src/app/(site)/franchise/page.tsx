@@ -2,25 +2,25 @@ import type { Metadata } from "next";
 import { LeadFormPage } from "@/features/site/components/lead-form-page";
 import { Tile } from "@/features/site/components/site-section";
 
-export const metadata: Metadata = { title: "Buka Cabang" };
+export const metadata: Metadata = { title: "Own a Gym" };
 
 const STEPS = [
-  { title: "Pengajuan", text: "Isi formulir ini. Tim pengembangan cabang membaca setiap pengajuan dalam dua hari kerja." },
-  { title: "Perkenalan", text: "Panggilan video 30 menit soal kota, lokasi yang dilirik, dan model kemitraan." },
-  { title: "Studi lokasi", text: "Kami cek ruang, akses, dan pasar sekitar bersama Anda sebelum ada komitmen." },
-  { title: "Pembukaan", text: "Peralatan, program, pelatihan coach, dan peluncuran mengikuti standar NüHabit." },
+  { title: "Application", text: "Fill in this form. The branch development team reads every application within two business days." },
+  { title: "Introduction", text: "A 30-minute video call about your city, the locations you have in mind and the partnership model." },
+  { title: "Site study", text: "We review the space, access and surrounding market with you before any commitment." },
+  { title: "Opening", text: "Equipment, program, coach training and launch follow the NüHabit standard." },
 ];
 
 export default function Page() {
   return (
     <LeadFormPage
-      kicker="Kemitraan"
-      title="Buka Cabang"
-      intro="Bawa metode NüHabit ke kota Anda: program 8 minggu, kelas kecil, dan sistem operasional yang sudah berjalan di cabang kami. Ceritakan rencana Anda dan tim kami yang menghubungi."
+      kicker="Partnership"
+      title="Own a Gym"
+      intro="Bring the NüHabit method to your city: the 8-week program, small classes and the operating system already running at our branches. Tell us your plan and our team will get in touch."
       slug="franchise"
       aside={
         <Tile className="space-y-4">
-          <h2 className="font-display text-lg font-semibold">Yang terjadi setelah Anda mengirim</h2>
+          <h2 className="font-display text-lg font-semibold">What happens after you send</h2>
           <ol className="space-y-3">
             {STEPS.map((step, i) => (
               <li key={step.title} className="flex gap-3">

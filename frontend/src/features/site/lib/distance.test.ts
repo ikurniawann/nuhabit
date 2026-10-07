@@ -41,7 +41,7 @@ describe("sortByDistance", () => {
 describe("formatKm", () => {
   it("shows metres under a kilometre and one decimal above", () => {
     expect(formatKm(0.45)).toBe("450 m");
-    expect(formatKm(2.345)).toBe("2,3 km");
+    expect(formatKm(2.345)).toBe("2.3 km");
     expect(formatKm(118)).toBe("118 km");
   });
 });

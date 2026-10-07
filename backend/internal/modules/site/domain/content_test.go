@@ -32,7 +32,7 @@ func TestMergeKeepsDefaultsForMissingFields(t *testing.T) {
 		"partners": []any{map[string]any{"name": "Rogue", "logo_url": "/x.png"}},
 	})
 	hero := got["hero"].(map[string]any)
-	if hero["title"] != "Judul baru" || hero["cta_label"] != "Coba Gratis" {
+	if hero["title"] != "Judul baru" || hero["cta_label"] != "Start a Trial" {
 		t.Fatalf("hero %v", hero)
 	}
 	if len(got["partners"].([]any)) != 1 || len(got["pillars"].([]any)) != 3 {

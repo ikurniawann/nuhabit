@@ -128,7 +128,7 @@ func (f *fixture) post(slug string, body any, ip string) (int, string) {
 func TestPublicFormDefinition(t *testing.T) {
 	f, slug, _ := newFixture(t)
 	res, _ := testutil.Do(t, f.mux, testutil.Request("GET", "/api/public/crm/forms/tidak-ada-"+testutil.RandomHex(3), nil))
-	if res.Code != 404 || strings.TrimSpace(res.Body.String()) != `{"success":false,"error":"Form tidak ditemukan"}` {
+	if res.Code != 404 || strings.TrimSpace(res.Body.String()) != `{"success":false,"error":"Form not found"}` {
 		t.Fatalf("%d %s", res.Code, res.Body)
 	}
 	res, body := testutil.Do(t, f.mux, testutil.Request("GET", "/api/public/crm/forms/"+slug, nil))
@@ -150,7 +150,7 @@ func TestPublicFormDefinition(t *testing.T) {
 		t.Fatalf("stored fields: %s", res.Body)
 	}
 	code, raw := f.post(slug, map[string]any{"pic_email": "ani@example.test"}, "10.0.0.7")
-	if code != 400 || raw != `{"success":false,"error":"Periksa kembali isian Anda","details":[{"key":"topic","message":"Topik wajib diisi"}]}` {
+	if code != 400 || raw != `{"success":false,"error":"Please check your details","details":[{"key":"topic","message":"Topik is required"}]}` {
 		t.Fatalf("stored validation %d %s", code, raw)
 	}
 	// An email-only form (no phone, no org name) still becomes a lead.
@@ -171,11 +171,11 @@ func TestPublicFormSubmissions(t *testing.T) {
 	}
 
 	code, body := f.post(slug, "bukan-json", "10.0.0.1")
-	if code != 400 || body != `{"success":false,"error":"Isian tidak terbaca"}` {
+	if code != 400 || body != `{"success":false,"error":"The request body could not be read"}` {
 		t.Fatalf("%d %s", code, body)
 	}
 	code, body = f.post(slug, map[string]any{"pic_name": "Ani"}, "10.0.0.2")
-	if code != 400 || !strings.HasPrefix(body, `{"success":false,"error":"Periksa kembali isian Anda","details":[{"key":"pic_phone","message":"Nomor WhatsApp wajib diisi"}`) {
+	if code != 400 || !strings.HasPrefix(body, `{"success":false,"error":"Please check your details","details":[{"key":"pic_phone","message":"Nomor WhatsApp is required"}`) {
 		t.Fatalf("%d %s", code, body)
 	}
 	code, body = f.post(slug, map[string]any{"website_url": "spam"}, "10.0.0.3")
@@ -222,7 +222,7 @@ func TestPublicFormSubmissions(t *testing.T) {
 	f.exec(`UPDATE crm.crm_forms SET company_id = NULL WHERE id = $1`, formID)
 	f.exec(`DELETE FROM crm.crm_settings WHERE key IN ('default_company_id', 'default_branch_id')`)
 	code, body = f.post(slug, valid, "10.0.0.6")
-	if code != 503 || body != `{"success":false,"error":"Form belum siap menerima kiriman. Hubungi kami lewat WhatsApp."}` {
+	if code != 503 || body != `{"success":false,"error":"This form is not ready to accept submissions yet. Reach us on WhatsApp instead."}` {
 		t.Fatalf("no venue %d %s", code, body)
 	}
 

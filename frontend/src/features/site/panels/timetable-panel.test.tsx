@@ -80,23 +80,23 @@ describe("TimetablePanel", () => {
     const calls = mockApi();
     renderPanel("bsd");
 
-    await waitFor(() => expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName("Rabu 7 Okt"));
+    await waitFor(() => expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName("Wednesday Oct 7"));
     expect(calls[0].searchParams.get("branch")).toBe("bsd");
     expect(calls[0].searchParams.get("week")).toBe("2026-10-05");
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Cabang" })).toHaveValue("bsd"));
-    expect(screen.getByText(/Belum ada kelas pada Rabu/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Branch" })).toHaveValue("bsd"));
+    expect(screen.getByText(/No classes on Wednesday/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Senin 5 Okt" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Monday Oct 5" }));
     const row = screen.getByRole("link", { name: /Station/ });
     expect(row).toHaveAttribute("href", "/member/classes/s2");
-    expect(row).toHaveTextContent("Penuh · daftar tunggu dibuka");
+    expect(row).toHaveTextContent("Full · waitlist open");
 
-    fireEvent.click(screen.getByRole("tab", { name: "Selasa 6 Okt" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Tuesday Oct 6" }));
     const engine = screen.getByRole("link", { name: /Engine/ });
     expect(engine).toHaveAttribute("href", "/member/classes/s1");
     expect(engine).toHaveTextContent("Coach Dita");
-    expect(engine).toHaveTextContent("4 kursi tersisa");
-    expect(engine).toHaveTextContent("60 mnt");
+    expect(engine).toHaveTextContent("4 seats left");
+    expect(engine).toHaveTextContent("60 min");
   });
 
   test("falls back to the cookie branch, then the first public branch", async () => {
@@ -110,14 +110,14 @@ describe("TimetablePanel", () => {
     calls.length = 0;
     renderPanel();
     await waitFor(() => expect(calls[0]?.searchParams.get("branch")).toBe("kemang"));
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Cabang" })).toHaveValue("kemang"));
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Branch" })).toHaveValue("kemang"));
   });
 
   test("clamps week navigation to this week and eight weeks ahead", async () => {
     const calls = mockApi();
     renderPanel("bsd");
-    const prev = screen.getByRole("button", { name: "Minggu sebelumnya" });
-    const next = screen.getByRole("button", { name: "Minggu berikutnya" });
+    const prev = screen.getByRole("button", { name: "Previous week" });
+    const next = screen.getByRole("button", { name: "Next week" });
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(prev).toBeDisabled();
     expect(next).toBeEnabled();
@@ -125,7 +125,7 @@ describe("TimetablePanel", () => {
     for (let i = 0; i < 9; i++) fireEvent.click(next);
     await waitFor(() => expect(next).toBeDisabled());
     expect(calls.at(-1)?.searchParams.get("week")).toBe("2026-11-30");
-    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName("Senin 30 Nov");
+    expect(screen.getByRole("tab", { selected: true })).toHaveAccessibleName("Monday Nov 30");
 
     fireEvent.click(prev);
     await waitFor(() => expect(calls.at(-1)?.searchParams.get("week")).toBe("2026-11-23"));
@@ -134,8 +134,8 @@ describe("TimetablePanel", () => {
   test("picking another branch reloads that branch's week", async () => {
     const calls = mockApi();
     renderPanel("bsd");
-    await waitFor(() => expect(screen.getByRole("combobox", { name: "Cabang" })).toBeEnabled());
-    fireEvent.change(screen.getByRole("combobox", { name: "Cabang" }), { target: { value: "kemang" } });
+    await waitFor(() => expect(screen.getByRole("combobox", { name: "Branch" })).toBeEnabled());
+    fireEvent.change(screen.getByRole("combobox", { name: "Branch" }), { target: { value: "kemang" } });
     await waitFor(() => expect(calls.at(-1)?.searchParams.get("branch")).toBe("kemang"));
   });
 });

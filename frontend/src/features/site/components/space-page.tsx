@@ -6,7 +6,7 @@ export function SpacePage({ space }: { space: SpaceContent }) {
     <>
       <Section className="pb-6">
         <Container>
-          <SectionHeading as="h1" kicker="Ruang Latihan" title={space.title} text={space.intro} />
+          <SectionHeading as="h1" kicker="The Space" title={space.title} text={space.intro} />
         </Container>
       </Section>
       <Section className="pt-4">
