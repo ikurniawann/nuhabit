@@ -63,12 +63,16 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/public/booking",
   "/pass",
   "/shop",
+  "/apparel",
   "/api/public/shop",
-  // Situs publik: daftar harga paket & pass per cabang.
-  "/api/public/site",
+  // Portal mitra wholesale (B2B): sesi sendiri lewat cookie nh_wholesale.
+  "/wholesale",
+  "/api/wholesale",
   // EPIC-050 T-5.3 — form publik CRM (web-to-lead)
   "/public",
   "/api/public/crm/forms",
+  // Situs publik: jadwal kelas, lead coba gratis, profil cabang.
+  "/api/public/site",
   // Probe liveness/readiness untuk Docker HEALTHCHECK & load balancer.
   "/api/health",
   "/api/ready",

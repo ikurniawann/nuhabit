@@ -63,6 +63,8 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/gym/coaches", Handler: h.member("Gagal memuat coach", h.memberCoaches)},
 		{Pattern: "GET /api/member-portal/gym/coaches/{id}", Handler: h.member("Gagal memuat coach", h.memberCoach)},
 		{Pattern: "GET /api/member-portal/app/classes/catalog", Handler: h.member("Gagal memuat katalog kelas", h.catalog)},
+
+		{Pattern: "GET /api/public/site/sessions", Handler: httpx.Handle(h.publicSessions)},
 	}
 }
 

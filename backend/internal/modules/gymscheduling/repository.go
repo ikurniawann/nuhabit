@@ -37,6 +37,11 @@ type Repository interface {
 	DeleteSession(ctx context.Context, q Q, id string) error
 	SessionsInWeek(ctx context.Context, q Q, weekStart time.Time) ([]WeekSession, error)
 	InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (bool, error)
+	// PublicBranch finds an active branch by its public slug (or code while
+	// no slug is set); nil when none.
+	PublicBranch(ctx context.Context, q Q, slug string) (*PublicBranch, error)
+	// PublicWeekSessions lists the branch's open sessions in [from, to).
+	PublicWeekSessions(ctx context.Context, q Q, branchID string, from, to time.Time) ([]PublicSession, error)
 
 	SeatsHeld(ctx context.Context, q Q, sessionID string) (int, error)
 	BookingStats(ctx context.Context, q Q, sessionID, customerID string) (BookingStats, error)

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"nuhabit/backend/internal/modules/crm/advance"
 	"nuhabit/backend/internal/modules/crm/publicforms"
@@ -48,11 +49,16 @@ func (l crmFormLeads) AppendNote(ctx context.Context, q database.Querier, leadID
 	return l.records.AppendLeadNote(ctx, q, leadID, note)
 }
 
+func (l crmFormLeads) RecentByPhone(ctx context.Context, q database.Querier, companyID, phone string, since time.Time) (string, error) {
+	return l.records.LeadByPhoneSince(ctx, q, companyID, phone, since)
+}
+
 func (l crmFormLeads) Create(ctx context.Context, q database.Querier, in publicforms.NewLead) (string, error) {
 	a := in.Attribution
 	return l.records.CreateFormLead(ctx, q, salesfunnel.FormLead{
 		CompanyID: in.CompanyID, BranchID: in.BranchID, OrgName: in.OrgName, OrgType: in.OrgType, Source: in.Source,
-		PicName: in.PicName, PicPhone: in.PicPhone, PicEmail: in.PicEmail, City: in.City, Notes: in.Notes, Custom: in.Custom,
+		Temperature: in.Temperature,
+		PicName:     in.PicName, PicPhone: in.PicPhone, PicEmail: in.PicEmail, City: in.City, Notes: in.Notes, Custom: in.Custom,
 		UtmSource: a.UtmSource, UtmMedium: a.UtmMedium, UtmCampaign: a.UtmCampaign, UtmContent: a.UtmContent,
 		UtmTerm: a.UtmTerm, LandingPage: a.LandingPage, Referrer: a.Referrer,
 	})

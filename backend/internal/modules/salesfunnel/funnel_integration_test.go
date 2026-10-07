@@ -78,8 +78,14 @@ func TestLeadLifecycle(t *testing.T) {
 
 	r = e.do(&s, "GET", "/api/sales-funnel/leads/"+id, nil)
 	e.expect(r, 200, "")
-	if !strings.HasPrefix(r.Raw, `{"success":true,"data":{"lead":{"id":"`+id) || !strings.Contains(r.Raw, `"customer":null,"recent_orders":[]}`) {
+	if !strings.HasPrefix(r.Raw, `{"success":true,"data":{"lead":{"id":"`+id) || !strings.Contains(r.Raw, `"customer":null,"recent_orders":[],"consents":[]}`) {
 		t.Fatalf("detail %s", r.Raw)
+	}
+	// Consents given on the public site show on the lead.
+	e.exec(`INSERT INTO crm.lead_consents (lead_id, channel, granted, consent_text_version, source_path) VALUES ($1, 'email', true, 'v-test', '/coba-gratis')`, id)
+	r = e.do(&s, "GET", "/api/sales-funnel/leads/"+id, nil)
+	if !strings.Contains(r.Raw, `"consents":[{"id":"`) || !strings.Contains(r.Raw, `"channel":"email","granted":true,"consent_text_version":"v-test","source_path":"/coba-gratis","created_at":"`) {
+		t.Fatalf("consents %s", r.Raw)
 	}
 
 	r = e.do(&s, "POST", "/api/sales-funnel/leads/"+id+"/link-customer", map[string]any{})

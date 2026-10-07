@@ -14,6 +14,7 @@ export type LeadSource =
   | "google"
   | "pameran"
   | "canvassing"
+  | "website"
   | "lainnya";
 
 export type LeadTemperature = "panas" | "hangat" | "dingin";
@@ -104,6 +105,7 @@ export const SOURCE_LABELS: Record<LeadSource, string> = {
   google: "Google",
   pameran: "Pameran",
   canvassing: "Canvassing",
+  website: "Website",
   lainnya: "Lainnya",
 };
 
@@ -199,7 +201,24 @@ export interface LeadDetail {
   activities: LeadActivitySummary[];
   customer: LinkedCustomer | null;
   recent_orders: CustomerOrderSummary[];
+  /** Persetujuan pemasaran dari situs publik (form coba gratis). */
+  consents?: LeadConsent[];
 }
+
+export interface LeadConsent {
+  id: string;
+  channel: "email" | "sms" | "whatsapp";
+  granted: boolean;
+  consent_text_version: string;
+  source_path: string | null;
+  created_at: string;
+}
+
+export const CONSENT_CHANNEL_LABELS: Record<LeadConsent["channel"], string> = {
+  email: "Email",
+  sms: "SMS",
+  whatsapp: "WhatsApp",
+};
 
 export const EMPTY_LEAD_FORM: LeadFormValues = {
   org_name: "",

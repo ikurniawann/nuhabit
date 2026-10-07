@@ -120,14 +120,13 @@ func TestAttributionAndAlert(t *testing.T) {
 	of := func(src any, fallback string) string {
 		return SourceFromAttribution(ParseAttribution(map[string]any{"utm_source": src}), fallback)
 	}
-	for src, want := range map[string]string{"instagram": "instagram", "IG": "instagram", "google_ads": "google", "whatsapp": "wa", "tiktok": "lainnya", "organic": "lainnya", "'; DROP TABLE --": "lainnya"} {
+	for src, want := range map[string]string{"instagram": "instagram", "IG": "instagram", "google_ads": "google", "whatsapp": "wa", "tiktok": "lainnya", "organic": "website", "'; DROP TABLE --": "lainnya"} {
 		if got := of(src, "lainnya"); got != want {
 			t.Errorf("source(%q) = %q", src, got)
 		}
 	}
-	// A valid form default is kept; 'website' (the old default) is rejected
-	// by crm_sales_leads_source_check, so it becomes 'lainnya'.
-	if of(nil, "pameran") != "pameran" || of(nil, "website") != "lainnya" {
+	// A valid form default is kept; an unknown one becomes 'lainnya'.
+	if of(nil, "pameran") != "pameran" || of(nil, "website") != "website" || of(nil, "tiktok") != "lainnya" {
 		t.Error("form default")
 	}
 	if LeadOrgName(map[string]string{"org_name": "PT Maju"}) != "PT Maju" || LeadOrgName(map[string]string{"pic_name": "Budi"}) != "Budi" ||

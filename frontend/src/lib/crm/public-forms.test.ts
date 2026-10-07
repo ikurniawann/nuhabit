@@ -125,10 +125,10 @@ describe("form publik / web-to-lead (EPIC-050 T-5.3)", () => {
   });
 
   test("hanya sumber yang lolos crm_sales_leads_source_check", () => {
-    // 'website' dulu menjadi default form dan ditolak constraint (400).
-    expect(sourceFromAttribution(parseAttribution({ utm_source: "organic" }), "lainnya")).toBe("lainnya");
-    expect(sourceFromAttribution(parseAttribution({ utm_source: null }), "website")).toBe("lainnya");
-    expect(toLeadSource("website")).toBe("lainnya");
+    expect(sourceFromAttribution(parseAttribution({ utm_source: "organic" }), "lainnya")).toBe("website");
+    expect(sourceFromAttribution(parseAttribution({ utm_source: null }), "website")).toBe("website");
+    expect(toLeadSource("website")).toBe("website");
+    expect(toLeadSource("tiktok")).toBe("lainnya");
     expect(toLeadSource(undefined)).toBe("lainnya");
     expect(toLeadSource("referral")).toBe("referral");
   });

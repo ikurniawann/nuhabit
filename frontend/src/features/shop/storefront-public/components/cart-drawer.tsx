@@ -1,23 +1,44 @@
 import { Minus, Plus, Trash2, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
 import { cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
+import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
+import { PreorderBadge } from './preorder-note';
 
+/**
+ * Drawer keranjang: ganti ukuran di tempat, stepper qty, hapus baris dan
+ * catatan pesanan. `products` dipakai untuk menawarkan ukuran lain.
+ */
 export function CartDrawer({
   cart,
+  note,
+  products,
   onChangeQty,
+  onChangeVariant,
   onRemove,
+  onNoteChange,
   onCheckout,
   onClose,
 }: {
   cart: CartLine[];
+  note: string;
+  products: CatalogProduct[];
   onChangeQty: (key: string, delta: number) => void;
+  onChangeVariant: (key: string, product: CatalogProduct, sku: CatalogSku) => void;
   onRemove: (key: string) => void;
+  onNoteChange: (note: string) => void;
   onCheckout: () => void;
   onClose: () => void;
 }) {
+  const productOf = (line: CartLine) => products.find((product) => product.id === line.productId);
+
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40">
-      <div className="flex h-full w-full max-w-md flex-col bg-white">
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-label="Keranjang"
+        className="flex h-full w-full max-w-md flex-col bg-white"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-900">Keranjang</h2>
           <button type="button" onClick={onClose} aria-label="Tutup">
@@ -28,38 +49,78 @@ export function CartDrawer({
           {cart.length === 0 ? (
             <p className="py-16 text-center text-sm text-gray-400">Keranjang kosong</p>
           ) : (
-            cart.map((line) => (
-              <div key={line.key} className="flex items-center gap-3 rounded-lg border border-gray-100 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-gray-900">{line.name}</p>
-                  {line.variantName ? <p className="text-xs text-gray-400">{line.variantName}</p> : null}
-                  <p className="text-sm font-semibold text-pink-600">{formatRupiah(line.price)}</p>
+            cart.map((line) => {
+              const product = productOf(line);
+              const sizes = product?.skus ?? [];
+              return (
+                <div key={line.key} className="rounded-lg border border-gray-100 p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-gray-900">{line.name}</p>
+                      <p className="text-sm font-semibold text-gray-900">{formatRupiah(line.price)}</p>
+                      {line.preorderUntil ? <PreorderBadge until={line.preorderUntil} className="mt-1" /> : null}
+                    </div>
+                    <button type="button" onClick={() => onRemove(line.key)} aria-label={`Hapus ${line.name}`}>
+                      <Trash2 className="h-4 w-4 text-red-400" />
+                    </button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    {line.skuId && sizes.length > 0 ? (
+                      <label className="flex items-center gap-2 text-xs text-gray-500">
+                        Ukuran
+                        <select
+                          value={line.skuId}
+                          aria-label={`Ukuran ${line.name}`}
+                          onChange={(event) => {
+                            const sku = sizes.find((candidate) => candidate.id === event.target.value);
+                            if (product && sku) onChangeVariant(line.key, product, sku);
+                          }}
+                          className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-900"
+                        >
+                          {sizes.map((sku) => (
+                            <option key={sku.id} value={sku.id} disabled={sku.stock <= 0 && !sku.preorder}>
+                              {sku.name}
+                              {sku.stock <= 0 ? (sku.preorder ? ' (pre-order)' : ' (habis)') : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <span className="text-xs text-gray-400">{line.variantName ?? ''}</span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onChangeQty(line.key, -1)}
+                        className="rounded-full border border-gray-200 p-1"
+                        aria-label="Kurangi"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium">{line.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => onChangeQty(line.key, 1)}
+                        className="rounded-full border border-gray-200 p-1"
+                        aria-label="Tambah"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onChangeQty(line.key, -1)}
-                    className="rounded-full border border-gray-200 p-1"
-                    aria-label="Kurangi"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="w-6 text-center text-sm font-medium">{line.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => onChangeQty(line.key, 1)}
-                    className="rounded-full border border-gray-200 p-1"
-                    aria-label="Tambah"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                  <button type="button" onClick={() => onRemove(line.key)} aria-label="Hapus">
-                    <Trash2 className="h-4 w-4 text-red-400" />
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
+          {cart.length > 0 ? (
+            <textarea
+              value={note}
+              onChange={(event) => onNoteChange(event.target.value)}
+              placeholder="Catatan pesanan (opsional)"
+              rows={2}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-forest"
+            />
+          ) : null}
         </div>
         {cart.length > 0 ? (
           <div className="border-t border-gray-100 px-5 py-4">
@@ -70,7 +131,7 @@ export function CartDrawer({
             <button
               type="button"
               onClick={onCheckout}
-              className="w-full rounded-lg bg-pink-600 px-4 py-3 text-sm font-semibold text-white hover:bg-pink-700"
+              className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark"
             >
               Lanjut ke Pengiriman
             </button>

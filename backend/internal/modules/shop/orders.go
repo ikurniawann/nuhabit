@@ -87,20 +87,26 @@ func (s *Service) OrderDetail(ctx context.Context, id string) (*Row, error) {
 
 // TransitionOrder is transitionShopOrder. Cancelling gives stock back:
 // held reservations of a pending order, committed ones of a paid order
-// (the money is refunded by hand in the Xendit dashboard).
+// (the money is refunded by hand in the Xendit dashboard). A pay_later
+// wholesale order ships before payment, so staff may also pack it or mark
+// it paid while it is still pending.
 func (s *Service) TransitionOrder(ctx context.Context, id, next string, note *string) (*Row, error) {
 	allowed, ok := domain.AllowedFromStatuses(next)
-	if !ok {
+	payLaterOK := domain.PayLaterFromPending(next)
+	if !ok && !payLaterOK {
 		return nil, httpx.BadRequest("Transisi status tidak dikenal")
 	}
 	updated, err := queryRow(ctx, s.db, `UPDATE shop.orders o
 		SET status = $2, updated_at = now(),
+		    paid_at = CASE WHEN $2 = 'paid' THEN COALESCE(o.paid_at, now()) ELSE o.paid_at END,
 		    notes = CASE WHEN $3::text IS NOT NULL
 		                 THEN COALESCE(o.notes || E'\n', '') || $3::text
 		                 ELSE o.notes END
 		FROM (SELECT status AS prev_status FROM shop.orders WHERE id = $1::uuid) prev
-		WHERE o.id = $1::uuid AND o.status = ANY($4::text[])
-		RETURNING o.id, o.status, prev.prev_status`, id, next, note, allowed)
+		WHERE o.id = $1::uuid
+		  AND (o.status = ANY($4::text[])
+		       OR ($5 AND o.status = 'pending' AND o.payment_terms = 'pay_later'))
+		RETURNING o.id, o.status, prev.prev_status`, id, next, note, allowed, payLaterOK)
 	if err != nil {
 		return nil, err
 	}
@@ -110,9 +116,8 @@ func (s *Service) TransitionOrder(ctx context.Context, id, next string, note *st
 	if next != "cancelled" {
 		return updated, nil
 	}
-	if updated.Str("prev_status") == "pending" {
-		return updated, s.releaseOrderReservations(ctx, id)
-	}
+	// A pending order holds its stock, a paid one has committed it, and a
+	// pay_later order commits at placement: release whatever is there.
 	if err := s.restoreCommittedReservations(ctx, id); err != nil {
 		return nil, err
 	}

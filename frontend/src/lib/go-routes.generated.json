@@ -4075,6 +4075,16 @@
     "path": "/api/public/site/plans"
   },
   {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/public/site/sessions"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
+    "path": "/api/public/site/trial"
+  },
+  {
     "module": "inventory",
     "method": "DELETE",
     "path": "/api/purchasing/bom/{id}"
@@ -5815,6 +5825,36 @@
     "path": "/api/shop/shipping/track"
   },
   {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/shop/wholesale/accounts"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/wholesale/accounts/{id}"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/wholesale/products"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/wholesale/products/{id}"
+  },
+  {
     "module": "pos-sales",
     "method": "POST",
     "path": "/api/table-order/orders"
@@ -6243,5 +6283,40 @@
     "module": "stored-value",
     "method": "POST",
     "path": "/api/wallet/sweep"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/catalog"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/login"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/logout"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/me"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/wholesale/orders"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/wholesale/orders/{id}"
   }
 ]

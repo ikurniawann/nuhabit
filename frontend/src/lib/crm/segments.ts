@@ -88,7 +88,7 @@ export const SEGMENT_SOURCE_DEFS: Record<SegmentSource, SegmentSourceDef> = {
       pic_name: { label: "Nama PIC", type: "text", sql: "t.pic_name" },
       city: { label: "Kota", type: "text", sql: "t.city" },
       org_type: { label: "Tipe Instansi", type: "enum", sql: "t.org_type", options: ["corporate", "sekolah", "komunitas", "travel-agent", "pemerintah", "perorangan", "lainnya"] },
-      source: { label: "Sumber", type: "enum", sql: "t.source", options: ["wa", "instagram", "referral", "google", "pameran", "canvassing", "lainnya"] },
+      source: { label: "Sumber", type: "enum", sql: "t.source", options: ["wa", "instagram", "referral", "google", "pameran", "canvassing", "website", "lainnya"] },
       temperature: { label: "Temperatur", type: "enum", sql: "t.temperature", options: ["panas", "hangat", "dingin"] },
       status: { label: "Status", type: "enum", sql: "t.status", options: ["baru", "dihubungi", "qualified", "tidak-cocok"] },
       score: { label: "Skor", type: "number", sql: "COALESCE(t.score, 0)" },

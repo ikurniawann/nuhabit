@@ -1,6 +1,6 @@
 // Keranjang storefront publik: aturan murni (tanpa I/O) yang dipakai klien.
 
-import type { CatalogProduct, CatalogSku } from "./types";
+import type { CatalogCollection, CatalogProduct, CatalogSku } from "./types";
 
 export type CartLine = {
   key: string;
@@ -10,30 +10,46 @@ export type CartLine = {
   variantName: string | null;
   price: number;
   quantity: number;
+  /** Batas pre-order (YYYY-MM-DD) bila baris ini dijual pre-order. */
+  preorderUntil: string | null;
 };
 
-/** Tambah satu unit; produk/varian yang sama menambah qty baris yang ada. */
+type LineProduct = Pick<CatalogProduct, "id" | "name" | "price"> &
+  Partial<Pick<CatalogProduct, "preorder" | "preorderUntil">>;
+type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogSku, "preorder">>;
+
+export const cartLineKey = (productId: string, skuId: string | null) =>
+  skuId ? `${productId}::${skuId}` : productId;
+
+/** Baris baru untuk produk/varian; qty minimal 1. */
+export function makeCartLine(product: LineProduct, sku: LineSku | null, quantity = 1): CartLine {
+  const preorder = sku ? sku.preorder === true : product.preorder === true;
+  return {
+    key: cartLineKey(product.id, sku?.id ?? null),
+    productId: product.id,
+    skuId: sku?.id ?? null,
+    name: product.name,
+    variantName: sku?.name ?? null,
+    price: sku ? sku.price : product.price,
+    quantity: Math.max(1, Math.floor(quantity)),
+    preorderUntil: preorder ? (product.preorderUntil ?? null) : null,
+  };
+}
+
+/** Tambah qty; produk/varian yang sama menambah qty baris yang ada. */
 export function addCartLine(
   lines: CartLine[],
-  product: Pick<CatalogProduct, "id" | "name" | "price">,
-  sku: Pick<CatalogSku, "id" | "name" | "price"> | null
+  product: LineProduct,
+  sku: LineSku | null,
+  quantity = 1
 ): CartLine[] {
-  const key = sku ? `${product.id}::${sku.id}` : product.id;
-  if (lines.some((line) => line.key === key)) {
-    return lines.map((line) => (line.key === key ? { ...line, quantity: line.quantity + 1 } : line));
+  const line = makeCartLine(product, sku, quantity);
+  if (lines.some((existing) => existing.key === line.key)) {
+    return lines.map((existing) =>
+      existing.key === line.key ? { ...existing, quantity: existing.quantity + line.quantity } : existing
+    );
   }
-  return [
-    ...lines,
-    {
-      key,
-      productId: product.id,
-      skuId: sku?.id ?? null,
-      name: product.name,
-      variantName: sku?.name ?? null,
-      price: sku ? sku.price : product.price,
-      quantity: 1,
-    },
-  ];
+  return [...lines, line];
 }
 
 /** Ubah qty; baris yang qty-nya habis (≤ 0) dibuang. */
@@ -41,6 +57,31 @@ export function changeCartQuantity(lines: CartLine[], key: string, delta: number
   return lines
     .map((line) => (line.key === key ? { ...line, quantity: line.quantity + delta } : line))
     .filter((line) => line.quantity > 0);
+}
+
+/**
+ * Ganti varian (ukuran) sebuah baris tanpa mengubah qty-nya. Bila varian
+ * tujuan sudah ada di keranjang, qty-nya digabung ke baris itu.
+ */
+export function changeCartVariant(
+  lines: CartLine[],
+  key: string,
+  product: LineProduct,
+  sku: LineSku
+): CartLine[] {
+  const current = lines.find((line) => line.key === key);
+  if (!current) return lines;
+  const replacement = makeCartLine(product, sku, current.quantity);
+  if (replacement.key === key) return lines;
+  const existing = lines.find((line) => line.key === replacement.key);
+  if (existing) {
+    return lines
+      .filter((line) => line.key !== key)
+      .map((line) =>
+        line.key === replacement.key ? { ...line, quantity: line.quantity + current.quantity } : line
+      );
+  }
+  return lines.map((line) => (line.key === key ? replacement : line));
 }
 
 export function removeCartLine(lines: CartLine[], key: string): CartLine[] {
@@ -60,15 +101,64 @@ export function cartSignature(lines: CartLine[]): string {
   return lines.map((line) => `${line.key}:${line.quantity}`).join("|");
 }
 
-/** Baca keranjang tersimpan; data korup atau bukan array → keranjang kosong. */
-export function parseStoredCart(raw: string | null): CartLine[] {
-  if (!raw) return [];
+export type StoredCart = { lines: CartLine[]; note: string };
+
+const isLine = (value: unknown): value is CartLine =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as CartLine).key === "string" &&
+  typeof (value as CartLine).productId === "string" &&
+  typeof (value as CartLine).quantity === "number";
+
+/**
+ * Baca keranjang tersimpan. Menerima format lama (array baris) dan format
+ * baru ({ lines, note }); data korup dibaca sebagai keranjang kosong.
+ */
+export function parseStoredCart(raw: string | null): StoredCart {
+  const empty: StoredCart = { lines: [], note: "" };
+  if (!raw) return empty;
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as CartLine[]) : [];
+    const lines = Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === "object" && parsed !== null && Array.isArray((parsed as StoredCart).lines)
+        ? (parsed as StoredCart).lines
+        : [];
+    const note =
+      !Array.isArray(parsed) && typeof (parsed as StoredCart)?.note === "string"
+        ? (parsed as StoredCart).note
+        : "";
+    return {
+      lines: lines.filter(isLine).map((line) => ({ ...line, preorderUntil: line.preorderUntil ?? null })),
+      note,
+    };
   } catch {
-    return [];
+    return empty;
   }
+}
+
+export type CollectionGroup = { id: string; name: string; products: CatalogProduct[] };
+
+/**
+ * Kelompokkan produk per koleksi mengikuti urutan `collections`; produk
+ * tanpa koleksi masuk grup "Lainnya" di akhir. Satu grup saja berarti
+ * storefront tampil sebagai grid datar.
+ */
+export function groupByCollection(
+  products: CatalogProduct[],
+  collections: CatalogCollection[]
+): CollectionGroup[] {
+  const groups = collections.map((collection) => ({ ...collection, products: [] as CatalogProduct[] }));
+  const byId = new Map(groups.map((group) => [group.id, group]));
+  const others: CatalogProduct[] = [];
+  for (const product of products) {
+    const group = product.collection ? byId.get(product.collection.id) : undefined;
+    if (group) group.products.push(product);
+    else others.push(product);
+  }
+  const filled = groups.filter((group) => group.products.length > 0);
+  if (others.length > 0) filled.push({ id: "lainnya", name: "Lainnya", products: others });
+  return filled;
 }
 
 export type CheckoutForm = {

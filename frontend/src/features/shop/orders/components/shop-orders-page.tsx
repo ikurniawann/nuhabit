@@ -10,36 +10,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PurchasingPageHeader } from '@/features/purchasing/components/shared/purchasing-page-header';
 import { PurchasingListSection } from '@/features/purchasing/components/shared/purchasing-list-section';
-import { formatDateTime, formatRupiah } from '@/lib/format';
+import { formatDate, formatDateTime, formatRupiah } from '@/lib/format';
 import { useShopOrders } from '../queries';
 import { courierLabel, ORDER_STATUS_TABS, orderStatusTone } from '../status';
 import { ShopOrderDetailDialog } from './shop-order-detail-dialog';
 
-export function ShopOrdersPage() {
+const TERMS_LABEL = { invoice: 'Invoice', pay_later: 'Bayar nanti' } as const;
+
+/**
+ * Pesanan toko online. `wholesale` menampilkan pesanan mitra B2B saja
+ * (kolom mitra dan termin) tanpa judul halaman, untuk ditanam di tab.
+ */
+export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search.trim());
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const ordersQuery = useShopOrders(statusFilter, deferredSearch);
+  const ordersQuery = useShopOrders(statusFilter, deferredSearch, wholesale);
   const orders = ordersQuery.data ?? [];
 
   return (
     <div className="space-y-6">
-      <PurchasingPageHeader
-        title="Pesanan Toko Online"
-        description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai."
-      />
+      {wholesale ? null : (
+        <PurchasingPageHeader
+          title="Pesanan Toko Online"
+          description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai."
+        />
+      )}
 
       <PurchasingListSection
         icon={Package}
-        title="Daftar Pesanan"
+        title={wholesale ? 'Pesanan Mitra' : 'Daftar Pesanan'}
         description={`${orders.length} pesanan`}
         toolbar={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <div className="relative min-w-[220px]">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder="Cari nomor/nama/WA..."
+                placeholder={wholesale ? 'Cari nomor/mitra...' : 'Cari nomor/nama/WA...'}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="h-9 pl-9"
@@ -95,7 +103,8 @@ export function ShopOrdersPage() {
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">Order</th>
-                  <th className="px-4 py-3 text-left font-semibold">Pembeli</th>
+                  <th className="px-4 py-3 text-left font-semibold">{wholesale ? 'Mitra' : 'Pembeli'}</th>
+                  {wholesale ? <th className="px-4 py-3 text-left font-semibold">Termin</th> : null}
                   <th className="px-4 py-3 text-left font-semibold">Tujuan</th>
                   <th className="px-4 py-3 text-left font-semibold">Kurir / Resi</th>
                   <th className="px-4 py-3 text-right font-semibold">Total</th>
@@ -115,7 +124,7 @@ export function ShopOrdersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-gray-900">
-                        {order.customer_name}
+                        {order.company_name ?? order.customer_name}
                         {order.customer_id ? (
                           <span className="ml-1.5 rounded bg-pink-50 px-1.5 py-0.5 text-[10px] font-semibold text-pink-600">
                             MEMBER
@@ -124,6 +133,14 @@ export function ShopOrdersPage() {
                       </p>
                       <p className="text-xs text-gray-400">{order.customer_phone}</p>
                     </td>
+                    {wholesale ? (
+                      <td className="px-4 py-3 text-gray-600">
+                        {order.payment_terms ? TERMS_LABEL[order.payment_terms] : '—'}
+                        {order.due_at ? (
+                          <span className="block text-xs text-gray-400">jatuh tempo {formatDate(order.due_at)}</span>
+                        ) : null}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3 text-gray-600">{order.shipping_area_label || '—'}</td>
                     <td className="px-4 py-3">
                       <p className="text-gray-700">{courierLabel(order)}</p>

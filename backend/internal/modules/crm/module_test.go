@@ -21,8 +21,8 @@ func TestRoutesMountTogether(t *testing.T) {
 		seen[r.Pattern] = true
 		mux.Handle(r.Pattern, r.Handler)
 	}
-	if len(seen) != 134 {
-		t.Fatalf("%d routes mounted, want 134", len(seen))
+	if len(seen) != 135 {
+		t.Fatalf("%d routes mounted, want 135", len(seen))
 	}
 	for _, p := range []string{
 		"POST /api/crm/avatars/upload", "POST /api/crm/engagement/announcements/image",

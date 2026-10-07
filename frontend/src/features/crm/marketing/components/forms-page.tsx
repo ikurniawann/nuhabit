@@ -157,6 +157,11 @@ function SubmissionsView({ form }: { form: FormRow }) {
   );
 }
 
+/** Options as typed keep empty entries (a trailing comma); saving drops them. */
+function cleanOptions(field: PublicFieldDef): PublicFieldDef {
+  return { ...field, options: field.options.filter((o, idx, all) => o !== "" && all.indexOf(o) === idx) };
+}
+
 function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: () => void }) {
   const ownersQuery = useOwners();
   const createMutation = useCreateForm();
@@ -179,7 +184,7 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
   const save = () => {
     const payload = {
       name: name.trim(), title: title.trim(), description: description.trim() || null,
-      fields, submit_label: submitLabel.trim() || "Kirim", success_message: successMessage.trim(),
+      fields: fields.map(cleanOptions), submit_label: submitLabel.trim() || "Kirim", success_message: successMessage.trim(),
       redirect_url: null, default_source: toLeadSource(initial?.default_source),
       notify_user_ids: notifyUsers, notify_numbers: notifyNumbers, is_active: initial?.is_active ?? true,
     };
@@ -236,6 +241,13 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
                 <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => setFields(fields.filter((_, j) => j !== i))}>
                   <X className="h-4 w-4" />
                 </button>
+                {f.type === "select" ? (
+                  <Input className="col-span-4 h-8 text-xs" value={f.options.join(", ")} placeholder="Pilihan, pisahkan dengan koma"
+                    onChange={(e) => setFields(fields.map((x, j) => (j === i ? { ...x, options: e.target.value.split(",").map((o) => o.trim()) } : x)))} />
+                ) : f.type === "checkbox" ? (
+                  <Input className="col-span-4 h-8 text-xs" value={f.help_text ?? ""} placeholder="Teks di samping centang"
+                    onChange={(e) => setFields(fields.map((x, j) => (j === i ? { ...x, help_text: e.target.value || null } : x)))} />
+                ) : null}
                 <p className="col-span-4 -mt-1 font-mono text-[11px] text-gray-400">
                   {f.key}
                   {LEAD_MAPPED_LABELS[f.key as keyof typeof LEAD_MAPPED_LABELS] ? " · masuk kolom lead" : " · masuk custom field"}

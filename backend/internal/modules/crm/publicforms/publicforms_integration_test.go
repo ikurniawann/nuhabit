@@ -5,6 +5,9 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/crm/advance"
 	"nuhabit/backend/internal/platform/database"
@@ -37,10 +40,21 @@ func (sqlLeads) AppendNote(ctx context.Context, q database.Querier, leadID, note
 func (sqlLeads) Create(ctx context.Context, q database.Querier, in NewLead) (string, error) {
 	var id string
 	err := q.QueryRow(ctx, `INSERT INTO crm.crm_sales_leads (company_id, branch_id, org_name, org_type, pic_name, pic_phone,
-		  pic_email, city, notes, source, temperature, status, custom, utm_source, utm_campaign)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'hangat', 'baru', $11::jsonb, $12, $13) RETURNING id::text`,
+		  pic_email, city, notes, source, temperature, status, custom, utm_source, utm_campaign, landing_page)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, COALESCE(NULLIF($14, ''), 'hangat'), 'baru', $11::jsonb, $12, $13, $15) RETURNING id::text`,
 		in.CompanyID, in.BranchID, in.OrgName, in.OrgType, in.PicName, in.PicPhone, in.PicEmail, in.City, in.Notes,
-		in.Source, in.Custom, in.Attribution.UtmSource, in.Attribution.UtmCampaign).Scan(&id)
+		in.Source, in.Custom, in.Attribution.UtmSource, in.Attribution.UtmCampaign, in.Temperature, in.Attribution.LandingPage).Scan(&id)
+	return id, err
+}
+
+func (sqlLeads) RecentByPhone(ctx context.Context, q database.Querier, companyID, phone string, since time.Time) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `SELECT id::text FROM crm.crm_sales_leads
+		WHERE company_id = $1 AND pic_phone = $2 AND created_at > $3 AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+		companyID, phone, since).Scan(&id)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
 	return id, err
 }
 
@@ -55,10 +69,8 @@ type fixture struct {
 	val  func(sql string, args ...any) string
 }
 
-func newFixture(t *testing.T) (*fixture, string, string) {
-	t.Helper()
-	staff := testutil.CreateStaff(t, testutil.StaffOptions{}) // before the transaction (cleanup order)
-	tx := testutil.Tx(t)
+// sqlFixture wraps tx with exec and val helpers that fail the test.
+func sqlFixture(t *testing.T, tx pgx.Tx) *fixture {
 	ctx := context.Background()
 	f := &fixture{t: t}
 	f.exec = func(sql string, args ...any) {
@@ -78,13 +90,25 @@ func newFixture(t *testing.T) (*fixture, string, string) {
 		}
 		return *v
 	}
-	company := f.val(`SELECT id::text FROM configuration.companies ORDER BY created_at LIMIT 1`)
-	branch := f.val(`SELECT id::text FROM configuration.branches WHERE company_id = $1 ORDER BY created_at LIMIT 1`, company)
-	h := newHandler(tx, testutil.Deps(t, nil), advance.Ports{WhatsApp: noGateway{}}, sqlLeads{})
+	return f
+}
+
+// mount serves the handler's routes on the fixture.
+func (f *fixture) mount(h *handler) {
 	f.mux = http.NewServeMux()
 	for _, r := range h.routes() {
 		f.mux.Handle(r.Pattern, r.Handler)
 	}
+}
+
+func newFixture(t *testing.T) (*fixture, string, string) {
+	t.Helper()
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{}) // before the transaction (cleanup order)
+	tx := testutil.Tx(t)
+	f := sqlFixture(t, tx)
+	company := f.val(`SELECT id::text FROM configuration.companies ORDER BY created_at LIMIT 1`)
+	branch := f.val(`SELECT id::text FROM configuration.branches WHERE company_id = $1 ORDER BY created_at LIMIT 1`, company)
+	f.mount(newHandler(tx, testutil.Deps(t, nil), advance.Ports{WhatsApp: noGateway{}}, sqlLeads{}))
 	slug := "go-" + testutil.RandomHex(4)
 	f.exec(`INSERT INTO crm.crm_forms (company_id, branch_id, slug, name, title, success_message, redirect_url, notify_user_ids)
 		VALUES ($1, $2, $3, 'Kontak', 'Hubungi kami', 'Terima kasih!', 'https://example.com/ok', jsonb_build_array($4::text))`,
@@ -114,6 +138,28 @@ func TestPublicFormDefinition(t *testing.T) {
 	}
 	if !strings.Contains(res.Body.String(), `"fields":[{"key":"pic_name","label":"Nama Anda","type":"text","required":true,"placeholder":"cth. Budi Santoso","help_text":null,"options":[],"width":1}`) {
 		t.Fatalf("default fields: %s", res.Body)
+	}
+
+	// A stored definition (numbers included) replaces the defaults, for the
+	// page and for validation.
+	f.exec(`UPDATE crm.crm_forms SET fields = $2::jsonb WHERE slug = $1`, slug,
+		`[{"key":"pic_email","label":"Email","type":"email","required":true,"placeholder":null,"help_text":null,"options":[],"width":2},
+		  {"key":"topic","label":"Topik","type":"select","required":true,"placeholder":null,"help_text":null,"options":["Kelas","Apparel"],"width":1}]`)
+	res, _ = testutil.Do(t, f.mux, testutil.Request("GET", "/api/public/crm/forms/"+slug, nil))
+	if !strings.Contains(res.Body.String(), `"fields":[{"key":"pic_email","label":"Email","type":"email","required":true,"placeholder":null,"help_text":null,"options":[],"width":2},{"key":"topic","label":"Topik","type":"select","required":true,"placeholder":null,"help_text":null,"options":["Kelas","Apparel"],"width":1}]`) {
+		t.Fatalf("stored fields: %s", res.Body)
+	}
+	code, raw := f.post(slug, map[string]any{"pic_email": "ani@example.test"}, "10.0.0.7")
+	if code != 400 || raw != `{"success":false,"error":"Periksa kembali isian Anda","details":[{"key":"topic","message":"Topik wajib diisi"}]}` {
+		t.Fatalf("stored validation %d %s", code, raw)
+	}
+	// An email-only form (no phone, no org name) still becomes a lead.
+	if code, raw = f.post(slug, map[string]any{"pic_email": "ani@example.test", "topic": "Kelas"}, "10.0.0.8"); code != 200 {
+		t.Fatalf("email-only %d %s", code, raw)
+	}
+	if got := f.val(`SELECT org_name || '|' || pic_name || '|' || pic_phone || '|' || (custom->>'topic') FROM crm.crm_sales_leads
+		WHERE pic_email = 'ani@example.test' AND company_id = (SELECT company_id FROM crm.crm_forms WHERE slug = $1)`, slug); got != "Kiriman Form Publik|Kiriman Form Publik||Kelas" {
+		t.Fatalf("email-only lead = %s", got)
 	}
 }
 

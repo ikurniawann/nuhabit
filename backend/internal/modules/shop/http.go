@@ -13,7 +13,6 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
-	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -23,12 +22,11 @@ type Guard interface {
 }
 
 type handler struct {
-	svc     *Service
-	guard   Guard
-	limiter *ratelimit.Limiter
+	svc   *Service
+	guard Guard
 }
 
-// Routes lists every /api/shop and /api/public/shop route.
+// Routes lists every /api/shop, /api/public/shop and /api/wholesale route.
 //
 // GET /api/public/shop/{slug}/catalog and GET /api/public/shop/order/{token}
 // overlap in ServeMux (/api/public/shop/order/catalog matches both), so one
@@ -55,7 +53,7 @@ func (h *handler) Routes() []module.Route {
 	public := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
 	}
-	return []module.Route{
+	routes := []module.Route{
 		staff("GET /api/shop/orders", h.listOrders),
 		staff("GET /api/shop/orders/{id}", h.orderDetail),
 		staff("PATCH /api/shop/orders/{id}", h.transitionOrder),
@@ -84,6 +82,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "POST /api/public/shop/webhook/biteship", Handler: http.HandlerFunc(h.biteshipWebhook)},
 		{Pattern: "POST /api/public/shop/webhook/xendit", Handler: http.HandlerFunc(h.xenditWebhook)},
 	}
+	return append(routes, h.wholesaleRoutes(staff)...)
 }
 
 // requirePosSession is `if (!(await getPosSession())) throw unauthorized`:
@@ -505,7 +504,7 @@ func (h *handler) adminAreas(w http.ResponseWriter, r *http.Request) error {
 // limit is checkRateLimit(`${bucket}:${ip}`, { limit, windowMs: 60_000 })
 // answered with the storefront's 429 body.
 func (h *handler) limit(r *http.Request, bucket string, limit int) error {
-	allowed, _, err := h.limiter.Sliding(r.Context(), bucket+":"+domain.ClientIP(r.Header), limit, time.Minute, h.svc.now())
+	allowed, _, err := h.svc.limits.Sliding(r.Context(), bucket+":"+domain.ClientIP(r.Header), limit, time.Minute, h.svc.now())
 	if err != nil {
 		return err
 	}
@@ -548,7 +547,7 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	h.svc.releaseExpiredReservations(ctx)
-	products, err := h.svc.BuildCatalog(ctx)
+	catalog, err := h.svc.BuildCatalog(ctx)
 	if err != nil {
 		return err
 	}
@@ -558,9 +557,10 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 		Description *string `json:"description"`
 	}
 	return ok(w, struct {
-		Storefront storefrontView       `json:"storefront"`
-		Products   []CatalogProductView `json:"products"`
-	}{storefrontView{sf.Slug, sf.Name, sf.Description}, products})
+		Storefront  storefrontView       `json:"storefront"`
+		Collections []CatalogCollection  `json:"collections"`
+		Products    []CatalogProductView `json:"products"`
+	}{storefrontView{sf.Slug, sf.Name, sf.Description}, catalog.Collections, catalog.Products})
 }
 
 func (h *handler) orderStatus(w http.ResponseWriter, r *http.Request, token string) error {

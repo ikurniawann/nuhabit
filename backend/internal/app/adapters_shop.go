@@ -59,7 +59,8 @@ func (c shopCatalog) webProducts(ctx context.Context, q database.Querier, produc
 	for i, p := range products {
 		out[i] = shop.WebProduct{ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription,
 			ImageURL: p.ImageURL, BasePrice: p.BasePrice, ChannelPrice: prices[p.ID], WeightGram: p.WeightGram,
-			InventoryQuantity: p.InventoryQuantity, HasActiveSKU: p.HasActiveSKU}
+			InventoryQuantity: p.InventoryQuantity, HasActiveSKU: p.HasActiveSKU,
+			CategoryID: p.CategoryID, CategoryName: p.CategoryName, CategoryOrder: p.CategoryOrder}
 	}
 	return out, nil
 }

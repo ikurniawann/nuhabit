@@ -39,6 +39,11 @@ type WebProduct struct {
 	WeightGram        *string
 	InventoryQuantity *string
 	HasActiveSKU      bool
+	// The product's POS category, the storefront's collection (nil without
+	// one).
+	CategoryID    *string
+	CategoryName  *string
+	CategoryOrder *int
 }
 
 // CatalogSKU is an active pos.pos_product_skus row.

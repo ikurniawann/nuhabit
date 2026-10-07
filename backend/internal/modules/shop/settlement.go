@@ -113,12 +113,15 @@ func (s *Service) settlePaid(ctx context.Context, orderID string, amount *float6
 	}
 
 	// Idempotent: only pending → paid runs the side effects.
-	var o struct{ number, token, name, phone, total string }
+	var o struct {
+		number, token, name, phone, total string
+		wholesale                         bool
+	}
 	err = s.db.QueryRow(ctx, `UPDATE shop.orders
 		SET status = 'paid', paid_at = COALESCE(paid_at, now()), updated_at = now()
 		WHERE id = $1::uuid AND status = 'pending'
-		RETURNING order_number, access_token::text, customer_name, customer_phone, total::text`, orderID).
-		Scan(&o.number, &o.token, &o.name, &o.phone, &o.total)
+		RETURNING order_number, access_token::text, customer_name, customer_phone, total::text, wholesale_account_id IS NOT NULL`, orderID).
+		Scan(&o.number, &o.token, &o.name, &o.phone, &o.total, &o.wholesale)
 	if database.IsNoRows(err) {
 		return WebhookResult{http.StatusOK, ack{Success: true, AlreadyProcessed: true}}, nil
 	}
@@ -131,8 +134,11 @@ func (s *Service) settlePaid(ctx context.Context, orderID string, amount *float6
 	total := domain.OrFinite(domain.JSNumber(o.total))
 	// Link the CRM member by WhatsApp number (members from day one). Xendit
 	// orders raise visit and spend stats only; XP is for ARK Coin payments.
-	if err := s.linkMember(ctx, orderID, o.phone, total); err != nil {
-		s.log.Error("[shop] member link failed", "order", orderID, "error", err)
+	// A partner's order is the company's, not a member's.
+	if !o.wholesale {
+		if err := s.linkMember(ctx, orderID, o.phone, total); err != nil {
+			s.log.Error("[shop] member link failed", "order", orderID, "error", err)
+		}
 	}
 	s.background(ctx, func(ctx context.Context) {
 		msg := domain.OrderPaidMessage(s.ports.AppOrigin, o.number, o.name, o.token, total)
