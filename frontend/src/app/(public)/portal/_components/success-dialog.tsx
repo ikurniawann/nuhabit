@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 
-/** Modal setelah lamaran terkirim; menutup modal kembali ke halaman karir. */
+/** Modal shown after the application is sent; closing it returns to the careers page. */
 export function SuccessDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -15,24 +15,23 @@ export function SuccessDialog({ onClose }: { onClose: () => void }) {
               <CheckCircle className="h-10 w-10 text-[#00281a]" />
             </div>
           </div>
-          <h2 className="mb-3 text-center text-2xl font-semibold leading-tight text-[#131a1c]">Lamaran Terkirim!</h2>
+          <h2 className="mb-3 text-center text-2xl font-semibold leading-tight text-[#131a1c]">Application Sent!</h2>
           <p className="mb-8 text-center text-base leading-relaxed text-[#2a332e]">
-            Terima kasih sudah melamar. Tim HRD kami akan menghubungi kamu
-            melalui WhatsApp atau email dalam 1-3 hari kerja.
+            Thank you for applying. Our HR team will reach you by WhatsApp or email within 1 to 3 business days.
           </p>
           <div className="flex flex-col gap-3">
             <Link
               href="/career"
               className="flex w-full items-center justify-center gap-2 rounded-full bg-[#00281a] px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-white transition-all hover:bg-[#203b32] active:scale-95"
             >
-              Kembali ke Career Page
+              Back to Careers
             </Link>
             <button
               type="button"
               onClick={onClose}
               className="w-full rounded-full border border-[#e3dbcc] bg-transparent px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-[#131a1c] transition-all hover:bg-[#f3ece2]"
             >
-              Tutup
+              Close
             </button>
           </div>
         </div>

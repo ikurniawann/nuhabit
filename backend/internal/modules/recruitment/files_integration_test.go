@@ -798,16 +798,16 @@ func TestPortalSubmit(t *testing.T) {
 	}
 	bad["email"] = "bukan-email"
 
-	expect(t, submit("203.0.113.1", without("phone"), photo), 400, "Field wajib belum lengkap")
-	expect(t, submit("203.0.113.1", bad, photo), 400, "Format email tidak valid")
-	expect(t, submit("203.0.113.1", fields), 400, "Pas foto wajib diupload")
-	expect(t, submit("203.0.113.1", fields, photo, part{"cv", "cv.txt", "text/plain", []byte("x")}), 400, "CV harus format PDF atau DOC")
-	expect(t, submit("203.0.113.1", fields, part{"photo", "f.gif", "image/gif", pngBytes}), 400, "Foto harus format JPG/PNG")
+	expect(t, submit("203.0.113.1", without("phone"), photo), 400, "Required fields are missing")
+	expect(t, submit("203.0.113.1", bad, photo), 400, "Invalid email format")
+	expect(t, submit("203.0.113.1", fields), 400, "A photo is required")
+	expect(t, submit("203.0.113.1", fields, photo, part{"cv", "cv.txt", "text/plain", []byte("x")}), 400, "CV must be a PDF or DOC file")
+	expect(t, submit("203.0.113.1", fields, part{"photo", "f.gif", "image/gif", pngBytes}), 400, "Photo must be a JPG or PNG file")
 
 	c := submit("203.0.113.2", fields, photo, cv)
 	expect(t, c, 200, "")
 	id, _ := c.body["candidate_id"].(string)
-	if c.body["success"] != true || c.body["message"] != "Lamaran berhasil dikirim" || id == "" {
+	if c.body["success"] != true || c.body["message"] != "Application submitted" || id == "" {
 		t.Fatal(c.raw)
 	}
 	got := h.scalar(`SELECT concat_ws('|', status, expected_salary::text, brand_id::text, notes, source, cv_url LIKE '/api/files/cv/candidates/%', photo_url LIKE '/api/files/photos/candidates/%')
@@ -824,7 +824,7 @@ func TestPortalSubmit(t *testing.T) {
 	for range 5 {
 		expect(t, submit("203.0.113.9", fields, photo), 200, "")
 	}
-	if c = submit("203.0.113.9", fields, photo); c.status != 429 || c.body["error"] != "Terlalu banyak lamaran dari jaringan ini. Coba lagi beberapa menit lagi." {
+	if c = submit("203.0.113.9", fields, photo); c.status != 429 || c.body["error"] != "Too many applications from this network. Try again in a few minutes." {
 		t.Fatal(c.raw)
 	}
 	expect(t, submit("203.0.113.10", fields, photo), 200, "")

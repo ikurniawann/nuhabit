@@ -44,7 +44,7 @@ export type WholesaleProduct = {
   skus: WholesaleSku[];
 };
 
-/** Baris pesanan mitra; angka numeric datang sebagai string. */
+/** A partner order row; numeric columns arrive as strings. */
 export type WholesaleOrderRow = {
   id: string;
   order_number: string;
@@ -83,7 +83,7 @@ export const wholesaleKeys = {
   order: (id: string) => ["wholesale", "orders", id] as const,
 };
 
-/** Akun yang sedang masuk; null saat belum masuk (401). */
+/** The signed-in account; null when signed out (401). */
 export const useWholesaleMe = () =>
   useQuery({
     queryKey: wholesaleKeys.me,
@@ -91,7 +91,7 @@ export const useWholesaleMe = () =>
       fetch("/api/wholesale/me").then(async (res) => {
         if (res.status === 401) return null;
         const json = (await res.json().catch(() => ({}))) as { data?: WholesaleAccount; error?: string };
-        if (!res.ok) throw new Error(json.error || "Gagal memuat akun");
+        if (!res.ok) throw new Error(json.error || "Could not load the account");
         return json.data ?? null;
       }),
     retry: false,
@@ -124,8 +124,8 @@ export const useWholesaleOrder = (id: string, enabled: boolean) =>
   });
 
 /**
- * Masuk. Tanpa retry: percobaan gagal tidak boleh dikirim ulang (setiap
- * kiriman dihitung oleh pembatas percobaan di server).
+ * Sign in. No retry: a failed attempt must not be resent (the server
+ * counts every attempt against the lockout).
  */
 export function useWholesaleLogin() {
   const queryClient = useQueryClient();
@@ -164,7 +164,7 @@ export type WholesaleOrderResult = {
   status_url: string;
 };
 
-/** Buat pesanan. Tanpa retry supaya satu klik tidak pernah jadi dua pesanan. */
+/** Place an order. No retry so one click never becomes two orders. */
 export function usePlaceWholesaleOrder() {
   const queryClient = useQueryClient();
   return useMutation({

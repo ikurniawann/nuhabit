@@ -13,59 +13,59 @@ import {
 } from "./storefront-cart";
 import type { CatalogProduct } from "./types";
 
-const kaos = { id: "p1", name: "Kaos", price: 100_000 };
+const tee = { id: "p1", name: "Tee", price: 100_000 };
 const sizeL = { id: "s1", name: "L", price: 120_000 };
 const sizeXL = { id: "s2", name: "XL", price: 130_000 };
 
 describe("storefront cart", () => {
-  it("menambah baris baru lalu menaikkan qty untuk produk/varian yang sama", () => {
-    let cart = addCartLine([], kaos, sizeL);
-    cart = addCartLine(cart, kaos, sizeL);
-    cart = addCartLine(cart, kaos, null);
+  it("adds a new line, then raises the quantity for the same product or variant", () => {
+    let cart = addCartLine([], tee, sizeL);
+    cart = addCartLine(cart, tee, sizeL);
+    cart = addCartLine(cart, tee, null);
     expect(cart).toEqual([
-      { key: "p1::s1", productId: "p1", skuId: "s1", name: "Kaos", variantName: "L", price: 120_000, quantity: 2, preorderUntil: null },
-      { key: "p1", productId: "p1", skuId: null, name: "Kaos", variantName: null, price: 100_000, quantity: 1, preorderUntil: null },
+      { key: "p1::s1", productId: "p1", skuId: "s1", name: "Tee", variantName: "L", price: 120_000, quantity: 2, preorderUntil: null },
+      { key: "p1", productId: "p1", skuId: null, name: "Tee", variantName: null, price: 100_000, quantity: 1, preorderUntil: null },
     ]);
     expect(cartCount(cart)).toBe(3);
     expect(cartSubtotal(cart)).toBe(340_000);
     expect(cartSignature(cart)).toBe("p1::s1:2|p1:1");
   });
 
-  it("qty turun ke 0 membuang baris; hapus baris langsung", () => {
-    const cart = addCartLine([], kaos, null);
+  it("drops a line at quantity 0; removes a line directly", () => {
+    const cart = addCartLine([], tee, null);
     expect(changeCartQuantity(cart, "p1", -1)).toEqual([]);
     expect(changeCartQuantity(cart, "p1", 2)[0].quantity).toBe(3);
     expect(removeCartLine(cart, "p1")).toEqual([]);
   });
 
-  it("ganti ukuran mempertahankan qty dan menggabung ke varian yang sudah ada", () => {
-    let cart = addCartLine([], kaos, sizeL, 3);
-    cart = changeCartVariant(cart, "p1::s1", kaos, sizeXL);
+  it("changing the size keeps the quantity and merges into an existing variant", () => {
+    let cart = addCartLine([], tee, sizeL, 3);
+    cart = changeCartVariant(cart, "p1::s1", tee, sizeXL);
     expect(cart).toHaveLength(1);
     expect(cart[0]).toMatchObject({ key: "p1::s2", variantName: "XL", price: 130_000, quantity: 3 });
 
-    cart = addCartLine(cart, kaos, sizeL, 2);
-    cart = changeCartVariant(cart, "p1::s1", kaos, sizeXL);
+    cart = addCartLine(cart, tee, sizeL, 2);
+    cart = changeCartVariant(cart, "p1::s1", tee, sizeXL);
     expect(cart).toEqual([expect.objectContaining({ key: "p1::s2", quantity: 5 })]);
 
-    expect(changeCartVariant(cart, "tidak-ada", kaos, sizeL)).toBe(cart);
-    expect(changeCartVariant(cart, "p1::s2", kaos, sizeXL)).toBe(cart);
+    expect(changeCartVariant(cart, "missing", tee, sizeL)).toBe(cart);
+    expect(changeCartVariant(cart, "p1::s2", tee, sizeXL)).toBe(cart);
   });
 
-  it("baris pre-order membawa tanggal perkiraan", () => {
-    const jaket = { id: "p2", name: "Jaket", price: 250_000, preorder: true, preorderUntil: "2026-11-01" };
-    expect(addCartLine([], jaket, null)[0].preorderUntil).toBe("2026-11-01");
-    expect(addCartLine([], jaket, { ...sizeL, preorder: false })[0].preorderUntil).toBeNull();
-    expect(addCartLine([], jaket, { ...sizeL, preorder: true })[0].preorderUntil).toBe("2026-11-01");
+  it("a pre-order line carries the expected date", () => {
+    const jacket = { id: "p2", name: "Jacket", price: 250_000, preorder: true, preorderUntil: "2026-11-01" };
+    expect(addCartLine([], jacket, null)[0].preorderUntil).toBe("2026-11-01");
+    expect(addCartLine([], jacket, { ...sizeL, preorder: false })[0].preorderUntil).toBeNull();
+    expect(addCartLine([], jacket, { ...sizeL, preorder: true })[0].preorderUntil).toBe("2026-11-01");
   });
 
-  it("keranjang tersimpan: format lama, format baru, dan data korup", () => {
+  it("stored cart: old format, new format and corrupt data", () => {
     expect(parseStoredCart(null)).toEqual({ lines: [], note: "" });
-    expect(parseStoredCart("{rusak")).toEqual({ lines: [], note: "" });
+    expect(parseStoredCart("{broken")).toEqual({ lines: [], note: "" });
     expect(parseStoredCart('{"a":1}')).toEqual({ lines: [], note: "" });
-    const legacy = addCartLine([], kaos, null).map(({ preorderUntil: _drop, ...line }) => line);
+    const legacy = addCartLine([], tee, null).map(({ preorderUntil: _drop, ...line }) => line);
     expect(parseStoredCart(JSON.stringify(legacy)).lines[0]).toMatchObject({ key: "p1", preorderUntil: null });
-    const stored = { lines: addCartLine([], kaos, sizeL), note: "Bungkus kado" };
+    const stored = { lines: addCartLine([], tee, sizeL), note: "Gift wrap" };
     expect(parseStoredCart(JSON.stringify(stored))).toEqual(stored);
     expect(parseStoredCart('{"lines":[{"key":1}],"note":5}')).toEqual({ lines: [], note: "" });
   });
@@ -76,25 +76,25 @@ describe("groupByCollection", () => {
     id, name: id, description: null, longDescription: null, imageUrl: null, images: [], price: 1,
     weightGram: null, stock: 1, collection, preorderUntil: null, preorder: false, skus: [],
   });
-  const atasan = { id: "c1", name: "Atasan" };
-  const aksesori = { id: "c2", name: "Aksesori" };
+  const tops = { id: "c1", name: "Tops" };
+  const accessories = { id: "c2", name: "Accessories" };
 
-  it("mengikuti urutan koleksi, melewati koleksi kosong, dan menaruh sisanya di Lainnya", () => {
+  it("follows the collection order, skips empty collections and puts the rest under Other", () => {
     const groups = groupByCollection(
-      [product("a", aksesori), product("b", atasan), product("c", null), product("d", atasan)],
-      [atasan, { id: "c9", name: "Kosong" }, aksesori]
+      [product("a", accessories), product("b", tops), product("c", null), product("d", tops)],
+      [tops, { id: "c9", name: "Empty" }, accessories]
     );
     expect(groups.map((g) => [g.name, g.products.map((p) => p.id)])).toEqual([
-      ["Atasan", ["b", "d"]],
-      ["Aksesori", ["a"]],
-      ["Lainnya", ["c"]],
+      ["Tops", ["b", "d"]],
+      ["Accessories", ["a"]],
+      ["Other", ["c"]],
     ]);
   });
 
-  it("satu koleksi saja menghasilkan satu grup", () => {
-    expect(groupByCollection([product("a", atasan)], [atasan])).toHaveLength(1);
+  it("a single collection yields a single group", () => {
+    expect(groupByCollection([product("a", tops)], [tops])).toHaveLength(1);
     expect(groupByCollection([product("a", null)], [])).toEqual([
-      { id: "lainnya", name: "Lainnya", products: [product("a", null)] },
+      { id: "other", name: "Other", products: [product("a", null)] },
     ]);
   });
 });
@@ -102,15 +102,15 @@ describe("groupByCollection", () => {
 describe("checkoutFormError", () => {
   const ok = { name: "Budi", phone: "0812-3456-789", address: "Jl. Melati No. 10", hasArea: true, hasRate: true };
 
-  it("lolos bila semua terisi", () => {
+  it("passes when everything is filled in", () => {
     expect(checkoutFormError(ok)).toBeNull();
   });
 
-  it("mengembalikan galat pertama sesuai urutan form", () => {
-    expect(checkoutFormError({ ...ok, name: " B " })).toBe("Nama penerima wajib diisi");
-    expect(checkoutFormError({ ...ok, phone: "0812-34" })).toBe("Nomor WA tidak valid");
-    expect(checkoutFormError({ ...ok, hasArea: false, address: "" })).toBe("Pilih area tujuan dulu");
-    expect(checkoutFormError({ ...ok, address: "Jl. Mawar" })).toBe("Alamat lengkap minimal 10 karakter");
-    expect(checkoutFormError({ ...ok, hasRate: false })).toBe("Pilih kurir dulu");
+  it("returns the first error in form order", () => {
+    expect(checkoutFormError({ ...ok, name: " B " })).toBe("Recipient name is required");
+    expect(checkoutFormError({ ...ok, phone: "0812-34" })).toBe("Enter a valid WhatsApp number");
+    expect(checkoutFormError({ ...ok, hasArea: false, address: "" })).toBe("Choose a destination area first");
+    expect(checkoutFormError({ ...ok, address: "Jl. Mawar" })).toBe("Full address must be at least 10 characters");
+    expect(checkoutFormError({ ...ok, hasRate: false })).toBe("Choose a courier first");
   });
 });

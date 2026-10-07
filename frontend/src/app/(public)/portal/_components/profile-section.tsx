@@ -6,43 +6,43 @@ import type { ApplicationFormValues } from "./application-schema";
 import { controlClass, FormField, FormSection } from "./form-field";
 
 const AVAILABILITY: [NonNullable<ApplicationFormValues["availability"]>, string][] = [
-  ["immediate", "Secepatnya"],
-  ["1_week", "1 Minggu"],
-  ["2_weeks", "2 Minggu"],
-  ["1_month", "1 Bulan"],
+  ["immediate", "Immediately"],
+  ["1_week", "1 week"],
+  ["2_weeks", "2 weeks"],
+  ["1_month", "1 month"],
 ];
 
-/** Tampilan input gaji: "Rp 5.000.000" dari digit mentah. */
+/** Salary input display: "Rp 5.000.000" from raw digits. */
 const salaryDisplay = (digits: string | undefined) => (digits ? `Rp ${formatNumber(parseInt(digits, 10))}` : "");
 
-/** Pengalaman, pendidikan, ketersediaan, dan ekspektasi gaji. */
+/** Experience, education, availability and expected salary. */
 export function ProfileSection({ form }: { form: UseFormReturn<ApplicationFormValues> }) {
   const { register, setValue, control, formState } = form;
   const { errors } = formState;
   const [availability, salary] = useWatch({ control, name: ["availability", "expected_salary"] });
 
   return (
-    <FormSection title="Informasi Tambahan">
+    <FormSection title="Additional Information">
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField id="last_experience" label="Pengalaman Kerja Terakhir" error={errors.last_experience?.message}>
+        <FormField id="last_experience" label="Most Recent Work Experience" error={errors.last_experience?.message}>
           <input
             id="last_experience"
-            placeholder="PT Company - Position (2 tahun)"
+            placeholder="Company - Position (2 years)"
             {...register("last_experience")}
             className={controlClass()}
           />
         </FormField>
 
-        <FormField id="last_education" label="Pendidikan Terakhir" error={errors.last_education?.message}>
+        <FormField id="last_education" label="Highest Education" error={errors.last_education?.message}>
           <input
             id="last_education"
-            placeholder="S1/D3/SMA - Jurusan - Universitas"
+            placeholder="Degree - Major - School"
             {...register("last_education")}
             className={controlClass()}
           />
         </FormField>
 
-        <FormField id="availability" label="Ketersediaan Bergabung">
+        <FormField id="availability" label="Available to Start">
           <select
             id="availability"
             value={availability || ""}
@@ -51,7 +51,7 @@ export function ProfileSection({ form }: { form: UseFormReturn<ApplicationFormVa
             }
             className={controlClass()}
           >
-            <option value="">Pilih ketersediaan</option>
+            <option value="">Choose availability</option>
             {AVAILABILITY.map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -60,7 +60,7 @@ export function ProfileSection({ form }: { form: UseFormReturn<ApplicationFormVa
           </select>
         </FormField>
 
-        <FormField id="expected_salary" label="Ekspektasi Gaji (Rp)">
+        <FormField id="expected_salary" label="Expected Salary (Rp)">
           <input
             id="expected_salary"
             type="text"

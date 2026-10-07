@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { formatDate, formatDateTime, formatRupiah } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
+import { formatDateEn, formatDateTimeEn } from "@/lib/shop/format-en";
 import { useWholesaleOrder } from "../queries";
 import { statusOf, TERMS_LABEL } from "./order-status";
 import { orderStatusLabel } from "./orders-page";
 import { useRequireAccount } from "./use-require-account";
 
-/** /wholesale/orders/[id]: rincian satu pesanan mitra. */
+/** /wholesale/orders/[id]: one partner order in detail. */
 export function WholesaleOrderDetailPage({ id }: { id: string }) {
   const { account, loading } = useRequireAccount();
   const order = useWholesaleOrder(id, account !== null);
@@ -25,7 +26,7 @@ export function WholesaleOrderDetailPage({ id }: { id: string }) {
       <div className="space-y-3">
         <BackLink />
         <p className="rounded-card bg-danger-soft px-4 py-3 text-sm text-danger">
-          {order.error?.message || "Pesanan tidak ditemukan"}
+          {order.error?.message || "Order not found"}
         </p>
       </div>
     );
@@ -40,9 +41,9 @@ export function WholesaleOrderDetailPage({ id }: { id: string }) {
       <section className="rounded-card bg-card p-5 shadow-card">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pesanan</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order</p>
             <h1 className="text-xl font-bold">{detail.order_number}</h1>
-            <p className="text-xs text-muted-foreground">{formatDateTime(detail.created_at)}</p>
+            <p className="text-xs text-muted-foreground">{formatDateTimeEn(detail.created_at)}</p>
           </div>
           <span className={`rounded-full px-3 py-1.5 text-xs font-medium ${status.tone}`}>{orderStatusLabel(detail)}</span>
         </div>
@@ -52,30 +53,30 @@ export function WholesaleOrderDetailPage({ id }: { id: string }) {
             href={detail.invoice_url}
             className="mb-4 block rounded-full bg-accent-strong px-4 py-3 text-center text-sm font-semibold text-accent-foreground hover:bg-accent-dark"
           >
-            Lanjutkan Pembayaran
+            Continue to Payment
           </a>
         ) : null}
 
         <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-xs text-muted-foreground">Pembayaran</dt>
+            <dt className="text-xs text-muted-foreground">Payment</dt>
             <dd>
               {TERMS_LABEL[detail.payment_terms]}
-              {detail.due_at && detail.payment_terms === "pay_later" ? ` · jatuh tempo ${formatDate(detail.due_at)}` : ""}
-              {detail.paid_at ? ` · dibayar ${formatDate(detail.paid_at)}` : ""}
+              {detail.due_at && detail.payment_terms === "pay_later" ? ` · due ${formatDateEn(detail.due_at)}` : ""}
+              {detail.paid_at ? ` · paid ${formatDateEn(detail.paid_at)}` : ""}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-muted-foreground">Resi</dt>
-            <dd>{detail.waybill || "Belum ada"}</dd>
+            <dt className="text-xs text-muted-foreground">Tracking number</dt>
+            <dd>{detail.waybill || "Not yet available"}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-xs text-muted-foreground">Alamat pengiriman</dt>
+            <dt className="text-xs text-muted-foreground">Shipping address</dt>
             <dd className="whitespace-pre-line">{detail.shipping_address}</dd>
           </div>
           {detail.notes ? (
             <div className="sm:col-span-2">
-              <dt className="text-xs text-muted-foreground">Catatan</dt>
+              <dt className="text-xs text-muted-foreground">Notes</dt>
               <dd className="whitespace-pre-line">{detail.notes}</dd>
             </div>
           ) : null}
@@ -83,7 +84,7 @@ export function WholesaleOrderDetailPage({ id }: { id: string }) {
       </section>
 
       <section className="rounded-card bg-card p-5 shadow-card">
-        <h2 className="mb-3 text-base font-semibold">Rincian</h2>
+        <h2 className="mb-3 text-base font-semibold">Items</h2>
         <ul className="divide-y divide-border text-sm">
           {detail.items.map((item, index) => (
             <li key={index} className="flex items-center justify-between gap-3 py-2">
@@ -107,8 +108,8 @@ export function WholesaleOrderDetailPage({ id }: { id: string }) {
             <span>{formatRupiah(detail.subtotal)}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Ongkir</span>
-            <span>{Number(detail.shipping_cost) > 0 ? formatRupiah(detail.shipping_cost) : "Diatur tim NüHabit"}</span>
+            <span>Shipping</span>
+            <span>{Number(detail.shipping_cost) > 0 ? formatRupiah(detail.shipping_cost) : "Arranged by the NüHabit team"}</span>
           </div>
           <div className="flex justify-between text-base font-semibold">
             <span>Total</span>
@@ -124,7 +125,7 @@ function BackLink() {
   return (
     <Link href="/wholesale/orders" className="inline-flex items-center gap-1.5 text-sm font-medium text-forest">
       <ArrowLeft className="h-4 w-4" />
-      Semua pesanan
+      All orders
     </Link>
   );
 }

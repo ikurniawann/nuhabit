@@ -186,9 +186,9 @@ func (s *Service) UpdateWholesaleAccount(ctx context.Context, id string, in Whol
 // ── Sessions ────────────────────────────────────────────────────────────
 
 var (
-	errWholesaleCredentials = httpx.Unauthorized("Email atau kata sandi salah")
-	errWholesaleDisabled    = httpx.Forbidden("Akun mitra dinonaktifkan. Hubungi tim NüHabit.")
-	errWholesaleLocked      = httpx.TooManyRequests("Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.")
+	errWholesaleCredentials = httpx.Unauthorized("Incorrect email or password")
+	errWholesaleDisabled    = httpx.Forbidden("This partner account is disabled. Contact the NüHabit team.")
+	errWholesaleLocked      = httpx.TooManyRequests("Too many sign-in attempts. Try again in 15 minutes.")
 )
 
 // WholesaleLogin checks the password and opens a session. Failed attempts
@@ -197,7 +197,7 @@ var (
 func (s *Service) WholesaleLogin(ctx context.Context, ip, email, password string) (token string, account *WholesaleAccount, err error) {
 	email = domain.NormalizeEmail(email)
 	if email == "" || password == "" {
-		return "", nil, httpx.BadRequest("Email dan kata sandi wajib diisi")
+		return "", nil, httpx.BadRequest("Email and password are required")
 	}
 	emailKey, ipKey := "wholesale-login:"+email, "wholesale-login-ip:"+ip
 	now := s.now()
@@ -369,14 +369,14 @@ func (s *Service) storefrontFor(ctx context.Context, acct WholesaleAccount) (*St
 // 30 days out and commits its stock at once, since it ships before payment.
 func (s *Service) PlaceWholesaleOrder(ctx context.Context, acct WholesaleAccount, in WholesaleOrderInput) (*WholesaleOrderResult, error) {
 	if acct.PaymentTerms == "invoice" && !s.ports.Payments.Configured() {
-		return nil, &checkoutError{503, "Pembayaran online belum dikonfigurasi"}
+		return nil, &checkoutError{503, "Online payment is not configured"}
 	}
 	sf, err := s.storefrontFor(ctx, acct)
 	if err != nil {
 		return nil, err
 	}
 	if sf == nil {
-		return nil, &checkoutError{503, "Toko belum aktif"}
+		return nil, &checkoutError{503, "The store is not active yet"}
 	}
 	lines, reason, err := s.resolveLines(ctx, in.Items)
 	if err != nil {
@@ -405,7 +405,7 @@ func (s *Service) PlaceWholesaleOrder(ctx context.Context, acct WholesaleAccount
 		address: in.Address, notes: in.Notes, wholesaleAccountID: &acct.ID, paymentTerms: &terms,
 	}
 	if d.total() <= 0 {
-		return nil, &checkoutError{400, "Total order tidak valid"}
+		return nil, &checkoutError{400, "Invalid order total"}
 	}
 	if terms == "pay_later" {
 		due := now.Add(domain.PayLaterDays * 24 * time.Hour)

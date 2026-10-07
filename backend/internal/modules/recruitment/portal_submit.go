@@ -27,7 +27,7 @@ import (
 const (
 	submitLimit       = 5
 	submitWindow      = 10 * time.Minute
-	fieldRequired     = "Field wajib belum lengkap"
+	fieldRequired     = "Required fields are missing"
 	maxApplicantBytes = 2 * 1024 * 1024
 )
 
@@ -66,7 +66,7 @@ func parseApplication(form *storage.Form) (application, error) {
 	a := application{FullName: required("full_name")}
 	if a.Email = required("email"); a.Email != "" {
 		if validate.UTF16Len(a.Email) > 255 || !applicantEmail.MatchString(a.Email) {
-			issues = append(issues, "Format email tidak valid")
+			issues = append(issues, "Invalid email format")
 		}
 	}
 	a.Phone, a.Domicile, a.Source = required("phone"), required("domicile"), required("source")
@@ -141,7 +141,7 @@ func (f *fileHandler) portalSubmit(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	if !allowed {
-		return httpx.TooManyRequests("Terlalu banyak lamaran dari jaringan ini. Coba lagi beberapa menit lagi.")
+		return httpx.TooManyRequests("Too many applications from this network. Try again in a few minutes.")
 	}
 	form, err := storage.ReadForm(r, storage.MaxRequestBytes)
 	if err != nil {
@@ -153,24 +153,24 @@ func (f *fileHandler) portalSubmit(w http.ResponseWriter, r *http.Request) error
 	}
 	photo := nonEmptyFile(form, "photo")
 	if photo == nil {
-		return httpx.BadRequest("Pas foto wajib diupload")
+		return httpx.BadRequest("A photo is required")
 	}
 	var cvURL *string
 	if cv := nonEmptyFile(form, "cv"); cv != nil {
-		url, err := f.uploadChecked(cv, uploadRule{types: cvMimeTypes, typeError: "CV harus format PDF atau DOC",
-			sizeError: "CV maksimal 2MB", bucket: "cv", uploadError: "Gagal upload CV"})
+		url, err := f.uploadChecked(cv, uploadRule{types: cvMimeTypes, typeError: "CV must be a PDF or DOC file",
+			sizeError: "CV must be 2MB or smaller", bucket: "cv", uploadError: "CV upload failed"})
 		if err != nil {
 			return err
 		}
 		cvURL = &url
 	}
-	photoURL, err := f.uploadChecked(photo, uploadRule{types: photoMimeTypes, typeError: "Foto harus format JPG/PNG",
-		sizeError: "Foto maksimal 2MB", bucket: "photos", uploadError: "Gagal upload foto"})
+	photoURL, err := f.uploadChecked(photo, uploadRule{types: photoMimeTypes, typeError: "Photo must be a JPG or PNG file",
+		sizeError: "Photo must be 2MB or smaller", bucket: "photos", uploadError: "Photo upload failed"})
 	if err != nil {
 		return err
 	}
 
-	positionTitle, brandName := "Belum ditentukan", "Umum"
+	positionTitle, brandName := "Not specified", "General"
 	if in.PositionID != nil && domain.IsUUID(*in.PositionID) {
 		if t, err := queryStrings(ctx, f.db(), "SELECT title FROM hris.positions WHERE id = $1", *in.PositionID); err != nil {
 			return err
@@ -202,7 +202,7 @@ func (f *fileHandler) portalSubmit(w http.ResponseWriter, r *http.Request) error
 		domicile: in.Domicile, source: in.Source, notes: in.Notes,
 		positionTitle: positionTitle, brandName: brandName, origin: portalOrigin(r),
 	})
-	return httpx.JSON(w, http.StatusOK, object("success", true, "message", "Lamaran berhasil dikirim", "candidate_id", candidateID))
+	return httpx.JSON(w, http.StatusOK, object("success", true, "message", "Application submitted", "candidate_id", candidateID))
 }
 
 // rateLimitIP is clientIpFromHeaders: cf-connecting-ip, the left-most
@@ -262,11 +262,11 @@ func emailSubject(text string) string {
 func candidateConfirmationHTML(d applicationEmail) string {
 	return `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a1a1a;">Terima Kasih, ` + htmlEscaper.Replace(d.fullName) + `!</h2>
-              <p style="color: #555;">Lamaran kamu untuk posisi <strong>` + htmlEscaper.Replace(d.positionTitle) + `</strong> di <strong>` + htmlEscaper.Replace(d.brandName) + `</strong> sudah kami terima.</p>
-              <p style="color: #555;">Tim HRD akan menghubungi kamu melalui WhatsApp atau email dalam 1-3 hari kerja.</p>
+              <h2 style="color: #1a1a1a;">Thank you, ` + htmlEscaper.Replace(d.fullName) + `!</h2>
+              <p style="color: #555;">We have received your application for <strong>` + htmlEscaper.Replace(d.positionTitle) + `</strong> at <strong>` + htmlEscaper.Replace(d.brandName) + `</strong>.</p>
+              <p style="color: #555;">Our HR team will reach you by WhatsApp or email within 1 to 3 business days.</p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-              <p style="color: #888; font-size: 12px;">Pesan ini dikirim otomatis. Mohon tidak membalas email ini.</p>
+              <p style="color: #888; font-size: 12px;">This message was sent automatically. Please do not reply to this email.</p>
             </div>
           `
 }
@@ -320,7 +320,7 @@ func (f *fileHandler) sendApplicationEmails(ctx context.Context, d applicationEm
 		from = "noreply@aapextechnology.com"
 	}
 	type message struct{ label, to, subject, html string }
-	messages := []message{{"Candidate", d.email, "Lamaran Kamu Sudah Kami Terima", candidateConfirmationHTML(d)}}
+	messages := []message{{"Candidate", d.email, "We Received Your Application", candidateConfirmationHTML(d)}}
 	if hrd := os.Getenv("HRD_EMAIL"); hrd != "" {
 		messages = append(messages, message{"HRD", hrd,
 			emailSubject("[Talent Pool] Lamaran Baru: " + d.fullName + " untuk " + d.positionTitle), hrdNotificationHTML(d)})

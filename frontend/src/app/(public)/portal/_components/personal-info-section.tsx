@@ -19,12 +19,12 @@ const SOURCES: [ApplicationFormValues["source"], string][] = [
   ["jobstreet", "JobStreet"],
   ["referral", "Referral"],
   ["walk_in", "Walk-in"],
-  ["other", "Lainnya"],
+  ["other", "Other"],
 ];
 
 const ICON = "absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#2a332e]";
 
-/** Outlet, posisi, identitas, kontak, domisili, dan sumber info pelamar. */
+/** Outlet, position, identity, contact, residence and how the applicant heard of us. */
 export function PersonalInfoSection({ form, options, optionsLoading, brandLocked }: PersonalInfoSectionProps) {
   const { register, setValue, control, formState } = form;
   const { errors } = formState;
@@ -32,7 +32,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
   const positions = options?.positions ?? [];
 
   return (
-    <FormSection title="Informasi Diri">
+    <FormSection title="Personal Information">
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="brand_id" label="Outlet / Brand">
           <select
@@ -42,7 +42,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
             disabled={brandLocked}
             className={controlClass()}
           >
-            <option value="">{brandLocked ? "Auto-selected" : "Pilih Outlet (opsional)"}</option>
+            <option value="">{brandLocked ? "Auto-selected" : "Choose an outlet (optional)"}</option>
             {(options?.outlets ?? []).map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -51,7 +51,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
           </select>
         </FormField>
 
-        <FormField id="position_id" label="Posisi yang Dilamar">
+        <FormField id="position_id" label="Position">
           <select
             id="position_id"
             value={positionId || ""}
@@ -59,7 +59,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
             className={controlClass()}
           >
             <option value="">
-              {optionsLoading ? "Loading positions..." : positions.length > 0 ? "Pilih Posisi" : "No positions available"}
+              {optionsLoading ? "Loading positions..." : positions.length > 0 ? "Choose a position" : "No positions available"}
             </option>
             {positions.map((p) => (
               <option key={p.id} value={p.id}>
@@ -67,16 +67,16 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
               </option>
             ))}
           </select>
-          {optionsLoading && <p className="text-xs text-[#2a332e]">Loading positions from database...</p>}
+          {optionsLoading && <p className="text-xs text-[#2a332e]">Loading positions...</p>}
           {!optionsLoading && positions.length === 0 && (
-            <p className="text-xs text-[#00281a]">No active positions found in database</p>
+            <p className="text-xs text-[#00281a]">No open positions right now</p>
           )}
         </FormField>
 
-        <FormField id="full_name" label="Nama Lengkap" required error={errors.full_name?.message}>
+        <FormField id="full_name" label="Full Name" required error={errors.full_name?.message}>
           <input
             id="full_name"
-            placeholder="Nama lengkap"
+            placeholder="Full name"
             {...register("full_name")}
             className={controlClass(Boolean(errors.full_name))}
           />
@@ -88,14 +88,14 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
             <input
               id="email"
               type="email"
-              placeholder="email@contoh.com"
+              placeholder="you@example.com"
               {...register("email")}
               className={controlClass(Boolean(errors.email), true)}
             />
           </div>
         </FormField>
 
-        <FormField id="phone" label="No. WhatsApp" required error={errors.phone?.message}>
+        <FormField id="phone" label="WhatsApp Number" required error={errors.phone?.message}>
           <div className="relative">
             <Phone className={ICON} />
             <input
@@ -108,7 +108,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
           </div>
         </FormField>
 
-        <FormField id="domicile" label="Domisili" required error={errors.domicile?.message}>
+        <FormField id="domicile" label="City of Residence" required error={errors.domicile?.message}>
           <div className="relative">
             <MapPin className={ICON} />
             <input
@@ -120,7 +120,7 @@ export function PersonalInfoSection({ form, options, optionsLoading, brandLocked
           </div>
         </FormField>
 
-        <FormField id="source" label="Sumber Info" required error={errors.source?.message}>
+        <FormField id="source" label="How Did You Hear About Us" required error={errors.source?.message}>
           <select
             id="source"
             value={source || "portal"}

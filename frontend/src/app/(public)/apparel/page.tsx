@@ -1,8 +1,8 @@
 import { ShopStorefrontPage } from "@/features/shop/storefront-public";
 
-export const metadata = { title: "Apparel", robots: { index: false } };
+export const metadata = { title: "Apparel | NüHabit", robots: { index: false } };
 
-/** /apparel: toko utama (storefront is_default, atau yang pertama aktif). */
+/** /apparel: the main store (storefront is_default, else the first active one). */
 export default function ApparelPage() {
   return <ShopStorefrontPage slug="default" />;
 }

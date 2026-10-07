@@ -1,5 +1,5 @@
-// Event dataLayer storefront (GTM). Dikirim hanya bila window.dataLayer ada
-// (layout situs memasangnya saat GTM container id diisi).
+// Storefront dataLayer events (GTM). Sent only when window.dataLayer exists
+// (the site layout installs it when a GTM container id is set).
 
 export type ShopEvent = "add_to_cart" | "buy_now" | "checkout_start";
 

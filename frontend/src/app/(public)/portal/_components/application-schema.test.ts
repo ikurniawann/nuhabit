@@ -8,18 +8,18 @@ const values: ApplicationFormValues = {
   domicile: "Bandung",
   source: "instagram",
   brand_id: "",
-  notes: "Siap shift malam",
+  notes: "Available for night shifts",
   expected_salary: "5000000",
 };
 
 describe("toSubmitFormData", () => {
-  it("field opsional kosong tidak dikirim; opening & berkas ikut", () => {
+  it("leaves out empty optional fields; includes the opening and the files", () => {
     const cv = new File(["%PDF"], "cv.pdf", { type: "application/pdf" });
     const form = toSubmitFormData(values, { jobOpeningId: "op-1", cv, photo: null });
     expect(form.get("full_name")).toBe("Budi");
     expect(form.get("source")).toBe("instagram");
     expect(form.has("brand_id")).toBe(false);
-    expect(form.get("notes")).toBe("Siap shift malam");
+    expect(form.get("notes")).toBe("Available for night shifts");
     expect(form.get("expected_salary")).toBe("5000000");
     expect(form.get("job_opening_id")).toBe("op-1");
     expect((form.get("cv") as File).name).toBe("cv.pdf");

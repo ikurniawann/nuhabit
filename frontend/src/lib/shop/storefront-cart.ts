@@ -1,4 +1,4 @@
-// Keranjang storefront publik: aturan murni (tanpa I/O) yang dipakai klien.
+// Public storefront cart: pure rules (no I/O) used by the client.
 
 import type { CatalogCollection, CatalogProduct, CatalogSku } from "./types";
 
@@ -10,7 +10,7 @@ export type CartLine = {
   variantName: string | null;
   price: number;
   quantity: number;
-  /** Batas pre-order (YYYY-MM-DD) bila baris ini dijual pre-order. */
+  /** Pre-order deadline (YYYY-MM-DD) when this line sells as a pre-order. */
   preorderUntil: string | null;
 };
 
@@ -21,7 +21,7 @@ type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogS
 export const cartLineKey = (productId: string, skuId: string | null) =>
   skuId ? `${productId}::${skuId}` : productId;
 
-/** Baris baru untuk produk/varian; qty minimal 1. */
+/** A new line for a product or variant; quantity at least 1. */
 export function makeCartLine(product: LineProduct, sku: LineSku | null, quantity = 1): CartLine {
   const preorder = sku ? sku.preorder === true : product.preorder === true;
   return {
@@ -36,7 +36,7 @@ export function makeCartLine(product: LineProduct, sku: LineSku | null, quantity
   };
 }
 
-/** Tambah qty; produk/varian yang sama menambah qty baris yang ada. */
+/** Add quantity; the same product or variant raises the existing line. */
 export function addCartLine(
   lines: CartLine[],
   product: LineProduct,
@@ -52,7 +52,7 @@ export function addCartLine(
   return [...lines, line];
 }
 
-/** Ubah qty; baris yang qty-nya habis (≤ 0) dibuang. */
+/** Change quantity; a line that reaches 0 or less is dropped. */
 export function changeCartQuantity(lines: CartLine[], key: string, delta: number): CartLine[] {
   return lines
     .map((line) => (line.key === key ? { ...line, quantity: line.quantity + delta } : line))
@@ -60,8 +60,8 @@ export function changeCartQuantity(lines: CartLine[], key: string, delta: number
 }
 
 /**
- * Ganti varian (ukuran) sebuah baris tanpa mengubah qty-nya. Bila varian
- * tujuan sudah ada di keranjang, qty-nya digabung ke baris itu.
+ * Change a line's variant (size) without changing its quantity. When the
+ * target variant is already in the cart, the quantity merges into that line.
  */
 export function changeCartVariant(
   lines: CartLine[],
@@ -96,7 +96,7 @@ export function cartSubtotal(lines: CartLine[]): number {
   return lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
 }
 
-/** Sidik isi keranjang: tarif ongkir hanya berlaku untuk sidik yang sama. */
+/** Cart signature: a shipping rate only applies to the same signature. */
 export function cartSignature(lines: CartLine[]): string {
   return lines.map((line) => `${line.key}:${line.quantity}`).join("|");
 }
@@ -111,8 +111,8 @@ const isLine = (value: unknown): value is CartLine =>
   typeof (value as CartLine).quantity === "number";
 
 /**
- * Baca keranjang tersimpan. Menerima format lama (array baris) dan format
- * baru ({ lines, note }); data korup dibaca sebagai keranjang kosong.
+ * Read a stored cart. Accepts the old format (an array of lines) and the
+ * new one ({ lines, note }); corrupt data reads as an empty cart.
  */
 export function parseStoredCart(raw: string | null): StoredCart {
   const empty: StoredCart = { lines: [], note: "" };
@@ -140,9 +140,9 @@ export function parseStoredCart(raw: string | null): StoredCart {
 export type CollectionGroup = { id: string; name: string; products: CatalogProduct[] };
 
 /**
- * Kelompokkan produk per koleksi mengikuti urutan `collections`; produk
- * tanpa koleksi masuk grup "Lainnya" di akhir. Satu grup saja berarti
- * storefront tampil sebagai grid datar.
+ * Group products per collection in `collections` order; products without a
+ * collection land in an "Other" group at the end. A single group means the
+ * storefront renders as a flat grid.
  */
 export function groupByCollection(
   products: CatalogProduct[],
@@ -157,7 +157,7 @@ export function groupByCollection(
     else others.push(product);
   }
   const filled = groups.filter((group) => group.products.length > 0);
-  if (others.length > 0) filled.push({ id: "lainnya", name: "Lainnya", products: others });
+  if (others.length > 0) filled.push({ id: "other", name: "Other", products: others });
   return filled;
 }
 
@@ -169,12 +169,12 @@ export type CheckoutForm = {
   hasRate: boolean;
 };
 
-/** Pesan galat pertama untuk form checkout, atau null bila siap dibayar. */
+/** First error message for the checkout form, or null when ready to pay. */
 export function checkoutFormError(form: CheckoutForm): string | null {
-  if (form.name.trim().length < 2) return "Nama penerima wajib diisi";
-  if (form.phone.replace(/\D/g, "").length < 8) return "Nomor WA tidak valid";
-  if (!form.hasArea) return "Pilih area tujuan dulu";
-  if (form.address.trim().length < 10) return "Alamat lengkap minimal 10 karakter";
-  if (!form.hasRate) return "Pilih kurir dulu";
+  if (form.name.trim().length < 2) return "Recipient name is required";
+  if (form.phone.replace(/\D/g, "").length < 8) return "Enter a valid WhatsApp number";
+  if (!form.hasArea) return "Choose a destination area first";
+  if (form.address.trim().length < 10) return "Full address must be at least 10 characters";
+  if (!form.hasRate) return "Choose a courier first";
   return null;
 }

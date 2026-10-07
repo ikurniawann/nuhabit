@@ -10,8 +10,8 @@ export interface PortalOptions {
 }
 
 /**
- * Outlet, posisi, dan auto-fill job opening dari endpoint publik (portal
- * tanpa login). Gagal muat → dropdown kosong, form tetap bisa diisi.
+ * Outlets, positions and the job-opening auto-fill from the public endpoint
+ * (no login). A failed load leaves the dropdowns empty; the form still works.
  */
 export function usePortalOptions(jobOpeningId: string | null) {
   return useQuery({

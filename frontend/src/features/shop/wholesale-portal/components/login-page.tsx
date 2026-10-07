@@ -7,7 +7,7 @@ import { useWholesaleLogin, useWholesaleMe } from "../queries";
 
 const INPUT = "h-11 w-full rounded-2xl border border-border bg-card px-4 text-sm outline-none focus:border-forest";
 
-/** /wholesale: masuk dengan email dan kata sandi yang diberikan tim NüHabit. */
+/** /wholesale: sign in with the email and password issued by the NüHabit team. */
 export function WholesaleLoginPage() {
   const router = useRouter();
   const me = useWholesaleMe();
@@ -30,12 +30,12 @@ export function WholesaleLoginPage() {
   return (
     <div className="mx-auto max-w-md">
       <div className="rounded-card bg-card p-6 shadow-card sm:p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Portal Mitra Wholesale</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Wholesale Partner Portal</p>
         <h1 className="mt-1 text-2xl font-bold">
-          Masuk<span className="text-forest">.</span>
+          Sign in<span className="text-forest">.</span>
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Untuk gym mitra dan reseller. Akun dibuat oleh tim NüHabit; hubungi kami bila belum punya.
+          For partner gyms and resellers. The NüHabit team creates accounts; contact us if you do not have one yet.
         </p>
         <form onSubmit={submit} className="mt-6 space-y-4">
           <label className="block space-y-1.5 text-sm font-medium">
@@ -50,7 +50,7 @@ export function WholesaleLoginPage() {
             />
           </label>
           <label className="block space-y-1.5 text-sm font-medium">
-            Kata sandi
+            Password
             <input
               type="password"
               autoComplete="current-password"
@@ -71,7 +71,7 @@ export function WholesaleLoginPage() {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground shadow-glow hover:bg-accent-dark disabled:opacity-60"
           >
             {login.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Masuk
+            Sign in
           </button>
         </form>
       </div>

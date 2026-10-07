@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- pratinjau blob: lokal, next/image tidak mendukung */
+/* eslint-disable @next/next/no-img-element -- blob: preview is local, next/image does not support it */
 "use client";
 
 import type { ChangeEvent, ReactNode } from "react";
@@ -17,7 +17,7 @@ function SelectedFile({ file, preview, onRemove }: { file: File; preview?: React
         <p className="truncate text-sm font-medium text-[#131a1c]">{file.name}</p>
         <p className="text-xs text-[#2a332e]">{sizeMb(file)}</p>
       </div>
-      <button type="button" onClick={onRemove} className="rounded p-1 transition-colors hover:bg-[#e3dbcc]">
+      <button type="button" onClick={onRemove} aria-label={`Remove ${file.name}`} className="rounded p-1 transition-colors hover:bg-[#e3dbcc]">
         <X className="h-4 w-4 text-[#00281a]" />
       </button>
     </div>
@@ -34,16 +34,16 @@ function DropZone({ label, accept, onChange }: { label: string; accept: string; 
   );
 }
 
-/** Unggah CV (PDF/DOC) dan pas foto (JPG/PNG/WebP), masing-masing maks 2MB. */
+/** Upload a CV (PDF/DOC) and a photo (JPG/PNG/WebP), each up to 2MB. */
 export function DocumentSection({ files }: { files: ApplicationFiles }) {
   return (
-    <FormSection title="Upload Dokumen">
+    <FormSection title="Documents">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <label className={LABEL}>
             CV <span className="text-[#00281a]">*</span>
           </label>
-          <span className="text-xs text-[#2a332e]">PDF/DOC, maks 2MB</span>
+          <span className="text-xs text-[#2a332e]">PDF/DOC, up to 2MB</span>
           {files.cvFile ? (
             <SelectedFile
               file={files.cvFile}
@@ -61,9 +61,9 @@ export function DocumentSection({ files }: { files: ApplicationFiles }) {
 
         <div className="space-y-1.5">
           <label className={LABEL}>
-            Pas Foto <span className="text-[#00281a]">*</span>
+            Photo <span className="text-[#00281a]">*</span>
           </label>
-          <span className="text-xs text-[#2a332e]">JPG/PNG, maks 2MB</span>
+          <span className="text-xs text-[#2a332e]">JPG/PNG, up to 2MB</span>
           {files.photoFile ? (
             <SelectedFile
               file={files.photoFile}
@@ -75,7 +75,7 @@ export function DocumentSection({ files }: { files: ApplicationFiles }) {
               onRemove={files.removePhoto}
             />
           ) : (
-            <DropZone label="Upload Foto" accept="image/jpeg,image/png,image/webp" onChange={files.onPhotoChange} />
+            <DropZone label="Upload Photo" accept="image/jpeg,image/png,image/webp" onChange={files.onPhotoChange} />
           )}
         </div>
 

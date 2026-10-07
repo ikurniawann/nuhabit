@@ -3,7 +3,8 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Package, ShoppingBag, X } from "lucide-react";
-import { formatDate, formatRupiah } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
+import { formatDateEn } from "@/lib/shop/format-en";
 import { groupByCollection } from "@/lib/shop/storefront-cart";
 import type { CatalogProduct } from "@/lib/shop/types";
 import { usePlaceWholesaleOrder, useWholesaleCatalog, type WholesaleProduct, type WholesaleSku } from "../queries";
@@ -16,7 +17,7 @@ const pickKey = (productId: string, skuId: string | null) => (skuId ? `${product
 
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
-/** /wholesale/catalog: harga mitra, minimal qty per produk, pesan sekaligus. */
+/** /wholesale/catalog: partner prices, minimum quantity per product, order in one go. */
 export function WholesaleCatalogPage() {
   const router = useRouter();
   const { account, loading } = useRequireAccount();
@@ -30,7 +31,7 @@ export function WholesaleCatalogPage() {
 
   const products = useMemo(() => catalog.data ?? [], [catalog.data]);
   const groups = useMemo(() => {
-    // groupByCollection hanya membaca id dan collection; cast cukup untuk itu.
+    // groupByCollection only reads id and collection; the cast covers that.
     const collections = Array.from(
       new Map(products.flatMap((p) => (p.collection ? [[p.collection.id, p.collection]] : []))).values()
     );
@@ -69,7 +70,7 @@ export function WholesaleCatalogPage() {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (address.trim().length < 10) {
-      setFormError("Alamat pengiriman minimal 10 karakter");
+      setFormError("Shipping address must be at least 10 characters");
       return;
     }
     setFormError(null);
@@ -103,14 +104,14 @@ export function WholesaleCatalogPage() {
     <div className="pb-28">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Katalog mitra</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Partner catalog</p>
           <h1 className="text-2xl font-bold">
-            Harga khusus {account.company_name}
+            Partner pricing for {account.company_name}
             <span className="text-forest">.</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Diskon {account.discount_pct}% dari harga retail kecuali produk berharga wholesale khusus.
-            {minOrder > 0 ? ` Minimal pesanan ${formatRupiah(minOrder)}.` : ""} Pembayaran:{" "}
+            {account.discount_pct}% off retail, except products with a dedicated wholesale price.
+            {minOrder > 0 ? ` Minimum order ${formatRupiah(minOrder)}.` : ""} Payment:{" "}
             {TERMS_LABEL[account.payment_terms]}.
           </p>
         </div>
@@ -125,7 +126,7 @@ export function WholesaleCatalogPage() {
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-24 text-muted-foreground">
           <ShoppingBag className="h-10 w-10 opacity-40" />
-          <p className="text-sm">Belum ada produk di katalog</p>
+          <p className="text-sm">No products in the catalog yet</p>
         </div>
       ) : (
         groups.map((group) => (
@@ -149,12 +150,14 @@ export function WholesaleCatalogPage() {
         <div className="fixed inset-x-0 bottom-0 z-30 bg-ink text-on-ink shadow-float">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
             <div>
-              <p className="text-xs text-on-ink-muted">{totalQty} pcs · {lines.length} baris</p>
+              <p className="text-xs text-on-ink-muted">
+                {totalQty} pcs · {lines.length} {lines.length === 1 ? "line" : "lines"}
+              </p>
               <p className="text-base font-semibold">{formatRupiah(subtotal)}</p>
               {underMin ? (
-                <p className="text-xs text-on-ink-muted">Minimal {underMin.minQty} pcs untuk {underMin.name}</p>
+                <p className="text-xs text-on-ink-muted">Minimum {underMin.minQty} pcs for {underMin.name}</p>
               ) : subtotal < minOrder ? (
-                <p className="text-xs text-on-ink-muted">Minimal pesanan {formatRupiah(minOrder)}</p>
+                <p className="text-xs text-on-ink-muted">Minimum order {formatRupiah(minOrder)}</p>
               ) : null}
             </div>
             <button
@@ -163,7 +166,7 @@ export function WholesaleCatalogPage() {
               disabled={underMin !== undefined || subtotal < minOrder}
               className="rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:opacity-50"
             >
-              Buat Pesanan
+              Place Order
             </button>
           </div>
         </div>
@@ -174,13 +177,13 @@ export function WholesaleCatalogPage() {
           <form
             onSubmit={submit}
             role="dialog"
-            aria-label="Konfirmasi pesanan"
+            aria-label="Confirm order"
             className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-card bg-card p-5 shadow-float sm:rounded-card"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-4 flex items-start justify-between">
-              <h2 className="text-lg font-bold">Konfirmasi pesanan</h2>
-              <button type="button" onClick={() => setSheetOpen(false)} aria-label="Tutup">
+              <h2 className="text-lg font-bold">Confirm order</h2>
+              <button type="button" onClick={() => setSheetOpen(false)} aria-label="Close">
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>
@@ -199,18 +202,18 @@ export function WholesaleCatalogPage() {
               </li>
             </ul>
             <label className="mb-3 block space-y-1.5 text-sm font-medium">
-              Alamat pengiriman
+              Shipping address
               <textarea
                 required
                 rows={3}
                 value={address}
                 onChange={(event) => setAddress(event.target.value)}
-                placeholder="Nama penerima, jalan, kota, kode pos"
+                placeholder="Recipient name, street, city, postal code"
                 className="w-full rounded-2xl border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-forest"
               />
             </label>
             <label className="mb-3 block space-y-1.5 text-sm font-medium">
-              Catatan (opsional)
+              Notes (optional)
               <textarea
                 rows={2}
                 value={notes}
@@ -220,8 +223,8 @@ export function WholesaleCatalogPage() {
             </label>
             <p className="mb-4 rounded-2xl bg-surface px-3 py-2 text-xs text-body">
               {account.payment_terms === "invoice"
-                ? "Setelah pesanan dibuat, Anda diarahkan ke invoice Xendit. Ongkir diatur tim NüHabit setelah pembayaran."
-                : "Pesanan dikirim lebih dulu; tagihan jatuh tempo 30 hari sejak pesanan dibuat."}
+                ? "After the order is placed you will be taken to the Xendit invoice. The NüHabit team arranges shipping after payment."
+                : "The order ships first; the invoice is due 30 days after the order is placed."}
             </p>
             {formError ? (
               <p role="alert" className="mb-3 rounded-2xl bg-danger-soft px-3 py-2 text-sm text-danger">
@@ -234,7 +237,7 @@ export function WholesaleCatalogPage() {
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-accent-strong text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:opacity-60"
             >
               {place.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {account.payment_terms === "invoice" ? "Buat pesanan & bayar" : "Buat pesanan"}
+              {account.payment_terms === "invoice" ? "Place order & pay" : "Place order"}
             </button>
           </form>
         </div>
@@ -272,7 +275,7 @@ function ProductCard({
         <h3 className="text-sm font-semibold">{product.name}</h3>
         <p className="text-xs text-muted-foreground">
           Min. {product.minQty} pcs
-          {product.preorderUntil && product.preorder ? ` · pre-order, kirim ${formatDate(product.preorderUntil)}` : ""}
+          {product.preorderUntil && product.preorder ? ` · pre-order, ships ${formatDateEn(product.preorderUntil)}` : ""}
         </p>
         <div className="mt-2 space-y-1.5">
           {rows.map((row) => {
@@ -283,7 +286,7 @@ function ProductCard({
                 <span className="min-w-0 truncate">
                   {row.sku ? <span className="font-medium">{row.label}</span> : null}{" "}
                   <span className="text-xs text-muted-foreground">
-                    {row.stock > 0 ? `stok ${row.stock}` : row.preorder ? "pre-order" : "habis"}
+                    {row.stock > 0 ? `${row.stock} in stock` : row.preorder ? "pre-order" : "sold out"}
                   </span>
                 </span>
                 <span className="flex items-center gap-2">
