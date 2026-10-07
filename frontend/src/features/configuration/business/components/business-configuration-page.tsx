@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   Loader2,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import {
 } from "../utils/business-tree";
 import type { FlatBusinessTreeRow } from "../utils/business-tree";
 import { toast } from "sonner";
+import { BranchProfileDialog } from "./branch-profile-dialog";
 
 const LEVEL_ICONS = {
   holding: Building2,
@@ -99,6 +101,7 @@ function BusinessTreeRow({
   onEdit,
   onAddChild,
   onDelete,
+  onProfile,
 }: {
   row: FlatBusinessTreeRow;
   expandedIds: Set<string>;
@@ -106,6 +109,7 @@ function BusinessTreeRow({
   onEdit: (node: BusinessTreeNode) => void;
   onAddChild: (node: BusinessTreeNode) => void;
   onDelete: (node: BusinessTreeNode) => void;
+  onProfile: (node: BusinessTreeNode) => void;
 }) {
   const { node, depth, hasChildren, isLast, parentContinuations } = row;
   const id = node.data.id;
@@ -195,6 +199,19 @@ function BusinessTreeRow({
               {BUSINESS_LEVEL_LABELS[childType]}
             </Button>
           ) : null}
+          {node.kind === "branch" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => onProfile(node)}
+              className="h-8 gap-1 px-2 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+              title="Profil publik cabang"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              Profil
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="sm"
@@ -248,6 +265,7 @@ export function BusinessConfigurationPage() {
   const [deletingNode, setDeletingNode] = useState<BusinessTreeNode | null>(
     null,
   );
+  const [profileNode, setProfileNode] = useState<BusinessTreeNode | null>(null);
 
   const businessTree = useMemo(() => tree ?? { holdings: [] }, [tree]);
   const counts = useMemo(
@@ -461,6 +479,7 @@ export function BusinessConfigurationPage() {
                     onEdit={openEdit}
                     onAddChild={openAddChild}
                     onDelete={openDelete}
+                    onProfile={setProfileNode}
                   />
                 ))}
               </tbody>
@@ -609,6 +628,11 @@ export function BusinessConfigurationPage() {
           </DialogFooter>
         </DialogPanel>
       </Dialog>
+      <BranchProfileDialog
+        branchId={profileNode?.data.id ?? null}
+        branchName={profileNode?.data.name ?? ""}
+        onClose={() => setProfileNode(null)}
+      />
     </div>
   );
 }

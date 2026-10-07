@@ -87,3 +87,33 @@ export const fetchCompanyProfile = () =>
 export const saveCompanyProfile = (
   body: Partial<Record<keyof CompanyProfile, string>>,
 ) => apiPut("/api/settings/company-profile", body);
+
+/** Public profile of a branch (configuration.branches public columns). */
+export interface BranchProfile {
+  id: string;
+  name: string;
+  slug: string;
+  is_public: boolean;
+  address: string | null;
+  city: string | null;
+  postcode: string | null;
+  lat: number | null;
+  lng: number | null;
+  phone: string | null;
+  email: string | null;
+  instagram: string | null;
+  directions: string | null;
+  hero_image_url: string | null;
+  benefits: { title: string; text: string }[];
+  accordions: { facilities: string[]; parking: string[]; team: string[]; community: string[] };
+  extras: { name: string; blurb: string }[];
+  testimonials: { name: string; quote: string; role: string }[];
+}
+
+export type BranchProfileBody = Omit<BranchProfile, "id" | "name">;
+
+export const fetchBranchProfile = (branchId: string) =>
+  apiGet<{ data: BranchProfile }>(`${BASE}/branch/${branchId}/profile`).then((r) => r.data);
+
+export const saveBranchProfile = (branchId: string, body: BranchProfileBody) =>
+  apiPut<{ data: BranchProfile }>(`${BASE}/branch/${branchId}/profile`, body).then((r) => r.data);
