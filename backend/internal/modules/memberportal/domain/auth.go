@@ -182,6 +182,8 @@ type Registration struct {
 	Email       *string
 	BirthDate   *string
 	WAConsent   bool
+	// GoogleSub links the member to a verified Google account.
+	GoogleSub *string
 }
 
 // RegistrationError names the field that failed.

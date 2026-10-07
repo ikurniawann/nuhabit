@@ -2881,6 +2881,11 @@
   },
   {
     "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/auth/google"
+  },
+  {
+    "module": "member-portal",
     "method": "GET",
     "path": "/api/member-portal/badges"
   },

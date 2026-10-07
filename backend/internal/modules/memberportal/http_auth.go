@@ -73,6 +73,40 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	return h.writeSignedIn(w, r, signed)
 }
 
+type googleSignedIn struct {
+	Status string  `json:"status"`
+	Name   *string `json:"name"`
+	Token  string  `json:"token,omitempty"`
+}
+
+type googleNeedsPhone struct {
+	Status    string `json:"status"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	GoogleSub string `json:"google_sub"`
+	Ticket    string `json:"ticket"`
+}
+
+// POST /auth/google { id_token }: a member with that verified email signs
+// in; anyone else gets a ticket to finish registration with a phone.
+func (h *Handler) googleSignIn(w http.ResponseWriter, r *http.Request) error {
+	body, _ := readBody(r)
+	res, err := h.svc.GoogleSignIn(r.Context(), clientIP(r.Header), jsString(body["id_token"]))
+	if err != nil {
+		return err
+	}
+	if res.SignedIn == nil {
+		t := res.Ticket
+		return ok(w, googleNeedsPhone{Status: "needs_phone", Email: t.Email, Name: t.Name, GoogleSub: t.Sub, Ticket: res.TicketValue})
+	}
+	data := googleSignedIn{Status: "signed_in", Name: res.SignedIn.Name}
+	if r.Header.Get("x-app-client") == "1" {
+		data.Token = res.SignedIn.Token
+	}
+	http.SetCookie(w, sessionCookie(r, res.SignedIn.Token, h.svc.now(), domain.SessionTTL))
+	return ok(w, data)
+}
+
 // POST /logout ends the session and clears the cookie, even on failure.
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 	token := domain.BearerToken(r.Header.Get("Authorization"))

@@ -38,4 +38,8 @@ type Service struct {
 	brand      string
 	production bool
 	appOrigin  string
+	// google verifies ID tokens for GOOGLE_CLIENT_ID; nil disables Google sign-in.
+	google         *googleKeys
+	googleAudience string
+	ticketSecret   []byte
 }

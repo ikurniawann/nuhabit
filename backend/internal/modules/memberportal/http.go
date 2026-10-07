@@ -53,6 +53,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST " + prefix + "/register/otp", Handler: h.public("Gagal mengirim OTP", h.requestRegisterOTP)},
 		{Pattern: "POST " + prefix + "/verify", Handler: h.public("Gagal verifikasi OTP", h.verify)},
 		{Pattern: "POST " + prefix + "/register", Handler: h.public("Pendaftaran gagal. Coba lagi.", h.register)},
+		{Pattern: "POST " + prefix + "/auth/google", Handler: h.public("Gagal masuk dengan Google", h.googleSignIn)},
 		{Pattern: "POST " + prefix + "/logout", Handler: http.HandlerFunc(h.logout)},
 
 		// Profile and account
