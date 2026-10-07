@@ -351,6 +351,9 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID)
 	case "invoice":
 		view, err = h.svc.StartInvoicePurchase(r.Context(), purchase, func(purchaseID string) string {
+			if in.FromSite {
+				return origin + "/join/status?purchase=" + purchaseID
+			}
 			return origin + "/member/wallet/pay/" + purchaseID
 		})
 	default:

@@ -761,4 +761,10 @@ func TestInvoicePurchase(t *testing.T) {
 	if b := e.balance(); b != 2 {
 		t.Fatalf("credits %d", b)
 	}
+
+	// The public /join checkout returns to its own status page.
+	site := e.data(asMember, "POST", "/api/member-portal/gym/credits/purchases", map[string]any{"package_id": pack, "method": "invoice", "source": "site"})
+	if !strings.HasSuffix(site["invoice_url"].(string), "/join/status?purchase="+site["id"].(string)) {
+		t.Fatalf("site purchase %v", site)
+	}
 }
