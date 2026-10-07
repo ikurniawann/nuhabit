@@ -123,9 +123,11 @@ func (h *handler) loadForm(ctx context.Context, slug string) (*form, error) {
 	return &f, nil
 }
 
+// decode reads stored JSON with numbers as json.Number, which the validate
+// checks expect (a float64 width would fail every stored field and drop
+// the form back to the defaults).
 func decode(raw []byte) any {
-	var v any
-	_ = json.Unmarshal(raw, &v)
+	v, _ := kit.DecodeLoose(raw)
 	return v
 }
 

@@ -127,6 +127,20 @@ func TestPublicFormDefinition(t *testing.T) {
 	if !strings.Contains(res.Body.String(), `"fields":[{"key":"pic_name","label":"Nama Anda","type":"text","required":true,"placeholder":"cth. Budi Santoso","help_text":null,"options":[],"width":1}`) {
 		t.Fatalf("default fields: %s", res.Body)
 	}
+
+	// A stored definition (numbers included) replaces the defaults, for the
+	// page and for validation.
+	f.exec(`UPDATE crm.crm_forms SET fields = $2::jsonb WHERE slug = $1`, slug,
+		`[{"key":"pic_email","label":"Email","type":"email","required":true,"placeholder":null,"help_text":null,"options":[],"width":2},
+		  {"key":"topic","label":"Topik","type":"select","required":true,"placeholder":null,"help_text":null,"options":["Kelas","Apparel"],"width":1}]`)
+	res, _ = testutil.Do(t, f.mux, testutil.Request("GET", "/api/public/crm/forms/"+slug, nil))
+	if !strings.Contains(res.Body.String(), `"fields":[{"key":"pic_email","label":"Email","type":"email","required":true,"placeholder":null,"help_text":null,"options":[],"width":2},{"key":"topic","label":"Topik","type":"select","required":true,"placeholder":null,"help_text":null,"options":["Kelas","Apparel"],"width":1}]`) {
+		t.Fatalf("stored fields: %s", res.Body)
+	}
+	code, raw := f.post(slug, map[string]any{"pic_email": "ani@example.test"}, "10.0.0.7")
+	if code != 400 || raw != `{"success":false,"error":"Periksa kembali isian Anda","details":[{"key":"topic","message":"Topik wajib diisi"}]}` {
+		t.Fatalf("stored validation %d %s", code, raw)
+	}
 }
 
 func TestPublicFormSubmissions(t *testing.T) {
