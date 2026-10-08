@@ -130,6 +130,25 @@ export async function verifyOtp(
   return result;
 }
 
+/**
+ * POST /api/member-portal/login — login dengan username dan password.
+ * Header x-app-client membuat server menyertakan `token` sesi di body.
+ */
+export async function login(
+  username: string,
+  password?: string
+): Promise<ApiResult<{ name: string | null; token?: string }>> {
+  const result = await request<{ name: string | null; token?: string }>(
+    "/api/member-portal/login",
+    {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+      headers: { "x-app-client": "1" },
+    }
+  );
+  return result;
+}
+
 /** GET /api/member-portal/me — profil + saldo + XP + tier. */
 export function fetchMe(): Promise<ApiResult<MemberProfileResponse>> {
   return request<MemberProfileResponse>("/api/member-portal/me");
