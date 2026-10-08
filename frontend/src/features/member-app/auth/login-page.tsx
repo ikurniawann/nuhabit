@@ -5,8 +5,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { OTP_ENABLED } from "@/lib/otp-availability";
-import { useMemberOtp } from "../lib/use-member-otp";
+import { useMemberLogin } from "../lib/use-member-login";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
 import { GoogleSignIn, type GoogleNeedsPhone } from "./google-sign-in";
@@ -28,17 +27,18 @@ export function LoginPage() {
     qc.clear();
     router.replace(returnPath());
   }, [qc, router]);
-  const otp = useMemberOtp({ onSignedIn });
+  
+  const auth = useMemberLogin({ onSignedIn });
+  
   // Akun Google tanpa member: lengkapi nomor WhatsApp di pendaftaran.
   const onNeedsPhone = useCallback(
     (identity: GoogleNeedsPhone) => {
-      if (OTP_ENABLED) router.push(`${m("/auth/register")}?${new URLSearchParams({ ...identity })}`);
-      else setGoogleNotice("Akun Google ini belum terhubung dengan keanggotaan. Pendaftaran baru sementara tidak tersedia.");
+      router.push(`${m("/auth/register")}?${new URLSearchParams({ ...identity })}`);
     },
     [router]
   );
 
-  const canSubmit = otp.step === "phone" ? otp.phone.trim().length >= 6 : otp.code.length === 6;
+  const canSubmit = auth.username.trim().length >= 3;
 
   return (
     <div className="nh-app">
@@ -66,75 +66,66 @@ export function LoginPage() {
         {/* Kartu form mengambang - relative supaya tergambar di atas overlay hero */}
         <div className="relative -mt-10 px-4 pb-10">
           <div className="nh-card !p-6">
-            {OTP_ENABLED ? <form
+            <form
               className="flex flex-col gap-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!canSubmit) return;
-                void (otp.step === "phone" ? otp.requestOtp() : otp.verifyOtp());
+                void auth.login();
               }}
             >
               <div>
                 <p className="nh-display text-2xl">{t("Sign in")}</p>
                 <p className="mt-0.5 text-sm text-nh-muted">
-                  {otp.step === "phone"
-                    ? t("Use the WhatsApp number on your membership.")
-                    : t("We sent a 6-digit code to WhatsApp {phone}.", { phone: otp.phone })}
+                  {t("Masuk dengan username dan password.")}
                 </p>
               </div>
-              {otp.step === "phone" ? (
-                <div>
-                  <label className="nh-label" htmlFor="phone">
-                    {t("WhatsApp number")}
-                  </label>
-                  <input
-                    id="phone"
-                    className="nh-input"
-                    type="tel"
-                    inputMode="tel"
-                    value={otp.phone}
-                    onChange={(e) => otp.setPhone(e.target.value)}
-                    placeholder="08xxxxxxxxxx"
-                    autoComplete="tel"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="nh-label" htmlFor="code">
-                    {t("Verification code")}
-                  </label>
-                  <input
-                    id="code"
-                    className="nh-input text-center text-2xl tracking-[0.5em]"
-                    value={otp.code}
-                    onChange={(e) => otp.setCode(e.target.value.slice(0, 6))}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="123456"
-                    autoFocus
-                  />
-                </div>
-              )}
+              
+              <div>
+                <label className="nh-label" htmlFor="username">
+                  {t("Username / No. WhatsApp / Email")}
+                </label>
+                <input
+                  id="username"
+                  className="nh-input"
+                  type="text"
+                  value={auth.username}
+                  onChange={(e) => auth.setUsername(e.target.value)}
+                  placeholder="Username Anda"
+                  autoComplete="username"
+                />
+              </div>
+              
+              <div>
+                <label className="nh-label" htmlFor="password">
+                  {t("Password")}
+                </label>
+                <input
+                  id="password"
+                  className="nh-input"
+                  type="password"
+                  value={auth.password}
+                  onChange={(e) => auth.setPassword(e.target.value)}
+                  placeholder="******"
+                  autoComplete="current-password"
+                />
+              </div>
+              
               <button
                 type="submit"
                 className="nh-btn-brand flex items-center justify-center gap-2"
-                disabled={otp.busy || !canSubmit}
+                disabled={auth.busy || !canSubmit}
               >
-                {otp.step === "phone" ? t("Send code") : t("Sign in")} <ArrowRight size={18} />
+                {t("Sign in")} <ArrowRight size={18} />
               </button>
-              {otp.step === "code" ? (
-                <button type="button" onClick={otp.backToPhone} className="text-sm font-bold text-nh-ink/60">
-                  {t("Change number or resend")}
-                </button>
-              ) : null}
-              {otp.error ? <p className="text-sm font-bold text-nh-danger">{otp.error}</p> : null}
-            </form> : <div className="mb-4"><p className="nh-display text-2xl">{t("Sign in")}</p><p className="mt-2 text-sm text-nh-muted">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "Login dengan kode WhatsApp sedang tidak tersedia. Anggota yang sudah terdaftar dapat masuk dengan Google." : "Login sementara tidak tersedia. Verifikasi kode WhatsApp sedang dinonaktifkan."}</p></div>}
-            {(!OTP_ENABLED || otp.step === "phone") ? (
-              <div className="mt-4">
-                <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} />
-                {googleNotice ? <p className="mt-3 text-sm text-nh-danger">{googleNotice}</p> : null}
-              </div>
-            ) : null}
+              
+              {auth.error ? <p className="text-sm font-bold text-nh-danger">{auth.error}</p> : null}
+            </form>
+            
+            <div className="mt-4">
+              <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} />
+              {googleNotice ? <p className="mt-3 text-sm text-nh-danger">{googleNotice}</p> : null}
+            </div>
           </div>
 
           <Link href={m("/auth/register")} className="nh-btn-ghost mt-3 w-full">
