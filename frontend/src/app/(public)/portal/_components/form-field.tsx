@@ -30,7 +30,7 @@ export function FormField({ id, label, required, error, children }: FormFieldPro
 
 export function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-[#e3dbcc] bg-mint p-5 sm:p-6">
+    <div className="rounded-lg border border-[#e3dbcc] bg-white p-5 sm:p-6">
       <h2 className="mb-4 text-base font-medium leading-tight">{title}</h2>
       {children}
     </div>

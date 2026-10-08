@@ -34,7 +34,18 @@ async function post<T = object>(path: string, body: unknown): Promise<PostResult
 
 /** useSearchParams needs a Suspense boundary for prerendering. */
 export function RegisterPage() {
-  if (!OTP_ENABLED) return <div className="nh-app flex min-h-dvh items-center justify-center px-6"><div className="nh-card max-w-md text-center"><h1 className="nh-display text-2xl">Pendaftaran sementara tidak tersedia</h1><p className="mt-3 text-sm text-nh-muted">Verifikasi kode WhatsApp sedang dinonaktifkan.</p><Link href={m("/auth/login")} className="nh-btn-brand mt-5 inline-flex">Ke halaman login</Link></div></div>;
+  if (!OTP_ENABLED) return (
+    <div className="nh-app flex min-h-dvh items-center justify-center bg-white px-6">
+      <div className="nh-card max-w-md border border-forest/10 bg-white text-center">
+        <h1 className="nh-display text-2xl">Pendaftaran sementara tidak tersedia</h1>
+        <p className="mt-3 text-sm text-nh-muted">Verifikasi kode WhatsApp sedang dinonaktifkan.</p>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          <Link href="/" className="nh-btn-brand inline-flex">Kembali ke Home</Link>
+          <Link href={m("/auth/login")} className="nh-btn-ghost inline-flex">Ke halaman login</Link>
+        </div>
+      </div>
+    </div>
+  );
   return (
     <Suspense fallback={<Spinner />}>
       <Register />

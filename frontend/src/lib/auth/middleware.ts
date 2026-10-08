@@ -25,6 +25,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/arkiv-os",
   "/qa",
   "/login",
+  "/unavailable",
   "/portal",
   "/career",
   "/table-order",
@@ -99,6 +100,13 @@ export function isPublicAuthPath(pathname: string): boolean {
   );
 }
 
+/** Known private page namespaces; all other unknown paths show a public 404. */
+export function isProtectedPagePath(pathname: string): boolean {
+  return ["/dashboard", "/pos"].some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+}
+
 /**
  * Middleware Edge-compatible — cek keberadaan cookie session saja.
  * Validasi session penuh (DB) dilakukan di API route / server component.
@@ -166,6 +174,11 @@ export async function updateSession(request: NextRequest) {
       );
     }
     const url = request.nextUrl.clone();
+    if (!isProtectedPagePath(pathname)) {
+      url.pathname = "/unavailable";
+      url.search = "";
+      return NextResponse.rewrite(url);
+    }
     url.pathname = "/login";
     // Deep link (mis. "Buatkan Pesanan" dari WA) → kembali ke halaman itu setelah login.
     if (pathname.startsWith("/dashboard") && !url.searchParams.has("redirect")) {

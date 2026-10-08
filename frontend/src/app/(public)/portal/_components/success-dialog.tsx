@@ -9,9 +9,9 @@ export function SuccessDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-[#131a1c]/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
       <div className="relative z-10 w-full max-w-lg animate-in fade-in zoom-in duration-300">
-        <div className="overflow-hidden rounded-2xl bg-mint p-8 shadow-2xl">
+        <div className="overflow-hidden rounded-2xl bg-white p-8 shadow-2xl">
           <div className="mb-6 flex justify-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f3ece2]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white">
               <CheckCircle className="h-10 w-10 text-[#00281a]" />
             </div>
           </div>
@@ -29,7 +29,7 @@ export function SuccessDialog({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-full border border-[#e3dbcc] bg-transparent px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-[#131a1c] transition-all hover:bg-[#f3ece2]"
+              className="w-full rounded-full border border-[#e3dbcc] bg-transparent px-8 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-[#131a1c] transition-all hover:bg-[#f7f9f7]"
             >
               Close
             </button>

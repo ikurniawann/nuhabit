@@ -62,18 +62,21 @@ export default function CareerPage() {
   }, [jobs]);
 
   return (
-    <div id="top" lang="en" className="min-h-screen bg-beige text-[#131a1c] career-roundo">
-      <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-beige/95 backdrop-blur">
+    <div id="top" lang="en" className="min-h-screen bg-white text-[#131a1c] career-roundo">
+      <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/career" className="flex h-full items-center" aria-label="NüHabit careers">
             <img src={logoUrl} alt="NüHabit" className="h-7 w-auto sm:h-8" />
           </Link>
-          <a
-            href="#open-roles"
-            className="rounded-full bg-[#00281a] px-6 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-white transition hover:bg-[#203b32] active:scale-95"
-          >
-            Open Roles
-          </a>
+          <div className="flex items-center gap-3 sm:gap-5">
+            <Link href="/" className="text-sm font-semibold text-forest underline-offset-4 hover:underline">Home</Link>
+            <a
+              href="#open-roles"
+              className="rounded-full bg-[#00281a] px-6 py-2 text-sm font-semibold uppercase tracking-[0.08em] text-white transition hover:bg-[#203b32] active:scale-95"
+            >
+              Open Roles
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -144,7 +147,7 @@ export default function CareerPage() {
                       <Link
                         key={job.id}
                         href={`/portal?job_opening_id=${job.id}&position_id=${job.position_id || ""}&brand_id=${job.brand_id || ""}`}
-                        className="group/item flex flex-col justify-between gap-4 rounded-lg border border-[#e3dbcc] bg-mint p-6 transition-all duration-300 hover:border-[#203b32] md:flex-row md:items-center"
+                        className="group/item flex flex-col justify-between gap-4 rounded-lg border border-[#e3dbcc] bg-white p-6 transition-all duration-300 hover:border-[#203b32] md:flex-row md:items-center"
                       >
                         <div>
                           <h3 className="text-2xl font-medium leading-tight transition-colors group-hover/item:text-[#203b32]">
@@ -167,7 +170,7 @@ export default function CareerPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="rounded-full border border-[#e3dbcc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-[#f3ece2]">
+                          <span className="rounded-full border border-[#e3dbcc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-[#f7f9f7]">
                             View Details
                           </span>
                           <span className="hidden rounded-full border border-[#e3dbcc] px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] md:inline-block">
@@ -185,9 +188,9 @@ export default function CareerPage() {
         </section>
 
         <section className="mx-auto mt-20 max-w-[1280px] px-4 sm:px-6 lg:px-10">
-          <div className="flex flex-col items-center justify-between gap-10 rounded-lg border border-[#e3dbcc] bg-[#f3ece2] p-8 text-center md:flex-row md:p-16 md:text-left">
+          <div className="flex flex-col items-center justify-between gap-10 rounded-lg border border-[#e3dbcc] bg-white p-8 text-center md:flex-row md:p-16 md:text-left">
             <div className="max-w-xl">
-              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-mint text-[#203b32]">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#203b32]">
                 <BriefcaseBusiness className="h-5 w-5" />
               </div>
               <h2 className="mb-3 text-3xl font-semibold leading-tight">Don&apos;t see a role for you?</h2>
@@ -206,7 +209,7 @@ export default function CareerPage() {
         </section>
       </main>
 
-      <footer className="w-full border-t border-[#e3dbcc] bg-beige py-20">
+      <footer className="w-full border-t border-[#e3dbcc] bg-white py-20">
         <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-4 sm:px-6 md:grid-cols-2 lg:px-10">
           <div className="space-y-6">
             <div className="flex h-12 items-center">

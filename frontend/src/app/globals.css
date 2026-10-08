@@ -7,12 +7,12 @@
    Warna utama: White Beige #f3ece2, Deep Forest Green #00281a, Pale Lime #daff59.
    Fungsional: Dark Jungle #1c261b, Everglade #203b32, Lettuce #abde67,
    Lemon Lime #eeffb1, Mint Cream #fdfff2, Golden Ochre #c9a227. Judul Outfit, isi Manrope.
-   Palet `pink-*` (dipakai ratusan halaman lama sebagai warna merek) ditimpa skala
-   lime → forest; `gray-*`, `slate-*`, `zinc-*`, `neutral-*` ditimpa tangga netral
-   hangat dari beige ke ink. Ribuan kelas lama ikut tanpa menyentuh tiap file. */
+   Kanvas dan kartu memakai putih. Palet `pink-*` (dipakai halaman lama sebagai
+   warna merek) ditimpa putih → lime → forest; `gray-*`, `slate-*`, `zinc-*`,
+   `neutral-*` ditimpa tangga netral menuju ink. */
 @theme {
-  --color-pink-50: #f7ffe0;
-  --color-pink-100: #eeffb1;
+  --color-pink-50: #ffffff;
+  --color-pink-100: #ffffff;
   --color-pink-200: #e3ff8a;
   --color-pink-300: #daff59;
   --color-pink-400: #abde67;
@@ -22,9 +22,29 @@
   --color-pink-800: #001f14;
   --color-pink-900: #00160e;
   --color-pink-950: #000d08;
+  --color-fuchsia-50: #ffffff;
+  --color-fuchsia-100: #ffffff;
+  --color-fuchsia-200: #edf2ed;
+  --color-fuchsia-300: #daff59;
+  --color-fuchsia-400: #abde67;
+  --color-fuchsia-500: #4d8a1c;
+  --color-fuchsia-600: #203b32;
+  --color-fuchsia-700: #00281a;
+  --color-fuchsia-800: #001f14;
+  --color-fuchsia-900: #00160e;
+  --color-rose-50: #ffffff;
+  --color-rose-100: #ffffff;
+  --color-rose-200: #e3dbcc;
+  --color-rose-300: #d4cbbb;
+  --color-rose-400: #d13b40;
+  --color-rose-500: #b3262c;
+  --color-rose-600: #a11f26;
+  --color-rose-700: #7f1d1d;
+  --color-rose-800: #651616;
+  --color-rose-900: #450a0a;
 
-  --color-gray-50: #f8f4ee;
-  --color-gray-100: #f3ece2;
+  --color-gray-50: #f7f9f7;
+  --color-gray-100: #edf2ed;
   --color-gray-200: #e3dbcc;
   --color-gray-300: #d4cbbb;
   --color-gray-400: #9a958a;
@@ -34,8 +54,8 @@
   --color-gray-800: #1c261b;
   --color-gray-900: #131a1c;
   --color-gray-950: #0b100f;
-  --color-slate-50: #f8f4ee;
-  --color-slate-100: #f3ece2;
+  --color-slate-50: #f7f9f7;
+  --color-slate-100: #edf2ed;
   --color-slate-200: #e3dbcc;
   --color-slate-300: #d4cbbb;
   --color-slate-400: #9a958a;
@@ -45,8 +65,8 @@
   --color-slate-800: #1c261b;
   --color-slate-900: #131a1c;
   --color-slate-950: #0b100f;
-  --color-zinc-50: #f8f4ee;
-  --color-zinc-100: #f3ece2;
+  --color-zinc-50: #f7f9f7;
+  --color-zinc-100: #edf2ed;
   --color-zinc-200: #e3dbcc;
   --color-zinc-300: #d4cbbb;
   --color-zinc-400: #9a958a;
@@ -56,8 +76,8 @@
   --color-zinc-800: #1c261b;
   --color-zinc-900: #131a1c;
   --color-zinc-950: #0b100f;
-  --color-neutral-50: #f8f4ee;
-  --color-neutral-100: #f3ece2;
+  --color-neutral-50: #f7f9f7;
+  --color-neutral-100: #edf2ed;
   --color-neutral-200: #e3dbcc;
   --color-neutral-300: #d4cbbb;
   --color-neutral-400: #9a958a;
@@ -72,9 +92,9 @@
 
   /* Portal member (/member): palet NüHabit mobile — White Beige ground, Deep
      Forest Green, Pale Lime accent; Outfit untuk judul, Manrope untuk isi. */
-  --color-nh-beige: #f3ece2;
-  --color-nh-cream: #fdfff2;
-  --color-nh-raised: #ece5d8;
+  --color-nh-beige: #ffffff;
+  --color-nh-cream: #ffffff;
+  --color-nh-raised: #f7f9f7;
   --color-nh-line: #e3dbcc;
   --color-nh-ink: #131a1c;
   --color-nh-ink-soft: #1c261b;
@@ -98,14 +118,14 @@
   --shadow-up: 0 -10px 30px -14px rgb(19 26 28 / 0.25);
 
   /* Warna merek bernama, untuk kode baru. */
-  --color-beige: #f3ece2;
+  --color-beige: #ffffff;
   --color-forest: #00281a;
   --color-lime: #daff59;
   --color-everglade: #203b32;
   --color-jungle: #1c261b;
   --color-lettuce: #abde67;
   --color-lemon: #eeffb1;
-  --color-mint: #fdfff2;
+  --color-mint: #ffffff;
   --color-ochre: #c9a227;
   --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
 }
@@ -219,23 +239,23 @@
   --wit-ink-2: #1c261b;
   --wit-ink-3: #203b32;
   --wit-on-ink-muted: #b9c2b4;
-  --wit-surface: #f3ece2;
-  --wit-surface-2: #f8f4ee;
+  --wit-surface: #ffffff;
+  --wit-surface-2: #f7f9f7;
   --wit-body: #2a332e;
   --wit-silver: #b9b0a2;
   --wit-chart-muted: #d4cbbb;
 
   /* Semantic — light (shadcn). */
-  --background: #fdfff2;
+  --background: #ffffff;
   --foreground: #131a1c;
-  --card: #fdfff2;
+  --card: #ffffff;
   --card-foreground: #131a1c;
-  --popover: #fdfff2;
+  --popover: #ffffff;
   --popover-foreground: #131a1c;
   --primary: var(--wit-accent-strong);
-  --secondary: #f3ece2;
+  --secondary: #f7f9f7;
   --secondary-foreground: #131a1c;
-  --muted: #f8f4ee;
+  --muted: #f7f9f7;
   --muted-foreground: #5f6b62;
   --destructive: #b3262c;
   --success: #3f7a12;
@@ -246,7 +266,7 @@
 
   /* Legacy glass tokens: kartu WIT tidak memakai kaca, tapi beberapa modul
      (Arkiv OS desktop) masih membacanya. */
-  --glass-bg: #fdfff2;
+  --glass-bg: #ffffff;
   --glass-border: transparent;
   --glass-blur: 0px;
   --glass-saturate: 1;
@@ -1298,21 +1318,21 @@ hr {
     [class^="bg-fuchsia-100/"],
     [class*=" bg-fuchsia-100/"]
   ) {
-    background-color: color-mix(in oklch, #d946ef 14%, transparent) !important;
-    border-color: color-mix(in oklch, #d946ef 30%, transparent) !important;
+    background-color: color-mix(in oklch, #4d8a1c 14%, transparent) !important;
+    border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important;
   }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .hover\:bg-fuchsia-50:hover,
     [class*="hover:bg-fuchsia-50/"]:hover,
     .hover\:bg-fuchsia-100:hover,
     [class*="hover:bg-fuchsia-100/"]:hover
-  ) { background-color: color-mix(in oklch, #d946ef 22%, transparent) !important; }
+  ) { background-color: color-mix(in oklch, #4d8a1c 22%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .text-fuchsia-600,
     .text-fuchsia-700,
     .text-fuchsia-800,
     .text-fuchsia-900
-  ) { color: color-mix(in oklch, #d946ef 42%, white) !important; }
+  ) { color: color-mix(in oklch, #4d8a1c 42%, white) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .border-fuchsia-100,
     [class*=" border-fuchsia-100/"],
@@ -1320,7 +1340,7 @@ hr {
     [class*=" border-fuchsia-200/"],
     .border-fuchsia-300,
     [class*=" border-fuchsia-300/"]
-  ) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  ) { border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .bg-pink-50,
     [class^="bg-pink-50/"],
@@ -1360,21 +1380,21 @@ hr {
     [class^="bg-rose-100/"],
     [class*=" bg-rose-100/"]
   ) {
-    background-color: color-mix(in oklch, #f43f5e 14%, transparent) !important;
-    border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important;
+    background-color: color-mix(in oklch, #b3262c 14%, transparent) !important;
+    border-color: color-mix(in oklch, #b3262c 30%, transparent) !important;
   }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .hover\:bg-rose-50:hover,
     [class*="hover:bg-rose-50/"]:hover,
     .hover\:bg-rose-100:hover,
     [class*="hover:bg-rose-100/"]:hover
-  ) { background-color: color-mix(in oklch, #f43f5e 22%, transparent) !important; }
+  ) { background-color: color-mix(in oklch, #b3262c 22%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .text-rose-600,
     .text-rose-700,
     .text-rose-800,
     .text-rose-900
-  ) { color: color-mix(in oklch, #f43f5e 42%, white) !important; }
+  ) { color: color-mix(in oklch, #b3262c 42%, white) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .border-rose-100,
     [class*=" border-rose-100/"],
@@ -1382,7 +1402,7 @@ hr {
     [class*=" border-rose-200/"],
     .border-rose-300,
     [class*=" border-rose-300/"]
-  ) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  ) { border-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .text-gray-950, .text-gray-900, .text-gray-800,
     .text-slate-950, .text-slate-900, .text-slate-800, .text-black
@@ -1779,13 +1799,13 @@ hr {
     .divide-fuchsia-100,
     .divide-fuchsia-200,
     .divide-fuchsia-300
-  ) > :not(:last-child) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .ring-fuchsia-50,
     .ring-fuchsia-100,
     .ring-fuchsia-200,
     .ring-fuchsia-300
-  ) { --tw-ring-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+  ) { --tw-ring-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .divide-pink-50,
     .divide-pink-100,
@@ -1803,13 +1823,13 @@ hr {
     .divide-rose-100,
     .divide-rose-200,
     .divide-rose-300
-  ) > :not(:last-child) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  ) > :not(:last-child) { border-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
   [data-theme="auto"] .arkiv-dashboard-theme :is(
     .ring-rose-50,
     .ring-rose-100,
     .ring-rose-200,
     .ring-rose-300
-  ) { --tw-ring-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+  ) { --tw-ring-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
   [data-theme="auto"] :is(
     [data-slot="popover"], [data-slot="dropdown-menu"], [data-slot="combobox"],
     .popover, .dropdown-menu, [role="listbox"]:not([data-arkiv-ai-listbox="true"])
@@ -2280,21 +2300,21 @@ hr {
   [class^="bg-fuchsia-100/"],
   [class*=" bg-fuchsia-100/"]
 ) {
-  background-color: color-mix(in oklch, #d946ef 14%, transparent) !important;
-  border-color: color-mix(in oklch, #d946ef 30%, transparent) !important;
+  background-color: color-mix(in oklch, #4d8a1c 14%, transparent) !important;
+  border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important;
 }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .hover\:bg-fuchsia-50:hover,
   [class*="hover:bg-fuchsia-50/"]:hover,
   .hover\:bg-fuchsia-100:hover,
   [class*="hover:bg-fuchsia-100/"]:hover
-) { background-color: color-mix(in oklch, #d946ef 22%, transparent) !important; }
+) { background-color: color-mix(in oklch, #4d8a1c 22%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .text-fuchsia-600,
   .text-fuchsia-700,
   .text-fuchsia-800,
   .text-fuchsia-900
-) { color: color-mix(in oklch, #d946ef 42%, white) !important; }
+) { color: color-mix(in oklch, #4d8a1c 42%, white) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .border-fuchsia-100,
   [class*=" border-fuchsia-100/"],
@@ -2302,7 +2322,7 @@ hr {
   [class*=" border-fuchsia-200/"],
   .border-fuchsia-300,
   [class*=" border-fuchsia-300/"]
-) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+) { border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .bg-pink-50,
   [class^="bg-pink-50/"],
@@ -2342,21 +2362,21 @@ hr {
   [class^="bg-rose-100/"],
   [class*=" bg-rose-100/"]
 ) {
-  background-color: color-mix(in oklch, #f43f5e 14%, transparent) !important;
-  border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important;
+  background-color: color-mix(in oklch, #b3262c 14%, transparent) !important;
+  border-color: color-mix(in oklch, #b3262c 30%, transparent) !important;
 }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .hover\:bg-rose-50:hover,
   [class*="hover:bg-rose-50/"]:hover,
   .hover\:bg-rose-100:hover,
   [class*="hover:bg-rose-100/"]:hover
-) { background-color: color-mix(in oklch, #f43f5e 22%, transparent) !important; }
+) { background-color: color-mix(in oklch, #b3262c 22%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .text-rose-600,
   .text-rose-700,
   .text-rose-800,
   .text-rose-900
-) { color: color-mix(in oklch, #f43f5e 42%, white) !important; }
+) { color: color-mix(in oklch, #b3262c 42%, white) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .border-rose-100,
   [class*=" border-rose-100/"],
@@ -2364,7 +2384,7 @@ hr {
   [class*=" border-rose-200/"],
   .border-rose-300,
   [class*=" border-rose-300/"]
-) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+) { border-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .text-gray-950, .text-gray-900, .text-gray-800,
   .text-slate-950, .text-slate-900, .text-slate-800, .text-black
@@ -2761,13 +2781,13 @@ hr {
   .divide-fuchsia-100,
   .divide-fuchsia-200,
   .divide-fuchsia-300
-) > :not(:last-child) { border-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+) > :not(:last-child) { border-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .ring-fuchsia-50,
   .ring-fuchsia-100,
   .ring-fuchsia-200,
   .ring-fuchsia-300
-) { --tw-ring-color: color-mix(in oklch, #d946ef 30%, transparent) !important; }
+) { --tw-ring-color: color-mix(in oklch, #4d8a1c 30%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .divide-pink-50,
   .divide-pink-100,
@@ -2785,13 +2805,13 @@ hr {
   .divide-rose-100,
   .divide-rose-200,
   .divide-rose-300
-) > :not(:last-child) { border-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+) > :not(:last-child) { border-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
 [data-theme="dark"] .arkiv-dashboard-theme :is(
   .ring-rose-50,
   .ring-rose-100,
   .ring-rose-200,
   .ring-rose-300
-) { --tw-ring-color: color-mix(in oklch, #f43f5e 30%, transparent) !important; }
+) { --tw-ring-color: color-mix(in oklch, #b3262c 30%, transparent) !important; }
 [data-theme="dark"] :is(
   [data-slot="popover"], [data-slot="dropdown-menu"], [data-slot="combobox"],
   .popover, .dropdown-menu, [role="listbox"]:not([data-arkiv-ai-listbox="true"])

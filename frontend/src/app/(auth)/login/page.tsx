@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { brandName, brandOsName } from "@/lib/branding";
 import { OS_PATH } from "@/lib/desktop/deep-link";
 import Image from "next/image";
+import Link from "next/link";
 
 /** Jam login per menit; null di server supaya hidrasi tidak bentrok dengan jam/locale klien. */
 function subscribeClock(onTick: () => void) {
@@ -195,6 +196,9 @@ function LoginContent() {
             </form>
 
             <p className="mt-6 text-xs text-muted-foreground">Satu akun, satu sesi aktif.</p>
+            <Link href="/" className="mt-4 inline-flex text-sm font-semibold text-forest underline-offset-4 hover:underline">
+              Kembali ke Home
+            </Link>
           </div>
         </section>
       </div>

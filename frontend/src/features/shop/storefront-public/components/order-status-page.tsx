@@ -5,13 +5,14 @@
 // refresh.
 
 import { CheckCircle2, Clock, Loader2, Package, Truck, XCircle } from 'lucide-react';
+import Link from 'next/link';
 import { formatRupiah } from '@/lib/format';
 import { useShopOrderStatus } from '../queries';
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   pending: { label: 'Awaiting Payment', tone: 'bg-lemon text-forest' },
   paid: { label: 'Paid, Being Prepared', tone: 'bg-lettuce/30 text-forest' },
-  packing: { label: 'Packing', tone: 'bg-beige text-everglade' },
+  packing: { label: 'Packing', tone: 'bg-white text-everglade' },
   shipped: { label: 'Shipped', tone: 'bg-everglade/15 text-everglade' },
   completed: { label: 'Completed', tone: 'bg-forest text-mint' },
   cancelled: { label: 'Cancelled', tone: 'bg-red-50 text-red-600' },
@@ -23,15 +24,16 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
 
   if (error && !order) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-beige px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-white px-6 text-center">
         <XCircle className="h-10 w-10 text-red-300" />
         <p className="text-sm text-gray-500">{error.message || 'Could not load the order'}</p>
+        <Link href="/" className="mt-4 rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-forest">Back to Home</Link>
       </div>
     );
   }
   if (!order) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-beige">
+      <div className="flex min-h-screen items-center justify-center bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
@@ -51,9 +53,9 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
           : CheckCircle2;
 
   return (
-    <div className="min-h-screen bg-beige px-4 py-8">
+    <div className="min-h-screen bg-white px-4 py-8">
       <div className="mx-auto max-w-lg space-y-4">
-        <div className="rounded-2xl bg-mint p-6 shadow-sm">
+        <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="text-xs uppercase tracking-wide text-gray-400">Order</p>
@@ -77,7 +79,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
           ) : null}
 
           {order.waybill ? (
-            <p className="mb-4 rounded-lg bg-beige px-3 py-2 text-sm text-everglade">
+            <p className="mb-4 rounded-lg border border-forest/10 bg-white px-3 py-2 text-sm text-everglade">
               Tracking number: <span className="font-semibold">{order.waybill}</span>
               {order.courier ? ` (${order.courier})` : ''}
             </p>
@@ -103,7 +105,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-mint p-6 text-sm shadow-sm">
+        <div className="rounded-2xl border border-forest/10 bg-white p-6 text-sm shadow-sm">
           <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
             <Package className="h-3.5 w-3.5" /> Shipping Address
           </p>

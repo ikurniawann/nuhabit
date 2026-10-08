@@ -11,7 +11,7 @@ const sizeMb = (file: File) => `${(file.size / 1024 / 1024).toFixed(2)} MB`;
 
 function SelectedFile({ file, preview, onRemove }: { file: File; preview?: ReactNode; onRemove: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[#e3dbcc] bg-beige p-4">
+    <div className="flex items-center gap-3 rounded-lg border border-[#e3dbcc] bg-white p-4">
       {preview}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[#131a1c]">{file.name}</p>
@@ -26,7 +26,7 @@ function SelectedFile({ file, preview, onRemove }: { file: File; preview?: React
 
 function DropZone({ label, accept, onChange }: { label: string; accept: string; onChange: (e: ChangeEvent<HTMLInputElement>) => void }) {
   return (
-    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#e3dbcc] p-6 transition-colors hover:border-[#00281a] hover:bg-[#f3ece2]">
+    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#e3dbcc] p-6 transition-colors hover:border-[#00281a] hover:bg-[#f7f9f7]">
       <Upload className="h-5 w-5 text-[#2a332e]" />
       <span className="text-xs font-medium text-[#131a1c]">{label}</span>
       <input type="file" accept={accept} className="hidden" onChange={onChange} />

@@ -3,6 +3,7 @@ import { formatRupiah } from '@/lib/format';
 import { cartLineIssue, cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
 import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
+import { ProductPhoto } from './product-photo';
 
 /**
  * Cart drawer: change the size in place, quantity stepper, remove a line
@@ -37,7 +38,7 @@ export function CartDrawer({
       <div
         role="dialog"
         aria-label="Cart"
-        className="flex h-full w-full max-w-md flex-col bg-mint"
+        className="flex h-full w-full max-w-md flex-col bg-white"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -58,10 +59,7 @@ export function CartDrawer({
               return (
                 <div key={line.key} className="rounded-lg border border-gray-100 p-3">
                   <div className="flex items-start gap-3">
-                    {image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt="" className="h-16 w-16 shrink-0 rounded-lg bg-gray-100 object-cover" />
-                    ) : null}
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-[#f5f7f3]"><ProductPhoto src={image} alt={line.name} compact /></div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900">{line.name}</p>
                       {line.variantName ? <p className="text-xs text-gray-500">{line.variantName}</p> : null}
@@ -84,7 +82,7 @@ export function CartDrawer({
                             const sku = sizes.find((candidate) => candidate.id === event.target.value);
                             if (product && sku) onChangeVariant(line.key, product, sku);
                           }}
-                          className="rounded-full border border-gray-200 bg-mint px-3 py-1 text-sm text-gray-900"
+                          className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-900"
                         >
                           {sizes.map((sku) => (
                             <option key={sku.id} value={sku.id} disabled={sku.stock <= 0 && !sku.preorder}>

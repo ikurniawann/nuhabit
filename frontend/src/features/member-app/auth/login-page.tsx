@@ -49,7 +49,7 @@ export function LoginPage() {
           <img src={asset("/img/hero-login.jpg")} alt="" className="h-full w-full object-cover" />
           {/* Pola merek sebagai tekstur tipis di atas foto, di bawah gradasi. */}
           <div className="nh-pattern-brand pointer-events-none absolute inset-0" aria-hidden />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-[#f3ece2]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-white" />
           <div className="absolute inset-x-0 top-0 p-6 pt-[max(env(safe-area-inset-top),1.5rem)]">
             {/* Wordmark lime di atas hero gelap (PNG putih sebagai mask). */}
             <div className="nh-logo-lime h-7 w-[204px]" role="img" aria-label="NüHabit" />

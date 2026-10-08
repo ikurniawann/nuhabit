@@ -142,6 +142,7 @@ describe("checkoutFormError", () => {
   it("returns the first error in form order", () => {
     expect(checkoutFormError({ ...ok, name: " B " })).toBe("Recipient name is required");
     expect(checkoutFormError({ ...ok, phone: "0812-34" })).toBe("Enter a valid WhatsApp number");
+    expect(checkoutFormError({ ...ok, email: "not-an-email" })).toBe("Enter a valid email address or leave it blank");
     expect(checkoutFormError({ ...ok, hasArea: false, address: "" })).toBe("Choose a destination area first");
     expect(checkoutFormError({ ...ok, address: "Jl. Mawar" })).toBe("Full address must be at least 10 characters");
     expect(checkoutFormError({ ...ok, hasRate: false })).toBe("Choose a courier first");

@@ -217,6 +217,7 @@ export function cartLineIssue(line: CartLine, products: CatalogProduct[]): strin
 export type CheckoutForm = {
   name: string;
   phone: string;
+  email?: string;
   address: string;
   hasArea: boolean;
   hasRate: boolean;
@@ -226,6 +227,7 @@ export type CheckoutForm = {
 export function checkoutFormError(form: CheckoutForm): string | null {
   if (form.name.trim().length < 2) return "Recipient name is required";
   if (form.phone.replace(/\D/g, "").length < 8) return "Enter a valid WhatsApp number";
+  if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return "Enter a valid email address or leave it blank";
   if (!form.hasArea) return "Choose a destination area first";
   if (form.address.trim().length < 10) return "Full address must be at least 10 characters";
   if (!form.hasRate) return "Choose a courier first";

@@ -65,7 +65,7 @@ export function ApplicationForm({ prefill, onSubmitted }: { prefill: Application
       <ProfileSection form={form} />
       <DocumentSection files={files} />
 
-      <div className="rounded-lg border border-[#e3dbcc] bg-mint p-5 sm:p-6">
+      <div className="rounded-lg border border-[#e3dbcc] bg-white p-5 sm:p-6">
         <h2 className="mb-4 text-base font-medium leading-tight">Notes (Optional)</h2>
         <textarea
           placeholder="Anything else you want us to know..."

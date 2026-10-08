@@ -25,7 +25,7 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 export function useAreaSearch(endpoint: string, query: string, enabled = true) {
   const trimmed = query.trim();
   const debounced = useDebouncedValue(trimmed, 400);
-  const active = enabled && trimmed.length >= MIN_QUERY && debounced.length >= MIN_QUERY;
+  const active = enabled && trimmed.length >= MIN_QUERY && debounced === trimmed;
 
   const result = useQuery({
     queryKey: ["shop", "areas", endpoint, debounced],
@@ -40,7 +40,8 @@ export function useAreaSearch(endpoint: string, query: string, enabled = true) {
 
   return {
     areas: active ? (result.data ?? []) : [],
-    searching: active && result.isFetching,
+    searching: enabled && trimmed.length >= MIN_QUERY && (!active || result.isFetching),
+    searched: active && result.isSuccess && !result.isFetching,
     error: active ? result.error : null,
   };
 }

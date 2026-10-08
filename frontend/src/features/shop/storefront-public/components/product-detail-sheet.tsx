@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, X, Zap } from 'lucide-react';
+import { X, Zap } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
 import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
+import { ProductPhoto } from './product-photo';
 
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
@@ -40,7 +41,7 @@ export function ProductDetailSheet({
       <div
         role="dialog"
         aria-label={product.name}
-        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-mint p-5 sm:rounded-3xl sm:p-7"
+        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl sm:p-7"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
@@ -55,17 +56,13 @@ export function ProductDetailSheet({
         <div className="grid gap-6 sm:grid-cols-2">
           <div>
             <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gray-100">
-              {images.length > 0 ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={images[activeImage]} alt={`${product.name}, image ${activeImage + 1} of ${images.length}`} className="h-full w-full object-cover" />
-              ) : <Package className="h-14 w-14 text-gray-300" />}
+              <ProductPhoto key={images[activeImage] ?? 'none'} src={images[activeImage]} alt={`${product.name}, image ${activeImage + 1} of ${images.length}`} />
             </div>
             {images.length > 1 ? (
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Product images">
                 {images.map((image, index) => (
                   <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(index)} aria-label={`Show image ${index + 1}`} aria-pressed={activeImage === index} className={`h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${activeImage === index ? 'border-forest' : 'border-transparent'}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image} alt="" className="h-full w-full object-cover" />
+                    <ProductPhoto src={image} alt={`${product.name}, thumbnail ${index + 1}`} compact />
                   </button>
                 ))}
               </div>

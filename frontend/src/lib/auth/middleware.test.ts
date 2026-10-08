@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicAuthPath } from "./middleware";
+import { isProtectedPagePath, isPublicAuthPath } from "./middleware";
 
 describe("isPublicAuthPath", () => {
   it("allows Xendit POS webhook without a session", () => {
@@ -29,5 +29,14 @@ describe("isPublicAuthPath", () => {
   it("still protects POS APIs", () => {
     expect(isPublicAuthPath("/api/pos/qris")).toBe(false);
     expect(isPublicAuthPath("/api/pos/orders")).toBe(false);
+  });
+});
+
+describe("unknown pages", () => {
+  it("keeps private pages behind login while allowing other unknown pages to show 404", () => {
+    expect(isProtectedPagePath("/dashboard/employees")).toBe(true);
+    expect(isProtectedPagePath("/pos/kds")).toBe(true);
+    expect(isProtectedPagePath("/dashboard-missing")).toBe(false);
+    expect(isProtectedPagePath("/halaman-tidak-ada")).toBe(false);
   });
 });

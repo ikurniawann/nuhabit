@@ -1,8 +1,8 @@
 # Frontend conventions (WIT layout, NüHabit brand)
 
-The back office (`/dashboard/*`) uses the WIT layout dressed in the NüHabit Brand Guideline 2026: a White Beige canvas (`#f3ece2`), Mint Cream cards (`#fdfff2`), Deep Forest Green (`#00281a`) for emphasis, and Pale Lime (`#daff59`) for the single most important thing on screen. Controls are pills. All headings use Outfit; body text and codes use Manrope.
+The back office (`/dashboard/*`) uses the WIT layout dressed in the NüHabit Brand Guideline 2026: a white canvas and cards, Deep Forest Green (`#00281a`) for emphasis, and Pale Lime (`#daff59`) for the single most important thing on screen. White Beige and Mint Cream remain in the approved palette but are not page backgrounds. Controls are pills. All headings use Outfit; body text and codes use Manrope.
 
-The approved palette is White Beige `#f3ece2`, Deep Forest Green `#00281a`, Pale Lime `#daff59`, Dark Jungle `#1c261b`, Everglade `#203b32`, Lettuce `#abde67`, Lemon Lime `#eeffb1`, Mint Cream `#fdfff2`, and Golden Ochre `#c9a227`. Use the named tokens in `globals.css` for brand surfaces and accents. Neutral and semantic status shades may be derived from these colors when contrast or state clarity requires them.
+The approved palette is White Beige `#f3ece2`, Deep Forest Green `#00281a`, Pale Lime `#daff59`, Dark Jungle `#1c261b`, Everglade `#203b32`, Lettuce `#abde67`, Lemon Lime `#eeffb1`, Mint Cream `#fdfff2`, and Golden Ochre `#c9a227`. Interface canvases and cards are white throughout the site, shop, member app, and back office. Legacy beige and cream surface classes also resolve to white. Use the named tokens in `globals.css` for brand accents. Neutral and semantic status shades may be derived from these colors when contrast or state clarity requires them.
 
 ## Reference pages
 
@@ -46,7 +46,7 @@ All tokens live in `src/app/globals.css`. The accent follows the fixed NüHabit 
 
 Naming differs from the skill in one place: shadcn's `muted` stays a background (`bg-muted`), so secondary text uses `text-muted-foreground`.
 
-`globals.css` also maps the Tailwind `gray-*`, `slate-*`, `zinc-*` and `neutral-*` palettes onto the WIT neutral ladder, and `pink-*` onto a lime-to-forest scale (300 is lime, 700 is forest). Existing pages that spell those classes out follow the style without edits. Use the semantic tokens above in new code.
+`globals.css` also maps the Tailwind `gray-*`, `slate-*`, `zinc-*` and `neutral-*` palettes onto the WIT neutral ladder, and `pink-*` onto white through lime to forest (50 and 100 are white, 300 is lime, 700 is forest). Existing pages that spell those classes out follow the style without edits. Use the semantic tokens above in new code.
 
 Contrast (WCAG 2.x, brand `#daff59`): forest on lime 14.0, lime on ink 15.5, `muted-foreground` on surface 4.75, `on-ink-muted` on ink 9.6, every status colour on its `-soft` tint 4.5 or more. Lime on beige measures 1.03, so lime never appears as text or an icon on a light surface; use `text-forest` there.
 

@@ -50,9 +50,9 @@ export const FONT_SIZE_OPTIONS: { value: AppearanceFontSize; label: string }[] =
 export const DEFAULT_APPEARANCE: AppearanceTokens = {
   presetId: DEFAULT_PRESET_ID,
   base: {
-    background: "#fdfff2",
+    background: "#ffffff",
     foreground: "#131a1c",
-    card: "#fdfff2",
+    card: "#ffffff",
     primary: "#daff59",
     secondary: "#00281a",
     destructive: "#b3262c",
@@ -68,7 +68,7 @@ export const DEFAULT_APPEARANCE: AppearanceTokens = {
     border: "#131a1c",
   },
   navbar: {
-    background: "#f3ece2",
+    background: "#ffffff",
     foreground: "#131a1c",
     border: "#e3dbcc",
   },
