@@ -1,60 +1,36 @@
 import { router } from 'expo-router';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput } from 'react-native';
 import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { normalizePhoneInput, requestOtp, verifyOtp } from '@/lib/api';
 import { useAuth } from '@/hooks/use-auth';
 import { Spacing } from '@/constants/theme';
+import { login } from '@/lib/api';
 
-/**
- * Login portal member 2 langkah (EPIC-044 Fase A): nomor WhatsApp → kode OTP.
- * Jalur OTP identik dengan portal web (wa-gateway mandiri); di lokal, dev
- * bypass MEMBER_OTP_DEV_CODE tetap berlaku — isi kode dev apa pun (6 digit).
- */
 export default function LoginScreen() {
   const { signIn } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const otpEnabled = process.env.EXPO_PUBLIC_OTP_ENABLED === 'true';
-
-  async function submitPhone() {
+  async function submitLogin() {
     setError(null);
-    if (phone.replace(/\D/g, '').length < 8) {
-      setError('Masukkan nomor WhatsApp yang valid');
+    if (!username) {
+      setError('Masukkan username');
+      return;
+    }
+    if (!password) {
+      setError('Masukkan password');
       return;
     }
     setBusy(true);
-    const res = await requestOtp(normalizePhoneInput(phone));
+    const res = await login(username, password);
     setBusy(false);
     if (!res.ok) {
-      setError(res.error ?? 'Gagal mengirim kode');
-      return;
-    }
-    setStep('otp');
-  }
-
-  async function submitCode() {
-    setError(null);
-    setBusy(true);
-    const res = await verifyOtp(normalizePhoneInput(phone), code.trim());
-    setBusy(false);
-    if (!res.ok) {
-      setError(res.error ?? 'Kode salah');
+      setError(res.error ?? 'Gagal masuk');
       return;
     }
     if (!res.data?.token) {
@@ -65,75 +41,41 @@ export default function LoginScreen() {
     router.replace('/(app)/home');
   }
 
-  if (!otpEnabled) return <ThemedView style={styles.container}><SafeAreaView style={styles.safeArea}><ThemedView style={styles.avoid}><ThemedText type="subtitle">Portal Member</ThemedText><ThemedText themeColor="textSecondary">Login dengan kode WhatsApp sementara tidak tersedia. Jika akun Google Anda sudah terhubung, coba masuk melalui situs NüHabit.</ThemedText></ThemedView></SafeAreaView></ThemedView>;
-
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.avoid}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <KeyboardAvoidingView style={styles.avoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ThemedText type="subtitle">Portal Member</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            {step === 'phone'
-              ? 'Masukkan nomor WhatsApp terdaftar untuk masuk.'
-              : `Kode OTP dikirim via WhatsApp ke ${phone}.`}
-          </ThemedText>
-
-          {step === 'phone' ? (
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="08xxxxxxxxxx"
-              placeholderTextColor="#888"
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              autoFocus
-            />
-          ) : (
-            <TextInput
-              style={[styles.input, styles.codeInput]}
-              value={code}
-              onChangeText={setCode}
-              placeholder="6 digit kode"
-              placeholderTextColor="#888"
-              keyboardType="number-pad"
-              autoComplete="sms-otp"
-              textContentType="oneTimeCode"
-              maxLength={6}
-              autoFocus
-            />
-          )}
-
+          <ThemedText themeColor="textSecondary">Masukkan username dan password untuk masuk.</ThemedText>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Username"
+            placeholderTextColor="#888"
+            autoCapitalize="none"
+            autoFocus
+          />
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            placeholderTextColor="#888"
+            secureTextEntry
+          />
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-
           <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={step === 'phone' ? submitPhone : submitCode}
+            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+            onPress={submitLogin}
             disabled={busy}
           >
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>
-                {step === 'phone' ? 'Kirim Kode' : 'Masuk'}
-              </Text>
+              <Text style={styles.buttonText}>Masuk</Text>
             )}
           </Pressable>
-
-          {step === 'otp' && !busy ? (
-            <Pressable onPress={() => { setStep('phone'); setCode(''); setError(null); }}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Ganti nomor / kirim ulang
-              </ThemedText>
-            </Pressable>
-          ) : null}
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
@@ -143,12 +85,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  avoid: {
-    flex: 1,
-    padding: Spacing.four,
-    gap: Spacing.two,
-    justifyContent: 'center',
-  },
+  avoid: { flex: 1, padding: Spacing.four, gap: Spacing.two, justifyContent: 'center' },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#666',
@@ -158,20 +95,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     backgroundColor: 'rgba(128,128,128,0.12)',
-  },
-  codeInput: {
-    letterSpacing: 8,
-    textAlign: 'center',
-    fontSize: 22,
-  },
-  error: { color: '#ff6b6b' },
-  button: {
-    backgroundColor: '#7c5cff',
-    borderRadius: 12,
-    paddingVertical: Spacing.two + 2,
-    alignItems: 'center',
     marginTop: Spacing.one,
   },
+  error: { color: '#ff6b6b', marginTop: Spacing.one },
+  button: { backgroundColor: '#7c5cff', borderRadius: 12, paddingVertical: Spacing.two + 2, alignItems: 'center', marginTop: Spacing.one },
   buttonPressed: { opacity: 0.85 },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
