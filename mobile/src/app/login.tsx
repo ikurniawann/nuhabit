@@ -30,6 +30,8 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const otpEnabled = process.env.EXPO_PUBLIC_OTP_ENABLED === 'true';
+
   async function submitPhone() {
     setError(null);
     if (phone.replace(/\D/g, '').length < 8) {
@@ -62,6 +64,8 @@ export default function LoginScreen() {
     await signIn(res.data.token);
     router.replace('/(app)/home');
   }
+
+  if (!otpEnabled) return <ThemedView style={styles.container}><SafeAreaView style={styles.safeArea}><ThemedView style={styles.avoid}><ThemedText type="subtitle">Portal Member</ThemedText><ThemedText themeColor="textSecondary">Login dengan kode WhatsApp sementara tidak tersedia. Jika akun Google Anda sudah terhubung, coba masuk melalui situs NüHabit.</ThemedText></ThemedView></SafeAreaView></ThemedView>;
 
   return (
     <ThemedView style={styles.container}>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { clientIp } from "@/lib/security/client-ip";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail } from "@/lib/dataroom/config";
@@ -8,6 +9,7 @@ import { sendShareCode } from "@/lib/dataroom/mail";
 
 /** POST /api/share/[token]/request-code { email } — kirim kode 6 digit ke email penerima. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  if (!OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   const { token } = await params;
   const ctx = await resolveShareContext(request, token);
   if (!ctx.ok) return NextResponse.json({ success: false, error: ctx.error }, { status: ctx.status });

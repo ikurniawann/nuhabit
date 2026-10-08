@@ -4,7 +4,6 @@ import {
   appearanceCssVars,
   applyAppearanceTokens,
   DEFAULT_APPEARANCE,
-  FONT_OPTIONS,
   FONT_STACKS,
   parseAppearanceTokens,
 } from "./appearance-tokens";
@@ -15,14 +14,14 @@ describe("parseAppearanceTokens", () => {
     expect(parseAppearanceTokens("nope")).toEqual(DEFAULT_APPEARANCE);
   });
 
-  it("fills missing keys and normalizes hex", () => {
+  it("replaces stored company colors with the NüHabit palette", () => {
     const parsed = parseAppearanceTokens({
       base: { primary: "0EA5E9" },
       font: { family: "inter", size: 14 },
     });
-    expect(parsed.base.primary).toBe("#0ea5e9");
+    expect(parsed.base.primary).toBe("#daff59");
     expect(parsed.base.background).toBe(DEFAULT_APPEARANCE.base.background);
-    expect(parsed.font).toEqual({ family: "inter", size: 14 });
+    expect(parsed.font).toEqual({ family: "manrope", size: 14 });
   });
 
   it("rejects invalid font / size", () => {
@@ -32,28 +31,27 @@ describe("parseAppearanceTokens", () => {
     expect(parsed.font).toEqual(DEFAULT_APPEARANCE.font);
   });
 
-  it("accepts expanded font families", () => {
+  it("normalizes a previously selected font to Manrope", () => {
     const parsed = parseAppearanceTokens({
       font: { family: "poppins", size: 15 },
     });
-    expect(parsed.font).toEqual({ family: "poppins", size: 15 });
+    expect(parsed.font).toEqual({ family: "manrope", size: 15 });
   });
 });
 
-describe("FONT_OPTIONS", () => {
-  it("covers every stack key exactly once", () => {
-    const values = FONT_OPTIONS.map((option) => option.value);
-    expect(new Set(values).size).toBe(values.length);
-    expect(values.sort()).toEqual(Object.keys(FONT_STACKS).sort());
+describe("FONT_STACKS", () => {
+  it("uses Manrope for body text", () => {
+    expect(Object.keys(FONT_STACKS)).toEqual(["manrope"]);
+    expect(FONT_STACKS.manrope).toContain("Manrope");
   });
 });
 
 describe("appearanceFromPreset", () => {
-  it("updates brand + sidebar active from preset", () => {
+  it("keeps the NüHabit palette for a legacy preset", () => {
     const next = appearanceFromPreset("ocean", DEFAULT_APPEARANCE);
-    expect(next.presetId).toBe("ocean");
-    expect(next.base.primary).toBe("#0ea5e9");
-    expect(next.sidebar.activeBackground).toBe("#0ea5e9");
+    expect(next.presetId).toBe("nuhabit");
+    expect(next.base.primary).toBe("#daff59");
+    expect(next.sidebar.activeBackground).toBe("#daff59");
     expect(next.sidebar.activeForeground).toBe("#00281a");
   });
 });
@@ -68,5 +66,12 @@ describe("applyAppearanceTokens", () => {
       DEFAULT_APPEARANCE.sidebar.background
     );
     expect(el.style.getPropertyValue("--font-size-base")).toBe("16px");
+  });
+  it("does not apply caller supplied brand colors", () => {
+    const custom = {
+      ...DEFAULT_APPEARANCE,
+      base: { ...DEFAULT_APPEARANCE.base, primary: "#0ea5e9" },
+    };
+    expect(appearanceCssVars(custom)["--brand-primary"]).toBe("#daff59");
   });
 });

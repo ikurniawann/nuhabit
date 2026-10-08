@@ -71,6 +71,7 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	t.Setenv("OTP_ENABLED", "true")
 	deps := testutil.Deps(t, nil)
 	deps.Log = slog.New(slog.NewTextHandler(testLog{t}, &slog.HandlerOptions{Level: slog.LevelError}))
 	m := New(deps, Options{Loyalty: &collLoyalty{}})
@@ -85,6 +86,22 @@ func newHarness(t *testing.T) *harness {
 		return domain.DevBypass{Code: h.devCode, DatabaseURL: "postgres://postgres@localhost:55432/nuhabit"}
 	}
 	return h
+}
+
+func TestIntegrationOTPDisabled(t *testing.T) {
+	h := newHarness(t)
+	t.Setenv("OTP_ENABLED", "false")
+	for _, path := range []string{
+		"/api/member-portal/otp",
+		"/api/member-portal/register/otp",
+		"/api/member-portal/verify",
+		"/api/member-portal/register",
+	} {
+		status, body, _ := h.do(testutil.Request("POST", path, map[string]any{}))
+		if status != http.StatusServiceUnavailable || body["success"] != false {
+			t.Fatalf("%s: status %d, body %v", path, status, body)
+		}
+	}
 }
 
 func (h *harness) do(r *http.Request) (int, map[string]any, *http.Response) {

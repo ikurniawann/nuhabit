@@ -76,7 +76,7 @@ export function BalanceCompositionChart({
     () => ({
       ...baseOptions,
       chart: { ...baseOptions.chart, type: "donut" },
-      colors: [brandPrimary, "#64748b", "#94a3b8"],
+      colors: [brandPrimary, "#203b32", "#abde67"],
       labels: filtered.map((r) => r.name),
       stroke: { width: 2, colors: ["#fff"] },
       plotOptions: {
@@ -145,7 +145,7 @@ export function PnlBreakdownChart({
   const brandPrimary = useBrandPrimary();
 
   const colors = useMemo(
-    () => [brandPrimary, "#f59e0b", "#ef4444", "#22c55e", "#f97316"],
+    () => [brandPrimary, "#c9a227", "#1c261b", "#abde67", "#203b32"],
     [brandPrimary],
   );
 
@@ -211,7 +211,7 @@ export function MonthlyTrendChart({
     () => ({
       ...baseOptions,
       chart: { ...baseOptions.chart, type: "area" },
-      colors: [brandPrimary, "#ef4444", "#16a34a"],
+      colors: [brandPrimary, "#1c261b", "#abde67"],
       stroke: { curve: "smooth", width: 2.5 },
       fill: {
         type: "gradient",
@@ -273,7 +273,7 @@ export function CashFlowChart({
   const brandPrimary = useBrandPrimary();
 
   const colors = useMemo(
-    () => [brandPrimary, "#0ea5e9", "#8b5cf6"],
+    () => [brandPrimary, "#203b32", "#daff59"],
     [brandPrimary],
   );
 

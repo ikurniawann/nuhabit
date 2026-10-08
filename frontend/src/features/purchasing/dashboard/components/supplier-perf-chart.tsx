@@ -62,13 +62,13 @@ export function SupplierPerfChart({ suppliers }: SupplierPerfChartProps) {
             margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
             barCategoryGap="30%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} />
-            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} domain={[0, 100]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e3dbcc" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#203b32" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#203b32" }} domain={[0, 100]} />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="On-Time Rate" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="QC Pass Rate" fill="#10b981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="On-Time Rate" fill="#00281a" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="QC Pass Rate" fill="#abde67" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

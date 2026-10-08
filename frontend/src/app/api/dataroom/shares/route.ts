@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { z } from "zod";
 import { ApiError, requireIamAction, requireIamMenuPrefix, validateBody } from "@/lib/api/auth";
 import { apiHandler } from "@/lib/api/handler";
@@ -42,6 +43,7 @@ const createSchema = z.object({
 export const POST = apiHandler(async (request: NextRequest) => {
   const user = await requireIamAction(IAM.dataroom, "create");
   const body = await validateBody(request, createSchema);
+  if (body.access_type === "email" && !OTP_ENABLED) throw ApiError.badRequest(OTP_UNAVAILABLE_MESSAGE);
   const node = await getNode(body.node_id);
   if (!node) throw ApiError.notFound("Item tidak ditemukan");
   const access = await createAccessResolver(await resolveActor(user));

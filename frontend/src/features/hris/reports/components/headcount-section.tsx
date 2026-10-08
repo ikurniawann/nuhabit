@@ -108,7 +108,7 @@ export function HeadcountSection({
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
                   <Tooltip formatter={(v) => [`${v} orang`, "Karyawan"]} />
-                  <Bar dataKey="count" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="count" fill="#00281a" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -127,7 +127,7 @@ export function HeadcountSection({
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => [`${v} orang`, "Headcount"]} />
-              <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
+              <Line type="monotone" dataKey="count" stroke="#00281a" strokeWidth={2} dot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>

@@ -124,7 +124,7 @@ export function CheckoutDrawer({
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40">
-      <div className="flex h-full w-full max-w-md flex-col bg-white">
+      <div className="flex h-full w-full max-w-md flex-col bg-mint">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-900">Shipping & Payment</h2>
           <button type="button" onClick={onClose} aria-label="Close">

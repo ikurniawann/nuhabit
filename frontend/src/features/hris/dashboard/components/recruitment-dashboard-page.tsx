@@ -43,7 +43,7 @@ import { useDashboardBrands, useDashboardData } from "../queries";
 import { buildRecruitmentReportHtml } from "../recruitment-report";
 import type { DashboardSummary } from "../types";
 
-const SOURCE_COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32"];
+const SOURCE_COLORS = ["#00281a", "#abde67", "#c9a227", "#1c261b", "#daff59", "#203b32", "#eeffb1"];
 const PURCHASING_ROLES = ["purchasing_manager", "purchasing_staff", "purchasing_admin", "warehouse_staff", "qc_staff"];
 const EMPTY_SUMMARY: DashboardSummary = { thisMonth: 0, activePipeline: 0, talentPool: 0, openPositions: 0 };
 
@@ -190,7 +190,7 @@ export function RecruitmentDashboardPage() {
                   <XAxis dataKey="week" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="candidates" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} name="Kandidat" />
+                  <Line type="monotone" dataKey="candidates" stroke="#00281a" strokeWidth={2} dot={{ r: 3 }} name="Kandidat" />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -250,7 +250,7 @@ export function RecruitmentDashboardPage() {
                   <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} name="Jumlah" />
+                  <Bar dataKey="value" fill="#00281a" radius={[0, 4, 4, 0]} name="Jumlah" />
                 </BarChart>
               </ResponsiveContainer>
             )}

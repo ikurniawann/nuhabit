@@ -12,6 +12,7 @@ import { GoogleSignIn } from "@/features/member-app/auth/google-sign-in";
 import { ApiError, memberApi } from "@/features/member-app/lib/api";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 import { planPayload, pushSiteEvent } from "../lib/analytics";
 import {
   accountTransition,
@@ -222,7 +223,12 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
     });
   };
 
-  const onNeedsPhone = useCallback((identity: GoogleIdentity) => dispatch({ type: "google_needs_phone", identity }), []);
+  const onNeedsPhone = useCallback((identity: GoogleIdentity) => {
+    if (OTP_ENABLED) dispatch({ type: "google_needs_phone", identity });
+    else setError("Pendaftaran anggota baru sementara tidak tersedia.");
+  }, []);
+
+  if (!OTP_ENABLED) return <div className="space-y-4"><h2 className="font-display text-xl font-semibold">Sign in to continue</h2><p className="text-sm text-body">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "WhatsApp code verification is temporarily unavailable. Existing members can sign in with Google." : "Sign in is temporarily unavailable while WhatsApp code verification is paused."}</p><GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} text="continue_with" />{error ? <p className="text-sm text-danger">{error}</p> : null}</div>;
 
   if (phase.kind === "phone") {
     return (

@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/modules/dataroom/domain"
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/featureflags"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
@@ -428,6 +429,9 @@ func (h *handler) createShare(w http.ResponseWriter, r *http.Request) error {
 	in, err := parse(r, shareSchema)
 	if err != nil {
 		return err
+	}
+	if in.AccessType == "email" && !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Link dengan verifikasi email sedang tidak tersedia")
 	}
 	a, err := h.svc.access(r.Context(), u)
 	if err != nil {

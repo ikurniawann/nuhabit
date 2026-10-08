@@ -37,7 +37,7 @@ export function CartDrawer({
       <div
         role="dialog"
         aria-label="Cart"
-        className="flex h-full w-full max-w-md flex-col bg-white"
+        className="flex h-full w-full max-w-md flex-col bg-mint"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -84,7 +84,7 @@ export function CartDrawer({
                             const sku = sizes.find((candidate) => candidate.id === event.target.value);
                             if (product && sku) onChangeVariant(line.key, product, sku);
                           }}
-                          className="rounded-full border border-gray-200 bg-white px-3 py-1 text-sm text-gray-900"
+                          className="rounded-full border border-gray-200 bg-mint px-3 py-1 text-sm text-gray-900"
                         >
                           {sizes.map((sku) => (
                             <option key={sku.id} value={sku.id} disabled={sku.stock <= 0 && !sku.preorder}>

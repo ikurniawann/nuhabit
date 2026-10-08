@@ -34,13 +34,13 @@ const GRANULARITY_OPTIONS: Array<{
 
 const CHART_COLORS = [
   "#00281a",
-  "#0ea5e9",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ef4444",
-  "#64748b",
-  "#14b8a6",
+  "#203b32",
+  "#abde67",
+  "#c9a227",
+  "#daff59",
+  "#1c261b",
+  "#f3ece2",
+  "#eeffb1",
 ];
 
 export function PaymentMethodsReportPage() {

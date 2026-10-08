@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 import { useMemberOtp } from "../lib/use-member-otp";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
@@ -21,6 +22,7 @@ export function LoginPage() {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
+  const [googleNotice, setGoogleNotice] = useState("");
   const onSignedIn = useCallback(() => {
     // Cache 401 dari sesi lama dibuang supaya guard aplikasi memuat ulang.
     qc.clear();
@@ -29,7 +31,10 @@ export function LoginPage() {
   const otp = useMemberOtp({ onSignedIn });
   // Akun Google tanpa member: lengkapi nomor WhatsApp di pendaftaran.
   const onNeedsPhone = useCallback(
-    (identity: GoogleNeedsPhone) => router.push(`${m("/auth/register")}?${new URLSearchParams({ ...identity })}`),
+    (identity: GoogleNeedsPhone) => {
+      if (OTP_ENABLED) router.push(`${m("/auth/register")}?${new URLSearchParams({ ...identity })}`);
+      else setGoogleNotice("Akun Google ini belum terhubung dengan keanggotaan. Pendaftaran baru sementara tidak tersedia.");
+    },
     [router]
   );
 
@@ -61,7 +66,7 @@ export function LoginPage() {
         {/* Kartu form mengambang - relative supaya tergambar di atas overlay hero */}
         <div className="relative -mt-10 px-4 pb-10">
           <div className="nh-card !p-6">
-            <form
+            {OTP_ENABLED ? <form
               className="flex flex-col gap-4"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -123,10 +128,11 @@ export function LoginPage() {
                 </button>
               ) : null}
               {otp.error ? <p className="text-sm font-bold text-nh-danger">{otp.error}</p> : null}
-            </form>
-            {otp.step === "phone" ? (
+            </form> : <div className="mb-4"><p className="nh-display text-2xl">{t("Sign in")}</p><p className="mt-2 text-sm text-nh-muted">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "Login dengan kode WhatsApp sedang tidak tersedia. Anggota yang sudah terdaftar dapat masuk dengan Google." : "Login sementara tidak tersedia. Verifikasi kode WhatsApp sedang dinonaktifkan."}</p></div>}
+            {(!OTP_ENABLED || otp.step === "phone") ? (
               <div className="mt-4">
                 <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} />
+                {googleNotice ? <p className="mt-3 text-sm text-nh-danger">{googleNotice}</p> : null}
               </div>
             ) : null}
           </div>

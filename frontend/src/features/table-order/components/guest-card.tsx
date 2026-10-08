@@ -4,6 +4,7 @@ import { forwardRef, useState } from "react";
 import { KeyRound, Loader2, Pencil, Phone, UserRound } from "lucide-react";
 import { displayGuestPhone, validateGuest, type GuestIdentity } from "@/lib/table-order/guest";
 import { ApiRequestError, requestOtp, tryDevBypassLogin, verifyOtp, type MemberProfile } from "../api";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 
 /**
  * Kartu "Data pemesan" — nomor WhatsApp & nama WAJIB sebelum memesan
@@ -48,6 +49,7 @@ export const GuestCard = forwardRef<
       return;
     }
     setError(null);
+    if (!OTP_ENABLED) { continueAsGuest(result.guest); return; }
     setBusy(true);
     try {
       if (await tryDevBypassLogin(result.guest.phone)) {
@@ -197,9 +199,9 @@ export const GuestCard = forwardRef<
               {busy && <Loader2 className="size-4 animate-spin" />}
               Simpan & mulai pesan
             </button>
-            <button type="button" onClick={onOpenMember} className="mt-2 w-full text-center text-xs font-semibold text-brand-text">
+            {OTP_ENABLED ? <button type="button" onClick={onOpenMember} className="mt-2 w-full text-center text-xs font-semibold text-brand-text">
               Sudah member? Masuk dengan OTP
-            </button>
+            </button> : null}
           </div>
         ) : guest ? (
           <div className="flex items-center justify-between gap-3">

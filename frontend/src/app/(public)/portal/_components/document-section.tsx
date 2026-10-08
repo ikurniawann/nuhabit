@@ -11,7 +11,7 @@ const sizeMb = (file: File) => `${(file.size / 1024 / 1024).toFixed(2)} MB`;
 
 function SelectedFile({ file, preview, onRemove }: { file: File; preview?: ReactNode; onRemove: () => void }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-[#e3dbcc] bg-[#f8f4ee] p-4">
+    <div className="flex items-center gap-3 rounded-lg border border-[#e3dbcc] bg-beige p-4">
       {preview}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[#131a1c]">{file.name}</p>

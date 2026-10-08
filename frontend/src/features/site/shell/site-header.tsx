@@ -102,6 +102,9 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
           <Link href="/login" className="ml-2 rounded-full border border-border px-3 py-1 font-semibold text-foreground transition-colors hover:bg-surface-2">
             Log in
           </Link>
+          <Link href="/member/auth/register" className="ml-1 rounded-full bg-ink px-3 py-1 font-semibold text-on-ink transition-opacity hover:opacity-85">
+            Register
+          </Link>
         </div>
       </div>
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 lg:px-6">
@@ -145,6 +148,11 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
             <Button asChild variant="outline">
               <Link href="/login" onClick={() => setMenuOpen(false)}>
                 Log in to NüHabit
+              </Link>
+            </Button>
+            <Button asChild variant="ink">
+              <Link href="/member/auth/register" onClick={() => setMenuOpen(false)}>
+                Register
               </Link>
             </Button>
             <Button

@@ -14,6 +14,7 @@ import { apiDelete, apiPost } from "@/lib/api-client";
 import { DATAROOM_MAX_EXPIRY_DAYS, isWatermarkable, normalizeEmails } from "@/lib/dataroom/config";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
 import { dataroomKeys, useShareLogs, useShares } from "@/features/dataroom/queries";
 import type { DataroomItem, ShareRow } from "@/features/dataroom/types";
@@ -128,11 +129,11 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                   { v: "email", icon: Mail, t: "Email tertentu", d: "Hanya email terdaftar (verifikasi kode)" },
                 ] as const).map((o) => (
                   <button
-                    key={o.v} type="button" onClick={() => setAccessType(o.v)}
-                    className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm transition", accessType === o.v ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted")}
+                    key={o.v} type="button" onClick={() => setAccessType(o.v)} disabled={o.v === "email" && !OTP_ENABLED}
+                    className={cn("flex items-start gap-2 rounded-lg border p-3 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-50", accessType === o.v ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted")}
                   >
                     <o.icon className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span><span className="block font-medium">{o.t}</span><span className="text-xs text-muted-foreground">{o.d}</span></span>
+                    <span><span className="block font-medium">{o.t}</span><span className="text-xs text-muted-foreground">{o.v === "email" && !OTP_ENABLED ? "Sementara tidak tersedia" : o.d}</span></span>
                   </button>
                 ))}
               </div>

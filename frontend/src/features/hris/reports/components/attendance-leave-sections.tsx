@@ -77,9 +77,9 @@ export function AttendanceSection({ report, periodLabel, onExport }: SectionProp
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend iconType="circle" iconSize={8} />
-                <Bar dataKey="present" name="Hadir" fill="#22c55e" stackId="a" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="late" name="Terlambat" fill="#f59e0b" stackId="b" />
-                <Bar dataKey="absent" name="Absen" fill="#ef4444" stackId="c" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="present" name="Hadir" fill="#abde67" stackId="a" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="late" name="Terlambat" fill="#c9a227" stackId="b" />
+                <Bar dataKey="absent" name="Absen" fill="#1c261b" stackId="c" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -134,7 +134,7 @@ export function LeaveSection({ report, periodLabel, onExport }: SectionProps) {
                   <XAxis dataKey="type" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip formatter={(v) => [`${v} hari`, ""]} />
-                  <Bar dataKey="days" name="Hari" fill="#8b5cf6" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="days" name="Hari" fill="#daff59" radius={[4, 4, 0, 0]}>
                     {l.by_type.map((t, i) => (
                       <Cell key={t.type} fill={reportColor(i)} />
                     ))}

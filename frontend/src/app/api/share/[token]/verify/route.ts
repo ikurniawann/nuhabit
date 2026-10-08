@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isSecureRequest } from "@/lib/auth/secure-cookie";
 import { resolveShareContext } from "@/lib/dataroom/api";
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const ctx = await resolveShareContext(request, token);
   if (!ctx.ok) return NextResponse.json({ success: false, error: ctx.error }, { status: ctx.status });
   const { share, session, steps } = ctx;
+  if (steps.needEmail && !OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   const ip = clientIp(request);
   const ua = request.headers.get("user-agent");
   if (!checkRateLimit(`dataroom-verify:${token}:${ip}`, 10).allowed) {

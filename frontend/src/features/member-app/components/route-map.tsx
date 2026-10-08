@@ -84,7 +84,7 @@ export function RouteMap({
         cx={ex}
         cy={ey}
         r={5}
-        fill="#131a1c"
+        fill="#1c261b"
         stroke="#fff"
         strokeWidth={1.5}
       />

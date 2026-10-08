@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/dataroom/domain"
+	"nuhabit/backend/internal/platform/featureflags"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -225,6 +226,9 @@ func jsString(v any) string {
 }
 
 func (h *handler) requestCode(w http.ResponseWriter, r *http.Request) error {
+	if !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	}
 	token := r.PathValue("token")
 	sc, err := h.resolveShare(r, token)
 	if err != nil {
@@ -288,6 +292,9 @@ func (h *handler) verify(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	sh, session, steps := sc.share, sc.session, sc.steps
+	if steps.NeedEmail && !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi email sedang tidak tersedia")
+	}
 	ip, ua := clientIP(r.Header), r.Header.Get("User-Agent")
 	if err := h.rateLimit(r, "dataroom-verify:"+token+":"+ip, 10, "Terlalu banyak percobaan. Coba lagi sebentar."); err != nil {
 		return err

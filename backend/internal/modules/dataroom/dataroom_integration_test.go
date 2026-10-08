@@ -109,6 +109,7 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
+	t.Setenv("OTP_ENABLED", "true")
 	tx := testutil.Tx(t)
 	f := &fixture{t: t, tx: tx, mail: &fakeMailer{}, staff: newUUID(t, tx), now: time.Now()}
 	f.dir = testDirectory{q: tx, dept: map[string]string{}}
@@ -498,6 +499,18 @@ func TestVerifyEmailCode(t *testing.T) {
 	// A second replica on the same database counts against the same window.
 	f.mux = testutil.Mux(mod{h: newHandler(f.svc, headerGuard{})})
 	f.fail(post("/request-code", map[string]any{"email": "budi@wit.id"}, nil), 429, "Terlalu banyak permintaan. Coba lagi sebentar.")
+}
+
+func TestEmailCodeDisabledKeepsPinLinksAvailable(t *testing.T) {
+	f := newFixture(t)
+	root := f.folder("Paused verification", nil)
+	_, emailToken, _ := f.share(map[string]any{"node_id": root, "access_type": "email", "emails": []string{"budi@wit.id"}})
+	_, pinToken, _ := f.share(map[string]any{"node_id": root, "access_type": "public", "pin": "1234"})
+	t.Setenv("OTP_ENABLED", "false")
+	f.fail(f.do(call{method: "POST", target: "/api/dataroom/shares", body: map[string]any{"node_id": root, "access_type": "email", "emails": []string{"budi@wit.id"}}}), 503, "Link dengan verifikasi email sedang tidak tersedia")
+	f.fail(f.do(call{method: "POST", target: "/api/share/" + emailToken + "/request-code", staff: "-", body: map[string]any{"email": "budi@wit.id"}}), 503, "Verifikasi dengan kode sedang tidak tersedia")
+	f.fail(f.do(call{method: "POST", target: "/api/share/" + emailToken + "/verify", staff: "-", body: map[string]any{"email": "budi@wit.id", "code": "123456"}}), 503, "Verifikasi email sedang tidak tersedia")
+	f.ok(f.do(call{method: "POST", target: "/api/share/" + pinToken + "/verify", staff: "-", body: map[string]any{"pin": "1234"}}), 200)
 }
 
 // The real guard: read routes need the dataroom menu, writes its action;

@@ -19,10 +19,10 @@ interface TrendChartProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  "Bahan Kering": "#3b82f6",
-  "Bahan Basah": "#06b6d4",
-  "Kemasan": "#f59e0b",
-  "Subkon": "#8b5cf6",
+  "Bahan Kering": "#00281a",
+  "Bahan Basah": "#203b32",
+  "Kemasan": "#c9a227",
+  "Subkon": "#daff59",
 };
 
 function CustomTooltip({ active, payload, label }: {
@@ -56,10 +56,10 @@ export function TrendChart({ data }: TrendChartProps) {
       <CardContent>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6b7280" }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e3dbcc" />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#203b32" }} />
             <YAxis
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
+              tick={{ fontSize: 10, fill: "#203b32" }}
               tickFormatter={(v) => `Rp ${(v / 1_000_000).toFixed(0)}jt`}
               width={70}
             />
@@ -70,7 +70,7 @@ export function TrendChart({ data }: TrendChartProps) {
                 key={cat}
                 type="monotone"
                 dataKey={cat}
-                stroke={CATEGORY_COLORS[cat] ?? "#6b7280"}
+                stroke={CATEGORY_COLORS[cat] ?? "#1c261b"}
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}

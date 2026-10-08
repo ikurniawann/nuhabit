@@ -40,7 +40,7 @@ export function ProductDetailSheet({
       <div
         role="dialog"
         aria-label={product.name}
-        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-white p-5 sm:rounded-3xl sm:p-7"
+        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl bg-mint p-5 sm:rounded-3xl sm:p-7"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">

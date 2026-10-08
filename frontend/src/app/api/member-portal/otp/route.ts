@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { getPool } from "@/lib/db";
 import { isDevBypassActive } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
@@ -16,6 +17,7 @@ import { findMemberByPhone, issueOtp, memberIpAllowed, TOO_MANY_FROM_IP } from "
  * yang membatasi enumerasi nomor lewat endpoint ini.
  */
 export async function POST(request: NextRequest) {
+  if (!OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   try {
     if (!memberIpAllowed("otp", request)) {
       return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error }, { status: TOO_MANY_FROM_IP.status });

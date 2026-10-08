@@ -136,7 +136,7 @@ export default function PhotoboothSelfServicePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f3ec] text-pink-950">
+    <main className="min-h-screen bg-beige text-forest">
       <div className="grid min-h-screen lg:grid-cols-[1fr_420px]">
         <section className="flex min-h-screen flex-col">
           <header className="flex items-center justify-between border-b border-pink-200 bg-white/80 px-5 py-4 backdrop-blur md:px-8">
@@ -159,7 +159,7 @@ export default function PhotoboothSelfServicePage() {
             </button>
           </header>
 
-          <div className="border-b border-pink-200 bg-[#fffaf1] px-5 py-4 md:px-8">
+          <div className="border-b border-pink-200 bg-mint px-5 py-4 md:px-8">
             <div className="grid gap-2 sm:grid-cols-4">
               {steps.map((item, index) => {
                 const isActive = item.id === step;

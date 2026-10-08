@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { getPool } from "@/lib/db";
 import { canBypassOtp } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
@@ -19,6 +20,7 @@ import {
  * header itu dan tetap menerima jawaban lama tanpa token di body.
  */
 export async function POST(request: NextRequest) {
+  if (!OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   try {
     const body = await request.json().catch(() => ({}));
     const phone = normalizePhoneDigits(body.phone);

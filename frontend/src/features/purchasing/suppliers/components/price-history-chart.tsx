@@ -76,7 +76,7 @@ export function PriceHistoryChart({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={sortedData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e3dbcc" />
         <XAxis
           dataKey="tanggal"
           tickFormatter={(value: string) => formatDate(value)}
@@ -101,12 +101,12 @@ export function PriceHistoryChart({
         {/* Average price line */}
         <ReferenceLine
           y={prices.reduce((a, b) => a + b, 0) / prices.length}
-          stroke="#9ca3af"
+          stroke="#203b32"
           strokeDasharray="3 3"
           label={{ 
             value: "Rata-rata", 
             position: "right",
-            fill: "#6b7280",
+            fill: "#203b32",
             fontSize: 12
           }}
         />
@@ -115,10 +115,10 @@ export function PriceHistoryChart({
         <Line
           type="monotone"
           dataKey="harga"
-          stroke="#2563eb"
+          stroke="#00281a"
           strokeWidth={3}
-          dot={{ fill: "#2563eb", strokeWidth: 2, r: 5 }}
-          activeDot={{ r: 7, fill: "#1d4ed8" }}
+          dot={{ fill: "#00281a", strokeWidth: 2, r: 5 }}
+          activeDot={{ r: 7, fill: "#c9a227" }}
           name="Harga"
           animationDuration={1000}
         />

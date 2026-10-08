@@ -17,10 +17,10 @@ import {
 } from "recharts";
 import type { AnalyticsView } from "@/lib/recruitment/analytics-view";
 
-const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#203b32", "#14b8a6"];
+const COLORS = ["#00281a", "#abde67", "#c9a227", "#1c261b", "#daff59", "#203b32", "#eeffb1", "#f3ece2"];
 const color = (i: number) => COLORS[i % COLORS.length];
 
-const rateColor = (rate: number) => (rate > 50 ? "#22c55e" : rate > 25 ? "#f59e0b" : "#ef4444");
+const rateColor = (rate: number) => (rate > 50 ? "#abde67" : rate > 25 ? "#c9a227" : "#1c261b");
 
 const pipelineBadge = (count: number) =>
   count > 5 ? "bg-red-100 text-red-700" : count > 2 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700";
@@ -64,8 +64,8 @@ export function AnalyticsCharts({ view, loading }: { view: AnalyticsView; loadin
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="applied" fill="#6366f1" radius={[4, 4, 0, 0]} name="Dilamar" />
-            <Bar dataKey="hired" fill="#22c55e" radius={[4, 4, 0, 0]} name="Dihire" />
+            <Bar dataKey="applied" fill="#00281a" radius={[4, 4, 0, 0]} name="Dilamar" />
+            <Bar dataKey="hired" fill="#abde67" radius={[4, 4, 0, 0]} name="Dihire" />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -96,8 +96,8 @@ export function AnalyticsCharts({ view, loading }: { view: AnalyticsView; loadin
             <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
             <YAxis type="category" dataKey="source" tick={{ fontSize: 11 }} width={80} />
             <Tooltip />
-            <Bar dataKey="hired" fill="#22c55e" radius={[0, 4, 4, 0]} name="Hired" />
-            <Bar dataKey="total" fill="#e5e7eb" radius={[0, 4, 4, 0]} name="Total" />
+            <Bar dataKey="hired" fill="#abde67" radius={[0, 4, 4, 0]} name="Hired" />
+            <Bar dataKey="total" fill="#f3ece2" radius={[0, 4, 4, 0]} name="Total" />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
@@ -137,9 +137,9 @@ export function AnalyticsCharts({ view, loading }: { view: AnalyticsView; loadin
             <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
             <Tooltip />
             <Legend />
-            <Bar dataKey="applicants" fill="#6366f1" radius={[4, 4, 0, 0]} name="Dilamar" />
-            <Bar dataKey="active" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Pipeline" />
-            <Bar dataKey="hired" fill="#22c55e" radius={[4, 4, 0, 0]} name="Hired" />
+            <Bar dataKey="applicants" fill="#00281a" radius={[4, 4, 0, 0]} name="Dilamar" />
+            <Bar dataKey="active" fill="#c9a227" radius={[4, 4, 0, 0]} name="Pipeline" />
+            <Bar dataKey="hired" fill="#abde67" radius={[4, 4, 0, 0]} name="Hired" />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>

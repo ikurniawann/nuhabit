@@ -7,7 +7,7 @@ import { formatCellValue } from "@/lib/crm/report-builder";
 import { formatNumber, formatRupiah, formatRupiahCompact } from "@/lib/format";
 import type { ChartType, ReportResult } from "../types";
 
-const PALETTE = ["#9F1239", "#BE185D", "#DB2777", "#F472B6", "#FBCFE8", "#7C2D12", "#B45309", "#047857"];
+const PALETTE = ["#00281a", "#203b32", "#1c261b", "#c9a227", "#abde67", "#daff59", "#eeffb1", "#f3ece2"];
 
 function labelOf(result: ReportResult, row: Record<string, unknown>): string {
   const col = result.columns.find((c) => !c.isAggregate);

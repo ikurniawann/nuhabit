@@ -38,7 +38,7 @@ export function PassStatusPage({ token }: { token: string }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">
           {pass.product_name}
         </p>
-        <h1 className="mt-1 font-mono text-xl font-bold text-gray-900">
+        <h1 className="mt-1 font-display text-xl font-bold text-gray-900">
           {pass.pass_code}
         </h1>
         <p className="mt-1 text-sm text-gray-500">{pass.holder_name}</p>

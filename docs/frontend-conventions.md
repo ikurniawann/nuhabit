@@ -1,6 +1,8 @@
 # Frontend conventions (WIT layout, NüHabit brand)
 
-The back office (`/dashboard/*`) uses the WIT layout dressed in the NüHabit Brand Guideline 2026: a beige canvas (`#f3ece2`), mint cream cards (`#fdfff2`) without borders, one ink surface (`#131a1c`) for emphasis, and pale lime (`#daff59`) for the single most important thing on screen. Controls are pills. Headings (`h1`-`h3`, card and dialog titles) use Outfit, body text uses Manrope, and codes use JetBrains Mono.
+The back office (`/dashboard/*`) uses the WIT layout dressed in the NüHabit Brand Guideline 2026: a White Beige canvas (`#f3ece2`), Mint Cream cards (`#fdfff2`), Deep Forest Green (`#00281a`) for emphasis, and Pale Lime (`#daff59`) for the single most important thing on screen. Controls are pills. All headings use Outfit; body text and codes use Manrope.
+
+The approved palette is White Beige `#f3ece2`, Deep Forest Green `#00281a`, Pale Lime `#daff59`, Dark Jungle `#1c261b`, Everglade `#203b32`, Lettuce `#abde67`, Lemon Lime `#eeffb1`, Mint Cream `#fdfff2`, and Golden Ochre `#c9a227`. Use the named tokens in `globals.css` for brand surfaces and accents. Neutral and semantic status shades may be derived from these colors when contrast or state clarity requires them.
 
 ## Reference pages
 
@@ -25,7 +27,7 @@ Links that may cross the POS layout boundary use `NavLink` / `useNavigate` from 
 
 ## Tokens
 
-All tokens live in `src/app/globals.css`. The accent follows `--brand-primary`, so each tenant's brand colour from Appearance settings still applies.
+All tokens live in `src/app/globals.css`. The accent follows the fixed NüHabit `--brand-primary` (`#daff59`). Appearance retains the base font-size control; stored company colors and old presets are normalized to the guideline palette.
 
 | Class | Use |
 |---|---|
@@ -46,7 +48,7 @@ Naming differs from the skill in one place: shadcn's `muted` stays a background 
 
 `globals.css` also maps the Tailwind `gray-*`, `slate-*`, `zinc-*` and `neutral-*` palettes onto the WIT neutral ladder, and `pink-*` onto a lime-to-forest scale (300 is lime, 700 is forest). Existing pages that spell those classes out follow the style without edits. Use the semantic tokens above in new code.
 
-Contrast (WCAG 2.x, brand `#daff59`): forest on lime 14.0, lime on ink 15.5, `muted-foreground` on surface 4.75, `on-ink-muted` on ink 9.6, every status colour on its `-soft` tint 4.5 or more. Lime on beige measures 1.03, so lime never appears as text or an icon on a light surface; use `text-forest` there. When a tenant picks a different brand colour in Appearance, `pickForeground` chooses white, forest or black for text on it.
+Contrast (WCAG 2.x, brand `#daff59`): forest on lime 14.0, lime on ink 15.5, `muted-foreground` on surface 4.75, `on-ink-muted` on ink 9.6, every status colour on its `-soft` tint 4.5 or more. Lime on beige measures 1.03, so lime never appears as text or an icon on a light surface; use `text-forest` there.
 
 Logos live in `public/brand/` (dashboard and public pages) and `public/member-assets/brand/` (member portal, which only serves `/member-assets/`): `wordmark-black` on light, `wordmark-white` on ink, `mark-lime` for square slots on ink.
 

@@ -24,7 +24,7 @@ export interface MapPin extends LatLng {
 }
 
 const ME = new Style({
-  image: new CircleStyle({ radius: 7, fill: new Fill({ color: "#2563eb" }), stroke: new Stroke({ color: "#fff", width: 2.5 }) }),
+  image: new CircleStyle({ radius: 7, fill: new Fill({ color: "#00281a" }), stroke: new Stroke({ color: "#fdfff2", width: 2.5 }) }),
 });
 
 function pinStyle(label: string, selected: boolean): Style {
@@ -38,7 +38,7 @@ function pinStyle(label: string, selected: boolean): Style {
       text: label,
       offsetY: -18,
       font: "600 12px Manrope, system-ui, sans-serif",
-      fill: new Fill({ color: "#131a1c" }),
+      fill: new Fill({ color: "#1c261b" }),
       stroke: new Stroke({ color: "#fdfff2", width: 3 }),
     }),
   });

@@ -302,7 +302,7 @@ export function PrintQueuePage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-mono text-base font-bold text-gray-950">
+                    <h2 className="font-display text-base font-bold text-gray-950">
                       {job.order?.order_number || job.order_id.slice(0, 8)}
                     </h2>
                     <Badge className={statusTone[job.status]}>{job.status}</Badge>

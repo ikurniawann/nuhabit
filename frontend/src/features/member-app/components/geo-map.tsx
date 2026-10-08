@@ -100,7 +100,7 @@ export function GeoMap({
         const start = new Feature(new Point(coords[0]!));
         start.setStyle(dotStyle(6, "#abde67", 2));
         const end = new Feature(new Point(coords[coords.length - 1]!));
-        end.setStyle(dotStyle(6, "#131a1c", 2));
+        end.setStyle(dotStyle(6, "#1c261b", 2));
         source.addFeatures([start, end]);
       }
     }
@@ -149,7 +149,7 @@ export function GeoMap({
       }),
     );
     const dot = new Feature(new Point(centre));
-    dot.setStyle(dotStyle(7, "#2563eb", 2.5));
+    dot.setStyle(dotStyle(7, "#00281a", 2.5));
     source.addFeatures([halo, dot]);
     map
       .getView()

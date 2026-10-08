@@ -15,13 +15,13 @@ describe("resolveBrand", () => {
       secondary: "#00281a",
     });
   });
-  it("prefers custom colors when set", () => {
+  it("keeps the guideline colors when an old custom theme is stored", () => {
     const brand = resolveBrand({
       ...DEFAULT_THEME_STATE,
       customPrimary: "#0ea5e9",
       customSecondary: "#6366f1",
     });
-    expect(brand).toEqual({ primary: "#0ea5e9", secondary: "#6366f1" });
+    expect(brand).toEqual({ primary: "#daff59", secondary: "#00281a" });
   });
 });
 
@@ -44,6 +44,12 @@ describe("parseThemeState", () => {
   it("falls back to default preset for unknown presetId", () => {
     const parsed = parseThemeState(JSON.stringify({ presetId: "does-not-exist" }));
     expect(parsed.presetId).toBe(DEFAULT_THEME_STATE.presetId);
+  });
+  it("drops old custom colors while preserving the display mode", () => {
+    expect(parseThemeState(JSON.stringify({ mode: "dark", customPrimary: "#0ea5e9" }))).toEqual({
+      ...DEFAULT_THEME_STATE,
+      mode: "dark",
+    });
   });
 });
 

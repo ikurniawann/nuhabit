@@ -16,8 +16,12 @@ function base(): string {
 }
 
 async function read<T>(path: string): Promise<T | null> {
+  const origin = base();
+  // Without an API origin, server-side fetch cannot resolve a relative URL.
+  // Public pages use their defaults until the Go API is configured.
+  if (!origin) return null;
   try {
-    const res = await fetch(`${base()}/api/public/site${path}`, { cache: "no-store" });
+    const res = await fetch(`${origin}/api/public/site${path}`, { cache: "no-store" });
     if (!res.ok) return null;
     const json = (await res.json()) as { success?: boolean; data?: T };
     return json.success ? (json.data ?? null) : null;

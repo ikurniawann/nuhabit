@@ -8,7 +8,7 @@ import type { ProfitBucket } from "@/lib/pos/reports/types";
 import { ApexChart } from "./apex-chart";
 import { useBrandPrimary } from "../use-brand-primary";
 
-const CHART_SECONDARY_COLORS = ["#9ca3af", "#6366f1", "#f59e0b", "#14b8a6", "#8b5cf6"];
+const CHART_SECONDARY_COLORS = ["#abde67", "#c9a227", "#203b32", "#1c261b", "#daff59"];
 
 const baseChartOptions: ApexOptions = {
   chart: {
@@ -17,13 +17,13 @@ const baseChartOptions: ApexOptions = {
     zoom: { enabled: false },
   },
   grid: {
-    borderColor: "#f3f4f6",
+    borderColor: "#e3dbcc",
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
   legend: {
     fontSize: "12px",
-    labels: { colors: "#6b7280" },
+    labels: { colors: "#203b32" },
   },
   tooltip: {
     theme: "light",
@@ -53,7 +53,7 @@ export function ProfitDailyTrendChart({ rows }: { rows: ProfitBucket[] }) {
     () => ({
       ...baseChartOptions,
       chart: { ...baseChartOptions.chart, type: "area" },
-      colors: [brandPrimary, "#9ca3af", "#6366f1"],
+      colors: [brandPrimary, "#c9a227", "#abde67"],
       stroke: { curve: "smooth", width: 2 },
       fill: {
         type: "gradient",
@@ -61,13 +61,13 @@ export function ProfitDailyTrendChart({ rows }: { rows: ProfitBucket[] }) {
       },
       xaxis: {
         categories: sorted.map((row) => row.label),
-        labels: { style: { colors: "#9ca3af", fontSize: "11px" } },
+        labels: { style: { colors: "#203b32", fontSize: "11px" } },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
       yaxis: {
         labels: {
-          style: { colors: "#9ca3af", fontSize: "11px" },
+          style: { colors: "#203b32", fontSize: "11px" },
           formatter: (value) => formatRupiah(value),
         },
       },
@@ -116,7 +116,7 @@ export function ProfitCompositionChart({
     () => ({
       ...baseChartOptions,
       chart: { ...baseChartOptions.chart, type: "donut" },
-      colors: [brandPrimary, "#9ca3af"],
+      colors: [brandPrimary, "#abde67"],
       labels: ["Gross Profit", "COGS"],
       plotOptions: {
         pie: {
@@ -128,7 +128,7 @@ export function ProfitCompositionChart({
                 show: true,
                 label: "Revenue",
                 formatter: () => formatRupiah(revenue),
-                color: "#111827",
+                color: "#1c261b",
                 fontSize: "14px",
                 fontWeight: 600,
               },
@@ -188,14 +188,14 @@ export function ProfitCategoryBarChart({ rows, title }: { rows: ProfitBucket[]; 
       xaxis: {
         categories: top.map((row) => truncateLabel(row.label)),
         labels: {
-          style: { colors: "#9ca3af", fontSize: "11px" },
+          style: { colors: "#203b32", fontSize: "11px" },
           formatter: (value) => formatRupiah(Number(value)),
         },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
       yaxis: {
-        labels: { style: { colors: "#6b7280", fontSize: "11px" } },
+        labels: { style: { colors: "#203b32", fontSize: "11px" } },
       },
       tooltip: {
         ...baseChartOptions.tooltip,
@@ -243,13 +243,13 @@ export function ProfitMarginBarChart({ rows }: { rows: ProfitBucket[] }) {
       },
       xaxis: {
         categories: top.map((row) => truncateLabel(row.label, 12)),
-        labels: { style: { colors: "#9ca3af", fontSize: "11px" }, rotate: -35 },
+        labels: { style: { colors: "#203b32", fontSize: "11px" }, rotate: -35 },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
       yaxis: {
         labels: {
-          style: { colors: "#9ca3af", fontSize: "11px" },
+          style: { colors: "#203b32", fontSize: "11px" },
           formatter: (value) => `${value}%`,
         },
         max: 100,

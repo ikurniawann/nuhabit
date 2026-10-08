@@ -68,7 +68,7 @@ const rows = [
 
 export function IntegrationSettingsPage() {
   return (
-    <main className="min-h-screen bg-[#ececf1] text-[#1d1d1f] dark:bg-transparent dark:text-foreground">
+    <main className="min-h-screen bg-beige text-jungle dark:bg-transparent dark:text-foreground">
       <div className="mx-auto flex min-h-screen max-w-7xl p-4 sm:p-6">
         <div className="flex w-full overflow-hidden rounded-[32px] border border-white/70 bg-white/60 shadow-[0_24px_80px_rgba(0,0,0,.14)] backdrop-blur-2xl">
           {/* Sidebar */}
@@ -95,7 +95,7 @@ export function IntegrationSettingsPage() {
                   <button
                     key={item.label}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
-                      item.active ? 'bg-[#007aff] text-white shadow-sm' : 'text-black/75 hover:bg-black/5 dark:text-foreground/75 dark:hover:bg-white/10'
+                      item.active ? 'bg-forest text-mint shadow-sm' : 'text-forest/75 hover:bg-forest/5 dark:text-foreground/75 dark:hover:bg-white/10'
                     }`}
                   >
                     <span className={`grid h-7 w-7 place-items-center rounded-lg ${item.active ? 'bg-white/20' : 'bg-white shadow-sm'}`}>
@@ -109,7 +109,7 @@ export function IntegrationSettingsPage() {
           </aside>
 
           {/* Content */}
-          <section className="flex-1 overflow-y-auto bg-[#f5f5f7]/80 p-5 dark:bg-white/[0.04] sm:p-8">
+          <section className="flex-1 overflow-y-auto bg-mint/80 p-5 dark:bg-white/[0.04] sm:p-8">
             <div className="mx-auto max-w-4xl">
               <div className="mb-6">
                 <h1 className="text-4xl font-semibold tracking-tight">Integration</h1>
@@ -128,7 +128,7 @@ export function IntegrationSettingsPage() {
                       Hubungkan Game, Photobox, Payment Gateway, API, dan webhook dari satu tempat.
                     </p>
                   </div>
-                  <button className="hidden rounded-full bg-[#007aff] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#006ee6] sm:block">
+                  <button className="hidden rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-forest transition hover:bg-lemon sm:block">
                     Add Integration
                   </button>
                 </div>
@@ -166,8 +166,8 @@ export function IntegrationSettingsPage() {
                   const Icon = row.icon;
                   return (
                     <div key={row.label} className={`flex items-center gap-4 px-5 py-4 ${index !== rows.length - 1 ? 'border-b border-black/5' : ''}`}>
-                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#f2f2f7] dark:bg-white/10">
-                        <Icon className="h-5 w-5 text-[#007aff]" />
+                      <div className="grid h-10 w-10 place-items-center rounded-xl bg-beige dark:bg-white/10">
+                        <Icon className="h-5 w-5 text-forest" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold">{row.label}</div>

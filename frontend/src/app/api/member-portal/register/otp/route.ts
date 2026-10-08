@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { isDevBypassActive } from "@/lib/member-portal/dev-bypass";
 import { normalizePhoneDigits } from "@/lib/member-portal/otp";
 import { issueOtp, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal/otp-store";
@@ -11,6 +12,7 @@ import { issueOtp, memberIpAllowed, TOO_MANY_FROM_IP } from "@/lib/member-portal
  * Rate limit sama dengan login (3 / 10 menit / nomor) plus rem per-IP.
  */
 export async function POST(request: NextRequest) {
+  if (!OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   try {
     if (!memberIpAllowed("otp", request)) {
       return NextResponse.json({ success: false, error: TOO_MANY_FROM_IP.error }, { status: TOO_MANY_FROM_IP.status });

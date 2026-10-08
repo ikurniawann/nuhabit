@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { OTP_ENABLED, OTP_UNAVAILABLE_MESSAGE } from "@/lib/otp-availability";
 import { withTransaction } from "@/lib/db";
 import { setMarketingConsent } from "@/lib/member-portal/consent";
 import { canBypassOtp } from "@/lib/member-portal/dev-bypass";
@@ -19,6 +20,7 @@ import {
  * per nomor supaya dua permintaan bersamaan tidak membuat member ganda.
  */
 export async function POST(request: NextRequest) {
+  if (!OTP_ENABLED) return NextResponse.json({ success: false, error: OTP_UNAVAILABLE_MESSAGE }, { status: 503 });
   try {
     const body = await request.json().catch(() => ({}));
     const parsed = validateRegistration(body);

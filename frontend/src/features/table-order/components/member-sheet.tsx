@@ -13,6 +13,7 @@ import {
 } from "../api";
 import { BottomSheet } from "./sheet";
 import { formatNumber } from "@/lib/format";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 
 /**
  * Masuk member via OTP WhatsApp — memakai endpoint portal member yang sudah
@@ -180,6 +181,8 @@ export function MemberSheet({
             Keluar
           </button>
         </div>
+      ) : !OTP_ENABLED ? (
+        <p className="text-sm text-gray-600">Login member dengan kode WhatsApp sementara tidak tersedia. Anda masih dapat melanjutkan pesanan sebagai tamu.</p>
       ) : step === "phone" ? (
         <div>
           <p className="text-sm leading-relaxed text-gray-600">

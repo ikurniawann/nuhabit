@@ -21,8 +21,8 @@ export function ApplicationPage(prefill: ApplicationPrefill) {
   };
 
   return (
-    <div id="top" lang="en" className="min-h-screen bg-[#f8f4ee] text-[#131a1c] career-roundo">
-      <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-[#f8f4ee]/95 backdrop-blur">
+    <div id="top" lang="en" className="min-h-screen bg-beige text-[#131a1c] career-roundo">
+      <nav className="fixed top-0 z-50 w-full border-b border-[#e3dbcc] bg-beige/95 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4 sm:px-6 lg:px-10">
           <Link href="/career" className="flex h-full items-center" aria-label="NüHabit careers">
             <img src={logoUrl} alt="NüHabit" className="h-7 w-auto sm:h-8" />
@@ -55,7 +55,7 @@ export function ApplicationPage(prefill: ApplicationPrefill) {
         </section>
       </main>
 
-      <footer className="w-full border-t border-[#e3dbcc] bg-[#f8f4ee] py-12">
+      <footer className="w-full border-t border-[#e3dbcc] bg-beige py-12">
         <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-8 px-4 sm:px-6 md:grid-cols-2 lg:px-10">
           <div className="space-y-4">
             <div className="flex h-10 items-center">

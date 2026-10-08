@@ -92,14 +92,14 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
 
   if (catalog.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-beige">
         <Loader2 className="h-8 w-8 animate-spin text-forest" />
       </div>
     );
   }
   if (catalog.isError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-gray-50 px-6 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-beige px-6 text-center">
         <Package className="h-10 w-10 text-gray-300" />
         <p className="text-sm text-gray-500">{catalog.error.message || 'Store not found'}</p>
       </div>
@@ -116,8 +116,8 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   const checkoutLines = buyNow ? buyNow.lines : cart.lines;
 
   return (
-    <div className="min-h-screen bg-[#f7f7f4] pb-24">
-      <header className="sticky top-0 z-30 border-b border-gray-100 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-beige pb-24">
+      <header className="sticky top-0 z-30 border-b border-gray-100 bg-mint/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest">NüHabit Shop</p>
@@ -142,12 +142,12 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <div className="mb-8 overflow-hidden rounded-[2rem] bg-ink px-6 py-8 text-on-ink sm:px-10 sm:py-12">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-lime-300">The everyday collection</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-lime">The everyday collection</p>
           <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-5xl">Made for your next move.</h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/75 sm:text-base">
             {storefront.description || 'Gear and essentials for every part of your routine.'}
           </p>
-          <a href="#shop-products" className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-gray-100">
+          <a href="#shop-products" className="mt-6 inline-flex items-center gap-2 rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-forest hover:bg-lemon">
             Shop the collection <ArrowRight className="h-4 w-4" />
           </a>
         </div>
@@ -162,7 +162,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-600">
                 Sort by
-                <select value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)} className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-forest focus:outline-none">
+                <select value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)} className="rounded-xl border border-gray-200 bg-mint px-3 py-2 text-sm text-gray-900 focus:border-forest focus:outline-none">
                   <option value="featured">Featured</option>
                   <option value="price-asc">Price: low to high</option>
                   <option value="price-desc">Price: high to low</option>
@@ -174,10 +174,10 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
               <label className="relative min-w-56 flex-1 sm:max-w-md">
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <span className="sr-only">Search products</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, sizes, collections" className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, sizes, collections" className="w-full rounded-xl border border-gray-200 bg-mint py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
                 {search ? <button type="button" onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"><X className="h-4 w-4" /></button> : null}
               </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-gray-200 bg-mint px-4 py-3 text-sm text-gray-700">
                 <input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} className="accent-forest" />
                 Available to order
               </label>
@@ -190,7 +190,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
             <p className="text-sm">No products in this store yet</p>
           </div>
         ) : visibleProducts.length === 0 ? (
-          <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
+          <div className="rounded-2xl border border-gray-200 bg-mint px-6 py-16 text-center">
             <Search className="mx-auto mb-3 h-8 w-8 text-gray-300" />
             <p className="font-medium text-gray-900">No matching products</p>
             <p className="mt-1 text-sm text-gray-500">Try another search or show sold-out items.</p>
@@ -263,7 +263,7 @@ function ProductGrid({
             key={product.id}
             type="button"
             onClick={() => onSelect(product)}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200/70 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-forest"
+            className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200/70 bg-mint text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-forest"
           >
             <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-gray-100">
               {image ? (
@@ -273,7 +273,7 @@ function ProductGrid({
                 <Package className="h-10 w-10 text-gray-300" />
               )}
               {product.preorder ? <PreorderBadge until={product.preorderUntil} className="absolute left-2 top-2" /> : null}
-              {soldOut ? <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-gray-700">Sold out</span> : null}
+              {soldOut ? <span className="absolute left-2 top-2 rounded-full bg-mint/95 px-2.5 py-1 text-xs font-semibold text-gray-700">Sold out</span> : null}
             </div>
             <div className="flex flex-1 flex-col p-3 sm:p-4">
               {product.collection ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-forest">{product.collection.name}</p> : null}

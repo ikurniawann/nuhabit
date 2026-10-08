@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/platform/featureflags"
 	"nuhabit/backend/internal/platform/httpx"
 )
 
@@ -16,6 +17,9 @@ type otpSentBody struct {
 
 // POST /otp { phone } sends a WhatsApp login code to a registered member.
 func (h *Handler) requestOTP(w http.ResponseWriter, r *http.Request) error {
+	if !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	}
 	body, _ := readBody(r)
 	issued, err := h.svc.RequestLoginOTP(r.Context(), clientIP(r.Header), body["phone"])
 	if err != nil {
@@ -29,6 +33,9 @@ func (h *Handler) requestOTP(w http.ResponseWriter, r *http.Request) error {
 
 // POST /register/otp { phone } is step one of self registration.
 func (h *Handler) requestRegisterOTP(w http.ResponseWriter, r *http.Request) error {
+	if !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	}
 	body, _ := readBody(r)
 	issued, err := h.svc.RequestRegisterOTP(r.Context(), clientIP(r.Header), body["phone"])
 	if err != nil {
@@ -55,6 +62,9 @@ func (h *Handler) writeSignedIn(w http.ResponseWriter, r *http.Request, s *Signe
 
 // POST /verify { phone, code } opens a member session.
 func (h *Handler) verify(w http.ResponseWriter, r *http.Request) error {
+	if !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	}
 	body, _ := readBody(r)
 	signed, err := h.svc.Verify(r.Context(), clientIP(r.Header), body["phone"], jsString(body["code"]))
 	if err != nil {
@@ -65,6 +75,9 @@ func (h *Handler) verify(w http.ResponseWriter, r *http.Request) error {
 
 // POST /register { phone, code, name, email?, birth_date?, wa_consent }.
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
+	if !featureflags.OTPEnabled() {
+		return httpx.Status(http.StatusServiceUnavailable, "Pendaftaran dengan kode sedang tidak tersedia")
+	}
 	body, _ := readBody(r)
 	signed, err := h.svc.Register(r.Context(), clientIP(r.Header), body)
 	if err != nil {

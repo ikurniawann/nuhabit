@@ -13,10 +13,10 @@ const COPYRIGHT_YEAR = new Date().getFullYear();
 /** EPIC-050 T-5.3 — halaman publik poskopi.reddie.id/public. */
 export function PublicFormPage({ form }: { form: PublicFormView }) {
   return (
-    <main className="relative min-h-screen bg-[#0d111b]">
+    <main className="relative min-h-screen bg-jungle">
       <div className="absolute inset-0">
         <Image src="/brand/wallpaper.webp" alt="" fill priority className="object-cover opacity-25" sizes="100vw" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d111b]/80 via-[#10182e]/85 to-[#0d111b]/95" />
+        <div className="absolute inset-0 bg-gradient-to-b from-jungle/80 via-forest/85 to-jungle/95" />
       </div>
 
       {/* min-h-dvh, bukan min-h-screen: globals.css punya aturan global

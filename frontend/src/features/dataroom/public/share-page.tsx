@@ -13,6 +13,7 @@ import { brandName } from "@/lib/branding";
 import { formatBytes, isPreviewable } from "@/lib/dataroom/config";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 import { ItemIcon } from "@/features/dataroom/components/item-icon";
 import { PreviewDialog } from "@/features/dataroom/components/preview-dialog";
 import type { DataroomItem } from "@/features/dataroom/types";
@@ -153,6 +154,8 @@ function Gate({ token, meta, onVerified }: { token: string; meta: ShareMeta; onV
       setBusy(false);
     }
   };
+
+  if (meta.steps.needEmail && !OTP_ENABLED) return <div className="mx-auto max-w-md rounded-xl border bg-white p-6 shadow-sm"><h2 className="font-semibold">Verifikasi email sementara tidak tersedia</h2><p className="mt-2 text-sm text-muted-foreground">Hubungi pengirim untuk meminta tautan baru yang menggunakan PIN.</p></div>;
 
   return (
     <div className="mx-auto max-w-md rounded-xl border bg-white p-6 shadow-sm">

@@ -15,13 +15,13 @@ const baseChartOptions: ApexOptions = {
     zoom: { enabled: false },
   },
   grid: {
-    borderColor: "#f3f4f6",
+    borderColor: "#e3dbcc",
     strokeDashArray: 4,
   },
   dataLabels: { enabled: false },
   legend: {
     fontSize: "12px",
-    labels: { colors: "#6b7280" },
+    labels: { colors: "#203b32" },
   },
   tooltip: { theme: "light" },
 };
@@ -53,13 +53,13 @@ export function PosRevenueTrendChart({ points }: { points: TrendPoint[] }) {
       },
       xaxis: {
         categories: points.map((point) => point.label),
-        labels: { style: { colors: "#9ca3af", fontSize: "11px" } },
+        labels: { style: { colors: "#203b32", fontSize: "11px" } },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
       yaxis: {
         labels: {
-          style: { colors: "#9ca3af", fontSize: "11px" },
+          style: { colors: "#203b32", fontSize: "11px" },
           formatter: (value) => formatRupiah(value),
         },
       },
@@ -97,27 +97,27 @@ export function PosArkXpTrendChart({ points }: { points: TrendPoint[] }) {
     () => ({
       ...baseChartOptions,
       chart: { ...baseChartOptions.chart, type: "line" },
-      colors: ["#f59e0b", "#6366f1"],
+      colors: ["#c9a227", "#00281a"],
       stroke: { curve: "smooth", width: 2 },
       xaxis: {
         categories: points.map((point) => point.label),
-        labels: { style: { colors: "#9ca3af", fontSize: "11px" } },
+        labels: { style: { colors: "#203b32", fontSize: "11px" } },
         axisBorder: { show: false },
         axisTicks: { show: false },
       },
       yaxis: [
         {
-          title: { text: "ARK Used", style: { color: "#9ca3af", fontSize: "11px" } },
+          title: { text: "ARK Used", style: { color: "#f3ece2", fontSize: "11px" } },
           labels: {
-            style: { colors: "#9ca3af", fontSize: "11px" },
+            style: { colors: "#203b32", fontSize: "11px" },
             formatter: (value) => formatArkAxis(value),
           },
         },
         {
           opposite: true,
-          title: { text: "XP Earned", style: { color: "#9ca3af", fontSize: "11px" } },
+          title: { text: "XP Earned", style: { color: "#f3ece2", fontSize: "11px" } },
           labels: {
-            style: { colors: "#9ca3af", fontSize: "11px" },
+            style: { colors: "#203b32", fontSize: "11px" },
             formatter: (value) => `${Math.round(value)}`,
           },
         },
@@ -177,12 +177,12 @@ export function PosTopProductsChart({ products }: { products: TopProduct[] }) {
           product.name.length > 20 ? `${product.name.slice(0, 20)}…` : product.name
         ),
         labels: {
-          style: { colors: "#9ca3af", fontSize: "11px" },
+          style: { colors: "#203b32", fontSize: "11px" },
           formatter: (value) => String(value),
         },
       },
       yaxis: {
-        labels: { style: { colors: "#6b7280", fontSize: "11px" } },
+        labels: { style: { colors: "#203b32", fontSize: "11px" } },
       },
       tooltip: {
         ...baseChartOptions.tooltip,
@@ -226,7 +226,7 @@ export function PosArkPaymentShareChart({
     () => ({
       ...baseChartOptions,
       chart: { ...baseChartOptions.chart, type: "donut" },
-      colors: ["#f59e0b", "#e5e7eb"],
+      colors: ["#c9a227", "#203b32"],
       labels: ["ARK Payment", "Other Payment"],
       plotOptions: {
         pie: {
@@ -241,7 +241,7 @@ export function PosArkPaymentShareChart({
                   const total = (w.globals.seriesTotals as number[]).reduce((sum, value) => sum + value, 0);
                   return String(Math.round(total));
                 },
-                color: "#111827",
+                color: "#1c261b",
                 fontSize: "14px",
                 fontWeight: 600,
               },

@@ -27,7 +27,7 @@
 
 /* Permukaan gelap premium: Dark Jungle ke Deep Forest Green. */
 .nh-surface-ink {
-  background: linear-gradient(150deg, #1c261b 0%, #00281a 55%, #001b12 100%);
+  background: linear-gradient(150deg, #1c261b 0%, #00281a 100%);
 }
 
 /* Gradien lime khas (tombol tengah, tile utama). Selalu dengan teks gelap. */

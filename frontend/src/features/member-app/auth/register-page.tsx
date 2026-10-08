@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { OTP_ENABLED } from "@/lib/otp-availability";
 import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
@@ -33,6 +34,7 @@ async function post<T = object>(path: string, body: unknown): Promise<PostResult
 
 /** useSearchParams needs a Suspense boundary for prerendering. */
 export function RegisterPage() {
+  if (!OTP_ENABLED) return <div className="nh-app flex min-h-dvh items-center justify-center px-6"><div className="nh-card max-w-md text-center"><h1 className="nh-display text-2xl">Pendaftaran sementara tidak tersedia</h1><p className="mt-3 text-sm text-nh-muted">Verifikasi kode WhatsApp sedang dinonaktifkan.</p><Link href={m("/auth/login")} className="nh-btn-brand mt-5 inline-flex">Ke halaman login</Link></div></div>;
   return (
     <Suspense fallback={<Spinner />}>
       <Register />

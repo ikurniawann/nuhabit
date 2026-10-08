@@ -68,7 +68,7 @@ export function ChallengeDetailPage() {
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-nh-forest to-[#ff7a45]"
+                className="h-full rounded-full bg-gradient-to-r from-nh-forest to-ochre"
                 style={{ width: `${pct}%` }}
               />
             </div>

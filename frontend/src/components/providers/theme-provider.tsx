@@ -112,8 +112,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       state: {
         ...readThemeSnapshot().state,
         presetId: next.presetId,
-        customPrimary: next.base.primary,
-        customSecondary: next.base.secondary,
+        customPrimary: null,
+        customSecondary: null,
       },
     });
   }, []);
