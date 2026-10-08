@@ -38,7 +38,8 @@ export function LoginPage() {
     [router]
   );
 
-  const canSubmit = auth.username.trim().length >= 3;
+  // Password ikut jadi syarat: server tidak lagi menerima login tanpa password.
+  const canSubmit = auth.username.trim().length >= 3 && auth.password.length > 0;
 
   return (
     <div className="nh-app">

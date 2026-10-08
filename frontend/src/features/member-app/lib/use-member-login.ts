@@ -22,7 +22,16 @@ export function useMemberLogin({
   };
 
   const login = useCallback(async () => {
-    if (!username.trim()) return;
+    // Password wajib: server menolak login tanpa password (401/403), jadi
+    // permintaan kosong tidak perlu dikirim sama sekali.
+    if (!username.trim()) {
+      setError("Username wajib diisi");
+      return;
+    }
+    if (!password) {
+      setError("Password wajib diisi");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -33,7 +42,7 @@ export function useMemberLogin({
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Gagal masuk");
-      
+
       onSignedIn();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal masuk");
