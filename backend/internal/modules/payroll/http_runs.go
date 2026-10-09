@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -101,8 +102,12 @@ func (h *handler) updateRun(w http.ResponseWriter, r *http.Request) error {
 
 // DELETE /api/hris/payroll/{id}
 func (h *handler) deleteRun(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...); err != nil {
+	u, err := h.auth.RequireMenuPrefix(r, iam.HrisCompensation...)
+	if err != nil {
 		return err
+	}
+	if u.Role != "super_admin" {
+		return httpx.Forbidden("Hanya superadmin yang dapat menghapus payroll run")
 	}
 	if err := h.svc.deleteRun(r.Context(), r.PathValue("id")); err != nil {
 		return err

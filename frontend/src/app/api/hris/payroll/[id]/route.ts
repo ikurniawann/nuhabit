@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireIamMenuPrefix } from "@/lib/api/auth";
+import { ApiError, requireIamMenuPrefix } from "@/lib/api/auth";
 import { apiHandler } from "@/lib/api/handler";
 import { readJson } from "@/lib/hris/workforce-route";
 import { IAM } from "@/lib/iam/prefixes";
@@ -23,9 +23,10 @@ export const PUT = apiHandler(async (request: NextRequest, { params }: Ctx) => {
   return NextResponse.json(await updateRun(await createServerPgClient(), user.id, id, input));
 }, "hris/payroll/[id].PUT");
 
-/** DELETE /api/hris/payroll/[id]: run paid tidak bisa dihapus. */
+/** DELETE /api/hris/payroll/[id]: hanya superadmin; run paid tidak bisa dihapus. */
 export const DELETE = apiHandler(async (_request: NextRequest, { params }: Ctx) => {
-  await requireIamMenuPrefix(IAM.hrisCompensation);
+  const user = await requireIamMenuPrefix(IAM.hrisCompensation);
+  if (user.role !== "super_admin") throw ApiError.forbidden("Hanya superadmin yang dapat menghapus payroll run");
   const { id } = await params;
   await deleteRun(await createServerPgClient(), id);
   return NextResponse.json({ message: "Payroll run berhasil dihapus" });

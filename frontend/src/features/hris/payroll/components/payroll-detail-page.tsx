@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import {
 import { toast } from "sonner";
 import { formatRupiah } from "@/lib/format";
 import { monthName } from "@/lib/hris/month-label";
-import { buildPayrollRunCsv } from "@/lib/payroll/ui-run-csv";
 import { usePayrollRun } from "../queries";
 import { useNotifyPayslip } from "../mutations";
 
@@ -28,34 +27,45 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
   const details = payrollRun?.payroll_details ?? [];
   const loading = runQuery.isLoading;
   const notify = useNotifyPayslip(id);
+  const [exporting, setExporting] = useState(false);
   const notifyingId = notify.isPending ? notify.variables : null;
+  const missingEmailCount = details.filter((detail) => !detail.employee?.is_active || !detail.employee?.email).length;
+  const emailedCount = details.filter((detail) => Boolean(detail.payslip_emailed_at)).length;
 
-  function handleNotify(detailId: string) {
+  function handleNotify(detailId: string, alreadyEmailed: boolean) {
+    if (alreadyEmailed && !window.confirm("Kirim ulang slip gaji ke email karyawan ini?")) return;
     notify.mutate(detailId, {
       onSuccess: (json) => {
-        if (json.data?.wa_link) window.open(json.data.wa_link, "_blank");
-        toast.success(json.message || "Slip ditandai terkirim");
+        toast.success(json.message || "Email slip gaji diterima Resend");
       },
       onError: (error) => toast.error(error.message || "Gagal mengirim notifikasi"),
     });
   }
 
-  function handleExportCSV() {
+  async function handleExportPayroll() {
     if (details.length === 0) {
       toast.error("Tidak ada data untuk diekspor");
       return;
     }
-
-    const csv = buildPayrollRunCsv(details);
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `payroll-${payrollRun?.period_month}-${payrollRun?.period_year}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast.success("CSV berhasil diunduh");
+    if (!payrollRun) return;
+    setExporting(true);
+    try {
+      const { buildPayrollRunWorkbook } = await import("@/lib/payroll/ui-run-workbook");
+      const workbook = await buildPayrollRunWorkbook(payrollRun);
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `nuhabit-payroll-${payrollRun.period_year}-${String(payrollRun.period_month).padStart(2, "0")}-draf.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Draf payroll XLSX berhasil diunduh");
+    } catch {
+      toast.error("Gagal membuat draf payroll XLSX");
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (loading) {
@@ -92,9 +102,9 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
             {monthName(payrollRun.period_month)} {payrollRun.period_year} • {payrollRun.total_employees} karyawan
           </p>
         </div>
-        <Button onClick={handleExportCSV} variant="outline">
+        <Button onClick={() => void handleExportPayroll()} variant="outline" disabled={exporting}>
           <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
-          Export CSV
+          {exporting ? "Membuat XLSX…" : "Export XLSX (Draf)"}
         </Button>
       </div>
 
@@ -152,6 +162,13 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
       <Card>
         <CardHeader>
           <CardTitle>Detail Payroll per Karyawan</CardTitle>
+          {details.length > 0 ? (
+            <p className="text-sm text-gray-600">
+              {details.length - missingEmailCount} dari {details.length} karyawan aktif memiliki alamat email.
+              {payrollRun.status === "paid" ? ` ${emailedCount} slip diterima Resend.` : ""}
+              {missingEmailCount > 0 ? ` ${missingEmailCount} perlu diperiksa HR sebelum slip dikirim.` : ""}
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -180,6 +197,9 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
                         <div>
                           <div className="font-medium">{detail.employee?.full_name}</div>
                           <div className="text-xs text-gray-500">{detail.employee?.nip}</div>
+                          <div className={`text-xs ${detail.employee?.is_active && detail.employee?.email ? "text-gray-500" : "text-red-700"}`}>
+                            {detail.employee?.is_active && detail.employee?.email ? detail.employee.email : "Email karyawan belum siap"}
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -199,17 +219,19 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
                           {payrollRun?.status === "paid" && (
                             <Button
                               size="sm"
-                              variant={detail.payslip_sent ? "ghost" : "outline"}
-                              className={detail.payslip_sent ? "text-green-600" : ""}
-                              disabled={notifyingId === detail.id}
+                              variant={detail.payslip_emailed_at ? "ghost" : "outline"}
+                              className={detail.payslip_emailed_at ? "text-green-600" : ""}
+                              disabled={notifyingId === detail.id || !detail.employee?.is_active || !detail.employee?.email}
                               title={
-                                detail.payslip_sent
-                                  ? "Notifikasi sudah dikirim — klik utk kirim ulang"
-                                  : "Kirim notifikasi WhatsApp slip terbit"
+                                !detail.employee?.is_active || !detail.employee?.email
+                                  ? "Aktifkan dan lengkapi email karyawan sebelum mengirim slip"
+                                  : detail.payslip_emailed_at
+                                  ? `Diterima Resend untuk ${detail.payslip_email_recipient ?? detail.employee.email} — klik untuk kirim ulang`
+                                  : "Kirim PDF slip gaji ke email karyawan"
                               }
-                              onClick={() => handleNotify(detail.id)}
+                              onClick={() => handleNotify(detail.id, Boolean(detail.payslip_emailed_at))}
                             >
-                              {detail.payslip_sent ? "✓ WA" : "WA"}
+                              {detail.payslip_emailed_at ? "✓ Email" : "Email"}
                             </Button>
                           )}
                           <Button

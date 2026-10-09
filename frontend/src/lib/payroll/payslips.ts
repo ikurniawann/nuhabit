@@ -1,5 +1,5 @@
 /**
- * Slip gaji (EPIC-008 Fase E): daftar ber-scope, notifikasi WA, dan baris
+ * Slip gaji (EPIC-008 Fase E): daftar ber-scope, pengiriman email, dan baris
  * sumber PDF. Slip gaji adalah PII finansial; scoping dilakukan di server.
  */
 
@@ -8,8 +8,11 @@ import { ApiError } from "@/lib/api/auth";
 import { queryOne } from "@/lib/db";
 import type { WorkforceActor } from "@/lib/hris/workforce-auth";
 import type { PayslipAmounts } from "@/lib/hris/payslip-pdf";
+import { buildPayslipPdf, payslipFileName } from "@/lib/hris/payslip-pdf";
 import type { PgClient } from "@/lib/pg/create-client";
-import { buildWaLink } from "@/lib/recruitment/wa";
+import { getSettings, SETTING_KEYS } from "@/lib/settings/app-settings";
+import { escapeHtml } from "@/lib/security/escape-html";
+import { Resend } from "resend";
 import type { LoanInstallmentDetail } from "./loans";
 import { periodLabelId } from "./period";
 
@@ -73,13 +76,13 @@ export async function listPayslips(
   return scope.meView ? rows.filter((row) => row.payroll_run?.status === "paid") : rows;
 }
 
-/** Tandai slip terkirim dan siapkan link WhatsApp "slip terbit". */
+/** Kirim PDF slip gaji ke email karyawan dan catat hanya setelah diterima Resend. */
 export async function notifyPayslip(db: PgClient, payrollDetailId: string) {
   const { data: detail } = await db
     .from("payroll_details")
     .select(`
       id, payslip_sent,
-      employee:employees ( id, full_name, phone ),
+      employee:employees ( id, full_name, email, is_active ),
       payroll_run:payroll_runs ( id, period_month, period_year, status )
     `)
     .eq("id", payrollDetailId)
@@ -89,23 +92,59 @@ export async function notifyPayslip(db: PgClient, payrollDetailId: string) {
     throw ApiError.badRequest("Notifikasi hanya untuk run yang sudah dibayar");
   }
 
-  const periodLabel = periodLabelId(detail.payroll_run.period_month, detail.payroll_run.period_year);
-  const waLink = buildWaLink(
-    detail.employee?.phone,
-    `Halo ${detail.employee?.full_name}, slip gaji Anda periode ${periodLabel} sudah terbit. ` +
-      `Silakan lihat detailnya di portal karyawan: menu Area Karyawan → Slip Gaji.`
-  );
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = (process.env.PAYROLL_FROM_EMAIL || process.env.FROM_EMAIL || "").trim();
+  if (!apiKey || !from) throw new ApiError(503, "Pengiriman email slip gaji belum dikonfigurasi");
+  const email = detail.employee?.email?.trim();
+  if (!detail.employee?.is_active || !email) throw ApiError.badRequest("Email karyawan aktif belum tersedia");
+  if (!z.email().safeParse(email).success) throw ApiError.badRequest("Email karyawan tidak valid");
 
-  await db
+  const row = await loadPayslipPdfRow(payrollDetailId);
+  if (!row) throw ApiError.notFound("Data karyawan untuk slip tidak ditemukan");
+  const settings = await getSettings([
+    SETTING_KEYS.COMPANY_LEGAL_NAME, SETTING_KEYS.COMPANY_ADDRESS, SETTING_KEYS.COMPANY_CITY,
+  ]).catch(() => ({}) as Record<string, string | null>);
+  const period = {
+    month: Number(row.period_month), year: Number(row.period_year),
+    paid_at: row.paid_at, status: row.run_status,
+  };
+  const pdf = await buildPayslipPdf({
+    company: {
+      legal_name: settings[SETTING_KEYS.COMPANY_LEGAL_NAME] ?? null,
+      address: settings[SETTING_KEYS.COMPANY_ADDRESS] ?? null,
+      city: settings[SETTING_KEYS.COMPANY_CITY] ?? null,
+    },
+    employee: {
+      full_name: row.full_name, nip: row.nip,
+      position_title: row.position_title, department_name: row.department_name,
+    },
+    period, amounts: payslipAmounts(row),
+  });
+  const periodLabel = periodLabelId(period.month, period.year);
+  let resendId: string;
+  try {
+    const { data: sent, error } = await new Resend(apiKey).emails.send({
+      from, to: email, subject: `Slip Gaji NüHabit — ${periodLabel}`,
+      html: `<p>Halo ${escapeHtml(row.full_name)},</p><p>Slip gaji periode ${escapeHtml(periodLabel)} terlampir dalam email ini.</p><p>Salam,<br>NüHabit</p>`,
+      attachments: [{ filename: payslipFileName(row.full_name, period), content: pdf }],
+    });
+    if (error || !sent?.id) throw new Error("Resend did not accept the email");
+    resendId = sent.id;
+  } catch {
+    throw new ApiError(502, "Email slip gaji gagal dikirim; coba lagi");
+  }
+
+  const sentAt = new Date().toISOString();
+  const { error: updateError } = await db
     .from("payroll_details")
-    .update({ payslip_sent: true, payslip_sent_at: new Date().toISOString() })
+    .update({ payslip_sent: true, payslip_sent_at: sentAt, payslip_emailed_at: sentAt,
+      payslip_email_recipient: email, payslip_resend_id: resendId })
     .eq("id", payrollDetailId);
+  if (updateError) throw new Error(updateError.message);
 
   return {
-    data: { wa_link: waLink, payslip_sent: true },
-    message: waLink
-      ? "Slip ditandai terkirim — buka WhatsApp untuk mengirim notifikasi"
-      : "Slip ditandai terkirim (karyawan tidak punya nomor telepon utk WA)",
+    data: { email, payslip_sent: true },
+    message: "Email slip gaji diterima Resend",
   };
 }
 

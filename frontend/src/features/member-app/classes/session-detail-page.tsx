@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarPlus2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError } from "../lib/api";
 import { coverageFor } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
+import { googleCalendarEventUrl } from "../lib/google-calendar";
 import { classTypeKey } from "../lib/images";
 import { m } from "../lib/links";
 import {
@@ -53,6 +54,15 @@ export function SessionDetailPage() {
   const bookable = ["PUBLISHED", "FULL"].includes(v.session.status);
   // Package coverage indicator: null = no package credits (no restriction).
   const covered = coverageFor(wallet, v.session.classTypeId);
+  const calendarUrl = mine?.status === "CONFIRMED"
+    ? googleCalendarEventUrl({
+        title: v.classTypeName,
+        startsAt: v.session.startsAt,
+        endsAt: v.session.endsAt,
+        branchName: v.branchName,
+        coachName: v.coachName,
+      })
+    : null;
 
   const onBook = async () => {
     setMessage(null);
@@ -124,7 +134,7 @@ export function SessionDetailPage() {
         <div>
           <p className="nh-label !mb-0.5">{t("Capacity")}</p>
           <p className="font-bold">
-            {v.confirmedCount}/{v.session.capacity}
+            {v.confirmedCount}/{v.session.capacity} · {v.spotsLeft} {t("slots left")}
             {v.waitlistCount > 0 ? ` · ${v.waitlistCount} ${t("waiting")}` : ""}
           </p>
         </div>
@@ -180,6 +190,11 @@ export function SessionDetailPage() {
               </p>
             )}
           </div>
+          {calendarUrl ? (
+            <a href={calendarUrl} target="_blank" rel="noopener noreferrer" className="nh-btn-ghost inline-flex gap-2 text-nh-forest">
+              <CalendarPlus2 size={18} /> {t("Add to Google Calendar")}
+            </a>
+          ) : null}
           {mine.status === "WAITLIST" && mine.promotionOfferedAt ? (
             <button className="nh-btn-brand" disabled={confirmBusy} onClick={() => void onConfirmSpot(mine.id)}>
               {t("Confirm spot")}

@@ -61,6 +61,7 @@ func (e payrollEmployees) Briefs(ctx context.Context, q database.Querier, ids []
 	for _, emp := range list {
 		out[emp.ID] = payroll.EmployeeBrief{
 			ID: emp.ID, FullName: emp.FullName, NIP: &emp.Nip, Email: &emp.Email, Phone: &emp.Phone,
+			BankName: emp.BankName, BankAccount: emp.BankAccount,
 			PhotoURL: emp.PhotoURL, IsActive: emp.IsActive, EmploymentStatus: emp.EmploymentStatus,
 			JoinDate: emp.JoinDate, DepartmentID: emp.DepartmentID,
 			Department: emp.DepartmentName, HasDepartment: emp.DepartmentName != nil,

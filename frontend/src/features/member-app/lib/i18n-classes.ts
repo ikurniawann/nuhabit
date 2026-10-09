@@ -30,6 +30,8 @@ export const CLASSES_ID: Record<string, string> = {
   Cost: "Biaya",
   credit: "kredit",
   Capacity: "Kapasitas",
+  "slots left": "slot tersisa",
+  "Add to Google Calendar": "Tambahkan ke Google Calendar",
   waiting: "menunggu",
   Rundown: "Susunan sesi",
   "You're in - spot confirmed!": "Kamu masuk - slot terkonfirmasi!",

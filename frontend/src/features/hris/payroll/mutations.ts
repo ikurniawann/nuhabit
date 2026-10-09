@@ -56,7 +56,7 @@ export function useSavePayrollSettings() {
   });
 }
 
-/** Kirim notifikasi WA slip terbit; segarkan run agar tanda terkirim muncul. */
+/** Kirim PDF slip lewat Resend; segarkan run agar status email muncul. */
 export function useNotifyPayslip(runId: string) {
   const qc = useQueryClient();
   return useMutation({

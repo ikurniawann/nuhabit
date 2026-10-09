@@ -18,8 +18,12 @@ import (
 
 // runDetailsJSON is the o2m embed of getRun (natural order, as json_agg).
 const runDetailsJSON = `COALESCE((SELECT json_agg(e) FROM (
-     SELECT id, employee_id, net_salary, gross_salary, total_deductions, pph21_deduction,
-            status, payslip_sent, payslip_sent_at
+     SELECT id, employee_id, base_salary, fixed_allowance, variable_allowance, transport_allowance,
+            meal_allowance, housing_allowance, overtime_pay, thr, bonus, other_earning,
+            gross_salary, bpjs_tk_jht_deduction, bpjs_tk_jp_deduction, bpjs_kes_deduction,
+            tapera_deduction, pph21_deduction, unpaid_leave_deduction, late_deduction,
+            loan_deduction, other_deduction, total_deductions, net_salary,
+            status, payslip_sent, payslip_sent_at, payslip_emailed_at, payslip_email_recipient, payslip_resend_id
        FROM hris.payroll_details WHERE payroll_run_id = r.id) e), '[]'::json) AS payroll_details`
 
 func listRunRows(ctx context.Context, q database.Querier, year *int, status *string) ([]*obj, error) {

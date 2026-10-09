@@ -32,18 +32,41 @@ export interface CalculatePayrollResult {
 export interface PayrollRunDetailRow {
   id: string;
   employee_id: string;
-  gross_salary: number;
-  total_deductions: number;
-  net_salary: number;
-  pph21_deduction: number;
-  bpjs_tk_jht_deduction: number;
-  bpjs_kes_deduction: number;
+  base_salary: number | string | null;
+  fixed_allowance: number | string | null;
+  variable_allowance: number | string | null;
+  transport_allowance: number | string | null;
+  meal_allowance: number | string | null;
+  housing_allowance: number | string | null;
+  overtime_pay: number | string | null;
+  thr: number | string | null;
+  bonus: number | string | null;
+  other_earning: number | string | null;
+  gross_salary: number | string | null;
+  bpjs_tk_jht_deduction: number | string | null;
+  bpjs_tk_jp_deduction: number | string | null;
+  bpjs_kes_deduction: number | string | null;
+  tapera_deduction: number | string | null;
+  pph21_deduction: number | string | null;
+  unpaid_leave_deduction: number | string | null;
+  late_deduction: number | string | null;
+  loan_deduction: number | string | null;
+  other_deduction: number | string | null;
+  total_deductions: number | string | null;
+  net_salary: number | string | null;
   status: string;
   payslip_sent?: boolean;
+  payslip_emailed_at?: string | null;
+  payslip_email_recipient?: string | null;
+  payslip_resend_id?: string | null;
   employee?: {
     id: string;
     full_name: string;
     nip: string;
+    email?: string | null;
+    is_active?: boolean;
+    bank_name?: string | null;
+    bank_account?: string | null;
     department?: { name: string };
   };
 }

@@ -3,7 +3,9 @@ package payroll
 import (
 	"context"
 	"fmt"
+	"html"
 	"net/http"
+	"net/mail"
 	"strings"
 
 	"nuhabit/backend/internal/modules/payroll/domain"
@@ -13,8 +15,7 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 )
 
-// Payslips (lib/payroll/payslips.ts). GET /api/hris/payslips/{id}/pdf stays
-// in TS: it renders the PDF with a Node library.
+// Payslips and PDF delivery.
 
 // payslipRunEmbed is `payroll_run:payroll_runs ( … )`; the NULL employee
 // column holds the employee embed's place before it.
@@ -71,17 +72,17 @@ func (s *service) listPayslips(ctx context.Context, a *actor, employeeParam, run
 }
 
 type notifyData struct {
-	WaLink      *string `json:"wa_link"`
-	PayslipSent bool    `json:"payslip_sent"`
+	Email       string `json:"email"`
+	PayslipSent bool   `json:"payslip_sent"`
 }
 
 func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageData, error) {
-	var employeeID, runStatus string
+	var runStatus string
 	var month *int
 	var year int
-	err := s.db.QueryRow(ctx, `SELECT d.employee_id::text, r.status, r.period_month, r.period_year
+	err := s.db.QueryRow(ctx, `SELECT r.status, r.period_month, r.period_year
 		  FROM hris.payroll_details d JOIN hris.payroll_runs r ON r.id = d.payroll_run_id
-		 WHERE d.id = $1`, detailID).Scan(&employeeID, &runStatus, &month, &year)
+		 WHERE d.id = $1`, detailID).Scan(&runStatus, &month, &year)
 	if database.IsNoRows(err) {
 		return nil, httpx.NotFound("Slip tidak ditemukan")
 	}
@@ -91,26 +92,44 @@ func (s *service) notifyPayslip(ctx context.Context, detailID string) (*messageD
 	if runStatus != "paid" {
 		return nil, httpx.BadRequest("Notifikasi hanya untuk run yang sudah dibayar")
 	}
-	emp, err := s.brief(ctx, employeeID)
+	if s.ports.PayslipMailer == nil || strings.TrimSpace(s.ports.PayslipFrom) == "" {
+		return nil, httpx.Status(http.StatusServiceUnavailable, "Pengiriman email slip gaji belum dikonfigurasi")
+	}
+	doc, err := s.payslipDocument(ctx, detailID)
 	if err != nil {
 		return nil, err
 	}
-	name, phone := "undefined", (*string)(nil)
-	if emp != nil {
-		name, phone = emp.FullName, emp.Phone
+	if doc == nil {
+		return nil, httpx.NotFound("Data karyawan untuk slip tidak ditemukan")
 	}
-	link := domain.BuildWaLink(phone, fmt.Sprintf("Halo %s, slip gaji Anda periode %s sudah terbit. "+
-		"Silakan lihat detailnya di portal karyawan: menu Area Karyawan → Slip Gaji.", name, domain.PeriodLabelID(month, year)))
-	if _, err := s.db.Exec(ctx, `UPDATE hris.payroll_details SET payslip_sent = true, payslip_sent_at = $2 WHERE id = $1`,
-		detailID, s.clock()); err != nil {
-		// The TS ignores this update's result.
+	if !doc.employee.IsActive || doc.employee.Email == nil || strings.TrimSpace(*doc.employee.Email) == "" {
+		return nil, httpx.BadRequest("Email karyawan aktif belum tersedia")
+	}
+	to := strings.TrimSpace(*doc.employee.Email)
+	parsed, err := mail.ParseAddress(to)
+	if err != nil || parsed.Address != to {
+		return nil, httpx.BadRequest("Email karyawan tidak valid")
+	}
+	pdf, err := buildPayslipPDF(doc)
+	if err != nil {
+		return nil, err
+	}
+	period := domain.PeriodLabelID(month, year)
+	name := html.EscapeString(doc.employee.FullName)
+	message := fmt.Sprintf("<p>Halo %s,</p><p>Slip gaji periode %s terlampir dalam email ini.</p><p>Salam,<br>NüHabit</p>", name, html.EscapeString(period))
+	resendID, err := s.ports.PayslipMailer.SendPayslip(ctx, to, s.ports.PayslipFrom, "Slip Gaji NüHabit — "+period, message,
+		domain.PayslipFileName(doc.employee.FullName, doc.month, doc.year), pdf)
+	if err != nil {
+		s.log.ErrorContext(ctx, "payslip: email send failed", "id", detailID, "error", err)
+		return nil, httpx.Status(http.StatusBadGateway, "Email slip gaji gagal dikirim; coba lagi")
+	}
+	if _, err := s.db.Exec(ctx, `UPDATE hris.payroll_details SET payslip_sent = true, payslip_sent_at = $2,
+		payslip_emailed_at = $2, payslip_email_recipient = $3, payslip_resend_id = $4 WHERE id = $1`,
+		detailID, s.clock(), to, resendID); err != nil {
 		s.log.ErrorContext(ctx, "payslip: mark sent failed", "id", detailID, "error", err)
+		return nil, err
 	}
-	msg := "Slip ditandai terkirim (karyawan tidak punya nomor telepon utk WA)"
-	if link != nil {
-		msg = "Slip ditandai terkirim — buka WhatsApp untuk mengirim notifikasi"
-	}
-	return &messageData{Data: notifyData{link, true}, Message: msg}, nil
+	return &messageData{Data: notifyData{to, true}, Message: "Email slip gaji diterima Resend"}, nil
 }
 
 // GET /api/hris/payslips?employee_id&payroll_run_id&year&month

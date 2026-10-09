@@ -3,6 +3,7 @@ package payroll
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -136,15 +137,37 @@ func (f *fakeWorkforce) Holidays(context.Context, database.Querier, string, stri
 }
 
 type env struct {
-	t     *testing.T
-	ctx   context.Context
-	tx    pgx.Tx
-	mux   http.Handler
-	emps  *fakeEmployees
-	depts *fakeDepartments
-	work  *fakeWorkforce
-	hr    testutil.Staff
-	staff testutil.Staff
+	t      *testing.T
+	ctx    context.Context
+	tx     pgx.Tx
+	mux    http.Handler
+	emps   *fakeEmployees
+	depts  *fakeDepartments
+	work   *fakeWorkforce
+	mailer *fakePayslipMailer
+	hr     testutil.Staff
+	admin  testutil.Staff
+	staff  testutil.Staff
+}
+
+type fakePayslipMailer struct {
+	to, filename string
+	pdf          []byte
+	err          error
+}
+
+func (m *fakePayslipMailer) SendPayslip(_ context.Context, to, _, _, _, filename string, pdf []byte) (string, error) {
+	if m.err != nil {
+		return "", m.err
+	}
+	m.to, m.filename, m.pdf = to, filename, pdf
+	return "resend-test-id", nil
+}
+
+type fakeSettings struct{}
+
+func (fakeSettings) GetMany(context.Context, database.Querier, []string) (map[string]*string, error) {
+	return map[string]*string{}, nil
 }
 
 var fixedNow = time.Date(2026, 10, 4, 10, 0, 0, 0, time.UTC)
@@ -155,6 +178,9 @@ func setup(t *testing.T) *env {
 	hr := testutil.CreateStaff(t, testutil.StaffOptions{Role: "hrd", Menus: map[string][]string{
 		"hris.compensation": nil, "hris.performance": nil, "hris.performance.kpi-config": nil,
 	}})
+	admin := testutil.CreateStaff(t, testutil.StaffOptions{Role: "super_admin", Menus: map[string][]string{
+		"hris.compensation": nil,
+	}})
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{Role: "pos", Menus: map[string][]string{"hris.workforce": nil}})
 	ctx := context.Background()
 	tx, err := deps.DB.Begin(ctx)
@@ -162,11 +188,12 @@ func setup(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	e := &env{t: t, ctx: ctx, tx: tx, hr: hr, staff: staff,
-		emps:  &fakeEmployees{byUser: map[string]string{}, briefs: map[string]EmployeeBrief{}, roles: map[string]string{}, companies: map[string]string{}},
-		depts: &fakeDepartments{},
-		work:  &fakeWorkforce{records: map[string]domain.WorkforceRecords{}, holidays: map[string]bool{}}}
-	e.mux = testutil.Mux(NewOn(deps, tx, Ports{Employees: e.emps, Departments: e.depts, Workforce: e.work}))
+	e := &env{t: t, ctx: ctx, tx: tx, hr: hr, admin: admin, staff: staff,
+		emps:   &fakeEmployees{byUser: map[string]string{}, briefs: map[string]EmployeeBrief{}, roles: map[string]string{}, companies: map[string]string{}},
+		depts:  &fakeDepartments{},
+		work:   &fakeWorkforce{records: map[string]domain.WorkforceRecords{}, holidays: map[string]bool{}},
+		mailer: &fakePayslipMailer{}}
+	e.mux = testutil.Mux(NewOn(deps, tx, Ports{Employees: e.emps, Departments: e.depts, Workforce: e.work, Settings: fakeSettings{}, PayslipMailer: e.mailer, PayslipFrom: "Payroll <payroll@example.com>"}))
 	return e
 }
 
@@ -436,7 +463,7 @@ func TestRunLifecycle(t *testing.T) {
 		shares.Companies[0].TotalTaperaEmployer != 30000 || shares.Companies[0].TotalTaperaEmployee != 25000 {
 		t.Fatalf("employee shares %v %v event %+v", tkEmployee, kesEmployee, shares)
 	}
-	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 400), "Payroll yang sudah dibayar tidak bisa dihapus")
+	wantErr(t, e.call(&e.admin, "DELETE", "/api/hris/payroll/"+runID, nil, 400), "Payroll yang sudah dibayar tidak bisa dihapus")
 
 	// Payslips: the employee sees paid slips only; HR may notify.
 	slips := e.call(&e.hr, "GET", "/api/hris/payslips?employee_id="+worker, nil, 200)["data"].([]any)
@@ -457,10 +484,25 @@ func TestRunLifecycle(t *testing.T) {
 	if mine := e.call(&e.staff, "GET", "/api/hris/payslips", nil, 200)["data"].([]any); len(mine) != 0 {
 		t.Fatalf("staff without employee %v", mine)
 	}
+	e.mailer.err = errors.New("mailer down")
+	wantErr(t, e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": slip["id"]}, 502), "Email slip gaji gagal dikirim; coba lagi")
+	var sent bool
+	e.scalar(&sent, `SELECT payslip_sent FROM hris.payroll_details WHERE id = $1`, slip["id"])
+	if sent {
+		t.Fatal("failed delivery marked sent")
+	}
+	e.mailer.err = nil
 	notify := e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": slip["id"]}, 200)
-	if notify["message"] != "Slip ditandai terkirim — buka WhatsApp untuk mengirim notifikasi" ||
-		!strings.HasPrefix(notify["data"].(map[string]any)["wa_link"].(string), "https://wa.me/62812000111?text=Halo%20Budi%20Gaji%2C%20slip%20gaji%20Anda%20periode%20Juni%202099") {
+	if notify["message"] != "Email slip gaji diterima Resend" ||
+		notify["data"].(map[string]any)["email"] != *e.emps.briefs[worker].Email ||
+		e.mailer.to != *e.emps.briefs[worker].Email || !strings.HasPrefix(string(e.mailer.pdf), "%PDF") {
 		t.Fatalf("notify %v", notify)
+	}
+	var savedRecipient, resendID string
+	e.scalar(&savedRecipient, `SELECT payslip_email_recipient FROM hris.payroll_details WHERE id = $1`, slip["id"])
+	e.scalar(&resendID, `SELECT payslip_resend_id FROM hris.payroll_details WHERE id = $1`, slip["id"])
+	if savedRecipient != e.mailer.to || resendID != "resend-test-id" {
+		t.Fatalf("email audit recipient=%q resend=%q", savedRecipient, resendID)
 	}
 	wantErr(t, e.call(&e.hr, "POST", "/api/hris/payslips/notify", map[string]any{"payroll_detail_id": "x"}, 400), "Invalid UUID")
 }
@@ -481,9 +523,10 @@ func TestRunDeleteAndPaidMismatch(t *testing.T) {
 	if status != "completed" {
 		t.Fatal("paid must roll back")
 	}
-	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/nope", nil, 404), "Payroll run tidak ditemukan")
+	wantErr(t, e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 403), "Hanya superadmin yang dapat menghapus payroll run")
+	wantErr(t, e.call(&e.admin, "DELETE", "/api/hris/payroll/nope", nil, 404), "Payroll run tidak ditemukan")
 	e.exec(`UPDATE hris.payroll_runs SET status = 'draft' WHERE id = $1`, runID)
-	if e.call(&e.hr, "DELETE", "/api/hris/payroll/"+runID, nil, 200)["message"] != "Payroll run berhasil dihapus" {
+	if e.call(&e.admin, "DELETE", "/api/hris/payroll/"+runID, nil, 200)["message"] != "Payroll run berhasil dihapus" {
 		t.Fatal("delete")
 	}
 	var n int

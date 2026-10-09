@@ -256,7 +256,7 @@ function EventDialog({ event, onClose, onSaved }: { event: CrmEvent | null; onCl
               <textarea className={TEXTAREA} value={form.description} onChange={set("description")} />
             </Field>
             <Field label="Host">
-              <Input value={form.host_name} onChange={set("host_name")} placeholder="Head coach" />
+              <Input value={form.host_name} onChange={set("host_name")} placeholder="Program Director" />
             </Field>
             <Field label="Lokasi">
               <Input value={form.location} onChange={set("location")} placeholder="BCD Dago, lantai 2" />

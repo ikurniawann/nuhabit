@@ -20,6 +20,8 @@ type EmployeeBrief struct {
 	NIP              *string
 	Email            *string
 	Phone            *string
+	BankName         *string
+	BankAccount      *string
 	PhotoURL         *string
 	IsActive         bool
 	EmploymentStatus string
@@ -97,10 +99,17 @@ type AppSettings interface {
 
 // Ports bundles the adapters the module needs.
 type Ports struct {
-	Employees   Employees
-	Departments Departments
-	Workforce   Workforce
-	Settings    AppSettings
+	Employees     Employees
+	Departments   Departments
+	Workforce     Workforce
+	Settings      AppSettings
+	PayslipMailer PayslipMailer
+	PayslipFrom   string
 	// KPI reads what the KPI snapshot measures in other contexts.
 	KPI KPISources
+}
+
+// PayslipMailer sends a salary PDF only to the employee's registered email.
+type PayslipMailer interface {
+	SendPayslip(ctx context.Context, to, from, subject, html, filename string, pdf []byte) (string, error)
 }

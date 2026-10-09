@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function PayrollPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [calcRunId, setCalcRunId] = useState<string | null>(null);
   const [calculationResult, setCalculationResult] = useState<CalculationResult | null>(null);
@@ -251,14 +253,16 @@ export function PayrollPage() {
                               Mark Paid
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDelete(run.id)}
-                            className="text-red-600 hover:text-red-700 hover:border-red-300"
-                          >
-                            Hapus
-                          </Button>
+                          {user?.role === "super_admin" && run.status !== "paid" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDelete(run.id)}
+                              className="text-red-600 hover:text-red-700 hover:border-red-300"
+                            >
+                              Hapus
+                            </Button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

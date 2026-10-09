@@ -9,7 +9,7 @@ import { notifyPayslip } from "@/lib/payroll/payslips";
 
 const notifySchema = z.object({ payroll_detail_id: z.string().uuid() });
 
-/** POST /api/hris/payslips/notify: tandai slip terkirim + link WhatsApp "slip terbit". */
+/** POST /api/hris/payslips/notify: kirim PDF slip ke email karyawan. */
 export const POST = apiHandler(async (request: NextRequest) => {
   await requireIamMenuPrefix(IAM.hrisCompensation);
   const { payroll_detail_id } = await readJson(request, notifySchema);

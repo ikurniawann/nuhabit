@@ -28,7 +28,7 @@ export const deletePayrollRun = (runId: string) =>
   apiDelete(`/api/hris/payroll/${runId}`);
 
 export const notifyPayslip = (payrollDetailId: string) =>
-  apiPost<{ message?: string; data?: { wa_link?: string | null } }>("/api/hris/payslips/notify", {
+  apiPost<{ message?: string; data?: { email: string; payslip_sent: boolean } }>("/api/hris/payslips/notify", {
     payroll_detail_id: payrollDetailId,
   });
 

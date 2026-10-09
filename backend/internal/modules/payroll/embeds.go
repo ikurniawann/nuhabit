@@ -16,7 +16,7 @@ import (
 // Employee embed shapes used by the routes (field lists in select order).
 var (
 	personFields   = []string{"id", "full_name", "nip"}
-	runDetailEmp   = []string{"id", "full_name", "nip", "department_id", "department"}
+	runDetailEmp   = []string{"id", "full_name", "nip", "email", "is_active", "bank_name", "bank_account", "department_id", "department"}
 	loanListEmp    = []string{"id", "full_name", "nip", "photo_url", "department"}
 	payslipEmp     = []string{"id", "full_name", "nip", "photo_url", "position", "department"}
 	salaryListEmp  = []string{"id", "full_name", "nip", "photo_url"}
@@ -41,8 +41,14 @@ func employeeObj(b *EmployeeBrief, fields []string) any {
 			o.Set(f, b.PhotoURL)
 		case "email":
 			o.Set(f, b.Email)
+		case "is_active":
+			o.Set(f, b.IsActive)
 		case "phone":
 			o.Set(f, b.Phone)
+		case "bank_name":
+			o.Set(f, b.BankName)
+		case "bank_account":
+			o.Set(f, b.BankAccount)
 		case "department_id":
 			o.Set(f, b.DepartmentID)
 		case "department":

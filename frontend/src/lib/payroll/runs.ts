@@ -16,9 +16,13 @@ const PERSON = "id, full_name, nip";
 const RUN_SELECT = `*, processed_by:employees!processed_by ( ${PERSON} ), approved_by:employees!approved_by ( ${PERSON} )`;
 const RUN_DETAIL_SELECT = `${RUN_SELECT},
   payroll_details:payroll_details (
-    id, employee_id, net_salary, gross_salary, total_deductions, pph21_deduction,
-    status, payslip_sent, payslip_sent_at,
-    employee:employees!employee_id ( ${PERSON}, department_id, department:departments ( name ) )
+    id, employee_id, base_salary, fixed_allowance, variable_allowance, transport_allowance,
+    meal_allowance, housing_allowance, overtime_pay, thr, bonus, other_earning,
+    gross_salary, bpjs_tk_jht_deduction, bpjs_tk_jp_deduction, bpjs_kes_deduction,
+    tapera_deduction, pph21_deduction, unpaid_leave_deduction, late_deduction,
+    loan_deduction, other_deduction, total_deductions, net_salary,
+    status, payslip_sent, payslip_sent_at, payslip_emailed_at, payslip_email_recipient, payslip_resend_id,
+    employee:employees!employee_id ( ${PERSON}, email, is_active, bank_name, bank_account, department_id, department:departments ( name ) )
   )`;
 
 export const runListQuerySchema = z.object({
