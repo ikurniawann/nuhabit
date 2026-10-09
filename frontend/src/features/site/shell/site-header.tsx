@@ -99,7 +99,7 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
               Member Area
             </Link>
           ) : null}
-          <Link href="/login" className="ml-2 rounded-full border border-border px-3 py-1 font-semibold text-foreground transition-colors hover:bg-surface-2">
+          <Link href="/member/auth/login" className="ml-2 rounded-full border border-border px-3 py-1 font-semibold text-foreground transition-colors hover:bg-surface-2">
             Log in
           </Link>
           <Link href="/member/auth/register" className="ml-1 rounded-full bg-ink px-3 py-1 font-semibold text-on-ink transition-opacity hover:opacity-85">
@@ -146,7 +146,7 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
           </nav>
           <div className="mt-auto flex flex-col gap-2 p-4">
             <Button asChild variant="outline">
-              <Link href="/login" onClick={() => setMenuOpen(false)}>
+              <Link href="/member/auth/login" onClick={() => setMenuOpen(false)}>
                 Log in to NüHabit
               </Link>
             </Button>
