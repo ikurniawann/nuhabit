@@ -153,15 +153,18 @@ func (b fakeBranches) Get(_ context.Context, _ database.Querier, id string) (*Pi
 	return nil, nil
 }
 
-// fakePromo knows one code; it records holds by order id and their state.
+// fakePromo knows one code; it records holds by order id and their state,
+// and the last cart it evaluated.
 type fakePromo struct {
-	code     string
-	discount float64
-	reject   string // reason when the code is refused
-	holds    map[string]string
+	code      string
+	discount  float64
+	reject    string // reason when the code is refused
+	holds     map[string]string
+	lastCheck PromoCheck
 }
 
 func (p *fakePromo) check(in PromoCheck) PromoPreview {
+	p.lastCheck = in
 	if strings.EqualFold(in.Code, p.code) && p.reject == "" {
 		return PromoPreview{OK: true, Discount: p.discount, Label: "Launch promo"}
 	}

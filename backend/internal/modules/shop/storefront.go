@@ -356,7 +356,7 @@ func (s *Service) buildCatalog(ctx context.Context, lowStockThreshold int) (Cata
 			ImageURL: p.ImageURL, Images: imgs, Price: pricing.Price, CompareAtPrice: pricing.CompareAt, SalePercent: pricing.Percent,
 			SaleUntil: saleUntil, WeightGram: weight, Stock: stock,
 			Collection: collection, PreorderUntil: domain.DateString(until),
-			Preorder: anyPreorder || (preorderOpen && stock <= 0),
+			Preorder:   anyPreorder || (preorderOpen && stock <= 0),
 			IsFeatured: ps.IsFeatured, IsNew: ps.IsNew,
 			LowStock: domain.LowStock(stock, lowStockThreshold), BackInStock: domain.BackInStock(stock, ps.RestockedAt, now),
 			Rating: ratings[p.ID], SKUs: views, regular: base,
