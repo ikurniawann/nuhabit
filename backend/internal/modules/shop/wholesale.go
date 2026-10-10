@@ -318,14 +318,9 @@ type WholesaleOrderResult struct {
 // storefrontFor is the account's storefront, else the default one.
 func (s *Service) storefrontFor(ctx context.Context, acct WholesaleAccount) (*Storefront, error) {
 	if acct.ShopID != nil {
-		var sf Storefront
-		err := s.db.QueryRow(ctx, `SELECT id::text, slug, name, description FROM shop.storefronts WHERE id = $1::uuid AND is_active`, *acct.ShopID).
-			Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
-		if err == nil {
-			return &sf, nil
-		}
-		if !database.IsNoRows(err) {
-			return nil, err
+		sf, err := scanStorefront(s.db.QueryRow(ctx, `SELECT `+storefrontColumns+` FROM shop.storefronts WHERE id = $1::uuid AND is_active`, *acct.ShopID))
+		if err != nil || sf != nil {
+			return sf, err
 		}
 	}
 	return s.ResolveStorefront(ctx, DefaultStorefrontSlug)

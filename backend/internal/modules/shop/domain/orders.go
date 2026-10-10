@@ -13,12 +13,23 @@ import (
 	"unicode"
 )
 
-// orderTransitions are ORDER_TRANSITIONS: paid→packing, shipped→completed
-// and cancel from pending/paid/packing. Shipping goes through /shipment.
+// Delivery methods and payment methods of shop.orders.
+const (
+	DeliveryShip   = "ship"
+	DeliveryPickup = "pickup"
+	PaymentXendit  = "xendit"
+	PaymentArkCoin = "arkcoin"
+)
+
+// orderTransitions are ORDER_TRANSITIONS: paid→packing, shipped→completed,
+// cancel from pending/paid/packing, and for pickup orders
+// paid→ready_for_pickup→picked_up. Shipping goes through /shipment.
 var orderTransitions = map[string][]string{
-	"packing":   {"paid"},
-	"completed": {"shipped"},
-	"cancelled": {"pending", "paid", "packing"},
+	"packing":          {"paid"},
+	"completed":        {"shipped"},
+	"cancelled":        {"pending", "paid", "packing", "ready_for_pickup"},
+	"ready_for_pickup": {"paid"},
+	"picked_up":        {"ready_for_pickup"},
 }
 
 // AllowedFromStatuses is allowedFromStatuses: the statuses an order may
@@ -26,6 +37,24 @@ var orderTransitions = map[string][]string{
 func AllowedFromStatuses(next string) (from []string, ok bool) {
 	from, ok = orderTransitions[next]
 	return from, ok
+}
+
+// TransitionFitsDelivery reports whether next belongs to the order's
+// delivery method: packing is for shipped orders, the pickup steps for
+// pickup orders; cancelling fits both.
+func TransitionFitsDelivery(next, deliveryMethod string) bool {
+	switch next {
+	case "packing":
+		return deliveryMethod != DeliveryPickup
+	case "ready_for_pickup", "picked_up":
+		return deliveryMethod == DeliveryPickup
+	}
+	return true
+}
+
+// OrderTotal is subtotal minus the discount plus shipping, never below 0.
+func OrderTotal(subtotal, discount, shipping float64) float64 {
+	return math.Max(0, subtotal-discount+shipping)
 }
 
 // CanShipOrder is canShipOrder: a paid order not yet shipped.

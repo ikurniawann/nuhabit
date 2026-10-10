@@ -10,7 +10,8 @@ import (
 // Ported from lib/shop/orders.test.ts.
 func TestOrderTransitions(t *testing.T) {
 	for next, want := range map[string][]string{
-		"packing": {"paid"}, "completed": {"shipped"}, "cancelled": {"pending", "paid", "packing"},
+		"packing": {"paid"}, "completed": {"shipped"}, "cancelled": {"pending", "paid", "packing", "ready_for_pickup"},
+		"ready_for_pickup": {"paid"}, "picked_up": {"ready_for_pickup"},
 	} {
 		got, ok := AllowedFromStatuses(next)
 		if !ok || !reflect.DeepEqual(got, want) {
@@ -26,6 +27,38 @@ func TestOrderTransitions(t *testing.T) {
 		if CanShipOrder(status) != want {
 			t.Errorf("CanShipOrder(%q) != %v", status, want)
 		}
+	}
+	for _, c := range []struct {
+		next, method string
+		want         bool
+	}{
+		{"packing", DeliveryShip, true}, {"packing", DeliveryPickup, false},
+		{"ready_for_pickup", DeliveryPickup, true}, {"ready_for_pickup", DeliveryShip, false},
+		{"picked_up", DeliveryShip, false}, {"cancelled", DeliveryPickup, true},
+	} {
+		if TransitionFitsDelivery(c.next, c.method) != c.want {
+			t.Errorf("TransitionFitsDelivery(%q, %q) != %v", c.next, c.method, c.want)
+		}
+	}
+}
+
+func TestCheckoutRules(t *testing.T) {
+	if OrderTotal(100000, 150000, 12000) != 0 || OrderTotal(100000, 10000, 12000) != 102000 {
+		t.Error("OrderTotal")
+	}
+	if PromoMessage("kuota-habis") != "This promo code has been fully used" || PromoMessage("??") != PromoMessage("nonaktif") {
+		t.Error("PromoMessage")
+	}
+	number := "0812-3456-789"
+	if got := WhatsAppLink(&number, "SHOP-1"); got == nil || *got != "https://wa.me/628123456789?text=Hi%2C+I+have+a+question+about+order+SHOP-1" {
+		t.Errorf("WhatsAppLink = %v", got)
+	}
+	short := "123"
+	if WhatsAppLink(nil, "x") != nil || WhatsAppLink(&short, "x") != nil {
+		t.Error("WhatsAppLink without a usable number")
+	}
+	if strings.Count(OrderPlacedMessage("https://a", "SHOP-1", "Budi", "tok", "Pick up at Dago", "https://pay", 5000), "https://") != 2 {
+		t.Error("OrderPlacedMessage links")
 	}
 }
 

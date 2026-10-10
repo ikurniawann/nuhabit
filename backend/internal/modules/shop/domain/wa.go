@@ -29,6 +29,30 @@ func OrderPaidMessage(origin, orderNumber, customerName, accessToken string, tot
 		"Your order is being prepared. Check its status and tracking number here:\n" + origin + "/shop/order/" + accessToken
 }
 
+// OrderPlacedMessage is the summary sent when an order awaits its Xendit
+// payment: delivery is "Pick up at <branch>" or "Shipping to <area>".
+func OrderPlacedMessage(origin, orderNumber, customerName, accessToken, delivery, invoiceURL string, total float64) string {
+	return "*Order received* 🛍️\n\n" +
+		"Order: *" + orderNumber + "*\n" +
+		"Name: " + customerName + "\n" +
+		"Total: " + FormatRupiah(total) + "\n" +
+		"Delivery: " + delivery + "\n\n" +
+		"Complete your payment here:\n" + invoiceURL + "\n\n" +
+		"Check your order status here:\n" + origin + "/shop/order/" + accessToken
+}
+
+// OrderReadyForPickupMessage tells the buyer where to collect the order.
+func OrderReadyForPickupMessage(origin, orderNumber, accessToken, branchName string, branchAddress *string) string {
+	where := branchName
+	if branchAddress != nil && *branchAddress != "" {
+		where += ", " + *branchAddress
+	}
+	return "*Ready for pickup* 🛍️\n\n" +
+		"Order: *" + orderNumber + "*\n" +
+		"Your order is ready at " + where + ".\n\n" +
+		"Order status:\n" + origin + "/shop/order/" + accessToken
+}
+
 // FormatRupiah is formatRupiah: "Rp1.250.000", rounded to the rupiah.
 func FormatRupiah(value float64) string {
 	n := jsmath.Round(value)

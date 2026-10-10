@@ -251,11 +251,17 @@ func (s *store) WalletHistory(ctx context.Context, customerID string) ([]WalletE
 	})
 }
 
+// PaidOrders lists the member's paid POS orders and paid online shop
+// orders together, newest first.
 func (s *store) PaidOrders(ctx context.Context, customerID string) ([]PaidOrder, error) {
 	rows, err := s.q.Query(ctx,
 		`SELECT id, order_number, total_amount::float, payment_method, status::text, created_at
 		   FROM pos.pos_orders
 		  WHERE customer_id = $1 AND payment_status = 'paid'
+		UNION ALL
+		SELECT id, order_number, total::float, payment_method, status, created_at
+		   FROM shop.orders
+		  WHERE customer_id = $1 AND paid_at IS NOT NULL AND status <> 'cancelled'
 		  ORDER BY created_at DESC LIMIT 25`, customerID)
 	if err != nil {
 		return nil, err

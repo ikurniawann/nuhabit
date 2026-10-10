@@ -30,21 +30,24 @@ type shippableOrder struct {
 	id, orderNumber, status, accessToken string
 	customerName, customerPhone, address string
 	areaID, postalCode, courier, service *string
-	total                                string
+	total, deliveryMethod                string
 }
 
 func (s *Service) loadShippableOrder(ctx context.Context, id string) (*shippableOrder, error) {
 	var o shippableOrder
 	err := s.db.QueryRow(ctx, `SELECT id::text, order_number, status, access_token::text, customer_name,
 		  customer_phone, shipping_address, shipping_area_id,
-		  shipping_postal_code, courier_code, courier_service, total::text
+		  shipping_postal_code, courier_code, courier_service, total::text, delivery_method
 		FROM shop.orders WHERE id = $1::uuid`, id).Scan(&o.id, &o.orderNumber, &o.status, &o.accessToken,
-		&o.customerName, &o.customerPhone, &o.address, &o.areaID, &o.postalCode, &o.courier, &o.service, &o.total)
+		&o.customerName, &o.customerPhone, &o.address, &o.areaID, &o.postalCode, &o.courier, &o.service, &o.total, &o.deliveryMethod)
 	if database.IsNoRows(err) {
 		return nil, httpx.NotFound(orderNotFound)
 	}
 	if err != nil {
 		return nil, err
+	}
+	if o.deliveryMethod == domain.DeliveryPickup {
+		return nil, httpx.BadRequest("Pickup orders are collected at the branch and have no shipment")
 	}
 	if !domain.CanShipOrder(o.status) {
 		return nil, httpx.BadRequest("Pengiriman hanya untuk order yang sudah dibayar")

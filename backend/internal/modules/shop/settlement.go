@@ -81,6 +81,7 @@ func (s *Service) SettleInvoice(ctx context.Context, db database.DB, cb InvoiceC
 			if err := tx.releaseOrderReservations(ctx, orderID); err != nil {
 				return WebhookResult{}, err
 			}
+			tx.releasePromo(ctx, orderID)
 		}
 		return ackOK, nil
 	}
@@ -129,6 +130,9 @@ func (s *Service) settlePaid(ctx context.Context, orderID string, amount *float6
 		return WebhookResult{}, err
 	}
 	if err := commitOrderReservations(ctx, s.db, orderID); err != nil {
+		return WebhookResult{}, err
+	}
+	if err := s.ports.Promo.Capture(ctx, s.db, orderID); err != nil {
 		return WebhookResult{}, err
 	}
 	total := domain.OrFinite(domain.JSNumber(o.total))

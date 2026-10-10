@@ -172,6 +172,8 @@ describe("Go route manifest", () => {
     // took over (member password login): nothing to fall back to.
     const goNativePrefixes = [
       "/api/shop/wholesale",
+      "/api/shop/storefront-settings",
+      "/api/public/shop",
       "/api/wholesale",
       "/api/public/site",
       "/api/site",
