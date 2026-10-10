@@ -3,6 +3,7 @@ package shop
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"nuhabit/backend/internal/platform/database"
@@ -16,6 +17,9 @@ type Ports struct {
 	Members   Members
 	Payments  Payments
 	Messenger Messenger
+	Branches  Branches
+	Promo     Promo
+	Wallet    Wallet
 	// AppOrigin is appOrigin() without a request: NEXT_PUBLIC_APP_URL (or
 	// NEXT_PUBLIC_BASE_URL) without trailing slashes, "" when unset.
 	AppOrigin string
@@ -97,11 +101,101 @@ type Stock interface {
 	Sell(ctx context.Context, q database.Querier, productID string, skuID *string, qty float64) (success *bool, reason string, err error)
 }
 
-// Members links paid orders to CRM members (pos.pos_customers).
+// Member is the signed-in buyer (pos.pos_customers display fields).
+type Member struct {
+	ID    string
+	Name  *string
+	Phone string
+	Email *string
+}
+
+// Members links orders to CRM members (pos.pos_customers).
 type Members interface {
 	// ByPhoneSuffix is the first member whose phone digits end with suffix,
 	// "" when none.
 	ByPhoneSuffix(ctx context.Context, q database.Querier, suffix string) (string, error)
+	// FromRequest resolves the member_session cookie (or Bearer token) of
+	// a public request; nil without a live session.
+	FromRequest(r *http.Request) (*Member, error)
+}
+
+// PickupBranch is a branch a pickup order can be collected from
+// (configuration.branches).
+type PickupBranch struct {
+	ID      string  `json:"id"`
+	Name    string  `json:"name"`
+	Address *string `json:"address"`
+	City    *string `json:"city"`
+	Phone   *string `json:"phone"`
+}
+
+// Branches reads branches from the configuration context.
+type Branches interface {
+	// Public lists the active public branches by name.
+	Public(ctx context.Context, q database.Querier) ([]PickupBranch, error)
+	// Get is one branch by id, public or not; nil when missing.
+	Get(ctx context.Context, q database.Querier, id string) (*PickupBranch, error)
+}
+
+// PromoContextType is promo_redemptions.context_type of a shop order.
+const PromoContextType = "shop_order"
+
+// PromoLine is one cart line the promo engine may target.
+type PromoLine struct {
+	ProductID string
+	Amount    float64
+}
+
+// PromoCheck is a code to evaluate for one cart.
+type PromoCheck struct {
+	Code       string
+	Subtotal   float64
+	Phone      *string
+	CustomerID *string
+	Lines      []PromoLine
+}
+
+// PromoPreview is the result of a preview: the discount and campaign name,
+// or the rejection reason (a promo domain RejectReason string).
+type PromoPreview struct {
+	OK       bool
+	Discount float64
+	Label    string
+	Reason   string
+}
+
+// PromoRejectedError is a hold the promo engine refused; Reason is the
+// promo domain RejectReason string.
+type PromoRejectedError struct{ Reason string }
+
+func (e *PromoRejectedError) Error() string { return "promo rejected: " + e.Reason }
+
+// Promo is the promo-code service of the stored-value context. The shop
+// evaluates codes on the "shop" channel, so campaigns scoped to every
+// channel apply.
+type Promo interface {
+	// Preview validates a code without claiming it.
+	Preview(ctx context.Context, q database.Querier, in PromoCheck) (PromoPreview, error)
+	// Hold claims the code for the order inside the caller's transaction
+	// and returns the discount and campaign name. A refusal is a
+	// *PromoRejectedError.
+	Hold(ctx context.Context, q database.Querier, in PromoCheck, orderID string) (discount float64, label string, err error)
+	// Capture makes the order's held redemption final (idempotent).
+	Capture(ctx context.Context, q database.Querier, orderID string) error
+	// Release gives the order's redemption back (idempotent).
+	Release(ctx context.Context, q database.Querier, orderID string) error
+}
+
+// ErrArkInsufficient is a payment the ARK Coin balance does not cover.
+var ErrArkInsufficient = errors.New("insufficient ARK Coin balance")
+
+// Wallet is the ARK Coin wallet of the stored-value context.
+type Wallet interface {
+	// Balance is the member's ARK Coin balance (0 when unknown).
+	Balance(ctx context.Context, q database.Querier, customerID string) (float64, error)
+	// Pay debits amount for the order on the caller's transaction;
+	// ErrArkInsufficient when the balance does not cover it.
+	Pay(ctx context.Context, q database.Querier, customerID string, amount float64, orderID, notes string) error
 }
 
 // InvoiceRequest is CreateInvoiceInput (lib/xendit/client).

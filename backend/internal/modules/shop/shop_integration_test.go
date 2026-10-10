@@ -121,10 +121,100 @@ func (fakeCatalog) LocalStock(context.Context, database.Querier, string, *string
 	return nil, nil
 }
 
+// fakeMembers links by phone to id and reads the signed-in member from the
+// X-Test-Member header (its id; name and phone are fixed).
 type fakeMembers struct{ id string }
 
 func (m fakeMembers) ByPhoneSuffix(context.Context, database.Querier, string) (string, error) {
 	return m.id, nil
+}
+
+func (fakeMembers) FromRequest(r *http.Request) (*Member, error) {
+	id := r.Header.Get("X-Test-Member")
+	if id == "" {
+		return nil, nil
+	}
+	name := "Go Test Member"
+	return &Member{ID: id, Name: &name, Phone: "+628111222333"}, nil
+}
+
+type fakeBranches struct{ list []PickupBranch }
+
+func (b fakeBranches) Public(context.Context, database.Querier) ([]PickupBranch, error) {
+	return b.list, nil
+}
+
+func (b fakeBranches) Get(_ context.Context, _ database.Querier, id string) (*PickupBranch, error) {
+	for _, x := range b.list {
+		if x.ID == id {
+			return &x, nil
+		}
+	}
+	return nil, nil
+}
+
+// fakePromo knows one code; it records holds by order id and their state.
+type fakePromo struct {
+	code     string
+	discount float64
+	reject   string // reason when the code is refused
+	holds    map[string]string
+}
+
+func (p *fakePromo) check(in PromoCheck) PromoPreview {
+	if strings.EqualFold(in.Code, p.code) && p.reject == "" {
+		return PromoPreview{OK: true, Discount: p.discount, Label: "Launch promo"}
+	}
+	reason := p.reject
+	if reason == "" {
+		reason = "nonaktif"
+	}
+	return PromoPreview{Reason: reason}
+}
+
+func (p *fakePromo) Preview(_ context.Context, _ database.Querier, in PromoCheck) (PromoPreview, error) {
+	return p.check(in), nil
+}
+
+func (p *fakePromo) Hold(_ context.Context, _ database.Querier, in PromoCheck, orderID string) (float64, string, error) {
+	res := p.check(in)
+	if !res.OK {
+		return 0, "", &PromoRejectedError{Reason: res.Reason}
+	}
+	p.holds[orderID] = "held"
+	return res.Discount, res.Label, nil
+}
+
+func (p *fakePromo) Capture(_ context.Context, _ database.Querier, orderID string) error {
+	if p.holds[orderID] == "held" {
+		p.holds[orderID] = "captured"
+	}
+	return nil
+}
+
+func (p *fakePromo) Release(_ context.Context, _ database.Querier, orderID string) error {
+	if _, ok := p.holds[orderID]; ok {
+		p.holds[orderID] = "released"
+	}
+	return nil
+}
+
+type fakeWallet struct {
+	balances map[string]float64
+	payments []string
+}
+
+func (w *fakeWallet) Balance(_ context.Context, _ database.Querier, id string) (float64, error) {
+	return w.balances[id], nil
+}
+
+func (w *fakeWallet) Pay(_ context.Context, _ database.Querier, id string, amount float64, orderID, _ string) error {
+	if w.balances[id] < amount {
+		return ErrArkInsufficient
+	}
+	w.balances[id] -= amount
+	w.payments = append(w.payments, orderID+":"+domain.JSString(amount))
+	return nil
 }
 
 type fakePayments struct {
@@ -147,27 +237,33 @@ func (*fakePayments) ValidWebhookToken(token string) bool {
 }
 
 type fixture struct {
-	t       *testing.T
-	ctx     context.Context
-	tx      pgx.Tx
-	svc     *Service
-	mux     *http.ServeMux
-	wa      *fakeMessenger
-	stock   *fakeStock
-	pay     *fakePayments
-	env     map[string]string
-	catalog fakeCatalog
+	t        *testing.T
+	ctx      context.Context
+	tx       pgx.Tx
+	svc      *Service
+	mux      *http.ServeMux
+	wa       *fakeMessenger
+	stock    *fakeStock
+	pay      *fakePayments
+	promo    *fakePromo
+	wallet   *fakeWallet
+	branches *fakeBranches
+	env      map[string]string
+	catalog  fakeCatalog
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	tx := testutil.Tx(t)
 	f := &fixture{t: t, ctx: context.Background(), tx: tx, wa: &fakeMessenger{}, stock: &fakeStock{fail: map[string]bool{}},
-		pay: &fakePayments{}, env: map[string]string{}, catalog: fakeCatalog{products: map[string]WebProduct{}}}
+		pay: &fakePayments{}, env: map[string]string{}, catalog: fakeCatalog{products: map[string]WebProduct{}},
+		promo: &fakePromo{code: "LAUNCH", discount: 20000, holds: map[string]string{}}, wallet: &fakeWallet{balances: map[string]float64{}},
+		branches: &fakeBranches{}}
 	// Fresh settings and storefront state inside the transaction.
 	f.exec(`DELETE FROM shop.shipping_settings`)
 	f.svc = NewService(tx, Ports{
 		Catalog: f.catalog, Stock: f.stock, Members: fakeMembers{}, Payments: f.pay, Messenger: f.wa,
+		Branches: f.branches, Promo: f.promo, Wallet: f.wallet,
 		AppOrigin: "https://app.example", Getenv: func(k string) string { return f.env[k] },
 	}, nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	f.svc.async = func(fn func()) { fn() }
@@ -593,7 +689,8 @@ func TestCatalogAndProviderErrors(t *testing.T) {
 	}}
 	res, _ := f.do("GET", "/api/public/shop/"+strings.ToUpper(slug)+"/catalog", nil)
 	expectStatus(t, res, 200)
-	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null},"collections":[],"products":[`+
+	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null,`+
+		`"settings":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null},"pickupBranches":[]},"collections":[],"products":[`+
 		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"sizeGuide":null,"imageUrl":null,"images":[],"price":50000,"weightGram":null,"stock":5,`+
 		`"collection":null,"preorderUntil":null,"preorder":false,`+
 		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"stock":3,"preorder":false},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"stock":2,"preorder":false}]}]}}`)
@@ -734,5 +831,357 @@ func TestShopeeSignature(t *testing.T) {
 		"&redirect=https%3A%2F%2Fapp.example%2Fapi%2Fshop%2Fmarketplace%2Fcallback"
 	if got != want {
 		t.Errorf("auth url = %s", got)
+	}
+}
+
+// storefrontFixture seeds a storefront, a product and a public branch for
+// the checkout tests and returns the public base path.
+func storefrontFixture(f *fixture) (base, product string) {
+	slug := "go-" + testutil.RandomHex(4)
+	f.exec(`INSERT INTO shop.storefronts (slug, name) VALUES ($1, 'Toko Go')`, slug)
+	product = f.scalar(`INSERT INTO pos.pos_products (sku, name, product_kind) VALUES ($1, 'Kaos', 'merchandise') RETURNING id::text`, "GO-"+testutil.RandomHex(4))
+	weight := "500"
+	f.catalog.products[product] = WebProduct{ID: product, Name: "Kaos", BasePrice: "50000", WeightGram: &weight}
+	address := "Jl. Dago 10"
+	f.branches.list = []PickupBranch{{ID: testutil.CreateOrg(f.t, f.tx).BranchID, Name: "Dago", Address: &address}}
+	return "/api/public/shop/" + slug, product
+}
+
+func TestPickupCheckoutAndTransitions(t *testing.T) {
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{})
+	f := newFixture(t)
+	base, product := storefrontFixture(f)
+	branch := f.branches.list[0]
+	body := map[string]any{
+		"items":    []map[string]any{{"product_id": product, "quantity": 2}},
+		"customer": map[string]any{"name": "Budi", "phone": "081234567890"},
+		"delivery": map[string]any{"method": "pickup", "branchId": branch.ID},
+	}
+
+	// The catalog lists the pickup branches while pickup is on.
+	res, out := f.do("GET", base+"/catalog", nil)
+	expectStatus(t, res, 200)
+	sf := out["data"].(map[string]any)["storefront"].(map[string]any)
+	if got := sf["pickupBranches"].([]any); len(got) != 1 || got[0].(map[string]any)["name"] != "Dago" {
+		t.Errorf("pickupBranches = %v", got)
+	}
+
+	res, _ = f.do("POST", base+"/checkout", map[string]any{"items": body["items"], "customer": body["customer"],
+		"delivery": map[string]any{"method": "pickup", "branchId": "6a1c2d3e-4b5a-4c6d-8e9f-0a1b2c3d4e5f"}})
+	expectStatus(t, res, 400)
+	expectJSON(t, res, `{"success":false,"error":"Pickup is not available at that branch"}`)
+
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	created := out["data"].(map[string]any)
+	number := created["order_number"].(string)
+	id := f.scalar(`SELECT id::text FROM shop.orders WHERE order_number = $1`, number)
+	got := f.scalar(`SELECT delivery_method || '|' || pickup_branch_id || '|' || shipping_cost || '|' || total || '|' || shipping_address || '|' || (courier_code IS NULL) || '|' || payment_method
+		FROM shop.orders WHERE id = $1`, id)
+	if got != "pickup|"+branch.ID+"|0.00|100000.00|Pickup at Dago|true|xendit" {
+		t.Errorf("order = %s", got)
+	}
+	if len(f.wa.sent) != 1 || !strings.Contains(f.wa.sent[0], "*Order received*") || !strings.Contains(f.wa.sent[0], "Delivery: Pick up at Dago") ||
+		!strings.Contains(f.wa.sent[0], "https://pay.example/inv-1") {
+		t.Errorf("placed wa = %v", f.wa.sent)
+	}
+
+	token := f.scalar(`SELECT access_token::text FROM shop.orders WHERE id = $1`, id)
+	res, out = f.do("GET", "/api/public/shop/order/"+token, nil)
+	expectStatus(t, res, 200)
+	view := out["data"].(map[string]any)
+	delivery := view["delivery"].(map[string]any)
+	if delivery["method"] != "pickup" || delivery["branch"].(map[string]any)["address"] != "Jl. Dago 10" || delivery["readyAt"] != nil ||
+		view["paymentMethod"] != "xendit" || view["discountAmount"] != 0.0 || view["whatsappUrl"] != nil || view["etaText"] != nil {
+		t.Errorf("status = %v", view)
+	}
+
+	// Staff see the delivery, payment and promo columns in the list and detail.
+	res, out = f.staff("GET", "/api/shop/orders?search="+number, nil)
+	expectStatus(t, res, 200)
+	row := out["data"].([]any)[0].(map[string]any)
+	if row["delivery_method"] != "pickup" || row["pickup_branch_name"] != "Dago" || row["payment_method"] != "xendit" ||
+		row["discount_amount"] != "0.00" || row["promo_code"] != nil {
+		t.Errorf("list row = %v", row)
+	}
+	res, out = f.staff("GET", "/api/shop/orders/"+id, nil)
+	expectStatus(t, res, 200)
+	if detail := out["data"].(map[string]any); detail["pickup_branch_name"] != "Dago" || detail["delivery_method"] != "pickup" {
+		t.Errorf("detail = %v", detail)
+	}
+
+	// Pickup orders never ship: packing and shipments are refused.
+	res, _ = f.do("POST", "/api/public/shop/webhook/xendit", map[string]any{"id": "inv-1", "external_id": InvoicePrefix + id, "status": "PAID", "amount": 100000}, "x-callback-token", "xnd-secret")
+	expectStatus(t, res, 200)
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+id, map[string]any{"status": "packing"})
+	expectStatus(t, res, 400)
+	expectJSON(t, res, `{"success":false,"error":"That step does not apply to this order's delivery method"}`)
+	res, _ = f.do("POST", "/api/shop/orders/"+id+"/shipment", map[string]any{"mode": "manual", "waybill": "JNE123456"}, "X-Test-Staff", staff.UserID)
+	expectStatus(t, res, 400)
+	expectJSON(t, res, `{"success":false,"error":"Pickup orders are collected at the branch and have no shipment"}`)
+
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+id, map[string]any{"status": "ready_for_pickup"})
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":{"id":"`+id+`","status":"ready_for_pickup","prev_status":"paid"}}`)
+	if got := f.scalar(`SELECT (ready_at IS NOT NULL)::text FROM shop.orders WHERE id = $1`, id); got != "true" {
+		t.Error("ready_at is set")
+	}
+	last := f.wa.sent[len(f.wa.sent)-1]
+	if len(f.wa.sent) != 3 || !strings.Contains(last, "*Ready for pickup*") || !strings.Contains(last, "ready at Dago, Jl. Dago 10") {
+		t.Errorf("wa = %v", f.wa.sent)
+	}
+	res, out = f.do("GET", "/api/public/shop/order/"+token, nil)
+	if out["data"].(map[string]any)["delivery"].(map[string]any)["readyAt"] == nil {
+		t.Error("readyAt shows on the status page")
+	}
+
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+id, map[string]any{"status": "picked_up"})
+	expectStatus(t, res, 200)
+	if got := f.scalar(`SELECT status || '|' || (picked_up_at IS NOT NULL) FROM shop.orders WHERE id = $1`, id); got != "picked_up|true" {
+		t.Errorf("order = %s", got)
+	}
+
+	// A ship order cannot take the pickup steps.
+	ship := f.order("paid")
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+ship, map[string]any{"status": "ready_for_pickup"})
+	expectStatus(t, res, 400)
+
+	// Pickup off: no branches, no pickup checkout.
+	f.exec(`INSERT INTO shop.storefront_settings (storefront_id, pickup_enabled) SELECT id, false FROM shop.storefronts WHERE slug = $1`, strings.TrimPrefix(base, "/api/public/shop/"))
+	res, out = f.do("GET", base+"/catalog", nil)
+	if got := out["data"].(map[string]any)["storefront"].(map[string]any)["pickupBranches"].([]any); len(got) != 0 {
+		t.Errorf("pickupBranches with pickup off = %v", got)
+	}
+	res, _ = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 400)
+}
+
+func TestPromoCodeCheckout(t *testing.T) {
+	f := newFixture(t)
+	f.svc.biteshipBase = fakeBiteship(t).URL
+	f.env["BITESHIP_API_KEY"] = "bs-key"
+	f.exec(`UPDATE shop.shipping_settings SET is_active = false`)
+	f.exec(`INSERT INTO shop.shipping_settings (provider, origin_area_id, couriers, markup_amount) VALUES ('biteship', 'ORIGIN', 'jne', 2500)`)
+	base, product := storefrontFixture(f)
+	lines := []map[string]any{{"productId": product, "quantity": 2}}
+
+	res, out := f.do("POST", base+"/promo/preview", map[string]any{"code": "launch", "lines": lines})
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":{"code":"launch","discountAmount":20000,"label":"Launch promo"}}`)
+	res, _ = f.do("POST", base+"/promo/preview", map[string]any{"code": "NOPE", "lines": lines})
+	expectStatus(t, res, 422)
+	expectJSON(t, res, `{"success":false,"error":"This promo code is not valid"}`)
+	f.promo.reject = "min-pembelian"
+	res, _ = f.do("POST", base+"/promo/preview", map[string]any{"code": "LAUNCH", "lines": lines})
+	expectJSON(t, res, `{"success":false,"error":"Your order does not reach the minimum for this promo code"}`)
+	f.promo.reject = ""
+	res, _ = f.do("POST", base+"/promo/preview", map[string]any{"code": "LAUNCH"})
+	expectStatus(t, res, 400)
+
+	body := map[string]any{
+		"items":       []map[string]any{{"product_id": product, "quantity": 2}},
+		"customer":    map[string]any{"name": "Budi", "phone": "081234567890"},
+		"destination": map[string]any{"area_id": "IDNP6", "label": "Coblong, Bandung", "address": "Jl. Dago 1 no 10"},
+		"courier":     map[string]any{"code": "jne", "service_code": "reg"},
+		"promoCode":   "LAUNCH",
+	}
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	number := out["data"].(map[string]any)["order_number"].(string)
+	id := f.scalar(`SELECT id::text FROM shop.orders WHERE order_number = $1`, number)
+	got := f.scalar(`SELECT promo_code || '|' || discount_amount || '|' || shipping_cost || '|' || total || '|' || eta_text FROM shop.orders WHERE id = $1`, id)
+	if got != "LAUNCH|20000.00|12500.00|92500.00|1 - 2 days" {
+		t.Errorf("order = %s", got)
+	}
+	if f.promo.holds[id] != "held" || f.pay.invoices[0].Amount != 92500 {
+		t.Errorf("hold = %s invoice = %+v", f.promo.holds[id], f.pay.invoices)
+	}
+	token := f.scalar(`SELECT access_token::text FROM shop.orders WHERE id = $1`, id)
+	res, out = f.do("GET", "/api/public/shop/order/"+token, nil)
+	view := out["data"].(map[string]any)
+	if view["discountAmount"] != 20000.0 || view["promoCode"] != "LAUNCH" || view["etaText"] != "1 - 2 days" || view["total"] != 92500.0 {
+		t.Errorf("status = %v", view)
+	}
+
+	// Paid captures the hold; an expired invoice or a cancellation releases it.
+	res, _ = f.do("POST", "/api/public/shop/webhook/xendit", map[string]any{"id": "inv-1", "external_id": InvoicePrefix + id, "status": "PAID", "amount": 92500}, "x-callback-token", "xnd-secret")
+	expectStatus(t, res, 200)
+	if f.promo.holds[id] != "captured" {
+		t.Errorf("after paid = %s", f.promo.holds[id])
+	}
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+id, map[string]any{"status": "cancelled"})
+	expectStatus(t, res, 200)
+	if f.promo.holds[id] != "released" {
+		t.Errorf("after cancel = %s", f.promo.holds[id])
+	}
+
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	expired := f.scalar(`SELECT id::text FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string))
+	res, _ = f.do("POST", "/api/public/shop/webhook/xendit", map[string]any{"id": "inv-2", "external_id": InvoicePrefix + expired, "status": "EXPIRED"}, "x-callback-token", "xnd-secret")
+	expectStatus(t, res, 200)
+	if f.promo.holds[expired] != "released" {
+		t.Errorf("after expiry = %s", f.promo.holds[expired])
+	}
+
+	// The subtotal reaching the free-shipping threshold zeroes the rate.
+	f.exec(`INSERT INTO shop.storefront_settings (storefront_id, free_shipping_threshold) VALUES ((SELECT storefront_id FROM shop.orders WHERE id = $1), 100000)`, id)
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	free := f.scalar(`SELECT shipping_cost || '|' || total FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string))
+	if free != "0.00|80000.00" {
+		t.Errorf("free shipping order = %s", free)
+	}
+	f.exec(`UPDATE shop.storefront_settings SET free_shipping_threshold = 100001`)
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	if got := f.scalar(`SELECT shipping_cost FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string)); got != "12500.00" {
+		t.Errorf("under threshold shipping = %s", got)
+	}
+
+	// A refused code places no order and gives the claimed stock back.
+	f.promo.reject = "kuota-habis"
+	calls := len(f.stock.calls)
+	res, _ = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 422)
+	expectJSON(t, res, `{"success":false,"error":"This promo code has been fully used"}`)
+	if len(f.stock.calls) != calls+2 || !strings.HasSuffix(f.stock.calls[calls+1], ":-2") {
+		t.Errorf("stock calls = %v", f.stock.calls)
+	}
+	if got := f.scalar(`SELECT count(*)::text FROM shop.orders WHERE storefront_id = (SELECT storefront_id FROM shop.orders WHERE id = $1)`, id); got != "4" {
+		t.Errorf("orders = %s", got)
+	}
+}
+
+func TestArkCoinCheckoutAndMemberPrefill(t *testing.T) {
+	member := testutil.CreateMember(t)
+	f := newFixture(t)
+	bus := outbox.NewBus(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	var recorded []possales.CustomerOrderRecorded
+	bus.Subscribe(possales.TopicCustomerOrderRecorded, "shop.test-ark", func(_ context.Context, _ pgx.Tx, e outbox.Event) error {
+		var ev possales.CustomerOrderRecorded
+		recorded = append(recorded, ev)
+		return e.Decode(&recorded[len(recorded)-1])
+	})
+	if err := bus.Register(f.ctx, f.tx); err != nil {
+		t.Fatal(err)
+	}
+	base, product := storefrontFixture(f)
+	branch := f.branches.list[0]
+	body := map[string]any{
+		"items":     []map[string]any{{"product_id": product, "quantity": 1}},
+		"customer":  map[string]any{"name": "Budi", "phone": "081234567890"},
+		"delivery":  map[string]any{"method": "pickup", "branchId": branch.ID},
+		"payment":   map[string]any{"method": "arkcoin"},
+		"promoCode": "LAUNCH",
+	}
+
+	res, _ := f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 401)
+	expectJSON(t, res, `{"success":false,"error":"Sign in to pay with ARK Coin"}`)
+
+	f.wallet.balances[member.CustomerID] = 25000
+	res, _ = f.do("POST", base+"/checkout", body, "X-Test-Member", member.CustomerID)
+	expectStatus(t, res, 422)
+	expectJSON(t, res, `{"success":false,"error":"Your ARK Coin balance does not cover this order"}`)
+	if len(f.stock.calls) != 0 {
+		t.Errorf("no stock claimed before the balance check: %v", f.stock.calls)
+	}
+
+	f.wallet.balances[member.CustomerID] = 40000
+	res, out := f.do("POST", base+"/checkout", body, "X-Test-Member", member.CustomerID)
+	expectStatus(t, res, 201)
+	created := out["data"].(map[string]any)
+	if created["status"] != "paid" || created["accessToken"] == nil || !strings.HasPrefix(created["statusUrl"].(string), "https://app.example/shop/order/") {
+		t.Errorf("created = %v", created)
+	}
+	number := created["orderNumber"].(string)
+	id := f.scalar(`SELECT id::text FROM shop.orders WHERE order_number = $1`, number)
+	got := f.scalar(`SELECT status || '|' || (paid_at IS NOT NULL) || '|' || payment_method || '|' || total || '|' || customer_id || '|' || (xendit_invoice_id IS NULL)
+		FROM shop.orders WHERE id = $1`, id)
+	if got != "paid|true|arkcoin|30000.00|"+member.CustomerID+"|true" {
+		t.Errorf("order = %s", got)
+	}
+	if f.wallet.balances[member.CustomerID] != 10000 || len(f.wallet.payments) != 1 || f.wallet.payments[0] != id+":30000" {
+		t.Errorf("wallet = %v %v", f.wallet.balances, f.wallet.payments)
+	}
+	if f.promo.holds[id] != "captured" {
+		t.Errorf("promo = %s", f.promo.holds[id])
+	}
+	if got := f.scalar(`SELECT status FROM shop.stock_reservations WHERE order_id = $1`, id); got != "committed" {
+		t.Errorf("reservation = %s", got)
+	}
+	if len(f.wa.sent) != 1 || !strings.Contains(f.wa.sent[0], "*Payment received*") || !strings.Contains(f.wa.sent[0], "Total: Rp30.000") {
+		t.Errorf("wa = %v", f.wa.sent)
+	}
+	if _, err := bus.Dispatch(f.ctx, f.tx); err != nil {
+		t.Fatal(err)
+	}
+	if len(recorded) != 1 || recorded[0] != (possales.CustomerOrderRecorded{CustomerID: member.CustomerID, OrderID: id, Amount: 30000}) {
+		t.Errorf("recorded = %+v", recorded)
+	}
+	if len(f.pay.invoices) != 0 {
+		t.Error("no Xendit invoice for an ARK Coin order")
+	}
+
+	// The prefill: null for a guest, the member and the last shipped
+	// address otherwise.
+	res, _ = f.do("GET", base+"/me", nil)
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":null}`)
+	res, out = f.do("GET", base+"/me", nil, "X-Test-Member", member.CustomerID)
+	expectStatus(t, res, 200)
+	me := out["data"].(map[string]any)
+	if me["name"] != "Go Test Member" || me["arkBalance"] != 10000.0 || me["lastAddress"] != nil {
+		t.Errorf("me = %v", me)
+	}
+	f.exec(`INSERT INTO shop.orders (status, customer_name, customer_phone, shipping_address, shipping_area_id, shipping_area_label, shipping_postal_code, customer_id)
+		VALUES ('paid', 'Budi', '0812', 'Jl. Riau 5', 'IDNP6', 'Coblong, Bandung', '40132', $1)`, member.CustomerID)
+	res, out = f.do("GET", base+"/me", nil, "X-Test-Member", member.CustomerID)
+	last := out["data"].(map[string]any)["lastAddress"].(map[string]any)
+	if last["address"] != "Jl. Riau 5" || last["areaId"] != "IDNP6" || last["postalCode"] != "40132" {
+		t.Errorf("lastAddress = %v", last)
+	}
+}
+
+func TestStorefrontSettingsRoute(t *testing.T) {
+	staff := testutil.CreateStaff(t, testutil.StaffOptions{})
+	f := newFixture(t)
+	f.exec(`INSERT INTO shop.storefronts (slug, name) VALUES ($1, 'Toko Go')`, "go-"+testutil.RandomHex(4))
+	const url = "/api/shop/storefront-settings"
+	put := func(body map[string]any) (*httptest.ResponseRecorder, map[string]any) {
+		return f.do("PUT", url, body, "X-Test-Staff", staff.UserID)
+	}
+	res, _ := f.do("GET", url, nil, "X-Test-Forbid", "1")
+	expectStatus(t, res, 403)
+	res, _ = f.do("PUT", url, map[string]any{"pickupEnabled": false})
+	expectStatus(t, res, 401)
+
+	res, _ = f.staff("GET", url, nil)
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null}}`)
+
+	res, _ = put(map[string]any{"pickupEnabled": false, "freeShippingThreshold": 250000, "lowStockThreshold": 5, "whatsappNumber": " 0812-3456-7890 "})
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890"}}`)
+	res, _ = f.staff("GET", url, nil)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890"}}`)
+
+	res, _ = put(map[string]any{"freeShippingThreshold": -1})
+	expectStatus(t, res, 400)
+	res, _ = put(map[string]any{"whatsappNumber": "12"})
+	expectStatus(t, res, 400)
+	res, _ = put(map[string]any{"pickupEnabled": true, "freeShippingThreshold": nil, "whatsappNumber": ""})
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null}}`)
+
+	// The status page links the store's WhatsApp number.
+	put(map[string]any{"whatsappNumber": "081234567890"})
+	id := f.order("paid", "storefront_id", "(SELECT id FROM shop.storefronts WHERE is_active ORDER BY is_default DESC, created_at, id LIMIT 1)")
+	token := f.scalar(`SELECT access_token::text FROM shop.orders WHERE id = $1`, id)
+	res, out := f.do("GET", "/api/public/shop/order/"+token, nil)
+	expectStatus(t, res, 200)
+	number := f.scalar(`SELECT order_number FROM shop.orders WHERE id = $1`, id)
+	if got := out["data"].(map[string]any)["whatsappUrl"]; got != "https://wa.me/6281234567890?text=Hi%2C+I+have+a+question+about+order+"+number {
+		t.Errorf("whatsappUrl = %v", got)
 	}
 }

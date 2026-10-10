@@ -10,9 +10,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/posops"
 	"nuhabit/backend/internal/modules/shop"
 	"nuhabit/backend/internal/modules/ticketing"
+	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -144,6 +147,115 @@ func TestXenditInvoiceClient(t *testing.T) {
 	env["XENDIT_MOCK"] = ""
 	if (ticketingPayments{x}).Configured() {
 		t.Error("no key and no mock is not configured")
+	}
+}
+
+// The shop's promo, wallet, branch and member adapters on real rows: a
+// campaign of the default CRM venue held for a shop order, captured and
+// released; ARK Coin debited or refused; public branches; the member
+// behind a session cookie.
+func TestShopCheckoutAdapters(t *testing.T) {
+	member := testutil.CreateMember(t) // before the transaction: its cleanup runs after the rollback
+	deps := testutil.Deps(t, nil)
+	tx := testutil.Tx(t)
+	ctx := context.Background()
+	org := testutil.CreateOrg(t, tx)
+	exec := func(sql string, args ...any) {
+		t.Helper()
+		if _, err := tx.Exec(ctx, sql, args...); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
+	}
+	exec(`INSERT INTO crm.crm_settings (key, value) VALUES ('default_company_id', to_jsonb($1::text)), ('default_branch_id', to_jsonb($2::text))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, org.CompanyID, org.BranchID)
+	var campaign string
+	if err := tx.QueryRow(ctx, `INSERT INTO promo.promo_campaigns (company_id, branch_id, name, discount_type, value, scope, per_phone_limit)
+		VALUES ($1, $2, 'Go launch', 'fixed', 15000, 'semua', NULL) RETURNING id::text`, org.CompanyID, org.BranchID).Scan(&campaign); err != nil {
+		t.Fatal(err)
+	}
+	exec(`INSERT INTO promo.promo_codes (company_id, branch_id, campaign_id, code) VALUES ($1, $2, $3, 'GOSHOP')`, org.CompanyID, org.BranchID, campaign)
+	exec(`UPDATE configuration.branches SET is_public = true, address = 'Jl. Dago 10', city = 'Bandung' WHERE id = $1`, org.BranchID)
+	exec(`UPDATE pos.pos_customers SET ark_coin_balance = 50000 WHERE id = $1`, member.CustomerID)
+
+	ports := ShopPorts(deps)
+	check := shop.PromoCheck{Code: "goshop", Subtotal: 100000, Lines: []shop.PromoLine{{ProductID: "00000000-0000-4000-8000-000000000009", Amount: 100000}}}
+	preview, err := ports.Promo.Preview(ctx, tx, check)
+	if err != nil || !preview.OK || preview.Discount != 15000 || preview.Label != "Go launch" {
+		t.Fatalf("preview = %+v %v", preview, err)
+	}
+	if p, _ := ports.Promo.Preview(ctx, tx, shop.PromoCheck{Code: "NOPE", Subtotal: 100000}); p.OK || p.Reason != "nonaktif" {
+		t.Errorf("unknown code = %+v", p)
+	}
+	const order = "00000000-0000-4000-8000-000000000031"
+	discount, label, err := ports.Promo.Hold(ctx, tx, check, order)
+	if err != nil || discount != 15000 || label != "Go launch" {
+		t.Fatalf("hold = %v %s %v", discount, label, err)
+	}
+	status := func() string {
+		var s string
+		if err := tx.QueryRow(ctx, `SELECT r.status || '|' || k.usage_count FROM promo.promo_redemptions r JOIN promo.promo_codes k ON k.id = r.code_id
+			WHERE r.context_type = 'shop_order' AND r.context_id = $1`, order).Scan(&s); err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	if got := status(); got != "held|1" {
+		t.Errorf("after hold = %s", got)
+	}
+	if err := ports.Promo.Capture(ctx, tx, order); err != nil || status() != "captured|1" {
+		t.Errorf("capture = %v %s", err, status())
+	}
+	if err := ports.Promo.Release(ctx, tx, order); err != nil || status() != "released|0" {
+		t.Errorf("release = %v %s", err, status())
+	}
+	_, _, err = ports.Promo.Hold(ctx, tx, shop.PromoCheck{Code: "NOPE", Subtotal: 100000}, order)
+	if rej, ok := errors.AsType[*shop.PromoRejectedError](err); !ok || rej.Reason != "nonaktif" {
+		t.Errorf("unknown code hold = %v", err)
+	}
+
+	// The wallet: the refusal runs in a savepoint so the transaction stays usable.
+	err = database.WithTx(ctx, tx, func(inner pgx.Tx) error {
+		return ports.Wallet.Pay(ctx, inner, member.CustomerID, 80000, order, "Shop order SHOP-1")
+	})
+	if !errors.Is(err, shop.ErrArkInsufficient) {
+		t.Errorf("over balance = %v", err)
+	}
+	if err := ports.Wallet.Pay(ctx, tx, member.CustomerID, 30000, order, "Shop order SHOP-1"); err != nil {
+		t.Fatal(err)
+	}
+	if balance, _ := ports.Wallet.Balance(ctx, tx, member.CustomerID); balance != 20000 {
+		t.Errorf("balance = %v", balance)
+	}
+	var notes string
+	if err := tx.QueryRow(ctx, `SELECT notes FROM pos.pos_wallet_transactions WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 1`, member.CustomerID).Scan(&notes); err != nil || notes != "Shop order SHOP-1" {
+		t.Errorf("wallet row = %q %v", notes, err)
+	}
+
+	branches, err := ports.Branches.Public(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, b := range branches {
+		found = found || (b.ID == org.BranchID && *b.Address == "Jl. Dago 10" && *b.City == "Bandung")
+	}
+	if !found {
+		t.Errorf("public branches = %+v", branches)
+	}
+	if b, err := ports.Branches.Get(ctx, tx, org.BranchID); err != nil || b == nil || b.Name == "" {
+		t.Errorf("branch = %+v %v", b, err)
+	}
+	if b, err := ports.Branches.Get(ctx, tx, order); err != nil || b != nil {
+		t.Errorf("missing branch = %+v %v", b, err)
+	}
+
+	r := testutil.Request("GET", "/api/public/shop/toko/me", nil)
+	if m, err := ports.Members.FromRequest(r); err != nil || m != nil {
+		t.Errorf("guest = %+v %v", m, err)
+	}
+	m, err := ports.Members.FromRequest(testutil.AsMember(r, member))
+	if err != nil || m == nil || m.ID != member.CustomerID || m.Phone != member.Phone || *m.Name != "Go Test Member" {
+		t.Errorf("member = %+v %v", m, err)
 	}
 }
 

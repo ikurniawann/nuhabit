@@ -311,5 +311,5 @@ WHERE deleted_at IS NULL
     'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
-    'pos.loyalty.wallet.settings', 'settings.audit', 'shop.wholesale',
+    'pos.loyalty.wallet.settings', 'settings.audit', 'shop.wholesale', 'shop.settings',
     'site', 'site.articles', 'site.content', 'site.events');

@@ -104,6 +104,32 @@ func TestIntegrationOTPDisabled(t *testing.T) {
 	}
 }
 
+// A paid online shop order linked to the member shows in the transactions
+// list next to the POS orders.
+func TestTransactionsListShopOrders(t *testing.T) {
+	h := newHarness(t)
+	member := newMember(t)
+	db := testutil.DB(t)
+	ctx := context.Background()
+	var id string
+	if err := db.QueryRow(ctx, `INSERT INTO shop.orders (status, customer_name, customer_phone, shipping_address, total, paid_at, customer_id, payment_method)
+		VALUES ('paid', 'Go', '0812', 'Pickup at Dago', 75000, now(), $1, 'arkcoin') RETURNING id::text`, member.CustomerID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(context.Background(), `DELETE FROM shop.orders WHERE id = $1`, id) })
+	status, body, _ := h.do(testutil.AsMember(testutil.Request("GET", "/api/member-portal/transactions", nil), member))
+	if status != 200 {
+		t.Fatalf("transactions: %d %v", status, body)
+	}
+	orders := body["data"].(map[string]any)["orders"].([]any)
+	if len(orders) != 1 {
+		t.Fatalf("orders = %v", orders)
+	}
+	if o := orders[0].(map[string]any); o["id"] != id || o["total_amount"] != 75000.0 || o["payment_method"] != "arkcoin" || o["status"] != "paid" {
+		t.Errorf("order = %v", o)
+	}
+}
+
 func (h *harness) do(r *http.Request) (int, map[string]any, *http.Response) {
 	h.t.Helper()
 	r.Header.Set("X-Forwarded-For", h.ip)

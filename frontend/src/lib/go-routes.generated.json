@@ -4086,6 +4086,11 @@
   },
   {
     "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/promo/preview"
+  },
+  {
+    "module": "shop",
     "method": "GET",
     "path": "/api/public/shop/{slug}/shipping/areas"
   },
@@ -5893,6 +5898,16 @@
     "module": "shop",
     "method": "GET",
     "path": "/api/shop/shipping/track"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/storefront-settings"
+  },
+  {
+    "module": "shop",
+    "method": "PUT",
+    "path": "/api/shop/storefront-settings"
   },
   {
     "module": "shop",
