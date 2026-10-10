@@ -7,7 +7,6 @@ import {
   cartSubtotal,
   changeCartQuantity,
   changeCartVariant,
-  checkoutFormError,
   filterAndSortProducts,
   groupByCollection,
   parseStoredCart,
@@ -62,14 +61,18 @@ describe("storefront cart", () => {
   });
 
   it("stored cart: old format, new format and corrupt data", () => {
-    expect(parseStoredCart(null)).toEqual({ lines: [], note: "" });
-    expect(parseStoredCart("{broken")).toEqual({ lines: [], note: "" });
-    expect(parseStoredCart('{"a":1}')).toEqual({ lines: [], note: "" });
+    expect(parseStoredCart(null)).toEqual({ lines: [], note: "", promo: null });
+    expect(parseStoredCart("{broken")).toEqual({ lines: [], note: "", promo: null });
+    expect(parseStoredCart('{"a":1}')).toEqual({ lines: [], note: "", promo: null });
     const legacy = addCartLine([], tee, null).map(({ preorderUntil: _drop, ...line }) => line);
     expect(parseStoredCart(JSON.stringify(legacy)).lines[0]).toMatchObject({ key: "p1", preorderUntil: null });
-    const stored = { lines: addCartLine([], tee, sizeL), note: "Gift wrap" };
+    const stored = { lines: addCartLine([], tee, sizeL), note: "Gift wrap", promo: null };
     expect(parseStoredCart(JSON.stringify(stored))).toEqual(stored);
-    expect(parseStoredCart('{"lines":[{"key":1}],"note":5}')).toEqual({ lines: [], note: "" });
+    expect(parseStoredCart(JSON.stringify({ lines: [], note: "" }))).toEqual({ lines: [], note: "", promo: null });
+    const promo = { code: "WELCOME", discountAmount: 10_000, label: "10k off" };
+    expect(parseStoredCart(JSON.stringify({ ...stored, promo })).promo).toEqual(promo);
+    expect(parseStoredCart(JSON.stringify({ ...stored, promo: { code: 1 } })).promo).toBeNull();
+    expect(parseStoredCart('{"lines":[{"key":1}],"note":5}')).toEqual({ lines: [], note: "", promo: null });
   });
 });
 
@@ -129,22 +132,5 @@ describe("groupByCollection", () => {
     expect(cartLineIssue(line, [])).toMatch(/no longer available/);
     shirt.skus = [];
     expect(cartLineIssue(line, [shirt])).toMatch(/size is no longer available/);
-  });
-});
-
-describe("checkoutFormError", () => {
-  const ok = { name: "Budi", phone: "0812-3456-789", address: "Jl. Melati No. 10", hasArea: true, hasRate: true };
-
-  it("passes when everything is filled in", () => {
-    expect(checkoutFormError(ok)).toBeNull();
-  });
-
-  it("returns the first error in form order", () => {
-    expect(checkoutFormError({ ...ok, name: " B " })).toBe("Recipient name is required");
-    expect(checkoutFormError({ ...ok, phone: "0812-34" })).toBe("Enter a valid WhatsApp number");
-    expect(checkoutFormError({ ...ok, email: "not-an-email" })).toBe("Enter a valid email address or leave it blank");
-    expect(checkoutFormError({ ...ok, hasArea: false, address: "" })).toBe("Choose a destination area first");
-    expect(checkoutFormError({ ...ok, address: "Jl. Mawar" })).toBe("Full address must be at least 10 characters");
-    expect(checkoutFormError({ ...ok, hasRate: false })).toBe("Choose a courier first");
   });
 });

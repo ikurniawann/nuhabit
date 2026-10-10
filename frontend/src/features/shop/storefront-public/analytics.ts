@@ -1,7 +1,7 @@
 // Storefront dataLayer events (GTM). Sent only when window.dataLayer exists
 // (the site layout installs it when a GTM container id is set).
 
-export type ShopEvent = "add_to_cart" | "buy_now" | "checkout_start";
+export type ShopEvent = "add_to_cart" | "buy_now" | "checkout_start" | "purchase";
 
 export type ShopEventPayload = {
   shop: string;
@@ -9,6 +9,10 @@ export type ShopEventPayload = {
   variant: string | null;
   qty: number;
   value: number;
+  /** purchase only */
+  order?: string;
+  payment?: string;
+  delivery?: string;
 };
 
 type DataLayerWindow = Window & { dataLayer?: Array<Record<string, unknown>> };
