@@ -6,6 +6,7 @@ import {
   updateMember,
   equipAvatar,
   grantAvatar,
+  resetMemberPassword,
 } from "./api";
 import { membersQueryKeys } from "./query-keys";
 import type { UpdateMemberPayload } from "./types";
@@ -31,6 +32,11 @@ export const useUpdateMember = () => {
     },
   });
 };
+
+export const useResetMemberPassword = () =>
+  useMutation({
+    mutationFn: ({ id, sendWhatsapp }: { id: string; sendWhatsapp: boolean }) => resetMemberPassword(id, sendWhatsapp),
+  });
 
 // useCreateRedemption & useRedeemAvatar dihapus (EPIC-011): alur redeem
 // dengan potong XP pensiun — XP lifetime tidak pernah berkurang.

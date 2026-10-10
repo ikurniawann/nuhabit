@@ -49,6 +49,8 @@ export interface LoyaltyMe {
   arkRate: number;
   lowBalanceThresholdIdr: number;
   marketingOptIn: boolean;
+  /** False only when the API says the account has no password; unknown counts as set. */
+  hasPassword: boolean;
   totalXp: number;
   tier: { code: string; name: string; discountPercent: number } | null;
   nextTier: { name: string; minLifetimeXp: number; xpNeeded: number } | null;
@@ -66,6 +68,7 @@ interface MeRaw {
   ark_rate: number;
   low_balance_threshold_idr: number;
   marketing_opt_in: boolean;
+  has_password?: boolean;
   total_xp: number;
   tier: { code: string; name: string; discount_percent: number } | null;
   next_tier: { name: string; min_lifetime_xp: number; xp_needed: number } | null;
@@ -88,6 +91,7 @@ async function fetchLoyaltyMe(): Promise<LoyaltyMe> {
     arkRate,
     lowBalanceThresholdIdr: Number(d.low_balance_threshold_idr) || 0,
     marketingOptIn: d.marketing_opt_in === true,
+    hasPassword: d.has_password !== false,
     totalXp: Number(d.total_xp) || 0,
     tier: d.tier
       ? { code: d.tier.code, name: d.tier.name, discountPercent: Number(d.tier.discount_percent) || 0 }

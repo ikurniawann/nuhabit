@@ -22,6 +22,7 @@ import { MemberEngagementPanel } from "./member-engagement-panel";
 import { MemberProfileForm } from "./member-profile-form";
 import { MemberAvatarSection } from "./member-avatar-section";
 import { MemberHistorySection } from "./member-history-section";
+import { MemberPasswordReset } from "./member-password-reset";
 import { DetailMetric, NO_FEEDBACK, StatusLine, errorText, type Feedback } from "./member-detail-ui";
 
 const NONE: never[] = [];
@@ -161,6 +162,9 @@ function MemberDetailBody({ bundle, memberKey }: { bundle: MemberDetailBundle; m
               label="XP to Tier Rule"
               value={nextXp ? `${formatNumber(nextXp)} XP` : "Current tier"}
             />
+          </div>
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <MemberPasswordReset memberId={member.id} phone={member.customer?.phone || null} />
           </div>
         </div>
       </section>
