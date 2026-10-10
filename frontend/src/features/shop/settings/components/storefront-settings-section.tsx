@@ -1,7 +1,8 @@
 'use client';
 
 // Storefront settings: pickup on or off, free-shipping threshold, low-stock
-// badge threshold and the WhatsApp number on the order status page.
+// badge threshold, the WhatsApp number on the order status page and the
+// promo banner (headline, text, campaign code).
 
 import { useState } from 'react';
 import { Loader2, Store } from 'lucide-react';
@@ -45,12 +46,18 @@ function StorefrontSettingsForm({ initial }: { initial: StorefrontSettings }) {
   const [freeShipping, setFreeShipping] = useState(initial.freeShippingThreshold === null ? '' : String(initial.freeShippingThreshold));
   const [lowStock, setLowStock] = useState(String(initial.lowStockThreshold));
   const [whatsapp, setWhatsapp] = useState(initial.whatsappNumber ?? '');
+  const [bannerHeadline, setBannerHeadline] = useState(initial.bannerHeadline ?? '');
+  const [bannerText, setBannerText] = useState(initial.bannerText ?? '');
+  const [bannerCode, setBannerCode] = useState(initial.bannerCode ?? '');
 
   const next: StorefrontSettings = {
     pickupEnabled,
     freeShippingThreshold: numberOrNull(freeShipping),
     lowStockThreshold: numberOrNull(lowStock) ?? 0,
     whatsappNumber: whatsapp.trim() || null,
+    bannerHeadline: bannerHeadline.trim() || null,
+    bannerText: bannerText.trim() || null,
+    bannerCode: bannerCode.trim().toUpperCase() || null,
   };
   const dirty = JSON.stringify(next) !== JSON.stringify(initial);
 
@@ -84,6 +91,28 @@ function StorefrontSettingsForm({ initial }: { initial: StorefrontSettings }) {
           <Input id="sf-whatsapp" inputMode="tel" value={whatsapp} placeholder="62812xxxxxxx" onChange={(event) => setWhatsapp(event.target.value)} />
         </div>
       </div>
+
+      <fieldset className="space-y-3 border-t border-gray-100 pt-4">
+        <legend className="sr-only">Banner promo</legend>
+        <div>
+          <p className="text-sm font-medium text-gray-900">Banner promo di storefront</p>
+          <p className="text-xs text-gray-500">Tampil di atas katalog. Kosongkan judul untuk menyembunyikan banner. Kode kampanye (opsional) bisa disalin pembeli dan dipakai saat checkout.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div>
+            <label htmlFor="sf-banner-headline" className="mb-1 block text-xs text-gray-500">Judul banner</label>
+            <Input id="sf-banner-headline" value={bannerHeadline} maxLength={120} placeholder="Diskon akhir tahun" onChange={(event) => setBannerHeadline(event.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="sf-banner-text" className="mb-1 block text-xs text-gray-500">Teks banner</label>
+            <Input id="sf-banner-text" value={bannerText} maxLength={240} placeholder="Potongan 20% untuk semua jersey" onChange={(event) => setBannerText(event.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="sf-banner-code" className="mb-1 block text-xs text-gray-500">Kode kampanye</label>
+            <Input id="sf-banner-code" value={bannerCode} maxLength={32} placeholder="AKHIRTAHUN" className="uppercase" onChange={(event) => setBannerCode(event.target.value)} />
+          </div>
+        </div>
+      </fieldset>
 
       <div className="flex items-center justify-end gap-2">
         <Button type="submit" disabled={!dirty || save.isPending}>

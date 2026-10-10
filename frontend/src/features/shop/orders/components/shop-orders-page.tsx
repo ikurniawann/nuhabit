@@ -2,13 +2,16 @@
 
 // EPIC-039 Fase E — back-office pesanan toko online: pipeline status,
 // detail order, buat pengiriman (Biteship) / input resi manual, batalkan
-// (refund manual via dashboard Xendit — keputusan owner).
+// (refund manual via dashboard Xendit — keputusan owner). Tab kedua:
+// moderasi ulasan produk.
 
 import { useDeferredValue, useState } from 'react';
 import { Loader2, Package, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PurchasingPageHeader } from '@/features/purchasing/components/shared/purchasing-page-header';
+import { ReviewsModerationSection } from '@/features/shop/reviews';
 import { PurchasingListSection } from '@/features/purchasing/components/shared/purchasing-list-section';
 import { formatDate, formatDateTime, formatRupiah } from '@/lib/format';
 import { useShopOrders } from '../queries';
@@ -29,15 +32,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
   const ordersQuery = useShopOrders(statusFilter, deferredSearch, wholesale);
   const orders = ordersQuery.data ?? [];
 
-  return (
-    <div className="space-y-6">
-      {wholesale ? null : (
-        <PurchasingPageHeader
-          title="Pesanan Toko Online"
-          description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai, atau bayar → siap diambil → sudah diambil."
-        />
-      )}
-
+  const list = (
       <PurchasingListSection
         icon={Package}
         title={wholesale ? 'Pesanan Mitra' : 'Daftar Pesanan'}
@@ -163,6 +158,28 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
           </div>
         )}
       </PurchasingListSection>
+  );
+
+  return (
+    <div className="space-y-6">
+      {wholesale ? (
+        list
+      ) : (
+        <>
+          <PurchasingPageHeader
+            title="Pesanan Toko Online"
+            description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai, atau bayar → siap diambil → sudah diambil. Tab Ulasan memoderasi ulasan produk dari member."
+          />
+          <Tabs defaultValue="orders" className="w-full flex-col">
+            <TabsList>
+              <TabsTrigger value="orders">Pesanan</TabsTrigger>
+              <TabsTrigger value="reviews">Ulasan</TabsTrigger>
+            </TabsList>
+            <TabsContent value="orders" className="mt-4">{list}</TabsContent>
+            <TabsContent value="reviews" className="mt-4"><ReviewsModerationSection /></TabsContent>
+          </Tabs>
+        </>
+      )}
 
       {selectedId ? (
         <ShopOrderDetailDialog key={selectedId} orderId={selectedId} onClose={() => setSelectedId(null)} />

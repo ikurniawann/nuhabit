@@ -133,6 +133,12 @@ export type MerchFormState = {
   stock: string;
   weightGram: string;
   webDistributed: boolean;
+  /** Harga promo toko online; kosong = tanpa promo */
+  salePrice: string;
+  /** Akhir promo, "YYYY-MM-DD" untuk input date; kosong = tanpa batas */
+  saleUntil: string;
+  isFeatured: boolean;
+  isNew: boolean;
 };
 
 export function merchFormFromProduct(product: PosCatalogProduct): MerchFormState {
@@ -141,25 +147,49 @@ export function merchFormFromProduct(product: PosCatalogProduct): MerchFormState
     stock: String(product.inventoryQuantity ?? 0),
     weightGram: product.weightGram === null ? "" : String(product.weightGram),
     webDistributed: product.webDistributed,
+    salePrice: product.salePriceIdr === null ? "" : String(product.salePriceIdr),
+    saleUntil: product.saleUntil ? product.saleUntil.slice(0, 10) : "",
+    isFeatured: product.isFeatured,
+    isNew: product.isNew,
   };
 }
+
+export type MerchSettingsChecked = {
+  stock: number;
+  weightGram: number | null;
+  salePriceIdr: number | null;
+  /** Akhir promo sebagai ISO akhir hari WIB, null = tanpa batas */
+  saleUntil: string | null;
+};
 
 /** Validasi sebelum menyentuh server; pesan galat sama dengan yang dulu di halaman. */
 export function validateMerchSettings(
   form: MerchFormState,
-  rows: MerchSkuRow[]
-): { ok: true; stock: number; weightGram: number | null } | { ok: false; error: string } {
+  rows: MerchSkuRow[],
+  basePrice = Number.POSITIVE_INFINITY
+): ({ ok: true } & MerchSettingsChecked) | { ok: false; error: string } {
   const stock = Number(form.stock);
   if (!Number.isFinite(stock) || stock < 0) return { ok: false, error: "Stok harus angka ≥ 0" };
   const weightGram = form.weightGram.trim() === "" ? null : Number(form.weightGram);
   if (weightGram !== null && (!Number.isFinite(weightGram) || weightGram < 0)) {
     return { ok: false, error: "Berat harus angka gram ≥ 0" };
   }
+  const salePriceIdr = form.salePrice.trim() === "" ? null : Number(form.salePrice);
+  if (salePriceIdr !== null && (!Number.isFinite(salePriceIdr) || salePriceIdr <= 0)) {
+    return { ok: false, error: "Harga promo harus angka > 0, atau kosongkan" };
+  }
+  if (salePriceIdr !== null && salePriceIdr >= basePrice) {
+    return { ok: false, error: "Harga promo harus lebih rendah dari harga normal" };
+  }
+  if (form.saleUntil.trim() !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(form.saleUntil.trim())) {
+    return { ok: false, error: "Tanggal akhir promo tidak valid" };
+  }
+  const saleUntil = salePriceIdr !== null && form.saleUntil.trim() !== "" ? `${form.saleUntil.trim()}T23:59:59+07:00` : null;
   for (const row of rows.filter((r) => !r.deleted)) {
     if (!row.sku.trim() || !row.name.trim()) return { ok: false, error: "Setiap varian wajib punya kode SKU dan nama" };
     if (!Number.isFinite(Number(row.stock))) return { ok: false, error: `Stok varian ${row.name || row.sku} harus angka` };
   }
-  return { ok: true, stock, weightGram };
+  return { ok: true, stock, weightGram, salePriceIdr, saleUntil };
 }
 
 // ── Matriks varian (EPIC-047 Fase 1A) ───────────────────────────────────────

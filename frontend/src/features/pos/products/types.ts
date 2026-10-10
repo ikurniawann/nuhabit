@@ -69,6 +69,12 @@ export type PosCatalogProduct = {
   inventoryQuantity: number;
   weightGram: number | null;
   sizeGuide: string | null;
+  /** Harga promo toko online (shop.product_settings.sale_price_idr); null = tanpa promo */
+  salePriceIdr: number | null;
+  /** Akhir promo (ISO); null = tanpa batas */
+  saleUntil: string | null;
+  isFeatured: boolean;
+  isNew: boolean;
   /** Varian ber-SKU (Fase B); stok produk ber-varian = SUM stok SKU */
   merchSkus: PosMerchSku[];
   /** Fase D — tampil di katalog toko online (channel 'web') */
@@ -96,6 +102,10 @@ export type ApiPosProduct = {
   inventory_quantity?: number | string | null;
   weight_gram?: number | string | null;
   size_guide?: string | null;
+  sale_price_idr?: number | string | null;
+  sale_until?: string | null;
+  is_featured?: boolean | null;
+  is_new?: boolean | null;
   skus?: ApiPosProductSku[] | null;
   channels?: Array<{ channel_code?: string | null; is_distributed?: boolean | null }> | null;
   sales_channels?: string[] | string | null;
@@ -135,6 +145,11 @@ export interface PatchPosProductPayload {
   inventory_quantity?: number;
   weight_gram?: number | null;
   size_guide?: string | null;
+  /** Promo toko online (shop.product_settings): null = tanpa promo / tanpa batas */
+  sale_price_idr?: number | null;
+  sale_until?: string | null;
+  is_featured?: boolean;
+  is_new?: boolean;
   /** Fase D — upsert shop.product_channels channel 'web' */
   web_distributed?: boolean;
   /** null = semua channel; mis. ["gofood"] = hanya GoFood */

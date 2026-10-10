@@ -7,6 +7,7 @@ import {
   formatMarginLabel,
   marginTone,
   matrixResultMessage,
+  merchFormFromProduct,
   merchStockLabel,
   parseBonusXp,
   parseMatrixPrice,
@@ -41,6 +42,10 @@ const product = (over: Partial<PosCatalogProduct> = {}): PosCatalogProduct => ({
   inventoryQuantity: 7,
   weightGram: null,
   sizeGuide: null,
+  salePriceIdr: null,
+  saleUntil: null,
+  isFeatured: false,
+  isNew: false,
   merchSkus: [],
   webDistributed: false,
   salesChannels: null,
@@ -113,13 +118,29 @@ describe("varian SKU merchandise", () => {
   });
 
   it("validasi stok, berat, dan baris varian", () => {
-    const form = { sourceProductId: "", stock: "5", weightGram: "", webDistributed: false };
-    expect(validateMerchSettings(form, [])).toEqual({ ok: true, stock: 5, weightGram: null });
+    const form = { sourceProductId: "", stock: "5", weightGram: "", webDistributed: false, salePrice: "", saleUntil: "", isFeatured: false, isNew: false };
+    expect(validateMerchSettings(form, [])).toEqual({ ok: true, stock: 5, weightGram: null, salePriceIdr: null, saleUntil: null });
     expect(validateMerchSettings({ ...form, stock: "-1" }, [])).toEqual({ ok: false, error: "Stok harus angka ≥ 0" });
     expect(validateMerchSettings({ ...form, weightGram: "x" }, [])).toMatchObject({ ok: false });
     expect(validateMerchSettings(form, [row({ sku: "" })])).toMatchObject({ error: "Setiap varian wajib punya kode SKU dan nama" });
     expect(validateMerchSettings(form, [row({ sku: "", deleted: true, id: "x" })])).toMatchObject({ ok: true });
     expect(validateMerchSettings(form, [row({ stock: "abc" })])).toMatchObject({ error: "Stok varian L harus angka" });
+  });
+
+  it("validasi harga promo: di bawah harga normal, tanggal akhir jadi akhir hari WIB", () => {
+    const form = { sourceProductId: "", stock: "5", weightGram: "", webDistributed: true, salePrice: "20000", saleUntil: "2026-12-31", isFeatured: true, isNew: false };
+    expect(validateMerchSettings(form, [], 25000)).toMatchObject({ ok: true, salePriceIdr: 20000, saleUntil: "2026-12-31T23:59:59+07:00" });
+    expect(validateMerchSettings({ ...form, saleUntil: "" }, [], 25000)).toMatchObject({ ok: true, saleUntil: null });
+    expect(validateMerchSettings({ ...form, salePrice: "25000" }, [], 25000)).toMatchObject({ error: "Harga promo harus lebih rendah dari harga normal" });
+    expect(validateMerchSettings({ ...form, salePrice: "0" }, [], 25000)).toMatchObject({ ok: false });
+    expect(validateMerchSettings({ ...form, saleUntil: "31/12/2026" }, [], 25000)).toMatchObject({ error: "Tanggal akhir promo tidak valid" });
+    expect(validateMerchSettings({ ...form, salePrice: "" }, [], 25000)).toMatchObject({ ok: true, salePriceIdr: null, saleUntil: null });
+    expect(merchFormFromProduct(product({ salePriceIdr: 20000, saleUntil: "2026-12-31T16:59:59Z", isNew: true }))).toMatchObject({
+      salePrice: "20000",
+      saleUntil: "2026-12-31",
+      isFeatured: false,
+      isNew: true,
+    });
   });
 });
 
