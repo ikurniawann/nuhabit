@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { addCartLine } from "@/lib/shop/storefront-cart";
-import type { AppliedPromo, PickupBranch, ShopMember, StorefrontSettings } from "@/lib/shop/types";
+import { DEFAULT_STOREFRONT_SETTINGS, type AppliedPromo, type PickupBranch, type ShopMember, type StorefrontSettings } from "@/lib/shop/types";
 import { CheckoutSheet } from "./checkout-sheet";
 import { FreeShippingBar } from "./cart-drawer";
 
 const tee = { id: "p1", name: "Tee", price: 100_000 };
 const cart = addCartLine([], tee, null, 2);
-const settings: StorefrontSettings = { pickupEnabled: true, freeShippingThreshold: null, lowStockThreshold: 3, whatsappNumber: null };
+const settings: StorefrontSettings = { ...DEFAULT_STOREFRONT_SETTINGS, pickupEnabled: true };
 const branches: PickupBranch[] = [
   { id: "b1", name: "Dago", address: "Jl. Dago 1", city: "Bandung", phone: "0811" },
   { id: "b2", name: "Kemang", address: "Jl. Kemang 2", city: "Jakarta", phone: "" },

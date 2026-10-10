@@ -2,7 +2,7 @@
 
 // Public order status page (the Xendit redirect and the ARK Coin checkout
 // land here). Polls lightly while the order is pending so the paid status
-// shows without a manual refresh.
+// shows without a manual refresh. A signed-in member rates paid items here.
 
 import { Check, CheckCircle2, Clock, Loader2, MapPin, MessageCircle, Package, Store, Truck, XCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -11,6 +11,7 @@ import { formatDateTimeEn } from '@/lib/shop/format-en';
 import { orderStepIndex, orderSteps } from '@/lib/shop/order-steps';
 import type { PublicOrderStatus } from '@/lib/shop/types';
 import { useShopOrderStatus } from '../queries';
+import { ReviewForm } from './review-form';
 
 const STATUS_LABEL: Record<string, { label: string; tone: string }> = {
   pending: { label: 'Awaiting Payment', tone: 'bg-lemon text-forest' },
@@ -87,11 +88,16 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
 
           <div className="space-y-2 border-t border-gray-100 pt-4">
             {order.items.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <span className="text-gray-700">
-                  {item.name} <span className="text-gray-400">× {item.quantity}</span>
-                </span>
-                <span className="text-gray-900">{formatRupiah(item.total)}</span>
+              <div key={index} className="text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-700">
+                    {item.name} <span className="text-gray-400">× {item.quantity}</span>
+                  </span>
+                  <span className="text-gray-900">{formatRupiah(item.total)}</span>
+                </div>
+                {item.reviewable && item.productId ? (
+                  <ReviewForm orderToken={token} productId={item.productId} productName={item.name} />
+                ) : null}
               </div>
             ))}
             <Row label="Subtotal" value={formatRupiah(order.subtotal)} className="border-t border-gray-100 pt-2" />

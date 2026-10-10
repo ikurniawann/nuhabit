@@ -35,6 +35,7 @@ export const GET = apiHandler(
           description: storefront.description,
           settings: DEFAULT_STOREFRONT_SETTINGS,
           pickupBranches: [],
+          banner: null,
         },
         collections: [],
         products,

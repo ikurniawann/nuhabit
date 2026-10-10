@@ -52,10 +52,12 @@ export function toPublicOrderStatus(order: OrderRow, items: OrderItemRow[]): Pub
     etaText: null,
     whatsappUrl: null,
     items: items.map((item) => ({
+      productId: null,
       name: item.sku_name ? `${item.product_name} — ${item.sku_name}` : item.product_name,
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
       total: Number(item.total),
+      reviewable: false,
     })),
   };
 }

@@ -108,6 +108,7 @@ export async function buildShopCatalog(): Promise<CatalogProduct[]> {
       sku: sku.sku,
       name: sku.name,
       price: Number(sku.price_override ?? NaN),
+      compareAtPrice: null,
       stock: Number(sku.stock_quantity) || 0,
       preorder: false,
     });
@@ -141,9 +142,18 @@ export async function buildShopCatalog(): Promise<CatalogProduct[]> {
       imageUrl: row.image_url,
       images: imagesByProduct.get(row.id) ?? [],
       price: basePrice,
+      compareAtPrice: null,
+      salePercent: null,
+      saleUntil: null,
+      isFeatured: false,
+      isNew: false,
+      lowStock: false,
+      backInStock: false,
+      rating: null,
+      relatedIds: [],
       weightGram: row.weight_gram === null ? null : Number(row.weight_gram),
       stock,
-      // Koleksi dan pre-order hanya dihitung rute Go (/api/public/shop).
+      // Koleksi, pre-order, promo dan ulasan hanya dihitung rute Go (/api/public/shop).
       collection: null,
       preorderUntil: null,
       preorder: false,

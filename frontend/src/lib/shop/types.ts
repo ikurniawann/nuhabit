@@ -4,7 +4,10 @@ export type CatalogSku = {
   id: string;
   sku: string;
   name: string;
+  /** Effective price: the sale price while the sale runs. */
   price: number;
+  /** The regular price while a sale applies, else null. */
+  compareAtPrice: number | null;
   stock: number;
   /** Stock 0 but the product's pre-order window is still open. */
   preorder: boolean;
@@ -21,7 +24,23 @@ export type CatalogProduct = {
   sizeGuide?: string | null;
   imageUrl: string | null;
   images: string[];
+  /** Effective price: the sale price while the sale runs. */
   price: number;
+  /** The regular price while a sale applies, else null. */
+  compareAtPrice: number | null;
+  /** Whole-number discount while a sale applies, else null. */
+  salePercent: number | null;
+  /** Sale end (ISO timestamp) or null for an open-ended sale. */
+  saleUntil: string | null;
+  isFeatured: boolean;
+  isNew: boolean;
+  /** Stock at or under the storefront low-stock threshold. */
+  lowStock: boolean;
+  /** Restocked from 0 within the last 7 days. */
+  backInStock: boolean;
+  rating: ProductRating | null;
+  /** Up to 4 product ids from the same collection, in stock first. */
+  relatedIds: string[];
   weightGram: number | null;
   stock: number;
   collection: CatalogCollection | null;
@@ -31,6 +50,20 @@ export type CatalogProduct = {
   preorder: boolean;
   skus: CatalogSku[];
 };
+
+export type ProductRating = { average: number; count: number };
+
+/** A published review on the product sheet; the author is a short display name. */
+export type ProductReview = {
+  id: string;
+  author: string;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+};
+
+/** Campaign banner on the storefront page; the code pre-fills checkout. */
+export type StorefrontBanner = { headline: string; text: string | null; code: string | null };
 
 /** Storefront settings the dashboard edits and the catalog exposes. */
 export type StorefrontSettings = {
@@ -47,6 +80,9 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   whatsappNumber: null,
 };
 
+/** The dashboard settings form (GET/PUT /api/shop/storefront-settings): settings plus the banner. */
+export type StorefrontConfig = StorefrontSettings & { banner: StorefrontBanner | null };
+
 export type PickupBranch = { id: string; name: string; address: string; city: string; phone: string };
 
 export type PublicStorefront = {
@@ -55,6 +91,7 @@ export type PublicStorefront = {
   description: string | null;
   settings: StorefrontSettings;
   pickupBranches: PickupBranch[];
+  banner: StorefrontBanner | null;
 };
 
 export type PublicCatalog = {
@@ -78,6 +115,16 @@ export type ShopMember = {
   lastAddress: { address: string; areaId: string; areaLabel: string; postalCode: string | null } | null;
 };
 
+export type PublicOrderItem = {
+  productId: string | null;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+  /** A signed-in member may review this product: the order is paid and no review exists yet. */
+  reviewable: boolean;
+};
+
 export type PublicOrderStatus = {
   order_number: string;
   status: string;
@@ -92,7 +139,7 @@ export type PublicOrderStatus = {
   waybill: string | null;
   paid_at: string | null;
   created_at: string;
-  items: Array<{ name: string; quantity: number; unit_price: number; total: number }>;
+  items: PublicOrderItem[];
   delivery: {
     method: DeliveryMethod;
     branch: { name: string; address: string; phone: string } | null;

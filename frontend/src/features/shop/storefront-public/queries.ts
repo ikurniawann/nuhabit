@@ -1,10 +1,17 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiGet, apiPost } from "@/lib/api-client";
+import { apiGet, apiPost, apiPut } from "@/lib/api-client";
 import type { CartLine } from "@/lib/shop/storefront-cart";
 import { promoLines, type CheckoutPayload } from "@/lib/shop/storefront-checkout";
-import { DEFAULT_STOREFRONT_SETTINGS, type AppliedPromo, type PublicCatalog, type PublicOrderStatus, type ShopMember } from "@/lib/shop/types";
+import {
+  DEFAULT_STOREFRONT_SETTINGS,
+  type AppliedPromo,
+  type ProductReview,
+  type PublicCatalog,
+  type PublicOrderStatus,
+  type ShopMember,
+} from "@/lib/shop/types";
 import type { AreaSuggestion } from "@/features/shop/shared/area-search";
 
 export type RateQuote = {
@@ -27,10 +34,37 @@ export const useStorefrontCatalog = (slug: string) =>
           ...data.storefront,
           settings: { ...DEFAULT_STOREFRONT_SETTINGS, ...data.storefront.settings },
           pickupBranches: data.storefront.pickupBranches ?? [],
+          banner: data.storefront.banner ?? null,
         },
+        products: data.products.map((product) => ({ ...product, relatedIds: product.relatedIds ?? [] })),
       })),
     retry: false,
   });
+
+/** Published reviews of one product, newest first. */
+export const useProductReviews = (slug: string, productId: string) =>
+  useQuery({
+    queryKey: ["shop", "reviews", slug, productId],
+    queryFn: () =>
+      apiGet<{ data: ProductReview[] }>(`/api/public/shop/${slug}/products/${productId}/reviews`).then((res) => res.data ?? []),
+    staleTime: 60_000,
+    retry: false,
+  });
+
+/** A member's review of a product from a paid order; it waits for moderation. */
+export function submitProductReview(slug: string, body: { orderToken: string; productId: string; rating: number; comment: string | null }) {
+  return apiPost<{ success: boolean }>(`/api/public/shop/${slug}/reviews`, body);
+}
+
+export function fetchWishlist(slug: string) {
+  return apiGet<{ data: { productIds: string[] } | null }>(`/api/public/shop/${slug}/wishlist`).then(
+    (res) => res.data?.productIds ?? []
+  );
+}
+
+export function saveWishlist(slug: string, productIds: string[]) {
+  return apiPut<{ success: boolean }>(`/api/public/shop/${slug}/wishlist`, { productIds });
+}
 
 /** The signed-in member (member_session cookie) or null for a guest. */
 export const useShopMember = (slug: string, enabled: boolean) =>

@@ -8,15 +8,18 @@ export type CartLine = {
   skuId: string | null;
   name: string;
   variantName: string | null;
+  /** Effective unit price (the sale price while a sale runs). */
   price: number;
+  /** The regular price while a sale applies, else null. */
+  compareAtPrice: number | null;
   quantity: number;
   /** Pre-order deadline (YYYY-MM-DD) when this line sells as a pre-order. */
   preorderUntil: string | null;
 };
 
 type LineProduct = Pick<CatalogProduct, "id" | "name" | "price"> &
-  Partial<Pick<CatalogProduct, "preorder" | "preorderUntil">>;
-type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogSku, "preorder">>;
+  Partial<Pick<CatalogProduct, "preorder" | "preorderUntil" | "compareAtPrice">>;
+type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogSku, "preorder" | "compareAtPrice">>;
 
 export const cartLineKey = (productId: string, skuId: string | null) =>
   skuId ? `${productId}::${skuId}` : productId;
@@ -31,6 +34,7 @@ export function makeCartLine(product: LineProduct, sku: LineSku | null, quantity
     name: product.name,
     variantName: sku?.name ?? null,
     price: sku ? sku.price : product.price,
+    compareAtPrice: (sku ? sku.compareAtPrice : product.compareAtPrice) ?? null,
     quantity: Math.max(1, Math.floor(quantity)),
     preorderUntil: preorder ? (product.preorderUntil ?? null) : null,
   };
@@ -101,7 +105,13 @@ export function cartSignature(lines: CartLine[]): string {
   return lines.map((line) => `${line.key}:${line.quantity}`).join("|");
 }
 
-export type StoredCart = { lines: CartLine[]; note: string; promo: AppliedPromo | null };
+export type StoredCart = {
+  lines: CartLine[];
+  note: string;
+  promo: AppliedPromo | null;
+  /** A campaign code copied from the banner, applied at checkout. */
+  pendingCode: string | null;
+};
 
 const isLine = (value: unknown): value is CartLine =>
   typeof value === "object" &&
@@ -119,10 +129,11 @@ const isPromo = (value: unknown): value is AppliedPromo =>
 
 /**
  * Read a stored cart. Accepts the old format (an array of lines) and the
- * new one ({ lines, note, promo }); corrupt data reads as an empty cart.
+ * new one ({ lines, note, promo, pendingCode }); corrupt data reads as an
+ * empty cart.
  */
 export function parseStoredCart(raw: string | null): StoredCart {
-  const empty: StoredCart = { lines: [], note: "", promo: null };
+  const empty: StoredCart = { lines: [], note: "", promo: null, pendingCode: null };
   if (!raw) return empty;
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -131,9 +142,14 @@ export function parseStoredCart(raw: string | null): StoredCart {
       : {};
     const lines = Array.isArray(parsed) ? parsed : Array.isArray(stored.lines) ? stored.lines : [];
     return {
-      lines: lines.filter(isLine).map((line) => ({ ...line, preorderUntil: line.preorderUntil ?? null })),
+      lines: lines.filter(isLine).map((line) => ({
+        ...line,
+        compareAtPrice: typeof line.compareAtPrice === "number" ? line.compareAtPrice : null,
+        preorderUntil: line.preorderUntil ?? null,
+      })),
       note: typeof stored.note === "string" ? stored.note : "",
       promo: isPromo(stored.promo) ? stored.promo : null,
+      pendingCode: typeof stored.pendingCode === "string" && stored.pendingCode ? stored.pendingCode : null,
     };
   } catch {
     return empty;
