@@ -13,6 +13,7 @@ of truth for the schema.
 ## Quick start
 
 ```bash
+backend/database/scripts/local-pg.sh init    # own Postgres 17 cluster on :55432 (see the script for the seeders)
 cp backend/.env.example backend/.env.local   # local Postgres on :55432
 pnpm db:migrate                              # dry run: "Semua migrasi sudah diterapkan."
 pnpm db:migrate:apply                        # apply pending files
