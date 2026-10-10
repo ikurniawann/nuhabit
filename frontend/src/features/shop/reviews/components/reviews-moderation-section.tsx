@@ -86,7 +86,7 @@ function ReviewRow({ review, busy, onModerate }: { review: ShopReview; busy: boo
     <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <p className="font-medium text-gray-900">{review.productName}</p>
+          <p className="font-medium text-gray-900">{review.product_name}</p>
           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_TONE[review.status]}`}>{STATUS_LABEL[review.status]}</span>
         </div>
         <p className="mt-1 flex items-center gap-2 text-xs text-gray-500">
@@ -95,9 +95,9 @@ function ReviewRow({ review, busy, onModerate }: { review: ShopReview; busy: boo
               <Star key={star} className={`h-3.5 w-3.5 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
             ))}
           </span>
-          <span>{review.customerName || 'Member'}</span>
-          {review.orderNumber ? <span>· {review.orderNumber}</span> : null}
-          <span>· {formatDateTime(review.createdAt)}</span>
+          <span>{review.customer_name}</span>
+          <span>· {review.order_number}</span>
+          <span>· {formatDateTime(review.created_at)}</span>
         </p>
         {review.comment ? <p className="mt-2 whitespace-pre-line text-sm text-gray-700">{review.comment}</p> : <p className="mt-2 text-sm italic text-gray-400">Tanpa komentar</p>}
       </div>

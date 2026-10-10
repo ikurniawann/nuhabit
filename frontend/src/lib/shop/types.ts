@@ -53,17 +53,17 @@ export type CatalogProduct = {
 
 export type ProductRating = { average: number; count: number };
 
-/** A published review on the product sheet. */
+/** A published review on the product sheet; the author is a short display name. */
 export type ProductReview = {
   id: string;
+  author: string;
   rating: number;
-  comment: string;
-  customerName: string | null;
+  comment: string | null;
   createdAt: string;
 };
 
 /** Campaign banner on the storefront page; the code pre-fills checkout. */
-export type StorefrontBanner = { headline: string; text: string; code: string | null };
+export type StorefrontBanner = { headline: string; text: string | null; code: string | null };
 
 /** Storefront settings the dashboard edits and the catalog exposes. */
 export type StorefrontSettings = {
@@ -71,9 +71,6 @@ export type StorefrontSettings = {
   freeShippingThreshold: number | null;
   lowStockThreshold: number;
   whatsappNumber: string | null;
-  bannerHeadline: string | null;
-  bannerText: string | null;
-  bannerCode: string | null;
 };
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -81,10 +78,10 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   freeShippingThreshold: null,
   lowStockThreshold: 3,
   whatsappNumber: null,
-  bannerHeadline: null,
-  bannerText: null,
-  bannerCode: null,
 };
+
+/** The dashboard settings form (GET/PUT /api/shop/storefront-settings): settings plus the banner. */
+export type StorefrontConfig = StorefrontSettings & { banner: StorefrontBanner | null };
 
 export type PickupBranch = { id: string; name: string; address: string; city: string; phone: string };
 
@@ -129,8 +126,6 @@ export type PublicOrderItem = {
 };
 
 export type PublicOrderStatus = {
-  /** Store the order belongs to; reviews post to its public routes. */
-  storefrontSlug: string;
   order_number: string;
   status: string;
   customer_name: string;

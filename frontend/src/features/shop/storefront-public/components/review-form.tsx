@@ -6,14 +6,18 @@ import { Loader2 } from 'lucide-react';
 import { submitProductReview } from '../queries';
 import { RatingInput } from './rating-stars';
 
-/** "Rate this item" on the order status page: stars and a comment, then a pending notice. */
-export function ReviewForm({ slug, orderToken, productId, productName }: { slug: string; orderToken: string; productId: string; productName: string }) {
+/**
+ * "Rate this item" on the order status page: stars and a comment, then a
+ * pending notice. Reviews post to the main store ("default"); the order page
+ * is not tied to a store slug.
+ */
+export function ReviewForm({ orderToken, productId, productName }: { orderToken: string; productId: string; productName: string }) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const submit = useMutation({
     retry: false,
-    mutationFn: () => submitProductReview(slug, { orderToken, productId, rating, comment: comment.trim() }),
+    mutationFn: () => submitProductReview('default', { orderToken, productId, rating, comment: comment.trim() || null }),
   });
 
   if (submit.isSuccess) {

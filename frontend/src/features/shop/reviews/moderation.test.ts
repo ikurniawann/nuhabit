@@ -2,18 +2,17 @@ import { describe, expect, it } from "vitest";
 import { sortReviewsForModeration } from "./moderation";
 import type { ShopReview } from "./queries";
 
-const review = (id: string, status: ShopReview["status"], createdAt: string): ShopReview => ({
+const review = (id: string, status: ShopReview["status"], created_at: string): ShopReview => ({
   id,
-  productId: "p",
-  productName: "Tee",
-  customerId: "c",
-  customerName: null,
-  orderId: "o",
-  orderNumber: null,
+  product_id: "p",
+  product_name: "Tee",
+  customer_name: "Budi S.",
+  order_number: "SO-1",
   rating: 5,
-  comment: "",
+  comment: null,
   status,
-  createdAt,
+  created_at,
+  updated_at: created_at,
 });
 
 describe("sortReviewsForModeration", () => {

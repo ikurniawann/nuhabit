@@ -82,13 +82,6 @@ export function mapApiPosProduct(product: ApiPosProduct): PosCatalogProduct {
         ? null
         : toNumber(product.weight_gram),
     sizeGuide: product.size_guide || null,
-    salePriceIdr:
-      product.sale_price_idr === null || product.sale_price_idr === undefined
-        ? null
-        : toNumber(product.sale_price_idr),
-    saleUntil: product.sale_until || null,
-    isFeatured: product.is_featured === true,
-    isNew: product.is_new === true,
     salesChannels: normalizeSalesChannels(product.sales_channels),
     webDistributed: (product.channels ?? []).some(
       (channel) => channel.channel_code === "web" && channel.is_distributed !== false

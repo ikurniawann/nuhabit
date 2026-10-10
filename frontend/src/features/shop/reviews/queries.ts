@@ -9,16 +9,15 @@ export type ReviewStatus = "pending" | "published" | "rejected";
 /** A product review in moderation (GET /api/shop/reviews). */
 export type ShopReview = {
   id: string;
-  productId: string;
-  productName: string;
-  customerId: string;
-  customerName: string | null;
-  orderId: string;
-  orderNumber: string | null;
+  product_id: string;
+  product_name: string;
+  customer_name: string;
+  order_number: string;
   rating: number;
-  comment: string;
+  comment: string | null;
   status: ReviewStatus;
-  createdAt: string;
+  created_at: string;
+  updated_at: string;
 };
 
 const keys = {
@@ -26,7 +25,7 @@ const keys = {
   list: (status: string) => ["shop", "reviews", "list", status] as const,
 };
 
-/** Reviews by status; "" lists every status, pending first. */
+/** Reviews by status; "" lists every status. */
 export const useShopReviews = (status: string) =>
   useQuery({
     queryKey: keys.list(status),
@@ -40,7 +39,7 @@ export function useModerateReview() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReviewStatus }) => apiPatch(`/api/shop/reviews/${id}`, { status }),
     onSuccess: async (_result, { status }) => {
-      toast.success(status === "published" ? "Ulasan dipublikasikan" : status === "rejected" ? "Ulasan ditolak" : "Ulasan dikembalikan ke antrean");
+      toast.success(status === "published" ? "Ulasan dipublikasikan" : "Ulasan ditolak");
       await queryClient.invalidateQueries({ queryKey: keys.all });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Gagal memperbarui ulasan"),

@@ -96,7 +96,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
                   <span className="text-gray-900">{formatRupiah(item.total)}</span>
                 </div>
                 {item.reviewable && item.productId ? (
-                  <ReviewForm slug={order.storefrontSlug || 'default'} orderToken={token} productId={item.productId} productName={item.name} />
+                  <ReviewForm orderToken={token} productId={item.productId} productName={item.name} />
                 ) : null}
               </div>
             ))}

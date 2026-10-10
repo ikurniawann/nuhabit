@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { PurchasingListSection } from '@/features/purchasing/components/shared/purchasing-list-section';
-import type { StorefrontSettings } from '@/lib/shop/types';
+import type { StorefrontConfig } from '@/lib/shop/types';
 import { useSaveStorefrontSettings, useStorefrontSettings } from '../queries';
 
 export function StorefrontSettingsSection() {
@@ -40,24 +40,25 @@ const numberOrNull = (value: string) => {
   return value.trim() === '' || !Number.isFinite(n) || n <= 0 ? null : n;
 };
 
-function StorefrontSettingsForm({ initial }: { initial: StorefrontSettings }) {
+function StorefrontSettingsForm({ initial }: { initial: StorefrontConfig }) {
   const save = useSaveStorefrontSettings();
   const [pickupEnabled, setPickupEnabled] = useState(initial.pickupEnabled);
   const [freeShipping, setFreeShipping] = useState(initial.freeShippingThreshold === null ? '' : String(initial.freeShippingThreshold));
   const [lowStock, setLowStock] = useState(String(initial.lowStockThreshold));
   const [whatsapp, setWhatsapp] = useState(initial.whatsappNumber ?? '');
-  const [bannerHeadline, setBannerHeadline] = useState(initial.bannerHeadline ?? '');
-  const [bannerText, setBannerText] = useState(initial.bannerText ?? '');
-  const [bannerCode, setBannerCode] = useState(initial.bannerCode ?? '');
+  const [bannerHeadline, setBannerHeadline] = useState(initial.banner?.headline ?? '');
+  const [bannerText, setBannerText] = useState(initial.banner?.text ?? '');
+  const [bannerCode, setBannerCode] = useState(initial.banner?.code ?? '');
 
-  const next: StorefrontSettings = {
+  // An empty headline removes the banner.
+  const next: StorefrontConfig = {
     pickupEnabled,
     freeShippingThreshold: numberOrNull(freeShipping),
     lowStockThreshold: numberOrNull(lowStock) ?? 0,
     whatsappNumber: whatsapp.trim() || null,
-    bannerHeadline: bannerHeadline.trim() || null,
-    bannerText: bannerText.trim() || null,
-    bannerCode: bannerCode.trim().toUpperCase() || null,
+    banner: bannerHeadline.trim()
+      ? { headline: bannerHeadline.trim(), text: bannerText.trim() || null, code: bannerCode.trim().toUpperCase() || null }
+      : null,
   };
   const dirty = JSON.stringify(next) !== JSON.stringify(initial);
 

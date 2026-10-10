@@ -52,7 +52,7 @@ export const useProductReviews = (slug: string, productId: string) =>
   });
 
 /** A member's review of a product from a paid order; it waits for moderation. */
-export function submitProductReview(slug: string, body: { orderToken: string; productId: string; rating: number; comment: string }) {
+export function submitProductReview(slug: string, body: { orderToken: string; productId: string; rating: number; comment: string | null }) {
   return apiPost<{ success: boolean }>(`/api/public/shop/${slug}/reviews`, body);
 }
 

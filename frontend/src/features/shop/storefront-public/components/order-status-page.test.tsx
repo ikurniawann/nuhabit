@@ -5,7 +5,6 @@ import type { PublicOrderStatus } from "@/lib/shop/types";
 import { ShopOrderStatusPage } from "./order-status-page";
 
 const order: PublicOrderStatus = {
-  storefrontSlug: "store",
   order_number: "SO-1",
   status: "paid",
   customer_name: "Budi",
@@ -68,7 +67,7 @@ describe("ShopOrderStatusPage reviews", () => {
 
     await waitFor(() => expect(screen.getByText(/Thanks for your review/)).toBeInTheDocument());
     expect(onReview).toHaveBeenCalledWith({ orderToken: "tok-1", productId: "p1", rating: 4, comment: "Great fit" });
-    expect(fetchMock.mock.calls.some(([url]) => String(url) === "/api/public/shop/store/reviews")).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url) === "/api/public/shop/default/reviews")).toBe(true);
     expect(screen.queryByRole("button", { name: "Rate this item" })).not.toBeInTheDocument();
   });
 

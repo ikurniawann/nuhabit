@@ -32,7 +32,6 @@ type OrderItemRow = {
 /** Bentuk publik: angka sudah Number, link invoice hanya selama masih pending. */
 export function toPublicOrderStatus(order: OrderRow, items: OrderItemRow[]): PublicOrderStatus {
   return {
-    storefrontSlug: "default",
     order_number: order.order_number,
     status: order.status,
     customer_name: order.customer_name,

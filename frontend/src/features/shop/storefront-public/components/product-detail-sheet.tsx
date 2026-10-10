@@ -216,7 +216,7 @@ function ProductReviews({ slug, product }: { slug: string; product: CatalogProdu
             <li key={review.id} className="rounded-xl bg-gray-50 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <StarRow value={review.rating} size="h-3.5 w-3.5" label={`${review.rating} out of 5`} />
-                <span className="text-xs text-gray-400">{review.customerName || 'Member'}, {formatDateEn(review.createdAt)}</span>
+                <span className="text-xs text-gray-400">{review.author}, {formatDateEn(review.createdAt)}</span>
               </div>
               {review.comment ? <p className="mt-1.5 text-sm leading-6 text-gray-700">{review.comment}</p> : null}
             </li>

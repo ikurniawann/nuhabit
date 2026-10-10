@@ -61,7 +61,7 @@ export function MerchSettingsDialog({
 
   async function save() {
     if (saving || busy) return;
-    const checked = validateMerchSettings(form, skuRows, product.price);
+    const checked = validateMerchSettings(form, skuRows);
     if (!checked.ok) {
       toast.error(checked.error);
       return;
@@ -79,10 +79,6 @@ export function MerchSettingsDialog({
         weight_gram: checked.weightGram,
         size_guide: sizeGuide.trim() || null,
         web_distributed: form.webDistributed,
-        sale_price_idr: checked.salePriceIdr,
-        sale_until: checked.saleUntil,
-        is_featured: form.isFeatured,
-        is_new: form.isNew,
       });
       toast.success('Pengaturan merchandise tersimpan');
       onClose();
@@ -169,54 +165,6 @@ export function MerchSettingsDialog({
             />
             Tampilkan di toko online (katalog web)
           </label>
-
-          <fieldset className="space-y-3 rounded-lg border border-gray-200/80 p-3">
-            <legend className="px-1 text-xs font-semibold text-gray-700">Promo dan sorotan toko online</legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="merch-sale-price" className="mb-1 block text-xs text-gray-500">Harga promo (Rp)</label>
-                <Input
-                  id="merch-sale-price"
-                  type="number"
-                  min={0}
-                  placeholder={`Normal ${product.price.toLocaleString('id-ID')}`}
-                  value={form.salePrice}
-                  onChange={(event) => patchForm({ salePrice: event.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="merch-sale-until" className="mb-1 block text-xs text-gray-500">Promo berakhir</label>
-                <Input
-                  id="merch-sale-until"
-                  type="date"
-                  value={form.saleUntil}
-                  disabled={form.salePrice.trim() === ''}
-                  onChange={(event) => patchForm({ saleUntil: event.target.value })}
-                />
-              </div>
-            </div>
-            <p className="text-xs text-gray-400">Harga promo tampil dicoret dengan harga normal di katalog, keranjang dan invoice. Kosongkan tanggal untuk promo tanpa batas.</p>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.isFeatured}
-                  onChange={(event) => patchForm({ isFeatured: event.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-pink-600"
-                />
-                Produk unggulan (Featured)
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={form.isNew}
-                  onChange={(event) => patchForm({ isNew: event.target.checked })}
-                  className="h-4 w-4 rounded border-gray-300 text-pink-600"
-                />
-                Produk baru (New arrivals)
-              </label>
-            </div>
-          </fieldset>
 
           {product.productKind === 'merchandise' ? (
             <SkuMatrixPanel productId={product.id} onGenerated={(skus) => setSkuRows(skuRowsFromMatrix(skus))} />
