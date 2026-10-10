@@ -4,7 +4,7 @@
 // land here). Polls lightly while the order is pending so the paid status
 // shows without a manual refresh.
 
-import { Check, CheckCircle2, Clock, Coins, Loader2, MapPin, MessageCircle, Package, Store, Truck, XCircle } from 'lucide-react';
+import { Check, CheckCircle2, Clock, Loader2, MapPin, MessageCircle, Package, Store, Truck, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { formatRupiah } from '@/lib/format';
 import { formatDateTimeEn } from '@/lib/shop/format-en';
@@ -106,11 +106,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
               <span>Total</span>
               <span className="text-forest">{formatRupiah(order.total)}</span>
             </div>
-            <Row
-              label="Payment"
-              value={order.paymentMethod === 'arkcoin' ? 'ARK Coin' : 'Xendit'}
-              icon={order.paymentMethod === 'arkcoin' ? Coins : undefined}
-            />
+            <Row label="Payment" value={order.paymentMethod === 'arkcoin' ? 'ARK Coin' : 'Xendit'} />
           </div>
         </div>
 
@@ -193,11 +189,11 @@ function OrderSteps({ order }: { order: PublicOrderStatus }) {
   );
 }
 
-function Row({ label, value, tone = 'text-gray-900', icon: Icon, className = '' }: { label: string; value: string; tone?: string; icon?: typeof Coins; className?: string }) {
+function Row({ label, value, tone = 'text-gray-900', className = '' }: { label: string; value: string; tone?: string; className?: string }) {
   return (
     <div className={`flex items-center justify-between text-sm ${className}`}>
       <span className="text-gray-500">{label}</span>
-      <span className={`flex items-center gap-1 ${tone}`}>{Icon ? <Icon className="h-3.5 w-3.5" /> : null}{value}</span>
+      <span className={tone}>{value}</span>
     </div>
   );
 }

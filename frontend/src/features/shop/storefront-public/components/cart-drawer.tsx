@@ -142,23 +142,23 @@ export function CartDrawer({
         </div>
         {cart.length > 0 ? (
           <div className="border-t border-gray-100 px-5 py-4">
-            <div className="mb-1 flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
               <span className={promo ? 'text-gray-900' : 'font-semibold text-gray-900'}>{formatRupiah(totals.subtotal)}</span>
             </div>
             {promo ? (
               <>
-                <div className="mb-1 flex items-center justify-between text-sm">
+                <div className="mt-1 flex items-center justify-between text-sm">
                   <span className="text-gray-500">Discount ({promo.code})</span>
                   <span className="text-everglade">-{formatRupiah(totals.discount)}</span>
                 </div>
-                <div className="mb-3 flex items-center justify-between text-sm">
+                <div className="mt-1 flex items-center justify-between text-sm">
                   <span className="text-gray-500">After discount</span>
                   <span className="font-semibold text-gray-900">{formatRupiah(totals.subtotal - totals.discount)}</span>
                 </div>
               </>
-            ) : <div className="mb-2" />}
-            <p className="mb-3 text-xs text-gray-500">Shipping and promo codes are set at checkout.</p>
+            ) : null}
+            <p className="mb-3 mt-2 text-xs text-gray-500">Shipping and promo codes are set at checkout.</p>
             <button
               type="button"
               onClick={onCheckout}
