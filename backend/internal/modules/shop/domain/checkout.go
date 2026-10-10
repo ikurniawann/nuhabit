@@ -48,6 +48,16 @@ func WhatsAppLink(number *string, orderNumber string) *string {
 	return &link
 }
 
+// ShippingCost is the courier rate, or 0 once the subtotal (before any
+// discount) reaches the storefront's free-shipping threshold, the rule
+// the cart shows as "Free".
+func ShippingCost(rate, subtotal float64, threshold *float64) float64 {
+	if threshold != nil && *threshold > 0 && subtotal >= *threshold {
+		return 0
+	}
+	return rate
+}
+
 // StorefrontSettings is the storefront settings form and the public
 // catalog's settings block.
 type StorefrontSettings struct {

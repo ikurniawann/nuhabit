@@ -461,7 +461,7 @@ func (h *handler) putStorefrontSettings(w http.ResponseWriter, r *http.Request, 
 // usual separators.
 func phoneCheck(s string) (string, string, bool) {
 	n := len(domain.PhoneDigits(s))
-	return "invalid_format", "Invalid phone number", s == "" || (n >= 8 && n <= 15 && len(s) <= 30)
+	return "invalid_format", "Invalid phone number", s == "" || (n >= 8 && n <= 15)
 }
 
 /* ── shipping (admin) ────────────────────────────────────────────────── */

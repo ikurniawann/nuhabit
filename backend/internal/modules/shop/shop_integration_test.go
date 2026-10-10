@@ -896,6 +896,20 @@ func TestPickupCheckoutAndTransitions(t *testing.T) {
 		t.Errorf("status = %v", view)
 	}
 
+	// Staff see the delivery, payment and promo columns in the list and detail.
+	res, out = f.staff("GET", "/api/shop/orders?search="+number, nil)
+	expectStatus(t, res, 200)
+	row := out["data"].([]any)[0].(map[string]any)
+	if row["delivery_method"] != "pickup" || row["pickup_branch_name"] != "Dago" || row["payment_method"] != "xendit" ||
+		row["discount_amount"] != "0.00" || row["promo_code"] != nil {
+		t.Errorf("list row = %v", row)
+	}
+	res, out = f.staff("GET", "/api/shop/orders/"+id, nil)
+	expectStatus(t, res, 200)
+	if detail := out["data"].(map[string]any); detail["pickup_branch_name"] != "Dago" || detail["delivery_method"] != "pickup" {
+		t.Errorf("detail = %v", detail)
+	}
+
 	// Pickup orders never ship: packing and shipments are refused.
 	res, _ = f.do("POST", "/api/public/shop/webhook/xendit", map[string]any{"id": "inv-1", "external_id": InvoicePrefix + id, "status": "PAID", "amount": 100000}, "x-callback-token", "xnd-secret")
 	expectStatus(t, res, 200)
@@ -1010,6 +1024,21 @@ func TestPromoCodeCheckout(t *testing.T) {
 		t.Errorf("after expiry = %s", f.promo.holds[expired])
 	}
 
+	// The subtotal reaching the free-shipping threshold zeroes the rate.
+	f.exec(`INSERT INTO shop.storefront_settings (storefront_id, free_shipping_threshold) VALUES ((SELECT storefront_id FROM shop.orders WHERE id = $1), 100000)`, id)
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	free := f.scalar(`SELECT shipping_cost || '|' || total FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string))
+	if free != "0.00|80000.00" {
+		t.Errorf("free shipping order = %s", free)
+	}
+	f.exec(`UPDATE shop.storefront_settings SET free_shipping_threshold = 100001`)
+	res, out = f.do("POST", base+"/checkout", body)
+	expectStatus(t, res, 201)
+	if got := f.scalar(`SELECT shipping_cost FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string)); got != "12500.00" {
+		t.Errorf("under threshold shipping = %s", got)
+	}
+
 	// A refused code places no order and gives the claimed stock back.
 	f.promo.reject = "kuota-habis"
 	calls := len(f.stock.calls)
@@ -1019,7 +1048,7 @@ func TestPromoCodeCheckout(t *testing.T) {
 	if len(f.stock.calls) != calls+2 || !strings.HasSuffix(f.stock.calls[calls+1], ":-2") {
 		t.Errorf("stock calls = %v", f.stock.calls)
 	}
-	if got := f.scalar(`SELECT count(*)::text FROM shop.orders WHERE storefront_id = (SELECT storefront_id FROM shop.orders WHERE id = $1)`, id); got != "2" {
+	if got := f.scalar(`SELECT count(*)::text FROM shop.orders WHERE storefront_id = (SELECT storefront_id FROM shop.orders WHERE id = $1)`, id); got != "4" {
 		t.Errorf("orders = %s", got)
 	}
 }

@@ -46,6 +46,11 @@ func TestCheckoutRules(t *testing.T) {
 	if OrderTotal(100000, 150000, 12000) != 0 || OrderTotal(100000, 10000, 12000) != 102000 {
 		t.Error("OrderTotal")
 	}
+	threshold, zero := 100000.0, 0.0
+	if ShippingCost(12000, 100000, &threshold) != 0 || ShippingCost(12000, 99999, &threshold) != 12000 ||
+		ShippingCost(12000, 100000, nil) != 12000 || ShippingCost(12000, 100000, &zero) != 12000 {
+		t.Error("ShippingCost")
+	}
 	if PromoMessage("kuota-habis") != "This promo code has been fully used" || PromoMessage("??") != PromoMessage("nonaktif") {
 		t.Error("PromoMessage")
 	}

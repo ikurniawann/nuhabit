@@ -47,10 +47,11 @@ func (s *Service) ListOrders(ctx context.Context, f domain.OrderListFilter) ([]*
 	if len(conds) > 0 {
 		where = "WHERE " + strings.Join(conds, " AND ")
 	}
-	return queryRows(ctx, s.db, fmt.Sprintf(`SELECT o.id, o.order_number, o.status, o.customer_name, o.customer_phone,
+	rows, err := queryRows(ctx, s.db, fmt.Sprintf(`SELECT o.id, o.order_number, o.status, o.customer_name, o.customer_phone,
 		  o.shipping_area_label, o.courier_code, o.courier_service,
 		  o.subtotal, o.shipping_cost, o.total, o.waybill, o.paid_at,
 		  o.created_at, o.customer_id,
+		  o.delivery_method, o.pickup_branch_id, o.payment_method, o.discount_amount, o.promo_code,
 		  (SELECT COUNT(*) FROM shop.order_items i WHERE i.order_id = o.id) AS item_count,
 		  s.status AS shipment_status, s.provider AS shipment_provider
 		FROM shop.orders o
@@ -59,10 +60,39 @@ func (s *Service) ListOrders(ctx context.Context, f domain.OrderListFilter) ([]*
 		%s
 		ORDER BY o.created_at DESC
 		LIMIT $%d`, where, len(args)), args...)
+	if err != nil {
+		return nil, err
+	}
+	return rows, s.setPickupBranchNames(ctx, rows)
 }
 
-// OrderDetail is getShopOrderDetail: the order with its active shipment and
-// its items.
+// setPickupBranchNames adds pickup_branch_name (nil for shipped orders)
+// to rows that carry pickup_branch_id.
+func (s *Service) setPickupBranchNames(ctx context.Context, rows []*Row) error {
+	names := map[string]*string{}
+	for _, row := range rows {
+		var name *string
+		if id, ok := row.Get("pickup_branch_id").(string); ok {
+			if _, seen := names[id]; !seen {
+				branch, err := s.ports.Branches.Get(ctx, s.db, id)
+				if err != nil {
+					return err
+				}
+				if branch != nil {
+					names[id] = &branch.Name
+				} else {
+					names[id] = nil
+				}
+			}
+			name = names[id]
+		}
+		row.Set("pickup_branch_name", name)
+	}
+	return nil
+}
+
+// OrderDetail is getShopOrderDetail: the order with its active shipment,
+// its pickup branch name and its items.
 func (s *Service) OrderDetail(ctx context.Context, id string) (*Row, error) {
 	order, err := queryRow(ctx, s.db, `SELECT o.*, s.id AS shipment_id, s.provider AS shipment_provider,
 		  s.status AS shipment_status, s.provider_order_id,
@@ -76,6 +106,9 @@ func (s *Service) OrderDetail(ctx context.Context, id string) (*Row, error) {
 	}
 	if order == nil {
 		return nil, httpx.NotFound(orderNotFound)
+	}
+	if err := s.setPickupBranchNames(ctx, []*Row{order}); err != nil {
+		return nil, err
 	}
 	items, err := queryRows(ctx, s.db, `SELECT product_name, sku_name, sku_code, quantity, unit_price, total, weight_gram
 		FROM shop.order_items WHERE order_id = $1::uuid ORDER BY product_name`, id)

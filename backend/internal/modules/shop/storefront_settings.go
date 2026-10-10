@@ -2,6 +2,7 @@ package shop
 
 import (
 	"context"
+	"slices"
 
 	"nuhabit/backend/internal/modules/shop/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -53,20 +54,11 @@ func (s *Service) PickupBranches(ctx context.Context, sf Storefront, settings do
 		return nil, err
 	}
 	for _, b := range branches {
-		if sf.VenueIDs == nil || contains(sf.VenueIDs, b.ID) {
+		if sf.VenueIDs == nil || slices.Contains(sf.VenueIDs, b.ID) {
 			out = append(out, b)
 		}
 	}
 	return out, nil
-}
-
-func contains(list []string, v string) bool {
-	for _, x := range list {
-		if x == v {
-			return true
-		}
-	}
-	return false
 }
 
 // LastAddress is the destination of the member's latest shipped order.

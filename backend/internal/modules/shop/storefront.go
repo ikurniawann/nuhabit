@@ -752,9 +752,14 @@ func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResul
 		d.address = "Pickup at " + in.Delivery.Branch.Name
 		delivery = "Pick up at " + in.Delivery.Branch.Name
 	} else {
+		settings, err := s.StorefrontSettings(ctx, in.Storefront.ID)
+		if err != nil {
+			return CheckoutResult{}, err
+		}
 		d.address, d.areaID, d.areaLabel, d.postalCode = in.Destination.Address, &in.Destination.AreaID, &in.Destination.Label, in.Destination.PostalCode
 		d.provider, d.courierCode, d.courierSvc = &in.Courier.Provider, &in.Courier.Code, &in.Courier.ServiceCode
-		d.shippingCost = math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost)))
+		rate := math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost)))
+		d.shippingCost = domain.ShippingCost(rate, d.subtotal(), settings.FreeShippingThreshold)
 		d.etaText = orNil(in.Courier.Etd)
 	}
 	if d.total() <= 0 {
