@@ -18,6 +18,12 @@ export type ShopOrderRow = {
   item_count: string;
   customer_id: string | null;
   created_at: string;
+  /** "ship" (default) or "pickup"; pickup orders name their branch. */
+  delivery_method?: "ship" | "pickup" | null;
+  pickup_branch_name?: string | null;
+  payment_method?: "xendit" | "arkcoin" | null;
+  discount_amount?: string | number | null;
+  promo_code?: string | null;
   /** Hanya pada daftar pesanan wholesale. */
   company_name?: string;
   payment_terms?: "invoice" | "pay_later" | null;
@@ -45,7 +51,7 @@ export type ShopOrderDetail = ShopOrderRow & {
 
 /** Aksi back-office pada satu order (status atau pengiriman). */
 export type ShopOrderAction =
-  | { kind: "transition"; status: "packing" | "completed" | "cancelled"; note?: string }
+  | { kind: "transition"; status: "packing" | "completed" | "cancelled" | "ready_for_pickup" | "picked_up"; note?: string }
   | { kind: "ship-provider" }
   | { kind: "ship-manual"; waybill: string };
 

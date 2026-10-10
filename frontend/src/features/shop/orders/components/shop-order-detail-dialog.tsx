@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Truck, X } from 'lucide-react';
+import { Loader2, Store, Truck, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/dialog';
 import { formatRupiah } from '@/lib/format';
 import { useShopOrderAction, useShopOrderDetail, type ShopOrderAction } from '../queries';
-import { courierLabel, orderStatusTone } from '../status';
+import { courierLabel, isPickupOrder, orderStatusLabel, orderStatusTone } from '../status';
 
 /**
  * Detail pesanan + aksi: kemas, buat pengiriman (provider) / resi manual,
  * selesai, batalkan (refund manual via dashboard Xendit — keputusan owner).
+ * Pesanan ambil di cabang: siap diambil, lalu sudah diambil.
  * Parent me-render dengan key=orderId supaya input resi ter-reset.
  */
 export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; onClose: () => void }) {
@@ -49,7 +50,9 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
     );
   };
 
-  const canShip = detail ? ['paid', 'packing'].includes(detail.status) && !detail.provider_order_id : false;
+  const pickup = detail ? isPickupOrder(detail) : false;
+  const canShip = detail ? !pickup && ['paid', 'packing'].includes(detail.status) && !detail.provider_order_id : false;
+  const discount = Number(detail?.discount_amount ?? 0);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -71,8 +74,17 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
             <>
               <div className="flex items-center gap-2">
                 <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${orderStatusTone(detail.status)}`}>
-                  {detail.status}
+                  {orderStatusLabel(detail.status)}
                 </span>
+                {pickup ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
+                    <Store className="h-3 w-3" />
+                    Ambil di cabang
+                  </span>
+                ) : null}
+                {detail.payment_method === 'arkcoin' ? (
+                  <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">ARK Coin</span>
+                ) : null}
                 {detail.waybill ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
                     <Truck className="h-3 w-3" />
@@ -83,12 +95,18 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
 
               <div className="rounded-lg border border-gray-100 bg-gray-50/60 p-3 text-sm">
                 <p className="font-medium text-gray-900">{detail.customer_name}</p>
-                <p className="text-gray-600">{detail.shipping_address}</p>
-                <p className="text-gray-500">
-                  {detail.shipping_area_label}
-                  {detail.shipping_postal_code ? ` (${detail.shipping_postal_code})` : ''}
-                </p>
-                <p className="mt-1 text-xs text-gray-400">Kurir: {courierLabel(detail)}</p>
+                {pickup ? (
+                  <p className="text-gray-600">{courierLabel(detail)}</p>
+                ) : (
+                  <>
+                    <p className="text-gray-600">{detail.shipping_address}</p>
+                    <p className="text-gray-500">
+                      {detail.shipping_area_label}
+                      {detail.shipping_postal_code ? ` (${detail.shipping_postal_code})` : ''}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-400">Kurir: {courierLabel(detail)}</p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -102,9 +120,15 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
                     <span className="text-gray-900">{formatRupiah(item.total)}</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-sm">
+                {discount > 0 ? (
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-2 text-sm">
+                    <span className="text-gray-500">Diskon{detail.promo_code ? ` (${detail.promo_code})` : ''}</span>
+                    <span className="text-green-700">-{formatRupiah(discount)}</span>
+                  </div>
+                ) : null}
+                <div className={`flex items-center justify-between text-sm ${discount > 0 ? '' : 'border-t border-gray-100 pt-2'}`}>
                   <span className="text-gray-500">Ongkir</span>
-                  <span className="text-gray-900">{formatRupiah(detail.shipping_cost)}</span>
+                  <span className="text-gray-900">{pickup ? 'Ambil sendiri' : formatRupiah(detail.shipping_cost)}</span>
                 </div>
                 <div className="flex items-center justify-between text-base font-semibold">
                   <span>Total</span>
@@ -142,7 +166,7 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
         <DialogFooter>
           {detail ? (
             <div className="flex w-full flex-wrap items-center justify-end gap-2">
-              {['pending', 'paid', 'packing'].includes(detail.status) ? (
+              {['pending', 'paid', 'packing', 'ready_for_pickup'].includes(detail.status) ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -154,7 +178,28 @@ export function ShopOrderDetailDialog({ orderId, onClose }: { orderId: string; o
                   Batalkan
                 </Button>
               ) : null}
-              {detail.status === 'paid' ? (
+              {pickup && detail.status === 'paid' ? (
+                <Button
+                  type="button"
+                  disabled={action.isPending}
+                  className="purchasing-main-button"
+                  onClick={() => run({ kind: 'transition', status: 'ready_for_pickup' }, 'Pesanan siap diambil, pembeli dikabari')}
+                >
+                  <Store className="mr-1.5 h-4 w-4" />
+                  Tandai Siap Diambil
+                </Button>
+              ) : null}
+              {pickup && detail.status === 'ready_for_pickup' ? (
+                <Button
+                  type="button"
+                  disabled={action.isPending}
+                  className="purchasing-main-button"
+                  onClick={() => run({ kind: 'transition', status: 'picked_up' }, 'Pesanan sudah diambil')}
+                >
+                  Tandai Sudah Diambil
+                </Button>
+              ) : null}
+              {!pickup && detail.status === 'paid' ? (
                 <Button
                   type="button"
                   variant="outline"

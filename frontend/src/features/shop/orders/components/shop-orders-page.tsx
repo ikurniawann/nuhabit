@@ -12,7 +12,7 @@ import { PurchasingPageHeader } from '@/features/purchasing/components/shared/pu
 import { PurchasingListSection } from '@/features/purchasing/components/shared/purchasing-list-section';
 import { formatDate, formatDateTime, formatRupiah } from '@/lib/format';
 import { useShopOrders } from '../queries';
-import { courierLabel, ORDER_STATUS_TABS, orderStatusTone } from '../status';
+import { courierLabel, isPickupOrder, ORDER_STATUS_TABS, orderStatusLabel, orderStatusTone } from '../status';
 import { ShopOrderDetailDialog } from './shop-order-detail-dialog';
 
 const TERMS_LABEL = { invoice: 'Invoice', pay_later: 'Bayar nanti' } as const;
@@ -34,7 +34,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
       {wholesale ? null : (
         <PurchasingPageHeader
           title="Pesanan Toko Online"
-          description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai."
+          description="Pipeline pesanan storefront: bayar → kemas → kirim (resi) → selesai, atau bayar → siap diambil → sudah diambil."
         />
       )}
 
@@ -141,7 +141,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
                         ) : null}
                       </td>
                     ) : null}
-                    <td className="px-4 py-3 text-gray-600">{order.shipping_area_label || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{isPickupOrder(order) ? 'Ambil di cabang' : order.shipping_area_label || '—'}</td>
                     <td className="px-4 py-3">
                       <p className="text-gray-700">{courierLabel(order)}</p>
                       {order.waybill ? (
@@ -153,7 +153,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${orderStatusTone(order.status)}`}>
-                        {order.status}
+                        {orderStatusLabel(order.status)}
                       </span>
                     </td>
                   </tr>

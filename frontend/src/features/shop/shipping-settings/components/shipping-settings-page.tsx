@@ -15,6 +15,7 @@ import { useAreaSearch, type AreaSuggestion } from '@/features/shop/shared/area-
 import { AreaSuggestions } from '@/features/shop/shared/area-suggestions';
 import { useShippingSettings, useUpdateShippingSettings, type ShippingSettings } from '../queries';
 import { RateTestSection } from './rate-test-section';
+import { StorefrontSettingsSection } from './storefront-settings-section';
 
 const COURIER_CHOICES = [
   { code: 'jne', label: 'JNE' },
@@ -51,9 +52,10 @@ export function ShippingSettingsPage() {
   return (
     <div className="space-y-6">
       <PurchasingPageHeader
-        title="Pengiriman (Kurir)"
-        description="Provider ongkir toko online: pilih Biteship atau RajaOngkir, atur origin, kurir aktif & markup."
+        title="Pengiriman & Storefront"
+        description="Provider ongkir toko online (Biteship atau RajaOngkir, origin, kurir aktif, markup) dan pengaturan storefront."
       />
+      <StorefrontSettingsSection />
       <ProviderSection settings={settings} />
       <RateTestSection />
     </div>
