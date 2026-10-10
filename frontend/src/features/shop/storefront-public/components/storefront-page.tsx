@@ -1,7 +1,8 @@
 'use client';
 
 // Public storefront: catalog by collection, size picker, cart (or Buy Now),
-// checkout (area plus live shipping rates), redirect to the Xendit invoice.
+// one-screen checkout (ship with live rates or branch pickup, promo code,
+// Xendit or ARK Coin), redirect to the invoice or the status page.
 // The cart lives in cart-store (localStorage per store slug).
 
 import { useEffect, useState } from 'react';
@@ -23,12 +24,12 @@ import {
   type CatalogSort,
   type CartLine,
 } from '@/lib/shop/storefront-cart';
-import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
+import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { pushShopEvent } from '../analytics';
-import { bindCart, clearCart, closeCart, openCart, setCartNote, updateLines, useCart } from '../cart-store';
+import { bindCart, clearCart, closeCart, openCart, setCartNote, setCartPromo, updateLines, useCart } from '../cart-store';
 import { useStorefrontCatalog } from '../queries';
 import { CartDrawer } from './cart-drawer';
-import { CheckoutDrawer } from './checkout-drawer';
+import { CheckoutSheet } from './checkout-sheet';
 import { CollectionNav } from './collection-nav';
 import { PreorderBadge } from './preorder-note';
 import { ProductDetailSheet } from './product-detail-sheet';
@@ -40,7 +41,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   const [detailProduct, setDetailProduct] = useState<CatalogProduct | null>(null);
   // "Buy Now" lines: a one-line cart held in memory, apart from the stored
   // cart. null means checkout uses the cart.
-  const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string } | null>(null);
+  const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string; promo: AppliedPromo | null } | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<CatalogSort>('featured');
@@ -83,7 +84,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     const lines = [makeCartLine(product, sku)];
     pushShopEvent('buy_now', eventPayload(product, sku));
     setDetailProduct(null);
-    setBuyNow({ lines, note: '' });
+    setBuyNow({ lines, note: '', promo: null });
     startCheckout(lines);
   };
 
@@ -225,6 +226,8 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         <CartDrawer
           cart={cart.lines}
           note={cart.note}
+          promo={cart.promo}
+          freeShippingThreshold={storefront.settings.freeShippingThreshold}
           products={products}
           onChangeQty={(key, delta) => updateLines((lines) => changeCartQuantity(lines, key, delta))}
           onChangeVariant={(key, product, sku) => updateLines((lines) => changeCartVariant(lines, key, product, sku))}
@@ -238,11 +241,18 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         />
       ) : null}
 
-      <CheckoutDrawer
+      <CheckoutSheet
         open={checkoutOpen}
         slug={storefront.slug}
         cart={checkoutLines}
         note={buyNow ? buyNow.note : cart.note}
+        settings={storefront.settings}
+        branches={storefront.pickupBranches}
+        promo={buyNow ? buyNow.promo : cart.promo}
+        onPromoChange={(promo) => {
+          if (buyNow) setBuyNow({ ...buyNow, promo });
+          else setCartPromo(promo);
+        }}
         onPaid={() => {
           if (!buyNow) clearCart();
         }}
