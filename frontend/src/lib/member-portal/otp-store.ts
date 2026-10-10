@@ -12,7 +12,6 @@ import {
   OTP_RATE_LIMIT_WINDOW_MS,
   OTP_TTL_MS,
   otpMessage,
-  normalizePhoneDigits,
 } from "./otp";
 
 /**
@@ -38,42 +37,6 @@ export async function findMemberByPhone(
            IN ($1, '0' || substring($1 from 3))
      LIMIT 1`,
     [phone]
-  );
-  return rows[0] ?? null;
-}
-
-export type MemberLoginCandidate = {
-  id: string;
-  name: string | null;
-  password_hash: string | null;
-};
-
-/**
- * Cari akun untuk login berpassword: nomor WhatsApp (digit 08xx/62xx) ATAU
- * email yang tersimpan di pos_customers.
- *
- * Nama sengaja TIDAK ikut dicari walau halaman login menyebutnya: nama tidak
- * unik, jadi dua member bernama sama akan ambigu dan itu jalan masuk akun orang
- * lain. Nomor dinormalkan (08xx ↔ 62xx) supaya kasir boleh menyimpan format
- * mana pun.
- */
-export async function findMemberLoginCandidate(
-  db: Db,
-  username: string
-): Promise<MemberLoginCandidate | null> {
-  const digits = normalizePhoneDigits(username);
-  const { rows } = await db.query(
-    `SELECT id, name, password_hash
-       FROM pos.pos_customers
-      WHERE is_active IS NOT FALSE
-        AND (
-          ($1::text IS NOT NULL AND regexp_replace(COALESCE(phone, ''), '\\D', '', 'g')
-             IN ($1, '0' || substring($1 from 3)))
-          OR lower(COALESCE(email, '')) = lower($2)
-        )
-      ORDER BY (lower(COALESCE(email, '')) = lower($2)) DESC
-      LIMIT 1`,
-    [digits, username]
   );
   return rows[0] ?? null;
 }
@@ -159,26 +122,7 @@ export async function consumeOtp(db: Db, phone: string, code: string): Promise<{
 export const MEMBER_IP_LIMITS = {
   otp: { limit: 30, windowMs: 10 * 60_000 },
   verify: { limit: 60, windowMs: 10 * 60_000 },
-  login: { limit: 30, windowMs: 10 * 60_000 },
 } satisfies Record<string, RateLimitRule>;
-
-/**
- * Batas per-AKUN untuk login berpassword: 10 percobaan / 15 menit.
- *
- * Ini penjaga utamanya, bukan batas per-IP — IP kafe dipakai bersama banyak
- * member, dan penyerang bisa berpindah IP. Kunci = username yang diketik
- * (dinormalkan huruf kecil + spasi dipangkas).
- */
-export const MEMBER_LOGIN_LIMITS = {
-  account: { limit: 10, windowMs: 15 * 60_000 },
-} satisfies Record<string, RateLimitRule>;
-
-export function memberLoginAllowed(username: string): boolean {
-  return checkRateLimit(
-    `member-login:${username.trim().toLowerCase()}`,
-    MEMBER_LOGIN_LIMITS.account
-  );
-}
 
 export function memberIpAllowed(kind: keyof typeof MEMBER_IP_LIMITS, request: Request): boolean {
   return checkRateLimit(`member-${kind}:${clientIp(request)}`, MEMBER_IP_LIMITS[kind]);
