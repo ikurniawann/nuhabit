@@ -139,7 +139,7 @@ const relatedLimit = 4
 
 // relatedIDs picks the product's related products: the same collection,
 // in stock first, newest first.
-func relatedIDs(self CatalogProductView, products []CatalogProductView, createdAt map[string]time.Time) []string {
+func relatedIDs(self CatalogProductView, products []CatalogProductView) []string {
 	out := []string{}
 	if self.Collection == nil {
 		return out
@@ -155,7 +155,7 @@ func relatedIDs(self CatalogProductView, products []CatalogProductView, createdA
 		if (a.Stock > 0) != (b.Stock > 0) {
 			return a.Stock > 0
 		}
-		return createdAt[a.ID].After(createdAt[b.ID])
+		return a.createdAt.After(b.createdAt)
 	})
 	for _, p := range candidates {
 		if len(out) == relatedLimit {
@@ -221,8 +221,10 @@ type CatalogProductView struct {
 	Rating          *ProductRating     `json:"rating"`
 	RelatedIDs      []string           `json:"relatedIds"`
 	SKUs            []CatalogSKUView   `json:"skus"`
-	// regular is the price before any sale, the wholesale base.
-	regular float64
+	// regular is the price before any sale, the wholesale base; createdAt
+	// orders related products.
+	regular   float64
+	createdAt time.Time
 }
 
 // Catalog is the storefront catalog: products with their collections in
@@ -305,9 +307,7 @@ func (s *Service) buildCatalog(ctx context.Context, lowStockThreshold int) (Cata
 	}
 	now := s.now()
 	collections := map[string]CatalogCollection{}
-	createdAt := map[string]time.Time{}
 	for _, p := range products {
-		createdAt[p.ID] = p.CreatedAt
 		base := basePrice(p)
 		ps := settingsOf(settings, p.ID)
 		pricing := domain.PriceWithSale(base, base, ps.Sale, now)
@@ -359,11 +359,11 @@ func (s *Service) buildCatalog(ctx context.Context, lowStockThreshold int) (Cata
 			Preorder:   anyPreorder || (preorderOpen && stock <= 0),
 			IsFeatured: ps.IsFeatured, IsNew: ps.IsNew,
 			LowStock: domain.LowStock(stock, lowStockThreshold), BackInStock: domain.BackInStock(stock, ps.RestockedAt, now),
-			Rating: ratings[p.ID], SKUs: views, regular: base,
+			Rating: ratings[p.ID], SKUs: views, regular: base, createdAt: p.CreatedAt,
 		})
 	}
 	for i := range catalog.Products {
-		catalog.Products[i].RelatedIDs = relatedIDs(catalog.Products[i], catalog.Products, createdAt)
+		catalog.Products[i].RelatedIDs = relatedIDs(catalog.Products[i], catalog.Products)
 	}
 	for _, c := range collections {
 		catalog.Collections = append(catalog.Collections, c)

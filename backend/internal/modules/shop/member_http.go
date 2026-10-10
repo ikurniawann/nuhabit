@@ -81,17 +81,21 @@ func (h *handler) productReviews(w http.ResponseWriter, r *http.Request) error {
 	return ok(w, reviews)
 }
 
-const wishlistSignIn = "Sign in to save your wishlist"
+// wishlistMember is the signed-in member behind a wishlist request on
+// a known storefront.
+func (h *handler) wishlistMember(r *http.Request) (*Member, error) {
+	if err := h.limit(r, "shop-wishlist", 60); err != nil {
+		return nil, err
+	}
+	if _, err := h.storefront(r); err != nil {
+		return nil, err
+	}
+	return h.requireMember(r, "Sign in to save your wishlist")
+}
 
 // getWishlist is GET /api/public/shop/{slug}/wishlist.
 func (h *handler) getWishlist(w http.ResponseWriter, r *http.Request) error {
-	if err := h.limit(r, "shop-wishlist", 60); err != nil {
-		return err
-	}
-	if _, err := h.storefront(r); err != nil {
-		return err
-	}
-	member, err := h.requireMember(r, wishlistSignIn)
+	member, err := h.wishlistMember(r)
 	if err != nil {
 		return err
 	}
@@ -104,13 +108,7 @@ func (h *handler) getWishlist(w http.ResponseWriter, r *http.Request) error {
 
 // putWishlist is PUT /api/public/shop/{slug}/wishlist {productIds}.
 func (h *handler) putWishlist(w http.ResponseWriter, r *http.Request) error {
-	if err := h.limit(r, "shop-wishlist", 60); err != nil {
-		return err
-	}
-	if _, err := h.storefront(r); err != nil {
-		return err
-	}
-	member, err := h.requireMember(r, wishlistSignIn)
+	member, err := h.wishlistMember(r)
 	if err != nil {
 		return err
 	}
