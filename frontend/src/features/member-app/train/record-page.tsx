@@ -11,9 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import {
   Bike,
-  Bluetooth,
   Check,
-  ChevronRight,
   Dumbbell,
   Flame,
   Footprints,
@@ -21,19 +19,17 @@ import {
   Pause,
   PersonStanding,
   Play,
-  Radio,
-  Settings,
   Square,
   Timer,
   Volume2,
   X,
 } from "lucide-react";
 import type { Division } from "@/lib/gym/hyrox";
-import { gearKindFor, haversineM } from "@/lib/gym/athlete";
+import { gearKindFor } from "@/lib/gym/athlete";
 import { GeoMap } from "../components/geo-map";
 import { LocationGate } from "../components/location-gate";
-import { RouteMap } from "../components/route-map";
 import { ApiError } from "../lib/api";
+import { acceptGpsFix, type AcceptedFix } from "../lib/gps-track";
 import { useLocationPermission } from "../lib/geolocation";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
@@ -246,9 +242,6 @@ export function RecordPage() {
   const [askingLocation, setAskingLocation] = useState(false);
   const [trackLaps, setTrackLaps] = usePref("laps");
   const [audioCues, setAudioCues] = usePref("cues");
-  const [liveShare, setLiveShare] = useState(false);
-  const [liveCopied, setLiveCopied] = useState(false);
-  const [sensorOpen, setSensorOpen] = useState(false);
   const [laps, setLaps] = useState<number[]>([]);
   const [exercises, setExercises] = useState<StrengthExercise[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -256,29 +249,68 @@ export function RecordPage() {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [distanceM, setDistanceM] = useState(0);
   const [gpsError, setGpsError] = useState("");
+  const [gpsAccuracyM, setGpsAccuracyM] = useState<number | null>(null);
+  const [lastFixAt, setLastFixAt] = useState<number | null>(null);
+  const [clockNow, setClockNow] = useState(0);
+  const [startedAt, setStartedAt] = useState(0);
 
   const startTsRef = useRef(0);
   const pausedRef = useRef(false);
   const watchIdRef = useRef<number | null>(null);
   const timersRef = useRef<number[]>([]);
-  const lastPointRef = useRef<TrackPoint | null>(null);
+  const lastFixRef = useRef<AcceptedFix | null>(null);
+  const needsSegmentRef = useRef(false);
+  const pausedAtRef = useRef(0);
+  const pausedMsRef = useRef(0);
   const lastKmRef = useRef(0);
+  const aliveRef = useRef(true);
 
-  const appendPoint = useCallback((lat: number, lng: number, ele?: number) => {
-    if (pausedRef.current) return;
-    const point: TrackPoint = {
-      t: Date.now() - startTsRef.current,
-      lat,
-      lng,
-      ...(ele !== undefined ? { ele } : {}),
+  // Keep the display awake where supported. Mobile browsers may still suspend
+  // location when the tab is backgrounded or the device is locked.
+  useEffect(() => {
+    if (phase !== "recording" || type === "WORKOUT") return;
+    let active = true;
+    let lock: WakeLockSentinel | null = null;
+    const acquire = async () => {
+      if (document.visibilityState !== "visible" || !navigator.wakeLock) return;
+      try {
+        const next = await navigator.wakeLock.request("screen");
+        if (active) lock = next;
+        else void next.release();
+      } catch {
+        // Tracking still works when the device does not support screen wake lock.
+      }
     };
-    const last = lastPointRef.current;
-    lastPointRef.current = point;
-    if (last) {
-      const delta = haversineM(last, point);
-      setDistanceM((d) => d + delta);
-    }
-    setPoints((prev) => [...prev, point]);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void acquire();
+    };
+    void acquire();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (lock) void lock.release();
+    };
+  }, [phase, type]);
+
+  const appendPoint = useCallback((pos: GeolocationPosition, kind: "RUN" | "RIDE" | "WALK") => {
+    if (pausedRef.current) return;
+    setGpsAccuracyM(pos.coords.accuracy);
+    setLastFixAt(Date.now());
+    if (pos.coords.accuracy <= 50) setGpsError("");
+    const result = acceptGpsFix({
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracyM: pos.coords.accuracy,
+      at: pos.timestamp,
+      altitude: pos.coords.altitude ?? undefined,
+    }, lastFixRef.current, startTsRef.current + pausedMsRef.current, kind, needsSegmentRef.current);
+    if (!result) return;
+    lastFixRef.current = result.accepted;
+    needsSegmentRef.current = false;
+    setGpsError("");
+    setDistanceM((d) => d + result.distanceM);
+    setPoints((prev) => [...prev, result.accepted.point]);
   }, []);
 
   const stopSources = useCallback(() => {
@@ -289,51 +321,91 @@ export function RecordPage() {
       watchIdRef.current = null;
     }
   }, []);
-  useEffect(() => stopSources, [stopSources]);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      stopSources();
+    };
+  }, [stopSources]);
 
-  const start = () => {
+  const start = async () => {
+    let initialPosition: GeolocationPosition | null = null;
+    if (type !== "WORKOUT" && type !== "HYROX") {
+      if (!navigator.geolocation || !window.isSecureContext) {
+        setGpsError("GPS needs location access and a secure connection (https).");
+        return;
+      }
+      setAskingLocation(true);
+      setGpsError("");
+      try {
+        initialPosition = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 15000,
+          }),
+        );
+        if (!aliveRef.current) return;
+        if (initialPosition.coords.accuracy > 50) {
+          setGpsError("GPS accuracy is too low. Move outdoors and try again.");
+          return;
+        }
+        setLocationPermission("granted");
+      } catch (error) {
+        if (!aliveRef.current) return;
+        const geoError = error as GeolocationPositionError;
+        if (geoError.code === 1) setLocationPermission("denied");
+        setGpsError(geoError.code === 1
+          ? "Location is blocked for this site. Allow it in your browser settings and start again."
+          : "Could not get a GPS fix. Move outdoors and try again.");
+        return;
+      } finally {
+        setAskingLocation(false);
+      }
+    }
     setPoints([]);
     setDistanceM(0);
     setElapsedSec(0);
     setLaps([]);
     lastKmRef.current = 0;
     setGpsError("");
+    setGpsAccuracyM(null);
+    setLastFixAt(null);
     startTsRef.current = Date.now();
+    setStartedAt(startTsRef.current);
     pausedRef.current = false;
-    lastPointRef.current = null;
+    pausedAtRef.current = 0;
+    pausedMsRef.current = 0;
+    lastFixRef.current = null;
+    needsSegmentRef.current = false;
     setPhase("recording");
+    if (initialPosition && type !== "WORKOUT" && type !== "HYROX") {
+      appendPoint(initialPosition, type);
+    }
 
     timersRef.current.push(
       window.setInterval(() => {
-        if (!pausedRef.current) setElapsedSec((s) => s + 1);
+        setClockNow(Date.now());
+        const activeMs = (pausedRef.current ? pausedAtRef.current : Date.now()) - startTsRef.current - pausedMsRef.current;
+        setElapsedSec(Math.max(0, Math.floor(activeMs / 1000)));
       }, 1000),
     );
 
     if (type === "WORKOUT" || type === "HYROX") return; // timer only / guided
 
-    if (!navigator.geolocation) {
-      setGpsError(
-        "This device cannot share its location, so the route cannot be recorded.",
-      );
-      return;
-    }
-
     watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) =>
-        appendPoint(
-          pos.coords.latitude,
-          pos.coords.longitude,
-          typeof pos.coords.altitude === "number"
-            ? pos.coords.altitude
-            : undefined,
-        ),
-      (err) =>
+      (pos) => appendPoint(pos, type),
+      (err) => {
+        needsSegmentRef.current = true;
+        if (err.code === 1) setLocationPermission("denied");
         setGpsError(
           err.code === 1
             ? "Location is blocked for this site. Allow it in your browser settings and start again."
             : "Lost the GPS fix. The timer is still running - the route will pick up when the signal returns.",
-        ),
-      { enableHighAccuracy: true, maximumAge: 1000 },
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
   };
 
@@ -357,10 +429,26 @@ export function RecordPage() {
 
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
+    if (pausedRef.current) {
+      pausedAtRef.current = Date.now();
+      setElapsedSec(Math.max(0, Math.floor((pausedAtRef.current - startTsRef.current - pausedMsRef.current) / 1000)));
+    } else {
+      pausedMsRef.current += Date.now() - pausedAtRef.current;
+      needsSegmentRef.current = true;
+    }
     setPhase(pausedRef.current ? "paused" : "recording");
   };
 
   const finish = () => {
+    const finishedMs = (pausedRef.current ? pausedAtRef.current : Date.now()) - startTsRef.current - pausedMsRef.current;
+    if (!pausedRef.current) {
+      setElapsedSec(Math.max(0, Math.floor(finishedMs / 1000)));
+    }
+    if (type !== "WORKOUT") {
+      setPoints((previous) => previous.length > 0
+        ? [...previous, { ...previous[previous.length - 1]!, t: Math.max(previous[previous.length - 1]!.t + 1, finishedMs) }]
+        : previous);
+    }
     pausedRef.current = true;
     stopSources();
     setPhase("saving");
@@ -547,10 +635,11 @@ export function RecordPage() {
           )}
           {type !== "HYROX" ? (
             <button
-              onClick={start}
-              className="nh-btn-brand flex items-center justify-center gap-2 !py-5 text-lg"
+              onClick={() => void start()}
+              disabled={askingLocation || (type !== "WORKOUT" && (locationPermission === "denied" || locationPermission === "insecure" || locationPermission === "unsupported"))}
+              className="nh-btn-brand flex items-center justify-center gap-2 !py-5 text-lg disabled:opacity-50"
             >
-              <Play size={22} fill="currentColor" /> {t("Start")}
+              <Play size={22} fill="currentColor" /> {askingLocation ? t("Finding you…") : t("Start")}
             </button>
           ) : (
             <div className="nh-card nh-surface-ink relative overflow-hidden !border-0 !p-6 text-white">
@@ -619,53 +708,11 @@ export function RecordPage() {
                 hint={t("Spoken split every kilometre")}
                 right={<Toggle on={audioCues} onChange={setAudioCues} />}
               />
-              <OptionRow
-                icon={Radio}
-                label={t("Share live location")}
-                hint={t(
-                  liveCopied
-                    ? "Demo link copied - anyone with it can watch"
-                    : "Send friends a live beacon link",
-                )}
-                right={
-                  <Toggle
-                    on={liveShare}
-                    onChange={(v) => {
-                      setLiveShare(v);
-                      if (v) {
-                        void navigator.clipboard
-                          ?.writeText(
-                            `${location.origin}/beacon/demo-${Date.now().toString(36)}`,
-                          )
-                          .catch(() => {});
-                        setLiveCopied(true);
-                      } else {
-                        setLiveCopied(false);
-                      }
-                    }}
-                  />
-                }
-              />
-              <OptionRow
-                icon={Bluetooth}
-                label={t("Add a sensor")}
-                hint={t("Heart rate, cadence")}
-                right={<ChevronRight size={15} className="text-nh-muted" />}
-                onClick={() => setSensorOpen(true)}
-              />
-              <OptionRow
-                icon={Settings}
-                label={t("Settings")}
-                hint={t("Units, reminders, language")}
-                right={<ChevronRight size={15} className="text-nh-muted" />}
-                onClick={() => router.push(m("/profile/settings"))}
-              />
             </div>
           ) : null}
         </>
       ) : null}
 
-      {sensorOpen ? <SensorSheet onClose={() => setSensorOpen(false)} /> : null}
       {pickerOpen ? (
         <ExercisePicker
           chosen={exercises.map((ex) => ex.name)}
@@ -709,8 +756,20 @@ export function RecordPage() {
               </p>
             ) : null}
           </div>
-          {gpsError ? (
-            <p className="text-sm font-bold text-nh-danger">{t(gpsError)}</p>
+          {type !== "WORKOUT" ? (
+            <div className="nh-card !py-3 text-sm">
+              <p className="font-bold">
+                {t(phase === "paused" ? "GPS paused" : !lastFixAt ? "Finding GPS signal…" : clockNow - lastFixAt > 15000 ? "GPS signal lost" : gpsAccuracyM !== null && gpsAccuracyM > 50 ? "GPS signal weak" : "GPS recording")}
+              </p>
+              {gpsAccuracyM !== null ? (
+                <p className="text-xs text-nh-muted">{t("Location accuracy")}: ±{Math.round(gpsAccuracyM)} m</p>
+              ) : null}
+              {gpsAccuracyM !== null && gpsAccuracyM > 50 ? (
+                <p className="text-xs text-nh-warn">{t("Move outdoors for a more accurate route.")}</p>
+              ) : null}
+              {gpsError ? <p className="mt-1 text-xs text-nh-danger">{t(gpsError)}</p> : null}
+              <p className="mt-1 text-xs text-nh-muted">{t("Keep this page open while recording; background GPS depends on your browser.")}</p>
+            </div>
           ) : null}
           {type === "WORKOUT" && exercises.length > 0 ? (
             <div className="flex flex-col gap-3">
@@ -821,7 +880,9 @@ export function RecordPage() {
               </div>
             </div>
           ) : null}
-          {points.length > 1 ? <RouteMap points={points} height={150} /> : null}
+          {type !== "WORKOUT" && points.length > 0 ? (
+            <GeoMap tracks={[{ points }]} height={220} interactive={false} />
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={togglePause}
@@ -848,6 +909,7 @@ export function RecordPage() {
           points={points}
           elapsedSec={elapsedSec}
           distanceM={distanceM}
+          startedAt={startedAt}
           gear={(stats?.gear ?? []).filter((g) => !g.retired)}
           onDiscard={discard}
           onSaved={(id) => {
@@ -867,6 +929,7 @@ function SaveForm({
   points,
   elapsedSec,
   distanceM,
+  startedAt,
   gear,
   onDiscard,
   onSaved,
@@ -877,6 +940,7 @@ function SaveForm({
   points: TrackPoint[];
   elapsedSec: number;
   distanceM: number;
+  startedAt: number;
   gear: { id: string; name: string; kind: string }[];
   onDiscard: () => void;
   onSaved: (activityId: string) => void;
@@ -931,7 +995,7 @@ function SaveForm({
         type,
         title,
         description,
-        startedAt: new Date(Date.now() - elapsedSec * 1000).toISOString(),
+        startedAt: new Date(startedAt).toISOString(),
         points,
         manualElapsedSec: type === "WORKOUT" ? Math.max(1, elapsedSec) : null,
         gearId: gearId || null,
@@ -964,6 +1028,9 @@ function SaveForm({
       </div>
       {points.length > 1 ? (
         <GeoMap tracks={[{ points }]} height={180} interactive={false} />
+      ) : null}
+      {type !== "WORKOUT" && points.length === 0 ? (
+        <p className="text-sm text-nh-danger">{t("No GPS route was recorded. Discard this activity and try again outdoors.")}</p>
       ) : null}
       <div>
         <label className="nh-label">{t("Title")}</label>
@@ -1047,7 +1114,7 @@ function SaveForm({
       ) : null}
       <button
         className="nh-btn-brand"
-        disabled={busy || title.length < 1}
+        disabled={busy || title.length < 1 || (type !== "WORKOUT" && points.length === 0)}
         onClick={() => void save()}
       >
         {t("Save activity")}
@@ -1055,50 +1122,6 @@ function SaveForm({
       <button className="nh-btn-ghost text-nh-danger" onClick={onDiscard}>
         {t("Discard")}
       </button>
-    </div>
-  );
-}
-
-/** Mock sensor pairing - scans, finds nothing (the web build has no Bluetooth). */
-function SensorSheet({ onClose }: { onClose: () => void }) {
-  const t = useT();
-  const [scanning, setScanning] = useState(true);
-  useEffect(() => {
-    const id = window.setTimeout(() => setScanning(false), 2200);
-    return () => clearTimeout(id);
-  }, []);
-  return (
-    <div
-      className="nh-sheet-backdrop fixed inset-0 z-40 flex items-end justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="nh-sheet-panel w-full max-w-md rounded-t-3xl bg-nh-cream p-5 pb-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="nh-display mb-1 text-xl">{t("Add a sensor")}</h2>
-        <p className="mb-4 text-sm text-nh-muted">
-          {t("Heart rate straps, cadence and power meters.")}
-        </p>
-        {scanning ? (
-          <div className="flex items-center gap-3 rounded-2xl bg-nh-raised px-4 py-4 text-sm font-bold">
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-nh-line border-t-nh-forest" />
-            {t("Scanning for nearby sensors…")}
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-nh-raised px-4 py-4 text-sm">
-            <p className="font-bold">{t("No sensors nearby")}</p>
-            <p className="mt-0.5 text-nh-muted">
-              {t(
-                "Pairing needs Bluetooth on a real device - this demo build stops here.",
-              )}
-            </p>
-          </div>
-        )}
-        <button className="nh-btn-ghost mt-4 w-full" onClick={onClose}>
-          {t("Close")}
-        </button>
-      </div>
     </div>
   );
 }

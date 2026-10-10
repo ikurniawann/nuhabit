@@ -138,6 +138,48 @@ func (s *store) DeleteSession(ctx context.Context, tokenHash string) error {
 	return err
 }
 
+// FindLoginAccount matches an active member by phone digits (stored as
+// 08xx or 62xx) or email; an email match wins when both are given.
+func (s *store) FindLoginAccount(ctx context.Context, digits, email string) (*LoginAccount, error) {
+	var a LoginAccount
+	err := s.q.QueryRow(ctx,
+		`SELECT id, name, COALESCE(phone, ''), password_hash FROM pos.pos_customers
+		  WHERE is_active IS NOT FALSE
+		    AND (($1 <> '' AND regexp_replace(COALESCE(phone, ''), '\D', '', 'g') IN ($1, '0' || substring($1 from 3)))
+		      OR ($2 <> '' AND lower(COALESCE(email, '')) = $2))
+		  ORDER BY (lower(COALESCE(email, '')) = $2) DESC
+		  LIMIT 1`, digits, email).Scan(&a.ID, &a.Name, &a.Phone, &a.PasswordHash)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (s *store) PasswordHash(ctx context.Context, customerID string) (*string, error) {
+	var hash *string
+	err := s.q.QueryRow(ctx, `SELECT password_hash FROM pos.pos_customers WHERE id = $1`, customerID).Scan(&hash)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	return hash, err
+}
+
+func (s *store) SetPasswordHash(ctx context.Context, customerID, hash string) error {
+	_, err := s.q.Exec(ctx, `UPDATE pos.pos_customers SET password_hash = $2, updated_at = now() WHERE id = $1`, customerID, hash)
+	return err
+}
+
+// DeleteOtherSessions ends every session of the member except the one
+// behind keepTokenHash ("" ends them all).
+func (s *store) DeleteOtherSessions(ctx context.Context, customerID, keepTokenHash string) error {
+	_, err := s.q.Exec(ctx,
+		`DELETE FROM crm.member_portal_sessions WHERE customer_id = $1 AND token_hash <> $2`, customerID, keepTokenHash)
+	return err
+}
+
 // LockRegistration serializes registrations of one number for the tx.
 func (s *store) LockRegistration(ctx context.Context, phoneDigits string) error {
 	_, err := s.q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "member-register:"+phoneDigits)

@@ -3,7 +3,7 @@ import "server-only";
 import { getPool } from "@/lib/db";
 import {
   bestPerMember,
-  downsample,
+  downsampleTrack,
   HEATMAP_POINTS,
   personalRecords,
   rankOf,
@@ -69,7 +69,7 @@ export async function saveRoute(
     [
       customerId,
       name.trim() || activity.title,
-      JSON.stringify(downsample(activity.points, ROUTE_POINTS)),
+      JSON.stringify(downsampleTrack(activity.points, ROUTE_POINTS)),
       activity.distanceM,
     ],
   );
@@ -96,7 +96,7 @@ export async function heatmap(
       WHERE customer_id = $1 AND jsonb_array_length(points) > 1 ORDER BY started_at DESC`,
     [customerId],
   );
-  return { tracks: rows.map((r) => downsample(r.points, HEATMAP_POINTS)) };
+  return { tracks: rows.map((r) => downsampleTrack(r.points, HEATMAP_POINTS)) };
 }
 
 // ── Gear & pengaturan ─────────────────────────────────────────────────────────

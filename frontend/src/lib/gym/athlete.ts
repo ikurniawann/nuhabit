@@ -28,6 +28,8 @@ export interface TrackPoint {
   lat: number;
   lng: number;
   ele?: number;
+  /** First point after a pause or GPS outage; do not count the gap. */
+  segmentStart?: boolean;
 }
 
 export interface ActivitySplit {
@@ -119,7 +121,7 @@ export function computeActivityStats(
     const prev = points[i - 1]!;
     const curr = points[i]!;
     const dt = (curr.t - prev.t) / 1000;
-    if (dt <= 0) continue;
+    if (dt <= 0 || curr.segmentStart) continue;
     const d = haversineM(prev, curr);
     distanceM += d;
     if (prev.ele !== undefined && curr.ele !== undefined) {
@@ -182,6 +184,20 @@ export function downsample<T>(points: readonly T[], max: number): T[] {
   if (max < 2 || points.length <= max) return [...points];
   const step = (points.length - 1) / (max - 1);
   return Array.from({ length: max }, (_, i) => points[Math.round(i * step)]!);
+}
+
+/** Keep pause/outage boundaries when a track is shortened for maps and cards. */
+export function downsampleTrack(points: readonly TrackPoint[], max: number): TrackPoint[] {
+  if (max < 2 || points.length <= max) return [...points];
+  const step = (points.length - 1) / (max - 1);
+  let previousIndex = 0;
+  return Array.from({ length: max }, (_, i) => {
+    const index = Math.round(i * step);
+    const point = points[index]!;
+    const hasBreak = i > 0 && points.slice(previousIndex + 1, index + 1).some((p) => p.segmentStart);
+    previousIndex = index;
+    return hasBreak ? { ...point, segmentStart: true } : point;
+  });
 }
 
 /** Judul bawaan server bila klien mengirim judul kosong. */
@@ -308,7 +324,7 @@ export function matchSegments<S extends SegmentLike>(
   if (points.length < 2) return [];
   const cum: number[] = [0];
   for (let i = 1; i < points.length; i++)
-    cum.push(cum[i - 1]! + haversineM(points[i - 1]!, points[i]!));
+    cum.push(cum[i - 1]! + (points[i]!.segmentStart ? 0 : haversineM(points[i - 1]!, points[i]!)));
 
   const matches: SegmentMatch<S>[] = [];
   for (const segment of segments) {
@@ -323,6 +339,7 @@ export function matchSegments<S extends SegmentLike>(
 
     let endIdx = -1;
     for (let j = startIdx + 1; j < points.length; j++) {
+      if (points[j]!.segmentStart) break;
       if (haversineM(points[j]!, gateEnd) > SEGMENT_MATCH_RADIUS_M) continue;
       const traveled = cum[j]! - cum[startIdx]!;
       if (

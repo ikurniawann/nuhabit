@@ -6,7 +6,7 @@ import "server-only";
 import type { Pool, PoolClient } from "pg";
 import {
   canViewActivity,
-  downsample,
+  downsampleTrack,
   FEED_CANDIDATES,
   THUMBNAIL_POINTS,
   workoutActivityTitle,
@@ -205,7 +205,7 @@ export async function cards(
       avgPaceSecPerKm: a.avgPaceSecPerKm,
       elevationGainM: a.elevationGainM,
       visibility: a.visibility,
-      thumbnail: downsample(a.points, THUMBNAIL_POINTS),
+      thumbnail: downsampleTrack(a.points, THUMBNAIL_POINTS),
       photoCount: a.photoCount,
       kudosCount: c?.kudos ?? 0,
       hasKudoed: c?.kudoed ?? false,

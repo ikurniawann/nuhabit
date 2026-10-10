@@ -13,7 +13,7 @@ import type {
   TrackPoint,
   WeekBucket,
 } from "./athlete";
-import { downsample } from "./athlete";
+import { downsampleTrack } from "./athlete";
 
 /** Galat yang aman ditampilkan ke member (status HTTP + pesan). */
 export class AthleteError extends Error {
@@ -265,7 +265,7 @@ export const toRoute = (r: RouteRow, maxPoints: number): RouteView => ({
   id: r.id,
   name: r.name,
   distanceM: Number(r.distance_m),
-  points: downsample(r.points, maxPoints),
+  points: downsampleTrack(r.points, maxPoints),
   createdAt: r.created_at.toISOString(),
 });
 

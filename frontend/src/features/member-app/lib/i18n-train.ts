@@ -74,6 +74,24 @@ export const TRAIN_ID: Record<string, string> = {
   Added: "Ditambahkan",
   "This device cannot share its location, so the route cannot be recorded.":
     "Perangkat ini tidak bisa membagikan lokasi, jadi rute tidak bisa direkam.",
+  "GPS needs location access and a secure connection (https).":
+    "GPS memerlukan izin lokasi dan koneksi aman (https).",
+  "GPS accuracy is too low. Move outdoors and try again.":
+    "Akurasi GPS terlalu rendah. Pindah ke luar ruangan lalu coba lagi.",
+  "Could not get a GPS fix. Move outdoors and try again.":
+    "GPS belum menemukan lokasi. Pindah ke luar ruangan lalu coba lagi.",
+  "GPS paused": "GPS dijeda",
+  "Finding GPS signal…": "Mencari sinyal GPS…",
+  "GPS signal lost": "Sinyal GPS hilang",
+  "GPS signal weak": "Sinyal GPS lemah",
+  "GPS recording": "GPS sedang merekam",
+  "Location accuracy": "Akurasi lokasi",
+  "Move outdoors for a more accurate route.":
+    "Pindah ke luar ruangan agar rute lebih akurat.",
+  "Keep this page open while recording; background GPS depends on your browser.":
+    "Biarkan halaman ini terbuka saat merekam; GPS di latar belakang bergantung pada browser.",
+  "No GPS route was recorded. Discard this activity and try again outdoors.":
+    "Rute GPS tidak terekam. Buang aktivitas ini lalu coba lagi di luar ruangan.",
   "Location is blocked for this site. Allow it in your browser settings and start again.":
     "Lokasi diblokir untuk situs ini. Izinkan di pengaturan browser lalu mulai lagi.",
   "Lost the GPS fix. The timer is still running - the route will pick up when the signal returns.":

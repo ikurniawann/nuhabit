@@ -84,6 +84,7 @@ func (h *Handler) Routes() []module.Route {
 	if h.credits != nil {
 		routes = append(routes, module.Route{Pattern: "GET " + prefix + "/app/home/me", Handler: h.member("Gagal memuat akun", h.account)})
 	}
+	routes = append(routes, h.passwordRoutes()...)
 	routes = append(routes, h.engagementRoutes()...)
 	routes = append(routes, h.collectionRoutes()...)
 	routes = append(routes, h.topupRoutes()...)

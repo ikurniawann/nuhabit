@@ -82,20 +82,27 @@ export function GeoMap({
 
     const source = new VectorSource();
     for (const track of current) {
-      if (track.points.length < 2) continue;
+      if (track.points.length === 0) continue;
       const coords = track.points.map((p) => fromLonLat([p.lng, p.lat]));
-      const line = new Feature(new LineString(coords));
-      line.setStyle(
-        new Style({
-          stroke: new Stroke({
-            color: track.color ?? `rgba(0, 40, 26, ${track.opacity ?? 1})`,
-            width: track.width ?? 4,
-            lineCap: "round",
-            lineJoin: "round",
-          }),
-        }),
-      );
-      source.addFeature(line);
+      let segmentStart = 0;
+      for (let i = 1; i <= coords.length; i++) {
+        if (i < coords.length && !track.points[i]?.segmentStart) continue;
+        if (i - segmentStart >= 2) {
+          const line = new Feature(new LineString(coords.slice(segmentStart, i)));
+          line.setStyle(
+            new Style({
+              stroke: new Stroke({
+                color: track.color ?? `rgba(0, 40, 26, ${track.opacity ?? 1})`,
+                width: track.width ?? 4,
+                lineCap: "round",
+                lineJoin: "round",
+              }),
+            }),
+          );
+          source.addFeature(line);
+        }
+        segmentStart = i;
+      }
       if (track.markers ?? current.length === 1) {
         const start = new Feature(new Point(coords[0]!));
         start.setStyle(dotStyle(6, "#abde67", 2));
@@ -122,7 +129,10 @@ export function GeoMap({
       view: new View({ center: fromLonLat([106.82, -6.2]), zoom: 12 }),
     });
     const extent = source.getExtent();
-    if (extent && Number.isFinite(extent[0])) {
+    if (current.length === 1 && current[0]?.points.length === 1) {
+      map.getView().setCenter(fromLonLat([current[0].points[0]!.lng, current[0].points[0]!.lat]));
+      map.getView().setZoom(16);
+    } else if (extent && Number.isFinite(extent[0])) {
       map.getView().fit(extent, { padding: [28, 28, 28, 28], maxZoom: 16 });
     }
     mapRef.current = map;

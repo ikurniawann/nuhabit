@@ -48,6 +48,24 @@ integration keys Next uses (Xendit, WhatsApp gateway, Meta, OpenAI, VAPID).
 At startup it logs one warning listing the integrations that stay off, as
 Next does, and exits when `DATABASE_URL` is not a `postgres://` URL.
 
+## Member sign-in flags
+
+Two variables decide how members get into the member app:
+
+| Variable | Read by | Effect |
+|---|---|---|
+| `OTP_ENABLED` | Go API, at runtime | `true` enables the WhatsApp OTP routes under `/api/member-portal`: self sign-up, OTP sign-in, Google sign-in for members without an account, and forgot-password by WhatsApp. Anything else makes them answer 503. |
+| `NEXT_PUBLIC_OTP_ENABLED` | Next, at `next build` | The same switch for the UI: with `false` the member app hides sign-up and the WhatsApp reset and tells members to ask the front desk. It is inlined into the bundle, so it must be in `RUNTIME_CONFIG_CONTENT` (the file the build reads as a BuildKit secret) at build time. Setting it on the running container changes nothing. |
+
+Keep the two in step. With both `false` (the default) members sign in with
+username (WhatsApp number or email) and password only; new sign-ups, Google
+sign-in for new members and forgot-password by WhatsApp are unavailable.
+The fallback is the staff reset: `POST /api/crm/members/{id}/password`
+(IAM menu `crm.members`, action `update`) from the member detail page
+generates a password, ends the member's sessions, writes an audit row and
+shows the password once or sends it by WhatsApp. Members can change their
+own password afterwards (`PUT /api/member-portal/password`).
+
 ## Schema drift check
 
 `migrate -verify` creates a scratch database on the target's server
