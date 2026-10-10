@@ -156,11 +156,10 @@ func (s *Service) ResetPassword(ctx context.Context, ip, username, code, next st
 	if msg := domain.NewPasswordProblem(next); msg != "" {
 		return &failure{Status: 400, Message: msg, Field: "new_password"}
 	}
-	if !domain.IsOTPCode(code) {
+	// The local dev bypass stands in for the code, as it does in Verify.
+	devBypass := s.bypass().CanBypass(code)
+	if !devBypass && !domain.IsOTPCode(code) {
 		return &failure{Status: 400, Message: "Enter the 6-digit code", Field: "code"}
-	}
-	if err := s.ipBrake(ctx, "verify", ip); err != nil {
-		return err
 	}
 	digits, email := domain.LoginLookup(username)
 	account, err := s.repo.FindLoginAccount(ctx, digits, email)
@@ -171,14 +170,21 @@ func (s *Service) ResetPassword(ctx context.Context, ip, username, code, next st
 	if account != nil {
 		phone = domain.NormalizePhoneDigits(account.Phone)
 	}
-	switch err := consumeOTP(ctx, s.repo, phone, code, s.now()); {
-	case err == nil:
-	case errors.Is(err, errOTPTooManyTries):
-		return errResetTooManyTries
-	case errors.Is(err, errOTPExpired), errors.Is(err, errOTPWrongCode):
-		return errResetCodeInvalid
-	default:
-		return err
+	if devBypass {
+		s.log.Warn("[member-portal] OTP dev bypass dipakai untuk reset password", "phone", phone)
+	} else {
+		if err := s.ipBrake(ctx, "verify", ip); err != nil {
+			return err
+		}
+		switch err := consumeOTP(ctx, s.repo, phone, code, s.now()); {
+		case err == nil:
+		case errors.Is(err, errOTPTooManyTries):
+			return errResetTooManyTries
+		case errors.Is(err, errOTPExpired), errors.Is(err, errOTPWrongCode):
+			return errResetCodeInvalid
+		default:
+			return err
+		}
 	}
 	if account == nil {
 		return errResetCodeInvalid
