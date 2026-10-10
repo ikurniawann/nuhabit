@@ -132,9 +132,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 		h.log.Error("Error destroying member session", "error", err.Error())
 	}
 	http.SetCookie(w, &http.Cookie{Name: domain.SessionCookie, Value: "", Path: "/", MaxAge: -1})
-	_ = httpx.JSON(w, http.StatusOK, struct {
-		Success bool `json:"success"`
-	}{true})
+	_ = success(w)
 }
 
 // GET /me.

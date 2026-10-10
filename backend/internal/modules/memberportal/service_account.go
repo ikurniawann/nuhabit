@@ -76,6 +76,7 @@ type MeView struct {
 	Completion             meCompletion   `json:"completion"`
 	FreeXPGranted          bool           `json:"free_xp_granted"`
 	FreeXPAmount           float64        `json:"free_xp_amount"`
+	HasPassword            bool           `json:"has_password"`
 }
 
 // Me is the profile, balance, XP, tier progress and profile completion.
@@ -118,6 +119,7 @@ func (s *Service) Me(ctx context.Context, customerID string) (*MeView, error) {
 		Completion:             meCompletion{ProfileCompletion: completion, MissingLabels: domain.MissingLabels(completion.Missing)},
 		FreeXPGranted:          customer.FreeXPGrantedAt != nil && customer.FreeXPGrantedAt.Valid,
 		FreeXPAmount:           jsNumber(freeXP),
+		HasPassword:            customer.HasPassword,
 	}
 	if customer.VisitCount != nil {
 		view.VisitCount = *customer.VisitCount

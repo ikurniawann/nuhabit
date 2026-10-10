@@ -44,6 +44,13 @@ func ok(w http.ResponseWriter, data any) error {
 	return httpx.JSON(w, http.StatusOK, dataBody{Success: true, Data: data})
 }
 
+// success writes {"success":true}.
+func success(w http.ResponseWriter) error {
+	return httpx.JSON(w, http.StatusOK, struct {
+		Success bool `json:"success"`
+	}{true})
+}
+
 // writeFailure renders err: failures and httpx errors with their status,
 // anything else as 500 with the route's message (withMemberSession).
 func writeFailure(w http.ResponseWriter, r *http.Request, log *slog.Logger, err error, failMessage string) {
