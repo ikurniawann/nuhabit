@@ -264,7 +264,7 @@ func (m *rawMaterialImport) references(ctx context.Context, f rawMaterialFields,
 		return nil, msgs.coa, nil
 	}
 	if f.warehouseCode != "" {
-		id, err := m.h.warehouseByCode(ctx, f.warehouseCode, m.branchID, m.warehouses)
+		id, err := m.h.warehouseByCode(ctx, f.warehouseCode, m.branchID, m.companyID, m.warehouses)
 		if err != nil || id == "" {
 			return nil, `Stall code "` + f.warehouseCode + `" was not found for this branch`, err
 		}

@@ -1,6 +1,9 @@
 // Daftar mandiri langkah 1: jawaban sama untuk nomor member & bukan member
 // (tidak membocorkan keanggotaan), plus rem per-IP.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// The route answers 503 while OTP is paused; these tests cover the enabled flow.
+vi.stubEnv("NEXT_PUBLIC_OTP_ENABLED", "true");
 import type { NextRequest } from "next/server";
 
 const issueOtp = vi.fn();

@@ -11,6 +11,7 @@ import { classImage } from "../lib/images";
 import { asset, m } from "../lib/links";
 import { useAccount, useHomeFeed, useMyBookings, usePromos } from "../lib/queries-home";
 import { Spinner, formatDay, formatDayTime, formatDuration, formatTime } from "../ui";
+import { PasswordPrompt } from "./password-prompt";
 
 /** Header seksi yang tenang: label huruf kapital kecil + tautan opsional. */
 function SectionHeader({ label, action }: { label: string; action?: ReactNode }) {
@@ -56,6 +57,8 @@ export function HomePage() {
         <p className="text-sm font-semibold text-nh-muted">{t("Hey,")}</p>
         <p className="nh-display text-3xl leading-tight">{me.member.fullName.split(" ")[0]}</p>
       </div>
+
+      <PasswordPrompt />
 
       {/* Saldo kredit - "kartu hitam"; ketuk membuka kartu member digital */}
       <button

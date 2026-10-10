@@ -131,8 +131,10 @@ describe("payroll", () => {
     expect(writes).toEqual([]);
   });
 
-  it("DELETE run paid ditolak; run tak ada → 404", async () => {
+  it("DELETE hanya superadmin; run paid ditolak; run tak ada → 404", async () => {
     const { DELETE } = await import("@/app/api/hris/payroll/[id]/route");
+    await expectError(await DELETE(req("DELETE"), params({ id: "x" })), 403, "Hanya superadmin yang dapat menghapus payroll run");
+    requireIamMenuPrefix.mockResolvedValue({ ...HR_USER, role: "super_admin" });
     await expectError(await DELETE(req("DELETE"), params({ id: "x" })), 404, "Payroll run tidak ditemukan");
     tables.payroll_runs = { id: "run-1", status: "paid" };
     await expectError(

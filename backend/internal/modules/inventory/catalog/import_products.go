@@ -142,7 +142,7 @@ func (p *productImport) resolve(ctx context.Context, data map[string]string) (*p
 	if stallCode == "" {
 		return nil, "Required field missing: stall_code", nil
 	}
-	warehouseID, err := p.h.warehouseByCode(ctx, stallCode, p.branchFilter, p.warehouses)
+	warehouseID, err := p.h.warehouseByCode(ctx, stallCode, p.branchFilter, ps.WarehouseCompanyFilter(p.scope), p.warehouses)
 	if err != nil || warehouseID == "" {
 		return nil, "Stall code not found: " + stallCode, err
 	}

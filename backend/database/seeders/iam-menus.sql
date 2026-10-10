@@ -298,4 +298,18 @@ WHERE deleted_at IS NULL
     -- GoFood / GoBiz (EPIC-049, 12 Sep 2026):
     'pos.operations.gofood',
     -- Tagihan Member (1 Okt 2026):
-    'pos.operations.member-bills');
+    'pos.operations.member-bills',
+    -- Menus added by migrations up to 10 Oct 2026 (gym, site, wholesale, CRM
+    -- engagement, wallet, stock movements, audit). Running this seeder on a
+    -- database that already had them retired every one of them.
+    'crm.engagement', 'crm.engagement.announcements', 'crm.engagement.challenges',
+    'crm.engagement.checkins', 'crm.engagement.events', 'crm.loyalty.partners',
+    'crm.members.member-reviews',
+    'gym', 'gym.bookings', 'gym.checkin', 'gym.class-types', 'gym.coaches', 'gym.credits',
+    'gym.exercises', 'gym.incentives', 'gym.packages', 'gym.races', 'gym.rules',
+    'gym.schedule', 'gym.sessions',
+    'items.raw-material.inventory.expiry', 'items.raw-material.inventory.movements',
+    'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
+    'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
+    'pos.loyalty.wallet.settings', 'settings.audit', 'shop.wholesale',
+    'site', 'site.articles', 'site.content', 'site.events');

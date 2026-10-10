@@ -11,6 +11,7 @@ import { useT } from "../lib/i18n";
 import { useInvalidateAll, useSettings } from "../lib/queries-home";
 import { loyaltyKeys, useLoyaltyMe, useRefresh } from "../lib/queries-loyalty";
 import { Spinner } from "../ui";
+import { PasswordSection } from "./password-section";
 
 const optionClass = (active: boolean) =>
   `rounded-xl border px-3 py-2.5 text-sm font-black uppercase ${
@@ -86,6 +87,8 @@ export function SettingsPage() {
       </div>
 
       <NotificationSettings />
+
+      <PasswordSection />
 
       <div className="nh-card text-sm text-nh-muted">
         <p className="nh-label">{t("About")}</p>

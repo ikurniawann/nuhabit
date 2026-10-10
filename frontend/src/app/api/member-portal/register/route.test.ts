@@ -1,6 +1,9 @@
 // Daftar mandiri langkah akhir: kode OTP dibuktikan DULU, baru status member
 // diungkap — tanpa kode sah, nomor member tidak bisa dibedakan.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// The route answers 503 while OTP is paused; these tests cover the enabled flow.
+vi.stubEnv("NEXT_PUBLIC_OTP_ENABLED", "true");
 import type { NextRequest } from "next/server";
 
 const consumeOtp = vi.fn();
