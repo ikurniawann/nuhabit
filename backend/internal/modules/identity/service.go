@@ -258,7 +258,7 @@ func (s *Service) authenticate(ctx context.Context, email string, password any) 
 		// bcrypt.compare throws "Illegal arguments": 500 in the TS route.
 		return nil, errNonStringCredential
 	}
-	if !verifyPassword(pw, row.PasswordHash) {
+	if !auth.VerifyPassword(pw, row.PasswordHash) {
 		return nil, invalid
 	}
 	if row.BannedUntil != nil && row.BannedUntil.After(s.now()) {
@@ -325,10 +325,10 @@ func (s *Service) ChangePassword(ctx context.Context, userID, current, next stri
 	if err != nil {
 		return err
 	}
-	if !found || !verifyPassword(current, hash) {
+	if !found || !auth.VerifyPassword(current, hash) {
 		return &clientError{http.StatusBadRequest, "Current password is incorrect"}
 	}
-	newHash, err := hashPassword(next)
+	newHash, err := auth.HashPassword(next)
 	if err != nil {
 		return err
 	}
