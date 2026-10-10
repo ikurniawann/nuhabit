@@ -251,18 +251,20 @@ type PublicOrderStatus struct {
 func (s *Service) PublicOrderStatus(ctx context.Context, token string) (*PublicOrderStatus, error) {
 	var v PublicOrderStatus
 	var id, subtotal, shipping, total, discount string
-	var courier, service, invoiceURL, branchID, storefrontID *string
+	var courier, service, invoiceURL, branchID, storefrontID, customerID *string
 	var paidAt, readyAt *time.Time
 	var createdAt time.Time
-	err := s.db.QueryRow(ctx, `SELECT id::text, order_number, status, customer_name, shipping_area_label,
-		  shipping_address, courier_code, courier_service, subtotal::text,
-		  shipping_cost::text, total::text, xendit_invoice_url, waybill, paid_at, created_at,
-		  delivery_method, pickup_branch_id::text, ready_at, discount_amount::text, promo_code,
-		  payment_method, eta_text, storefront_id::text
-		FROM shop.orders WHERE access_token = $1::uuid`, token).Scan(&id, &v.OrderNumber, &v.Status, &v.CustomerName,
+	var canReview bool
+	err := s.db.QueryRow(ctx, `SELECT o.id::text, o.order_number, o.status, o.customer_name, o.shipping_area_label,
+		  o.shipping_address, o.courier_code, o.courier_service, o.subtotal::text,
+		  o.shipping_cost::text, o.total::text, o.xendit_invoice_url, o.waybill, o.paid_at, o.created_at,
+		  o.delivery_method, o.pickup_branch_id::text, o.ready_at, o.discount_amount::text, o.promo_code,
+		  o.payment_method, o.eta_text, o.storefront_id::text, o.customer_id::text,
+		  o.customer_id IS NOT NULL AND `+paidOrderCond+`
+		FROM shop.orders o WHERE o.access_token = $1::uuid`, token).Scan(&id, &v.OrderNumber, &v.Status, &v.CustomerName,
 		&v.ShippingAreaLabel, &v.ShippingAddress, &courier, &service, &subtotal, &shipping, &total, &invoiceURL,
 		&v.Waybill, &paidAt, &createdAt, &v.Delivery.Method, &branchID, &readyAt, &discount, &v.PromoCode,
-		&v.PaymentMethod, &v.EtaText, &storefrontID)
+		&v.PaymentMethod, &v.EtaText, &storefrontID, &customerID, &canReview)
 	if database.IsNoRows(err) {
 		return nil, nil
 	}
@@ -285,8 +287,12 @@ func (s *Service) PublicOrderStatus(ctx context.Context, token string) (*PublicO
 		}
 		v.WhatsappURL = domain.WhatsAppLink(settings.WhatsappNumber, v.OrderNumber)
 	}
-	rows, err := s.db.Query(ctx, `SELECT product_name, sku_name, quantity::text, unit_price::text, total::text
-		FROM shop.order_items WHERE order_id = $1::uuid ORDER BY product_name`, id)
+	// A product is reviewable while the buyer (the linked member) has no
+	// review of it yet.
+	rows, err := s.db.Query(ctx, `SELECT i.product_name, i.sku_name, i.quantity::text, i.unit_price::text, i.total::text, i.product_id::text,
+		  $2 AND i.product_id IS NOT NULL AND NOT EXISTS (
+		    SELECT 1 FROM shop.product_reviews r WHERE r.product_id = i.product_id AND r.customer_id = $3::uuid)
+		FROM shop.order_items i WHERE i.order_id = $1::uuid ORDER BY i.product_name`, id, canReview, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +300,7 @@ func (s *Service) PublicOrderStatus(ctx context.Context, token string) (*PublicO
 	v.Items = []domain.PublicOrderItem{}
 	for rows.Next() {
 		var it domain.OrderItemRow
-		if err := rows.Scan(&it.ProductName, &it.SkuName, &it.Quantity, &it.UnitPrice, &it.Total); err != nil {
+		if err := rows.Scan(&it.ProductName, &it.SkuName, &it.Quantity, &it.UnitPrice, &it.Total, &it.ProductID, &it.Reviewable); err != nil {
 			return nil, err
 		}
 		v.Items = append(v.Items, domain.PublicItem(it))

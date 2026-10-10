@@ -12,6 +12,7 @@ import (
 	possales "nuhabit/backend/internal/contracts/possales"
 	"nuhabit/backend/internal/modules/shop/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/jsmath"
 	"nuhabit/backend/internal/platform/outbox"
 )
@@ -70,6 +71,10 @@ type ProductSettings struct {
 	PreorderUntil     *time.Time
 	WholesalePriceIDR *float64
 	WholesaleMinQty   float64
+	Sale              domain.Sale
+	IsFeatured        bool
+	IsNew             bool
+	RestockedAt       *time.Time
 }
 
 // productSettings reads the settings of the products (missing rows give
@@ -79,7 +84,8 @@ func (s *Service) productSettings(ctx context.Context, ids []string) (map[string
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := s.db.Query(ctx, `SELECT product_id::text, preorder_until, wholesale_price_idr::float8, wholesale_min_qty
+	rows, err := s.db.Query(ctx, `SELECT product_id::text, preorder_until, wholesale_price_idr::float8, wholesale_min_qty,
+		  sale_price_idr::float8, sale_until, is_featured, is_new, restocked_at
 		FROM shop.product_settings WHERE product_id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
@@ -89,13 +95,75 @@ func (s *Service) productSettings(ctx context.Context, ids []string) (map[string
 		var id string
 		var ps ProductSettings
 		var minQty int
-		if err := rows.Scan(&id, &ps.PreorderUntil, &ps.WholesalePriceIDR, &minQty); err != nil {
+		if err := rows.Scan(&id, &ps.PreorderUntil, &ps.WholesalePriceIDR, &minQty,
+			&ps.Sale.Price, &ps.Sale.Until, &ps.IsFeatured, &ps.IsNew, &ps.RestockedAt); err != nil {
 			return nil, err
 		}
 		ps.WholesaleMinQty = float64(minQty)
 		out[id] = ps
 	}
 	return out, rows.Err()
+}
+
+// ProductRating is the published reviews of a product.
+type ProductRating struct {
+	Average float64 `json:"average"`
+	Count   int     `json:"count"`
+}
+
+// productRatings aggregates the published reviews of the products
+// (average to one decimal).
+func (s *Service) productRatings(ctx context.Context, ids []string) (map[string]*ProductRating, error) {
+	out := map[string]*ProductRating{}
+	rows, err := s.db.Query(ctx, `SELECT product_id::text, avg(rating)::float8, count(*)::int
+		FROM shop.product_reviews WHERE status = 'published' AND product_id = ANY($1::uuid[])
+		GROUP BY product_id`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var r ProductRating
+		if err := rows.Scan(&id, &r.Average, &r.Count); err != nil {
+			return nil, err
+		}
+		r.Average = jsmath.RoundTo(r.Average, 1)
+		out[id] = &r
+	}
+	return out, rows.Err()
+}
+
+// relatedLimit is how many "You may also like" products a product gets.
+const relatedLimit = 4
+
+// relatedIDs picks the product's related products: the same collection,
+// in stock first, newest first.
+func relatedIDs(self CatalogProductView, products []CatalogProductView) []string {
+	out := []string{}
+	if self.Collection == nil {
+		return out
+	}
+	var candidates []CatalogProductView
+	for _, p := range products {
+		if p.ID != self.ID && p.Collection != nil && p.Collection.ID == self.Collection.ID {
+			candidates = append(candidates, p)
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		a, b := candidates[i], candidates[j]
+		if (a.Stock > 0) != (b.Stock > 0) {
+			return a.Stock > 0
+		}
+		return a.createdAt.After(b.createdAt)
+	})
+	for _, p := range candidates {
+		if len(out) == relatedLimit {
+			break
+		}
+		out = append(out, p.ID)
+	}
+	return out
 }
 
 func settingsOf(all map[string]ProductSettings, id string) ProductSettings {
@@ -105,14 +173,18 @@ func settingsOf(all map[string]ProductSettings, id string) ProductSettings {
 	return ProductSettings{WholesaleMinQty: 1}
 }
 
-// CatalogSKUView is CatalogSku.
+// CatalogSKUView is CatalogSku. Price is the effective price;
+// CompareAtPrice the regular one while a sale applies.
 type CatalogSKUView struct {
-	ID       string  `json:"id"`
-	SKU      string  `json:"sku"`
-	Name     string  `json:"name"`
-	Price    float64 `json:"price"`
-	Stock    float64 `json:"stock"`
-	Preorder bool    `json:"preorder"`
+	ID             string   `json:"id"`
+	SKU            string   `json:"sku"`
+	Name           string   `json:"name"`
+	Price          float64  `json:"price"`
+	CompareAtPrice *float64 `json:"compareAtPrice"`
+	Stock          float64  `json:"stock"`
+	Preorder       bool     `json:"preorder"`
+	// regular is the price before any sale, the wholesale base.
+	regular float64
 }
 
 // CatalogCollection is a storefront collection (a POS category).
@@ -122,7 +194,9 @@ type CatalogCollection struct {
 	order int
 }
 
-// CatalogProductView is CatalogProduct.
+// CatalogProductView is CatalogProduct. Price is the effective price;
+// CompareAtPrice, SalePercent and SaleUntil describe the sale when one
+// applies.
 type CatalogProductView struct {
 	ID              string             `json:"id"`
 	Name            string             `json:"name"`
@@ -132,12 +206,25 @@ type CatalogProductView struct {
 	ImageURL        *string            `json:"imageUrl"`
 	Images          []string           `json:"images"`
 	Price           float64            `json:"price"`
+	CompareAtPrice  *float64           `json:"compareAtPrice"`
+	SalePercent     *int               `json:"salePercent"`
+	SaleUntil       *httpx.JSTime      `json:"saleUntil"`
 	WeightGram      *float64           `json:"weightGram"`
 	Stock           float64            `json:"stock"`
 	Collection      *CatalogCollection `json:"collection"`
 	PreorderUntil   *string            `json:"preorderUntil"`
 	Preorder        bool               `json:"preorder"`
+	IsFeatured      bool               `json:"isFeatured"`
+	IsNew           bool               `json:"isNew"`
+	LowStock        bool               `json:"lowStock"`
+	BackInStock     bool               `json:"backInStock"`
+	Rating          *ProductRating     `json:"rating"`
+	RelatedIDs      []string           `json:"relatedIds"`
 	SKUs            []CatalogSKUView   `json:"skus"`
+	// regular is the price before any sale, the wholesale base; createdAt
+	// orders related products.
+	regular   float64
+	createdAt time.Time
 }
 
 // Catalog is the storefront catalog: products with their collections in
@@ -173,15 +260,17 @@ func skuPrice(product float64, override *string) float64 {
 	return product
 }
 
-// BuildCatalog is buildShopCatalog, plus collections and pre-order flags.
-func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
-	catalog, _, err := s.buildCatalog(ctx)
+// BuildCatalog is buildShopCatalog, plus collections, pre-order and sale
+// pricing, the stock badges (lowStockThreshold from the storefront
+// settings), ratings and related products.
+func (s *Service) BuildCatalog(ctx context.Context, lowStockThreshold int) (CatalogView, error) {
+	catalog, _, err := s.buildCatalog(ctx, lowStockThreshold)
 	return catalog, err
 }
 
 // buildCatalog also hands back the product settings it read, for the
 // wholesale views that price the same products.
-func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]ProductSettings, error) {
+func (s *Service) buildCatalog(ctx context.Context, lowStockThreshold int) (CatalogView, map[string]ProductSettings, error) {
 	catalog := CatalogView{Collections: []CatalogCollection{}, Products: []CatalogProductView{}}
 	settings := map[string]ProductSettings{}
 	products, err := s.ports.Catalog.WebProducts(ctx, s.db)
@@ -204,6 +293,10 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 	if err != nil {
 		return catalog, settings, err
 	}
+	ratings, err := s.productRatings(ctx, ids)
+	if err != nil {
+		return catalog, settings, err
+	}
 	skusByProduct := map[string][]CatalogSKU{}
 	for _, sku := range skus {
 		skusByProduct[sku.ProductID] = append(skusByProduct[sku.ProductID], sku)
@@ -215,14 +308,19 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 	now := s.now()
 	collections := map[string]CatalogCollection{}
 	for _, p := range products {
-		price := basePrice(p)
-		until := settingsOf(settings, p.ID).PreorderUntil
+		base := basePrice(p)
+		ps := settingsOf(settings, p.ID)
+		pricing := domain.PriceWithSale(base, base, ps.Sale, now)
+		until := ps.PreorderUntil
 		preorderOpen := domain.PreorderOpen(0, until, now)
 		views := []CatalogSKUView{}
 		stock := 0.0
 		anyPreorder := false
 		for _, sku := range skusByProduct[p.ID] {
-			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPrice(price, sku.PriceOverride), Stock: numOr0(&sku.StockQuantity)}
+			regular := skuPrice(base, sku.PriceOverride)
+			skuPricing := domain.PriceWithSale(regular, base, ps.Sale, now)
+			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPricing.Price, CompareAtPrice: skuPricing.CompareAt,
+				Stock: numOr0(&sku.StockQuantity), regular: regular}
 			v.Preorder = preorderOpen && v.Stock <= 0
 			anyPreorder = anyPreorder || v.Preorder
 			views = append(views, v)
@@ -249,12 +347,23 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 			collections[c.ID] = c
 			collection = &CatalogCollection{ID: c.ID, Name: c.Name}
 		}
+		var saleUntil *httpx.JSTime
+		if pricing.CompareAt != nil {
+			saleUntil = httpx.NewJSTime(ps.Sale.Until)
+		}
 		catalog.Products = append(catalog.Products, CatalogProductView{
 			ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription, SizeGuide: p.SizeGuide,
-			ImageURL: p.ImageURL, Images: imgs, Price: price, WeightGram: weight, Stock: stock,
+			ImageURL: p.ImageURL, Images: imgs, Price: pricing.Price, CompareAtPrice: pricing.CompareAt, SalePercent: pricing.Percent,
+			SaleUntil: saleUntil, WeightGram: weight, Stock: stock,
 			Collection: collection, PreorderUntil: domain.DateString(until),
-			Preorder: anyPreorder || (preorderOpen && stock <= 0), SKUs: views,
+			Preorder:   anyPreorder || (preorderOpen && stock <= 0),
+			IsFeatured: ps.IsFeatured, IsNew: ps.IsNew,
+			LowStock: domain.LowStock(stock, lowStockThreshold), BackInStock: domain.BackInStock(stock, ps.RestockedAt, now),
+			Rating: ratings[p.ID], SKUs: views, regular: base, createdAt: p.CreatedAt,
 		})
+	}
+	for i := range catalog.Products {
+		catalog.Products[i].RelatedIDs = relatedIDs(catalog.Products[i], catalog.Products)
 	}
 	for _, c := range collections {
 		catalog.Collections = append(catalog.Collections, c)
@@ -361,8 +470,11 @@ type resolvedLine struct {
 	skuName     *string
 	skuCode     *string
 	quantity    float64
-	unitPrice   float64
-	weightGram  float64
+	// unitPrice is the effective (sale) price; regularPrice the one before
+	// the sale, which wholesale prices from.
+	unitPrice    float64
+	regularPrice float64
+	weightGram   float64
 	// stock is what the catalog shows for the SKU (or the product).
 	stock float64
 	// settings are the product's shop settings.
@@ -440,7 +552,8 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 		if p == nil {
 			return nil, "A product is no longer available. Reload the catalog.", nil
 		}
-		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: basePrice(*p),
+		base := basePrice(*p)
+		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: base,
 			weightGram: unitWeight(p.WeightGram), stock: numOr0(p.InventoryQuantity), settings: settingsOf(settings, p.ID)}
 		if it.SkuID != nil && *it.SkuID != "" {
 			sku, err := s.ports.Catalog.ActiveSKU(ctx, s.db, *it.SkuID, it.ProductID)
@@ -460,6 +573,8 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 		} else if p.HasActiveSKU {
 			return nil, p.Name + " has variants. Choose one first.", nil
 		}
+		line.regularPrice = line.unitPrice
+		line.unitPrice = domain.PriceWithSale(line.regularPrice, base, line.settings.Sale, now).Price
 		line.isPreorder = domain.PreorderOpen(line.stock, line.settings.PreorderUntil, now)
 		lines = append(lines, line)
 	}

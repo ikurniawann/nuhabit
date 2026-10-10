@@ -3,6 +3,7 @@ package posops
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,6 +33,7 @@ type MerchProduct struct {
 	CategoryID    *string
 	CategoryName  *string
 	CategoryOrder *int
+	CreatedAt     time.Time
 }
 
 // MerchSKU is an active pos.pos_product_skus row.
@@ -55,7 +57,7 @@ func (Merchandise) Products(ctx context.Context, q database.Querier, ids []strin
 	rows, err := q.Query(ctx, `SELECT p.id::text, p.name, p.description, p.long_description, p.size_guide, p.image_url,
 	  p.base_price::text, p.weight_gram::text, p.inventory_quantity::text,
 	  EXISTS (SELECT 1 FROM pos.pos_product_skus s WHERE s.product_id = p.id AND s.is_active = true),
-	  c.id::text, c.name, c.display_order
+	  c.id::text, c.name, c.display_order, p.created_at
 	FROM pos.pos_products p
 	LEFT JOIN pos.pos_categories c ON c.id = p.category_id
 	WHERE p.id = ANY($1::uuid[]) AND p.product_kind = 'merchandise'
