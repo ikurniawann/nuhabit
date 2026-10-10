@@ -2,15 +2,19 @@ package shop
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	possales "nuhabit/backend/internal/contracts/possales"
 	"nuhabit/backend/internal/modules/shop/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/jsmath"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 // The public storefront (lib/shop/storefront-server.ts): catalog, checkout
@@ -29,32 +33,36 @@ const defaultItemWeightGram = 1000
 // (/apparel).
 const DefaultStorefrontSlug = "default"
 
-// Storefront is a shop.storefronts row.
+// Storefront is a shop.storefronts row. VenueIDs nil = every venue.
 type Storefront struct {
 	ID          string
 	Slug        string
 	Name        string
 	Description *string
+	VenueIDs    []string
+}
+
+const storefrontColumns = `id::text, slug, name, description, venue_ids::text[]`
+
+func scanStorefront(row pgx.Row) (*Storefront, error) {
+	var sf Storefront
+	err := row.Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description, &sf.VenueIDs)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	return &sf, err
 }
 
 // ResolveStorefront is resolveStorefront: an active storefront by slug
 // (case-insensitive), nil when none. DefaultStorefrontSlug resolves the
 // is_default storefront, else the oldest active one.
 func (s *Service) ResolveStorefront(ctx context.Context, slug string) (*Storefront, error) {
-	var sf Storefront
-	var err error
 	if slug == DefaultStorefrontSlug {
-		err = s.db.QueryRow(ctx, `SELECT id::text, slug, name, description FROM shop.storefronts
-			WHERE is_active = true ORDER BY is_default DESC, created_at, id LIMIT 1`).Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
-	} else {
-		err = s.db.QueryRow(ctx, `SELECT id::text, slug, name, description
-			FROM shop.storefronts
-			WHERE lower(slug) = lower($1) AND is_active = true`, slug).Scan(&sf.ID, &sf.Slug, &sf.Name, &sf.Description)
+		return scanStorefront(s.db.QueryRow(ctx, `SELECT `+storefrontColumns+` FROM shop.storefronts
+			WHERE is_active = true ORDER BY is_default DESC, created_at, id LIMIT 1`))
 	}
-	if database.IsNoRows(err) {
-		return nil, nil
-	}
-	return &sf, err
+	return scanStorefront(s.db.QueryRow(ctx, `SELECT `+storefrontColumns+` FROM shop.storefronts
+		WHERE lower(slug) = lower($1) AND is_active = true`, slug))
 }
 
 // ProductSettings is a shop.product_settings row; the zero value is a
@@ -63,6 +71,10 @@ type ProductSettings struct {
 	PreorderUntil     *time.Time
 	WholesalePriceIDR *float64
 	WholesaleMinQty   float64
+	Sale              domain.Sale
+	IsFeatured        bool
+	IsNew             bool
+	RestockedAt       *time.Time
 }
 
 // productSettings reads the settings of the products (missing rows give
@@ -72,7 +84,8 @@ func (s *Service) productSettings(ctx context.Context, ids []string) (map[string
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := s.db.Query(ctx, `SELECT product_id::text, preorder_until, wholesale_price_idr::float8, wholesale_min_qty
+	rows, err := s.db.Query(ctx, `SELECT product_id::text, preorder_until, wholesale_price_idr::float8, wholesale_min_qty,
+		  sale_price_idr::float8, sale_until, is_featured, is_new, restocked_at
 		FROM shop.product_settings WHERE product_id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
@@ -82,13 +95,75 @@ func (s *Service) productSettings(ctx context.Context, ids []string) (map[string
 		var id string
 		var ps ProductSettings
 		var minQty int
-		if err := rows.Scan(&id, &ps.PreorderUntil, &ps.WholesalePriceIDR, &minQty); err != nil {
+		if err := rows.Scan(&id, &ps.PreorderUntil, &ps.WholesalePriceIDR, &minQty,
+			&ps.Sale.Price, &ps.Sale.Until, &ps.IsFeatured, &ps.IsNew, &ps.RestockedAt); err != nil {
 			return nil, err
 		}
 		ps.WholesaleMinQty = float64(minQty)
 		out[id] = ps
 	}
 	return out, rows.Err()
+}
+
+// ProductRating is the published reviews of a product.
+type ProductRating struct {
+	Average float64 `json:"average"`
+	Count   int     `json:"count"`
+}
+
+// productRatings aggregates the published reviews of the products
+// (average to one decimal).
+func (s *Service) productRatings(ctx context.Context, ids []string) (map[string]*ProductRating, error) {
+	out := map[string]*ProductRating{}
+	rows, err := s.db.Query(ctx, `SELECT product_id::text, avg(rating)::float8, count(*)::int
+		FROM shop.product_reviews WHERE status = 'published' AND product_id = ANY($1::uuid[])
+		GROUP BY product_id`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var r ProductRating
+		if err := rows.Scan(&id, &r.Average, &r.Count); err != nil {
+			return nil, err
+		}
+		r.Average = jsmath.RoundTo(r.Average, 1)
+		out[id] = &r
+	}
+	return out, rows.Err()
+}
+
+// relatedLimit is how many "You may also like" products a product gets.
+const relatedLimit = 4
+
+// relatedIDs picks the product's related products: the same collection,
+// in stock first, newest first.
+func relatedIDs(self CatalogProductView, products []CatalogProductView) []string {
+	out := []string{}
+	if self.Collection == nil {
+		return out
+	}
+	var candidates []CatalogProductView
+	for _, p := range products {
+		if p.ID != self.ID && p.Collection != nil && p.Collection.ID == self.Collection.ID {
+			candidates = append(candidates, p)
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		a, b := candidates[i], candidates[j]
+		if (a.Stock > 0) != (b.Stock > 0) {
+			return a.Stock > 0
+		}
+		return a.createdAt.After(b.createdAt)
+	})
+	for _, p := range candidates {
+		if len(out) == relatedLimit {
+			break
+		}
+		out = append(out, p.ID)
+	}
+	return out
 }
 
 func settingsOf(all map[string]ProductSettings, id string) ProductSettings {
@@ -98,14 +173,18 @@ func settingsOf(all map[string]ProductSettings, id string) ProductSettings {
 	return ProductSettings{WholesaleMinQty: 1}
 }
 
-// CatalogSKUView is CatalogSku.
+// CatalogSKUView is CatalogSku. Price is the effective price;
+// CompareAtPrice the regular one while a sale applies.
 type CatalogSKUView struct {
-	ID       string  `json:"id"`
-	SKU      string  `json:"sku"`
-	Name     string  `json:"name"`
-	Price    float64 `json:"price"`
-	Stock    float64 `json:"stock"`
-	Preorder bool    `json:"preorder"`
+	ID             string   `json:"id"`
+	SKU            string   `json:"sku"`
+	Name           string   `json:"name"`
+	Price          float64  `json:"price"`
+	CompareAtPrice *float64 `json:"compareAtPrice"`
+	Stock          float64  `json:"stock"`
+	Preorder       bool     `json:"preorder"`
+	// regular is the price before any sale, the wholesale base.
+	regular float64
 }
 
 // CatalogCollection is a storefront collection (a POS category).
@@ -115,7 +194,9 @@ type CatalogCollection struct {
 	order int
 }
 
-// CatalogProductView is CatalogProduct.
+// CatalogProductView is CatalogProduct. Price is the effective price;
+// CompareAtPrice, SalePercent and SaleUntil describe the sale when one
+// applies.
 type CatalogProductView struct {
 	ID              string             `json:"id"`
 	Name            string             `json:"name"`
@@ -125,12 +206,25 @@ type CatalogProductView struct {
 	ImageURL        *string            `json:"imageUrl"`
 	Images          []string           `json:"images"`
 	Price           float64            `json:"price"`
+	CompareAtPrice  *float64           `json:"compareAtPrice"`
+	SalePercent     *int               `json:"salePercent"`
+	SaleUntil       *httpx.JSTime      `json:"saleUntil"`
 	WeightGram      *float64           `json:"weightGram"`
 	Stock           float64            `json:"stock"`
 	Collection      *CatalogCollection `json:"collection"`
 	PreorderUntil   *string            `json:"preorderUntil"`
 	Preorder        bool               `json:"preorder"`
+	IsFeatured      bool               `json:"isFeatured"`
+	IsNew           bool               `json:"isNew"`
+	LowStock        bool               `json:"lowStock"`
+	BackInStock     bool               `json:"backInStock"`
+	Rating          *ProductRating     `json:"rating"`
+	RelatedIDs      []string           `json:"relatedIds"`
 	SKUs            []CatalogSKUView   `json:"skus"`
+	// regular is the price before any sale, the wholesale base; createdAt
+	// orders related products.
+	regular   float64
+	createdAt time.Time
 }
 
 // Catalog is the storefront catalog: products with their collections in
@@ -166,15 +260,17 @@ func skuPrice(product float64, override *string) float64 {
 	return product
 }
 
-// BuildCatalog is buildShopCatalog, plus collections and pre-order flags.
-func (s *Service) BuildCatalog(ctx context.Context) (CatalogView, error) {
-	catalog, _, err := s.buildCatalog(ctx)
+// BuildCatalog is buildShopCatalog, plus collections, pre-order and sale
+// pricing, the stock badges (lowStockThreshold from the storefront
+// settings), ratings and related products.
+func (s *Service) BuildCatalog(ctx context.Context, lowStockThreshold int) (CatalogView, error) {
+	catalog, _, err := s.buildCatalog(ctx, lowStockThreshold)
 	return catalog, err
 }
 
 // buildCatalog also hands back the product settings it read, for the
 // wholesale views that price the same products.
-func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]ProductSettings, error) {
+func (s *Service) buildCatalog(ctx context.Context, lowStockThreshold int) (CatalogView, map[string]ProductSettings, error) {
 	catalog := CatalogView{Collections: []CatalogCollection{}, Products: []CatalogProductView{}}
 	settings := map[string]ProductSettings{}
 	products, err := s.ports.Catalog.WebProducts(ctx, s.db)
@@ -197,6 +293,10 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 	if err != nil {
 		return catalog, settings, err
 	}
+	ratings, err := s.productRatings(ctx, ids)
+	if err != nil {
+		return catalog, settings, err
+	}
 	skusByProduct := map[string][]CatalogSKU{}
 	for _, sku := range skus {
 		skusByProduct[sku.ProductID] = append(skusByProduct[sku.ProductID], sku)
@@ -208,14 +308,19 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 	now := s.now()
 	collections := map[string]CatalogCollection{}
 	for _, p := range products {
-		price := basePrice(p)
-		until := settingsOf(settings, p.ID).PreorderUntil
+		base := basePrice(p)
+		ps := settingsOf(settings, p.ID)
+		pricing := domain.PriceWithSale(base, base, ps.Sale, now)
+		until := ps.PreorderUntil
 		preorderOpen := domain.PreorderOpen(0, until, now)
 		views := []CatalogSKUView{}
 		stock := 0.0
 		anyPreorder := false
 		for _, sku := range skusByProduct[p.ID] {
-			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPrice(price, sku.PriceOverride), Stock: numOr0(&sku.StockQuantity)}
+			regular := skuPrice(base, sku.PriceOverride)
+			skuPricing := domain.PriceWithSale(regular, base, ps.Sale, now)
+			v := CatalogSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, Price: skuPricing.Price, CompareAtPrice: skuPricing.CompareAt,
+				Stock: numOr0(&sku.StockQuantity), regular: regular}
 			v.Preorder = preorderOpen && v.Stock <= 0
 			anyPreorder = anyPreorder || v.Preorder
 			views = append(views, v)
@@ -242,12 +347,23 @@ func (s *Service) buildCatalog(ctx context.Context) (CatalogView, map[string]Pro
 			collections[c.ID] = c
 			collection = &CatalogCollection{ID: c.ID, Name: c.Name}
 		}
+		var saleUntil *httpx.JSTime
+		if pricing.CompareAt != nil {
+			saleUntil = httpx.NewJSTime(ps.Sale.Until)
+		}
 		catalog.Products = append(catalog.Products, CatalogProductView{
 			ID: p.ID, Name: p.Name, Description: p.Description, LongDescription: p.LongDescription, SizeGuide: p.SizeGuide,
-			ImageURL: p.ImageURL, Images: imgs, Price: price, WeightGram: weight, Stock: stock,
+			ImageURL: p.ImageURL, Images: imgs, Price: pricing.Price, CompareAtPrice: pricing.CompareAt, SalePercent: pricing.Percent,
+			SaleUntil: saleUntil, WeightGram: weight, Stock: stock,
 			Collection: collection, PreorderUntil: domain.DateString(until),
-			Preorder: anyPreorder || (preorderOpen && stock <= 0), SKUs: views,
+			Preorder:   anyPreorder || (preorderOpen && stock <= 0),
+			IsFeatured: ps.IsFeatured, IsNew: ps.IsNew,
+			LowStock: domain.LowStock(stock, lowStockThreshold), BackInStock: domain.BackInStock(stock, ps.RestockedAt, now),
+			Rating: ratings[p.ID], SKUs: views, regular: base, createdAt: p.CreatedAt,
 		})
+	}
+	for i := range catalog.Products {
+		catalog.Products[i].RelatedIDs = relatedIDs(catalog.Products[i], catalog.Products)
 	}
 	for _, c := range collections {
 		catalog.Collections = append(catalog.Collections, c)
@@ -297,13 +413,21 @@ func (s *Service) CartWeightAndValue(ctx context.Context, items []CartItem) (wei
 
 // ── Checkout ────────────────────────────────────────────────────────────
 
-// CheckoutInput is CheckoutInput.
+// CheckoutInput is the parsed checkout body plus what the handler
+// resolved: the storefront, the authoritative courier quote and the
+// signed-in member.
 type CheckoutInput struct {
 	Storefront Storefront
 	Items      []CartItem
 	Customer   struct {
 		Name, Phone string
 		Email       *string
+	}
+	// Delivery is ship (destination and courier required) or pickup at
+	// Branch (no address, no shipping cost).
+	Delivery struct {
+		Method string
+		Branch *PickupBranch
 	}
 	Destination struct {
 		AreaID, Label, Address string
@@ -312,15 +436,23 @@ type CheckoutInput struct {
 	Courier struct {
 		Code, ServiceCode, Provider string
 		Cost                        float64
+		Etd                         *string
 	}
-	Notes *string
+	PromoCode *string
+	// Payment is xendit (an invoice to pay) or arkcoin (the member's
+	// balance, paid at once).
+	Payment string
+	Member  *Member
+	Notes   *string
 	// BaseURL is the absolute origin for the Xendit redirect.
 	BaseURL string
 }
 
-// CheckoutResult is the ok branch of CheckoutResult.
+// CheckoutResult is a placed order; InvoiceURL is empty for an ARK Coin
+// order, which is already paid.
 type CheckoutResult struct {
 	OrderID, OrderNumber, AccessToken, InvoiceURL string
+	Paid                                          bool
 }
 
 // checkoutError is the `{ ok: false, status, reason }` branch.
@@ -338,8 +470,11 @@ type resolvedLine struct {
 	skuName     *string
 	skuCode     *string
 	quantity    float64
-	unitPrice   float64
-	weightGram  float64
+	// unitPrice is the effective (sale) price; regularPrice the one before
+	// the sale, which wholesale prices from.
+	unitPrice    float64
+	regularPrice float64
+	weightGram   float64
 	// stock is what the catalog shows for the SKU (or the product).
 	stock float64
 	// settings are the product's shop settings.
@@ -417,7 +552,8 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 		if p == nil {
 			return nil, "A product is no longer available. Reload the catalog.", nil
 		}
-		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: basePrice(*p),
+		base := basePrice(*p)
+		line := resolvedLine{productID: p.ID, productName: p.Name, quantity: qty, unitPrice: base,
 			weightGram: unitWeight(p.WeightGram), stock: numOr0(p.InventoryQuantity), settings: settingsOf(settings, p.ID)}
 		if it.SkuID != nil && *it.SkuID != "" {
 			sku, err := s.ports.Catalog.ActiveSKU(ctx, s.db, *it.SkuID, it.ProductID)
@@ -437,6 +573,8 @@ func (s *Service) resolveLines(ctx context.Context, items []CartItem) ([]resolve
 		} else if p.HasActiveSKU {
 			return nil, p.Name + " has variants. Choose one first.", nil
 		}
+		line.regularPrice = line.unitPrice
+		line.unitPrice = domain.PriceWithSale(line.regularPrice, base, line.settings.Sale, now).Price
 		line.isPreorder = domain.PreorderOpen(line.stock, line.settings.PreorderUntil, now)
 		lines = append(lines, line)
 	}
@@ -460,7 +598,15 @@ type orderDraft struct {
 	courierCode   *string
 	courierSvc    *string
 	shippingCost  float64
+	etaText       *string
 	notes         *string
+	// Retail orders: delivery, promo code, payment method and the member
+	// (nil for a guest). The zero values are ship, no promo, xendit.
+	deliveryMethod string
+	pickupBranchID *string
+	promoCode      *string
+	paymentMethod  string
+	member         *Member
 	// Wholesale orders carry the account and its terms; pay_later ones a
 	// due date instead of an invoice expiry.
 	wholesaleAccountID *string
@@ -480,18 +626,39 @@ func (d orderDraft) subtotal() float64 {
 	return sum
 }
 
+// total is the amount before any promo discount; placeOrder applies the
+// discount the promo engine grants.
 func (d orderDraft) total() float64 { return d.subtotal() + d.shippingCost }
+
+// promoCheck is the cart as the promo engine evaluates it.
+func (d orderDraft) promoCheck() PromoCheck {
+	check := PromoCheck{Code: *d.promoCode, Subtotal: d.subtotal(), Phone: orNil(&d.customerPhone), CustomerID: d.customerID()}
+	for _, l := range d.lines {
+		check.Lines = append(check.Lines, PromoLine{ProductID: l.productID, Amount: float64(l.unitPrice * l.quantity)})
+	}
+	return check
+}
+
+func (d orderDraft) customerID() *string {
+	if d.member == nil {
+		return nil
+	}
+	return &d.member.ID
+}
 
 // placedOrder is a written order and the stock it claimed.
 type placedOrder struct {
 	id, number, token string
+	total             float64
 	claims            []claim
 }
 
 // placeOrder claims stock for the non-pre-order lines BEFORE the order
-// exists (the cashier pattern), then writes the order, its items and the
-// reservations in one transaction. A failure part-way gives the claims
-// back.
+// exists (the cashier pattern), then, in one transaction, holds the promo
+// code, writes the order with its discount, its items and the
+// reservations, and for ARK Coin debits the member's balance and marks
+// the order paid. A failure part-way gives the claims back; a promo
+// refusal or an insufficient balance is a 422 *checkoutError.
 func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, error) {
 	var claims []claim
 	for _, l := range d.lines {
@@ -524,21 +691,50 @@ func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, er
 		t := s.now().Add(InvoiceExpiryHours * time.Hour)
 		reservationExpiry = &t
 	}
+	if d.deliveryMethod == "" {
+		d.deliveryMethod = domain.DeliveryShip
+	}
+	if d.paymentMethod == "" {
+		d.paymentMethod = domain.PaymentXendit
+	}
 	res := placedOrder{claims: claims}
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		// The promo hold needs the order id, so the id comes first.
+		if err := tx.QueryRow(ctx, `SELECT gen_random_uuid()::text`).Scan(&res.id); err != nil {
+			return err
+		}
+		discount := 0.0
+		if d.promoCode != nil {
+			var err error
+			discount, _, err = s.ports.Promo.Hold(ctx, tx, d.promoCheck(), res.id)
+			if rej, ok := errors.AsType[*PromoRejectedError](err); ok {
+				return &checkoutError{422, domain.PromoMessage(rej.Reason)}
+			}
+			if err != nil {
+				return err
+			}
+		}
+		res.total = domain.OrderTotal(d.subtotal(), discount, d.shippingCost)
+		if res.total <= 0 && d.paymentMethod == domain.PaymentXendit {
+			return &checkoutError{400, "Invalid order total"}
+		}
 		if err := tx.QueryRow(ctx, `INSERT INTO shop.orders (
-			  storefront_id, customer_name, customer_phone, customer_email,
+			  id, storefront_id, customer_name, customer_phone, customer_email,
 			  shipping_address, shipping_area_id, shipping_area_label,
 			  shipping_postal_code, shipping_provider, courier_code,
 			  courier_service, subtotal, shipping_cost, total,
-			  invoice_expires_at, notes, wholesale_account_id, payment_terms, due_at
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid,$18,$19)
-			RETURNING id::text, order_number, access_token::text`,
-			d.storefront.ID, d.customerName, d.customerPhone, orNil(d.customerEmail),
+			  invoice_expires_at, notes, wholesale_account_id, payment_terms, due_at,
+			  delivery_method, pickup_branch_id, promo_code, discount_amount,
+			  payment_method, eta_text, customer_id
+			) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18::uuid,$19,$20,
+			  $21,$22::uuid,$23,$24,$25,$26,$27::uuid)
+			RETURNING order_number, access_token::text`,
+			res.id, d.storefront.ID, d.customerName, d.customerPhone, orNil(d.customerEmail),
 			d.address, d.areaID, d.areaLabel, orNil(d.postalCode), d.provider, d.courierCode,
-			d.courierSvc, d.subtotal(), d.shippingCost, d.total(), d.invoiceExpiresAt, orNil(d.notes),
+			d.courierSvc, d.subtotal(), d.shippingCost, res.total, d.invoiceExpiresAt, orNil(d.notes),
 			d.wholesaleAccountID, d.paymentTerms, d.dueAt,
-		).Scan(&res.id, &res.number, &res.token); err != nil {
+			d.deliveryMethod, d.pickupBranchID, d.promoCode, discount, d.paymentMethod, d.etaText, d.customerID(),
+		).Scan(&res.number, &res.token); err != nil {
 			return err
 		}
 		for _, l := range d.lines {
@@ -557,19 +753,55 @@ func (s *Service) placeOrder(ctx context.Context, d orderDraft) (placedOrder, er
 				return err
 			}
 		}
+		if d.paymentMethod == domain.PaymentArkCoin {
+			return s.payWithArkCoin(ctx, tx, d, res)
+		}
 		return nil
 	})
 	if err != nil {
-		s.log.Error("[shop] checkout order insert failed", "error", err)
 		s.restoreClaims(ctx, claims)
+		if cerr, ok := errors.AsType[*checkoutError](err); ok {
+			return placedOrder{}, cerr
+		}
+		s.log.Error("[shop] checkout order insert failed", "error", err)
 		return placedOrder{}, &checkoutError{500, "Could not create the order. Try again."}
 	}
 	return res, nil
 }
 
+// payWithArkCoin debits the member inside the order's transaction, marks
+// the order paid, captures the promo, commits the stock and records the
+// member's spend through the outbox.
+func (s *Service) payWithArkCoin(ctx context.Context, tx pgx.Tx, d orderDraft, o placedOrder) error {
+	err := s.ports.Wallet.Pay(ctx, tx, d.member.ID, o.total, o.id, "Shop order "+o.number)
+	if errors.Is(err, ErrArkInsufficient) {
+		return &checkoutError{422, arkInsufficient}
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE shop.orders SET status = 'paid', paid_at = now(), invoice_expires_at = NULL, updated_at = now()
+		WHERE id = $1::uuid`, o.id); err != nil {
+		return err
+	}
+	if d.promoCode != nil {
+		if err := s.ports.Promo.Capture(ctx, tx, o.id); err != nil {
+			return err
+		}
+	}
+	if err := commitOrderReservations(ctx, tx, o.id); err != nil {
+		return err
+	}
+	return outbox.Publish(ctx, tx, possales.TopicCustomerOrderRecorded, o.id, possales.CustomerOrderRecorded{
+		CustomerID: d.member.ID, OrderID: o.id, Amount: o.total,
+	})
+}
+
+const arkInsufficient = "Your ARK Coin balance does not cover this order"
+
 // issueInvoice creates the Xendit invoice of a placed order and stores its
-// link. A failure compensates fully: stock back, reservations released,
-// order cancelled.
+// link. A failure compensates fully: stock back, reservations and promo
+// released, order cancelled.
 func (s *Service) issueInvoice(ctx context.Context, o placedOrder, amount float64, payer, description, redirectURL string) (string, error) {
 	invoice, err := s.ports.Payments.CreateInvoice(ctx, InvoiceRequest{
 		ExternalID: InvoicePrefix + o.id, Amount: amount, PayerName: payer, Description: description, RedirectURL: redirectURL,
@@ -591,14 +823,29 @@ func (s *Service) issueInvoice(ctx context.Context, o placedOrder, amount float6
 	if _, err := s.db.Exec(ctx, `UPDATE shop.orders SET status='cancelled', updated_at=now() WHERE id = $1::uuid`, o.id); err != nil {
 		s.log.Error("[shop] cancel order failed", "order", o.id, "error", err)
 	}
+	s.releasePromo(ctx, o.id)
 	return "", &checkoutError{502, "Could not create the payment invoice. Try again."}
 }
 
-// Checkout is processShopCheckout. A *checkoutError carries the TS status
-// and reason.
+// releasePromo gives an expired or cancelled order's promo code back;
+// a failure is only logged.
+func (s *Service) releasePromo(ctx context.Context, orderID string) {
+	if err := s.ports.Promo.Release(ctx, s.db, orderID); err != nil {
+		s.log.Error("[shop] promo release failed", "order", orderID, "error", err)
+	}
+}
+
+// Checkout places a retail order. Ship orders carry the authoritative
+// courier quote; pickup orders skip shipping. Xendit orders get an
+// invoice and a WhatsApp summary; ARK Coin orders are paid at once and
+// get the payment confirmation. A *checkoutError carries the status and
+// reason for the buyer.
 func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResult, error) {
-	if !s.ports.Payments.Configured() {
+	if in.Payment == domain.PaymentXendit && !s.ports.Payments.Configured() {
 		return CheckoutResult{}, &checkoutError{503, "Online payment is not configured"}
+	}
+	if in.Payment == domain.PaymentArkCoin && in.Member == nil {
+		return CheckoutResult{}, &checkoutError{401, "Sign in to pay with ARK Coin"}
 	}
 	lines, reason, err := s.resolveLines(ctx, in.Items)
 	if err != nil {
@@ -611,23 +858,76 @@ func (s *Service) Checkout(ctx context.Context, in CheckoutInput) (CheckoutResul
 	d := orderDraft{
 		storefront: in.Storefront, lines: lines,
 		customerName: in.Customer.Name, customerPhone: in.Customer.Phone, customerEmail: in.Customer.Email,
-		address: in.Destination.Address, areaID: &in.Destination.AreaID, areaLabel: &in.Destination.Label, postalCode: in.Destination.PostalCode,
-		provider: &in.Courier.Provider, courierCode: &in.Courier.Code, courierSvc: &in.Courier.ServiceCode,
-		shippingCost: math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost))),
-		notes:        in.Notes, invoiceExpiresAt: &expiresAt,
+		notes: in.Notes, invoiceExpiresAt: &expiresAt,
+		deliveryMethod: in.Delivery.Method, promoCode: in.PromoCode, paymentMethod: in.Payment, member: in.Member,
+	}
+	delivery := "Shipping to " + in.Destination.Label
+	if in.Delivery.Method == domain.DeliveryPickup {
+		d.pickupBranchID = &in.Delivery.Branch.ID
+		d.address = "Pickup at " + in.Delivery.Branch.Name
+		delivery = "Pick up at " + in.Delivery.Branch.Name
+	} else {
+		settings, err := s.StorefrontSettings(ctx, in.Storefront.ID)
+		if err != nil {
+			return CheckoutResult{}, err
+		}
+		d.address, d.areaID, d.areaLabel, d.postalCode = in.Destination.Address, &in.Destination.AreaID, &in.Destination.Label, in.Destination.PostalCode
+		d.provider, d.courierCode, d.courierSvc = &in.Courier.Provider, &in.Courier.Code, &in.Courier.ServiceCode
+		rate := math.Max(0, jsmath.Round(domain.OrFinite(in.Courier.Cost)))
+		d.shippingCost = domain.ShippingCost(rate, d.subtotal(), settings.FreeShippingThreshold)
+		d.etaText = orNil(in.Courier.Etd)
 	}
 	if d.total() <= 0 {
 		return CheckoutResult{}, &checkoutError{400, "Invalid order total"}
+	}
+	if in.Payment == domain.PaymentArkCoin {
+		// A cheap refusal before any stock is claimed; the debit inside
+		// the transaction is the final word.
+		balance, err := s.ports.Wallet.Balance(ctx, s.db, in.Member.ID)
+		if err != nil {
+			return CheckoutResult{}, err
+		}
+		if balance < s.estimatedTotal(ctx, d) {
+			return CheckoutResult{}, &checkoutError{422, arkInsufficient}
+		}
 	}
 	placed, err := s.placeOrder(ctx, d)
 	if err != nil {
 		return CheckoutResult{}, err
 	}
-	url, err := s.issueInvoice(ctx, placed, d.total(), in.Customer.Name, "Order "+placed.number+" — "+in.Storefront.Name, in.BaseURL+"/shop/order/"+placed.token)
+	res := CheckoutResult{OrderID: placed.id, OrderNumber: placed.number, AccessToken: placed.token}
+	statusURL := in.BaseURL + "/shop/order/" + placed.token
+	if in.Payment == domain.PaymentArkCoin {
+		res.Paid = true
+		s.sendWa(ctx, in.Customer.Phone, domain.OrderPaidMessage(s.ports.AppOrigin, placed.number, in.Customer.Name, placed.token, placed.total), "paid")
+		return res, nil
+	}
+	res.InvoiceURL, err = s.issueInvoice(ctx, placed, placed.total, in.Customer.Name, "Order "+placed.number+" — "+in.Storefront.Name, statusURL)
 	if err != nil {
 		return CheckoutResult{}, err
 	}
-	return CheckoutResult{OrderID: placed.id, OrderNumber: placed.number, AccessToken: placed.token, InvoiceURL: url}, nil
+	s.sendWa(ctx, in.Customer.Phone, domain.OrderPlacedMessage(s.ports.AppOrigin, placed.number, in.Customer.Name, placed.token, delivery, res.InvoiceURL, placed.total), "placed")
+	return res, nil
+}
+
+// estimatedTotal is the total after the promo preview's discount.
+func (s *Service) estimatedTotal(ctx context.Context, d orderDraft) float64 {
+	discount := 0.0
+	if d.promoCode != nil {
+		if p, err := s.ports.Promo.Preview(ctx, s.db, d.promoCheck()); err == nil && p.OK {
+			discount = p.Discount
+		}
+	}
+	return domain.OrderTotal(d.subtotal(), discount, d.shippingCost)
+}
+
+// sendWa sends a best-effort WhatsApp text after the response.
+func (s *Service) sendWa(ctx context.Context, phone, message, kind string) {
+	s.background(ctx, func(ctx context.Context) {
+		if err := s.ports.Messenger.SendText(ctx, phone, message); err != nil {
+			s.log.Error("[shop] WA "+kind+" failed", "error", err)
+		}
+	})
 }
 
 // orNil is `value || null`.

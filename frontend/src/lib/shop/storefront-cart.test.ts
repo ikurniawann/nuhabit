@@ -7,13 +7,12 @@ import {
   cartSubtotal,
   changeCartQuantity,
   changeCartVariant,
-  checkoutFormError,
   filterAndSortProducts,
   groupByCollection,
   parseStoredCart,
   removeCartLine,
 } from "./storefront-cart";
-import type { CatalogProduct } from "./types";
+import { catalogProduct, catalogSku } from "@/test/shop-fixtures";
 
 const tee = { id: "p1", name: "Tee", price: 100_000 };
 const sizeL = { id: "s1", name: "L", price: 120_000 };
@@ -25,8 +24,8 @@ describe("storefront cart", () => {
     cart = addCartLine(cart, tee, sizeL);
     cart = addCartLine(cart, tee, null);
     expect(cart).toEqual([
-      { key: "p1::s1", productId: "p1", skuId: "s1", name: "Tee", variantName: "L", price: 120_000, quantity: 2, preorderUntil: null },
-      { key: "p1", productId: "p1", skuId: null, name: "Tee", variantName: null, price: 100_000, quantity: 1, preorderUntil: null },
+      { key: "p1::s1", productId: "p1", skuId: "s1", name: "Tee", variantName: "L", price: 120_000, compareAtPrice: null, quantity: 2, preorderUntil: null },
+      { key: "p1", productId: "p1", skuId: null, name: "Tee", variantName: null, price: 100_000, compareAtPrice: null, quantity: 1, preorderUntil: null },
     ]);
     expect(cartCount(cart)).toBe(3);
     expect(cartSubtotal(cart)).toBe(340_000);
@@ -62,22 +61,24 @@ describe("storefront cart", () => {
   });
 
   it("stored cart: old format, new format and corrupt data", () => {
-    expect(parseStoredCart(null)).toEqual({ lines: [], note: "" });
-    expect(parseStoredCart("{broken")).toEqual({ lines: [], note: "" });
-    expect(parseStoredCart('{"a":1}')).toEqual({ lines: [], note: "" });
+    expect(parseStoredCart(null)).toEqual({ lines: [], note: "", promo: null, pendingCode: null });
+    expect(parseStoredCart("{broken")).toEqual({ lines: [], note: "", promo: null, pendingCode: null });
+    expect(parseStoredCart('{"a":1}')).toEqual({ lines: [], note: "", promo: null, pendingCode: null });
     const legacy = addCartLine([], tee, null).map(({ preorderUntil: _drop, ...line }) => line);
     expect(parseStoredCart(JSON.stringify(legacy)).lines[0]).toMatchObject({ key: "p1", preorderUntil: null });
-    const stored = { lines: addCartLine([], tee, sizeL), note: "Gift wrap" };
+    const stored = { lines: addCartLine([], tee, sizeL), note: "Gift wrap", promo: null, pendingCode: null };
     expect(parseStoredCart(JSON.stringify(stored))).toEqual(stored);
-    expect(parseStoredCart('{"lines":[{"key":1}],"note":5}')).toEqual({ lines: [], note: "" });
+    expect(parseStoredCart(JSON.stringify({ lines: [], note: "" }))).toEqual({ lines: [], note: "", promo: null, pendingCode: null });
+    const promo = { code: "WELCOME", discountAmount: 10_000, label: "10k off" };
+    expect(parseStoredCart(JSON.stringify({ ...stored, promo })).promo).toEqual(promo);
+    expect(parseStoredCart(JSON.stringify({ ...stored, promo: { code: 1 } })).promo).toBeNull();
+    expect(parseStoredCart('{"lines":[{"key":1}],"note":5}')).toEqual({ lines: [], note: "", promo: null, pendingCode: null });
   });
 });
 
 describe("groupByCollection", () => {
-  const product = (id: string, collection: { id: string; name: string } | null): CatalogProduct => ({
-    id, name: id, description: null, longDescription: null, imageUrl: null, images: [], price: 1,
-    weightGram: null, stock: 1, collection, preorderUntil: null, preorder: false, skus: [],
-  });
+  const product = (id: string, collection: { id: string; name: string } | null) =>
+    catalogProduct({ id, price: 1, stock: 1, collection });
   const tops = { id: "c1", name: "Tops" };
   const accessories = { id: "c2", name: "Accessories" };
 
@@ -106,8 +107,8 @@ describe("groupByCollection", () => {
     const shirt = product("Training Shirt", tops);
     shirt.price = 150_000;
     shirt.skus = [
-      { id: "sold", sku: "S", name: "Small", price: 80_000, stock: 0, preorder: false },
-      { id: "medium", sku: "M", name: "Medium", price: 120_000, stock: 2, preorder: false },
+      catalogSku({ id: "sold", sku: "S", name: "Small", price: 80_000, stock: 0 }),
+      catalogSku({ id: "medium", sku: "M", name: "Medium", price: 120_000, stock: 2 }),
     ];
     expect(filterAndSortProducts([shirt, cap], "medium", false, "featured")).toEqual([shirt]);
     expect(filterAndSortProducts([shirt, cap], "accessories", false, "featured")).toEqual([cap]);
@@ -121,7 +122,7 @@ describe("groupByCollection", () => {
     const shirt = product("Training Shirt", tops);
     shirt.id = "p1";
     shirt.name = "Tee";
-    shirt.skus = [{ ...sizeL, sku: "L", stock: 2, preorder: false }];
+    shirt.skus = [catalogSku({ ...sizeL, sku: "L", stock: 2 })];
     const line = addCartLine([], tee, sizeL, 2)[0];
     expect(cartLineIssue(line, [shirt])).toBeNull();
     expect(cartLineIssue({ ...line, quantity: 3 }, [shirt])).toBe("Only 2 available");
@@ -129,22 +130,5 @@ describe("groupByCollection", () => {
     expect(cartLineIssue(line, [])).toMatch(/no longer available/);
     shirt.skus = [];
     expect(cartLineIssue(line, [shirt])).toMatch(/size is no longer available/);
-  });
-});
-
-describe("checkoutFormError", () => {
-  const ok = { name: "Budi", phone: "0812-3456-789", address: "Jl. Melati No. 10", hasArea: true, hasRate: true };
-
-  it("passes when everything is filled in", () => {
-    expect(checkoutFormError(ok)).toBeNull();
-  });
-
-  it("returns the first error in form order", () => {
-    expect(checkoutFormError({ ...ok, name: " B " })).toBe("Recipient name is required");
-    expect(checkoutFormError({ ...ok, phone: "0812-34" })).toBe("Enter a valid WhatsApp number");
-    expect(checkoutFormError({ ...ok, email: "not-an-email" })).toBe("Enter a valid email address or leave it blank");
-    expect(checkoutFormError({ ...ok, hasArea: false, address: "" })).toBe("Choose a destination area first");
-    expect(checkoutFormError({ ...ok, address: "Jl. Mawar" })).toBe("Full address must be at least 10 characters");
-    expect(checkoutFormError({ ...ok, hasRate: false })).toBe("Choose a courier first");
   });
 });

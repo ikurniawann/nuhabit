@@ -1,6 +1,7 @@
 package shop
 
 import (
+	"context"
 	"errors"
 	"math"
 	"net/http"
@@ -20,6 +21,9 @@ import (
 type Guard interface {
 	RequireMenuPrefix(r *http.Request, prefixes ...string) (*auth.User, error)
 }
+
+// storefrontSettingsMenu is the IAM menu of the storefront settings form.
+const storefrontSettingsMenu = "shop.settings"
 
 type handler struct {
 	svc   *Service
@@ -53,11 +57,25 @@ func (h *handler) Routes() []module.Route {
 	public := func(pattern string, fn httpx.HandlerFunc) module.Route {
 		return module.Route{Pattern: pattern, Handler: httpx.Handle(fn)}
 	}
+	// The storefront settings form has its own IAM menu under shop.
+	settings := func(pattern string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) module.Route {
+		return module.Route{Pattern: pattern, Handler: httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
+			u, err := h.guard.RequireMenuPrefix(r, storefrontSettingsMenu)
+			if err != nil {
+				return err
+			}
+			return fn(w, r, u)
+		})}
+	}
 	routes := []module.Route{
 		staff("GET /api/shop/orders", h.listOrders),
 		staff("GET /api/shop/orders/{id}", h.orderDetail),
 		staff("PATCH /api/shop/orders/{id}", h.transitionOrder),
 		staff("POST /api/shop/orders/{id}/shipment", h.createShipment),
+		settings("GET /api/shop/storefront-settings", h.getStorefrontSettings),
+		settings("PUT /api/shop/storefront-settings", h.putStorefrontSettings),
+		staff("GET /api/shop/reviews", h.listReviews),
+		staff("PATCH /api/shop/reviews/{id}", h.moderateReview),
 
 		staff("GET /api/shop/marketplace/accounts", h.listAccounts),
 		staff("PATCH /api/shop/marketplace/accounts", h.updateAccount),
@@ -77,8 +95,12 @@ func (h *handler) Routes() []module.Route {
 
 		public("GET /api/public/shop/{a}/{b}", h.publicGet),
 		public("POST /api/public/shop/{slug}/checkout", h.checkout),
+		public("POST /api/public/shop/{slug}/promo/preview", h.promoPreview),
 		public("GET /api/public/shop/{slug}/shipping/areas", h.publicAreas),
 		public("POST /api/public/shop/{slug}/shipping/rates", h.publicRates),
+		public("POST /api/public/shop/{slug}/reviews", h.createReview),
+		public("GET /api/public/shop/{slug}/products/{id}/reviews", h.productReviews),
+		public("PUT /api/public/shop/{slug}/wishlist", h.putWishlist),
 		{Pattern: "POST /api/public/shop/webhook/biteship", Handler: http.HandlerFunc(h.biteshipWebhook)},
 		{Pattern: "POST /api/public/shop/webhook/xendit", Handler: http.HandlerFunc(h.xenditWebhook)},
 	}
@@ -389,6 +411,74 @@ func (h *handler) sync(w http.ResponseWriter, r *http.Request) error {
 	return ok(w, res)
 }
 
+/* ── storefront settings (admin) ─────────────────────────────────────── */
+
+// defaultStorefront is the storefront the settings form edits.
+func (h *handler) defaultStorefront(r *http.Request) (*Storefront, error) {
+	sf, err := h.svc.ResolveStorefront(r.Context(), DefaultStorefrontSlug)
+	if err == nil && sf == nil {
+		return nil, httpx.NotFound("No active storefront")
+	}
+	return sf, err
+}
+
+func (h *handler) getStorefrontSettings(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+	sf, err := h.defaultStorefront(r)
+	if err != nil {
+		return err
+	}
+	cfg, err := h.svc.StorefrontConfig(r.Context(), sf.ID)
+	if err != nil {
+		return err
+	}
+	return ok(w, cfg)
+}
+
+func (h *handler) putStorefrontSettings(w http.ResponseWriter, r *http.Request, u *auth.User) error {
+	sf, err := h.defaultStorefront(r)
+	if err != nil {
+		return err
+	}
+	raw, err := readJSON(r)
+	if err != nil {
+		return err
+	}
+	f := validate.New(raw, true)
+	nullish := validate.Rule{Optional: true, Nullable: true}
+	in := domain.StorefrontConfig{StorefrontSettings: domain.DefaultStorefrontSettings()}
+	in.PickupEnabled = f.BoolDefault("pickupEnabled", in.PickupEnabled)
+	in.FreeShippingThreshold = f.Num("freeShippingThreshold", nullish, validate.NumOpts{Min: validate.Bound(0)})
+	if n := f.Int("lowStockThreshold", validate.Rule{Optional: true}, validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(1000)}); n != nil {
+		in.LowStockThreshold = *n
+	}
+	in.WhatsappNumber = f.Str("whatsappNumber", nullish, validate.StrOpts{Trim: true, Max: 30, Check: phoneCheck})
+	if _, _, done := f.Take("banner", "object", nullish); !done {
+		b := f.Child("banner")
+		var banner domain.StorefrontBanner
+		if headline := b.Str("headline", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 80}); headline != nil {
+			banner.Headline = *headline
+		}
+		banner.Text = b.Str("text", nullish, validate.StrOpts{Trim: true, Max: 240})
+		banner.Code = b.Str("code", nullish, validate.StrOpts{Trim: true, Max: 40})
+		in.Banner = &banner
+	}
+	if !f.Valid() {
+		return httpx.BadRequest("Invalid settings")
+	}
+	cfg, err := h.svc.SaveStorefrontConfig(r.Context(), sf.ID, in, u.ID)
+	if err != nil {
+		return err
+	}
+	return ok(w, cfg)
+}
+
+// phoneCheck accepts an empty value (cleared) or 8 to 15 digits with the
+// usual separators.
+func phoneCheck(s string) (string, string, bool) {
+	n := len(domain.PhoneDigits(s))
+	return "invalid_format", "Invalid phone number", s == "" || (n >= 8 && n <= 15)
+}
+
 /* ── shipping (admin) ────────────────────────────────────────────────── */
 
 func (h *handler) getShippingSettings(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -532,21 +622,28 @@ const (
 	publicCheckoutInvalid = "Checkout data is incomplete or invalid"
 )
 
-// publicGet dispatches GET /api/public/shop/order/{token} and
-// GET /api/public/shop/{slug}/catalog.
+// publicGet dispatches GET /api/public/shop/order/{token} and the
+// storefront's GET /api/public/shop/{slug}/{catalog,me,wishlist}.
 func (h *handler) publicGet(w http.ResponseWriter, r *http.Request) error {
 	a, b := r.PathValue("a"), r.PathValue("b")
-	switch {
-	case a == "order":
+	if a == "order" {
 		return h.orderStatus(w, r, b)
-	case b == "catalog":
-		r.SetPathValue("slug", a)
+	}
+	r.SetPathValue("slug", a)
+	switch b {
+	case "catalog":
 		return h.catalog(w, r)
+	case "me":
+		return h.me(w, r)
+	case "wishlist":
+		return h.getWishlist(w, r)
 	}
 	http.NotFound(w, r)
 	return nil
 }
 
+// catalog is GET /api/public/shop/{slug}/catalog: the storefront with its
+// settings and pickup branches, the collections and the products.
 func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 	if err := h.limit(r, "shop-catalog", 60); err != nil {
 		return err
@@ -557,20 +654,109 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	h.svc.releaseExpiredReservations(ctx)
-	catalog, err := h.svc.BuildCatalog(ctx)
+	cfg, err := h.svc.StorefrontConfig(ctx, sf.ID)
+	if err != nil {
+		return err
+	}
+	catalog, err := h.svc.BuildCatalog(ctx, cfg.LowStockThreshold)
+	if err != nil {
+		return err
+	}
+	branches, err := h.svc.PickupBranches(ctx, *sf, cfg.StorefrontSettings)
 	if err != nil {
 		return err
 	}
 	type storefrontView struct {
-		Slug        string  `json:"slug"`
-		Name        string  `json:"name"`
-		Description *string `json:"description"`
+		Slug           string                    `json:"slug"`
+		Name           string                    `json:"name"`
+		Description    *string                   `json:"description"`
+		Settings       domain.StorefrontSettings `json:"settings"`
+		PickupBranches []PickupBranch            `json:"pickupBranches"`
+		Banner         *domain.StorefrontBanner  `json:"banner"`
 	}
 	return ok(w, struct {
 		Storefront  storefrontView       `json:"storefront"`
 		Collections []CatalogCollection  `json:"collections"`
 		Products    []CatalogProductView `json:"products"`
-	}{storefrontView{sf.Slug, sf.Name, sf.Description}, catalog.Collections, catalog.Products})
+	}{storefrontView{sf.Slug, sf.Name, sf.Description, cfg.StorefrontSettings, branches, cfg.Banner}, catalog.Collections, catalog.Products})
+}
+
+// me is GET /api/public/shop/{slug}/me: the signed-in member's checkout
+// prefill, data null for a guest.
+func (h *handler) me(w http.ResponseWriter, r *http.Request) error {
+	if err := h.limit(r, "shop-me", 60); err != nil {
+		return err
+	}
+	if _, err := h.storefront(r); err != nil {
+		return err
+	}
+	member, err := h.svc.ports.Members.FromRequest(r)
+	if err != nil {
+		return err
+	}
+	if member == nil {
+		return ok(w, nil)
+	}
+	view, err := h.svc.MemberView(r.Context(), *member)
+	if err != nil {
+		return err
+	}
+	return ok(w, view)
+}
+
+// promoPreview is POST /api/public/shop/{slug}/promo/preview.
+func (h *handler) promoPreview(w http.ResponseWriter, r *http.Request) error {
+	if err := h.limit(r, "shop-promo", 20); err != nil {
+		return err
+	}
+	if _, err := h.storefront(r); err != nil {
+		return err
+	}
+	raw, err := readJSON(r)
+	if err != nil {
+		return err
+	}
+	f := validate.New(raw, true)
+	code := f.Str("code", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 40})
+	items := promoLines(f)
+	if !f.Valid() {
+		return httpx.BadRequest("Invalid payload")
+	}
+	member, err := h.svc.ports.Members.FromRequest(r)
+	if err != nil {
+		return err
+	}
+	view, err := h.svc.PreviewPromo(r.Context(), *code, items, member)
+	if err != nil {
+		return checkoutStatus(err)
+	}
+	return ok(w, view)
+}
+
+// promoLines reads the preview's lines: [{productId, skuId?, quantity}].
+func promoLines(f *validate.Form) []CartItem {
+	var out []CartItem
+	f.List("lines", validate.Rule{}, 50, func(sub *validate.Form, i int, v any) {
+		it := sub.Item(i, v)
+		var item CartItem
+		if id := it.UUID("productId", validate.Rule{}); id != nil {
+			item.ProductID = *id
+		}
+		item.SkuID = it.UUID("skuId", validate.Rule{Optional: true, Nullable: true})
+		if q := it.Int("quantity", validate.Rule{}, validate.NumOpts{Positive: true, Max: validate.Bound(999)}); q != nil {
+			item.Quantity = float64(*q)
+		}
+		out = append(out, item)
+	})
+	return out
+}
+
+// checkoutStatus turns a *checkoutError into its HTTP status.
+func checkoutStatus(err error) error {
+	if cerr, ok := errors.AsType[*checkoutError](err); ok {
+		return httpx.Status(cerr.status, cerr.reason)
+	}
+	return err
 }
 
 func (h *handler) orderStatus(w http.ResponseWriter, r *http.Request, token string) error {
@@ -700,15 +886,67 @@ func (h *handler) checkout(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	in, valid := parseCheckout(raw)
+	in, branchID, valid := parseCheckout(raw)
 	if !valid {
 		return httpx.BadRequest(publicCheckoutInvalid)
 	}
 	ctx := r.Context()
 	h.svc.releaseExpiredReservations(ctx)
+	in.Storefront = *sf
+	if in.Member, err = h.svc.ports.Members.FromRequest(r); err != nil {
+		return err
+	}
+	if in.Delivery.Method == domain.DeliveryPickup {
+		if in.Delivery.Branch, err = h.pickupBranch(ctx, *sf, branchID); err != nil {
+			return err
+		}
+	} else if err := h.priceShipping(ctx, &in); err != nil {
+		return err
+	}
+	base := requestOrigin(r, h.svc.ports.AppOrigin)
+	in.BaseURL = base
+	res, err := h.svc.Checkout(ctx, in)
+	if err != nil {
+		return checkoutStatus(err)
+	}
+	statusURL := base + "/shop/order/" + res.AccessToken
+	if res.Paid {
+		return created(w, struct {
+			OrderNumber string `json:"orderNumber"`
+			AccessToken string `json:"accessToken"`
+			Status      string `json:"status"`
+			StatusURL   string `json:"statusUrl"`
+		}{res.OrderNumber, res.AccessToken, "paid", statusURL})
+	}
+	return created(w, struct {
+		OrderNumber string `json:"order_number"`
+		InvoiceURL  string `json:"invoice_url"`
+		StatusURL   string `json:"status_url"`
+	}{res.OrderNumber, res.InvoiceURL, statusURL})
+}
 
-	// Authoritative shipping: re-quote from the provider and match the
-	// client's choice.
+// pickupBranch is the branch a pickup order names: pickup must be on and
+// the branch among the storefront's pickup branches.
+func (h *handler) pickupBranch(ctx context.Context, sf Storefront, branchID string) (*PickupBranch, error) {
+	settings, err := h.svc.StorefrontSettings(ctx, sf.ID)
+	if err != nil {
+		return nil, err
+	}
+	branches, err := h.svc.PickupBranches(ctx, sf, settings)
+	if err != nil {
+		return nil, err
+	}
+	for i := range branches {
+		if branches[i].ID == branchID {
+			return &branches[i], nil
+		}
+	}
+	return nil, httpx.BadRequest("Pickup is not available at that branch")
+}
+
+// priceShipping is the authoritative shipping of a ship order: re-quote
+// from the provider and match the client's choice.
+func (h *handler) priceShipping(ctx context.Context, in *CheckoutInput) error {
 	weight, value, err := h.svc.CartWeightAndValue(ctx, in.Items)
 	if err != nil {
 		return err
@@ -731,29 +969,16 @@ func (h *handler) checkout(w http.ResponseWriter, r *http.Request) error {
 	if !found {
 		return httpx.Conflict(publicCourierGone)
 	}
-	base := requestOrigin(r, h.svc.ports.AppOrigin)
-	in.Storefront = *sf
 	in.Courier.Code, in.Courier.ServiceCode = chosen.CourierCode, chosen.ServiceCode
-	in.Courier.Provider, in.Courier.Cost = sc.provider.name(), chosen.Price+sc.markup
-	in.BaseURL = base
-	res, err := h.svc.Checkout(ctx, in)
-	var cerr *checkoutError
-	if errors.As(err, &cerr) {
-		return httpx.Status(cerr.status, cerr.reason)
-	}
-	if err != nil {
-		return err
-	}
-	return created(w, struct {
-		OrderNumber string `json:"order_number"`
-		InvoiceURL  string `json:"invoice_url"`
-		StatusURL   string `json:"status_url"`
-	}{res.OrderNumber, res.InvoiceURL, base + "/shop/order/" + res.AccessToken})
+	in.Courier.Provider, in.Courier.Cost, in.Courier.Etd = sc.provider.name(), chosen.Price+sc.markup, chosen.Etd
+	return nil
 }
 
-// parseCheckout is the checkout bodySchema; only pass or fail matters.
-func parseCheckout(raw any) (CheckoutInput, bool) {
-	var in CheckoutInput
+// parseCheckout is the checkout body: items, customer, delivery (ship by
+// default; pickup names a branchId and needs no destination or courier),
+// promoCode, payment (xendit by default) and notes. Only pass or fail
+// matters.
+func parseCheckout(raw any) (in CheckoutInput, branchID string, valid bool) {
 	f := validate.New(raw, true)
 	nullish := validate.Rule{Optional: true, Nullable: true}
 	in.Items = cartItems(f, true)
@@ -767,22 +992,45 @@ func parseCheckout(raw any) (CheckoutInput, bool) {
 			in.Customer.Email = c.Str("email", nullish, validate.StrOpts{Trim: true, Max: 160, Check: emailCheck})
 		}
 	}
-	d := f.Child("destination")
-	area := d.Str("area_id", validate.Rule{}, validate.StrOpts{Min: 1})
-	label := d.Str("label", validate.Rule{}, validate.StrOpts{Trim: true, Min: 3, Max: 300})
-	in.Destination.PostalCode = d.Str("postal_code", nullish, validate.StrOpts{Trim: true, Max: 10})
-	address := d.Str("address", validate.Rule{}, validate.StrOpts{Trim: true, Min: 10, Max: 500})
-	k := f.Child("courier")
-	code := k.Str("code", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 30})
-	service := k.Str("service_code", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 60})
+	in.Delivery.Method, in.Payment = domain.DeliveryShip, domain.PaymentXendit
+	if _, sent := f.Fields()["delivery"]; sent {
+		d := f.Child("delivery")
+		if m := d.Enum("method", validate.Rule{}, []string{domain.DeliveryShip, domain.DeliveryPickup}); m != nil {
+			in.Delivery.Method = *m
+		}
+		if in.Delivery.Method == domain.DeliveryPickup {
+			if id := d.UUID("branchId", validate.Rule{}); id != nil {
+				branchID = *id
+			}
+		}
+	}
+	if _, sent := f.Fields()["payment"]; sent {
+		if m := f.Child("payment").Enum("method", validate.Rule{}, []string{domain.PaymentXendit, domain.PaymentArkCoin}); m != nil {
+			in.Payment = *m
+		}
+	}
+	in.PromoCode = orNil(f.Str("promoCode", nullish, validate.StrOpts{Trim: true, Max: 40}))
 	in.Notes = f.Str("notes", nullish, validate.StrOpts{Trim: true, Max: 500})
+	var area, label, address, code, service *string
+	if in.Delivery.Method == domain.DeliveryShip {
+		d := f.Child("destination")
+		area = d.Str("area_id", validate.Rule{}, validate.StrOpts{Min: 1})
+		label = d.Str("label", validate.Rule{}, validate.StrOpts{Trim: true, Min: 3, Max: 300})
+		in.Destination.PostalCode = d.Str("postal_code", nullish, validate.StrOpts{Trim: true, Max: 10})
+		address = d.Str("address", validate.Rule{}, validate.StrOpts{Trim: true, Min: 10, Max: 500})
+		k := f.Child("courier")
+		code = k.Str("code", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 30})
+		service = k.Str("service_code", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 60})
+	}
 	if !f.Valid() {
-		return in, false
+		return in, "", false
 	}
 	in.Customer.Name, in.Customer.Phone = *name, *phone
-	in.Destination.AreaID, in.Destination.Label, in.Destination.Address = *area, *label, *address
-	in.Courier.Code, in.Courier.ServiceCode = *code, *service
-	return in, true
+	if in.Delivery.Method == domain.DeliveryShip {
+		in.Destination.AreaID, in.Destination.Label, in.Destination.Address = *area, *label, *address
+		in.Courier.Code, in.Courier.ServiceCode = *code, *service
+	}
+	return in, branchID, true
 }
 
 /* ── webhooks ────────────────────────────────────────────────────────── */

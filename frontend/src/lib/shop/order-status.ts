@@ -45,11 +45,19 @@ export function toPublicOrderStatus(order: OrderRow, items: OrderItemRow[]): Pub
     waybill: order.waybill,
     paid_at: order.paid_at,
     created_at: order.created_at,
+    delivery: { method: "ship", branch: null, readyAt: null },
+    discountAmount: 0,
+    promoCode: null,
+    paymentMethod: "xendit",
+    etaText: null,
+    whatsappUrl: null,
     items: items.map((item) => ({
+      productId: null,
       name: item.sku_name ? `${item.product_name} — ${item.sku_name}` : item.product_name,
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
       total: Number(item.total),
+      reviewable: false,
     })),
   };
 }

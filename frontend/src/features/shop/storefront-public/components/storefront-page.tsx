@@ -1,56 +1,88 @@
 'use client';
 
-// Public storefront: catalog by collection, size picker, cart (or Buy Now),
-// checkout (area plus live shipping rates), redirect to the Xendit invoice.
-// The cart lives in cart-store (localStorage per store slug).
+// Public storefront: promo banner, promo, new and featured rows, saved and
+// recently viewed rows, catalog by collection with size and price filters
+// in the URL, quick add from the grid, cart (or Buy Now), one-screen
+// checkout (ship with live rates or branch pickup, promo code, Xendit or
+// ARK Coin), redirect to the invoice or the status page.
+// The cart lives in cart-store, saved and recent ids in saved-store
+// (localStorage per store slug).
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Loader2, Package, Search, ShoppingBag, ShoppingCart, X } from 'lucide-react';
-import { formatRupiah } from '@/lib/format';
+import { ArrowRight, Loader2, Package, Search, ShoppingBag, ShoppingCart } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   addCartLine,
   cartCount,
   cartSubtotal,
   changeCartQuantity,
   changeCartVariant,
-  filterAndSortProducts,
   groupByCollection,
   makeCartLine,
-  productIsAvailable,
-  productStartingPrice,
   removeCartLine,
-  type CatalogSort,
   type CartLine,
 } from '@/lib/shop/storefront-cart';
-import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
+import {
+  applyCatalogFilters,
+  catalogFiltersQuery,
+  catalogSections,
+  catalogSizes,
+  EMPTY_FILTERS,
+  isBrowsing,
+  parseCatalogFilters,
+  productsByIds,
+  type CatalogFilters,
+} from '@/lib/shop/storefront-discovery';
+import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { pushShopEvent } from '../analytics';
-import { bindCart, clearCart, closeCart, openCart, setCartNote, updateLines, useCart } from '../cart-store';
-import { useStorefrontCatalog } from '../queries';
+import { bindCart, clearCart, closeCart, openCart, setCartNote, setCartPendingCode, setCartPromo, updateLines, useCart } from '../cart-store';
+import { useShopMember, useStorefrontCatalog } from '../queries';
+import { bindSaved, pushRecent, useSaved } from '../saved-store';
+import { useWishlist } from '../use-wishlist';
 import { CartDrawer } from './cart-drawer';
-import { CheckoutDrawer } from './checkout-drawer';
+import { CatalogFilterBar } from './catalog-filter-bar';
+import { CheckoutSheet } from './checkout-sheet';
 import { CollectionNav } from './collection-nav';
-import { PreorderBadge } from './preorder-note';
+import { ProductGrid } from './product-card';
 import { ProductDetailSheet } from './product-detail-sheet';
-import { ProductPhoto } from './product-photo';
+import { ProductRow } from './product-row';
+import { PromoBanner } from './promo-banner';
 
 export function ShopStorefrontPage({ slug }: { slug: string }) {
   const catalog = useStorefrontCatalog(slug);
   const cart = useCart();
+  const saved = useSaved();
   const [detailProduct, setDetailProduct] = useState<CatalogProduct | null>(null);
   // "Buy Now" lines: a one-line cart held in memory, apart from the stored
   // cart. null means checkout uses the cart.
-  const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string } | null>(null);
+  const [buyNow, setBuyNow] = useState<{ lines: CartLine[]; note: string; promo: AppliedPromo | null } | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState<CatalogSort>('featured');
-  const [availableOnly, setAvailableOnly] = useState(false);
+  // Filters live in the URL query (the server render shows the loader, so
+  // reading the query here never changes the first markup).
+  const [filters, setFilters] = useState<CatalogFilters>(() =>
+    typeof window === 'undefined' ? EMPTY_FILTERS : parseCatalogFilters(new URLSearchParams(window.location.search))
+  );
 
   // The cart follows the store's real slug (/apparel loads slug "default").
   const shopSlug = catalog.data?.storefront.slug;
   useEffect(() => {
-    if (shopSlug) bindCart(shopSlug);
+    if (shopSlug) {
+      bindCart(shopSlug);
+      bindSaved(shopSlug);
+    }
   }, [shopSlug]);
+
+  useEffect(() => {
+    const query = catalogFiltersQuery(filters);
+    const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+    if (url !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, '', url);
+    }
+  }, [filters]);
+
+  const member = useShopMember(shopSlug ?? slug, Boolean(shopSlug));
+  const wishlist = useWishlist(shopSlug, member.data);
 
   const eventPayload = (product: CatalogProduct, sku: CatalogSku | null) => ({
     shop: shopSlug ?? slug,
@@ -60,11 +92,26 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     value: sku ? sku.price : product.price,
   });
 
+  const openProduct = (product: CatalogProduct) => {
+    setDetailProduct(product);
+    pushRecent(product.id);
+    pushShopEvent('view_item', eventPayload(product, null));
+  };
+
   const addToCart = (product: CatalogProduct, sku: CatalogSku | null) => {
     updateLines((lines) => addCartLine(lines, product, sku));
     pushShopEvent('add_to_cart', eventPayload(product, sku));
     setDetailProduct(null);
     openCart();
+  };
+
+  const quickAdd = (product: CatalogProduct, sku: CatalogSku | null) => {
+    updateLines((lines) => addCartLine(lines, product, sku));
+    pushShopEvent('add_to_cart', eventPayload(product, sku));
+    toast.success('Added to cart', {
+      description: sku ? `${product.name}, ${sku.name}` : product.name,
+      action: { label: 'View cart', onClick: openCart },
+    });
   };
 
   const startCheckout = (lines: CartLine[]) => {
@@ -83,7 +130,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
     const lines = [makeCartLine(product, sku)];
     pushShopEvent('buy_now', eventPayload(product, sku));
     setDetailProduct(null);
-    setBuyNow({ lines, note: '' });
+    setBuyNow({ lines, note: '', promo: null });
     startCheckout(lines);
   };
 
@@ -110,13 +157,21 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   }
 
   const { storefront, collections, products } = catalog.data;
-  const visibleProducts = filterAndSortProducts(products, search, availableOnly, sort);
-  const groups = sort === 'featured' && !search.trim()
+  const browsing = isBrowsing(filters);
+  const visibleProducts = applyCatalogFilters(products, filters);
+  const groups = browsing
     ? groupByCollection(visibleProducts, collections ?? [])
     : [{ id: 'results', name: 'Results', products: visibleProducts }];
   const grouped = groups.length > 1;
+  const sections = browsing ? catalogSections(products) : [];
   const count = cartCount(cart.lines);
   const checkoutLines = buyNow ? buyNow.lines : cart.lines;
+  const cardActions = { onSelect: openProduct, isSaved: wishlist.has, onToggleSaved: wishlist.toggle, onQuickAdd: quickAdd };
+
+  const copyBannerCode = (code: string) => {
+    setCartPendingCode(code);
+    pushShopEvent('select_promotion', { shop: storefront.slug, product: storefront.banner?.headline ?? code, variant: null, qty: 0, value: 0, code });
+  };
 
   return (
     <div className="min-h-screen bg-white pb-24">
@@ -158,36 +213,24 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           </a>
         </div>
 
+        {storefront.banner ? <PromoBanner banner={storefront.banner} onCopyCode={copyBannerCode} /> : null}
+
+        {browsing ? (
+          <>
+            {sections.map((section) => (
+              <section key={section.id} id={`section-${section.id}`} aria-label={section.name} className="mb-10">
+                <h2 className="mb-4 text-2xl font-semibold text-gray-900">{section.name}</h2>
+                <ProductGrid products={section.products} actions={cardActions} />
+              </section>
+            ))}
+            <ProductRow title="Saved" products={productsByIds(saved.wishlist, products)} onSelect={openProduct} />
+            <ProductRow title="Recently viewed" products={productsByIds(saved.recent, products)} onSelect={openProduct} />
+          </>
+        ) : null}
+
         {products.length > 0 ? (
           <div id="shop-products" className="scroll-mt-36">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-forest">Explore</p>
-                <h2 className="text-2xl font-semibold text-gray-900">All products</h2>
-                <p className="mt-1 text-sm text-gray-500">{visibleProducts.length} {visibleProducts.length === 1 ? 'product' : 'products'}</p>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                Sort by
-                <select value={sort} onChange={(event) => setSort(event.target.value as CatalogSort)} className="rounded-xl border border-forest/15 bg-white px-3 py-2 text-sm text-forest focus:border-forest focus:outline-none">
-                  <option value="featured">Featured</option>
-                  <option value="price-asc">Price: low to high</option>
-                  <option value="price-desc">Price: high to low</option>
-                  <option value="name">Name: A to Z</option>
-                </select>
-              </label>
-            </div>
-            <div className="mb-7 flex flex-wrap items-center gap-3">
-              <label className="relative min-w-56 flex-1 sm:max-w-md">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                <span className="sr-only">Search products</span>
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products, sizes, collections" className="w-full rounded-xl border border-forest/15 bg-white py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
-                {search ? <button type="button" onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"><X className="h-4 w-4" /></button> : null}
-              </label>
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-forest/15 bg-white px-4 py-3 text-sm text-gray-700">
-                <input type="checkbox" checked={availableOnly} onChange={(event) => setAvailableOnly(event.target.checked)} className="accent-forest" />
-                Available to order
-              </label>
-            </div>
+            <CatalogFilterBar filters={filters} sizes={catalogSizes(products)} count={visibleProducts.length} onChange={setFilters} />
           </div>
         ) : null}
         {products.length === 0 ? (
@@ -199,14 +242,14 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           <div className="rounded-2xl border border-forest/15 bg-white px-6 py-16 text-center">
             <Search className="mx-auto mb-3 h-8 w-8 text-gray-300" />
             <p className="font-medium text-gray-900">No matching products</p>
-            <p className="mt-1 text-sm text-gray-500">Try another search or show sold-out items.</p>
-            <button type="button" onClick={() => { setSearch(''); setAvailableOnly(false); }} className="mt-4 text-sm font-semibold text-forest underline">Clear filters</button>
+            <p className="mt-1 text-sm text-gray-500">Try another search, size or price range, or show sold-out items.</p>
+            <button type="button" onClick={() => setFilters(EMPTY_FILTERS)} className="mt-4 text-sm font-semibold text-forest underline">Clear filters</button>
           </div>
         ) : (
           groups.map((group) => (
             <section key={group.id} id={`collection-${group.id}`} className="scroll-mt-40 mb-10">
               {grouped ? <h3 className="mb-4 text-lg font-semibold text-gray-900">{group.name}</h3> : null}
-              <ProductGrid products={group.products} onSelect={setDetailProduct} />
+              <ProductGrid products={group.products} actions={cardActions} />
             </section>
           ))
         )}
@@ -214,7 +257,13 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
 
       {detailProduct ? (
         <ProductDetailSheet
+          key={detailProduct.id}
+          slug={storefront.slug}
           product={detailProduct}
+          products={products}
+          saved={wishlist.has(detailProduct.id)}
+          onToggleSaved={wishlist.toggle}
+          onSelect={openProduct}
           onAdd={addToCart}
           onBuyNow={buyNowProduct}
           onClose={() => setDetailProduct(null)}
@@ -225,6 +274,8 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         <CartDrawer
           cart={cart.lines}
           note={cart.note}
+          promo={cart.promo}
+          freeShippingThreshold={storefront.settings.freeShippingThreshold}
           products={products}
           onChangeQty={(key, delta) => updateLines((lines) => changeCartQuantity(lines, key, delta))}
           onChangeVariant={(key, product, sku) => updateLines((lines) => changeCartVariant(lines, key, product, sku))}
@@ -238,56 +289,24 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         />
       ) : null}
 
-      <CheckoutDrawer
+      <CheckoutSheet
         open={checkoutOpen}
         slug={storefront.slug}
         cart={checkoutLines}
         note={buyNow ? buyNow.note : cart.note}
+        settings={storefront.settings}
+        branches={storefront.pickupBranches}
+        promo={buyNow ? buyNow.promo : cart.promo}
+        pendingCode={cart.pendingCode}
+        onPromoChange={(promo) => {
+          if (buyNow) setBuyNow({ ...buyNow, promo });
+          else setCartPromo(promo);
+        }}
         onPaid={() => {
           if (!buyNow) clearCart();
         }}
         onClose={closeCheckout}
       />
-    </div>
-  );
-}
-
-function ProductGrid({
-  products,
-  onSelect,
-}: {
-  products: CatalogProduct[];
-  onSelect: (product: CatalogProduct) => void;
-}) {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-      {products.map((product) => {
-        const image = product.images[0] || product.imageUrl;
-        const soldOut = !productIsAvailable(product);
-        return (
-          <button
-            key={product.id}
-            type="button"
-            onClick={() => onSelect(product)}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-forest/10 bg-white text-left shadow-[0_8px_30px_rgb(0_40_26/0.06)] transition hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(0_40_26/0.12)] focus-visible:outline-2 focus-visible:outline-forest"
-          >
-            <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#f5f7f3]">
-              <ProductPhoto src={image} alt={product.name} />
-              {product.preorder ? <PreorderBadge until={product.preorderUntil} className="absolute left-2 top-2" /> : null}
-              {soldOut ? <span className="absolute left-2 top-2 rounded-full bg-white/95 px-2.5 py-1 text-xs font-semibold text-gray-700">Sold out</span> : null}
-            </div>
-            <div className="flex flex-1 flex-col p-3 sm:p-4">
-              {product.collection ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-forest">{product.collection.name}</p> : null}
-              <p className="line-clamp-2 text-sm font-semibold text-gray-900">{product.name}</p>
-              {product.description ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">{product.description}</p> : null}
-              <div className="mt-auto flex items-end justify-between gap-2 pt-3">
-                <p className="text-sm font-bold text-gray-900">{product.skus.length > 1 ? 'From ' : ''}{formatRupiah(productStartingPrice(product))}</p>
-                {!soldOut ? <span className="text-xs font-semibold text-forest">View <span aria-hidden="true">→</span></span> : null}
-              </div>
-            </div>
-          </button>
-        );
-      })}
     </div>
   );
 }

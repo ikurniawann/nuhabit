@@ -230,6 +230,7 @@ function ProductsTab() {
                   <th className="px-4 py-3 text-right font-semibold">Min. qty</th>
                   <th className="px-4 py-3 text-right font-semibold">Stok</th>
                   <th className="px-4 py-3 text-left font-semibold">Pre-order</th>
+                  <th className="px-4 py-3 text-left font-semibold">Promo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -251,6 +252,15 @@ function ProductsTab() {
                     <td className="px-4 py-3 text-right">{product.stock}</td>
                     <td className="px-4 py-3 text-gray-600">
                       {product.preorder_until ? `sampai ${formatDate(product.preorder_until)}` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {product.sale_price_idr === null ? "—" : formatRupiah(product.sale_price_idr)}
+                      {product.sale_until && product.sale_price_idr !== null ? (
+                        <span className="block text-xs text-gray-400">sampai {formatDate(product.sale_until)}</span>
+                      ) : null}
+                      {product.is_featured || product.is_new ? (
+                        <span className="block text-xs text-gray-400">{[product.is_featured ? "unggulan" : null, product.is_new ? "baru" : null].filter(Boolean).join(", ")}</span>
+                      ) : null}
                     </td>
                   </tr>
                 ))}

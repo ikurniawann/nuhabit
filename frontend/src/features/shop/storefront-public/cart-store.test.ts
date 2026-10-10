@@ -7,8 +7,12 @@ import {
   closeCart,
   getCartCount,
   openCart,
+  readCheckoutContact,
   resetCartStore,
+  saveCheckoutContact,
   setCartNote,
+  setCartPendingCode,
+  setCartPromo,
   updateLines,
   useCart,
   useCartCount,
@@ -33,6 +37,8 @@ describe("cart store", () => {
     expect(JSON.parse(window.localStorage.getItem("shop-cart-store") ?? "")).toEqual({
       lines: result.current.lines,
       note: "Gift wrap",
+      promo: null,
+      pendingCode: null,
     });
     expect(window.localStorage.getItem("shop-cart-active")).toBe("store");
     expect(getCartCount()).toBe(2);
@@ -70,6 +76,40 @@ describe("cart store", () => {
     expect(result.current.lines[0].key).toBe("p1::s1");
     act(() => clearCart());
     expect(result.current.lines).toEqual([]);
-    expect(window.localStorage.getItem("shop-cart-store")).toBe(JSON.stringify({ lines: [], note: "" }));
+    expect(window.localStorage.getItem("shop-cart-store")).toBe(JSON.stringify({ lines: [], note: "", promo: null, pendingCode: null }));
+  });
+
+  it("a promo is stored with the cart and dropped when the lines change", () => {
+    const promo = { code: "WELCOME", discountAmount: 10_000, label: "10k off" };
+    const { result } = renderHook(() => useCart());
+    act(() => bindCart("store"));
+    act(() => updateLines((lines) => addCartLine(lines, tee, null)));
+    act(() => setCartPromo(promo));
+    expect(result.current.promo).toEqual(promo);
+    expect(JSON.parse(window.localStorage.getItem("shop-cart-store") ?? "").promo).toEqual(promo);
+    act(() => updateLines((lines) => addCartLine(lines, tee, null)));
+    expect(result.current.promo).toBeNull();
+  });
+
+  it("a banner code survives line changes and is stored with the cart", () => {
+    const { result } = renderHook(() => useCart());
+    act(() => bindCart("store"));
+    act(() => setCartPendingCode("AKHIRTAHUN"));
+    act(() => updateLines((lines) => addCartLine(lines, tee, null)));
+    expect(result.current.pendingCode).toBe("AKHIRTAHUN");
+    expect(JSON.parse(window.localStorage.getItem("shop-cart-store") ?? "").pendingCode).toBe("AKHIRTAHUN");
+    act(() => clearCart());
+    expect(result.current.pendingCode).toBeNull();
+  });
+
+  it("remembers the checkout contact and reads corrupt data as empty", () => {
+    expect(readCheckoutContact()).toEqual({ name: "", phone: "", email: "", address: "", area: null });
+    const contact = { name: "Budi", phone: "0812", email: "", address: "Jl. Dago 1", area: { id: "a1", label: "Coblong", postalCode: null } };
+    saveCheckoutContact(contact);
+    expect(readCheckoutContact()).toEqual(contact);
+    window.localStorage.setItem("shop-checkout-contact", '{"name":1,"area":{"id":2}}');
+    expect(readCheckoutContact()).toEqual({ name: "", phone: "", email: "", address: "", area: null });
+    window.localStorage.setItem("shop-checkout-contact", "{nope");
+    expect(readCheckoutContact().name).toBe("");
   });
 });

@@ -9,6 +9,7 @@ import {
   releaseExpiredReservations,
   resolveStorefront,
 } from '@/lib/shop/storefront-server';
+import { DEFAULT_STOREFRONT_SETTINGS } from '@/lib/shop/types';
 
 export const GET = apiHandler(
   async (request: NextRequest, { params }: { params: Promise<{ slug: string }> }) => {
@@ -32,6 +33,9 @@ export const GET = apiHandler(
           slug: storefront.slug,
           name: storefront.name,
           description: storefront.description,
+          settings: DEFAULT_STOREFRONT_SETTINGS,
+          pickupBranches: [],
+          banner: null,
         },
         collections: [],
         products,

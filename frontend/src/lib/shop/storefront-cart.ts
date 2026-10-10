@@ -1,6 +1,6 @@
 // Public storefront cart: pure rules (no I/O) used by the client.
 
-import type { CatalogCollection, CatalogProduct, CatalogSku } from "./types";
+import type { AppliedPromo, CatalogCollection, CatalogProduct, CatalogSku } from "./types";
 
 export type CartLine = {
   key: string;
@@ -8,15 +8,18 @@ export type CartLine = {
   skuId: string | null;
   name: string;
   variantName: string | null;
+  /** Effective unit price (the sale price while a sale runs). */
   price: number;
+  /** The regular price while a sale applies, else null. */
+  compareAtPrice: number | null;
   quantity: number;
   /** Pre-order deadline (YYYY-MM-DD) when this line sells as a pre-order. */
   preorderUntil: string | null;
 };
 
 type LineProduct = Pick<CatalogProduct, "id" | "name" | "price"> &
-  Partial<Pick<CatalogProduct, "preorder" | "preorderUntil">>;
-type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogSku, "preorder">>;
+  Partial<Pick<CatalogProduct, "preorder" | "preorderUntil" | "compareAtPrice">>;
+type LineSku = Pick<CatalogSku, "id" | "name" | "price"> & Partial<Pick<CatalogSku, "preorder" | "compareAtPrice">>;
 
 export const cartLineKey = (productId: string, skuId: string | null) =>
   skuId ? `${productId}::${skuId}` : productId;
@@ -31,6 +34,7 @@ export function makeCartLine(product: LineProduct, sku: LineSku | null, quantity
     name: product.name,
     variantName: sku?.name ?? null,
     price: sku ? sku.price : product.price,
+    compareAtPrice: (sku ? sku.compareAtPrice : product.compareAtPrice) ?? null,
     quantity: Math.max(1, Math.floor(quantity)),
     preorderUntil: preorder ? (product.preorderUntil ?? null) : null,
   };
@@ -101,7 +105,13 @@ export function cartSignature(lines: CartLine[]): string {
   return lines.map((line) => `${line.key}:${line.quantity}`).join("|");
 }
 
-export type StoredCart = { lines: CartLine[]; note: string };
+export type StoredCart = {
+  lines: CartLine[];
+  note: string;
+  promo: AppliedPromo | null;
+  /** A campaign code copied from the banner, applied at checkout. */
+  pendingCode: string | null;
+};
 
 const isLine = (value: unknown): value is CartLine =>
   typeof value === "object" &&
@@ -110,27 +120,36 @@ const isLine = (value: unknown): value is CartLine =>
   typeof (value as CartLine).productId === "string" &&
   typeof (value as CartLine).quantity === "number";
 
+const isPromo = (value: unknown): value is AppliedPromo =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as AppliedPromo).code === "string" &&
+  typeof (value as AppliedPromo).discountAmount === "number" &&
+  typeof (value as AppliedPromo).label === "string";
+
 /**
  * Read a stored cart. Accepts the old format (an array of lines) and the
- * new one ({ lines, note }); corrupt data reads as an empty cart.
+ * new one ({ lines, note, promo, pendingCode }); corrupt data reads as an
+ * empty cart.
  */
 export function parseStoredCart(raw: string | null): StoredCart {
-  const empty: StoredCart = { lines: [], note: "" };
+  const empty: StoredCart = { lines: [], note: "", promo: null, pendingCode: null };
   if (!raw) return empty;
   try {
     const parsed: unknown = JSON.parse(raw);
-    const lines = Array.isArray(parsed)
-      ? parsed
-      : typeof parsed === "object" && parsed !== null && Array.isArray((parsed as StoredCart).lines)
-        ? (parsed as StoredCart).lines
-        : [];
-    const note =
-      !Array.isArray(parsed) && typeof (parsed as StoredCart)?.note === "string"
-        ? (parsed as StoredCart).note
-        : "";
+    const stored = !Array.isArray(parsed) && typeof parsed === "object" && parsed !== null
+      ? (parsed as Partial<StoredCart>)
+      : {};
+    const lines = Array.isArray(parsed) ? parsed : Array.isArray(stored.lines) ? stored.lines : [];
     return {
-      lines: lines.filter(isLine).map((line) => ({ ...line, preorderUntil: line.preorderUntil ?? null })),
-      note,
+      lines: lines.filter(isLine).map((line) => ({
+        ...line,
+        compareAtPrice: typeof line.compareAtPrice === "number" ? line.compareAtPrice : null,
+        preorderUntil: line.preorderUntil ?? null,
+      })),
+      note: typeof stored.note === "string" ? stored.note : "",
+      promo: isPromo(stored.promo) ? stored.promo : null,
+      pendingCode: typeof stored.pendingCode === "string" && stored.pendingCode ? stored.pendingCode : null,
     };
   } catch {
     return empty;
@@ -211,25 +230,5 @@ export function cartLineIssue(line: CartLine, products: CatalogProduct[]): strin
   if (!preorder && line.quantity > stock) return `Only ${stock} available`;
   const price = sku ? sku.price : product.price;
   if (line.price !== price) return "Price changed. Remove and add this item again";
-  return null;
-}
-
-export type CheckoutForm = {
-  name: string;
-  phone: string;
-  email?: string;
-  address: string;
-  hasArea: boolean;
-  hasRate: boolean;
-};
-
-/** First error message for the checkout form, or null when ready to pay. */
-export function checkoutFormError(form: CheckoutForm): string | null {
-  if (form.name.trim().length < 2) return "Recipient name is required";
-  if (form.phone.replace(/\D/g, "").length < 8) return "Enter a valid WhatsApp number";
-  if (form.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return "Enter a valid email address or leave it blank";
-  if (!form.hasArea) return "Choose a destination area first";
-  if (form.address.trim().length < 10) return "Full address must be at least 10 characters";
-  if (!form.hasRate) return "Choose a courier first";
   return null;
 }

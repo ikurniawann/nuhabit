@@ -30,13 +30,16 @@ export type WholesaleProductRow = {
   preorder_until: string | null;
   wholesale_price_idr: number | null;
   wholesale_min_qty: number;
+  /** Harga promo toko online; null = tanpa promo */
+  sale_price_idr: number | null;
+  /** Akhir promo (ISO); null = tanpa batas */
+  sale_until: string | null;
+  is_featured: boolean;
+  is_new: boolean;
 };
 
-export type ProductSettingsForm = {
-  preorder_until: string | null;
-  wholesale_price_idr: number | null;
-  wholesale_min_qty: number;
-};
+/** PATCH mengganti seluruh baris pengaturan, jadi semua kolom dikirim. */
+export type ProductSettingsForm = Omit<WholesaleProductRow, "id" | "name" | "collection" | "price" | "stock">;
 
 const keys = {
   accounts: ["shop", "wholesale", "accounts"] as const,

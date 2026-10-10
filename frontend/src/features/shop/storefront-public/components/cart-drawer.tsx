@@ -1,17 +1,22 @@
 import { Minus, Plus, Trash2, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
-import { cartLineIssue, cartSubtotal, type CartLine } from '@/lib/shop/storefront-cart';
-import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
+import { cartLineIssue, type CartLine } from '@/lib/shop/storefront-cart';
+import { checkoutTotals, freeShippingProgress } from '@/lib/shop/storefront-checkout';
+import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
+import { PriceTag } from './price-tag';
 import { ProductPhoto } from './product-photo';
 
 /**
- * Cart drawer: change the size in place, quantity stepper, remove a line
- * and an order note. `products` supplies the other sizes on offer.
+ * Cart drawer: change the size in place, quantity stepper, remove a line,
+ * an order note, the applied promo and the free-shipping progress bar.
+ * `products` supplies the other sizes on offer.
  */
 export function CartDrawer({
   cart,
   note,
+  promo,
+  freeShippingThreshold,
   products,
   onChangeQty,
   onChangeVariant,
@@ -22,6 +27,8 @@ export function CartDrawer({
 }: {
   cart: CartLine[];
   note: string;
+  promo: AppliedPromo | null;
+  freeShippingThreshold: number | null;
   products: CatalogProduct[];
   onChangeQty: (key: string, delta: number) => void;
   onChangeVariant: (key: string, product: CatalogProduct, sku: CatalogSku) => void;
@@ -32,6 +39,8 @@ export function CartDrawer({
 }) {
   const productOf = (line: CartLine) => products.find((product) => product.id === line.productId);
   const hasIssue = cart.some((line) => cartLineIssue(line, products));
+  const totals = checkoutTotals({ lines: cart, promo, method: 'ship', rateCost: null, freeShippingThreshold });
+  const progress = freeShippingProgress(totals.subtotal, freeShippingThreshold);
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
@@ -48,6 +57,9 @@ export function CartDrawer({
           </button>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+          {progress && cart.length > 0 ? (
+            <FreeShippingBar text={progress.text} ratio={progress.ratio} unlocked={progress.unlocked} />
+          ) : null}
           {cart.length === 0 ? (
             <p className="py-16 text-center text-sm text-gray-400">Your cart is empty</p>
           ) : (
@@ -63,7 +75,7 @@ export function CartDrawer({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900">{line.name}</p>
                       {line.variantName ? <p className="text-xs text-gray-500">{line.variantName}</p> : null}
-                      <p className="text-sm font-semibold text-gray-900">{formatRupiah(line.price)}</p>
+                      <PriceTag price={line.price} compareAtPrice={line.compareAtPrice} />
                       {line.preorderUntil ? <PreorderBadge until={line.preorderUntil} className="mt-1" /> : null}
                       {issue ? <p className="mt-1 text-xs font-medium text-red-600">{issue}</p> : null}
                     </div>
@@ -131,21 +143,46 @@ export function CartDrawer({
         </div>
         {cart.length > 0 ? (
           <div className="border-t border-gray-100 px-5 py-4">
-            <div className="mb-3 flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="font-semibold text-gray-900">{formatRupiah(cartSubtotal(cart))}</span>
+              <span className={promo ? 'text-gray-900' : 'font-semibold text-gray-900'}>{formatRupiah(totals.subtotal)}</span>
             </div>
+            {promo ? (
+              <>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Discount ({promo.code})</span>
+                  <span className="text-everglade">-{formatRupiah(totals.discount)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-gray-500">After discount</span>
+                  <span className="font-semibold text-gray-900">{formatRupiah(totals.subtotal - totals.discount)}</span>
+                </div>
+              </>
+            ) : null}
+            <p className="mb-3 mt-2 text-xs text-gray-500">Shipping and promo codes are set at checkout.</p>
             <button
               type="button"
               onClick={onCheckout}
               disabled={hasIssue}
               className="w-full rounded-full bg-accent-strong px-4 py-3 text-sm font-semibold text-accent-foreground hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Continue to Shipping
+              Checkout
             </button>
             {hasIssue ? <p className="mt-2 text-center text-xs text-red-600">Update or remove the marked items to continue.</p> : null}
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Progress toward the free-shipping threshold. */
+export function FreeShippingBar({ text, ratio, unlocked }: { text: string; ratio: number; unlocked: boolean }) {
+  return (
+    <div className="rounded-xl bg-[#f5f7f3] px-3 py-2.5" data-testid="free-shipping-bar">
+      <p className={`text-xs font-medium ${unlocked ? 'text-forest' : 'text-gray-700'}`}>{text}</p>
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-forest/10" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(ratio * 100)} aria-label="Free shipping progress">
+        <div className="h-full rounded-full bg-forest transition-[width]" style={{ width: `${Math.round(ratio * 100)}%` }} />
       </div>
     </div>
   );

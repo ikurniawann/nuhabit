@@ -30,18 +30,31 @@ func newWholesaleFixture(t *testing.T, terms string) *wholesaleFixture {
 		VALUES ($1, 'Kaos', 'merchandise', 0) RETURNING id::text`, "GO-"+testutil.RandomHex(4))
 	stock := "0"
 	f.catalog.products[f.product] = WebProduct{ID: f.product, Name: "Kaos", BasePrice: "100000", InventoryQuantity: &stock}
+	f.createAccount(terms)
+	return f
+}
+
+// anotherPartner registers a second partner on the same fixture: a second
+// test transaction would wait on the first one's rows.
+func (f *wholesaleFixture) anotherPartner(terms string) *wholesaleFixture {
+	o := &wholesaleFixture{fixture: f.fixture, product: f.product}
+	o.createAccount(terms)
+	return o
+}
+
+func (f *wholesaleFixture) createAccount(terms string) {
+	f.t.Helper()
 	f.email = "mitra-" + testutil.RandomHex(4) + "@example.test"
 	res, body := f.staff("POST", "/api/shop/wholesale/accounts", map[string]any{
 		"company_name": "Gym Mitra", "contact_name": "Sari", "email": strings.ToUpper(f.email), "phone": "0811111111",
 		"discount_pct": 20, "min_order_idr": 500000, "payment_terms": terms,
 	})
-	expectStatus(t, res, 201)
+	expectStatus(f.t, res, 201)
 	f.account = body["data"].(map[string]any)
 	f.password, _ = f.account["password"].(string)
 	if len(f.password) != 12 || f.account["email"] != f.email || f.account["password_hash"] != nil {
-		t.Fatalf("account = %v", f.account)
+		f.t.Fatalf("account = %v", f.account)
 	}
-	return f
 }
 
 // login signs the partner in and returns the session cookie.
@@ -248,7 +261,7 @@ func TestWholesaleOrderValidationAndInvoice(t *testing.T) {
 	}
 
 	// Another partner never sees it; staff see it with the company.
-	other := newWholesaleFixture(t, "invoice")
+	other := f.anotherPartner("invoice")
 	_, otherToken := other.login(other.password)
 	res, _ = other.partner(otherToken, "GET", "/api/wholesale/orders/"+id, nil)
 	expectStatus(t, res, 404)

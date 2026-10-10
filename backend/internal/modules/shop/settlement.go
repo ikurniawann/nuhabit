@@ -81,6 +81,7 @@ func (s *Service) SettleInvoice(ctx context.Context, db database.DB, cb InvoiceC
 			if err := tx.releaseOrderReservations(ctx, orderID); err != nil {
 				return WebhookResult{}, err
 			}
+			tx.releasePromo(ctx, orderID)
 		}
 		return ackOK, nil
 	}
@@ -131,6 +132,9 @@ func (s *Service) settlePaid(ctx context.Context, orderID string, amount *float6
 	if err := commitOrderReservations(ctx, s.db, orderID); err != nil {
 		return WebhookResult{}, err
 	}
+	if err := s.ports.Promo.Capture(ctx, s.db, orderID); err != nil {
+		return WebhookResult{}, err
+	}
 	total := domain.OrFinite(domain.JSNumber(o.total))
 	// Link the CRM member by WhatsApp number (members from day one). Xendit
 	// orders raise visit and spend stats only; XP is for ARK Coin payments.
@@ -140,12 +144,7 @@ func (s *Service) settlePaid(ctx context.Context, orderID string, amount *float6
 			s.log.Error("[shop] member link failed", "order", orderID, "error", err)
 		}
 	}
-	s.background(ctx, func(ctx context.Context) {
-		msg := domain.OrderPaidMessage(s.ports.AppOrigin, o.number, o.name, o.token, total)
-		if err := s.ports.Messenger.SendText(ctx, o.phone, msg); err != nil {
-			s.log.Error("[shop] WA paid failed", "order", orderID, "error", err)
-		}
-	})
+	s.sendWa(ctx, o.phone, domain.OrderPaidMessage(s.ports.AppOrigin, o.number, o.name, o.token, total), "paid")
 	return ackOK, nil
 }
 
@@ -245,10 +244,5 @@ type shippedWa struct {
 
 // sendShippedWa is sendShopOrderShippedWa, after the response.
 func (s *Service) sendShippedWa(ctx context.Context, w shippedWa) {
-	s.background(ctx, func(ctx context.Context) {
-		msg := domain.OrderShippedMessage(s.ports.AppOrigin, w.orderNumber, w.accessToken, w.waybill, w.courierLabel)
-		if err := s.ports.Messenger.SendText(ctx, w.customerPhone, msg); err != nil {
-			s.log.Error("[shop] WA resi gagal", "order", w.orderNumber, "error", err)
-		}
-	})
+	s.sendWa(ctx, w.customerPhone, domain.OrderShippedMessage(s.ports.AppOrigin, w.orderNumber, w.accessToken, w.waybill, w.courierLabel), "shipped")
 }
