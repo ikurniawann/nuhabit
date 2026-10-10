@@ -39,7 +39,7 @@ async function request<T>(
       return {
         ok: false,
         status: res.status,
-        error: body?.error ?? `Permintaan gagal (${res.status})`,
+        error: body?.error ?? `Request failed (${res.status})`,
       };
     }
     return { ok: true, status: res.status, data: body.data };
@@ -47,7 +47,7 @@ async function request<T>(
     return {
       ok: false,
       status: 0,
-      error: "Tidak bisa menghubungi server — periksa koneksi",
+      error: "Could not reach the server. Check your connection.",
     };
   }
 }
@@ -131,14 +131,15 @@ export async function verifyOtp(
 }
 
 /**
- * POST /api/member-portal/login — login dengan username dan password.
- * Header x-app-client membuat server menyertakan `token` sesi di body.
+ * POST /api/member-portal/login with a WhatsApp number or email plus the
+ * password. The x-app-client header makes the server return the session
+ * `token` in the body. 403 means the account has no password yet.
  */
-export async function login(
+export function login(
   username: string,
-  password?: string
+  password: string
 ): Promise<ApiResult<{ name: string | null; token?: string }>> {
-  const result = await request<{ name: string | null; token?: string }>(
+  return request<{ name: string | null; token?: string }>(
     "/api/member-portal/login",
     {
       method: "POST",
@@ -146,7 +147,6 @@ export async function login(
       headers: { "x-app-client": "1" },
     }
   );
-  return result;
 }
 
 /** GET /api/member-portal/me — profil + saldo + XP + tier. */

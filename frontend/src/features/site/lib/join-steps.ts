@@ -20,6 +20,8 @@ export interface GoogleIdentity {
 }
 
 export type AccountPhase =
+  /** OTP is off: members sign in with a password, new members go to the front desk. */
+  | { kind: "front_desk"; googleUnlinked: boolean }
   | { kind: "phone"; google: GoogleIdentity | null }
   | { kind: "code"; phone: string; devBypass: boolean }
   | { kind: "register"; phone: string; devBypass: boolean; google: GoogleIdentity | null };
@@ -30,9 +32,15 @@ export type AccountEvent =
   | { type: "google_needs_phone"; identity: GoogleIdentity }
   | { type: "back" };
 
-export const initialAccountPhase: AccountPhase = { kind: "phone", google: null };
+export function initialAccountPhase(otpEnabled: boolean): AccountPhase {
+  return otpEnabled ? { kind: "phone", google: null } : { kind: "front_desk", googleUnlinked: false };
+}
 
 export function accountTransition(phase: AccountPhase, event: AccountEvent): AccountPhase {
+  if (phase.kind === "front_desk") {
+    // Only Google can reach us here; an unknown Google account cannot register without OTP.
+    return { kind: "front_desk", googleUnlinked: event.type === "google_needs_phone" };
+  }
   const google = "google" in phase ? phase.google : null;
   switch (event.type) {
     case "otp_sent":
