@@ -160,6 +160,12 @@ func dateCheck(s string) (string, string, bool) {
 	return "invalid_format", "Invalid date", err == nil
 }
 
+// timestampCheck is an RFC 3339 timestamp (Date.prototype.toISOString).
+func timestampCheck(s string) (string, string, bool) {
+	_, err := time.Parse(time.RFC3339, s)
+	return "invalid_format", "Invalid timestamp", err == nil
+}
+
 func (h *handler) updateWholesaleProduct(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	id := r.PathValue("id")
 	if !validate.IsUUID(id) {
@@ -178,6 +184,13 @@ func (h *handler) updateWholesaleProduct(w http.ResponseWriter, r *http.Request,
 	if n := f.Int("wholesale_min_qty", validate.Rule{HasDefault: true}, validate.NumOpts{Min: validate.Bound(1), Max: validate.Bound(999)}); n != nil {
 		in.WholesaleMinQty = *n
 	}
+	in.SalePriceIDR = f.Num("sale_price_idr", nullish, validate.NumOpts{Min: validate.Bound(0)})
+	if until := f.Str("sale_until", nullish, validate.StrOpts{Check: timestampCheck}); until != nil {
+		t, _ := time.Parse(time.RFC3339, *until)
+		in.SaleUntil = &t
+	}
+	in.IsFeatured = f.BoolDefault("is_featured", false)
+	in.IsNew = f.BoolDefault("is_new", false)
 	if !f.Valid() {
 		return f.ErrAtPath("Data tidak valid")
 	}

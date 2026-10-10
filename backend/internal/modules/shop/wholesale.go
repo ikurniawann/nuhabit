@@ -273,9 +273,10 @@ type WholesaleProductView struct {
 	SKUs          []WholesaleSKUView `json:"skus"`
 }
 
-// WholesaleCatalog is the web catalog priced for the account.
+// WholesaleCatalog is the web catalog priced for the account, from the
+// regular retail price (retail sales do not reach partners).
 func (s *Service) WholesaleCatalog(ctx context.Context, acct WholesaleAccount) ([]WholesaleProductView, error) {
-	catalog, settings, err := s.buildCatalog(ctx)
+	catalog, settings, err := s.buildCatalog(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -284,12 +285,12 @@ func (s *Service) WholesaleCatalog(ctx context.Context, acct WholesaleAccount) (
 		ps := settingsOf(settings, p.ID)
 		v := WholesaleProductView{
 			ID: p.ID, Name: p.Name, Description: p.Description, ImageURL: p.ImageURL, Images: p.Images, Collection: p.Collection,
-			RetailPrice: p.Price, Price: domain.WholesaleUnitPrice(p.Price, ps.WholesalePriceIDR, acct.DiscountPct),
+			RetailPrice: p.regular, Price: domain.WholesaleUnitPrice(p.regular, ps.WholesalePriceIDR, acct.DiscountPct),
 			MinQty: ps.WholesaleMinQty, Stock: p.Stock, Preorder: p.Preorder, PreorderUntil: p.PreorderUntil, SKUs: []WholesaleSKUView{},
 		}
 		for _, sku := range p.SKUs {
-			v.SKUs = append(v.SKUs, WholesaleSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, RetailPrice: sku.Price,
-				Price: domain.WholesaleUnitPrice(sku.Price, ps.WholesalePriceIDR, acct.DiscountPct), Stock: sku.Stock, Preorder: sku.Preorder})
+			v.SKUs = append(v.SKUs, WholesaleSKUView{ID: sku.ID, SKU: sku.SKU, Name: sku.Name, RetailPrice: sku.regular,
+				Price: domain.WholesaleUnitPrice(sku.regular, ps.WholesalePriceIDR, acct.DiscountPct), Stock: sku.Stock, Preorder: sku.Preorder})
 		}
 		out = append(out, v)
 	}
@@ -350,7 +351,7 @@ func (s *Service) PlaceWholesaleOrder(ctx context.Context, acct WholesaleAccount
 	}
 	rules := make([]domain.WholesaleLine, len(lines))
 	for i := range lines {
-		lines[i].unitPrice = domain.WholesaleUnitPrice(lines[i].unitPrice, lines[i].settings.WholesalePriceIDR, acct.DiscountPct)
+		lines[i].unitPrice = domain.WholesaleUnitPrice(lines[i].regularPrice, lines[i].settings.WholesalePriceIDR, acct.DiscountPct)
 		rules[i] = domain.WholesaleLine{Name: lines[i].label(), Quantity: lines[i].quantity, MinQty: lines[i].settings.WholesaleMinQty,
 			Subtotal: float64(lines[i].unitPrice * lines[i].quantity)}
 	}
@@ -440,28 +441,34 @@ func (s *Service) ListWholesaleOrdersAdmin(ctx context.Context, f domain.OrderLi
 // ── Product settings ────────────────────────────────────────────────────
 
 // WholesaleProductRow is a web product with its shop settings, for staff.
+// Price is the regular retail price the sale price is set against.
 type WholesaleProductRow struct {
-	ID                string   `json:"id"`
-	Name              string   `json:"name"`
-	Collection        *string  `json:"collection"`
-	Price             float64  `json:"price"`
-	Stock             float64  `json:"stock"`
-	PreorderUntil     *string  `json:"preorder_until"`
-	WholesalePriceIDR *float64 `json:"wholesale_price_idr"`
-	WholesaleMinQty   float64  `json:"wholesale_min_qty"`
+	ID                string        `json:"id"`
+	Name              string        `json:"name"`
+	Collection        *string       `json:"collection"`
+	Price             float64       `json:"price"`
+	Stock             float64       `json:"stock"`
+	PreorderUntil     *string       `json:"preorder_until"`
+	WholesalePriceIDR *float64      `json:"wholesale_price_idr"`
+	WholesaleMinQty   float64       `json:"wholesale_min_qty"`
+	SalePriceIDR      *float64      `json:"sale_price_idr"`
+	SaleUntil         *httpx.JSTime `json:"sale_until"`
+	IsFeatured        bool          `json:"is_featured"`
+	IsNew             bool          `json:"is_new"`
 }
 
 // ListWholesaleProducts lists the web products with their settings.
 func (s *Service) ListWholesaleProducts(ctx context.Context) ([]WholesaleProductRow, error) {
-	catalog, settings, err := s.buildCatalog(ctx)
+	catalog, settings, err := s.buildCatalog(ctx, 0)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]WholesaleProductRow, 0, len(catalog.Products))
 	for _, p := range catalog.Products {
 		ps := settingsOf(settings, p.ID)
-		row := WholesaleProductRow{ID: p.ID, Name: p.Name, Price: p.Price, Stock: p.Stock, PreorderUntil: p.PreorderUntil,
-			WholesalePriceIDR: ps.WholesalePriceIDR, WholesaleMinQty: ps.WholesaleMinQty}
+		row := WholesaleProductRow{ID: p.ID, Name: p.Name, Price: p.regular, Stock: p.Stock, PreorderUntil: p.PreorderUntil,
+			WholesalePriceIDR: ps.WholesalePriceIDR, WholesaleMinQty: ps.WholesaleMinQty,
+			SalePriceIDR: ps.Sale.Price, SaleUntil: httpx.NewJSTime(ps.Sale.Until), IsFeatured: ps.IsFeatured, IsNew: ps.IsNew}
 		if p.Collection != nil {
 			row.Collection = &p.Collection.Name
 		}
@@ -470,11 +477,16 @@ func (s *Service) ListWholesaleProducts(ctx context.Context) ([]WholesaleProduct
 	return out, nil
 }
 
-// ProductSettingsInput is the staff patch of a product's shop settings.
+// ProductSettingsInput is the staff patch of a product's shop settings;
+// the whole row is replaced, so the form sends every field.
 type ProductSettingsInput struct {
 	PreorderUntil     *string
 	WholesalePriceIDR *float64
 	WholesaleMinQty   int
+	SalePriceIDR      *float64
+	SaleUntil         *time.Time
+	IsFeatured        bool
+	IsNew             bool
 }
 
 var errUnknownProduct = httpx.NotFound("Produk tidak ditemukan")
@@ -488,11 +500,14 @@ func (s *Service) UpdateProductSettings(ctx context.Context, productID string, i
 	if product == nil {
 		return nil, errUnknownProduct
 	}
-	_, err = s.db.Exec(ctx, `INSERT INTO shop.product_settings (product_id, preorder_until, wholesale_price_idr, wholesale_min_qty)
-		VALUES ($1::uuid, $2::date, $3, $4)
+	_, err = s.db.Exec(ctx, `INSERT INTO shop.product_settings
+		  (product_id, preorder_until, wholesale_price_idr, wholesale_min_qty, sale_price_idr, sale_until, is_featured, is_new)
+		VALUES ($1::uuid, $2::date, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (product_id) DO UPDATE SET preorder_until = EXCLUDED.preorder_until,
-		  wholesale_price_idr = EXCLUDED.wholesale_price_idr, wholesale_min_qty = EXCLUDED.wholesale_min_qty, updated_at = now()`,
-		productID, in.PreorderUntil, in.WholesalePriceIDR, in.WholesaleMinQty)
+		  wholesale_price_idr = EXCLUDED.wholesale_price_idr, wholesale_min_qty = EXCLUDED.wholesale_min_qty,
+		  sale_price_idr = EXCLUDED.sale_price_idr, sale_until = EXCLUDED.sale_until,
+		  is_featured = EXCLUDED.is_featured, is_new = EXCLUDED.is_new, updated_at = now()`,
+		productID, in.PreorderUntil, in.WholesalePriceIDR, in.WholesaleMinQty, in.SalePriceIDR, in.SaleUntil, in.IsFeatured, in.IsNew)
 	if err != nil {
 		return nil, err
 	}

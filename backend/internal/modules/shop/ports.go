@@ -49,6 +49,7 @@ type WebProduct struct {
 	CategoryID    *string
 	CategoryName  *string
 	CategoryOrder *int
+	CreatedAt     time.Time
 }
 
 // CatalogSKU is an active pos.pos_product_skus row.

@@ -261,6 +261,7 @@ func newFixture(t *testing.T) *fixture {
 		branches: &fakeBranches{}}
 	// Fresh settings and storefront state inside the transaction.
 	f.exec(`DELETE FROM shop.shipping_settings`)
+	f.exec(`DELETE FROM shop.storefront_settings`)
 	f.svc = NewService(tx, Ports{
 		Catalog: f.catalog, Stock: f.stock, Members: fakeMembers{}, Payments: f.pay, Messenger: f.wa,
 		Branches: f.branches, Promo: f.promo, Wallet: f.wallet,
@@ -690,10 +691,11 @@ func TestCatalogAndProviderErrors(t *testing.T) {
 	res, _ := f.do("GET", "/api/public/shop/"+strings.ToUpper(slug)+"/catalog", nil)
 	expectStatus(t, res, 200)
 	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null,`+
-		`"settings":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null},"pickupBranches":[]},"collections":[],"products":[`+
-		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"sizeGuide":null,"imageUrl":null,"images":[],"price":50000,"weightGram":null,"stock":5,`+
-		`"collection":null,"preorderUntil":null,"preorder":false,`+
-		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"stock":3,"preorder":false},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"stock":2,"preorder":false}]}]}}`)
+		`"settings":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null},"pickupBranches":[],"banner":null},"collections":[],"products":[`+
+		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"sizeGuide":null,"imageUrl":null,"images":[],"price":50000,`+
+		`"compareAtPrice":null,"salePercent":null,"saleUntil":null,"weightGram":null,"stock":5,`+
+		`"collection":null,"preorderUntil":null,"preorder":false,"isFeatured":false,"isNew":false,"lowStock":false,"backInStock":false,"rating":null,"relatedIds":[],`+
+		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"compareAtPrice":null,"stock":3,"preorder":false},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"compareAtPrice":null,"stock":2,"preorder":false}]}]}}`)
 
 	// No API key: the provider's 503 reaches the client.
 	res, _ = f.do("GET", "/api/public/shop/"+slug+"/shipping/areas?q=coblong", nil)
@@ -1159,26 +1161,44 @@ func TestStorefrontSettingsRoute(t *testing.T) {
 
 	res, _ = f.staff("GET", url, nil)
 	expectStatus(t, res, 200)
-	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null}}`)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null,"banner":null}}`)
 
 	res, _ = put(map[string]any{"pickupEnabled": false, "freeShippingThreshold": 250000, "lowStockThreshold": 5, "whatsappNumber": " 0812-3456-7890 "})
 	expectStatus(t, res, 200)
-	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890"}}`)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890","banner":null}}`)
 	res, _ = f.staff("GET", url, nil)
-	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890"}}`)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":false,"freeShippingThreshold":250000,"lowStockThreshold":5,"whatsappNumber":"0812-3456-7890","banner":null}}`)
 
 	res, _ = put(map[string]any{"freeShippingThreshold": -1})
 	expectStatus(t, res, 400)
 	res, _ = put(map[string]any{"whatsappNumber": "12"})
 	expectStatus(t, res, 400)
 	res, _ = put(map[string]any{"pickupEnabled": true, "freeShippingThreshold": nil, "whatsappNumber": ""})
-	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null}}`)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null,"banner":null}}`)
+
+	// The promo banner round-trips to the form and the public catalog.
+	res, _ = put(map[string]any{"banner": map[string]any{"headline": " Launch week ", "text": "20% off everything", "code": "LAUNCH"}})
+	expectStatus(t, res, 200)
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null,`+
+		`"banner":{"headline":"Launch week","text":"20% off everything","code":"LAUNCH"}}}`)
+	res, out := f.do("GET", "/api/public/shop/default/catalog", nil)
+	expectStatus(t, res, 200)
+	if banner := out["data"].(map[string]any)["storefront"].(map[string]any)["banner"].(map[string]any); banner["headline"] != "Launch week" || banner["code"] != "LAUNCH" {
+		t.Errorf("catalog banner = %v", banner)
+	}
+	res, _ = put(map[string]any{"banner": map[string]any{"headline": ""}})
+	expectStatus(t, res, 400)
+	res, _ = put(map[string]any{"banner": map[string]any{"headline": "No code", "text": ""}})
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null,`+
+		`"banner":{"headline":"No code","text":null,"code":null}}}`)
+	res, _ = put(map[string]any{"banner": nil})
+	expectJSON(t, res, `{"success":true,"data":{"pickupEnabled":true,"freeShippingThreshold":null,"lowStockThreshold":3,"whatsappNumber":null,"banner":null}}`)
 
 	// The status page links the store's WhatsApp number.
 	put(map[string]any{"whatsappNumber": "081234567890"})
 	id := f.order("paid", "storefront_id", "(SELECT id FROM shop.storefronts WHERE is_active ORDER BY is_default DESC, created_at, id LIMIT 1)")
 	token := f.scalar(`SELECT access_token::text FROM shop.orders WHERE id = $1`, id)
-	res, out := f.do("GET", "/api/public/shop/order/"+token, nil)
+	res, out = f.do("GET", "/api/public/shop/order/"+token, nil)
 	expectStatus(t, res, 200)
 	number := f.scalar(`SELECT order_number FROM shop.orders WHERE id = $1`, id)
 	if got := out["data"].(map[string]any)["whatsappUrl"]; got != "https://wa.me/6281234567890?text=Hi%2C+I+have+a+question+about+order+"+number {
