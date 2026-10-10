@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Check, Coins, Loader2, MapPin, Store, Tag, Truck, X } from 'lucide-react';
 import { formatRupiah } from '@/lib/format';
@@ -43,6 +43,7 @@ export function CheckoutSheet({
   settings,
   branches,
   promo,
+  pendingCode = null,
   onPromoChange,
   onPaid,
   onClose,
@@ -54,6 +55,8 @@ export function CheckoutSheet({
   settings: StorefrontSettings;
   branches: PickupBranch[];
   promo: AppliedPromo | null;
+  /** A banner code copied earlier; applied once when the sheet opens without a promo. */
+  pendingCode?: string | null;
   onPromoChange: (promo: AppliedPromo | null) => void;
   onPaid: () => void;
   onClose: () => void;
@@ -69,8 +72,9 @@ export function CheckoutSheet({
   const [method, setMethod] = useState<DeliveryMethod>('ship');
   const [branchId, setBranchId] = useState<string | null>(branches[0]?.id ?? null);
   const [pickedRate, setPickedRate] = useState<{ rate: RateQuote; signature: string; areaId: string } | null>(null);
-  const [promoInput, setPromoInput] = useState(promo?.code ?? '');
+  const [promoInput, setPromoInput] = useState(promo?.code ?? pendingCode ?? '');
   const [promoError, setPromoError] = useState<string | null>(null);
+  const triedCode = useRef<string | null>(null);
   const [payment, setPayment] = useState<PaymentMethod>('xendit');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -118,12 +122,20 @@ export function CheckoutSheet({
     // A rejected code is an answer, not a network failure.
     retry: false,
     mutationFn: (code: string) => previewPromoCode(slug, code, cart),
-    onSuccess: (applied) => {
+    onMutate: (code) => {
+      setPromoInput(code);
       setPromoError(null);
-      onPromoChange(applied);
     },
+    onSuccess: (applied) => onPromoChange(applied),
     onError: (error) => setPromoError(error instanceof Error ? error.message : 'This code cannot be used'),
   });
+  const { mutate: previewPromo } = promoMutation;
+  // The banner code is applied once per code when the sheet opens without a promo.
+  useEffect(() => {
+    if (!open || !pendingCode || promo || cart.length === 0 || triedCode.current === pendingCode) return;
+    triedCode.current = pendingCode;
+    previewPromo(pendingCode);
+  }, [open, pendingCode, promo, cart.length, previewPromo]);
 
   const totals = checkoutTotals({
     lines: cart,

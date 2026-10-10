@@ -4,6 +4,7 @@ import { cartLineIssue, type CartLine } from '@/lib/shop/storefront-cart';
 import { checkoutTotals, freeShippingProgress } from '@/lib/shop/storefront-checkout';
 import type { AppliedPromo, CatalogProduct, CatalogSku } from '@/lib/shop/types';
 import { PreorderBadge } from './preorder-note';
+import { PriceTag } from './price-tag';
 import { ProductPhoto } from './product-photo';
 
 /**
@@ -74,7 +75,7 @@ export function CartDrawer({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900">{line.name}</p>
                       {line.variantName ? <p className="text-xs text-gray-500">{line.variantName}</p> : null}
-                      <p className="text-sm font-semibold text-gray-900">{formatRupiah(line.price)}</p>
+                      <PriceTag price={line.price} compareAtPrice={line.compareAtPrice} />
                       {line.preorderUntil ? <PreorderBadge until={line.preorderUntil} className="mt-1" /> : null}
                       {issue ? <p className="mt-1 text-xs font-medium text-red-600">{issue}</p> : null}
                     </div>

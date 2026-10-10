@@ -5,12 +5,15 @@
 // source.
 //
 // localStorage:
-//   `shop-cart-<slug>`      JSON { lines: CartLine[], note: string, promo: AppliedPromo | null }
-//                           per store. The old format (an array of CartLine) still reads.
+//   `shop-cart-<slug>`      JSON { lines: CartLine[], note: string, promo: AppliedPromo | null,
+//                           pendingCode: string | null } per store. The old format (an
+//                           array of CartLine) still reads.
 //   `shop-cart-active`      slug of the last store opened, so the badge outside
 //                           the store page knows which cart to count.
 //   `shop-checkout-contact` JSON CheckoutContact: name, phone, email and the last
 //                           shipping address, prefilled on the next checkout.
+//   `shop-wishlist-<slug>`  JSON string[] of saved product ids (guests only) and
+//   `shop-recent-<slug>`    JSON string[] of recently viewed ids: see saved-store.ts.
 
 import { useEffect, useSyncExternalStore } from "react";
 import { cartCount, parseStoredCart, type CartLine } from "@/lib/shop/storefront-cart";
@@ -23,6 +26,8 @@ export type CartState = {
   note: string;
   /** Promo code the store accepted for these lines. */
   promo: AppliedPromo | null;
+  /** A campaign code copied from the banner; checkout applies it. */
+  pendingCode: string | null;
   /** The cart drawer is open (the store page renders it). */
   open: boolean;
 };
@@ -31,7 +36,7 @@ const ACTIVE_KEY = "shop-cart-active";
 const CONTACT_KEY = "shop-checkout-contact";
 const storageKey = (slug: string) => `shop-cart-${slug}`;
 
-const EMPTY: CartState = { slug: null, lines: [], note: "", promo: null, open: false };
+const EMPTY: CartState = { slug: null, lines: [], note: "", promo: null, pendingCode: null, open: false };
 let state: CartState = EMPTY;
 const listeners = new Set<() => void>();
 
@@ -57,7 +62,9 @@ function read(key: string): string | null {
 
 function setState(next: Partial<CartState>) {
   state = { ...state, ...next };
-  if (state.slug) write(storageKey(state.slug), { lines: state.lines, note: state.note, promo: state.promo });
+  if (state.slug) {
+    write(storageKey(state.slug), { lines: state.lines, note: state.note, promo: state.promo, pendingCode: state.pendingCode });
+  }
   emit();
 }
 
@@ -70,7 +77,7 @@ export function bindCart(slug: string) {
   } catch {
     /* ignore */
   }
-  state = { ...state, slug, lines: stored.lines, note: stored.note, promo: stored.promo };
+  state = { ...state, slug, lines: stored.lines, note: stored.note, promo: stored.promo, pendingCode: stored.pendingCode };
   emit();
 }
 
@@ -94,8 +101,13 @@ export function setCartPromo(promo: AppliedPromo | null) {
   setState({ promo });
 }
 
+/** Remember a banner code; it survives line changes and checkout applies it. */
+export function setCartPendingCode(pendingCode: string | null) {
+  setState({ pendingCode });
+}
+
 export function clearCart() {
-  setState({ lines: [], note: "", promo: null, open: false });
+  setState({ lines: [], note: "", promo: null, pendingCode: null, open: false });
 }
 
 /** Open the cart drawer; the store page reads it through useCart(). */

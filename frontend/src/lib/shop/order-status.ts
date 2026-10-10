@@ -32,6 +32,7 @@ type OrderItemRow = {
 /** Bentuk publik: angka sudah Number, link invoice hanya selama masih pending. */
 export function toPublicOrderStatus(order: OrderRow, items: OrderItemRow[]): PublicOrderStatus {
   return {
+    storefrontSlug: "default",
     order_number: order.order_number,
     status: order.status,
     customer_name: order.customer_name,
@@ -52,10 +53,12 @@ export function toPublicOrderStatus(order: OrderRow, items: OrderItemRow[]): Pub
     etaText: null,
     whatsappUrl: null,
     items: items.map((item) => ({
+      productId: null,
       name: item.sku_name ? `${item.product_name} — ${item.sku_name}` : item.product_name,
       quantity: Number(item.quantity),
       unit_price: Number(item.unit_price),
       total: Number(item.total),
+      reviewable: false,
     })),
   };
 }
