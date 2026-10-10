@@ -1147,7 +1147,10 @@ func TestArkCoinCheckoutAndMemberPrefill(t *testing.T) {
 func TestStorefrontSettingsRoute(t *testing.T) {
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{})
 	f := newFixture(t)
-	f.exec(`INSERT INTO shop.storefronts (slug, name) VALUES ($1, 'Toko Go')`, "go-"+testutil.RandomHex(4))
+	// The route targets the default storefront; the fixture's one must be it,
+	// whatever the database already holds (rolled back with the tx).
+	f.exec(`UPDATE shop.storefronts SET is_default = false WHERE is_default`)
+	f.exec(`INSERT INTO shop.storefronts (slug, name, is_default) VALUES ($1, 'Toko Go', true)`, "go-"+testutil.RandomHex(4))
 	const url = "/api/shop/storefront-settings"
 	put := func(body map[string]any) (*httptest.ResponseRecorder, map[string]any) {
 		return f.do("PUT", url, body, "X-Test-Staff", staff.UserID)
