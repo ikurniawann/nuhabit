@@ -31,6 +31,19 @@ Approved on 2026-10-10. Base branch `feat/storefront-ux` (on top of
 - Recently viewed row (browser storage) and a wishlist (browser storage for
   guests, saved on the member account when signed in).
 
+## Promo and discount on products
+
+- Products get `sale_price_idr` and `sale_until` (and `is_featured`,
+  `is_new`) in `shop.product_settings`, edited in the merchandise settings
+  dialog. The catalog returns the original and the sale price; cards and the
+  sheet show the struck-through price, a percent badge and "Sale ends <date>".
+  Cart, promo preview and invoice use the sale price.
+- A "Promo" section at the top of the storefront lists every discounted
+  product; "New arrivals" and "Featured" rows follow; empty sections hide.
+- A promo banner from storefront settings: headline, text and an optional
+  campaign code with a "Copy code" button that pre-fills checkout.
+- Campaign codes stack with sale prices only when the campaign rules allow.
+
 ## Trust and polish
 
 - Product reviews from members with a paid order containing the product,
