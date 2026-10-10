@@ -115,6 +115,8 @@ export function CheckoutSheet({
     : null;
 
   const promoMutation = useMutation({
+    // A rejected code is an answer, not a network failure.
+    retry: false,
     mutationFn: (code: string) => previewPromoCode(slug, code, cart),
     onSuccess: (applied) => {
       setPromoError(null);
@@ -135,6 +137,8 @@ export function CheckoutSheet({
   const branch = branches.find((candidate) => candidate.id === branchId) ?? null;
 
   const checkout = useMutation({
+    // Never resend a checkout: a retry could place the order twice.
+    retry: false,
     mutationFn: () =>
       submitShopCheckout(slug, buildCheckoutPayload({
         lines: cart,

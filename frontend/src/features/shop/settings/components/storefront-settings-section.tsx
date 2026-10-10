@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { PurchasingListSection } from '@/features/purchasing/components/shared/purchasing-list-section';
 import type { StorefrontSettings } from '@/lib/shop/types';
-import { useSaveStorefrontSettings, useStorefrontSettings } from '../storefront-queries';
+import { useSaveStorefrontSettings, useStorefrontSettings } from '../queries';
 
 export function StorefrontSettingsSection() {
   const { data: settings, error } = useStorefrontSettings();
