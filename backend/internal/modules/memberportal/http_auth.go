@@ -122,13 +122,7 @@ func (h *Handler) googleSignIn(w http.ResponseWriter, r *http.Request) error {
 
 // POST /logout ends the session and clears the cookie, even on failure.
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-	token := domain.BearerToken(r.Header.Get("Authorization"))
-	if token == "" {
-		if c, err := r.Cookie(domain.SessionCookie); err == nil {
-			token = c.Value
-		}
-	}
-	if err := h.svc.Logout(r.Context(), token); err != nil {
+	if err := h.svc.Logout(r.Context(), sessionToken(r)); err != nil {
 		h.log.Error("Error destroying member session", "error", err.Error())
 	}
 	http.SetCookie(w, &http.Cookie{Name: domain.SessionCookie, Value: "", Path: "/", MaxAge: -1})

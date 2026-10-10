@@ -40,11 +40,14 @@ const (
 // digits of a phone number (so 08xx and 62xx share one budget), the
 // lower-cased email, or the lower-cased input when it is neither.
 func LoginKey(username string) string {
-	username = strings.TrimSpace(username)
-	if digits := NormalizePhoneDigits(username); digits != "" && !strings.Contains(username, "@") {
+	digits, email := LoginLookup(username)
+	switch {
+	case digits != "":
 		return digits
+	case email != "":
+		return email
 	}
-	return strings.ToLower(username)
+	return strings.ToLower(strings.TrimSpace(username))
 }
 
 // LoginLookup splits a username into the phone digits and email to match.

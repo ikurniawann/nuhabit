@@ -32,10 +32,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 // PUT /password { current_password?, new_password }.
 func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request, customerID string) error {
 	body, _ := readBody(r)
-	var current *string
-	if v, isString := body["current_password"].(string); isString {
-		current = &v
-	}
+	current, _ := body["current_password"].(string)
 	next, _ := body["new_password"].(string)
 	if err := h.svc.ChangePassword(r.Context(), customerID, sessionToken(r), current, next); err != nil {
 		return err

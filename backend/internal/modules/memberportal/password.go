@@ -19,6 +19,14 @@ var (
 	errResetTooManyTries   = &failure{Status: 429, Message: "Too many attempts. Request a new code.", Field: "code"}
 )
 
+// requireUsername rejects a username too short to be a number or email.
+func requireUsername(username string) error {
+	if len(username) < 3 {
+		return &failure{Status: 400, Message: "Username is required", Field: "username"}
+	}
+	return nil
+}
+
 // Login opens a session for a username (WhatsApp number or email) and
 // password. Unknown accounts and wrong passwords share one answer, and
 // bcrypt runs against a dummy hash when no account matches, so timing
@@ -27,8 +35,8 @@ func (s *Service) Login(ctx context.Context, ip, username, password string) (*Si
 	if err := s.ipBrake(ctx, "login", ip); err != nil {
 		return nil, err
 	}
-	if len(username) < 3 {
-		return nil, &failure{Status: 400, Message: "Username is required", Field: "username"}
+	if err := requireUsername(username); err != nil {
+		return nil, err
 	}
 	if password == "" {
 		return nil, &failure{Status: 400, Message: "Password is required", Field: "password"}
@@ -70,7 +78,7 @@ func (s *Service) Login(ctx context.Context, ip, username, password string) (*Si
 // required only when the account already has one (OTP-registered members
 // set their first password without it). Every other session of the member
 // is revoked; the one behind currentToken stays.
-func (s *Service) ChangePassword(ctx context.Context, customerID, currentToken string, current *string, next string) error {
+func (s *Service) ChangePassword(ctx context.Context, customerID, currentToken, current, next string) error {
 	if msg := domain.NewPasswordProblem(next); msg != "" {
 		return &failure{Status: 400, Message: msg, Field: "new_password"}
 	}
@@ -79,10 +87,10 @@ func (s *Service) ChangePassword(ctx context.Context, customerID, currentToken s
 		return err
 	}
 	if hash != nil {
-		if current == nil || *current == "" {
+		if current == "" {
 			return &failure{Status: 400, Message: "Current password is required", Field: "current_password"}
 		}
-		if !auth.VerifyPassword(*current, *hash) {
+		if !auth.VerifyPassword(current, *hash) {
 			return &failure{Status: 401, Message: "Current password is incorrect", Field: "current_password"}
 		}
 	}
@@ -118,8 +126,8 @@ func (s *Service) ForgotPassword(ctx context.Context, ip, username string) (*For
 	if err := s.ipBrake(ctx, "otp", ip); err != nil {
 		return nil, err
 	}
-	if len(username) < 3 {
-		return nil, &failure{Status: 400, Message: "Username is required", Field: "username"}
+	if err := requireUsername(username); err != nil {
+		return nil, err
 	}
 	digits, email := domain.LoginLookup(username)
 	account, err := s.repo.FindLoginAccount(ctx, digits, email)
