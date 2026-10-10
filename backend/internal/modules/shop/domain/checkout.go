@@ -72,3 +72,18 @@ type StorefrontSettings struct {
 func DefaultStorefrontSettings() StorefrontSettings {
 	return StorefrontSettings{PickupEnabled: true, LowStockThreshold: 3}
 }
+
+// StorefrontBanner is the promo banner at the top of the storefront; the
+// optional campaign code pre-fills checkout.
+type StorefrontBanner struct {
+	Headline string  `json:"headline"`
+	Text     *string `json:"text"`
+	Code     *string `json:"code"`
+}
+
+// StorefrontConfig is the staff settings form: the public settings plus
+// the banner (nil = none).
+type StorefrontConfig struct {
+	StorefrontSettings
+	Banner *StorefrontBanner `json:"banner"`
+}

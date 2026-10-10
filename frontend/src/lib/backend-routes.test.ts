@@ -173,6 +173,7 @@ describe("Go route manifest", () => {
     const goNativePrefixes = [
       "/api/shop/wholesale",
       "/api/shop/storefront-settings",
+      "/api/shop/reviews",
       "/api/public/shop",
       "/api/wholesale",
       "/api/public/site",

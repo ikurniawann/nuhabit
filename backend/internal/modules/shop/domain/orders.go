@@ -147,12 +147,15 @@ func JoinNonEmpty(sep string, parts ...*string) string {
 	return strings.Join(kept, sep)
 }
 
-// PublicOrderItem is one line of the public order page.
+// PublicOrderItem is one line of the public order page. Reviewable is
+// true when the buyer may still review the product from this order.
 type PublicOrderItem struct {
-	Name      string  `json:"name"`
-	Quantity  float64 `json:"quantity"`
-	UnitPrice float64 `json:"unit_price"`
-	Total     float64 `json:"total"`
+	Name       string  `json:"name"`
+	Quantity   float64 `json:"quantity"`
+	UnitPrice  float64 `json:"unit_price"`
+	Total      float64 `json:"total"`
+	ProductID  *string `json:"productId"`
+	Reviewable bool    `json:"reviewable"`
 }
 
 // OrderItemRow is an order_items row as the public page reads it (numeric
@@ -163,6 +166,8 @@ type OrderItemRow struct {
 	Quantity    string
 	UnitPrice   string
 	Total       string
+	ProductID   *string
+	Reviewable  bool
 }
 
 // PublicItem is the toPublicOrderStatus line: the variant joined to the
@@ -172,7 +177,8 @@ func PublicItem(i OrderItemRow) PublicOrderItem {
 	if i.SkuName != nil && *i.SkuName != "" {
 		name += " — " + *i.SkuName
 	}
-	return PublicOrderItem{Name: name, Quantity: JSNumber(i.Quantity), UnitPrice: JSNumber(i.UnitPrice), Total: JSNumber(i.Total)}
+	return PublicOrderItem{Name: name, Quantity: JSNumber(i.Quantity), UnitPrice: JSNumber(i.UnitPrice), Total: JSNumber(i.Total),
+		ProductID: i.ProductID, Reviewable: i.Reviewable}
 }
 
 // InvoiceURLWhilePending is the invoice link only while the order waits for

@@ -8,37 +8,57 @@ import (
 	"nuhabit/backend/internal/platform/database"
 )
 
-// Storefront settings (pickup, free shipping, low stock, WhatsApp), the
-// pickup branches a storefront offers, the signed-in buyer's prefill and
-// the promo code preview.
+// Storefront settings (pickup, free shipping, low stock, WhatsApp, the
+// promo banner), the pickup branches a storefront offers, the signed-in
+// buyer's prefill and the promo code preview.
 
-// StorefrontSettings reads the storefront's settings, the defaults
-// without a row.
-func (s *Service) StorefrontSettings(ctx context.Context, storefrontID string) (domain.StorefrontSettings, error) {
-	v := domain.DefaultStorefrontSettings()
-	err := s.db.QueryRow(ctx, `SELECT pickup_enabled, free_shipping_threshold::float8, low_stock_threshold, whatsapp_number
+// StorefrontConfig reads the storefront's settings and banner, the
+// defaults without a row.
+func (s *Service) StorefrontConfig(ctx context.Context, storefrontID string) (domain.StorefrontConfig, error) {
+	v := domain.StorefrontConfig{StorefrontSettings: domain.DefaultStorefrontSettings()}
+	var headline *string
+	var banner domain.StorefrontBanner
+	err := s.db.QueryRow(ctx, `SELECT pickup_enabled, free_shipping_threshold::float8, low_stock_threshold, whatsapp_number,
+		  banner_headline, banner_text, banner_code
 		FROM shop.storefront_settings WHERE storefront_id = $1::uuid`, storefrontID).
-		Scan(&v.PickupEnabled, &v.FreeShippingThreshold, &v.LowStockThreshold, &v.WhatsappNumber)
+		Scan(&v.PickupEnabled, &v.FreeShippingThreshold, &v.LowStockThreshold, &v.WhatsappNumber, &headline, &banner.Text, &banner.Code)
 	if database.IsNoRows(err) {
 		return v, nil
+	}
+	if headline != nil {
+		banner.Headline = *headline
+		v.Banner = &banner
 	}
 	return v, err
 }
 
-// SaveStorefrontSettings upserts the storefront's settings row.
-func (s *Service) SaveStorefrontSettings(ctx context.Context, storefrontID string, in domain.StorefrontSettings, userID string) (domain.StorefrontSettings, error) {
+// StorefrontSettings is the public part of the storefront's config.
+func (s *Service) StorefrontSettings(ctx context.Context, storefrontID string) (domain.StorefrontSettings, error) {
+	cfg, err := s.StorefrontConfig(ctx, storefrontID)
+	return cfg.StorefrontSettings, err
+}
+
+// SaveStorefrontConfig upserts the storefront's settings row.
+func (s *Service) SaveStorefrontConfig(ctx context.Context, storefrontID string, in domain.StorefrontConfig, userID string) (domain.StorefrontConfig, error) {
+	var headline, text, code *string
+	if in.Banner != nil {
+		headline, text, code = &in.Banner.Headline, orNil(in.Banner.Text), orNil(in.Banner.Code)
+	}
 	_, err := s.db.Exec(ctx, `INSERT INTO shop.storefront_settings
-		  (storefront_id, pickup_enabled, free_shipping_threshold, low_stock_threshold, whatsapp_number, updated_by)
-		VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid)
+		  (storefront_id, pickup_enabled, free_shipping_threshold, low_stock_threshold, whatsapp_number,
+		   banner_headline, banner_text, banner_code, updated_by)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::uuid)
 		ON CONFLICT (storefront_id) DO UPDATE SET
 		  pickup_enabled = EXCLUDED.pickup_enabled, free_shipping_threshold = EXCLUDED.free_shipping_threshold,
 		  low_stock_threshold = EXCLUDED.low_stock_threshold, whatsapp_number = EXCLUDED.whatsapp_number,
+		  banner_headline = EXCLUDED.banner_headline, banner_text = EXCLUDED.banner_text, banner_code = EXCLUDED.banner_code,
 		  updated_by = EXCLUDED.updated_by, updated_at = now()`,
-		storefrontID, in.PickupEnabled, in.FreeShippingThreshold, in.LowStockThreshold, orNil(in.WhatsappNumber), userID)
+		storefrontID, in.PickupEnabled, in.FreeShippingThreshold, in.LowStockThreshold, orNil(in.WhatsappNumber),
+		headline, text, code, userID)
 	if err != nil {
-		return domain.StorefrontSettings{}, err
+		return domain.StorefrontConfig{}, err
 	}
-	return s.StorefrontSettings(ctx, storefrontID)
+	return s.StorefrontConfig(ctx, storefrontID)
 }
 
 // PickupBranches lists the public branches a storefront's orders can be

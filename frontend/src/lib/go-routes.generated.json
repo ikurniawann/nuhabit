@@ -4086,8 +4086,18 @@
   },
   {
     "module": "shop",
+    "method": "GET",
+    "path": "/api/public/shop/{slug}/products/{id}/reviews"
+  },
+  {
+    "module": "shop",
     "method": "POST",
     "path": "/api/public/shop/{slug}/promo/preview"
+  },
+  {
+    "module": "shop",
+    "method": "POST",
+    "path": "/api/public/shop/{slug}/reviews"
   },
   {
     "module": "shop",
@@ -4098,6 +4108,11 @@
     "module": "shop",
     "method": "POST",
     "path": "/api/public/shop/{slug}/shipping/rates"
+  },
+  {
+    "module": "shop",
+    "method": "PUT",
+    "path": "/api/public/shop/{slug}/wishlist"
   },
   {
     "module": "site",
@@ -5873,6 +5888,16 @@
     "module": "shop",
     "method": "POST",
     "path": "/api/shop/orders/{id}/shipment"
+  },
+  {
+    "module": "shop",
+    "method": "GET",
+    "path": "/api/shop/reviews"
+  },
+  {
+    "module": "shop",
+    "method": "PATCH",
+    "path": "/api/shop/reviews/{id}"
   },
   {
     "module": "shop",

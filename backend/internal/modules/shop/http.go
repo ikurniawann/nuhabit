@@ -74,6 +74,8 @@ func (h *handler) Routes() []module.Route {
 		staff("POST /api/shop/orders/{id}/shipment", h.createShipment),
 		settings("GET /api/shop/storefront-settings", h.getStorefrontSettings),
 		settings("PUT /api/shop/storefront-settings", h.putStorefrontSettings),
+		staff("GET /api/shop/reviews", h.listReviews),
+		staff("PATCH /api/shop/reviews/{id}", h.moderateReview),
 
 		staff("GET /api/shop/marketplace/accounts", h.listAccounts),
 		staff("PATCH /api/shop/marketplace/accounts", h.updateAccount),
@@ -96,6 +98,9 @@ func (h *handler) Routes() []module.Route {
 		public("POST /api/public/shop/{slug}/promo/preview", h.promoPreview),
 		public("GET /api/public/shop/{slug}/shipping/areas", h.publicAreas),
 		public("POST /api/public/shop/{slug}/shipping/rates", h.publicRates),
+		public("POST /api/public/shop/{slug}/reviews", h.createReview),
+		public("GET /api/public/shop/{slug}/products/{id}/reviews", h.productReviews),
+		public("PUT /api/public/shop/{slug}/wishlist", h.putWishlist),
 		{Pattern: "POST /api/public/shop/webhook/biteship", Handler: http.HandlerFunc(h.biteshipWebhook)},
 		{Pattern: "POST /api/public/shop/webhook/xendit", Handler: http.HandlerFunc(h.xenditWebhook)},
 	}
@@ -422,11 +427,11 @@ func (h *handler) getStorefrontSettings(w http.ResponseWriter, r *http.Request, 
 	if err != nil {
 		return err
 	}
-	settings, err := h.svc.StorefrontSettings(r.Context(), sf.ID)
+	cfg, err := h.svc.StorefrontConfig(r.Context(), sf.ID)
 	if err != nil {
 		return err
 	}
-	return ok(w, settings)
+	return ok(w, cfg)
 }
 
 func (h *handler) putStorefrontSettings(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -440,21 +445,31 @@ func (h *handler) putStorefrontSettings(w http.ResponseWriter, r *http.Request, 
 	}
 	f := validate.New(raw, true)
 	nullish := validate.Rule{Optional: true, Nullable: true}
-	in := domain.DefaultStorefrontSettings()
+	in := domain.StorefrontConfig{StorefrontSettings: domain.DefaultStorefrontSettings()}
 	in.PickupEnabled = f.BoolDefault("pickupEnabled", in.PickupEnabled)
 	in.FreeShippingThreshold = f.Num("freeShippingThreshold", nullish, validate.NumOpts{Min: validate.Bound(0)})
 	if n := f.Int("lowStockThreshold", validate.Rule{Optional: true}, validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(1000)}); n != nil {
 		in.LowStockThreshold = *n
 	}
 	in.WhatsappNumber = f.Str("whatsappNumber", nullish, validate.StrOpts{Trim: true, Max: 30, Check: phoneCheck})
+	if _, _, done := f.Take("banner", "object", nullish); !done {
+		b := f.Child("banner")
+		var banner domain.StorefrontBanner
+		if headline := b.Str("headline", validate.Rule{}, validate.StrOpts{Trim: true, Min: 1, Max: 80}); headline != nil {
+			banner.Headline = *headline
+		}
+		banner.Text = b.Str("text", nullish, validate.StrOpts{Trim: true, Max: 240})
+		banner.Code = b.Str("code", nullish, validate.StrOpts{Trim: true, Max: 40})
+		in.Banner = &banner
+	}
 	if !f.Valid() {
 		return httpx.BadRequest("Invalid settings")
 	}
-	settings, err := h.svc.SaveStorefrontSettings(r.Context(), sf.ID, in, u.ID)
+	cfg, err := h.svc.SaveStorefrontConfig(r.Context(), sf.ID, in, u.ID)
 	if err != nil {
 		return err
 	}
-	return ok(w, settings)
+	return ok(w, cfg)
 }
 
 // phoneCheck accepts an empty value (cleared) or 8 to 15 digits with the
@@ -607,19 +622,21 @@ const (
 	publicCheckoutInvalid = "Checkout data is incomplete or invalid"
 )
 
-// publicGet dispatches GET /api/public/shop/order/{token},
-// GET /api/public/shop/{slug}/catalog and GET /api/public/shop/{slug}/me.
+// publicGet dispatches GET /api/public/shop/order/{token} and the
+// storefront's GET /api/public/shop/{slug}/{catalog,me,wishlist}.
 func (h *handler) publicGet(w http.ResponseWriter, r *http.Request) error {
 	a, b := r.PathValue("a"), r.PathValue("b")
-	switch {
-	case a == "order":
+	if a == "order" {
 		return h.orderStatus(w, r, b)
-	case b == "catalog":
-		r.SetPathValue("slug", a)
+	}
+	r.SetPathValue("slug", a)
+	switch b {
+	case "catalog":
 		return h.catalog(w, r)
-	case b == "me":
-		r.SetPathValue("slug", a)
+	case "me":
 		return h.me(w, r)
+	case "wishlist":
+		return h.getWishlist(w, r)
 	}
 	http.NotFound(w, r)
 	return nil
@@ -637,15 +654,15 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	h.svc.releaseExpiredReservations(ctx)
-	catalog, err := h.svc.BuildCatalog(ctx)
+	cfg, err := h.svc.StorefrontConfig(ctx, sf.ID)
 	if err != nil {
 		return err
 	}
-	settings, err := h.svc.StorefrontSettings(ctx, sf.ID)
+	catalog, err := h.svc.BuildCatalog(ctx, cfg.LowStockThreshold)
 	if err != nil {
 		return err
 	}
-	branches, err := h.svc.PickupBranches(ctx, *sf, settings)
+	branches, err := h.svc.PickupBranches(ctx, *sf, cfg.StorefrontSettings)
 	if err != nil {
 		return err
 	}
@@ -655,12 +672,13 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request) error {
 		Description    *string                   `json:"description"`
 		Settings       domain.StorefrontSettings `json:"settings"`
 		PickupBranches []PickupBranch            `json:"pickupBranches"`
+		Banner         *domain.StorefrontBanner  `json:"banner"`
 	}
 	return ok(w, struct {
 		Storefront  storefrontView       `json:"storefront"`
 		Collections []CatalogCollection  `json:"collections"`
 		Products    []CatalogProductView `json:"products"`
-	}{storefrontView{sf.Slug, sf.Name, sf.Description, settings, branches}, catalog.Collections, catalog.Products})
+	}{storefrontView{sf.Slug, sf.Name, sf.Description, cfg.StorefrontSettings, branches, cfg.Banner}, catalog.Collections, catalog.Products})
 }
 
 // me is GET /api/public/shop/{slug}/me: the signed-in member's checkout
