@@ -121,7 +121,7 @@ export function ForgotPasswordPage() {
                 id="forgot-code"
                 className="nh-input text-center text-2xl tracking-[0.5em]"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) => setCode(e.target.value.replace(/\s/g, "").slice(0, 12))}
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 placeholder="123456"
@@ -145,7 +145,7 @@ export function ForgotPasswordPage() {
               <p className="mt-1 text-xs text-nh-muted">{t("8 to 72 characters with at least one letter and one digit.")}</p>
             </div>
             {error ? <p className="text-sm font-bold text-nh-danger" role="alert">{error}</p> : null}
-            <button type="submit" className="nh-btn-brand" disabled={busy || code.length < 6 || !password}>
+            <button type="submit" className="nh-btn-brand" disabled={busy || code.length < 4 || !password}>
               {t("Reset password")}
             </button>
             <button type="button" className="nh-btn-ghost" onClick={() => dispatch({ type: "back" })}>
