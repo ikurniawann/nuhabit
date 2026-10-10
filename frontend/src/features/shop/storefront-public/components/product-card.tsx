@@ -40,7 +40,7 @@ export function ProductCard({ product, actions }: { product: CatalogProduct; act
   const sale = saleEndsText(product, formatDateEn);
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-forest/10 bg-white shadow-[0_8px_30px_rgb(0_40_26/0.06)] transition hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(0_40_26/0.12)]" data-testid="product-card">
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-forest/10 bg-white shadow-[0_8px_30px_rgb(0_40_26/0.06)] transition hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(0_40_26/0.12)]">
       <button
         type="button"
         onClick={() => actions.onSelect(product)}

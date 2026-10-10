@@ -1,10 +1,8 @@
 // Wishlist and recently viewed: pure list rules (no I/O).
 
-export const RECENTLY_VIEWED_LIMIT = 8;
-
-/** Move `id` to the front and keep the newest `limit` ids. */
-export function pushRecentlyViewed(ids: string[], id: string, limit = RECENTLY_VIEWED_LIMIT): string[] {
-  return [id, ...ids.filter((item) => item !== id)].slice(0, limit);
+/** Move `id` to the front and keep the newest 8 ids. */
+export function pushRecentlyViewed(ids: string[], id: string): string[] {
+  return [id, ...ids.filter((item) => item !== id)].slice(0, 8);
 }
 
 export function toggleSaved(ids: string[], id: string): string[] {

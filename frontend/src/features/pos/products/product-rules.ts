@@ -154,7 +154,7 @@ export function merchFormFromProduct(product: PosCatalogProduct): MerchFormState
   };
 }
 
-export type MerchSettingsChecked = {
+type MerchSettingsChecked = {
   stock: number;
   weightGram: number | null;
   salePriceIdr: number | null;

@@ -21,8 +21,7 @@ export function useWishlist(slug: string | undefined, member: ShopMember | null 
     staleTime: Infinity,
     retry: false,
   });
-  const save = useMutation({ mutationFn: (ids: string[]) => saveWishlist(slug as string, ids) });
-  const { mutate: persist } = save;
+  const { mutate: persist } = useMutation({ mutationFn: (ids: string[]) => saveWishlist(slug as string, ids) });
 
   const accountIds = account.data;
   const ready = saved.slug === slug;

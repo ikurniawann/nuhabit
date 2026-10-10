@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { Heart, Loader2, Star, X, Zap } from 'lucide-react';
+import { Heart, Loader2, X, Zap } from 'lucide-react';
 import { formatDateEn } from '@/lib/shop/format-en';
 import { relatedProducts, saleEndsText } from '@/lib/shop/storefront-discovery';
 import type { CatalogProduct, CatalogSku } from '@/lib/shop/types';
@@ -9,7 +9,7 @@ import { PreorderBadge } from './preorder-note';
 import { PriceTag, SaleBadge } from './price-tag';
 import { ProductPhoto } from './product-photo';
 import { ProductRow } from './product-row';
-import { RatingStars } from './rating-stars';
+import { RatingStars, StarRow } from './rating-stars';
 
 const sellable = (stock: number, preorder: boolean) => stock > 0 || preorder;
 
@@ -215,11 +215,7 @@ function ProductReviews({ slug, product }: { slug: string; product: CatalogProdu
           {reviews.data.map((review) => (
             <li key={review.id} className="rounded-xl bg-gray-50 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="inline-flex" aria-label={`${review.rating} out of 5`}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className={`h-3.5 w-3.5 ${star <= review.rating ? 'fill-forest text-forest' : 'text-gray-300'}`} />
-                  ))}
-                </span>
+                <StarRow value={review.rating} size="h-3.5 w-3.5" label={`${review.rating} out of 5`} />
                 <span className="text-xs text-gray-400">{review.customerName || 'Member'}, {formatDateEn(review.createdAt)}</span>
               </div>
               {review.comment ? <p className="mt-1.5 text-sm leading-6 text-gray-700">{review.comment}</p> : null}

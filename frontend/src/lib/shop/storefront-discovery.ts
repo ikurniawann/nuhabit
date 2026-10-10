@@ -16,19 +16,15 @@ export function catalogSections(products: CatalogProduct[]): CatalogSection[] {
   return sections.filter((section) => section.products.length > 0);
 }
 
-/** Products the catalog names as related, in the catalog's order, that still exist. */
-export function relatedProducts(product: CatalogProduct, products: CatalogProduct[]): CatalogProduct[] {
-  const byId = new Map(products.map((item) => [item.id, item]));
-  return product.relatedIds
-    .map((id) => byId.get(id))
-    .filter((item): item is CatalogProduct => item !== undefined && item.id !== product.id)
-    .slice(0, 4);
-}
-
 /** Products for a list of ids (saved, recently viewed), keeping the list order. */
 export function productsByIds(ids: string[], products: CatalogProduct[]): CatalogProduct[] {
   const byId = new Map(products.map((item) => [item.id, item]));
   return ids.map((id) => byId.get(id)).filter((item): item is CatalogProduct => item !== undefined);
+}
+
+/** Products the catalog names as related, in the catalog's order, that still exist. */
+export function relatedProducts(product: CatalogProduct, products: CatalogProduct[]): CatalogProduct[] {
+  return productsByIds(product.relatedIds, products).filter((item) => item.id !== product.id).slice(0, 4);
 }
 
 export type CatalogFilters = {

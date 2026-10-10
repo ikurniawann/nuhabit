@@ -3,16 +3,23 @@ import type { ProductRating } from '@/lib/shop/types';
 
 const STARS = [1, 2, 3, 4, 5];
 
+/** Five stars filled up to `value` (rounded). */
+export function StarRow({ value, size = 'h-4 w-4', label }: { value: number; size?: string; label?: string }) {
+  return (
+    <span className="inline-flex" aria-hidden={label ? undefined : true} aria-label={label}>
+      {STARS.map((star) => (
+        <Star key={star} className={`${size} ${star <= Math.round(value) ? 'fill-forest text-forest' : 'text-gray-300'}`} />
+      ))}
+    </span>
+  );
+}
+
 /** Average rating as five stars with the review count. */
 export function RatingStars({ rating, compact = false }: { rating: ProductRating; compact?: boolean }) {
   const rounded = Math.round(rating.average * 10) / 10;
   return (
     <span className={`inline-flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-sm'} text-gray-600`} aria-label={`Rated ${rounded} out of 5 from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'}`}>
-      <span className="inline-flex" aria-hidden="true">
-        {STARS.map((star) => (
-          <Star key={star} className={`${compact ? 'h-3 w-3' : 'h-4 w-4'} ${star <= Math.round(rating.average) ? 'fill-forest text-forest' : 'text-gray-300'}`} />
-        ))}
-      </span>
+      <StarRow value={rating.average} size={compact ? 'h-3 w-3' : 'h-4 w-4'} />
       <span>{rounded}</span>
       <span className="text-gray-400">({rating.count})</span>
     </span>
