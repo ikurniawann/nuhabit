@@ -21,6 +21,7 @@ type MeCustomer struct {
 	TotalXP         *float64
 	VisitCount      *int64
 	FreeXPGrantedAt *jsTime
+	HasPassword     bool
 }
 
 func (s *store) MeCustomer(ctx context.Context, customerID string) (*MeCustomer, error) {
@@ -29,11 +30,12 @@ func (s *store) MeCustomer(ctx context.Context, customerID string) (*MeCustomer,
 	err := s.q.QueryRow(ctx,
 		`SELECT id, name, phone, email, birth_date::text, gender, city, photo_url,
 		        wa_consent, member_type,
-		        ark_coin_balance::float, total_xp::float, visit_count, free_xp_granted_at
+		        ark_coin_balance::float, total_xp::float, visit_count, free_xp_granted_at,
+		        password_hash IS NOT NULL
 		   FROM pos.pos_customers WHERE id = $1`, customerID).Scan(
 		&c.ID, &c.Fields.Name, &c.Fields.Phone, &c.Fields.Email, &c.Fields.BirthDate, &c.Fields.Gender,
 		&c.Fields.City, &c.Fields.PhotoURL, &waConsent, &c.MemberType,
-		&c.ArkCoinBalance, &c.TotalXP, &c.VisitCount, &c.FreeXPGrantedAt)
+		&c.ArkCoinBalance, &c.TotalXP, &c.VisitCount, &c.FreeXPGrantedAt, &c.HasPassword)
 	if database.IsNoRows(err) {
 		return nil, nil
 	}

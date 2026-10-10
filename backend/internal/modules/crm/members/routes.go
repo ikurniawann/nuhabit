@@ -21,6 +21,8 @@ type Ports struct {
 	Orders OrderReads
 	// Wallet reads the member's wallet transactions (stored-value).
 	Wallet WalletReads
+	// WhatsApp delivers a reset password to the member.
+	WhatsApp PasswordMessenger
 }
 
 // OrderReads are the POS order reads of the member detail page.
@@ -69,5 +71,6 @@ func (h *handler) routes() []module.Route {
 		{Pattern: "PUT /api/crm/members/{id}/consent", Handler: httpx.Handle(h.updateConsent)},
 		{Pattern: "GET /api/crm/members/{id}/badges", Handler: httpx.Handle(h.badges)},
 		{Pattern: "POST /api/crm/members/{id}/badges", Handler: httpx.Handle(h.badgeAction)},
+		{Pattern: "POST /api/crm/members/{id}/password", Handler: httpx.Handle(h.resetPassword)},
 	}
 }

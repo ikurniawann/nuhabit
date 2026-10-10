@@ -48,7 +48,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "cd frontend && BACKEND_URL=http://127.0.0.1:8190 exec pnpm run dev:next --port 3100 --hostname 127.0.0.1"
+        "cd frontend && BACKEND_URL=http://127.0.0.1:8190 NEXT_PUBLIC_OTP_ENABLED=true exec pnpm run dev:next --port 3100 --hostname 127.0.0.1"
       ],
       "port": 3100,
       "url": "http://127.0.0.1:3100"

@@ -50,7 +50,7 @@ export function RouteMap({
   const path = points
     .map((p, i) => {
       const [x, y] = toXY(p);
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+      return `${i === 0 || p.segmentStart ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
   const [sx, sy] = toXY(points[0]!);

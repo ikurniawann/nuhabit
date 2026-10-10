@@ -167,10 +167,13 @@ func exactScope(a *kit.Args, companyID, branchID *string) string {
 
 // warehouseByCode is resolveWarehouseIdByCode: an active stall whose code
 // matches case-insensitively (ILIKE, as the query builder), in branchID
-// when set. Results are cached per branch and code.
-func (h *handler) warehouseByCode(ctx context.Context, code string, branchID *string, cache map[string]string) (string, error) {
+// when set, else in companyID when set. Stall codes repeat across
+// companies, so a company-scoped import must not pick another company's
+// stall and then reject it as out of scope. Results are cached per
+// filter and code.
+func (h *handler) warehouseByCode(ctx context.Context, code string, branchID, companyID *string, cache map[string]string) (string, error) {
 	normalized := strings.ToUpper(jsTrim(code))
-	key := kit.FirstNonEmpty(kit.Deref(branchID), "global") + ":" + normalized
+	key := kit.FirstNonEmpty(kit.Deref(branchID), kit.Deref(companyID), "global") + ":" + normalized
 	if id, ok := cache[key]; ok {
 		return id, nil
 	}
@@ -178,6 +181,8 @@ func (h *handler) warehouseByCode(ctx context.Context, code string, branchID *st
 	sql := `SELECT id::text FROM configuration.warehouses WHERE code ILIKE ` + a.Add(normalized) + ` AND is_active = true`
 	if kit.Deref(branchID) != "" {
 		sql += ` AND branch_id = ` + a.Add(*branchID)
+	} else if kit.Deref(companyID) != "" {
+		sql += ` AND branch_id IN (SELECT id FROM configuration.branches WHERE company_id = ` + a.Add(*companyID) + `)`
 	}
 	row, err := kit.QueryOne(ctx, h.env.DB, sql+` LIMIT 1`, a.Values...)
 	if err != nil {

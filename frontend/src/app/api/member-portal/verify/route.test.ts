@@ -1,6 +1,9 @@
 // Verifikasi OTP: rem per-IP hanya menghitung percobaan kode sungguhan,
 // probe bypass dev (tanpa kode) tidak memakan jatah.
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// The route answers 503 while OTP is paused; these tests cover the enabled flow.
+vi.stubEnv("NEXT_PUBLIC_OTP_ENABLED", "true");
 import type { NextRequest } from "next/server";
 
 const consumeOtp = vi.fn();

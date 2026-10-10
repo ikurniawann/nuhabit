@@ -18,6 +18,7 @@ type fixture struct {
 	pos   testutil.Staff
 	crm   testutil.Staff
 	plain testutil.Staff
+	wa    *fakeMessenger
 }
 
 func setup(t *testing.T) *fixture {
@@ -31,9 +32,10 @@ func setup(t *testing.T) *fixture {
 		plain: crmtest.Staff(t, "hris"),
 	}
 	f.tx = testutil.Tx(t)
+	f.wa = &fakeMessenger{}
 	d := testutil.Deps(t, nil)
 	engine := &xp.Engine{Now: d.Now, Log: d.Log}
-	f.mux = crmtest.Mux(newHandler(f.tx, d, engine, Ports{Orders: OrdersSQL{}, Wallet: WalletSQL{}}).routes())
+	f.mux = crmtest.Mux(newHandler(f.tx, d, engine, Ports{Orders: OrdersSQL{}, Wallet: WalletSQL{}, WhatsApp: f.wa}).routes())
 	return f
 }
 

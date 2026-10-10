@@ -60,6 +60,7 @@ const trackPoint = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
   ele: z.number().optional(),
+  segmentStart: z.boolean().optional(),
 });
 const photos = z
   .array(z.string().max(MAX_PHOTO_BYTES))

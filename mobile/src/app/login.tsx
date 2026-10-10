@@ -9,6 +9,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { Spacing } from '@/constants/theme';
 import { login } from '@/lib/api';
 
+/** The API answers 403 for an account that has no password yet. */
+const NO_PASSWORD_STATUS = 403;
+
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
@@ -18,23 +21,26 @@ export default function LoginScreen() {
 
   async function submitLogin() {
     setError(null);
-    if (!username) {
-      setError('Masukkan username');
+    if (!username.trim()) {
+      setError('Enter your WhatsApp number or email.');
       return;
     }
     if (!password) {
-      setError('Masukkan password');
+      setError('Enter your password.');
       return;
     }
     setBusy(true);
-    const res = await login(username, password);
+    const res = await login(username.trim(), password);
     setBusy(false);
     if (!res.ok) {
-      setError(res.error ?? 'Gagal masuk');
+      const message = res.error ?? 'Could not sign in. Try again.';
+      setError(
+        res.status === NO_PASSWORD_STATUS ? `${message} The front desk at any NüHabit studio can set one for you.` : message
+      );
       return;
     }
     if (!res.data?.token) {
-      setError('Server tidak mengirim token sesi');
+      setError('The server did not return a session token.');
       return;
     }
     await signIn(res.data.token);
@@ -45,15 +51,16 @@ export default function LoginScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView style={styles.avoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ThemedText type="subtitle">Portal Member</ThemedText>
-          <ThemedText themeColor="textSecondary">Masukkan username dan password untuk masuk.</ThemedText>
+          <ThemedText type="subtitle">Member Portal</ThemedText>
+          <ThemedText themeColor="textSecondary">Sign in with your WhatsApp number or email and your password.</ThemedText>
           <TextInput
             style={styles.input}
             value={username}
             onChangeText={setUsername}
-            placeholder="Username"
+            placeholder="WhatsApp number or email"
             placeholderTextColor="#888"
             autoCapitalize="none"
+            autoComplete="username"
             autoFocus
           />
           <TextInput
@@ -62,6 +69,7 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             placeholder="Password"
             placeholderTextColor="#888"
+            autoComplete="current-password"
             secureTextEntry
           />
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
@@ -73,7 +81,7 @@ export default function LoginScreen() {
             {busy ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Masuk</Text>
+              <Text style={styles.buttonText}>Sign in</Text>
             )}
           </Pressable>
         </KeyboardAvoidingView>

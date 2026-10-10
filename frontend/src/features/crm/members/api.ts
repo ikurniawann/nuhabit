@@ -112,6 +112,20 @@ export async function updateMember(
   await parseCrmResponse(response, "Gagal menyimpan member");
 }
 
+/**
+ * Generates a new portal password for the member and revokes their sessions.
+ * The password comes back once; with `sendWhatsapp` it goes to the member instead.
+ */
+export async function resetMemberPassword(id: string, sendWhatsapp: boolean): Promise<{ password?: string }> {
+  const response = await fetch(`/api/crm/members/${id}/password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(sendWhatsapp ? { send_whatsapp: true } : {}),
+  });
+  const json = await parseCrmResponse<{ data?: { password?: string } }>(response, "Gagal mereset password member");
+  return json.data ?? {};
+}
+
 // createRedemption & redeemAvatar dihapus (EPIC-011): endpoint redeem XP
 // sudah pensiun (410) — XP lifetime tidak pernah berkurang.
 

@@ -594,7 +594,7 @@ func TestCatalogAndProviderErrors(t *testing.T) {
 	res, _ := f.do("GET", "/api/public/shop/"+strings.ToUpper(slug)+"/catalog", nil)
 	expectStatus(t, res, 200)
 	expectJSON(t, res, `{"success":true,"data":{"storefront":{"slug":"`+slug+`","name":"Toko Go","description":null},"collections":[],"products":[`+
-		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"imageUrl":null,"images":[],"price":50000,"weightGram":null,"stock":5,`+
+		`{"id":"`+p+`","name":"Kaos","description":null,"longDescription":null,"sizeGuide":null,"imageUrl":null,"images":[],"price":50000,"weightGram":null,"stock":5,`+
 		`"collection":null,"preorderUntil":null,"preorder":false,`+
 		`"skus":[{"id":"s1","sku":"K-L","name":"L","price":50000,"stock":3,"preorder":false},{"id":"s2","sku":"K-XL","name":"XL","price":65000,"stock":2,"preorder":false}]}]}}`)
 

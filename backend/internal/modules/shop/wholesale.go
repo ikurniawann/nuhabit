@@ -4,12 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"math/big"
 	"net/http"
-	"strings"
 	"time"
-
-	"golang.org/x/crypto/bcrypt"
 
 	"nuhabit/backend/internal/modules/shop/domain"
 	"nuhabit/backend/internal/platform/auth"
@@ -87,44 +83,16 @@ type WholesaleAccountInput struct {
 	Status       string
 }
 
-// passwordAlphabet leaves out the glyphs that read alike (0/O, 1/l/I).
-const passwordAlphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-// newPassword is a 12 character one-time password.
-func newPassword() (string, error) {
-	var b strings.Builder
-	for i := 0; i < 12; i++ {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(passwordAlphabet))))
-		if err != nil {
-			return "", err
-		}
-		b.WriteByte(passwordAlphabet[n.Int64()])
-	}
-	return b.String(), nil
-}
-
-// bcrypt reads at most 72 bytes of a password.
-const bcryptMaxBytes = 72
-
-func hashPassword(password string) (string, error) {
-	raw := []byte(password)
-	if len(raw) > bcryptMaxBytes {
-		raw = raw[:bcryptMaxBytes]
-	}
-	hash, err := bcrypt.GenerateFromPassword(raw, bcrypt.DefaultCost)
-	return string(hash), err
-}
-
 var errEmailTaken = httpx.Conflict("Email sudah dipakai akun lain")
 
 // CreateWholesaleAccount inserts an account with a fresh one-time password,
 // returned once for staff to hand over.
 func (s *Service) CreateWholesaleAccount(ctx context.Context, in WholesaleAccountInput) (*WholesaleAccount, string, error) {
-	password, err := newPassword()
+	password, err := auth.GeneratePassword(12)
 	if err != nil {
 		return nil, "", err
 	}
-	hash, err := hashPassword(password)
+	hash, err := auth.HashPassword(password)
 	if err != nil {
 		return nil, "", err
 	}
@@ -149,11 +117,11 @@ func (s *Service) UpdateWholesaleAccount(ctx context.Context, id string, in Whol
 	password := ""
 	var hash *string
 	if resetPassword {
-		p, err := newPassword()
+		p, err := auth.GeneratePassword(12)
 		if err != nil {
 			return nil, "", err
 		}
-		h, err := hashPassword(p)
+		h, err := auth.HashPassword(p)
 		if err != nil {
 			return nil, "", err
 		}
@@ -215,7 +183,7 @@ func (s *Service) WholesaleLogin(ctx context.Context, ip, email, password string
 	if err != nil && !database.IsNoRows(err) {
 		return "", nil, err
 	}
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
+	if err != nil || !auth.VerifyPassword(password, hash) {
 		for _, key := range []string{emailKey, ipKey} {
 			if _, _, err := s.limits.Sliding(ctx, key, 1<<30, domain.WholesaleLoginWindow, now); err != nil {
 				return "", nil, err

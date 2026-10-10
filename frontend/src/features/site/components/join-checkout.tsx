@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useReducer, useState, useSyncExternalStore, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -143,8 +143,14 @@ function PlanSummary({ plan, branch }: { plan: PublicPlan; branch: PublicPlanBra
   );
 }
 
+const MEMBER_LOGIN = "/member/auth/login";
+const noSubscribe = () => () => {};
+/** The login page returns to this checkout; the URL is only known in the browser. */
+const loginHrefSnapshot = () => `${MEMBER_LOGIN}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
+
 function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
-  const [phase, dispatch] = useReducer(accountTransition, initialAccountPhase);
+  const [phase, dispatch] = useReducer(accountTransition, OTP_ENABLED, initialAccountPhase);
+  const loginHref = useSyncExternalStore(noSubscribe, loginHrefSnapshot, () => MEMBER_LOGIN);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -223,12 +229,27 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
     });
   };
 
-  const onNeedsPhone = useCallback((identity: GoogleIdentity) => {
-    if (OTP_ENABLED) dispatch({ type: "google_needs_phone", identity });
-    else setError("Pendaftaran anggota baru sementara tidak tersedia.");
-  }, []);
+  const onNeedsPhone = useCallback((identity: GoogleIdentity) => dispatch({ type: "google_needs_phone", identity }), []);
 
-  if (!OTP_ENABLED) return <div className="space-y-4"><h2 className="font-display text-xl font-semibold">Sign in to continue</h2><p className="text-sm text-body">{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? "WhatsApp code verification is temporarily unavailable. Existing members can sign in with Google." : "Sign in is temporarily unavailable while WhatsApp code verification is paused."}</p><GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} text="continue_with" />{error ? <p className="text-sm text-danger">{error}</p> : null}</div>;
+  if (phase.kind === "front_desk") {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h2 className="font-display text-xl font-semibold">Sign in to continue</h2>
+          <p className="text-sm text-body">
+            New memberships are created at the front desk while WhatsApp verification is off. Members with a password can sign in here.
+          </p>
+        </div>
+        <Button asChild size="lg" className="w-full">
+          <a href={loginHref}>Sign in with your password</a>
+        </Button>
+        <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} text="continue_with" />
+        {phase.googleUnlinked ? (
+          <p className="text-sm text-danger">This Google account is not linked to a membership yet. Ask the front desk to create one.</p>
+        ) : null}
+      </div>
+    );
+  }
 
   if (phase.kind === "phone") {
     return (

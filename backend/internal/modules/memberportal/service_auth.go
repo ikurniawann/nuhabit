@@ -26,6 +26,14 @@ type OTPRecord struct {
 	ConsumedAt *time.Time
 }
 
+// LoginAccount is the member a password sign-in checks.
+type LoginAccount struct {
+	ID           string
+	Name         *string
+	Phone        string
+	PasswordHash *string
+}
+
 // Venue is the default company/branch stamped on wallet and XP rows.
 type Venue struct {
 	CompanyID *string
@@ -48,6 +56,10 @@ type AuthRepository interface {
 	MarkWAVerified(ctx context.Context, customerID string) error
 	CreateSession(ctx context.Context, tokenHash, customerID string, expiresAt time.Time) error
 	DeleteSession(ctx context.Context, tokenHash string) error
+	FindLoginAccount(ctx context.Context, digits, email string) (*LoginAccount, error)
+	PasswordHash(ctx context.Context, customerID string) (*string, error)
+	SetPasswordHash(ctx context.Context, customerID, hash string) error
+	DeleteOtherSessions(ctx context.Context, customerID, keepTokenHash string) error
 	LockRegistration(ctx context.Context, phoneDigits string) error
 	InsertRegisteredMember(ctx context.Context, reg domain.Registration) (*MemberRef, error)
 	DefaultVenue(ctx context.Context) Venue
@@ -63,16 +75,19 @@ var (
 	errTooManyFromIP    = fail(429, domain.TooManyFromIP)
 )
 
-// ipBrake applies the per-IP brake for kind "otp", "verify" or "google",
+// ipBrake applies the per-IP brake for kind "otp", "verify", "google" or "login",
 // shared by every replica.
 func (s *Service) ipBrake(ctx context.Context, kind, ip string) error {
-	rule := domain.IPRuleOTP
-	if kind == "verify" {
+	rule, refusal := domain.IPRuleOTP, errTooManyFromIP
+	switch kind {
+	case "verify":
 		rule = domain.IPRuleVerify
+	case "login":
+		rule, refusal = domain.IPRuleLogin, errLoginTooManyFromIP
 	}
 	allowed, _, err := s.limits.Sliding(ctx, "member-"+kind+":"+ip, rule.Limit, rule.Window, s.now())
 	if err == nil && !allowed {
-		return errTooManyFromIP
+		return refusal
 	}
 	return err
 }

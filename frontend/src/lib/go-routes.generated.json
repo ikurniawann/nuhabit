@@ -927,6 +927,11 @@
   {
     "module": "crm",
     "method": "POST",
+    "path": "/api/crm/members/{id}/password"
+  },
+  {
+    "module": "crm",
+    "method": "POST",
     "path": "/api/crm/members/{id}/xp-adjust"
   },
   {
@@ -3047,6 +3052,11 @@
   {
     "module": "member-portal",
     "method": "POST",
+    "path": "/api/member-portal/login"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
     "path": "/api/member-portal/logout"
   },
   {
@@ -3078,6 +3088,21 @@
     "module": "member-portal",
     "method": "POST",
     "path": "/api/member-portal/otp"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/member-portal/password"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/password/forgot"
+  },
+  {
+    "module": "member-portal",
+    "method": "POST",
+    "path": "/api/member-portal/password/reset"
   },
   {
     "module": "member-portal",
