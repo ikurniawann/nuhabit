@@ -30,41 +30,41 @@ export function ContactPage({ social, branches }: { social: SocialContent; branc
             <dl className="space-y-3 text-sm">
               {hq ? (
                 <div className="flex gap-3">
-                  <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="sr-only">Address</dt>
-                    <dd className="text-body">
-                      <span className="font-semibold text-foreground">{hq.name}</span>
-                      <br />
-                      {[hq.address, hq.city, hq.postcode].filter(Boolean).join(", ")}
-                    </dd>
-                  </div>
+                  <dt>
+                    <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="sr-only">Address</span>
+                  </dt>
+                  <dd className="text-body">
+                    <span className="font-semibold text-foreground">{hq.name}</span>
+                    <br />
+                    {[hq.address, hq.city, hq.postcode].filter(Boolean).join(", ")}
+                  </dd>
                 </div>
               ) : null}
               {social.whatsapp || hq?.phone ? (
                 <div className="flex gap-3">
-                  <MessageCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="sr-only">WhatsApp</dt>
-                    <dd>
-                      <a href={waHref(social.whatsapp || hq?.phone || "")} className="text-forest hover:underline dark:text-accent" target="_blank" rel="noopener noreferrer">
-                        {social.whatsapp || hq?.phone}
-                      </a>
-                    </dd>
-                  </div>
+                  <dt>
+                    <MessageCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="sr-only">WhatsApp</span>
+                  </dt>
+                  <dd>
+                    <a href={waHref(social.whatsapp || hq?.phone || "")} className="text-forest hover:underline dark:text-accent" target="_blank" rel="noopener noreferrer">
+                      {social.whatsapp || hq?.phone}
+                    </a>
+                  </dd>
                 </div>
               ) : null}
               {social.email ? (
                 <div className="flex gap-3">
-                  <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <div>
-                    <dt className="sr-only">Email</dt>
-                    <dd>
-                      <a href={`mailto:${social.email}`} className="text-forest hover:underline dark:text-accent">
-                        {social.email}
-                      </a>
-                    </dd>
-                  </div>
+                  <dt>
+                    <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="sr-only">Email</span>
+                  </dt>
+                  <dd>
+                    <a href={`mailto:${social.email}`} className="text-forest hover:underline dark:text-accent">
+                      {social.email}
+                    </a>
+                  </dd>
                 </div>
               ) : null}
             </dl>

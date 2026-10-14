@@ -181,7 +181,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="theme-light min-h-screen bg-background pb-24">
       <header className="sticky top-0 z-30 px-3 pt-3 md:px-4">
         <div className="mx-auto flex h-16 items-center gap-3 rounded-2xl bg-card/95 px-4 shadow-float backdrop-blur lg:px-5">
           <Link href="/" className="flex shrink-0 items-center" aria-label="NüHabit, go to the home page">
@@ -199,10 +199,10 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           <Link
             href="/member/auth/login"
             aria-label="Member login"
-            className="ml-auto inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold text-foreground transition-colors hover:bg-surface-2 sm:size-auto sm:px-4 sm:py-2"
+            className="ml-auto inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold whitespace-nowrap text-foreground transition-colors hover:bg-surface-2 lg:size-auto lg:px-4 lg:py-2"
           >
             <UserRound className="h-4 w-4" />
-            <span className="hidden sm:inline">Member login</span>
+            <span className="hidden lg:inline">Member login</span>
           </Link>
           <button
             type="button"

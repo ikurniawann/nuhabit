@@ -74,5 +74,20 @@ describe("buildNavBreadcrumbs", () => {
       "Challenge",
     ]);
   });
-});
 
+  it("shows menu sections as text, since their path may have no page", () => {
+    const items: NavItem[] = [
+      {
+        href: "/dashboard/items/product",
+        label: "Product",
+        icon: "clipboard",
+        children: [{ href: "/dashboard/items/product/production", label: "Produksi", icon: "clipboard" }],
+      },
+    ];
+    expect(buildNavBreadcrumbs(items, "/dashboard/items/product/production")).toEqual([
+      { label: "Beranda", href: "/dashboard" },
+      { label: "Product" },
+      { label: "Produksi" },
+    ]);
+  });
+});

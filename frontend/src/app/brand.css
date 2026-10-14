@@ -37,7 +37,7 @@
   --color-gray-100: #edf2ed;
   --color-gray-200: #e3dbcc;
   --color-gray-300: #d4cbbb;
-  --color-gray-400: #9a958a;
+  --color-gray-400: #76726a;
   --color-gray-500: #5f6b62;
   --color-gray-600: #4a544d;
   --color-gray-700: #2a332e;
@@ -48,7 +48,7 @@
   --color-slate-100: #edf2ed;
   --color-slate-200: #e3dbcc;
   --color-slate-300: #d4cbbb;
-  --color-slate-400: #9a958a;
+  --color-slate-400: #76726a;
   --color-slate-500: #5f6b62;
   --color-slate-600: #4a544d;
   --color-slate-700: #2a332e;
@@ -59,7 +59,7 @@
   --color-zinc-100: #edf2ed;
   --color-zinc-200: #e3dbcc;
   --color-zinc-300: #d4cbbb;
-  --color-zinc-400: #9a958a;
+  --color-zinc-400: #76726a;
   --color-zinc-500: #5f6b62;
   --color-zinc-600: #4a544d;
   --color-zinc-700: #2a332e;
@@ -70,7 +70,7 @@
   --color-neutral-100: #edf2ed;
   --color-neutral-200: #e3dbcc;
   --color-neutral-300: #d4cbbb;
-  --color-neutral-400: #9a958a;
+  --color-neutral-400: #76726a;
   --color-neutral-500: #5f6b62;
   --color-neutral-600: #4a544d;
   --color-neutral-700: #2a332e;
@@ -89,7 +89,7 @@
   --color-nh-lime-soft: #eeffb1;
   --color-nh-lettuce: #abde67;
   --color-nh-muted: #5f6b62;
-  --color-nh-ok: #4d8a1c;
+  --color-nh-ok: #3f7a12;
   --color-nh-warn: #9c7a14;
   --color-nh-danger: #d13b40;
   --font-nh-display: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
@@ -259,4 +259,37 @@
 
 .notch {
   clip-path: polygon(0 0, calc(100% - 1.5rem) 0, calc(100% - 1.5rem) 1.5rem, 100% 1.5rem, 100% 100%, 0 100%);
+}
+
+/* A subtree that stays light in dark mode (the public shop). */
+.theme-light {
+  --wit-accent-soft: #eeffb1 !important;
+  --wit-brand-text: #00281a !important;
+  --wit-info: #203b32 !important;
+  --wit-info-soft: #e3ece6 !important;
+  --wit-success: #3f7a12 !important;
+  --wit-success-soft: #e6f2d8 !important;
+  --wit-warning: #835f00 !important;
+  --wit-warning-soft: #f7ecc8 !important;
+  --wit-danger: #b3262c !important;
+  --wit-danger-soft: #fbe5e5 !important;
+  --wit-ink: #131a1c !important;
+  --wit-surface: #ffffff !important;
+  --wit-surface-2: #f7f9f7 !important;
+  --wit-body: #2a332e !important;
+  --background: #ffffff !important;
+  --foreground: #131a1c !important;
+  --card: #ffffff !important;
+  --card-foreground: #131a1c !important;
+  --popover: #ffffff !important;
+  --popover-foreground: #131a1c !important;
+  --secondary: #f7f9f7 !important;
+  --secondary-foreground: #131a1c !important;
+  --muted: #f7f9f7 !important;
+  --muted-foreground: #5f6b62 !important;
+  --border: #e3dbcc !important;
+  --input: #e3dbcc !important;
+  --glass-bg: #ffffff !important;
+  color-scheme: light;
+  color: var(--foreground);
 }

@@ -207,8 +207,8 @@ export function StationPage({ station, index, stations, stationClass }: {
   return (
     <>
       <PageHero kicker={`Station ${index + 1} of ${stations.length}`} title={station.name} text={station.text} image={station.image_url || undefined}>
-        {station.spec ? <p className="bg-accent px-3 py-2 text-sm font-bold tracking-wider text-accent-foreground uppercase">{station.spec}</p> : null}
-        <p className="border border-border px-3 py-2 text-sm font-bold tracking-wider uppercase">After run {index + 1} · 1 km</p>
+        {station.spec ? <p className="bg-accent px-3 py-2 text-sm font-bold tracking-wider whitespace-nowrap text-accent-foreground uppercase">{station.spec}</p> : null}
+        <p className="border border-border px-3 py-2 text-sm font-bold tracking-wider whitespace-nowrap uppercase">After run {index + 1} · 1 km</p>
       </PageHero>
 
       <Section className="pt-0">

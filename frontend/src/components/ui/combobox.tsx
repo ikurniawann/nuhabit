@@ -79,7 +79,6 @@ export function Combobox({
       <PopoverTrigger
         data-slot="select-trigger"
         type="button"
-        role="combobox"
         aria-expanded={open}
         className={cn(
           "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-transparent px-3 text-sm outline-none transition-colors hover:border-gray-300 hover:bg-muted focus-visible:border-pink-200 focus-visible:ring-1 focus-visible:ring-pink-100 disabled:pointer-events-none disabled:opacity-50",

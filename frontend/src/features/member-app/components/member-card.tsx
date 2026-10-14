@@ -53,7 +53,7 @@ export function MemberCardSheet({ onClose }: { onClose: () => void }) {
           <div className="relative mt-6 flex items-center justify-center">
             <div className="rounded-2xl bg-white p-3.5">
               {qr.data ? (
-                <QRCodeSVG value={qr.data.token} size={168} level="M" marginSize={0} />
+                <QRCodeSVG value={qr.data.token} size={168} level="M" marginSize={0} title={t("Your check-in QR code")} />
               ) : (
                 <div className="h-[168px] w-[168px]" />
               )}

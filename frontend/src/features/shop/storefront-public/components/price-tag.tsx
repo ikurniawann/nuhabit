@@ -16,7 +16,7 @@ export function PriceTag({
   return (
     <span className={`inline-flex flex-wrap items-baseline gap-x-2 ${size === 'lg' ? 'text-xl' : 'text-sm'}`}>
       <span className={`font-bold ${onSale ? 'text-forest' : 'text-gray-900'}`}>{prefix}{formatRupiah(price)}</span>
-      {onSale ? <s className={`font-normal text-gray-400 ${size === 'lg' ? 'text-base' : 'text-xs'}`}>{formatRupiah(compareAtPrice)}</s> : null}
+      {onSale ? <s className={`font-normal text-gray-500 ${size === 'lg' ? 'text-base' : 'text-xs'}`}>{formatRupiah(compareAtPrice)}</s> : null}
     </span>
   );
 }

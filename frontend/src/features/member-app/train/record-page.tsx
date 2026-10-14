@@ -119,15 +119,18 @@ function resizeImageToDataUrl(
 function Toggle({
   on,
   onChange,
+  label,
 }: {
   on: boolean;
   onChange: (next: boolean) => void;
+  label: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
+      aria-label={label}
       onClick={() => onChange(!on)}
       className={`h-7 w-12 shrink-0 rounded-full p-1 transition ${on ? "bg-nh-forest" : "bg-nh-line"}`}
     >
@@ -700,13 +703,13 @@ export function RecordPage() {
                 icon={Timer}
                 label={t("Track laps")}
                 hint={t("Adds a Lap button while recording")}
-                right={<Toggle on={trackLaps} onChange={setTrackLaps} />}
+                right={<Toggle on={trackLaps} onChange={setTrackLaps} label={t("Track laps")} />}
               />
               <OptionRow
                 icon={Volume2}
                 label={t("Audio cues")}
                 hint={t("Spoken split every kilometre")}
-                right={<Toggle on={audioCues} onChange={setAudioCues} />}
+                right={<Toggle on={audioCues} onChange={setAudioCues} label={t("Audio cues")} />}
               />
             </div>
           ) : null}

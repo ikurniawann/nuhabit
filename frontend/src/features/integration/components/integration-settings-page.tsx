@@ -113,11 +113,11 @@ export function IntegrationSettingsPage() {
             <div className="mx-auto max-w-4xl">
               <div className="mb-6">
                 <h1 className="text-4xl font-semibold tracking-tight">Integration</h1>
-                <p className="mt-2 text-sm text-black/50">Kelola integrasi NüHabit OS dengan layanan eksternal.</p>
+                <p className="mt-2 text-sm text-muted-foreground">Kelola integrasi NüHabit OS dengan layanan eksternal.</p>
               </div>
 
               {/* Hero Card */}
-              <div className="mb-6 overflow-hidden rounded-[28px] bg-white shadow-sm ring-1 ring-black/5">
+              <div className="mb-6 overflow-hidden rounded-[28px] bg-card shadow-sm ring-1 ring-border">
                 <div className="flex items-center gap-5 p-6">
                   <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-gradient-to-br from-pink-400 to-rose-600 text-white shadow-lg shadow-pink-200">
                     <Plug className="h-10 w-10" />
@@ -153,7 +153,7 @@ export function IntegrationSettingsPage() {
                         <ChevronRight className="mt-2 h-5 w-5 text-black/25 transition group-hover:translate-x-0.5" />
                       </div>
                       <div className="mt-4 text-lg font-semibold">{item.name}</div>
-                      <p className="mt-1 min-h-[48px] text-sm leading-6 text-black/50">{item.desc}</p>
+                      <p className="mt-1 min-h-[48px] text-sm leading-6 text-muted-foreground">{item.desc}</p>
                       <div className="mt-4 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-medium text-black/55">{item.status}</div>
                     </button>
                   );
@@ -161,7 +161,7 @@ export function IntegrationSettingsPage() {
               </div>
 
               {/* macOS-style grouped settings */}
-              <div className="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/5">
+              <div className="overflow-hidden rounded-[24px] bg-card shadow-sm ring-1 ring-border">
                 {rows.map((row, index) => {
                   const Icon = row.icon;
                   return (

@@ -61,7 +61,7 @@ export function CartDrawer({
             <FreeShippingBar text={progress.text} ratio={progress.ratio} unlocked={progress.unlocked} />
           ) : null}
           {cart.length === 0 ? (
-            <p className="py-16 text-center text-sm text-gray-400">Your cart is empty</p>
+            <p className="py-16 text-center text-sm text-gray-500">Your cart is empty</p>
           ) : (
             cart.map((line) => {
               const product = productOf(line);
@@ -105,7 +105,7 @@ export function CartDrawer({
                         </select>
                       </label>
                     ) : (
-                      <span className="text-xs text-gray-400">{line.variantName ?? ''}</span>
+                      <span className="text-xs text-gray-500">{line.variantName ?? ''}</span>
                     )}
                     <div className="flex items-center gap-2">
                       <button

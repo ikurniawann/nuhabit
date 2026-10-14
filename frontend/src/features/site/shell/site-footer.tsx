@@ -126,7 +126,7 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
               </Link>
             </li>
             <li>
-              <Link href="/wholesale" className="font-semibold text-forest hover:underline">
+              <Link href="/wholesale" className="font-semibold text-forest hover:underline dark:text-accent">
                 Partner Portal
               </Link>
             </li>

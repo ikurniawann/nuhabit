@@ -22,11 +22,22 @@ function humanizeSegment(segment: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function toCrumb(item: NavItem): NavBreadcrumbItem {
+/** A crumb from the nav tree; `group` marks a menu section, which has no page of its own. */
+type NavCrumb = NavBreadcrumbItem & { group?: true };
+
+function toCrumb(item: NavItem): NavCrumb {
   return {
     label: item.label,
     ...(isValidHref(item.href) ? { href: item.href } : {}),
+    ...(item.children?.length ? { group: true as const } : {}),
   };
+}
+
+/** Section crumbs above the page are plain text: their path often has no page (a 404 link). */
+function unlinkSections(chain: NavCrumb[]): NavBreadcrumbItem[] {
+  return chain.map(({ group, ...crumb }, index) =>
+    group && index < chain.length - 1 ? { label: crumb.label } : crumb
+  );
 }
 
 /**
@@ -44,10 +55,10 @@ function findDeepestNavChain(
   items: NavItem[],
   pathname: string,
   navFrom: string | null,
-  ancestors: NavBreadcrumbItem[] = [],
+  ancestors: NavCrumb[] = [],
   peerHrefs: string[] = []
-): NavBreadcrumbItem[] | null {
-  let best: NavBreadcrumbItem[] | null = null;
+): NavCrumb[] | null {
+  let best: NavCrumb[] | null = null;
 
   for (const item of items) {
     const childHrefs = item.children?.map((child) => child.href) ?? [];
@@ -156,7 +167,7 @@ export function buildNavBreadcrumbs(
     return finalizeChain(fallbackFromPath(normalizedPath), normalizedPath);
   }
 
-  const withoutDuplicateHome = navChain.filter(
+  const withoutDuplicateHome = unlinkSections(navChain).filter(
     (crumb, index) => !(index === 0 && crumb.href === HOME_HREF)
   );
 

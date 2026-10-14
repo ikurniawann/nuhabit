@@ -62,7 +62,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
         <div className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-xs uppercase tracking-wide text-gray-400">Order</p>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Order</p>
               <h1 className="text-lg font-semibold text-gray-900">{order.order_number}</h1>
             </div>
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${status.tone}`}>
@@ -91,7 +91,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
               <div key={index} className="text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-700">
-                    {item.name} <span className="text-gray-400">× {item.quantity}</span>
+                    {item.name} <span className="text-gray-500">× {item.quantity}</span>
                   </span>
                   <span className="text-gray-900">{formatRupiah(item.total)}</span>
                 </div>
@@ -119,7 +119,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
         <div className="rounded-2xl border border-forest/10 bg-white p-6 text-sm shadow-sm">
           {pickup ? (
             <>
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
                 <Store className="h-3.5 w-3.5" /> Pick up at
               </p>
               {order.delivery.branch ? (
@@ -140,7 +140,7 @@ export function ShopOrderStatusPage({ token }: { token: string }) {
             </>
           ) : (
             <>
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-400">
+              <p className="mb-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
                 <Package className="h-3.5 w-3.5" /> Shipping Address
               </p>
               <p className="font-medium text-gray-900">{order.customer_name}</p>
@@ -187,7 +187,7 @@ function OrderSteps({ order }: { order: PublicOrderStatus }) {
             }`}>
               {done ? <Check className="h-3.5 w-3.5" /> : index + 1}
             </span>
-            <span className={`text-[11px] leading-4 ${active ? 'font-semibold text-forest' : done ? 'text-gray-700' : 'text-gray-400'}`}>{step.label}</span>
+            <span className={`text-[11px] leading-4 ${active ? 'font-semibold text-forest' : done ? 'text-gray-700' : 'text-gray-500'}`}>{step.label}</span>
           </li>
         );
       })}

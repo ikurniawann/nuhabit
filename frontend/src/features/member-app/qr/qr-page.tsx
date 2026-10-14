@@ -52,7 +52,7 @@ export function QrPage() {
         <div className="pointer-events-none absolute -bottom-24 -left-16 h-48 w-48 rounded-full bg-white/[0.05] blur-2xl" />
 
         <div className="relative mx-auto w-fit rounded-2xl bg-white p-4">
-          <QRCodeSVG value={qr.data.token} size={212} level="M" marginSize={0} />
+          <QRCodeSVG value={qr.data.token} size={212} level="M" marginSize={0} title={t("Your check-in QR code")} />
         </div>
 
         <div className="relative mt-6 flex items-center gap-4">

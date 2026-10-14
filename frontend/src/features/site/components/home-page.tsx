@@ -262,7 +262,7 @@ function Reel({ reel }: { reel: HomeContent["reel"] }) {
     <Section>
       <Container className="space-y-6">
         <SectionHeading kicker={hasSamples ? "Sample content" : "Community"} title={hasSamples ? "Preview of the training gallery" : "What happens on the training floor"} text={hasSamples ? "AI-generated sample images. Replace them with approved photos from real classes." : undefined} />
-        <ul className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 lg:-mx-6 lg:px-6">
+        <ul tabIndex={0} aria-label="Training gallery, scroll sideways" className="no-scrollbar -mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-2 focus-visible:outline-2 focus-visible:outline-forest lg:-mx-6 lg:px-6">
           {reel.map((item, i) => (
             <li key={`${item.image_url}-${i}`} className="w-[78vw] shrink-0 snap-start sm:w-80">
               <figure className="overflow-hidden border border-border bg-card">

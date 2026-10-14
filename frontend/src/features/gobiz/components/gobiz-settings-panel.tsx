@@ -143,10 +143,10 @@ export function GobizSettingsPanel() {
   }
 
   const inputClass =
-    "h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-[#007aff] focus:ring-2 focus:ring-[#007aff]/20 dark:bg-white/5";
+    "h-10 w-full rounded-xl border border-black/10 bg-white px-3 text-sm outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 dark:bg-white/5";
 
   return (
-    <div className="mb-6 overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/5 dark:bg-white/[0.04]">
+    <div className="mb-6 overflow-hidden rounded-[24px] bg-card shadow-sm ring-1 ring-border">
       <div className="flex items-start gap-4 border-b border-black/5 p-5">
         <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-white shadow-sm">
           <Utensils className="h-6 w-6" />
@@ -174,7 +174,7 @@ export function GobizSettingsPanel() {
           <p className="mt-1 text-sm leading-6 text-black/55">
             Order GoFood masuk otomatis ke POS & KDS, terima/tolak dari halaman POS → GoFood, menu disinkron dari katalog POS.
             Kredensial (Client ID, Client Secret, Outlet ID) diperoleh dari{" "}
-            <a href="https://developer.gobiz.com" target="_blank" rel="noreferrer" className="text-[#007aff] underline">
+            <a href="https://developer.gobiz.com" target="_blank" rel="noreferrer" className="text-forest dark:text-accent underline">
               GoBiz Developer Portal
             </a>
             .
@@ -214,7 +214,7 @@ export function GobizSettingsPanel() {
         </label>
         <label className="block">
           <span className="text-xs font-semibold text-black/60">
-            Client Secret {data?.has_client_secret ? <span className="font-normal text-black/40">(tersimpan: {data.client_secret_masked})</span> : null}
+            Client Secret {data?.has_client_secret ? <span className="font-normal text-muted-foreground">(tersimpan: {data.client_secret_masked})</span> : null}
           </span>
           <input
             type="password"
@@ -237,7 +237,7 @@ export function GobizSettingsPanel() {
         </label>
         <label className="block">
           <span className="text-xs font-semibold text-black/60">
-            Relay secret {data?.has_relay_secret ? <span className="font-normal text-black/40">(tersimpan: {data.relay_secret_masked})</span> : null}
+            Relay secret {data?.has_relay_secret ? <span className="font-normal text-muted-foreground">(tersimpan: {data.relay_secret_masked})</span> : null}
           </span>
           <input
             type="password"
@@ -258,7 +258,7 @@ export function GobizSettingsPanel() {
           />
           <span>
             <span className="block text-sm font-semibold">Tolak webhook bertanda tangan salah</span>
-            <span className="block text-xs text-black/50">
+            <span className="block text-xs text-muted-foreground">
               Nyalakan setelah uji sandbox membuktikan tanda tangan cocok. Mati = tanda tangan hanya dicatat di log.
             </span>
           </span>
@@ -273,7 +273,7 @@ export function GobizSettingsPanel() {
           />
           <span>
             <span className="block text-sm font-semibold">Auto-accept order</span>
-            <span className="block text-xs text-black/50">Order langsung diterima & masuk KDS tanpa klik kasir (GoFood batalkan otomatis bila tak diterima 3 menit).</span>
+            <span className="block text-xs text-muted-foreground">Order langsung diterima & masuk KDS tanpa klik kasir (GoFood batalkan otomatis bila tak diterima 3 menit).</span>
           </span>
         </label>
         <label className="flex items-center gap-3 rounded-xl border border-black/5 px-3 py-2.5">
@@ -285,12 +285,12 @@ export function GobizSettingsPanel() {
           />
           <span>
             <span className="block text-sm font-semibold">Integrasi aktif</span>
-            <span className="block text-xs text-black/50">Tampilkan status di POS → GoFood. Webhook tetap diterima selama token valid.</span>
+            <span className="block text-xs text-muted-foreground">Tampilkan status di POS → GoFood. Webhook tetap diterima selama token valid.</span>
           </span>
         </label>
 
         <div className="sm:col-span-2">
-          <button type="button" onClick={() => setAdvanced((v) => !v)} className="text-xs font-semibold text-[#007aff]">
+          <button type="button" onClick={() => setAdvanced((v) => !v)} className="text-xs font-semibold text-forest dark:text-accent">
             {advanced ? "Sembunyikan" : "Tampilkan"} pengaturan lanjutan (URL API)
           </button>
           {advanced && (
@@ -336,7 +336,7 @@ export function GobizSettingsPanel() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-black/5 bg-black/[0.02] p-5">
-        <Button type="button" onClick={save} disabled={busy !== null} className="h-10 rounded-full bg-[#007aff] px-5 hover:bg-[#006ee6]">
+        <Button type="button" onClick={save} disabled={busy !== null} className="h-10 rounded-full px-5">
           {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Simpan
         </Button>
@@ -353,7 +353,7 @@ export function GobizSettingsPanel() {
           Sinkron katalog ke GoFood
         </Button>
         {data?.last_catalog_sync && (
-          <span className="ml-auto text-xs text-black/50">
+          <span className="ml-auto text-xs text-muted-foreground">
             Sinkron terakhir: {formatDateTime(data.last_catalog_sync.created_at)} ·{" "}
             {data.last_catalog_sync.status === "success"
               ? `${data.last_catalog_sync.item_count} item`

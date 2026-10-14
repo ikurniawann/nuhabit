@@ -52,16 +52,17 @@ function EmergencyContactForm({ contact }: { contact: EmergencyContact | null })
       <h1 className="nh-display text-3xl">{t("Emergency contact")}</h1>
       <p className="-mt-2 text-sm text-nh-muted">{t("Shown to studio staff if something happens during training.")}</p>
       <div>
-        <label className="nh-label">{t("Contact name")}</label>
-        <input className="nh-input" value={name} onChange={(e) => setName(e.target.value)} />
+        <label htmlFor="emergency-name" className="nh-label">{t("Contact name")}</label>
+        <input id="emergency-name" className="nh-input" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div>
-        <label className="nh-label">{t("Contact phone")}</label>
-        <input className="nh-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62812…" />
+        <label htmlFor="emergency-phone" className="nh-label">{t("Contact phone")}</label>
+        <input id="emergency-phone" className="nh-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62812…" />
       </div>
       <div>
-        <label className="nh-label">{t("Relationship")}</label>
+        <label htmlFor="emergency-relationship" className="nh-label">{t("Relationship")}</label>
         <input
+          id="emergency-relationship"
           className="nh-input"
           value={relation}
           onChange={(e) => setRelation(e.target.value)}

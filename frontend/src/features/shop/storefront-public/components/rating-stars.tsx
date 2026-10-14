@@ -21,7 +21,7 @@ export function RatingStars({ rating, compact = false }: { rating: ProductRating
     <span className={`inline-flex items-center gap-1 ${compact ? 'text-[11px]' : 'text-sm'} text-gray-600`} aria-label={`Rated ${rounded} out of 5 from ${rating.count} ${rating.count === 1 ? 'review' : 'reviews'}`}>
       <StarRow value={rating.average} size={compact ? 'h-3 w-3' : 'h-4 w-4'} />
       <span>{rounded}</span>
-      <span className="text-gray-400">({rating.count})</span>
+      <span className="text-gray-500">({rating.count})</span>
     </span>
   );
 }

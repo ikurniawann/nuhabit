@@ -351,7 +351,7 @@ export function CheckoutSheet({
                 </label>
 
                 {selectedArea && ratesMutation.isPending ? (
-                  <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
+                  <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
                     <Loader2 className="h-4 w-4 animate-spin" /> Calculating shipping...
                   </div>
                 ) : rates.length > 0 ? (
@@ -472,7 +472,7 @@ export function CheckoutSheet({
             {checkout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {payLabel}{ready ? ` · ${formatRupiah(totals.total)}` : ''}
           </button>
-          <p className="mt-2 text-center text-xs text-gray-400">
+          <p className="mt-2 text-center text-xs text-gray-500">
             {paymentMethod === 'arkcoin' ? 'ARK Coin is debited from your member balance at once.' : 'Secure payment via Xendit (QRIS, virtual account, e-wallet, card)'}
           </p>
         </div>

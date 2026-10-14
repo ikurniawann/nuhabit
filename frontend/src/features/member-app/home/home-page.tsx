@@ -61,13 +61,12 @@ export function HomePage() {
       <PasswordPrompt />
 
       {/* Saldo kredit - "kartu hitam"; ketuk membuka kartu member digital */}
-      <button
-        onClick={() => setCardOpen(true)}
-        className="nh-card nh-surface-ink relative block w-full overflow-hidden !border-0 !p-6 text-left text-white"
-      >
+      <div className="nh-card nh-surface-ink relative block w-full overflow-hidden !border-0 !p-6 text-left text-white">
+        {/* The whole card opens the member card; the Top up link sits above this button, not inside it. */}
+        <button onClick={() => setCardOpen(true)} aria-label={t("Open member card")} className="absolute inset-0 rounded-[inherit]" />
         <div className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full bg-nh-lime/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-28 -left-10 h-48 w-48 rounded-full bg-white/[0.04] blur-2xl" />
-        <div className="relative flex items-start justify-between">
+        <div className="pointer-events-none relative flex items-start justify-between">
           <div>
             <p className="text-[10px] font-bold tracking-[0.22em] text-white/50 uppercase">{t("Credit balance")}</p>
             <p className="nh-display mt-1 text-7xl leading-none">{me.balance}</p>
@@ -76,12 +75,11 @@ export function HomePage() {
             <QrCode size={22} className="text-white/80" />
           </span>
         </div>
-        <div className="relative mt-5 flex items-center justify-between">
+        <div className="pointer-events-none relative mt-5 flex items-center justify-between">
           <p className="text-xs font-semibold text-white/45">{me.member.fullName}</p>
           <Link
             href={m(me.lowBalance ? "/wallet/topup" : "/wallet")}
-            onClick={(e) => e.stopPropagation()}
-            className={`nh-chip ${me.lowBalance ? "bg-nh-lime text-nh-ink" : "bg-white/10 text-white/80"}`}
+            className={`nh-chip pointer-events-auto ${me.lowBalance ? "bg-nh-lime text-nh-ink" : "bg-white/10 text-white/80"}`}
           >
             {me.lowBalance
               ? t("Top up")
@@ -90,7 +88,7 @@ export function HomePage() {
                 : t("Wallet")}
           </Link>
         </div>
-      </button>
+      </div>
 
       {/* Aksi cepat - masing-masing dengan rona aksen sendiri */}
       <div className="grid grid-cols-2 gap-3">
@@ -154,7 +152,7 @@ export function HomePage() {
           <SectionHeader
             label={t("Promos")}
             action={
-              <Link href={m("/promos")} className="text-xs font-bold text-nh-ink/50">
+              <Link href={m("/promos")} className="text-xs font-bold text-nh-muted">
                 {t("See all")} →
               </Link>
             }
@@ -226,7 +224,7 @@ export function HomePage() {
           <SectionHeader
             label={home.railDay === "TODAY" ? t("Today at the studio") : t("Tomorrow at the studio")}
             action={
-              <Link href={m("/classes")} className="text-xs font-bold text-nh-ink/50">
+              <Link href={m("/classes")} className="text-xs font-bold text-nh-muted">
                 {t("Schedule")} →
               </Link>
             }
@@ -276,7 +274,7 @@ export function HomePage() {
         <SectionHeader
           label={t("Upcoming")}
           action={
-            <Link href={m("/bookings")} className="text-xs font-bold text-nh-ink/50">
+            <Link href={m("/bookings")} className="text-xs font-bold text-nh-muted">
               {t("All bookings")} →
             </Link>
           }

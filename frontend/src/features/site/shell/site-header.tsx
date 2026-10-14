@@ -127,7 +127,7 @@ export function SiteHeader({ memberLinked }: { memberLinked: boolean }) {
           <Link
             href={accountHref}
             aria-label={accountLabel}
-            className="inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold text-foreground transition-colors hover:bg-surface-2 sm:size-auto sm:px-4 sm:py-2"
+            className="inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold whitespace-nowrap text-foreground transition-colors hover:bg-surface-2 sm:size-auto sm:px-4 sm:py-2"
           >
             <UserRound className="size-4" />
             <span className="hidden sm:inline">{accountLabel}</span>

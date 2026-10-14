@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, KeyRound, Plug, Plus, RefreshCw, UserSearch } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,9 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { crmFetch as call } from "../crm-fetch";
 import { PARTNER_TYPE_LABELS, PARTNER_TYPES, PARTNER_XP_CAP, type PartnerType } from "@/lib/crm/partner-types";
 import { formatDateTime, formatNumber } from "@/lib/format";
+
+// The origin never changes after load; the server snapshot is "" so hydration matches.
+const noSubscribe = () => () => {};
 
 interface Partner {
   id: string;
@@ -123,7 +126,7 @@ export function PartnersPage() {
   const rows = partners.data ?? [];
   const pending = rows.reduce((sum, p) => sum + p.pending_count, 0);
   const xpTotal = rows.reduce((sum, p) => sum + p.xp_total, 0);
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const origin = useSyncExternalStore(noSubscribe, () => window.location.origin, () => "");
 
   return (
     <div className="space-y-4">

@@ -27,6 +27,8 @@ const BASE_ID: Record<string, string> = {
   Cancel: 'Batal',
   // Home
   'Credit balance': 'Saldo kredit',
+  'Open member card': 'Buka kartu member',
+  'Your check-in QR code': 'QR check-in kamu',
   'Check in': 'Check in',
   'Book a class': 'Pesan kelas',
   Workout: 'Workout',

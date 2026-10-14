@@ -207,7 +207,7 @@ function ProductReviews({ slug, product }: { slug: string; product: CatalogProdu
         {product.rating ? <RatingStars rating={product.rating} /> : null}
       </div>
       {reviews.isPending ? (
-        <p className="flex items-center gap-2 text-sm text-gray-400"><Loader2 className="h-4 w-4 animate-spin" /> Loading reviews</p>
+        <p className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading reviews</p>
       ) : reviews.isError || !reviews.data || reviews.data.length === 0 ? (
         <p className="text-sm text-gray-500">No reviews yet. Members can rate this item from their order page after it is paid.</p>
       ) : (
@@ -216,7 +216,7 @@ function ProductReviews({ slug, product }: { slug: string; product: CatalogProdu
             <li key={review.id} className="rounded-xl bg-gray-50 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <StarRow value={review.rating} size="h-3.5 w-3.5" label={`${review.rating} out of 5`} />
-                <span className="text-xs text-gray-400">{review.author}, {formatDateEn(review.createdAt)}</span>
+                <span className="text-xs text-gray-500">{review.author}, {formatDateEn(review.createdAt)}</span>
               </div>
               {review.comment ? <p className="mt-1.5 text-sm leading-6 text-gray-700">{review.comment}</p> : null}
             </li>
