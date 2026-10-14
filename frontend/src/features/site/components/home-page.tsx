@@ -206,8 +206,8 @@ function Block({ block, classCount, branchCount, fromPrice }: {
         {stats.length > 0 ? (
           <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {stats.map((stat, i) => (
-              <div key={stat.label} className={cn("notch flex min-h-40 flex-col justify-between p-5", i === 0 ? "bg-accent text-accent-foreground" : "bg-ink text-on-ink")}>
-                <dd className="font-display text-4xl font-extrabold leading-none tracking-tight tabular-nums md:text-5xl">{stat.value}</dd>
+              <div key={stat.label} className={cn("notch flex min-h-40 min-w-0 flex-col justify-between p-5", i === 0 ? "bg-accent text-accent-foreground" : "bg-ink text-on-ink")}>
+                <dd className={cn("font-display font-extrabold leading-none tracking-tight tabular-nums md:text-5xl", stat.value.length > 4 ? "text-2xl sm:text-4xl" : "text-4xl")}>{stat.value}</dd>
                 <dt className={cn("mt-6 font-display text-sm font-bold tracking-wide uppercase", i === 0 ? "text-forest" : "text-accent")}>{stat.label}</dt>
               </div>
             ))}

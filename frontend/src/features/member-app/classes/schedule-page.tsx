@@ -16,6 +16,12 @@ function dayKey(iso: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+/** A filter chip: one line, never squeezed, so the row scrolls sideways instead. */
+const chipClass = (active: boolean) =>
+  `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${
+    active ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
+  }`;
+
 export function SchedulePage() {
   const t = useT();
   const locale = useLang() === "id" ? "id-ID" : undefined;
@@ -84,12 +90,10 @@ export function SchedulePage() {
 
       {/* Branch filter: only worth showing when there is more than one branch. */}
       {(branches ?? []).length > 1 ? (
-        <div className="flex gap-2">
+        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1">
           <button
             onClick={() => setBranchId("")}
-            className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
-              branchId === "" ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-            }`}
+            className={chipClass(branchId === "")}
           >
             {t("All branches")}
           </button>
@@ -97,9 +101,7 @@ export function SchedulePage() {
             <button
               key={b.id}
               onClick={() => setBranchId(b.id)}
-              className={`rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                branchId === b.id ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-              }`}
+              className={chipClass(branchId === b.id)}
             >
               {b.name}
             </button>
@@ -110,12 +112,10 @@ export function SchedulePage() {
       {/* Who is teaching. Only coaches with classes in the window appear, so a
           chip never leads to an empty day. */}
       {(trainers ?? []).some((tr) => tr.upcomingCount > 0) ? (
-        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1">
           <button
             onClick={() => setCoachId("")}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-bold transition ${
-              coachId === "" ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-            }`}
+            className={chipClass(coachId === "")}
           >
             {t("Any trainer")}
           </button>
@@ -125,11 +125,7 @@ export function SchedulePage() {
               <button
                 key={tr.coach.id}
                 onClick={() => setCoachId(coachId === tr.coach.id ? "" : tr.coach.id)}
-                className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-bold transition ${
-                  coachId === tr.coach.id
-                    ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20"
-                    : "bg-nh-cream text-nh-muted"
-                }`}
+                className={chipClass(coachId === tr.coach.id)}
               >
                 {tr.coach.name.split(" ")[0]}
               </button>
@@ -167,8 +163,8 @@ export function SchedulePage() {
             const full = v.spotsLeft === 0;
             return (
               <Link key={v.session.id} href={m(`/classes/${v.session.id}`)} className="nh-card flex items-center gap-4">
-                <div className="w-14 text-center">
-                  <p className="nh-display text-lg leading-tight font-black">{formatTime(v.session.startsAt)}</p>
+                <div className="w-[4.75rem] shrink-0 text-center">
+                  <p className="nh-display text-base leading-tight font-black whitespace-nowrap">{formatTime(v.session.startsAt)}</p>
                   <p className="text-[11px] text-nh-muted">{v.session.creditCost} cr</p>
                 </div>
                 <div className="min-w-0 flex-1">

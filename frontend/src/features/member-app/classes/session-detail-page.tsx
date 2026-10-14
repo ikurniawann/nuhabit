@@ -146,7 +146,7 @@ export function SessionDetailPage() {
           {sessionRundown(classTypeKey(v.classTypeName) ?? v.session.classTypeId, v.session.startsAt, v.session.endsAt).map(
             (item, i, arr) => (
               <div key={item.label} className="flex gap-3">
-                <p className="w-14 shrink-0 pt-0.5 text-right font-mono text-xs font-bold text-nh-muted">
+                <p className="w-16 shrink-0 pt-0.5 text-right font-mono text-xs font-bold whitespace-nowrap text-nh-muted">
                   {item.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </p>
                 <div className="flex flex-col items-center">
