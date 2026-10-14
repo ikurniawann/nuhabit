@@ -4,7 +4,7 @@ import { DEFAULT_PRESET_ID, THEME_PRESETS } from "./presets";
 export const APPEARANCE_STORAGE_KEY = "arkiv-appearance";
 
 export const FONT_STACKS = {
-  manrope: '"Manrope", ui-sans-serif, system-ui, sans-serif',
+  manrope: 'var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif',
 } as const;
 
 export type AppearanceFontFamily = keyof typeof FONT_STACKS;
