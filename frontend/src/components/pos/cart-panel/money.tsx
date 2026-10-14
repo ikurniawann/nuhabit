@@ -20,7 +20,7 @@ export function MoneyPair({
   return (
     <div className={cn('text-right leading-tight', className)}>
       <div className="font-medium text-foreground">{formatCurrency(amount)}</div>
-      {formatArk && <div className={cn('text-[11px] font-medium text-amber-600/90', arkClassName)}>{formatArk(amount)}</div>}
+      {formatArk && <div className={cn('text-[11px] font-medium text-amber-700 dark:text-amber-400', arkClassName)}>{formatArk(amount)}</div>}
     </div>
   );
 }

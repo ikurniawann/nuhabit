@@ -211,7 +211,7 @@ export function KDSOrderCard({ order, onStatusChange, index }: KDSOrderCardProps
                     </p>
                   )}
                   {item.notes && (
-                    <p className="mt-0.5 text-[10px] italic text-amber-600">&quot;{item.notes}&quot;</p>
+                    <p className="mt-0.5 text-[10px] italic text-amber-700 dark:text-amber-400">&quot;{item.notes}&quot;</p>
                   )}
                 </div>
               </div>

@@ -174,7 +174,7 @@ export function SplitPaymentScreen({
                         <XCircle className="w-3 h-3" /> Cancelled
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 px-2 py-0.5 rounded-full">
                         <Clock className="w-3 h-3" /> Unpaid
                       </span>
                     )}
@@ -188,7 +188,7 @@ export function SplitPaymentScreen({
                 <div className="text-right">
                   <p className="text-sm font-bold text-gray-900">{formatCurrency(split.total_amount)}</p>
                   {split.status === 'paid' && split.ark_coins_used > 0 && (
-                    <p className="text-[10px] text-amber-600">{formatArk(split.ark_coins_used)}</p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-400">{formatArk(split.ark_coins_used)}</p>
                   )}
                 </div>
                 {split.status === 'pending' && (

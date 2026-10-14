@@ -318,7 +318,7 @@ export function PosDashboardPage() {
                         <p className="font-semibold text-indigo-600">
                           {formatNumber(member.totalXp)} XP
                         </p>
-                        <p className="text-xs font-medium text-amber-600">{formatArk(member.arkBalance)}</p>
+                        <p className="text-xs font-medium text-amber-700 dark:text-amber-400">{formatArk(member.arkBalance)}</p>
                       </div>
                     </div>
                   ))

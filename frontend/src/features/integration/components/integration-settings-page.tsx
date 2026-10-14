@@ -171,9 +171,9 @@ export function IntegrationSettingsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold">{row.label}</div>
-                        <div className="text-xs text-black/45">{row.desc}</div>
+                        <div className="text-xs text-muted-foreground">{row.desc}</div>
                       </div>
-                      <div className="flex items-center gap-3 text-sm text-black/45">
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <span>{row.value}</span>
                         <ToggleLeft className="h-7 w-7 text-black/25" />
                       </div>

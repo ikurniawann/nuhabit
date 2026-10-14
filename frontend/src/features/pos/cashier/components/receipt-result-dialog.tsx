@@ -92,7 +92,7 @@ function ReceiptResultPanel(props: {
           <>
             <div className="space-y-2 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-amber-50">
-                <AlertCircle className="h-8 w-8 text-amber-600" />
+                <AlertCircle className="h-8 w-8 text-amber-700 dark:text-amber-400" />
               </div>
               <h2 className="text-xl font-bold text-foreground">Saved offline</h2>
               <p className="text-sm text-muted-foreground">Order will sync when connection is restored.</p>

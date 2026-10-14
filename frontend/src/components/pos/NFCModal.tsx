@@ -86,7 +86,7 @@ export function NFCModal({ open, input, searching, error, onInputChange, onSubmi
             </div>
           )}
           {searching && (
-            <div className="flex items-center justify-center gap-2 text-amber-600">
+            <div className="flex items-center justify-center gap-2 text-amber-700 dark:text-amber-400">
               <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
               <span className="text-sm">Mencari member...</span>
             </div>

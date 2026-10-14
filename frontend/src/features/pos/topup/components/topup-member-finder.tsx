@@ -257,7 +257,7 @@ function MemberRow({
         </span>
       </span>
       <span className="shrink-0 text-right">
-        <span className="block text-sm font-bold text-amber-600">
+        <span className="block text-sm font-bold text-amber-700 dark:text-amber-400">
           {formatArkAmount(Number(customer.ark_coin_balance || 0), arkRate)}
         </span>
         {isTopHit ? (

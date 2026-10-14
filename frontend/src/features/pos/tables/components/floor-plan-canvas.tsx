@@ -48,7 +48,7 @@ export function statusNodeTone(status: string) {
     case "available":
       return "text-emerald-600";
     case "occupied":
-      return "text-amber-600";
+      return "text-amber-700 dark:text-amber-400";
     case "billing":
       return "text-red-600";
     case "reserved":

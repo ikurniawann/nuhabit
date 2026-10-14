@@ -101,7 +101,7 @@ export function CartLine({
                   </span>
                 )}
                 {showArk && (
-                  <span className="text-[11px] font-medium text-amber-600/90">
+                  <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
                     {formatArk(showMemberPrice ? memberUnit : discAmt > 0 ? netUnit : item.price)}
                   </span>
                 )}

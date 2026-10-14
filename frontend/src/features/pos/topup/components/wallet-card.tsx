@@ -66,7 +66,7 @@ export function SummaryLine({ label, value, strong = false }: { label: string; v
   return (
     <div className="mb-2 flex items-center justify-between last:mb-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className={strong ? 'font-bold text-amber-600' : 'font-medium text-foreground'}>{value}</span>
+      <span className={strong ? 'font-bold text-amber-700 dark:text-amber-400' : 'font-medium text-foreground'}>{value}</span>
     </div>
   );
 }

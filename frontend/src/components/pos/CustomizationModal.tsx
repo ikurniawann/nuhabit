@@ -79,7 +79,7 @@ export function CustomizationModal({
                   className="font-bold text-brand-text"
                   strikeClassName="text-gray-500"
                 />
-                {showArk && <span className="text-xs font-medium text-amber-600">{formatArk(basePrice)}</span>}
+                {showArk && <span className="text-xs font-medium text-amber-700 dark:text-amber-400">{formatArk(basePrice)}</span>}
               </div>
             </div>
           </div>
@@ -149,7 +149,7 @@ export function CustomizationModal({
                         className={optionClass(isSelected)}
                       >
                         <span className="text-sm font-medium leading-tight text-gray-900">{mod.name}</span>
-                        {priceText && <span className="text-[11px] font-medium text-amber-600">{priceText}</span>}
+                        {priceText && <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400">{priceText}</span>}
                       </button>
                     );
                   })}
@@ -195,7 +195,7 @@ export function CustomizationModal({
               <div className="text-xs tabular-nums text-gray-400 line-through">{formatCurrency(lineTotal)}</div>
             )}
             <div className="truncate text-xl font-bold tabular-nums text-brand-text">{formatCurrency(memberLineTotal)}</div>
-            {showArk && <div className="text-[11px] font-medium text-amber-600">{formatArk(memberLineTotal)}</div>}
+            {showArk && <div className="text-[11px] font-medium text-amber-700 dark:text-amber-400">{formatArk(memberLineTotal)}</div>}
           </div>
           <button
             type="button"

@@ -132,7 +132,7 @@ export function ProductGrid(props: {
                 {(arkEnabled || xpEnabled) && (
                   <div className="flex items-center justify-between gap-1">
                     {arkEnabled ? (
-                      <span className={`font-medium text-amber-600 ${smallText}`}>{props.formatArk(product.base_price)}</span>
+                      <span className={`font-medium text-amber-700 dark:text-amber-400 ${smallText}`}>{props.formatArk(product.base_price)}</span>
                     ) : (
                       <span />
                     )}

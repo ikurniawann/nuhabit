@@ -358,22 +358,22 @@ export function CartPanel({
 
         {paymentMethod === 'ark_coin' && arkToUseCapped > 0 && (
           <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-amber-600">ARK Coin</span>
-            <span className="font-medium tabular-nums text-amber-600">-{formatArk(arkToUseCapped)}</span>
+            <span className="text-amber-700 dark:text-amber-400">ARK Coin</span>
+            <span className="font-medium tabular-nums text-amber-700 dark:text-amber-400">-{formatArk(arkToUseCapped)}</span>
           </div>
         )}
 
         {paymentMethod === 'ark_coin' ? (
           <div className="border-t border-gray-200/70 pt-2.5 text-center">
             <div className="text-xs font-medium text-muted-foreground">Total Payment</div>
-            <div className="text-3xl font-bold text-amber-600">{formatArk(totalAfterArk)}</div>
+            <div className="text-3xl font-bold text-amber-700 dark:text-amber-400">{formatArk(totalAfterArk)}</div>
             <div className="text-xs text-muted-foreground">≈ {formatCurrency(totalAfterArk)}</div>
           </div>
         ) : (
           <div className="flex items-end justify-between gap-3 border-t border-gray-200/70 pt-2.5">
             <div>
               <div className="text-sm font-semibold text-foreground">Total</div>
-              {showArk && <div className="text-xs font-medium text-amber-600">{formatArk(totalAfterArk)}</div>}
+              {showArk && <div className="text-xs font-medium text-amber-700 dark:text-amber-400">{formatArk(totalAfterArk)}</div>}
             </div>
             <div className="text-xl font-bold tabular-nums text-brand-text">
               {formatCurrency(totalAfterArk)}

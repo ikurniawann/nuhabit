@@ -36,7 +36,7 @@ export function CustomerStrip(props: {
               {arkEnabled && (
                 <>
                   <span className="text-gray-300">•</span>
-                  <span className="text-amber-600 font-medium">{props.formatArk(customer.ark_coin_balance)}</span>
+                  <span className="text-amber-700 dark:text-amber-400 font-medium">{props.formatArk(customer.ark_coin_balance)}</span>
                 </>
               )}
             </div>
@@ -54,7 +54,7 @@ export function CustomerStrip(props: {
             <span className="text-sm font-semibold text-amber-700">
               {customer?.name?.split(" ")[0]}&apos;s favorites
             </span>
-            <span className="text-xs text-amber-600">({favorites.length} items)</span>
+            <span className="text-xs text-amber-700 dark:text-amber-400">({favorites.length} items)</span>
           </div>
           <div
             className={
@@ -83,7 +83,7 @@ export function CustomerStrip(props: {
                       strikeClassName="text-gray-500"
                     />
                     {arkEnabled && (
-                      <span className="text-[10px] text-amber-600 font-medium">
+                      <span className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
                         {props.formatArk(product.base_price)}
                       </span>
                     )}

@@ -313,7 +313,7 @@ export function GobizSettingsPanel() {
                   className={`${inputClass} mt-1 font-mono text-xs`}
                 />
               </label>
-              <p className="text-xs text-black/45 sm:col-span-2">
+              <p className="text-xs text-muted-foreground sm:col-span-2">
                 Default sandbox: <code>api.partner-sandbox.gobiz.co.id</code> / <code>integration-goauth.gojekapi.com</code>.
                 URL produksi dikonfirmasi ke tim GoBiz saat kredensial produksi diberikan.
               </p>

@@ -107,7 +107,7 @@ function GroupSection({
           )}
           <div
             className={`rounded-lg p-2 ${
-              group.id === "beverage" ? "bg-sky-500/10 text-sky-600" : "bg-amber-500/10 text-amber-600"
+              group.id === "beverage" ? "bg-sky-500/10 text-sky-600" : "bg-amber-500/10 text-amber-700 dark:text-amber-400"
             }`}
           >
             <Icon className="h-4 w-4" />

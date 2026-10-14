@@ -37,7 +37,7 @@ export function TopupQrisStep({
         <div className="rounded-2xl border border-gray-200/70 bg-card p-4">
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Waiting for payment</div>
           <div className="mt-1 text-3xl font-bold text-foreground">{formatRupiah(topupRp)}</div>
-          <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArkAmount(creditRp, arkRate)}</div>
+          <div className="mt-0.5 text-sm font-medium text-amber-700 dark:text-amber-400">{formatArkAmount(creditRp, arkRate)}</div>
           <p className="mt-3 text-sm text-muted-foreground">
             Ask the customer to scan this QRIS. ARK is credited after payment is confirmed.
           </p>

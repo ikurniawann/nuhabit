@@ -42,7 +42,7 @@ export function CashierNotices(props: {
       {!props.isOnline && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200/80 bg-amber-50/80 px-4 py-2 text-sm text-amber-800">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
+            <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
             <span className="font-medium">Offline mode — transactions saved locally</span>
           </div>
           <span className="text-xs opacity-75">{props.pendingCount} pending</span>
@@ -52,7 +52,7 @@ export function CashierNotices(props: {
       {POS_SHIFT_MANAGEMENT_ENABLED && !props.loadingShift && !props.hasShift ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" />
             <span className="font-medium">No active shift — open a shift to start transactions</span>
             <HelpHint helpId="pos.shift" role="default" />
           </div>

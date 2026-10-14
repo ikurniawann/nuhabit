@@ -323,7 +323,7 @@ export function PrintQueuePage() {
                   <div key={`${job.id}-${index}`} className="flex items-start justify-between gap-3 border-b border-gray-100 py-2 last:border-b-0">
                     <div className="min-w-0">
                       <div className="font-semibold text-gray-900">{item.product_name || "Item"}</div>
-                      {item.notes && <div className="text-xs italic text-amber-600">{item.notes}</div>}
+                      {item.notes && <div className="text-xs italic text-amber-700 dark:text-amber-400">{item.notes}</div>}
                     </div>
                     <div className="rounded-md bg-white px-2 py-1 text-xs font-bold text-gray-700">
                       x{item.quantity || 1}
@@ -496,7 +496,7 @@ function Metric({
   tone: "amber" | "red" | "emerald";
 }) {
   const toneClass = {
-    amber: "bg-amber-50 text-amber-600",
+    amber: "bg-amber-50 text-amber-700 dark:text-amber-400",
     red: "bg-red-50 text-red-600",
     emerald: "bg-emerald-50 text-emerald-600",
   }[tone];

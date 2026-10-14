@@ -41,7 +41,7 @@ export function TopupPaymentStep({
       <div className="rounded-2xl border border-gray-200/70 bg-card p-4">
         <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Top-up amount</div>
         <div className="mt-1 text-3xl font-bold text-foreground">{amount}</div>
-        <div className="mt-0.5 text-sm font-medium text-amber-600">{formatArkAmount(creditRp, arkRate)}</div>
+        <div className="mt-0.5 text-sm font-medium text-amber-700 dark:text-amber-400">{formatArkAmount(creditRp, arkRate)}</div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3">
