@@ -6,7 +6,7 @@ import { SitePanelsProvider } from "./panels";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
-/** The public site's chrome: header, slide-over panels and footer. */
+/** The public site's chrome: header, popup panels and footer. */
 export function SiteShell({
   branches,
   social,

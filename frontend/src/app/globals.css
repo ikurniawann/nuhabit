@@ -419,6 +419,11 @@ body {
   }
 }
 
+/* Public site tiles with a stepped cut in the top-right corner. */
+@utility notch {
+  clip-path: polygon(0 0, calc(100% - 1.5rem) 0, calc(100% - 1.5rem) 1.5rem, 100% 1.5rem, 100% 100%, 0 100%);
+}
+
 /* Markdown copy on the public site (articles, legal pages, brand story). */
 @utility prose-site {
   color: var(--color-body);

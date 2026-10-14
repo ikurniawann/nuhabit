@@ -19,12 +19,12 @@ export function PromoBanner({ banner, onCopyCode }: { banner: StorefrontBanner; 
   };
 
   return (
-    <section aria-label="Promotion" className="mb-8 flex flex-col gap-4 rounded-2xl bg-lemon px-5 py-5 text-forest sm:flex-row sm:items-center sm:justify-between sm:px-7">
+    <section aria-label="Promotion" className="notch mb-10 flex flex-col gap-4 bg-lime px-5 py-6 text-forest sm:flex-row sm:items-center sm:justify-between sm:px-8">
       <div className="flex items-start gap-3">
         <Tag className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
-          <p className="text-base font-semibold sm:text-lg">{banner.headline}</p>
-          {banner.text ? <p className="mt-1 text-sm text-everglade">{banner.text}</p> : null}
+          <p className="font-display text-xl font-extrabold uppercase tracking-tight sm:text-2xl">{banner.headline}</p>
+          {banner.text ? <p className="mt-1 text-sm text-forest/80">{banner.text}</p> : null}
         </div>
       </div>
       {banner.code ? (

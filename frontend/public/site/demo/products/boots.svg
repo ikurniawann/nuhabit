@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Suede boot illustration">
+  <title>Suede boot illustration</title>
+  <rect width="800" height="800" fill="#f7f9f7"/>
+  <circle cx="400" cy="400" r="300" fill="#eeffb1"/>
+  <ellipse cx="400" cy="705" rx="230" ry="18" fill="#00281a" opacity="0.12"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M195,540 L205,205 Q208,182 230,182 L378,182 Q398,182 398,205 L402,380 Q560,400 652,468 Q692,500 684,540 Z" fill="#00281a" stroke="#00281a" stroke-width="10"/>
+    <path d="M330,220 L400,238" stroke="#eeffb1" stroke-width="9"/>
+    <path d="M330,265 L400,283" stroke="#eeffb1" stroke-width="9"/>
+    <path d="M330,310 L400,328" stroke="#eeffb1" stroke-width="9"/>
+    <path d="M330,355 L400,373" stroke="#eeffb1" stroke-width="9"/>
+    <path d="M402,380 Q470,430 520,425" fill="none" stroke="#abde67" stroke-width="7"/>
+    <rect x="210" y="150" width="34" height="58" rx="10" fill="#abde67" stroke="#00281a" stroke-width="8"/>
+    <rect x="182" y="536" width="512" height="54" rx="18" fill="#131a1c"/>
+    <rect x="182" y="536" width="140" height="54" rx="12" fill="#131a1c" stroke="#abde67" stroke-width="6"/>
+  </g>
+</svg>

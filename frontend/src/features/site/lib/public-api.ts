@@ -56,8 +56,8 @@ export async function fetchEvents(): Promise<SiteEvent[]> {
   return (await read<SiteEvent[]>("/events")) ?? [];
 }
 
-/** The next bookable classes at the visitor's branch, across the current and next week. */
-export async function fetchUpcomingSessions(branchSlug: string, now = new Date()): Promise<PublicSession[]> {
+/** Every bookable class at a branch across the current and next week, soonest first. */
+export async function fetchSessionsAhead(branchSlug: string, now = new Date()): Promise<PublicSession[]> {
   const monday = weekWindow(now).first;
   const weeks = [monday, addDays(monday, 7)];
   const timetables = await Promise.all(weeks.map((week) =>
@@ -65,8 +65,24 @@ export async function fetchUpcomingSessions(branchSlug: string, now = new Date()
   ));
   return timetables.flatMap((table) => table?.sessions ?? [])
     .filter((session) => new Date(session.starts_at).getTime() > now.getTime())
-    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
-    .slice(0, 3);
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+}
+
+/** The next few classes at the visitor's branch. */
+export async function fetchUpcomingSessions(branchSlug: string, now = new Date()): Promise<PublicSession[]> {
+  return (await fetchSessionsAhead(branchSlug, now)).slice(0, 3);
+}
+
+export interface BranchSession extends PublicSession {
+  branch: Pick<BranchSummary, "slug" | "name">;
+}
+
+/** Upcoming classes at every branch, each tagged with its branch, soonest first. */
+export async function fetchAllSessionsAhead(branches: BranchSummary[], now = new Date()): Promise<BranchSession[]> {
+  const perBranch = await Promise.all(branches.map(async (branch) =>
+    (await fetchSessionsAhead(branch.slug, now)).map((session) => ({ ...session, branch: { slug: branch.slug, name: branch.name } }))
+  ));
+  return perBranch.flat().sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 }
 
 export function fetchEvent(slug: string): Promise<SiteEvent | null> {

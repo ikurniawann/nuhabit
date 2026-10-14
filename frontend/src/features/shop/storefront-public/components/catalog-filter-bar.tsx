@@ -4,7 +4,7 @@ import { Search, X } from 'lucide-react';
 import type { CatalogSort } from '@/lib/shop/storefront-cart';
 import type { CatalogFilters } from '@/lib/shop/storefront-discovery';
 
-const FIELD_CLASS = 'rounded-xl border border-forest/15 bg-white px-3 py-2 text-sm text-forest focus:border-forest focus:outline-none';
+const FIELD_CLASS = 'rounded-full border border-border bg-white px-3 py-2 text-sm text-forest focus:border-forest focus:outline-none';
 
 /** Search, sort, availability, size chips and the price range (all mirrored in the URL). */
 export function CatalogFilterBar({
@@ -31,8 +31,8 @@ export function CatalogFilterBar({
     <div className="mb-7 space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-forest">Explore</p>
-          <h2 className="text-2xl font-semibold text-gray-900">All products</h2>
+          <p className="text-xs font-semibold uppercase tracking-wider text-forest">Explore</p>
+          <h2 className="font-display text-3xl font-extrabold uppercase tracking-tight text-gray-900 md:text-4xl">All products</h2>
           <p className="mt-1 text-sm text-gray-500">{count} {count === 1 ? 'product' : 'products'}</p>
         </div>
         <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -49,10 +49,10 @@ export function CatalogFilterBar({
         <label className="relative min-w-56 flex-1 sm:max-w-md">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <span className="sr-only">Search products</span>
-          <input value={filters.search} onChange={(event) => patch({ search: event.target.value })} placeholder="Search products, sizes, collections" className="w-full rounded-xl border border-forest/15 bg-white py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
+          <input value={filters.search} onChange={(event) => patch({ search: event.target.value })} placeholder="Search products, sizes, collections" className="w-full rounded-full border border-border bg-white py-3 pl-11 pr-10 text-sm outline-none focus:border-forest" />
           {filters.search ? <button type="button" onClick={() => patch({ search: '' })} aria-label="Clear search" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"><X className="h-4 w-4" /></button> : null}
         </label>
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-forest/15 bg-white px-4 py-3 text-sm text-gray-700">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-white px-4 py-3 text-sm text-gray-700">
           <input type="checkbox" checked={filters.availableOnly} onChange={(event) => patch({ availableOnly: event.target.checked })} className="accent-forest" />
           Available to order
         </label>

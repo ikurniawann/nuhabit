@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Flannel shirt illustration">
+  <title>Flannel shirt illustration</title>
+  <rect width="800" height="800" fill="#f7f9f7"/>
+  <circle cx="400" cy="400" r="300" fill="#eeffb1"/>
+  <ellipse cx="400" cy="705" rx="230" ry="18" fill="#00281a" opacity="0.12"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <defs><clipPath id="shirt"><path d="M340,150 L235,185 Q190,260 160,560 L222,574 L258,330 L258,650 Q400,665 542,650 L542,330 L578,574 L640,560 Q610,260 565,185 L460,150 Z"/></clipPath></defs>
+    <path d="M340,150 L235,185 Q190,260 160,560 L222,574 L258,330 L258,650 Q400,665 542,650 L542,330 L578,574 L640,560 Q610,260 565,185 L460,150 Z" fill="#00281a"/>
+    <g clip-path="url(#shirt)">
+      <rect x="150" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="220" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="290" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="360" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="430" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="500" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="570" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="640" y="100" width="22" height="600" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="180" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="250" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="320" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="390" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="460" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="530" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="600" width="520" height="22" fill="#abde67" opacity="0.55"/>
+      <rect x="140" y="670" width="520" height="22" fill="#abde67" opacity="0.55"/>
+    </g>
+    <path d="M400,168 L400,650" stroke="#eeffb1" stroke-width="6"/>
+    <circle cx="412" cy="240" r="7" fill="#eeffb1"/>
+    <circle cx="412" cy="320" r="7" fill="#eeffb1"/>
+    <circle cx="412" cy="400" r="7" fill="#eeffb1"/>
+    <circle cx="412" cy="480" r="7" fill="#eeffb1"/>
+    <circle cx="412" cy="560" r="7" fill="#eeffb1"/>
+    <path d="M340,150 L382,212 L400,168 L418,212 L460,150 Q400,136 340,150 Z" fill="#00281a" stroke="#eeffb1" stroke-width="6"/>
+    <path d="M340,150 L235,185 Q190,260 160,560 L222,574 L258,330 L258,650 Q400,665 542,650 L542,330 L578,574 L640,560 Q610,260 565,185 L460,150 Z" fill="none" stroke="#00281a" stroke-width="10"/>
+  </g>
+</svg>

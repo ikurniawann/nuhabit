@@ -67,7 +67,7 @@ function SessionRow({ session }: { session: PublicSession }) {
 }
 
 /**
- * The timetable slide-over: branch picker, week navigation inside the
+ * The timetable popup: branch picker, week navigation inside the
  * API's window, day tabs with today selected, and one link per session
  * into the member app, which handles login and booking.
  */

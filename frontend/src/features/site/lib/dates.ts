@@ -19,3 +19,6 @@ export const formatSiteTime = (iso: string) => format(iso, { hour: "2-digit", mi
 
 /** "Oct 7, 2026, 06:30" */
 export const formatSiteDateTime = (iso: string) => `${formatSiteDate(iso)}, ${formatSiteTime(iso)}`;
+
+/** "Wednesday" */
+export const formatSiteWeekday = (iso: string) => format(iso, { weekday: "long" });

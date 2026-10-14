@@ -7,7 +7,7 @@ import type { ContentKey } from "../types";
 export type SchemaField =
   | { name: string; label: string; kind: "text" | "long" | "url" | "strings" }
   | { name: string; label: string; kind: "object"; fields: SchemaField[] }
-  | { name: string; label: string; kind: "objects"; addLabel: string; fields: { name: string; label: string; kind: "text" | "long" | "url" }[] };
+  | { name: string; label: string; kind: "objects"; addLabel: string; fields: { name: string; label: string; kind: "text" | "long" | "url" | "strings" }[] };
 
 export interface ContentSchema {
   label: string;
@@ -45,7 +45,7 @@ export const CONTENT_SCHEMAS: Record<ContentKey, ContentSchema> = {
   },
   training: {
     label: "Training",
-    description: "Jenis kelas, blok 8 minggu dan Hukum NüHabit.",
+    description: "Jenis kelas, blok 8 minggu, Hukum NüHabit, stasiun HYROX, pelatih dan FAQ.",
     fields: [
       { name: "intro", label: "Pembuka", kind: "object", fields: [text("title", "Judul"), long("text", "Teks")] },
       {
@@ -53,7 +53,15 @@ export const CONTENT_SCHEMAS: Record<ContentKey, ContentSchema> = {
         label: "Jenis kelas",
         kind: "objects",
         addLabel: "Tambah kelas",
-        fields: [{ name: "name", label: "Nama", kind: "text" }, { name: "duration", label: "Durasi", kind: "text" }, { name: "text", label: "Teks", kind: "long" }],
+        fields: [
+          { name: "name", label: "Nama", kind: "text" },
+          { name: "slug", label: "Slug halaman (mis. race-sim)", kind: "text" },
+          { name: "duration", label: "Durasi", kind: "text" },
+          { name: "level", label: "Level", kind: "text" },
+          { name: "text", label: "Teks", kind: "long" },
+          { name: "focus", label: "Fokus (satu per baris)", kind: "strings" },
+          { name: "image_url", label: "Foto", kind: "url" },
+        ],
       },
       {
         name: "block",
@@ -67,11 +75,43 @@ export const CONTENT_SCHEMAS: Record<ContentKey, ContentSchema> = {
             label: "Fase",
             kind: "objects",
             addLabel: "Tambah fase",
-            fields: [{ name: "name", label: "Nama", kind: "text" }, { name: "weeks", label: "Minggu", kind: "text" }, { name: "text", label: "Teks", kind: "long" }],
+            fields: [{ name: "name", label: "Nama", kind: "text" }, { name: "weeks", label: "Minggu", kind: "text" }, { name: "text", label: "Teks", kind: "long" }, { name: "items", label: "Isi fase (satu per baris)", kind: "strings" }],
           },
         ],
       },
       { name: "laws", label: "Hukum NüHabit", kind: "object", fields: [text("title", "Judul"), { name: "items", label: "Daftar (satu per baris)", kind: "strings" }] },
+      {
+        name: "stations",
+        label: "Stasiun HYROX",
+        kind: "objects",
+        addLabel: "Tambah stasiun",
+        fields: [
+          { name: "name", label: "Nama", kind: "text" },
+          { name: "slug", label: "Slug halaman (mis. sled-push)", kind: "text" },
+          { name: "spec", label: "Jarak atau repetisi", kind: "text" },
+          { name: "text", label: "Teks", kind: "long" },
+          { name: "tips", label: "Tips teknik (satu per baris)", kind: "strings" },
+          { name: "image_url", label: "Foto", kind: "url" },
+        ],
+      },
+      {
+        name: "coaches",
+        label: "Pelatih",
+        kind: "objects",
+        addLabel: "Tambah pelatih",
+        fields: [
+          { name: "name", label: "Nama (sama dengan nama pelatih di jadwal)", kind: "text" },
+          { name: "slug", label: "Slug halaman (mis. maya-kusuma)", kind: "text" },
+          { name: "role", label: "Peran", kind: "text" },
+          { name: "bio", label: "Bio", kind: "long" },
+          { name: "quote", label: "Kutipan", kind: "long" },
+          { name: "specialties", label: "Keahlian (satu per baris)", kind: "strings" },
+          { name: "certifications", label: "Sertifikasi (satu per baris)", kind: "strings" },
+          { name: "instagram", label: "Instagram (@handle)", kind: "text" },
+          { name: "image_url", label: "Foto", kind: "url" },
+        ],
+      },
+      { name: "faq", label: "FAQ", kind: "objects", addLabel: "Tambah pertanyaan", fields: [{ name: "question", label: "Pertanyaan", kind: "text" }, { name: "answer", label: "Jawaban", kind: "long" }] },
     ],
   },
   space: {

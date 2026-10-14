@@ -23,7 +23,7 @@ function readLines(): CartLine[] {
 }
 
 /**
- * The cart slide-over: hands off to the storefront's own drawer when one is
+ * The cart popup: hands off to the storefront's own drawer when one is
  * mounted, otherwise shows the stored lines with a link to the shop.
  */
 export default function CartPanel({ onClose }: { branchSlug?: string; onClose(): void }) {

@@ -32,7 +32,7 @@ function useLoaded<T>(path: string | null): Loaded<T> {
 }
 
 /**
- * The membership slide-over: a branch picker (prop, then the remembered
+ * The membership popup: a branch picker (prop, then the remembered
  * cookie, then the first public branch) and that branch's plans. "Choose"
  * closes the panel and goes to /join with one plan.
  */

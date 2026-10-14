@@ -67,9 +67,12 @@ var Schemas = map[string][]Field{
 	},
 	"training": {
 		object("intro", text("title"), long("text")),
-		objects("class_types", text("name"), text("duration"), long("text")),
-		object("block", text("title"), long("text"), objects("phases", text("name"), text("weeks"), long("text"))),
+		objects("class_types", text("name"), text("slug"), text("duration"), text("level"), long("text"), lines("focus"), link("image_url")),
+		object("block", text("title"), long("text"), objects("phases", text("name"), text("weeks"), long("text"), lines("items"))),
 		object("laws", text("title"), lines("items")),
+		objects("stations", text("name"), text("slug"), text("spec"), long("text"), lines("tips"), link("image_url")),
+		objects("coaches", text("name"), text("slug"), text("role"), long("bio"), long("quote"), lines("specialties"), lines("certifications"), text("instagram"), link("image_url")),
+		objects("faq", text("question"), long("answer")),
 	},
 	"space": {
 		text("title"),
@@ -130,9 +133,9 @@ var Defaults = map[string]map[string]any{
 			"text":  "Every class follows the same 8-week block, so whatever your schedule, your progress stays measurable.",
 		},
 		"class_types": []any{
-			map[string]any{"name": "Station", "duration": "60 minutes", "text": "Strength and technique on the eight HYROX stations, with the load rising each phase."},
-			map[string]any{"name": "Engine", "duration": "60 minutes", "text": "Running intervals and cardio machines to build aerobic capacity."},
-			map[string]any{"name": "Race Sim", "duration": "75 minutes", "text": "A full race simulation at the end of every block. Record your time and compare it with the last block."},
+			map[string]any{"name": "Station", "slug": "station", "duration": "60 minutes", "text": "Strength and technique on the eight HYROX stations, with the load rising each phase."},
+			map[string]any{"name": "Engine", "slug": "engine", "duration": "60 minutes", "text": "Running intervals and cardio machines to build aerobic capacity."},
+			map[string]any{"name": "Race Sim", "slug": "race-sim", "duration": "75 minutes", "text": "A full race simulation at the end of every block. Record your time and compare it with the last block."},
 		},
 		"block": map[string]any{
 			"title": "An 8-week block in 4 phases",
@@ -154,6 +157,9 @@ var Defaults = map[string]map[string]any{
 				"Rest is training too. Sleep enough.",
 			},
 		},
+		"stations": []any{},
+		"coaches":  []any{},
+		"faq":      []any{},
 	},
 	"space": {
 		"title": "A training space built for HYROX.",

@@ -21,6 +21,7 @@ const PUBLIC_AUTH_PREFIXES = [
   "/products/",
   "/qris/",
   "/site/sample/",
+  "/site/demo/",
   // Desktop NüHabit OS (/os) & alamat lamanya: tampil juga untuk pengunjung.
   "/arkiv-os",
   "/qa",

@@ -34,8 +34,8 @@ export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
   };
 
   return (
-    <nav aria-label="Collections" className="border-t border-gray-100">
-      <div className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6">
+    <nav aria-label="Collections" className="mx-auto mt-2 ">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto rounded-2xl bg-card/95 p-2 shadow-card backdrop-blur">
         {groups.map((group) => {
           const current = group.id === active;
           return (
@@ -44,8 +44,8 @@ export function CollectionNav({ groups }: { groups: CollectionGroup[] }) {
               type="button"
               aria-current={current ? 'true' : undefined}
               onClick={() => jump(group.id)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
-                current ? 'bg-ink text-on-ink' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider transition ${
+                current ? 'bg-ink text-on-ink' : 'bg-surface-2 text-body hover:bg-gray-200'
               }`}
             >
               {group.name}

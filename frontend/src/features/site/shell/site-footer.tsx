@@ -81,7 +81,7 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
   const panels = useSitePanels();
   return (
     <footer className="mt-16 bg-surface">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-12 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] lg:px-6">
+      <div className="mx-auto grid grid-cols-1 gap-8 px-4 py-12 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)] lg:px-6">
         <div className="space-y-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/wordmark-black.png" alt="NüHabit" className="h-6 w-auto dark:hidden" />
@@ -139,7 +139,7 @@ export function SiteFooter({ branches, social }: { branches: BranchSummary[]; so
         </nav>
       </div>
       <div className="border-t border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-6">
+        <div className="mx-auto flex flex-col gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between lg:px-6">
           <p>© {year} NüHabit. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-foreground">

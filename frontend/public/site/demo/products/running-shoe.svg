@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Running shoe illustration">
+  <title>Running shoe illustration</title>
+  <rect width="800" height="800" fill="#eeffb1"/>
+  <circle cx="400" cy="400" r="300" fill="#f7f9f7"/>
+  <ellipse cx="400" cy="705" rx="230" ry="18" fill="#00281a" opacity="0.12"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M170,500 L178,385 Q186,350 220,352 Q262,372 300,350 L360,300 Q380,285 400,300 L590,400 Q700,430 705,500 Z" fill="#00281a" stroke="#00281a" stroke-width="10"/>
+    <path d="M215,470 Q400,470 575,395 Q470,500 215,495 Z" fill="#daff59"/>
+    <path d="M402,322 L372,358" stroke="#eeffb1" stroke-width="8"/>
+    <path d="M444,345 L414,381" stroke="#eeffb1" stroke-width="8"/>
+    <path d="M486,368 L456,404" stroke="#eeffb1" stroke-width="8"/>
+    <path d="M160,500 L712,500 Q728,548 676,560 L190,566 Q150,560 160,500 Z" fill="#ffffff" stroke="#00281a" stroke-width="10"/>
+    <path d="M175,535 Q420,522 710,528" fill="none" stroke="#abde67" stroke-width="12"/>
+  </g>
+</svg>

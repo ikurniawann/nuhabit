@@ -10,7 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Loader2, Package, Search, ShoppingBag, ShoppingCart } from 'lucide-react';
+import { Loader2, Package, Search, ShoppingBag, ShoppingCart, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   addCartLine,
@@ -48,6 +48,13 @@ import { ProductGrid } from './product-card';
 import { ProductDetailSheet } from './product-detail-sheet';
 import { ProductRow } from './product-row';
 import { PromoBanner } from './promo-banner';
+import { StorefrontHero } from './storefront-hero';
+
+const SITE_LINKS = [
+  { href: '/training', label: 'Training' },
+  { href: '/locations', label: 'Locations' },
+  { href: '/news', label: 'News' },
+] as const;
 
 export function ShopStorefrontPage({ slug }: { slug: string }) {
   const catalog = useStorefrontCatalog(slug);
@@ -174,44 +181,49 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-24">
-      <header className="sticky top-0 z-30 border-b border-forest/10 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-forest">NüHabit Shop</p>
-            <p className="text-base font-semibold text-gray-900">{storefront.name}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-xs font-semibold text-forest underline-offset-4 hover:underline sm:text-sm">Home</Link>
-            <button
-              type="button"
-              onClick={openCart}
-              className="relative rounded-full bg-ink p-2.5 text-on-ink shadow hover:bg-ink-3"
-              aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {count > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-strong px-1 text-xs font-bold text-accent-foreground">
-                  {count}
-                </span>
-              ) : null}
-            </button>
-          </div>
+    <div className="min-h-screen bg-background pb-24">
+      <header className="sticky top-0 z-30 px-3 pt-3 md:px-4">
+        <div className="mx-auto flex h-16 items-center gap-3 rounded-2xl bg-card/95 px-4 shadow-float backdrop-blur lg:px-5">
+          <Link href="/" className="flex shrink-0 items-center" aria-label="NüHabit, go to the home page">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/wordmark-black.png" alt="" className="h-6 w-auto" />
+          </Link>
+          <span className="rounded-full bg-lime px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-forest">Shop</span>
+          <nav aria-label="Site" className="ml-4 hidden items-center gap-1 text-sm md:flex">
+            {SITE_LINKS.map((link) => (
+              <Link key={link.href} href={link.href} className="whitespace-nowrap rounded-full px-3 py-1.5 text-body transition-colors hover:bg-surface-2">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <Link
+            href="/member/auth/login"
+            aria-label="Member login"
+            className="ml-auto inline-flex size-10 items-center justify-center gap-2 rounded-full border border-border text-sm font-semibold text-foreground transition-colors hover:bg-surface-2 sm:size-auto sm:px-4 sm:py-2"
+          >
+            <UserRound className="h-4 w-4" />
+            <span className="hidden sm:inline">Member login</span>
+          </Link>
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold uppercase tracking-wide text-on-ink hover:bg-ink-3"
+            aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">Cart</span>
+            {count > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-strong px-1 text-xs font-bold text-accent-foreground">
+                {count}
+              </span>
+            ) : null}
+          </button>
         </div>
         {grouped ? <CollectionNav groups={groups} /> : null}
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="mb-8 overflow-hidden rounded-[2rem] bg-ink px-6 py-8 text-on-ink sm:px-10 sm:py-12">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-lime">The everyday collection</p>
-          <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-5xl">Made for your next move.</h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-white/75 sm:text-base">
-            {storefront.description || 'Gear and essentials for every part of your routine.'}
-          </p>
-          <a href="#shop-products" className="mt-6 inline-flex items-center gap-2 rounded-full bg-lime px-5 py-2.5 text-sm font-semibold text-forest hover:bg-lemon">
-            Shop the collection <ArrowRight className="h-4 w-4" />
-          </a>
-        </div>
+      <main className=" px-3 py-3 md:px-4">
+        <StorefrontHero storefront={storefront} products={products} onSelect={openProduct} />
 
         {storefront.banner ? <PromoBanner banner={storefront.banner} onCopyCode={copyBannerCode} /> : null}
 
@@ -219,7 +231,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
           <>
             {sections.map((section) => (
               <section key={section.id} id={`section-${section.id}`} aria-label={section.name} className="mb-10">
-                <h2 className="mb-4 text-2xl font-semibold text-gray-900">{section.name}</h2>
+                <h2 className="mb-4 flex items-baseline gap-3 font-display text-3xl font-extrabold uppercase tracking-tight text-gray-900 md:text-4xl">{section.name}<span className="text-sm font-semibold text-gray-500">{section.products.length}</span></h2>
                 <ProductGrid products={section.products} actions={cardActions} />
               </section>
             ))}
@@ -239,7 +251,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
             <p className="text-sm">No products in this store yet</p>
           </div>
         ) : visibleProducts.length === 0 ? (
-          <div className="rounded-2xl border border-forest/15 bg-white px-6 py-16 text-center">
+          <div className="border border-border bg-white px-6 py-16 text-center">
             <Search className="mx-auto mb-3 h-8 w-8 text-gray-300" />
             <p className="font-medium text-gray-900">No matching products</p>
             <p className="mt-1 text-sm text-gray-500">Try another search, size or price range, or show sold-out items.</p>
@@ -248,7 +260,7 @@ export function ShopStorefrontPage({ slug }: { slug: string }) {
         ) : (
           groups.map((group) => (
             <section key={group.id} id={`collection-${group.id}`} className="scroll-mt-40 mb-10">
-              {grouped ? <h3 className="mb-4 text-lg font-semibold text-gray-900">{group.name}</h3> : null}
+              {grouped ? <h3 className="mb-4 font-display text-2xl font-extrabold uppercase tracking-tight text-gray-900">{group.name}</h3> : null}
               <ProductGrid products={group.products} actions={cardActions} />
             </section>
           ))

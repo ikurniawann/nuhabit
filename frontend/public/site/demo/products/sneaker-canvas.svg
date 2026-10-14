@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Canvas sneaker illustration">
+  <title>Canvas sneaker illustration</title>
+  <rect width="800" height="800" fill="#f7f9f7"/>
+  <circle cx="400" cy="400" r="300" fill="#eeffb1"/>
+  <ellipse cx="400" cy="705" rx="230" ry="18" fill="#00281a" opacity="0.12"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M165,505 L172,370 Q178,345 205,345 Q250,365 290,345 L340,290 Q360,275 378,292 L600,420 Q690,440 690,505 Z" fill="#ffffff" stroke="#00281a" stroke-width="10"/>
+    <path d="M600,420 Q560,470 590,505" fill="none" stroke="#00281a" stroke-width="8"/>
+    <path d="M380,315 L346,355" stroke="#00281a" stroke-width="9"/>
+    <path d="M425,340 L391,380" stroke="#00281a" stroke-width="9"/>
+    <path d="M470,366 L436,406" stroke="#00281a" stroke-width="9"/>
+    <path d="M515,392 L481,432" stroke="#00281a" stroke-width="9"/>
+    <path d="M150,505 L700,505 Q712,560 660,568 L172,568 Q140,562 150,505 Z" fill="#abde67" stroke="#00281a" stroke-width="10"/>
+    <path d="M160,530 L700,530" stroke="#00281a" stroke-width="6"/>
+  </g>
+</svg>

@@ -83,7 +83,7 @@ export function ImageUrlField({ value, onChange }: { value: string; onChange(v: 
   );
 }
 
-export type ItemKind = "text" | "long" | "url";
+export type ItemKind = "text" | "long" | "url" | "strings";
 
 export interface ItemField {
   key: string;
@@ -91,10 +91,13 @@ export interface ItemField {
   kind: ItemKind;
 }
 
-export type Item = Record<string, string>;
+export type Item = Record<string, string | string[]>;
+
+const text = (v: Item[string] | undefined) => (typeof v === "string" ? v : "");
+const lines = (v: Item[string] | undefined) => (Array.isArray(v) ? v : []);
 
 function emptyItem(fields: ItemField[]): Item {
-  return Object.fromEntries(fields.map((f) => [f.key, ""]));
+  return Object.fromEntries(fields.map((f) => [f.key, f.kind === "strings" ? [] : ""]));
 }
 
 /** A repeatable list of small objects (benefits, pillars, testimonials). */
@@ -109,7 +112,7 @@ export function ItemListField({
   onChange(items: Item[]): void;
   addLabel?: string;
 }) {
-  const update = (index: number, key: string, value: string) =>
+  const update = (index: number, key: string, value: string | string[]) =>
     onChange(items.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
   return (
     <div className="space-y-3">
@@ -123,12 +126,14 @@ export function ItemListField({
           </div>
           {fields.map((f) => (
             <LabeledField key={f.key} label={f.label}>
-              {f.kind === "long" ? (
-                <LongText value={item[f.key] ?? ""} onChange={(v) => update(index, f.key, v)} rows={3} />
+              {f.kind === "strings" ? (
+                <LinesField value={lines(item[f.key])} onChange={(v) => update(index, f.key, v)} rows={3} />
+              ) : f.kind === "long" ? (
+                <LongText value={text(item[f.key])} onChange={(v) => update(index, f.key, v)} rows={3} />
               ) : f.kind === "url" ? (
-                <ImageUrlField value={item[f.key] ?? ""} onChange={(v) => update(index, f.key, v)} />
+                <ImageUrlField value={text(item[f.key])} onChange={(v) => update(index, f.key, v)} />
               ) : (
-                <Input value={item[f.key] ?? ""} onChange={(e) => update(index, f.key, e.target.value)} />
+                <Input value={text(item[f.key])} onChange={(e) => update(index, f.key, e.target.value)} />
               )}
             </LabeledField>
           ))}

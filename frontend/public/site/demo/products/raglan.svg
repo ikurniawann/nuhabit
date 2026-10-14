@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Raglan tee illustration">
+  <title>Raglan tee illustration</title>
+  <rect width="800" height="800" fill="#f7f9f7"/>
+  <circle cx="400" cy="400" r="300" fill="#eeffb1"/>
+  <ellipse cx="400" cy="705" rx="230" ry="18" fill="#00281a" opacity="0.12"/>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M340,160 Q400,215 460,160 L570,190 L655,320 L578,362 L560,350 L560,640 Q400,655 240,640 L240,350 L222,362 L145,320 L230,190 Z" fill="#ffffff"/>
+    <path d="M340,160 L230,190 L145,320 L222,362 L240,350 Z" fill="#00281a"/>
+    <path d="M460,160 L570,190 L655,320 L578,362 L560,350 Z" fill="#00281a"/>
+    <path d="M340,160 Q400,215 460,160" fill="none" stroke="#00281a" stroke-width="18"/>
+    <path d="M340,160 Q400,215 460,160 L570,190 L655,320 L578,362 L560,350 L560,640 Q400,655 240,640 L240,350 L222,362 L145,320 L230,190 Z" fill="none" stroke="#00281a" stroke-width="10"/>
+  </g>
+</svg>

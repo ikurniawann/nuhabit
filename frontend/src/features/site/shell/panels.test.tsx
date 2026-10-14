@@ -16,7 +16,7 @@ afterEach(() => vi.restoreAllMocks());
 const KINDS: PanelKind[] = ["timetable", "trial", "membership", "cart"];
 
 describe("panel registry", () => {
-  it("registers the four slide-overs with a title and a component", () => {
+  it("registers the four popups with a title and a component", () => {
     for (const kind of KINDS) {
       expect(PANELS[kind].title).toBeTruthy();
       expect(typeof PANELS[kind].Component).toBe("function");

@@ -1,14 +1,14 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ComponentType, type ReactNode } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BRANCH_COOKIE } from "../lib/branch-cookie";
 import CartPanel from "../panels/cart-panel";
 import MembershipPanel from "../panels/membership-panel";
 import TimetablePanel from "../panels/timetable-panel";
 import TrialPanel from "../panels/trial-panel";
 
-/** Props every slide-over panel receives. */
+/** Props every popup panel receives. */
 export interface PanelProps {
   branchSlug?: string;
   onClose(): void;
@@ -21,7 +21,7 @@ export interface PanelEntry {
   Component: ComponentType<PanelProps>;
 }
 
-/** The four slide-overs of the public shell, keyed by what opens them. */
+/** The four popups of the public shell, keyed by what opens them. */
 export const PANELS: Record<PanelKind, PanelEntry> = {
   timetable: { title: "Class timetable", Component: TimetablePanel },
   trial: { title: "Start a trial", Component: TrialPanel },
@@ -81,24 +81,24 @@ export function useSitePanels(): PanelsContextValue {
   return ctx;
 }
 
-/** Renders the open panel in a Sheet (focus trap and Esc come from Base UI). */
+/** Renders the open panel in a centered popup (focus trap and Esc come from Base UI). */
 function SitePanelHost() {
   const { current, close } = useSitePanels();
   const entry = current ? PANELS[current.kind] : null;
   return (
-    <Sheet open={current !== null} onOpenChange={(open) => !open && close()}>
-      <SheetContent side="right" className="sm:max-w-md" aria-describedby={undefined}>
+    <Dialog open={current !== null} onOpenChange={(open) => !open && close()}>
+      <DialogContent className="flex max-h-[90dvh] flex-col gap-0 p-0 sm:max-w-lg" aria-describedby={undefined}>
         {entry && current ? (
           <>
-            <SheetHeader className="pr-12">
-              <SheetTitle className="text-lg">{entry.title}</SheetTitle>
-            </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+            <DialogHeader className="border-b border-border px-6 py-4 pr-12">
+              <DialogTitle className="font-display text-xl font-extrabold uppercase">{entry.title}</DialogTitle>
+            </DialogHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               <entry.Component branchSlug={current.branchSlug} onClose={close} />
             </div>
           </>
         ) : null}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

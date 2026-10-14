@@ -23,18 +23,18 @@ export function PlanCard({ plan, branchSlug, onSelect }: PlanCardProps) {
     onSelect?.();
   };
   return (
-    <article className="flex h-full flex-col gap-3 rounded-card bg-card p-5 shadow-card">
+    <article className="flex h-full flex-col gap-3 border border-border bg-card p-5 transition-colors hover:border-forest/40">
       <div className="flex items-start justify-between gap-3">
-        <h4 className="font-display text-lg font-semibold">{plan.name}</h4>
+        <h4 className="font-display text-lg font-extrabold uppercase">{plan.name}</h4>
         {plan.badge ? <Badge variant="accent">{plan.badge}</Badge> : null}
       </div>
-      <p className="font-display text-2xl font-bold tabular-nums">{formatRupiah(plan.price_idr)}</p>
+      <p className="font-display text-3xl font-extrabold tracking-tight tabular-nums">{formatRupiah(plan.price_idr)}</p>
       <ul className="space-y-1 text-sm text-body">
         <li>{creditsLabel(plan)}</li>
         <li>Valid for {validityLabel(plan.validity_days)}</li>
       </ul>
       {plan.description ? <p className="text-sm text-muted-foreground">{plan.description}</p> : null}
-      <Button asChild className="mt-auto">
+      <Button asChild className="mt-auto uppercase">
         <Link href={joinHref(plan.id, branchSlug)} onClick={select}>
           Choose
         </Link>
@@ -62,7 +62,7 @@ export function PlanGroups({
     <div className="space-y-8">
       {groups.map((group) => (
         <section key={group.kind} aria-label={group.label} className="space-y-3">
-          <h3 className="font-display text-base font-semibold tracking-wide uppercase">{group.label}</h3>
+          <h3 className="text-xs font-semibold tracking-wider text-forest uppercase dark:text-accent">{group.label}</h3>
           <div className={cn("grid grid-cols-1 gap-4", columns)}>
             {group.plans.map((plan) => (
               <PlanCard key={plan.id} plan={plan} branchSlug={branchSlug} onSelect={onSelect} />

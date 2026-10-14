@@ -250,19 +250,19 @@ export function CheckoutSheet({
     : !selectedArea ? 'Choose a delivery area' : !selectedRate ? 'Choose a courier' : 'Pay Now';
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-forest/55">
-      <div role="dialog" aria-modal="true" aria-label="Checkout" className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-forest/10 px-5 py-4">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-forest/55 sm:p-6">
+      <div role="dialog" aria-modal="true" aria-label="Checkout" className="flex h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:max-w-2xl sm:rounded-hero">
+        <div className="flex items-center justify-between border-b border-forest/10 px-5 py-4 sm:px-8">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-everglade">NüHabit Shop</p>
-            <h2 className="font-display text-xl font-semibold text-forest">Checkout</h2>
+            <h2 className="font-display text-2xl font-extrabold uppercase tracking-tight text-forest">Checkout</h2>
           </div>
           <button type="button" onClick={onClose} aria-label="Close">
             <X className="h-5 w-5 text-forest/60" />
           </button>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4">
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4 sm:px-8 sm:py-6">
           <section aria-labelledby="checkout-contact" className="space-y-3">
             <SectionTitle id="checkout-contact">Contact</SectionTitle>
             {member.data ? <p className="text-xs text-everglade">Signed in as {member.data.name}. Your details are filled in from your member profile.</p> : null}
@@ -462,7 +462,7 @@ export function CheckoutSheet({
           {message ? <p role="alert" className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-700">{message}</p> : null}
         </div>
 
-        <div className="border-t border-forest/10 bg-white px-5 py-4 shadow-[0_-8px_24px_rgb(0_40_26/0.04)]">
+        <div className="border-t border-forest/10 bg-white px-5 py-4 sm:px-8 shadow-[0_-8px_24px_rgb(0_40_26/0.04)]">
           <button
             type="button"
             onClick={submit}

@@ -23,7 +23,7 @@ const sellable = (sku: CatalogSku) => sku.stock > 0 || sku.preorder;
 
 export function ProductGrid({ products, actions }: { products: CatalogProduct[]; actions: ProductCardActions }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} actions={actions} />
       ))}
@@ -40,7 +40,7 @@ export function ProductCard({ product, actions }: { product: CatalogProduct; act
   const sale = saleEndsText(product, formatDateEn);
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-forest/10 bg-white shadow-[0_8px_30px_rgb(0_40_26/0.06)] transition hover:-translate-y-1 hover:shadow-[0_16px_36px_rgb(0_40_26/0.12)]">
+    <div className="group relative flex flex-col overflow-hidden border border-border bg-card transition-colors hover:border-forest/40">
       <button
         type="button"
         onClick={() => actions.onSelect(product)}
@@ -67,7 +67,7 @@ export function ProductCard({ product, actions }: { product: CatalogProduct; act
       </button>
       <div className="flex flex-1 flex-col p-3 sm:p-4">
         {product.collection ? <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-forest">{product.collection.name}</p> : null}
-        <button type="button" onClick={() => actions.onSelect(product)} className="line-clamp-2 text-left text-sm font-semibold text-gray-900 hover:underline">
+        <button type="button" onClick={() => actions.onSelect(product)} className="line-clamp-2 text-left font-display text-sm font-bold uppercase tracking-tight text-gray-900 hover:underline sm:text-base">
           {product.name}
         </button>
         {product.rating ? <div className="mt-1"><RatingStars rating={product.rating} compact /></div> : null}

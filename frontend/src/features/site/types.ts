@@ -9,11 +9,47 @@ export interface HomeContent {
   stories: { name: string; role: string; quote: string; outcome: string; image_url: string }[];
 }
 
+/** A class type; the optional fields are missing from content saved before they existed. */
+export interface ClassTypeContent {
+  name: string;
+  slug?: string;
+  duration: string;
+  level?: string;
+  text: string;
+  focus?: string[];
+  image_url?: string;
+}
+
+export interface StationContent {
+  name: string;
+  slug?: string;
+  spec: string;
+  text: string;
+  tips?: string[];
+  image_url: string;
+}
+
+/** A coach profile; `name` must match the coach name on scheduled classes. */
+export interface CoachContent {
+  name: string;
+  slug?: string;
+  role: string;
+  bio: string;
+  quote?: string;
+  specialties?: string[];
+  certifications?: string[];
+  instagram?: string;
+  image_url: string;
+}
+
 export interface TrainingContent {
   intro: { title: string; text: string };
-  class_types: { name: string; duration: string; text: string }[];
-  block: { title: string; text: string; phases: { name: string; weeks: string; text: string }[] };
+  class_types: ClassTypeContent[];
+  block: { title: string; text: string; phases: { name: string; weeks: string; text: string; items?: string[] }[] };
   laws: { title: string; items: string[] };
+  stations: StationContent[];
+  coaches: CoachContent[];
+  faq: { question: string; answer: string }[];
 }
 
 export interface SpaceContent {

@@ -22,6 +22,10 @@ curl localhost:8080/health
 curl localhost:8080/ready
 ```
 
+For a demo of the public site and /apparel, seed sample branches, classes,
+content and product images from `backend/`:
+`node database/seeders/run-sql-file.js database/seeders/site-demo.sql` (safe to re-run).
+
 To route a prefix through Go during local development, set
 `BACKEND_URL=http://localhost:8080` in `frontend/.env.local` and add the prefix
 to `GO_BACKEND_PREFIXES`.

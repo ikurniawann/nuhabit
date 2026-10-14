@@ -1,7 +1,11 @@
+import Link from "next/link";
 import { AtSign, Mail, MapPin, Phone } from "lucide-react";
-import type { BranchProfile } from "../types";
+import { Button } from "@/components/ui/button";
+import type { BranchProfile, CoachContent } from "../types";
+import { SessionSchedule, type ScheduledSession } from "./session-schedule";
+import { CoachGrid } from "./training-parts";
 import { PanelButton } from "./panel-button";
-import { Container, Kicker, Picture, Section, SectionHeading, Tile } from "./site-section";
+import { Container, FALLBACK_PHOTOS, Picture, Section, SectionHeading, Tile, timetableHref } from "./site-section";
 
 const ACCORDION_LABELS: { key: keyof BranchProfile["accordions"]; label: string }[] = [
   { key: "facilities", label: "Facilities" },
@@ -18,20 +22,20 @@ function instagramHref(handle: string): string {
 function BranchActions({ slug }: { slug: string }) {
   return (
     <div className="flex flex-wrap gap-3">
-      <PanelButton panel="trial" branchSlug={slug} size="lg">
+      <PanelButton panel="trial" branchSlug={slug} size="lg" className="uppercase">
         Start a Trial
       </PanelButton>
-      <PanelButton panel="membership" branchSlug={slug} size="lg" variant="onInk">
+      <PanelButton panel="membership" branchSlug={slug} size="lg" variant="onInk" className="uppercase">
         Membership
       </PanelButton>
-      <PanelButton panel="timetable" branchSlug={slug} size="lg" variant="onInk">
+      <Button asChild size="lg" variant="onInk" className="uppercase"><Link href={timetableHref(slug)}>
         Class timetable
-      </PanelButton>
+      </Link></Button>
     </div>
   );
 }
 
-export function BranchPage({ branch }: { branch: BranchProfile }) {
+export function BranchPage({ branch, sessions, coaches }: { branch: BranchProfile; sessions: ScheduledSession[]; coaches: CoachContent[] }) {
   const address = [branch.address, branch.city, branch.postcode].filter(Boolean).join(", ");
   const mapsHref =
     branch.lat !== null && branch.lng !== null
@@ -42,20 +46,17 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-ink text-on-ink">
-        {branch.hero_image_url ? (
-          <Picture src={branch.hero_image_url} alt="" className="absolute inset-0 -z-10 h-full w-full opacity-45" />
-        ) : (
-          <div aria-hidden className="pointer-events-none absolute -top-24 -right-24 -z-10 size-80 rounded-full bg-accent/25 blur-3xl" />
-        )}
-        <Container className="flex min-h-[52dvh] flex-col justify-end gap-6 py-14 md:py-20">
+      <section className="px-3 pt-3 md:px-4">
+        <div className="relative isolate flex min-h-[60dvh] flex-col justify-end gap-6 overflow-hidden rounded-hero bg-ink p-6 text-on-ink md:p-10">
+          <Picture src={branch.hero_image_url || FALLBACK_PHOTOS.hero} alt="" className="absolute inset-0 -z-10 h-full w-full grayscale" />
+          <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-ink via-ink/60 to-ink/10" />
           <div className="space-y-3">
-            <Kicker onInk>NüHabit {branch.city ?? ""}</Kicker>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-balance md:text-6xl">{branch.name}</h1>
+            <p className="inline-block rounded-full bg-accent px-3 py-1 text-xs font-bold tracking-wider text-accent-foreground uppercase">NüHabit {branch.city ?? ""}</p>
+            <h1 className="font-display text-5xl font-extrabold leading-[0.92] tracking-tight text-balance uppercase md:text-8xl">{branch.name}</h1>
             {address ? <p className="max-w-xl text-on-ink-muted">{address}</p> : null}
           </div>
           <BranchActions slug={branch.slug} />
-        </Container>
+        </div>
       </section>
 
       {branch.benefits.length > 0 ? (
@@ -65,7 +66,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {branch.benefits.map((b, i) => (
                 <Tile key={`${b.title}-${i}`} className="space-y-2">
-                  <h3 className="font-display text-lg font-semibold">{b.title}</h3>
+                  <h3 className="font-display text-lg font-extrabold uppercase">{b.title}</h3>
                   <p className="text-sm text-body">{b.text}</p>
                 </Tile>
               ))}
@@ -74,10 +75,26 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
         </Section>
       ) : null}
 
+      <Section id="schedule" className="scroll-mt-24">
+        <Container className="space-y-6">
+          <SectionHeading kicker="Schedule" title={`Classes at ${branch.name}`} text="The next two weeks. Times shown in Western Indonesia Time (WIB)." />
+          <SessionSchedule sessions={sessions} />
+        </Container>
+      </Section>
+
+      {coaches.length > 0 ? (
+        <Section className="pt-0">
+          <Container className="space-y-6">
+            <SectionHeading kicker="Coaches" title="Who coaches here" />
+            <CoachGrid coaches={coaches} />
+          </Container>
+        </Section>
+      ) : null}
+
       <Section className="pt-0">
         <Container className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <Tile className="space-y-4">
-            <h2 className="font-display text-xl font-semibold">Branch info</h2>
+            <h2 className="font-display text-xl font-extrabold uppercase">Branch info</h2>
             <ul className="space-y-3 text-sm">
               {address ? (
                 <li className="flex gap-3">
@@ -133,8 +150,8 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
               const lines = branch.accordions[key];
               if (!lines || lines.length === 0) return null;
               return (
-                <details key={key} className="group rounded-card bg-card shadow-card">
-                  <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4 font-display text-lg font-semibold [&::-webkit-details-marker]:hidden">
+                <details key={key} className="group border border-border bg-card">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4 font-display text-lg font-extrabold uppercase [&::-webkit-details-marker]:hidden">
                     {label}
                     <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-45">+</span>
                   </summary>
@@ -160,7 +177,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {branch.extras.map((x, i) => (
                 <Tile key={`${x.name}-${i}`} className="space-y-1">
-                  <h3 className="font-semibold">{x.name}</h3>
+                  <h3 className="font-display font-extrabold uppercase">{x.name}</h3>
                   <p className="text-sm text-body">{x.blurb}</p>
                 </Tile>
               ))}
@@ -176,7 +193,7 @@ export function BranchPage({ branch }: { branch: BranchProfile }) {
             <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {branch.testimonials.map((t, i) => (
                 <li key={`${t.name}-${i}`}>
-                  <figure className="h-full rounded-card bg-card p-6 shadow-card">
+                  <figure className="h-full border border-border bg-card p-6">
                     <blockquote className="text-body">“{t.quote}”</blockquote>
                     <figcaption className="mt-4 text-sm">
                       <span className="font-semibold">{t.name}</span>
