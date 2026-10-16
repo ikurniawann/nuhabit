@@ -3,7 +3,7 @@ import { buildContractPdf, contractFileName, type ContractDocumentData } from ".
 
 const baseData: ContractDocumentData = {
   company: {
-    legal_name: "PT Arkiv Kuliner Nusantara",
+    legal_name: "PT NüHabit Indonesia",
     address: "Jl. Merdeka No. 1, Bandung",
     city: "Bandung",
     signer_name: "Ilham Kurniawan",

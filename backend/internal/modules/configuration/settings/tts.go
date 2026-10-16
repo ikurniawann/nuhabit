@@ -355,7 +355,7 @@ func synthesizeAzure(ctx context.Context, urls Endpoints, text string, cfg ttsCo
 		"Ocp-Apim-Subscription-Key": cfg.azureKey,
 		"Content-Type":              "application/ssml+xml",
 		"X-Microsoft-OutputFormat":  "audio-24khz-48kbitrate-mono-mp3",
-		"User-Agent":                "arkiv-os",
+		"User-Agent":                "nuhabit",
 	})
 }
 

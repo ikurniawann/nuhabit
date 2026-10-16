@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@/lib/api/auth";
+import { brandName } from "@/lib/branding";
 import { query, queryOne } from "@/lib/db";
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { savePrivateImage } from "@/lib/storage-private";
@@ -426,5 +427,5 @@ export async function loadCompanyName(): Promise<string> {
   const company = await queryOne<{ name: string }>(
     "SELECT name FROM configuration.companies ORDER BY created_at LIMIT 1"
   );
-  return company?.name ?? "Arkiv OS";
+  return company?.name ?? brandName();
 }

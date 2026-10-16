@@ -93,7 +93,7 @@ func TestLeaves(t *testing.T) {
 	if _, err := h.deps.Events.Dispatch(context.Background(), h.tx); err != nil {
 		t.Fatal(err)
 	}
-	if len(h.wa.sent) != 1 || !strings.HasPrefix(h.wa.sent[0], "6281234567890|Arkiv OS — Pengajuan Cuti Tahunan") ||
+	if len(h.wa.sent) != 1 || !strings.HasPrefix(h.wa.sent[0], "6281234567890|NüHabit OS — Pengajuan Cuti Tahunan") ||
 		!strings.Contains(h.wa.sent[0], "Kepada: Atasan Cuti") {
 		t.Fatalf("whatsapp = %v", h.wa.sent)
 	}

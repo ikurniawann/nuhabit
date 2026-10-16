@@ -26,10 +26,10 @@ describe("centerPad", () => {
 
 describe("encodeEscPosText", () => {
   it("starts with init and ends with cut", () => {
-    const bytes = encodeEscPosText(["ARKIV", "TOTAL"]);
+    const bytes = encodeEscPosText(["NUHABIT", "TOTAL"]);
     expect(Array.from(bytes.slice(0, 5))).toEqual([0x1b, 0x40, 0x1b, 0x61, 0x00]);
     expect(Array.from(bytes.slice(-3))).toEqual([0x1d, 0x56, 0x00]);
-    expect(String.fromCharCode(...bytes.slice(5, 10))).toBe("ARKIV");
+    expect(String.fromCharCode(...bytes.slice(5, 12))).toBe("NUHABIT");
   });
 });
 

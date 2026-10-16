@@ -69,7 +69,7 @@ func TestReport(t *testing.T) {
 	}
 	f, _ := excelize.OpenReader(bytes.NewReader(data))
 	defer f.Close()
-	if props, _ := f.GetDocProps(); props.Creator != "NüHabit — Arkiv OS" {
+	if props, _ := f.GetDocProps(); props.Creator != "NüHabit OS" {
 		t.Errorf("creator %q", props.Creator)
 	}
 	styleOf := func(ref string) *excelize.Style {

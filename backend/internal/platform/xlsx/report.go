@@ -65,7 +65,7 @@ func NewReport(now time.Time) *Report {
 	f := excelize.NewFile()
 	r := &Report{f: f, styles: map[style]int{}}
 	r.keep(f.SetDocProps(&excelize.DocProperties{
-		Creator: "NüHabit — Arkiv OS",
+		Creator: "NüHabit OS",
 		Created: now.UTC().Format(time.RFC3339),
 	}))
 	return r

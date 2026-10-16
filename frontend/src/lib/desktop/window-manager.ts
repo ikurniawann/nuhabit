@@ -1,5 +1,5 @@
 /**
- * Manajer jendela Arkiv OS — helper murni (tanpa React/DOM) supaya perilaku
+ * Manajer jendela NüHabit OS — helper murni (tanpa React/DOM) supaya perilaku
  * "seperti desktop sungguhan" bisa diuji: urutan fokus, minimize, snap ke
  * tepi, siklus jendela, pintasan papan ketik, dan ingatan posisi/ukuran.
  */

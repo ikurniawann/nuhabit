@@ -1,5 +1,5 @@
 /**
- * Spotlight Arkiv OS — mencari DATA, bukan cuma nama aplikasi.
+ * Spotlight NüHabit OS — mencari DATA, bukan cuma nama aplikasi.
  *
  * Berkas ini murni metadata + pemeringkatan (tanpa DB) supaya bisa diuji;
  * kueri SQL-nya ada di src/app/api/desktop/search/route.ts. Tiap sumber

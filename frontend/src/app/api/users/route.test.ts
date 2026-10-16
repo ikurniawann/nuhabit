@@ -190,13 +190,13 @@ describe("POST /api/users/[id]/reset-password", () => {
     });
     service.resetUserEmployeePassword.mockResolvedValue({
       message: "Password reset successfully",
-      tempPassword: "ArkivX!",
+      tempPassword: "NuHabitX!",
     });
     const { POST } = await import("./[id]/reset-password/route");
     const res = await POST(getReq(), ctx);
     expect(await res.json()).toEqual({
       message: "Password reset successfully",
-      tempPassword: "ArkivX!",
+      tempPassword: "NuHabitX!",
     });
     expect(service.resetUserEmployeePassword).toHaveBeenCalledWith("u-9");
   });

@@ -154,11 +154,11 @@ func AuthStatus(bannedUntil *string, now time.Time) string {
 }
 
 // TempPassword is the temporary password of resetUserEmployeePassword:
-// "Arkiv", 12 base64url characters of 9 random bytes, "!".
+// "NuHabit", 12 base64url characters of 9 random bytes, "!".
 func TempPassword(random io.Reader) (string, error) {
 	b := make([]byte, 9)
 	if _, err := io.ReadFull(random, b); err != nil {
 		return "", err
 	}
-	return "Arkiv" + base64.RawURLEncoding.EncodeToString(b)[:12] + "!", nil
+	return "NuHabit" + base64.RawURLEncoding.EncodeToString(b)[:12] + "!", nil
 }

@@ -266,7 +266,7 @@
   --ring: #203b32;
 
   /* Legacy glass tokens: kartu WIT tidak memakai kaca, tapi beberapa modul
-     (Arkiv OS desktop) masih membacanya. */
+     (NüHabit OS desktop) masih membacanya. */
   --glass-bg: #ffffff;
   --glass-border: transparent;
   --glass-blur: 0px;
@@ -735,7 +735,7 @@ select:focus-visible,
   outline: none !important;
 }
 
-/* Input di jendela kaca Arkiv OS (mis. Settings → Notifikasi WA): global rule
+/* Input di jendela kaca NüHabit OS (mis. Settings → Notifikasi WA): global rule
    di bawah memaksa semua input berlatar putih 70% + border terang dengan
    !important, sehingga utility Tailwind tidak bisa menang. Kelas ini adalah
    penawarnya — specificity input.class.class menyamai input:not():not() dan

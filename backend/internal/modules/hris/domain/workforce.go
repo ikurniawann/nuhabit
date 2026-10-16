@@ -165,7 +165,7 @@ func LeaveRequestWaMessage(in LeaveRequestWa) string {
 	if in.StartDate != in.EndDate {
 		rentang += " s.d. " + tanggalID(in.EndDate)
 	}
-	lines := []string{"Arkiv OS — Pengajuan " + LeaveTypeLabel(in.LeaveType)}
+	lines := []string{"NüHabit OS — Pengajuan " + LeaveTypeLabel(in.LeaveType)}
 	if in.ApproverName != nil && *in.ApproverName != "" {
 		lines = append(lines, "Kepada: "+*in.ApproverName)
 	}
@@ -173,7 +173,7 @@ func LeaveRequestWaMessage(in LeaveRequestWa) string {
 	if in.Reason != nil && JSTrim(*in.Reason) != "" {
 		lines = append(lines, "Alasan : "+JSTrim(*in.Reason))
 	}
-	lines = append(lines, "", "Mohon ditinjau di dashboard Arkiv OS (Kehadiran & Cuti → Cuti & Izin).")
+	lines = append(lines, "", "Mohon ditinjau di dashboard NüHabit OS (Kehadiran & Cuti → Cuti & Izin).")
 	return strings.Join(lines, "\n")
 }
 

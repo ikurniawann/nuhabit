@@ -17,7 +17,7 @@ import {
 } from "@/lib/desktop/wallpapers";
 
 /**
- * Wallpaper desktop Arkiv OS.
+ * Wallpaper desktop NüHabit OS.
  * - GET   : publik (desktop juga tampil untuk pengunjung belum login).
  * - POST  : unggah gambar — butuh hak menu Settings → Appearance.
  * - DELETE: hapus satu wallpaper (+ berkasnya) — hak yang sama.

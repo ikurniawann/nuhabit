@@ -54,7 +54,7 @@ func (s *Service) ExportAttendance(ctx context.Context, f exportFilter, format s
 	if err != nil {
 		return nil, err
 	}
-	meta := reportMeta{CompanyName: "Arkiv OS", PeriodLabel: "Semua tanggal", GeneratedAt: now}
+	meta := reportMeta{CompanyName: "NüHabit", PeriodLabel: "Semua tanggal", GeneratedAt: now}
 	if company != nil {
 		meta.CompanyName = *company
 	}

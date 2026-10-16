@@ -1,5 +1,5 @@
 /**
- * Wallpaper desktop Arkiv OS yang diunggah admin — disimpan sebagai JSON di
+ * Wallpaper desktop NüHabit OS yang diunggah admin — disimpan sebagai JSON di
  * configuration.app_settings (key `desktop_wallpapers`), berkasnya di bucket
  * publik `desktop-wallpapers`. Helper murni tanpa DB/FS supaya mudah diuji.
  */

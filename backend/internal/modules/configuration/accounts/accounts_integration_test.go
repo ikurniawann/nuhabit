@@ -240,7 +240,7 @@ func TestCreateUserWithAppAccount(t *testing.T) {
 	id := data["id"].(string)
 	code, body, _ = e.do("POST", "/api/users/"+id+"/reset-password", nil)
 	temp, _ := body["tempPassword"].(string)
-	if code != 200 || body["message"] != "Password reset successfully" || !regexp.MustCompile(`^Arkiv[A-Za-z0-9_-]{12}!$`).MatchString(temp) {
+	if code != 200 || body["message"] != "Password reset successfully" || !regexp.MustCompile(`^NuHabit[A-Za-z0-9_-]{12}!$`).MatchString(temp) {
 		t.Fatalf("reset: %d %v", code, body)
 	}
 	if ok := e.scalar(`SELECT password_hash = public.crypt($2, password_hash) FROM auth.users WHERE id = $1`, userID, temp); ok != true {

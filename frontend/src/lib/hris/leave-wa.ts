@@ -1,3 +1,4 @@
+import { brandOsName } from "@/lib/branding";
 import { getPool, queryOne } from "@/lib/db";
 import { loadGatewayConfig, sendGatewayText } from "@/lib/whatsapp/gateway";
 import { normalizeWaPhone } from "@/lib/pos/receipt-wa";
@@ -63,13 +64,13 @@ export function buildLeaveRequestWaMessage(input: LeaveRequestWaInput): string {
       ? tanggalId(input.startDate)
       : `${tanggalId(input.startDate)} s.d. ${tanggalId(input.endDate)}`;
   const baris = [
-    `Arkiv OS — Pengajuan ${leaveTypeLabel(input.leaveType)}`,
+    `${brandOsName()} — Pengajuan ${leaveTypeLabel(input.leaveType)}`,
     ...(input.approverName ? [`Kepada: ${input.approverName}`] : []),
     `Karyawan : ${input.employeeName}`,
     `Tanggal : ${rentang} (${input.totalDays} hari kerja)`,
   ];
   if (input.reason?.trim()) baris.push(`Alasan : ${input.reason.trim()}`);
-  baris.push("", "Mohon ditinjau di dashboard Arkiv OS (Kehadiran & Cuti → Cuti & Izin).");
+  baris.push("", `Mohon ditinjau di dashboard ${brandOsName()} (Kehadiran & Cuti → Cuti & Izin).`);
   return baris.join("\n");
 }
 

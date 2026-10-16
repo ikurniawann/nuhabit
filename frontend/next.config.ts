@@ -335,7 +335,7 @@ const nextConfig: NextConfig = {
   async headers() {
     // Security headers (audit 2026-09-17, temuan #7). Lima header di bawah
     // AMAN untuk langsung ditegakkan:
-    //  - X-Frame-Options SAMEORIGIN: desktop Arkiv OS meng-iframe halaman
+    //  - X-Frame-Options SAMEORIGIN: desktop NüHabit OS meng-iframe halaman
     //    /dashboard SE-ORIGIN, jadi SAMEORIGIN membiarkannya jalan (DENY akan
     //    membuat jendela desktop blank).
     //  - HSTS tanpa preload: komitmen preload dihindari, includeSubDomains

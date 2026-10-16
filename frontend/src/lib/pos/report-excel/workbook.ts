@@ -1,4 +1,5 @@
 import type ExcelJS from "exceljs";
+import { brandOsName } from "@/lib/branding";
 
 /**
  * Helper gaya Excel rapi (exceljs) untuk ekspor laporan POS dari Desktop →
@@ -28,7 +29,7 @@ const BORDER: Partial<ExcelJS.Borders> = {
 export async function newWorkbook(): Promise<ExcelJS.Workbook> {
   const { Workbook } = await import("exceljs");
   const wb = new Workbook();
-  wb.creator = "NüHabit — Arkiv OS";
+  wb.creator = brandOsName();
   wb.created = new Date();
   return wb;
 }

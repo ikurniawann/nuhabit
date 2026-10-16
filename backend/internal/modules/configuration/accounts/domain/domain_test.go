@@ -106,10 +106,10 @@ func TestAuthStatus(t *testing.T) {
 
 func TestTempPassword(t *testing.T) {
 	got, err := TempPassword(bytes.NewReader([]byte{0xfb, 0xff, 0xbf, 1, 2, 3, 4, 5, 6}))
-	if err != nil || got != "Arkiv-_-_AQIDBAUG!" {
+	if err != nil || got != "NuHabit-_-_AQIDBAUG!" {
 		t.Fatalf("got %q %v", got, err)
 	}
-	if !regexp.MustCompile(`^Arkiv[A-Za-z0-9_-]{12}!$`).MatchString(got) {
+	if !regexp.MustCompile(`^NuHabit[A-Za-z0-9_-]{12}!$`).MatchString(got) {
 		t.Fatal("format")
 	}
 	if _, err := TempPassword(bytes.NewReader(nil)); err == nil {
