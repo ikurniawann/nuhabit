@@ -93,13 +93,15 @@ docs/ARCHITECTURE.md
 | `recruitment` | 61 | candidates, psikotes, interviews, offers, job openings, positions, promotion |
 | `crm` | 128 | loyalty and XP, members, campaigns, segments, inbox, approvals, workflow rules, reports |
 | `ticketing` | 56 | bookings, gate taps, visits, season and staff passes, capacity, channels |
+| `files` | 1 | `GET /api/files/{bucket}/{path...}`: public buckets, member-owned photos, staff-only buckets |
 
 The Next app forwards a request to Go when `BACKEND_URL` is set, its path is
 under a prefix in `frontend/src/lib/backend-routes.ts`, and Go registers that
 method and path (`frontend/src/lib/go-routes.generated.json`, refreshed by
-`make generate`), unless the route is in `NEXT_ONLY_ROUTES`: uploads and files
-in Next's storage, xlsx/pdf output and OCR/AI extraction stay in Next. That
-list is the remaining work for the port.
+`make generate`), unless the route is in `NEXT_ONLY_ROUTES` (empty today).
+Next keeps three routes of its own: `/api/health` and `/api/ready` probe the
+Next container, and `/api/openapi.json` serves the OpenAPI document committed
+in the frontend.
 
 ## Tests
 
