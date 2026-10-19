@@ -167,6 +167,8 @@ func TestIssueAndReceiveBatches(t *testing.T) {
 		t.Fatalf("wip %v", wip)
 	}
 
+	// 2 of 10 planned may be scrapped as normal loss.
+	e.Call("PUT", "/api/production/recipe-settings", map[string]any{"product_id": product, "scrap_tolerance_pct": 20}, http.StatusOK)
 	// Batch 1: 4 good, 1 scrap at the standard 7000 per unit + 40% of 5000.
 	out = e.Call("POST", base+"/receipts", map[string]any{"qty_good": 4, "qty_scrap": 1}, http.StatusCreated)
 	b1 := obj(obj(out["data"])["batch"])
@@ -262,7 +264,9 @@ func TestScrapWipAndVariants(t *testing.T) {
 	cream := e.RawMaterial(e.org, "RSC-"+sfx, "Krim", kg, "", 1)
 	e.Stock(e.org, milk, e.org.MainID, 10, 20000)
 
-	// A raw material order that yields nothing: the WIP becomes scrap.
+	// A raw material order that yields nothing: the WIP becomes scrap, all
+	// of it normal under a 100% tolerance.
+	e.Call("PUT", "/api/production/recipe-settings", map[string]any{"raw_material_id": cream, "scrap_tolerance_pct": 100}, http.StatusOK)
 	id, lines := e.order("IN_PROGRESS", "raw_material", "FINISHED_GOOD", cream, 2, 0, milk, 1, 20000)
 	base := "/api/production/orders/" + id
 	e.Fail("POST", base+"/receipts", map[string]any{"qty_good": 1}, http.StatusBadRequest,
@@ -312,6 +316,71 @@ func TestScrapWipAndVariants(t *testing.T) {
 	detail := obj(e.Call("GET", "/api/production/batches/"+obj(obj(out["data"])["batch"])["id"].(string), nil, http.StatusOK)["data"])
 	if len(list(detail["variants"])) != 2 {
 		t.Fatalf("variants %v", detail)
+	}
+}
+
+// Scrap above the tolerance (5% of the planned 10 by default) is costed like
+// a good unit and expensed; the normal part raises the HPP.
+func TestAbnormalScrap(t *testing.T) {
+	e := setup(t)
+	kg := e.Unit("KG", "Kilogram")
+	sfx := e.org.BranchID[:4]
+	flour := e.RawMaterial(e.org, "RAF-"+sfx, "Tepung", kg, "", 1)
+	e.Stock(e.org, flour, e.org.MainID, 10, 10000)
+	product := e.Product(e.org, e.org.Stall1ID, "PRA-"+sfx, "Roti", 5000)
+
+	settings := "/api/production/recipe-settings?product_id=" + product
+	got := obj(e.Call("GET", settings, nil, http.StatusOK)["data"])
+	if got["scrap_tolerance_pct"] != nil || got["effective_scrap_tolerance_pct"] != 5.0 {
+		t.Fatalf("default settings %v", got)
+	}
+	e.Fail("PUT", "/api/production/recipe-settings", map[string]any{"product_id": product, "scrap_tolerance_pct": 150}, http.StatusBadRequest,
+		"Validation failed")
+	e.Fail("PUT", "/api/production/recipe-settings", map[string]any{"scrap_tolerance_pct": 1}, http.StatusBadRequest,
+		"Isi salah satu: product_id atau raw_material_id")
+	e.Fail("GET", "/api/production/recipe-settings?product_id="+e.org.MainID, nil, http.StatusNotFound, "Produk tidak ditemukan")
+	got = obj(e.Call("PUT", "/api/production/recipe-settings", map[string]any{"product_id": product, "scrap_tolerance_pct": 10}, http.StatusOK)["data"])
+	if got["effective_scrap_tolerance_pct"] != 10.0 {
+		t.Fatalf("saved %v", got)
+	}
+	e.Call("PUT", "/api/production/recipe-settings", map[string]any{"product_id": product, "scrap_tolerance_pct": nil}, http.StatusOK)
+	if got = obj(e.Call("GET", settings, nil, http.StatusOK)["data"]); got["scrap_tolerance_pct"] != nil {
+		t.Fatalf("cleared %v", got)
+	}
+
+	// 10 loaves from 5 kg flour (5000 material and 100 conversion per loaf).
+	id, lines := e.order("RELEASED", "product", "FINISHED_GOOD", product, 10, 1000, flour, 5, 10000)
+	base := "/api/production/orders/" + id
+	e.Call("POST", base+"/issues", map[string]any{"lines": []any{map[string]any{"material_id": lines[0], "qty": 5}}}, http.StatusCreated)
+
+	// Batch 1: 1 scrap, 0.5 within the 0.5 allowance, 0.5 abnormal at 5100.
+	out := e.Call("POST", base+"/receipts", map[string]any{"qty_good": 4, "qty_scrap": 1}, http.StatusCreated)
+	b1 := obj(obj(out["data"])["batch"])
+	if b1["qty_scrap_normal"] != 0.5 || b1["qty_scrap_abnormal"] != 0.5 || b1["abnormal_material_cost"] != 2500.0 ||
+		b1["abnormal_conversion_cost"] != 50.0 || b1["abnormal_scrap_cost"] != 2550.0 || b1["hpp_per_unit"] != 5100.0 ||
+		b1["scrap_tolerance_pct"] != 5.0 {
+		t.Fatalf("batch 1 %v", b1)
+	}
+	w := obj(obj(obj(out["data"])["flow"])["wip"])
+	if w["wip_value"] != 27500.0 || w["scrap_allowance"] != 0.5 || w["qty_scrap_abnormal"] != 0.5 || w["conversion_applied"] != 450.0 {
+		t.Fatalf("wip after batch 1 %v", w)
+	}
+	// Batch 2 (final): the allowance is used up, so its 1 scrap is abnormal
+	// and takes 1/5 of what is left.
+	out = e.Call("POST", base+"/receipts", map[string]any{"qty_good": 4, "qty_scrap": 1, "final": true}, http.StatusCreated)
+	b2 := obj(obj(out["data"])["batch"])
+	if b2["material_cost"] != 22000.0 || b2["abnormal_material_cost"] != 5500.0 || b2["conversion_cost"] != 440.0 ||
+		b2["abnormal_conversion_cost"] != 110.0 || b2["hpp_per_unit"] != 5610.0 {
+		t.Fatalf("batch 2 %v", b2)
+	}
+	var payload map[string]any
+	e.Scalar(&payload, `SELECT payload FROM platform.outbox_events WHERE topic = $1 AND key = $2`, contracts.TopicOutputReceived, b2["id"])
+	if payload["abnormal_scrap_cost"] != 5610.0 || payload["abnormal_conversion_cost"] != 110.0 {
+		t.Fatalf("event %v", payload)
+	}
+	detail := obj(e.Call("GET", "/api/production/batches/"+b2["id"].(string), nil, http.StatusOK)["data"])
+	if obj(list(detail["materials"])[0])["share_cost"] != 27500.0 || detail["abnormal_scrap_cost"] != 5610.0 {
+		t.Fatalf("batch detail %v", detail)
 	}
 }
 

@@ -9,6 +9,7 @@ import {
   deleteAdditionalCost,
   issueProductionMaterials,
   receiveProductionBatch,
+  saveRecipeSettings,
   updateProductionOrder,
 } from "./api";
 import { productionQueryKeys } from "./query-keys";
@@ -68,5 +69,15 @@ export const useDeleteAdditionalCost = () => {
   return useMutation({
     mutationFn: (id: string) => deleteAdditionalCost(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
+  });
+};
+
+export const useSaveRecipeSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Record<string, unknown>) => saveRecipeSettings(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: productionQueryKeys.all });
+    },
   });
 };

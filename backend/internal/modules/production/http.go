@@ -37,6 +37,8 @@ func (h *Handler) Routes() []module.Route {
 		route("GET /api/production/wip", h.wip),
 		route("GET /api/production/batches", h.batches),
 		route("GET /api/production/batches/{id}", h.batch),
+		route("GET /api/production/recipe-settings", h.recipeSettings),
+		route("PUT /api/production/recipe-settings", h.saveRecipeSettings),
 	}
 }
 

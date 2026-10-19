@@ -171,6 +171,53 @@ func TestCostReceipt(t *testing.T) {
 	}
 }
 
+// 5% of 100 planned is the normal scrap; the rest is abnormal, costed at
+// the batch's unit cost and expensed.
+func TestAbnormalScrap(t *testing.T) {
+	allowance := ScrapAllowance(100, DefaultScrapTolerancePct)
+	if allowance != 5 || ScrapAllowance(30, 2.5) != 0.75 {
+		t.Fatalf("allowance %v", allowance)
+	}
+	if n, a := SplitScrap(0, 8, allowance); n != 5 || a != 3 {
+		t.Fatalf("first split %v %v", n, a)
+	}
+	if n, a := SplitScrap(8, 2, allowance); n != 0 || a != 2 {
+		t.Fatalf("allowance used up %v %v", n, a)
+	}
+	if n, a := SplitScrap(2, 2, allowance); n != 2 || a != 0 {
+		t.Fatalf("within tolerance %v %v", n, a)
+	}
+
+	base := ReceiptInput{PlannedQty: 100, StdMaterialPerUnit: 220, IssuedCost: 20000, Conversion: 5000}
+	// Non-final: 3 abnormal units at the standard 220 + 50 per unit.
+	first := base
+	first.QtyGood, first.QtyScrap, first.QtyAbnormal = 40, 8, 3
+	c1 := CostReceipt(first)
+	if c1 != (ReceiptCost{Material: 8800, Conversion: 2000, AbnormalMaterial: 660, AbnormalConversion: 150, Total: 10800, HppPerUnit: 270}) ||
+		c1.Abnormal() != 810 {
+		t.Fatalf("first %+v", c1)
+	}
+	// Final: what is left splits over 45 good and 2 abnormal units.
+	final := base
+	final.ReceivedMaterialCost, final.ScrapCost, final.AppliedConversion = 8800, 660, 2150
+	final.QtyGood, final.QtyScrap, final.QtyAbnormal, final.Final = 45, 2, 2, true
+	c2 := CostReceipt(final)
+	if c2 != (ReceiptCost{Material: 10091.49, Conversion: 2728.72, AbnormalMaterial: 448.51, AbnormalConversion: 121.28, Total: 12820.21,
+		HppPerUnit: 284.89}) {
+		t.Fatalf("final %+v", c2)
+	}
+	if got := round2(c1.Material + c1.AbnormalMaterial + c2.Material + c2.AbnormalMaterial); got != base.IssuedCost {
+		t.Fatalf("material adds up to %v", got)
+	}
+	// Final with nothing good: the abnormal third of the scrap is expensed,
+	// the normal rest is written off as before.
+	lost := base
+	lost.ReceivedMaterialCost, lost.AppliedConversion, lost.QtyScrap, lost.QtyAbnormal, lost.Final = 8800, 2000, 3, 1, true
+	if c := CostReceipt(lost); c != (ReceiptCost{Scrap: 7466.67, AbnormalMaterial: 3733.33, AbnormalConversion: 1000}) {
+		t.Fatalf("lost %+v", c)
+	}
+}
+
 func TestYieldAndAllocate(t *testing.T) {
 	if y := Yield(45, 5); *y != 90 {
 		t.Fatalf("yield %v", *y)

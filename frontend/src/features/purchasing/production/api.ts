@@ -9,6 +9,7 @@ import type {
   buildIssuePayload,
   buildReceiptPayload,
 } from "@/lib/purchasing/production-flow";
+import type { RecipeOwner, RecipeSettings } from "@/lib/purchasing/production-recipe-settings";
 import type { RawMaterialWithStock } from "@/types/purchasing";
 import type {
   CogsData,
@@ -212,4 +213,19 @@ export async function listProductionBatches(context: ProductionContext, search =
 export async function getProductionBatch(id: string): Promise<ProductionBatchDetail> {
   const json = await requestJson(`${PRODUCTION_URL}/batches/${id}`, "Gagal memuat batch produksi");
   return json.data as ProductionBatchDetail;
+}
+
+function recipeOwnerQuery(owner: RecipeOwner) {
+  return "productId" in owner ? `product_id=${owner.productId}` : `raw_material_id=${owner.rawMaterialId}`;
+}
+
+export async function getRecipeSettings(owner: RecipeOwner): Promise<RecipeSettings> {
+  const json = await requestJson(`${PRODUCTION_URL}/recipe-settings?${recipeOwnerQuery(owner)}`, "Gagal memuat pengaturan resep");
+  return json.data as RecipeSettings;
+}
+
+/** Simpan pengaturan resep; mengembalikan pesan sukses dari API. */
+export async function saveRecipeSettings(payload: Record<string, unknown>): Promise<string | undefined> {
+  const json = await sendJson(`${PRODUCTION_URL}/recipe-settings`, "PUT", payload, "Gagal menyimpan pengaturan resep");
+  return json.message;
 }

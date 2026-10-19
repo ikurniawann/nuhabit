@@ -49,10 +49,18 @@ export function ProductionBatchDetailPage({ moduleType = "raw_material" }: { mod
     ["Biaya konversi", batch.conversion_cost],
     ["Total ke stok", batch.total_cost],
     ["WIP dibebankan sebagai scrap", batch.scrap_cost],
+    ["Kerugian scrap di atas toleransi", batch.abnormal_scrap_cost],
   ] as const;
   const yieldRows = [
     ["Hasil baik", formatNumber(batch.qty_good, 3)],
     ["Scrap", formatNumber(batch.qty_scrap, 3)],
+    [
+      batch.scrap_tolerance_pct === null
+        ? "Scrap normal"
+        : `Scrap normal (toleransi ${formatNumber(batch.scrap_tolerance_pct, 2)}%)`,
+      formatNumber(batch.qty_scrap_normal, 3),
+    ],
+    ["Scrap di atas toleransi", formatNumber(batch.qty_scrap_abnormal, 3)],
     ["Yield batch", pct(batch.yield_pct)],
     ["Terhadap rencana order", `${pct(batch.planned_yield_pct)} dari ${formatNumber(batch.planned_qty, 3)}`],
   ] as const;
@@ -134,7 +142,9 @@ export function ProductionBatchDetailPage({ moduleType = "raw_material" }: { mod
         <Card className="border-gray-200/70 shadow-xs">
           <CardHeader className="border-b border-gray-200/70 pb-3">
             <CardTitle className="text-base">Porsi Biaya Bahan</CardTitle>
-            <p className="text-xs text-gray-500">Biaya bahan batch dibagi menurut nilai bahan yang dikeluarkan ke order.</p>
+            <p className="text-xs text-gray-500">
+              Biaya bahan batch, termasuk yang dibebankan sebagai scrap, dibagi menurut nilai bahan yang dikeluarkan ke order.
+            </p>
           </CardHeader>
           <CardContent className="overflow-x-auto p-4">
             <table className="min-w-full text-sm">

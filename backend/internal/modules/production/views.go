@@ -91,29 +91,42 @@ type IssueView struct {
 
 // BatchView is one received batch.
 type BatchView struct {
-	ID               string       `json:"id"`
-	BatchNumber      string       `json:"batch_number"`
-	OutputType       string       `json:"output_type"`
-	WipRawMaterialID *string      `json:"wip_raw_material_id"`
-	QtyGood          float64      `json:"qty_good"`
-	QtyScrap         float64      `json:"qty_scrap"`
-	MaterialCost     float64      `json:"material_cost"`
-	ConversionCost   float64      `json:"conversion_cost"`
-	ScrapCost        float64      `json:"scrap_cost"`
-	TotalCost        float64      `json:"total_cost"`
-	HppPerUnit       float64      `json:"hpp_per_unit"`
-	YieldPct         *float64     `json:"yield_pct"`
-	PlannedYieldPct  *float64     `json:"planned_yield_pct"`
-	IsFinal          bool         `json:"is_final"`
-	Catatan          *string      `json:"catatan"`
-	CreatedAt        httpx.JSTime `json:"created_at"`
+	ID               string  `json:"id"`
+	BatchNumber      string  `json:"batch_number"`
+	OutputType       string  `json:"output_type"`
+	WipRawMaterialID *string `json:"wip_raw_material_id"`
+	QtyGood          float64 `json:"qty_good"`
+	QtyScrap         float64 `json:"qty_scrap"`
+	MaterialCost     float64 `json:"material_cost"`
+	ConversionCost   float64 `json:"conversion_cost"`
+	ScrapCost        float64 `json:"scrap_cost"`
+	TotalCost        float64 `json:"total_cost"`
+	HppPerUnit       float64 `json:"hpp_per_unit"`
+	// Scrap within the tolerance raises the HPP; the abnormal part is
+	// costed like a good unit and expensed.
+	QtyScrapNormal         float64      `json:"qty_scrap_normal"`
+	QtyScrapAbnormal       float64      `json:"qty_scrap_abnormal"`
+	AbnormalMaterialCost   float64      `json:"abnormal_material_cost"`
+	AbnormalConversionCost float64      `json:"abnormal_conversion_cost"`
+	AbnormalScrapCost      float64      `json:"abnormal_scrap_cost"`
+	ScrapTolerancePct      *float64     `json:"scrap_tolerance_pct"`
+	YieldPct               *float64     `json:"yield_pct"`
+	PlannedYieldPct        *float64     `json:"planned_yield_pct"`
+	IsFinal                bool         `json:"is_final"`
+	Catatan                *string      `json:"catatan"`
+	CreatedAt              httpx.JSTime `json:"created_at"`
 }
 
-// WipSummary is the WIP balance of one order.
+// WipSummary is the WIP balance of one order. ScrapAllowance is the
+// normal scrap quantity (ScrapTolerancePct of the planned quantity).
 type WipSummary struct {
 	IssuedCost           float64  `json:"issued_cost"`
 	ReceivedMaterialCost float64  `json:"received_material_cost"`
 	ScrapCost            float64  `json:"scrap_cost"`
+	AbnormalScrapCost    float64  `json:"abnormal_scrap_cost"`
+	ScrapTolerancePct    float64  `json:"scrap_tolerance_pct"`
+	ScrapAllowance       float64  `json:"scrap_allowance"`
+	QtyScrapAbnormal     float64  `json:"qty_scrap_abnormal"`
 	WipValue             float64  `json:"wip_value"`
 	ConversionCost       float64  `json:"conversion_cost"`
 	ConversionApplied    float64  `json:"conversion_applied"`
@@ -167,18 +180,23 @@ func batchView(b Batch, plannedQty float64) BatchView {
 		ID: b.ID, BatchNumber: b.Number, OutputType: b.OutputType, WipRawMaterialID: b.WipRawMaterialID,
 		QtyGood: b.QtyGood, QtyScrap: b.QtyScrap, MaterialCost: b.MaterialCost, ConversionCost: b.ConversionCost,
 		ScrapCost: b.ScrapCost, TotalCost: b.TotalCost, HppPerUnit: b.HppPerUnit,
-		YieldPct: domain.Yield(b.QtyGood, b.QtyScrap), PlannedYieldPct: domain.PlannedYield(b.QtyGood, plannedQty),
+		QtyScrapNormal: domain.RoundQty(b.QtyScrap - b.QtyAbnormal), QtyScrapAbnormal: b.QtyAbnormal,
+		AbnormalMaterialCost: b.AbnormalMaterial, AbnormalConversionCost: b.AbnormalConversion, AbnormalScrapCost: b.AbnormalCost(),
+		ScrapTolerancePct: b.ScrapTolerancePct,
+		YieldPct:          domain.Yield(b.QtyGood, b.QtyScrap), PlannedYieldPct: domain.PlannedYield(b.QtyGood, plannedQty),
 		IsFinal: b.IsFinal, Catatan: b.Catatan, CreatedAt: httpx.JSTime(b.CreatedAt),
 	}
 }
 
-func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, materials map[string]Material, units map[string]string, skus []Sku) *FlowView {
+func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, materials map[string]Material, units map[string]string,
+	skus []Sku, tolerancePct float64) *FlowView {
 	f := &FlowView{Order: orderView(o), Materials: make([]FlowMaterialView, len(lines)), Issues: make([]IssueView, len(issues)),
 		Batches: make([]BatchView, len(batches)), VariantSkus: skus, Stepped: len(issues) > 0}
 	if f.VariantSkus == nil {
 		f.VariantSkus = []Sku{}
 	}
 	dl := make([]domain.Line, len(lines))
+	abnormalMaterial := 0.0
 	for i, l := range lines {
 		m := materials[l.RawMaterialID]
 		f.Materials[i] = FlowMaterialView{ID: l.ID, RawMaterialID: l.RawMaterialID, Kode: m.Kode, Nama: m.Nama, Satuan: m.Unit,
@@ -199,14 +217,19 @@ func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, 
 		f.Batches[i] = batchView(b, o.PlannedQty)
 		f.Wip.ReceivedMaterialCost += b.MaterialCost
 		f.Wip.ScrapCost += b.ScrapCost
-		f.Wip.ConversionApplied += b.ConversionCost
+		f.Wip.AbnormalScrapCost += b.AbnormalCost()
+		abnormalMaterial += b.AbnormalMaterial
+		f.Wip.QtyScrapAbnormal += b.QtyAbnormal
+		f.Wip.ConversionApplied += b.Applied()
 		f.Wip.QtyGood += b.QtyGood
 		f.Wip.QtyScrap += b.QtyScrap
 	}
 	w := &f.Wip
 	w.IssuedCost, w.ReceivedMaterialCost = round2(w.IssuedCost), round2(w.ReceivedMaterialCost)
 	w.ScrapCost, w.ConversionApplied = round2(w.ScrapCost), round2(w.ConversionApplied)
-	w.WipValue = domain.WipBalance(w.IssuedCost, w.ReceivedMaterialCost, w.ScrapCost)
+	w.AbnormalScrapCost, w.QtyScrapAbnormal = round2(w.AbnormalScrapCost), domain.RoundQty(w.QtyScrapAbnormal)
+	w.WipValue = domain.WipBalance(w.IssuedCost, w.ReceivedMaterialCost, w.ScrapCost+abnormalMaterial)
+	w.ScrapTolerancePct, w.ScrapAllowance = tolerancePct, domain.ScrapAllowance(o.PlannedQty, tolerancePct)
 	w.ConversionCost = round2(o.Conversion())
 	w.StdMaterialPerUnit = round2(domain.StdMaterialPerUnit(dl, o.PlannedQty))
 	w.QtyRemaining = domain.RoundQty(math.Max(0, o.PlannedQty-w.QtyGood-w.QtyScrap))
@@ -260,7 +283,7 @@ type WipView struct {
 func wipView(rows []WipRow) *WipView {
 	v := &WipView{Orders: make([]WipOrderView, len(rows))}
 	for i, r := range rows {
-		wip := domain.WipBalance(r.IssuedCost, r.ReceivedMaterialCost, r.ScrapCost)
+		wip := domain.WipBalance(r.IssuedCost, r.ReceivedMaterialCost, r.ScrapCost+r.AbnormalMaterialCost)
 		v.Orders[i] = WipOrderView{
 			ID: r.ID, NomorProduksi: r.Number, Status: r.Status, ProductionContext: r.Context, OutputType: r.OutputType,
 			ItemKode: r.ItemKode, ItemNama: r.ItemNama, PlannedQty: r.PlannedQty, StartedAt: httpx.NewJSTime(r.StartedAt),
@@ -296,7 +319,7 @@ type BatchListView struct {
 func batchListView(r BatchRow) BatchListView {
 	return BatchListView{BatchView: batchView(r.Batch, r.PlannedQty), ProductionOrderID: r.OrderID, NomorProduksi: r.OrderNumber,
 		ProductionContext: r.Context, OrderStatus: r.OrderStatus, ItemKode: r.ItemKode, ItemNama: r.ItemNama,
-		Stepped: r.MaterialCost+r.ConversionCost+r.ScrapCost > 0 || r.TotalCost == 0}
+		Stepped: r.MaterialCost+r.ConversionCost+r.ScrapCost+r.AbnormalCost() > 0 || r.TotalCost == 0}
 }
 
 // BatchMaterialView is a material's share of a batch's material cost.
@@ -338,7 +361,7 @@ func batchDetailView(b BatchRow, lines []MaterialLine, materials map[string]Mate
 	}
 	// The material cost of the batch, plus what it wrote off, follows the
 	// issued value of each material.
-	shares := domain.Allocate(b.MaterialCost+b.ScrapCost, weights)
+	shares := domain.Allocate(b.MaterialCost+b.WrittenOff(), weights)
 	for i, l := range lines {
 		m := materials[l.RawMaterialID]
 		pct := 0.0

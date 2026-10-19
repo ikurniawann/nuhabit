@@ -22,9 +22,11 @@ type MaterialsIssued struct {
 
 // TopicOutputReceived fires when a batch is received. Accounting posts
 // PRODUCTION_CONVERSION_COST (debit WIP, credit applied overhead) for
-// ConversionCost, PRODUCTION_OUTPUT_RECEIPT (debit inventory, credit WIP)
-// for MaterialCost + ConversionCost and PRODUCTION_SCRAP (debit COGS,
-// credit WIP) for ScrapCost, each keyed by BatchID.
+// ConversionCost + AbnormalConversionCost, PRODUCTION_OUTPUT_RECEIPT (debit
+// inventory, credit WIP) for MaterialCost + ConversionCost,
+// PRODUCTION_SCRAP (debit COGS, credit WIP) for ScrapCost and
+// PRODUCTION_ABNORMAL_SCRAP (debit production loss, credit WIP) for
+// AbnormalScrapCost, each keyed by BatchID.
 const TopicOutputReceived = "production.output.received"
 
 // OutputReceived is the TopicOutputReceived payload.
@@ -39,4 +41,8 @@ type OutputReceived struct {
 	MaterialCost   float64 `json:"material_cost"`
 	ConversionCost float64 `json:"conversion_cost"`
 	ScrapCost      float64 `json:"scrap_cost"`
+	// AbnormalScrapCost is the scrap above the tolerance, material and
+	// conversion; AbnormalConversionCost is its conversion part.
+	AbnormalScrapCost      float64 `json:"abnormal_scrap_cost"`
+	AbnormalConversionCost float64 `json:"abnormal_conversion_cost"`
 }

@@ -25,6 +25,7 @@ import {
   BOMItem,
   RawMaterialWithStock,
 } from "@/types/purchasing";
+import { RecipeSettingsCard } from "@/features/purchasing/production/components/recipe-settings-card";
 import { formatNumber } from "@/lib/format";
 import { materialSmallUnitLabel, materialUnitCost } from "@/lib/purchasing/product-ui-form";
 
@@ -265,6 +266,8 @@ function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
           </Button>
         }
       />
+
+      <RecipeSettingsCard owner={{ productId }} />
 
       <Card className="border-gray-200/70 shadow-xs">
         <CardHeader className="flex flex-row items-start justify-between border-b border-gray-200/70 pb-3">

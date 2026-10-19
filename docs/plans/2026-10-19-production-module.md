@@ -130,6 +130,7 @@ batches by creation time for the batch list.
 | GET | `/api/production/wip?production_context=&search=` | read | open orders with WIP value |
 | GET | `/api/production/batches?production_context=&order_id=&search=&limit=` | read | batches with cost and yield |
 | GET | `/api/production/batches/{id}` | read | one batch: cost split, material share per line, yield, variants |
+| GET, PUT | `/api/production/recipe-settings?product_id=\|raw_material_id=` | item catalog menus (product), items menus (raw material) | scrap tolerance and batch size of a recipe |
 
 Read = a granted menu under `iam.ItemsProduction`
 (`items.product.production`, `items.raw-material.production`); update = the
@@ -213,6 +214,42 @@ the same rule the other mappings follow.
 The owner approved six decisions on 2026-10-19. Each one below says what
 changed and how it works.
 
+### 1. Scrap tolerance: normal and abnormal scrap
+
+Each order has a scrap allowance: the recipe's tolerance in percent of the
+planned quantity, 5% when the recipe sets none. The tolerance lives in
+`manufacturing.recipe_settings.scrap_tolerance_pct` (nullable, one row per
+product or raw material recipe; production owns the recipes, so their
+settings sit next to them) and is edited in "Pengaturan Resep" on both BOM
+editors through `GET/PUT /api/production/recipe-settings`.
+
+- A receipt splits its scrap: normal up to what is left of the allowance
+  after earlier batches, abnormal for the rest
+  (`domain.SplitScrap`). The batch stores `qty_scrap` (all of it),
+  `qty_scrap_abnormal`, `abnormal_material_cost`,
+  `abnormal_conversion_cost` and the `scrap_tolerance_pct` it used.
+- Normal scrap works as before: it carries no cost and raises the HPP of
+  the good units.
+- Abnormal scrap units cost what a good unit of the batch costs. On a
+  running batch that is the standard material per unit plus the planned
+  conversion per unit (each capped by what is left); on the final batch the
+  remaining WIP and conversion split evenly over the good and abnormal
+  units, so normal scrap still loads only the good ones. A final batch with
+  no good units writes the abnormal share off as abnormal scrap and the
+  rest as `PRODUCTION_SCRAP`, as before.
+- The abnormal material leaves the WIP balance; the abnormal conversion is
+  applied to WIP with the batch and leaves it again with the scrap.
+- Journals: `production.output.received` carries `abnormal_scrap_cost` and
+  `abnormal_conversion_cost`. Accounting adds the abnormal conversion to
+  `PRODUCTION_CONVERSION_COST` and posts `PRODUCTION_ABNORMAL_SCRAP`
+  (debit `PRODUCTION_LOSS`, credit `WIP`) for the abnormal cost. Delta
+  `20261020100000_production_scrap_tolerance.sql` creates the mapping for
+  every company with the production mappings.
+- UI: Terima Hasil shows the tolerance, the remaining allowance and the
+  normal/abnormal split with the loss in its preview; the batch list, the
+  batch detail and the Langkah Produksi batch table show the abnormal
+  quantity and cost.
+
 ### 4. Orders count materials in the stock unit
 
 A BOM line keeps `qty_required` in its own unit (`satuan_id`). Production
@@ -273,8 +310,6 @@ deleted.
 
 ## Open questions
 
-1. Scrap is treated as normal loss and raises HPP. Should abnormal scrap
-   above a tolerance go to COGS instead?
 2. Returning unused issued materials to stock: not built. A final receipt
    leaves the remaining WIP on the batch cost.
 3. Which COA accounts hold WIP and applied overhead?

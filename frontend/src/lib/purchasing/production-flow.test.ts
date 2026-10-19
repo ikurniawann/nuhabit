@@ -7,75 +7,10 @@ import {
   initReceiptForm,
   issueShortages,
   previewReceipt,
+  splitScrap,
   variantRemainder,
-  type ProductionFlow,
-  type ProductionFlowMaterial,
 } from "./production-flow";
-
-const material = (over: Partial<ProductionFlowMaterial>): ProductionFlowMaterial => ({
-  id: "m1",
-  raw_material_id: "rm1",
-  kode: "F",
-  nama: "Tepung",
-  satuan: "kg",
-  qty_planned: 5,
-  qty_issued: 0,
-  qty_remaining: 5,
-  unit_cost: 10000,
-  issued_cost: 0,
-  qty_onhand: 10,
-  recipe_qty: null,
-  recipe_satuan: null,
-  unit_factor: null,
-  ...over,
-});
-
-function flow(over: Partial<ProductionFlow> = {}): ProductionFlow {
-  return {
-    order: {
-      id: "o1",
-      nomor_produksi: "PROD-1",
-      status: "IN_PROGRESS",
-      production_context: "product",
-      output_type: "FINISHED_GOOD",
-      item_kode: "R",
-      item_nama: "Roti",
-      planned_qty: 10,
-      actual_qty: 4,
-      planned_material_cost: 70000,
-      overhead_cost: 5000,
-      labor_cost: 0,
-      packaging_cost: 0,
-      waste_cost: 0,
-      conversion_cost: 5000,
-      hpp_per_unit: 7500,
-      started_at: null,
-      completed_at: null,
-    },
-    materials: [],
-    issues: [],
-    batches: [],
-    wip: {
-      issued_cost: 70000,
-      received_material_cost: 28000,
-      scrap_cost: 0,
-      wip_value: 42000,
-      conversion_cost: 5000,
-      conversion_applied: 2000,
-      std_material_per_unit: 7000,
-      qty_good: 4,
-      qty_scrap: 1,
-      qty_remaining: 5,
-      yield_pct: 80,
-      planned_yield_pct: 40,
-    },
-    can_issue: true,
-    can_receive: true,
-    stepped: true,
-    variant_skus: [],
-    ...over,
-  };
-}
+import { flow, material } from "./production-flow.test-fixtures";
 
 describe("issue form", () => {
   it("starts from the remaining plan capped by stock and drops empty rows", () => {
@@ -99,13 +34,14 @@ describe("receipt form", () => {
   it("previews a partial batch at the standard cost", () => {
     const f = flow();
     const form = { ...initReceiptForm(f), final: false, qtyGood: "4" };
-    expect(previewReceipt(f, form)).toEqual({ material: 28000, conversion: 2000, scrap: 0, total: 30000, hpp: 7500 });
+    expect(previewReceipt(f, form)).toMatchObject({ material: 28000, conversion: 2000, scrap: 0, total: 30000, hpp: 7500 });
   });
 
   it("gives the final batch the rest and new conversion costs", () => {
     const f = flow();
     const form = { ...initReceiptForm(f), qtyGood: "4", qtyScrap: "1", overhead: "6000" };
-    expect(previewReceipt(f, form)).toEqual({ material: 42000, conversion: 4000, scrap: 0, total: 46000, hpp: 11500 });
+    expect(previewReceipt(f, form)).toEqual({ material: 42000, conversion: 4000, scrap: 0, total: 46000, hpp: 11500, normalScrap: 1,
+      abnormalScrap: 0, abnormalCost: 0 });
     expect(buildReceiptPayload(form, false)).toEqual({
       qty_good: 4,
       qty_scrap: 1,
@@ -123,6 +59,22 @@ describe("receipt form", () => {
     expect(previewReceipt(f, form)).toMatchObject({ scrap: 42000, total: 0, hpp: 0 });
     expect(canSubmitReceipt(form, false)).toBe(true);
     expect(canSubmitReceipt({ ...form, qtyScrap: "0" }, false)).toBe(false);
+  });
+
+  it("expenses scrap above the tolerance at the batch unit cost", () => {
+    // 10 planned, 0.5 normal scrap already used by batch 1.
+    const f = flow({
+      order: { ...flow().order, overhead_cost: 1000, conversion_cost: 1000 },
+      wip: { ...flow().wip, wip_value: 27500, conversion_cost: 1000, conversion_applied: 450, std_material_per_unit: 5000,
+        scrap_tolerance_pct: 5, scrap_allowance: 0.5, qty_scrap: 1 },
+    });
+    expect(splitScrap(f.wip, 1)).toEqual({ normal: 0, abnormal: 1 });
+    expect(splitScrap({ ...f.wip, qty_scrap: 0 }, 1)).toEqual({ normal: 0.5, abnormal: 0.5 });
+    const form = { ...initReceiptForm(f), qtyGood: "4", qtyScrap: "1", overhead: "1000" };
+    expect(previewReceipt(f, form)).toEqual({ material: 22000, conversion: 440, scrap: 0, total: 22440, hpp: 5610, normalScrap: 0,
+      abnormalScrap: 1, abnormalCost: 5610 });
+    // A running batch costs abnormal units at the standard 5000 + 100.
+    expect(previewReceipt(f, { ...form, final: false, qtyScrap: "0.5" })).toMatchObject({ abnormalScrap: 0.5, abnormalCost: 2550 });
   });
 
   it("needs the variant split to match the good units", () => {

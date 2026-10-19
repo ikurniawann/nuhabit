@@ -81,29 +81,53 @@ func StdMaterialPerUnit(lines []Line, plannedQty float64) float64 {
 	return total / plannedQty
 }
 
+// DefaultScrapTolerancePct is the normal scrap of an order, in percent of
+// its planned quantity, when its recipe sets none.
+const DefaultScrapTolerancePct = 5.0
+
+// ScrapAllowance is the normal scrap quantity of an order.
+func ScrapAllowance(plannedQty, tolerancePct float64) float64 {
+	return RoundQty(math.Max(0, plannedQty*tolerancePct/100))
+}
+
+// SplitScrap splits a batch's scrap into normal (within what is left of the
+// order's allowance after earlier scrap) and abnormal (the rest).
+func SplitScrap(earlierScrap, qtyScrap, allowance float64) (normal, abnormal float64) {
+	normal = math.Min(qtyScrap, math.Max(0, RoundQty(allowance-earlierScrap)))
+	return normal, RoundQty(qtyScrap - normal)
+}
+
 // ReceiptInput is the state of an order when a batch comes in.
 type ReceiptInput struct {
 	PlannedQty           float64
 	StdMaterialPerUnit   float64
 	IssuedCost           float64 // all issues
 	ReceivedMaterialCost float64 // material cost of earlier batches
-	ScrapCost            float64 // WIP written off by earlier batches
+	ScrapCost            float64 // WIP written off by earlier batches, normal and abnormal material
 	Conversion           float64 // overhead + labor + packaging + waste of the order
-	AppliedConversion    float64 // conversion cost of earlier batches
+	AppliedConversion    float64 // conversion cost of earlier batches, abnormal scrap included
 	QtyGood              float64
 	QtyScrap             float64
+	QtyAbnormal          float64 // the part of QtyScrap above the tolerance
 	Final                bool
 }
 
 // ReceiptCost is the cost split of one batch, rupiah with 2 decimals.
-// Total = Material + Conversion is what goes into stock.
+// Total = Material + Conversion is what goes into stock. Abnormal scrap is
+// costed like a good unit and expensed: AbnormalMaterial leaves WIP,
+// AbnormalConversion is applied to WIP and leaves it with the scrap.
 type ReceiptCost struct {
-	Material   float64
-	Conversion float64
-	Scrap      float64
-	Total      float64
-	HppPerUnit float64
+	Material           float64
+	Conversion         float64
+	Scrap              float64
+	AbnormalMaterial   float64
+	AbnormalConversion float64
+	Total              float64
+	HppPerUnit         float64
 }
+
+// Abnormal is the expensed cost of the abnormal scrap.
+func (c ReceiptCost) Abnormal() float64 { return round2(c.AbnormalMaterial + c.AbnormalConversion) }
 
 func round2(v float64) float64 { return jsmath.RoundTo(v, 2) }
 
@@ -116,21 +140,36 @@ func WipBalance(issued, received, scrapped float64) float64 {
 // cost of its good units (capped by the WIP balance) and its share of the
 // conversion cost. The final batch takes everything left, so the batches of
 // an order add up to what was issued; with no good units the rest is scrap.
-// Scrap units carry no cost of their own: normal loss raises the HPP of the
-// good units.
+// Normal scrap carries no cost of its own and raises the HPP of the good
+// units. Abnormal scrap units cost what a good unit of the batch costs: the
+// standard unit cost on a non-final batch, an even share of what is left
+// with the good units on the final one.
 func CostReceipt(in ReceiptInput) ReceiptCost {
 	wip := WipBalance(in.IssuedCost, in.ReceivedMaterialCost, in.ScrapCost)
 	convLeft := math.Max(0, round2(in.Conversion-in.AppliedConversion))
+	abnormal := math.Min(math.Max(0, in.QtyAbnormal), in.QtyScrap)
+	share := func(total, units float64) float64 {
+		if units <= 0 {
+			return 0
+		}
+		return round2(total * abnormal / units)
+	}
 	var c ReceiptCost
 	switch {
 	case in.Final && in.QtyGood <= 0:
-		c.Scrap = wip
+		c.AbnormalMaterial = share(wip, in.QtyScrap)
+		c.AbnormalConversion = share(convLeft, in.QtyScrap)
+		c.Scrap = round2(wip - c.AbnormalMaterial)
 	case in.Final:
-		c.Material, c.Conversion = wip, convLeft
+		c.AbnormalMaterial = share(wip, in.QtyGood+abnormal)
+		c.AbnormalConversion = share(convLeft, in.QtyGood+abnormal)
+		c.Material, c.Conversion = round2(wip-c.AbnormalMaterial), round2(convLeft-c.AbnormalConversion)
 	default:
 		c.Material = math.Min(wip, round2(float64(in.QtyGood*in.StdMaterialPerUnit)))
+		c.AbnormalMaterial = math.Min(round2(wip-c.Material), round2(float64(abnormal*in.StdMaterialPerUnit)))
 		if in.PlannedQty > 0 {
 			c.Conversion = math.Min(convLeft, round2(float64(in.Conversion*in.QtyGood)/in.PlannedQty))
+			c.AbnormalConversion = math.Min(round2(convLeft-c.Conversion), round2(float64(in.Conversion*abnormal)/in.PlannedQty))
 		}
 	}
 	c.Total = round2(c.Material + c.Conversion)

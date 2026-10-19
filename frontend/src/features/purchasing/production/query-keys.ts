@@ -17,4 +17,5 @@ export const productionQueryKeys = {
   batches: (context: "product" | "raw_material", search: string) =>
     ["purchasing", "production", "batches", context, search] as const,
   batch: (id: string) => ["purchasing", "production", "batch", id] as const,
+  recipeSettings: (ownerId: string) => ["purchasing", "production", "recipe-settings", ownerId] as const,
 };

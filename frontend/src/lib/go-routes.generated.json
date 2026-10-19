@@ -3822,6 +3822,16 @@
   {
     "module": "production",
     "method": "GET",
+    "path": "/api/production/recipe-settings"
+  },
+  {
+    "module": "production",
+    "method": "PUT",
+    "path": "/api/production/recipe-settings"
+  },
+  {
+    "module": "production",
+    "method": "GET",
     "path": "/api/production/wip"
   },
   {

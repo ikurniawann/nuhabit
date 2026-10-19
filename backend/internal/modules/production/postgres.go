@@ -98,12 +98,14 @@ func (Postgres) Issues(ctx context.Context, q database.Querier, orderID string) 
 }
 
 const batchCols = `b.id::text, b.production_order_id::text, b.batch_number, b.output_type, b.wip_raw_material_id::text,
-	b.qty_produced::float8, b.qty_scrap::float8, b.hpp_per_unit::float8, b.total_cost::float8, b.material_cost::float8,
-	b.conversion_cost::float8, b.scrap_cost::float8, b.is_final, b.catatan, b.created_at`
+	b.qty_produced::float8, b.qty_scrap::float8, b.qty_scrap_abnormal::float8, b.hpp_per_unit::float8, b.total_cost::float8,
+	b.material_cost::float8, b.conversion_cost::float8, b.scrap_cost::float8, b.abnormal_material_cost::float8,
+	b.abnormal_conversion_cost::float8, b.scrap_tolerance_pct::float8, b.is_final, b.catatan, b.created_at`
 
 func scanBatch(r pgx.Row, b *Batch, extra ...any) error {
-	return r.Scan(append([]any{&b.ID, &b.OrderID, &b.Number, &b.OutputType, &b.WipRawMaterialID, &b.QtyGood, &b.QtyScrap,
-		&b.HppPerUnit, &b.TotalCost, &b.MaterialCost, &b.ConversionCost, &b.ScrapCost, &b.IsFinal, &b.Catatan, &b.CreatedAt}, extra...)...)
+	return r.Scan(append([]any{&b.ID, &b.OrderID, &b.Number, &b.OutputType, &b.WipRawMaterialID, &b.QtyGood, &b.QtyScrap, &b.QtyAbnormal,
+		&b.HppPerUnit, &b.TotalCost, &b.MaterialCost, &b.ConversionCost, &b.ScrapCost, &b.AbnormalMaterial, &b.AbnormalConversion,
+		&b.ScrapTolerancePct, &b.IsFinal, &b.Catatan, &b.CreatedAt}, extra...)...)
 }
 
 func (Postgres) Batches(ctx context.Context, q database.Querier, orderID string) ([]Batch, error) {
@@ -162,10 +164,13 @@ func (Postgres) MarkIssued(ctx context.Context, q database.Querier, orderID, use
 func (Postgres) InsertBatch(ctx context.Context, q database.Querier, o *Order, b Batch, userID string) (Batch, error) {
 	err := q.QueryRow(ctx, `INSERT INTO manufacturing.production_batches (production_order_id, product_id,
 		output_raw_material_id, batch_number, output_type, wip_raw_material_id, qty_produced, qty_scrap, hpp_per_unit,
-		total_cost, material_cost, conversion_cost, scrap_cost, is_final, catatan, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id::text, created_at`,
+		total_cost, material_cost, conversion_cost, scrap_cost, is_final, catatan, created_by, qty_scrap_abnormal,
+		abnormal_material_cost, abnormal_conversion_cost, scrap_tolerance_pct)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+		RETURNING id::text, created_at`,
 		o.ID, o.ProductID, o.OutputRawMaterialID, b.Number, b.OutputType, b.WipRawMaterialID, b.QtyGood, b.QtyScrap,
-		b.HppPerUnit, b.TotalCost, b.MaterialCost, b.ConversionCost, b.ScrapCost, b.IsFinal, b.Catatan, null(userID)).
+		b.HppPerUnit, b.TotalCost, b.MaterialCost, b.ConversionCost, b.ScrapCost, b.IsFinal, b.Catatan, null(userID),
+		b.QtyAbnormal, b.AbnormalMaterial, b.AbnormalConversion, b.ScrapTolerancePct).
 		Scan(&b.ID, &b.CreatedAt)
 	b.OrderID = o.ID
 	return b, err
@@ -237,6 +242,36 @@ func (Postgres) MaterialRecipes(ctx context.Context, q database.Querier, ids []s
 		ORDER BY created_at, id`, ids)
 }
 
+// column is the recipe_settings column and id of a recipe owner.
+func (o RecipeOwner) column() (string, *string) {
+	if o.RawMaterialID != nil {
+		return "raw_material_id", o.RawMaterialID
+	}
+	return "product_id", o.ProductID
+}
+
+func (Postgres) RecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner) (*RecipeSettings, error) {
+	col, id := owner.column()
+	if id == nil {
+		return nil, nil
+	}
+	var r RecipeSettings
+	err := q.QueryRow(ctx, `SELECT scrap_tolerance_pct::float8, updated_at FROM manufacturing.recipe_settings WHERE `+col+` = $1`, *id).
+		Scan(&r.ScrapTolerancePct, &r.UpdatedAt)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	return &r, err
+}
+
+func (Postgres) SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, tolerancePct *float64, userID string) error {
+	col, id := owner.column()
+	_, err := q.Exec(ctx, `INSERT INTO manufacturing.recipe_settings (`+col+`, scrap_tolerance_pct, updated_by) VALUES ($1, $2, $3)
+		ON CONFLICT (`+col+`) DO UPDATE SET scrap_tolerance_pct = EXCLUDED.scrap_tolerance_pct, updated_by = EXCLUDED.updated_by,
+		updated_at = now()`, id, tolerancePct, null(userID))
+	return err
+}
+
 // where builds the shared list filter on the v_production_orders alias v.
 func (f ListFilter) where(args *[]any, searchCols ...string) string {
 	add := func(v any) string {
@@ -276,14 +311,14 @@ func (Postgres) WipOrders(ctx context.Context, q database.Querier, f ListFilter)
 	rows, err := q.Query(ctx, `SELECT v.id::text, v.nomor_produksi, v.status, v.production_context, v.output_type,
 		COALESCE(v.item_kode, ''), COALESCE(v.item_nama, ''), v.planned_qty::float8, v.started_at,
 		iss.issued::float8, iss.last_issue_at,
-		COALESCE(b.material, 0)::float8, COALESCE(b.scrap, 0)::float8, COALESCE(b.conversion, 0)::float8,
+		COALESCE(b.material, 0)::float8, COALESCE(b.scrap, 0)::float8, COALESCE(b.abnormal, 0)::float8, COALESCE(b.conversion, 0)::float8,
 		COALESCE(b.good, 0)::float8, COALESCE(b.qty_scrap, 0)::float8, COALESCE(b.batches, 0)::int, b.last_receipt_at,
 		(v.overhead_cost + v.labor_cost + v.packaging_cost + v.waste_cost)::float8
 		FROM v_production_orders v
 		JOIN (SELECT production_order_id, sum(total_cost) AS issued, max(created_at) AS last_issue_at
 		        FROM manufacturing.production_issues GROUP BY production_order_id) iss ON iss.production_order_id = v.id
 		LEFT JOIN (SELECT production_order_id, sum(material_cost) AS material, sum(scrap_cost) AS scrap,
-		        sum(conversion_cost) AS conversion, sum(qty_produced) AS good, sum(qty_scrap) AS qty_scrap,
+		        sum(abnormal_material_cost) AS abnormal, sum(conversion_cost + abnormal_conversion_cost) AS conversion, sum(qty_produced) AS good, sum(qty_scrap) AS qty_scrap,
 		        count(*) AS batches, max(created_at) AS last_receipt_at
 		        FROM manufacturing.production_batches GROUP BY production_order_id) b ON b.production_order_id = v.id
 		WHERE v.status = 'IN_PROGRESS'`+where+` ORDER BY iss.last_issue_at DESC LIMIT 200`, args...)
@@ -293,7 +328,7 @@ func (Postgres) WipOrders(ctx context.Context, q database.Querier, f ListFilter)
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (WipRow, error) {
 		var w WipRow
 		err := r.Scan(&w.ID, &w.Number, &w.Status, &w.Context, &w.OutputType, &w.ItemKode, &w.ItemNama, &w.PlannedQty,
-			&w.StartedAt, &w.IssuedCost, &w.LastIssueAt, &w.ReceivedMaterialCost, &w.ScrapCost, &w.ConversionApplied,
+			&w.StartedAt, &w.IssuedCost, &w.LastIssueAt, &w.ReceivedMaterialCost, &w.ScrapCost, &w.AbnormalMaterialCost, &w.ConversionApplied,
 			&w.QtyGood, &w.QtyScrap, &w.Batches, &w.LastReceiptAt, &w.ConversionCost)
 		return w, err
 	})

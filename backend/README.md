@@ -87,7 +87,7 @@ docs/ARCHITECTURE.md
 | `stored-value` | 59 | ARK wallet, top-up, member cards and bills, refunds, gift cards, promo and offers |
 | `procurement` | 97 | purchase requests and orders, GRN, QC, deliveries, returns, vendors, payables reports |
 | `inventory` | 84 | stock, movements, opnames, transfers, item masters, COGS estimates and landed costs |
-| `production` | 22 | production orders, BOM lines, multi-level BOM explosion, material issue, WIP, batch receipts with scrap, batch HPP |
+| `production` | 24 | production orders, BOM lines, multi-level BOM explosion, material issue, WIP, batch receipts with scrap, batch HPP |
 | `accounting` | 61 | chart of accounts, journals, fiscal periods, AP/AR, cash-bank, reports, finance |
 | `hris` | 82 | employees, attendance, leave, shifts, overtime, contracts, onboarding, announcements, master data |
 | `payroll` | 62 | payroll runs, payslips, salary, loans, KPI, performance reviews, feedback, department tasks |

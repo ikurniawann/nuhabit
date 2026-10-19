@@ -933,12 +933,15 @@ func TestProductionJournals(t *testing.T) {
 	e.mapping("PRODUCTION_CONVERSION_COST", "INVENTORY", mline("DEBIT", "WIP", wip, "TOTAL"), mline("CREDIT", "OVERHEAD_APPLIED", applied, "TOTAL"))
 	e.mapping("PRODUCTION_OUTPUT_RECEIPT", "INVENTORY", mline("DEBIT", "INVENTORY", stock, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
 	e.mapping("PRODUCTION_SCRAP", "INVENTORY", mline("DEBIT", "COGS", cogs, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
+	loss := e.account("5102001", "Kerugian Produksi", "COGS", false)
+	e.mapping("PRODUCTION_ABNORMAL_SCRAP", "INVENTORY", mline("DEBIT", "PRODUCTION_LOSS", loss, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
 
 	issue, batch := "6f1d5c2e-4444-4a1b-9c1d-000000000001", "6f1d5c2e-4444-4a1b-9c1d-000000000002"
 	issued := production.MaterialsIssued{IssueID: issue, IssueNumber: "PROD-1-I01", OrderID: "6f1d5c2e-4444-4a1b-9c1d-000000000009",
 		OrderNumber: "PROD-1", CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", Total: 70000}
 	received := production.OutputReceived{BatchID: batch, BatchNumber: "PROD-1-B01", OrderID: issued.OrderID, OrderNumber: "PROD-1",
-		CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", MaterialCost: 42000, ConversionCost: 4000, ScrapCost: 1500}
+		CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", MaterialCost: 42000, ConversionCost: 4000, ScrapCost: 1500,
+		AbnormalScrapCost: 2550, AbnormalConversionCost: 50}
 	e.publish(production.TopicMaterialsIssued, issue, issued)
 	e.publish(production.TopicOutputReceived, batch, received)
 	e.publish(production.TopicOutputReceived, batch, received)
@@ -946,7 +949,9 @@ func TestProductionJournals(t *testing.T) {
 	if got, want := e.journals(issue), []string{"PRODUCTION_MATERIAL_ISSUE:DEBIT=70000.00,CREDIT=70000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("issue:\n got %v\nwant %v", got, want)
 	}
-	want := []string{"PRODUCTION_CONVERSION_COST:DEBIT=4000.00,CREDIT=4000.00",
+	// Abnormal scrap: its conversion part is applied to WIP with the rest,
+	// then 2550 leaves WIP for production loss.
+	want := []string{"PRODUCTION_ABNORMAL_SCRAP:DEBIT=2550.00,CREDIT=2550.00", "PRODUCTION_CONVERSION_COST:DEBIT=4050.00,CREDIT=4050.00",
 		"PRODUCTION_OUTPUT_RECEIPT:DEBIT=46000.00,CREDIT=46000.00", "PRODUCTION_SCRAP:DEBIT=1500.00,CREDIT=1500.00"}
 	if got := e.journals(batch); fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("batch:\n got %v\nwant %v", got, want)

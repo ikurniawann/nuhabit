@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import { recipeOwnerId, type RecipeOwner } from "@/lib/purchasing/production-recipe-settings";
 import {
   listAdditionalCosts,
   getProductionDashboard,
@@ -14,6 +15,7 @@ import {
   getProductionWip,
   listProductionBatches,
   getProductionBatch,
+  getRecipeSettings,
 } from "./api";
 import { productionQueryKeys } from "./query-keys";
 
@@ -85,4 +87,11 @@ export const useAdditionalCosts = (referenceType?: AdditionalCostReferenceType) 
   useQuery({
     queryKey: productionQueryKeys.additionalCosts(referenceType ?? "all"),
     queryFn: () => listAdditionalCosts(referenceType),
+  });
+
+export const useRecipeSettings = (owner: RecipeOwner) =>
+  useQuery({
+    queryKey: productionQueryKeys.recipeSettings(recipeOwnerId(owner)),
+    queryFn: () => getRecipeSettings(owner),
+    enabled: !!recipeOwnerId(owner),
   });

@@ -97,10 +97,17 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
               type="number"
               min="0"
               step="any"
+              aria-describedby="receipt-scrap-tolerance"
               className={INPUT_CLASS}
             />
           </div>
         </div>
+        <p id="receipt-scrap-tolerance" className="text-xs text-gray-500">
+          Toleransi scrap {formatNumber(flow.wip.scrap_tolerance_pct, 2)}% dari rencana ={" "}
+          {formatNumber(flow.wip.scrap_allowance, 3)} unit, sisa jatah{" "}
+          {formatNumber(Math.max(0, flow.wip.scrap_allowance - flow.wip.qty_scrap), 3)} unit. Scrap di atas toleransi
+          dibebankan sebagai kerugian produksi.
+        </p>
 
         <div className="flex items-start justify-between gap-4 rounded-lg border border-gray-200/70 px-4 py-3">
           <div>
@@ -185,6 +192,24 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
             <dt className="text-gray-500">Biaya konversi</dt>
             <dd className="font-medium">{formatRupiah(preview.conversion)}</dd>
           </div>
+          {preview.normalScrap + preview.abnormalScrap > 0 && (
+            <>
+              <div className="flex justify-between gap-3">
+                <dt className="text-gray-500">Scrap normal (menaikkan HPP)</dt>
+                <dd className="font-medium">{formatNumber(preview.normalScrap, 3)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-gray-500">Scrap di atas toleransi</dt>
+                <dd className="font-medium">{formatNumber(preview.abnormalScrap, 3)}</dd>
+              </div>
+            </>
+          )}
+          {preview.abnormalCost > 0 && (
+            <div className="flex justify-between gap-3 sm:col-span-2">
+              <dt className="text-red-600">Kerugian produksi (scrap abnormal)</dt>
+              <dd className="font-semibold text-red-700">{formatRupiah(preview.abnormalCost)}</dd>
+            </div>
+          )}
           {preview.scrap > 0 && (
             <div className="flex justify-between gap-3 sm:col-span-2">
               <dt className="text-red-600">WIP dibebankan sebagai scrap</dt>

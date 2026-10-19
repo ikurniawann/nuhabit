@@ -9,8 +9,8 @@ import (
 )
 
 // Production journals: materials into WIP on an issue; conversion cost into
-// WIP, output out of WIP into inventory and scrap out of WIP into COGS on a
-// receipt. Each journal is keyed by its document, so a redelivered event
+// WIP, output out of WIP into inventory, scrap out of WIP into COGS and
+// abnormal scrap out of WIP into production loss on a receipt. Each journal is keyed by its document, so a redelivered event
 // finds the entry it already wrote.
 
 // PostProductionIssue posts PRODUCTION_MATERIAL_ISSUE.
@@ -32,9 +32,10 @@ func (s *Service) PostProductionReceipt(ctx context.Context, db database.DB, in 
 		event, label string
 		amount       float64
 	}{
-		{"PRODUCTION_CONVERSION_COST", "Biaya konversi batch ", in.ConversionCost},
+		{"PRODUCTION_CONVERSION_COST", "Biaya konversi batch ", in.ConversionCost + in.AbnormalConversionCost},
 		{"PRODUCTION_OUTPUT_RECEIPT", "Hasil produksi batch ", in.MaterialCost + in.ConversionCost},
 		{"PRODUCTION_SCRAP", "Scrap produksi batch ", in.ScrapCost},
+		{"PRODUCTION_ABNORMAL_SCRAP", "Scrap di atas toleransi batch ", in.AbnormalScrapCost},
 	} {
 		amount := domain.Round2(j.amount)
 		if !(amount > 0) {

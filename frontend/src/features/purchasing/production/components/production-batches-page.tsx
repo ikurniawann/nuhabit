@@ -55,20 +55,21 @@ export function ProductionBatchesPage({ moduleType = "raw_material" }: { moduleT
                 <th className="px-4 py-3 text-right font-semibold">Yield</th>
                 <th className="px-4 py-3 text-right font-semibold">Bahan</th>
                 <th className="px-4 py-3 text-right font-semibold">Konversi</th>
+                <th className="px-4 py-3 text-right font-semibold">Scrap Abnormal</th>
                 <th className="px-4 py-3 text-right font-semibold">HPP / Unit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {batchesQuery.isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500">
                     <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-pink-600" />
                     Memuat batch...
                   </td>
                 </tr>
               ) : batches.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500">
                     Belum ada batch hasil produksi.
                   </td>
                 </tr>
@@ -96,6 +97,16 @@ export function ProductionBatchesPage({ moduleType = "raw_material" }: { moduleT
                     </td>
                     <td className="px-4 py-3 text-right">{batch.stepped ? formatRupiah(batch.material_cost) : "-"}</td>
                     <td className="px-4 py-3 text-right">{batch.stepped ? formatRupiah(batch.conversion_cost) : "-"}</td>
+                    <td className="px-4 py-3 text-right">
+                      {batch.qty_scrap_abnormal > 0 ? (
+                        <>
+                          <p className="font-medium text-red-700">{formatRupiah(batch.abnormal_scrap_cost)}</p>
+                          <p className="text-xs text-gray-500">{formatNumber(batch.qty_scrap_abnormal, 3)} di atas toleransi</p>
+                        </>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right font-semibold text-emerald-700">
                       {formatRupiah(batch.hpp_per_unit)}
                     </td>

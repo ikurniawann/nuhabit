@@ -25,6 +25,7 @@ import type { RawMaterialWithStock } from "@/types/purchasing";
 import { createRawMaterialBomItem, deleteRawMaterialBomItem, updateRawMaterialBomItem } from "../api";
 import { useRawMaterialBomEditorData } from "../queries";
 import type { RawMaterialBomRow } from "../types";
+import { RecipeSettingsCard } from "./recipe-settings-card";
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -147,6 +148,8 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
           </Button>
         }
       />
+
+      <RecipeSettingsCard owner={{ rawMaterialId: materialId }} />
 
       <Card className="border-gray-200/70 shadow-xs">
         <CardHeader className="flex flex-row items-start justify-between border-b border-gray-200/70 pb-3">

@@ -66,6 +66,13 @@ export type ProductionBatch = {
   scrap_cost: number;
   total_cost: number;
   hpp_per_unit: number;
+  /** Scrap dalam toleransi menaikkan HPP; sisanya dibebankan sebagai kerugian. */
+  qty_scrap_normal: number;
+  qty_scrap_abnormal: number;
+  abnormal_material_cost: number;
+  abnormal_conversion_cost: number;
+  abnormal_scrap_cost: number;
+  scrap_tolerance_pct: number | null;
   yield_pct: number | null;
   planned_yield_pct: number | null;
   is_final: boolean;
@@ -77,6 +84,11 @@ export type ProductionWipBalance = {
   issued_cost: number;
   received_material_cost: number;
   scrap_cost: number;
+  abnormal_scrap_cost: number;
+  /** Persen toleransi scrap resep dan jatah scrap normal order (qty). */
+  scrap_tolerance_pct: number;
+  scrap_allowance: number;
+  qty_scrap_abnormal: number;
   wip_value: number;
   conversion_cost: number;
   conversion_applied: number;
@@ -258,30 +270,64 @@ export function buildReceiptPayload(form: ReceiptForm, variantRequired: boolean)
 }
 
 /**
+ * Bagi scrap batch: normal sampai jatah toleransi order habis (dikurangi
+ * scrap batch sebelumnya), sisanya abnormal.
+ */
+export function splitScrap(wip: ProductionWipBalance, qtyScrap: number) {
+  const left = Math.max(0, roundQty(wip.scrap_allowance - wip.qty_scrap));
+  const normal = Math.min(Math.max(0, qtyScrap), left);
+  return { normal, abnormal: roundQty(Math.max(0, qtyScrap) - normal) };
+}
+
+/**
  * Perkiraan biaya batch, sama dengan aturan server: batch sementara memakai
  * biaya bahan standar (dibatasi saldo WIP) dan porsi biaya konversi; batch
  * terakhir mengambil semua sisa. Tanpa hasil baik, sisa WIP menjadi scrap.
+ * Scrap abnormal dihitung seperti satu unit hasil baik dan dibebankan.
  */
 export function previewReceipt(flow: ProductionFlow, form: ReceiptForm) {
   const { wip, order } = flow;
   const good = num(form.qtyGood);
+  const qtyScrap = num(form.qtyScrap);
+  const { normal, abnormal } = splitScrap(wip, qtyScrap);
   const conversion = form.final
     ? num(form.overhead) + num(form.labor) + num(form.packaging) + num(form.waste)
     : wip.conversion_cost;
   const convLeft = Math.max(0, round2(conversion - wip.conversion_applied));
+  const share = (total: number, units: number) => (units > 0 ? round2((total * abnormal) / units) : 0);
   let material = 0;
   let conv = 0;
   let scrap = 0;
-  if (form.final && good <= 0) scrap = wip.wip_value;
-  else if (form.final) {
-    material = wip.wip_value;
-    conv = convLeft;
+  let abnormalMaterial = 0;
+  let abnormalConversion = 0;
+  if (form.final && good <= 0) {
+    abnormalMaterial = share(wip.wip_value, qtyScrap);
+    abnormalConversion = share(convLeft, qtyScrap);
+    scrap = round2(wip.wip_value - abnormalMaterial);
+  } else if (form.final) {
+    abnormalMaterial = share(wip.wip_value, good + abnormal);
+    abnormalConversion = share(convLeft, good + abnormal);
+    material = round2(wip.wip_value - abnormalMaterial);
+    conv = round2(convLeft - abnormalConversion);
   } else {
     material = Math.min(wip.wip_value, round2(good * wip.std_material_per_unit));
-    conv = order.planned_qty > 0 ? Math.min(convLeft, round2((conversion * good) / order.planned_qty)) : 0;
+    abnormalMaterial = Math.min(round2(wip.wip_value - material), round2(abnormal * wip.std_material_per_unit));
+    if (order.planned_qty > 0) {
+      conv = Math.min(convLeft, round2((conversion * good) / order.planned_qty));
+      abnormalConversion = Math.min(round2(convLeft - conv), round2((conversion * abnormal) / order.planned_qty));
+    }
   }
   const total = round2(material + conv);
-  return { material, conversion: conv, scrap, total, hpp: good > 0 ? round2(total / good) : 0 };
+  return {
+    material,
+    conversion: conv,
+    scrap,
+    total,
+    hpp: good > 0 ? round2(total / good) : 0,
+    normalScrap: normal,
+    abnormalScrap: abnormal,
+    abnormalCost: round2(abnormalMaterial + abnormalConversion),
+  };
 }
 
 function round2(value: number) {

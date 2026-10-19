@@ -163,7 +163,15 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive 
                         )}
                       </td>
                       <td className="py-2 text-right">{formatNumber(batch.qty_good, 3)}</td>
-                      <td className="py-2 text-right">{formatNumber(batch.qty_scrap, 3)}</td>
+                      <td className="py-2 text-right">
+                        <p>{formatNumber(batch.qty_scrap, 3)}</p>
+                        {batch.qty_scrap_abnormal > 0 && (
+                          <p className="text-xs text-red-600">
+                            {formatNumber(batch.qty_scrap_abnormal, 3)} di atas toleransi ·{" "}
+                            {formatRupiah(batch.abnormal_scrap_cost)}
+                          </p>
+                        )}
+                      </td>
                       <td className="py-2 text-right">{pct(batch.yield_pct)}</td>
                       <td className="py-2 text-right">{formatRupiah(batch.total_cost)}</td>
                       <td className="py-2 text-right font-semibold text-emerald-700">{formatRupiah(batch.hpp_per_unit)}</td>

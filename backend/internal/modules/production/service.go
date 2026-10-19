@@ -81,16 +81,31 @@ type IssueLine struct {
 }
 
 // Batch is one output receipt (manufacturing.production_batches).
+// QtyAbnormal is the part of QtyScrap above the order's tolerance; its cost
+// (AbnormalMaterial + AbnormalConversion) is expensed.
 type Batch struct {
 	ID, OrderID, Number, OutputType         string
 	WipRawMaterialID                        *string
-	QtyGood, QtyScrap                       float64
+	QtyGood, QtyScrap, QtyAbnormal          float64
 	HppPerUnit, TotalCost                   float64
 	MaterialCost, ConversionCost, ScrapCost float64
+	AbnormalMaterial, AbnormalConversion    float64
+	ScrapTolerancePct                       *float64
 	IsFinal                                 bool
 	Catatan                                 *string
 	CreatedAt                               time.Time
 }
+
+// AbnormalCost is the expensed cost of the batch's abnormal scrap.
+func (b Batch) AbnormalCost() float64 { return round2(b.AbnormalMaterial + b.AbnormalConversion) }
+
+// WrittenOff is the material the batch took out of WIP without putting it
+// into stock: normal scrap of a final batch with no good units plus the
+// material of abnormal scrap.
+func (b Batch) WrittenOff() float64 { return b.ScrapCost + b.AbnormalMaterial }
+
+// Applied is the conversion cost the batch applied to WIP.
+func (b Batch) Applied() float64 { return b.ConversionCost + b.AbnormalConversion }
 
 // BatchRow is a batch with its order, for the batch list.
 type BatchRow struct {
@@ -110,6 +125,7 @@ type WipRow struct {
 	IssuedCost                              float64
 	LastIssueAt                             time.Time
 	ReceivedMaterialCost, ScrapCost         float64
+	AbnormalMaterialCost                    float64
 	ConversionApplied, ConversionCost       float64
 	QtyGood, QtyScrap                       float64
 	Batches                                 int
@@ -123,6 +139,15 @@ type Outcome struct {
 	Complete                          bool
 	UserID                            string
 	Now                               time.Time
+}
+
+// RecipeOwner names a recipe: a product or a raw material (one of them).
+type RecipeOwner struct{ ProductID, RawMaterialID *string }
+
+// RecipeSettings are per recipe settings (manufacturing.recipe_settings).
+type RecipeSettings struct {
+	ScrapTolerancePct *float64
+	UpdatedAt         *time.Time
 }
 
 // ListFilter narrows the WIP and batch lists.
@@ -148,6 +173,10 @@ type Repository interface {
 	SaveOutcome(ctx context.Context, q database.Querier, orderID string, o Outcome) error
 	ProductRecipes(ctx context.Context, q database.Querier, productIDs []string) (map[string][]domain.Component, error)
 	MaterialRecipes(ctx context.Context, q database.Querier, ids []string) (map[string][]domain.Component, error)
+	// RecipeSettings is the settings row of a product or raw material
+	// recipe, nil when it has none.
+	RecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner) (*RecipeSettings, error)
+	SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, tolerancePct *float64, userID string) error
 	WipOrders(ctx context.Context, q database.Querier, f ListFilter) ([]WipRow, error)
 	ListBatches(ctx context.Context, q database.Querier, f ListFilter) ([]BatchRow, error)
 	Batch(ctx context.Context, q database.Querier, id string) (*BatchRow, error)
@@ -426,7 +455,28 @@ func (s *Service) flow(ctx context.Context, q database.Querier, o *Order) (*Flow
 			return nil, err
 		}
 	}
-	return buildFlow(o, lines, issues, batches, materials, units, skus), nil
+	tolerance, err := s.tolerance(ctx, q, o)
+	if err != nil {
+		return nil, err
+	}
+	return buildFlow(o, lines, issues, batches, materials, units, skus, tolerance), nil
+}
+
+// owner is the recipe an order makes.
+func (o *Order) owner() RecipeOwner {
+	if o.Context == "raw_material" {
+		return RecipeOwner{RawMaterialID: o.OutputRawMaterialID}
+	}
+	return RecipeOwner{ProductID: o.ProductID}
+}
+
+// tolerance is the scrap tolerance of the order's recipe, else the default.
+func (s *Service) tolerance(ctx context.Context, q database.Querier, o *Order) (float64, error) {
+	settings, err := s.repo.RecipeSettings(ctx, q, o.owner())
+	if err != nil || settings == nil || settings.ScrapTolerancePct == nil {
+		return domain.DefaultScrapTolerancePct, err
+	}
+	return *settings.ScrapTolerancePct, nil
 }
 
 /* ── issue ───────────────────────────────────────────────────────────── */
@@ -645,17 +695,23 @@ func (s *Service) Receive(ctx context.Context, scope *ps.Scope, orderID, userID 
 			dl[i] = l.domain()
 			issued += l.IssuedCost
 		}
+		tolerance, err := s.tolerance(ctx, tx, o)
+		if err != nil {
+			return err
+		}
 		cin := domain.ReceiptInput{PlannedQty: o.PlannedQty, StdMaterialPerUnit: domain.StdMaterialPerUnit(dl, o.PlannedQty),
 			IssuedCost: issued, Conversion: o.Conversion(), QtyGood: in.QtyGood, QtyScrap: in.QtyScrap, Final: in.Final}
 		good := in.QtyGood
-		total := 0.0
+		total, earlierScrap := 0.0, 0.0
 		for _, b := range batches {
 			cin.ReceivedMaterialCost += b.MaterialCost
-			cin.ScrapCost += b.ScrapCost
-			cin.AppliedConversion += b.ConversionCost
+			cin.ScrapCost += b.WrittenOff()
+			cin.AppliedConversion += b.Applied()
 			good += b.QtyGood
 			total += b.TotalCost
+			earlierScrap += b.QtyScrap
 		}
+		_, cin.QtyAbnormal = domain.SplitScrap(earlierScrap, in.QtyScrap, domain.ScrapAllowance(o.PlannedQty, tolerance))
 		cost := domain.CostReceipt(cin)
 
 		finishedGood := o.Context == "product" && o.OutputType == "FINISHED_GOOD" && o.ProductID != nil
@@ -679,8 +735,10 @@ func (s *Service) Receive(ctx context.Context, scope *ps.Scope, orderID, userID 
 		}
 
 		b := Batch{Number: domain.BatchNumber(o.Number, len(batches)+1), OutputType: o.OutputType, QtyGood: in.QtyGood,
-			QtyScrap: in.QtyScrap, HppPerUnit: cost.HppPerUnit, TotalCost: cost.Total, MaterialCost: cost.Material,
-			ConversionCost: cost.Conversion, ScrapCost: cost.Scrap, IsFinal: in.Final, Catatan: in.Catatan}
+			QtyScrap: in.QtyScrap, QtyAbnormal: cin.QtyAbnormal, HppPerUnit: cost.HppPerUnit, TotalCost: cost.Total,
+			MaterialCost: cost.Material, ConversionCost: cost.Conversion, ScrapCost: cost.Scrap,
+			AbnormalMaterial: cost.AbnormalMaterial, AbnormalConversion: cost.AbnormalConversion, ScrapTolerancePct: &tolerance,
+			IsFinal: in.Final, Catatan: in.Catatan}
 		if o.Context == "raw_material" {
 			b.OutputType = "FINISHED_GOOD"
 		}
@@ -711,6 +769,7 @@ func (s *Service) Receive(ctx context.Context, scope *ps.Scope, orderID, userID 
 		if err := outbox.Publish(ctx, tx, contracts.TopicOutputReceived, b.ID, contracts.OutputReceived{
 			BatchID: b.ID, BatchNumber: b.Number, OrderID: o.ID, OrderNumber: o.Number, CompanyID: o.CompanyID, UserID: userID,
 			EntryDate: s.entryDate(), MaterialCost: b.MaterialCost, ConversionCost: b.ConversionCost, ScrapCost: b.ScrapCost,
+			AbnormalScrapCost: b.AbnormalCost(), AbnormalConversionCost: b.AbnormalConversion,
 		}); err != nil {
 			return err
 		}
@@ -782,6 +841,9 @@ func receiptMessage(b Batch, o *Order) string {
 	msg := "Batch " + b.Number + " diterima: " + pdfgen.Thousands(b.QtyGood) + " baik"
 	if b.QtyScrap > 0 {
 		msg += ", " + pdfgen.Thousands(b.QtyScrap) + " scrap"
+	}
+	if b.QtyAbnormal > 0 {
+		msg += " (" + pdfgen.Thousands(b.QtyAbnormal) + " di atas toleransi, " + pdfgen.Rupiah(b.AbnormalCost()) + " dibebankan sebagai kerugian)"
 	}
 	if b.QtyGood > 0 {
 		msg += ", HPP " + pdfgen.Rupiah(b.HppPerUnit)
