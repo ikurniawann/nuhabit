@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { actOnWorkoutSession, loadMemberSession } from "@/lib/gym/training-server";
+import { actOnWorkoutSession } from "@/lib/gym/training-server";
 import { memberError, memberJson, withMemberSession } from "@/lib/member-portal/route";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -21,15 +21,6 @@ const actionSchema = z.discriminatedUnion("action", [
 ]);
 
 const isUuid = (id: string) => z.string().uuid().safeParse(id).success;
-
-/** GET — status sesi workout (untuk melanjutkan timer setelah aplikasi dibuka ulang). */
-export const GET = withMemberSession("Gagal memuat sesi workout", async (customerId, _request: Request, ctx: Ctx) => {
-  const { id } = await ctx.params;
-  if (!isUuid(id)) return memberError("ID tidak valid");
-  const session = await loadMemberSession(customerId, id);
-  if (!session) return memberError("Sesi tidak ditemukan", 404);
-  return memberJson(session);
-});
 
 /**
  * POST — aksi sesi: pause | resume | record (satu blok) | complete (dengan
