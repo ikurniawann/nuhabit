@@ -158,8 +158,11 @@ only, 10 s timeout, 15 MB cap). Without it, those photos answer 404.
 
 `test-api` and `test-web` run in the `.pre` stage of every pipeline, before
 the builds: gofmt, `go vet`, Go unit tests, the route manifest against
-`go run ./cmd/api -routes`, then ESLint, `tsc` and Vitest. Go integration
-tests need a seeded database and run locally with `make -C backend test`.
+`go run ./cmd/api -routes`, then every migration applied to an empty
+Postgres 17 service and `migrate -verify` against it, then ESLint, `tsc` and
+Vitest. The GitHub workflow runs the same migration replay and drift check
+before its Go tests. Go integration tests need a seeded database and run
+locally with `make -C backend test`.
 
 ## Scaling
 
