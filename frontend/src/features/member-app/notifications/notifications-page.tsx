@@ -93,7 +93,7 @@ export function NotificationsPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-black">{n.title}</p>
                   <p className="text-sm text-nh-muted">{n.body}</p>
-                  <p className="mt-1 text-xs text-nh-muted/60">{formatDayTime(n.createdAt)}</p>
+                  <p className="mt-1 text-xs text-nh-muted">{formatDayTime(n.createdAt)}</p>
                 </div>
               </button>
             );

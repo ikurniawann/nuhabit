@@ -196,7 +196,7 @@ function LoginContent() {
             </form>
 
             <p className="mt-6 text-xs text-muted-foreground">Satu akun, satu sesi aktif.</p>
-            <Link href="/" className="mt-4 inline-flex text-sm font-semibold text-forest underline-offset-4 hover:underline">
+            <Link href="/" className="mt-4 inline-flex text-sm font-semibold text-forest underline-offset-4 hover:underline dark:text-accent">
               Kembali ke Home
             </Link>
           </div>

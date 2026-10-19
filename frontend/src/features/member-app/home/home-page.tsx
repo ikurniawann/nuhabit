@@ -198,7 +198,7 @@ export function HomePage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3">
                       <p className="text-sm font-extrabold">{a.title}</p>
-                      <p className="shrink-0 text-xs text-nh-muted/70">{formatDay(a.createdAt)}</p>
+                      <p className="shrink-0 text-xs text-nh-muted">{formatDay(a.createdAt)}</p>
                     </div>
                     <p className="mt-0.5 text-sm text-nh-muted">{a.message}</p>
                   </div>

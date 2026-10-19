@@ -248,6 +248,8 @@ export const AXE_ALLOWLIST: AllowedViolation[] = [
   },
 ];
 
+/** E2E_AXE_STRICT=1 ignores the list, to check which entries still match. */
 export function isAllowed(rule: string, route: string): boolean {
+  if (process.env.E2E_AXE_STRICT === "1") return false;
   return AXE_ALLOWLIST.some((entry) => entry.rule === rule && entry.routes.includes(route));
 }
