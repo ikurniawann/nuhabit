@@ -208,6 +208,15 @@ func TestShopCheckoutAdapters(t *testing.T) {
 	if err := ports.Promo.Release(ctx, tx, order); err != nil || status() != "released|0" {
 		t.Errorf("release = %v %s", err, status())
 	}
+	// A second release (the expiry sweep after a webhook) changes nothing,
+	// so another order's live hold keeps counting.
+	const other = "00000000-0000-4000-8000-000000000032"
+	if _, _, err := ports.Promo.Hold(ctx, tx, check, other); err != nil {
+		t.Fatal(err)
+	}
+	if err := ports.Promo.Release(ctx, tx, order); err != nil || status() != "released|1" {
+		t.Errorf("second release = %v %s", err, status())
+	}
 	_, _, err = ports.Promo.Hold(ctx, tx, shop.PromoCheck{Code: "NOPE", Subtotal: 100000}, order)
 	if rej, ok := errors.AsType[*shop.PromoRejectedError](err); !ok || rej.Reason != "nonaktif" {
 		t.Errorf("unknown code hold = %v", err)

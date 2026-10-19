@@ -827,11 +827,45 @@ func (s *Service) issueInvoice(ctx context.Context, o placedOrder, amount float6
 	return "", &checkoutError{502, "Could not create the payment invoice. Try again."}
 }
 
-// releasePromo gives an expired or cancelled order's promo code back;
-// a failure is only logged.
+// releasePromo gives an expired or cancelled order's promo code back and
+// stamps promo_released_at, both in one savepoint: a failed release leaves
+// the stamp empty, so releaseCancelledPromos retries it. Running it twice
+// is harmless because the promo engine skips released redemptions. A
+// failure is only logged.
 func (s *Service) releasePromo(ctx context.Context, orderID string) {
-	if err := s.ports.Promo.Release(ctx, s.db, orderID); err != nil {
+	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		if err := s.ports.Promo.Release(ctx, tx, orderID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE shop.orders SET promo_released_at = now()
+			WHERE id = $1::uuid AND promo_code IS NOT NULL AND promo_released_at IS NULL`, orderID)
+		return err
+	})
+	if err != nil {
 		s.log.Error("[shop] promo release failed", "order", orderID, "error", err)
+	}
+}
+
+// promoSweepBatch caps how many cancelled orders one sweep releases.
+const promoSweepBatch = 50
+
+// releaseCancelledPromos releases the promo hold of cancelled orders that
+// still carry one: orders shop.release_expired_reservations() cancelled in
+// SQL when their reservation TTL ran out, and earlier releases that failed.
+func (s *Service) releaseCancelledPromos(ctx context.Context) {
+	rows, err := s.db.Query(ctx, `SELECT id::text FROM shop.orders
+		WHERE status = 'cancelled' AND promo_code IS NOT NULL AND promo_released_at IS NULL
+		ORDER BY updated_at LIMIT $1`, promoSweepBatch)
+	var ids []string
+	if err == nil {
+		ids, err = pgx.CollectRows(rows, pgx.RowTo[string])
+	}
+	if err != nil {
+		s.log.Error("[shop] cancelled promo lookup failed", "error", err)
+		return
+	}
+	for _, id := range ids {
+		s.releasePromo(ctx, id)
 	}
 }
 

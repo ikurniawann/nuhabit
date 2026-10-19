@@ -154,13 +154,16 @@ func (b fakeBranches) Get(_ context.Context, _ database.Querier, id string) (*Pi
 }
 
 // fakePromo knows one code; it records holds by order id and their state,
-// and the last cart it evaluated.
+// the releases per order and the last cart it evaluated. failRelease makes
+// that many Release calls fail.
 type fakePromo struct {
-	code      string
-	discount  float64
-	reject    string // reason when the code is refused
-	holds     map[string]string
-	lastCheck PromoCheck
+	code        string
+	discount    float64
+	reject      string // reason when the code is refused
+	holds       map[string]string
+	releases    map[string]int
+	failRelease int
+	lastCheck   PromoCheck
 }
 
 func (p *fakePromo) check(in PromoCheck) PromoPreview {
@@ -196,6 +199,11 @@ func (p *fakePromo) Capture(_ context.Context, _ database.Querier, orderID strin
 }
 
 func (p *fakePromo) Release(_ context.Context, _ database.Querier, orderID string) error {
+	if p.failRelease > 0 {
+		p.failRelease--
+		return io.ErrUnexpectedEOF
+	}
+	p.releases[orderID]++
 	if _, ok := p.holds[orderID]; ok {
 		p.holds[orderID] = "released"
 	}
@@ -260,7 +268,7 @@ func newFixture(t *testing.T) *fixture {
 	tx := testutil.Tx(t)
 	f := &fixture{t: t, ctx: context.Background(), tx: tx, wa: &fakeMessenger{}, stock: &fakeStock{fail: map[string]bool{}},
 		pay: &fakePayments{}, env: map[string]string{}, catalog: fakeCatalog{products: map[string]WebProduct{}},
-		promo: &fakePromo{code: "LAUNCH", discount: 20000, holds: map[string]string{}}, wallet: &fakeWallet{balances: map[string]float64{}},
+		promo: &fakePromo{code: "LAUNCH", discount: 20000, holds: map[string]string{}, releases: map[string]int{}}, wallet: &fakeWallet{balances: map[string]float64{}},
 		branches: &fakeBranches{}}
 	// Fresh settings and storefront state inside the transaction.
 	f.exec(`DELETE FROM shop.shipping_settings`)
@@ -1055,6 +1063,93 @@ func TestPromoCodeCheckout(t *testing.T) {
 	}
 	if got := f.scalar(`SELECT count(*)::text FROM shop.orders WHERE storefront_id = (SELECT storefront_id FROM shop.orders WHERE id = $1)`, id); got != "4" {
 		t.Errorf("orders = %s", got)
+	}
+}
+
+// Every way an unpaid order ends gives its promo hold back once: the
+// reservation TTL (cancelled in SQL, released by the sweep), a late or
+// FAILED webhook, a manual cancel, and a release that failed earlier.
+func TestPromoHoldReleasedWhenUnpaidOrderEnds(t *testing.T) {
+	f := newFixture(t)
+	base, product := storefrontFixture(f)
+	// Older cancelled orders in the database are not this test's concern.
+	f.exec(`UPDATE shop.orders SET promo_released_at = now() WHERE promo_released_at IS NULL`)
+	body := map[string]any{
+		"items":     []map[string]any{{"product_id": product, "quantity": 1}},
+		"customer":  map[string]any{"name": "Budi", "phone": "081234567890"},
+		"delivery":  map[string]any{"method": "pickup", "branchId": f.branches.list[0].ID},
+		"promoCode": "LAUNCH",
+	}
+	place := func() string {
+		t.Helper()
+		res, out := f.do("POST", base+"/checkout", body)
+		expectStatus(t, res, 201)
+		id := f.scalar(`SELECT id::text FROM shop.orders WHERE order_number = $1`, out["data"].(map[string]any)["order_number"].(string))
+		if f.promo.holds[id] != "held" {
+			t.Fatalf("hold = %s", f.promo.holds[id])
+		}
+		return id
+	}
+	state := func(id string) string {
+		t.Helper()
+		return f.scalar(`SELECT status || '|' || (promo_released_at IS NOT NULL) FROM shop.orders WHERE id = $1`, id)
+	}
+	webhook := func(id, status string) {
+		t.Helper()
+		res, _ := f.do("POST", "/api/public/shop/webhook/xendit", map[string]any{"id": "inv-x", "external_id": InvoicePrefix + id, "status": status},
+			"x-callback-token", "xnd-secret")
+		expectStatus(t, res, 200)
+	}
+
+	// The reservation TTL runs out: the catalog's expiry pass cancels the
+	// order in SQL and the sweep releases the hold, once.
+	expired := place()
+	f.exec(`UPDATE shop.stock_reservations SET expires_at = now() - interval '1 minute' WHERE order_id = $1::uuid`, expired)
+	res, _ := f.do("GET", base+"/catalog", nil)
+	expectStatus(t, res, 200)
+	if got := state(expired); got != "cancelled|true" || f.promo.holds[expired] != "released" || f.promo.releases[expired] != 1 {
+		t.Errorf("after expiry = %s %s %d", got, f.promo.holds[expired], f.promo.releases[expired])
+	}
+	f.svc.releaseExpiredReservations(f.ctx)
+	if f.promo.releases[expired] != 1 {
+		t.Errorf("sweep released a stamped order again: %d", f.promo.releases[expired])
+	}
+	// Xendit's EXPIRED arrives after the sweep: the release runs again and
+	// the promo engine treats it as a no-op.
+	webhook(expired, "EXPIRED")
+	if got := state(expired); got != "cancelled|true" || f.promo.holds[expired] != "released" {
+		t.Errorf("late webhook = %s %s", got, f.promo.holds[expired])
+	}
+
+	// A FAILED payment cancels and releases like EXPIRED.
+	failed := place()
+	webhook(failed, "FAILED")
+	if got := state(failed); got != "cancelled|true" || f.promo.holds[failed] != "released" {
+		t.Errorf("failed payment = %s %s", got, f.promo.holds[failed])
+	}
+
+	// A manual cancel whose release fails stays due; the next sweep
+	// releases it.
+	manual := place()
+	f.promo.failRelease = 1
+	res, _ = f.staff("PATCH", "/api/shop/orders/"+manual, map[string]any{"status": "cancelled"})
+	expectStatus(t, res, 200)
+	if got := state(manual); got != "cancelled|false" || f.promo.holds[manual] != "held" {
+		t.Errorf("failed release = %s %s", got, f.promo.holds[manual])
+	}
+	f.svc.releaseExpiredReservations(f.ctx)
+	if got := state(manual); got != "cancelled|true" || f.promo.holds[manual] != "released" || f.promo.releases[manual] != 1 {
+		t.Errorf("retried release = %s %s %d", got, f.promo.holds[manual], f.promo.releases[manual])
+	}
+
+	// A paid order keeps its captured promo through the sweep.
+	paid := place()
+	f.exec(`UPDATE shop.orders SET status = 'paid', paid_at = now() WHERE id = $1::uuid`, paid)
+	f.promo.holds[paid] = "captured"
+	f.svc.releaseExpiredReservations(f.ctx)
+	webhook(paid, "EXPIRED")
+	if f.promo.holds[paid] != "captured" || f.promo.releases[paid] != 0 {
+		t.Errorf("paid order = %s %d", f.promo.holds[paid], f.promo.releases[paid])
 	}
 }
 
