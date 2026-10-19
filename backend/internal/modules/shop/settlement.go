@@ -56,8 +56,10 @@ func IsShopInvoice(externalID string) bool { return strings.HasPrefix(externalID
 // order on db (a pool or the caller's transaction). PAID/SETTLED moves a
 // pending order to paid (idempotent), commits its reserved stock, links the
 // CRM member by WhatsApp number (stats through the outbox, no XP) and
-// queues the buyer's confirmation; EXPIRED cancels a pending order and
-// gives its stock back. The result carries the TS route's status and body.
+// queues the buyer's confirmation; EXPIRED or FAILED cancels a pending
+// order, gives its stock back and releases its promo hold (also when the
+// reservation expiry cancelled it first). The result carries the TS
+// route's status and body.
 func (s *Service) SettleInvoice(ctx context.Context, db database.DB, cb InvoiceCallback) (WebhookResult, error) {
 	if !IsShopInvoice(cb.ExternalID) {
 		return ackIgnored, nil
@@ -70,10 +72,14 @@ func (s *Service) SettleInvoice(ctx context.Context, db database.DB, cb InvoiceC
 	switch cb.Status {
 	case "PAID", "SETTLED":
 		return tx.settlePaid(ctx, orderID, cb.Amount)
-	case "EXPIRED":
-		var cancelled bool
+	case "EXPIRED", "FAILED":
+		// The outer SELECT reads the snapshot before the CTE's update, so
+		// wasCancelled means the reservation expiry cancelled it earlier.
+		var cancelled, wasCancelled bool
 		err := tx.db.QueryRow(ctx, `WITH c AS (UPDATE shop.orders SET status = 'cancelled', updated_at = now()
-			WHERE id = $1::uuid AND status = 'pending' RETURNING id) SELECT EXISTS (SELECT 1 FROM c)`, orderID).Scan(&cancelled)
+			WHERE id = $1::uuid AND status = 'pending' RETURNING id)
+			SELECT EXISTS (SELECT 1 FROM c), EXISTS (SELECT 1 FROM shop.orders WHERE id = $1::uuid AND status = 'cancelled')`,
+			orderID).Scan(&cancelled, &wasCancelled)
 		if err != nil {
 			return WebhookResult{}, err
 		}
@@ -81,6 +87,8 @@ func (s *Service) SettleInvoice(ctx context.Context, db database.DB, cb InvoiceC
 			if err := tx.releaseOrderReservations(ctx, orderID); err != nil {
 				return WebhookResult{}, err
 			}
+		}
+		if cancelled || wasCancelled {
 			tx.releasePromo(ctx, orderID)
 		}
 		return ackOK, nil

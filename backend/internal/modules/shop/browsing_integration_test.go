@@ -197,25 +197,52 @@ func TestProductReviews(t *testing.T) {
 		return res.Code, out
 	}
 
-	// A guest, an unpaid order, another member and a product outside the
-	// order are all refused.
+	// A guest, an unpaid or not yet received order, another member and a
+	// product outside the order are all refused.
 	res, _ := f.do("POST", base+"/reviews", review)
 	expectStatus(t, res, 401)
 	expectJSON(t, res, `{"success":false,"error":"Sign in to write a review"}`)
-	if code, out := post(review, member.CustomerID); code != 403 || out["error"] != "You can review products from your paid orders only" {
+	if code, out := post(review, member.CustomerID); code != 403 || out["error"] != "You can review products from orders you have received" {
 		t.Errorf("unpaid order: %d %v", code, out)
 	}
-	items := func() []any {
-		res, out := f.do("GET", "/api/public/shop/order/"+token, nil)
+	// reviewable is computed for whoever reads the status page.
+	itemsFor := func(viewer string) []any {
+		t.Helper()
+		var headers []string
+		if viewer != "" {
+			headers = []string{"X-Test-Member", viewer}
+		}
+		res, out := f.do("GET", "/api/public/shop/order/"+token, nil, headers...)
 		expectStatus(t, res, 200)
 		return out["data"].(map[string]any)["items"].([]any)
+	}
+	items := func() []any { return itemsFor(member.CustomerID) }
+	reviewable := func(got []any) []any {
+		return []any{got[0].(map[string]any)["reviewable"], got[1].(map[string]any)["reviewable"]}
 	}
 	if got := items(); got[1].(map[string]any)["reviewable"] != false || got[1].(map[string]any)["productId"] != product {
 		t.Errorf("unpaid items = %v", got)
 	}
-	f.exec(`UPDATE shop.orders SET status = 'paid', paid_at = now() WHERE id = $1::uuid`, order)
-	if got := items(); got[0].(map[string]any)["reviewable"] != false || got[1].(map[string]any)["reviewable"] != true {
-		t.Errorf("paid items = %v", got)
+	f.exec(`UPDATE shop.orders SET status = 'shipped', paid_at = now() WHERE id = $1::uuid`, order)
+	if got := reviewable(items()); got[1] != false {
+		t.Errorf("shipped, not received: %v", got)
+	}
+	if code, _ := post(review, member.CustomerID); code != 403 {
+		t.Errorf("review before delivery: %d", code)
+	}
+	f.exec(`UPDATE shop.orders SET status = 'completed' WHERE id = $1::uuid`, order)
+	if got := reviewable(items()); got[0] != false || got[1] != true {
+		t.Errorf("buyer after delivery = %v", got)
+	}
+	if got := reviewable(itemsFor("")); got[1] != false {
+		t.Errorf("guest = %v", got)
+	}
+	if got := reviewable(itemsFor(stranger.CustomerID)); got[1] != false {
+		t.Errorf("another member = %v", got)
+	}
+	f.exec(`UPDATE shop.orders SET status = 'picked_up', delivery_method = 'pickup' WHERE id = $1::uuid`, order)
+	if got := reviewable(items()); got[1] != true {
+		t.Errorf("buyer after pickup = %v", got)
 	}
 	if code, _ := post(review, stranger.CustomerID); code != 403 {
 		t.Errorf("another member: %d", code)

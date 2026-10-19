@@ -147,6 +147,11 @@ export function CheckoutSheet({
   const arkAvailable = arkCoinAvailable(member.data, totals.total);
   const paymentMethod: PaymentMethod = arkAvailable ? payment : 'xendit';
   const branch = branches.find((candidate) => candidate.id === branchId) ?? null;
+  // A targeted code names the cart items it discounts.
+  const eligibleIds = promo?.eligibleProductIds;
+  const promoTargets = eligibleIds
+    ? [...new Set(cart.filter((line) => eligibleIds.includes(line.productId)).map((line) => line.name))].join(', ')
+    : '';
 
   const checkout = useMutation({
     // Never resend a checkout: a retry could place the order twice.
@@ -409,6 +414,7 @@ export function CheckoutSheet({
                 </button>
               </div>
             )}
+            {promo && promoTargets ? <p className="text-xs text-gray-600">Applies to {promoTargets} only</p> : null}
             {promoError ? <p role="alert" className="text-xs text-red-700">{promoError}</p> : null}
           </section>
 

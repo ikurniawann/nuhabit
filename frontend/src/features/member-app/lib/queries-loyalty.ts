@@ -124,11 +124,17 @@ export interface CoinTxn {
   createdAt: string;
 }
 
+/** Where an order came from: an outlet (POS) receipt or the online shop. */
+export type OrderSource = "pos" | "shop";
+
 export interface OrderSummary {
   id: string;
   orderNumber: string;
   totalIdr: number;
   paidWithArk: boolean;
+  source: OrderSource;
+  /** Raw order status; shop orders show it (pending, shipped, ready_for_pickup…). */
+  status: string;
   createdAt: string;
 }
 
@@ -143,6 +149,8 @@ export const useTransactions = () =>
           order_number: string;
           total_amount: number;
           payment_method: string | null;
+          status: string | null;
+          source?: OrderSource;
           created_at: string;
         }>;
       }>("/transactions");
@@ -158,14 +166,39 @@ export const useTransactions = () =>
           orderNumber: r.order_number,
           totalIdr: Number(r.total_amount) || 0,
           paidWithArk: isArkCoinMethod(r.payment_method),
+          source: r.source === "shop" ? "shop" : "pos",
+          status: r.status ?? "",
           createdAt: r.created_at,
         })),
       };
     },
   });
 
-/** Detail order dari GET /orders/:id (struk). */
+/** What an online shop order adds to GET /orders/:id. */
+export interface ShopOrderDetail {
+  status: string;
+  paid_at: string | null;
+  shipping_cost: number;
+  delivery: {
+    method: "ship" | "pickup";
+    address: string;
+    area_label: string | null;
+    courier: string | null;
+    eta_text: string | null;
+    waybill: string | null;
+    branch: { name: string; address: string | null; phone: string | null } | null;
+    ready_at: string | null;
+  };
+  /** Payment link while the order is pending, else null. */
+  invoice_url: string | null;
+  /** The public status page (tracking, reviews). */
+  status_url: string;
+}
+
+/** Detail order dari GET /orders/:id: struk outlet, atau order toko online (shop terisi). */
 export interface OrderDetail {
+  source: OrderSource;
+  shop: ShopOrderDetail | null;
   order: {
     order_number: string;
     ordered_at: string;

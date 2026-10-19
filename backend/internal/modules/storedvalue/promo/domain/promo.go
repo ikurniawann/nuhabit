@@ -153,15 +153,15 @@ func HasTargets(c CampaignRule) bool {
 	return len(c.TargetProductIDs) > 0 || len(c.TargetCategoryIDs) > 0
 }
 
-// EligibleSubtotal is the discount base: the whole subtotal without
-// targets, else the sum of lines whose product OR category is targeted.
-func EligibleSubtotal(c CampaignRule, subtotal float64, lines []Line) float64 {
+// EligibleLines are the lines a campaign discounts: every line without
+// targets, else the lines whose product OR category is targeted.
+func EligibleLines(c CampaignRule, lines []Line) []Line {
 	if !HasTargets(c) {
-		return subtotal
+		return lines
 	}
 	products := toSet(c.TargetProductIDs)
 	categories := toSet(c.TargetCategoryIDs)
-	base := 0.0
+	var out []Line
 	for _, l := range lines {
 		_, byProduct := products[l.ProductID]
 		byCategory := false
@@ -169,8 +169,21 @@ func EligibleSubtotal(c CampaignRule, subtotal float64, lines []Line) float64 {
 			_, byCategory = categories[*l.CategoryID]
 		}
 		if byProduct || byCategory {
-			base += max(0, l.Amount)
+			out = append(out, l)
 		}
+	}
+	return out
+}
+
+// EligibleSubtotal is the discount base: the whole subtotal without
+// targets, else the sum of the eligible lines.
+func EligibleSubtotal(c CampaignRule, subtotal float64, lines []Line) float64 {
+	if !HasTargets(c) {
+		return subtotal
+	}
+	base := 0.0
+	for _, l := range EligibleLines(c, lines) {
+		base += max(0, l.Amount)
 	}
 	return svdomain.RoundIdr(base)
 }

@@ -765,8 +765,12 @@ func (h *handler) orderStatus(w http.ResponseWriter, r *http.Request, token stri
 	}
 	var view *PublicOrderStatus
 	if validate.IsUUID(token) {
-		var err error
-		if view, err = h.svc.PublicOrderStatus(r.Context(), token); err != nil {
+		// The viewer, not the order's member, decides what is reviewable.
+		viewer, err := h.svc.ports.Members.FromRequest(r)
+		if err != nil {
+			return err
+		}
+		if view, err = h.svc.PublicOrderStatus(r.Context(), token, viewer); err != nil {
 			return err
 		}
 	}

@@ -113,6 +113,19 @@ describe("CheckoutSheet", () => {
     expect(screen.getByText("-Rp40.000")).toBeInTheDocument();
   });
 
+  it("names the items a targeted promo discounts and stays quiet for a whole-cart promo", () => {
+    stubFetch(() => ({ body: { success: true, data: null } }));
+    const mixed = addCartLine(cart, { id: "p2", name: "Cap", price: 50_000 }, null, 1);
+    const targeted: AppliedPromo = { code: "TEES20", discountAmount: 40_000, label: "Tees week", eligibleProductIds: ["p1"] };
+    const { unmount } = renderSheet({ cart: mixed, promo: targeted });
+    expect(screen.getByText("Applies to Tee only")).toBeInTheDocument();
+    expect(screen.getByText("-Rp40.000")).toBeInTheDocument();
+    unmount();
+
+    renderSheet({ cart: mixed, promo: { ...targeted, eligibleProductIds: null } });
+    expect(screen.queryByText(/Applies to/)).not.toBeInTheDocument();
+  });
+
   it("offers ARK Coin only when the member balance covers the total, and prefills the member", async () => {
     stubFetch((url) => (url.endsWith("/me") ? { body: { success: true, data: member } } : { body: { success: true, data: [] } }));
     renderSheet();

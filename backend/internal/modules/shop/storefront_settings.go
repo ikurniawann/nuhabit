@@ -118,10 +118,12 @@ func (s *Service) MemberView(ctx context.Context, m Member) (*MemberView, error)
 }
 
 // PromoPreviewView is POST /api/public/shop/{slug}/promo/preview.
+// EligibleProductIDs is null when the discount covers the whole cart.
 type PromoPreviewView struct {
-	Code           string  `json:"code"`
-	DiscountAmount float64 `json:"discountAmount"`
-	Label          string  `json:"label"`
+	Code               string   `json:"code"`
+	DiscountAmount     float64  `json:"discountAmount"`
+	Label              string   `json:"label"`
+	EligibleProductIDs []string `json:"eligibleProductIds"`
 }
 
 // PreviewPromo prices the cart from the catalog and asks the promo engine
@@ -143,7 +145,7 @@ func (s *Service) PreviewPromo(ctx context.Context, code string, items []CartIte
 		return nil, err
 	}
 	if !p.OK {
-		return nil, &checkoutError{422, domain.PromoMessage(p.Reason)}
+		return nil, &checkoutError{422, domain.PromoRejection(p.Reason, p.Targets)}
 	}
-	return &PromoPreviewView{Code: code, DiscountAmount: p.Discount, Label: p.Label}, nil
+	return &PromoPreviewView{Code: code, DiscountAmount: p.Discount, Label: p.Label, EligibleProductIDs: p.EligibleProductIDs}, nil
 }

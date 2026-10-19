@@ -9,15 +9,16 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 )
 
-// Product reviews: a member with a paid order containing the product
-// writes one from the order page; staff publish or reject it; the
+// Product reviews: a member who bought and received the product writes
+// one, once, from the order page; staff publish or reject it; the
 // storefront shows published ones with the product's average rating.
 
-// paidOrderCond is a shop.orders row (aliased o) the buyer has paid for.
-const paidOrderCond = `o.paid_at IS NOT NULL AND o.status NOT IN ('pending', 'cancelled', 'refund')`
+// receivedOrderCond is a shop.orders row (aliased o) the buyer paid for
+// and received: delivered (completed) or picked up.
+const receivedOrderCond = `o.paid_at IS NOT NULL AND o.status IN ('completed', 'picked_up')`
 
 var (
-	errReviewNotEligible = httpx.Forbidden("You can review products from your paid orders only")
+	errReviewNotEligible = httpx.Forbidden("You can review products from orders you have received")
 	errReviewExists      = httpx.Conflict("You have already reviewed this product")
 	errReviewNotFound    = httpx.NotFound("Review not found")
 )
@@ -41,12 +42,12 @@ type ReviewView struct {
 }
 
 // CreateReview writes a pending review once the SQL eligibility check
-// passes: the token's order belongs to the member, is paid and contains
-// the product. A second review of the product is a 409.
+// passes: the token's order belongs to the member, was received and
+// contains the product. A second review of the product is a 409.
 func (s *Service) CreateReview(ctx context.Context, member Member, in ReviewInput) (*ReviewView, error) {
 	var orderID string
 	err := s.db.QueryRow(ctx, `SELECT o.id::text FROM shop.orders o
-		WHERE o.access_token = $1::uuid AND o.customer_id = $2::uuid AND `+paidOrderCond+`
+		WHERE o.access_token = $1::uuid AND o.customer_id = $2::uuid AND `+receivedOrderCond+`
 		  AND EXISTS (SELECT 1 FROM shop.order_items i WHERE i.order_id = o.id AND i.product_id = $3::uuid)`,
 		in.OrderToken, member.ID, in.ProductID).Scan(&orderID)
 	if database.IsNoRows(err) {

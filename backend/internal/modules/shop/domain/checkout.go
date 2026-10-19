@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -29,6 +31,28 @@ func PromoMessage(reason string) string {
 		return msg
 	}
 	return promoMessages["nonaktif"]
+}
+
+// promoTargetNames is how many targeted products or collections a
+// rejection names before it says "and N more".
+const promoTargetNames = 3
+
+// PromoRejection is PromoMessage, except that a code for other products
+// names what it covers: "This promo code applies to Tees and Caps only.
+// Add one to your cart to use it."
+func PromoRejection(reason string, targets []string) string {
+	if reason != "produk-tidak-sesuai" || len(targets) == 0 {
+		return PromoMessage(reason)
+	}
+	names := targets
+	if len(names) > promoTargetNames {
+		names = append(slices.Clone(names[:promoTargetNames]), fmt.Sprintf("%d more", len(targets)-promoTargetNames))
+	}
+	list := names[0]
+	if n := len(names); n > 1 {
+		list = strings.Join(names[:n-1], ", ") + " and " + names[n-1]
+	}
+	return "This promo code applies to " + list + " only. Add one to your cart to use it."
 }
 
 // WhatsAppLink is the wa.me chat link for the store's number with the

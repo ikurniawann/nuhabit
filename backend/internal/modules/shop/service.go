@@ -61,10 +61,12 @@ func (s *Service) background(ctx context.Context, fn func(ctx context.Context)) 
 	s.async(func() { fn(ctx) })
 }
 
-// releaseExpiredReservations is releaseExpiredReservations: opportunistic,
-// a failure is only logged.
+// releaseExpiredReservations is releaseExpiredReservations, then the promo
+// holds of the orders it cancelled: opportunistic, a failure is only
+// logged.
 func (s *Service) releaseExpiredReservations(ctx context.Context) {
 	if _, err := s.db.Exec(ctx, `SELECT shop.release_expired_reservations()`); err != nil {
 		s.log.Error("[shop] release expired reservations failed", "error", err)
 	}
+	s.releaseCancelledPromos(ctx)
 }

@@ -23,9 +23,11 @@ type AccountRepository interface {
 	VenueVisits(ctx context.Context, customerID string) ([]VenueVisit, error)
 	VisitCount(ctx context.Context, customerID string) (int64, error)
 	WalletHistory(ctx context.Context, customerID string) ([]WalletEntry, error)
-	PaidOrders(ctx context.Context, customerID string) ([]PaidOrder, error)
+	Orders(ctx context.Context, customerID string) ([]OrderSummary, error)
 	MemberOrder(ctx context.Context, customerID, orderID string) (*OrderHeader, error)
 	OrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
+	MemberShopOrder(ctx context.Context, customerID, orderID string) (*ShopOrder, error)
+	ShopOrderItems(ctx context.Context, orderID string) ([]OrderItem, error)
 	OrderXP(ctx context.Context, customerID, orderID string) (ledger, legacy float64, err error)
 }
 
@@ -223,17 +225,18 @@ func (s *Service) Visits(ctx context.Context, customerID string) (*VisitsView, e
 
 // TransactionsView is GET /transactions.
 type TransactionsView struct {
-	Wallet []WalletEntry `json:"wallet"`
-	Orders []PaidOrder   `json:"orders"`
+	Wallet []WalletEntry  `json:"wallet"`
+	Orders []OrderSummary `json:"orders"`
 }
 
-// Transactions is the latest wallet entries and paid orders.
+// Transactions is the latest wallet entries, paid outlet orders and online
+// shop orders.
 func (s *Service) Transactions(ctx context.Context, customerID string) (*TransactionsView, error) {
 	wallet, err := s.repo.WalletHistory(ctx, customerID)
 	if err != nil {
 		return nil, err
 	}
-	orders, err := s.repo.PaidOrders(ctx, customerID)
+	orders, err := s.repo.Orders(ctx, customerID)
 	if err != nil {
 		return nil, err
 	}
@@ -253,18 +256,53 @@ type orderDetailHeader struct {
 	Subtotal       float64 `json:"subtotal"`
 }
 
-// OrderDetailView is GET /orders/{id}.
+// OrderDetailView is GET /orders/{id}. Source tells an outlet receipt
+// from an online shop order; Shop is set for the latter only.
 type OrderDetailView struct {
+	Source   string            `json:"source"`
 	Order    orderDetailHeader `json:"order"`
 	Items    []OrderItem       `json:"items"`
 	XPEarned float64           `json:"xp_earned"`
 	ArkRate  float64           `json:"ark_rate"`
+	Shop     *shopOrderDetail  `json:"shop"`
+}
+
+// shopOrderDetail is what an online shop order adds to the receipt.
+type shopOrderDetail struct {
+	Status       string       `json:"status"`
+	PaidAt       jsTime       `json:"paid_at"`
+	ShippingCost float64      `json:"shipping_cost"`
+	Delivery     shopDelivery `json:"delivery"`
+	// InvoiceURL is the payment link while the order is pending, else nil.
+	InvoiceURL *string `json:"invoice_url"`
+	// StatusURL is the buyer's public status page (tracking and reviews).
+	StatusURL string `json:"status_url"`
+}
+
+// shopDelivery is a shipped order's destination and courier, or a pickup
+// order's branch.
+type shopDelivery struct {
+	Method    string      `json:"method"`
+	Address   string      `json:"address"`
+	AreaLabel *string     `json:"area_label"`
+	Courier   *string     `json:"courier"`
+	EtaText   *string     `json:"eta_text"`
+	Waybill   *string     `json:"waybill"`
+	Branch    *shopBranch `json:"branch"`
+	ReadyAt   jsTime      `json:"ready_at"`
+}
+
+type shopBranch struct {
+	Name    string  `json:"name"`
+	Address *string `json:"address"`
+	Phone   *string `json:"phone"`
 }
 
 var errOrderNotFound = fail(404, "Order tidak ditemukan")
 
-// OrderDetail is one of the member's orders. Someone else's order behaves
-// exactly like a missing one (404), without confirming the id exists.
+// OrderDetail is one of the member's orders: an outlet (POS) order, else
+// an online shop order. Someone else's order behaves exactly like a
+// missing one (404), without confirming the id exists.
 func (s *Service) OrderDetail(ctx context.Context, customerID, orderID string) (*OrderDetailView, error) {
 	if !isLooseUUID(orderID) {
 		return nil, errOrderNotFound
@@ -273,18 +311,18 @@ func (s *Service) OrderDetail(ctx context.Context, customerID, orderID string) (
 	if err != nil {
 		return nil, err
 	}
+	rates, err := s.repo.LoyaltyRates(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if order == nil {
-		return nil, errOrderNotFound
+		return s.shopOrderDetail(ctx, customerID, orderID, deref(rates.ArkRate))
 	}
 	items, err := s.repo.OrderItems(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
 	ledger, legacy, err := s.repo.OrderXP(ctx, customerID, orderID)
-	if err != nil {
-		return nil, err
-	}
-	rates, err := s.repo.LoyaltyRates(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +335,7 @@ func (s *Service) OrderDetail(ctx context.Context, customerID, orderID string) (
 		xp = ledger
 	}
 	return &OrderDetailView{
+		Source: OrderSourcePOS,
 		Order: orderDetailHeader{
 			ID: order.ID, OrderNumber: order.OrderNumber, OrderedAt: order.OrderedAt,
 			TotalAmount: deref(order.TotalAmount), DiscountAmount: deref(order.DiscountAmount),
@@ -307,6 +346,63 @@ func (s *Service) OrderDetail(ctx context.Context, customerID, orderID string) (
 		XPEarned: xp,
 		ArkRate:  deref(rates.ArkRate),
 	}, nil
+}
+
+// shopOrderDetail is OrderDetail for an online shop order. The promo code
+// is the discount reason and the storefront the venue; shop orders earn
+// no XP.
+func (s *Service) shopOrderDetail(ctx context.Context, customerID, orderID string, arkRate float64) (*OrderDetailView, error) {
+	o, err := s.repo.MemberShopOrder(ctx, customerID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if o == nil {
+		return nil, errOrderNotFound
+	}
+	items, err := s.repo.ShopOrderItems(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	shop := &shopOrderDetail{
+		Status: o.Status, PaidAt: o.PaidAt, ShippingCost: o.ShippingCost,
+		Delivery: shopDelivery{Method: o.DeliveryMethod, Address: o.Address, AreaLabel: o.AreaLabel,
+			Courier: courierLabel(o.CourierCode, o.CourierService), EtaText: o.EtaText, Waybill: o.Waybill, ReadyAt: o.ReadyAt},
+		StatusURL: "/shop/order/" + o.AccessToken,
+	}
+	if o.Status == "pending" {
+		shop.InvoiceURL = o.InvoiceURL
+	}
+	if o.BranchName != nil {
+		shop.Delivery.Branch = &shopBranch{Name: *o.BranchName, Address: o.BranchAddress, Phone: o.BranchPhone}
+	}
+	payment := o.PaymentMethod
+	return &OrderDetailView{
+		Source: OrderSourceShop,
+		Order: orderDetailHeader{
+			ID: o.ID, OrderNumber: &o.OrderNumber, OrderedAt: o.CreatedAt, TotalAmount: o.Total,
+			DiscountAmount: o.DiscountAmount, DiscountReason: o.PromoCode, PaymentMethod: &payment,
+			VenueName: o.StorefrontName, Subtotal: o.Subtotal,
+		},
+		Items:   nonNil(items),
+		ArkRate: arkRate,
+		Shop:    shop,
+	}, nil
+}
+
+// courierLabel is "JNE REG" from the codes jne and reg, nil without a
+// courier (pickup).
+func courierLabel(code, service *string) *string {
+	var parts []string
+	for _, p := range []*string{code, service} {
+		if p != nil && *p != "" {
+			parts = append(parts, strings.ToUpper(*p))
+		}
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	label := strings.Join(parts, " ")
+	return &label
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────
