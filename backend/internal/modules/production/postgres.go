@@ -125,6 +125,8 @@ func (Postgres) InsertIssue(ctx context.Context, q database.Querier, orderID, nu
 	return i, err
 }
 
+// InsertIssueLine writes the line and adds it to its order line's running
+// qty_issued and issued_cost.
 func (Postgres) InsertIssueLine(ctx context.Context, q database.Querier, issueID string, l IssueLine) error {
 	if _, err := q.Exec(ctx, `INSERT INTO manufacturing.production_issue_lines (issue_id, production_order_material_id,
 		raw_material_id, qty, unit_cost, total_cost, inventory_movement_id, warehouse_id)

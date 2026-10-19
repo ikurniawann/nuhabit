@@ -2,7 +2,6 @@ package production
 
 import (
 	"math"
-	"time"
 
 	"nuhabit/backend/internal/modules/production/domain"
 	"nuhabit/backend/internal/platform/httpx"
@@ -136,10 +135,6 @@ type FlowView struct {
 	VariantSkus []Sku `json:"variant_skus"`
 }
 
-func jsTime(t *time.Time) *httpx.JSTime { return httpx.NewJSTime(t) }
-
-func at(t time.Time) httpx.JSTime { return *httpx.NewJSTime(&t) }
-
 func orderView(o *Order) OrderView {
 	return OrderView{
 		ID: o.ID, NomorProduksi: o.Number, Status: o.Status, ProductionContext: o.Context, OutputType: o.OutputType,
@@ -147,12 +142,12 @@ func orderView(o *Order) OrderView {
 		PlannedQty: o.PlannedQty, ActualQty: o.ActualQty, PlannedMaterialCost: o.PlannedMaterialCost,
 		OverheadCost: o.Overhead, LaborCost: o.Labor, PackagingCost: o.Packaging, WasteCost: o.Waste,
 		ConversionCost: round2(o.Conversion()), HppPerUnit: o.HppPerUnit,
-		StartedAt: jsTime(o.StartedAt), CompletedAt: jsTime(o.CompletedAt),
+		StartedAt: httpx.NewJSTime(o.StartedAt), CompletedAt: httpx.NewJSTime(o.CompletedAt),
 	}
 }
 
 func issueView(i Issue, materials map[string]Material) IssueView {
-	v := IssueView{ID: i.ID, NomorIssue: i.Number, TotalCost: i.TotalCost, Catatan: i.Catatan, CreatedAt: at(i.CreatedAt),
+	v := IssueView{ID: i.ID, NomorIssue: i.Number, TotalCost: i.TotalCost, Catatan: i.Catatan, CreatedAt: httpx.JSTime(i.CreatedAt),
 		Lines: make([]IssueLineView, len(i.Lines))}
 	for k, l := range i.Lines {
 		m := materials[l.RawMaterialID]
@@ -168,7 +163,7 @@ func batchView(b Batch, plannedQty float64) BatchView {
 		QtyGood: b.QtyGood, QtyScrap: b.QtyScrap, MaterialCost: b.MaterialCost, ConversionCost: b.ConversionCost,
 		ScrapCost: b.ScrapCost, TotalCost: b.TotalCost, HppPerUnit: b.HppPerUnit,
 		YieldPct: domain.Yield(b.QtyGood, b.QtyScrap), PlannedYieldPct: domain.PlannedYield(b.QtyGood, plannedQty),
-		IsFinal: b.IsFinal, Catatan: b.Catatan, CreatedAt: at(b.CreatedAt),
+		IsFinal: b.IsFinal, Catatan: b.Catatan, CreatedAt: httpx.JSTime(b.CreatedAt),
 	}
 }
 
@@ -258,11 +253,11 @@ func wipView(rows []WipRow) *WipView {
 		wip := domain.WipBalance(r.IssuedCost, r.ReceivedMaterialCost, r.ScrapCost)
 		v.Orders[i] = WipOrderView{
 			ID: r.ID, NomorProduksi: r.Number, Status: r.Status, ProductionContext: r.Context, OutputType: r.OutputType,
-			ItemKode: r.ItemKode, ItemNama: r.ItemNama, PlannedQty: r.PlannedQty, StartedAt: jsTime(r.StartedAt),
+			ItemKode: r.ItemKode, ItemNama: r.ItemNama, PlannedQty: r.PlannedQty, StartedAt: httpx.NewJSTime(r.StartedAt),
 			IssuedCost: round2(r.IssuedCost), ReceivedMaterialCost: round2(r.ReceivedMaterialCost), ScrapCost: round2(r.ScrapCost),
 			WipValue: wip, ConversionCost: round2(r.ConversionCost), ConversionApplied: round2(r.ConversionApplied),
 			QtyGood: r.QtyGood, QtyScrap: r.QtyScrap, Batches: r.Batches, YieldPct: domain.Yield(r.QtyGood, r.QtyScrap),
-			LastIssueAt: at(r.LastIssueAt), LastReceiptAt: jsTime(r.LastReceiptAt),
+			LastIssueAt: httpx.JSTime(r.LastIssueAt), LastReceiptAt: httpx.NewJSTime(r.LastReceiptAt),
 		}
 		v.Summary.Orders++
 		v.Summary.WipValue += wip
