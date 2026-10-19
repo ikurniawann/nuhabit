@@ -11,6 +11,7 @@ import { PurchasingTablePagination } from "@/features/purchasing/components/shar
 import { formatNumber } from "@/lib/format";
 import { displayName, hasRecipe, matchesItemKeyword, paginate } from "@/lib/purchasing/production-ui-display";
 import type { ProductionProduct } from "../types";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const PAGE_SIZE = 10;
 
@@ -77,7 +78,7 @@ export function ProductionItemsSection({
       }
     >
       <div>
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel item produksi" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -161,7 +162,7 @@ export function ProductionItemsSection({
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
 
         {!loading && filtered.length > 0 && (
           <PurchasingTablePagination

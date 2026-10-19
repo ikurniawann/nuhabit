@@ -26,6 +26,7 @@ import { createRawMaterialBomItem, deleteRawMaterialBomItem, updateRawMaterialBo
 import { useRawMaterialBomEditorData } from "../queries";
 import type { RawMaterialBomRow } from "../types";
 import { RecipeSettingsCard } from "./recipe-settings-card";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -173,7 +174,7 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
           </CardAction>
         </CardHeader>
         <CardContent className="space-y-4 p-4">
-          <div className="overflow-x-auto rounded-lg border border-gray-200/70">
+          <ScrollRegion label="Tabel komponen bahan" className="overflow-x-auto rounded-lg border border-gray-200/70">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -248,7 +249,7 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
 
           <div className="flex justify-end gap-3">
             <Button

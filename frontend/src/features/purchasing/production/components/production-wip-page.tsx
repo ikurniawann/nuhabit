@@ -12,6 +12,7 @@ import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { getProductionModuleConfig } from "../production-module";
 import { useProductionWip } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /** WIP Produksi: order berjalan dengan nilai bahan yang masih di proses. */
 export function ProductionWipPage({ moduleType = "raw_material" }: { moduleType?: PurchasingModuleType }) {
@@ -64,7 +65,7 @@ export function ProductionWipPage({ moduleType = "raw_material" }: { moduleType?
           </div>
         }
       >
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel WIP per order" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -119,7 +120,7 @@ export function ProductionWipPage({ moduleType = "raw_material" }: { moduleType?
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </PurchasingListSection>
     </div>
   );

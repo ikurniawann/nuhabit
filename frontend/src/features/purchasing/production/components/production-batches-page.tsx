@@ -12,6 +12,7 @@ import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { getProductionModuleConfig } from "../production-module";
 import { useProductionBatches } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /** Biaya Batch: HPP, pecahan biaya dan yield setiap batch hasil produksi. */
 export function ProductionBatchesPage({ moduleType = "raw_material" }: { moduleType?: PurchasingModuleType }) {
@@ -46,7 +47,7 @@ export function ProductionBatchesPage({ moduleType = "raw_material" }: { moduleT
           </div>
         }
       >
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel batch produksi" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -115,7 +116,7 @@ export function ProductionBatchesPage({ moduleType = "raw_material" }: { moduleT
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </PurchasingListSection>
     </div>
   );

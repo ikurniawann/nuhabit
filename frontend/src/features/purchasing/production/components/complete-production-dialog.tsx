@@ -29,6 +29,7 @@ import {
 import type { ProductionDetail } from "../types";
 import { CompleteHppPreview } from "./complete-hpp-preview";
 import { CompleteProductionMaterials } from "./complete-production-materials";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const INPUT_CLASS = "h-9 text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100";
 
@@ -108,7 +109,7 @@ function CompleteProductionPanel({
               </Button>
             </CardHeader>
             <CardContent className="space-y-3 p-4">
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel bahan produksi" className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
@@ -139,7 +140,7 @@ function CompleteProductionPanel({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
               <div
                 className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold ${
                   isVariantBalanced(remainder) ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"

@@ -9,6 +9,7 @@ import { formatNumber } from "@/lib/format";
 import { displayName, recipeUnitNote } from "@/lib/purchasing/production-ui-display";
 import { bomLineRequirement } from "@/lib/purchasing/production-ui-order-form";
 import type { CogsMaterial } from "../types";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 type ProductionBomPreviewProps = {
   isProduct: boolean;
@@ -55,7 +56,7 @@ export function ProductionBomPreview({
         </Link>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel resep (BOM)" className="overflow-x-auto">
           <table className="min-w-[960px] w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -177,7 +178,7 @@ export function ProductionBomPreview({
               </tfoot>
             )}
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

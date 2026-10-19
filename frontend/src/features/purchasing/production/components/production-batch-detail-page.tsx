@@ -11,6 +11,7 @@ import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
 import { getProductionModuleConfig } from "../production-module";
 import { useProductionBatch } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 function pct(value: number | null) {
   return value === null ? "-" : `${formatNumber(value, 2)}%`;
@@ -146,34 +147,36 @@ export function ProductionBatchDetailPage({ moduleType = "raw_material" }: { mod
               Biaya bahan batch, termasuk yang dibebankan sebagai scrap, dibagi menurut nilai bahan yang dikeluarkan ke order.
             </p>
           </CardHeader>
-          <CardContent className="overflow-x-auto p-4">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
-                <tr>
-                  <th className="py-2 text-left font-semibold">Bahan</th>
-                  <th className="py-2 text-right font-semibold">Dikeluarkan</th>
-                  <th className="py-2 text-right font-semibold">Nilai Keluar</th>
-                  <th className="py-2 text-right font-semibold">Porsi</th>
-                  <th className="py-2 text-right font-semibold">Biaya di Batch</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {batch.materials.map((m) => (
-                  <tr key={m.raw_material_id}>
-                    <td className="py-2 pr-3">
-                      <p className="font-medium text-gray-900">{m.nama}</p>
-                      <p className="text-xs text-gray-500">{m.kode}</p>
-                    </td>
-                    <td className="py-2 text-right">
-                      {formatNumber(m.issued_qty, 4)} {m.satuan}
-                    </td>
-                    <td className="py-2 text-right">{formatRupiah(m.issued_cost)}</td>
-                    <td className="py-2 text-right">{formatNumber(m.share_pct, 2)}%</td>
-                    <td className="py-2 text-right font-medium">{formatRupiah(m.share_cost)}</td>
+          <CardContent className="p-4">
+            <ScrollRegion label="Tabel porsi biaya bahan" className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="py-2 text-left font-semibold">Bahan</th>
+                    <th className="py-2 text-right font-semibold">Dikeluarkan</th>
+                    <th className="py-2 text-right font-semibold">Nilai Keluar</th>
+                    <th className="py-2 text-right font-semibold">Porsi</th>
+                    <th className="py-2 text-right font-semibold">Biaya di Batch</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {batch.materials.map((m) => (
+                    <tr key={m.raw_material_id}>
+                      <td className="py-2 pr-3">
+                        <p className="font-medium text-gray-900">{m.nama}</p>
+                        <p className="text-xs text-gray-500">{m.kode}</p>
+                      </td>
+                      <td className="py-2 text-right">
+                        {formatNumber(m.issued_qty, 4)} {m.satuan}
+                      </td>
+                      <td className="py-2 text-right">{formatRupiah(m.issued_cost)}</td>
+                      <td className="py-2 text-right">{formatNumber(m.share_pct, 2)}%</td>
+                      <td className="py-2 text-right font-medium">{formatRupiah(m.share_cost)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollRegion>
           </CardContent>
         </Card>
       )}

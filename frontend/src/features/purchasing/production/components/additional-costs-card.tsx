@@ -11,6 +11,7 @@ import {
   type AdditionalCostLine,
   type AdditionalCostType,
 } from "@/lib/purchasing/production-ui-order-form";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 type AdditionalCostsCardProps = {
   lines: AdditionalCostLine[];
@@ -38,7 +39,7 @@ export function AdditionalCostsCard({ lines, total, onAdd, onChange, onRemove }:
         </CardAction>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel biaya tambahan" className="overflow-x-auto">
           <table className="min-w-[720px] w-full text-sm">
             <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -121,7 +122,7 @@ export function AdditionalCostsCard({ lines, total, onAdd, onChange, onRemove }:
               </tr>
             </tfoot>
           </table>
-        </div>
+        </ScrollRegion>
       </CardContent>
     </Card>
   );

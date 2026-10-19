@@ -8,6 +8,7 @@ import { PurchasingListSection } from "@/features/purchasing/components/shared/p
 import { formatDate, formatNumber } from "@/lib/format";
 import { displayName, toNumber } from "@/lib/purchasing/production-ui-display";
 import type { WipInventory, WipSummary } from "../types";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 type ProductionWipSectionProps = {
   items: WipInventory[];
@@ -40,7 +41,7 @@ export function ProductionWipSection({
         </div>
       }
     >
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel stok WIP" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -119,7 +120,7 @@ export function ProductionWipSection({
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </PurchasingListSection>
   );
 }

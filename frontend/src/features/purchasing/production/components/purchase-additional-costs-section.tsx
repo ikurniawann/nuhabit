@@ -32,6 +32,7 @@ import {
 } from "@/lib/purchasing/cogs-additional-cost-ui";
 import { useCreateAdditionalCost, useDeleteAdditionalCost } from "../mutations";
 import { useAdditionalCosts } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 type ReferenceFilter = AdditionalCostReferenceType | "all";
 
@@ -97,7 +98,7 @@ export function PurchaseAdditionalCostsSection() {
         </div>
       }
     >
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel biaya tambahan pembelian" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -174,7 +175,7 @@ export function PurchaseAdditionalCostsSection() {
             </tfoot>
           )}
         </table>
-      </div>
+      </ScrollRegion>
 
       {formOpen && <AdditionalCostFormModal onClose={() => setFormOpen(false)} />}
 

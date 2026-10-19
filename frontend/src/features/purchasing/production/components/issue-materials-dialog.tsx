@@ -23,6 +23,7 @@ import {
   issueShortages,
   type ProductionFlow,
 } from "@/lib/purchasing/production-flow";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const INPUT_CLASS = "h-9 w-28 text-right text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100";
 
@@ -63,7 +64,7 @@ function IssueMaterialsPanel({ flow, submitting, onClose, onSubmit }: Omit<Issue
         </DialogPanelDescription>
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel bahan yang dikeluarkan" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
               <tr>
@@ -109,7 +110,7 @@ function IssueMaterialsPanel({ flow, submitting, onClose, onSubmit }: Omit<Issue
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
         <div className="space-y-1.5">
           <Label htmlFor="issue-note" className="text-xs text-gray-500">
             Catatan

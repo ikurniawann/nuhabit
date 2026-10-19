@@ -111,7 +111,7 @@ export function ProductionFlowCard({
           ))}
         </dl>
 
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel pengeluaran bahan" className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <caption className="sr-only">Pengeluaran bahan per baris</caption>
             <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
@@ -150,7 +150,7 @@ export function ProductionFlowCard({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
 
         {flow.intermediates.length > 0 && (
           <div className="space-y-2">
@@ -270,7 +270,7 @@ export function ProductionFlowCard({
         {flow.batches.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-gray-900">Batch Hasil</h3>
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel batch hasil" className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <caption className="sr-only">Batch hasil produksi</caption>
                 <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
@@ -313,7 +313,7 @@ export function ProductionFlowCard({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           </div>
         )}
       </CardContent>

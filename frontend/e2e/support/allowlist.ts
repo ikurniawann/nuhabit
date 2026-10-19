@@ -8,24 +8,9 @@
  */
 export type AllowedViolation = { rule: string; reason: string; routes: string[] };
 
-export const AXE_ALLOWLIST: AllowedViolation[] = [
-  {
-    rule: "scrollable-region-focusable",
-    reason: "Production tables scroll sideways on a phone without a keyboard stop; the production rework wraps them in ScrollRegion.",
-    routes: [
-      "/dashboard/items/product/production",
-      "/dashboard/items/product/production/batches",
-      "/dashboard/items/product/production/recipes",
-      "/dashboard/items/product/production/wip",
-      "/dashboard/items/raw-material/production",
-      "/dashboard/items/raw-material/production/batches",
-      "/dashboard/items/raw-material/production/recipes",
-      "/dashboard/items/raw-material/production/wip",
-      "/dashboard/purchasing/production",
-      "/dashboard/purchasing/production/recipes",
-    ],
-  },
-];
+// Empty: the production routes, the last entries, pass the strict walk now
+// that their tables scroll inside ScrollRegion.
+export const AXE_ALLOWLIST: AllowedViolation[] = [];
 
 /** E2E_AXE_STRICT=1 ignores the list, to check which entries still match. */
 export function isAllowed(rule: string, route: string): boolean {
