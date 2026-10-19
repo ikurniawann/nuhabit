@@ -225,13 +225,21 @@ type WalletEntry struct {
 	CreatedAt    jsTime   `json:"created_at"`
 }
 
-// PaidOrder is a row of the order history.
-type PaidOrder struct {
+// Sources of the member's orders: an outlet (POS) order or an online shop
+// order.
+const (
+	OrderSourcePOS  = "pos"
+	OrderSourceShop = "shop"
+)
+
+// OrderSummary is a row of the order history.
+type OrderSummary struct {
 	ID            string   `json:"id"`
 	OrderNumber   *string  `json:"order_number"`
 	TotalAmount   *float64 `json:"total_amount"`
 	PaymentMethod *string  `json:"payment_method"`
 	Status        *string  `json:"status"`
+	Source        string   `json:"source"`
 	CreatedAt     jsTime   `json:"created_at"`
 }
 
@@ -251,25 +259,82 @@ func (s *store) WalletHistory(ctx context.Context, customerID string) ([]WalletE
 	})
 }
 
-// PaidOrders lists the member's paid POS orders and paid online shop
-// orders together, newest first.
-func (s *store) PaidOrders(ctx context.Context, customerID string) ([]PaidOrder, error) {
+// Orders lists the member's paid POS orders and every online shop order
+// the member placed or was linked to (pending, paid, cancelled), newest
+// first.
+func (s *store) Orders(ctx context.Context, customerID string) ([]OrderSummary, error) {
 	rows, err := s.q.Query(ctx,
-		`SELECT id, order_number, total_amount::float, payment_method, status::text, created_at
+		`SELECT id, order_number, total_amount::float, payment_method, status::text, 'pos', created_at
 		   FROM pos.pos_orders
 		  WHERE customer_id = $1 AND payment_status = 'paid'
 		UNION ALL
-		SELECT id, order_number, total::float, payment_method, status, created_at
+		SELECT id, order_number, total::float, payment_method, status, 'shop', created_at
 		   FROM shop.orders
-		  WHERE customer_id = $1 AND paid_at IS NOT NULL AND status <> 'cancelled'
+		  WHERE customer_id = $1
 		  ORDER BY created_at DESC LIMIT 25`, customerID)
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (PaidOrder, error) {
-		var o PaidOrder
-		err := row.Scan(&o.ID, &o.OrderNumber, &o.TotalAmount, &o.PaymentMethod, &o.Status, &o.CreatedAt)
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (OrderSummary, error) {
+		var o OrderSummary
+		err := row.Scan(&o.ID, &o.OrderNumber, &o.TotalAmount, &o.PaymentMethod, &o.Status, &o.Source, &o.CreatedAt)
 		return o, err
+	})
+}
+
+// ShopOrder is a shop.orders row of GET /orders/{id}, with its storefront
+// and pickup branch.
+type ShopOrder struct {
+	ID, OrderNumber, Status, AccessToken, DeliveryMethod, Address string
+	PaymentMethod                                                 string
+	CreatedAt, PaidAt, ReadyAt                                    jsTime
+	Subtotal, ShippingCost, DiscountAmount, Total                 float64
+	PromoCode, AreaLabel, CourierCode, CourierService, EtaText    *string
+	Waybill, InvoiceURL, StorefrontName                           *string
+	BranchName, BranchAddress, BranchPhone                        *string
+}
+
+// MemberShopOrder returns the shop order only when it belongs to the
+// member.
+func (s *store) MemberShopOrder(ctx context.Context, customerID, orderID string) (*ShopOrder, error) {
+	var o ShopOrder
+	err := s.q.QueryRow(ctx,
+		`SELECT o.id::text, o.order_number, o.status, o.access_token::text, o.delivery_method, o.shipping_address,
+		        o.payment_method, o.created_at, o.paid_at, o.ready_at,
+		        o.subtotal::float, o.shipping_cost::float, o.discount_amount::float, o.total::float,
+		        o.promo_code, o.shipping_area_label, o.courier_code, o.courier_service, o.eta_text,
+		        o.waybill, o.xendit_invoice_url, sf.name, b.name, b.address, b.phone
+		   FROM shop.orders o
+		   LEFT JOIN shop.storefronts sf ON sf.id = o.storefront_id
+		   LEFT JOIN configuration.branches b ON b.id = o.pickup_branch_id
+		  WHERE o.id = $1 AND o.customer_id = $2`, orderID, customerID).Scan(
+		&o.ID, &o.OrderNumber, &o.Status, &o.AccessToken, &o.DeliveryMethod, &o.Address,
+		&o.PaymentMethod, &o.CreatedAt, &o.PaidAt, &o.ReadyAt,
+		&o.Subtotal, &o.ShippingCost, &o.DiscountAmount, &o.Total,
+		&o.PromoCode, &o.AreaLabel, &o.CourierCode, &o.CourierService, &o.EtaText,
+		&o.Waybill, &o.InvoiceURL, &o.StorefrontName, &o.BranchName, &o.BranchAddress, &o.BranchPhone)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+// ShopOrderItems lists a shop order's lines; a variant joins the product
+// name in parentheses.
+func (s *store) ShopOrderItems(ctx context.Context, orderID string) ([]OrderItem, error) {
+	rows, err := s.q.Query(ctx,
+		`SELECT product_name || COALESCE(' (' || sku_name || ')', ''), quantity::float, unit_price::float, 0::float, total::float
+		   FROM shop.order_items WHERE order_id = $1 ORDER BY product_name`, orderID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (OrderItem, error) {
+		var it OrderItem
+		err := row.Scan(&it.ProductName, &it.Quantity, &it.UnitPrice, &it.DiscountAmount, &it.TotalAmount)
+		return it, err
 	})
 }
 

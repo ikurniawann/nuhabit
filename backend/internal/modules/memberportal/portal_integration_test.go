@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -104,29 +105,99 @@ func TestIntegrationOTPDisabled(t *testing.T) {
 	}
 }
 
-// A paid online shop order linked to the member shows in the transactions
-// list next to the POS orders.
-func TestTransactionsListShopOrders(t *testing.T) {
+// The member's online shop orders show in the order list (any status,
+// labelled "shop") and open in the order detail with their status,
+// delivery or pickup, lines, totals and, while pending, the payment link.
+// Another member's shop order is a 404.
+func TestShopOrdersInMemberOrders(t *testing.T) {
 	h := newHarness(t)
-	member := newMember(t)
+	member, stranger := newMember(t), newMember(t)
 	db := testutil.DB(t)
 	ctx := context.Background()
-	var id string
-	if err := db.QueryRow(ctx, `INSERT INTO shop.orders (status, customer_name, customer_phone, shipping_address, total, paid_at, customer_id, payment_method)
-		VALUES ('paid', 'Go', '0812', 'Pickup at Dago', 75000, now(), $1, 'arkcoin') RETURNING id::text`, member.CustomerID).Scan(&id); err != nil {
+	scalar := func(sql string, args ...any) (v string) {
+		t.Helper()
+		if err := db.QueryRow(ctx, sql, args...).Scan(&v); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
+		return v
+	}
+	storefront := scalar(`INSERT INTO shop.storefronts (slug, name) VALUES ($1, 'Go Apparel') RETURNING id::text`, "go-"+testutil.RandomHex(4))
+	branch := scalar(`SELECT id::text FROM configuration.branches ORDER BY created_at LIMIT 1`)
+	branchName := scalar(`SELECT name FROM configuration.branches WHERE id = $1`, branch)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		_, _ = db.Exec(ctx, `DELETE FROM shop.orders WHERE storefront_id = $1`, storefront)
+		_, _ = db.Exec(ctx, `DELETE FROM shop.storefronts WHERE id = $1`, storefront)
+	})
+	order := func(customerID, status, delivery, extraCols, extraVals string) string {
+		t.Helper()
+		return scalar(`INSERT INTO shop.orders (storefront_id, status, customer_name, customer_phone, shipping_address,
+			subtotal, shipping_cost, discount_amount, total, customer_id, delivery_method, payment_method`+extraCols+`)
+			VALUES ($1, $2, 'Go', '0812', 'Jl. Dago 1', 100000, 12000, 10000, 102000, $3, $4, 'xendit'`+extraVals+`)
+			RETURNING id::text`, storefront, status, customerID, delivery)
+	}
+	pending := order(member.CustomerID, "pending", "ship",
+		", shipping_area_label, courier_code, courier_service, eta_text, promo_code, xendit_invoice_url",
+		", 'Coblong, Bandung', 'jne', 'reg', '1 - 2 days', 'LAUNCH', 'https://pay.example/inv-1'")
+	if _, err := db.Exec(ctx, `INSERT INTO shop.order_items (order_id, product_name, sku_name, quantity, unit_price, total)
+		VALUES ($1, 'Tee', 'L', 2, 50000, 100000)`, pending); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _, _ = db.Exec(context.Background(), `DELETE FROM shop.orders WHERE id = $1`, id) })
+	pickup := order(member.CustomerID, "ready_for_pickup", "pickup", ", pickup_branch_id, paid_at, ready_at, xendit_invoice_url",
+		", '"+branch+"', now(), now(), 'https://pay.example/inv-2'")
+	cancelled := order(member.CustomerID, "cancelled", "ship", "", "")
+	foreign := order(stranger.CustomerID, "paid", "ship", ", paid_at", ", now()")
+
 	status, body, _ := h.do(testutil.AsMember(testutil.Request("GET", "/api/member-portal/transactions", nil), member))
 	if status != 200 {
 		t.Fatalf("transactions: %d %v", status, body)
 	}
-	orders := body["data"].(map[string]any)["orders"].([]any)
-	if len(orders) != 1 {
-		t.Fatalf("orders = %v", orders)
+	got := map[string]string{}
+	for _, raw := range body["data"].(map[string]any)["orders"].([]any) {
+		o := raw.(map[string]any)
+		got[o["id"].(string)] = o["source"].(string) + "|" + o["status"].(string)
 	}
-	if o := orders[0].(map[string]any); o["id"] != id || o["total_amount"] != 75000.0 || o["payment_method"] != "arkcoin" || o["status"] != "paid" {
-		t.Errorf("order = %v", o)
+	want := map[string]string{pending: "shop|pending", pickup: "shop|ready_for_pickup", cancelled: "shop|cancelled"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("orders = %v, want %v", got, want)
+	}
+
+	detail := func(id string) (int, map[string]any) {
+		t.Helper()
+		status, body, _ := h.do(testutil.AsMember(testutil.Request("GET", "/api/member-portal/orders/"+id, nil), member))
+		data, _ := body["data"].(map[string]any)
+		return status, data
+	}
+	status, d := detail(pending)
+	if status != 200 || d["source"] != "shop" {
+		t.Fatalf("pending detail: %d %v", status, d)
+	}
+	o, shop := d["order"].(map[string]any), d["shop"].(map[string]any)
+	if o["subtotal"] != 100000.0 || o["discount_amount"] != 10000.0 || o["discount_reason"] != "LAUNCH" || o["total_amount"] != 102000.0 ||
+		o["venue_name"] != "Go Apparel" || o["payment_method"] != "xendit" {
+		t.Errorf("pending order = %v", o)
+	}
+	items := d["items"].([]any)
+	if len(items) != 1 || items[0].(map[string]any)["product_name"] != "Tee (L)" || items[0].(map[string]any)["total_amount"] != 100000.0 {
+		t.Errorf("items = %v", items)
+	}
+	delivery := shop["delivery"].(map[string]any)
+	if shop["status"] != "pending" || shop["shipping_cost"] != 12000.0 || shop["invoice_url"] != "https://pay.example/inv-1" ||
+		!strings.HasPrefix(shop["status_url"].(string), "/shop/order/") || delivery["method"] != "ship" ||
+		delivery["courier"] != "JNE REG" || delivery["area_label"] != "Coblong, Bandung" || delivery["eta_text"] != "1 - 2 days" || delivery["branch"] != nil {
+		t.Errorf("pending shop = %v", shop)
+	}
+
+	status, d = detail(pickup)
+	shop = d["shop"].(map[string]any)
+	delivery = shop["delivery"].(map[string]any)
+	if status != 200 || shop["invoice_url"] != nil || delivery["method"] != "pickup" || delivery["courier"] != nil ||
+		delivery["branch"].(map[string]any)["name"] != branchName || delivery["ready_at"] == nil || shop["paid_at"] == nil {
+		t.Errorf("pickup detail: %d %v", status, shop)
+	}
+
+	if status, _ := detail(foreign); status != 404 {
+		t.Errorf("another member's shop order: %d", status)
 	}
 }
 
