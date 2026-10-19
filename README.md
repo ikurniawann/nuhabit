@@ -14,7 +14,7 @@ HYROX gym and membership platform with supporting ERP modules (POS, HRIS, purcha
 | `mobile/` | Expo app. |
 | `docs/` | Documentation, HR/KPI templates. |
 
-The frontend forwards API paths owned by the Go backend to `BACKEND_URL` (see `frontend/src/lib/backend-routes.ts`), so the browser keeps calling one origin while routes move to Go one bounded context at a time.
+The frontend forwards every API route the Go backend registers to `BACKEND_URL` (see `frontend/src/lib/backend-routes.ts`), so the browser calls one origin. Next keeps no TypeScript copy of those routes.
 
 ## Commands
 

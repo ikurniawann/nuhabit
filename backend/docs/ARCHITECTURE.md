@@ -2,22 +2,22 @@
 
 ## Goal
 
-Move the ~850 Next.js API routes to Go without the frontend noticing. A route
-moves when its Go handler returns the same status, JSON and messages as the
-TypeScript one, proven by an integration test against a real database. Then
-its prefix joins `GO_BACKEND_PREFIXES` in `frontend/src/lib/backend-routes.ts`
-and the Next proxy rewrites matching requests to `BACKEND_URL`. The TypeScript
-route stays until the Go one has run in production; rollback is removing the
-prefix.
+Serve the NüHabit API from Go without the frontend noticing. A route moved
+when its Go handler returned the same status, JSON and messages as the
+TypeScript one, proven by an integration test against a real database. The
+Next proxy rewrites every method and path Go registers to `BACKEND_URL`, and
+the TypeScript handler is deleted, so each rule lives in one place. Rollback
+is redeploying the previous Go image (`backend/docs/DEPLOY.md`).
 
 ## Request path
 
 ```
 browser -> Next proxy (frontend/src/proxy.ts)
-             |-- path matches GO_BACKEND_PREFIXES and BACKEND_URL set
-             |      -> NextResponse.rewrite(BACKEND_URL + path + query)
-             |           -> Go: request id -> access log -> recover -> auth.Gate -> ServeMux -> module handler
-             '-- otherwise -> updateSession (Next auth gate) -> TS route
+             |-- Go registers method + path (go-routes.generated.json)
+             |      |-- BACKEND_URL set -> NextResponse.rewrite(BACKEND_URL + path + query)
+             |      |      -> Go: request id -> access log -> recover -> auth.Gate -> ServeMux -> module handler
+             |      '-- BACKEND_URL unset -> 503
+             '-- otherwise -> updateSession (Next auth gate) -> page or TS route
 ```
 
 The rewrite happens before the Next auth gate, so `auth.Gate` reproduces it for
@@ -114,12 +114,10 @@ Dependencies point inward: `http.go -> service.go -> domain`, and
    `testutil.CreateStaff` (grants IAM menus through a throwaway role) and
    `testutil.CreateMember`. Assert the exact TS bodies.
 4. Run `make generate` to refresh `frontend/src/lib/go-routes.generated.json`
-   (CI fails when it is stale), then add the path prefix to
-   `GO_BACKEND_PREFIXES`. The proxy forwards a request only when its path is
-   under a switched prefix and Go registers that method and path, so a route
-   left in Next (an upload that writes Next storage, a PDF) keeps working
-   under a switched prefix. A prefix matches whole segments, so `/api/gym`
-   does not catch `/api/gymnastics`.
+   (CI fails when it is stale). From then on the proxy sends that method and
+   path to Go, so delete the TypeScript handler in the same change:
+   `frontend/src/lib/backend-routes.test.ts` fails while a Next `route.ts`
+   shadows a Go route.
 
 `internal/modules/identity` (`GET /api/auth/me`) is the smallest worked example.
 
@@ -213,8 +211,8 @@ The Node runner and the Go runner share the table, so either can be used.
 
 ## Files, documents and images
 
-The routes still in Next (`NEXT_ONLY_ROUTES`) upload and serve files, render
-PDFs and spreadsheets, extract text and run OCR. These platform packages port
+The routes that stayed in Next longest uploaded and served files, rendered
+PDFs and spreadsheets, extracted text and ran OCR. These platform packages port
 the TS helpers so a module can move those routes; each has tests, and the
 `*Parity` tests run the real TS libraries under Node (skipped without `node`
 or `frontend/node_modules`).

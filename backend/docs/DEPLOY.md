@@ -1,10 +1,11 @@
 # Deploying the Go API
 
-The Go API runs on the same host as the Next container and serves every
-`/api` route. Next stays the only public entry point: its proxy forwards the
-routes in `frontend/src/lib/go-routes.generated.json` to `BACKEND_URL`. Unset
-`BACKEND_URL` and Next serves every route from the TS handlers, which stay in
-the codebase as the rollback path.
+The Go API runs on the same host as the Next container and owns every route
+in `frontend/src/lib/go-routes.generated.json`. Next stays the only public
+entry point: its proxy forwards those routes to `BACKEND_URL`. The Next image
+has no TypeScript handler for them, so with `BACKEND_URL` unset they answer
+503. Next serves only the `/api` routes Go does not register, such as
+`/api/health`, `/api/ready` and `/api/files/...`.
 
 ## Docker script (.gitlab/deploy-docker.sh)
 
@@ -25,8 +26,9 @@ One run does this, in order:
    and waits for `/login`.
 5. Requests `/api/auth/me` through Next and looks for `X-Request-Id`, a header
    only Go sets. If the API was unhealthy or the proxy does not reach it, the
-   script restarts Next without `BACKEND_URL` (TS serves everything) and exits
-   1, so the pipeline shows the failure while the site stays up.
+   script restarts Next without `BACKEND_URL` and exits 1, so the pipeline
+   shows the failure. Pages still render, but every Go route answers 503 until
+   you roll the API back (see Rollback).
 
 Both containers rotate their Docker logs (5 files of 50 MB). On SIGTERM the
 API stops accepting connections, closes the desktop SSE streams at once (the
@@ -38,7 +40,7 @@ The host that builds the images needs at least 6 GB of memory for Docker:
 
 | Variable | Default | Effect |
 |---|---|---|
-| `BACKEND_ENABLED` | `1` | `0` deploys Next alone and stops the API container (rollback). |
+| `BACKEND_ENABLED` | `1` | `0` deploys Next alone and stops the API container. Every Go route then answers 503, so this is no rollback. |
 | `MIGRATE_ON_DEPLOY` | `1` | `0` skips migrations and the drift check. |
 | `MIGRATE_VERIFY` | `1` | `0` skips the drift check only. |
 
@@ -93,16 +95,24 @@ changed objects; never edit an applied file.
 
 ## Rollback
 
-- Back to the TS handlers: redeploy with `BACKEND_ENABLED=0`.
-- Back to the previous build without rebuilding, on the host:
+Rollback means running the previous Go image. The TypeScript handlers for Go
+routes are gone, and `BACKEND_ENABLED=0` leaves those routes answering 503.
+Step 1 of the script tags the running images `:previous` before it builds, so
+the last good build stays on the host.
+
+- Previous API only, on the host:
 
   ```bash
-  docker tag <image>:previous <image>:latest
   docker tag <image>-api:previous <image>-api:latest
   ```
 
-  then `docker rm -f` both containers and rerun the `docker run` lines of the
-  script, or rerun the deploy job for the previous commit.
+  then `docker rm -f <CONTAINER_NAME>-api` and rerun the API `docker run` line
+  of the script. Next keeps its `BACKEND_URL`. A route that only the newer
+  build registers answers 404 from the older API.
+- Previous API and Next: also run `docker tag <image>:previous <image>:latest`,
+  remove both containers and rerun both `docker run` lines.
+- Or rerun the deploy job for the previous commit, which rebuilds both
+  images.
 
 Migrations do not roll back. The deltas from `20261004192000` on add objects,
 widen checks and replace functions, so an older build keeps working on the

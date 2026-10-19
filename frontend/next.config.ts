@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // Emits .next/standalone with a self-contained server.js and only the
   // node_modules files actually traced as reachable — the runtime image then
   // needs no package manager and none of the devDependencies.
-  // NOT output: "export": this app has ~580 route handlers plus rewrites()
-  // below, none of which a static export supports.
+  // NOT output: "export": the proxy (src/proxy.ts), the remaining /api route
+  // handlers and rewrites() below all need a server.
   output: "standalone",
   reactCompiler: true,
   allowedDevOrigins: ["192.168.0.109", "192.168.18.29", "localhost", "192.168.11.234"],

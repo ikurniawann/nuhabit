@@ -42,7 +42,7 @@ describe("proxy: member hostname", () => {
   // The whole portal 404s if these get prefixed: ~30 absolute calls to
   // /api/member-portal/* live in the member pages.
   test("passes /api through untouched", async () => {
-    expect(await call(MEMBER, "/api/member-portal/me")).toBeNull();
+    expect(await call(MEMBER, "/api/health")).toBeNull();
   });
 
   // Links in the app emit absolute /member/... paths; prefixing twice would
@@ -60,64 +60,30 @@ describe("proxy: other hostnames", () => {
   });
 });
 
-describe("proxy: Go backend prefixes", () => {
-  test("rewrites a listed /api prefix to BACKEND_URL with its query", async () => {
+describe("proxy: Go backend routes", () => {
+  const request = (method: string, path: string, host = DASH) =>
+    new NextRequest(new URL(`https://${host}${path}`), { method, headers: { host } });
+
+  test("rewrites a Go route to BACKEND_URL with its query, on every host", async () => {
     vi.stubEnv("BACKEND_URL", "http://go-api:8080/");
     vi.resetModules();
-    vi.doMock("@/lib/backend-routes", async (importOriginal) => {
-      const mod = await importOriginal<typeof import("@/lib/backend-routes")>();
-      return {
-        ...mod,
-        goBackendTarget: (pathname: string, method: string) =>
-          mod.goBackendTarget(pathname, method, { prefixes: ["/api/auth/me"] }),
-      };
-    });
     try {
       const { proxy: proxyWithGo } = await import("./proxy");
-      const req = new NextRequest(new URL(`https://${DASH}/api/auth/me?x=1`), {
-        method: "GET",
-        headers: { host: DASH, cookie: "nuhabit_session=abc" },
-      });
-      const res = await proxyWithGo(req);
-      expect(res.headers.get("x-middleware-rewrite")).toBe(
+      const rewrite = async (req: NextRequest) =>
+        (await proxyWithGo(req)).headers.get("x-middleware-rewrite");
+      expect(await rewrite(request("GET", "/api/auth/me?x=1"))).toBe(
         "http://go-api:8080/api/auth/me?x=1",
       );
-
       // Same rewrite on the member host, before its /member logic.
-      const member = new NextRequest(new URL(`https://${MEMBER}/api/auth/me`), {
-        headers: { host: MEMBER },
-      });
+      expect(await rewrite(request("GET", "/api/auth/me", MEMBER))).toBe(
+        "http://go-api:8080/api/auth/me",
+      );
       expect(
-        (await proxyWithGo(member)).headers.get("x-middleware-rewrite"),
-      ).toBe("http://go-api:8080/api/auth/me");
-    } finally {
-      vi.doUnmock("@/lib/backend-routes");
-      vi.unstubAllEnvs();
-      vi.resetModules();
-    }
-  });
-
-  test("sends a route Go does not serve to Next even under a switched prefix", async () => {
-    vi.stubEnv("BACKEND_URL", "http://go-api:8080");
-    vi.resetModules();
-    try {
-      const { proxy: proxyWithGo } = await import("./proxy");
-      const at = (method: string, path: string) =>
-        proxyWithGo(
-          new NextRequest(new URL(`https://${MEMBER}${path}`), {
-            method,
-            headers: { host: MEMBER },
-          }),
-        );
-      expect(
-        (await at("PUT", "/api/member-portal/profile")).headers.get(
-          "x-middleware-rewrite",
-        ),
+        await rewrite(request("PUT", "/api/member-portal/profile", MEMBER)),
       ).toBe("http://go-api:8080/api/member-portal/profile");
+      // DELETE is not a Go route: Next answers it.
       expect(
-        (await at("DELETE", "/api/member-portal/profile")).headers.get(
-          "x-middleware-rewrite",
-        ),
+        await rewrite(request("DELETE", "/api/member-portal/profile", MEMBER)),
       ).toBeNull();
     } finally {
       vi.unstubAllEnvs();
@@ -125,10 +91,13 @@ describe("proxy: Go backend prefixes", () => {
     }
   });
 
-  test("changes nothing while BACKEND_URL is unset", async () => {
+  test("answers 503 for a Go route while BACKEND_URL is unset", async () => {
     vi.stubEnv("BACKEND_URL", "");
     try {
-      expect(await call(MEMBER, "/api/member-portal/me")).toBeNull();
+      const res = await proxy(request("GET", "/api/member-portal/me", MEMBER));
+      expect(res.status).toBe(503);
+      expect(res.headers.get("x-middleware-rewrite")).toBeNull();
+      expect(await res.json()).toMatchObject({ success: false });
     } finally {
       vi.unstubAllEnvs();
     }

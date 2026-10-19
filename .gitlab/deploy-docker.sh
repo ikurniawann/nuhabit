@@ -100,10 +100,10 @@ fi
 DATABASE_URL_RUNTIME="postgresql://${DB_USER}:${DB_PASS_URLENCODED}@${DB_HOST}:${DB_PORT}/${DATABASE_NAME}"
 
 # Go API (backend/) jalan di host yang sama, satu Docker network dengan Next.
-# Semua route /api sudah di-port ke Go, jadi API aktif secara default dan
-# proxy Next meneruskan /api ke sana (BACKEND_URL). BACKEND_ENABLED=0 adalah
-# rollback: container API dihentikan dan Next melayani semua route lewat kode
-# TS yang masih ada.
+# Proxy Next meneruskan setiap route yang didaftarkan Go ke sana (BACKEND_URL);
+# Next tidak punya handler TS untuk route itu. BACKEND_ENABLED=0 menghentikan
+# container API dan route Go menjawab 503, jadi itu bukan rollback. Rollback =
+# menjalankan image API :previous (lihat backend/docs/DEPLOY.md).
 BACKEND_ENABLED="${BACKEND_ENABLED:-1}"
 NETWORK="${CONTAINER_NAME}-net"
 API_CONTAINER="${CONTAINER_NAME}-api"
@@ -242,8 +242,9 @@ start_next() {
 start_next ${BACKEND_ENV[@]+"${BACKEND_ENV[@]}"}
 
 # 4. Pastikan proxy Next benar-benar sampai ke Go: hanya Go yang memasang
-#    X-Request-Id. Bila tidak, Next dijalankan ulang tanpa BACKEND_URL agar
-#    TS melayani semua route, dan deploy ditandai gagal supaya terlihat.
+#    X-Request-Id. Bila tidak, Next dijalankan ulang tanpa BACKEND_URL
+#    (halaman tetap tampil, route Go menjawab 503) dan deploy ditandai gagal
+#    supaya terlihat.
 if [ ${#BACKEND_ENV[@]} -gt 0 ] &&
   ! curl -s -o /dev/null -D - "http://127.0.0.1:${HOST_PORT}/api/auth/me" | grep -qi '^x-request-id:'; then
   DEGRADED="proxy Next tidak meneruskan /api ke Go"
@@ -252,6 +253,6 @@ if [ ${#BACKEND_ENV[@]} -gt 0 ] &&
 fi
 
 if [ -n "$DEGRADED" ]; then
-  echo "Deploy selesai TANPA Go API (${DEGRADED}): Next melayani semua route. Perbaiki lalu deploy ulang." >&2
+  echo "Deploy selesai TANPA Go API (${DEGRADED}): route Go menjawab 503. Jalankan image API :previous (backend/docs/DEPLOY.md) atau perbaiki lalu deploy ulang." >&2
   exit 1
 fi

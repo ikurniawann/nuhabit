@@ -2,24 +2,20 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  GO_BACKEND_PREFIXES,
-  NEXT_ONLY_ROUTES,
   goBackendTarget,
+  goOwnsRoute,
   matchesGoPattern,
   type GoRoute,
 } from "./backend-routes";
-import goRoutes from "./go-routes.generated.json";
 
 const env = { BACKEND_URL: "http://go-api:8080" };
-const prefixes = ["/api/gym", "/api/member-portal/workouts/"];
 const routes: GoRoute[] = [
   { module: "t", method: "GET", path: "/api/gym" },
   { module: "t", method: "GET", path: "/api/gym/packages/{id}" },
   { module: "t", method: "POST", path: "/api/member-portal/workouts/{a}/{b}" },
-  { module: "t", method: "GET", path: "/api/member-portal/me" },
   { module: "t", method: "*", path: "/api/gym/members/{id}/{sub}" },
 ];
-const opts = { prefixes, routes, env };
+const opts = { routes, env };
 
 describe("matchesGoPattern", () => {
   it.each([
@@ -38,89 +34,75 @@ describe("matchesGoPattern", () => {
 });
 
 describe("goBackendTarget", () => {
-  it("returns BACKEND_URL + path when the prefix is switched and Go serves the route", () => {
-    expect(goBackendTarget("/api/gym", "GET", opts)).toBe(
-      "http://go-api:8080/api/gym",
-    );
-    expect(goBackendTarget("/api/gym/packages/1", "GET", opts)).toBe(
-      "http://go-api:8080/api/gym/packages/1",
-    );
-    expect(goBackendTarget("/api/gym/packages/1", "HEAD", opts)).toBe(
-      "http://go-api:8080/api/gym/packages/1",
-    );
+  it("returns BACKEND_URL + path for a route Go registers", () => {
+    expect(goBackendTarget("/api/gym", "GET", opts)).toEqual({
+      url: "http://go-api:8080/api/gym",
+    });
+    expect(goBackendTarget("/api/gym/packages/1", "HEAD", opts)).toEqual({
+      url: "http://go-api:8080/api/gym/packages/1",
+    });
     expect(
-      goBackendTarget("/api/member-portal/workouts/9/start", "POST", opts),
-    ).toBe("http://go-api:8080/api/member-portal/workouts/9/start");
+      goBackendTarget("/api/member-portal/workouts/9/start", "post", opts),
+    ).toEqual({ url: "http://go-api:8080/api/member-portal/workouts/9/start" });
   });
 
   it("forwards every method for a method-less pattern", () => {
-    expect(goBackendTarget("/api/gym/members/7/notes", "PATCH", opts)).toBe(
-      "http://go-api:8080/api/gym/members/7/notes",
-    );
-    expect(goBackendTarget("/api/gym/members/7/notes", "DELETE", opts)).toBe(
-      "http://go-api:8080/api/gym/members/7/notes",
-    );
+    for (const method of ["PATCH", "DELETE"]) {
+      expect(
+        goBackendTarget("/api/gym/members/7/notes", method, opts),
+      ).toEqual({ url: "http://go-api:8080/api/gym/members/7/notes" });
+    }
   });
 
-  it("leaves a method or path Go does not serve to Next", () => {
+  it("leaves a method or path Go does not register to Next", () => {
     expect(goBackendTarget("/api/gym/packages/1", "DELETE", opts)).toBeNull();
     expect(
       goBackendTarget("/api/gym/packages/1/thumbnail", "POST", opts),
     ).toBeNull();
-  });
-
-  it("needs a switched prefix even when Go serves the route", () => {
-    expect(goBackendTarget("/api/member-portal/me", "GET", opts)).toBeNull();
     expect(goBackendTarget("/api/gymnastics", "GET", opts)).toBeNull();
+    expect(goBackendTarget("/gym", "GET", opts)).toBeNull();
   });
 
-  it("is off without BACKEND_URL and outside /api", () => {
-    expect(goBackendTarget("/api/gym", "GET", { ...opts, env: {} })).toBeNull();
+  it("keeps a Go route away from Next while BACKEND_URL is unset", () => {
+    expect(goBackendTarget("/api/gym", "GET", { routes, env: {} })).toEqual({
+      url: null,
+    });
     expect(
       goBackendTarget("/api/gym", "GET", {
-        ...opts,
+        routes,
         env: { BACKEND_URL: "  " },
       }),
-    ).toBeNull();
-    expect(
-      goBackendTarget("/gym", "GET", { ...opts, prefixes: ["/gym"] }),
-    ).toBeNull();
+    ).toEqual({ url: null });
   });
 
   it("drops a trailing slash on BACKEND_URL", () => {
     expect(
       goBackendTarget("/api/gym", "GET", {
-        ...opts,
+        routes,
         env: { BACKEND_URL: "http://go:8080//" },
       }),
-    ).toBe("http://go:8080/api/gym");
+    ).toEqual({ url: "http://go:8080/api/gym" });
   });
 
   it("uses the generated manifest by default", () => {
+    expect(goBackendTarget("/api/auth/me", "GET", { env })).toEqual({
+      url: "http://go-api:8080/api/auth/me",
+    });
+    expect(goBackendTarget("/api/auth/me", "GET", { env: {} })).toEqual({
+      url: null,
+    });
     expect(
       goBackendTarget("/api/gym/credits/no/such/route", "GET", { env }),
     ).toBeNull();
-    expect(goBackendTarget("/api/auth/me", "GET", { env })).toBe(
-      "http://go-api:8080/api/auth/me",
-    );
-    expect(goBackendTarget("/api/auth/me", "GET", { env: {} })).toBeNull();
+  });
+
+  it("leaves the Next health and readiness probes to Next", () => {
+    expect(goBackendTarget("/api/health", "GET", { env })).toBeNull();
+    expect(goBackendTarget("/api/ready", "GET", { env })).toBeNull();
   });
 });
 
-describe("Go route manifest", () => {
-  const manifest = goRoutes as GoRoute[];
-
-  it("covers every switched prefix with at least one Go route", () => {
-    for (const prefix of GO_BACKEND_PREFIXES) {
-      expect(
-        manifest.some(
-          (r) => r.path === prefix || r.path.startsWith(`${prefix}/`),
-        ),
-        prefix,
-      ).toBe(true);
-    }
-  });
-});
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 
 /** Every exported HTTP method of every Next API route, as "METHOD /api/x/[id]". */
 function nextApiRoutes(): string[] {
@@ -133,11 +115,12 @@ function nextApiRoutes(): string[] {
       else if (entry.name === "route.ts") {
         const src = fs.readFileSync(full, "utf8");
         const route = "/" + path.relative(root, dir).split(path.sep).join("/");
-        for (const m of ["GET", "POST", "PUT", "PATCH", "DELETE"]) {
-          const exported =
-            new RegExp(
-              `export\\s+(const|async function|function)\\s+${m}\\b`,
-            ).test(src) || new RegExp(`export\\s*\\{[^}]*\\b${m}\\b`).test(src);
+        for (const m of HTTP_METHODS) {
+          const exported = [
+            `export\\s+(const|async function|function)\\s+${m}\\b`,
+            `export\\s+const\\s*\\{[^}]*\\b${m}\\b`,
+            `export\\s*\\{[^}]*\\b${m}\\b`,
+          ].some((re) => new RegExp(re).test(src));
           if (exported) out.push(`${m} ${route}`);
         }
       }
@@ -151,42 +134,53 @@ function nextApiRoutes(): string[] {
 const samplePath = (route: string) =>
   route.replace(/\[\.\.\.\w+\]/g, "a/b").replace(/\[\w+\]/g, "x1");
 
-describe("routes kept in Next", () => {
-  const allNext = nextApiRoutes();
+/**
+ * Handlers Go already takes through a wildcard or catch-all pattern, kept
+ * until their port lands. The proxy never reaches them. Delete an entry with
+ * its handler; never add one.
+ */
+const SHADOWED_UNTIL_PORTED = new Set([
+  "GET /api/accounting/cash-bank/cash-in",
+  "POST /api/accounting/cash-bank/cash-in",
+  "GET /api/accounting/cash-bank/cash-out",
+  "POST /api/accounting/cash-bank/cash-out",
+  "GET /api/hris/announcements/cover/[...path]",
+  "GET /api/hris/attendance/photo/[...path]",
+  "GET /api/hris/employees/[id]/contracts",
+  "POST /api/hris/employees/[id]/contracts",
+  "GET /api/hris/employees/[id]/lifecycle",
+  "GET /api/hris/employees/[id]/recruitment-documents",
+  "GET /api/hris/employees/[id]/shifts",
+  "PUT /api/hris/employees/[id]/shifts",
+  "PATCH /api/hris/employees/documents/[doc_id]",
+  "DELETE /api/hris/employees/documents/[doc_id]",
+  "GET /api/hris/leaves/attachment/[...path]",
+  "GET /api/interview/files/[...path]",
+  "GET /api/inventory/[id]/movements",
+  "POST /api/member-portal/gym/workouts/[id]/start",
+  "POST /api/member-portal/gym/workouts/sessions/[id]",
+  "GET /api/psikotes/files/[...path]",
+  "GET /api/public/booking/[slug]/availability",
+  "GET /api/public/booking/[slug]/catalog",
+  "GET /api/public/booking/[slug]/passes",
+  "GET /api/public/booking/[slug]/slots",
+  "GET /api/public/booking/pass-status/[token]",
+  "GET /api/public/booking/status/[token]",
+  "GET /api/public/shop/[slug]/catalog",
+  "GET /api/public/shop/order/[token]",
+  "GET /api/purchasing/inventory/[id]/movements",
+  "GET /api/purchasing/receipts/[...path]",
+]);
 
-  it("keeps a Go wildcard from taking a Next-only route", () => {
-    const nextOnly = ["GET /api/hris/attendance/export"];
-    expect(
-      goBackendTarget("/api/hris/attendance/export", "GET", { env, nextOnly }),
-    ).toBeNull();
-    expect(
-      goBackendTarget("/api/hris/attendance/export", "HEAD", { env, nextOnly }),
-    ).toBeNull();
-    expect(
-      goBackendTarget("/api/hris/attendance/7", "GET", { env, nextOnly }),
-    ).toBe("http://go-api:8080/api/hris/attendance/7");
-    expect(goBackendTarget("/api/hris/attendance/export", "GET", { env })).toBe(
-      "http://go-api:8080/api/hris/attendance/export",
-    );
-  });
-
-  it("lists only routes that exist in Next", () => {
-    const existing = new Set(allNext);
-    expect(NEXT_ONLY_ROUTES.filter((r) => !existing.has(r))).toEqual([]);
-  });
-
-  it("decides every Next route under a switched prefix: Go or NEXT_ONLY_ROUTES", () => {
-    const undecided = allNext.filter((entry) => {
+describe("Next API routes", () => {
+  it("never shadow a route Go registers", () => {
+    const shadowed = nextApiRoutes().filter((entry) => {
       const [method, route] = entry.split(" ");
-      const switched = GO_BACKEND_PREFIXES.some(
-        (p) => route === p || route.startsWith(`${p}/`),
-      );
       return (
-        switched &&
-        !NEXT_ONLY_ROUTES.includes(entry) &&
-        goBackendTarget(samplePath(route), method, { env }) === null
+        !SHADOWED_UNTIL_PORTED.has(entry) &&
+        goOwnsRoute(samplePath(route), method)
       );
     });
-    expect(undecided).toEqual([]);
+    expect(shadowed).toEqual([]);
   });
 });
