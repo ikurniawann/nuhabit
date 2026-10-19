@@ -19,7 +19,7 @@ import (
 
 // The HRIS routes that read or write files: clock-in/out selfies, the
 // attendance export, leave attachments, announcement covers and contract
-// documents (app/api/hris/**, formerly NEXT_ONLY_ROUTES).
+// documents.
 func (h handlers) fileRoutes() []module.Route {
 	kepegawaian := iam.HrisKepegawaian
 	r := func(pattern string, handler http.Handler) module.Route {

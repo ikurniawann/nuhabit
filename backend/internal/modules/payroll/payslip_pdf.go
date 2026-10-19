@@ -16,8 +16,8 @@ import (
 	"nuhabit/backend/internal/platform/ratelimit"
 )
 
-// The payroll routes that produce files: the payslip PDF (formerly in
-// NEXT_ONLY_ROUTES) and the KPI snapshot, whose collectors read five
+// The payroll routes that produce files: the payslip PDF and the KPI
+// snapshot, whose collectors read five
 // contexts through the KPI port.
 func (h *handler) fileRoutes() []module.Route {
 	limiter := ratelimit.New(h.svc.db)

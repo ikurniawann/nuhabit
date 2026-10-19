@@ -194,7 +194,7 @@ the same rule the other mappings follow.
   for orders without issues.
 - New pages per context: `production/wip` (WIP per order) and
   `production/batches` plus `production/batches/[id]` (batch cost).
-- `/api/production` joins `GO_BACKEND_PREFIXES`.
+- `/api/production` routes reach Go through the route manifest.
 
 ## Tests
 
