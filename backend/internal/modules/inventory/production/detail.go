@@ -364,6 +364,11 @@ func (h *handler) updateOrder(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	status := order.Str("status")
+	if in.action == "complete" || in.action == "cancel" {
+		if err := h.refuseStepped(ctx, order.Str("id")); err != nil {
+			return err
+		}
+	}
 	switch in.action {
 	case "recheck_stock":
 		all, shortages, err := h.checkStock(ctx, order.Str("id"), domain.CoverageMode(status), nil)
@@ -418,4 +423,19 @@ func (h *handler) setStatus(w http.ResponseWriter, r *http.Request, order *kit.R
 		return errNoRows
 	}
 	return kit.OK(w, kit.Obj("success", true, "data", rows[0], "message", message))
+}
+
+// refuseStepped keeps stock leaving through one path: an order that had
+// materials issued by the production module finishes with its receipts
+// (POST /api/production/orders/{id}/receipts), not the one-shot actions.
+func (h *handler) refuseStepped(ctx context.Context, orderID string) error {
+	var issued bool
+	if err := h.env.DB.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM manufacturing.production_issues
+		WHERE production_order_id = $1)`, orderID).Scan(&issued); err != nil {
+		return err
+	}
+	if issued {
+		return httpx.BadRequest("Bahan order ini sudah dikeluarkan bertahap. Selesaikan lewat Terima Hasil di Langkah Produksi.")
+	}
+	return nil
 }
