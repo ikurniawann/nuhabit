@@ -37,7 +37,7 @@ const host = ts.createCompilerHost(options);
 const CODE = /\.(ts|tsx|js|jsx|mjs|cjs)$/;
 const TEST = /\.(test|spec)\.(ts|tsx|js|jsx)$|\/__tests__\//;
 // Test helpers: dead once no test imports them.
-const SUPPORT = /\.test-util\.|\/src\/test\/|\/__mocks__\//;
+const SUPPORT = /\.test-(util|fixtures)\.|\/src\/test\/|\/__mocks__\//;
 const APP_ENTRY =
   /^(page|layout|route|loading|error|global-error|not-found|template|default|sitemap|robots|manifest|icon|apple-icon|opengraph-image|twitter-image)\.(ts|tsx|js|jsx)$/;
 const ROOT_ENTRY = /^(proxy|middleware|instrumentation(-client)?)\.(ts|js)$/;
