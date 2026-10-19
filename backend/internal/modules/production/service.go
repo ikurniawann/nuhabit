@@ -45,13 +45,19 @@ type Order struct {
 // Conversion is the order's overhead, labor, packaging and waste cost.
 func (o Order) Conversion() float64 { return o.Overhead + o.Labor + o.Packaging + o.Waste }
 
-// MaterialLine is one planned material with what was issued so far.
+// MaterialLine is one planned material with what was issued so far, in
+// the material's stock unit. RecipeQty, RecipeUnitID and UnitFactor keep
+// the recipe line it came from; they are nil on orders created before
+// recipe units were converted.
 type MaterialLine struct {
 	ID, RawMaterialID string
 	QtyPlanned        float64
 	UnitCost          float64
 	QtyIssued         float64
 	IssuedCost        float64
+	RecipeQty         *float64
+	RecipeUnitID      *string
+	UnitFactor        *float64
 }
 
 func (l MaterialLine) domain() domain.Line {
@@ -254,6 +260,9 @@ func (s *Service) Explode(ctx context.Context, in ExplodeInput) (*ExplodeView, e
 	if err != nil {
 		return nil, err
 	}
+	if err := s.toStockUnits(ctx, q, root, recipes); err != nil {
+		return nil, err
+	}
 	x, err := domain.Explode(root, in.Qty, recipes, materials)
 	var cycle *domain.CycleError
 	var depth *domain.DepthError
@@ -317,6 +326,38 @@ func (s *Service) loadGraph(ctx context.Context, q database.Querier, root []doma
 	return recipes, materials, nil
 }
 
+// toStockUnits sets the stock unit factor and the recipe unit name of every
+// component of root and recipes.
+func (s *Service) toStockUnits(ctx context.Context, q database.Querier, root []domain.Component, recipes domain.Recipes) error {
+	lists := [][]domain.Component{root}
+	for _, cs := range recipes {
+		lists = append(lists, cs)
+	}
+	var materialIDs, unitIDs []string
+	for _, cs := range lists {
+		for _, c := range cs {
+			materialIDs = append(materialIDs, c.RawMaterialID)
+			unitIDs = append(unitIDs, c.SatuanID)
+		}
+	}
+	factors, err := s.ports.Catalog.RecipeFactors(ctx, q, materialIDs, unitIDs)
+	if err != nil {
+		return err
+	}
+	names, err := s.ports.Catalog.UnitNames(ctx, q, unique(unitIDs))
+	if err != nil {
+		return err
+	}
+	i := 0
+	for _, cs := range lists {
+		for k := range cs {
+			cs[k].Factor, cs[k].RecipeUnit = factors[i], names[cs[k].SatuanID]
+			i++
+		}
+	}
+	return nil
+}
+
 func componentIDs(cs []domain.Component) []string {
 	ids := make([]string, len(cs))
 	for i, c := range cs {
@@ -369,13 +410,23 @@ func (s *Service) flow(ctx context.Context, q database.Querier, o *Order) (*Flow
 	if err != nil {
 		return nil, err
 	}
+	var unitIDs []string
+	for _, l := range lines {
+		if l.RecipeUnitID != nil {
+			unitIDs = append(unitIDs, *l.RecipeUnitID)
+		}
+	}
+	units, err := s.ports.Catalog.UnitNames(ctx, q, unique(unitIDs))
+	if err != nil {
+		return nil, err
+	}
 	var skus []Sku
 	if o.Context == "product" && o.OutputType == "FINISHED_GOOD" && o.ProductID != nil {
 		if _, skus, err = s.ports.Pos.Variants(ctx, q, *o.ProductID); err != nil {
 			return nil, err
 		}
 	}
-	return buildFlow(o, lines, issues, batches, materials, skus), nil
+	return buildFlow(o, lines, issues, batches, materials, units, skus), nil
 }
 
 /* ── issue ───────────────────────────────────────────────────────────── */

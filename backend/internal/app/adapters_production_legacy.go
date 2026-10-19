@@ -65,6 +65,10 @@ func (productionItems) Stock(ctx context.Context, q database.Querier, ids []stri
 		FROM v_raw_materials_stock WHERE id = ANY($1::uuid[])`, ids))
 }
 
+func (productionItems) RecipeFactors(ctx context.Context, q database.Querier, materialIDs, unitIDs []string) ([]float64, error) {
+	return recipeFactors(ctx, q, materialIDs, unitIDs)
+}
+
 func (productionItems) Units(ctx context.Context, q database.Querier, ids []string) (map[string]*kit.Row, error) {
 	if len(ids) == 0 {
 		return map[string]*kit.Row{}, nil

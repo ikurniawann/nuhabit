@@ -102,6 +102,19 @@ func TestPacksAndUnits(t *testing.T) {
 	if f := PackFactor(nil, nil, "x"); f != 1 {
 		t.Error(f)
 	}
+	// Recipe units follow v_products_cogs: big unit × konversi, small or
+	// no unit 1, a pack row its own factor, an unknown unit 1.
+	for unit, want := range map[string]float64{"ctn": 24, "pcs": 1, "": 1, "unknown": 1} {
+		if f := RecipeFactor(m, nil, unit); f != want {
+			t.Errorf("recipe unit %q: %v", unit, f)
+		}
+	}
+	if f := RecipeFactor(m, []Pack{{SatuanID: "box", QtyInBaseUnit: 12}}, "box"); f != 12 {
+		t.Errorf("recipe pack %v", f)
+	}
+	if f := RecipeFactor(&Material{SatuanBesarID: s("kg")}, nil, "kg"); f != 1 {
+		t.Errorf("a material without a small unit counts in its big unit: %v", f)
+	}
 	if h := MasterHargaBeliFromBaseUnitCost(500, m); h != 12000 {
 		t.Error(h)
 	}

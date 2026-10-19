@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format";
-import { displayName } from "@/lib/purchasing/production-ui-display";
+import { displayName, recipeUnitNote } from "@/lib/purchasing/production-ui-display";
 import { bomLineRequirement } from "@/lib/purchasing/production-ui-order-form";
 import type { CogsMaterial } from "../types";
 
@@ -105,7 +105,9 @@ export function ProductionBomPreview({
                 </tr>
               ) : (
                 materials.map((material) => {
-                  const { required, lineTotal, shortage } = bomLineRequirement(material, plannedQty);
+                  const { required, recipeRequired, lineTotal, shortage } = bomLineRequirement(material, plannedQty);
+                  const stockUnit = material.satuan_stok || material.satuan;
+                  const note = recipeUnitNote(recipeRequired, material.satuan, stockUnit);
                   return (
                     <tr key={material.bahan_id} className="hover:bg-gray-50/80">
                       <td className="px-4 py-3 align-top">
@@ -129,7 +131,10 @@ export function ProductionBomPreview({
                         <p className="text-xs text-gray-500">Susut {formatNumber(material.waste_percentage, 3)}%</p>
                       </td>
                       <td className="px-4 py-3 text-right align-top tabular-nums font-medium text-gray-900 whitespace-nowrap">
-                        {formatNumber(required, 3)}
+                        <p>
+                          {formatNumber(required, 3)} {note ? stockUnit : ""}
+                        </p>
+                        {note && <p className="text-xs font-normal text-gray-500">{note}</p>}
                       </td>
                       <td className="px-4 py-3 text-right align-top tabular-nums whitespace-nowrap">
                         <span className={shortage > 0 ? "font-medium text-red-600" : "font-medium text-gray-900"}>

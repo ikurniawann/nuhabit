@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { recipeUnitNote } from "@/lib/purchasing/production-ui-display";
 import {
   buildIssuePayload,
   initIssueRows,
@@ -81,14 +82,19 @@ function IssueMaterialsPanel({ flow, submitting, onClose, onSubmit }: Omit<Issue
                     <p className="text-xs text-gray-500">{m.kode}</p>
                   </td>
                   <td className="py-2 text-right text-gray-700">
-                    {formatNumber(m.qty_planned, 4)} {m.satuan}
+                    <p>
+                      {formatNumber(m.qty_planned, 4)} {m.satuan}
+                    </p>
+                    {recipeUnitNote(m.recipe_qty, m.recipe_satuan, m.satuan) && (
+                      <p className="text-xs text-gray-500">{recipeUnitNote(m.recipe_qty, m.recipe_satuan, m.satuan)}</p>
+                    )}
                   </td>
                   <td className="py-2 text-right text-gray-700">{formatNumber(m.qty_issued, 4)}</td>
                   <td className="py-2 text-right text-gray-700">{formatNumber(m.qty_onhand, 4)}</td>
                   <td className="py-2">
                     <div className="flex flex-col items-end gap-1">
                       <Input
-                        aria-label={`Jumlah ${m.nama} yang dikeluarkan`}
+                        aria-label={`Jumlah ${m.nama} yang dikeluarkan (${m.satuan || "satuan stok"})`}
                         value={rows[i]?.qty ?? ""}
                         onChange={(event) => setQty(m.id, event.target.value)}
                         type="number"

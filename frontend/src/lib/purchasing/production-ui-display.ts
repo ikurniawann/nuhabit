@@ -6,6 +6,19 @@ export function toNumber(value: unknown): number {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+/**
+ * Keterangan satuan resep bila berbeda dari satuan stok, mis. "= 1 Kilogram
+ * di resep". Null bila sama atau order lama tanpa data resep.
+ */
+export function recipeUnitNote(
+  recipeQty: number | string | null | undefined,
+  recipeUnit: string | null | undefined,
+  stockUnit: string | null | undefined
+): string | null {
+  if (recipeQty === null || recipeQty === undefined || !recipeUnit || recipeUnit === stockUnit) return null;
+  return `= ${Number(toNumber(recipeQty).toFixed(4)).toLocaleString("id-ID")} ${recipeUnit} di resep`;
+}
+
 /** Nama item tanpa akhiran timestamp (mis. "Saus Tomat 1712345678901" dari impor lama). */
 export function displayName(value?: string | null): string {
   return (value || "-").replace(/\s+\d{8,}$/g, "").trim();

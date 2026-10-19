@@ -22,13 +22,14 @@ type Ports struct {
 /* ── catalog (inventory: item.raw_materials, item.products) ──────────── */
 
 // Material is a raw material with its stock, as the explosion and the
-// issue screen show it. SourceProductID is set on the WIP mirror of a
-// product.
+// issue screen show it. Unit and UnitID are the stock unit the balances
+// count in. SourceProductID is set on the WIP mirror of a product.
 type Material struct {
 	ID              string
 	Kode            string
 	Nama            string
 	Unit            string
+	UnitID          string
 	QtyOnHand       float64
 	AvgCost         float64
 	SourceProductID string
@@ -48,6 +49,11 @@ type Catalog interface {
 	Materials(ctx context.Context, q database.Querier, ids []string) (map[string]Material, error)
 	// Product is nil when the product does not exist.
 	Product(ctx context.Context, q database.Querier, id string) (*Product, error)
+	// RecipeFactors converts recipe units into stock units: the i-th
+	// factor is for materialIDs[i] in unitIDs[i] ("" = the stock unit).
+	RecipeFactors(ctx context.Context, q database.Querier, materialIDs, unitIDs []string) ([]float64, error)
+	// UnitNames maps unit ids to their names.
+	UnitNames(ctx context.Context, q database.Querier, ids []string) (map[string]string, error)
 }
 
 /* ── stock (inventory ledgers) ───────────────────────────────────────── */

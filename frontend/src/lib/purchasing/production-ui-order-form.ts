@@ -43,11 +43,17 @@ export function aggregateAdditionalCosts(lines: AdditionalCostLine[]) {
 
 export type CostTotals = ReturnType<typeof aggregateAdditionalCosts>;
 
-/** Kebutuhan dan biaya satu baris BOM untuk `plannedQty` unit output. */
+/**
+ * Kebutuhan dan biaya satu baris BOM untuk `plannedQty` unit output.
+ * `required` dalam satuan stok (dibandingkan dengan stok), `recipeRequired`
+ * dalam satuan resep.
+ */
 export function bomLineRequirement(material: CogsMaterial, plannedQty: number) {
-  const required = material.effective_qty * plannedQty;
+  const recipeRequired = material.effective_qty * plannedQty;
+  const required = recipeRequired * (material.stock_factor ?? 1);
   return {
     required,
+    recipeRequired,
     lineTotal: material.subtotal * plannedQty,
     shortage: Math.max(0, required - material.qty_available),
   };

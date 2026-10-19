@@ -14,6 +14,17 @@ type BaseUnitResolver func(rawMaterialID string, satuanID *string) float64
 
 // NewBaseUnitResolver loads the materials' legacy units and active packs.
 func NewBaseUnitResolver(ctx context.Context, q database.Querier, rawMaterialIDs []string) (BaseUnitResolver, error) {
+	return newResolver(ctx, q, rawMaterialIDs, domain.PackFactor)
+}
+
+// NewRecipeUnitResolver converts recipe (BOM) units into the stock unit
+// with domain.RecipeFactor.
+func NewRecipeUnitResolver(ctx context.Context, q database.Querier, rawMaterialIDs []string) (BaseUnitResolver, error) {
+	return newResolver(ctx, q, rawMaterialIDs, domain.RecipeFactor)
+}
+
+func newResolver(ctx context.Context, q database.Querier, rawMaterialIDs []string,
+	factor func(*domain.Material, []domain.Pack, string) float64) (BaseUnitResolver, error) {
 	seen := map[string]bool{}
 	var ids []string
 	for _, id := range rawMaterialIDs {
@@ -54,6 +65,6 @@ func NewBaseUnitResolver(ctx context.Context, q database.Querier, rawMaterialIDs
 		if satuanID != nil {
 			s = *satuanID
 		}
-		return domain.PackFactor(materials[rawMaterialID], packs[rawMaterialID], s)
+		return factor(materials[rawMaterialID], packs[rawMaterialID], s)
 	}, nil
 }

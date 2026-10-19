@@ -6,13 +6,17 @@ import (
 	"testing"
 )
 
+func comp(id string, qty, waste float64) Component {
+	return Component{RawMaterialID: id, QtyPer: qty, WasteFactor: waste}
+}
+
 // A cake: flour (bought) and a cream filling made in-house from milk and
 // sugar; sugar syrup is itself made from sugar.
 func cakeRecipe() ([]Component, Recipes, map[string]Material) {
-	root := []Component{{"flour", 0.5, 0}, {"cream", 0.2, 0.1}}
+	root := []Component{comp("flour", 0.5, 0), comp("cream", 0.2, 0.1)}
 	recipes := Recipes{
-		"cream": {{"milk", 0.8, 0}, {"syrup", 0.5, 0}},
-		"syrup": {{"sugar", 0.6, 0}},
+		"cream": {comp("milk", 0.8, 0), comp("syrup", 0.5, 0)},
+		"syrup": {comp("sugar", 0.6, 0)},
 	}
 	materials := map[string]Material{
 		"flour": {ID: "flour", Kode: "F", Nama: "Tepung", QtyOnHand: 3, AvgCost: 10000},
@@ -61,9 +65,9 @@ func TestExplodeLevels(t *testing.T) {
 }
 
 func TestExplodeCycleAndDepth(t *testing.T) {
-	recipes := Recipes{"a": {{"b", 1, 0}}, "b": {{"a", 1, 0}}}
+	recipes := Recipes{"a": {comp("b", 1, 0)}, "b": {comp("a", 1, 0)}}
 	materials := map[string]Material{"a": {ID: "a", Kode: "A", Nama: "Adonan"}, "b": {ID: "b", Kode: "B", Nama: "Bumbu"}}
-	_, err := Explode([]Component{{"a", 1, 0}}, 1, recipes, materials)
+	_, err := Explode([]Component{comp("a", 1, 0)}, 1, recipes, materials)
 	var cycle *CycleError
 	if !errors.As(err, &cycle) || err.Error() != "Resep berputar: A Adonan memakai dirinya sendiri lewat komponennya" {
 		t.Fatalf("cycle %v", err)
@@ -71,12 +75,31 @@ func TestExplodeCycleAndDepth(t *testing.T) {
 
 	deep := Recipes{}
 	for i := 0; i < MaxDepth+1; i++ {
-		deep[string(rune('a'+i))] = []Component{{string(rune('a' + i + 1)), 1, 0}}
+		deep[string(rune('a'+i))] = []Component{comp(string(rune('a'+i+1)), 1, 0)}
 	}
-	_, err = Explode([]Component{{"a", 1, 0}}, 1, deep, map[string]Material{})
+	_, err = Explode([]Component{comp("a", 1, 0)}, 1, deep, map[string]Material{})
 	var depth *DepthError
 	if !errors.As(err, &depth) {
 		t.Fatalf("depth %v", err)
+	}
+}
+
+// A recipe line in the big unit counts Factor stock units: 0.25 kg of
+// flour stocked in grams is 250 g per unit.
+func TestExplodeStockUnits(t *testing.T) {
+	root := []Component{{RawMaterialID: "flour", QtyPer: 0.25, SatuanID: "kg", RecipeUnit: "Kilogram", Factor: 1000}}
+	materials := map[string]Material{"flour": {ID: "flour", Nama: "Tepung", Unit: "Gram", QtyOnHand: 600, AvgCost: 20}}
+	x, err := Explode(root, 4, Recipes{}, materials)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := x.Lines[0]
+	if n.QtyRequired != 1000 || n.QtyPer != 250 || n.RecipeQtyPer != 0.25 || n.RecipeUnit != "Kilogram" || n.Unit != "Gram" ||
+		n.UnitFactor != 1000 || n.ShortageQty != 400 || n.TotalCost != 20000 || x.Leaves[0].QtyRequired != 1000 {
+		t.Fatalf("stock units %+v", n)
+	}
+	if comp("x", 2, 0).UnitFactor() != 1 || comp("x", 2, 0).Gross(3) != 6 {
+		t.Fatal("no factor is 1")
 	}
 }
 

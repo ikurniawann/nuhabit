@@ -24,6 +24,9 @@ const material = (over: Partial<ProductionFlowMaterial>): ProductionFlowMaterial
   unit_cost: 10000,
   issued_cost: 0,
   qty_onhand: 10,
+  recipe_qty: null,
+  recipe_satuan: null,
+  unit_factor: null,
   ...over,
 });
 

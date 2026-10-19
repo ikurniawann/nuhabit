@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatNumber } from "@/lib/format";
-import { displayName, shortagePoHref, toNumber } from "@/lib/purchasing/production-ui-display";
+import { displayName, recipeUnitNote, shortagePoHref, toNumber } from "@/lib/purchasing/production-ui-display";
 import type { ProductionDetail } from "../types";
 
 export const ORDER_ACTION_BUTTON =
@@ -53,6 +53,7 @@ export function ProductionOrderMaterialsCard({ order, shortageCount, poInsertRou
             <tbody className="divide-y divide-gray-100">
               {order.materials.map((material) => {
                 const shortage = toNumber(material.stock?.shortage_qty);
+                const note = recipeUnitNote(material.recipe_qty, material.recipe_satuan?.nama, material.satuan?.nama);
                 return (
                   <tr key={material.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
@@ -64,7 +65,10 @@ export function ProductionOrderMaterialsCard({ order, shortageCount, poInsertRou
                         {material.satuan?.nama?.trim() || "-"}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatNumber(material.qty_planned, 3)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      <p>{formatNumber(material.qty_planned, 3)}</p>
+                      {note && <p className="text-xs text-gray-500">{note}</p>}
+                    </td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatNumber(material.qty_actual, 3)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatNumber(material.stock?.qty_onhand, 3)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">

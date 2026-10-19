@@ -62,6 +62,11 @@ type FlowMaterialView struct {
 	UnitCost      float64 `json:"unit_cost"`
 	IssuedCost    float64 `json:"issued_cost"`
 	QtyOnHand     float64 `json:"qty_onhand"`
+	// The recipe line in its own unit; null on orders created before
+	// recipe units were converted (their quantities are as stored).
+	RecipeQty    *float64 `json:"recipe_qty"`
+	RecipeSatuan *string  `json:"recipe_satuan"`
+	UnitFactor   *float64 `json:"unit_factor"`
 }
 
 // IssueLineView is one issued material.
@@ -167,7 +172,7 @@ func batchView(b Batch, plannedQty float64) BatchView {
 	}
 }
 
-func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, materials map[string]Material, skus []Sku) *FlowView {
+func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, materials map[string]Material, units map[string]string, skus []Sku) *FlowView {
 	f := &FlowView{Order: orderView(o), Materials: make([]FlowMaterialView, len(lines)), Issues: make([]IssueView, len(issues)),
 		Batches: make([]BatchView, len(batches)), VariantSkus: skus, Stepped: len(issues) > 0}
 	if f.VariantSkus == nil {
@@ -178,7 +183,12 @@ func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, 
 		m := materials[l.RawMaterialID]
 		f.Materials[i] = FlowMaterialView{ID: l.ID, RawMaterialID: l.RawMaterialID, Kode: m.Kode, Nama: m.Nama, Satuan: m.Unit,
 			QtyPlanned: l.QtyPlanned, QtyIssued: l.QtyIssued, QtyRemaining: domain.RoundQty(math.Max(0, l.QtyPlanned-l.QtyIssued)),
-			UnitCost: l.UnitCost, IssuedCost: l.IssuedCost, QtyOnHand: m.QtyOnHand}
+			UnitCost: l.UnitCost, IssuedCost: l.IssuedCost, QtyOnHand: m.QtyOnHand,
+			RecipeQty: l.RecipeQty, UnitFactor: l.UnitFactor}
+		if l.RecipeUnitID != nil {
+			name := units[*l.RecipeUnitID]
+			f.Materials[i].RecipeSatuan = &name
+		}
 		dl[i] = l.domain()
 		f.Wip.IssuedCost += l.IssuedCost
 	}

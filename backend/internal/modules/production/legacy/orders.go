@@ -187,13 +187,31 @@ func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) error {
 	for id, s := range stock {
 		avgCost[id] = s.Num("avg_cost")
 	}
+	// Recipe quantities are in the BOM unit; the order counts in the
+	// material's stock unit, the unit its balance and average cost use.
+	materialIDs, unitIDs := make([]string, len(lines)), make([]string, len(lines))
+	for i, l := range lines {
+		materialIDs[i], unitIDs[i] = l.Str("raw_material_id"), l.Str("satuan_id")
+	}
+	factors, err := h.ports.Items.RecipeFactors(ctx, db, materialIDs, unitIDs)
+	if err != nil {
+		return err
+	}
 	materials := make([]*kit.Row, len(lines))
 	plannedCost := 0.0
 	for i, l := range lines {
-		qty := l.Num("qty_required") * (1 + l.Num("waste_factor")) * in.plannedQty
+		recipeQty := l.Num("qty_required") * (1 + l.Num("waste_factor")) * in.plannedQty
+		qty := recipeQty * factors[i]
 		unit := avgCost[l.Str("raw_material_id")]
-		materials[i] = kit.Obj("raw_material_id", l.Get("raw_material_id"), "satuan_id", l.Get("satuan_id"), "qty_planned", qty,
-			"qty_actual", qty, "waste_qty", 0.0, "unit_cost", unit, "total_cost", qty*unit)
+		stockUnit := l.Get("satuan_id")
+		if s := stock[l.Str("raw_material_id")]; s != nil {
+			if id := kit.FirstNonEmpty(s.Str("satuan_kecil_id"), s.Str("satuan_besar_id")); id != "" {
+				stockUnit = id
+			}
+		}
+		materials[i] = kit.Obj("raw_material_id", l.Get("raw_material_id"), "satuan_id", stockUnit, "qty_planned", qty,
+			"qty_actual", qty, "waste_qty", 0.0, "unit_cost", unit, "total_cost", qty*unit,
+			"recipe_qty", recipeQty, "recipe_satuan_id", l.Get("satuan_id"), "unit_factor", factors[i])
 		plannedCost += qty * unit
 	}
 	hpp := (plannedCost + in.overhead + in.labor + in.packaging + in.waste) / in.plannedQty

@@ -141,6 +141,28 @@ func PackFactor(m *Material, rows []Pack, satuanID string) float64 {
 	return 1
 }
 
+// RecipeFactor converts a recipe (BOM) unit of a material into its stock
+// unit, the base unit the inventory balances count in. It follows
+// v_products_cogs: a line in the satuan besar is konversi_factor small
+// units, a line in the satuan kecil or without a unit is one. A pack in
+// item.raw_material_unit_conversions overrides both; an unknown unit is
+// taken as the stock unit.
+func RecipeFactor(m *Material, rows []Pack, satuanID string) float64 {
+	if m == nil || satuanID == "" {
+		return 1
+	}
+	var usable []Pack
+	for _, p := range rows {
+		if p.QtyInBaseUnit > 0 {
+			usable = append(usable, p)
+		}
+	}
+	if p := findPack(ResolvePacks(*m, usable), satuanID); p != nil {
+		return p.QtyInBaseUnit
+	}
+	return 1
+}
+
 // MasterHargaBeliFromBaseUnitCost scales a base-unit cost to the satuan
 // besar price kept on the master (masterHargaBeliFromBaseUnitCost).
 func MasterHargaBeliFromBaseUnitCost(baseUnitCost float64, m *Material) float64 {

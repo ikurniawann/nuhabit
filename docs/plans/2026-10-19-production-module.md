@@ -213,6 +213,36 @@ the same rule the other mappings follow.
 The owner approved six decisions on 2026-10-19. Each one below says what
 changed and how it works.
 
+### 4. Orders count materials in the stock unit
+
+A BOM line keeps `qty_required` in its own unit (`satuan_id`). Production
+orders and the explosion convert it into the material's stock unit, the
+unit `inventory.qty_available` and `unit_cost` count in (the satuan kecil
+when the material has one, else the satuan besar). The factor is
+`inventory/domain.RecipeFactor`, the conversion `v_products_cogs` uses: a
+line in the satuan besar is `konversi_factor` small units, a line in the
+satuan kecil or without a unit is one, and an active row of
+`item.raw_material_unit_conversions` for that unit overrides both.
+Production reaches it through the catalog port (`RecipeFactors`, backed by
+`ledger.NewRecipeUnitResolver`).
+
+- Order creation stores `qty_planned`, `qty_actual` and `satuan_id` in the
+  stock unit, and the recipe line as `recipe_qty`, `recipe_satuan_id` and
+  `unit_factor` (delta `20261020090000_production_stock_units.sql`). The
+  planned material cost is stock quantity × stock average cost.
+- Issue, WIP and costing work on those stock quantities.
+- The explosion returns `qty_per_parent` and `qty_required` in the stock
+  unit (`satuan`) plus `recipe_qty_per`, `recipe_satuan` and `unit_factor`.
+- The COGS breakdown adds `stock_factor` and `satuan_stok`, so the new
+  order form compares stock with the requirement in the same unit.
+- The UI shows the stock quantity and, where the recipe unit differs, the
+  recipe quantity under it ("= 1 Kilogram di resep"): new order form, order
+  detail, Langkah Produksi and Keluarkan Bahan.
+- Existing orders keep their stored quantities. Their recipe columns stay
+  NULL and nothing is backfilled; an order created before the delta that
+  mixed BOM and stock units keeps that mix until it is finished or
+  cancelled.
+
 ### 6. One module writes the manufacturing tables
 
 The order handlers (`/api/purchasing/production/orders`, the recipe lists,
@@ -248,7 +278,4 @@ deleted.
 2. Returning unused issued materials to stock: not built. A final receipt
    leaves the remaining WIP on the batch cost.
 3. Which COA accounts hold WIP and applied overhead?
-4. BOM units: production orders (legacy and new) use `qty_required` as is;
-   the COGS view converts BOM units to the stock unit. Should orders convert
-   too?
 5. Should the explosion create sub-orders for intermediate shortages?

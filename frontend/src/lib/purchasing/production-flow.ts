@@ -39,6 +39,10 @@ export type ProductionFlowMaterial = {
   unit_cost: number;
   issued_cost: number;
   qty_onhand: number;
+  /** Baris resep dalam satuannya sendiri; null untuk order sebelum konversi satuan. */
+  recipe_qty: number | null;
+  recipe_satuan: string | null;
+  unit_factor: number | null;
 };
 
 export type ProductionIssue = {

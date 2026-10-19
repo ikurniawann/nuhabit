@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/modules/production"
@@ -40,8 +42,8 @@ func (productionCatalog) Materials(ctx context.Context, q database.Querier, ids 
 		return out, nil
 	}
 	rows, err := q.Query(ctx, `SELECT id::text, COALESCE(kode, ''), COALESCE(nama, ''),
-		COALESCE(satuan_kecil_nama, satuan_besar_nama, ''), qty_onhand::float8, avg_cost::float8,
-		COALESCE(source_product_id::text, '')
+		COALESCE(satuan_kecil_nama, satuan_besar_nama, ''), COALESCE(satuan_kecil_id, satuan_besar_id)::text,
+		qty_onhand::float8, avg_cost::float8, COALESCE(source_product_id::text, '')
 		FROM v_raw_materials_stock WHERE id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
@@ -49,12 +51,52 @@ func (productionCatalog) Materials(ctx context.Context, q database.Querier, ids 
 	defer rows.Close()
 	for rows.Next() {
 		var m production.Material
-		if err := rows.Scan(&m.ID, &m.Kode, &m.Nama, &m.Unit, &m.QtyOnHand, &m.AvgCost, &m.SourceProductID); err != nil {
+		var unitID *string
+		if err := rows.Scan(&m.ID, &m.Kode, &m.Nama, &m.Unit, &unitID, &m.QtyOnHand, &m.AvgCost, &m.SourceProductID); err != nil {
 			return nil, err
+		}
+		if unitID != nil {
+			m.UnitID = *unitID
 		}
 		out[m.ID] = m
 	}
 	return out, rows.Err()
+}
+
+// RecipeFactors converts recipe units with ledger's recipe unit resolver
+// (domain.RecipeFactor, the conversion of v_products_cogs).
+func (productionCatalog) RecipeFactors(ctx context.Context, q database.Querier, materialIDs, unitIDs []string) ([]float64, error) {
+	return recipeFactors(ctx, q, materialIDs, unitIDs)
+}
+
+func recipeFactors(ctx context.Context, q database.Querier, materialIDs, unitIDs []string) ([]float64, error) {
+	resolve, err := ledger.NewRecipeUnitResolver(ctx, q, materialIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]float64, len(materialIDs))
+	for i, id := range materialIDs {
+		unit := unitIDs[i]
+		out[i] = resolve(id, &unit)
+	}
+	return out, nil
+}
+
+func (productionCatalog) UnitNames(ctx context.Context, q database.Querier, ids []string) (map[string]string, error) {
+	out := map[string]string{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(ctx, `SELECT id::text, COALESCE(nama, '') FROM item.units WHERE id = ANY($1::uuid[])`, ids)
+	if err != nil {
+		return nil, err
+	}
+	var id, name string
+	_, err = pgx.ForEachRow(rows, []any{&id, &name}, func() error {
+		out[id] = name
+		return nil
+	})
+	return out, err
 }
 
 func (productionCatalog) Product(ctx context.Context, q database.Querier, id string) (*production.Product, error) {

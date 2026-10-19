@@ -41,6 +41,9 @@ type Items interface {
 	// qty_on_order, avg_cost, material_type, source_product_id, unit ids and
 	// names, konversi_factor.
 	Stock(ctx context.Context, q database.Querier, ids []string) (map[string]*kit.Row, error)
+	// RecipeFactors converts recipe units into stock units: the i-th factor
+	// is for materialIDs[i] in unitIDs[i] ("" = the stock unit).
+	RecipeFactors(ctx context.Context, q database.Querier, materialIDs, unitIDs []string) ([]float64, error)
 	// Units is the item.units row of each id.
 	Units(ctx context.Context, q database.Querier, ids []string) (map[string]*kit.Row, error)
 	// MaterialEmbeds and UnitEmbeds are row_to_json of the given columns

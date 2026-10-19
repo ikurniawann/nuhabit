@@ -15,16 +15,32 @@ import (
 const MaxDepth = 8
 
 // Component is one line of a recipe: QtyPer of a raw material per unit of
-// the parent, plus WasteFactor (0.1 = 10% extra).
+// the parent in the recipe unit, plus WasteFactor (0.1 = 10% extra).
+// Factor converts the recipe unit into the material's stock unit (0 = 1);
+// RecipeUnit names the recipe unit.
 type Component struct {
 	RawMaterialID string
 	QtyPer        float64
 	WasteFactor   float64
+	SatuanID      string
+	RecipeUnit    string
+	Factor        float64
 }
 
-// Gross is the quantity of a component needed for parentQty units.
+// UnitFactor is Factor, 1 when unset.
+func (c Component) UnitFactor() float64 {
+	if c.Factor > 0 {
+		return c.Factor
+	}
+	return 1
+}
+
+// StockQtyPer is QtyPer in the stock unit.
+func (c Component) StockQtyPer() float64 { return c.QtyPer * c.UnitFactor() }
+
+// Gross is the stock quantity of a component needed for parentQty units.
 func (c Component) Gross(parentQty float64) float64 {
-	return RoundQty(float64(parentQty*c.QtyPer) * (1 + c.WasteFactor))
+	return RoundQty(float64(parentQty*c.StockQtyPer()) * (1 + c.WasteFactor))
 }
 
 // Material is what the explosion knows about a raw material.
@@ -42,9 +58,11 @@ type Material struct {
 // bought material has none.
 type Recipes map[string][]Component
 
-// Node is one exploded line. QtyRequired is gross for the requested
-// quantity; RolledUnitCost is the cost of making one unit from its children
-// and is nil for a bought material.
+// Node is one exploded line. Quantities are in the stock unit (Unit):
+// QtyRequired is gross for the requested quantity, QtyPer per parent unit.
+// RecipeQtyPer and RecipeUnit are the recipe line as written, UnitFactor
+// the conversion between them. RolledUnitCost is the cost of making one
+// unit from its children and is nil for a bought material.
 type Node struct {
 	RawMaterialID  string   `json:"raw_material_id"`
 	Kode           string   `json:"kode"`
@@ -52,6 +70,9 @@ type Node struct {
 	Unit           string   `json:"satuan"`
 	Level          int      `json:"level"`
 	QtyPer         float64  `json:"qty_per_parent"`
+	RecipeQtyPer   float64  `json:"recipe_qty_per"`
+	RecipeUnit     string   `json:"recipe_satuan"`
+	UnitFactor     float64  `json:"unit_factor"`
 	WasteFactor    float64  `json:"waste_factor"`
 	QtyRequired    float64  `json:"qty_required"`
 	QtyOnHand      float64  `json:"qty_onhand"`
@@ -161,7 +182,8 @@ func (x *explosion) node(c Component, parentQty float64, level int) (Node, error
 	qty := c.Gross(parentQty)
 	n := Node{
 		RawMaterialID: m.ID, Kode: m.Kode, Nama: m.Nama, Unit: m.Unit, Level: level,
-		QtyPer: c.QtyPer, WasteFactor: c.WasteFactor, QtyRequired: qty, QtyOnHand: m.QtyOnHand,
+		QtyPer: RoundQty(c.StockQtyPer()), RecipeQtyPer: c.QtyPer, RecipeUnit: firstNonEmpty(c.RecipeUnit, m.Unit), UnitFactor: c.UnitFactor(),
+		WasteFactor: c.WasteFactor, QtyRequired: qty, QtyOnHand: m.QtyOnHand,
 		ShortageQty: RoundQty(math.Max(0, qty-m.QtyOnHand)), UnitCost: m.AvgCost,
 		TotalCost: jsmath.RoundTo(float64(qty*m.AvgCost), 2), Children: []Node{},
 	}

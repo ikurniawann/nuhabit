@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { ProductionFlow } from "@/lib/purchasing/production-flow";
+import { recipeUnitNote } from "@/lib/purchasing/production-ui-display";
 
 type ProductionFlowCardProps = {
   flow: ProductionFlow;
@@ -97,7 +98,12 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive 
                     <p className="text-xs text-gray-500">{m.kode}</p>
                   </td>
                   <td className="py-2 text-right">
-                    {formatNumber(m.qty_planned, 4)} {m.satuan}
+                    <p>
+                      {formatNumber(m.qty_planned, 4)} {m.satuan}
+                    </p>
+                    {recipeUnitNote(m.recipe_qty, m.recipe_satuan, m.satuan) && (
+                      <p className="text-xs text-gray-500">{recipeUnitNote(m.recipe_qty, m.recipe_satuan, m.satuan)}</p>
+                    )}
                   </td>
                   <td className="py-2 text-right">{formatNumber(m.qty_issued, 4)}</td>
                   <td className="py-2 text-right">{formatNumber(m.qty_remaining, 4)}</td>

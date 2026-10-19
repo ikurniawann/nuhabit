@@ -45,14 +45,15 @@ func (Postgres) Order(ctx context.Context, q database.Querier, id string, lock b
 
 func (Postgres) Lines(ctx context.Context, q database.Querier, orderID string) ([]MaterialLine, error) {
 	rows, err := q.Query(ctx, `SELECT id::text, raw_material_id::text, qty_planned::float8, unit_cost::float8,
-		qty_issued::float8, issued_cost::float8
+		qty_issued::float8, issued_cost::float8, recipe_qty::float8, recipe_satuan_id::text, unit_factor::float8
 		FROM manufacturing.production_order_materials WHERE production_order_id = $1 ORDER BY created_at, id`, orderID)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (MaterialLine, error) {
 		var l MaterialLine
-		err := r.Scan(&l.ID, &l.RawMaterialID, &l.QtyPlanned, &l.UnitCost, &l.QtyIssued, &l.IssuedCost)
+		err := r.Scan(&l.ID, &l.RawMaterialID, &l.QtyPlanned, &l.UnitCost, &l.QtyIssued, &l.IssuedCost,
+			&l.RecipeQty, &l.RecipeUnitID, &l.UnitFactor)
 		return l, err
 	})
 }
@@ -215,7 +216,7 @@ func recipes(ctx context.Context, q database.Querier, sql string, ids []string) 
 	}
 	var owner string
 	var c domain.Component
-	_, err = pgx.ForEachRow(rows, []any{&owner, &c.RawMaterialID, &c.QtyPer, &c.WasteFactor}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&owner, &c.RawMaterialID, &c.QtyPer, &c.WasteFactor, &c.SatuanID}, func() error {
 		out[owner] = append(out[owner], c)
 		return nil
 	})
@@ -223,14 +224,15 @@ func recipes(ctx context.Context, q database.Querier, sql string, ids []string) 
 }
 
 func (Postgres) ProductRecipes(ctx context.Context, q database.Querier, productIDs []string) (map[string][]domain.Component, error) {
-	return recipes(ctx, q, `SELECT product_id::text, raw_material_id::text, qty_required::float8, COALESCE(waste_factor, 0)::float8
+	return recipes(ctx, q, `SELECT product_id::text, raw_material_id::text, qty_required::float8, COALESCE(waste_factor, 0)::float8,
+		COALESCE(satuan_id::text, '')
 		FROM manufacturing.bom_items WHERE product_id = ANY($1::uuid[]) AND is_active = true AND raw_material_id IS NOT NULL
 		ORDER BY created_at, id`, productIDs)
 }
 
 func (Postgres) MaterialRecipes(ctx context.Context, q database.Querier, ids []string) (map[string][]domain.Component, error) {
 	return recipes(ctx, q, `SELECT output_raw_material_id::text, component_raw_material_id::text, qty_required::float8,
-		COALESCE(waste_factor, 0)::float8
+		COALESCE(waste_factor, 0)::float8, COALESCE(satuan_id::text, '')
 		FROM manufacturing.raw_material_bom_items WHERE output_raw_material_id = ANY($1::uuid[]) AND is_active = true
 		ORDER BY created_at, id`, ids)
 }

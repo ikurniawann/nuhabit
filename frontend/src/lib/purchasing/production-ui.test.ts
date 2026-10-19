@@ -7,11 +7,13 @@ import {
   optionsLabel,
   paginate,
   productionStatusLabel,
+  recipeUnitNote,
   shortagePoHref,
   toNumber,
 } from "./production-ui-display";
 import {
   aggregateAdditionalCosts,
+  bomLineRequirement,
   buildCreateOrderPayload,
   buildQuickCompletePayload,
   countShortMaterials,
@@ -141,6 +143,21 @@ describe("create order form", () => {
     expect(estimate.hppPerUnit).toBe(2500);
     expect(estimate.shortages.map((row) => row.bahan_id)).toEqual(["a"]);
     expect(estimateProductionOrder(null, 0, 0).hppPerUnit).toBe(0);
+  });
+
+  it("compares a recipe in kg with stock counted in grams", () => {
+    const flour = { bahan_id: "f", kode: "F", nama: "Tepung", jumlah: 0.25, satuan: "Kilogram", qty_available: 600, qty_on_order: 0,
+      unit_cost: 20000, waste_percentage: 0, effective_qty: 0.25, subtotal: 5000, stock_factor: 1000, satuan_stok: "Gram" };
+    const line = bomLineRequirement(flour, 4);
+    expect(line).toEqual({ required: 1000, recipeRequired: 1, lineTotal: 20000, shortage: 400 });
+    expect(bomLineRequirement({ ...flour, stock_factor: undefined }, 4).shortage).toBe(0);
+  });
+
+  it("notes the recipe unit only when it differs from the stock unit", () => {
+    expect(recipeUnitNote(1, "Kilogram", "Gram")).toBe("= 1 Kilogram di resep");
+    expect(recipeUnitNote("0.2500", "Kilogram", "Gram")).toBe("= 0,25 Kilogram di resep");
+    expect(recipeUnitNote(5, "Gram", "Gram")).toBeNull();
+    expect(recipeUnitNote(null, "Kilogram", "Gram")).toBeNull();
   });
 
   it("builds product and raw material payloads", () => {

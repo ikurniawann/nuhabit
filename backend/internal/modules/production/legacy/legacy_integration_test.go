@@ -208,6 +208,46 @@ func TestRawMaterialAndWipOrders(t *testing.T) {
 	}
 }
 
+// A BOM line in the satuan besar becomes stock units (the satuan kecil) on
+// the order: 0.25 kg of flour per loaf, stocked in grams at 20 per gram.
+func TestOrderConvertsRecipeUnits(t *testing.T) {
+	e := kittest.Setup(t, kittest.Menus, nil)
+	org := e.NewOrg()
+	mount(e, &fakePos{stock: map[string]float64{}})
+	kg, gr := e.Unit("KG", "Kilogram"), e.Unit("GR", "Gram")
+	flour := e.RawMaterial(org, "RMU-"+org.BranchID[:4], "Tepung", kg, gr, 1000)
+	salt := e.RawMaterial(org, "RMN-"+org.BranchID[:4], "Garam", kg, gr, 1000)
+	e.Stock(org, flour, org.MainID, 5000, 20)
+	e.Stock(org, salt, org.MainID, 500, 10)
+	product := e.Product(org, org.Stall1ID, "PRU-"+org.BranchID[:4], "Roti", 5000)
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required, satuan_id) VALUES ($1, $2, 0.25, $3), ($1, $4, 5, $5)`,
+		product, flour, kg, salt, gr)
+
+	out := e.Call("POST", "/api/purchasing/production/orders", map[string]any{"product_id": product, "planned_qty": 4}, http.StatusCreated)
+	order := obj(out["data"])
+	lines := map[any]map[string]any{}
+	for _, m := range order["materials"].([]any) {
+		lines[obj(m)["raw_material_id"]] = obj(m)
+	}
+	f, s := lines[flour], lines[salt]
+	// 1 kg = 1000 g at 20, 20 g of salt at 10: 20200.
+	if f["qty_planned"] != 1000.0 || f["recipe_qty"] != 1.0 || f["unit_factor"] != 1000.0 || f["satuan_id"] != gr || f["recipe_satuan_id"] != kg ||
+		s["qty_planned"] != 20.0 || s["unit_factor"] != 1.0 || order["planned_material_cost"] != "20200.00" {
+		t.Fatalf("converted order %v", order)
+	}
+	d := obj(e.Call("GET", "/api/purchasing/production/orders/"+order["id"].(string), nil, http.StatusOK)["data"])
+	for _, m := range d["materials"].([]any) {
+		line := obj(m)
+		if line["raw_material_id"] == flour && (line["qty_planned"] != "1000.0000" || obj(line["satuan"])["nama"] != "Gram" ||
+			obj(line["recipe_satuan"])["nama"] != "Kilogram" || line["unit_factor"] != "1000.000000") {
+			t.Fatalf("detail line %v", line)
+		}
+	}
+	if obj(d["stock_summary"])["can_release"] != true {
+		t.Fatalf("5000 g covers 1000 g: %v", d["stock_summary"])
+	}
+}
+
 // An order the production module issued materials for no longer completes
 // or cancels in one shot.
 func TestSteppedOrderRefusesOneShot(t *testing.T) {

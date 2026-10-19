@@ -315,6 +315,47 @@ func TestScrapWipAndVariants(t *testing.T) {
 	}
 }
 
+// The explosion, the order and the issue count in the stock unit: a recipe
+// of 0.25 kg flour per loaf, flour stocked in grams.
+func TestStockUnits(t *testing.T) {
+	e := setup(t)
+	kg, gr := e.Unit("KG", "Kilogram"), e.Unit("GR", "Gram")
+	sfx := e.org.BranchID[:4]
+	flour := e.RawMaterial(e.org, "RUF-"+sfx, "Tepung", kg, gr, 1000)
+	e.Stock(e.org, flour, e.org.MainID, 1500, 20)
+	product := e.Product(e.org, e.org.Stall1ID, "PRU-"+sfx, "Roti", 5000)
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required, satuan_id) VALUES ($1, $2, 0.25, $3)`, product, flour, kg)
+
+	x := obj(e.Call("GET", "/api/production/bom/explode?product_id="+product+"&qty=4", nil, http.StatusOK)["data"])
+	line := obj(list(x["lines"])[0])
+	if line["qty_required"] != 1000.0 || line["qty_per_parent"] != 250.0 || line["satuan"] != "Gram" || line["recipe_qty_per"] != 0.25 ||
+		line["recipe_satuan"] != "Kilogram" || line["unit_factor"] != 1000.0 || line["total_cost"] != 20000.0 ||
+		obj(list(x["leaves"])[0])["qty_required"] != 1000.0 {
+		t.Fatalf("explode %v", line)
+	}
+
+	out := e.Call("POST", "/api/purchasing/production/orders", map[string]any{"product_id": product, "planned_qty": 4}, http.StatusCreated)
+	id := obj(out["data"])["id"].(string)
+	e.Call("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": "release"}, http.StatusOK)
+	flow := obj(e.Call("GET", "/api/production/orders/"+id+"/flow", nil, http.StatusOK)["data"])
+	m := obj(list(flow["materials"])[0])
+	if m["qty_planned"] != 1000.0 || m["satuan"] != "Gram" || m["recipe_qty"] != 1.0 || m["recipe_satuan"] != "Kilogram" || m["unit_factor"] != 1000.0 {
+		t.Fatalf("flow material %v", m)
+	}
+	e.Call("POST", "/api/production/orders/"+id+"/issues", map[string]any{"lines": []any{map[string]any{"material_id": m["id"], "qty": 1000}}},
+		http.StatusCreated)
+	if got := e.num(`SELECT qty_available FROM inventory.inventory WHERE raw_material_id = $1`, flour); got != 500 {
+		t.Fatalf("flour stock %v g", got)
+	}
+
+	// An order written before the conversion keeps its stored quantities.
+	old, _ := e.order("RELEASED", "product", "FINISHED_GOOD", product, 1, 0, flour, 0.25, 20)
+	m = obj(list(obj(e.Call("GET", "/api/production/orders/"+old+"/flow", nil, http.StatusOK)["data"])["materials"])[0])
+	if m["qty_planned"] != 0.25 || m["recipe_qty"] != nil || m["unit_factor"] != nil {
+		t.Fatalf("legacy line %v", m)
+	}
+}
+
 func TestProductionNeedsMenus(t *testing.T) {
 	e := setup(t)
 	outsider := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"pos.catalog": nil}})

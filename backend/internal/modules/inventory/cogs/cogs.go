@@ -7,6 +7,7 @@ import (
 
 	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/httpx"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/validate"
@@ -60,8 +61,11 @@ type cogsTotals struct {
 
 // estimate is estimateBomCost: material at average cost, plus each
 // material's landed cost rate (additional purchase costs), plus overhead on
-// both.
-func estimate(lines []cogsLine, stock map[string]*kit.Row, rates map[string]float64, overhead float64, convertUnits bool) ([]*kit.Row, cogsTotals) {
+// both. stockUnits converts each line's recipe unit into the stock unit
+// production orders count it in (stock_factor and satuan_stok on the
+// breakdown).
+func estimate(lines []cogsLine, stock map[string]*kit.Row, rates map[string]float64, overhead float64, convertUnits bool,
+	stockUnits ledger.BaseUnitResolver) ([]*kit.Row, cogsTotals) {
 	var breakdown []*kit.Row
 	total, additional := 0.0, 0.0
 	for _, l := range lines {
@@ -106,7 +110,9 @@ func estimate(lines []cogsLine, stock map[string]*kit.Row, rates map[string]floa
 			Set("satuan", kit.FirstNonEmpty(get(l.satuan, "nama"), get(s, "satuan_kecil_nama"), get(s, "satuan_besar_nama"), "-")).
 			Set("qty_available", onhand).Set("qty_on_order", onorder).Set("unit_cost", unit).Set("waste_percentage", waste*100).
 			Set("effective_qty", domain.Round3(effective)).Set("subtotal", domain.Round2(sub)).
-			Set("landed_cost_rate", domain.Round2(rate*100)).Set("additional_cost", domain.Round2(extra)))
+			Set("landed_cost_rate", domain.Round2(rate*100)).Set("additional_cost", domain.Round2(extra)).
+			Set("stock_factor", stockUnits(l.materialID, &l.satuanID)).
+			Set("satuan_stok", kit.FirstNonEmpty(get(s, "satuan_kecil_nama"), get(s, "satuan_besar_nama"), "-")))
 	}
 	totalOverhead := (total + additional) * overhead
 	return breakdown, cogsTotals{hpp: domain.Round2(total + additional + totalOverhead), bom: domain.Round2(total),
@@ -184,8 +190,12 @@ func (h *handler) productCogs(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	stockUnits, err := ledger.NewRecipeUnitResolver(ctx, h.env.DB, materialIDs(lines))
+	if err != nil {
+		return err
+	}
 	rate := h.overheadRate(ctx)
-	breakdown, t := estimate(lines, stock, landed, rate, true)
+	breakdown, t := estimate(lines, stock, landed, rate, true, stockUnits)
 	harga := product.Num("harga_jual")
 	var margin, marginPct *float64
 	if harga > 0 {
@@ -245,8 +255,12 @@ func (h *handler) rawMaterialCogs(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
+	stockUnits, err := ledger.NewRecipeUnitResolver(ctx, h.env.DB, materialIDs(lines))
+	if err != nil {
+		return err
+	}
 	rate := h.overheadRate(ctx)
-	breakdown, t := estimate(lines, stock, landed, rate, false)
+	breakdown, t := estimate(lines, stock, landed, rate, false, stockUnits)
 	return kit.Data(w, header.Set("hpp_per_unit", t.hpp).Set("total_bom_cost", t.bom).Set("total_additional_cost", t.additional).
 		Set("overhead_rate", rate*100).Set("total_overhead", t.overhead).Set("breakdown_bahan", breakdown))
 }

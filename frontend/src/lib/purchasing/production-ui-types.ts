@@ -28,6 +28,9 @@ export type CogsMaterial = {
   waste_percentage: number;
   effective_qty: number;
   subtotal: number;
+  /** Satuan stok per satuan resep; kebutuhan order dihitung dalam satuan stok. */
+  stock_factor?: number;
+  satuan_stok?: string;
   /** Tarif biaya tambahan pembelian bahan ini, persen dari biaya bahan. */
   landed_cost_rate?: number;
   additional_cost?: number;
@@ -159,7 +162,12 @@ export type ProductionMaterial = {
   total_cost: number | string;
   inventory_movement_id?: string | null;
   raw_material?: { kode?: string | null; nama?: string | null } | null;
+  /** Satuan stok: satuan qty_planned/qty_actual. */
   satuan?: { nama?: string | null } | null;
+  /** Baris resep asal (null untuk order sebelum konversi satuan). */
+  recipe_qty?: number | string | null;
+  recipe_satuan?: { nama?: string | null } | null;
+  unit_factor?: number | string | null;
   stock?: {
     qty_onhand: number;
     required_qty: number;

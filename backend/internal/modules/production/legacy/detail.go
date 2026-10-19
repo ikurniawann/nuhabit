@@ -261,14 +261,17 @@ func (h *handler) attachMaterials(ctx context.Context, rows kit.Rows, cols ...st
 	return nil
 }
 
-// attachUnits sets satuan on each order line: id, kode and nama of its unit.
+// attachUnits sets satuan (the stock unit the quantities count in) and
+// recipe_satuan (the BOM unit the line came from) on each order line: id,
+// kode and nama of each unit.
 func (h *handler) attachUnits(ctx context.Context, rows kit.Rows) error {
-	embeds, err := h.ports.Items.UnitEmbeds(ctx, h.env.DB, column(rows, "satuan_id"), "id", "kode", "nama")
+	ids := append(column(rows, "satuan_id"), column(rows, "recipe_satuan_id")...)
+	embeds, err := h.ports.Items.UnitEmbeds(ctx, h.env.DB, ids, "id", "kode", "nama")
 	if err != nil {
 		return err
 	}
 	for _, r := range rows {
-		r.Set("satuan", embedOf(embeds, r.Str("satuan_id")))
+		r.Set("satuan", embedOf(embeds, r.Str("satuan_id"))).Set("recipe_satuan", embedOf(embeds, r.Str("recipe_satuan_id")))
 	}
 	return nil
 }
