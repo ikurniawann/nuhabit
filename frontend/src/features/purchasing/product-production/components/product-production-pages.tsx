@@ -4,6 +4,9 @@ import {
   ProductionPage,
   ProductionRecipesPage,
   ProductionOrderDetailPage,
+  ProductionWipPage,
+  ProductionBatchesPage,
+  ProductionBatchDetailPage,
 } from "../../production";
 
 export function ProductProductionPage() {
@@ -16,4 +19,16 @@ export function ProductProductionRecipesPage() {
 
 export function ProductProductionOrderDetailPage() {
   return <ProductionOrderDetailPage moduleType="product" />;
+}
+
+export function ProductProductionWipPage() {
+  return <ProductionWipPage moduleType="product" />;
+}
+
+export function ProductProductionBatchesPage() {
+  return <ProductionBatchesPage moduleType="product" />;
+}
+
+export function ProductProductionBatchDetailPage() {
+  return <ProductionBatchDetailPage moduleType="product" />;
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Beaker, Loader2, RefreshCw } from "lucide-react";
+import { Beaker, Layers, Loader2, Receipt, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,6 +80,18 @@ export function ProductionPage({ moduleType = "raw_material" }: { moduleType?: P
               <Button variant="outline" className={HEADER_BUTTON}>
                 <Beaker className="h-4 w-4" />
                 Resep (BOM)
+              </Button>
+            </Link>
+            <Link href={config.productionWipRoute}>
+              <Button variant="outline" className={HEADER_BUTTON}>
+                <Layers className="h-4 w-4" />
+                WIP Produksi
+              </Button>
+            </Link>
+            <Link href={config.productionBatchesRoute}>
+              <Button variant="outline" className={HEADER_BUTTON}>
+                <Receipt className="h-4 w-4" />
+                Biaya Batch
               </Button>
             </Link>
             <Button

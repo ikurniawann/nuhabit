@@ -21,10 +21,13 @@ import {
   toNumber,
 } from "@/lib/purchasing/production-ui-display";
 import type { ProductionOrderAction } from "@/lib/purchasing/production-ui-types";
-import { useUpdateProductionOrder } from "../mutations";
+import { useIssueProductionMaterials, useReceiveProductionBatch, useUpdateProductionOrder } from "../mutations";
 import { getProductionModuleConfig } from "../production-module";
-import { useProductionOrder } from "../queries";
+import { useProductionFlow, useProductionOrder } from "../queries";
 import { CompleteProductionDialog } from "./complete-production-dialog";
+import { IssueMaterialsDialog } from "./issue-materials-dialog";
+import { ProductionFlowCard } from "./production-flow-card";
+import { ReceiveBatchDialog } from "./receive-batch-dialog";
 import { ProductionOrderCostAndBatches, ProductionOrderStats } from "./production-order-cost-cards";
 import { ORDER_ACTION_BUTTON, ProductionOrderMaterialsCard } from "./production-order-materials-card";
 
@@ -37,12 +40,20 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
   const config = getProductionModuleConfig(moduleType);
   const orderId = useParams<{ id: string }>().id;
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [step, setStep] = useState<"issue" | "receive" | null>(null);
 
   const orderQuery = useProductionOrder(orderId);
   useErrorToast(orderQuery.error, "Gagal memuat detail order produksi");
+  const flowQuery = useProductionFlow(orderId);
   const actionMutation = useUpdateProductionOrder();
+  const issueMutation = useIssueProductionMaterials();
+  const receiveMutation = useReceiveProductionBatch();
   const order = orderQuery.data ?? null;
-  const loading = orderQuery.isLoading || orderQuery.isFetching || actionMutation.isPending;
+  const flow = flowQuery.data ?? null;
+  const stepping = issueMutation.isPending || receiveMutation.isPending;
+  const loading = orderQuery.isLoading || orderQuery.isFetching || actionMutation.isPending || stepping;
+  // Setelah bahan dikeluarkan bertahap, order hanya selesai lewat Terima Hasil.
+  const stepped = !!flow?.stepped;
 
   const runAction = async (action: ProductionOrderAction, payload: Record<string, unknown> = {}) => {
     try {
@@ -57,6 +68,15 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
       // Cek ulang stok tetap memuat ulang supaya angka kekurangan terbaru tampil.
       if (action === "recheck_stock") await orderQuery.refetch();
       return false;
+    }
+  };
+
+  const runStep = async (run: () => Promise<string | undefined>, fallback: string) => {
+    try {
+      toast.success((await run()) || fallback);
+      setStep(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : fallback);
     }
   };
 
@@ -163,7 +183,7 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
                 Mulai
               </Button>
             )}
-            {order.status === "IN_PROGRESS" && (
+            {order.status === "IN_PROGRESS" && !stepped && (
               <Button
                 type="button"
                 onClick={() => setCompleteOpen(true)}
@@ -174,7 +194,7 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
                 Terima Output
               </Button>
             )}
-            {!["COMPLETED", "CANCELLED"].includes(order.status) && (
+            {!["COMPLETED", "CANCELLED"].includes(order.status) && !stepped && (
               <Button
                 type="button"
                 variant="outline"
@@ -215,12 +235,44 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
       )}
 
       <ProductionOrderStats order={order} materialCost={materialCost} />
+      {flow && (flow.stepped || flow.can_issue) && (
+        <ProductionFlowCard
+          flow={flow}
+          busy={loading}
+          batchRoute={config.productionBatchRoute}
+          onIssue={() => setStep("issue")}
+          onReceive={() => setStep("receive")}
+        />
+      )}
       <ProductionOrderMaterialsCard
         order={order}
         shortageCount={shortMaterials.length}
         poInsertRoute={config.purchasingPoInsertRoute}
       />
       <ProductionOrderCostAndBatches order={order} materialCost={materialCost} />
+
+      {flow && (
+        <>
+          <IssueMaterialsDialog
+            flow={flow}
+            open={step === "issue"}
+            submitting={stepping}
+            onClose={() => setStep(null)}
+            onSubmit={(payload) =>
+              void runStep(() => issueMutation.mutateAsync({ orderId, payload }), "Bahan dikeluarkan ke produksi")
+            }
+          />
+          <ReceiveBatchDialog
+            flow={flow}
+            open={step === "receive"}
+            submitting={stepping}
+            onClose={() => setStep(null)}
+            onSubmit={(payload) =>
+              void runStep(() => receiveMutation.mutateAsync({ orderId, payload }), "Hasil produksi diterima")
+            }
+          />
+        </>
+      )}
 
       <CompleteProductionDialog
         order={order}

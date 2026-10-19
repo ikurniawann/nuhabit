@@ -1,5 +1,14 @@
 import type { AdditionalCost, AdditionalCostPayload, AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type {
+  ProductionBatchDetail,
+  ProductionBatchRow,
+  ProductionContext,
+  ProductionFlow,
+  ProductionWipList,
+  buildIssuePayload,
+  buildReceiptPayload,
+} from "@/lib/purchasing/production-flow";
 import type { RawMaterialWithStock } from "@/types/purchasing";
 import type {
   CogsData,
@@ -152,4 +161,55 @@ export async function createAdditionalCost(payload: AdditionalCostPayload): Prom
 export async function deleteAdditionalCost(id: string): Promise<string | undefined> {
   const json = await requestJson(`${ADDITIONAL_COST_URL}/${id}`, "Gagal menghapus biaya tambahan", { method: "DELETE" });
   return json.message;
+}
+
+/* ── Langkah produksi bertahap (modul Go production) ─────────────────── */
+
+const PRODUCTION_URL = "/api/production";
+
+export async function getProductionFlow(orderId: string): Promise<ProductionFlow> {
+  const json = await requestJson(`${PRODUCTION_URL}/orders/${orderId}/flow`, "Gagal memuat langkah produksi");
+  return json.data as ProductionFlow;
+}
+
+/** Keluarkan bahan ke produksi; mengembalikan pesan sukses dari API. */
+export async function issueProductionMaterials(
+  orderId: string,
+  payload: ReturnType<typeof buildIssuePayload>
+): Promise<string | undefined> {
+  const json = await sendJson(`${PRODUCTION_URL}/orders/${orderId}/issues`, "POST", payload, "Gagal mengeluarkan bahan");
+  return json.message;
+}
+
+/** Terima hasil satu batch; mengembalikan pesan sukses dari API. */
+export async function receiveProductionBatch(
+  orderId: string,
+  payload: ReturnType<typeof buildReceiptPayload>
+): Promise<string | undefined> {
+  const json = await sendJson(
+    `${PRODUCTION_URL}/orders/${orderId}/receipts`,
+    "POST",
+    payload,
+    "Gagal menerima hasil produksi"
+  );
+  return json.message;
+}
+
+export async function getProductionWip(context: ProductionContext, search = ""): Promise<ProductionWipList> {
+  const query = new URLSearchParams({ production_context: context });
+  if (search) query.set("search", search);
+  const json = await requestJson(`${PRODUCTION_URL}/wip?${query}`, "Gagal memuat WIP produksi");
+  return json.data as ProductionWipList;
+}
+
+export async function listProductionBatches(context: ProductionContext, search = ""): Promise<ProductionBatchRow[]> {
+  const query = new URLSearchParams({ production_context: context, limit: "100" });
+  if (search) query.set("search", search);
+  const json = await requestJson(`${PRODUCTION_URL}/batches?${query}`, "Gagal memuat biaya batch");
+  return (json.data as ProductionBatchRow[]) || [];
+}
+
+export async function getProductionBatch(id: string): Promise<ProductionBatchDetail> {
+  const json = await requestJson(`${PRODUCTION_URL}/batches/${id}`, "Gagal memuat batch produksi");
+  return json.data as ProductionBatchDetail;
 }

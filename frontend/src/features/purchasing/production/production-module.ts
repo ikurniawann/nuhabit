@@ -11,6 +11,9 @@ export function getProductionModuleConfig(moduleType: PurchasingModuleType = "ra
     productionHubRoute: routes.productionHub,
     productionRecipesRoute: routes.productionRecipes,
     productionOrderRoute: (id: string) => routes.productionOrder(id),
+    productionWipRoute: routes.productionWip,
+    productionBatchesRoute: routes.productionBatches,
+    productionBatchRoute: (id: string) => routes.productionBatch(id),
     bomEditorRoute: (id: string) =>
       isProduct ? PRODUCT_ROUTES.productsBom(id) : RM_ROUTES.materialsBom(id),
     materialsInsertRoute: isProduct ? PRODUCT_ROUTES.productsInsert : RM_ROUTES.materialsInsert,
