@@ -207,7 +207,8 @@ func (shopBranches) Get(ctx context.Context, q database.Querier, id string) (*sh
 type shopPromo struct{ s *promo.Service }
 
 // shopPromoChannel is the channel the promo engine sees; campaigns scoped
-// "semua" apply.
+// "semua" apply, and their product or category targets limit the discount
+// to the matching lines.
 const shopPromoChannel = "shop"
 
 func (shopPromo) scope(ctx context.Context, q database.Querier) (promo.VenueScope, bool) {
@@ -235,7 +236,8 @@ func (p shopPromo) Preview(ctx context.Context, q database.Querier, in shop.Prom
 		Scope: scope, Code: in.Code, Channel: shopPromoChannel, Subtotal: in.Subtotal, Phone: in.Phone,
 		Lines: shopPromoLines(in), CustomerID: in.CustomerID,
 	})
-	return shop.PromoPreview{OK: res.OK, Discount: res.Discount, Label: res.CampaignName, Reason: string(res.Reason)}, err
+	return shop.PromoPreview{OK: res.OK, Discount: res.Discount, Label: res.CampaignName, Reason: string(res.Reason),
+		EligibleProductIDs: res.EligibleProductIDs, Targets: res.Targets}, err
 }
 
 func (p shopPromo) Hold(ctx context.Context, q database.Querier, in shop.PromoCheck, orderID string) (float64, string, error) {

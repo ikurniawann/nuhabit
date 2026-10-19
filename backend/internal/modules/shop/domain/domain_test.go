@@ -159,6 +159,24 @@ func TestBuildShippingSettingsPatch(t *testing.T) {
 	}
 }
 
+func TestPromoRejection(t *testing.T) {
+	for _, c := range []struct {
+		reason  string
+		targets []string
+		want    string
+	}{
+		{"kuota-habis", []string{"Tees"}, "This promo code has been fully used"},
+		{"produk-tidak-sesuai", nil, "This promo code does not apply to the items in your cart"},
+		{"produk-tidak-sesuai", []string{"Tees"}, "This promo code applies to Tees only. Add one to your cart to use it."},
+		{"produk-tidak-sesuai", []string{"Tee", "Caps"}, "This promo code applies to Tee and Caps only. Add one to your cart to use it."},
+		{"produk-tidak-sesuai", []string{"A", "B", "C", "D", "E"}, "This promo code applies to A, B, C and 2 more only. Add one to your cart to use it."},
+	} {
+		if got := PromoRejection(c.reason, c.targets); got != c.want {
+			t.Errorf("PromoRejection(%s, %v) = %q", c.reason, c.targets, got)
+		}
+	}
+}
+
 func TestSafeEqual(t *testing.T) {
 	if !SafeEqual("bs-secret", "bs-secret") || SafeEqual("bs-secre", "bs-secret") || SafeEqual("", "") {
 		t.Error("SafeEqual")

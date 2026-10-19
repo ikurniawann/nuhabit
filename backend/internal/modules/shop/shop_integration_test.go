@@ -980,7 +980,7 @@ func TestPromoCodeCheckout(t *testing.T) {
 
 	res, out := f.do("POST", base+"/promo/preview", map[string]any{"code": "launch", "lines": lines})
 	expectStatus(t, res, 200)
-	expectJSON(t, res, `{"success":true,"data":{"code":"launch","discountAmount":20000,"label":"Launch promo"}}`)
+	expectJSON(t, res, `{"success":true,"data":{"code":"launch","discountAmount":20000,"label":"Launch promo","eligibleProductIds":null}}`)
 	res, _ = f.do("POST", base+"/promo/preview", map[string]any{"code": "NOPE", "lines": lines})
 	expectStatus(t, res, 422)
 	expectJSON(t, res, `{"success":false,"error":"This promo code is not valid"}`)

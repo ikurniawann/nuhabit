@@ -104,7 +104,13 @@ export type DeliveryMethod = "ship" | "pickup";
 export type PaymentMethod = "xendit" | "arkcoin";
 
 /** A promo code the storefront accepted for the current cart. */
-export type AppliedPromo = { code: string; discountAmount: number; label: string };
+export type AppliedPromo = {
+  code: string;
+  discountAmount: number;
+  label: string;
+  /** Cart products a product- or collection-targeted code discounts; null or absent when it covers the whole cart. */
+  eligibleProductIds?: string[] | null;
+};
 
 /** GET /api/public/shop/{slug}/me with a member session; null for guests. */
 export type ShopMember = {

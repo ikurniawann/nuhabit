@@ -49,7 +49,8 @@ export function CampaignTargetFields({
         <p className="text-sm font-semibold text-foreground">Batas produk &amp; pembeli</p>
         <p className="text-xs text-muted-foreground">
           Kosongkan produk dan kategori agar diskon berlaku untuk seluruh belanja. Bila diisi,
-          diskon hanya dihitung dari item yang cocok (khusus kasir POS).
+          diskon hanya dihitung dari item yang cocok, di kasir POS maupun toko online (kategori
+          sama dengan koleksi toko; toko online hanya menerima campaign berkanal Semua Kanal).
         </p>
       </div>
       <TargetPicker

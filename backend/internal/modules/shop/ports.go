@@ -163,6 +163,12 @@ type PromoPreview struct {
 	Discount float64
 	Label    string
 	Reason   string
+	// EligibleProductIDs are the cart products a product- or
+	// category-targeted campaign discounts; nil when it covers the cart.
+	EligibleProductIDs []string
+	// Targets names what a targeted campaign covers when the cart has none
+	// of it (reason produk-tidak-sesuai).
+	Targets []string
 }
 
 // PromoRejectedError is a hold the promo engine refused; Reason is the
@@ -173,7 +179,8 @@ func (e *PromoRejectedError) Error() string { return "promo rejected: " + e.Reas
 
 // Promo is the promo-code service of the stored-value context. The shop
 // evaluates codes on the "shop" channel, so campaigns scoped to every
-// channel apply.
+// channel apply; a campaign that targets products or categories (the
+// storefront's collections) discounts the matching lines only.
 type Promo interface {
 	// Preview validates a code without claiming it.
 	Preview(ctx context.Context, q database.Querier, in PromoCheck) (PromoPreview, error)

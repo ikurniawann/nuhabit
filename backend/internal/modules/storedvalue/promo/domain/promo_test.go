@@ -137,6 +137,32 @@ func TestEligibleSubtotal(t *testing.T) {
 	}
 }
 
+func TestEligibleLines(t *testing.T) {
+	ids := func(lines []Line) []string {
+		var out []string
+		for _, l := range lines {
+			out = append(out, l.ProductID)
+		}
+		return out
+	}
+	if got := EligibleLines(posCampaign(nil), posLines); len(got) != len(posLines) {
+		t.Errorf("untargeted = %v", ids(got))
+	}
+	byProduct := posCampaign(func(c *CampaignRule) { c.TargetProductIDs = []string{latte} })
+	if got := ids(EligibleLines(byProduct, posLines)); !slices.Equal(got, []string{latte}) {
+		t.Errorf("product target = %v", got)
+	}
+	byCategory := posCampaign(func(c *CampaignRule) { c.TargetCategoryIDs = []string{pastryCat} })
+	for _, l := range EligibleLines(byCategory, posLines) {
+		if l.CategoryID == nil || *l.CategoryID != pastryCat {
+			t.Errorf("category target kept %+v", l)
+		}
+	}
+	if got := EligibleLines(byProduct, nil); got != nil {
+		t.Errorf("empty cart = %v", got)
+	}
+}
+
 func TestEvaluatePromoTargetsAndEligibility(t *testing.T) {
 	withMember := func(prior, days int) UsageContext {
 		return posUsage(func(u *UsageContext) { u.Member = &MemberContext{PriorPaidOrders: prior, JoinedDaysAgo: days} })

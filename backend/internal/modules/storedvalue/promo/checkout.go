@@ -168,6 +168,12 @@ type PromoPreview struct {
 	DiscountType string
 	Reason       domain.RejectReason
 	Message      string
+	// EligibleProductIDs are the distinct cart products a targeted campaign
+	// discounts; nil when the discount covers the whole cart.
+	EligibleProductIDs []string
+	// Targets names the campaign's products then categories when the cart
+	// has none of them (RejectProductMismatch).
+	Targets []string
 }
 
 func rejectedPreview(r domain.RejectReason) PromoPreview {
@@ -190,11 +196,50 @@ func (s *Service) PreviewPromoCode(ctx context.Context, q database.Querier, in P
 	if err != nil {
 		return PromoPreview{}, err
 	}
-	res := domain.EvaluatePromo(row.rule(), row.state(), u)
+	rule := row.rule()
+	res := domain.EvaluatePromo(rule, row.state(), u)
 	if !res.OK {
-		return rejectedPreview(res.Reason), nil
+		p := rejectedPreview(res.Reason)
+		if res.Reason == domain.RejectProductMismatch {
+			if p.Targets, err = s.targetNames(ctx, q, row); err != nil {
+				return PromoPreview{}, err
+			}
+		}
+		return p, nil
 	}
-	return PromoPreview{OK: true, Discount: res.Discount, CampaignName: row.CampaignName, DiscountType: row.DiscountType}, nil
+	p := PromoPreview{OK: true, Discount: res.Discount, CampaignName: row.CampaignName, DiscountType: row.DiscountType}
+	if domain.HasTargets(rule) {
+		seen := map[string]bool{}
+		p.EligibleProductIDs = []string{}
+		for _, l := range domain.EligibleLines(rule, u.Lines) {
+			if !seen[l.ProductID] {
+				seen[l.ProductID] = true
+				p.EligibleProductIDs = append(p.EligibleProductIDs, l.ProductID)
+			}
+		}
+	}
+	return p, nil
+}
+
+// targetNames names the campaign's targeted products then categories in
+// the campaign's order, skipping ids the catalog no longer has.
+func (s *Service) targetNames(ctx context.Context, q database.Querier, row *codeRowFull) ([]string, error) {
+	products, categories, err := s.ports.Catalog.Names(ctx, q, row.TargetProductIDs, row.TargetCategoryIDs)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, id := range row.TargetProductIDs {
+		if name, ok := products[id]; ok {
+			names = append(names, name)
+		}
+	}
+	for _, id := range row.TargetCategoryIDs {
+		if name, ok := categories[id]; ok {
+			names = append(names, name)
+		}
+	}
+	return names, nil
 }
 
 // HoldInput claims a code for one checkout context.

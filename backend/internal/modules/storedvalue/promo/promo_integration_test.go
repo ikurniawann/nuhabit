@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -448,7 +449,7 @@ func TestPromoCodeLifecycle(t *testing.T) {
 		t.Fatalf("unknown code: %+v %v", preview, err)
 	}
 	preview, err = e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: " hemat10 ", Channel: "pos", Subtotal: 100_000})
-	if err != nil || preview != (PromoPreview{OK: true, Discount: 10_000, CampaignName: "Kampanye", DiscountType: "percent"}) {
+	if err != nil || !reflect.DeepEqual(preview, PromoPreview{OK: true, Discount: 10_000, CampaignName: "Kampanye", DiscountType: "percent"}) {
 		t.Fatalf("preview: %+v %v", preview, err)
 	}
 
@@ -495,12 +496,23 @@ func TestPromoTargetsAndEligibility(t *testing.T) {
 	lines := []LineInput{{ProductID: latteID, Amount: 40_000}, {ProductID: cakeID, Amount: 30_000}}
 
 	p, err := e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: "KOPI50", Channel: "pos", Subtotal: 70_000, Lines: lines})
-	if err != nil || !p.OK || p.Discount != 20_000 {
+	if err != nil || !p.OK || p.Discount != 20_000 || !slices.Equal(p.EligibleProductIDs, []string{latteID}) {
 		t.Fatalf("targeted: %+v %v", p, err)
 	}
 	p, _ = e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: "KOPI50", Channel: "pos", Subtotal: 70_000, Lines: lines[1:]})
-	if p.Reason != domain.RejectProductMismatch {
+	if p.Reason != domain.RejectProductMismatch || !slices.Equal(p.Targets, []string{"Kopi"}) {
 		t.Fatalf("no coffee: %+v", p)
+	}
+	// A product target names the product; an untargeted code covers the
+	// whole cart (no eligible list).
+	e.campaign(map[string]any{"value": 10, "public_code": "CAKE10", "target_product_ids": []string{cakeID}})
+	p, _ = e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: "CAKE10", Channel: "pos", Subtotal: 40_000, Lines: lines[:1]})
+	if p.Reason != domain.RejectProductMismatch || !slices.Equal(p.Targets, []string{"Cake"}) {
+		t.Fatalf("no cake: %+v", p)
+	}
+	p, _ = e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: "CAKE10", Channel: "pos", Subtotal: 70_000, Lines: lines})
+	if !p.OK || p.Discount != 3_000 || !slices.Equal(p.EligibleProductIDs, []string{cakeID}) {
+		t.Fatalf("cake: %+v", p)
 	}
 	p, _ = e.svc.PreviewPromoCode(e.ctx, e.tx, PreviewInput{Scope: scope, Code: "BARU", Channel: "pos", Subtotal: 70_000})
 	if p.Reason != domain.RejectMembersOnly {
