@@ -1,9 +1,10 @@
 // Package production is the production bounded context: multi-level BOM
 // explosion, material issue into WIP, output receipt in batches with scrap,
 // and the HPP of every batch. Orders are created, released and started by
-// the legacy handlers in the inventory module; once materials are issued
-// here, the order finishes here. Stock moves through Ports.Stock, journals
-// follow from the events in internal/contracts/production.
+// the routes ported from TS (package legacy, same module); once materials
+// are issued here, the order finishes here. Stock moves through
+// Ports.Stock, journals follow from the events in
+// internal/contracts/production.
 package production
 
 import (

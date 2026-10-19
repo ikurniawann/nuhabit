@@ -12,13 +12,15 @@ output in batches with scrap) and costs every batch.
   `production_order_materials`, `production_batches`,
   `production_output_variants`. View `public.v_production_orders` adds item
   names and counts.
-- **Go handlers** in `backend/internal/modules/inventory/production` (a
-  sub-package of the inventory module, ported from the TS routes):
+- **Go handlers** ported from the TS routes, first in the inventory module
+  and now in `backend/internal/modules/production/legacy` (decision 6):
   `GET/POST /api/purchasing/production/orders`,
   `GET/PATCH /api/purchasing/production/orders/{id}` with the actions
   `recheck_stock`, `release`, `start`, `complete`, `cancel`; recipe lists;
-  `GET /api/purchasing/production/wip` (stock of WIP raw materials); COGS
-  estimates and landed costs under `/api/purchasing/cogs`.
+  `GET /api/purchasing/production/wip` (stock of WIP raw materials); BOM
+  lines under `/api/purchasing/{products,raw-materials}/{id}/bom`. COGS
+  estimates and landed costs under `/api/purchasing/cogs` stay in the
+  inventory module (`inventory/cogs`).
 - **Lifecycle**: DRAFT, RELEASED (stock checked), IN_PROGRESS, COMPLETED or
   CANCELLED. `complete` does everything at once: takes every material out of
   stock, writes one batch `<order>-B01`, puts the output into stock (finished
@@ -133,10 +135,9 @@ Read = a granted menu under `iam.ItemsProduction`
 (`items.product.production`, `items.raw-material.production`); update = the
 `update` action on one of those menus (the hub menus grant it).
 
-The legacy order routes stay in the inventory module. Once an order has an
-issue, the legacy `complete` and `cancel` actions refuse it, so stock leaves
-through one path only. Moving the legacy routes into this module is a
-follow-up; until then both packages write `manufacturing.*`.
+The legacy order routes live in `production/legacy` (decision 6). Once an
+order has an issue, the legacy `complete` and `cancel` actions refuse it,
+so stock leaves through one path only.
 
 ## Inventory
 
@@ -206,6 +207,39 @@ the same rule the other mappings follow.
   errors; legacy guard; outbox events.
 - accounting: `TestProductionJournals` posts the four journals from the
   events.
+
+## Decisions
+
+The owner approved six decisions on 2026-10-19. Each one below says what
+changed and how it works.
+
+### 6. One module writes the manufacturing tables
+
+The order handlers (`/api/purchasing/production/orders`, the recipe lists,
+`/api/purchasing/production/wip`) moved from `inventory/production` to
+`production/legacy`, and the BOM line handlers
+(`/api/purchasing/products/{id}/bom`, `/api/purchasing/bom/{id}`,
+`/api/purchasing/raw-materials/{id}/bom`,
+`/api/purchasing/raw-material-bom/{id}`) moved there from
+`inventory/catalog`. Paths, methods, request and response shapes, messages
+and status codes are unchanged; the route manifest lists the same 1307
+routes, 15 of them now under module `production`. A comparison test ran
+every moved route against the code on main inside one rolled-back
+transaction and got byte-identical bodies (ids aside) before it was
+deleted.
+
+- The inventory module writes no `manufacturing` table any more. It still
+  reads `bom_items` for the product detail and the COGS estimate.
+- `production/legacy` reaches inventory through `legacy.Ports`: `Items`
+  (item masters, stock rows and row_to_json embeds, in the TS shapes),
+  `Stock` (consume for the one-shot completion, receive material and
+  goods, the WIP material) and `Pos`. internal/app adapts them
+  (`adapters_production_legacy.go`), with the stock writes in
+  `inventory/ledger` (`ConsumeForOrder`, `EnsureWipMaterial`).
+- COGS estimates and landed costs moved from the deleted package to
+  `inventory/cogs`. The package `inventory/production` is gone.
+- The order rules of the TS routes (numbering, coverage mode, variant split,
+  completion message) moved from `inventory/domain` to `production/legacy`.
 
 ## Open questions
 

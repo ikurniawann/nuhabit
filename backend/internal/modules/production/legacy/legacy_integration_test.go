@@ -1,31 +1,32 @@
-package production_test
+package legacy_test
 
 import (
 	"context"
 	"net/http"
-	"slices"
 	"testing"
 	"time"
 
-	"nuhabit/backend/internal/modules/inventory/domain"
+	"nuhabit/backend/internal/app"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/modules/inventory/kit/kittest"
-	"nuhabit/backend/internal/modules/inventory/production"
+	"nuhabit/backend/internal/modules/production/legacy"
 	"nuhabit/backend/internal/platform/database"
 )
 
 // Integration tests on TEST_DATABASE_URL in one rolled-back transaction.
-// Response shapes and database effects were also diffed against the TS
-// routes on seeded data (product, raw material, WIP and variant orders).
+// Item masters and stock run through the real adapters of internal/app;
+// the POS port is a fake. Response shapes and database effects were also
+// diffed against the TS routes on seeded data (product, raw material, WIP
+// and variant orders).
 
 type fakePos struct {
 	posProduct string
-	skus       []production.Sku
+	skus       []legacy.Sku
 	stock      map[string]float64
 	synced     int
 }
 
-func (f *fakePos) MerchandiseSkus(context.Context, database.Querier, string) (string, []production.Sku, error) {
+func (f *fakePos) MerchandiseSkus(context.Context, database.Querier, string) (string, []legacy.Sku, error) {
 	return f.posProduct, f.skus, nil
 }
 
@@ -34,8 +35,8 @@ func (f *fakePos) AddSkuStock(_ context.Context, _ database.Querier, sku, _ stri
 	return f.stock[sku], true, nil
 }
 
-func (f *fakePos) SkuLabels(context.Context, database.Querier, []string) (map[string]production.Sku, error) {
-	out := map[string]production.Sku{}
+func (f *fakePos) SkuLabels(context.Context, database.Querier, []string) (map[string]legacy.Sku, error) {
+	out := map[string]legacy.Sku{}
 	for _, s := range f.skus {
 		out[s.ID] = s
 	}
@@ -52,12 +53,19 @@ func obj(v any) map[string]any {
 	return m
 }
 
+// mount serves the legacy routes with the real item and stock adapters.
+func mount(e *kittest.T, pos *fakePos) {
+	ports := app.LegacyProductionPorts(e.Env.Now)
+	ports.Pos = pos
+	e.Mount(legacy.Routes(e.Env, ports))
+}
+
 func TestProductOrderLifecycle(t *testing.T) {
 	e := kittest.Setup(t, kittest.Menus, func() time.Time { return time.Date(2026, 10, 4, 3, 0, 0, 0, time.UTC) })
 	org := e.NewOrg()
 	e.ScopeStaff("branch", org)
 	pos := &fakePos{stock: map[string]float64{}}
-	e.Mount(production.Routes(e.Env, production.Ports{Pos: pos, Receipts: fakeReceipts{}}))
+	mount(e, pos)
 	kg := e.Unit("KG", "Kilogram")
 	rm := e.RawMaterial(org, "RMP-"+org.BranchID[:4], "Beras", kg, "", 1)
 	e.Stock(org, rm, org.MainID, 10, 12000)
@@ -97,7 +105,9 @@ func TestProductOrderLifecycle(t *testing.T) {
 
 	out = e.Call("GET", "/api/purchasing/production/orders/"+id, nil, http.StatusOK)
 	d := obj(out["data"])
-	if d["status"] != "COMPLETED" || len(d["batches"].([]any)) != 1 || obj(d["stock_summary"])["total_materials"] != 1.0 {
+	line := obj(d["materials"].([]any)[0])
+	if d["status"] != "COMPLETED" || len(d["batches"].([]any)) != 1 || obj(d["stock_summary"])["total_materials"] != 1.0 ||
+		obj(line["raw_material"])["nama"] != "Beras" || obj(line["satuan"])["nama"] != "Kilogram" || d["output_satuan_nama"] != nil {
 		t.Fatalf("detail %v", d)
 	}
 	out = e.Call("GET", "/api/purchasing/production/orders?search=Nasi", nil, http.StatusOK)
@@ -106,20 +116,13 @@ func TestProductOrderLifecycle(t *testing.T) {
 	}
 	e.Fail("GET", "/api/purchasing/production/orders/"+org.MainID, nil, http.StatusNotFound, "Production order not found")
 
-	out = e.Call("GET", "/api/purchasing/cogs/product/"+product, nil, http.StatusOK)
-	c := obj(out["data"])
-	// 0.2 × 1.1 kg at 12000 = 2640, +10% overhead.
-	if c["total_bom_cost"] != 2640.0 || c["hpp_per_unit"] != 2904.0 || c["margin_label"] != "Healthy" {
-		t.Fatalf("cogs %v", c)
-	}
-	e.Fail("GET", "/api/purchasing/cogs/product/x", nil, http.StatusBadRequest, "Invalid product ID")
 	out = e.Call("GET", "/api/purchasing/production/product-recipes", nil, http.StatusOK)
 	if r := obj(out["data"].([]any)[0]); r["total_bahan_baku"] != 1.0 {
 		t.Fatalf("recipes %v", r)
 	}
 }
 
-func TestVariantSplitAndAdditionalCosts(t *testing.T) {
+func TestVariantSplit(t *testing.T) {
 	e := kittest.Setup(t, kittest.Menus, nil)
 	org := e.NewOrg()
 	kg := e.Unit("KG", "Kilogram")
@@ -130,9 +133,9 @@ func TestVariantSplitAndAdditionalCosts(t *testing.T) {
 		RETURNING id::text`, product, org.BranchID[:6])
 	skuM := e.ID(`INSERT INTO pos.pos_product_skus (product_id, sku, name) VALUES ($1, 'KV-M', 'M') RETURNING id::text`, posProduct)
 	skuL := e.ID(`INSERT INTO pos.pos_product_skus (product_id, sku, name) VALUES ($1, 'KV-L', 'L') RETURNING id::text`, posProduct)
-	pos := &fakePos{posProduct: posProduct, skus: []production.Sku{{ID: skuM, Sku: "M", Name: "M"}, {ID: skuL, Sku: "L", Name: "L"}},
+	pos := &fakePos{posProduct: posProduct, skus: []legacy.Sku{{ID: skuM, Sku: "M", Name: "M"}, {ID: skuL, Sku: "L", Name: "L"}},
 		stock: map[string]float64{}}
-	e.Mount(production.Routes(e.Env, production.Ports{Pos: pos, Receipts: fakeReceipts{}}))
+	mount(e, pos)
 	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required) VALUES ($1, $2, 1)`, product, rm)
 	out := e.Call("POST", "/api/purchasing/production/orders", map[string]any{"product_id": product, "planned_qty": 2}, http.StatusCreated)
 	id := obj(out["data"])["id"].(string)
@@ -154,81 +157,54 @@ func TestVariantSplitAndAdditionalCosts(t *testing.T) {
 	}
 }
 
-// fakeReceipts stands in for procurement: received lines of raw materials
-// and the PO/GRN numbers (the SQL adapter is tested in internal/app).
-type fakeReceipts struct {
-	lines   []domain.ReceiptLine
-	totals  map[string]float64
-	numbers map[string]string
-}
-
-func (f fakeReceipts) ReceivedValues(_ context.Context, _ database.Querier, ids []string) ([]domain.ReceiptLine, map[string]float64, error) {
-	var out []domain.ReceiptLine
-	for _, l := range f.lines {
-		if slices.Contains(ids, l.MaterialID) {
-			out = append(out, l)
-		}
-	}
-	return out, f.totals, nil
-}
-
-func (f fakeReceipts) DocumentNumbers(_ context.Context, _ database.Querier, refs []production.DocRef) (map[string]string, error) {
-	out := map[string]string{}
-	for _, r := range refs {
-		if n, ok := f.numbers[domain.DocKey(r.Type, r.ID)]; ok {
-			out[domain.DocKey(r.Type, r.ID)] = n
-		}
-	}
-	return out, nil
-}
-
-// Freight on a GRN raises the HPP of the products made from what it brought.
-func TestAdditionalCostsInCogs(t *testing.T) {
+// A raw material order and a WIP order complete in one shot: the output
+// comes into stock, the WIP order through the product's WIP material.
+func TestRawMaterialAndWipOrders(t *testing.T) {
 	e := kittest.Setup(t, kittest.Menus, nil)
 	org := e.NewOrg()
+	mount(e, &fakePos{stock: map[string]float64{}})
 	kg := e.Unit("KG", "Kilogram")
-	rm := e.RawMaterial(org, "RML-"+org.BranchID[:4], "Beras", kg, "", 1)
-	e.Stock(org, rm, org.MainID, 10, 12000)
-	product := e.Product(org, org.Stall1ID, "PRL-"+org.BranchID[:4], "Nasi", 5000)
-	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required, waste_factor) VALUES ($1, $2, 0.2, 0.1)`, product, rm)
-	po, grn := e.ID(`SELECT gen_random_uuid()::text`), e.ID(`SELECT gen_random_uuid()::text`)
-	receipts := fakeReceipts{
-		lines:   []domain.ReceiptLine{{GrnID: grn, PoID: po, MaterialID: rm, Value: 120000}},
-		totals:  map[string]float64{"GRN:" + grn: 120000, "PO:" + po: 120000},
-		numbers: map[string]string{"GRN:" + grn: "GRN-GO-1", "PO:" + po: "PO-GO-1"},
+	milk := e.RawMaterial(org, "RWM-"+org.BranchID[:4], "Susu", kg, "", 1)
+	cream := e.RawMaterial(org, "RWC-"+org.BranchID[:4], "Krim", kg, "", 1)
+	e.Stock(org, milk, org.MainID, 10, 20000)
+	e.Exec(`INSERT INTO manufacturing.raw_material_bom_items (output_raw_material_id, component_raw_material_id, qty_required)
+		VALUES ($1, $2, 2)`, cream, milk)
+	out := e.Call("POST", "/api/purchasing/production/orders", map[string]any{"production_context": "raw_material",
+		"raw_material_id": cream, "planned_qty": 1}, http.StatusCreated)
+	id := obj(out["data"])["id"].(string)
+	for _, action := range []string{"release", "start", "complete"} {
+		e.Call("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": action}, http.StatusOK)
 	}
-	e.Mount(production.Routes(e.Env, production.Ports{Pos: &fakePos{stock: map[string]float64{}}, Receipts: receipts}))
-	base := "/api/purchasing/cogs/additional-cost"
-
-	e.Fail("POST", base, map[string]any{"reference_type": "SO", "tipe_biaya": "freight", "jumlah": 1}, http.StatusBadRequest, "Validation failed")
-	e.Fail("POST", base, map[string]any{"reference_type": "PO", "reference_id": grn, "tipe_biaya": "freight", "jumlah": 1}, http.StatusNotFound, "PO tidak ditemukan")
-	out := e.Call("POST", base, map[string]any{"reference_type": "GRN", "reference_id": grn, "tipe_biaya": "freight", "jumlah": 10,
-		"currency": "USD", "exchange_rate": 1200, "deskripsi": "Ongkir", "tanggal_transaksi": "2026-10-03"}, http.StatusCreated)
-	cost := obj(out["data"])
-	if out["message"] != "Biaya tambahan berhasil ditambahkan" || cost["reference_number"] != "GRN-GO-1" || cost["jumlah"] != "10.00" ||
-		cost["jumlah_idr"] != "12000.00" || cost["currency"] != "USD" || cost["tanggal_transaksi"] != "2026-10-03" || cost["deskripsi"] != "Ongkir" {
-		t.Fatalf("create %v", out)
-	}
-	list := e.Call("GET", base+"?reference_type=GRN&reference_id="+grn, nil, http.StatusOK)
-	if rows := list["data"].([]any); len(rows) != 1 || obj(rows[0])["id"] != cost["id"] || obj(list["pagination"])["total"] != 1.0 {
-		t.Fatalf("list %v", list)
-	}
-	if rows := e.Call("GET", base+"?reference_type=PO&reference_id="+po, nil, http.StatusOK)["data"].([]any); len(rows) != 0 {
-		t.Fatalf("PO filter %v", rows)
+	var qty, cost float64
+	e.Scalar(&qty, `SELECT qty_available FROM inventory.inventory WHERE raw_material_id = $1`, cream)
+	e.Scalar(&cost, `SELECT unit_cost FROM inventory.inventory WHERE raw_material_id = $1`, cream)
+	if qty != 1 || cost != 40000 {
+		t.Fatalf("cream %v @ %v", qty, cost)
 	}
 
-	// 12000 freight on 120000 of rice is a 10% landed cost: 0.22 kg × 12000 × 10% = 264 per unit.
-	c := obj(e.Call("GET", "/api/purchasing/cogs/product/"+product, nil, http.StatusOK)["data"])
-	line := obj(c["breakdown_bahan"].([]any)[0])
-	if c["total_bom_cost"] != 2640.0 || c["total_additional_cost"] != 264.0 || c["total_overhead"] != 290.4 || c["hpp_per_unit"] != 3194.4 ||
-		line["additional_cost"] != 264.0 || line["landed_cost_rate"] != 10.0 {
-		t.Fatalf("cogs with landed cost %v", c)
+	product := e.Product(org, org.Stall1ID, "PRW-"+org.BranchID[:4], "Adonan", 5000)
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required) VALUES ($1, $2, 1)`, product, milk)
+	out = e.Call("POST", "/api/purchasing/production/orders", map[string]any{"product_id": product, "planned_qty": 2, "output_type": "WIP"},
+		http.StatusCreated)
+	id = obj(out["data"])["id"].(string)
+	for _, action := range []string{"release", "start", "complete"} {
+		e.Call("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": action}, http.StatusOK)
 	}
-
-	e.Call("DELETE", base+"/"+cost["id"].(string), nil, http.StatusOK)
-	e.Fail("DELETE", base+"/"+cost["id"].(string), nil, http.StatusNotFound, "Biaya tambahan tidak ditemukan")
-	if c := obj(e.Call("GET", "/api/purchasing/cogs/product/"+product, nil, http.StatusOK)["data"]); c["hpp_per_unit"] != 2904.0 || c["total_additional_cost"] != 0.0 {
-		t.Fatalf("cogs after delete %v", c)
+	var wip string
+	e.Scalar(&wip, `SELECT id::text FROM item.raw_materials WHERE source_product_id = $1 AND material_type = 'WIP'`, product)
+	e.Scalar(&qty, `SELECT qty_available FROM inventory.inventory WHERE raw_material_id = $1`, wip)
+	if qty != 2 {
+		t.Fatalf("wip stock %v", qty)
+	}
+	list := e.Call("GET", "/api/purchasing/production/wip", nil, http.StatusOK)
+	var found map[string]any
+	for _, r := range list["data"].([]any) {
+		if obj(r)["id"] == wip {
+			found = obj(r)
+		}
+	}
+	if found == nil || obj(found["source_product"])["nama"] != "Adonan" || obj(found["latest_batch"])["production_order_id"] != id {
+		t.Fatalf("legacy wip %v", list)
 	}
 }
 
@@ -237,7 +213,7 @@ func TestAdditionalCostsInCogs(t *testing.T) {
 func TestSteppedOrderRefusesOneShot(t *testing.T) {
 	e := kittest.Setup(t, kittest.Menus, nil)
 	org := e.NewOrg()
-	e.Mount(production.Routes(e.Env, production.Ports{Pos: &fakePos{stock: map[string]float64{}}, Receipts: fakeReceipts{}}))
+	mount(e, &fakePos{stock: map[string]float64{}})
 	kg := e.Unit("KG", "Kilogram")
 	rm := e.RawMaterial(org, "RMS-"+org.BranchID[:4], "Beras", kg, "", 1)
 	e.Stock(org, rm, org.MainID, 10, 12000)
@@ -250,4 +226,61 @@ func TestSteppedOrderRefusesOneShot(t *testing.T) {
 	msg := "Bahan order ini sudah dikeluarkan bertahap. Selesaikan lewat Terima Hasil di Langkah Produksi."
 	e.Fail("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": "complete"}, http.StatusBadRequest, msg)
 	e.Fail("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": "cancel"}, http.StatusBadRequest, msg)
+}
+
+// Product and raw material BOM lines: add, cost per small unit, update,
+// remove. Moved here from the inventory catalog.
+func TestBomLines(t *testing.T) {
+	e := kittest.Setup(t, kittest.Menus, nil)
+	org := e.NewOrg()
+	mount(e, &fakePos{stock: map[string]float64{}})
+	kg, gr := e.Unit("KG", "Kilogram"), e.Unit("GR", "Gram")
+	rm := e.RawMaterial(org, "RMB-"+org.BranchID[:4], "Gula BOM", kg, gr, 1000)
+	e.Stock(org, rm, org.MainID, 5000, 0.02)
+	pid := e.Product(org, org.Stall1ID, "PRB-"+org.BranchID[:4], "Es Kopi", 5000)
+
+	out := e.Call("POST", "/api/purchasing/products/"+pid+"/bom", map[string]any{"raw_material_id": rm, "qty_needed": 200, "waste_persen": 10}, http.StatusCreated)
+	bom := obj(out["data"])
+	if bom["qty_required"] != "200.0000" || bom["waste_factor"] != "0.1000" || out["message"] != "Bahan berhasil ditambahkan ke BOM" {
+		t.Fatalf("bom %v", out)
+	}
+	e.Fail("POST", "/api/purchasing/products/"+pid+"/bom", map[string]any{"raw_material_id": rm}, http.StatusBadRequest, "Jumlah harus lebih dari 0")
+	e.Fail("POST", "/api/purchasing/products/"+pid+"/bom", map[string]any{"raw_material_id": rm, "qty_required": 1}, http.StatusBadRequest,
+		"Bahan ini sudah ada di BOM produk")
+	e.Fail("POST", "/api/purchasing/products/"+org.MainID+"/bom", map[string]any{"raw_material_id": rm, "qty_required": 1},
+		http.StatusNotFound, "Produk tidak ditemukan")
+	out = e.Call("GET", "/api/purchasing/products/"+pid+"/bom", nil, http.StatusOK)
+	line := obj(out["data"].([]any)[0])
+	// 0.02 per gram-equivalent avg cost / 1000 per small unit, × 200 × 1.1.
+	if line["cost_per_unit"] != 0.00002 || obj(obj(line["raw_material"])["satuan_kecil"])["id"] != gr ||
+		obj(line["raw_material"])["konversi_factor"] != 1000.0 || line["satuan"] != nil {
+		t.Fatalf("bom line %v", line)
+	}
+	out = e.Call("PUT", "/api/purchasing/bom/"+bom["id"].(string), map[string]any{"qty_required": 150}, http.StatusOK)
+	if obj(out["data"])["qty_required"] != "150.0000" || out["message"] != "Item BOM berhasil diupdate" {
+		t.Fatalf("update %v", out)
+	}
+	e.Fail("PUT", "/api/purchasing/bom/"+org.MainID, map[string]any{"qty_required": 1}, http.StatusNotFound, "Item BOM tidak ditemukan")
+	out = e.Call("DELETE", "/api/purchasing/bom/"+bom["id"].(string), nil, http.StatusOK)
+	if out["message"] != "Bahan berhasil dihapus dari BOM" {
+		t.Fatal(out)
+	}
+
+	cream := e.RawMaterial(org, "RMK-"+org.BranchID[:4], "Krim", kg, "", 1)
+	e.Fail("POST", "/api/purchasing/raw-materials/"+cream+"/bom", map[string]any{"component_raw_material_id": cream, "qty_required": 1},
+		http.StatusBadRequest, "A raw material cannot be a component of itself")
+	out = e.Call("POST", "/api/purchasing/raw-materials/"+cream+"/bom", map[string]any{"component_raw_material_id": rm, "qty_required": 500,
+		"satuan_id": gr}, http.StatusCreated)
+	comp := obj(out["data"])
+	out = e.Call("GET", "/api/purchasing/raw-materials/"+cream+"/bom", nil, http.StatusOK)
+	line = obj(out["data"].([]any)[0])
+	if line["raw_material_id"] != rm || obj(line["component"])["nama"] != "Gula BOM" || obj(line["satuan"])["id"] != gr ||
+		line["total_cost"] != 0.01 {
+		t.Fatalf("raw material bom %v", line)
+	}
+	e.Call("PUT", "/api/purchasing/raw-material-bom/"+comp["id"].(string), map[string]any{"waste_factor": 0.1}, http.StatusOK)
+	e.Call("DELETE", "/api/purchasing/raw-material-bom/"+comp["id"].(string), nil, http.StatusOK)
+	if rows := e.Call("GET", "/api/purchasing/raw-materials/"+cream+"/bom", nil, http.StatusOK)["data"].([]any); len(rows) != 0 {
+		t.Fatalf("after delete %v", rows)
+	}
 }

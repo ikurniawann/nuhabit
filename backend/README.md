@@ -86,8 +86,8 @@ docs/ARCHITECTURE.md
 | `pos-ops` | 46 | shifts, tables, reservations, POS catalog, customers, dashboard, reports, POS settings |
 | `stored-value` | 59 | ARK wallet, top-up, member cards and bills, refunds, gift cards, promo and offers |
 | `procurement` | 97 | purchase requests and orders, GRN, QC, deliveries, returns, vendors, payables reports |
-| `inventory` | 91 | stock, movements, opnames, transfers, items and BOM, production orders, COGS |
-| `production` | 7 | multi-level BOM explosion, material issue, WIP, batch receipts with scrap, batch HPP |
+| `inventory` | 84 | stock, movements, opnames, transfers, item masters, COGS estimates and landed costs |
+| `production` | 22 | production orders, BOM lines, multi-level BOM explosion, material issue, WIP, batch receipts with scrap, batch HPP |
 | `accounting` | 61 | chart of accounts, journals, fiscal periods, AP/AR, cash-bank, reports, finance |
 | `hris` | 82 | employees, attendance, leave, shifts, overtime, contracts, onboarding, announcements, master data |
 | `payroll` | 62 | payroll runs, payslips, salary, loans, KPI, performance reviews, feedback, department tasks |

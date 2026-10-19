@@ -327,14 +327,5 @@ func FormatRupiah(v float64) string {
 
 /* ── BOM costing (lib/purchasing/bom-cost.ts) ───────────────────────── */
 
-// SmallUnitCost is normalizeToSmallUnit: the master cost per satuan besar
-// divided by konversi when the material has a small unit.
-func SmallUnitCost(cost, konversi float64, hasSmallUnit bool) float64 {
-	if hasSmallUnit && konversi > 0 {
-		return cost / konversi
-	}
-	return cost
-}
-
 // QtyWithWaste is qty × (1 + waste).
 func QtyWithWaste(qty, waste float64) float64 { return qty * (1 + waste) }

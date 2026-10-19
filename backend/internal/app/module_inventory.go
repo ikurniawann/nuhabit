@@ -5,14 +5,14 @@ import (
 
 	"nuhabit/backend/internal/modules/inventory"
 	"nuhabit/backend/internal/modules/inventory/catalog"
-	"nuhabit/backend/internal/modules/inventory/production"
+	"nuhabit/backend/internal/modules/inventory/cogs"
 	"nuhabit/backend/internal/modules/inventory/stock"
 	"nuhabit/backend/internal/platform/module"
 )
 
 // inventory: item masters, stock levels and ledgers, opnames, transfers,
-// production and COGS (/api/inventory, /api/purchasing/{inventory,
-// raw-materials,...}). Procurement and POS catalog reads go through the SQL
+// COGS estimates and landed costs (/api/inventory, /api/purchasing/{inventory,
+// raw-materials,cogs,...}). Procurement and POS catalog reads go through the SQL
 // adapters in adapters_inventory.go; stock journals go to accounting as
 // outbox events.
 func init() {
@@ -28,7 +28,7 @@ func inventoryPorts(now func() time.Time) inventory.Ports {
 			PosSkus:     inventoryPosSkus{},
 			Journals:    stock.OutboxJournals{},
 		},
-		Catalog:    catalog.Ports{Pos: inventoryPosCatalog{now: now}, Procurement: inventoryGrns{}},
-		Production: production.Ports{Pos: inventoryPosOutput{catalog: inventoryPosCatalog{now: now}}, Receipts: inventoryReceipts{}},
+		Catalog: catalog.Ports{Pos: inventoryPosCatalog{now: now}, Procurement: inventoryGrns{}},
+		Cogs:    cogs.Ports{Receipts: inventoryReceipts{}},
 	}
 }

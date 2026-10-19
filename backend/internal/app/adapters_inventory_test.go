@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"nuhabit/backend/internal/modules/inventory/production"
+	"nuhabit/backend/internal/modules/inventory/cogs"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -50,7 +50,7 @@ func TestInventoryReceiptsAdapter(t *testing.T) {
 	if len(totals) != 2 || totals["GRN:"+grn] != 180000 || totals["PO:"+po] != 180000 {
 		t.Fatalf("totals %v", totals)
 	}
-	numbers, err := receipts.DocumentNumbers(ctx, tx, []production.DocRef{{Type: "PO", ID: po}, {Type: "GRN", ID: grn}, {Type: "GRN", ID: po}})
+	numbers, err := receipts.DocumentNumbers(ctx, tx, []cogs.DocRef{{Type: "PO", ID: po}, {Type: "GRN", ID: grn}, {Type: "GRN", ID: po}})
 	if err != nil {
 		t.Fatal(err)
 	}

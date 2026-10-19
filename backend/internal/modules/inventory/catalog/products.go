@@ -144,7 +144,7 @@ func (h *handler) getProduct(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	costs, err := h.stockCosts(ctx, rows, "raw_material_id", false)
+	costs, err := h.stockCosts(ctx, rows, "raw_material_id")
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (h *handler) getProduct(w http.ResponseWriter, r *http.Request) error {
 		if c, ok := costs[row.Str("raw_material_id")]; ok {
 			return c
 		}
-		return fallbackCost(kit.Embed(row.Get("raw_material")), false)
+		return fallbackCost(kit.Embed(row.Get("raw_material")))
 	})
 	return kit.Data(w, withHppReview(product).Set("bom_items", lines).Set("hpp_calculated", total))
 }

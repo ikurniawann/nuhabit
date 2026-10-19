@@ -10,9 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/inventory/catalog"
+	"nuhabit/backend/internal/modules/inventory/cogs"
 	invdomain "nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
-	"nuhabit/backend/internal/modules/inventory/production"
 	"nuhabit/backend/internal/modules/inventory/stock"
 	"nuhabit/backend/internal/platform/database"
 )
@@ -286,7 +286,7 @@ func (inventoryGrns) SupplierGrnIDs(ctx context.Context, q database.Querier, grn
 
 type inventoryReceipts struct{}
 
-var _ production.Receipts = inventoryReceipts{}
+var _ cogs.Receipts = inventoryReceipts{}
 
 // receiptValue is a GRN line's value: quantity received × PO unit price.
 const receiptValue = `(gi.qty_diterima * poi.harga_satuan)::float8`
@@ -332,7 +332,7 @@ func (inventoryReceipts) ReceivedValues(ctx context.Context, q database.Querier,
 }
 
 // DocumentNumbers is loadDocumentNumbers in lib/purchasing/cogs-additional-cost.ts.
-func (inventoryReceipts) DocumentNumbers(ctx context.Context, q database.Querier, refs []production.DocRef) (map[string]string, error) {
+func (inventoryReceipts) DocumentNumbers(ctx context.Context, q database.Querier, refs []cogs.DocRef) (map[string]string, error) {
 	var pos, grns []string
 	for _, r := range refs {
 		if r.Type == "PO" {
@@ -371,72 +371,4 @@ func collectAmounts(rows pgx.Rows) (map[string]float64, error) {
 		out[key] = v
 	}
 	return out, rows.Err()
-}
-
-/* ── POS merchandise output (production completion) ──────────────────── */
-
-type inventoryPosOutput struct{ catalog inventoryPosCatalog }
-
-var _ production.PosOutput = inventoryPosOutput{}
-
-// MerchandiseSkus is resolveVariantContext in lib/purchasing/production-orders.ts.
-func (inventoryPosOutput) MerchandiseSkus(ctx context.Context, q database.Querier, productID string) (string, []production.Sku, error) {
-	var posID string
-	err := q.QueryRow(ctx, `SELECT id::text FROM pos.pos_products WHERE source_product_id = $1 AND product_kind = 'merchandise' LIMIT 1`,
-		productID).Scan(&posID)
-	if database.IsNoRows(err) {
-		return "", nil, nil
-	}
-	if err != nil {
-		return "", nil, err
-	}
-	rows, err := q.Query(ctx, `SELECT id::text, sku, name, options, stock_quantity::text FROM pos.pos_product_skus
-		WHERE product_id = $1 AND is_active = true ORDER BY name ASC`, posID)
-	if err != nil {
-		return "", nil, err
-	}
-	defer rows.Close()
-	var skus []production.Sku
-	for rows.Next() {
-		var s production.Sku
-		if err := rows.Scan(&s.ID, &s.Sku, &s.Name, &s.Options, &s.StockQuantity); err != nil {
-			return "", nil, err
-		}
-		skus = append(skus, s)
-	}
-	return posID, skus, rows.Err()
-}
-
-// AddSkuStock is postVariantStock's UPDATE … RETURNING stock_quantity.
-func (inventoryPosOutput) AddSkuStock(ctx context.Context, q database.Querier, skuID, posProductID string, qty float64) (float64, bool, error) {
-	var after float64
-	err := q.QueryRow(ctx, `UPDATE pos.pos_product_skus SET stock_quantity = stock_quantity + $1, updated_at = now()
-		WHERE id = $2 AND product_id = $3 RETURNING stock_quantity::float8`, kit.N(qty), skuID, posProductID).Scan(&after)
-	if database.IsNoRows(err) {
-		return 0, false, nil
-	}
-	return after, err == nil, err
-}
-
-// SkuLabels reads sku, name and options of SKUs.
-func (inventoryPosOutput) SkuLabels(ctx context.Context, q database.Querier, skuIDs []string) (map[string]production.Sku, error) {
-	rows, err := q.Query(ctx, `SELECT id::text, sku, name, options FROM pos.pos_product_skus WHERE id = ANY($1::uuid[])`, skuIDs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := map[string]production.Sku{}
-	for rows.Next() {
-		var s production.Sku
-		if err := rows.Scan(&s.ID, &s.Sku, &s.Name, &s.Options); err != nil {
-			return nil, err
-		}
-		out[s.ID] = s
-	}
-	return out, rows.Err()
-}
-
-// SyncHpp is syncProductionHppToPos.
-func (a inventoryPosOutput) SyncHpp(ctx context.Context, q database.Querier, productID string, hppPerUnit float64) (*kit.Row, error) {
-	return a.catalog.SyncProduct(ctx, q, productID, "", &hppPerUnit)
 }

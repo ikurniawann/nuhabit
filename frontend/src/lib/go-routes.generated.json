@@ -4205,12 +4205,12 @@
     "path": "/api/public/site/trial"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "DELETE",
     "path": "/api/purchasing/bom/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "PUT",
     "path": "/api/purchasing/bom/{id}"
   },
@@ -4675,37 +4675,37 @@
     "path": "/api/purchasing/pr/{id}/submit"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/production/orders"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "POST",
     "path": "/api/purchasing/production/orders"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/production/orders/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "PATCH",
     "path": "/api/purchasing/production/orders/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/production/product-recipes"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/production/raw-material-recipes"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/production/wip"
   },
@@ -4740,12 +4740,12 @@
     "path": "/api/purchasing/products/{id}/apply-recipe-hpp"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/products/{id}/bom"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "POST",
     "path": "/api/purchasing/products/{id}/bom"
   },
@@ -4765,12 +4765,12 @@
     "path": "/api/purchasing/qc/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "DELETE",
     "path": "/api/purchasing/raw-material-bom/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "PUT",
     "path": "/api/purchasing/raw-material-bom/{id}"
   },
@@ -4805,12 +4805,12 @@
     "path": "/api/purchasing/raw-materials/{id}"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "GET",
     "path": "/api/purchasing/raw-materials/{id}/bom"
   },
   {
-    "module": "inventory",
+    "module": "production",
     "method": "POST",
     "path": "/api/purchasing/raw-materials/{id}/bom"
   },

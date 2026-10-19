@@ -1,14 +1,11 @@
-package production
+package legacy
 
 import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
-	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
-	"nuhabit/backend/internal/modules/inventory/ledger"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 )
@@ -21,11 +18,6 @@ var errNoRows = errors.New("No rows found")
 type consumption struct {
 	row                                  *kit.Row
 	qtyActual, wasteQty, unit, totalCost float64
-}
-
-type postedVariant struct {
-	skuID         string
-	before, after float64
 }
 
 // complete is completeProductionOrder. Validation (status, materials,
@@ -53,7 +45,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 
 	// resolveVariantSplit: only finished goods of a product order.
 	var posProductID string
-	var variants []domain.VariantRow
+	var variants []variantRow
 	if order.Str("production_context") == "product" && outputType == "FINISHED_GOOD" {
 		pid, skus, err := h.merchandise(ctx, order.Str("product_id"))
 		if err != nil {
@@ -71,7 +63,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 			if !in.variantsSent {
 				rows = nil
 			}
-			valid, msg := domain.ValidateVariantSplit(actualQty, rows, ids)
+			valid, msg := validateVariantSplit(actualQty, rows, ids)
 			if msg != "" {
 				return httpx.BadRequest(msg, kit.Obj("available_skus", available))
 			}
@@ -126,12 +118,12 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 
 	var updated, batch *kit.Row
 	err = h.env.Tx(ctx, func(q database.Querier) error {
-		if err := h.consume(ctx, q, orderID, number, userID, consumed, now); err != nil {
+		if err := h.consume(ctx, q, orderID, number, userID, consumed); err != nil {
 			return err
 		}
 		var wipID *string
-		if product := embedded(order.Get("product")); outputType == "WIP" && product != nil {
-			id, err := EnsureWip(ctx, q, product, userID)
+		if pid := order.Str("product_id"); outputType == "WIP" && pid != "" {
+			id, err := h.ports.Stock.WipMaterial(ctx, q, pid, userID)
 			if err != nil {
 				return err
 			}
@@ -142,19 +134,21 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 		}
 		switch {
 		case order.Str("production_context") == "raw_material" && order.Str("output_raw_material_id") != "":
-			err = ledger.AddFromProduction(ctx, q, ledger.ProductionOutput{RawMaterialID: order.Str("output_raw_material_id"),
-				Qty: actualQty, UnitCost: hpp, OrderID: orderID, ProductionNumber: number, UserID: userID, ReferenceType: "production_output"}, now)
+			err = h.ports.Stock.ReceiveMaterial(ctx, q, MaterialReceipt{RawMaterialID: order.Str("output_raw_material_id"),
+				Qty: actualQty, UnitCost: hpp, ReferenceID: orderID, ReferenceNumber: number, ReferenceType: "production_output", UserID: userID})
 		case outputType == "WIP" && wipID != nil:
-			err = ledger.AddFromProduction(ctx, q, ledger.ProductionOutput{RawMaterialID: *wipID, Qty: actualQty, UnitCost: hpp,
-				OrderID: orderID, ProductionNumber: number, UserID: userID}, now)
+			err = h.ports.Stock.ReceiveMaterial(ctx, q, MaterialReceipt{RawMaterialID: *wipID, Qty: actualQty, UnitCost: hpp,
+				ReferenceID: orderID, ReferenceNumber: number, UserID: userID})
 		default:
-			var posted []postedVariant
+			var posted []PostedVariant
 			if len(variants) > 0 && posProductID != "" {
 				if posted, err = h.postVariants(ctx, q, orderID, batch.Str("id"), posProductID, userID, variants); err != nil {
 					return err
 				}
 			}
-			err = postFinishedGoods(ctx, q, order, userID, actualQty, hpp, totalCost, posted, now)
+			err = h.ports.Stock.ReceiveGoods(ctx, q, GoodsReceipt{ProductID: order.Str("product_id"), Qty: actualQty, UnitCost: hpp,
+				TotalCost: totalCost, ReferenceID: orderID, ReferenceNumber: number, Alasan: "Production completed", UserID: userID,
+				Variants: posted})
 		}
 		if err != nil {
 			return err
@@ -190,39 +184,28 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 		}
 	}
 	return kit.OK(w, kit.Obj("success", true, "data", kit.Obj("order", updated, "batch", batch, "pos_sync", sync),
-		"message", domain.CompletionMessage(number, hpp, margin)))
+		"message", completionMessage(number, hpp, margin)))
 }
 
 // consume is consumeMaterials: stock out per material not yet consumed.
-func (h *handler) consume(ctx context.Context, q database.Querier, orderID, number, userID string, materials []consumption, now time.Time) error {
+func (h *handler) consume(ctx context.Context, q database.Querier, orderID, number, userID string, materials []consumption) error {
 	for _, m := range materials {
 		fields := kit.Obj("qty_actual", m.qtyActual, "waste_qty", m.wasteQty, "unit_cost", m.unit, "total_cost", m.totalCost)
 		id := m.row.Str("id")
 		if m.row.Get("inventory_movement_id") == nil {
 			rm := m.row.Str("raw_material_id")
-			inv, err := kit.QueryOne(ctx, q, `SELECT id::text, qty_available, unit_cost, branch_id::text, warehouse_id::text
-				FROM inventory WHERE raw_material_id = $1 AND is_active = true LIMIT 1`, rm)
-			if err != nil || inv == nil {
+			mv, err := h.ports.Stock.Consume(ctx, q, Consumption{RawMaterialID: rm, Qty: m.qtyActual, UnitCost: m.unit,
+				OrderID: orderID, OrderNumber: number, UserID: userID})
+			var short *ShortageError
+			switch {
+			case errors.As(err, &short):
+				return httpx.BadRequest("Stok bahan tidak cukup. Sisa " + kit.JSNum(short.Available) + ", butuh " + kit.JSNum(m.qtyActual))
+			case errors.Is(err, ErrNoStock):
 				return httpx.BadRequest("Inventory bahan " + rm + " tidak ditemukan")
-			}
-			before := inv.Num("qty_available")
-			if before < m.qtyActual {
-				return httpx.BadRequest("Stok bahan tidak cukup. Sisa " + kit.JSNum(before) + ", butuh " + kit.JSNum(m.qtyActual))
-			}
-			after := before - m.qtyActual
-			mv, err := kit.InsertOne(ctx, q, "inventory_movements", kit.Obj("inventory_id", inv.Get("id"), "raw_material_id", rm,
-				"tipe", "out", "jumlah", m.qtyActual, "qty_before", before, "qty_after", after, "unit_cost", m.unit,
-				"total_cost", m.totalCost, "branch_id", inv.Get("branch_id"), "warehouse_id", inv.Get("warehouse_id"),
-				"reference_type", "production", "reference_id", orderID, "reference_number", number,
-				"alasan", "Pemakaian bahan untuk produksi "+number, "created_by", userID))
-			if err != nil {
+			case err != nil:
 				return err
 			}
-			if _, err := q.Exec(ctx, `UPDATE inventory SET qty_available = $1, last_movement_at = $2, updated_by = $3 WHERE id = $4`,
-				kit.N(after), now, userID, inv.Get("id")); err != nil {
-				return err
-			}
-			fields.Set("inventory_movement_id", mv.Get("id"))
+			fields.Set("inventory_movement_id", mv)
 		}
 		if _, err := kit.Update(ctx, q, "production_order_materials", fields, func(a *kit.Args) string { return `"id" = ` + a.Add(id) }, false); err != nil {
 			return err
@@ -231,34 +214,9 @@ func (h *handler) consume(ctx context.Context, q database.Querier, orderID, numb
 	return nil
 }
 
-// EnsureWip is ensureWipRawMaterial: the WIP material that mirrors a
-// product, created on first use. The production module reaches it through
-// its stock port.
-func EnsureWip(ctx context.Context, q database.Querier, product *kit.Row, userID string) (string, error) {
-	existing, err := kit.QueryOne(ctx, q, `SELECT id::text FROM raw_materials WHERE source_product_id = $1 LIMIT 1`, product.Get("id"))
-	if err != nil {
-		return "", err
-	}
-	if existing != nil {
-		return existing.Str("id"), nil
-	}
-	nama := kit.FirstNonEmpty(product.Str("nama"), product.Str("kode"), "WIP")
-	var satuan any
-	if s := product.Str("satuan_id"); s != "" {
-		satuan = s
-	}
-	row, err := kit.InsertOne(ctx, q, "raw_materials", kit.Obj("kode", domain.WipCode(product.Str("kode")), "nama", nama,
-		"kategori", "LAINNYA", "material_type", "WIP", "source_product_id", product.Get("id"), "satuan_besar_id", satuan,
-		"satuan_kecil_id", satuan, "konversi_factor", 1.0, "created_by", userID))
-	if err != nil {
-		return "", err
-	}
-	return row.Str("id"), nil
-}
-
 // upsertBatch updates or creates the order's deterministic batch.
 func upsertBatch(ctx context.Context, q database.Querier, order *kit.Row, userID, outputType string, wipID *string, qty, hpp, total float64) (*kit.Row, error) {
-	number := domain.BatchNumber(order.Str("nomor_produksi"))
+	number := batchNumber(order.Str("nomor_produksi"))
 	existing, err := kit.QueryOne(ctx, q, `SELECT * FROM production_batches WHERE batch_number = $1 LIMIT 1`, number)
 	if err != nil {
 		return nil, err
@@ -286,7 +244,7 @@ func upsertBatch(ctx context.Context, q database.Querier, order *kit.Row, userID
 
 // postVariants is postVariantStock: idempotent per (batch, SKU) through ON
 // CONFLICT DO NOTHING; only newly recorded rows raise SKU stock.
-func (h *handler) postVariants(ctx context.Context, q database.Querier, orderID, batchID, posProductID, userID string, rows []domain.VariantRow) ([]postedVariant, error) {
+func (h *handler) postVariants(ctx context.Context, q database.Querier, orderID, batchID, posProductID, userID string, rows []variantRow) ([]PostedVariant, error) {
 	payload := make([]*kit.Row, len(rows))
 	for i, r := range rows {
 		payload[i] = kit.Obj("production_order_id", orderID, "production_batch_id", batchID, "pos_sku_id", r.PosSkuID, "qty", r.Qty, "created_by", userID)
@@ -295,7 +253,7 @@ func (h *handler) postVariants(ctx context.Context, q database.Querier, orderID,
 	if err != nil {
 		return nil, err
 	}
-	var posted []postedVariant
+	var posted []PostedVariant
 	for _, row := range inserted {
 		qty := row.Num("qty")
 		after, ok, err := h.ports.Pos.AddSkuStock(ctx, q, row.Str("pos_sku_id"), posProductID, qty)
@@ -305,7 +263,7 @@ func (h *handler) postVariants(ctx context.Context, q database.Querier, orderID,
 		if !ok {
 			return nil, errors.New("SKU " + row.Str("pos_sku_id") + " tidak ditemukan untuk produk ini")
 		}
-		posted = append(posted, postedVariant{row.Str("pos_sku_id"), after - qty, after})
+		posted = append(posted, PostedVariant{row.Str("pos_sku_id"), after - qty, after})
 	}
 	return posted, nil
 }
@@ -331,18 +289,4 @@ func insertIgnore(ctx context.Context, q database.Querier, rows []*kit.Row) (kit
 	}
 	return kit.Query(ctx, q, `INSERT INTO production_output_variants (production_order_id, production_batch_id, pos_sku_id, qty, created_by)
 		VALUES `+values+` ON CONFLICT DO NOTHING RETURNING pos_sku_id, qty`, a.Values...)
-}
-
-// postFinishedGoods adds the output to finished goods at the weighted cost
-// and records the product movement plus one per posted variant.
-func postFinishedGoods(ctx context.Context, q database.Querier, order *kit.Row, userID string, qty, hpp, total float64, posted []postedVariant, now time.Time) error {
-	variants := make([]ledger.VariantMovement, len(posted))
-	for i, p := range posted {
-		variants[i] = ledger.VariantMovement{SkuID: p.skuID, Before: p.before, After: p.after}
-	}
-	return ledger.AddFinishedGoodsFromProduction(ctx, q, ledger.FinishedGoodsReceipt{
-		ProductID: order.Str("product_id"), Qty: qty, UnitCost: hpp, TotalCost: total,
-		ReferenceID: order.Str("id"), ReferenceNumber: order.Str("nomor_produksi"), Alasan: "Production completed",
-		UserID: userID, Variants: variants,
-	}, now)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"nuhabit/backend/internal/modules/production/legacy"
 	"nuhabit/backend/internal/platform/database"
 )
 
@@ -14,6 +15,8 @@ type Ports struct {
 	Catalog Catalog
 	Stock   Stock
 	Pos     Pos
+	// Legacy serves the order and BOM routes ported from TS.
+	Legacy legacy.Ports
 }
 
 /* ── catalog (inventory: item.raw_materials, item.products) ──────────── */

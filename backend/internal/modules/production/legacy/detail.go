@@ -1,4 +1,4 @@
-package production
+package legacy
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 
-	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -35,16 +34,10 @@ func (h *handler) stockMap(ctx context.Context, rows kit.Rows) (map[string]*kit.
 			ids = append(ids, id)
 		}
 	}
-	out := map[string]*kit.Row{}
 	if len(ids) == 0 {
-		return out, nil
+		return map[string]*kit.Row{}, nil
 	}
-	stock, err := kit.Query(ctx, h.env.DB, `SELECT id, qty_onhand, avg_cost, satuan_kecil_nama, satuan_besar_nama
-		FROM v_raw_materials_stock WHERE id = ANY($1::uuid[])`, ids)
-	for _, s := range stock {
-		out[s.Str("id")] = s
-	}
-	return out, err
+	return h.ports.Items.Stock(ctx, h.env.DB, ids)
 }
 
 // buildCoverage is buildStockCoverage.
@@ -104,10 +97,12 @@ func embedded(v any) *kit.Row {
 // checkStock is checkMaterialStock: coverage of the materials not yet
 // consumed, with actual quantities overridden by the request.
 func (h *handler) checkStock(ctx context.Context, orderID, mode string, overrides map[string]float64) (all, shortages []coverage, err error) {
-	rows, err := kit.Query(ctx, h.env.DB, `SELECT "id", "raw_material_id", "qty_planned", "qty_actual", "inventory_movement_id", `+
-		kit.EmbedColsSQL("raw_material", `"item"."raw_materials"`, "id", "production_order_materials", "raw_material_id", "kode", "nama")+
-		` FROM "production_order_materials" WHERE "production_order_id" = $1`, orderID)
+	rows, err := kit.Query(ctx, h.env.DB, `SELECT "id", "raw_material_id", "qty_planned", "qty_actual", "inventory_movement_id"
+		FROM "production_order_materials" WHERE "production_order_id" = $1`, orderID)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := h.attachMaterials(ctx, rows, "kode", "nama"); err != nil {
 		return nil, nil, err
 	}
 	for _, r := range rows {
@@ -147,11 +142,15 @@ func (h *handler) getOrder(w http.ResponseWriter, r *http.Request) error {
 	if err != nil || order == nil {
 		return httpx.NotFound(orderNotFound)
 	}
-	materials, err := kit.Query(ctx, db, `SELECT *, `+
-		kit.EmbedColsSQL("raw_material", `"item"."raw_materials"`, "id", "production_order_materials", "raw_material_id", "id", "kode", "nama")+`, `+
-		kit.EmbedColsSQL("satuan", `"item"."units"`, "id", "production_order_materials", "satuan_id", "id", "kode", "nama")+
-		` FROM "production_order_materials" WHERE "production_order_id" = $1 ORDER BY "created_at" ASC`, id)
+	materials, err := kit.Query(ctx, db, `SELECT * FROM "production_order_materials" WHERE "production_order_id" = $1
+		ORDER BY "created_at" ASC`, id)
 	if err != nil {
+		return err
+	}
+	if err := h.attachMaterials(ctx, materials, "id", "kode", "nama"); err != nil {
+		return err
+	}
+	if err := h.attachUnits(ctx, materials); err != nil {
 		return err
 	}
 	batches, err := kit.Query(ctx, db, `SELECT * FROM production_batches WHERE production_order_id = $1 ORDER BY created_at DESC`, id)
@@ -166,7 +165,7 @@ func (h *handler) getOrder(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	cover := buildCoverage(materials, stock, domain.CoverageMode(order.Str("status")))
+	cover := buildCoverage(materials, stock, coverageMode(order.Str("status")))
 	byID := map[any]coverage{}
 	for _, c := range cover {
 		byID[c.ID] = c
@@ -249,21 +248,68 @@ func rawOrNil(b []byte) any {
 	return json.RawMessage(b)
 }
 
+// attachMaterials sets raw_material on each row: the embed of the given
+// columns of its raw material, null when there is none.
+func (h *handler) attachMaterials(ctx context.Context, rows kit.Rows, cols ...string) error {
+	embeds, err := h.ports.Items.MaterialEmbeds(ctx, h.env.DB, column(rows, "raw_material_id"), cols...)
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		r.Set("raw_material", embedOf(embeds, r.Str("raw_material_id")))
+	}
+	return nil
+}
+
+// attachUnits sets satuan on each order line: id, kode and nama of its unit.
+func (h *handler) attachUnits(ctx context.Context, rows kit.Rows) error {
+	embeds, err := h.ports.Items.UnitEmbeds(ctx, h.env.DB, column(rows, "satuan_id"), "id", "kode", "nama")
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		r.Set("satuan", embedOf(embeds, r.Str("satuan_id")))
+	}
+	return nil
+}
+
+// column lists the distinct non-empty values of key.
+func column(rows kit.Rows, key string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, r := range rows {
+		if v := r.Str(key); v != "" && !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// embedOf is the embed of id, or an untyped nil (JSON null).
+func embedOf(embeds map[string]json.RawMessage, id string) any {
+	if e, ok := embeds[id]; ok && id != "" {
+		return e
+	}
+	return nil
+}
+
 // outputUnitName is loadOutputUnitName.
 func (h *handler) outputUnitName(ctx context.Context, order *kit.Row) (any, error) {
 	if pid := order.Str("product_id"); pid != "" {
-		row, err := kit.QueryOne(ctx, h.env.DB, `SELECT `+
-			kit.EmbedColsSQL("satuan", `"item"."units"`, "id", "products", "satuan_id", "nama")+` FROM "products" WHERE "id" = $1`, pid)
-		if err != nil || row == nil {
+		p, err := h.ports.Items.Product(ctx, h.env.DB, pid, false)
+		if err != nil || p == nil || p.Str("satuan_id") == "" {
 			return nil, nil
 		}
-		if s := embedded(row.Get("satuan")); s != nil && s.Str("nama") != "" {
-			return s.Str("nama"), nil
+		units, err := h.ports.Items.Units(ctx, h.env.DB, []string{p.Str("satuan_id")})
+		if u := units[p.Str("satuan_id")]; err == nil && u != nil && u.Str("nama") != "" {
+			return u.Str("nama"), nil
 		}
 		return nil, nil
 	}
 	if rid := order.Str("output_raw_material_id"); rid != "" {
-		row, err := kit.QueryOne(ctx, h.env.DB, `SELECT satuan_besar_nama, satuan_kecil_nama FROM v_raw_materials_stock WHERE id = $1`, rid)
+		stock, err := h.ports.Items.Stock(ctx, h.env.DB, []string{rid})
+		row := stock[rid]
 		if err != nil || row == nil {
 			return nil, nil
 		}
@@ -289,7 +335,7 @@ type updateInput struct {
 	actualQty                         *float64
 	overhead, labor, packaging, waste *float64
 	materials                         []materialInput
-	variants                          []domain.VariantRow
+	variants                          []variantRow
 	variantsSent                      bool
 }
 
@@ -324,7 +370,7 @@ func parseUpdate(r *http.Request) (updateInput, error) {
 	})
 	list := f.List("variant_output", validate.Rule{Optional: true}, 100, func(sub *validate.Form, i int, v any) {
 		item := sub.Item(i, v)
-		var row domain.VariantRow
+		var row variantRow
 		if id := item.UUID("pos_sku_id", validate.Rule{}); id != nil {
 			row.PosSkuID = *id
 		}
@@ -337,11 +383,9 @@ func parseUpdate(r *http.Request) (updateInput, error) {
 	return in, f.Err("Validation failed")
 }
 
-// loadOrder is loadProductionOrderForUpdate (with the product embedded).
+// loadOrder is loadProductionOrderForUpdate.
 func (h *handler) loadOrder(ctx context.Context, q database.Querier, id string) (*kit.Row, error) {
-	order, err := kit.QueryOne(ctx, q, `SELECT *, `+
-		kit.EmbedColsSQL("product", `"item"."products"`, "id", "production_orders", "product_id", "id", "kode", "nama", "satuan_id")+
-		` FROM "production_orders" WHERE "id" = $1`, id)
+	order, err := kit.QueryOne(ctx, q, `SELECT * FROM "production_orders" WHERE "id" = $1`, id)
 	if err != nil || order == nil {
 		return nil, httpx.NotFound(orderNotFound)
 	}
@@ -371,7 +415,7 @@ func (h *handler) updateOrder(w http.ResponseWriter, r *http.Request) error {
 	}
 	switch in.action {
 	case "recheck_stock":
-		all, shortages, err := h.checkStock(ctx, order.Str("id"), domain.CoverageMode(status), nil)
+		all, shortages, err := h.checkStock(ctx, order.Str("id"), coverageMode(status), nil)
 		if err != nil {
 			return err
 		}
@@ -379,7 +423,7 @@ func (h *handler) updateOrder(w http.ResponseWriter, r *http.Request) error {
 			u.ID, h.env.Now(), order.Get("id")); err != nil {
 			return err
 		}
-		msg := "Stok bahan sudah cukup. " + domain.NextProductionStep(status)
+		msg := "Stok bahan sudah cukup. " + nextProductionStep(status)
 		if len(shortages) > 0 {
 			msg = "Masih ada " + kit.JSNum(float64(len(shortages))) + " bahan yang kurang. Buat PO atau terima barang masuk terlebih dahulu."
 		}

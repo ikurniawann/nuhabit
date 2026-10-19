@@ -1,6 +1,7 @@
 // Package catalog serves the item masters under /api/purchasing: units,
 // warehouses, item lookups, raw materials (and the legacy /materials
-// alias), supply items, products, and product and raw material BOMs.
+// alias), supply items and products. The BOM line routes are in the
+// production module.
 package catalog
 
 import (
@@ -71,10 +72,6 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("DELETE /api/purchasing/raw-materials/{id}", h.deleteRawMaterial),
 		kit.Route("GET /api/purchasing/raw-materials/{id}/price-history", h.priceHistory),
 		kit.Route("GET /api/purchasing/raw-materials/{id}/purchase-price", h.purchasePrice),
-		kit.Route("GET /api/purchasing/raw-materials/{id}/bom", h.listRawMaterialBom),
-		kit.Route("POST /api/purchasing/raw-materials/{id}/bom", h.addRawMaterialBom),
-		kit.Route("PUT /api/purchasing/raw-material-bom/{id}", h.updateRawMaterialBom),
-		kit.Route("DELETE /api/purchasing/raw-material-bom/{id}", h.deleteRawMaterialBom),
 
 		kit.Route("GET /api/purchasing/materials", h.listLegacyMaterials),
 		kit.Route("POST /api/purchasing/materials", h.createLegacyMaterial),
@@ -94,10 +91,6 @@ func Routes(env kit.Env, ports Ports) []module.Route {
 		kit.Route("PUT /api/purchasing/products/{id}", h.updateProduct),
 		kit.Route("DELETE /api/purchasing/products/{id}", h.deleteProduct),
 		kit.Route("POST /api/purchasing/products/{id}/apply-recipe-hpp", h.applyRecipeHpp),
-		kit.Route("GET /api/purchasing/products/{id}/bom", h.listProductBom),
-		kit.Route("POST /api/purchasing/products/{id}/bom", h.addProductBom),
-		kit.Route("PUT /api/purchasing/bom/{id}", h.updateProductBom),
-		kit.Route("DELETE /api/purchasing/bom/{id}", h.deleteProductBom),
 
 		kit.Route("POST /api/purchasing/import/products", h.importProducts),
 		kit.Route("POST /api/purchasing/import/raw-materials", h.importRawMaterials),

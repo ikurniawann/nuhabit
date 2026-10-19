@@ -1,4 +1,4 @@
-package production
+package legacy
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -146,8 +145,7 @@ func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) error {
 	var lines kit.Rows
 	fields := kit.NewRow()
 	if in.context == "raw_material" {
-		owner, err = kit.QueryOne(ctx, db, `SELECT id, kode, nama, company_id::text, branch_id::text FROM raw_materials
-			WHERE id = $1 AND is_active = true AND deleted_at IS NULL`, in.rawMaterialID)
+		owner, err = h.ports.Items.ActiveRawMaterial(ctx, db, in.rawMaterialID)
 		if err != nil || owner == nil {
 			return httpx.NotFound("Output raw material not found")
 		}
@@ -161,8 +159,7 @@ func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) error {
 		fields.Set("production_context", "raw_material").Set("output_raw_material_id", in.rawMaterialID).
 			Set("product_id", nil).Set("output_type", "FINISHED_GOOD")
 	} else {
-		owner, err = kit.QueryOne(ctx, db, `SELECT id, kode, nama, company_id::text, branch_id::text FROM products
-			WHERE id = $1 AND is_active = true`, in.productID)
+		owner, err = h.ports.Items.Product(ctx, db, in.productID, true)
 		if err != nil || owner == nil {
 			return httpx.NotFound("Produk tidak ditemukan")
 		}
@@ -183,12 +180,12 @@ func (h *handler) createOrder(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	avgCost := map[string]float64{}
-	stock, err := kit.Query(ctx, db, `SELECT id, avg_cost FROM v_raw_materials_stock WHERE id = ANY($1::uuid[])`, ids)
+	stock, err := h.ports.Items.Stock(ctx, db, ids)
 	if err != nil {
 		return err
 	}
-	for _, s := range stock {
-		avgCost[s.Str("id")] = s.Num("avg_cost")
+	for id, s := range stock {
+		avgCost[id] = s.Num("avg_cost")
 	}
 	materials := make([]*kit.Row, len(lines))
 	plannedCost := 0.0
@@ -252,7 +249,7 @@ func orNilStr(s *string) any {
 // nextProductionNumber is generateProductionNumber: PROD-YYYYMM-NNNN after
 // the month's highest number.
 func nextProductionNumber(ctx context.Context, q database.Querier, now time.Time) (string, error) {
-	prefix := domain.ProductionNumberPrefix(now)
+	prefix := productionNumberPrefix(now)
 	last, err := kit.QueryOne(ctx, q, `SELECT nomor_produksi FROM production_orders WHERE nomor_produksi ILIKE $1
 		ORDER BY nomor_produksi DESC LIMIT 1`, prefix+"-%")
 	if err != nil {
@@ -262,5 +259,5 @@ func nextProductionNumber(ctx context.Context, q database.Querier, now time.Time
 	if last != nil {
 		lastNumber = last.Str("nomor_produksi")
 	}
-	return domain.NextProductionNumber(prefix, lastNumber), nil
+	return nextNumber(prefix, lastNumber), nil
 }

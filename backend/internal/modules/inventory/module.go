@@ -1,13 +1,14 @@
 // Package inventory is the inventory bounded context: item masters
-// (catalog), stock and its ledgers (stock, ledger), production and COGS
-// (production). Sub-packages share kit (scope, rows, query parsing) and
-// domain (pure rules).
+// (catalog), stock and its ledgers (stock, ledger), COGS estimates and
+// landed costs (cogs). Production orders and BOM lines belong to the
+// production module. Sub-packages share kit (scope, rows, query parsing)
+// and domain (pure rules).
 package inventory
 
 import (
 	"nuhabit/backend/internal/modules/inventory/catalog"
+	"nuhabit/backend/internal/modules/inventory/cogs"
 	"nuhabit/backend/internal/modules/inventory/kit"
-	"nuhabit/backend/internal/modules/inventory/production"
 	"nuhabit/backend/internal/modules/inventory/stock"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
@@ -18,9 +19,9 @@ const Name = "inventory"
 
 // Ports are the adapters internal/app wires per sub-area.
 type Ports struct {
-	Stock      stock.Ports
-	Catalog    catalog.Ports
-	Production production.Ports
+	Stock   stock.Ports
+	Catalog catalog.Ports
+	Cogs    cogs.Ports
 }
 
 type inventoryModule struct{ routes []module.Route }
@@ -43,6 +44,6 @@ func NewOn(deps module.Deps, db database.DB, ports Ports) module.Module {
 	var routes []module.Route
 	routes = append(routes, stock.Routes(env, ports.Stock)...)
 	routes = append(routes, catalog.Routes(env, ports.Catalog)...)
-	routes = append(routes, production.Routes(env, ports.Production)...)
+	routes = append(routes, cogs.Routes(env, ports.Cogs)...)
 	return inventoryModule{routes: routes}
 }

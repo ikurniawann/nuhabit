@@ -1,15 +1,17 @@
-package production_test
+package cogs_test
 
 import (
 	"net/http"
 	"testing"
 	"time"
 
+	"nuhabit/backend/internal/app"
 	"nuhabit/backend/internal/contracts/procurement"
+	"nuhabit/backend/internal/modules/inventory/cogs"
 	"nuhabit/backend/internal/modules/inventory/kit/kittest"
 	"nuhabit/backend/internal/modules/inventory/ledger"
-	"nuhabit/backend/internal/modules/inventory/production"
 	"nuhabit/backend/internal/modules/inventory/stock"
+	"nuhabit/backend/internal/modules/production/legacy"
 )
 
 // Additional purchase costs join the stock value of the raw materials they
@@ -45,7 +47,9 @@ func TestLandedCostCapitalization(t *testing.T) {
 		t.Fatal(err)
 	}
 	receipts := fakeReceipts{numbers: map[string]string{"GRN:" + grn: "GRN-LC1", "PO:" + po: "PO-LC"}}
-	e.Mount(production.Routes(e.Env, production.Ports{Pos: &fakePos{stock: map[string]float64{}}, Receipts: receipts}))
+	// The production order routes (module production) cost materials at the
+	// same stock average.
+	e.Mount(append(cogs.Routes(e.Env, cogs.Ports{Receipts: receipts}), legacy.Routes(e.Env, app.LegacyProductionPorts(e.Env.Now))...))
 	unitCost := func() float64 {
 		var cost float64
 		e.Scalar(&cost, `SELECT unit_cost::float8 FROM inventory.inventory WHERE raw_material_id = $1`, rm)

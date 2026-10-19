@@ -193,7 +193,7 @@ func TestLegacyMaterialsAndSupplyItems(t *testing.T) {
 	e.Fail("GET", "/api/purchasing/supply-items/"+sid, nil, http.StatusNotFound, "Barang tidak ditemukan")
 }
 
-func TestProductsAndBom(t *testing.T) {
+func TestProducts(t *testing.T) {
 	e := setup(t)
 	e.ScopeStaff("branch", e.org)
 	rm := e.RawMaterial(e.org, "RMB-"+e.org.BranchID[:4], "Gula BOM", e.kg, e.gr, 1000)
@@ -206,28 +206,14 @@ func TestProductsAndBom(t *testing.T) {
 	if p["kode"] != "PRD-20261004-001" || p["station"] != "kitchen" || out["message"] != "Produk berhasil ditambahkan dan tersinkron ke POS" {
 		t.Fatalf("product %v", out)
 	}
-	out = e.Call("POST", "/api/purchasing/products/"+pid+"/bom", map[string]any{"raw_material_id": rm, "qty_needed": 200, "waste_persen": 10}, http.StatusCreated)
-	bom := obj(out["data"])
-	if bom["qty_required"] != "200.0000" || bom["waste_factor"] != "0.1000" {
-		t.Fatalf("bom %v", bom)
-	}
-	e.Fail("POST", "/api/purchasing/products/"+pid+"/bom", map[string]any{"raw_material_id": rm}, http.StatusBadRequest, "Jumlah harus lebih dari 0")
-	out = e.Call("GET", "/api/purchasing/products/"+pid+"/bom", nil, http.StatusOK)
-	line := obj(out["data"].([]any)[0])
-	// 0.02 per gram-equivalent avg cost / 1000 per small unit, × 200 × 1.1.
-	if line["cost_per_unit"] != 0.00002 || obj(line["raw_material"])["satuan_kecil"] == nil {
-		t.Fatalf("bom line %v", line)
-	}
+	// The BOM line routes are in the production module (production/legacy).
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required, waste_factor) VALUES ($1, $2, 200, 0.1)`, pid, rm)
 	out = e.Call("GET", "/api/purchasing/products/"+pid, nil, http.StatusOK)
 	if obj(out["data"])["hpp_perlu_review"] != false || len(obj(out["data"])["bom_items"].([]any)) != 1 {
 		t.Fatalf("detail %v", out)
 	}
 	e.Fail("POST", "/api/purchasing/products/"+pid+"/apply-recipe-hpp", nil, http.StatusBadRequest,
 		"HPP seharusnya belum bisa dihitung. Lengkapi BOM dan biaya bahan dulu.")
-	out = e.Call("DELETE", "/api/purchasing/bom/"+bom["id"].(string), nil, http.StatusOK)
-	if out["message"] != "Bahan berhasil dihapus dari BOM" {
-		t.Fatal(out)
-	}
 	out = e.Call("DELETE", "/api/purchasing/products/"+pid, nil, http.StatusOK)
 	if out["message"] != "Produk berhasil dihapus" || len(e.pos.synced) != 1 {
 		t.Fatalf("delete %v synced %v", out, e.pos.synced)

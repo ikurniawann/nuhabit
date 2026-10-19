@@ -140,23 +140,8 @@ func TestCoaDefaults(t *testing.T) {
 }
 
 func TestProductionRules(t *testing.T) {
-	if NextProductionNumber("PROD-202610", "PROD-202610-0009") != "PROD-202610-0010" || NextProductionNumber("PROD-202610", "") != "PROD-202610-0001" {
-		t.Error("numbers")
-	}
 	if WipCode("prd-2026/1004 001") != "WPPRD20261004001" || WipCode("") != "WPWIP" {
 		t.Error(WipCode("prd-2026/1004 001"))
-	}
-	if _, msg := ValidateVariantSplit(3, []VariantRow{{"a", 1}, {"a", 2}}, []string{"a"}); msg != "Varian ganda" {
-		t.Error(msg)
-	}
-	if _, msg := ValidateVariantSplit(3, []VariantRow{{"a", 1.255}}, []string{"a"}); msg != "Rincian varian harus berjumlah sama dengan jumlah aktual (1.25 vs 3)" {
-		t.Error(msg)
-	}
-	if rows, msg := ValidateVariantSplit(2, []VariantRow{{"a", 1.005}, {"b", 0.995}}, []string{"a", "b"}); msg != "" || len(rows) != 2 {
-		t.Error(msg)
-	}
-	if got := CompletionMessage("PROD-1", 2840.4, p(40.5)); got != "Produksi PROD-1 selesai. HPP aktual Rp2.840 tersinkron ke POS. Margin POS 40.5%." {
-		t.Error(got)
 	}
 	r := BuildHppReview(10000, 10400.6, 2)
 	if r.HppResep != 10401 || r.HppSelisih != 401 || !r.PerluReview {

@@ -5,9 +5,88 @@ import (
 	"errors"
 	"time"
 
+	"nuhabit/backend/internal/modules/inventory/domain"
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/database"
 )
+
+// OrderConsumption takes a raw material out of stock for the one-shot
+// completion of a production order.
+type OrderConsumption struct {
+	RawMaterialID string
+	Qty           float64
+	UnitCost      float64 // the order line's cost, kept on the movement
+	OrderID       string
+	OrderNumber   string
+	UserID        string
+}
+
+// ConsumeForOrder is consumeMaterials for one line: the material's first
+// active balance loses Qty and an `out` movement (reference production)
+// records it at the order line's cost. It returns the movement id,
+// ErrNoBalance or *ShortageError.
+func ConsumeForOrder(ctx context.Context, q database.Querier, in OrderConsumption, now time.Time) (string, error) {
+	inv, err := kit.QueryOne(ctx, q, `SELECT id::text, qty_available, unit_cost, branch_id::text, warehouse_id::text
+		FROM inventory.inventory WHERE raw_material_id = $1 AND is_active = true LIMIT 1`, in.RawMaterialID)
+	if err != nil {
+		return "", err
+	}
+	if inv == nil {
+		return "", ErrNoBalance
+	}
+	before := inv.Num("qty_available")
+	if before < in.Qty {
+		return "", &ShortageError{Available: before}
+	}
+	after := before - in.Qty
+	id, err := insertMovement(ctx, q, Movement{
+		InventoryID: inv.Str("id"), RawMaterialID: in.RawMaterialID, Tipe: "out", Jumlah: in.Qty,
+		QtyBefore: before, QtyAfter: after, UnitCost: f(in.UnitCost), TotalCost: f(in.Qty * in.UnitCost),
+		BranchID: inv.StrPtr("branch_id"), WarehouseID: inv.StrPtr("warehouse_id"), ReferenceType: "production",
+		ReferenceID: s(in.OrderID), ReferenceNumber: s(in.OrderNumber),
+		Alasan: s("Pemakaian bahan untuk produksi " + in.OrderNumber), CreatedBy: strOrNil(in.UserID),
+	})
+	if err != nil {
+		return "", err
+	}
+	_, err = q.Exec(ctx, `UPDATE inventory.inventory SET qty_available = $1, last_movement_at = $2, updated_by = $3 WHERE id = $4`,
+		kit.N(after), now, strOrNil(in.UserID), inv.Str("id"))
+	return id, err
+}
+
+// ErrNoProduct is a WIP material asked for a product that does not exist.
+var ErrNoProduct = errors.New("product not found")
+
+// EnsureWipMaterial is ensureWipRawMaterial: the WIP raw material that
+// mirrors a product, created on first use with the product's code and unit.
+func EnsureWipMaterial(ctx context.Context, q database.Querier, productID, userID string) (string, error) {
+	existing, err := kit.QueryOne(ctx, q, `SELECT id::text FROM item.raw_materials WHERE source_product_id = $1 LIMIT 1`, productID)
+	if err != nil {
+		return "", err
+	}
+	if existing != nil {
+		return existing.Str("id"), nil
+	}
+	product, err := kit.QueryOne(ctx, q, `SELECT kode, nama, satuan_id::text FROM item.products WHERE id = $1`, productID)
+	if err != nil {
+		return "", err
+	}
+	if product == nil {
+		return "", ErrNoProduct
+	}
+	nama := kit.FirstNonEmpty(product.Str("nama"), product.Str("kode"), "WIP")
+	var satuan any
+	if u := product.Str("satuan_id"); u != "" {
+		satuan = u
+	}
+	row, err := kit.InsertOne(ctx, q, "raw_materials", kit.Obj("kode", domain.WipCode(product.Str("kode")), "nama", nama,
+		"kategori", "LAINNYA", "material_type", "WIP", "source_product_id", productID, "satuan_besar_id", satuan,
+		"satuan_kecil_id", satuan, "konversi_factor", 1.0, "created_by", userID))
+	if err != nil {
+		return "", err
+	}
+	return row.Str("id"), nil
+}
 
 // ProductionIssue takes a raw material out of stock for a production order.
 type ProductionIssue struct {
