@@ -143,6 +143,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@playwright/test':
+        specifier: 1.63.0
+        version: 1.63.0
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.1
@@ -179,6 +182,9 @@ importers:
       '@vitest/ui':
         specifier: ^4.1.4
         version: 4.1.9(vitest@4.1.9)
+      axe-core:
+        specifier: 4.12.1
+        version: 4.12.1
       babel-plugin-react-compiler:
         specifier: 1.0.0
         version: 1.0.0
@@ -5894,7 +5900,6 @@ snapshots:
   '@playwright/test@1.63.0':
     dependencies:
       playwright: 1.63.0
-    optional: true
 
   '@polka/url@1.0.0-next.29': {}
 
@@ -9414,13 +9419,11 @@ snapshots:
     dependencies:
       find-up: 3.0.0
 
-  playwright-core@1.63.0:
-    optional: true
+  playwright-core@1.63.0: {}
 
   playwright@1.63.0:
     dependencies:
       playwright-core: 1.63.0
-    optional: true
 
   png-js@1.1.0:
     dependencies:

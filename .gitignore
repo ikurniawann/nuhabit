@@ -63,3 +63,9 @@ storage/private/
 # go
 backend/bin/
 reports/pengembangan/
+
+# playwright e2e: sessions, reports, server logs copied by CI
+frontend/e2e/.auth/
+frontend/e2e/playwright-report/
+frontend/e2e/test-results/
+frontend/e2e/*.log
