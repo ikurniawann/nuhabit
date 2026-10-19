@@ -1,4 +1,4 @@
--- Indexes for the 436 foreign keys that had no covering index. Without
+-- Indexes for the 440 foreign keys that had no covering index. Without
 -- one, a DELETE or key UPDATE on the parent scans the whole child table, and
 -- joins from parent to child cannot use an index.
 --
@@ -249,6 +249,10 @@ CREATE INDEX IF NOT EXISTS bom_items_satuan_id_fk_idx ON manufacturing.bom_items
 CREATE INDEX IF NOT EXISTS production_batches_created_by_fk_idx ON manufacturing.production_batches (created_by);
 CREATE INDEX IF NOT EXISTS production_batches_output_raw_material_id_fk_idx ON manufacturing.production_batches (output_raw_material_id);
 CREATE INDEX IF NOT EXISTS production_batches_product_id_fk_idx ON manufacturing.production_batches (product_id);
+CREATE INDEX IF NOT EXISTS production_issue_lines_inventory_movement_id_fk_idx ON manufacturing.production_issue_lines (inventory_movement_id);
+CREATE INDEX IF NOT EXISTS production_issue_lines_raw_material_id_fk_idx ON manufacturing.production_issue_lines (raw_material_id);
+CREATE INDEX IF NOT EXISTS production_issue_lines_warehouse_id_fk_idx ON manufacturing.production_issue_lines (warehouse_id);
+CREATE INDEX IF NOT EXISTS production_issues_created_by_fk_idx ON manufacturing.production_issues (created_by);
 CREATE INDEX IF NOT EXISTS production_order_materials_inventory_movement_id_fk_idx ON manufacturing.production_order_materials (inventory_movement_id);
 CREATE INDEX IF NOT EXISTS production_order_materials_satuan_id_fk_idx ON manufacturing.production_order_materials (satuan_id);
 CREATE INDEX IF NOT EXISTS production_orders_created_by_fk_idx ON manufacturing.production_orders (created_by);
