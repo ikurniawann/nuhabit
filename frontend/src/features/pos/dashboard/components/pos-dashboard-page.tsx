@@ -18,6 +18,7 @@ import { FadeIn, PageTransition } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HelpHint } from "@/components/ui/help-hint";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
@@ -368,7 +369,7 @@ export function PosDashboardPage() {
             title="Recent Orders"
             description="Latest POS orders across all cashiers"
           >
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel pesanan terbaru" className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                   <tr>
@@ -410,7 +411,7 @@ export function PosDashboardPage() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           </PurchasingListSection>
         </>
       )}
