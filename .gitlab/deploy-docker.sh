@@ -166,9 +166,14 @@ fi
 # 3. Ganti container: API dulu, supaya Next langsung bisa diarahkan ke sana.
 DEGRADED=""
 BACKEND_ENV=()
-docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
-docker rm "$API_CONTAINER" >/dev/null 2>&1 || true
-if [ "$BACKEND_ENABLED" = "1" ]; then
+NEXT_TAG=latest
+
+# run_api TAG: jalankan image API dengan tag itu dan tunggu HEALTHCHECK bawaan
+# image (api -healthcheck) menjadi healthy. Gagal: container dihentikan (log-nya
+# tetap ada untuk diperiksa) dan fungsi mengembalikan 1.
+run_api() {
+  docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
+  docker rm "$API_CONTAINER" >/dev/null 2>&1 || true
   # uid 1001 sama dengan user nextjs: STORAGE_DIR milik 1001 dengan mode 750.
   # public/ Next tidak ikut di image API: foto /products untuk GoFood diambil
   # dari container Next lewat PUBLIC_ORIGIN (satu network). APP_ENV ditulis
@@ -190,25 +195,18 @@ if [ "$BACKEND_ENABLED" = "1" ]; then
     -e APP_ENV=production \
     -e STORAGE_DIR=/app/storage \
     -e PUBLIC_ORIGIN="http://${CONTAINER_NAME}:${CONTAINER_PORT}" \
-    "$API_IMAGE:latest"
-  # Tunggu HEALTHCHECK bawaan image (api -healthcheck) menjadi healthy.
-  api_ready=""
+    "$API_IMAGE:$1" >/dev/null || return 1
   for attempt in $(seq 1 30); do
     if [ "$(docker inspect --format '{{.State.Health.Status}}' "$API_CONTAINER" 2>/dev/null)" = "healthy" ]; then
-      api_ready=1
-      break
+      return 0
     fi
     sleep 2
   done
-  if [ -z "$api_ready" ]; then
-    DEGRADED="container Go API tidak sehat"
-    docker logs --tail 100 "$API_CONTAINER" >&2 || true
-    # Hentikan loop restart; container dan log-nya tetap ada untuk diperiksa.
-    docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
-  else
-    BACKEND_ENV=(-e "BACKEND_URL=http://${API_CONTAINER}:8080")
-  fi
-fi
+  docker logs --tail 100 "$API_CONTAINER" >&2 || true
+  # Hentikan loop restart; container dan log-nya tetap ada untuk diperiksa.
+  docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
+  return 1
+}
 
 # NEXT_PUBLIC_* sudah di-inline saat build, jadi tidak diteruskan lagi lewat
 # -e. DATABASE_URL di bawah menimpa nilai yang sama di ENV_FILE (bila ada).
@@ -228,7 +226,7 @@ start_next() {
     -e MIGRATE_DATABASE_URL="$DATABASE_URL_RUNTIME" \
     -e NODE_ENV=production \
     "$@" \
-    "$DOCKER_IMAGE:latest" >/dev/null
+    "$DOCKER_IMAGE:$NEXT_TAG" >/dev/null
   for attempt in $(seq 1 30); do
     if curl -fsSL "http://127.0.0.1:${HOST_PORT}/login" >/dev/null; then
       return 0
@@ -239,20 +237,61 @@ start_next() {
   docker logs --tail 100 "$CONTAINER_NAME" >&2 || true
   return 1
 }
-start_next ${BACKEND_ENV[@]+"${BACKEND_ENV[@]}"}
 
-# 4. Pastikan proxy Next benar-benar sampai ke Go: hanya Go yang memasang
-#    X-Request-Id. Bila tidak, Next dijalankan ulang tanpa BACKEND_URL
-#    (halaman tetap tampil, route Go menjawab 503) dan deploy ditandai gagal
-#    supaya terlihat.
-if [ ${#BACKEND_ENV[@]} -gt 0 ] &&
-  ! curl -s -o /dev/null -D - "http://127.0.0.1:${HOST_PORT}/api/auth/me" | grep -qi '^x-request-id:'; then
-  DEGRADED="proxy Next tidak meneruskan /api ke Go"
-  docker logs --tail 50 "$CONTAINER_NAME" >&2 || true
+# proxy_reaches_go: hanya Go yang memasang X-Request-Id, jadi header itu
+# membuktikan proxy Next sampai ke API.
+proxy_reaches_go() {
+  curl -s -o /dev/null -D - "http://127.0.0.1:${HOST_PORT}/api/auth/me" | grep -qi '^x-request-id:'
+}
+
+# roll_back_to_previous: jalankan pasangan image :previous (API dan Next dari
+# deploy terakhir yang sehat), karena Next tanpa API membuat setiap route Go
+# menjawab 503. Migrasi tidak dibatalkan: delta harus tetap aman untuk kode
+# lama (lihat backend/docs/DEPLOY.md).
+roll_back_to_previous() {
+  if ! docker image inspect "$API_IMAGE:previous" >/dev/null 2>&1 ||
+    ! docker image inspect "$DOCKER_IMAGE:previous" >/dev/null 2>&1; then
+    echo "Tidak ada image :previous untuk rollback otomatis." >&2
+    BACKEND_ENV=()
+    start_next
+    return
+  fi
+  echo "Rollback otomatis ke image :previous." >&2
+  NEXT_TAG=previous
+  if run_api previous; then
+    BACKEND_ENV=(-e "BACKEND_URL=http://${API_CONTAINER}:8080")
+  else
+    DEGRADED="${DEGRADED}; image API :previous juga tidak sehat"
+    BACKEND_ENV=()
+  fi
+  start_next ${BACKEND_ENV[@]+"${BACKEND_ENV[@]}"}
+}
+
+if [ "$BACKEND_ENABLED" = "1" ]; then
+  if run_api latest; then
+    BACKEND_ENV=(-e "BACKEND_URL=http://${API_CONTAINER}:8080")
+    start_next "${BACKEND_ENV[@]}"
+    # 4. Pastikan proxy Next benar-benar sampai ke Go.
+    if ! proxy_reaches_go; then
+      DEGRADED="proxy Next tidak meneruskan /api ke Go"
+      docker logs --tail 50 "$CONTAINER_NAME" >&2 || true
+      roll_back_to_previous
+    fi
+  else
+    DEGRADED="container Go API tidak sehat"
+    roll_back_to_previous
+  fi
+else
+  docker stop "$API_CONTAINER" >/dev/null 2>&1 || true
+  docker rm "$API_CONTAINER" >/dev/null 2>&1 || true
   start_next
 fi
 
 if [ -n "$DEGRADED" ]; then
-  echo "Deploy selesai TANPA Go API (${DEGRADED}): route Go menjawab 503. Jalankan image API :previous (backend/docs/DEPLOY.md) atau perbaiki lalu deploy ulang." >&2
+  if [ "$NEXT_TAG" = "previous" ] && [ ${#BACKEND_ENV[@]} -gt 0 ]; then
+    echo "Deploy GAGAL (${DEGRADED}): aplikasi berjalan dengan image :previous. Perbaiki lalu deploy ulang." >&2
+  else
+    echo "Deploy GAGAL (${DEGRADED}): route Go menjawab 503. Perbaiki lalu deploy ulang (backend/docs/DEPLOY.md)." >&2
+  fi
   exit 1
 fi

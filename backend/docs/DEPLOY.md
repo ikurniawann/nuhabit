@@ -25,10 +25,12 @@ One run does this, in order:
 4. Replaces the Next container with `BACKEND_URL=http://<CONTAINER_NAME>-api:8080`
    and waits for `/login`.
 5. Requests `/api/auth/me` through Next and looks for `X-Request-Id`, a header
-   only Go sets. If the API was unhealthy or the proxy does not reach it, the
-   script restarts Next without `BACKEND_URL` and exits 1, so the pipeline
-   shows the failure. Pages still render, but every Go route answers 503 until
-   you roll the API back (see Rollback).
+   only Go sets. If the new API is unhealthy or the proxy does not reach it,
+   the script starts the `:previous` API and Next images (the pair from the
+   last deploy) and exits 1, so the pipeline shows the failure while members
+   keep the last working build. Without `:previous` images, or when the old
+   API is unhealthy too, Next runs without `BACKEND_URL` and every Go route
+   answers 503 until you fix it (see Rollback).
 
 Both containers rotate their Docker logs (5 files of 50 MB). On SIGTERM the
 API stops accepting connections, closes the desktop SSE streams at once (the
@@ -157,7 +159,9 @@ migrations do not roll back.
 Rollback means running the previous Go image. The TypeScript handlers for Go
 routes are gone, and `BACKEND_ENABLED=0` leaves those routes answering 503.
 Step 1 of the script tags the running images `:previous` before it builds, so
-the last good build stays on the host.
+the last good build stays on the host. The script rolls back on its own when
+the new API fails its health check or the proxy check (step 5); the steps
+below are for a build that deployed cleanly and misbehaves later.
 
 - Previous API only, on the host:
 
