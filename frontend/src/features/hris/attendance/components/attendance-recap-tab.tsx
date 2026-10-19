@@ -21,6 +21,7 @@ import { currentMonthWib, monthRange } from "@/lib/hris/attendance-calendar";
 import { SelfiePhotoDialog } from "./selfie-photo-dialog";
 import { exportAttendanceCsv, type AttendanceExportFormat } from "../api";
 import { useActiveEmployees, useAttendanceList, useAttendanceMonthStats } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /**
  * Tab "Rekap" absensi HRD: tabel absensi berpagination dengan filter
@@ -216,7 +217,7 @@ export function AttendanceRecapTab() {
               Tidak ada rekaman absensi untuk filter ini.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel rekap absensi" className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left text-gray-600">
@@ -283,7 +284,7 @@ export function AttendanceRecapTab() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </CardContent>
       </Card>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { breakdownBars, type BreakdownInput } from "@/lib/purchasing/report-ui-shared";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /** Judul laporan + tombol muat ulang; tombol ekspor lewat `children`. */
 export function ReportHeader({
@@ -178,7 +179,7 @@ export function ReportTableCard({
         {actions}
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto px-4">{children}</div>
+        <ScrollRegion label="Tabel laporan" className="overflow-x-auto px-4">{children}</ScrollRegion>
         <div className="border-t border-gray-200/70 px-4 py-3 text-xs text-muted-foreground">{footer}</div>
       </CardContent>
     </Card>

@@ -19,6 +19,7 @@ import {
   useTicketingReport,
   type ReportAggRow,
 } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 // Label hari tabel harian: nama hari membantu membaca pola akhir pekan
 const formatDateShort = (iso: string) =>
@@ -252,7 +253,7 @@ export function TicketingReportsPage() {
             />
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white">
+          <ScrollRegion label="Tabel laporan tiket" className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -291,7 +292,7 @@ export function TicketingReportsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <AggTable

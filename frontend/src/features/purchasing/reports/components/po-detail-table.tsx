@@ -8,6 +8,7 @@ import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { PODetailLine, PODetailRow } from "../types";
 import { PoStatusBadge } from "./po-status-badge";
 import { ReportTableMessage } from "./report-ui";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const COLUMNS = 8;
 
@@ -86,7 +87,7 @@ export function PoDetailTable({ rows, loading, expanded, onToggle }: PoDetailTab
 function PoLineItems({ items }: { items: PODetailLine[] }) {
   if (items.length === 0) return <p className="text-xs italic text-muted-foreground">Tidak ada line item</p>;
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200/70 bg-card">
+    <ScrollRegion label="Tabel detail PO" className="overflow-x-auto rounded-lg border border-gray-200/70 bg-card">
       <table className="w-full text-xs">
         <thead className="bg-muted/50 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           <tr>
@@ -120,6 +121,6 @@ function PoLineItems({ items }: { items: PODetailLine[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }

@@ -28,6 +28,7 @@ import { useCreateCashMovement } from "../mutations";
 import { useCashMovements, usePostableAccountOptions } from "../queries";
 import type { CashMovementKind } from "../types";
 import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const NO_ACCOUNTS: never[] = [];
 
@@ -127,7 +128,7 @@ export function CashMovementPage({ kind }: Props) {
             Belum ada transaksi {title}.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel mutasi kas" className="overflow-x-auto px-4">
             <table className="w-full min-w-[800px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -169,7 +170,7 @@ export function CashMovementPage({ kind }: Props) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

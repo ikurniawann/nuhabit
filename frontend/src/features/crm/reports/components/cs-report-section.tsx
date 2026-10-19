@@ -13,6 +13,7 @@ import { CATEGORY_LABELS, PRIORITY_LABELS, formatDuration } from "@/lib/crm/cs-r
 import { useCsReport } from "../queries";
 import type { CrmReportPeriodInput } from "../types";
 import { formatNumber } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /**
  * EPIC-012 Fase E — bagian laporan customer service pada halaman Laporan CRM,
@@ -88,7 +89,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
           {(data?.categories ?? []).length === 0 ? (
             <Empty>Belum ada komplain pada periode ini.</Empty>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel laporan CS" className="overflow-x-auto">
               <table className="w-full min-w-[420px] text-sm">
                 <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
                   <tr className="border-b border-slate-200">
@@ -119,7 +120,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </Panel>
 
@@ -156,7 +157,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
         {(data?.daily ?? []).length === 0 ? (
           <Empty>Belum ada percakapan pada periode ini.</Empty>
         ) : (
-          <div className="overflow-x-auto p-3">
+          <ScrollRegion label="Grafik harian CS" className="overflow-x-auto p-3">
             <div className="flex min-w-[480px] items-end gap-1" style={{ height: 120 }}>
               {data?.daily.map((row) => (
                 <div key={row.tanggal} className="flex flex-1 flex-col items-center gap-1">
@@ -173,7 +174,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                 </div>
               ))}
             </div>
-          </div>
+          </ScrollRegion>
         )}
       </Panel>
 
@@ -181,7 +182,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
         {(data?.channels ?? []).length === 0 ? (
           <Empty>Belum ada percakapan pada periode ini.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel laporan CS" className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr className="border-b border-slate-200">
@@ -216,7 +217,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </Panel>
 
@@ -250,7 +251,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
         {(data?.agents ?? []).length === 0 ? (
           <Empty>Belum ada percakapan yang ditangani agent.</Empty>
         ) : (
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel laporan CS" className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
                 <tr className="border-b border-slate-200">
@@ -279,7 +280,7 @@ export function CsReportSection({ period }: { period: CrmReportPeriodInput }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </Panel>
 

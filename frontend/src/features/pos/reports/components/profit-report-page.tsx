@@ -34,6 +34,7 @@ import {
   ProfitMarginBarChart,
 } from "./profit-report-charts";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -120,7 +121,7 @@ function BreakdownTableSection({
 
   return (
     <PurchasingListSection icon={Icon} title={title} description={description}>
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel laporan laba" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -172,7 +173,7 @@ function BreakdownTableSection({
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </PurchasingListSection>
   );
 }

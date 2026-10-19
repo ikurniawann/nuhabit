@@ -17,6 +17,7 @@ import { formatReportStallLabel } from "@/lib/pos/reports/transaction-labels";
 import { ReportExportActions, ReportPrintStyles } from "./report-export-actions";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -210,7 +211,7 @@ export function ProductSalesReportPage() {
               </select>
             </div>
           </div>
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel penjualan produk" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -258,7 +259,7 @@ export function ProductSalesReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
         <ReportPrintStyles />
       </div>

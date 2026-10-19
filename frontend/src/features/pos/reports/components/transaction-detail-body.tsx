@@ -18,6 +18,7 @@ import {
   resolveXenditExternalId,
 } from "@/lib/pos/reports/transaction-labels";
 import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -380,7 +381,7 @@ export function TransactionDetailBody({
       ) : null}
 
       <SectionCard title="Item terjual">
-        <div className="overflow-x-auto rounded-lg border border-gray-200/70">
+        <ScrollRegion label="Tabel item transaksi" className="overflow-x-auto rounded-lg border border-gray-200/70">
           <table className="min-w-full text-sm">
             <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -459,7 +460,7 @@ export function TransactionDetailBody({
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       </SectionCard>
     </div>
   );

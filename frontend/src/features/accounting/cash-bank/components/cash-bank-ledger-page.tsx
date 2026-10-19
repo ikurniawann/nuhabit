@@ -12,6 +12,7 @@ import { JOURNAL_ENTRY_ROUTES } from "@/features/accounting/journal-entries/rout
 import { useCashBankLedger } from "../queries";
 import { CASH_BANK_ROUTES } from "../routes";
 import { formatLedgerAmount } from "@/lib/accounting/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 
 export function CashBankLedgerPage() {
@@ -132,7 +133,7 @@ export function CashBankLedgerPage() {
                 Tidak ada mutasi pada periode ini
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel buku kas" className="overflow-x-auto">
                 <table className="w-full min-w-220 text-sm">
                   <thead>
                     <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -207,7 +208,7 @@ export function CashBankLedgerPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
           </div>
         )}

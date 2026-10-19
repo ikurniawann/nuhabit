@@ -22,6 +22,7 @@ import { PurchasingPageHeader } from "@/features/purchasing/components/shared/pu
 import type { RevenueCompositionBucket, RevenueCompositionGroup } from "@/lib/pos/reports/types";
 import { useRevenueCompositionReport } from "../queries";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatPct = (value: number) => `${formatNumber(value, 1)}%`;
 
@@ -137,7 +138,7 @@ function GroupSection({
         </button>
 
         {expanded && (
-          <div className="overflow-x-auto border-t border-gray-200/70">
+          <ScrollRegion label="Tabel komposisi pendapatan" className="overflow-x-auto border-t border-gray-200/70">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
@@ -184,7 +185,7 @@ function GroupSection({
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </CardContent>
     </Card>

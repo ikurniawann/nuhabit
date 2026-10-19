@@ -54,6 +54,7 @@ import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
 import { ReportExportActions, ReportPrintStyles } from "./report-export-actions";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatDateTime, formatNumber, formatRupiah, formatRupiahCompact } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -331,7 +332,7 @@ export function TransactionReportPage() {
           title="Rekap per Stall"
           description="Berbasis item: order lintas stall menyumbang ke tiap stall sesuai itemnya (nilai setelah diskon item, sebelum diskon/pajak transaksi)"
         >
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel transaksi" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -362,7 +363,7 @@ export function TransactionReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
 
         <PurchasingListSection
@@ -370,7 +371,7 @@ export function TransactionReportPage() {
           title="Detail transaksi"
           description={`${rows.length} baris untuk periode ${applied.date_from} s/d ${applied.date_to}`}
         >
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel transaksi" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -473,7 +474,7 @@ export function TransactionReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
 
         <Dialog

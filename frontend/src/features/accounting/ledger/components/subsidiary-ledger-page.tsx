@@ -10,6 +10,7 @@ import { PurchasingListSection } from "@/features/purchasing/components/shared/p
 import { formatNumber } from "@/lib/format";
 import type { SubsidiaryKind } from "../api";
 import { useSubsidiaryLedger, useSubsidiaryParties } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -185,7 +186,7 @@ export function SubsidiaryLedgerPage() {
                 {formatNumber(data.closing_balance)}.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel buku besar pembantu" className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -229,7 +230,7 @@ export function SubsidiaryLedgerPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
           </div>
         )}

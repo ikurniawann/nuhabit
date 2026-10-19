@@ -10,6 +10,7 @@ import { PurchasingListSection } from "@/features/purchasing/components/shared/p
 import { useCashBankAccounts } from "../queries";
 import { CASH_BANK_ROUTES } from "../routes";
 import { formatLedgerAmount } from "@/lib/accounting/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 
 export function CashBankListPage() {
@@ -57,7 +58,7 @@ export function CashBankListPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel kas dan bank" className="overflow-x-auto px-4">
             <table className="w-full min-w-180 text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -112,7 +113,7 @@ export function CashBankListPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
     </div>

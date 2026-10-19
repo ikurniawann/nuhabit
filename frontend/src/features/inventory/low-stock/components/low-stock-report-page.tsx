@@ -22,6 +22,7 @@ import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useLowStock } from "../queries";
 import type { LowStockItem } from "../types";
 import { formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export function LowStockReportPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -213,7 +214,7 @@ export function LowStockReportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel stok menipis" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-y">
                 <tr>
@@ -321,7 +322,7 @@ export function LowStockReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
     </div>

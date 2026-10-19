@@ -16,6 +16,7 @@ import { CsReportSection } from "./cs-report-section";
 import { ConversationInsightSection } from "./conversation-insight-section";
 import type { CrmReportPeriodInput } from "../types";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 function tierLabel(tier: string) {
   return tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : "Regular";
@@ -260,7 +261,7 @@ function ReconciliationSection({
           Belum ada transaksi wallet pada periode ini.
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <ScrollRegion label="Tabel laporan CRM" className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -313,7 +314,7 @@ function ReconciliationSection({
               </tr>
             </tfoot>
           </table>
-        </div>
+        </ScrollRegion>
       )}
 
       {untaggedCount > 0 ? (
