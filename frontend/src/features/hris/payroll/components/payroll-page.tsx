@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PlusIcon, DocumentTextIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { formatRupiah } from "@/lib/format";
@@ -169,7 +170,7 @@ export function PayrollPage() {
           <CardTitle>Riwayat Payroll</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel riwayat payroll" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
@@ -271,7 +272,7 @@ export function PayrollPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
 

@@ -6,6 +6,7 @@ import {
   ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { formatDateTime, formatNumber } from "@/lib/format";
@@ -43,7 +44,7 @@ export function TransferHistorySection() {
         </Button>
       }
     >
-      <div className="overflow-x-auto px-4 pb-4">
+      <ScrollRegion label="Tabel riwayat transfer" className="overflow-x-auto px-4 pb-4">
         <table className="w-full min-w-[960px] text-sm">
           <thead>
             <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -118,7 +119,7 @@ export function TransferHistorySection() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       {totalPages > 1 && (
         <div className="border-t border-gray-200/70 px-4 py-4">

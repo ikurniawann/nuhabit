@@ -13,6 +13,7 @@ import {
   stageAgeTone,
   stageDotClass,
 } from "@/lib/recruitment/pipeline-board";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export type PipelineCandidate = Candidate & {
   brands?: { name: string } | null;
@@ -109,7 +110,7 @@ export function PipelineKanban({
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
+      <ScrollRegion label="Papan pipeline kandidat" className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-4 sm:mx-0 sm:px-0">
         {PIPELINE_STAGES.map((stage) => {
           const stageCandidates = byStage.get(stage.id) ?? [];
           return (
@@ -156,7 +157,7 @@ export function PipelineKanban({
             </Droppable>
           );
         })}
-      </div>
+      </ScrollRegion>
     </DragDropContext>
   );
 }

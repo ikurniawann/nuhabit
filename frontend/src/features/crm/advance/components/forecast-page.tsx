@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Loader2, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { usePipelines } from "@/features/sales-funnel/pipeline/queries";
@@ -141,7 +142,7 @@ export function ForecastPage() {
         ) : rows.length === 0 ? (
           <p className="py-14 text-center text-sm text-gray-500">Belum ada salesperson / deal di bulan ini.</p>
         ) : (
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel forecast penjualan" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
@@ -171,7 +172,7 @@ export function ForecastPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

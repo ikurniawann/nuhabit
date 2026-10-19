@@ -14,6 +14,7 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { CrmTierConfig } from "../types";
 import { tierFormToPayload, tierToForm, type TierForm } from "../settings-forms";
 import { useSaveCrmTier } from "../queries";
@@ -39,7 +40,7 @@ export function TierConfigSection({ tiers, loading }: { tiers: CrmTierConfig[]; 
         </CardTitle>
         <p className="text-xs text-muted-foreground">Ditentukan dari lifetime XP (ambang min XP).</p>
       </CardHeader>
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel tier membership" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -90,7 +91,7 @@ export function TierConfigSection({ tiers, loading }: { tiers: CrmTierConfig[]; 
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       <Dialog
         open={Boolean(form)}

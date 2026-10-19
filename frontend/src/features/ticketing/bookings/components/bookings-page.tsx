@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   Select,
   SelectContent,
@@ -120,7 +121,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
             <p className="mt-2 text-sm text-gray-500">Memuat booking...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel booking" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -220,7 +221,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
                 </div>
               </div>
             ) : null}
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

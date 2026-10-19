@@ -16,6 +16,7 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import type { CrmXpRuleConfig } from "../types";
 import { EMPTY_RULE_FORM, XP_MODE_LABELS, ruleFormToPayload, ruleToForm, type RuleForm } from "../settings-forms";
 import { useSaveCrmXpRule } from "../queries";
@@ -61,7 +62,7 @@ export function XpRulesSection({ rules, loading }: { rules: CrmXpRuleConfig[]; l
       <p className="px-4 pt-3 text-xs text-muted-foreground">
         XP hanya diberikan untuk pembayaran penuh dengan ARK Coin. Aturan menentukan besaran XP per transaksi/produk.
       </p>
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel aturan XP" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
@@ -118,7 +119,7 @@ export function XpRulesSection({ rules, loading }: { rules: CrmXpRuleConfig[]; l
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       <Dialog
         open={Boolean(editing)}

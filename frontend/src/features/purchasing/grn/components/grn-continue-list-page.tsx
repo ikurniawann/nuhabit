@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   ClipboardDocumentCheckIcon,
   PlusIcon,
@@ -117,7 +118,7 @@ export function GrnContinueListPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel GRN lanjutan" className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
@@ -223,7 +224,7 @@ export function GrnContinueListPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
 
           {totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-4">

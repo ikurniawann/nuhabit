@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   ArrowLeftIcon,
   DocumentTextIcon,
@@ -171,7 +172,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
           ) : null}
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel slip payroll" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
@@ -249,7 +250,7 @@ export function PayrollDetailPage({ params }: PayrollPageProps) {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
     </div>

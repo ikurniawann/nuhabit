@@ -12,6 +12,7 @@ import { CartExtras } from './cart-panel/cart-extras';
 import { CartLine } from './cart-panel/cart-line';
 import { CartActions, CartHeader } from './cart-panel/cart-chrome';
 import { DiscountRow, SummaryRow } from './cart-panel/money';
+import { ScrollRegion } from '@/components/ui/scroll-region';
 
 interface CartPanelProps {
   cart: PosCartItem[];
@@ -210,7 +211,7 @@ export function CartPanel({
         onClearCart={onClearCart}
       />
 
-      <div className="min-h-[7rem] flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
+      <ScrollRegion label="Daftar item keranjang" axis="y" className="min-h-[7rem] flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
         {cart.length === 0 ? (
           <div className="py-10 text-center text-muted-foreground">
             <ShoppingBag className="mx-auto mb-2 h-10 w-10 opacity-40" />
@@ -244,7 +245,7 @@ export function CartPanel({
             </span>
           </div>
         )}
-      </div>
+      </ScrollRegion>
 
       <div className="space-y-1.5 border-t border-gray-200/70 bg-muted/20 px-3 py-2">
         <SummaryRow label="Subtotal" amount={displaySubtotal} money={money} />
