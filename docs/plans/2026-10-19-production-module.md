@@ -185,9 +185,10 @@ module publishes in the issue or receipt transaction (contracts in
   above zero. Each is keyed by the batch id, so a redelivery finds the entry
   it already wrote.
 
-Until an accountant fills the WIP and applied overhead accounts, the mapping
-is incomplete and the journal is not written (the handler logs the reason),
-the same rule the other mappings follow.
+A mapping line without an account leaves the journal unwritten (the
+handler logs the reason), the same rule the other mappings follow. Delta
+`20261020130000_production_journal_accounts.sql` fills those lines for every
+company with a chart of accounts (decision 3).
 
 ## Frontend
 
@@ -285,6 +286,43 @@ materials left over at the end leave WIP before the last batch is costed.
   shows the same inputs when the batch is final. The card lists returns
   under "Riwayat Pengembalian" and the returned quantity per line.
 
+### 3. WIP, applied overhead and production loss accounts
+
+Delta `20261020130000_production_journal_accounts.sql` runs per company that
+has its own chart of accounts (rows in `accounting.chart_of_accounts` with
+its `company_id`). It is idempotent: it only creates what is missing and
+only fills mapping lines whose account is empty.
+
+1. It creates the six production mappings the company lacks
+   (`PRODUCTION_MATERIAL_ISSUE`, `_CONVERSION_COST`, `_OUTPUT_RECEIPT`,
+   `_SCRAP`, `_ABNORMAL_SCRAP`, `_MATERIAL_RETURN`) with their lines.
+2. It picks accounts by name, case-insensitive, among active postable
+   accounts: WIP (type ASSET) "barang dalam proses", "work in process" or
+   the word "wip"; applied overhead (COGS or EXPENSE) "overhead pabrik
+   dibebankan" or "applied overhead"; production loss (COGS, EXPENSE or
+   OTHER_EXPENSE) "kerugian produksi" or "production loss", else the
+   company's COGS account. An exact name beats a name that contains the
+   phrase, then the lowest code wins. Inventory comes from the
+   `PURCHASE_GRN` mapping, COGS from `POS_COGS_RELIEF` (else the first
+   postable COGS account).
+3. When no WIP account matches it creates "Barang Dalam Proses" (ASSET)
+   under the parent of the inventory account (else the deepest non-postable
+   ASSET group named persediaan/inventor), with the next free code among
+   its siblings, following the 7-digit `ABCCDDD` numbering (1301000 →
+   1301001, ...). When no applied overhead account matches it creates
+   "Overhead Pabrik Dibebankan" (COGS, contra) the same way next to the COGS
+   account. A company without such a group keeps the line empty and the
+   migration prints a NOTICE.
+4. It fills the empty `WIP`, `OVERHEAD_APPLIED`, `PRODUCTION_LOSS`, `COGS`
+   and `INVENTORY` lines of the six mappings.
+
+The created accounts carry "Dibuat oleh migrasi 20261020130000" in their
+description. Staff change any account on the journal mapping page
+(`/dashboard/accounting/journal-mappings`), which now lists the six
+production events and the `WIP`, `OVERHEAD_APPLIED` and `PRODUCTION_LOSS`
+roles. On the SULU chart the word match
+picks "Inv - ST KOH WIP" (1301006) as WIP, so check that choice per company.
+
 ### 4. Orders count materials in the stock unit
 
 A BOM line keeps `qty_required` in its own unit (`satuan_id`). Production
@@ -371,6 +409,5 @@ deleted.
 - The order rules of the TS routes (numbering, coverage mode, variant split,
   completion message) moved from `inventory/domain` to `production/legacy`.
 
-## Open questions
-
-3. Which COA accounts hold WIP and applied overhead?
+All five open questions of the first draft are answered by the decisions
+above.

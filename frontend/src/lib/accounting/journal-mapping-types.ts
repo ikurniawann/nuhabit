@@ -45,6 +45,12 @@ export const JOURNAL_LINE_ROLES = [
   "BPJS_KES_PAYABLE",
   "TAPERA_EXPENSE",
   "TAPERA_PAYABLE",
+  /** Barang dalam proses (produksi). */
+  "WIP",
+  /** Overhead pabrik dibebankan ke WIP. */
+  "OVERHEAD_APPLIED",
+  /** Kerugian produksi (scrap di atas toleransi). */
+  "PRODUCTION_LOSS",
   "OTHER",
 ] as const;
 export type JournalLineRole = (typeof JOURNAL_LINE_ROLES)[number];
@@ -87,6 +93,12 @@ export const JOURNAL_EVENT_CODES = [
   "STOCK_ADJUSTMENT_SHORTAGE",
   "STOCK_ADJUSTMENT_SURPLUS",
   "STOCK_TRANSFER",
+  "PRODUCTION_MATERIAL_ISSUE",
+  "PRODUCTION_CONVERSION_COST",
+  "PRODUCTION_OUTPUT_RECEIPT",
+  "PRODUCTION_SCRAP",
+  "PRODUCTION_ABNORMAL_SCRAP",
+  "PRODUCTION_MATERIAL_RETURN",
 ] as const;
 export type JournalEventCode = (typeof JOURNAL_EVENT_CODES)[number];
 
@@ -278,6 +290,36 @@ export const JOURNAL_EVENT_META: Record<
     name: "Stock Transfer",
     module: "INVENTORY",
     description: "Transfer stok antar gudang (audit nilai inventori)",
+  },
+  PRODUCTION_MATERIAL_ISSUE: {
+    name: "Production Material Issue",
+    module: "INVENTORY",
+    description: "Bahan baku dikeluarkan ke produksi: persediaan pindah ke barang dalam proses (WIP)",
+  },
+  PRODUCTION_CONVERSION_COST: {
+    name: "Production Conversion Cost",
+    module: "INVENTORY",
+    description: "Biaya overhead, tenaga kerja, kemasan dan susut dibebankan ke WIP saat hasil produksi diterima",
+  },
+  PRODUCTION_OUTPUT_RECEIPT: {
+    name: "Production Output Receipt",
+    module: "INVENTORY",
+    description: "Hasil produksi diterima ke persediaan dari WIP sebesar HPP batch",
+  },
+  PRODUCTION_SCRAP: {
+    name: "Production Scrap",
+    module: "INVENTORY",
+    description: "Sisa WIP tanpa hasil baik dibebankan sebagai kerugian produksi",
+  },
+  PRODUCTION_ABNORMAL_SCRAP: {
+    name: "Production Abnormal Scrap",
+    module: "INVENTORY",
+    description: "Scrap di atas toleransi dibebankan sebagai kerugian produksi dari WIP",
+  },
+  PRODUCTION_MATERIAL_RETURN: {
+    name: "Production Material Return",
+    module: "INVENTORY",
+    description: "Bahan sisa produksi dikembalikan ke persediaan dari WIP",
   },
 };
 

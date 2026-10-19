@@ -52,6 +52,12 @@ var EventNames = map[string][2]string{
 	"STOCK_ADJUSTMENT_SHORTAGE":     {"Stock Adjustment — Shortage", "Penyesuaian stok kurang"},
 	"STOCK_ADJUSTMENT_SURPLUS":      {"Stock Adjustment — Surplus", "Penyesuaian stok lebih"},
 	"STOCK_TRANSFER":                {"Stock Transfer", "Transfer stok antar gudang (audit nilai inventori)"},
+	"PRODUCTION_MATERIAL_ISSUE":     {"Production Material Issue", "Bahan baku dikeluarkan ke produksi: persediaan pindah ke barang dalam proses (WIP)"},
+	"PRODUCTION_CONVERSION_COST":    {"Production Conversion Cost", "Biaya overhead, tenaga kerja, kemasan dan susut dibebankan ke WIP saat hasil produksi diterima"},
+	"PRODUCTION_OUTPUT_RECEIPT":     {"Production Output Receipt", "Hasil produksi diterima ke persediaan dari WIP sebesar HPP batch"},
+	"PRODUCTION_SCRAP":              {"Production Scrap", "Sisa WIP tanpa hasil baik dibebankan sebagai kerugian produksi"},
+	"PRODUCTION_ABNORMAL_SCRAP":     {"Production Abnormal Scrap", "Scrap di atas toleransi dibebankan sebagai kerugian produksi dari WIP"},
+	"PRODUCTION_MATERIAL_RETURN":    {"Production Material Return", "Bahan sisa produksi dikembalikan ke persediaan dari WIP"},
 }
 
 // Amounts is a JournalAmountBag: amount source -> value. A missing key is 0.
