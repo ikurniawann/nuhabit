@@ -85,7 +85,7 @@ export function UsersTable({
                     <p className="font-medium text-gray-900">{emp.fullName}</p>
                     <p className="text-xs text-gray-400">
                       {emp.isActive ? (
-                        <span className="text-green-600">● Active</span>
+                        <span className="text-green-700">● Active</span>
                       ) : (
                         <span className="text-gray-400">● Inactive</span>
                       )}

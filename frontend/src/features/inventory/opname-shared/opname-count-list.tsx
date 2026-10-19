@@ -147,7 +147,7 @@ export function OpnameCountList({
   return (
     <div className="space-y-3">
       {/* Progres + filter — lengket di atas saat menggulir di HP */}
-      <div className="sticky top-0 z-10 -mx-4 space-y-3 border-b border-gray-200/70 bg-white/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:px-0 md:py-0">
+      <div className="sticky top-0 z-10 -mx-4 space-y-3 border-b border-gray-200/70 bg-card/95 px-4 py-3 backdrop-blur md:static md:mx-0 md:border-0 md:px-0 md:py-0">
         <div>
           <div className="flex items-center justify-between text-xs text-gray-600">
             <span>

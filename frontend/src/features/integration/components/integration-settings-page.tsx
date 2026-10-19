@@ -124,7 +124,7 @@ export function IntegrationSettingsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="text-2xl font-semibold">Integration Center</h2>
-                    <p className="mt-1 text-sm leading-6 text-black/55">
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       Hubungkan Game, Photobox, Payment Gateway, API, dan webhook dari satu tempat.
                     </p>
                   </div>
@@ -144,7 +144,7 @@ export function IntegrationSettingsPage() {
                   return (
                     <button
                       key={item.name}
-                      className="group rounded-[24px] bg-white p-5 text-left shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
+                      className="group rounded-[24px] bg-card p-5 text-left shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className={`grid h-12 w-12 place-items-center rounded-2xl ${item.color} text-white shadow-sm`}>
@@ -154,7 +154,7 @@ export function IntegrationSettingsPage() {
                       </div>
                       <div className="mt-4 text-lg font-semibold">{item.name}</div>
                       <p className="mt-1 min-h-[48px] text-sm leading-6 text-muted-foreground">{item.desc}</p>
-                      <div className="mt-4 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-medium text-black/55">{item.status}</div>
+                      <div className="mt-4 inline-flex rounded-full bg-black/5 px-3 py-1 text-xs font-medium text-muted-foreground">{item.status}</div>
                     </button>
                   );
                 })}

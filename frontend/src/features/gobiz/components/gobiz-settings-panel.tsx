@@ -160,18 +160,18 @@ export function GobizSettingsPanel() {
                   ? "bg-emerald-50 text-emerald-700"
                   : data?.configured
                     ? "bg-amber-50 text-amber-700"
-                    : "bg-black/5 text-black/55"
+                    : "bg-black/5 text-muted-foreground"
               }`}
             >
               {data ? (data.configured ? (data.enabled ? "Aktif" : "Terkonfigurasi · nonaktif") : "Belum dikonfigurasi") : "…"}
             </span>
             {data && (
-              <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-medium text-black/55">
+              <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                 {data.environment === "production" ? "Production" : "Sandbox"}
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm leading-6 text-black/55">
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
             Order GoFood masuk otomatis ke POS & KDS, terima/tolak dari halaman POS → GoFood, menu disinkron dari katalog POS.
             Kredensial (Client ID, Client Secret, Outlet ID) diperoleh dari{" "}
             <a href="https://developer.gobiz.com" target="_blank" rel="noreferrer" className="text-forest dark:text-accent underline">
@@ -184,7 +184,7 @@ export function GobizSettingsPanel() {
 
       <div className="grid gap-4 p-5 sm:grid-cols-2">
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">Environment</span>
+          <span className="text-xs font-semibold text-muted-foreground">Environment</span>
           <select
             value={form.environment}
             onChange={(event) => setForm((f) => ({ ...f, environment: event.target.value as "sandbox" | "production" }))}
@@ -195,7 +195,7 @@ export function GobizSettingsPanel() {
           </select>
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">Outlet ID</span>
+          <span className="text-xs font-semibold text-muted-foreground">Outlet ID</span>
           <input
             value={form.outlet_id}
             onChange={(event) => setForm((f) => ({ ...f, outlet_id: event.target.value }))}
@@ -204,7 +204,7 @@ export function GobizSettingsPanel() {
           />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">Client ID</span>
+          <span className="text-xs font-semibold text-muted-foreground">Client ID</span>
           <input
             value={form.client_id}
             onChange={(event) => setForm((f) => ({ ...f, client_id: event.target.value }))}
@@ -213,7 +213,7 @@ export function GobizSettingsPanel() {
           />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">
+          <span className="text-xs font-semibold text-muted-foreground">
             Client Secret {data?.has_client_secret ? <span className="font-normal text-muted-foreground">(tersimpan: {data.client_secret_masked})</span> : null}
           </span>
           <input
@@ -227,7 +227,7 @@ export function GobizSettingsPanel() {
         </label>
 
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">Partner ID</span>
+          <span className="text-xs font-semibold text-muted-foreground">Partner ID</span>
           <input
             value={form.partner_id}
             onChange={(event) => setForm((f) => ({ ...f, partner_id: event.target.value }))}
@@ -236,7 +236,7 @@ export function GobizSettingsPanel() {
           />
         </label>
         <label className="block">
-          <span className="text-xs font-semibold text-black/60">
+          <span className="text-xs font-semibold text-muted-foreground">
             Relay secret {data?.has_relay_secret ? <span className="font-normal text-muted-foreground">(tersimpan: {data.relay_secret_masked})</span> : null}
           </span>
           <input
@@ -296,7 +296,7 @@ export function GobizSettingsPanel() {
           {advanced && (
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="text-xs font-semibold text-black/60">OAuth token URL (override)</span>
+                <span className="text-xs font-semibold text-muted-foreground">OAuth token URL (override)</span>
                 <input
                   value={form.oauth_url}
                   onChange={(event) => setForm((f) => ({ ...f, oauth_url: event.target.value }))}
@@ -305,7 +305,7 @@ export function GobizSettingsPanel() {
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-semibold text-black/60">API base URL (override)</span>
+                <span className="text-xs font-semibold text-muted-foreground">API base URL (override)</span>
                 <input
                   value={form.api_base_url}
                   onChange={(event) => setForm((f) => ({ ...f, api_base_url: event.target.value }))}
@@ -322,7 +322,7 @@ export function GobizSettingsPanel() {
         </div>
 
         <div className="sm:col-span-2">
-          <span className="text-xs font-semibold text-black/60">URL webhook (didaftarkan ke GoBiz)</span>
+          <span className="text-xs font-semibold text-muted-foreground">URL webhook (didaftarkan ke GoBiz)</span>
           <div className="mt-1 flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-xl bg-black/5 px-3 py-2 text-xs">{data?.webhook_url || "…"}</code>
             <Button type="button" variant="outline" size="sm" onClick={copyWebhook} className="h-9" aria-label="Salin URL webhook">
@@ -366,7 +366,7 @@ export function GobizSettingsPanel() {
 
       {webhookResult && (
         <div className="border-t border-black/5 p-5">
-          <div className="text-xs font-semibold text-black/60">Hasil pendaftaran webhook</div>
+          <div className="text-xs font-semibold text-muted-foreground">Hasil pendaftaran webhook</div>
           <ul className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
             {webhookResult.map((row) => (
               <li key={row.event} className={row.ok ? "text-emerald-700" : "text-red-700"}>
