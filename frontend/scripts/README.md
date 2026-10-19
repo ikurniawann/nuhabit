@@ -25,6 +25,8 @@ Full guide: [docs/MIGRATIONS.md](../docs/MIGRATIONS.md)
 | `./scripts/reset-db.sh` | Truncate purchasing transaction data |
 | `./scripts/create_super_user.js` | Create super admin user |
 | `./scripts/create_pos_admin.js` | Create POS admin user |
+| `node scripts/find-dead-modules.mjs` | List modules and tests no Next entry point reaches |
+| `node scripts/generate-openapi.mjs` | Rebuild the OpenAPI inventory from the Go route manifest |
 
 ## Legacy wrapper
 

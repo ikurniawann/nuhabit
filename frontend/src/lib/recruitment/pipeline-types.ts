@@ -66,7 +66,7 @@ export interface PsikotesSummary {
 
 export type PsikotesSummaryPayload = Pick<PsikotesSummary, "recommendation" | "notes">;
 
-/** Selaras McqScoreResult["detail"] di lib/recruitment/psikotes-scoring.ts. */
+/** Selaras McqScoreResult["detail"] di backend/internal/modules/recruitment/domain/psikotes.go. */
 export interface McqScoreDetail {
   total: number;
   correct: number;
@@ -91,7 +91,7 @@ export interface DrawingAiInsightRecord {
   created_by_name: string;
 }
 
-/** Selaras PapiScoreResult di lib/recruitment/psikotes-scoring.ts. */
+/** Selaras PapiScoreResult di backend/internal/modules/recruitment/domain/psikotes.go. */
 export interface PapiScoreDetail {
   scales: Record<PapiScaleCode, number>;
   dominant: { code: PapiScaleCode; label: string; count: number }[];

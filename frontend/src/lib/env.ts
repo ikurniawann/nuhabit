@@ -18,8 +18,9 @@ export function databaseUrl(env: Env = process.env): string {
 }
 
 /**
- * Origin of the Go backend (backend/), e.g. http://api:8080. Optional: when
- * empty every /api route is served by Next. Trailing slashes are dropped.
+ * Origin of the Go backend (backend/), e.g. http://api:8080. When empty, the
+ * routes Go registers answer 503 (see backend-routes.ts). Trailing slashes are
+ * dropped.
  */
 export function backendUrl(env: Env = process.env): string {
   return env.BACKEND_URL?.trim().replace(/\/+$/, "") || "";

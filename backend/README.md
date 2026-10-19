@@ -1,11 +1,11 @@
 # NüHabit backend (Go)
 
-The Go modular monolith that takes over the Next.js API routes one prefix at a
-time. Each ported route keeps the TypeScript HTTP contract byte for byte: same
-method, path, status codes, JSON shape and messages. The frontend does not
-change. The Next proxy forwards a listed `/api` prefix to this service when
-`BACKEND_URL` is set (`frontend/src/lib/backend-routes.ts`); unset it and Next
-serves everything again.
+The Go modular monolith that serves the NüHabit API. Each route kept the
+TypeScript HTTP contract byte for byte when it moved: same method, path,
+status codes, JSON shape and messages. The Next proxy forwards every method
+and path this service registers to `BACKEND_URL`
+(`frontend/src/lib/backend-routes.ts`). Next has no handler for those routes,
+so with `BACKEND_URL` unset they answer 503.
 
 `database/` holds the SQL migrations and Node seeders. They remain the source
 of truth for the schema.
@@ -26,9 +26,8 @@ For a demo of the public site and /apparel, seed sample branches, classes,
 content and product images from `backend/`:
 `node database/seeders/run-sql-file.js database/seeders/site-demo.sql` (safe to re-run).
 
-To route a prefix through Go during local development, set
-`BACKEND_URL=http://localhost:8080` in `frontend/.env.local` and add the prefix
-to `GO_BACKEND_PREFIXES`.
+Local development needs the API: set `BACKEND_URL=http://localhost:8080` in
+`frontend/.env.local`, or every Go route answers 503.
 
 From `backend/` the Makefile wraps the same commands: `make run`, `make test`,
 `make lint`, `make migrate`, `make migrate-apply`, `make generate`, `make docker`.
@@ -97,13 +96,13 @@ docs/ARCHITECTURE.md
 | `ticketing` | 56 | bookings, gate taps, visits, season and staff passes, capacity, channels |
 | `files` | 1 | `GET /api/files/{bucket}/{path...}`: public buckets, member-owned photos, staff-only buckets |
 
-The Next app forwards a request to Go when `BACKEND_URL` is set, its path is
-under a prefix in `frontend/src/lib/backend-routes.ts`, and Go registers that
-method and path (`frontend/src/lib/go-routes.generated.json`, refreshed by
-`make generate`), unless the route is in `NEXT_ONLY_ROUTES` (empty today).
-Next keeps three routes of its own: `/api/health` and `/api/ready` probe the
-Next container, and `/api/openapi.json` serves the OpenAPI document committed
-in the frontend.
+The Next app forwards a request to Go when Go registers that method and path
+(`frontend/src/lib/go-routes.generated.json`, refreshed by `make generate`).
+A Go route never falls back to a TypeScript handler, and
+`frontend/src/lib/backend-routes.test.ts` fails when a Next `route.ts` shadows
+one. Next keeps three routes of its own: `/api/health` and `/api/ready` probe
+the Next container, and `/api/openapi.json` serves the OpenAPI document
+committed in the frontend.
 
 ## Tests
 

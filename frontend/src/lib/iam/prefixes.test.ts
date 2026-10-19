@@ -10,4 +10,8 @@ describe("IAM prefixes", () => {
   it("does not let ESS satisfy purchasing", () => {
     expect(hasAnyIamMenuPrefix(["ess.attendance"], IAM.items)).toBe(false);
   });
+
+  it("lets the POS catalog menu use the recipe builder next to Items", () => {
+    expect(IAM.itemsCatalog).toEqual(expect.arrayContaining([...IAM.items, ...IAM.posCatalog]));
+  });
 });

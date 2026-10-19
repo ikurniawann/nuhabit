@@ -91,7 +91,7 @@ export const EMPTY_JOB_FORM: JobForm = {
   closing_date: "",
 };
 
-/** Slug lowongan; dipakai form klien dan normalisasi server (lib/hris/job-openings.ts). */
+/** Slug lowongan; dipakai form klien dan normalisasi server (backend/internal/modules/recruitment/domain/jobopenings.go). */
 export function slugify(value: string): string {
   return value
     .toLowerCase()

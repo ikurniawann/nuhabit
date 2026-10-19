@@ -12,7 +12,7 @@ import { computeLotRemainders, expiresAtFor, roundIdr, type LedgerRow } from "./
 
 type Db = Pool | PoolClient;
 
-/** Galat aturan dompet: ApiError supaya apiHandler menjawab dengan status & pesannya. */
+/** Galat aturan dompet: ApiError yang membawa status & pesannya. */
 export class WalletError extends ApiError {
   constructor(message: string, status = 400) {
     super(status, message);

@@ -15,7 +15,6 @@ import {
   wholePacksFor,
   type ItemPack,
 } from "./packs";
-import { resolveBaseUnitFactor } from "./raw-material-units";
 
 const PCS: ItemPack = { satuan_id: "pcs", qty_in_base_unit: 1, is_base: true, is_issue_default: true, unit_name: "PCS" };
 const BOX: ItemPack = { satuan_id: "box", qty_in_base_unit: 12, is_base: false, unit_name: "BOX" };
@@ -105,7 +104,6 @@ describe("satuan besar/kecil lama sebagai dua pack", () => {
     expect(packFactor(material, rows, "pcs")).toBe(1);
     expect(packFactor(material, rows, null)).toBe(12);
     expect(packToBase(3, packFactor(material, rows, "ctn"))).toBe(144);
-    expect(resolveBaseUnitFactor(material, rows, "ctn")).toBe(48);
   });
 });
 

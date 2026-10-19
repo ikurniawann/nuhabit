@@ -57,9 +57,9 @@ export const SETTING_KEYS = {
   GOBIZ_OAUTH_URL: "gobiz_oauth_url",
   GOBIZ_API_BASE_URL: "gobiz_api_base_url",
   // Partner ID & Relay secret dari GoBiz Developer Portal. Relay secret =
-  // kunci HMAC header X-Go-Signature webhook (lib/gobiz/signature.ts);
+  // kunci HMAC header X-Go-Signature webhook (backend/internal/modules/integrations/gobiz);
   // GOBIZ_SIGNATURE_ENFORCE "true" = tolak webhook bertanda tangan salah.
-  // Bot Telegram notifikasi pesanan masuk (lib/notifications/order-alert*).
+  // Bot Telegram notifikasi pesanan masuk (backend/internal/modules/configuration/settings/orderalerts.go).
   TELEGRAM_BOT_TOKEN: "telegram_bot_token",
   TELEGRAM_WEBHOOK_SECRET: "telegram_webhook_secret",
   TELEGRAM_BOT_USERNAME: "telegram_bot_username",
@@ -68,7 +68,7 @@ export const SETTING_KEYS = {
   GOBIZ_SIGNATURE_ENFORCE: "gobiz_signature_enforce",
   QRIS_NMID: "qris_nmid",
   // Static QRIS self-order — gambar QRIS statis venue + saklar aktif
-  // (lib/payments/static-qris.ts). Diatur di Settings → Payment Gateways.
+  // (backend/internal/modules/possales/tableorder). Diatur di Settings → Payment Gateways.
   STATIC_QRIS_ENABLED: "static_qris_enabled",
   STATIC_QRIS_IMAGE_URL: "static_qris_image_url",
   // Penerima laporan tutup kasir via WA — JSON array nomor `628xx`, boleh

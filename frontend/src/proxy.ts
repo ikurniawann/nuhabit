@@ -34,12 +34,19 @@ function isMemberHost(hostHeader: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  // Strangler migration: /api prefixes ported to the Go backend go there
-  // first, on every host. Method, query, body and cookies travel with the
-  // rewrite; the Go service applies the same auth gate as updateSession.
-  const goTarget = goBackendTarget(request.nextUrl.pathname, request.method);
-  if (goTarget) {
-    return NextResponse.rewrite(new URL(`${goTarget}${request.nextUrl.search}`));
+  // Routes the Go backend registers go there first, on every host. Method,
+  // query, body and cookies travel with the rewrite; the Go service applies
+  // the same auth gate as updateSession. They have no TypeScript handler, so
+  // without BACKEND_URL they answer 503 instead of reaching Next.
+  const go = goBackendTarget(request.nextUrl.pathname, request.method);
+  if (go) {
+    if (!go.url) {
+      return NextResponse.json(
+        { success: false, error: "Rute ini dilayani backend Go. Set BACKEND_URL untuk mengaktifkannya." },
+        { status: 503 },
+      );
+    }
+    return NextResponse.rewrite(new URL(`${go.url}${request.nextUrl.search}`));
   }
 
   const host = request.headers.get("host") ?? "";

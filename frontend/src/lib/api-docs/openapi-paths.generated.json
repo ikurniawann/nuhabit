@@ -1,5 +1,5 @@
 {
- "generated_route_count": 896,
+ "generated_route_count": 1320,
  "paths": {
   "/api/accounting/account-types/{id}": {
    "put": {
@@ -159,6 +159,34 @@
      "accounting"
     ],
     "summary": "GET /api/accounting/ap/payable",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/accounting/ap/payments/{id}/void": {
+   "post": {
+    "tags": [
+     "accounting"
+    ],
+    "summary": "POST /api/accounting/ap/payments/{id}/void",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -1489,6 +1517,24 @@
     ]
    }
   },
+  "/api/audit": {
+   "get": {
+    "tags": [
+     "audit"
+    ],
+    "summary": "GET /api/audit",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/auth/active-stall": {
    "post": {
     "tags": [
@@ -1712,6 +1758,32 @@
    }
   },
   "/api/candidates/{id}/activities": {
+   "get": {
+    "tags": [
+     "candidates"
+    ],
+    "summary": "GET /api/candidates/{id}/activities",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
    "post": {
     "tags": [
      "candidates"
@@ -2337,6 +2409,140 @@
     ]
    }
   },
+  "/api/crm/approval-rules/{id}": {
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/approval-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/approval-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/approval-rules": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/approval-rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/approval-rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/approvals/{id}/decide": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/approvals/{id}/decide",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/approvals": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/approvals",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/crm/avatar-inventory": {
    "get": {
     "tags": [
@@ -2715,12 +2921,516 @@
     ]
    }
   },
+  "/api/crm/custom-fields/{id}": {
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/custom-fields/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/custom-fields/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/custom-fields": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/custom-fields",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/custom-fields",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/crm/dashboard": {
    "get": {
     "tags": [
      "crm"
     ],
     "summary": "GET /api/crm/dashboard",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/dashboards/{id}": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/dashboards/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/dashboards/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/dashboards/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/dashboards": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/dashboards",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/dashboards",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/announcements/image": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/engagement/announcements/image",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/announcements": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/engagement/announcements",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/engagement/announcements",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/challenges": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/engagement/challenges",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/engagement/challenges",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/checkins": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/engagement/checkins",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/events/bookings": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/engagement/events/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/engagement/events/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/engagement/events": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/engagement/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/engagement/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/engagement/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/forms/{id}": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/forms/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/forms/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/forms/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/forms": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/forms",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/forms",
     "responses": {
      "200": {
       "description": "OK"
@@ -2923,6 +3633,234 @@
     ]
    }
   },
+  "/api/crm/loyalty-features": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/loyalty-features",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/member-reviews/{id}": {
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/member-reviews/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/member-reviews": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/member-reviews",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/members/{id}/activity": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/members/{id}/activity",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/members/{id}/badges": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/members/{id}/badges",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/members/{id}/badges",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/members/{id}/consent": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/members/{id}/consent",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PUT /api/crm/members/{id}/consent",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/members/{id}/password": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/members/{id}/password",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/crm/members/{id}": {
    "get": {
     "tags": [
@@ -2955,6 +3893,34 @@
      "crm"
     ],
     "summary": "PATCH /api/crm/members/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/members/{id}/xp-adjust": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/members/{id}/xp-adjust",
     "parameters": [
      {
       "name": "id",
@@ -3011,6 +3977,104 @@
     ]
    }
   },
+  "/api/crm/partners/{id}": {
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/partners/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/partners/events/rematch": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/partners/events/rematch",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/partners/events": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/partners/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/partners": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/partners",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/partners",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/crm/redemptions": {
    "get": {
     "tags": [
@@ -3049,6 +4113,298 @@
      "crm"
     ],
     "summary": "EPIC-011 Fase F — antrean & riwayat redeem reward.",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-builder/{id}/export": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/report-builder/{id}/export",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-builder/{id}": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/report-builder/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/report-builder/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/report-builder/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-builder/datasets": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/report-builder/datasets",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-builder": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/report-builder",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/report-builder",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-builder/run": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/report-builder/run",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-schedules/{id}": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/report-schedules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/report-schedules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/report-schedules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/report-schedules": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/report-schedules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/report-schedules",
     "responses": {
      "200": {
       "description": "OK"
@@ -3199,6 +4555,272 @@
     ]
    }
   },
+  "/api/crm/scoring/recalculate": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/scoring/recalculate",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/scoring-rules/{id}": {
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/scoring-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/scoring-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/scoring-rules": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/scoring-rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/scoring-rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/segments/{id}/preview": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/segments/{id}/preview",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/segments/{id}": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/segments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/segments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/segments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/segments/preview": {
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/segments/preview",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/segments": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/segments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/segments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/crm/settings": {
    "get": {
     "tags": [
@@ -3305,6 +4927,148 @@
      "crm"
     ],
     "summary": "CRUD wallpaper collectible (EPIC-014 Task 5) — super_admin only.",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/workflow-rules/{id}": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/workflow-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "PATCH /api/crm/workflow-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "DELETE /api/crm/workflow-rules/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/workflow-rules/{id}/runs": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/workflow-rules/{id}/runs",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/crm/workflow-rules": {
+   "get": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "GET /api/crm/workflow-rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "crm"
+    ],
+    "summary": "POST /api/crm/workflow-rules",
     "responses": {
      "200": {
       "description": "OK"
@@ -3459,12 +5223,480 @@
     ]
    }
   },
+  "/api/dataroom/departments": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/departments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/nodes/{id}/access": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/nodes/{id}/access",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "PUT /api/dataroom/nodes/{id}/access",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/nodes/{id}/download": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/nodes/{id}/download",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/nodes/{id}": {
+   "patch": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "PATCH /api/dataroom/nodes/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "DELETE /api/dataroom/nodes/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/nodes": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/nodes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "POST /api/dataroom/nodes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/shares/{id}": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/shares/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "DELETE /api/dataroom/shares/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/shares": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/shares",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "POST /api/dataroom/shares",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/tree": {
+   "get": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "GET /api/dataroom/tree",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/dataroom/upload": {
+   "post": {
+    "tags": [
+     "dataroom"
+    ],
+    "summary": "POST /api/dataroom/upload",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/inbox": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/inbox",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/desktop/overview": {
    "get": {
     "tags": [
      "desktop"
     ],
     "summary": "GET /api/desktop/overview — data papan monitoring desktop (EPIC-019).",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/preferences": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/preferences",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "PUT /api/desktop/preferences",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/search": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/search",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/status": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/status",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/stream": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/stream",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/desktop/wallpapers": {
+   "get": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "GET /api/desktop/wallpapers",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "POST /api/desktop/wallpapers",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "desktop"
+    ],
+    "summary": "DELETE /api/desktop/wallpapers",
     "responses": {
      "200": {
       "description": "OK"
@@ -3735,6 +5967,1034 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/bookings/{id}": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/bookings/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/bookings/members": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/bookings/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/bookings": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/checkin": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/checkin",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/checkin",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/class-types/{id}": {
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/class-types/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/class-types/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/class-types": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/class-types",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/class-types",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/coaches/{id}": {
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/coaches/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/coaches": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/coaches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/coaches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/{customerId}/adjust": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/{customerId}/adjust",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/{customerId}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/credits/{customerId}",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/{customerId}/sell": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/{customerId}/sell",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/purchases/{id}/refund": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/purchases/{id}/refund",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/reverse": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/reverse",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/credits",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/exercises": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/exercises",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/exercises",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/exercises",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/exercises/substitutions": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/exercises/substitutions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/exercises/substitutions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/incentives/payouts/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/incentives/payouts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/incentives/payouts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/incentives/payouts": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/incentives/payouts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/incentives/payouts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/incentives/schemes": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/incentives/schemes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/incentives/schemes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/incentives/schemes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/incentives/statements": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/incentives/statements",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/packages/{id}": {
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/packages/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/packages/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/packages": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/packages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/packages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/races/{id}/entrants": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/races/{id}/entrants",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/races": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/rules": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/sessions/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/sessions/duplicate-week": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/sessions/duplicate-week",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/sessions": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/sessions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/sessions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/health": {
+   "get": {
+    "tags": [
+     "health"
+    ],
+    "summary": "GET /api/health — proses hidup. Tidak menyentuh database (lihat /api/ready).",
     "responses": {
      "200": {
       "description": "OK"
@@ -4389,6 +7649,96 @@
      "hris"
     ],
     "summary": "GET /api/hris/departments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/dept-tasks/{id}": {
+   "patch": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "PATCH /api/hris/dept-tasks/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/dept-tasks/occurrences/{id}": {
+   "patch": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "PATCH /api/hris/dept-tasks/occurrences/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/dept-tasks": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/dept-tasks",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "POST /api/hris/dept-tasks",
     "responses": {
      "200": {
       "description": "OK"
@@ -5795,6 +9145,40 @@
     ]
    }
   },
+  "/api/hris/kpi-config": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/kpi-config",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "PUT /api/hris/kpi-config",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/hris/leave-balances/{employee_id}": {
    "get": {
     "tags": [
@@ -6197,6 +9581,24 @@
      "hris"
     ],
     "summary": "GET /api/hris/me — identitas karyawan milik akun yang login + kuota cuti",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/me/team": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/me/team",
     "responses": {
      "200": {
       "description": "OK"
@@ -6729,6 +10131,130 @@
     ]
    }
   },
+  "/api/hris/performance/cycles": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/performance/cycles",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "POST /api/hris/performance/cycles",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/performance/realtime": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/performance/realtime",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/performance/reviews/{id}": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/performance/reviews/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "PATCH /api/hris/performance/reviews/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/hris/performance/reviews": {
+   "get": {
+    "tags": [
+     "hris"
+    ],
+    "summary": "GET /api/hris/performance/reviews",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/hris/promote": {
    "post": {
     "tags": [
@@ -6841,6 +10367,90 @@
      "hris"
     ],
     "summary": "GET  /api/hris/shifts — master shift kerja (dipakai halaman Shift Kerja",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/integrations/gobiz/webhook/{token}": {
+   "post": {
+    "tags": [
+     "integrations"
+    ],
+    "summary": "POST /api/integrations/gobiz/webhook/{token}",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/integrations/loyalty-events/{partner}": {
+   "post": {
+    "tags": [
+     "integrations"
+    ],
+    "summary": "POST /api/integrations/loyalty-events/{partner}",
+    "parameters": [
+     {
+      "name": "partner",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/integrations/telegram/webhook/{secret}": {
+   "post": {
+    "tags": [
+     "integrations"
+    ],
+    "summary": "POST /api/integrations/telegram/webhook/{secret}",
+    "parameters": [
+     {
+      "name": "secret",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -7213,6 +10823,42 @@
     ]
    }
   },
+  "/api/inventory/{id}/{sub}": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/{id}/{sub}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sub",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/inventory/{id}/movements": {
    "get": {
     "tags": [
@@ -7229,6 +10875,42 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/inventory/batches": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/batches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/inventory/expiry": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/expiry",
     "responses": {
      "200": {
       "description": "OK"
@@ -7283,6 +10965,42 @@
      "inventory"
     ],
     "summary": "GET /api/inventory/low-stock",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/inventory/materials": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/materials",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/inventory/movements": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/movements",
     "responses": {
      "200": {
       "description": "OK"
@@ -7453,6 +11171,40 @@
      "inventory"
     ],
     "summary": "GET /api/inventory",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/inventory/scrap": {
+   "get": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "GET /api/inventory/scrap",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "inventory"
+    ],
+    "summary": "POST /api/inventory/scrap",
     "responses": {
      "200": {
       "description": "OK"
@@ -7881,6 +11633,948 @@
     ]
    }
   },
+  "/api/member-portal/app/classes/catalog": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/classes/catalog",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home/announcements/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home/announcements/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home/bookings": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home/me": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home/me",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/app/home/me",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home/settings": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/app/home/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/home/visits": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/home/visits",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/activities/{id}/comments": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/activities/{id}/comments",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/activities/{id}/kudos": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/activities/{id}/kudos",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/activities/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/activities/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/app/train/activities/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/app/train/activities/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/activities": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/activities",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/activities",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/athletes/{memberId}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/athletes/{memberId}",
+    "parameters": [
+     {
+      "name": "memberId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/challenges/{id}/join": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/challenges/{id}/join",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/app/train/challenges/{id}/join",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/challenges": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/challenges",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/clubs/{id}/toggle": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/clubs/{id}/toggle",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/clubs": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/clubs",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/feed": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/feed",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/follow/{memberId}": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/follow/{memberId}",
+    "parameters": [
+     {
+      "name": "memberId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/gear/{id}": {
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/app/train/gear/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/gear": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/gear",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/gear",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/heatmap": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/heatmap",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/routes/{id}": {
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/app/train/routes/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/routes": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/routes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/app/train/routes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/segments/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/segments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/segments": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/segments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/settings": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PUT /api/member-portal/app/train/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/social": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/social",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/train/stats": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/train/stats",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/exercises": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/exercises",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/races/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/races/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/races/mine": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/races/mine",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/races": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/workouts/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/workouts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/app/workout/workouts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/auth/google": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/auth/google",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/badges": {
    "get": {
     "tags": [
@@ -7903,6 +12597,58 @@
      "member-portal"
     ],
     "summary": "Badge member (EPIC-014 Task 6). Pemberian dievaluasi lazily setiap dibaca:",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/bills": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/bills",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/challenges": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/challenges",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/challenges",
     "responses": {
      "200": {
       "description": "OK"
@@ -7969,6 +12715,542 @@
     ]
    }
   },
+  "/api/member-portal/consent": {
+   "put": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PUT /api/member-portal/consent",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/events": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/bookings/{id}": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/bookings/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/gym/bookings/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/bookings": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/bookings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/coaches/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/coaches/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/coaches": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/coaches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits/packages": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/credits/packages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits/purchases/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/credits/purchases/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits/purchases/{id}/simulate-paid": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/credits/purchases/{id}/simulate-paid",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits/purchases": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/credits/purchases",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/credits",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/races/{id}": {
+   "patch": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PATCH /api/member-portal/gym/races/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/races": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/sessions/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/sessions": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/sessions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/workouts/{a}/{b}": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/workouts/{a}/{b}",
+    "parameters": [
+     {
+      "name": "a",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "b",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/workouts": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/workouts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/workouts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/workouts/sessions/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/workouts/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/login": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/login",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/logout": {
    "post": {
     "tags": [
@@ -7993,6 +13275,58 @@
      "member-portal"
     ],
     "summary": "GET /api/member-portal/me — profil + saldo/XP/tier + progres tier",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/notifications": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/notifications",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/notifications",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/notifications/track": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/notifications/track",
     "responses": {
      "200": {
       "description": "OK"
@@ -8051,6 +13385,60 @@
     ]
    }
   },
+  "/api/member-portal/password/forgot": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/password/forgot",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/password/reset": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/password/reset",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/password": {
+   "put": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PUT /api/member-portal/password",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/profile/photo": {
    "post": {
     "tags": [
@@ -8087,6 +13475,162 @@
     ]
    }
   },
+  "/api/member-portal/promos": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/promos",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/push": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/push",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/push",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/push",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/qr": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/qr",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/register/otp": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/register/otp",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/register": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/register",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/reviews": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/reviews",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/reviews",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/rewards": {
    "get": {
     "tags": [
@@ -8109,6 +13653,96 @@
      "member-portal"
     ],
     "summary": "EPIC-011 Fase F — katalog reward di portal member.",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/topup/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/topup/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/topup/{id}/simulate-paid": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/topup/{id}/simulate-paid",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/topup": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/topup",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/topup",
     "responses": {
      "200": {
       "description": "OK"
@@ -8313,6 +13947,24 @@
     ]
    }
   },
+  "/api/openapi.json": {
+   "get": {
+    "tags": [
+     "openapi.json"
+    ],
+    "summary": "EPIC-042: spesifikasi OpenAPI 3.0 seluruh endpoint /api/",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/payments/xendit/webhook": {
    "get": {
     "tags": [
@@ -8405,6 +14057,40 @@
      "pos"
     ],
     "summary": "PUT /api/pos/billing-settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/channel-prices": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/channel-prices",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "PUT /api/pos/channel-prices",
     "responses": {
      "200": {
       "description": "OK"
@@ -8607,6 +14293,70 @@
     ]
    }
   },
+  "/api/pos/gift-card-reload": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/gift-card-reload",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/gofood/orders/{id}": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/gofood/orders/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/gofood/orders": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/gofood/orders",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/kds": {
    "get": {
     "tags": [
@@ -8659,6 +14409,284 @@
     ]
    }
   },
+  "/api/pos/member-bills/{customerId}/payments": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-bills/{customerId}/payments",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-bills/{customerId}": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/member-bills/{customerId}",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-bills/{customerId}/send-wa": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-bills/{customerId}/send-wa",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-bills/{customerId}/settle": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-bills/{customerId}/settle",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-bills": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/member-bills",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-cards/{id}/refund": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-cards/{id}/refund",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-cards/{id}/unlink": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-cards/{id}/unlink",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-cards": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/member-cards",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-qr": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-qr",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-refunds/{id}/cancel": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-refunds/{id}/cancel",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/member-refunds/{id}/complete": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/member-refunds/{id}/complete",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/offer-rules": {
    "get": {
     "tags": [
@@ -8677,12 +14705,68 @@
     ]
    }
   },
+  "/api/pos/orders/{id}/accept": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/orders/{id}/accept",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/orders/{id}/merge": {
    "post": {
     "tags": [
      "pos"
     ],
     "summary": "POST /api/pos/orders/{id}/merge",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/orders/{id}/payment-proof": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/orders/{id}/payment-proof",
     "parameters": [
      {
       "name": "id",
@@ -9349,6 +15433,34 @@
     ]
    }
   },
+  "/api/pos/products/{id}/skus/matrix": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/products/{id}/skus/matrix",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/products/{id}/skus": {
    "get": {
     "tags": [
@@ -9555,6 +15667,24 @@
     ]
    }
   },
+  "/api/pos/reports/export": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/reports/export",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/reports/payment-methods": {
    "get": {
     "tags": [
@@ -9597,6 +15727,42 @@
      "pos"
     ],
     "summary": "GET /api/pos/reports/profit",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/reports/revenue-composition": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/reports/revenue-composition",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/reports/rush-hour/export": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/reports/rush-hour/export",
     "responses": {
      "200": {
       "description": "OK"
@@ -9741,6 +15907,34 @@
      "pos"
     ],
     "summary": "POST /api/pos/reservations",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/sales-channels/{code}": {
+   "put": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "PUT /api/pos/sales-channels/{code}",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -10057,6 +16251,34 @@
     ]
    }
   },
+  "/api/pos/topup/{id}/reconcile": {
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/topup/{id}/reconcile",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/pos/topup/{id}/send-wa": {
    "post": {
     "tags": [
@@ -10351,6 +16573,24 @@
     ]
    }
   },
+  "/api/promo/catalog": {
+   "get": {
+    "tags": [
+     "promo"
+    ],
+    "summary": "GET /api/promo/catalog",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/promo/codes/{id}": {
    "patch": {
     "tags": [
@@ -10495,6 +16735,34 @@
     ]
    }
   },
+  "/api/promo/gift-cards/{id}/reload": {
+   "post": {
+    "tags": [
+     "promo"
+    ],
+    "summary": "POST /api/promo/gift-cards/{id}/reload",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/promo/gift-cards/{id}": {
    "patch": {
     "tags": [
@@ -10511,6 +16779,24 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/promo/gift-cards/member-lookup": {
+   "get": {
+    "tags": [
+     "promo"
+    ],
+    "summary": "GET /api/promo/gift-cards/member-lookup",
     "responses": {
      "200": {
       "description": "OK"
@@ -11357,6 +17643,42 @@
     ]
    }
   },
+  "/api/public/booking/{a}/{b}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/booking/{a}/{b}",
+    "parameters": [
+     {
+      "name": "a",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "b",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/public/booking/{slug}/availability": {
    "get": {
     "tags": [
@@ -11627,6 +17949,124 @@
     ]
    }
   },
+  "/api/public/crm/forms/{slug}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/crm/forms/{slug}",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "public"
+    ],
+    "summary": "POST /api/public/crm/forms/{slug}",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/gofood-image/{file}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/gofood-image/{file}",
+    "parameters": [
+     {
+      "name": "file",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/shop/{a}/{b}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/shop/{a}/{b}",
+    "parameters": [
+     {
+      "name": "a",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "b",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/public/shop/{slug}/catalog": {
    "get": {
     "tags": [
@@ -11683,6 +18123,98 @@
     ]
    }
   },
+  "/api/public/shop/{slug}/products/{id}/reviews": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/shop/{slug}/products/{id}/reviews",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/shop/{slug}/promo/preview": {
+   "post": {
+    "tags": [
+     "public"
+    ],
+    "summary": "POST /api/public/shop/{slug}/promo/preview",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/shop/{slug}/reviews": {
+   "post": {
+    "tags": [
+     "public"
+    ],
+    "summary": "POST /api/public/shop/{slug}/reviews",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/public/shop/{slug}/shipping/areas": {
    "get": {
     "tags": [
@@ -11717,6 +18249,34 @@
      "public"
     ],
     "summary": "POST /api/public/shop/{slug}/shipping/rates",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/shop/{slug}/wishlist": {
+   "put": {
+    "tags": [
+     "public"
+    ],
+    "summary": "PUT /api/public/shop/{slug}/wishlist",
     "parameters": [
      {
       "name": "slug",
@@ -11803,6 +18363,226 @@
     ]
    }
   },
+  "/api/public/site/articles/{slug}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/articles/{slug}",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/articles": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/articles",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/branches/{slug}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/branches/{slug}",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/branches": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/branches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/content/{key}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/content/{key}",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/events/{slug}": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/events/{slug}",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/events": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/plans": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/plans",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/sessions": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/sessions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/trial": {
+   "post": {
+    "tags": [
+     "public"
+    ],
+    "summary": "POST /api/public/site/trial",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/purchasing/bom/{id}": {
    "put": {
     "tags": [
@@ -11835,6 +18615,34 @@
      "purchasing"
     ],
     "summary": "DELETE /api/purchasing/bom/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/purchasing/cogs/additional-cost/{id}": {
+   "delete": {
+    "tags": [
+     "purchasing"
+    ],
+    "summary": "DELETE /api/purchasing/cogs/additional-cost/{id}",
     "parameters": [
      {
       "name": "id",
@@ -12683,6 +19491,42 @@
      "purchasing"
     ],
     "summary": "POST /api/purchasing/import/units",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/purchasing/inventory/{id}/{sub}": {
+   "get": {
+    "tags": [
+     "purchasing"
+    ],
+    "summary": "GET /api/purchasing/inventory/{id}/{sub}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "sub",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -15009,6 +21853,34 @@
     ]
    }
   },
+  "/api/purchasing/returns/{id}/revise": {
+   "post": {
+    "tags": [
+     "purchasing"
+    ],
+    "summary": "POST /api/purchasing/returns/{id}/revise",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/purchasing/returns/{id}": {
    "get": {
     "tags": [
@@ -15513,6 +22385,40 @@
     ]
    }
   },
+  "/api/purchasing/vendor-credits/apply": {
+   "get": {
+    "tags": [
+     "purchasing"
+    ],
+    "summary": "GET /api/purchasing/vendor-credits/apply",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "purchasing"
+    ],
+    "summary": "POST /api/purchasing/vendor-credits/apply",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/purchasing/vendor-payments": {
    "get": {
     "tags": [
@@ -15777,6 +22683,24 @@
     ]
    }
   },
+  "/api/ready": {
+   "get": {
+    "tags": [
+     "ready"
+    ],
+    "summary": "GET /api/ready — 200 bila database menjawab, 503 bila tidak. Publik (tanpa sesi).",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/recruitment/live-monitoring/{type}/{id}/chat": {
    "get": {
     "tags": [
@@ -15971,6 +22895,476 @@
     ]
    }
   },
+  "/api/resort/availability": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/availability",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/front-office": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/front-office",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/reservations/{id}/charges": {
+   "post": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "POST /api/resort/reservations/{id}/charges",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/reservations/{id}": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/reservations/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "PATCH /api/resort/reservations/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/reservations/{id}/status": {
+   "post": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "POST /api/resort/reservations/{id}/status",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/reservations": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/reservations",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "POST /api/resort/reservations",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/room-types/{id}": {
+   "patch": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "PATCH /api/resort/room-types/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "DELETE /api/resort/room-types/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/room-types": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/room-types",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "POST /api/resort/room-types",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/rooms/{id}": {
+   "patch": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "PATCH /api/resort/rooms/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "DELETE /api/resort/rooms/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/resort/rooms": {
+   "get": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "GET /api/resort/rooms",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "resort"
+    ],
+    "summary": "POST /api/resort/rooms",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/accounts/{id}": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/accounts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "PATCH /api/sales-funnel/accounts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "DELETE /api/sales-funnel/accounts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/accounts": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/accounts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/accounts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/sales-funnel/activities/{id}": {
    "patch": {
     "tags": [
@@ -16059,6 +23453,138 @@
     ]
    }
   },
+  "/api/sales-funnel/contacts/{id}": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/contacts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "PATCH /api/sales-funnel/contacts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "DELETE /api/sales-funnel/contacts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/contacts": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/contacts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/contacts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/custom-fields": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/custom-fields",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/sales-funnel/customers": {
    "get": {
     "tags": [
@@ -16109,6 +23635,86 @@
      "sales-funnel"
     ],
     "summary": "POST /api/sales-funnel/deals/{id}/invoices",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/deals/{id}/members": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/deals/{id}/members",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/deals/{id}/members",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "DELETE /api/sales-funnel/deals/{id}/members",
     "parameters": [
      {
       "name": "id",
@@ -16379,6 +23985,24 @@
      "sales-funnel"
     ],
     "summary": "POST /api/sales-funnel/deals",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/forecast": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/forecast",
     "responses": {
      "200": {
       "description": "OK"
@@ -16695,6 +24319,86 @@
     ]
    }
   },
+  "/api/sales-funnel/owners": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/owners",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/pipelines/{id}": {
+   "patch": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "PATCH /api/sales-funnel/pipelines/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/pipelines": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/pipelines",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/pipelines",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/sales-funnel/products": {
    "get": {
     "tags": [
@@ -16747,6 +24451,34 @@
      "sales-funnel"
     ],
     "summary": "Error khusus pembawa detail kekurangan stok — jadi respons 409.",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/quotations/{id}/revise": {
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/quotations/{id}/revise",
     "parameters": [
      {
       "name": "id",
@@ -16955,6 +24687,74 @@
      "sales-funnel"
     ],
     "summary": "GET /api/sales-funnel/stages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "POST /api/sales-funnel/stages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/targets": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/targets",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "PUT /api/sales-funnel/targets",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/sales-funnel/timeline": {
+   "get": {
+    "tags": [
+     "sales-funnel"
+    ],
+    "summary": "GET /api/sales-funnel/timeline",
     "responses": {
      "200": {
       "description": "OK"
@@ -17193,6 +24993,60 @@
     ]
    }
   },
+  "/api/settings/business/branch/{id}/profile": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "GET /api/settings/business/branch/{id}/profile",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "PUT /api/settings/business/branch/{id}/profile",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/settings/business": {
    "get": {
     "tags": [
@@ -17249,6 +25103,58 @@
      "settings"
     ],
     "summary": "GET/PUT /api/settings/company-profile — profil legal perusahaan untuk",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/settings/gobiz/actions": {
+   "post": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "POST /api/settings/gobiz/actions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/settings/gobiz": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "GET /api/settings/gobiz",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "PUT /api/settings/gobiz",
     "responses": {
      "200": {
       "description": "OK"
@@ -17677,6 +25583,56 @@
     ]
    }
   },
+  "/api/settings/order-alerts": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "GET /api/settings/order-alerts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "POST /api/settings/order-alerts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "PUT /api/settings/order-alerts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/settings/payment-gateways": {
    "get": {
     "tags": [
@@ -17767,6 +25723,72 @@
      "settings"
     ],
     "summary": "GET/PUT /api/settings/sales-target — target omzet harian & bulanan",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/settings/static-qris": {
+   "get": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "GET /api/settings/static-qris",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "POST /api/settings/static-qris",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "PUT /api/settings/static-qris",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "settings"
+    ],
+    "summary": "DELETE /api/settings/static-qris",
     "responses": {
      "200": {
       "description": "OK"
@@ -17939,6 +25961,154 @@
      "settings"
     ],
     "summary": "POST /api/settings/wa-notifications/test — kirim pesan uji ke semua nomor",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/share/{token}/files/{nodeId}": {
+   "get": {
+    "tags": [
+     "share"
+    ],
+    "summary": "GET /api/share/{token}/files/{nodeId}",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "nodeId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/share/{token}/list": {
+   "get": {
+    "tags": [
+     "share"
+    ],
+    "summary": "GET /api/share/{token}/list",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/share/{token}/request-code": {
+   "post": {
+    "tags": [
+     "share"
+    ],
+    "summary": "POST /api/share/{token}/request-code",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/share/{token}": {
+   "get": {
+    "tags": [
+     "share"
+    ],
+    "summary": "GET /api/share/{token}",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/share/{token}/verify": {
+   "post": {
+    "tags": [
+     "share"
+    ],
+    "summary": "POST /api/share/{token}/verify",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -18207,6 +26377,52 @@
     ]
    }
   },
+  "/api/shop/reviews/{id}": {
+   "patch": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "PATCH /api/shop/reviews/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/reviews": {
+   "get": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "GET /api/shop/reviews",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/shop/shipping/areas": {
    "get": {
     "tags": [
@@ -18295,12 +26511,536 @@
     ]
    }
   },
-  "/api/table-order/customers/lookup": {
+  "/api/shop/storefront-settings": {
+   "get": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "GET /api/shop/storefront-settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "PUT /api/shop/storefront-settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/wholesale/accounts/{id}": {
+   "patch": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "PATCH /api/shop/wholesale/accounts/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/wholesale/accounts": {
+   "get": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "GET /api/shop/wholesale/accounts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "POST /api/shop/wholesale/accounts",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/wholesale/orders": {
+   "get": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "GET /api/shop/wholesale/orders",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/wholesale/products/{id}": {
+   "patch": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "PATCH /api/shop/wholesale/products/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/shop/wholesale/products": {
+   "get": {
+    "tags": [
+     "shop"
+    ],
+    "summary": "GET /api/shop/wholesale/products",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/articles/{id}": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "GET /api/site/articles/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "site"
+    ],
+    "summary": "PATCH /api/site/articles/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "site"
+    ],
+    "summary": "DELETE /api/site/articles/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/articles": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "GET /api/site/articles",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "site"
+    ],
+    "summary": "POST /api/site/articles",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/content/{key}": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "GET /api/site/content/{key}",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "site"
+    ],
+    "summary": "PUT /api/site/content/{key}",
+    "parameters": [
+     {
+      "name": "key",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/events/{id}": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "GET /api/site/events/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "site"
+    ],
+    "summary": "PATCH /api/site/events/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "site"
+    ],
+    "summary": "DELETE /api/site/events/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/events": {
+   "get": {
+    "tags": [
+     "site"
+    ],
+    "summary": "GET /api/site/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "site"
+    ],
+    "summary": "POST /api/site/events",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/site/uploads": {
+   "post": {
+    "tags": [
+     "site"
+    ],
+    "summary": "POST /api/site/uploads",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/table-order/orders/{id}/payment-proof": {
+   "get": {
+    "tags": [
+     "table-order"
+    ],
+    "summary": "GET /api/table-order/orders/{id}/payment-proof",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
    "post": {
     "tags": [
      "table-order"
     ],
-    "summary": "POST /api/table-order/customers/lookup",
+    "summary": "POST /api/table-order/orders/{id}/payment-proof",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/table-order/orders/{id}": {
+   "get": {
+    "tags": [
+     "table-order"
+    ],
+    "summary": "GET /api/table-order/orders/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -19793,6 +28533,518 @@
      "wa"
     ],
     "summary": "EPIC-012 Fase B — penerima event pesan dari wa-gateway (Baileys",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/branches": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/branches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/entries/{id}/refund": {
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/entries/{id}/refund",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/entries/{id}/reverse": {
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/entries/{id}/reverse",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/members/{id}/adjust": {
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/members/{id}/adjust",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/members/{id}": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/members/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/members": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/packages/{id}": {
+   "put": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "PUT /api/wallet/packages/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "DELETE /api/wallet/packages/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/packages": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/packages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/packages",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/payments/{id}/reconcile": {
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/payments/{id}/reconcile",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/payments/{id}": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/payments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/payments": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/payments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/settings": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "PUT /api/wallet/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wallet/sweep": {
+   "get": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "GET /api/wallet/sweep",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "wallet"
+    ],
+    "summary": "POST /api/wallet/sweep",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/catalog": {
+   "get": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "GET /api/wholesale/catalog",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/login": {
+   "post": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "POST /api/wholesale/login",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/logout": {
+   "post": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "POST /api/wholesale/logout",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/me": {
+   "get": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "GET /api/wholesale/me",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/orders/{id}": {
+   "get": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "GET /api/wholesale/orders/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/wholesale/orders": {
+   "get": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "GET /api/wholesale/orders",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "wholesale"
+    ],
+    "summary": "POST /api/wholesale/orders",
     "responses": {
      "200": {
       "description": "OK"
