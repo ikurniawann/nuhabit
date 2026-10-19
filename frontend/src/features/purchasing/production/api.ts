@@ -183,6 +183,12 @@ export async function issueProductionMaterials(
   return json.message;
 }
 
+/** Buat sub-order DRAFT untuk kekurangan bahan setengah jadi; mengembalikan pesan dari API. */
+export async function createProductionSubOrders(orderId: string): Promise<string | undefined> {
+  const json = await sendJson(`${PRODUCTION_URL}/orders/${orderId}/sub-orders`, "POST", {}, "Gagal membuat sub-order");
+  return json.message;
+}
+
 /** Kembalikan bahan sisa ke stok; mengembalikan pesan sukses dari API. */
 export async function returnProductionMaterials(
   orderId: string,

@@ -43,6 +43,8 @@ export function flow(over: Partial<ProductionFlow> = {}): ProductionFlow {
       hpp_per_unit: 7500,
       started_at: null,
       completed_at: null,
+      parent_order_id: null,
+      parent_nomor_produksi: null,
     },
     materials: [],
     issues: [],
@@ -72,6 +74,9 @@ export function flow(over: Partial<ProductionFlow> = {}): ProductionFlow {
     can_return: true,
     stepped: true,
     variant_skus: [],
+    intermediates: [],
+    sub_orders: [],
+    can_create_sub_orders: false,
     ...over,
   };
 }

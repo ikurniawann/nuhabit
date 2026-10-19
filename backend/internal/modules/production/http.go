@@ -34,6 +34,7 @@ func (h *Handler) Routes() []module.Route {
 		route("GET /api/production/orders/{id}/flow", h.flow),
 		route("POST /api/production/orders/{id}/issues", h.issue),
 		route("POST /api/production/orders/{id}/returns", h.returnMaterials),
+		route("POST /api/production/orders/{id}/sub-orders", h.createSubOrders),
 		route("POST /api/production/orders/{id}/receipts", h.receive),
 		route("GET /api/production/wip", h.wip),
 		route("GET /api/production/batches", h.batches),
@@ -175,6 +176,27 @@ func parseIssue(r *http.Request) (IssueInput, error) {
 		return in, httpx.BadRequest("Pilih minimal satu bahan untuk dikeluarkan")
 	}
 	return in, nil
+}
+
+/* POST /api/production/orders/{id}/sub-orders: DRAFT orders for short intermediates. */
+func (h *Handler) createSubOrders(w http.ResponseWriter, r *http.Request) error {
+	u, scope, err := h.writer(r)
+	if err != nil {
+		return err
+	}
+	id, err := pathID(r, errOrderNotFound.Message)
+	if err != nil {
+		return err
+	}
+	res, err := h.svc.CreateSubOrders(r.Context(), scope, id, u.ID)
+	if err != nil {
+		return err
+	}
+	status := http.StatusCreated
+	if len(res.Created) == 0 {
+		status = http.StatusOK
+	}
+	return httpx.DataMessage(w, status, res, res.Message)
 }
 
 /*

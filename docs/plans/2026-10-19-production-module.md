@@ -128,6 +128,7 @@ batches by creation time for the batch list.
 | POST | `/api/production/orders/{id}/issues` | update | issue materials |
 | POST | `/api/production/orders/{id}/returns` | update | return unused issued materials to stock |
 | POST | `/api/production/orders/{id}/receipts` | update | receive a batch (good, scrap, final, variants, conversion overrides on the final one) |
+| POST | `/api/production/orders/{id}/sub-orders` | update | DRAFT sub-orders for short intermediates |
 | GET | `/api/production/wip?production_context=&search=` | read | open orders with WIP value |
 | GET | `/api/production/batches?production_context=&order_id=&search=&limit=` | read | batches with cost and yield |
 | GET | `/api/production/batches/{id}` | read | one batch: cost split, material share per line, yield, variants |
@@ -314,6 +315,34 @@ Production reaches it through the catalog port (`RecipeFactors`, backed by
   mixed BOM and stock units keeps that mix until it is finished or
   cancelled.
 
+### 5. Sub-orders for short intermediates, on request
+
+Nothing is created automatically. The flow of an order lists its
+intermediates: the material lines made in-house, found the way the
+explosion finds them (the material's own recipe, else the recipe of the
+product it mirrors as WIP). For each it shows, in the stock unit, what the
+order still needs (planned minus issued plus returned), the stock, what open
+sub-orders (DRAFT, RELEASED, IN_PROGRESS) will make, and the shortage left
+(`domain.Shortage`).
+
+- "Buat Sub-order" (`POST /api/production/orders/{id}/sub-orders`, update
+  guard) creates one DRAFT order per intermediate with a shortage: a raw
+  material order for an own recipe, a product order with output WIP for a
+  WIP mirror. Its quantity is the shortage rounded up to a multiple of the
+  intermediate recipe's batch size (`recipe_settings.batch_size`, edited
+  next to the tolerance; no rounding when empty), its lines come from that
+  recipe in stock units at the current average cost, and it copies the
+  parent's company and branch.
+- `production_orders.parent_order_id` links it to the parent (delta
+  `20261020120000_production_sub_orders.sql`). The parent's flow lists its
+  sub-orders; a sub-order's flow links back to the parent.
+- Idempotent: the parent row is locked and the shortage is net of open
+  sub-orders, so a second press finds nothing left and answers 200 with no
+  new order. A cancelled sub-order stops covering, so its shortage shows
+  again. Completed sub-orders count through the stock they added.
+- Only the direct intermediates of the order get sub-orders; a sub-order's
+  own intermediates get theirs from its own flow.
+
 ### 6. One module writes the manufacturing tables
 
 The order handlers (`/api/purchasing/production/orders`, the recipe lists,
@@ -345,4 +374,3 @@ deleted.
 ## Open questions
 
 3. Which COA accounts hold WIP and applied overhead?
-5. Should the explosion create sub-orders for intermediate shortages?

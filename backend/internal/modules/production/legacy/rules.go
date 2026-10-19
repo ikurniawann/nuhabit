@@ -1,11 +1,8 @@
 package legacy
 
 import (
-	"fmt"
 	"math"
 	"strconv"
-	"strings"
-	"time"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
 	"nuhabit/backend/internal/platform/jsmath"
@@ -42,21 +39,6 @@ func nextProductionStep(status string) string {
 
 // batchNumber is the deterministic single batch of an order.
 func batchNumber(orderNumber string) string { return orderNumber + "-B01" }
-
-// productionNumberPrefix is PROD-YYYYMM on the server clock (UTC).
-func productionNumberPrefix(now time.Time) string { return "PROD-" + now.UTC().Format("200601") }
-
-// nextNumber is nextProductionNumber: the last sequence + 1.
-func nextNumber(prefix, last string) string {
-	next := 1
-	if last != "" {
-		parts := strings.Split(last, "-")
-		if n := kit.JSNumber(parts[len(parts)-1]); !math.IsNaN(n) && !math.IsInf(n, 0) {
-			next = int(n) + 1
-		}
-	}
-	return fmt.Sprintf("%s-%04d", prefix, next)
-}
 
 // completionMessage is completionMessage (margin nil = not synced to POS).
 func completionMessage(orderNumber string, hppPerUnit float64, margin *float64) string {

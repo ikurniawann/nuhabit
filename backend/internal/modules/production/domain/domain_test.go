@@ -237,6 +237,23 @@ func TestReturns(t *testing.T) {
 	}
 }
 
+func TestSubOrderRules(t *testing.T) {
+	if NextOrderNumber("PROD-202610", "PROD-202610-0009") != "PROD-202610-0010" || NextOrderNumber("PROD-202610", "") != "PROD-202610-0001" {
+		t.Fatal("numbers")
+	}
+	cases := []struct{ shortage, batch, want float64 }{
+		{2.2, 5, 5}, {10, 5, 10}, {10.0001, 5, 15}, {0.3, 0.25, 0.5}, {2.2001, 0, 2.201}, {0, 5, 0},
+	}
+	for _, c := range cases {
+		if got := SubOrderQty(c.shortage, c.batch); got != c.want {
+			t.Errorf("SubOrderQty(%v, %v) = %v, want %v", c.shortage, c.batch, got, c.want)
+		}
+	}
+	if Shortage(5, 1, 2) != 2 || Shortage(5, 4, 2) != 0 {
+		t.Fatal("shortage")
+	}
+}
+
 func TestYieldAndAllocate(t *testing.T) {
 	if y := Yield(45, 5); *y != 90 {
 		t.Fatalf("yield %v", *y)

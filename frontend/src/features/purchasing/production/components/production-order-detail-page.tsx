@@ -22,6 +22,7 @@ import {
 } from "@/lib/purchasing/production-ui-display";
 import type { ProductionOrderAction } from "@/lib/purchasing/production-ui-types";
 import {
+  useCreateProductionSubOrders,
   useIssueProductionMaterials,
   useReceiveProductionBatch,
   useReturnProductionMaterials,
@@ -55,9 +56,10 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
   const issueMutation = useIssueProductionMaterials();
   const receiveMutation = useReceiveProductionBatch();
   const returnMutation = useReturnProductionMaterials();
+  const subOrderMutation = useCreateProductionSubOrders();
   const order = orderQuery.data ?? null;
   const flow = flowQuery.data ?? null;
-  const stepping = issueMutation.isPending || receiveMutation.isPending || returnMutation.isPending;
+  const stepping = issueMutation.isPending || receiveMutation.isPending || returnMutation.isPending || subOrderMutation.isPending;
   const loading = orderQuery.isLoading || orderQuery.isFetching || actionMutation.isPending || stepping;
   // Setelah bahan dikeluarkan bertahap, order hanya selesai lewat Terima Hasil.
   const stepped = !!flow?.stepped;
@@ -249,6 +251,8 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
           batchRoute={config.productionBatchRoute}
           onIssue={() => setStep("issue")}
           onReturn={() => setStep("return")}
+          orderRoute={config.productionOrderRoute}
+          onCreateSubOrders={() => void runStep(() => subOrderMutation.mutateAsync(orderId), "Sub-order dibuat")}
           onReceive={() => setStep("receive")}
         />
       )}

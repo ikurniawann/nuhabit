@@ -6,6 +6,7 @@ import type { CreateProductionOrderPayload } from "./types";
 import {
   createAdditionalCost,
   createProductionOrder,
+  createProductionSubOrders,
   deleteAdditionalCost,
   issueProductionMaterials,
   receiveProductionBatch,
@@ -43,6 +44,14 @@ export const useIssueProductionMaterials = () => {
   return useMutation({
     mutationFn: ({ orderId, payload }: { orderId: string; payload: Parameters<typeof issueProductionMaterials>[1] }) =>
       issueProductionMaterials(orderId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
+  });
+};
+
+export const useCreateProductionSubOrders = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => createProductionSubOrders(orderId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
   });
 };

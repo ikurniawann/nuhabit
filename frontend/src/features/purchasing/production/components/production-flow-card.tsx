@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { Layers, PackageCheck, PackageMinus, PackagePlus } from "lucide-react";
+import { Layers, ListPlus, PackageCheck, PackageMinus, PackagePlus } from "lucide-react";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import type { ProductionFlow } from "@/lib/purchasing/production-flow";
-import { recipeUnitNote } from "@/lib/purchasing/production-ui-display";
+import { productionStatusLabel, recipeUnitNote } from "@/lib/purchasing/production-ui-display";
 
 type ProductionFlowCardProps = {
   flow: ProductionFlow;
   busy: boolean;
   batchRoute: (id: string) => string;
+  orderRoute: (id: string) => string;
+  onCreateSubOrders: () => void;
   onIssue: () => void;
   onReturn: () => void;
   onReceive: () => void;
@@ -23,7 +26,16 @@ function pct(value: number | null) {
 }
 
 /** Langkah Produksi: keluarkan bahan ke WIP, terima hasil per batch, saldo WIP. */
-export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReturn, onReceive }: ProductionFlowCardProps) {
+export function ProductionFlowCard({
+  flow,
+  busy,
+  batchRoute,
+  orderRoute,
+  onIssue,
+  onReturn,
+  onReceive,
+  onCreateSubOrders,
+}: ProductionFlowCardProps) {
   const { wip } = flow;
   const stats = [
     { label: "Bahan dikeluarkan", value: formatRupiah(wip.issued_cost) },
@@ -46,6 +58,14 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReturn, 
             <p className="text-xs text-gray-500">
               Keluarkan bahan bertahap ke WIP, lalu terima hasil per batch. HPP dihitung per batch.
             </p>
+            {flow.order.parent_order_id && (
+              <p className="text-xs text-gray-500">
+                Sub-order untuk{" "}
+                <Link href={orderRoute(flow.order.parent_order_id)} className="font-medium text-pink-700 hover:underline">
+                  {flow.order.parent_nomor_produksi}
+                </Link>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -131,6 +151,83 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReturn, 
             </tbody>
           </table>
         </div>
+
+        {flow.intermediates.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Bahan Setengah Jadi</h3>
+                <p className="text-xs text-gray-500">
+                  Kekurangan dihitung dari kebutuhan order dikurangi stok dan sub-order yang masih berjalan.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCreateSubOrders}
+                disabled={busy || !flow.can_create_sub_orders}
+                className="purchasing-secondary-button w-full gap-2 sm:w-auto"
+              >
+                <ListPlus className="h-4 w-4" />
+                Buat Sub-order
+              </Button>
+            </div>
+            <ScrollRegion label="Tabel bahan setengah jadi" className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="py-2 text-left font-semibold">Bahan</th>
+                    <th className="py-2 text-right font-semibold">Dibutuhkan</th>
+                    <th className="py-2 text-right font-semibold">Stok</th>
+                    <th className="py-2 text-right font-semibold">Di Sub-order</th>
+                    <th className="py-2 text-right font-semibold">Kurang</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {flow.intermediates.map((it) => (
+                    <tr key={it.material_id}>
+                      <td className="py-2 pr-3">
+                        <p className="font-medium text-gray-900">{it.nama}</p>
+                        <p className="text-xs text-gray-500">{it.kode}</p>
+                      </td>
+                      <td className="py-2 text-right">
+                        {formatNumber(it.qty_needed, 4)} {it.satuan}
+                      </td>
+                      <td className="py-2 text-right">{formatNumber(it.qty_onhand, 4)}</td>
+                      <td className="py-2 text-right">{formatNumber(it.qty_on_sub_orders, 4)}</td>
+                      <td className={`py-2 text-right font-semibold ${it.shortage_qty > 0 ? "text-red-600" : "text-emerald-700"}`}>
+                        {it.shortage_qty > 0 ? formatNumber(it.shortage_qty, 4) : "Cukup"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollRegion>
+          </div>
+        )}
+
+        {flow.sub_orders.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-900">Sub-order</h3>
+            <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+              {flow.sub_orders.map((sub) => (
+                <li key={sub.id} className="flex flex-col gap-1 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <Link href={orderRoute(sub.id)} className="font-medium text-pink-700 hover:underline">
+                      {sub.nomor_produksi}
+                    </Link>
+                    <p className="text-xs text-gray-500">
+                      {sub.item_nama} · {formatNumber(sub.planned_qty, 3)} · {formatDate(sub.created_at)}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="w-fit border-gray-200/80 bg-gray-50 text-gray-700">
+                    {productionStatusLabel(sub.status)}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {flow.issues.length > 0 && (
           <div className="space-y-2">

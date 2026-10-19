@@ -22,7 +22,8 @@ const orderCols = `po.id::text, po.nomor_produksi, po.status, po.production_cont
 	po.product_id::text, po.output_raw_material_id::text, COALESCE(v.item_kode, ''), COALESCE(v.item_nama, ''),
 	po.planned_qty::float8, po.actual_qty::float8, po.planned_material_cost::float8, po.actual_material_cost::float8,
 	po.overhead_cost::float8, po.labor_cost::float8, po.packaging_cost::float8, po.waste_cost::float8,
-	po.hpp_per_unit::float8, po.company_id::text, po.branch_id::text, po.started_at, po.completed_at, po.created_at`
+	po.hpp_per_unit::float8, po.company_id::text, po.branch_id::text, po.started_at, po.completed_at, po.created_at,
+	po.parent_order_id::text, (SELECT p.nomor_produksi FROM manufacturing.production_orders p WHERE p.id = po.parent_order_id)`
 
 func (Postgres) Order(ctx context.Context, q database.Querier, id string, lock bool) (*Order, error) {
 	if lock {
@@ -36,7 +37,7 @@ func (Postgres) Order(ctx context.Context, q database.Querier, id string, lock b
 		&o.ID, &o.Number, &o.Status, &o.Context, &o.OutputType, &o.ProductID, &o.OutputRawMaterialID, &o.ItemKode, &o.ItemNama,
 		&o.PlannedQty, &o.ActualQty, &o.PlannedMaterialCost, &o.ActualMaterialCost,
 		&o.Overhead, &o.Labor, &o.Packaging, &o.Waste, &o.HppPerUnit, &o.CompanyID, &o.BranchID,
-		&o.StartedAt, &o.CompletedAt, &o.CreatedAt)
+		&o.StartedAt, &o.CompletedAt, &o.CreatedAt, &o.ParentOrderID, &o.ParentNumber)
 	if database.IsNoRows(err) {
 		return nil, nil
 	}
@@ -298,20 +299,72 @@ func (Postgres) RecipeSettings(ctx context.Context, q database.Querier, owner Re
 		return nil, nil
 	}
 	var r RecipeSettings
-	err := q.QueryRow(ctx, `SELECT scrap_tolerance_pct::float8, updated_at FROM manufacturing.recipe_settings WHERE `+col+` = $1`, *id).
-		Scan(&r.ScrapTolerancePct, &r.UpdatedAt)
+	err := q.QueryRow(ctx, `SELECT scrap_tolerance_pct::float8, batch_size::float8 FROM manufacturing.recipe_settings WHERE `+col+` = $1`, *id).
+		Scan(&r.ScrapTolerancePct, &r.BatchSize)
 	if database.IsNoRows(err) {
 		return nil, nil
 	}
 	return &r, err
 }
 
-func (Postgres) SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, tolerancePct *float64, userID string) error {
+func (Postgres) SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, r RecipeSettings, userID string) error {
 	col, id := owner.column()
-	_, err := q.Exec(ctx, `INSERT INTO manufacturing.recipe_settings (`+col+`, scrap_tolerance_pct, updated_by) VALUES ($1, $2, $3)
-		ON CONFLICT (`+col+`) DO UPDATE SET scrap_tolerance_pct = EXCLUDED.scrap_tolerance_pct, updated_by = EXCLUDED.updated_by,
-		updated_at = now()`, id, tolerancePct, null(userID))
+	_, err := q.Exec(ctx, `INSERT INTO manufacturing.recipe_settings (`+col+`, scrap_tolerance_pct, batch_size, updated_by)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (`+col+`) DO UPDATE SET scrap_tolerance_pct = EXCLUDED.scrap_tolerance_pct, batch_size = EXCLUDED.batch_size,
+		updated_by = EXCLUDED.updated_by, updated_at = now()`, id, r.ScrapTolerancePct, r.BatchSize, null(userID))
 	return err
+}
+
+func (Postgres) ChildOrders(ctx context.Context, q database.Querier, parentID string) ([]ChildOrder, error) {
+	rows, err := q.Query(ctx, `SELECT po.id::text, po.nomor_produksi, po.status, po.production_context, po.output_type,
+		po.product_id::text, po.output_raw_material_id::text, COALESCE(v.item_kode, ''), COALESCE(v.item_nama, ''),
+		po.planned_qty::float8, po.created_at
+		FROM manufacturing.production_orders po JOIN v_production_orders v ON v.id = po.id
+		WHERE po.parent_order_id = $1 ORDER BY po.created_at, po.nomor_produksi`, parentID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ChildOrder, error) {
+		var c ChildOrder
+		err := r.Scan(&c.ID, &c.Number, &c.Status, &c.Context, &c.OutputType, &c.ProductID, &c.OutputRawMaterialID,
+			&c.ItemKode, &c.ItemNama, &c.PlannedQty, &c.CreatedAt)
+		return c, err
+	})
+}
+
+// LastOrderNumber is the month's highest order number with prefix.
+func (Postgres) LastOrderNumber(ctx context.Context, q database.Querier, prefix string) (string, error) {
+	var last string
+	err := q.QueryRow(ctx, `SELECT nomor_produksi FROM manufacturing.production_orders WHERE nomor_produksi ILIKE $1
+		ORDER BY nomor_produksi DESC LIMIT 1`, prefix+"-%").Scan(&last)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
+	return last, err
+}
+
+// InsertOrder writes a DRAFT order and its planned lines.
+func (Postgres) InsertOrder(ctx context.Context, q database.Querier, o NewOrder) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `INSERT INTO manufacturing.production_orders (nomor_produksi, product_id, output_raw_material_id,
+		production_context, output_type, planned_qty, actual_qty, status, planned_material_cost, hpp_per_unit, company_id, branch_id,
+		catatan, created_by, parent_order_id)
+		VALUES ($1, $2, $3, $4, $5, $6, 0, 'DRAFT', $7, $8, $9, $10, $11, $12, $13) RETURNING id::text`,
+		o.Number, o.ProductID, o.OutputRawMaterialID, o.Context, o.OutputType, o.PlannedQty, o.PlannedCost, o.Hpp,
+		o.CompanyID, o.BranchID, o.Catatan, null(o.UserID), o.ParentOrderID).Scan(&id)
+	if err != nil {
+		return "", err
+	}
+	for _, m := range o.Materials {
+		if _, err := q.Exec(ctx, `INSERT INTO manufacturing.production_order_materials (production_order_id, raw_material_id,
+			satuan_id, qty_planned, qty_actual, waste_qty, unit_cost, total_cost, recipe_qty, recipe_satuan_id, unit_factor)
+			VALUES ($1, $2, $3, $4, $4, 0, $5, $6, $7, $8, $9)`, id, m.RawMaterialID, m.SatuanID, m.QtyPlanned, m.UnitCost, m.Cost,
+			m.RecipeQty, m.RecipeSatuanID, m.UnitFactor); err != nil {
+			return "", err
+		}
+	}
+	return id, nil
 }
 
 // where builds the shared list filter on the v_production_orders alias v.

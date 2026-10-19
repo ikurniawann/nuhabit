@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/inventory/kit"
+	"nuhabit/backend/internal/modules/production/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	ps "nuhabit/backend/internal/platform/scope"
@@ -267,7 +268,7 @@ func orNilStr(s *string) any {
 // nextProductionNumber is generateProductionNumber: PROD-YYYYMM-NNNN after
 // the month's highest number.
 func nextProductionNumber(ctx context.Context, q database.Querier, now time.Time) (string, error) {
-	prefix := productionNumberPrefix(now)
+	prefix := domain.OrderNumberPrefix(now)
 	last, err := kit.QueryOne(ctx, q, `SELECT nomor_produksi FROM production_orders WHERE nomor_produksi ILIKE $1
 		ORDER BY nomor_produksi DESC LIMIT 1`, prefix+"-%")
 	if err != nil {
@@ -277,5 +278,5 @@ func nextProductionNumber(ctx context.Context, q database.Querier, now time.Time
 	if last != nil {
 		lastNumber = last.Str("nomor_produksi")
 	}
-	return nextNumber(prefix, lastNumber), nil
+	return domain.NextOrderNumber(prefix, lastNumber), nil
 }

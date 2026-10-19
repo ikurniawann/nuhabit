@@ -1,6 +1,6 @@
 /**
  * Pengaturan resep (modul Go `production`, /api/production/recipe-settings):
- * toleransi scrap per produk atau bahan baku olahan.
+ * toleransi scrap dan ukuran batch per produk atau bahan baku olahan.
  */
 
 export type RecipeOwner = { productId: string } | { rawMaterialId: string };
@@ -10,6 +10,8 @@ export type RecipeSettings = {
   raw_material_id: string | null;
   /** Null: resep memakai toleransi default. */
   scrap_tolerance_pct: number | null;
+  /** Null: sub-order tidak dibulatkan ke kelipatan batch. */
+  batch_size: number | null;
   effective_scrap_tolerance_pct: number;
   default_scrap_tolerance_pct: number;
 };
@@ -18,24 +20,30 @@ export function recipeOwnerId(owner: RecipeOwner): string {
   return "productId" in owner ? owner.productId : owner.rawMaterialId;
 }
 
-export type RecipeSettingsForm = { tolerance: string };
+export type RecipeSettingsForm = { tolerance: string; batchSize: string };
+
+const text = (value: number | null | undefined) => (value == null ? "" : String(value));
 
 export function initRecipeSettingsForm(settings: RecipeSettings | undefined): RecipeSettingsForm {
-  return { tolerance: settings?.scrap_tolerance_pct == null ? "" : String(settings.scrap_tolerance_pct) };
+  return { tolerance: text(settings?.scrap_tolerance_pct), batchSize: text(settings?.batch_size) };
 }
 
-/** Pesan galat isian, atau null bila valid. Kosong berarti pakai default. */
-export function recipeSettingsError(form: RecipeSettingsForm): string | null {
-  const raw = form.tolerance.trim();
-  if (raw === "") return null;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0 || value > 100) return "Toleransi scrap harus 0 sampai 100%";
-  return null;
+/** Galat per isian; kosong berarti pakai default (toleransi) atau tanpa pembulatan (batch). */
+export function recipeSettingsErrors(form: RecipeSettingsForm): { tolerance: string | null; batchSize: string | null } {
+  const tolerance = form.tolerance.trim();
+  const batch = form.batchSize.trim();
+  const pct = Number(tolerance);
+  const size = Number(batch);
+  return {
+    tolerance:
+      tolerance !== "" && (!Number.isFinite(pct) || pct < 0 || pct > 100) ? "Toleransi scrap harus 0 sampai 100%" : null,
+    batchSize: batch !== "" && (!Number.isFinite(size) || size <= 0) ? "Ukuran batch harus lebih dari 0" : null,
+  };
 }
 
 /** Payload PUT /api/production/recipe-settings. */
 export function buildRecipeSettingsPayload(owner: RecipeOwner, form: RecipeSettingsForm) {
-  const raw = form.tolerance.trim();
+  const value = (raw: string) => (raw.trim() === "" ? null : Number(raw.trim()));
   const ownerKey = "productId" in owner ? { product_id: owner.productId } : { raw_material_id: owner.rawMaterialId };
-  return { ...ownerKey, scrap_tolerance_pct: raw === "" ? null : Number(raw) };
+  return { ...ownerKey, scrap_tolerance_pct: value(form.tolerance), batch_size: value(form.batchSize) };
 }

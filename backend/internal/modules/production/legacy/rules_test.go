@@ -3,9 +3,6 @@ package legacy
 import "testing"
 
 func TestOrderRules(t *testing.T) {
-	if nextNumber("PROD-202610", "PROD-202610-0009") != "PROD-202610-0010" || nextNumber("PROD-202610", "") != "PROD-202610-0001" {
-		t.Error("numbers")
-	}
 	if _, msg := validateVariantSplit(3, []variantRow{{"a", 1}, {"a", 2}}, []string{"a"}); msg != "Varian ganda" {
 		t.Error(msg)
 	}

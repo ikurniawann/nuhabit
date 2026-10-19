@@ -47,6 +47,9 @@ type OrderView struct {
 	HppPerUnit          float64       `json:"hpp_per_unit"`
 	StartedAt           *httpx.JSTime `json:"started_at"`
 	CompletedAt         *httpx.JSTime `json:"completed_at"`
+	// The order this sub-order feeds, null for an order of its own.
+	ParentOrderID       *string `json:"parent_order_id"`
+	ParentNomorProduksi *string `json:"parent_nomor_produksi"`
 }
 
 // FlowMaterialView is one material line with its issue progress.
@@ -174,6 +177,59 @@ type FlowView struct {
 	// finishes with receipts only.
 	Stepped     bool  `json:"stepped"`
 	VariantSkus []Sku `json:"variant_skus"`
+	// Intermediates are the lines made in-house with their shortage;
+	// SubOrders the orders created for them.
+	Intermediates      []IntermediateView `json:"intermediates"`
+	SubOrders          []SubOrderView     `json:"sub_orders"`
+	CanCreateSubOrders bool               `json:"can_create_sub_orders"`
+}
+
+// IntermediateView is an order line made in-house: what the order still
+// needs, stock, what open sub-orders make and the shortage left, in the
+// stock unit.
+type IntermediateView struct {
+	MaterialLineID string  `json:"material_id"`
+	RawMaterialID  string  `json:"raw_material_id"`
+	Kode           string  `json:"kode"`
+	Nama           string  `json:"nama"`
+	Satuan         string  `json:"satuan"`
+	QtyNeeded      float64 `json:"qty_needed"`
+	QtyOnHand      float64 `json:"qty_onhand"`
+	QtyOnSubOrders float64 `json:"qty_on_sub_orders"`
+	ShortageQty    float64 `json:"shortage_qty"`
+}
+
+// SubOrderView is a sub-order of the order.
+type SubOrderView struct {
+	ID                string       `json:"id"`
+	NomorProduksi     string       `json:"nomor_produksi"`
+	Status            string       `json:"status"`
+	ProductionContext string       `json:"production_context"`
+	OutputType        string       `json:"output_type"`
+	ItemKode          string       `json:"item_kode"`
+	ItemNama          string       `json:"item_nama"`
+	PlannedQty        float64      `json:"planned_qty"`
+	CreatedAt         httpx.JSTime `json:"created_at"`
+}
+
+func intermediateViews(its []intermediate) []IntermediateView {
+	out := make([]IntermediateView, len(its))
+	for i, it := range its {
+		out[i] = IntermediateView{MaterialLineID: it.line.ID, RawMaterialID: it.line.RawMaterialID, Kode: it.material.Kode,
+			Nama: it.material.Nama, Satuan: it.material.Unit, QtyNeeded: it.needed, QtyOnHand: it.material.QtyOnHand,
+			QtyOnSubOrders: it.covered, ShortageQty: it.shortage}
+	}
+	return out
+}
+
+func subOrderViews(children []ChildOrder) []SubOrderView {
+	out := make([]SubOrderView, len(children))
+	for i, c := range children {
+		out[i] = SubOrderView{ID: c.ID, NomorProduksi: c.Number, Status: c.Status, ProductionContext: c.Context,
+			OutputType: c.OutputType, ItemKode: c.ItemKode, ItemNama: c.ItemNama, PlannedQty: c.PlannedQty,
+			CreatedAt: httpx.JSTime(c.CreatedAt)}
+	}
+	return out
 }
 
 func orderView(o *Order) OrderView {
@@ -184,6 +240,7 @@ func orderView(o *Order) OrderView {
 		OverheadCost: o.Overhead, LaborCost: o.Labor, PackagingCost: o.Packaging, WasteCost: o.Waste,
 		ConversionCost: round2(o.Conversion()), HppPerUnit: o.HppPerUnit,
 		StartedAt: httpx.NewJSTime(o.StartedAt), CompletedAt: httpx.NewJSTime(o.CompletedAt),
+		ParentOrderID: o.ParentOrderID, ParentNomorProduksi: o.ParentNumber,
 	}
 }
 

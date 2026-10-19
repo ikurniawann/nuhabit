@@ -9,6 +9,7 @@ const settings = {
   product_id: "p1",
   raw_material_id: null,
   scrap_tolerance_pct: null,
+  batch_size: null,
   effective_scrap_tolerance_pct: 5,
   default_scrap_tolerance_pct: 5,
 };
@@ -51,9 +52,14 @@ describe("RecipeSettingsCard", () => {
     expect(screen.getByRole("button", { name: "Simpan Pengaturan" })).toBeDisabled();
 
     fireEvent.change(input, { target: { value: "10" } });
+    const batch = screen.getByLabelText("Ukuran batch (satuan hasil)");
+    fireEvent.change(batch, { target: { value: "0" } });
+    expect(screen.getByText("Ukuran batch harus lebih dari 0")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Simpan Pengaturan" })).toBeDisabled();
+    fireEvent.change(batch, { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan Pengaturan" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(true));
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
-    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ product_id: "p1", scrap_tolerance_pct: 10 });
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ product_id: "p1", scrap_tolerance_pct: 10, batch_size: 2 });
   });
 });

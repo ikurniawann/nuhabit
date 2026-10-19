@@ -25,6 +25,34 @@ export type ProductionFlowOrder = {
   hpp_per_unit: number;
   started_at: string | null;
   completed_at: string | null;
+  /** Order induk bila order ini sub-order. */
+  parent_order_id: string | null;
+  parent_nomor_produksi: string | null;
+};
+
+/** Bahan setengah jadi (dibuat sendiri) di order dan kekurangannya, dalam satuan stok. */
+export type ProductionIntermediate = {
+  material_id: string;
+  raw_material_id: string;
+  kode: string;
+  nama: string;
+  satuan: string;
+  qty_needed: number;
+  qty_onhand: number;
+  qty_on_sub_orders: number;
+  shortage_qty: number;
+};
+
+export type ProductionSubOrder = {
+  id: string;
+  nomor_produksi: string;
+  status: string;
+  production_context: ProductionContext;
+  output_type: string;
+  item_kode: string;
+  item_nama: string;
+  planned_qty: number;
+  created_at: string;
 };
 
 export type ProductionFlowMaterial = {
@@ -131,6 +159,10 @@ export type ProductionFlow = {
   /** true setelah bahan dikeluarkan bertahap: order selesai lewat Terima Hasil. */
   stepped: boolean;
   variant_skus: ProductionSku[];
+  intermediates: ProductionIntermediate[];
+  sub_orders: ProductionSubOrder[];
+  /** Ada kekurangan bahan setengah jadi yang belum tercakup sub-order. */
+  can_create_sub_orders: boolean;
 };
 
 export type ProductionWipOrder = {

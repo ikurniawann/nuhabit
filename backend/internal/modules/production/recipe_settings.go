@@ -15,11 +15,13 @@ import (
 
 // RecipeSettingsView is GET/PUT /api/production/recipe-settings.
 // ScrapTolerancePct is what the recipe sets (null = the default);
-// EffectiveScrapTolerancePct is what orders of the recipe use.
+// EffectiveScrapTolerancePct is what orders of the recipe use. BatchSize
+// rounds sub-orders of the recipe up (null = no rounding).
 type RecipeSettingsView struct {
 	ProductID                  *string  `json:"product_id"`
 	RawMaterialID              *string  `json:"raw_material_id"`
 	ScrapTolerancePct          *float64 `json:"scrap_tolerance_pct"`
+	BatchSize                  *float64 `json:"batch_size"`
 	EffectiveScrapTolerancePct float64  `json:"effective_scrap_tolerance_pct"`
 	DefaultScrapTolerancePct   float64  `json:"default_scrap_tolerance_pct"`
 }
@@ -54,15 +56,30 @@ func (s *Service) RecipeSettings(ctx context.Context, owner RecipeOwner) (*Recip
 	if row != nil && row.ScrapTolerancePct != nil {
 		v.ScrapTolerancePct, v.EffectiveScrapTolerancePct = row.ScrapTolerancePct, *row.ScrapTolerancePct
 	}
+	if row != nil {
+		v.BatchSize = row.BatchSize
+	}
 	return v, nil
 }
 
-// SaveRecipeSettings sets (or clears, with nil) the scrap tolerance.
-func (s *Service) SaveRecipeSettings(ctx context.Context, owner RecipeOwner, tolerancePct *float64, userID string) (*RecipeSettingsView, error) {
+// SaveRecipeSettings sets (or clears, with nil) the scrap tolerance and,
+// when batchSent, the batch size.
+func (s *Service) SaveRecipeSettings(ctx context.Context, owner RecipeOwner, tolerancePct, batchSize *float64, batchSent bool,
+	userID string) (*RecipeSettingsView, error) {
 	if err := s.checkOwner(ctx, owner); err != nil {
 		return nil, err
 	}
-	if err := s.repo.SaveRecipeSettings(ctx, s.db, owner, tolerancePct, userID); err != nil {
+	settings := RecipeSettings{ScrapTolerancePct: tolerancePct, BatchSize: batchSize}
+	if !batchSent {
+		current, err := s.repo.RecipeSettings(ctx, s.db, owner)
+		if err != nil {
+			return nil, err
+		}
+		if current != nil {
+			settings.BatchSize = current.BatchSize
+		}
+	}
+	if err := s.repo.SaveRecipeSettings(ctx, s.db, owner, settings, userID); err != nil {
 		return nil, err
 	}
 	return s.RecipeSettings(ctx, owner)
@@ -116,13 +133,15 @@ func (h *Handler) recipeSettings(w http.ResponseWriter, r *http.Request) error {
 /*
 PUT /api/production/recipe-settings
 
-	{ product_id | raw_material_id, scrap_tolerance_pct: number 0..100 | null }
+	{ product_id | raw_material_id, scrap_tolerance_pct: number 0..100 | null, batch_size?: number > 0 | null }
 */
 func (h *Handler) saveRecipeSettings(w http.ResponseWriter, r *http.Request) error {
 	f := validate.New(validate.ReadBody(r))
 	productID := f.UUID("product_id", validate.Rule{Optional: true, Nullable: true})
 	rawMaterialID := f.UUID("raw_material_id", validate.Rule{Optional: true, Nullable: true})
 	tolerance := f.Num("scrap_tolerance_pct", validate.Rule{Nullable: true}, validate.NumOpts{Min: validate.Bound(0), Max: validate.Bound(100)})
+	batchSize := f.Num("batch_size", validate.Rule{Optional: true, Nullable: true}, validate.NumOpts{Positive: true})
+	_, batchSent := f.Fields()["batch_size"]
 	if err := f.Err("Validation failed"); err != nil {
 		return err
 	}
@@ -140,7 +159,7 @@ func (h *Handler) saveRecipeSettings(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	view, err := h.svc.SaveRecipeSettings(r.Context(), owner, tolerance, userID)
+	view, err := h.svc.SaveRecipeSettings(r.Context(), owner, tolerance, batchSize, batchSent, userID)
 	if err != nil {
 		return err
 	}

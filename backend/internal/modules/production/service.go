@@ -40,6 +40,8 @@ type Order struct {
 	CompanyID, BranchID                     *string
 	StartedAt, CompletedAt                  *time.Time
 	CreatedAt                               time.Time
+	// ParentOrderID and ParentNumber name the order a sub-order feeds.
+	ParentOrderID, ParentNumber *string
 }
 
 // Conversion is the order's overhead, labor, packaging and waste cost.
@@ -159,7 +161,7 @@ type RecipeOwner struct{ ProductID, RawMaterialID *string }
 // RecipeSettings are per recipe settings (manufacturing.recipe_settings).
 type RecipeSettings struct {
 	ScrapTolerancePct *float64
-	UpdatedAt         *time.Time
+	BatchSize         *float64
 }
 
 // ListFilter narrows the WIP and batch lists.
@@ -192,7 +194,10 @@ type Repository interface {
 	// RecipeSettings is the settings row of a product or raw material
 	// recipe, nil when it has none.
 	RecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner) (*RecipeSettings, error)
-	SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, tolerancePct *float64, userID string) error
+	SaveRecipeSettings(ctx context.Context, q database.Querier, owner RecipeOwner, settings RecipeSettings, userID string) error
+	ChildOrders(ctx context.Context, q database.Querier, parentID string) ([]ChildOrder, error)
+	LastOrderNumber(ctx context.Context, q database.Querier, prefix string) (string, error)
+	InsertOrder(ctx context.Context, q database.Querier, o NewOrder) (string, error)
 	WipOrders(ctx context.Context, q database.Querier, f ListFilter) ([]WipRow, error)
 	ListBatches(ctx context.Context, q database.Querier, f ListFilter) ([]BatchRow, error)
 	Batch(ctx context.Context, q database.Querier, id string) (*BatchRow, error)
@@ -479,7 +484,20 @@ func (s *Service) flow(ctx context.Context, q database.Querier, o *Order) (*Flow
 	if err != nil {
 		return nil, err
 	}
-	return buildFlow(o, lines, issues, returns, batches, materials, units, skus, tolerance), nil
+	children, err := s.repo.ChildOrders(ctx, q, o.ID)
+	if err != nil {
+		return nil, err
+	}
+	its, err := s.intermediates(ctx, q, lines, materials, children)
+	if err != nil {
+		return nil, err
+	}
+	f := buildFlow(o, lines, issues, returns, batches, materials, units, skus, tolerance)
+	f.Intermediates, f.SubOrders = intermediateViews(its), subOrderViews(children)
+	for _, it := range its {
+		f.CanCreateSubOrders = f.CanCreateSubOrders || (it.shortage > 0 && activeOrder(o.Status))
+	}
+	return f, nil
 }
 
 // owner is the recipe an order makes.

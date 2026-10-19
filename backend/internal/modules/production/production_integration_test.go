@@ -445,6 +445,108 @@ func TestReturnMaterials(t *testing.T) {
 	e.Fail("POST", base+"/returns", ret(1), http.StatusBadRequest, "Bahan hanya bisa dikembalikan saat order IN_PROGRESS")
 }
 
+// Short intermediates get DRAFT sub-orders on request, rounded up to the
+// recipe's batch size, and only once per shortage.
+func TestSubOrders(t *testing.T) {
+	e := setup(t)
+	kg := e.Unit("KG", "Kilogram")
+	sfx := e.org.BranchID[:4]
+	flour := e.RawMaterial(e.org, "RSF-"+sfx, "Tepung", kg, "", 1)
+	cream := e.RawMaterial(e.org, "RSK-"+sfx, "Krim", kg, "", 1)
+	e.Stock(e.org, flour, e.org.MainID, 100, 1000)
+	e.Stock(e.org, cream, e.org.MainID, 0.5, 3000)
+	e.Exec(`INSERT INTO manufacturing.raw_material_bom_items (output_raw_material_id, component_raw_material_id, qty_required)
+		VALUES ($1, $2, 0.5)`, cream, flour)
+	// Adonan is a product whose WIP mirror the cake uses.
+	dough := e.Product(e.org, e.org.Stall1ID, "PSD-"+sfx, "Adonan", 5000)
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required) VALUES ($1, $2, 1)`, dough, flour)
+	doughWip := e.ID(`INSERT INTO item.raw_materials (kode, nama, kategori, material_type, source_product_id, satuan_besar_id,
+		company_id, branch_id) VALUES ('WPSD-'||$2, 'Adonan', 'LAINNYA', 'WIP', $1, $3, $4, $5) RETURNING id::text`,
+		dough, sfx, kg, e.org.CompanyID, e.org.BranchID)
+	cake := e.Product(e.org, e.org.Stall1ID, "PSC-"+sfx, "Kue", 5000)
+
+	e.Call("PUT", "/api/production/recipe-settings", map[string]any{"raw_material_id": cream, "scrap_tolerance_pct": nil, "batch_size": 2},
+		http.StatusOK)
+	got := obj(e.Call("PUT", "/api/production/recipe-settings", map[string]any{"raw_material_id": cream, "scrap_tolerance_pct": 8},
+		http.StatusOK)["data"])
+	if got["batch_size"] != 2.0 || got["scrap_tolerance_pct"] != 8.0 {
+		t.Fatalf("a PUT without batch_size keeps it: %v", got)
+	}
+
+	id, _ := e.order("RELEASED", "product", "FINISHED_GOOD", cake, 1, 0, cream, 3, 3000, doughWip, 2, 0, flour, 1, 1000)
+	base := "/api/production/orders/" + id
+	flow := obj(e.Call("GET", base+"/flow", nil, http.StatusOK)["data"])
+	short := map[any]map[string]any{}
+	for _, it := range list(flow["intermediates"]) {
+		short[obj(it)["raw_material_id"]] = obj(it)
+	}
+	if len(short) != 2 || short[cream]["shortage_qty"] != 2.5 || short[doughWip]["shortage_qty"] != 2.0 || flow["can_create_sub_orders"] != true {
+		t.Fatalf("intermediates %v", flow["intermediates"])
+	}
+
+	out := e.Call("POST", base+"/sub-orders", nil, http.StatusCreated)
+	created := list(obj(out["data"])["created"])
+	if len(created) != 2 {
+		t.Fatalf("created %v", out)
+	}
+	type child struct {
+		context, output string
+		qty, cost       float64
+	}
+	read := func(rawMaterial, product string) child {
+		var c child
+		e.Scalar(&c.context, `SELECT production_context FROM manufacturing.production_orders WHERE parent_order_id = $1
+			AND (output_raw_material_id = $2::uuid OR product_id = $3::uuid)`, id, nilIfEmpty(rawMaterial), nilIfEmpty(product))
+		e.Scalar(&c.qty, `SELECT planned_qty FROM manufacturing.production_orders WHERE parent_order_id = $1
+			AND (output_raw_material_id = $2::uuid OR product_id = $3::uuid)`, id, nilIfEmpty(rawMaterial), nilIfEmpty(product))
+		e.Scalar(&c.output, `SELECT output_type || '/' || status FROM manufacturing.production_orders WHERE parent_order_id = $1
+			AND (output_raw_material_id = $2::uuid OR product_id = $3::uuid)`, id, nilIfEmpty(rawMaterial), nilIfEmpty(product))
+		e.Scalar(&c.cost, `SELECT planned_material_cost FROM manufacturing.production_orders WHERE parent_order_id = $1
+			AND (output_raw_material_id = $2::uuid OR product_id = $3::uuid)`, id, nilIfEmpty(rawMaterial), nilIfEmpty(product))
+		return c
+	}
+	// 2.5 kg cream rounds up to two batches of 2; it needs 2 kg flour.
+	if c := read(cream, ""); c.context != "raw_material" || c.qty != 4 || c.output != "FINISHED_GOOD/DRAFT" || c.cost != 2000 {
+		t.Fatalf("cream sub-order %+v", c)
+	}
+	if c := read("", dough); c.context != "product" || c.qty != 2 || c.output != "WIP/DRAFT" || c.cost != 2000 {
+		t.Fatalf("dough sub-order %+v", c)
+	}
+	flow = obj(obj(out["data"])["flow"])
+	if len(list(flow["sub_orders"])) != 2 || flow["can_create_sub_orders"] != false {
+		t.Fatalf("flow after %v", flow)
+	}
+	for _, it := range list(flow["intermediates"]) {
+		if obj(it)["shortage_qty"] != 0.0 {
+			t.Fatalf("covered %v", it)
+		}
+	}
+	// Pressing again creates nothing.
+	again := e.Call("POST", base+"/sub-orders", nil, http.StatusOK)
+	if len(list(obj(again["data"])["created"])) != 0 || again["message"] != "Tidak ada kekurangan bahan setengah jadi yang belum tercakup sub-order" {
+		t.Fatalf("again %v", again)
+	}
+	// The sub-order links back; a cancelled one no longer covers.
+	childID := obj(created[0])["id"].(string)
+	childFlow := obj(e.Call("GET", "/api/production/orders/"+childID+"/flow", nil, http.StatusOK)["data"])
+	if obj(childFlow["order"])["parent_order_id"] != id {
+		t.Fatalf("child %v", childFlow["order"])
+	}
+	e.Exec(`UPDATE manufacturing.production_orders SET status = 'CANCELLED' WHERE id = $1`, childID)
+	if flow = obj(e.Call("GET", base+"/flow", nil, http.StatusOK)["data"]); flow["can_create_sub_orders"] != true {
+		t.Fatalf("after cancel %v", flow["intermediates"])
+	}
+	e.Exec(`UPDATE manufacturing.production_orders SET status = 'COMPLETED' WHERE id = $1`, id)
+	e.Fail("POST", base+"/sub-orders", nil, http.StatusBadRequest, "Sub-order hanya bisa dibuat untuk order yang belum selesai atau batal")
+}
+
+func nilIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
 // The explosion, the order and the issue count in the stock unit: a recipe
 // of 0.25 kg flour per loaf, flour stocked in grams.
 func TestStockUnits(t *testing.T) {
