@@ -7,7 +7,6 @@ import {
   splitByRecency,
   timeAgoText,
 } from "./incoming";
-import { TABLE_ORDER_TAG } from "./server";
 
 const self = (id: string, status: string, at: string, payment = "cashier") => ({
   id,
@@ -17,10 +16,6 @@ const self = (id: string, status: string, at: string, payment = "cashier") => ({
 });
 
 describe("incoming self-order", () => {
-  it("prefix sama dgn tag yang ditulis route self-order", () => {
-    expect(TABLE_ORDER_TAG).toBe("Self-service table order");
-  });
-
   it("hanya self-order pending, urut terlama dulu", () => {
     const orders = [
       self("b", "pending", "2026-10-01T10:05:00Z"),

@@ -423,7 +423,7 @@ async function fetchTeamToday(): Promise<TeamToday> {
 }
 
 async function fetchPendingDecisions(): Promise<PendingDecisions> {
-  // Definisi 'pending' identik dengan nav-badges (lib/hris/nav-badges.ts);
+  // Definisi 'pending' identik dengan nav-badges (backend/internal/modules/hris/selfservice.go);
   // PO memakai status 'draft' sesuai enum purchase_orders (draft → approved).
   const row = await queryOne<{
     cuti: number;
