@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatDate } from "@/lib/format";
 import type { OvertimeDecisionAction } from "@/lib/hris/overtime-rules";
 import { hhmm } from "@/lib/hris/shifts-view";
@@ -21,7 +22,7 @@ interface OvertimeTableProps {
 
 export function OvertimeTable({ rows, loading, decidingId, onDecide }: OvertimeTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
+    <ScrollRegion label="Tabel lembur" className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -60,7 +61,7 @@ export function OvertimeTable({ rows, loading, decidingId, onDecide }: OvertimeT
           )}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

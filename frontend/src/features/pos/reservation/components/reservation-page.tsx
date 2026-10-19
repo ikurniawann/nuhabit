@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatReservationQueueNumber } from "@/lib/pos/reservation-queue";
 import { useCreateReservation, useUpdateReservationStatus } from "../mutations";
 import { printQueueSlip } from "../print-queue-slip";
@@ -138,7 +139,7 @@ export function ReservationPage() {
 
       <Card className="min-h-0 flex-1 overflow-hidden border-gray-200/70 shadow-xs">
         <CardContent className="flex h-full flex-col p-0">
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
+          <ScrollRegion label="Daftar reservasi" axis="y" className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4">
             {list.isLoading ? (
               <div className="flex h-64 items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -162,7 +163,7 @@ export function ReservationPage() {
                 />
               ))
             )}
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
 

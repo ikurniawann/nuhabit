@@ -51,4 +51,18 @@ describe("ScrollRegion", () => {
     expect(screen.queryByRole("region")).not.toBeInTheDocument();
     expect(container.firstElementChild).not.toHaveAttribute("tabindex");
   });
+
+  test("axis y memantau tinggi untuk daftar yang bergulir ke bawah", () => {
+    mockWidths(400, 400);
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(600);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(200);
+
+    render(
+      <ScrollRegion label="Daftar reservasi" axis="y">
+        <ul />
+      </ScrollRegion>
+    );
+
+    expect(screen.getByRole("region", { name: "Daftar reservasi" })).toHaveAttribute("tabindex", "0");
+  });
 });

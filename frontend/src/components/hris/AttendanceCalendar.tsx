@@ -106,7 +106,7 @@ export function AttendanceCalendar({ employeeId }: { employeeId?: string }) {
               <div
                 key={day}
                 className={`bg-gray-50 py-2 text-center text-[10px] font-semibold uppercase tracking-wider ${
-                  i === 0 ? "text-red-400" : "text-gray-400"
+                  i === 0 ? "text-red-700" : "text-gray-400"
                 }`}
               >
                 {day}

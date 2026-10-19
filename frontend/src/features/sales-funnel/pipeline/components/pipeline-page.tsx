@@ -13,6 +13,7 @@ import { Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import {
   Select,
   SelectContent,
@@ -193,7 +194,7 @@ export function SalesFunnelPipelinePage() {
         </div>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4">
+          <ScrollRegion label="Papan pipeline deal" className="flex gap-4 overflow-x-auto pb-4">
             {stages.map((stage) => {
               const stageDeals = byStage.get(stage.id) ?? [];
               const stageValue = stageDeals.reduce(
@@ -261,7 +262,7 @@ export function SalesFunnelPipelinePage() {
                 </div>
               );
             })}
-          </div>
+          </ScrollRegion>
         </DragDropContext>
       )}
 

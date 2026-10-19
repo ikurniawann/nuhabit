@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { DsDateTimePicker } from "@/components/design-system";
 import { STALL_LABELS } from "@/lib/configuration/stall-labels";
 import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
@@ -354,7 +355,7 @@ export function ProductManualAdjustmentPage() {
             )}
           </div>
 
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel item penyesuaian" className="overflow-x-auto px-4 pb-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -463,7 +464,7 @@ export function ProductManualAdjustmentPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
     </div>

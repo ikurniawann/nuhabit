@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatRupiah } from "@/lib/format";
 import { loanPaidPercent, loanTypeLabel } from "@/lib/hris/loans-view";
 import type { LoanRow } from "../types";
@@ -20,7 +21,7 @@ interface LoansTableProps {
 
 export function LoansTable({ rows, loading, decidingId, onDecide }: LoansTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
+    <ScrollRegion label="Tabel pinjaman" className="overflow-x-auto rounded-xl border border-gray-200/70 bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
@@ -55,7 +56,7 @@ export function LoansTable({ rows, loading, decidingId, onDecide }: LoansTablePr
           )}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

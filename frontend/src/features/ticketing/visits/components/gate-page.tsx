@@ -85,7 +85,7 @@ export function GatePage() {
 
   return (
     <div
-      className={`flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center rounded-2xl px-6 py-10 text-white transition-colors duration-300 ${bgClass}`}
+      className={`flex min-h-full flex-col md:min-h-[calc(100vh-4rem)] items-center justify-center rounded-2xl px-6 py-10 text-white transition-colors duration-300 ${bgClass}`}
       onClick={() => inputRef.current?.focus()}
     >
       <input

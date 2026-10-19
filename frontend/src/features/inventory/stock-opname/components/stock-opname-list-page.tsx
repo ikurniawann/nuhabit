@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Combobox } from "@/components/ui/combobox";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
@@ -164,7 +165,7 @@ export function StockOpnameListPage() {
           </div>
         }
       >
-        <div className="overflow-x-auto px-4">
+        <ScrollRegion label="Tabel stock opname" className="overflow-x-auto px-4">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -261,7 +262,7 @@ export function StockOpnameListPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
 
         <PurchasingTablePagination
           page={page}

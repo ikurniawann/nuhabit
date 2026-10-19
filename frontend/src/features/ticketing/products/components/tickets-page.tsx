@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -135,7 +136,7 @@ export function TicketsPage() {
             <p className="mt-2 text-sm text-gray-500">Memuat ticket...</p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel ticket" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <TableRow className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500 hover:bg-gray-50/80">
@@ -248,7 +249,7 @@ export function TicketsPage() {
                 ) : null}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 

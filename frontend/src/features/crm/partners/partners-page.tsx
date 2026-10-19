@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -216,13 +217,15 @@ export function PartnersPage() {
 
       <Card className="gap-3 px-5">
         <p className="text-sm font-semibold">Cara partner mengirim event</p>
-        <pre className="overflow-x-auto rounded-2xl bg-surface-2 p-4 font-mono text-xs leading-relaxed">{`POST ${origin}/api/integrations/loyalty-events/<KODE>
+        <ScrollRegion label="Contoh request event partner" className="overflow-x-auto rounded-2xl bg-surface-2">
+          <pre className="w-max p-4 font-mono text-xs leading-relaxed">{`POST ${origin}/api/integrations/loyalty-events/<KODE>
 X-Timestamp: <detik Unix, maks. selisih 5 menit>
 X-Signature: sha256=<hex HMAC-SHA256(raw body, secret)>
 
 { "external_id": "sesi-123", "event_type": "photo_session",
   "email": "member@mail.com" | "phone": "0812…",
   "occurred_at": "2026-10-04T10:00:00+07:00", "payload": {} }`}</pre>
+        </ScrollRegion>
         <p className="text-xs text-muted-foreground">
           Kirim ulang dengan external_id yang sama aman: event dicatat sekali dan XP tidak dobel. XP per event maksimal{" "}
           {PARTNER_XP_CAP}.

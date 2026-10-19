@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { PlusIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { formatDate, formatRupiah } from "@/lib/format";
 import { useSalaryList } from "../queries";
@@ -43,7 +44,7 @@ export function SalaryPage() {
           <CardTitle>Daftar Salary Structure</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel struktur gaji" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
@@ -106,7 +107,7 @@ export function SalaryPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
     </div>

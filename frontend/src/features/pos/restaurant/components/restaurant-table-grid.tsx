@@ -22,7 +22,7 @@ const TONES: Record<string, Tone> = {
   available: {
     table: "bg-indigo-50 border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-400/20",
     seat: "border-indigo-200 bg-white dark:border-indigo-400/40 dark:bg-transparent",
-    text: "text-indigo-500 dark:text-indigo-300",
+    text: "text-indigo-700 dark:text-indigo-300",
   },
   occupied: {
     table: "bg-orange-100 border-orange-200 dark:bg-orange-500/15 dark:border-orange-400/30",

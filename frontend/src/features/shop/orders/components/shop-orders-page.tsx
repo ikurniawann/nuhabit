@@ -9,6 +9,7 @@ import { useDeferredValue, useState } from 'react';
 import { Loader2, Package, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ScrollRegion } from '@/components/ui/scroll-region';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PurchasingPageHeader } from '@/features/purchasing/components/shared/purchasing-page-header';
 import { ReviewsModerationSection } from '@/features/shop/reviews';
@@ -93,7 +94,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
             <p className="text-sm">Belum ada pesanan</p>
           </div>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel pesanan" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -155,7 +156,7 @@ export function ShopOrdersPage({ wholesale = false }: { wholesale?: boolean }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
   );

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatDateTime } from "@/lib/format";
 
 /**
@@ -206,7 +207,7 @@ export function ApiTokensPage() {
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <ScrollRegion label="Tabel token API" className="overflow-x-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead className="bg-muted/40 text-left">
             <tr>
@@ -264,7 +265,7 @@ export function ApiTokensPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

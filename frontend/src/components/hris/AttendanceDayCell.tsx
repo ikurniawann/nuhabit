@@ -52,7 +52,7 @@ export function AttendanceDayCell({
               : isPublicHoliday
                 ? "text-red-600"
                 : isSunday
-                  ? "text-red-400"
+                  ? "text-red-700"
                   : isDayOff
                     ? "text-gray-400"
                     : "text-gray-700"

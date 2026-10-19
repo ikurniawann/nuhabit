@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 import { useXpRulesList } from "../queries";
 import { useSaveXpRule } from "../mutations";
 import {
@@ -244,7 +245,7 @@ export function CrmXpRulesPage() {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <ScrollRegion label="Tabel aturan XP" className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wide text-slate-500">
             <tr>
@@ -322,7 +323,7 @@ export function CrmXpRulesPage() {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">

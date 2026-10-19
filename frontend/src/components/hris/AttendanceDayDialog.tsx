@@ -34,14 +34,14 @@ export function AttendanceDayDialog({ info, hasSchedule, onClose }: AttendanceDa
           <div className="space-y-3">
             {info.holidays.length > 0 && (
               <div className="rounded-lg border border-red-200 bg-red-50/70 p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-red-400">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-red-700">
                   Hari Libur
                 </p>
                 {info.holidays.map((holiday) => (
                   <p key={holiday.name} className="mt-1 text-sm font-semibold text-red-700">
                     {holiday.name}
                     {holiday.deducts_leave && (
-                      <span className="ml-1 text-xs font-normal text-red-400">
+                      <span className="ml-1 text-xs font-normal text-red-700">
                         (memotong jatah cuti)
                       </span>
                     )}
