@@ -5,8 +5,9 @@
 #     fail-closed, guard IAM per route, dan batas percobaan PIN/OTP/login.
 #   - audit dependensi produksi pada level high/critical.
 #   - lint: 0 error & 0 warning; jaga tetap bersih.
-#   - backend Go: go vet, gofmt, migrasi dari nol, lalu go test (unit +
-#     integrasi) terhadap Postgres service container.
+#   - backend Go: go vet, gofmt, migrasi dari nol, pemeriksaan drift skema
+#     (migrate -verify), lalu go test (unit + integrasi) terhadap Postgres
+#     service container.
 # Yang TIDAK memblokir:
 #   - production build: butuh .env (terverifikasi gagal tanpanya) dan sudah
 #     diuji setiap deploy lewat `docker build`. Menyusul bila env CI disiapkan.
@@ -146,6 +147,11 @@ jobs:
 
       - name: Apply migrations
         run: go run ./cmd/migrate -apply
+
+      # Replays every migration into a scratch database and compares catalogs;
+      # exit 3 means a migration's effect differs from what the files produce.
+      - name: Schema drift check
+        run: go run ./cmd/migrate -verify
 
       - name: go test (unit + integration)
         run: go test ./... -count=1

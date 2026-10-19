@@ -1,5 +1,6 @@
 // Command api serves the Go HTTP API: the modules selected by MODULES plus
-// /health and /ready.
+// /health and /ready. With METRICS_ADDR set it also serves Prometheus
+// metrics at /metrics on that separate, internal address.
 //
 //	go -C backend run ./cmd/api
 //	api -routes        # print the route manifest for frontend/src/lib/go-routes.generated.json
@@ -25,6 +26,7 @@ import (
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/metrics"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ocr"
 	"nuhabit/backend/internal/platform/outbox"
@@ -97,7 +99,10 @@ func run(cfg config.Config, log *slog.Logger) error {
 		Config: cfg,
 		Events: outbox.NewBus(db, log),
 	}
-	handler, mounted := app.Handler(deps, time.Now())
+	reg := metrics.NewRegistry()
+	metrics.RegisterRuntime(reg)
+	metrics.RegisterPool(reg, func() metrics.PoolStat { return db.Stat() })
+	handler, mounted := app.Handler(deps, time.Now(), reg)
 	go func() {
 		if err := deps.Events.Run(ctx, 5*time.Second, 7*24*time.Hour); err != nil {
 			log.Error("outbox dispatcher stopped", "error", err)
@@ -116,7 +121,11 @@ func run(cfg config.Config, log *slog.Logger) error {
 	draining := make(chan struct{})
 	srv.BaseContext = func(net.Listener) context.Context { return httpx.WithShutdown(context.Background(), draining) }
 	srv.RegisterOnShutdown(func() { close(draining) })
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
+	metricsSrv, err := serveMetrics(cfg.MetricsAddr, reg, log, errCh)
+	if err != nil {
+		return err
+	}
 	go func() {
 		log.Info("api listening", "addr", srv.Addr, "env", cfg.AppEnv, "modules", mounted)
 		errCh <- srv.ListenAndServe()
@@ -133,7 +142,35 @@ func run(cfg config.Config, log *slog.Logger) error {
 	log.Info("shutting down")
 	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancelShutdown()
-	return srv.Shutdown(shutdownCtx)
+	err = srv.Shutdown(shutdownCtx)
+	if metricsSrv != nil {
+		_ = metricsSrv.Shutdown(shutdownCtx)
+	}
+	return err
+}
+
+// serveMetrics starts the /metrics server on addr and returns it, or nil
+// when addr is empty. It binds before returning so a taken port stops the
+// API at startup. The server has no auth: bind it to an address only the
+// scraper reaches, never to the public port.
+func serveMetrics(addr string, reg *metrics.Registry, log *slog.Logger, errCh chan<- error) (*http.Server, error) {
+	if addr == "" {
+		return nil, nil
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, fmt.Errorf("METRICS_ADDR: %w", err)
+	}
+	mux := http.NewServeMux()
+	mux.Handle("GET /metrics", reg.Handler())
+	srv := &http.Server{Handler: mux, ReadHeaderTimeout: 5 * time.Second, WriteTimeout: 30 * time.Second}
+	go func() {
+		log.Info("metrics listening", "addr", ln.Addr().String())
+		if err := srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("metrics server: %w", err)
+		}
+	}()
+	return srv, nil
 }
 
 func logLevel() slog.Level {

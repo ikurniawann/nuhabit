@@ -45,6 +45,7 @@ From `backend/` the Makefile wraps the same commands: `make run`, `make test`,
 | `APP_ENV` | `development` | `production` disables the member OTP dev bypass (`NODE_ENV=production` counts too) |
 | `TZ` | `Asia/Jakarta` | process zone; the pool also forces `timezone=Asia/Jakarta` per session |
 | `LOG_LEVEL` | `info` | slog level; logs are JSON on stdout |
+| `METRICS_ADDR` | unset | listen address of the internal Prometheus `/metrics` server (see `docs/DEPLOY.md`); unset serves none |
 | `TEST_DATABASE_URL` | unset | enables integration tests |
 
 Values come from the shell first, then `backend/.env.local`, then `backend/.env`.

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/config"
+	"nuhabit/backend/internal/platform/metrics"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -24,7 +25,8 @@ func TestModuleSelection(t *testing.T) {
 func TestHandlerMountsOnlySelectedModules(t *testing.T) {
 	deps := testutil.Deps(t, nil)
 	deps.Config.Modules = "identity"
-	h, mounted := Handler(deps, time.Now())
+	reg := metrics.NewRegistry()
+	h, mounted := Handler(deps, time.Now(), reg)
 	if strings.Join(mounted, ",") != "identity" {
 		t.Fatalf("mounted = %v", mounted)
 	}
@@ -42,6 +44,17 @@ func TestHandlerMountsOnlySelectedModules(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest("GET", "/ready", nil))
 	if !strings.HasPrefix(rec.Body.String(), `{"status":"ready","database":"ok","latency_ms":`) {
 		t.Errorf("ready body %s", rec.Body.String())
+	}
+	var out strings.Builder
+	_ = reg.WriteText(&out)
+	// The gate's 401 is counted under the module's pattern.
+	for _, line := range []string{
+		`http_requests_total{route="/ready",method="GET",status="2xx"} 2`,
+		`http_requests_total{route="/api/auth/me",method="GET",status="4xx"} 1`,
+	} {
+		if !strings.Contains(out.String(), line) {
+			t.Errorf("missing %s in\n%s", line, out.String())
+		}
 	}
 }
 

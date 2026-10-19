@@ -21,6 +21,9 @@ type Config struct {
 	// AppEnv is "development", "test" or "production".
 	AppEnv   string
 	TimeZone string
+	// MetricsAddr is METRICS_ADDR, the listen address of the internal
+	// /metrics server; empty disables it.
+	MetricsAddr string
 }
 
 // IsProduction reports whether APP_ENV (or NODE_ENV) says production.
@@ -85,6 +88,7 @@ func Load() Config {
 		Modules:     firstNonEmpty(os.Getenv("MODULES"), "all"),
 		AppEnv:      appEnv,
 		TimeZone:    firstNonEmpty(os.Getenv("TZ"), "Asia/Jakarta"),
+		MetricsAddr: firstNonEmpty(os.Getenv("METRICS_ADDR")),
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/metrics"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/outbox"
 )
@@ -93,14 +94,20 @@ func Mount(mux *http.ServeMux, deps module.Deps) []string {
 }
 
 // Handler builds the whole HTTP surface: /health, /ready, the selected
-// modules, wrapped in request id, access log, panic recovery and the API
-// auth gate (the half of the Next proxy that proxied requests skip).
-func Handler(deps module.Deps, started time.Time) (http.Handler, []string) {
+// modules, wrapped in request metrics (registered on reg), request id,
+// access log, panic recovery and the API auth gate (the half of the Next
+// proxy that proxied requests skip).
+func Handler(deps module.Deps, started time.Time, reg *metrics.Registry) (http.Handler, []string) {
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", Health(started))
 	mux.Handle("GET /ready", Ready(deps))
 	mounted := Mount(mux, deps)
+	// The outermost layer sees every request, including those the gate
+	// rejects; it asks the mux for the pattern instead of reading r.Pattern,
+	// which the mux sets only on the request copy it receives.
+	route := func(r *http.Request) string { _, p := mux.Handler(r); return p }
 	h := httpx.Chain(mux,
+		httpx.Metrics(reg, route),
 		httpx.WithRequestID,
 		httpx.AccessLog(deps.Log),
 		httpx.Recover(deps.Log),
