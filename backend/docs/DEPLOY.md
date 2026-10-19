@@ -91,6 +91,15 @@ MIGRATE_DATABASE_URL=postgresql://... go -C backend run ./cmd/migrate -allow-rem
 To fix drift, write a new delta migration that recreates the missing or
 changed objects; never edit an applied file.
 
+## Backups
+
+The deploy does not back up the database. `backend/database/scripts/backup.sh`
+writes a daily `pg_dump` on the database host and copies it off-host, and
+`restore-check.sh` proves each week that the newest dump restores. Set them
+up once per host with [BACKUP.md](BACKUP.md), which also holds the restore
+runbook. Take a manual dump before a deploy that carries a risky migration:
+migrations do not roll back.
+
 ## Rollback
 
 - Back to the TS handlers: redeploy with `BACKEND_ENABLED=0`.
