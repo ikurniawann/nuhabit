@@ -71,7 +71,6 @@ const ITEMS_ROUTES: Array<[string, string]> = [
   ["raw-material-bom/[id]", "PUT"],
   ["inventory", "GET"],
   ["inventory/[id]", "GET"],
-  ["inventory/[id]/movements", "GET"],
   ["inventory/movements", "GET"],
   ["inventory/supply", "GET"],
   ["inventory/supply/form-data", "GET"],

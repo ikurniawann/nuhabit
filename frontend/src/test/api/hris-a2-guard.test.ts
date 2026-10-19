@@ -109,7 +109,6 @@ const unauthenticated: [string, () => Promise<RouteModule>, string[]][] = [
   ["leaves/[id]", () => import("@/app/api/hris/leaves/[id]/route"), ["GET", "PUT", "DELETE"]],
   ["leaves/approve", () => import("@/app/api/hris/leaves/approve/route"), ["POST"]],
   ["leaves/attachment", () => import("@/app/api/hris/leaves/attachment/route"), ["POST"]],
-  ["leaves/attachment/[...path]", () => import("@/app/api/hris/leaves/attachment/[...path]/route"), ["GET"]],
   ["leave-balances", () => import("@/app/api/hris/leave-balances/[employee_id]/route"), ["GET", "PUT"]],
   ["logbook", () => import("@/app/api/hris/logbook/route"), ["GET", "POST", "PATCH", "DELETE"]],
   ["me", () => import("@/app/api/hris/me/route"), ["GET"]],

@@ -181,6 +181,16 @@ describe("Go route manifest", () => {
       "/api/member-portal/login",
       "/api/member-portal/password",
       "/api/crm/members/{id}/password",
+      "/api/files",
+      "/api/hris/announcements/cover/{path...}",
+      "/api/hris/attendance/photo/{path...}",
+      "/api/hris/leaves/attachment/{path...}",
+      "/api/accounting/cash-bank/cash-in",
+      "/api/accounting/cash-bank/cash-out",
+      "/api/purchasing/receipts/{path...}",
+      "/api/member-portal/gym/workouts/sessions/{id}",
+      "/api/interview/files/{path...}",
+      "/api/psikotes/files/{path...}",
     ];
     const goNative = (p: string) =>
       goNativePrefixes.some((n) => p === n || p.startsWith(`${n}/`));

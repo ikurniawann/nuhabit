@@ -251,6 +251,18 @@ func TestSetupJournalsAndReports(t *testing.T) {
 	if kpis := dash["kpis"].(map[string]any); kpis["cash_balance"] != 1750.5 || kpis["posted_entries_ytd"] != float64(2) || len(dash["monthly_trend"].([]any)) != 10 {
 		t.Fatalf("dashboard: %v", dash)
 	}
+	// Cash out shares the handler with its own kind and label.
+	out := e.do("POST", "/api/accounting/cash-bank/cash-out", map[string]any{"entry_date": "2026-10-06", "amount": 50, "cash_account_id": cash, "offset_account_id": revenue}, 201)
+	if out["message"] != "Cash Out berhasil dicatat & diposting" || data(out)["entry_no"] != "JE-202610-0003" {
+		t.Fatalf("cash out: %v", out)
+	}
+	if outs := e.do("GET", "/api/accounting/cash-bank/cash-out", nil, 200); outs["meta"].(map[string]any)["total"] != float64(1) {
+		t.Fatalf("cash-out list: %v", outs)
+	}
+	if ins := e.do("GET", "/api/accounting/cash-bank/cash-in", nil, 200); ins["meta"].(map[string]any)["total"] != float64(1) {
+		t.Fatalf("cash-in list after cash out: %v", ins)
+	}
+	e.do("POST", "/api/accounting/cash-bank/cash-out", map[string]any{"entry_date": "2026-10-06", "amount": 0, "cash_account_id": cash, "offset_account_id": revenue}, 400)
 	// LIMIT NaN fails in PostgreSQL like node-pg's (last: it aborts the test tx).
 	if body := e.do("GET", "/api/accounting/cash-bank/cash-in?limit=abc", nil, 400); body["error"] != "Format data tidak valid" {
 		t.Fatalf("NaN limit: %v", body)

@@ -71,6 +71,8 @@ export const GO_BACKEND_PREFIXES: readonly string[] = [
   "/api/share",
   // site (public site content, articles, events)
   "/api/site",
+  // files (the upload tree shared with Next's storage)
+  "/api/files",
 ];
 
 /**

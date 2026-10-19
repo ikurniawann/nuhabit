@@ -1365,6 +1365,11 @@
     "path": "/api/desktop/wallpapers"
   },
   {
+    "module": "files",
+    "method": "GET",
+    "path": "/api/files/{bucket}/{path...}"
+  },
+  {
     "module": "accounting",
     "method": "GET",
     "path": "/api/finance/invoices"
