@@ -133,6 +133,14 @@ func (s productionStock) Issue(ctx context.Context, q database.Querier, in produ
 	return production.IssuedStock{MovementID: got.MovementID, UnitCost: got.UnitCost, WarehouseID: got.WarehouseID}, nil
 }
 
+func (s productionStock) Return(ctx context.Context, q database.Querier, in production.StockReturn) (production.ReturnedStock, error) {
+	got, err := ledger.ReturnFromProduction(ctx, q, ledger.ProductionReturn{
+		RawMaterialID: in.RawMaterialID, Qty: in.Qty, UnitCost: in.UnitCost, WarehouseID: in.WarehouseID, BranchID: in.BranchID,
+		ReturnID: in.ReturnID, ReturnNumber: in.ReturnNumber, UserID: in.UserID,
+	}, s.now())
+	return production.ReturnedStock{MovementID: got.MovementID, WarehouseID: got.WarehouseID}, err
+}
+
 // ReceiveMaterial keys the movement by the batch, so a batch posts once.
 func (s productionStock) ReceiveMaterial(ctx context.Context, q database.Querier, in production.MaterialReceipt) error {
 	return ledger.AddFromProduction(ctx, q, ledger.ProductionOutput{

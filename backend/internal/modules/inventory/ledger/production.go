@@ -159,6 +159,78 @@ func IssueToProduction(ctx context.Context, q database.Querier, in ProductionIss
 	return IssuedStock{MovementID: id, UnitCost: b.unitCost, WarehouseID: b.warehouseID}, nil
 }
 
+// ProductionReturn puts unused issued material back into stock.
+type ProductionReturn struct {
+	RawMaterialID string
+	Qty           float64
+	UnitCost      float64 // the order line's issued average cost
+	// WarehouseID is where it goes back (the issue's warehouse); nil
+	// prefers BranchID, then the largest balance.
+	WarehouseID  *string
+	BranchID     *string
+	ReturnID     string
+	ReturnNumber string
+	UserID       string
+}
+
+// ReturnedStock is the movement a return wrote and where it landed.
+type ReturnedStock struct {
+	MovementID  string
+	WarehouseID *string
+}
+
+// ReturnFromProduction locks the balance the material goes back to
+// (created empty at the warehouse when missing), raises qty_available at
+// the weighted average cost and writes an `in` movement (reference
+// production_return).
+func ReturnFromProduction(ctx context.Context, q database.Querier, in ProductionReturn, now time.Time) (ReturnedStock, error) {
+	sql := `SELECT id::text, qty_available, COALESCE(unit_cost, 0), branch_id::text, warehouse_id::text
+		FROM inventory.inventory WHERE raw_material_id = $1 AND is_active = true`
+	args := []any{in.RawMaterialID}
+	if in.WarehouseID != nil && *in.WarehouseID != "" {
+		sql += ` AND warehouse_id = $2 LIMIT 1 FOR UPDATE`
+		args = append(args, *in.WarehouseID)
+	} else {
+		sql += ` ORDER BY (branch_id IS NOT DISTINCT FROM $2::uuid) DESC, qty_available DESC, created_at ASC LIMIT 1 FOR UPDATE`
+		args = append(args, in.BranchID)
+	}
+	var b balance
+	err := q.QueryRow(ctx, sql, args...).Scan(&b.id, &b.qtyAvailable, &b.unitCost, &b.branchID, &b.warehouseID)
+	switch {
+	case database.IsNoRows(err):
+		loc, lerr := ResolveLocation(ctx, q, in.RawMaterialID)
+		if in.WarehouseID != nil && *in.WarehouseID != "" {
+			loc, lerr = warehouseLocation(ctx, q, *in.WarehouseID)
+		}
+		if lerr != nil {
+			return ReturnedStock{}, lerr
+		}
+		if b.id, err = insertBalance(ctx, q, in.RawMaterialID, 0, 0, in.UnitCost, loc, strOrNil(in.UserID), now, false); err != nil {
+			return ReturnedStock{}, err
+		}
+		b.unitCost, b.branchID, b.warehouseID = in.UnitCost, loc.BranchID, loc.WarehouseID
+	case err != nil:
+		return ReturnedStock{}, err
+	}
+	after := b.qtyAvailable + in.Qty
+	cost := domain.WeightedAverage(b.qtyAvailable, b.unitCost, in.Qty, in.UnitCost)
+	if _, err := q.Exec(ctx, `UPDATE inventory.inventory SET qty_available = $1, unit_cost = $2, last_movement_at = $3,
+		updated_by = $4, updated_at = $3 WHERE id = $5`, kit.N(after), kit.N(cost), now, strOrNil(in.UserID), b.id); err != nil {
+		return ReturnedStock{}, err
+	}
+	id, err := insertMovement(ctx, q, Movement{
+		InventoryID: b.id, RawMaterialID: in.RawMaterialID, Tipe: "in", Jumlah: in.Qty,
+		QtyBefore: b.qtyAvailable, QtyAfter: after, UnitCost: f(in.UnitCost), TotalCost: f(in.Qty * in.UnitCost),
+		BranchID: b.branchID, WarehouseID: b.warehouseID, ReferenceType: "production_return",
+		ReferenceID: s(in.ReturnID), ReferenceNumber: s(in.ReturnNumber),
+		Alasan: s("Pengembalian bahan sisa produksi " + in.ReturnNumber), CreatedBy: strOrNil(in.UserID),
+	})
+	if err != nil {
+		return ReturnedStock{}, err
+	}
+	return ReturnedStock{MovementID: id, WarehouseID: b.warehouseID}, nil
+}
+
 // VariantMovement is one SKU's share of a finished goods receipt.
 type VariantMovement struct {
 	SkuID         string

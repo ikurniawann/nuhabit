@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Layers, PackageCheck, PackageMinus } from "lucide-react";
+import { Layers, PackageCheck, PackageMinus, PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ type ProductionFlowCardProps = {
   busy: boolean;
   batchRoute: (id: string) => string;
   onIssue: () => void;
+  onReturn: () => void;
   onReceive: () => void;
 };
 
@@ -22,7 +23,7 @@ function pct(value: number | null) {
 }
 
 /** Langkah Produksi: keluarkan bahan ke WIP, terima hasil per batch, saldo WIP. */
-export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive }: ProductionFlowCardProps) {
+export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReturn, onReceive }: ProductionFlowCardProps) {
   const { wip } = flow;
   const stats = [
     { label: "Bahan dikeluarkan", value: formatRupiah(wip.issued_cost) },
@@ -58,6 +59,18 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive 
             >
               <PackageMinus className="h-4 w-4" />
               Keluarkan Bahan
+            </Button>
+          )}
+          {flow.can_return && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onReturn}
+              disabled={busy}
+              className="purchasing-secondary-button w-full gap-2 sm:w-auto"
+            >
+              <PackagePlus className="h-4 w-4" />
+              Kembalikan Bahan
             </Button>
           )}
           {flow.can_receive && (
@@ -105,9 +118,14 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive 
                       <p className="text-xs text-gray-500">{recipeUnitNote(m.recipe_qty, m.recipe_satuan, m.satuan)}</p>
                     )}
                   </td>
-                  <td className="py-2 text-right">{formatNumber(m.qty_issued, 4)}</td>
+                  <td className="py-2 text-right">
+                    <p>{formatNumber(m.qty_issued, 4)}</p>
+                    {m.qty_returned > 0 && (
+                      <p className="text-xs text-gray-500">{formatNumber(m.qty_returned, 4)} dikembalikan</p>
+                    )}
+                  </td>
                   <td className="py-2 text-right">{formatNumber(m.qty_remaining, 4)}</td>
-                  <td className="py-2 text-right font-medium">{formatRupiah(m.issued_cost)}</td>
+                  <td className="py-2 text-right font-medium">{formatRupiah(m.issued_cost - m.returned_cost)}</td>
                 </tr>
               ))}
             </tbody>
@@ -127,6 +145,25 @@ export function ProductionFlowCard({ flow, busy, batchRoute, onIssue, onReceive 
                     </p>
                   </div>
                   <span className="font-semibold text-gray-900">{formatRupiah(issue.total_cost)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {flow.returns.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-gray-900">Riwayat Pengembalian</h3>
+            <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+              {flow.returns.map((ret) => (
+                <li key={ret.id} className="flex flex-col gap-1 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900">{ret.nomor_return}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(ret.created_at)} · {ret.lines.map((l) => `${l.nama} ${formatNumber(l.qty, 4)}`).join(", ")}
+                    </p>
+                  </div>
+                  <span className="font-semibold text-gray-900">{formatRupiah(ret.total_cost)}</span>
                 </li>
               ))}
             </ul>

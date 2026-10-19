@@ -21,13 +21,19 @@ import {
   toNumber,
 } from "@/lib/purchasing/production-ui-display";
 import type { ProductionOrderAction } from "@/lib/purchasing/production-ui-types";
-import { useIssueProductionMaterials, useReceiveProductionBatch, useUpdateProductionOrder } from "../mutations";
+import {
+  useIssueProductionMaterials,
+  useReceiveProductionBatch,
+  useReturnProductionMaterials,
+  useUpdateProductionOrder,
+} from "../mutations";
 import { getProductionModuleConfig } from "../production-module";
 import { useProductionFlow, useProductionOrder } from "../queries";
 import { CompleteProductionDialog } from "./complete-production-dialog";
 import { IssueMaterialsDialog } from "./issue-materials-dialog";
 import { ProductionFlowCard } from "./production-flow-card";
 import { ReceiveBatchDialog } from "./receive-batch-dialog";
+import { ReturnMaterialsDialog } from "./return-materials-dialog";
 import { ProductionOrderCostAndBatches, ProductionOrderStats } from "./production-order-cost-cards";
 import { ORDER_ACTION_BUTTON, ProductionOrderMaterialsCard } from "./production-order-materials-card";
 
@@ -40,7 +46,7 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
   const config = getProductionModuleConfig(moduleType);
   const orderId = useParams<{ id: string }>().id;
   const [completeOpen, setCompleteOpen] = useState(false);
-  const [step, setStep] = useState<"issue" | "receive" | null>(null);
+  const [step, setStep] = useState<"issue" | "return" | "receive" | null>(null);
 
   const orderQuery = useProductionOrder(orderId);
   useErrorToast(orderQuery.error, "Gagal memuat detail order produksi");
@@ -48,9 +54,10 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
   const actionMutation = useUpdateProductionOrder();
   const issueMutation = useIssueProductionMaterials();
   const receiveMutation = useReceiveProductionBatch();
+  const returnMutation = useReturnProductionMaterials();
   const order = orderQuery.data ?? null;
   const flow = flowQuery.data ?? null;
-  const stepping = issueMutation.isPending || receiveMutation.isPending;
+  const stepping = issueMutation.isPending || receiveMutation.isPending || returnMutation.isPending;
   const loading = orderQuery.isLoading || orderQuery.isFetching || actionMutation.isPending || stepping;
   // Setelah bahan dikeluarkan bertahap, order hanya selesai lewat Terima Hasil.
   const stepped = !!flow?.stepped;
@@ -241,6 +248,7 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
           busy={loading}
           batchRoute={config.productionBatchRoute}
           onIssue={() => setStep("issue")}
+          onReturn={() => setStep("return")}
           onReceive={() => setStep("receive")}
         />
       )}
@@ -260,6 +268,15 @@ export function ProductionOrderDetailPage({ moduleType = "raw_material" }: { mod
             onClose={() => setStep(null)}
             onSubmit={(payload) =>
               void runStep(() => issueMutation.mutateAsync({ orderId, payload }), "Bahan dikeluarkan ke produksi")
+            }
+          />
+          <ReturnMaterialsDialog
+            flow={flow}
+            open={step === "return"}
+            submitting={stepping}
+            onClose={() => setStep(null)}
+            onSubmit={(payload) =>
+              void runStep(() => returnMutation.mutateAsync({ orderId, payload }), "Bahan dikembalikan ke stok")
             }
           />
           <ReceiveBatchDialog

@@ -44,6 +44,18 @@ func CheckReceipt(status string, issues int, qtyGood, qtyScrap float64) error {
 	return nil
 }
 
+// CheckReturn guards a material return: only a running order holds
+// issued materials to give back.
+func CheckReturn(status string) error {
+	if status != StatusInProgress {
+		return RuleError("Bahan hanya bisa dikembalikan saat order IN_PROGRESS")
+	}
+	return nil
+}
+
+// ReturnNumber is the n-th return of an order: PROD-202610-0001-R01.
+func ReturnNumber(orderNumber string, n int) string { return fmt.Sprintf("%s-R%02d", orderNumber, n) }
+
 // IssueNumber is the n-th issue of an order: PROD-202610-0001-I01.
 func IssueNumber(orderNumber string, n int) string { return fmt.Sprintf("%s-I%02d", orderNumber, n) }
 
@@ -51,12 +63,28 @@ func IssueNumber(orderNumber string, n int) string { return fmt.Sprintf("%s-I%02
 // number the one-shot completion also uses for its single batch.
 func BatchNumber(orderNumber string, n int) string { return fmt.Sprintf("%s-B%02d", orderNumber, n) }
 
-// Line is one material line of an order with what was issued so far.
+// Line is one material line of an order with what was issued and returned
+// so far.
 type Line struct {
-	QtyPlanned float64
-	UnitCost   float64 // planned average cost
-	QtyIssued  float64
-	IssuedCost float64
+	QtyPlanned   float64
+	UnitCost     float64 // planned average cost
+	QtyIssued    float64
+	IssuedCost   float64
+	QtyReturned  float64
+	ReturnedCost float64
+}
+
+// Returnable is the quantity issued and not returned yet.
+func (l Line) Returnable() float64 { return RoundQty(math.Max(0, l.QtyIssued-l.QtyReturned)) }
+
+// ReturnValue values qty going back to stock at the line's issued average
+// cost. Returning everything left takes the rest of the issued value, so
+// the line nets to zero.
+func (l Line) ReturnValue(qty float64) float64 {
+	if qty >= l.Returnable() {
+		return math.Max(0, round2(l.IssuedCost-l.ReturnedCost))
+	}
+	return round2(float64(qty * l.IssuedUnitCost()))
 }
 
 // IssuedUnitCost is the average cost of what was issued, else the planned
@@ -101,7 +129,7 @@ func SplitScrap(earlierScrap, qtyScrap, allowance float64) (normal, abnormal flo
 type ReceiptInput struct {
 	PlannedQty           float64
 	StdMaterialPerUnit   float64
-	IssuedCost           float64 // all issues
+	IssuedCost           float64 // all issues, net of returns
 	ReceivedMaterialCost float64 // material cost of earlier batches
 	ScrapCost            float64 // WIP written off by earlier batches, normal and abnormal material
 	Conversion           float64 // overhead + labor + packaging + waste of the order

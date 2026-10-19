@@ -84,6 +84,25 @@ func (e *ShortageError) Error() string { return "insufficient stock" }
 // ErrNoStock is a material without a stock balance where it was asked.
 var ErrNoStock = errors.New("no stock balance")
 
+// StockReturn puts unused issued material back into stock at the line's
+// issued average cost.
+type StockReturn struct {
+	RawMaterialID string
+	Qty           float64
+	UnitCost      float64
+	WarehouseID   *string // nil: the order's branch first, then the largest balance
+	BranchID      *string
+	ReturnID      string
+	ReturnNumber  string
+	UserID        string
+}
+
+// ReturnedStock is the movement a return wrote and its warehouse.
+type ReturnedStock struct {
+	MovementID  string
+	WarehouseID *string
+}
+
 // MaterialReceipt is a produced raw material (intermediate or WIP) coming
 // into stock, idempotent per batch.
 type MaterialReceipt struct {
@@ -117,6 +136,7 @@ type GoodsReceipt struct {
 type Stock interface {
 	// Issue returns *ShortageError or ErrNoStock when it cannot take qty.
 	Issue(ctx context.Context, q database.Querier, in StockIssue) (IssuedStock, error)
+	Return(ctx context.Context, q database.Querier, in StockReturn) (ReturnedStock, error)
 	ReceiveMaterial(ctx context.Context, q database.Querier, in MaterialReceipt) error
 	ReceiveGoods(ctx context.Context, q database.Querier, in GoodsReceipt) error
 	// WipMaterial is the raw material mirroring a product as WIP, created on

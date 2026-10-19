@@ -935,6 +935,7 @@ func TestProductionJournals(t *testing.T) {
 	e.mapping("PRODUCTION_SCRAP", "INVENTORY", mline("DEBIT", "COGS", cogs, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
 	loss := e.account("5102001", "Kerugian Produksi", "COGS", false)
 	e.mapping("PRODUCTION_ABNORMAL_SCRAP", "INVENTORY", mline("DEBIT", "PRODUCTION_LOSS", loss, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
+	e.mapping("PRODUCTION_MATERIAL_RETURN", "INVENTORY", mline("DEBIT", "INVENTORY", stock, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
 
 	issue, batch := "6f1d5c2e-4444-4a1b-9c1d-000000000001", "6f1d5c2e-4444-4a1b-9c1d-000000000002"
 	issued := production.MaterialsIssued{IssueID: issue, IssueNumber: "PROD-1-I01", OrderID: "6f1d5c2e-4444-4a1b-9c1d-000000000009",
@@ -943,11 +944,17 @@ func TestProductionJournals(t *testing.T) {
 		CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", MaterialCost: 42000, ConversionCost: 4000, ScrapCost: 1500,
 		AbnormalScrapCost: 2550, AbnormalConversionCost: 50}
 	e.publish(production.TopicMaterialsIssued, issue, issued)
+	returned := "6f1d5c2e-4444-4a1b-9c1d-000000000003"
+	e.publish(production.TopicMaterialsReturned, returned, production.MaterialsReturned{ReturnID: returned, ReturnNumber: "PROD-1-R01",
+		OrderID: issued.OrderID, OrderNumber: "PROD-1", CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", Total: 10000})
 	e.publish(production.TopicOutputReceived, batch, received)
 	e.publish(production.TopicOutputReceived, batch, received)
 	e.dispatch()
 	if got, want := e.journals(issue), []string{"PRODUCTION_MATERIAL_ISSUE:DEBIT=70000.00,CREDIT=70000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("issue:\n got %v\nwant %v", got, want)
+	}
+	if got, want := e.journals(returned), []string{"PRODUCTION_MATERIAL_RETURN:DEBIT=10000.00,CREDIT=10000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("return:\n got %v\nwant %v", got, want)
 	}
 	// Abnormal scrap: its conversion part is applied to WIP with the rest,
 	// then 2550 leaves WIP for production loss.

@@ -7,6 +7,8 @@ import {
   initReceiptForm,
   issueShortages,
   previewReceipt,
+  returnErrors,
+  returnValue,
   splitScrap,
   variantRemainder,
 } from "./production-flow";
@@ -93,5 +95,23 @@ describe("receipt form", () => {
         { pos_sku_id: "s2", qty: 0.5 },
       ],
     });
+  });
+});
+
+describe("return form", () => {
+  const m = material({ qty_issued: 3, qty_returnable: 3, issued_cost: 10000 });
+  it("values a part at the issued average and the rest at what is left", () => {
+    expect(returnValue({ m1: "1" }, [m])).toBe(3333.33);
+    expect(returnValue({ m1: "3" }, [m])).toBe(10000);
+    expect(returnValue({ m1: "2" }, [{ ...m, qty_returned: 1, qty_returnable: 2, returned_cost: 3333.33 }])).toBe(6666.67);
+    expect(returnErrors({ m1: "3.5" }, [m])).toEqual(["m1"]);
+  });
+
+  it("sends returns only with the final batch", () => {
+    const f = flow({ materials: [m] });
+    const form = { ...initReceiptForm(f), qtyGood: "1", returns: { m1: "1" } };
+    expect(buildReceiptPayload(form, false).returns).toEqual([{ material_id: "m1", qty: 1 }]);
+    expect(buildReceiptPayload({ ...form, final: false }, false).returns).toBeUndefined();
+    expect(canSubmitReceipt({ ...form, returns: { m1: "9" } }, false, [m])).toBe(false);
   });
 });

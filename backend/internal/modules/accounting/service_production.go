@@ -8,7 +8,8 @@ import (
 	"nuhabit/backend/internal/platform/database"
 )
 
-// Production journals: materials into WIP on an issue; conversion cost into
+// Production journals: materials into WIP on an issue, back out of WIP on
+// a return; conversion cost into
 // WIP, output out of WIP into inventory, scrap out of WIP into COGS and
 // abnormal scrap out of WIP into production loss on a receipt. Each journal is keyed by its document, so a redelivered event
 // finds the entry it already wrote.
@@ -22,6 +23,17 @@ func (s *Service) PostProductionIssue(ctx context.Context, db database.DB, in pr
 	return PostFromMapping(ctx, db, MappingPost{CompanyID: in.CompanyID, UserID: in.UserID, EventCode: "PRODUCTION_MATERIAL_ISSUE",
 		DocumentType: "production_issue", DocumentID: in.IssueID, EntryDate: in.EntryDate, Amounts: domain.Amounts{"TOTAL": amount},
 		SourceModule: "INVENTORY", Description: "Pengeluaran bahan " + in.IssueNumber + " ke produksi " + in.OrderNumber})
+}
+
+// PostProductionReturn posts PRODUCTION_MATERIAL_RETURN.
+func (s *Service) PostProductionReturn(ctx context.Context, db database.DB, in production.MaterialsReturned) (domain.PostResult, error) {
+	amount := domain.Round2(in.Total)
+	if !(amount > 0) {
+		return domain.PostResult{Status: domain.PostSkipped, Reason: "Nilai pengembalian bahan 0"}, nil
+	}
+	return PostFromMapping(ctx, db, MappingPost{CompanyID: in.CompanyID, UserID: in.UserID, EventCode: "PRODUCTION_MATERIAL_RETURN",
+		DocumentType: "production_return", DocumentID: in.ReturnID, EntryDate: in.EntryDate, Amounts: domain.Amounts{"TOTAL": amount},
+		SourceModule: "INVENTORY", Description: "Pengembalian bahan " + in.ReturnNumber + " dari produksi " + in.OrderNumber})
 }
 
 // PostProductionReceipt posts the conversion, output and scrap journals of

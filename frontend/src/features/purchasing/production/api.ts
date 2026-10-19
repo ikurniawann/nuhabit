@@ -8,6 +8,7 @@ import type {
   ProductionWipList,
   buildIssuePayload,
   buildReceiptPayload,
+  buildReturnPayload,
 } from "@/lib/purchasing/production-flow";
 import type { RecipeOwner, RecipeSettings } from "@/lib/purchasing/production-recipe-settings";
 import type { RawMaterialWithStock } from "@/types/purchasing";
@@ -179,6 +180,15 @@ export async function issueProductionMaterials(
   payload: ReturnType<typeof buildIssuePayload>
 ): Promise<string | undefined> {
   const json = await sendJson(`${PRODUCTION_URL}/orders/${orderId}/issues`, "POST", payload, "Gagal mengeluarkan bahan");
+  return json.message;
+}
+
+/** Kembalikan bahan sisa ke stok; mengembalikan pesan sukses dari API. */
+export async function returnProductionMaterials(
+  orderId: string,
+  payload: ReturnType<typeof buildReturnPayload>
+): Promise<string | undefined> {
+  const json = await sendJson(`${PRODUCTION_URL}/orders/${orderId}/returns`, "POST", payload, "Gagal mengembalikan bahan");
   return json.message;
 }
 

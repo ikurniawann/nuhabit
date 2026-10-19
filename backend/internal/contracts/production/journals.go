@@ -20,6 +20,23 @@ type MaterialsIssued struct {
 	Total       float64 `json:"total"`
 }
 
+// TopicMaterialsReturned fires when unused issued materials go back to
+// stock. Accounting posts PRODUCTION_MATERIAL_RETURN (debit inventory,
+// credit WIP).
+const TopicMaterialsReturned = "production.materials.returned"
+
+// MaterialsReturned is the TopicMaterialsReturned payload.
+type MaterialsReturned struct {
+	ReturnID     string  `json:"return_id"`
+	ReturnNumber string  `json:"return_number"`
+	OrderID      string  `json:"order_id"`
+	OrderNumber  string  `json:"order_number"`
+	CompanyID    *string `json:"company_id"`
+	UserID       string  `json:"user_id"`
+	EntryDate    string  `json:"entry_date"`
+	Total        float64 `json:"total"`
+}
+
 // TopicOutputReceived fires when a batch is received. Accounting posts
 // PRODUCTION_CONVERSION_COST (debit WIP, credit applied overhead) for
 // ConversionCost + AbnormalConversionCost, PRODUCTION_OUTPUT_RECEIPT (debit

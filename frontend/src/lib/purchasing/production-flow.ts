@@ -35,9 +35,13 @@ export type ProductionFlowMaterial = {
   satuan: string;
   qty_planned: number;
   qty_issued: number;
+  qty_returned: number;
+  /** Sudah dikeluarkan dan belum dikembalikan. */
+  qty_returnable: number;
   qty_remaining: number;
   unit_cost: number;
   issued_cost: number;
+  returned_cost: number;
   qty_onhand: number;
   /** Baris resep dalam satuannya sendiri; null untuk order sebelum konversi satuan. */
   recipe_qty: number | null;
@@ -52,6 +56,16 @@ export type ProductionIssue = {
   catatan: string | null;
   created_at: string;
   lines: { raw_material_id: string; kode: string; nama: string; qty: number; unit_cost: number; total_cost: number }[];
+};
+
+/** Pengembalian bahan sisa ke stok (<order>-R01, ...). */
+export type ProductionReturn = {
+  id: string;
+  nomor_return: string;
+  total_cost: number;
+  catatan: string | null;
+  created_at: string;
+  lines: ProductionIssue["lines"];
 };
 
 export type ProductionBatch = {
@@ -82,6 +96,7 @@ export type ProductionBatch = {
 
 export type ProductionWipBalance = {
   issued_cost: number;
+  returned_cost: number;
   received_material_cost: number;
   scrap_cost: number;
   abnormal_scrap_cost: number;
@@ -106,10 +121,13 @@ export type ProductionFlow = {
   order: ProductionFlowOrder;
   materials: ProductionFlowMaterial[];
   issues: ProductionIssue[];
+  returns: ProductionReturn[];
   batches: ProductionBatch[];
   wip: ProductionWipBalance;
   can_issue: boolean;
   can_receive: boolean;
+  /** Order berjalan dan masih ada bahan keluar yang bisa dikembalikan. */
+  can_return: boolean;
   /** true setelah bahan dikeluarkan bertahap: order selesai lewat Terima Hasil. */
   stepped: boolean;
   variant_skus: ProductionSku[];
@@ -199,6 +217,50 @@ export function issueShortages(rows: IssueRow[], materials: ProductionFlowMateri
     .map((row) => row.materialId);
 }
 
+/* ── Kembalikan bahan ────────────────────────────────────────────────── */
+
+/** Jumlah kembali per baris order (id baris → isian). */
+export type ReturnRows = Record<string, string>;
+
+/** Baris yang masih bisa dikembalikan. */
+export function returnableMaterials(materials: ProductionFlowMaterial[]): ProductionFlowMaterial[] {
+  return materials.filter((m) => m.qty_returnable > 0);
+}
+
+/** Baris yang melebihi jumlah yang bisa dikembalikan. */
+export function returnErrors(rows: ReturnRows, materials: ProductionFlowMaterial[]): string[] {
+  return materials.filter((m) => num(rows[m.id] ?? "") > m.qty_returnable + 1e-9).map((m) => m.id);
+}
+
+/** Baris payload: hanya qty > 0. */
+export function returnLines(rows: ReturnRows) {
+  return Object.entries(rows)
+    .map(([material_id, qty]) => ({ material_id, qty: roundQty(num(qty)) }))
+    .filter((line) => line.qty > 0);
+}
+
+/**
+ * Perkiraan nilai kembali: harga rata-rata saat bahan dikeluarkan.
+ * Mengembalikan seluruh sisa mengambil sisa nilai baris itu.
+ */
+export function returnValue(rows: ReturnRows, materials: ProductionFlowMaterial[]): number {
+  return round2(
+    materials.reduce((sum, m) => {
+      const qty = num(rows[m.id] ?? "");
+      if (qty <= 0 || m.qty_issued <= 0) return sum;
+      if (qty >= m.qty_returnable) return sum + Math.max(0, m.issued_cost - m.returned_cost);
+      return sum + round2((qty * m.issued_cost) / m.qty_issued);
+    }, 0)
+  );
+}
+
+/** Payload POST .../returns. */
+export function buildReturnPayload(rows: ReturnRows, catatan: string) {
+  const note = catatan.trim();
+  const lines = returnLines(rows);
+  return note ? { lines, catatan: note } : { lines };
+}
+
 /* ── Terima hasil ────────────────────────────────────────────────────── */
 
 export type ReceiptForm = {
@@ -211,6 +273,8 @@ export type ReceiptForm = {
   packaging: string;
   waste: string;
   variants: Record<string, string>;
+  /** Bahan sisa yang dikembalikan bersama batch terakhir. */
+  returns: ReturnRows;
 };
 
 export function initReceiptForm(flow: ProductionFlow): ReceiptForm {
@@ -225,6 +289,7 @@ export function initReceiptForm(flow: ProductionFlow): ReceiptForm {
     packaging: String(order.packaging_cost),
     waste: String(order.waste_cost),
     variants: Object.fromEntries(flow.variant_skus.map((sku) => [sku.id, ""])),
+    returns: {},
   };
 }
 
@@ -239,10 +304,11 @@ export function variantRemainder(form: ReceiptForm): number {
   return Math.round((num(form.qtyGood) - split) * 100) / 100;
 }
 
-export function canSubmitReceipt(form: ReceiptForm, variantRequired: boolean): boolean {
+export function canSubmitReceipt(form: ReceiptForm, variantRequired: boolean, materials: ProductionFlowMaterial[] = []): boolean {
   const good = num(form.qtyGood);
   const scrap = num(form.qtyScrap);
   if (good < 0 || scrap < 0 || good + scrap <= 0) return false;
+  if (form.final && returnErrors(form.returns, materials).length > 0) return false;
   if (variantRequired && good > 0 && Math.abs(variantRemainder(form)) > 0.01) return false;
   return true;
 }
@@ -261,6 +327,8 @@ export function buildReceiptPayload(form: ReceiptForm, variantRequired: boolean)
     payload.packaging_cost = num(form.packaging);
     payload.waste_cost = num(form.waste);
   }
+  const returns = form.final ? returnLines(form.returns) : [];
+  if (returns.length > 0) payload.returns = returns;
   if (variantRequired && num(form.qtyGood) > 0) {
     payload.variant_output = Object.entries(form.variants)
       .map(([pos_sku_id, qty]) => ({ pos_sku_id, qty: num(qty) }))
@@ -286,7 +354,10 @@ export function splitScrap(wip: ProductionWipBalance, qtyScrap: number) {
  * Scrap abnormal dihitung seperti satu unit hasil baik dan dibebankan.
  */
 export function previewReceipt(flow: ProductionFlow, form: ReceiptForm) {
-  const { wip, order } = flow;
+  const { order } = flow;
+  // Bahan sisa yang ikut dikembalikan keluar dari WIP sebelum batch terakhir dihitung.
+  const returned = form.final ? returnValue(form.returns, flow.materials) : 0;
+  const wip = { ...flow.wip, wip_value: Math.max(0, round2(flow.wip.wip_value - returned)) };
   const good = num(form.qtyGood);
   const qtyScrap = num(form.qtyScrap);
   const { normal, abnormal } = splitScrap(wip, qtyScrap);

@@ -33,6 +33,7 @@ func (h *Handler) Routes() []module.Route {
 		route("GET /api/production/bom/explode", h.explode),
 		route("GET /api/production/orders/{id}/flow", h.flow),
 		route("POST /api/production/orders/{id}/issues", h.issue),
+		route("POST /api/production/orders/{id}/returns", h.returnMaterials),
 		route("POST /api/production/orders/{id}/receipts", h.receive),
 		route("GET /api/production/wip", h.wip),
 		route("GET /api/production/batches", h.batches),
@@ -145,10 +146,10 @@ func (h *Handler) issue(w http.ResponseWriter, r *http.Request) error {
 	return httpx.DataMessage(w, http.StatusCreated, res, res.Message)
 }
 
-func parseIssue(r *http.Request) (IssueInput, error) {
-	f := validate.New(validate.ReadBody(r))
-	var in IssueInput
-	f.List("lines", validate.Rule{}, 200, func(sub *validate.Form, i int, v any) {
+// materialLines reads [{ material_id, qty, warehouse_id? }] under key.
+func materialLines(f *validate.Form, key string, rule validate.Rule) []IssueLineInput {
+	var lines []IssueLineInput
+	f.List(key, rule, 200, func(sub *validate.Form, i int, v any) {
 		item := sub.Item(i, v)
 		var l IssueLineInput
 		if id := item.UUID("material_id", validate.Rule{}); id != nil {
@@ -158,8 +159,14 @@ func parseIssue(r *http.Request) (IssueInput, error) {
 			l.Qty = domain.RoundQty(*q)
 		}
 		l.WarehouseID = item.UUID("warehouse_id", validate.Rule{Optional: true, Nullable: true})
-		in.Lines = append(in.Lines, l)
+		lines = append(lines, l)
 	})
+	return lines
+}
+
+func parseIssue(r *http.Request) (IssueInput, error) {
+	f := validate.New(validate.ReadBody(r))
+	in := IssueInput{Lines: materialLines(f, "lines", validate.Rule{})}
 	in.Catatan = optionalText(f, "catatan")
 	if err := f.Err("Validation failed"); err != nil {
 		return in, err
@@ -171,10 +178,38 @@ func parseIssue(r *http.Request) (IssueInput, error) {
 }
 
 /*
+POST /api/production/orders/{id}/returns
+
+	{ lines: [{ material_id, qty, warehouse_id? }], catatan? }
+*/
+func (h *Handler) returnMaterials(w http.ResponseWriter, r *http.Request) error {
+	u, scope, err := h.writer(r)
+	if err != nil {
+		return err
+	}
+	id, err := pathID(r, errOrderNotFound.Message)
+	if err != nil {
+		return err
+	}
+	f := validate.New(validate.ReadBody(r))
+	in := ReturnInput{Lines: materialLines(f, "lines", validate.Rule{})}
+	in.Catatan = optionalText(f, "catatan")
+	if err := f.Err("Validation failed"); err != nil {
+		return err
+	}
+	res, err := h.svc.Return(r.Context(), scope, id, u.ID, in)
+	if err != nil {
+		return err
+	}
+	return httpx.DataMessage(w, http.StatusCreated, res, res.Message)
+}
+
+/*
 POST /api/production/orders/{id}/receipts
 
 	{ qty_good, qty_scrap?, final?, catatan?, variant_output?: [{ pos_sku_id, qty }],
-	  overhead_cost?, labor_cost?, packaging_cost?, waste_cost? }
+	  overhead_cost?, labor_cost?, packaging_cost?, waste_cost?,
+	  returns?: [{ material_id, qty, warehouse_id? }] (final receipt only) }
 */
 func (h *Handler) receive(w http.ResponseWriter, r *http.Request) error {
 	u, scope, err := h.writer(r)
@@ -223,6 +258,7 @@ func parseReceipt(r *http.Request) (ReceiptInput, error) {
 	in.Labor = f.Num("labor_cost", validate.Rule{Optional: true}, nonNegative)
 	in.Packaging = f.Num("packaging_cost", validate.Rule{Optional: true}, nonNegative)
 	in.Waste = f.Num("waste_cost", validate.Rule{Optional: true}, nonNegative)
+	in.Returns = materialLines(f, "returns", validate.Rule{Optional: true})
 	return in, f.Err("Validation failed")
 }
 

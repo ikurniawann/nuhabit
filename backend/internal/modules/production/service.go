@@ -45,8 +45,8 @@ type Order struct {
 // Conversion is the order's overhead, labor, packaging and waste cost.
 func (o Order) Conversion() float64 { return o.Overhead + o.Labor + o.Packaging + o.Waste }
 
-// MaterialLine is one planned material with what was issued so far, in
-// the material's stock unit. RecipeQty, RecipeUnitID and UnitFactor keep
+// MaterialLine is one planned material with what was issued and returned
+// so far, in the material's stock unit. RecipeQty, RecipeUnitID and UnitFactor keep
 // the recipe line it came from; they are nil on orders created before
 // recipe units were converted.
 type MaterialLine struct {
@@ -55,13 +55,16 @@ type MaterialLine struct {
 	UnitCost          float64
 	QtyIssued         float64
 	IssuedCost        float64
+	QtyReturned       float64
+	ReturnedCost      float64
 	RecipeQty         *float64
 	RecipeUnitID      *string
 	UnitFactor        *float64
 }
 
 func (l MaterialLine) domain() domain.Line {
-	return domain.Line{QtyPlanned: l.QtyPlanned, UnitCost: l.UnitCost, QtyIssued: l.QtyIssued, IssuedCost: l.IssuedCost}
+	return domain.Line{QtyPlanned: l.QtyPlanned, UnitCost: l.UnitCost, QtyIssued: l.QtyIssued, IssuedCost: l.IssuedCost,
+		QtyReturned: l.QtyReturned, ReturnedCost: l.ReturnedCost}
 }
 
 // Issue is one material issue.
@@ -73,7 +76,16 @@ type Issue struct {
 	Lines      []IssueLine
 }
 
-// IssueLine is one material of an issue.
+// Return is one material return (the issue's mirror).
+type Return struct {
+	ID, Number string
+	TotalCost  float64
+	Catatan    *string
+	CreatedAt  time.Time
+	Lines      []IssueLine
+}
+
+// IssueLine is one material of an issue or a return.
 type IssueLine struct {
 	MaterialLineID, RawMaterialID string
 	Qty, UnitCost, TotalCost      float64
@@ -122,7 +134,7 @@ type WipRow struct {
 	ItemKode, ItemNama                      string
 	PlannedQty                              float64
 	StartedAt                               *time.Time
-	IssuedCost                              float64
+	IssuedCost, ReturnedCost                float64
 	LastIssueAt                             time.Time
 	ReceivedMaterialCost, ScrapCost         float64
 	AbnormalMaterialCost                    float64
@@ -167,6 +179,10 @@ type Repository interface {
 	InsertIssueLine(ctx context.Context, q database.Querier, issueID string, l IssueLine) error
 	SetIssueTotal(ctx context.Context, q database.Querier, issueID string, total float64) error
 	MarkIssued(ctx context.Context, q database.Querier, orderID, userID string, start bool, now time.Time) error
+	Returns(ctx context.Context, q database.Querier, orderID string) ([]Return, error)
+	InsertReturn(ctx context.Context, q database.Querier, orderID, number string, catatan *string, userID string) (Return, error)
+	InsertReturnLine(ctx context.Context, q database.Querier, returnID string, l IssueLine) error
+	SetReturnTotal(ctx context.Context, q database.Querier, returnID string, total float64) error
 	InsertBatch(ctx context.Context, q database.Querier, o *Order, b Batch, userID string) (Batch, error)
 	InsertVariants(ctx context.Context, q database.Querier, orderID, batchID, userID string, rows []domain.Variant) error
 	Variants(ctx context.Context, q database.Querier, batchID string) ([]domain.Variant, error)
@@ -427,6 +443,10 @@ func (s *Service) flow(ctx context.Context, q database.Querier, o *Order) (*Flow
 	if err != nil {
 		return nil, err
 	}
+	returns, err := s.repo.Returns(ctx, q, o.ID)
+	if err != nil {
+		return nil, err
+	}
 	batches, err := s.repo.Batches(ctx, q, o.ID)
 	if err != nil {
 		return nil, err
@@ -459,7 +479,7 @@ func (s *Service) flow(ctx context.Context, q database.Querier, o *Order) (*Flow
 	if err != nil {
 		return nil, err
 	}
-	return buildFlow(o, lines, issues, batches, materials, units, skus, tolerance), nil
+	return buildFlow(o, lines, issues, returns, batches, materials, units, skus, tolerance), nil
 }
 
 // owner is the recipe an order makes.
@@ -627,16 +647,159 @@ func label(m Material) string {
 	return m.Kode + " " + m.Nama
 }
 
+/* ── return ──────────────────────────────────────────────────────────── */
+
+// ReturnInput is POST /api/production/orders/{id}/returns: order lines and
+// quantities (stock units) to give back, and where (nil = the warehouse of
+// the line's last issue).
+type ReturnInput struct {
+	Lines   []IssueLineInput
+	Catatan *string
+}
+
+// ReturnResult is the return written and the order's flow after it.
+type ReturnResult struct {
+	Return  ReturnView `json:"return"`
+	Flow    *FlowView  `json:"flow"`
+	Message string     `json:"-"`
+}
+
+// Return gives unused issued materials back to stock and out of WIP.
+func (s *Service) Return(ctx context.Context, scope *ps.Scope, orderID, userID string, in ReturnInput) (*ReturnResult, error) {
+	var res *ReturnResult
+	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
+		o, err := s.order(ctx, tx, scope, orderID, true)
+		if err != nil {
+			return err
+		}
+		ret, err := s.returnMaterials(ctx, tx, o, userID, in)
+		if err != nil {
+			return err
+		}
+		if o, err = s.repo.Order(ctx, tx, o.ID, false); err != nil {
+			return err
+		}
+		flow, err := s.flow(ctx, tx, o)
+		if err != nil {
+			return err
+		}
+		materials := map[string]Material{}
+		for _, m := range flow.Materials {
+			materials[m.RawMaterialID] = Material{Kode: m.Kode, Nama: m.Nama}
+		}
+		res = &ReturnResult{Return: returnView(ret, materials), Flow: flow,
+			Message: "Bahan dikembalikan ke stok (" + ret.Number + "), nilai " + pdfgen.Rupiah(ret.TotalCost)}
+		return nil
+	})
+	return res, err
+}
+
+// returnMaterials writes a return on a locked order: each line at most what
+// was issued and not returned, valued at the line's issued average cost.
+func (s *Service) returnMaterials(ctx context.Context, tx pgx.Tx, o *Order, userID string, in ReturnInput) (Return, error) {
+	if err := domain.CheckReturn(o.Status); err != nil {
+		return Return{}, rule(err)
+	}
+	if len(in.Lines) == 0 {
+		return Return{}, httpx.BadRequest("Pilih minimal satu bahan untuk dikembalikan")
+	}
+	lines, err := s.repo.Lines(ctx, tx, o.ID)
+	if err != nil {
+		return Return{}, err
+	}
+	issues, err := s.repo.Issues(ctx, tx, o.ID)
+	if err != nil {
+		return Return{}, err
+	}
+	// The warehouse a line's material last left from is where it goes back.
+	lastWarehouse := map[string]*string{}
+	for _, is := range issues {
+		for _, l := range is.Lines {
+			lastWarehouse[l.MaterialLineID] = l.WarehouseID
+		}
+	}
+	byID := map[string]MaterialLine{}
+	var ids []string
+	for _, l := range lines {
+		byID[l.ID] = l
+		ids = append(ids, l.RawMaterialID)
+	}
+	materials, err := s.ports.Catalog.Materials(ctx, tx, ids)
+	if err != nil {
+		return Return{}, err
+	}
+	seen := map[string]bool{}
+	for _, l := range in.Lines {
+		line, ok := byID[l.MaterialLineID]
+		switch {
+		case !ok:
+			return Return{}, httpx.BadRequest("Bahan tidak ada di order ini")
+		case seen[l.MaterialLineID]:
+			return Return{}, httpx.BadRequest("Bahan yang sama muncul dua kali")
+		case l.Qty > line.domain().Returnable():
+			return Return{}, httpx.BadRequest("Jumlah " + label(materials[line.RawMaterialID]) + " yang dikembalikan melebihi yang sudah dikeluarkan. Sisa " +
+				pdfgen.Thousands(line.domain().Returnable()))
+		}
+		seen[l.MaterialLineID] = true
+	}
+	existing, err := s.repo.Returns(ctx, tx, o.ID)
+	if err != nil {
+		return Return{}, err
+	}
+	ret, err := s.repo.InsertReturn(ctx, tx, o.ID, domain.ReturnNumber(o.Number, len(existing)+1), in.Catatan, userID)
+	if err != nil {
+		return Return{}, err
+	}
+	total := 0.0
+	for _, l := range in.Lines {
+		line := byID[l.MaterialLineID]
+		value := line.domain().ReturnValue(l.Qty)
+		unit := round2(value / l.Qty)
+		warehouse := l.WarehouseID
+		if warehouse == nil {
+			warehouse = lastWarehouse[line.ID]
+		}
+		got, err := s.ports.Stock.Return(ctx, tx, StockReturn{RawMaterialID: line.RawMaterialID, Qty: l.Qty, UnitCost: unit,
+			WarehouseID: warehouse, BranchID: o.BranchID, ReturnID: ret.ID, ReturnNumber: ret.Number, UserID: userID})
+		if err != nil {
+			return Return{}, err
+		}
+		rl := IssueLine{MaterialLineID: line.ID, RawMaterialID: line.RawMaterialID, Qty: l.Qty, UnitCost: unit, TotalCost: value,
+			MovementID: &got.MovementID, WarehouseID: got.WarehouseID}
+		if err := s.repo.InsertReturnLine(ctx, tx, ret.ID, rl); err != nil {
+			return Return{}, err
+		}
+		ret.Lines = append(ret.Lines, rl)
+		total += value
+	}
+	ret.TotalCost = round2(total)
+	if err := s.repo.SetReturnTotal(ctx, tx, ret.ID, ret.TotalCost); err != nil {
+		return Return{}, err
+	}
+	if err := s.repo.MarkIssued(ctx, tx, o.ID, userID, false, s.now()); err != nil {
+		return Return{}, err
+	}
+	if err := outbox.Publish(ctx, tx, contracts.TopicMaterialsReturned, ret.ID, contracts.MaterialsReturned{
+		ReturnID: ret.ID, ReturnNumber: ret.Number, OrderID: o.ID, OrderNumber: o.Number, CompanyID: o.CompanyID,
+		UserID: userID, EntryDate: s.entryDate(), Total: ret.TotalCost,
+	}); err != nil {
+		return Return{}, err
+	}
+	return ret, nil
+}
+
 /* ── receipt ─────────────────────────────────────────────────────────── */
 
 // ReceiptInput is POST /api/production/orders/{id}/receipts. The conversion
-// costs replace the order's on the final receipt only.
+// costs replace the order's on the final receipt only; so do Returns, the
+// unused materials that go back to stock before the final batch is costed.
 type ReceiptInput struct {
 	QtyGood, QtyScrap                 float64
 	Final                             bool
 	Catatan                           *string
 	Variants                          []domain.Variant
 	Overhead, Labor, Packaging, Waste *float64
+	Returns                           []IssueLineInput
 }
 
 // ReceiptResult is the batch written and the order's flow after it.
@@ -671,6 +834,14 @@ func (s *Service) Receive(ctx context.Context, scope *ps.Scope, orderID, userID 
 		if err := domain.CheckReceipt(o.Status, len(issues), in.QtyGood, in.QtyScrap); err != nil {
 			return rule(err)
 		}
+		if len(in.Returns) > 0 {
+			if !in.Final {
+				return httpx.BadRequest("Bahan sisa dikembalikan bersama batch terakhir atau lewat Kembalikan Bahan")
+			}
+			if _, err := s.returnMaterials(ctx, tx, o, userID, ReturnInput{Lines: in.Returns}); err != nil {
+				return err
+			}
+		}
 		lines, err := s.repo.Lines(ctx, tx, o.ID)
 		if err != nil {
 			return err
@@ -693,7 +864,7 @@ func (s *Service) Receive(ctx context.Context, scope *ps.Scope, orderID, userID 
 		issued := 0.0
 		for i, l := range lines {
 			dl[i] = l.domain()
-			issued += l.IssuedCost
+			issued += l.IssuedCost - l.ReturnedCost
 		}
 		tolerance, err := s.tolerance(ctx, tx, o)
 		if err != nil {

@@ -218,6 +218,25 @@ func TestAbnormalScrap(t *testing.T) {
 	}
 }
 
+// Returns go back at the issued average cost; the last one takes what is
+// left of the issued value.
+func TestReturns(t *testing.T) {
+	if CheckReturn(StatusReleased) == nil || CheckReturn(StatusInProgress) != nil {
+		t.Fatal("return guard")
+	}
+	if ReturnNumber("PROD-202610-0001", 1) != "PROD-202610-0001-R01" {
+		t.Fatal("number")
+	}
+	l := Line{QtyPlanned: 3, QtyIssued: 3, IssuedCost: 10000}
+	if l.Returnable() != 3 || l.ReturnValue(1) != 3333.33 {
+		t.Fatalf("first return %v %v", l.Returnable(), l.ReturnValue(1))
+	}
+	l.QtyReturned, l.ReturnedCost = 1, 3333.33
+	if l.Returnable() != 2 || l.ReturnValue(2) != 6666.67 {
+		t.Fatalf("last return %v", l.ReturnValue(2))
+	}
+}
+
 func TestYieldAndAllocate(t *testing.T) {
 	if y := Yield(45, 5); *y != 90 {
 		t.Fatalf("yield %v", *y)

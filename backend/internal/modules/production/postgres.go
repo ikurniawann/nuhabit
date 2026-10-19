@@ -45,22 +45,37 @@ func (Postgres) Order(ctx context.Context, q database.Querier, id string, lock b
 
 func (Postgres) Lines(ctx context.Context, q database.Querier, orderID string) ([]MaterialLine, error) {
 	rows, err := q.Query(ctx, `SELECT id::text, raw_material_id::text, qty_planned::float8, unit_cost::float8,
-		qty_issued::float8, issued_cost::float8, recipe_qty::float8, recipe_satuan_id::text, unit_factor::float8
+		qty_issued::float8, issued_cost::float8, qty_returned::float8, returned_cost::float8,
+		recipe_qty::float8, recipe_satuan_id::text, unit_factor::float8
 		FROM manufacturing.production_order_materials WHERE production_order_id = $1 ORDER BY created_at, id`, orderID)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (MaterialLine, error) {
 		var l MaterialLine
-		err := r.Scan(&l.ID, &l.RawMaterialID, &l.QtyPlanned, &l.UnitCost, &l.QtyIssued, &l.IssuedCost,
+		err := r.Scan(&l.ID, &l.RawMaterialID, &l.QtyPlanned, &l.UnitCost, &l.QtyIssued, &l.IssuedCost, &l.QtyReturned, &l.ReturnedCost,
 			&l.RecipeQty, &l.RecipeUnitID, &l.UnitFactor)
 		return l, err
 	})
 }
 
 func (Postgres) Issues(ctx context.Context, q database.Querier, orderID string) ([]Issue, error) {
-	rows, err := q.Query(ctx, `SELECT id::text, nomor_issue, total_cost::float8, catatan, created_at
-		FROM manufacturing.production_issues WHERE production_order_id = $1 ORDER BY created_at, nomor_issue`, orderID)
+	return documents(ctx, q, orderID, "production_issues", "nomor_issue", "production_issue_lines", "issue_id")
+}
+
+func (Postgres) Returns(ctx context.Context, q database.Querier, orderID string) ([]Return, error) {
+	docs, err := documents(ctx, q, orderID, "production_returns", "nomor_return", "production_return_lines", "return_id")
+	out := make([]Return, len(docs))
+	for i, d := range docs {
+		out[i] = Return(d)
+	}
+	return out, err
+}
+
+// documents reads the issues or returns of an order with their lines.
+func documents(ctx context.Context, q database.Querier, orderID, table, numberCol, lineTable, docCol string) ([]Issue, error) {
+	rows, err := q.Query(ctx, `SELECT id::text, `+numberCol+`, total_cost::float8, catatan, created_at
+		FROM manufacturing.`+table+` WHERE production_order_id = $1 ORDER BY created_at, `+numberCol, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -73,10 +88,10 @@ func (Postgres) Issues(ctx context.Context, q database.Querier, orderID string) 
 	if err != nil || len(issues) == 0 {
 		return issues, err
 	}
-	rows, err = q.Query(ctx, `SELECT l.issue_id::text, l.production_order_material_id::text, l.raw_material_id::text,
+	rows, err = q.Query(ctx, `SELECT l.`+docCol+`::text, l.production_order_material_id::text, l.raw_material_id::text,
 		l.qty::float8, l.unit_cost::float8, l.total_cost::float8, l.inventory_movement_id::text, l.warehouse_id::text
-		FROM manufacturing.production_issue_lines l
-		JOIN manufacturing.production_issues i ON i.id = l.issue_id
+		FROM manufacturing.`+lineTable+` l
+		JOIN manufacturing.`+table+` i ON i.id = l.`+docCol+`
 		WHERE i.production_order_id = $1 ORDER BY l.created_at, l.id`, orderID)
 	if err != nil {
 		return nil, err
@@ -143,16 +158,43 @@ func (Postgres) InsertIssueLine(ctx context.Context, q database.Querier, issueID
 	return err
 }
 
+func (Postgres) InsertReturn(ctx context.Context, q database.Querier, orderID, number string, catatan *string, userID string) (Return, error) {
+	r := Return{Number: number, Catatan: catatan, Lines: []IssueLine{}}
+	err := q.QueryRow(ctx, `INSERT INTO manufacturing.production_returns (production_order_id, nomor_return, catatan, created_by)
+		VALUES ($1, $2, $3, $4) RETURNING id::text, created_at`, orderID, number, catatan, null(userID)).Scan(&r.ID, &r.CreatedAt)
+	return r, err
+}
+
+// InsertReturnLine writes the line and adds it to its order line's running
+// qty_returned and returned_cost.
+func (Postgres) InsertReturnLine(ctx context.Context, q database.Querier, returnID string, l IssueLine) error {
+	if _, err := q.Exec(ctx, `INSERT INTO manufacturing.production_return_lines (return_id, production_order_material_id,
+		raw_material_id, qty, unit_cost, total_cost, inventory_movement_id, warehouse_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, returnID, l.MaterialLineID, l.RawMaterialID, l.Qty, l.UnitCost, l.TotalCost,
+		l.MovementID, l.WarehouseID); err != nil {
+		return err
+	}
+	_, err := q.Exec(ctx, `UPDATE manufacturing.production_order_materials
+		SET qty_returned = qty_returned + $2, returned_cost = returned_cost + $3, updated_at = now() WHERE id = $1`,
+		l.MaterialLineID, l.Qty, l.TotalCost)
+	return err
+}
+
+func (Postgres) SetReturnTotal(ctx context.Context, q database.Querier, returnID string, total float64) error {
+	_, err := q.Exec(ctx, `UPDATE manufacturing.production_returns SET total_cost = $2 WHERE id = $1`, returnID, total)
+	return err
+}
+
 func (Postgres) SetIssueTotal(ctx context.Context, q database.Querier, issueID string, total float64) error {
 	_, err := q.Exec(ctx, `UPDATE manufacturing.production_issues SET total_cost = $2 WHERE id = $1`, issueID, total)
 	return err
 }
 
-// MarkIssued refreshes the actual material cost from the issued totals and
-// starts a released order.
+// MarkIssued refreshes the actual material cost from the issued totals net
+// of returns and starts a released order.
 func (Postgres) MarkIssued(ctx context.Context, q database.Querier, orderID, userID string, start bool, now time.Time) error {
 	_, err := q.Exec(ctx, `UPDATE manufacturing.production_orders SET
-		actual_material_cost = (SELECT COALESCE(sum(issued_cost), 0) FROM manufacturing.production_order_materials
+		actual_material_cost = (SELECT COALESCE(sum(issued_cost - returned_cost), 0) FROM manufacturing.production_order_materials
 			WHERE production_order_id = $1),
 		status = CASE WHEN $2 THEN 'IN_PROGRESS' ELSE status END,
 		started_at = CASE WHEN $2 THEN COALESCE(started_at, $3) ELSE started_at END,
@@ -310,13 +352,15 @@ func (Postgres) WipOrders(ctx context.Context, q database.Querier, f ListFilter)
 	where := f.where(&args, "v.nomor_produksi", "v.item_nama", "v.item_kode")
 	rows, err := q.Query(ctx, `SELECT v.id::text, v.nomor_produksi, v.status, v.production_context, v.output_type,
 		COALESCE(v.item_kode, ''), COALESCE(v.item_nama, ''), v.planned_qty::float8, v.started_at,
-		iss.issued::float8, iss.last_issue_at,
+		iss.issued::float8, COALESCE(ret.returned, 0)::float8, iss.last_issue_at,
 		COALESCE(b.material, 0)::float8, COALESCE(b.scrap, 0)::float8, COALESCE(b.abnormal, 0)::float8, COALESCE(b.conversion, 0)::float8,
 		COALESCE(b.good, 0)::float8, COALESCE(b.qty_scrap, 0)::float8, COALESCE(b.batches, 0)::int, b.last_receipt_at,
 		(v.overhead_cost + v.labor_cost + v.packaging_cost + v.waste_cost)::float8
 		FROM v_production_orders v
 		JOIN (SELECT production_order_id, sum(total_cost) AS issued, max(created_at) AS last_issue_at
 		        FROM manufacturing.production_issues GROUP BY production_order_id) iss ON iss.production_order_id = v.id
+		LEFT JOIN (SELECT production_order_id, sum(total_cost) AS returned
+		        FROM manufacturing.production_returns GROUP BY production_order_id) ret ON ret.production_order_id = v.id
 		LEFT JOIN (SELECT production_order_id, sum(material_cost) AS material, sum(scrap_cost) AS scrap,
 		        sum(abnormal_material_cost) AS abnormal, sum(conversion_cost + abnormal_conversion_cost) AS conversion, sum(qty_produced) AS good, sum(qty_scrap) AS qty_scrap,
 		        count(*) AS batches, max(created_at) AS last_receipt_at
@@ -328,7 +372,7 @@ func (Postgres) WipOrders(ctx context.Context, q database.Querier, f ListFilter)
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (WipRow, error) {
 		var w WipRow
 		err := r.Scan(&w.ID, &w.Number, &w.Status, &w.Context, &w.OutputType, &w.ItemKode, &w.ItemNama, &w.PlannedQty,
-			&w.StartedAt, &w.IssuedCost, &w.LastIssueAt, &w.ReceivedMaterialCost, &w.ScrapCost, &w.AbnormalMaterialCost, &w.ConversionApplied,
+			&w.StartedAt, &w.IssuedCost, &w.ReturnedCost, &w.LastIssueAt, &w.ReceivedMaterialCost, &w.ScrapCost, &w.AbnormalMaterialCost, &w.ConversionApplied,
 			&w.QtyGood, &w.QtyScrap, &w.Batches, &w.LastReceiptAt, &w.ConversionCost)
 		return w, err
 	})

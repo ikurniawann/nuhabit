@@ -3821,6 +3821,11 @@
   },
   {
     "module": "production",
+    "method": "POST",
+    "path": "/api/production/orders/{id}/returns"
+  },
+  {
+    "module": "production",
     "method": "GET",
     "path": "/api/production/recipe-settings"
   },

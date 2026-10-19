@@ -17,6 +17,8 @@ export const MOVEMENT_REFERENCE_LABELS: Record<string, string> = {
   scrap: "Scrap / write-off",
   production: "Pemakaian produksi",
   production_wip: "Hasil produksi",
+  production_issue: "Pengeluaran ke produksi",
+  production_return: "Pengembalian dari produksi",
   sales_realization: "Realisasi penjualan",
   purchase_return: "Retur pembelian",
   import: "Impor / saldo awal",

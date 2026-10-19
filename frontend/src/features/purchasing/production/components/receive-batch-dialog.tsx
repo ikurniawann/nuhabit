@@ -22,10 +22,13 @@ import {
   canSubmitReceipt,
   initReceiptForm,
   previewReceipt,
+  returnValue,
+  returnableMaterials,
   variantRemainder,
   type ProductionFlow,
   type ReceiptForm,
 } from "@/lib/purchasing/production-flow";
+import { ReturnLinesTable } from "./return-lines-table";
 
 const INPUT_CLASS = "h-9 text-sm focus:border-pink-400 focus:ring-2 focus:ring-pink-100";
 
@@ -58,6 +61,7 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
   const variantRequired = flow.variant_skus.length > 0;
   const preview = previewReceipt(flow, form);
   const remainder = variantRemainder(form);
+  const returned = form.final ? returnValue(form.returns, flow.materials) : 0;
   const set = <K extends keyof ReceiptForm>(field: K, value: ReceiptForm[K]) =>
     setForm((current) => ({ ...current, [field]: value }));
 
@@ -145,6 +149,16 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
           </div>
         )}
 
+        {form.final && returnableMaterials(flow.materials).length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-gray-900">Bahan sisa dikembalikan ke stok</p>
+            <p className="text-xs text-gray-500">
+              Isi bahan yang tidak terpakai. Bahan ini kembali ke stok dan tidak masuk HPP batch terakhir.
+            </p>
+            <ReturnLinesTable materials={flow.materials} rows={form.returns} onChange={(rows) => set("returns", rows)} />
+          </div>
+        )}
+
         {variantRequired && (
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-900">Rincian per varian</p>
@@ -216,6 +230,12 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
               <dd className="font-semibold text-red-700">{formatRupiah(preview.scrap)}</dd>
             </div>
           )}
+          {returned > 0 && (
+            <div className="flex justify-between gap-3 sm:col-span-2">
+              <dt className="text-gray-500">Bahan sisa kembali ke stok</dt>
+              <dd className="font-medium">{formatRupiah(returned)}</dd>
+            </div>
+          )}
           <div className="flex justify-between gap-3 sm:col-span-2">
             <dt className="font-medium text-gray-900">Perkiraan HPP / unit</dt>
             <dd className="font-semibold text-emerald-700">{formatRupiah(preview.hpp)}</dd>
@@ -235,7 +255,7 @@ function ReceiveBatchPanel({ flow, submitting, onClose, onSubmit }: Omit<Receive
         <Button
           type="button"
           onClick={() => onSubmit(buildReceiptPayload(form, variantRequired))}
-          disabled={submitting || !canSubmitReceipt(form, variantRequired)}
+          disabled={submitting || !canSubmitReceipt(form, variantRequired, flow.materials)}
           className="purchasing-main-button w-full gap-2 sm:w-auto"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PackageCheck className="h-4 w-4" />}

@@ -9,6 +9,7 @@ import {
   deleteAdditionalCost,
   issueProductionMaterials,
   receiveProductionBatch,
+  returnProductionMaterials,
   saveRecipeSettings,
   updateProductionOrder,
 } from "./api";
@@ -42,6 +43,15 @@ export const useIssueProductionMaterials = () => {
   return useMutation({
     mutationFn: ({ orderId, payload }: { orderId: string; payload: Parameters<typeof issueProductionMaterials>[1] }) =>
       issueProductionMaterials(orderId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
+  });
+};
+
+export const useReturnProductionMaterials = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, payload }: { orderId: string; payload: Parameters<typeof returnProductionMaterials>[1] }) =>
+      returnProductionMaterials(orderId, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
   });
 };

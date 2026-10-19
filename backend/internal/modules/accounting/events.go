@@ -67,6 +67,10 @@ func (s *Service) subscribe(bus *outbox.Bus) {
 		r, err := s.PostProductionIssue(ctx, tx, in)
 		return []domain.PostResult{r}, err
 	}))
+	bus.Subscribe(production.TopicMaterialsReturned, "accounting.journal-production-return", handle(s, func(ctx context.Context, tx pgx.Tx, in production.MaterialsReturned) ([]domain.PostResult, error) {
+		r, err := s.PostProductionReturn(ctx, tx, in)
+		return []domain.PostResult{r}, err
+	}))
 	bus.Subscribe(production.TopicOutputReceived, "accounting.journal-production-receipt", handle(s, func(ctx context.Context, tx pgx.Tx, in production.OutputReceived) ([]domain.PostResult, error) {
 		return s.PostProductionReceipt(ctx, tx, in)
 	}))

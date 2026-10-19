@@ -126,6 +126,7 @@ batches by creation time for the batch list.
 | GET | `/api/production/bom/explode?product_id=&raw_material_id=&qty=` | read | multi-level explosion |
 | GET | `/api/production/orders/{id}/flow` | read | order, material lines with issued and remaining quantity, issues, batches, WIP summary |
 | POST | `/api/production/orders/{id}/issues` | update | issue materials |
+| POST | `/api/production/orders/{id}/returns` | update | return unused issued materials to stock |
 | POST | `/api/production/orders/{id}/receipts` | update | receive a batch (good, scrap, final, variants, conversion overrides on the final one) |
 | GET | `/api/production/wip?production_context=&search=` | read | open orders with WIP value |
 | GET | `/api/production/batches?production_context=&order_id=&search=&limit=` | read | batches with cost and yield |
@@ -250,6 +251,39 @@ editors through `GET/PUT /api/production/recipe-settings`.
   batch detail and the Langkah Produksi batch table show the abnormal
   quantity and cost.
 
+### 2. Return unused materials
+
+`POST /api/production/orders/{id}/returns` (`{ lines: [{ material_id, qty,
+warehouse_id? }], catatan? }`, update guard) gives issued materials back to
+stock while the order is IN_PROGRESS. The final receipt takes the same
+lines as `returns` and processes them first, in its transaction, so
+materials left over at the end leave WIP before the last batch is costed.
+
+- A line returns at most what was issued and not returned yet
+  (`qty_issued - qty_returned`), in stock units.
+- The value is the line's issued average cost (`issued_cost / qty_issued`)
+  times the quantity; returning everything left takes the rest of the
+  line's issued value, so the line nets to zero (`domain.Line.ReturnValue`).
+- Stock moves through the stock port: `ledger.ReturnFromProduction` locks
+  the balance of the warehouse the line last left from (or the requested
+  one; an empty balance is created when missing), raises it at the weighted
+  average cost and writes an `in` movement with reference type
+  `production_return` (label "Pengembalian dari produksi").
+- Returns are numbered `<order>-R01`, `-R02`
+  (`manufacturing.production_returns` and `production_return_lines`, delta
+  `20261020110000_production_material_returns.sql`); the order lines keep
+  `qty_returned` and `returned_cost`, and `actual_material_cost` is issued
+  minus returned.
+- WIP = issued − returned − received material − written off. The standard
+  material cost per unit still uses the issued average cost.
+- Event `production.materials.returned` posts `PRODUCTION_MATERIAL_RETURN`
+  (debit `INVENTORY`, credit `WIP`); the mapping copies the inventory account
+  from `PURCHASE_GRN`.
+- UI: "Kembalikan Bahan" on the Langkah Produksi card opens a dialog with
+  the returnable quantity per line and the value going back; Terima Hasil
+  shows the same inputs when the batch is final. The card lists returns
+  under "Riwayat Pengembalian" and the returned quantity per line.
+
 ### 4. Orders count materials in the stock unit
 
 A BOM line keeps `qty_required` in its own unit (`satuan_id`). Production
@@ -267,7 +301,7 @@ Production reaches it through the catalog port (`RecipeFactors`, backed by
   stock unit, and the recipe line as `recipe_qty`, `recipe_satuan_id` and
   `unit_factor` (delta `20261020090000_production_stock_units.sql`). The
   planned material cost is stock quantity × stock average cost.
-- Issue, WIP and costing work on those stock quantities.
+- Issue, return, WIP and costing work on those stock quantities.
 - The explosion returns `qty_per_parent` and `qty_required` in the stock
   unit (`satuan`) plus `recipe_qty_per`, `recipe_satuan` and `unit_factor`.
 - The COGS breakdown adds `stock_factor` and `satuan_stok`, so the new
@@ -310,7 +344,5 @@ deleted.
 
 ## Open questions
 
-2. Returning unused issued materials to stock: not built. A final receipt
-   leaves the remaining WIP on the batch cost.
 3. Which COA accounts hold WIP and applied overhead?
 5. Should the explosion create sub-orders for intermediate shortages?

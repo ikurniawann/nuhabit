@@ -384,6 +384,67 @@ func TestAbnormalScrap(t *testing.T) {
 	}
 }
 
+// Unused materials go back to stock at the issued average cost, while the
+// order runs and with its final receipt, and leave the WIP.
+func TestReturnMaterials(t *testing.T) {
+	e := setup(t)
+	kg := e.Unit("KG", "Kilogram")
+	sfx := e.org.BranchID[:4]
+	flour := e.RawMaterial(e.org, "RRF-"+sfx, "Tepung", kg, "", 1)
+	e.Stock(e.org, flour, e.org.MainID, 10, 10000)
+	product := e.Product(e.org, e.org.Stall1ID, "PRR-"+sfx, "Roti", 5000)
+	id, lines := e.order("RELEASED", "product", "FINISHED_GOOD", product, 10, 1000, flour, 5, 10000)
+	base := "/api/production/orders/" + id
+	ret := func(qty float64) map[string]any {
+		return map[string]any{"lines": []any{map[string]any{"material_id": lines[0], "qty": qty}}}
+	}
+	e.Fail("POST", base+"/returns", ret(1), http.StatusBadRequest, "Bahan hanya bisa dikembalikan saat order IN_PROGRESS")
+	e.Call("POST", base+"/issues", ret(5), http.StatusCreated)
+
+	e.Fail("POST", base+"/returns", ret(6), http.StatusBadRequest,
+		"Jumlah RRF-"+sfx+" Tepung yang dikembalikan melebihi yang sudah dikeluarkan. Sisa 5")
+	e.Fail("POST", base+"/returns", map[string]any{"lines": []any{}}, http.StatusBadRequest, "Pilih minimal satu bahan untuk dikembalikan")
+	out := e.Call("POST", base+"/returns", ret(1), http.StatusCreated)
+	r1 := obj(obj(out["data"])["return"])
+	flow := obj(obj(out["data"])["flow"])
+	m := obj(list(flow["materials"])[0])
+	w := obj(flow["wip"])
+	if n := r1["nomor_return"].(string); n[len(n)-3:] != "R01" || r1["total_cost"] != 10000.0 || w["returned_cost"] != 10000.0 ||
+		w["wip_value"] != 40000.0 || m["qty_returnable"] != 4.0 || m["qty_remaining"] != 1.0 || flow["can_return"] != true ||
+		len(list(flow["returns"])) != 1 {
+		t.Fatalf("return %v flow %v", r1, flow)
+	}
+	if got := e.num(`SELECT qty_available FROM inventory.inventory WHERE raw_material_id = $1`, flour); got != 6 {
+		t.Fatalf("flour back in stock %v", got)
+	}
+	if got := e.num(`SELECT count(*) FROM inventory.inventory_movements WHERE reference_type = 'production_return' AND reference_id = $1`,
+		r1["id"]); got != 1 {
+		t.Fatalf("return movements %v", got)
+	}
+	if e.events(contracts.TopicMaterialsReturned, r1["id"].(string)) != 1 {
+		t.Fatal("return event")
+	}
+	if got := e.num(`SELECT actual_material_cost FROM manufacturing.production_orders WHERE id = $1`, id); got != 40000 {
+		t.Fatalf("actual material cost %v", got)
+	}
+
+	// Returns ride along with the final receipt only.
+	e.Fail("POST", base+"/receipts", map[string]any{"qty_good": 2, "returns": ret(1)["lines"]}, http.StatusBadRequest,
+		"Bahan sisa dikembalikan bersama batch terakhir atau lewat Kembalikan Bahan")
+	out = e.Call("POST", base+"/receipts", map[string]any{"qty_good": 10, "final": true, "returns": ret(1)["lines"]}, http.StatusCreated)
+	b := obj(obj(out["data"])["batch"])
+	flow = obj(obj(out["data"])["flow"])
+	// 3 kg used: 30000 material + 1000 conversion over 10 loaves.
+	if b["material_cost"] != 30000.0 || b["hpp_per_unit"] != 3100.0 || len(list(flow["returns"])) != 2 || obj(flow["wip"])["wip_value"] != 0.0 ||
+		flow["can_return"] != false {
+		t.Fatalf("final with return %v flow %v", b, flow)
+	}
+	if got := e.num(`SELECT qty_available FROM inventory.inventory WHERE raw_material_id = $1`, flour); got != 7 {
+		t.Fatalf("flour after the final return %v", got)
+	}
+	e.Fail("POST", base+"/returns", ret(1), http.StatusBadRequest, "Bahan hanya bisa dikembalikan saat order IN_PROGRESS")
+}
+
 // The explosion, the order and the issue count in the stock unit: a recipe
 // of 0.25 kg flour per loaf, flour stocked in grams.
 func TestStockUnits(t *testing.T) {
