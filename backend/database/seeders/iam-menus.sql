@@ -312,4 +312,7 @@ WHERE deleted_at IS NULL
     'items.raw-material.inventory.scrap', 'pos.catalog.channel-prices',
     'pos.loyalty.wallet', 'pos.loyalty.wallet.packages', 'pos.loyalty.wallet.payments',
     'pos.loyalty.wallet.settings', 'settings.audit', 'shop.wholesale', 'shop.settings',
-    'site', 'site.articles', 'site.content', 'site.events');
+    'site', 'site.articles', 'site.content', 'site.events',
+    -- Production module (19 Oct 2026): WIP and batch cost pages.
+    'items.product.production.wip', 'items.product.production.batches',
+    'items.raw-material.production.wip', 'items.raw-material.production.batches');

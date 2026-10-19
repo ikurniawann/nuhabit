@@ -28,6 +28,8 @@ export const GO_BACKEND_PREFIXES: readonly string[] = [
   // procurement, inventory
   "/api/purchasing",
   "/api/inventory",
+  // production (issue, WIP, batch receipts and cost)
+  "/api/production",
   // hris, payroll, recruitment
   "/api/hris",
   "/api/master",

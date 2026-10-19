@@ -12,6 +12,7 @@ var (
 	ItemsInventory          = []string{"items.product.inventory", "items.raw-material.inventory"}
 	ItemsApproval           = []string{"items.product.approval", "items.raw-material.approval"}
 	ItemsReports            = []string{"items.reports"}
+	ItemsProduction         = []string{"items.product.production", "items.raw-material.production"}
 	Pos                     = []string{"pos"}
 	PosOperations           = []string{"pos.operations", "pos.cashier.central"}
 	PosMemberBills          = []string{"pos.operations.member-bills"}
@@ -91,6 +92,7 @@ var ByKey = map[string][]string{
 	"itemsInventory":          ItemsInventory,
 	"itemsApproval":           ItemsApproval,
 	"itemsReports":            ItemsReports,
+	"itemsProduction":         ItemsProduction,
 	"pos":                     Pos,
 	"posOperations":           PosOperations,
 	"posMemberBills":          PosMemberBills,

@@ -57,6 +57,9 @@ export const RM_ROUTES = {
   productionRecipes: `${RM_BASE}/production/recipes`,
   productionHub: `${RM_BASE}/production`,
   productionOrder: (id: string) => `${RM_BASE}/production/orders/${id}`,
+  productionWip: `${RM_BASE}/production/wip`,
+  productionBatches: `${RM_BASE}/production/batches`,
+  productionBatch: (id: string) => `${RM_BASE}/production/batches/${id}`,
 } as const;
 
 export const PRODUCT_ROUTES = {
@@ -109,6 +112,9 @@ export const PRODUCT_ROUTES = {
   productionRecipes: `${PRODUCT_BASE}/production/recipes`,
   productionHub: `${PRODUCT_BASE}/production`,
   productionOrder: (id: string) => `${PRODUCT_BASE}/production/orders/${id}`,
+  productionWip: `${PRODUCT_BASE}/production/wip`,
+  productionBatches: `${PRODUCT_BASE}/production/batches`,
+  productionBatch: (id: string) => `${PRODUCT_BASE}/production/batches/${id}`,
 } as const;
 
 /**

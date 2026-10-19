@@ -10,6 +10,10 @@ import {
   listRecipeItems,
   getProductionOrder,
   getRawMaterialBomEditorData,
+  getProductionFlow,
+  getProductionWip,
+  listProductionBatches,
+  getProductionBatch,
 } from "./api";
 import { productionQueryKeys } from "./query-keys";
 
@@ -48,6 +52,32 @@ export const useProductionOrder = (id: string) =>
   useQuery({
     queryKey: productionQueryKeys.order(id),
     queryFn: () => getProductionOrder(id),
+    enabled: !!id,
+  });
+
+export const useProductionFlow = (orderId: string) =>
+  useQuery({
+    queryKey: productionQueryKeys.flow(orderId),
+    queryFn: () => getProductionFlow(orderId),
+    enabled: !!orderId,
+  });
+
+export const useProductionWip = (moduleType: PurchasingModuleType, search: string) =>
+  useQuery({
+    queryKey: productionQueryKeys.wip(contextKey(moduleType), search),
+    queryFn: () => getProductionWip(contextKey(moduleType), search),
+  });
+
+export const useProductionBatches = (moduleType: PurchasingModuleType, search: string) =>
+  useQuery({
+    queryKey: productionQueryKeys.batches(contextKey(moduleType), search),
+    queryFn: () => listProductionBatches(contextKey(moduleType), search),
+  });
+
+export const useProductionBatch = (id: string) =>
+  useQuery({
+    queryKey: productionQueryKeys.batch(id),
+    queryFn: () => getProductionBatch(id),
     enabled: !!id,
   });
 

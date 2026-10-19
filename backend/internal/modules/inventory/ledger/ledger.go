@@ -101,15 +101,23 @@ func num(f *float64) any {
 
 // InsertMovement writes one movement row.
 func InsertMovement(ctx context.Context, q database.Querier, m Movement) error {
-	_, err := q.Exec(ctx, `INSERT INTO inventory.inventory_movements (
+	_, err := insertMovement(ctx, q, m)
+	return err
+}
+
+// insertMovement writes one movement row and returns its id.
+func insertMovement(ctx context.Context, q database.Querier, m Movement) (string, error) {
+	var id string
+	err := q.QueryRow(ctx, `INSERT INTO inventory.inventory_movements (
 		inventory_id, raw_material_id, tipe, jumlah, qty_before, qty_after, unit_cost, total_cost,
 		branch_id, warehouse_id, reference_type, reference_id, reference_number, return_id,
 		alasan, catatan, batch_number, expiry_date, batch_id, created_by, updated_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+		RETURNING id::text`,
 		m.InventoryID, m.RawMaterialID, m.Tipe, kit.N(m.Jumlah), kit.N(m.QtyBefore), kit.N(m.QtyAfter), num(m.UnitCost), num(m.TotalCost),
 		m.BranchID, m.WarehouseID, m.ReferenceType, m.ReferenceID, m.ReferenceNumber, m.ReturnID,
-		m.Alasan, m.Catatan, m.BatchNumber, m.ExpiryDate, m.BatchID, m.CreatedBy, m.UpdatedBy)
-	return err
+		m.Alasan, m.Catatan, m.BatchNumber, m.ExpiryDate, m.BatchID, m.CreatedBy, m.UpdatedBy).Scan(&id)
+	return id, err
 }
 
 func f(v float64) *float64 { return &v }

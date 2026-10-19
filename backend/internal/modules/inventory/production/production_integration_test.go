@@ -231,3 +231,23 @@ func TestAdditionalCostsInCogs(t *testing.T) {
 		t.Fatalf("cogs after delete %v", c)
 	}
 }
+
+// An order the production module issued materials for no longer completes
+// or cancels in one shot.
+func TestSteppedOrderRefusesOneShot(t *testing.T) {
+	e := kittest.Setup(t, kittest.Menus, nil)
+	org := e.NewOrg()
+	e.Mount(production.Routes(e.Env, production.Ports{Pos: &fakePos{stock: map[string]float64{}}, Receipts: fakeReceipts{}}))
+	kg := e.Unit("KG", "Kilogram")
+	rm := e.RawMaterial(org, "RMS-"+org.BranchID[:4], "Beras", kg, "", 1)
+	e.Stock(org, rm, org.MainID, 10, 12000)
+	product := e.Product(org, org.Stall1ID, "PRS-"+org.BranchID[:4], "Nasi", 5000)
+	e.Exec(`INSERT INTO manufacturing.bom_items (product_id, raw_material_id, qty_required) VALUES ($1, $2, 1)`, product, rm)
+	out := e.Call("POST", "/api/purchasing/production/orders", map[string]any{"product_id": product, "planned_qty": 2}, http.StatusCreated)
+	id := obj(out["data"])["id"].(string)
+	e.Exec(`UPDATE manufacturing.production_orders SET status = 'IN_PROGRESS' WHERE id = $1`, id)
+	e.Exec(`INSERT INTO manufacturing.production_issues (production_order_id, nomor_issue) VALUES ($1::uuid, 'ISS-'||$1::text)`, id)
+	msg := "Bahan order ini sudah dikeluarkan bertahap. Selesaikan lewat Terima Hasil di Langkah Produksi."
+	e.Fail("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": "complete"}, http.StatusBadRequest, msg)
+	e.Fail("PATCH", "/api/purchasing/production/orders/"+id, map[string]any{"action": "cancel"}, http.StatusBadRequest, msg)
+}

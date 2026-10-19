@@ -11,4 +11,10 @@ export const productionQueryKeys = {
   order: (id: string) => ["purchasing", "production", "order", id] as const,
   additionalCosts: (referenceType: string) =>
     ["purchasing", "production", "additional-costs", referenceType] as const,
+  flow: (orderId: string) => ["purchasing", "production", "flow", orderId] as const,
+  wip: (context: "product" | "raw_material", search: string) =>
+    ["purchasing", "production", "wip", context, search] as const,
+  batches: (context: "product" | "raw_material", search: string) =>
+    ["purchasing", "production", "batches", context, search] as const,
+  batch: (id: string) => ["purchasing", "production", "batch", id] as const,
 };

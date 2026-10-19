@@ -191,6 +191,7 @@ describe("Go route manifest", () => {
       "/api/member-portal/gym/workouts/sessions/{id}",
       "/api/interview/files/{path...}",
       "/api/psikotes/files/{path...}",
+      "/api/production",
     ];
     const goNative = (p: string) =>
       goNativePrefixes.some((n) => p === n || p.startsWith(`${n}/`));

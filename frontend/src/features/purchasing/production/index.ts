@@ -7,3 +7,6 @@ export { ProductionPage } from "./components/production-page";
 export { ProductionRecipesPage } from "./components/production-recipes-page";
 export { ProductionOrderDetailPage } from "./components/production-order-detail-page";
 export { RawMaterialBomEditorPage } from "./components/raw-material-bom-editor-page";
+export { ProductionWipPage } from "./components/production-wip-page";
+export { ProductionBatchesPage } from "./components/production-batches-page";
+export { ProductionBatchDetailPage } from "./components/production-batch-detail-page";

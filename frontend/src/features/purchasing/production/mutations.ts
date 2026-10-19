@@ -3,7 +3,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AdditionalCostPayload } from "@/lib/purchasing/cogs-additional-cost-ui";
 import type { CreateProductionOrderPayload } from "./types";
-import { createAdditionalCost, createProductionOrder, deleteAdditionalCost, updateProductionOrder } from "./api";
+import {
+  createAdditionalCost,
+  createProductionOrder,
+  deleteAdditionalCost,
+  issueProductionMaterials,
+  receiveProductionBatch,
+  updateProductionOrder,
+} from "./api";
 import { productionQueryKeys } from "./query-keys";
 
 export const useCreateProductionOrder = () => {
@@ -25,6 +32,25 @@ export const useUpdateProductionOrder = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: productionQueryKeys.all });
     },
+  });
+};
+
+/** Keluarkan bahan dan terima hasil mengubah order, stok dan WIP: seluruh cache produksi disegarkan. */
+export const useIssueProductionMaterials = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, payload }: { orderId: string; payload: Parameters<typeof issueProductionMaterials>[1] }) =>
+      issueProductionMaterials(orderId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
+  });
+};
+
+export const useReceiveProductionBatch = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orderId, payload }: { orderId: string; payload: Parameters<typeof receiveProductionBatch>[1] }) =>
+      receiveProductionBatch(orderId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: productionQueryKeys.all }),
   });
 };
 

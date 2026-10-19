@@ -15,6 +15,7 @@ import (
 	"nuhabit/backend/internal/contracts/inventory"
 	"nuhabit/backend/internal/contracts/payroll"
 	"nuhabit/backend/internal/contracts/possales"
+	"nuhabit/backend/internal/contracts/production"
 	"nuhabit/backend/internal/contracts/storedvalue"
 	acct "nuhabit/backend/internal/modules/accounting"
 	"nuhabit/backend/internal/platform/module"
@@ -918,6 +919,40 @@ func TestPayrollMappingsFromChartAndCompanySplit(t *testing.T) {
 
 // A landed cost batch posts PURCHASE_LANDED_COST for what went into stock
 // and what was expensed, and the reversal for what came out, once per batch.
+// Production: an issue moves stock value into WIP; a batch applies its
+// conversion cost to WIP, moves output into stock and writes scrap off to
+// COGS. A redelivery finds the entries already written.
+func TestProductionJournals(t *testing.T) {
+	e := setup(t)
+	stock := e.account("1301001", "Persediaan", "ASSET", false)
+	wip := e.account("1302001", "Barang Dalam Proses", "ASSET", false)
+	cogs := e.account("5101001", "HPP", "COGS", false)
+	applied := e.account("5201001", "Overhead Produksi Dibebankan", "EXPENSE", false)
+	e.fiscal2026()
+	e.mapping("PRODUCTION_MATERIAL_ISSUE", "INVENTORY", mline("DEBIT", "WIP", wip, "TOTAL"), mline("CREDIT", "INVENTORY", stock, "TOTAL"))
+	e.mapping("PRODUCTION_CONVERSION_COST", "INVENTORY", mline("DEBIT", "WIP", wip, "TOTAL"), mline("CREDIT", "OVERHEAD_APPLIED", applied, "TOTAL"))
+	e.mapping("PRODUCTION_OUTPUT_RECEIPT", "INVENTORY", mline("DEBIT", "INVENTORY", stock, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
+	e.mapping("PRODUCTION_SCRAP", "INVENTORY", mline("DEBIT", "COGS", cogs, "TOTAL"), mline("CREDIT", "WIP", wip, "TOTAL"))
+
+	issue, batch := "6f1d5c2e-4444-4a1b-9c1d-000000000001", "6f1d5c2e-4444-4a1b-9c1d-000000000002"
+	issued := production.MaterialsIssued{IssueID: issue, IssueNumber: "PROD-1-I01", OrderID: "6f1d5c2e-4444-4a1b-9c1d-000000000009",
+		OrderNumber: "PROD-1", CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", Total: 70000}
+	received := production.OutputReceived{BatchID: batch, BatchNumber: "PROD-1-B01", OrderID: issued.OrderID, OrderNumber: "PROD-1",
+		CompanyID: &e.company, UserID: e.staff.UserID, EntryDate: "2026-10-05", MaterialCost: 42000, ConversionCost: 4000, ScrapCost: 1500}
+	e.publish(production.TopicMaterialsIssued, issue, issued)
+	e.publish(production.TopicOutputReceived, batch, received)
+	e.publish(production.TopicOutputReceived, batch, received)
+	e.dispatch()
+	if got, want := e.journals(issue), []string{"PRODUCTION_MATERIAL_ISSUE:DEBIT=70000.00,CREDIT=70000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("issue:\n got %v\nwant %v", got, want)
+	}
+	want := []string{"PRODUCTION_CONVERSION_COST:DEBIT=4000.00,CREDIT=4000.00",
+		"PRODUCTION_OUTPUT_RECEIPT:DEBIT=46000.00,CREDIT=46000.00", "PRODUCTION_SCRAP:DEBIT=1500.00,CREDIT=1500.00"}
+	if got := e.journals(batch); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("batch:\n got %v\nwant %v", got, want)
+	}
+}
+
 func TestLandedCostJournals(t *testing.T) {
 	e := setup(t)
 	stock := e.account("1301001", "Persediaan Bahan Baku", "ASSET", false)

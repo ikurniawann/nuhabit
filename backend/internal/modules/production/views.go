@@ -1,0 +1,349 @@
+package production
+
+import (
+	"math"
+
+	"nuhabit/backend/internal/modules/production/domain"
+	"nuhabit/backend/internal/platform/httpx"
+)
+
+// Response shapes. Money is rupiah with 2 decimals, quantities are numbers
+// (not numeric strings: these routes are new and have no TS twin).
+
+// ItemView is the item an explosion makes.
+type ItemView struct {
+	ID     string `json:"id"`
+	Kode   string `json:"kode"`
+	Nama   string `json:"nama"`
+	Satuan string `json:"satuan"`
+	Type   string `json:"type"` // product | raw_material
+}
+
+// ExplodeView is GET /api/production/bom/explode.
+type ExplodeView struct {
+	Item ItemView `json:"item"`
+	domain.Explosion
+}
+
+// OrderView is the order header of the flow.
+type OrderView struct {
+	ID                  string        `json:"id"`
+	NomorProduksi       string        `json:"nomor_produksi"`
+	Status              string        `json:"status"`
+	ProductionContext   string        `json:"production_context"`
+	OutputType          string        `json:"output_type"`
+	ProductID           *string       `json:"product_id"`
+	OutputRawMaterialID *string       `json:"output_raw_material_id"`
+	ItemKode            string        `json:"item_kode"`
+	ItemNama            string        `json:"item_nama"`
+	PlannedQty          float64       `json:"planned_qty"`
+	ActualQty           float64       `json:"actual_qty"`
+	PlannedMaterialCost float64       `json:"planned_material_cost"`
+	OverheadCost        float64       `json:"overhead_cost"`
+	LaborCost           float64       `json:"labor_cost"`
+	PackagingCost       float64       `json:"packaging_cost"`
+	WasteCost           float64       `json:"waste_cost"`
+	ConversionCost      float64       `json:"conversion_cost"`
+	HppPerUnit          float64       `json:"hpp_per_unit"`
+	StartedAt           *httpx.JSTime `json:"started_at"`
+	CompletedAt         *httpx.JSTime `json:"completed_at"`
+}
+
+// FlowMaterialView is one material line with its issue progress.
+type FlowMaterialView struct {
+	ID            string  `json:"id"`
+	RawMaterialID string  `json:"raw_material_id"`
+	Kode          string  `json:"kode"`
+	Nama          string  `json:"nama"`
+	Satuan        string  `json:"satuan"`
+	QtyPlanned    float64 `json:"qty_planned"`
+	QtyIssued     float64 `json:"qty_issued"`
+	QtyRemaining  float64 `json:"qty_remaining"`
+	UnitCost      float64 `json:"unit_cost"`
+	IssuedCost    float64 `json:"issued_cost"`
+	QtyOnHand     float64 `json:"qty_onhand"`
+}
+
+// IssueLineView is one issued material.
+type IssueLineView struct {
+	RawMaterialID string  `json:"raw_material_id"`
+	Kode          string  `json:"kode"`
+	Nama          string  `json:"nama"`
+	Qty           float64 `json:"qty"`
+	UnitCost      float64 `json:"unit_cost"`
+	TotalCost     float64 `json:"total_cost"`
+}
+
+// IssueView is one issue.
+type IssueView struct {
+	ID         string          `json:"id"`
+	NomorIssue string          `json:"nomor_issue"`
+	TotalCost  float64         `json:"total_cost"`
+	Catatan    *string         `json:"catatan"`
+	CreatedAt  httpx.JSTime    `json:"created_at"`
+	Lines      []IssueLineView `json:"lines"`
+}
+
+// BatchView is one received batch.
+type BatchView struct {
+	ID               string       `json:"id"`
+	BatchNumber      string       `json:"batch_number"`
+	OutputType       string       `json:"output_type"`
+	WipRawMaterialID *string      `json:"wip_raw_material_id"`
+	QtyGood          float64      `json:"qty_good"`
+	QtyScrap         float64      `json:"qty_scrap"`
+	MaterialCost     float64      `json:"material_cost"`
+	ConversionCost   float64      `json:"conversion_cost"`
+	ScrapCost        float64      `json:"scrap_cost"`
+	TotalCost        float64      `json:"total_cost"`
+	HppPerUnit       float64      `json:"hpp_per_unit"`
+	YieldPct         *float64     `json:"yield_pct"`
+	PlannedYieldPct  *float64     `json:"planned_yield_pct"`
+	IsFinal          bool         `json:"is_final"`
+	Catatan          *string      `json:"catatan"`
+	CreatedAt        httpx.JSTime `json:"created_at"`
+}
+
+// WipSummary is the WIP balance of one order.
+type WipSummary struct {
+	IssuedCost           float64  `json:"issued_cost"`
+	ReceivedMaterialCost float64  `json:"received_material_cost"`
+	ScrapCost            float64  `json:"scrap_cost"`
+	WipValue             float64  `json:"wip_value"`
+	ConversionCost       float64  `json:"conversion_cost"`
+	ConversionApplied    float64  `json:"conversion_applied"`
+	StdMaterialPerUnit   float64  `json:"std_material_per_unit"`
+	QtyGood              float64  `json:"qty_good"`
+	QtyScrap             float64  `json:"qty_scrap"`
+	QtyRemaining         float64  `json:"qty_remaining"`
+	YieldPct             *float64 `json:"yield_pct"`
+	PlannedYieldPct      *float64 `json:"planned_yield_pct"`
+}
+
+// FlowView is GET /api/production/orders/{id}/flow.
+type FlowView struct {
+	Order      OrderView          `json:"order"`
+	Materials  []FlowMaterialView `json:"materials"`
+	Issues     []IssueView        `json:"issues"`
+	Batches    []BatchView        `json:"batches"`
+	Wip        WipSummary         `json:"wip"`
+	CanIssue   bool               `json:"can_issue"`
+	CanReceive bool               `json:"can_receive"`
+	// Stepped is true once materials were issued here: the order then
+	// finishes with receipts only.
+	Stepped     bool  `json:"stepped"`
+	VariantSkus []Sku `json:"variant_skus"`
+}
+
+func orderView(o *Order) OrderView {
+	return OrderView{
+		ID: o.ID, NomorProduksi: o.Number, Status: o.Status, ProductionContext: o.Context, OutputType: o.OutputType,
+		ProductID: o.ProductID, OutputRawMaterialID: o.OutputRawMaterialID, ItemKode: o.ItemKode, ItemNama: o.ItemNama,
+		PlannedQty: o.PlannedQty, ActualQty: o.ActualQty, PlannedMaterialCost: o.PlannedMaterialCost,
+		OverheadCost: o.Overhead, LaborCost: o.Labor, PackagingCost: o.Packaging, WasteCost: o.Waste,
+		ConversionCost: round2(o.Conversion()), HppPerUnit: o.HppPerUnit,
+		StartedAt: httpx.NewJSTime(o.StartedAt), CompletedAt: httpx.NewJSTime(o.CompletedAt),
+	}
+}
+
+func issueView(i Issue, materials map[string]Material) IssueView {
+	v := IssueView{ID: i.ID, NomorIssue: i.Number, TotalCost: i.TotalCost, Catatan: i.Catatan, CreatedAt: httpx.JSTime(i.CreatedAt),
+		Lines: make([]IssueLineView, len(i.Lines))}
+	for k, l := range i.Lines {
+		m := materials[l.RawMaterialID]
+		v.Lines[k] = IssueLineView{RawMaterialID: l.RawMaterialID, Kode: m.Kode, Nama: m.Nama, Qty: l.Qty,
+			UnitCost: l.UnitCost, TotalCost: l.TotalCost}
+	}
+	return v
+}
+
+func batchView(b Batch, plannedQty float64) BatchView {
+	return BatchView{
+		ID: b.ID, BatchNumber: b.Number, OutputType: b.OutputType, WipRawMaterialID: b.WipRawMaterialID,
+		QtyGood: b.QtyGood, QtyScrap: b.QtyScrap, MaterialCost: b.MaterialCost, ConversionCost: b.ConversionCost,
+		ScrapCost: b.ScrapCost, TotalCost: b.TotalCost, HppPerUnit: b.HppPerUnit,
+		YieldPct: domain.Yield(b.QtyGood, b.QtyScrap), PlannedYieldPct: domain.PlannedYield(b.QtyGood, plannedQty),
+		IsFinal: b.IsFinal, Catatan: b.Catatan, CreatedAt: httpx.JSTime(b.CreatedAt),
+	}
+}
+
+func buildFlow(o *Order, lines []MaterialLine, issues []Issue, batches []Batch, materials map[string]Material, skus []Sku) *FlowView {
+	f := &FlowView{Order: orderView(o), Materials: make([]FlowMaterialView, len(lines)), Issues: make([]IssueView, len(issues)),
+		Batches: make([]BatchView, len(batches)), VariantSkus: skus, Stepped: len(issues) > 0}
+	if f.VariantSkus == nil {
+		f.VariantSkus = []Sku{}
+	}
+	dl := make([]domain.Line, len(lines))
+	for i, l := range lines {
+		m := materials[l.RawMaterialID]
+		f.Materials[i] = FlowMaterialView{ID: l.ID, RawMaterialID: l.RawMaterialID, Kode: m.Kode, Nama: m.Nama, Satuan: m.Unit,
+			QtyPlanned: l.QtyPlanned, QtyIssued: l.QtyIssued, QtyRemaining: domain.RoundQty(math.Max(0, l.QtyPlanned-l.QtyIssued)),
+			UnitCost: l.UnitCost, IssuedCost: l.IssuedCost, QtyOnHand: m.QtyOnHand}
+		dl[i] = l.domain()
+		f.Wip.IssuedCost += l.IssuedCost
+	}
+	for i, is := range issues {
+		f.Issues[i] = issueView(is, materials)
+	}
+	for i, b := range batches {
+		f.Batches[i] = batchView(b, o.PlannedQty)
+		f.Wip.ReceivedMaterialCost += b.MaterialCost
+		f.Wip.ScrapCost += b.ScrapCost
+		f.Wip.ConversionApplied += b.ConversionCost
+		f.Wip.QtyGood += b.QtyGood
+		f.Wip.QtyScrap += b.QtyScrap
+	}
+	w := &f.Wip
+	w.IssuedCost, w.ReceivedMaterialCost = round2(w.IssuedCost), round2(w.ReceivedMaterialCost)
+	w.ScrapCost, w.ConversionApplied = round2(w.ScrapCost), round2(w.ConversionApplied)
+	w.WipValue = domain.WipBalance(w.IssuedCost, w.ReceivedMaterialCost, w.ScrapCost)
+	w.ConversionCost = round2(o.Conversion())
+	w.StdMaterialPerUnit = round2(domain.StdMaterialPerUnit(dl, o.PlannedQty))
+	w.QtyRemaining = domain.RoundQty(math.Max(0, o.PlannedQty-w.QtyGood-w.QtyScrap))
+	w.YieldPct = domain.Yield(w.QtyGood, w.QtyScrap)
+	w.PlannedYieldPct = domain.PlannedYield(w.QtyGood, o.PlannedQty)
+	f.CanIssue = domain.CheckIssue(o.Status) == nil
+	f.CanReceive = o.Status == domain.StatusInProgress && len(issues) > 0
+	return f
+}
+
+/* ── WIP list ────────────────────────────────────────────────────────── */
+
+// WipOrderView is one open order with WIP.
+type WipOrderView struct {
+	ID                   string        `json:"id"`
+	NomorProduksi        string        `json:"nomor_produksi"`
+	Status               string        `json:"status"`
+	ProductionContext    string        `json:"production_context"`
+	OutputType           string        `json:"output_type"`
+	ItemKode             string        `json:"item_kode"`
+	ItemNama             string        `json:"item_nama"`
+	PlannedQty           float64       `json:"planned_qty"`
+	StartedAt            *httpx.JSTime `json:"started_at"`
+	IssuedCost           float64       `json:"issued_cost"`
+	ReceivedMaterialCost float64       `json:"received_material_cost"`
+	ScrapCost            float64       `json:"scrap_cost"`
+	WipValue             float64       `json:"wip_value"`
+	ConversionCost       float64       `json:"conversion_cost"`
+	ConversionApplied    float64       `json:"conversion_applied"`
+	QtyGood              float64       `json:"qty_good"`
+	QtyScrap             float64       `json:"qty_scrap"`
+	Batches              int           `json:"batches"`
+	YieldPct             *float64      `json:"yield_pct"`
+	LastIssueAt          httpx.JSTime  `json:"last_issue_at"`
+	LastReceiptAt        *httpx.JSTime `json:"last_receipt_at"`
+}
+
+// WipTotals sums the WIP list.
+type WipTotals struct {
+	Orders   int     `json:"orders"`
+	WipValue float64 `json:"wip_value"`
+	Issued   float64 `json:"issued_cost"`
+}
+
+// WipView is GET /api/production/wip.
+type WipView struct {
+	Orders  []WipOrderView `json:"orders"`
+	Summary WipTotals      `json:"summary"`
+}
+
+func wipView(rows []WipRow) *WipView {
+	v := &WipView{Orders: make([]WipOrderView, len(rows))}
+	for i, r := range rows {
+		wip := domain.WipBalance(r.IssuedCost, r.ReceivedMaterialCost, r.ScrapCost)
+		v.Orders[i] = WipOrderView{
+			ID: r.ID, NomorProduksi: r.Number, Status: r.Status, ProductionContext: r.Context, OutputType: r.OutputType,
+			ItemKode: r.ItemKode, ItemNama: r.ItemNama, PlannedQty: r.PlannedQty, StartedAt: httpx.NewJSTime(r.StartedAt),
+			IssuedCost: round2(r.IssuedCost), ReceivedMaterialCost: round2(r.ReceivedMaterialCost), ScrapCost: round2(r.ScrapCost),
+			WipValue: wip, ConversionCost: round2(r.ConversionCost), ConversionApplied: round2(r.ConversionApplied),
+			QtyGood: r.QtyGood, QtyScrap: r.QtyScrap, Batches: r.Batches, YieldPct: domain.Yield(r.QtyGood, r.QtyScrap),
+			LastIssueAt: httpx.JSTime(r.LastIssueAt), LastReceiptAt: httpx.NewJSTime(r.LastReceiptAt),
+		}
+		v.Summary.Orders++
+		v.Summary.WipValue += wip
+		v.Summary.Issued += r.IssuedCost
+	}
+	v.Summary.WipValue, v.Summary.Issued = round2(v.Summary.WipValue), round2(v.Summary.Issued)
+	return v
+}
+
+/* ── batches ─────────────────────────────────────────────────────────── */
+
+// BatchListView is one row of GET /api/production/batches.
+type BatchListView struct {
+	BatchView
+	ProductionOrderID string `json:"production_order_id"`
+	NomorProduksi     string `json:"nomor_produksi"`
+	ProductionContext string `json:"production_context"`
+	OrderStatus       string `json:"order_status"`
+	ItemKode          string `json:"item_kode"`
+	ItemNama          string `json:"item_nama"`
+	// Stepped is false for a batch of the one-shot completion, whose cost
+	// is not split.
+	Stepped bool `json:"stepped"`
+}
+
+func batchListView(r BatchRow) BatchListView {
+	return BatchListView{BatchView: batchView(r.Batch, r.PlannedQty), ProductionOrderID: r.OrderID, NomorProduksi: r.OrderNumber,
+		ProductionContext: r.Context, OrderStatus: r.OrderStatus, ItemKode: r.ItemKode, ItemNama: r.ItemNama,
+		Stepped: r.MaterialCost+r.ConversionCost+r.ScrapCost > 0 || r.TotalCost == 0}
+}
+
+// BatchMaterialView is a material's share of a batch's material cost.
+type BatchMaterialView struct {
+	RawMaterialID string  `json:"raw_material_id"`
+	Kode          string  `json:"kode"`
+	Nama          string  `json:"nama"`
+	Satuan        string  `json:"satuan"`
+	IssuedQty     float64 `json:"issued_qty"`
+	IssuedCost    float64 `json:"issued_cost"`
+	ShareCost     float64 `json:"share_cost"`
+	SharePct      float64 `json:"share_pct"`
+}
+
+// BatchVariantView is a SKU's share of a finished goods batch.
+type BatchVariantView struct {
+	PosSkuID string  `json:"pos_sku_id"`
+	Sku      string  `json:"sku"`
+	Name     string  `json:"name"`
+	Qty      float64 `json:"qty"`
+}
+
+// BatchDetailView is GET /api/production/batches/{id}.
+type BatchDetailView struct {
+	BatchListView
+	PlannedQty float64             `json:"planned_qty"`
+	Materials  []BatchMaterialView `json:"materials"`
+	Variants   []BatchVariantView  `json:"variants"`
+}
+
+func batchDetailView(b BatchRow, lines []MaterialLine, materials map[string]Material, variants []domain.Variant, skus []Sku) *BatchDetailView {
+	v := &BatchDetailView{BatchListView: batchListView(b), PlannedQty: b.PlannedQty,
+		Materials: make([]BatchMaterialView, len(lines)), Variants: make([]BatchVariantView, len(variants))}
+	weights := make([]float64, len(lines))
+	total := 0.0
+	for i, l := range lines {
+		weights[i] = l.IssuedCost
+		total += l.IssuedCost
+	}
+	// The material cost of the batch, plus what it wrote off, follows the
+	// issued value of each material.
+	shares := domain.Allocate(b.MaterialCost+b.ScrapCost, weights)
+	for i, l := range lines {
+		m := materials[l.RawMaterialID]
+		pct := 0.0
+		if total > 0 {
+			pct = round2(l.IssuedCost / total * 100)
+		}
+		v.Materials[i] = BatchMaterialView{RawMaterialID: l.RawMaterialID, Kode: m.Kode, Nama: m.Nama, Satuan: m.Unit,
+			IssuedQty: l.QtyIssued, IssuedCost: l.IssuedCost, ShareCost: shares[i], SharePct: pct}
+	}
+	labels := map[string]Sku{}
+	for _, s := range skus {
+		labels[s.ID] = s
+	}
+	for i, x := range variants {
+		v.Variants[i] = BatchVariantView{PosSkuID: x.SkuID, Sku: labels[x.SkuID].Sku, Name: labels[x.SkuID].Name, Qty: x.Qty}
+	}
+	return v
+}

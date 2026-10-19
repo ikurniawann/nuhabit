@@ -4,6 +4,9 @@ import {
   ProductionPage,
   ProductionRecipesPage,
   ProductionOrderDetailPage,
+  ProductionWipPage,
+  ProductionBatchesPage,
+  ProductionBatchDetailPage,
   RawMaterialBomEditorPage,
 } from "../../production";
 
@@ -21,4 +24,16 @@ export function RawMaterialProductionOrderDetailPage() {
 
 export function RawMaterialProductionBomEditorPage() {
   return <RawMaterialBomEditorPage />;
+}
+
+export function RawMaterialProductionWipPage() {
+  return <ProductionWipPage moduleType="raw_material" />;
+}
+
+export function RawMaterialProductionBatchesPage() {
+  return <ProductionBatchesPage moduleType="raw_material" />;
+}
+
+export function RawMaterialProductionBatchDetailPage() {
+  return <ProductionBatchDetailPage moduleType="raw_material" />;
 }

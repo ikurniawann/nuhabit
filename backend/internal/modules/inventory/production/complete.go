@@ -131,7 +131,7 @@ func (h *handler) complete(w http.ResponseWriter, r *http.Request, order *kit.Ro
 		}
 		var wipID *string
 		if product := embedded(order.Get("product")); outputType == "WIP" && product != nil {
-			id, err := ensureWip(ctx, q, product, userID)
+			id, err := EnsureWip(ctx, q, product, userID)
 			if err != nil {
 				return err
 			}
@@ -231,8 +231,10 @@ func (h *handler) consume(ctx context.Context, q database.Querier, orderID, numb
 	return nil
 }
 
-// ensureWip is ensureWipRawMaterial: the WIP material that mirrors a product.
-func ensureWip(ctx context.Context, q database.Querier, product *kit.Row, userID string) (string, error) {
+// EnsureWip is ensureWipRawMaterial: the WIP material that mirrors a
+// product, created on first use. The production module reaches it through
+// its stock port.
+func EnsureWip(ctx context.Context, q database.Querier, product *kit.Row, userID string) (string, error) {
 	existing, err := kit.QueryOne(ctx, q, `SELECT id::text FROM raw_materials WHERE source_product_id = $1 LIMIT 1`, product.Get("id"))
 	if err != nil {
 		return "", err
@@ -334,48 +336,13 @@ func insertIgnore(ctx context.Context, q database.Querier, rows []*kit.Row) (kit
 // postFinishedGoods adds the output to finished goods at the weighted cost
 // and records the product movement plus one per posted variant.
 func postFinishedGoods(ctx context.Context, q database.Querier, order *kit.Row, userID string, qty, hpp, total float64, posted []postedVariant, now time.Time) error {
-	productID := order.Str("product_id")
-	inv, err := kit.QueryOne(ctx, q, `SELECT id::text, qty_available, unit_cost FROM finished_goods_inventory WHERE product_id = $1 LIMIT 1`, productID)
-	if err != nil {
-		return err
+	variants := make([]ledger.VariantMovement, len(posted))
+	for i, p := range posted {
+		variants[i] = ledger.VariantMovement{SkuID: p.skuID, Before: p.before, After: p.after}
 	}
-	var invID string
-	before, after, unitCost := 0.0, qty, hpp
-	if inv != nil {
-		before = inv.Num("qty_available")
-		after = before + qty
-		if after > 0 {
-			unitCost = (before*inv.Num("unit_cost") + total) / after
-		}
-		if _, err := q.Exec(ctx, `UPDATE finished_goods_inventory SET qty_available = $1, unit_cost = $2, last_movement_at = $3,
-			updated_by = $4, updated_at = $3 WHERE id = $5`, kit.N(after), kit.N(unitCost), now, userID, inv.Get("id")); err != nil {
-			return err
-		}
-		invID = inv.Str("id")
-	} else {
-		created, err := kit.InsertOne(ctx, q, "finished_goods_inventory", kit.Obj("product_id", productID, "qty_available", qty,
-			"unit_cost", hpp, "last_movement_at", now, "created_by", userID))
-		if err != nil {
-			return err
-		}
-		invID = created.Str("id")
-	}
-	base := ledger.FinishedGoodsMovement{
-		InventoryID: invID, ProductID: productID, Tipe: "in", UnitCost: unitCost, ReferenceType: kit.Ptr("production_order"),
-		ReferenceID: kit.Ptr(order.Str("id")), ReferenceNumber: kit.Ptr(order.Str("nomor_produksi")),
-		Alasan: kit.Ptr("Production completed"), UserID: &userID,
-	}
-	m := base
-	m.QtyBefore, m.QtyAfter = before, after
-	if _, err := ledger.RecordFinishedGoodsMovement(ctx, q, m, now); err != nil {
-		return err
-	}
-	for _, p := range posted {
-		v := base
-		v.QtyBefore, v.QtyAfter, v.Catatan, v.PosSkuID = p.before, p.after, kit.Ptr("rincian varian"), kit.Ptr(p.skuID)
-		if _, err := ledger.RecordFinishedGoodsMovement(ctx, q, v, now); err != nil {
-			return err
-		}
-	}
-	return nil
+	return ledger.AddFinishedGoodsFromProduction(ctx, q, ledger.FinishedGoodsReceipt{
+		ProductID: order.Str("product_id"), Qty: qty, UnitCost: hpp, TotalCost: total,
+		ReferenceID: order.Str("id"), ReferenceNumber: order.Str("nomor_produksi"), Alasan: "Production completed",
+		UserID: userID, Variants: variants,
+	}, now)
 }
