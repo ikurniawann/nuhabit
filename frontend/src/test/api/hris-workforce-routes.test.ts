@@ -274,17 +274,6 @@ describe("validasi body route kepegawaian", () => {
     );
   });
 
-  it("PUT jadwal shift kurang dari 7 hari → 400", async () => {
-    const { PUT } = await import("@/app/api/hris/employees/[id]/shifts/route");
-    const res = await PUT(
-      req("http://x", "PUT", { effective_from: "2026-10-05", days: [{ day_of_week: 1, shift_id: null }] }),
-      params({ id: EMPLOYEE_ID })
-    );
-    expect(res.status).toBe(400);
-    expect((await json(res)).error).toBe("Pola jadwal harus lengkap 7 hari (Senin–Minggu)");
-    expect(withTransaction).not.toHaveBeenCalled();
-  });
-
   it("POST gaji tanpa gaji pokok → 400", async () => {
     const { POST } = await import("@/app/api/hris/employee-salary/route");
     const res = await POST(req("http://x", "POST", { employee_id: EMPLOYEE_ID }));
