@@ -179,6 +179,7 @@ export function ChannelManagerPage() {
                         <td key={channel.channel_id} className="px-4 py-3">
                           <div className="flex flex-col items-center gap-1.5">
                             <Switch
+                              aria-label={`Distribusikan ${product.name} ke ${channel.channel_code === "walk-in" ? "POS" : "Website"}`}
                               checked={channel.is_distributed}
                               disabled={toggleMutation.isPending || blocked}
                               onCheckedChange={(checked) =>
@@ -283,6 +284,7 @@ export function ChannelManagerPage() {
                               min={0}
                               step={5000}
                               placeholder="ikut varian"
+                              aria-label={`Harga regular ${variant.name}`}
                               value={form.price_regular}
                               onChange={(e) =>
                                 setOverride(index, { price_regular: e.target.value })
@@ -296,6 +298,7 @@ export function ChannelManagerPage() {
                               min={0}
                               step={5000}
                               placeholder="ikut varian"
+                              aria-label={`Harga high season ${variant.name}`}
                               value={form.price_high}
                               onChange={(e) =>
                                 setOverride(index, { price_high: e.target.value })

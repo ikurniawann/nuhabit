@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Combobox } from "@/components/ui/combobox";
 import type { BusinessTree } from "@/features/configuration/business/types";
 import { FormFieldLabel, formComboboxClassName } from "@/components/layout/form-field";
@@ -32,6 +33,7 @@ export function BusinessScopePicker({
   isEdit = false,
   onChange,
 }: BusinessScopePickerProps) {
+  const id = useId();
   const isSuperAdmin = form.role === "super_admin";
   const scope = form.business_scope as BusinessScopeLevel | "";
   const showScopePickers = !isSuperAdmin || isEdit;
@@ -117,8 +119,9 @@ export function BusinessScopePicker({
     return (
       <div className="space-y-4 rounded-lg border border-gray-200/70 bg-gray-50/50 p-4">
         <div>
-          <FormFieldLabel required>Data Access Scope</FormFieldLabel>
+          <FormFieldLabel required htmlFor={`${id}-scope`}>Data Access Scope</FormFieldLabel>
           <Combobox
+            id={`${id}-scope`}
             options={SCOPE_OPTIONS}
             value={scope || ""}
             onChange={handleScopeChange}
@@ -135,8 +138,9 @@ export function BusinessScopePicker({
         {scope ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <FormFieldLabel required>Holding</FormFieldLabel>
+              <FormFieldLabel required htmlFor={`${id}-holding`}>Holding</FormFieldLabel>
               <Combobox
+                id={`${id}-holding`}
                 options={holdingOptions}
                 value={form.holding_id || ""}
                 onChange={handleHoldingChange}
@@ -149,8 +153,9 @@ export function BusinessScopePicker({
 
             {scope === "company" || scope === "branch" ? (
               <div>
-                <FormFieldLabel required>Company</FormFieldLabel>
+                <FormFieldLabel required htmlFor={`${id}-company`}>Company</FormFieldLabel>
                 <Combobox
+                  id={`${id}-company`}
                   options={companyOptions}
                   value={form.company_id || ""}
                   onChange={handleCompanyChange}
@@ -165,8 +170,9 @@ export function BusinessScopePicker({
 
             {scope === "branch" ? (
               <div>
-                <FormFieldLabel required>Branch</FormFieldLabel>
+                <FormFieldLabel required htmlFor={`${id}-branch`}>Branch</FormFieldLabel>
                 <Combobox
+                  id={`${id}-branch`}
                   options={branchOptions}
                   value={form.branch_id || ""}
                   onChange={(value) =>

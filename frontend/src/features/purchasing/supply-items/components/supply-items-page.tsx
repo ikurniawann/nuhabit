@@ -180,7 +180,7 @@ export function SupplyItemsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(item)} aria-label={`Edit ${item.nama}`}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -188,6 +188,7 @@ export function SupplyItemsPage() {
                           size="sm"
                           className="text-red-500 hover:bg-red-50 hover:text-red-600"
                           onClick={() => setDeleteTarget(item)}
+                          aria-label={`Hapus ${item.nama}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

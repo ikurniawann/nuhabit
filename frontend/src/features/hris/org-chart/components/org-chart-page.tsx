@@ -175,7 +175,7 @@ export function OrgChartPage() {
           <p className="text-sm text-gray-500 mt-1">{filteredEmployees.length} karyawan aktif</p>
         </div>
         <Select value={selectedDept} onValueChange={(v) => setSelectedDept(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-52">
+          <SelectTrigger className="w-full sm:w-52" aria-label="Filter departemen">
             <SelectValue placeholder="Semua Departemen" />
           </SelectTrigger>
           <SelectContent>

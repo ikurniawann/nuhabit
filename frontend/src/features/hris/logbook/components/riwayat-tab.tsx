@@ -96,7 +96,7 @@ export function LogbookRiwayatTab({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[200px_180px_180px_auto]">
           <div className="space-y-1">
-            <Label>Status</Label>
+            <Label htmlFor="logbook-history-status">Status</Label>
             <Select
               value={status}
               onValueChange={(value) => {
@@ -104,7 +104,7 @@ export function LogbookRiwayatTab({
                 setPage(1);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger id="logbook-history-status">
                 <SelectValue placeholder="Semua status" />
               </SelectTrigger>
               <SelectContent>
@@ -118,8 +118,9 @@ export function LogbookRiwayatTab({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Dari</Label>
+            <Label htmlFor="logbook-history-from">Dari</Label>
             <Input
+              id="logbook-history-from"
               type="date"
               value={from}
               onChange={(event) => {
@@ -129,8 +130,9 @@ export function LogbookRiwayatTab({
             />
           </div>
           <div className="space-y-1">
-            <Label>Sampai</Label>
+            <Label htmlFor="logbook-history-to">Sampai</Label>
             <Input
+              id="logbook-history-to"
               type="date"
               value={to}
               onChange={(event) => {
@@ -252,8 +254,9 @@ export function LogbookRiwayatTab({
               <LogbookEntryChecklist entry={detail} canEdit={false} />
               {me?.can_review && detail.status === "submitted" && (
                 <div className="space-y-2 border-t pt-4">
-                  <Label>Catatan Review (opsional)</Label>
+                  <Label htmlFor="logbook-history-review-notes">Catatan Review (opsional)</Label>
                   <Textarea
+                    id="logbook-history-review-notes"
                     value={reviewNotes}
                     onChange={(event) => setReviewNotes(event.target.value)}
                     placeholder="Catatan untuk kepala department..."

@@ -85,7 +85,7 @@ export function ContractFormDialog({ employeeId, contract, onClose }: ContractFo
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <ContractField label="Tipe kontrak">
+          <ContractField label="Tipe kontrak" htmlFor={contract ? undefined : "contract-type"}>
             {contract ? (
               <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
                 {CONTRACT_TYPE_LABELS[form.contract_type]} — tipe tidak bisa diubah (hapus draft
@@ -93,6 +93,7 @@ export function ContractFormDialog({ employeeId, contract, onClose }: ContractFo
               </p>
             ) : (
               <Combobox
+                id="contract-type"
                 options={TYPE_OPTIONS}
                 value={form.contract_type}
                 onChange={(value) => setField({ contract_type: value as ContractType })}
@@ -101,24 +102,27 @@ export function ContractFormDialog({ employeeId, contract, onClose }: ContractFo
             )}
           </ContractField>
           <div className="grid grid-cols-2 gap-3">
-            <ContractField label="Tanggal mulai">
+            <ContractField label="Tanggal mulai" htmlFor="contract-start-date">
               <Input
+                id="contract-start-date"
                 type="date"
                 value={form.start_date}
                 onChange={(e) => setField({ start_date: e.target.value })}
               />
             </ContractField>
             {isPkwt ? (
-              <ContractField label="Tanggal berakhir">
+              <ContractField label="Tanggal berakhir" htmlFor="contract-end-date">
                 <Input
+                  id="contract-end-date"
                   type="date"
                   value={form.end_date}
                   onChange={(e) => setField({ end_date: e.target.value })}
                 />
               </ContractField>
             ) : (
-              <ContractField label="Akhir masa percobaan (ops.)">
+              <ContractField label="Akhir masa percobaan (ops.)" htmlFor="contract-probation-end-date">
                 <Input
+                  id="contract-probation-end-date"
                   type="date"
                   value={form.probation_end_date}
                   onChange={(e) => setField({ probation_end_date: e.target.value })}
@@ -127,24 +131,26 @@ export function ContractFormDialog({ employeeId, contract, onClose }: ContractFo
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <ContractField label="Gaji pokok (ops. — default gaji aktif)">
+            <ContractField label="Gaji pokok (ops. — default gaji aktif)" htmlFor="contract-base-salary">
               <Input
+                id="contract-base-salary"
                 type="number"
                 placeholder="cth. 4500000"
                 value={form.base_salary}
                 onChange={(e) => setField({ base_salary: e.target.value })}
               />
             </ContractField>
-            <ContractField label="Lokasi kerja (ops.)">
+            <ContractField label="Lokasi kerja (ops.)" htmlFor="contract-work-location">
               <Input
+                id="contract-work-location"
                 placeholder="cth. Kantor Pusat Jakarta"
                 value={form.work_location}
                 onChange={(e) => setField({ work_location: e.target.value })}
               />
             </ContractField>
           </div>
-          <ContractField label="Catatan (ops.)">
-            <Input value={form.notes} onChange={(e) => setField({ notes: e.target.value })} />
+          <ContractField label="Catatan (ops.)" htmlFor="contract-notes">
+            <Input id="contract-notes" value={form.notes} onChange={(e) => setField({ notes: e.target.value })} />
           </ContractField>
           {isPkwt && (
             <PkwtNotice>

@@ -302,10 +302,10 @@ export function PRForm({
 
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     <div className="min-w-0 space-y-1.5 lg:col-span-4">
-                      <Label className="text-xs">
+                      <Label htmlFor={`pr-${index}-material`} className="text-xs">
                         Bahan Baku <span className="text-red-500">*</span>
                       </Label>
-                      <Combobox
+                      <Combobox id={`pr-${index}-material`}
                         options={materials.map((material) => ({
                           value: material.id,
                           label: material.nama,
@@ -335,8 +335,8 @@ export function PRForm({
                     </div>
 
                     <div className="min-w-0 space-y-1.5 lg:col-span-2">
-                      <Label className="text-xs">Qty</Label>
-                      <NumericInput
+                      <Label htmlFor={`pr-${index}-qty`} className="text-xs">Qty</Label>
+                      <NumericInput id={`pr-${index}-qty`}
                         value={items[index]?.qty || 0}
                         onValueChange={(value) =>
                           setValue(`items.${index}.qty`, value, {
@@ -373,10 +373,10 @@ export function PRForm({
                     {!hideItemPricing && (
                       <>
                         <div className="min-w-0 space-y-1.5 lg:col-span-3">
-                          <Label className="text-xs">
+                          <Label htmlFor={`pr-${index}-price`} className="text-xs">
                             Est. Harga Satuan <span className="text-gray-400">(opsional)</span>
                           </Label>
-                          <NumericInput
+                          <NumericInput id={`pr-${index}-price`}
                             value={items[index]?.estimated_price || 0}
                             onValueChange={(value) =>
                               setValue(`items.${index}.estimated_price`, value, {

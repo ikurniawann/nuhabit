@@ -184,8 +184,9 @@ function JournalMappingForm({
             </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <FormFieldLabel required>Event</FormFieldLabel>
+                <FormFieldLabel htmlFor="journal-mapping-event" required>Event</FormFieldLabel>
                 <Combobox
+                  id="journal-mapping-event"
                   options={
                     mode === "edit" && form.event_code
                       ? [
@@ -213,8 +214,9 @@ function JournalMappingForm({
                 </p>
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>Module</FormFieldLabel>
+                <FormFieldLabel htmlFor="journal-mapping-module" required>Module</FormFieldLabel>
                 <Combobox
+                  id="journal-mapping-module"
                   options={moduleOptions}
                   value={form.module}
                   onChange={(value) =>
@@ -231,8 +233,9 @@ function JournalMappingForm({
                 </p>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <FormFieldLabel required>Nama</FormFieldLabel>
+                <FormFieldLabel htmlFor="journal-mapping-name" required>Nama</FormFieldLabel>
                 <Input
+                  id="journal-mapping-name"
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
@@ -242,8 +245,9 @@ function JournalMappingForm({
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <FormFieldLabel>Deskripsi</FormFieldLabel>
+                <FormFieldLabel htmlFor="journal-mapping-description">Deskripsi</FormFieldLabel>
                 <Input
+                  id="journal-mapping-description"
                   value={form.description}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, description: e.target.value }))

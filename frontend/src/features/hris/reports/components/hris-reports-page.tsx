@@ -40,7 +40,7 @@ export function HRISReportsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-36" aria-label="Bulan">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -50,7 +50,7 @@ export function HRISReportsPage() {
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-24" aria-label="Tahun">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

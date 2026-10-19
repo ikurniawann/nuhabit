@@ -108,6 +108,7 @@ export function QcParametersCard({
             <span className="text-sm font-medium text-gray-800">{QC_PARAMETER_LABELS[param]}</span>
             <Select value={results[param] || "OK"} onValueChange={(value) => onChange(param, value as QcParameterResult)}>
               <SelectTrigger
+                aria-label={`Hasil ${QC_PARAMETER_LABELS[param]}`}
                 className={`h-8 w-[120px] border-gray-200/80 ${disabled ? "pointer-events-none opacity-50" : ""}`}
               >
                 <SelectValue />

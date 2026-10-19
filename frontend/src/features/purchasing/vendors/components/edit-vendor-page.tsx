@@ -136,10 +136,10 @@ function EditVendorForm({ vendorId, data }: { vendorId: string; data: VendorDeta
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">
+                <Label htmlFor="vendor-category" className="text-xs">
                   Category <span className="text-red-500">*</span>
                 </Label>
-                <Combobox
+                <Combobox id="vendor-category"
                   options={VENDOR_CATEGORY_OPTIONS}
                   value={formData.category}
                   onChange={(value) =>
@@ -150,10 +150,10 @@ function EditVendorForm({ vendorId, data }: { vendorId: string; data: VendorDeta
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">
+                <Label htmlFor="vendor-usage-scope" className="text-xs">
                   Peruntukan <span className="text-red-500">*</span>
                 </Label>
-                <Combobox
+                <Combobox id="vendor-usage-scope"
                   options={VENDOR_USAGE_OPTIONS}
                   value={formData.usage_scope}
                   onChange={(value) =>
@@ -297,6 +297,7 @@ function EditVendorForm({ vendorId, data }: { vendorId: string; data: VendorDeta
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              aria-label="Catatan vendor"
               rows={3}
               className="resize-none text-sm"
             />

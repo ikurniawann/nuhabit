@@ -91,7 +91,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                     </td>
                     <td className="py-3">
                       <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" size="sm" onClick={() => setDialog({ rule })}>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setDialog({ rule })} aria-label={`Edit ${rule.name}`}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button
@@ -101,6 +101,7 @@ export function OfferRulesPage({ offerType }: { offerType: OfferType }) {
                           className="border-red-200 text-red-600 hover:bg-red-50"
                           disabled={deleteMutation.isPending}
                           onClick={() => void handleDelete(rule)}
+                          aria-label={`Hapus ${rule.name}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>

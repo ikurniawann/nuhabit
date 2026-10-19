@@ -36,6 +36,7 @@ export function CampaignSenderConfig() {
             checked={config?.enabled ?? false}
             disabled={updateConfig.isPending || !config}
             onCheckedChange={(checked) => updateConfig.mutate({ enabled: checked })}
+            aria-label="Master Switch Pengiriman"
           />
         </div>
         <div className="space-y-1.5">

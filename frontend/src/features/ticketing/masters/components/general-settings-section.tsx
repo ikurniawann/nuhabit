@@ -102,14 +102,14 @@ export function GeneralSettingsSection() {
         <div className="grid gap-6 px-5 py-4 lg:grid-cols-2">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Default Re-entry Ticket Baru</Label>
+              <Label htmlFor="ticketing-default-reentry">Default Re-entry Ticket Baru</Label>
               <Select
                 value={form.re_entry_policy}
                 onValueChange={(value) =>
                   setForm({ re_entry_policy: value as ReEntryPolicy })
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="ticketing-default-reentry" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -144,14 +144,14 @@ export function GeneralSettingsSection() {
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label>Mode Bayar Default di Loket</Label>
+              <Label htmlFor="ticketing-default-payment-mode">Mode Bayar Default di Loket</Label>
               <Select
                 value={form.default_payment_mode}
                 onValueChange={(value) =>
                   setForm({ default_payment_mode: value as PaymentMode })
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="ticketing-default-payment-mode" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -254,6 +254,7 @@ export function GeneralSettingsSection() {
                   </p>
                 </div>
                 <Switch
+                  aria-label={`Aktifkan kanal ${channel.name}`}
                   checked={channel.is_active}
                   disabled={updateChannelMutation.isPending}
                   onCheckedChange={(checked) =>

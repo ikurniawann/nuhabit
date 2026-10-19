@@ -264,7 +264,7 @@ export function RedeemDialog({ open, onOpenChange }: RedeemDialogProps) {
                           value={band.guest_id}
                           onValueChange={(v) => setBandGuest(index, v)}
                         >
-                          <SelectTrigger className="h-8 w-44">
+                          <SelectTrigger className="h-8 w-44" aria-label={`Anggota untuk gelang ${band.nfc_uid}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -288,6 +288,7 @@ export function RedeemDialog({ open, onOpenChange }: RedeemDialogProps) {
                           size="sm"
                           variant="ghost"
                           onClick={() => removeBand(index)}
+                          aria-label={`Hapus gelang ${band.nfc_uid}`}
                           className="h-8 w-8 p-0 text-gray-400 hover:bg-red-50 hover:text-red-600"
                         >
                           <TrashIcon className="h-4 w-4" />

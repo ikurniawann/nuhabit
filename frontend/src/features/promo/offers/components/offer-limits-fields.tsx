@@ -89,6 +89,7 @@ export function OfferLimitsFields({
             <div className="text-xs text-muted-foreground">Tidak bisa digabung</div>
           </div>
           <Switch
+            aria-label="Eksklusif"
             checked={value.is_exclusive}
             onCheckedChange={(checked) => onChange({ is_exclusive: checked })}
           />

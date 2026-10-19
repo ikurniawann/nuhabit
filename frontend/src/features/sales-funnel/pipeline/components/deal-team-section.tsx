@@ -41,14 +41,14 @@ export function DealTeamSection({ dealId, enabled, ownerUserId }: { dealId: stri
       )}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={userId || "none"} onValueChange={(v) => setUserId(v === "none" ? "" : v)}>
-          <SelectTrigger className="h-8 w-48 text-xs"><SelectValue placeholder="Pilih anggota" /></SelectTrigger>
+          <SelectTrigger className="h-8 w-48 text-xs" aria-label="Pilih anggota tim"><SelectValue placeholder="Pilih anggota" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="none">— pilih user —</SelectItem>
             {candidates.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name} · {o.role}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={role} onValueChange={(v) => setRole(v as DealMember["role"])}>
-          <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="h-8 w-40 text-xs" aria-label="Peran anggota tim"><SelectValue /></SelectTrigger>
           <SelectContent>
             {(Object.keys(DEAL_MEMBER_ROLE_LABELS) as DealMember["role"][]).filter((r) => r !== "owner").map((r) => <SelectItem key={r} value={r}>{DEAL_MEMBER_ROLE_LABELS[r]}</SelectItem>)}
           </SelectContent>

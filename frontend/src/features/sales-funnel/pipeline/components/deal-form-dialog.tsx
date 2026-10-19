@@ -164,7 +164,7 @@ function DealFormBody({
       <div className="space-y-4">
         {needsLeadPicker ? (
           <div className="space-y-1.5">
-            <Label>Lead / Instansi *</Label>
+            <Label htmlFor="deal-lead">Lead / Instansi *</Label>
             <Input
               value={leadSearch}
               onChange={(e) => setLeadSearch(e.target.value)}
@@ -181,7 +181,7 @@ function DealFormBody({
                 }
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger id="deal-lead">
                 <SelectValue placeholder="Pilih lead..." />
               </SelectTrigger>
               <SelectContent>
@@ -203,12 +203,12 @@ function DealFormBody({
 
         {!isEdit && pipelines.length > 1 ? (
           <div className="space-y-1.5">
-            <Label>Pipeline</Label>
+            <Label htmlFor="deal-pipeline">Pipeline</Label>
             <Select
               value={form.pipeline_id || pipelines.find((p) => p.is_default)?.id || pipelines[0]?.id || ""}
               onValueChange={(v) => set("pipeline_id", v)}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="deal-pipeline"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {pipelines.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
@@ -227,12 +227,12 @@ function DealFormBody({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Jenis Acara</Label>
+            <Label htmlFor="deal-event-type">Jenis Acara</Label>
             <Select
               value={form.event_type}
               onValueChange={(v) => set("event_type", v as DealFormValues["event_type"])}
             >
-              <SelectTrigger>
+              <SelectTrigger id="deal-event-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

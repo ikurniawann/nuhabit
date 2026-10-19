@@ -113,10 +113,10 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
       </DialogHeader>
       <div className="space-y-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-700">
+          <label htmlFor="supply-item-name" className="text-xs font-medium text-gray-700">
             Nama Barang <span className="text-red-500">*</span>
           </label>
-          <Input
+          <Input id="supply-item-name"
             value={form.nama}
             onChange={(e) => setForm((f) => ({ ...f, nama: e.target.value }))}
             placeholder="mis. Kertas A4 80gsm"
@@ -124,20 +124,20 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Kode</label>
-            <Input
+            <label htmlFor="supply-item-code" className="text-xs font-medium text-gray-700">Kode</label>
+            <Input id="supply-item-code"
               value={form.kode}
               onChange={(e) => setForm((f) => ({ ...f, kode: e.target.value }))}
               placeholder="otomatis bila kosong"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Kategori</label>
+            <label htmlFor="supply-item-category" className="text-xs font-medium text-gray-700">Kategori</label>
             <Select
               value={form.kategori || undefined}
               onValueChange={(v) => setForm((f) => ({ ...f, kategori: v }))}
             >
-              <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+              <SelectTrigger id="supply-item-category"><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
                   <SelectItem key={c.code} value={c.code}>{c.nama}</SelectItem>
@@ -148,12 +148,12 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Satuan</label>
+            <label htmlFor="supply-item-unit" className="text-xs font-medium text-gray-700">Satuan</label>
             <Select
               value={form.satuan_id || undefined}
               onValueChange={(v) => setForm((f) => ({ ...f, satuan_id: v }))}
             >
-              <SelectTrigger><SelectValue placeholder="Pilih satuan" /></SelectTrigger>
+              <SelectTrigger id="supply-item-unit"><SelectValue placeholder="Pilih satuan" /></SelectTrigger>
               <SelectContent>
                 {units.map((u) => (
                   <SelectItem key={u.id} value={u.id}>{u.nama}</SelectItem>
@@ -162,8 +162,8 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
             </Select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-gray-700">Harga Beli (Rp)</label>
-            <Input
+            <label htmlFor="supply-item-price" className="text-xs font-medium text-gray-700">Harga Beli (Rp)</label>
+            <Input id="supply-item-price"
               type="number"
               min={0}
               value={form.harga_beli}
@@ -181,14 +181,15 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
               </p>
             </div>
             <Switch
+              aria-label="Dilacak stok"
               checked={form.stockable}
               onCheckedChange={(v) => setForm((f) => ({ ...f, stockable: v }))}
             />
           </div>
           {form.stockable && (
             <div className="mt-3 space-y-1.5">
-              <label className="text-xs font-medium text-gray-700">Stok Minimum</label>
-              <Input
+              <label htmlFor="supply-item-min-stock" className="text-xs font-medium text-gray-700">Stok Minimum</label>
+              <Input id="supply-item-min-stock"
                 type="number"
                 min={0}
                 value={form.stok_minimum}
@@ -199,8 +200,8 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
           )}
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-medium text-gray-700">Deskripsi</label>
-          <Textarea
+          <label htmlFor="supply-item-description" className="text-xs font-medium text-gray-700">Deskripsi</label>
+          <Textarea id="supply-item-description"
             rows={2}
             value={form.deskripsi}
             onChange={(e) => setForm((f) => ({ ...f, deskripsi: e.target.value }))}
@@ -211,6 +212,7 @@ export function SupplyItemFormDialog({ open, onOpenChange, editing, categories, 
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">Aktif</span>
           <Switch
+            aria-label="Aktif"
             checked={form.is_active}
             onCheckedChange={(v) => setForm((f) => ({ ...f, is_active: v }))}
           />

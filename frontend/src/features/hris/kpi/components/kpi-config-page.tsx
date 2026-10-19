@@ -126,6 +126,7 @@ export function KpiConfigPage() {
                   <Checkbox
                     checked={d.enabled}
                     onCheckedChange={(v) => setDraftItem(ind.id, { enabled: v === true })}
+                    aria-label={`Aktifkan ${ind.name}`}
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-900">
@@ -151,6 +152,7 @@ export function KpiConfigPage() {
                       value={d.weight}
                       disabled={!d.enabled}
                       onChange={(e) => setDraftItem(ind.id, { weight: e.target.value })}
+                      aria-label={`Bobot ${ind.name} (%)`}
                       className="h-8 w-20 text-right"
                     />
                     <span className="text-xs text-gray-500">%</span>

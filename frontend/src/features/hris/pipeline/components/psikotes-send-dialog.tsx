@@ -103,6 +103,7 @@ export function PsikotesSendDialog({ candidate, positionTitle, open, onOpenChang
                       <Checkbox
                         checked={!excluded.has(instrument.id)}
                         onCheckedChange={() => toggle(instrument.id)}
+                        aria-label={instrument.name}
                       />
                       <span className="flex-1">{instrument.name}</span>
                       {instrument.kind !== "drawing" && instrument.active_question_count === 0 && (
@@ -118,8 +119,9 @@ export function PsikotesSendDialog({ candidate, positionTitle, open, onOpenChang
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Masa Berlaku (hari)</Label>
+                <Label htmlFor="psikotes-send-expires-days" className="text-xs font-medium">Masa Berlaku (hari)</Label>
                 <Input
+                  id="psikotes-send-expires-days"
                   type="number"
                   min={1}
                   max={30}

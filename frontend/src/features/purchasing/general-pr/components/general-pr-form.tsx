@@ -141,10 +141,10 @@ export function GeneralPRForm({
               <input type="hidden" {...register("department_id")} />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="general-pr-department" className="text-xs">
                     Departemen <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="general-pr-department"
                     options={departments.map((dept) => ({ value: dept.id, label: dept.name }))}
                     value={selectedDepartment}
                     onChange={(value) => setValue("department_id", value, { shouldValidate: true })}
@@ -159,10 +159,10 @@ export function GeneralPRForm({
                   )}
                 </div>
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="general-pr-priority" className="text-xs">
                     Prioritas <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="general-pr-priority"
                     options={[
                       { value: "low", label: "Rendah" },
                       { value: "medium", label: "Sedang" },
@@ -234,6 +234,7 @@ export function GeneralPRForm({
                           size="sm"
                           className="h-8 text-red-500 hover:text-red-600"
                           onClick={() => remove(index)}
+                          aria-label={`Hapus baris ${index + 1}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -241,10 +242,10 @@ export function GeneralPRForm({
                     </div>
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                       <div className="min-w-0 space-y-1.5 lg:col-span-4">
-                        <Label className="text-xs">
+                        <Label htmlFor={`general-pr-${index}-supply`} className="text-xs">
                           Barang <span className="text-red-500">*</span>
                         </Label>
-                        <Combobox
+                        <Combobox id={`general-pr-${index}-supply`}
                           options={supplies.map((supply) => ({
                             value: supply.id,
                             label: supply.nama,
@@ -280,8 +281,8 @@ export function GeneralPRForm({
                         </div>
                       </div>
                       <div className="min-w-0 space-y-1.5 lg:col-span-2">
-                        <Label className="text-xs">Jumlah</Label>
-                        <NumericInput
+                        <Label htmlFor={`general-pr-${index}-qty`} className="text-xs">Jumlah</Label>
+                        <NumericInput id={`general-pr-${index}-qty`}
                           value={items[index]?.qty || 0}
                           onValueChange={(value) =>
                             setValue(`items.${index}.qty`, value, {
@@ -302,8 +303,8 @@ export function GeneralPRForm({
                         </div>
                       </div>
                       <div className="min-w-0 space-y-1.5 lg:col-span-3">
-                        <Label className="text-xs">Harga Estimasi</Label>
-                        <NumericInput
+                        <Label htmlFor={`general-pr-${index}-price`} className="text-xs">Harga Estimasi</Label>
+                        <NumericInput id={`general-pr-${index}-price`}
                           value={items[index]?.estimated_price || 0}
                           onValueChange={(value) =>
                             setValue(`items.${index}.estimated_price`, value, {
@@ -341,8 +342,8 @@ export function GeneralPRForm({
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">Catatan</Label>
-                <Textarea {...register("notes")} placeholder="Catatan tambahan..." rows={4} className="resize-none text-sm" />
+                <Label htmlFor="general-pr-notes" className="text-xs">Catatan</Label>
+                <Textarea id="general-pr-notes" {...register("notes")} placeholder="Catatan tambahan..." rows={4} className="resize-none text-sm" />
               </div>
               <div className="rounded-xl border border-gray-200/70 bg-gray-50/70 p-4">
                 <p className="text-sm text-gray-500">Estimasi Total</p>

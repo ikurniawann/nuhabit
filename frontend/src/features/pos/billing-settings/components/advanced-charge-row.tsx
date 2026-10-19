@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +18,7 @@ export function AdvancedChargeRow({
   onChange: (patch: Partial<BillingCharge>) => void;
   onRemove: () => void;
 }) {
+  const id = useId();
   const fixed = charge.calc_method === "fixed";
   return (
     <div className="grid grid-cols-12 gap-3 p-4">
@@ -32,13 +34,13 @@ export function AdvancedChargeRow({
         <span className={fieldLabel}>Nama</span>
         <Input value={charge.name} onChange={(e) => onChange({ name: e.target.value })} className="h-9 border-gray-200/80" />
       </label>
-      <label className="col-span-12 space-y-1 sm:col-span-6 lg:col-span-2">
+      <label htmlFor={`${id}-kind`} className="col-span-12 space-y-1 sm:col-span-6 lg:col-span-2">
         <span className={fieldLabel}>Jenis</span>
         <Select
           value={charge.charge_kind}
           onValueChange={(value) => onChange({ charge_kind: value as BillingCharge["charge_kind"] })}
         >
-          <SelectTrigger className="h-9 border-gray-200/80">
+          <SelectTrigger id={`${id}-kind`} className="h-9 border-gray-200/80">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -47,13 +49,13 @@ export function AdvancedChargeRow({
           </SelectContent>
         </Select>
       </label>
-      <label className="col-span-12 space-y-1 sm:col-span-6 lg:col-span-2">
+      <label htmlFor={`${id}-method`} className="col-span-12 space-y-1 sm:col-span-6 lg:col-span-2">
         <span className={fieldLabel}>Metode</span>
         <Select
           value={charge.calc_method}
           onValueChange={(value) => onChange({ calc_method: value as BillingCharge["calc_method"] })}
         >
-          <SelectTrigger className="h-9 border-gray-200/80">
+          <SelectTrigger id={`${id}-method`} className="h-9 border-gray-200/80">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

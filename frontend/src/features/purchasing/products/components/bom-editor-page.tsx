@@ -354,9 +354,9 @@ function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <Label className="sr-only">Qty</Label>
+                          <Label htmlFor={`bom-${item.id}-qty`} className="sr-only">Qty</Label>
                           <div className="flex w-full rounded-lg border border-gray-200/70 bg-white focus-within:border-pink-300 focus-within:ring-2 focus-within:ring-pink-100">
-                            <NumericInput
+                            <NumericInput id={`bom-${item.id}-qty`}
                               min="0"
                               step="0.0001"
                               value={item.qty_required}
@@ -370,9 +370,9 @@ function BomEditor({ productId, data, reloading, onReload }: BomEditorProps) {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Label className="sr-only">Waste</Label>
+                          <Label htmlFor={`bom-${item.id}-waste`} className="sr-only">Waste</Label>
                           <div className="flex w-full rounded-lg border border-gray-200/70 bg-white focus-within:border-pink-300 focus-within:ring-2 focus-within:ring-pink-100">
-                            <NumericInput
+                            <NumericInput id={`bom-${item.id}-waste`}
                               min="0"
                               max="100"
                               step="0.1"

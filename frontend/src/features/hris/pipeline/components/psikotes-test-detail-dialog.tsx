@@ -101,8 +101,9 @@ export function PsikotesTestDetailDialog({ test, candidateId, open, onOpenChange
                 <DrawingInsightPanel testId={test.id} candidateId={candidateId} existing={test.ai_insight} />
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Kesimpulan Review Manual</Label>
+                <Label htmlFor="psikotes-test-review-notes" className="text-xs font-medium">Kesimpulan Review Manual</Label>
                 <Textarea
+                  id="psikotes-test-review-notes"
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}

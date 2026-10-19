@@ -54,8 +54,9 @@ function OvertimeAssignBody({ onClose }: { onClose: () => void }) {
     <>
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Karyawan</label>
+          <label htmlFor="overtime-assign-employee" className="mb-1 block text-xs font-medium text-gray-600">Karyawan</label>
           <Combobox
+            id="overtime-assign-employee"
             options={employeeOptions}
             value={form.employee_id}
             onChange={(value) => setForm((f) => ({ ...f, employee_id: value }))}
@@ -63,8 +64,9 @@ function OvertimeAssignBody({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
+          <label htmlFor="overtime-assign-date" className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
           <Input
+            id="overtime-assign-date"
             type="date"
             value={form.date}
             onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
@@ -72,16 +74,18 @@ function OvertimeAssignBody({ onClose }: { onClose: () => void }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jam Mulai</label>
+            <label htmlFor="overtime-assign-start" className="mb-1 block text-xs font-medium text-gray-600">Jam Mulai</label>
             <Input
+              id="overtime-assign-start"
               type="time"
               value={form.start_time}
               onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jam Selesai</label>
+            <label htmlFor="overtime-assign-end" className="mb-1 block text-xs font-medium text-gray-600">Jam Selesai</label>
             <Input
+              id="overtime-assign-end"
               type="time"
               value={form.end_time}
               onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
@@ -89,10 +93,11 @@ function OvertimeAssignBody({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
+          <label htmlFor="overtime-assign-reason" className="mb-1 block text-xs font-medium text-gray-600">
             Pekerjaan yang dilembur (min. 5 karakter)
           </label>
           <Input
+            id="overtime-assign-reason"
             placeholder="cth. stock opname akhir bulan"
             value={form.reason}
             onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}

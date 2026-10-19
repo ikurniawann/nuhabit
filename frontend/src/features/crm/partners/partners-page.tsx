@@ -431,7 +431,7 @@ function CreatePartnerDialog({ onClose, onCreated }: { onClose: () => void; onCr
                 <p className="text-sm font-medium">Beri XP untuk event yang cocok</p>
                 <p className="text-xs text-muted-foreground">Mati = event hanya dicatat.</p>
               </div>
-              <Switch checked={form.awards_xp} onCheckedChange={(next) => setForm((c) => ({ ...c, awards_xp: next }))} />
+              <Switch checked={form.awards_xp} onCheckedChange={(next) => setForm((c) => ({ ...c, awards_xp: next }))} aria-label="Beri XP untuk event yang cocok" />
             </div>
             {form.awards_xp && (
               <Field label="XP per event" hint={`Maksimal ${PARTNER_XP_CAP}.`}>

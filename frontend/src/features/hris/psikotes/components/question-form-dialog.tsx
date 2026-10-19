@@ -183,9 +183,9 @@ export function QuestionFormDialog({
     }
   };
 
-  const scaleSelect = (value: PapiScaleCode, onChange: (v: PapiScaleCode) => void) => (
+  const scaleSelect = (id: string, value: PapiScaleCode, onChange: (v: PapiScaleCode) => void) => (
     <Select value={value} onValueChange={(v) => onChange(v as PapiScaleCode)}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger id={id} className="w-full">
         <SelectValue placeholder="Pilih skala" />
       </SelectTrigger>
       <SelectContent>
@@ -210,8 +210,9 @@ export function QuestionFormDialog({
           {isMcq ? (
             <>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Soal</Label>
+                <Label htmlFor="psikotes-question-body" className="text-xs font-medium">Soal</Label>
                 <Textarea
+                  id="psikotes-question-body"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   rows={3}
@@ -275,8 +276,9 @@ export function QuestionFormDialog({
           ) : (
             <>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Keterangan (opsional)</Label>
+                <Label htmlFor="psikotes-question-note" className="text-xs font-medium">Keterangan (opsional)</Label>
                 <Input
+                  id="psikotes-question-note"
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                   maxLength={500}
@@ -290,8 +292,9 @@ export function QuestionFormDialog({
                 ] as const
               ).map(([label, statement, setStatement]) => (
                 <div key={label} className="space-y-2 rounded-lg border border-border p-3">
-                  <Label className="text-xs font-medium">Pernyataan {label}</Label>
+                  <Label htmlFor={`psikotes-question-papi-${label}-text`} className="text-xs font-medium">Pernyataan {label}</Label>
                   <Textarea
+                    id={`psikotes-question-papi-${label}-text`}
                     value={statement.text}
                     onChange={(e) => setStatement({ ...statement, text: e.target.value })}
                     rows={2}
@@ -299,8 +302,8 @@ export function QuestionFormDialog({
                     placeholder={`Teks pernyataan ${label}`}
                   />
                   <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Skala PAPI</Label>
-                    {scaleSelect(statement.scale, (scale) => setStatement({ ...statement, scale }))}
+                    <Label htmlFor={`psikotes-question-papi-${label}-scale`} className="text-xs text-muted-foreground">Skala PAPI</Label>
+                    {scaleSelect(`psikotes-question-papi-${label}-scale`, statement.scale, (scale) => setStatement({ ...statement, scale }))}
                   </div>
                 </div>
               ))}

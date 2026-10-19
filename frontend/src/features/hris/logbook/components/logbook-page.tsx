@@ -58,9 +58,9 @@ export function LogbookPage() {
 
         {isFullAccess && (
           <div className="w-full space-y-1 md:w-64">
-            <Label>Department</Label>
+            <Label htmlFor="logbook-department">Department</Label>
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger>
+              <SelectTrigger id="logbook-department">
                 <SelectValue placeholder="Semua department" />
               </SelectTrigger>
               <SelectContent>

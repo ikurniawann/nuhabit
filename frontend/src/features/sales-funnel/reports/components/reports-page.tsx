@@ -114,6 +114,7 @@ export function SalesFunnelReportsPage() {
           <Filter className="h-4 w-4 text-gray-400" />
           <Input
             type="date"
+            aria-label="Dari tanggal"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
             className="h-9 w-40 bg-white text-sm"
@@ -121,6 +122,7 @@ export function SalesFunnelReportsPage() {
           <span className="text-sm text-gray-400">s/d</span>
           <Input
             type="date"
+            aria-label="Sampai tanggal"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             className="h-9 w-40 bg-white text-sm"

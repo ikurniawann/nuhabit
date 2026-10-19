@@ -239,7 +239,7 @@ export function InvoiceSection({
             <div className="space-y-1.5">
               <p className="text-xs font-medium text-gray-600">Termin</p>
               <Select value={termId} onValueChange={applyTerm}>
-                <SelectTrigger className="h-9 w-full">
+                <SelectTrigger className="h-9 w-full" aria-label="Termin">
                   <SelectValue placeholder="Pilih termin..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,6 +281,7 @@ export function InvoiceSection({
                 <p className="text-xs font-medium text-gray-600">Jatuh tempo</p>
                 <Input
                   type="date"
+                  aria-label="Jatuh tempo"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   className="h-9 text-sm"

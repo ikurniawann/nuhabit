@@ -162,8 +162,9 @@ export function EssPinjamanPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
+              <label htmlFor="pinjaman-request-type" className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
               <Combobox
+                id="pinjaman-request-type"
                 options={LOAN_TYPE_OPTIONS}
                 value={form.loan_type}
                 onChange={(value) => setForm((f) => ({ ...f, loan_type: value }))}
@@ -172,8 +173,9 @@ export function EssPinjamanPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Jumlah (Rp)</label>
+                <label htmlFor="pinjaman-request-amount" className="mb-1 block text-xs font-medium text-gray-600">Jumlah (Rp)</label>
                 <Input
+                  id="pinjaman-request-amount"
                   type="number"
                   min="0"
                   value={form.principal_amount}
@@ -181,8 +183,9 @@ export function EssPinjamanPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Tenor (bulan)</label>
+                <label htmlFor="pinjaman-request-tenor" className="mb-1 block text-xs font-medium text-gray-600">Tenor (bulan)</label>
                 <Input
+                  id="pinjaman-request-tenor"
                   type="number"
                   min="1"
                   max="60"
@@ -192,8 +195,9 @@ export function EssPinjamanPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Keperluan</label>
+              <label htmlFor="pinjaman-request-purpose" className="mb-1 block text-xs font-medium text-gray-600">Keperluan</label>
               <Input
+                id="pinjaman-request-purpose"
                 placeholder="cth. biaya sekolah anak"
                 value={form.purpose}
                 onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}

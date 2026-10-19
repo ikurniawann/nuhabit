@@ -50,7 +50,7 @@ export function CandidateFilters({ filter, searchInput, brands, onSearchInput, o
           {/* horizontal scroll di mobile */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             <Select value={filter.status} onValueChange={(v) => onChange({ status: !v || v === "all" ? "" : v })}>
-              <SelectTrigger className="w-[140px] flex-shrink-0">
+              <SelectTrigger className="w-[140px] flex-shrink-0" aria-label="Filter status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -63,7 +63,7 @@ export function CandidateFilters({ filter, searchInput, brands, onSearchInput, o
               </SelectContent>
             </Select>
             <Select value={filter.brand_id} onValueChange={(v) => onChange({ brand_id: !v || v === "all" ? "" : v })}>
-              <SelectTrigger className="w-[140px] flex-shrink-0">
+              <SelectTrigger className="w-[140px] flex-shrink-0" aria-label="Filter outlet">
                 <SelectValue placeholder={brands.find((b) => b.id === filter.brand_id)?.name ?? "Pilih Outlet"} />
               </SelectTrigger>
               <SelectContent>

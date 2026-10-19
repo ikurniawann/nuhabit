@@ -99,14 +99,15 @@ export function InstrumentConfigDialog({
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Nama Instrumen</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+            <Label htmlFor="psikotes-instrument-name" className="text-xs font-medium">Nama Instrumen</Label>
+            <Input id="psikotes-instrument-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Durasi (menit)</Label>
+              <Label htmlFor="psikotes-instrument-duration" className="text-xs font-medium">Durasi (menit)</Label>
               <Input
+                id="psikotes-instrument-duration"
                 type="number"
                 min={1}
                 max={MAX_DURATION_MINUTES}
@@ -116,8 +117,9 @@ export function InstrumentConfigDialog({
             </div>
             {isMcq && (
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Soal Ditarik per Tes</Label>
+                <Label htmlFor="psikotes-instrument-question-count" className="text-xs font-medium">Soal Ditarik per Tes</Label>
                 <Input
+                  id="psikotes-instrument-question-count"
                   type="number"
                   min={1}
                   max={200}
@@ -142,8 +144,9 @@ export function InstrumentConfigDialog({
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Instruksi untuk Kandidat</Label>
+            <Label htmlFor="psikotes-instrument-instructions" className="text-xs font-medium">Instruksi untuk Kandidat</Label>
             <Textarea
+              id="psikotes-instrument-instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={4}

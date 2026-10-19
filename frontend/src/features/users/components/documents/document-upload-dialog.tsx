@@ -42,10 +42,18 @@ const EMPTY_DOC_FORM = {
 
 type DocForm = typeof EMPTY_DOC_FORM;
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <label className="text-xs font-medium text-gray-600">{label}</label>
+      <label htmlFor={htmlFor} className="text-xs font-medium text-gray-600">{label}</label>
       {children}
     </div>
   );
@@ -84,8 +92,9 @@ export function DocumentUploadDialog({
           <DialogTitle>Upload Dokumen</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
-          <Field label="Jenis Dokumen *">
+          <Field label="Jenis Dokumen *" htmlFor="document-type">
             <Combobox
+              id="document-type"
               options={DOC_TYPE_OPTIONS}
               value={form.document_type}
               onChange={(value) => setField({ document_type: value })}
@@ -95,15 +104,17 @@ export function DocumentUploadDialog({
               className="!w-full h-9 text-sm"
             />
           </Field>
-          <Field label="Nama Dokumen *">
+          <Field label="Nama Dokumen *" htmlFor="document-name">
             <Input
+              id="document-name"
               value={form.document_name}
               onChange={(e) => setField({ document_name: e.target.value })}
               placeholder="cth. KTP - Budi Santoso"
             />
           </Field>
-          <Field label="URL File *">
+          <Field label="URL File *" htmlFor="document-file-url">
             <Input
+              id="document-file-url"
               value={form.file_url}
               onChange={(e) => setField({ file_url: e.target.value })}
               placeholder="https://... atau path file"
@@ -113,23 +124,26 @@ export function DocumentUploadDialog({
             </p>
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Tanggal Terbit">
+            <Field label="Tanggal Terbit" htmlFor="document-issue-date">
               <Input
+                id="document-issue-date"
                 type="date"
                 value={form.issue_date}
                 onChange={(e) => setField({ issue_date: e.target.value })}
               />
             </Field>
-            <Field label="Tanggal Kedaluwarsa">
+            <Field label="Tanggal Kedaluwarsa" htmlFor="document-expiry-date">
               <Input
+                id="document-expiry-date"
                 type="date"
                 value={form.expiry_date}
                 onChange={(e) => setField({ expiry_date: e.target.value })}
               />
             </Field>
           </div>
-          <Field label="Catatan">
+          <Field label="Catatan" htmlFor="document-notes">
             <Input
+              id="document-notes"
               value={form.notes}
               onChange={(e) => setField({ notes: e.target.value })}
               placeholder="Opsional"

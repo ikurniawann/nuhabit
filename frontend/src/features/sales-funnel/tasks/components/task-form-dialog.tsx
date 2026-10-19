@@ -126,9 +126,9 @@ function TaskFormBody({ onOpenChange, subject, task, defaultDueAt }: Omit<TaskFo
           </div>
 
           <div className="space-y-1.5">
-            <Label>Jenis</Label>
+            <Label htmlFor="task-type">Jenis</Label>
             <Select value={form.activity_type} onValueChange={(v) => set("activity_type", v as TaskFormValues["activity_type"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="task-type"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(TASK_TYPE_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -138,9 +138,9 @@ function TaskFormBody({ onOpenChange, subject, task, defaultDueAt }: Omit<TaskFo
           </div>
 
           <div className="space-y-1.5">
-            <Label>Prioritas</Label>
+            <Label htmlFor="task-priority">Prioritas</Label>
             <Select value={form.priority} onValueChange={(v) => set("priority", v as TaskFormValues["priority"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="task-priority"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
@@ -197,12 +197,12 @@ function TaskFormBody({ onOpenChange, subject, task, defaultDueAt }: Omit<TaskFo
           </div>
 
           <div className="space-y-1.5">
-            <Label>Ulangi</Label>
+            <Label htmlFor="task-recurrence">Ulangi</Label>
             <Select
               value={form.recurrence_freq || "none"}
               onValueChange={(v) => set("recurrence_freq", v === "none" ? "" : (v as TaskFormValues["recurrence_freq"]))}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="task-recurrence"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Tidak berulang</SelectItem>
                 {Object.entries(RECURRENCE_LABELS).map(([value, label]) => (
@@ -239,9 +239,9 @@ function TaskFormBody({ onOpenChange, subject, task, defaultDueAt }: Omit<TaskFo
 
           {isEdit ? (
             <div className="space-y-1.5">
-              <Label>Status</Label>
+              <Label htmlFor="task-status">Status</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v as TaskFormValues["status"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="task-status"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(STATUS_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>{label}</SelectItem>

@@ -122,7 +122,7 @@ export function RecruitmentDashboardPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Select value={brandFilter} onValueChange={(v) => setBrandFilter(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" aria-label="Filter outlet">
             <SelectValue placeholder="Semua Outlet" />
           </SelectTrigger>
           <SelectContent>
@@ -131,7 +131,7 @@ export function RecruitmentDashboardPage() {
           </SelectContent>
         </Select>
         <Select value={period} onValueChange={(v) => setPeriod(v ?? "month")}>
-          <SelectTrigger className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-40" aria-label="Periode">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

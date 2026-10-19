@@ -140,10 +140,10 @@ export function ProductPRForm({
               <input type="hidden" {...register("department_id")} />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="product-pr-department" className="text-xs">
                     Departemen <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="product-pr-department"
                     options={departments.map((dept) => ({ value: dept.id, label: dept.name }))}
                     value={selectedDepartment}
                     onChange={(value) => setValue("department_id", value, { shouldValidate: true })}
@@ -158,10 +158,10 @@ export function ProductPRForm({
                   )}
                 </div>
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="product-pr-priority" className="text-xs">
                     Prioritas <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="product-pr-priority"
                     options={[
                       { value: "low", label: "Rendah" },
                       { value: "medium", label: "Sedang" },
@@ -229,6 +229,7 @@ export function ProductPRForm({
                         size="sm"
                         className="h-8 text-red-500 hover:text-red-600"
                         onClick={() => remove(index)}
+                        aria-label={`Hapus baris ${index + 1}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -236,10 +237,10 @@ export function ProductPRForm({
                   </div>
                   <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
                     <div className="min-w-0 space-y-1.5 lg:col-span-4">
-                      <Label className="text-xs">
+                      <Label htmlFor={`product-pr-${index}-product`} className="text-xs">
                         Produk <span className="text-red-500">*</span>
                       </Label>
-                      <Combobox
+                      <Combobox id={`product-pr-${index}-product`}
                         options={products.map((product) => ({
                           value: product.id,
                           label: product.nama,
@@ -262,8 +263,8 @@ export function ProductPRForm({
                       </div>
                     </div>
                     <div className="min-w-0 space-y-1.5 lg:col-span-2">
-                      <Label className="text-xs">Jumlah</Label>
-                      <NumericInput
+                      <Label htmlFor={`product-pr-${index}-qty`} className="text-xs">Jumlah</Label>
+                      <NumericInput id={`product-pr-${index}-qty`}
                         value={items[index]?.qty || 0}
                         onValueChange={(value) =>
                           setValue(`items.${index}.qty`, value, {
@@ -284,8 +285,8 @@ export function ProductPRForm({
                       </div>
                     </div>
                     <div className="min-w-0 space-y-1.5 lg:col-span-3">
-                      <Label className="text-xs">Harga Estimasi</Label>
-                      <NumericInput
+                      <Label htmlFor={`product-pr-${index}-price`} className="text-xs">Harga Estimasi</Label>
+                      <NumericInput id={`product-pr-${index}-price`}
                         value={items[index]?.estimated_price || 0}
                         onValueChange={(value) =>
                           setValue(`items.${index}.estimated_price`, value, {
@@ -321,8 +322,8 @@ export function ProductPRForm({
             </CardHeader>
             <CardContent className="space-y-4 pt-4">
               <div className="space-y-1.5">
-                <Label className="text-xs">Catatan</Label>
-                <Textarea {...register("notes")} placeholder="Catatan tambahan..." rows={4} className="resize-none text-sm" />
+                <Label htmlFor="product-pr-notes" className="text-xs">Catatan</Label>
+                <Textarea id="product-pr-notes" {...register("notes")} placeholder="Catatan tambahan..." rows={4} className="resize-none text-sm" />
               </div>
               <div className="rounded-xl border border-gray-200/70 bg-gray-50/70 p-4">
                 <p className="text-sm text-gray-500">Estimasi Total</p>

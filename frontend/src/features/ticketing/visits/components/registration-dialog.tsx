@@ -342,12 +342,12 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Mode Bayar</Label>
+                <Label htmlFor="visit-payment-mode">Mode Bayar</Label>
                 <Select
                   value={effectiveMode}
                   onValueChange={(v) => setPaymentMode(v as PaymentMode)}
                 >
-                  <SelectTrigger className="w-full bg-white">
+                  <SelectTrigger id="visit-payment-mode" className="w-full bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -380,12 +380,12 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Metode</Label>
+                    <Label htmlFor="visit-deposit-method">Metode</Label>
                     <Select
                       value={depositMethod}
                       onValueChange={(v) => setDepositMethod(v as CashMethod)}
                     >
-                      <SelectTrigger className="w-full bg-white">
+                      <SelectTrigger id="visit-deposit-method" className="w-full bg-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -443,6 +443,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                           <button
                             type="button"
                             onClick={() => changeQty(line.key, -1)}
+                            aria-label={`Kurangi ${line.ticketName}`}
                             className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900"
                           >
                             <Minus className="h-3 w-3" />
@@ -453,6 +454,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                           <button
                             type="button"
                             onClick={() => changeQty(line.key, 1)}
+                            aria-label={`Tambah ${line.ticketName}`}
                             className="flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 text-gray-600 hover:border-gray-900 hover:text-gray-900"
                           >
                             <Plus className="h-3 w-3" />
@@ -460,6 +462,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                           <button
                             type="button"
                             onClick={() => removeLine(line.key)}
+                            aria-label={`Hapus ${line.ticketName}`}
                             className="text-gray-300 hover:text-red-500"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

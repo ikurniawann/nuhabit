@@ -147,8 +147,9 @@ function CoaAccountForm({
       </DialogPanelHeader>
       <DialogPanelBody className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-1">
-          <FormFieldLabel required>Kode</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-code" required>Kode</FormFieldLabel>
           <Input
+            id="coa-account-code"
             value={form.code}
             onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
             className={formInputClassName}
@@ -157,8 +158,9 @@ function CoaAccountForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-1">
-          <FormFieldLabel required>Account Type</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-type" required>Account Type</FormFieldLabel>
           <Combobox
+            id="coa-account-type"
             options={accountTypeFormOptions}
             value={form.account_type_id}
             onChange={(value) =>
@@ -171,8 +173,9 @@ function CoaAccountForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <FormFieldLabel required>Nama</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-name" required>Nama</FormFieldLabel>
           <Input
+            id="coa-account-name"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             className={formInputClassName}
@@ -180,8 +183,9 @@ function CoaAccountForm({
           />
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <FormFieldLabel>Parent</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-parent">Parent</FormFieldLabel>
           <Combobox
+            id="coa-account-parent"
             options={parentFormOptions}
             value={form.parent_id}
             onChange={(value) => setForm((f) => ({ ...f, parent_id: value }))}
@@ -193,8 +197,9 @@ function CoaAccountForm({
           />
         </div>
         <div className="space-y-1.5">
-          <FormFieldLabel>Cash Flow Category</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-cash-flow">Cash Flow Category</FormFieldLabel>
           <Combobox
+            id="coa-account-cash-flow"
             options={cashFlowOptions}
             value={form.cash_flow_category}
             onChange={(value) =>
@@ -208,8 +213,9 @@ function CoaAccountForm({
           />
         </div>
         <div className="space-y-1.5">
-          <FormFieldLabel>Deskripsi</FormFieldLabel>
+          <FormFieldLabel htmlFor="coa-account-description">Deskripsi</FormFieldLabel>
           <Input
+            id="coa-account-description"
             value={form.description}
             onChange={(e) =>
               setForm((f) => ({ ...f, description: e.target.value }))

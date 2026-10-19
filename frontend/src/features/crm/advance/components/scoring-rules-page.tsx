@@ -142,7 +142,7 @@ export function ScoringRulesPage() {
           <ul className="divide-y divide-gray-200/60">
             {rules.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${r.name}`} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{r.name}</p>
                   <p className="text-xs text-gray-500">{describe(r)}</p>
@@ -200,13 +200,13 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
       <DialogHeader><DialogTitle>{isEdit ? "Edit Aturan Scoring" : "Aturan Scoring Baru"}</DialogTitle></DialogHeader>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Nama</Label>
-          <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Sumber referral" />
+          <Label htmlFor="scoring-rule-name">Nama</Label>
+          <Input id="scoring-rule-name" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Sumber referral" />
         </div>
         <div className="space-y-1.5">
-          <Label>Jenis aturan</Label>
+          <Label htmlFor="scoring-rule-kind">Jenis aturan</Label>
           <Select value={f.kind} onValueChange={(v) => set("kind", v as FormState["kind"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="scoring-rule-kind"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="field">Field lead</SelectItem>
               <SelectItem value="event">Kejadian (event)</SelectItem>
@@ -214,59 +214,59 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Poin (boleh negatif)</Label>
-          <Input type="number" min={-100} max={100} value={f.points} onChange={(e) => set("points", e.target.value)} />
+          <Label htmlFor="scoring-rule-points">Poin (boleh negatif)</Label>
+          <Input id="scoring-rule-points" type="number" min={-100} max={100} value={f.points} onChange={(e) => set("points", e.target.value)} />
         </div>
         {f.kind === "field" ? (
           <>
             <div className="space-y-1.5">
-              <Label>Field</Label>
+              <Label htmlFor="scoring-rule-field">Field</Label>
               <Select value={f.field} onValueChange={(v) => set("field", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="scoring-rule-field"><SelectValue /></SelectTrigger>
                 <SelectContent>{SCORING_FIELDS.map((x) => <SelectItem key={x} value={x}>{FIELD_LABELS[x]}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Operator</Label>
+              <Label htmlFor="scoring-rule-operator">Operator</Label>
               <Select value={f.operator} onValueChange={(v) => set("operator", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="scoring-rule-operator"><SelectValue /></SelectTrigger>
                 <SelectContent>{SCORING_OPERATORS.map((x) => <SelectItem key={x} value={x}>{OP_LABELS[x]}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {f.operator !== "not_empty" ? (
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>Nilai</Label>
-                <Input value={f.value} onChange={(e) => set("value", e.target.value)} placeholder={f.operator === "in" ? "corporate, pemerintah" : "cth. wa / panas / Bandung"} />
+                <Label htmlFor="scoring-rule-value">Nilai</Label>
+                <Input id="scoring-rule-value" value={f.value} onChange={(e) => set("value", e.target.value)} placeholder={f.operator === "in" ? "corporate, pemerintah" : "cth. wa / panas / Bandung"} />
               </div>
             ) : null}
           </>
         ) : (
           <>
             <div className="space-y-1.5 sm:col-span-2">
-              <Label>Kejadian</Label>
+              <Label htmlFor="scoring-rule-event-type">Kejadian</Label>
               <Select value={f.event_type} onValueChange={(v) => set("event_type", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="scoring-rule-event-type"><SelectValue /></SelectTrigger>
                 <SelectContent>{SCORING_EVENT_TYPES.map((x) => <SelectItem key={x} value={x}>{EVENT_LABELS[x]}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             {f.event_type === "task_done" ? (
               <div className="space-y-1.5">
-                <Label>Jenis task (opsional)</Label>
-                <Input value={f.value} onChange={(e) => set("value", e.target.value)} placeholder="meeting / telepon / wa" />
+                <Label htmlFor="scoring-rule-task-type">Jenis task (opsional)</Label>
+                <Input id="scoring-rule-task-type" value={f.value} onChange={(e) => set("value", e.target.value)} placeholder="meeting / telepon / wa" />
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label>Hanya dalam N hari terakhir (kosong = semua)</Label>
-              <Input type="number" min={1} value={f.window_days} onChange={(e) => set("window_days", e.target.value)} />
+              <Label htmlFor="scoring-rule-window-days">Hanya dalam N hari terakhir (kosong = semua)</Label>
+              <Input id="scoring-rule-window-days" type="number" min={1} value={f.window_days} onChange={(e) => set("window_days", e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Dihitung maksimal (kali)</Label>
-              <Input type="number" min={1} max={100} value={f.max_count} onChange={(e) => set("max_count", e.target.value)} />
+              <Label htmlFor="scoring-rule-max-count">Dihitung maksimal (kali)</Label>
+              <Input id="scoring-rule-max-count" type="number" min={1} max={100} value={f.max_count} onChange={(e) => set("max_count", e.target.value)} />
             </div>
           </>
         )}
         <label className="inline-flex items-center gap-2 text-sm sm:col-span-2">
-          <Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} /> Aktif
+          <Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} aria-label="Aktif" /> Aktif
         </label>
       </div>
       <DialogFooter>

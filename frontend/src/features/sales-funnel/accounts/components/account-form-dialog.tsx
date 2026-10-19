@@ -80,9 +80,9 @@ function AccountFormBody({ onOpenChange, account, onCreated }: Omit<AccountFormD
             <Input id="acc_name" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="PT / Sekolah / Komunitas" />
           </div>
           <div className="space-y-1.5">
-            <Label>Jenis</Label>
+            <Label htmlFor="account-type">Jenis</Label>
             <Select value={form.account_type} onValueChange={(v) => set("account_type", v as AccountFormValues["account_type"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="account-type"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {Object.entries(ORG_TYPE_LABELS).map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>

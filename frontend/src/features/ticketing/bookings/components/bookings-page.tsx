@@ -75,6 +75,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
           <div className="flex flex-wrap items-center gap-2">
             <Input
               type="date"
+              aria-label="Filter tanggal"
               value={date}
               onChange={(e) => {
                 setDate(e.target.value);
@@ -89,7 +90,7 @@ export function BookingsPage({ canManage = false }: { canManage?: boolean }) {
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-9 w-40">
+              <SelectTrigger className="h-9 w-40" aria-label="Filter status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

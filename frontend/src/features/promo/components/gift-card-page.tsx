@@ -217,6 +217,7 @@ export function GiftCardPage() {
         <div className="mt-4 flex items-center justify-between gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <Switch
+              aria-label="Kasir boleh mengetik nominal bebas"
               checked={config?.allow_custom ?? true}
               disabled={configQuery.isLoading || saveConfigMutation.isPending}
               onCheckedChange={(checked) =>
@@ -377,6 +378,7 @@ export function GiftCardPage() {
                         )}
                         {(card.status === "active" || card.status === "disabled") && (
                           <Switch
+                            aria-label={`Aktifkan ${card.code}`}
                             checked={card.status === "active"}
                             disabled={toggleMutation.isPending}
                             onCheckedChange={(checked) =>
@@ -471,12 +473,12 @@ export function GiftCardPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Mode</Label>
+              <Label htmlFor="gift-card-mode">Mode</Label>
               <Select
                 value={form.mode}
                 onValueChange={(v) => set({ mode: v as IssueMode })}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="gift-card-mode" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

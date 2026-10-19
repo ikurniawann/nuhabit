@@ -50,7 +50,7 @@ function MethodSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as CashMethod)}>
-      <SelectTrigger className="h-9 w-36">
+      <SelectTrigger className="h-9 w-36" aria-label="Metode bayar">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

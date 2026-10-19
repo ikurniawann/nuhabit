@@ -111,6 +111,7 @@ export function ContractCard({
                 className="text-red-600"
                 disabled={deletePending}
                 onClick={onDelete}
+                aria-label={`Hapus draft kontrak ${contract.contract_number}`}
               >
                 <TrashIcon className="h-4 w-4" />
               </Button>

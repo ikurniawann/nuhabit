@@ -92,7 +92,7 @@ export function ResetPasswordDialog({ target, open, onOpenChange }: ResetPasswor
             <div>
               <p className="mb-1.5 text-xs font-medium text-gray-600">Temporary password</p>
               <div className="flex gap-2">
-                <Input readOnly value={tempPassword ?? ""} className="h-10 font-mono text-sm" />
+                <Input readOnly value={tempPassword ?? ""} aria-label="Password sementara" className="h-10 font-mono text-sm" />
                 <Button
                   type="button"
                   variant="outline"

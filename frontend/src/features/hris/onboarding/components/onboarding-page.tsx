@@ -70,7 +70,7 @@ export function OnboardingPage({ params }: OnboardingPageProps) {
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/employees">
+          <Link href="/dashboard/employees" aria-label="Kembali">
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </Button>

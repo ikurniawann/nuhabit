@@ -64,7 +64,7 @@ export function ReportSchedulesPage() {
           <ul className="divide-y divide-gray-200/60">
             {schedules.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={s.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: s.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={s.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: s.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${s.name}`} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{s.name} <span className="text-xs font-normal text-gray-400">· {s.report_name}</span></p>
                   <p className="text-xs text-gray-500">
@@ -152,44 +152,44 @@ function ScheduleForm({ reports, pending, onCancel, onSubmit }: {
       <DialogHeader><DialogTitle>Jadwal Baru</DialogTitle></DialogHeader>
       <div className="grid gap-3">
         <div className="space-y-1.5">
-          <Label>Report</Label>
+          <Label htmlFor="schedule-report">Report</Label>
           <Select value={reportId} onValueChange={setReportId}>
-            <SelectTrigger><SelectValue placeholder="pilih report" /></SelectTrigger>
+            <SelectTrigger id="schedule-report"><SelectValue placeholder="pilih report" /></SelectTrigger>
             <SelectContent>{reports.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
-        <div className="space-y-1.5"><Label>Nama jadwal</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Rekap pipeline Senin pagi" /></div>
+        <div className="space-y-1.5"><Label htmlFor="schedule-name">Nama jadwal</Label><Input id="schedule-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Rekap pipeline Senin pagi" /></div>
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1.5">
-            <Label>Frekuensi</Label>
+            <Label htmlFor="schedule-frequency">Frekuensi</Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as ScheduleFrequency)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="schedule-frequency"><SelectValue /></SelectTrigger>
               <SelectContent>{SCHEDULE_FREQUENCIES.map((f) => <SelectItem key={f} value={f}>{SCHEDULE_FREQUENCY_LABELS[f]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           {frequency === "weekly" ? (
             <div className="space-y-1.5">
-              <Label>Hari</Label>
+              <Label htmlFor="schedule-day-of-week">Hari</Label>
               <Select value={dayOfWeek} onValueChange={setDayOfWeek}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="schedule-day-of-week"><SelectValue /></SelectTrigger>
                 <SelectContent>{DAY_NAMES.map((d, i) => <SelectItem key={d} value={String(i)}>{d}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           ) : frequency === "monthly" ? (
             <div className="space-y-1.5">
-              <Label>Tanggal</Label>
-              <Input type="number" min={1} max={28} value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} />
+              <Label htmlFor="schedule-day-of-month">Tanggal</Label>
+              <Input id="schedule-day-of-month" type="number" min={1} max={28} value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} />
             </div>
           ) : <div />}
           <div className="space-y-1.5">
-            <Label>Jam (WIB)</Label>
-            <Input type="number" min={0} max={23} value={hour} onChange={(e) => setHour(e.target.value)} />
+            <Label htmlFor="schedule-hour">Jam (WIB)</Label>
+            <Input id="schedule-hour" type="number" min={0} max={23} value={hour} onChange={(e) => setHour(e.target.value)} />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Kanal</Label>
+          <Label htmlFor="schedule-channel">Kanal</Label>
           <Select value={channel} onValueChange={(v) => setChannel(v as ScheduleChannel)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="schedule-channel"><SelectValue /></SelectTrigger>
             <SelectContent>{SCHEDULE_CHANNELS.map((c) => <SelectItem key={c} value={c}>{SCHEDULE_CHANNEL_LABELS[c]}</SelectItem>)}</SelectContent>
           </Select>
           <p className="text-xs text-gray-500">WhatsApp mengirim ke nomor karyawan penerima sekaligus notifikasi aplikasi.</p>
@@ -200,14 +200,14 @@ function ScheduleForm({ reports, pending, onCancel, onSubmit }: {
             {recipients.map((r, i) => (
               <span key={i} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
                 {r.type === "user" ? owners.find((o) => o.id === r.user_id)?.full_name ?? "Pengguna" : r.number}
-                <button type="button" onClick={() => setRecipients(recipients.filter((_, j) => j !== i))}><X className="h-3 w-3" /></button>
+                <button type="button" onClick={() => setRecipients(recipients.filter((_, j) => j !== i))} aria-label={`Hapus penerima ${r.type === "user" ? owners.find((o) => o.id === r.user_id)?.full_name ?? "pengguna" : r.number}`}><X className="h-3 w-3" /></button>
               </span>
             ))}
             {recipients.length === 0 ? <span className="text-xs text-gray-500">Belum ada penerima.</span> : null}
           </div>
           <div className="flex gap-1.5">
             <Select value={userToAdd} onValueChange={addUser}>
-              <SelectTrigger className="h-9 flex-1"><SelectValue placeholder="+ pengguna" /></SelectTrigger>
+              <SelectTrigger className="h-9 flex-1" aria-label="Tambah pengguna penerima"><SelectValue placeholder="+ pengguna" /></SelectTrigger>
               <SelectContent>{owners.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name}</SelectItem>)}</SelectContent>
             </Select>
           </div>

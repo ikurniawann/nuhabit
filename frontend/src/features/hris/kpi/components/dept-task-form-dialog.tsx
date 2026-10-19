@@ -73,12 +73,12 @@ export function DeptTaskFormDialog({ open, onOpenChange, departmentId, members }
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-gray-600">Judul task</label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="mis. Cek suhu chiller" />
+            <label htmlFor="dept-task-title" className="text-xs font-medium text-gray-600">Judul task</label>
+            <Input id="dept-task-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="mis. Cek suhu chiller" />
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600">Deskripsi (opsional)</label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <label htmlFor="dept-task-description" className="text-xs font-medium text-gray-600">Deskripsi (opsional)</label>
+            <Input id="dept-task-description" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600">Pengulangan</label>
@@ -97,8 +97,9 @@ export function DeptTaskFormDialog({ open, onOpenChange, departmentId, members }
           </div>
           {recurrence === "weekly" ? (
             <div>
-              <label className="text-xs font-medium text-gray-600">Setiap hari</label>
+              <label htmlFor="dept-task-weekly-day" className="text-xs font-medium text-gray-600">Setiap hari</label>
               <Combobox
+                id="dept-task-weekly-day"
                 value={weeklyDay}
                 onChange={setWeeklyDay}
                 options={[1, 2, 3, 4, 5, 6, 7].map((d) => ({ value: String(d), label: HARI[d] }))}
@@ -107,8 +108,9 @@ export function DeptTaskFormDialog({ open, onOpenChange, departmentId, members }
           ) : null}
           {recurrence === "monthly" ? (
             <div>
-              <label className="text-xs font-medium text-gray-600">Setiap tanggal (1–28)</label>
+              <label htmlFor="dept-task-monthly-day" className="text-xs font-medium text-gray-600">Setiap tanggal (1–28)</label>
               <Input
+                id="dept-task-monthly-day"
                 type="number"
                 min={1}
                 max={28}
@@ -119,8 +121,8 @@ export function DeptTaskFormDialog({ open, onOpenChange, departmentId, members }
           ) : null}
           {recurrence === "once" ? (
             <div>
-              <label className="text-xs font-medium text-gray-600">Jatuh tempo</label>
-              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              <label htmlFor="dept-task-due-date" className="text-xs font-medium text-gray-600">Jatuh tempo</label>
+              <Input id="dept-task-due-date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           ) : null}
           <div>
@@ -162,10 +164,11 @@ export function DeptTaskFormDialog({ open, onOpenChange, departmentId, members }
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600">
+            <label htmlFor="dept-task-assignee" className="text-xs font-medium text-gray-600">
               Penanggung jawab (opsional — kosong = seluruh departemen)
             </label>
             <Combobox
+              id="dept-task-assignee"
               value={assignee}
               onChange={setAssignee}
               options={members.map((m) => ({ value: m.id, label: m.full_name }))}

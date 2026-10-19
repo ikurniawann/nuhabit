@@ -69,7 +69,7 @@ export function SegmentsPage() {
           <ul className="divide-y divide-gray-200/60">
             {segments.map((s) => (
               <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={s.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: s.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={s.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: s.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${s.name}`} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{s.name}</p>
                   <p className="text-xs text-gray-500">
@@ -152,22 +152,22 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
 
       <div className="grid gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Nama</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Pelanggan Loyal Bandung" /></div>
+          <div className="space-y-1.5"><Label htmlFor="segment-name">Nama</Label><Input id="segment-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Pelanggan Loyal Bandung" /></div>
           <div className="space-y-1.5">
-            <Label>Sumber</Label>
+            <Label htmlFor="segment-source">Sumber</Label>
             <Select value={def.source} onValueChange={(v) => { setDef(emptyDefinition(v as SegmentSource)); setPreview(null); }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="segment-source"><SelectValue /></SelectTrigger>
               <SelectContent>{SEGMENT_SOURCES.map((s) => <SelectItem key={s} value={s}>{SEGMENT_SOURCE_LABELS[s]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
-        <div className="space-y-1.5"><Label>Deskripsi (opsional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="segment-description">Deskripsi (opsional)</Label><Input id="segment-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
 
         {src.supportsRfm ? (
           <div className="rounded-lg border border-gray-200/80 p-3">
             <div className="flex items-center justify-between">
               <Label>Saring dengan RFM</Label>
-              <Switch checked={def.rfm.enabled} onCheckedChange={(v) => patch({ rfm: { ...def.rfm, enabled: Boolean(v) } })} />
+              <Switch checked={def.rfm.enabled} onCheckedChange={(v) => patch({ rfm: { ...def.rfm, enabled: Boolean(v) } })} aria-label="Saring dengan RFM" />
             </div>
             {def.rfm.enabled ? (
               <>
@@ -191,10 +191,10 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
                         {dim === "recency" ? "Kebaruan" : dim === "frequency" ? "Frekuensi" : "Belanja"}
                       </p>
                       <div className="flex items-center gap-1">
-                        <Input type="number" min={1} max={5} className="h-8 text-center text-xs" value={def.rfm[dim].min}
+                        <Input type="number" min={1} max={5} className="h-8 text-center text-xs" value={def.rfm[dim].min} aria-label={`${dim === "recency" ? "Kebaruan" : dim === "frequency" ? "Frekuensi" : "Belanja"} minimum`}
                           onChange={(e) => patch({ rfm: { ...def.rfm, [dim]: { ...def.rfm[dim], min: Math.min(5, Math.max(1, Number(e.target.value) || 1)) } } })} />
                         <span className="text-xs text-gray-400">–</span>
-                        <Input type="number" min={1} max={5} className="h-8 text-center text-xs" value={def.rfm[dim].max}
+                        <Input type="number" min={1} max={5} className="h-8 text-center text-xs" value={def.rfm[dim].max} aria-label={`${dim === "recency" ? "Kebaruan" : dim === "frequency" ? "Frekuensi" : "Belanja"} maksimum`}
                           onChange={(e) => patch({ rfm: { ...def.rfm, [dim]: { ...def.rfm[dim], max: Math.min(5, Math.max(1, Number(e.target.value) || 5)) } } })} />
                       </div>
                     </div>
@@ -222,17 +222,17 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
               return (
                 <div key={i} className="flex flex-wrap gap-1.5">
                   <Select value={f.field} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, field: v } : x)) })}>
-                    <SelectTrigger className="h-8 w-44 bg-white text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-44 bg-white text-xs" aria-label={`Field filter ${i + 1}`}><SelectValue /></SelectTrigger>
                     <SelectContent>{fields.map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
                   </Select>
                   <Select value={f.op} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, op: v as typeof x.op } : x)) })}>
-                    <SelectTrigger className="h-8 w-32 bg-white text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-8 w-32 bg-white text-xs" aria-label={`Operator filter ${i + 1}`}><SelectValue /></SelectTrigger>
                     <SelectContent>{FILTER_OPS.map((o) => <SelectItem key={o} value={o}>{FILTER_OP_LABELS[o]}</SelectItem>)}</SelectContent>
                   </Select>
                   {needsValue ? (
                     meta?.options?.length ? (
                       <Select value={String(f.value ?? "")} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, value: v } : x)) })}>
-                        <SelectTrigger className="h-8 flex-1 bg-white text-xs"><SelectValue placeholder="pilih" /></SelectTrigger>
+                        <SelectTrigger className="h-8 flex-1 bg-white text-xs" aria-label={`Nilai filter ${i + 1}`}><SelectValue placeholder="pilih" /></SelectTrigger>
                         <SelectContent>{meta.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                       </Select>
                     ) : (
@@ -242,7 +242,7 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
                         onChange={(e) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} />
                     )
                   ) : null}
-                  <button type="button" className="px-1 text-gray-400 hover:text-red-600"
+                  <button type="button" className="px-1 text-gray-400 hover:text-red-600" aria-label={`Hapus filter ${i + 1}`}
                     onClick={() => patch({ filters: def.filters.filter((_, j) => j !== i) })}>
                     <X className="h-4 w-4" />
                   </button>
@@ -253,7 +253,7 @@ function SegmentBuilder({ initial, onClose }: { initial: SegmentRow | null; onCl
         </div>
 
         <label className="inline-flex items-center gap-2 text-sm">
-          <Switch checked={def.require_wa_consent} onCheckedChange={(v) => patch({ require_wa_consent: Boolean(v) })} />
+          <Switch checked={def.require_wa_consent} onCheckedChange={(v) => patch({ require_wa_consent: Boolean(v) })} aria-label="Hanya yang memberi izin WhatsApp" />
           Hanya yang memberi izin WhatsApp
         </label>
 

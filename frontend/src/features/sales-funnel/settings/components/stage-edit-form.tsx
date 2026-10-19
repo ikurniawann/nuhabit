@@ -111,6 +111,7 @@ export function StageEditForm({ stage, onClose }: { stage: SalesStage; onClose: 
               </p>
             </div>
             <Switch
+              aria-label="Tahap aktif"
               checked={form.is_active}
               onCheckedChange={(checked) =>
                 setForm((p) => ({ ...p, is_active: checked }))

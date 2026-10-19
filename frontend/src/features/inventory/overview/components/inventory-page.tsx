@@ -169,7 +169,7 @@ export function InventoryPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px]" aria-label="Filter status">
               <SelectValue placeholder="Semua Status" />
             </SelectTrigger>
             <SelectContent>

@@ -81,16 +81,18 @@ function HolidayFormBody({ holiday, year, onCancel, onSaved }: HolidayFormBodyPr
     <>
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
+          <label htmlFor="holiday-form-date" className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
           <Input
+            id="holiday-form-date"
             type="date"
             value={form.holiday_date}
             onChange={(e) => setForm((f) => ({ ...f, holiday_date: e.target.value }))}
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Nama libur</label>
+          <label htmlFor="holiday-form-name" className="mb-1 block text-xs font-medium text-gray-600">Nama libur</label>
           <Input
+            id="holiday-form-name"
             placeholder="cth. Hari Kemerdekaan Republik Indonesia"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -98,12 +100,12 @@ function HolidayFormBody({ holiday, year, onCancel, onSaved }: HolidayFormBodyPr
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Tipe</label>
+            <label htmlFor="holiday-form-type" className="mb-1 block text-xs font-medium text-gray-600">Tipe</label>
             <Select
               value={form.type}
               onValueChange={(v) => setForm((f) => withHolidayType(f, v as HolidayType))}
             >
-              <SelectTrigger>
+              <SelectTrigger id="holiday-form-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -116,12 +118,12 @@ function HolidayFormBody({ holiday, year, onCancel, onSaved }: HolidayFormBodyPr
             </Select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Status</label>
+            <label htmlFor="holiday-form-status" className="mb-1 block text-xs font-medium text-gray-600">Status</label>
             <Select
               value={form.status}
               onValueChange={(v) => setForm((f) => ({ ...f, status: v as HolidayStatus }))}
             >
-              <SelectTrigger>
+              <SelectTrigger id="holiday-form-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -146,8 +148,9 @@ function HolidayFormBody({ holiday, year, onCancel, onSaved }: HolidayFormBodyPr
           </span>
         </label>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Catatan (opsional)</label>
+          <label htmlFor="holiday-form-note" className="mb-1 block text-xs font-medium text-gray-600">Catatan (opsional)</label>
           <Input
+            id="holiday-form-note"
             placeholder="cth. tanggal tentatif, verifikasi ke SKB resmi"
             value={form.note}
             onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}

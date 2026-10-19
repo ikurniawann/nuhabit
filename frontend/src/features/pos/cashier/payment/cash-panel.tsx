@@ -25,7 +25,7 @@ export function CashPanel({
   return (
     <div className="space-y-3 rounded-xl border border-gray-200/70 bg-muted/30 p-4">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-foreground">Amount received</label>
+        <label htmlFor="payment-cash-received" className="text-sm font-medium text-foreground">Amount received</label>
         <Button
           type="button"
           variant="outline"
@@ -38,6 +38,7 @@ export function CashPanel({
         </Button>
       </div>
       <Input
+        id="payment-cash-received"
         type="text"
         inputMode="numeric"
         placeholder="0"

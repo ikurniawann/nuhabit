@@ -240,8 +240,9 @@ export function DepartmentsPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div>
-                <FormFieldLabel required>Nama Departemen</FormFieldLabel>
+                <FormFieldLabel required htmlFor="department-name">Nama Departemen</FormFieldLabel>
                 <Input
+                  id="department-name"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Contoh: Human Resources"
@@ -249,8 +250,9 @@ export function DepartmentsPage() {
                 />
               </div>
               <div>
-                <FormFieldLabel required>Kode</FormFieldLabel>
+                <FormFieldLabel required htmlFor="department-code">Kode</FormFieldLabel>
                 <Input
+                  id="department-code"
                   value={form.code}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))
@@ -262,8 +264,9 @@ export function DepartmentsPage() {
                 <p className="mt-1 text-xs text-gray-400">Kode unik, huruf kapital otomatis</p>
               </div>
               <div>
-                <FormFieldLabel>Deskripsi</FormFieldLabel>
+                <FormFieldLabel htmlFor="department-description">Deskripsi</FormFieldLabel>
                 <Input
+                  id="department-description"
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="Opsional"

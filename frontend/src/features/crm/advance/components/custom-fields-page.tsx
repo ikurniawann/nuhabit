@@ -96,7 +96,7 @@ export function CustomFieldsPage() {
           <ul className="divide-y divide-gray-200/60">
             {fields.map((f) => (
               <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${f.label}`} />
                 <Badge className="border-0 bg-gray-900 font-semibold text-white">{OBJECT_LABELS[f.object]}</Badge>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{f.label} <span className="font-mono text-xs text-gray-400">{f.key}</span></p>
@@ -157,53 +157,53 @@ function FieldForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: 
       <DialogHeader><DialogTitle>{isEdit ? "Edit Custom Field" : "Custom Field Baru"}</DialogTitle></DialogHeader>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Objek</Label>
+          <Label htmlFor="custom-field-object">Objek</Label>
           {isEdit ? (
-            <Input value={OBJECT_LABELS[f.object]} disabled />
+            <Input id="custom-field-object" value={OBJECT_LABELS[f.object]} disabled />
           ) : (
             <Select value={f.object} onValueChange={(v) => set("object", v as FormState["object"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="custom-field-object"><SelectValue /></SelectTrigger>
               <SelectContent>{CUSTOM_FIELD_OBJECTS.map((o) => <SelectItem key={o} value={o}>{OBJECT_LABELS[o]}</SelectItem>)}</SelectContent>
             </Select>
           )}
         </div>
         <div className="space-y-1.5">
-          <Label>Tipe</Label>
+          <Label htmlFor="custom-field-type">Tipe</Label>
           <Select value={f.field_type} onValueChange={(v) => set("field_type", v as FormState["field_type"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="custom-field-type"><SelectValue /></SelectTrigger>
             <SelectContent>{CUSTOM_FIELD_TYPES.map((t) => <SelectItem key={t} value={t}>{TYPE_LABELS[t]}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Label</Label>
-          <Input value={f.label} onChange={(e) => { set("label", e.target.value); if (!isEdit && !f.key) set("key", e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)); }} placeholder="cth. Budget (Rp)" />
+          <Label htmlFor="custom-field-label">Label</Label>
+          <Input id="custom-field-label" value={f.label} onChange={(e) => { set("label", e.target.value); if (!isEdit && !f.key) set("key", e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)); }} placeholder="cth. Budget (Rp)" />
         </div>
         <div className="space-y-1.5">
-          <Label>Key (huruf kecil, angka, _)</Label>
-          <Input value={f.key} onChange={(e) => set("key", e.target.value.toLowerCase())} disabled={isEdit} placeholder="budget" className="font-mono" />
+          <Label htmlFor="custom-field-key">Key (huruf kecil, angka, _)</Label>
+          <Input id="custom-field-key" value={f.key} onChange={(e) => set("key", e.target.value.toLowerCase())} disabled={isEdit} placeholder="budget" className="font-mono" />
         </div>
         {isPick ? (
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Pilihan (pisah koma)</Label>
-            <Input value={f.options} onChange={(e) => set("options", e.target.value)} placeholder="Kecil, Sedang, Besar" />
+            <Label htmlFor="custom-field-options">Pilihan (pisah koma)</Label>
+            <Input id="custom-field-options" value={f.options} onChange={(e) => set("options", e.target.value)} placeholder="Kecil, Sedang, Besar" />
           </div>
         ) : null}
         {f.field_type === "number" ? (
           <>
-            <div className="space-y-1.5"><Label>Minimum</Label><Input type="number" value={f.min} onChange={(e) => set("min", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Maksimum</Label><Input type="number" value={f.max} onChange={(e) => set("max", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="custom-field-min">Minimum</Label><Input id="custom-field-min" type="number" value={f.min} onChange={(e) => set("min", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="custom-field-max">Maksimum</Label><Input id="custom-field-max" type="number" value={f.max} onChange={(e) => set("max", e.target.value)} /></div>
           </>
         ) : null}
         {f.field_type === "text" ? (
-          <div className="space-y-1.5 sm:col-span-2"><Label>Pola regex (opsional)</Label><Input value={f.pattern} onChange={(e) => set("pattern", e.target.value)} placeholder="^[A-Z]{3}-\\d{4}$" className="font-mono" /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor="custom-field-pattern">Pola regex (opsional)</Label><Input id="custom-field-pattern" value={f.pattern} onChange={(e) => set("pattern", e.target.value)} placeholder="^[A-Z]{3}-\\d{4}$" className="font-mono" /></div>
         ) : null}
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Teks bantuan (opsional)</Label>
-          <Input value={f.help_text} onChange={(e) => set("help_text", e.target.value)} />
+          <Label htmlFor="custom-field-help-text">Teks bantuan (opsional)</Label>
+          <Input id="custom-field-help-text" value={f.help_text} onChange={(e) => set("help_text", e.target.value)} />
         </div>
-        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_required} onCheckedChange={(v) => set("is_required", Boolean(v))} /> Wajib diisi</label>
-        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.show_in_list} onCheckedChange={(v) => set("show_in_list", Boolean(v))} /> Tampil di daftar</label>
-        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} /> Aktif</label>
+        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_required} onCheckedChange={(v) => set("is_required", Boolean(v))} aria-label="Wajib diisi" /> Wajib diisi</label>
+        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.show_in_list} onCheckedChange={(v) => set("show_in_list", Boolean(v))} aria-label="Tampil di daftar" /> Tampil di daftar</label>
+        <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} aria-label="Aktif" /> Aktif</label>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={pending}>Batal</Button>

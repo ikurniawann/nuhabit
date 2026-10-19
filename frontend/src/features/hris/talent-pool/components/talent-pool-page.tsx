@@ -234,7 +234,7 @@ export function TalentPoolPage() {
           />
         </div>
         <Select value={selectedBrand} onValueChange={(v) => setSelectedBrand(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" aria-label="Filter outlet">
             <SelectValue
               placeholder={brands.find((b) => b.id === selectedBrand)?.name ?? "Semua Outlet"}
             />

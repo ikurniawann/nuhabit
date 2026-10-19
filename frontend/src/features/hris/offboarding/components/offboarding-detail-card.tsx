@@ -100,7 +100,7 @@ export function OffboardingDetailCard({ employeeId, offboarding }: OffboardingDe
           <div>
             <p className="text-sm text-gray-500">Status</p>
             <Select value={offboarding.status} onValueChange={handleStatus}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" aria-label="Status offboarding">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -134,8 +134,9 @@ export function OffboardingDetailCard({ employeeId, offboarding }: OffboardingDe
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label className="text-sm">Tanggal</Label>
+                <Label htmlFor="offboarding-exit-interview-date" className="text-sm">Tanggal</Label>
                 <Input
+                  id="offboarding-exit-interview-date"
                   type="date"
                   value={offboarding.exit_interview_date || ""}
                   onChange={() => handleStatus("exit_interview")}
@@ -143,8 +144,9 @@ export function OffboardingDetailCard({ employeeId, offboarding }: OffboardingDe
                 />
               </div>
               <div>
-                <Label className="text-sm">Notes</Label>
+                <Label htmlFor="offboarding-exit-interview-notes" className="text-sm">Notes</Label>
                 <Textarea
+                  id="offboarding-exit-interview-notes"
                   value={offboarding.exit_interview_notes || ""}
                   placeholder="Catatan exit interview..."
                   rows={3}
@@ -161,8 +163,9 @@ export function OffboardingDetailCard({ employeeId, offboarding }: OffboardingDe
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label className="text-sm">Tanggal Pembayaran</Label>
+                <Label htmlFor="offboarding-final-payroll-date" className="text-sm">Tanggal Pembayaran</Label>
                 <Input
+                  id="offboarding-final-payroll-date"
                   type="date"
                   value={offboarding.final_payroll_date || ""}
                   disabled={isUpdating}
@@ -170,8 +173,9 @@ export function OffboardingDetailCard({ employeeId, offboarding }: OffboardingDe
                 />
               </div>
               <div>
-                <Label className="text-sm">Jumlah (Rp)</Label>
+                <Label htmlFor="offboarding-final-payroll-amount" className="text-sm">Jumlah (Rp)</Label>
                 <Input
+                  id="offboarding-final-payroll-amount"
                   type="number"
                   value={offboarding.final_payroll_amount || ""}
                   placeholder="0"

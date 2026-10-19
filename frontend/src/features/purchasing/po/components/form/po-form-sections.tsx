@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,11 +43,12 @@ export function PRSourceCard({ pr, onOpen }: { pr: PRSource; onOpen: () => void 
 }
 
 function PercentInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
+  const id = useId();
   return (
     <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs">{label}</Label>
+      <Label htmlFor={id} className="text-xs">{label}</Label>
       <div className="flex rounded-lg border border-gray-200/80 bg-white focus-within:border-gray-300 focus-within:ring-1 focus-within:ring-gray-200">
-        <NumericInput
+        <NumericInput id={id}
           min="0"
           max="100"
           value={value}
@@ -122,8 +124,8 @@ export function POItemsSection({ items, locked, onChange }: POItemsSectionProps)
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
               <ReadOnlyField className="lg:col-span-4" label="Bahan Baku" value={item.raw_material_name} />
               <div className="min-w-0 space-y-1.5 lg:col-span-2">
-                <Label className="text-xs">Qty</Label>
-                <NumericInput
+                <Label htmlFor={`po-item-${item.id}-qty`} className="text-xs">Qty</Label>
+                <NumericInput id={`po-item-${item.id}-qty`}
                   min="0"
                   value={item.qty_ordered > 0 ? item.qty_ordered : null}
                   decimalScale={4}
@@ -136,8 +138,8 @@ export function POItemsSection({ items, locked, onChange }: POItemsSectionProps)
               </div>
               <ReadOnlyField className="lg:col-span-2" label="Satuan" value={item.raw_material_unit} />
               <div className="min-w-0 space-y-1.5 lg:col-span-2">
-                <Label className="text-xs">Harga Satuan</Label>
-                <NumericInput
+                <Label htmlFor={`po-item-${item.id}-price`} className="text-xs">Harga Satuan</Label>
+                <NumericInput id={`po-item-${item.id}-price`}
                   min="0"
                   value={item.harga_satuan}
                   decimalScale={0}

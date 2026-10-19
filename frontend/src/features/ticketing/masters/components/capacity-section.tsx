@@ -270,6 +270,7 @@ export function CapacitySection() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Switch
+                      aria-label={`Aktifkan override ${row.label}`}
                       checked={row.is_active}
                       disabled={updateMutation.isPending}
                       onCheckedChange={(checked) =>

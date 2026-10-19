@@ -271,8 +271,9 @@ export function EmploymentStatusesPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div>
-                <FormFieldLabel required>Kode</FormFieldLabel>
+                <FormFieldLabel required htmlFor="employment-status-code">Kode</FormFieldLabel>
                 <Input
+                  id="employment-status-code"
                   value={form.code}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -287,8 +288,9 @@ export function EmploymentStatusesPage() {
                 <p className="mt-1 text-xs text-gray-400">Huruf kecil, tanpa spasi</p>
               </div>
               <div>
-                <FormFieldLabel required>Nama Tampilan</FormFieldLabel>
+                <FormFieldLabel required htmlFor="employment-status-name">Nama Tampilan</FormFieldLabel>
                 <Input
+                  id="employment-status-name"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Contoh: Probasi"
@@ -296,8 +298,9 @@ export function EmploymentStatusesPage() {
                 />
               </div>
               <div>
-                <FormFieldLabel>Warna Badge</FormFieldLabel>
+                <FormFieldLabel htmlFor="employment-status-color">Warna Badge</FormFieldLabel>
                 <Combobox
+                  id="employment-status-color"
                   options={COLOR_OPTIONS}
                   value={form.color}
                   onChange={(value) => setForm((f) => ({ ...f, color: value }))}
@@ -308,8 +311,9 @@ export function EmploymentStatusesPage() {
                 />
               </div>
               <div>
-                <FormFieldLabel>Deskripsi</FormFieldLabel>
+                <FormFieldLabel htmlFor="employment-status-description">Deskripsi</FormFieldLabel>
                 <Input
+                  id="employment-status-description"
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="Opsional"

@@ -101,11 +101,11 @@ export function UnitFormDialog({ open, onOpenChange, editingUnit }: UnitFormDial
     loadingLabel="Menyimpan..."
   >
     <div>
-      <FormFieldLabel htmlFor="kode" required>
+      <FormFieldLabel htmlFor="unit-kode" required>
         Kode Satuan
       </FormFieldLabel>
       <Input
-        id="kode"
+        id="unit-kode"
         value={formData.kode}
         onChange={(e) => setFormData({ ...formData, kode: e.target.value })}
         placeholder="Contoh: KG"
@@ -115,11 +115,11 @@ export function UnitFormDialog({ open, onOpenChange, editingUnit }: UnitFormDial
       />
     </div>
     <div>
-      <FormFieldLabel htmlFor="nama" required>
+      <FormFieldLabel htmlFor="unit-nama" required>
         Nama Satuan
       </FormFieldLabel>
       <Input
-        id="nama"
+        id="unit-nama"
         value={formData.nama}
         onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
         placeholder="Contoh: Kilogram"
@@ -129,10 +129,11 @@ export function UnitFormDialog({ open, onOpenChange, editingUnit }: UnitFormDial
       />
     </div>
     <div>
-      <FormFieldLabel htmlFor="tipe" required>
+      <FormFieldLabel htmlFor="unit-tipe" required>
         Tipe Satuan
       </FormFieldLabel>
       <Combobox
+        id="unit-tipe"
         options={UNIT_TYPE_OPTIONS}
         value={formData.tipe}
         onChange={(value) =>
@@ -145,9 +146,9 @@ export function UnitFormDialog({ open, onOpenChange, editingUnit }: UnitFormDial
       />
     </div>
     <div>
-      <FormFieldLabel htmlFor="deskripsi">Deskripsi</FormFieldLabel>
+      <FormFieldLabel htmlFor="unit-deskripsi">Deskripsi</FormFieldLabel>
       <Textarea
-        id="deskripsi"
+        id="unit-deskripsi"
         value={formData.deskripsi}
         onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
         placeholder="Deskripsi opsional"

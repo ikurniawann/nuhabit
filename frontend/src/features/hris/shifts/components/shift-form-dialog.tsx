@@ -55,8 +55,9 @@ function ShiftFormBody({ shift, onClose }: { shift: ShiftRow | null; onClose: ()
     <>
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Nama shift</label>
+          <label htmlFor="shift-form-name" className="mb-1 block text-xs font-medium text-gray-600">Nama shift</label>
           <Input
+            id="shift-form-name"
             placeholder="cth. Shift Pagi"
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -64,16 +65,18 @@ function ShiftFormBody({ shift, onClose }: { shift: ShiftRow | null; onClose: ()
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jam mulai</label>
+            <label htmlFor="shift-form-start" className="mb-1 block text-xs font-medium text-gray-600">Jam mulai</label>
             <Input
+              id="shift-form-start"
               type="time"
               value={form.start_time}
               onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jam selesai</label>
+            <label htmlFor="shift-form-end" className="mb-1 block text-xs font-medium text-gray-600">Jam selesai</label>
             <Input
+              id="shift-form-end"
               type="time"
               value={form.end_time}
               onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
@@ -82,18 +85,20 @@ function ShiftFormBody({ shift, onClose }: { shift: ShiftRow | null; onClose: ()
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Istirahat (menit)</label>
+            <label htmlFor="shift-form-break" className="mb-1 block text-xs font-medium text-gray-600">Istirahat (menit)</label>
             <Input
+              id="shift-form-break"
               type="number"
               value={form.break_minutes}
               onChange={(e) => setForm((f) => ({ ...f, break_minutes: e.target.value }))}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
+            <label htmlFor="shift-form-late-tolerance" className="mb-1 block text-xs font-medium text-gray-600">
               Toleransi terlambat (menit)
             </label>
             <Input
+              id="shift-form-late-tolerance"
               type="number"
               value={form.late_tolerance_minutes}
               onChange={(e) => setForm((f) => ({ ...f, late_tolerance_minutes: e.target.value }))}

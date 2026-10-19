@@ -78,7 +78,7 @@ export function PassGatePage() {
           if (e.key === "Enter") submit(wedge);
         }}
         className="absolute h-px w-px opacity-0"
-        aria-hidden
+        aria-label="Kode season pass"
         autoFocus
       />
 

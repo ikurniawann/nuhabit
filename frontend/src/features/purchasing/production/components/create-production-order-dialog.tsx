@@ -148,10 +148,10 @@ function CreateProductionOrderPanel({
             </CardHeader>
             <CardContent>
               <div className="max-w-xs space-y-2">
-                <Label className="text-xs text-gray-600">
+                <Label htmlFor="production-order-qty" className="text-xs text-gray-600">
                   Kuantitas <span className="text-red-500">*</span>
                 </Label>
-                <Input
+                <Input id="production-order-qty"
                   value={plannedQty}
                   onChange={(event) => setPlannedQty(event.target.value)}
                   type="number"

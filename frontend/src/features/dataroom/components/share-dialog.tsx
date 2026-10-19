@@ -140,8 +140,8 @@ export function ShareDialog({ open, node, canManage, onClose }: {
 
               {accessType === "email" && (
                 <div className="space-y-2">
-                  <label className="text-xs font-medium text-muted-foreground">Email penerima (pisahkan dengan koma / baris baru)</label>
-                  <Textarea rows={2} value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="nama@perusahaan.com, lain@domain.id" />
+                  <label htmlFor="dataroom-share-emails" className="text-xs font-medium text-muted-foreground">Email penerima (pisahkan dengan koma / baris baru)</label>
+                  <Textarea id="dataroom-share-emails" rows={2} value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="nama@perusahaan.com, lain@domain.id" />
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" className="h-4 w-4" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
                     Kirim link ke email penerima sekarang
@@ -151,13 +151,13 @@ export function ShareDialog({ open, node, canManage, onClose }: {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Lock className="h-3 w-3" />PIN (opsional, 4–6 digit)</label>
-                  <Input inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="Kosongkan bila tanpa PIN" />
+                  <label htmlFor="dataroom-share-pin" className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Lock className="h-3 w-3" />PIN (opsional, 4–6 digit)</label>
+                  <Input id="dataroom-share-pin" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="Kosongkan bila tanpa PIN" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Masa aktif (hari)</label>
+                  <label htmlFor="dataroom-share-days" className="text-xs font-medium text-muted-foreground">Masa aktif (hari)</label>
                   <div className="flex items-center gap-1.5">
-                    <Input type="number" min={1} max={DATAROOM_MAX_EXPIRY_DAYS} value={days} onChange={(e) => setDays(Math.max(1, Math.min(DATAROOM_MAX_EXPIRY_DAYS, Number(e.target.value) || 1)))} className="w-24" />
+                    <Input id="dataroom-share-days" type="number" min={1} max={DATAROOM_MAX_EXPIRY_DAYS} value={days} onChange={(e) => setDays(Math.max(1, Math.min(DATAROOM_MAX_EXPIRY_DAYS, Number(e.target.value) || 1)))} className="w-24" />
                     {[1, 7, 30, 90].map((d) => (
                       <button key={d} type="button" onClick={() => setDays(d)} className={cn("rounded-md border px-2 py-1 text-xs", days === d ? "border-primary bg-primary/10 text-brand-text" : "hover:bg-muted")}>{d}h</button>
                     ))}

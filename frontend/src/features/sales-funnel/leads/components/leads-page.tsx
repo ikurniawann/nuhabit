@@ -161,7 +161,7 @@ export function SalesFunnelLeadsPage() {
               ) : null}
             </label>
             <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
-              <SelectTrigger className="h-10 bg-white sm:w-36">
+              <SelectTrigger className="h-10 bg-white sm:w-36" aria-label="Filter status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -172,7 +172,7 @@ export function SalesFunnelLeadsPage() {
               </SelectContent>
             </Select>
             <Select value={orgType} onValueChange={(v) => { setOrgType(v); setPage(1); }}>
-              <SelectTrigger className="h-10 bg-white sm:w-40">
+              <SelectTrigger className="h-10 bg-white sm:w-40" aria-label="Filter jenis instansi">
                 <SelectValue placeholder="Jenis Instansi" />
               </SelectTrigger>
               <SelectContent>
@@ -183,7 +183,7 @@ export function SalesFunnelLeadsPage() {
               </SelectContent>
             </Select>
             <Select value={source} onValueChange={(v) => { setSource(v); setPage(1); }}>
-              <SelectTrigger className="h-10 bg-white sm:w-36">
+              <SelectTrigger className="h-10 bg-white sm:w-36" aria-label="Filter sumber">
                 <SelectValue placeholder="Sumber" />
               </SelectTrigger>
               <SelectContent>

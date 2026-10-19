@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ const FIELDS: Array<{ key: 'barcode' | 'stock' | 'price'; label: string; type?: 
 
 /** EPIC-039 Fase B — varian ber-SKU: stok/barcode/harga per varian. */
 export function MerchSkuEditor({ rows, onChange }: { rows: MerchSkuRow[]; onChange: (rows: MerchSkuRow[]) => void }) {
+  const id = useId();
   const live = rows.filter((row) => !row.deleted);
   const update = (rowId: string, patch: Partial<MerchSkuRow>) =>
     onChange(rows.map((row) => (row.rowId === rowId ? { ...row, ...patch } : row)));
@@ -36,19 +38,20 @@ export function MerchSkuEditor({ rows, onChange }: { rows: MerchSkuRow[]; onChan
           <div key={row.rowId} className="space-y-2 rounded-lg border border-gray-200/70 bg-gray-50/80 p-3">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs text-gray-500">Nama varian</label>
-                <Input value={row.name} placeholder="Merah / L" onChange={(e) => update(row.rowId, { name: e.target.value })} />
+                <label htmlFor={`${id}-${row.rowId}-name`} className="mb-1 block text-xs text-gray-500">Nama varian</label>
+                <Input id={`${id}-${row.rowId}-name`} value={row.name} placeholder="Merah / L" onChange={(e) => update(row.rowId, { name: e.target.value })} />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-500">Kode SKU</label>
-                <Input value={row.sku} placeholder="KAOS-MRH-L" onChange={(e) => update(row.rowId, { sku: e.target.value })} />
+                <label htmlFor={`${id}-${row.rowId}-sku`} className="mb-1 block text-xs text-gray-500">Kode SKU</label>
+                <Input id={`${id}-${row.rowId}-sku`} value={row.sku} placeholder="KAOS-MRH-L" onChange={(e) => update(row.rowId, { sku: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {FIELDS.map((field) => (
                 <div key={field.key}>
-                  <label className="mb-1 block text-xs text-gray-500">{field.label}</label>
+                  <label htmlFor={`${id}-${row.rowId}-${field.key}`} className="mb-1 block text-xs text-gray-500">{field.label}</label>
                   <Input
+                    id={`${id}-${row.rowId}-${field.key}`}
                     type={field.type}
                     min={field.key === 'price' ? 0 : undefined}
                     placeholder={field.placeholder}

@@ -134,7 +134,7 @@ export function AccountDetailPage({ accountId }: { accountId: string }) {
             <Button type="button" variant="outline" onClick={() => setEditOpen(true)} className="h-9 gap-1.5 rounded-lg">
               <Pencil className="h-3.5 w-3.5" /> Edit
             </Button>
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(true)} className="h-9 gap-1.5 rounded-lg border-red-200 text-red-600 hover:bg-red-50">
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(true)} className="h-9 gap-1.5 rounded-lg border-red-200 text-red-600 hover:bg-red-50" aria-label="Hapus account">
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>

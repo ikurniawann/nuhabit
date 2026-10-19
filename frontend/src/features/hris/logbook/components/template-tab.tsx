@@ -193,12 +193,12 @@ export function LogbookTemplateTab({
         <CardContent className="space-y-3">
           {isFullAccess ? (
             <div className="space-y-1">
-              <Label>Department</Label>
+              <Label htmlFor="logbook-template-department">Department</Label>
               <Select
                 value={formDepartment || departmentId}
                 onValueChange={setFormDepartment}
               >
-                <SelectTrigger>
+                <SelectTrigger id="logbook-template-department">
                   <SelectValue placeholder="Pilih department" />
                 </SelectTrigger>
                 <SelectContent>
@@ -220,16 +220,18 @@ export function LogbookTemplateTab({
           )}
 
           <div className="space-y-1">
-            <Label>Nama Template</Label>
+            <Label htmlFor="logbook-template-name">Nama Template</Label>
             <Input
+              id="logbook-template-name"
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
               placeholder="Checklist Harian Gudang"
             />
           </div>
           <div className="space-y-1">
-            <Label>Deskripsi</Label>
+            <Label htmlFor="logbook-template-description">Deskripsi</Label>
             <Textarea
+              id="logbook-template-description"
               value={form.description}
               onChange={(event) =>
                 setForm({ ...form, description: event.target.value })
@@ -238,12 +240,12 @@ export function LogbookTemplateTab({
             />
           </div>
           <div className="space-y-1">
-            <Label>Frekuensi</Label>
+            <Label htmlFor="logbook-template-frequency">Frekuensi</Label>
             <Select
               value={form.frequency}
               onValueChange={(value) => setForm({ ...form, frequency: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger id="logbook-template-frequency">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -297,8 +299,9 @@ export function LogbookTemplateTab({
                   </Button>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Bobot KPI</Label>
+                  <Label htmlFor={`logbook-template-item-${index}-weight`} className="text-xs">Bobot KPI</Label>
                   <NumericInput
+                    id={`logbook-template-item-${index}-weight`}
                     value={item.weight}
                     onValueChange={(value) => updateItem(index, { weight: value })}
                     decimalScale={0}

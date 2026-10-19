@@ -74,15 +74,16 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Nama Kampanye</Label>
-            <Input placeholder="mis. Win-back Juli" value={form.name} onChange={(e) => set({ name: e.target.value })} />
+            <Label htmlFor="campaign-name">Nama Kampanye</Label>
+            <Input id="campaign-name" placeholder="mis. Win-back Juli" value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
 
           <div className="rounded-xl border border-gray-200/70 p-3">
             <Label>Segmen Penerima</Label>
             <div className="mt-2">
-              <Label className="text-xs text-gray-500">Segmen tersimpan (Marketing → Segmen)</Label>
+              <Label htmlFor="campaign-segment" className="text-xs text-gray-500">Segmen tersimpan (Marketing → Segmen)</Label>
               <select
+                id="campaign-segment"
                 className="mt-1 h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-sm"
                 value={form.segment_id}
                 onChange={(e) => set({ segment_id: e.target.value })}
@@ -100,8 +101,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
             </div>
             <div className={`mt-2 grid grid-cols-3 gap-2 ${form.segment_id ? "pointer-events-none opacity-40" : ""}`}>
               <div>
-                <Label className="text-xs text-gray-500">Tak datang ≥ (hari)</Label>
+                <Label htmlFor="campaign-last-visit-days" className="text-xs text-gray-500">Tak datang ≥ (hari)</Label>
                 <Input
+                  id="campaign-last-visit-days"
                   type="number"
                   min={1}
                   placeholder="60"
@@ -110,8 +112,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Min XP</Label>
+                <Label htmlFor="campaign-min-xp" className="text-xs text-gray-500">Min XP</Label>
                 <Input
+                  id="campaign-min-xp"
                   type="number"
                   min={0}
                   placeholder="kosong = semua"
@@ -120,8 +123,8 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
                 />
               </div>
               <div>
-                <Label className="text-xs text-gray-500">Tier (pisah koma)</Label>
-                <Input placeholder="kosong = semua" value={form.tiers} onChange={(e) => set({ tiers: e.target.value })} />
+                <Label htmlFor="campaign-tiers" className="text-xs text-gray-500">Tier (pisah koma)</Label>
+                <Input id="campaign-tiers" placeholder="kosong = semua" value={form.tiers} onChange={(e) => set({ tiers: e.target.value })} />
               </div>
             </div>
             <div className="mt-2 flex items-center gap-3">
@@ -161,8 +164,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
             {inApp && (
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <Label className="text-xs text-gray-500">Judul notifikasi</Label>
+                  <Label htmlFor="campaign-inapp-title" className="text-xs text-gray-500">Judul notifikasi</Label>
                   <Input
+                    id="campaign-inapp-title"
                     placeholder={form.name || "Kosong = nama kampanye"}
                     value={form.inapp_title}
                     maxLength={120}
@@ -170,12 +174,13 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">URL gambar (opsional)</Label>
-                  <Input placeholder="https://…" value={form.image_url} onChange={(e) => set({ image_url: e.target.value })} />
+                  <Label htmlFor="campaign-image-url" className="text-xs text-gray-500">URL gambar (opsional)</Label>
+                  <Input id="campaign-image-url" placeholder="https://…" value={form.image_url} onChange={(e) => set({ image_url: e.target.value })} />
                 </div>
                 <div>
-                  <Label className="text-xs text-gray-500">Tautan saat diketuk (opsional)</Label>
+                  <Label htmlFor="campaign-link-url" className="text-xs text-gray-500">Tautan saat diketuk (opsional)</Label>
                   <Input
+                    id="campaign-link-url"
                     placeholder="/member/promos atau https://…"
                     value={form.link_url}
                     onChange={(e) => set({ link_url: e.target.value })}
@@ -189,8 +194,8 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
           </div>
 
           <div className="space-y-1.5">
-            <Label>Template Pesan</Label>
-            <Textarea rows={4} value={form.message_template} onChange={(e) => set({ message_template: e.target.value })} />
+            <Label htmlFor="campaign-message-template">Template Pesan</Label>
+            <Textarea id="campaign-message-template" rows={4} value={form.message_template} onChange={(e) => set({ message_template: e.target.value })} />
             <p className="text-xs text-gray-500">
               Placeholder: <code>{"{nama}"}</code> = nama member, <code>{"{kode}"}</code> = kode promo. Footer &quot;Balas
               STOP untuk berhenti&quot; otomatis ditambahkan.
@@ -199,12 +204,12 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Lampirkan Promo (EPIC-032)</Label>
+              <Label htmlFor="campaign-promo">Lampirkan Promo (EPIC-032)</Label>
               <Select
                 value={form.promo_campaign_id === "" ? NO_PROMO : form.promo_campaign_id}
                 onValueChange={(v) => set({ promo_campaign_id: v === NO_PROMO ? "" : v })}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="campaign-promo" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -221,9 +226,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
             </div>
             {withPromo && (
               <div className="space-y-1.5">
-                <Label>Mode Kode</Label>
+                <Label htmlFor="campaign-promo-mode">Mode Kode</Label>
                 <Select value={form.promo_mode} onValueChange={(v) => set({ promo_mode: v as "public" | "batch" })}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id="campaign-promo-mode" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -236,8 +241,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
           </div>
           {withPromo && form.promo_mode === "batch" && (
             <div className="space-y-1.5">
-              <Label>Prefix Voucher</Label>
+              <Label htmlFor="campaign-voucher-prefix">Prefix Voucher</Label>
               <Input
+                id="campaign-voucher-prefix"
                 placeholder="mis. WIN"
                 value={form.voucher_prefix}
                 onChange={(e) => set({ voucher_prefix: e.target.value.toUpperCase() })}
@@ -249,8 +255,9 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
             </div>
           )}
           <div className="space-y-1.5">
-            <Label>Plafon Kampanye per Hari (opsional)</Label>
+            <Label htmlFor="campaign-daily-cap">Plafon Kampanye per Hari (opsional)</Label>
             <Input
+              id="campaign-daily-cap"
               type="number"
               min={1}
               placeholder="kosong = ikut plafon global"
@@ -279,6 +286,7 @@ export function CreateCampaignDialog({ open, onOpenChange }: { open: boolean; on
             {form.send_at !== "" && (
               <div className="mt-2 space-y-1">
                 <Input
+                  aria-label="Waktu kirim"
                   type="datetime-local"
                   value={form.send_at}
                   onChange={(e) => set({ send_at: e.target.value })}

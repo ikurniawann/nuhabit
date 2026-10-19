@@ -108,8 +108,9 @@ export function AttendanceRecapTab() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Karyawan</label>
+              <label htmlFor="attendance-recap-employee" className="text-sm font-medium text-gray-700 mb-2 block">Karyawan</label>
               <Combobox
+                id="attendance-recap-employee"
                 options={employeeOptions}
                 value={filterEmployee}
                 onChange={changeFilter(setFilterEmployee)}
@@ -120,18 +121,18 @@ export function AttendanceRecapTab() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Bulan</label>
-              <Input type="month" value={month} onChange={(e) => changeFilter(setMonth)(e.target.value)} />
+              <label htmlFor="attendance-recap-month" className="text-sm font-medium text-gray-700 mb-2 block">Bulan</label>
+              <Input id="attendance-recap-month" type="month" value={month} onChange={(e) => changeFilter(setMonth)(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+              <label htmlFor="attendance-recap-late" className="text-sm font-medium text-gray-700 mb-2 block">
                 Keterlambatan
               </label>
               <Select
                 value={lateOnly ? "late" : "all"}
                 onValueChange={(value) => changeFilter(setLateOnly)(value === "late")}
               >
-                <SelectTrigger>
+                <SelectTrigger id="attendance-recap-late">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

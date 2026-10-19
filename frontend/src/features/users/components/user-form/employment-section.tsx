@@ -41,8 +41,9 @@ export function EmploymentSection({ form, lookups, onChange }: EmploymentSection
           onChange={(join_date) => onChange({ join_date })}
         />
         <div>
-          <FormFieldLabel required>Employment Status</FormFieldLabel>
+          <FormFieldLabel required htmlFor="employee-employment-status">Employment Status</FormFieldLabel>
           <Combobox
+            id="employee-employment-status"
             options={(lookups?.employmentStatuses ?? []).map((o) => ({
               value: o.code,
               label: o.name,
@@ -56,8 +57,9 @@ export function EmploymentSection({ form, lookups, onChange }: EmploymentSection
           />
         </div>
         <div>
-          <FormFieldLabel>Department</FormFieldLabel>
+          <FormFieldLabel htmlFor="employee-department">Department</FormFieldLabel>
           <Combobox
+            id="employee-department"
             options={departments.map((d) => ({ value: d.id, label: d.name }))}
             value={form.department_id}
             onChange={(department_id) => onChange({ department_id, job_title_id: "" })}
@@ -69,8 +71,9 @@ export function EmploymentSection({ form, lookups, onChange }: EmploymentSection
           />
         </div>
         <div>
-          <FormFieldLabel>Position</FormFieldLabel>
+          <FormFieldLabel htmlFor="employee-position">Position</FormFieldLabel>
           <Combobox
+            id="employee-position"
             options={positionOptions}
             value={form.job_title_id}
             onChange={(job_title_id) => onChange({ job_title_id })}
@@ -83,8 +86,9 @@ export function EmploymentSection({ form, lookups, onChange }: EmploymentSection
           />
         </div>
         <div>
-          <FormFieldLabel>Section</FormFieldLabel>
+          <FormFieldLabel htmlFor="employee-section">Section</FormFieldLabel>
           <Combobox
+            id="employee-section"
             options={(lookups?.sections ?? []).map((s) => ({
               value: s.id,
               label: s.name,
@@ -99,8 +103,9 @@ export function EmploymentSection({ form, lookups, onChange }: EmploymentSection
           />
         </div>
         <div>
-          <FormFieldLabel>Manager</FormFieldLabel>
+          <FormFieldLabel htmlFor="employee-manager">Manager</FormFieldLabel>
           <Combobox
+            id="employee-manager"
             options={(lookups?.managers ?? []).map((m) => ({
               value: m.id,
               label: m.full_name,

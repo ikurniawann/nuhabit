@@ -87,7 +87,7 @@ function ContactFormBody({ onOpenChange, contact, defaultAccountId }: Omit<Conta
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Account</Label>
+            <Label htmlFor="contact-account">Account</Label>
             <Input
               value={accountSearch}
               onChange={(e) => setAccountSearch(e.target.value)}
@@ -95,7 +95,7 @@ function ContactFormBody({ onOpenChange, contact, defaultAccountId }: Omit<Conta
               className="mb-1"
             />
             <Select value={form.account_id || NO_ACCOUNT} onValueChange={(v) => set("account_id", v === NO_ACCOUNT ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Pilih account" /></SelectTrigger>
+              <SelectTrigger id="contact-account"><SelectValue placeholder="Pilih account" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_ACCOUNT}>Tanpa account (perorangan)</SelectItem>
                 {form.account_id && !accountOptions.some((a) => a.id === form.account_id) && contact?.account_name ? (

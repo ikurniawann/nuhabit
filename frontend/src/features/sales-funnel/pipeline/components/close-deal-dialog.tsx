@@ -166,9 +166,9 @@ function CloseDealForm({
         </div>
       ) : (
         <div className="space-y-1.5">
-          <Label>Alasan Kalah *</Label>
+          <Label htmlFor="close-deal-lost-reason">Alasan Kalah *</Label>
           <Select value={lostReasonId} onValueChange={setLostReasonId}>
-            <SelectTrigger>
+            <SelectTrigger id="close-deal-lost-reason">
               <SelectValue placeholder="Pilih alasan..." />
             </SelectTrigger>
             <SelectContent>

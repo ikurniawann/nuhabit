@@ -366,6 +366,7 @@ function ChannelEditor({ channel, products }: { channel: ChannelRule; products: 
                           disabled={!previewRule.isActive}
                           value={text}
                           placeholder={formatNumber(resolved.auto)}
+                          aria-label={`Harga manual ${product.name}`}
                           onChange={(event) =>
                             setPriceDraft((draft) => ({ ...draft, [product.id]: formatDigits(event.target.value) }))
                           }
