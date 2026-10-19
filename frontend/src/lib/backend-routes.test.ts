@@ -134,52 +134,11 @@ function nextApiRoutes(): string[] {
 const samplePath = (route: string) =>
   route.replace(/\[\.\.\.\w+\]/g, "a/b").replace(/\[\w+\]/g, "x1");
 
-/**
- * Handlers Go already takes through a wildcard or catch-all pattern, kept
- * until their port lands. The proxy never reaches them. Delete an entry with
- * its handler; never add one.
- */
-const SHADOWED_UNTIL_PORTED = new Set([
-  "GET /api/accounting/cash-bank/cash-in",
-  "POST /api/accounting/cash-bank/cash-in",
-  "GET /api/accounting/cash-bank/cash-out",
-  "POST /api/accounting/cash-bank/cash-out",
-  "GET /api/hris/announcements/cover/[...path]",
-  "GET /api/hris/attendance/photo/[...path]",
-  "GET /api/hris/employees/[id]/contracts",
-  "POST /api/hris/employees/[id]/contracts",
-  "GET /api/hris/employees/[id]/lifecycle",
-  "GET /api/hris/employees/[id]/recruitment-documents",
-  "GET /api/hris/employees/[id]/shifts",
-  "PUT /api/hris/employees/[id]/shifts",
-  "PATCH /api/hris/employees/documents/[doc_id]",
-  "DELETE /api/hris/employees/documents/[doc_id]",
-  "GET /api/hris/leaves/attachment/[...path]",
-  "GET /api/interview/files/[...path]",
-  "GET /api/inventory/[id]/movements",
-  "POST /api/member-portal/gym/workouts/[id]/start",
-  "POST /api/member-portal/gym/workouts/sessions/[id]",
-  "GET /api/psikotes/files/[...path]",
-  "GET /api/public/booking/[slug]/availability",
-  "GET /api/public/booking/[slug]/catalog",
-  "GET /api/public/booking/[slug]/passes",
-  "GET /api/public/booking/[slug]/slots",
-  "GET /api/public/booking/pass-status/[token]",
-  "GET /api/public/booking/status/[token]",
-  "GET /api/public/shop/[slug]/catalog",
-  "GET /api/public/shop/order/[token]",
-  "GET /api/purchasing/inventory/[id]/movements",
-  "GET /api/purchasing/receipts/[...path]",
-]);
-
 describe("Next API routes", () => {
   it("never shadow a route Go registers", () => {
     const shadowed = nextApiRoutes().filter((entry) => {
       const [method, route] = entry.split(" ");
-      return (
-        !SHADOWED_UNTIL_PORTED.has(entry) &&
-        goOwnsRoute(samplePath(route), method)
-      );
+      return goOwnsRoute(samplePath(route), method);
     });
     expect(shadowed).toEqual([]);
   });

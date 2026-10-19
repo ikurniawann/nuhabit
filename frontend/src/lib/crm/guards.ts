@@ -1,6 +1,6 @@
 /**
  * Gate API CRM berbasis grant menu IAM. Melempar ApiError (401 tanpa sesi,
- * 403 tanpa grant) — route membungkus handler dengan apiHandler.
+ * 403 tanpa grant) yang dijawab pemanggilnya.
  */
 import type { z } from "zod";
 import { ApiError, requireIamMenuPrefix, type ApiUser } from "@/lib/api/auth";

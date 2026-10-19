@@ -25,7 +25,7 @@ import {
 // EPIC-031 A3 — kuota harian venue (per ORANG, online + walk-in).
 // Default venue di ticket_settings.daily_capacity (kosong = unlimited);
 // override per rentang tanggal (0 = tanggal tutup). Overlap → kapasitas
-// terkecil menang (resolver lib/ticketing/capacity.ts).
+// terkecil menang (resolver backend/internal/modules/ticketing/capacity.go).
 
 interface OverrideForm {
   label: string;

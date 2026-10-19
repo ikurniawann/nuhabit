@@ -1,7 +1,6 @@
 /**
- * Potongan bersama route API staf gym (/api/gym/**). Handler dibungkus
- * apiHandler; gerbang menu lewat requireIamMenuPrefix; galat bisnis dilempar
- * sebagai ApiError (SchedulingError dan GymCreditError turunannya).
+ * Validasi input dan deteksi unique violation untuk kode server gym. Galat
+ * bisnis dilempar sebagai ApiError.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
