@@ -10,6 +10,8 @@ export const IAM = {
   itemsInventory: ["items.product.inventory", "items.raw-material.inventory"],
   itemsApproval: ["items.product.approval", "items.raw-material.approval"],
   itemsReports: ["items.reports"],
+  /** Items → Produksi: langkah produksi, WIP dan biaya batch (/api/production). */
+  itemsProduction: ["items.product.production", "items.raw-material.production"],
   pos: ["pos"],
   posOperations: ["pos.operations", "pos.cashier.central"],
   /** POS → Operasional → Tagihan (tagihan member, 2026-10-01). */

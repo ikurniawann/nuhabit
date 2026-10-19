@@ -114,9 +114,8 @@ Reuse `production_orders`, `production_order_materials`,
   `.batches`, granted to the roles that hold the production hub menu, and
   added to the keep list in `backend/database/seeders/iam-menus.sql`.
 
-A second delta, `20261019101000_production_batch_cost_index.sql`, indexes
-issue lines by order material and batches by order and creation time for the
-batch list.
+The same delta indexes issues by order, issue lines by order material, and
+batches by creation time for the batch list.
 
 ## Endpoints (module `production`, prefix `/api/production`)
 

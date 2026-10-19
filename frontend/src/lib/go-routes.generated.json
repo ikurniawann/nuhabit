@@ -3785,6 +3785,41 @@
     "path": "/api/positions"
   },
   {
+    "module": "production",
+    "method": "GET",
+    "path": "/api/production/batches"
+  },
+  {
+    "module": "production",
+    "method": "GET",
+    "path": "/api/production/batches/{id}"
+  },
+  {
+    "module": "production",
+    "method": "GET",
+    "path": "/api/production/bom/explode"
+  },
+  {
+    "module": "production",
+    "method": "GET",
+    "path": "/api/production/orders/{id}/flow"
+  },
+  {
+    "module": "production",
+    "method": "POST",
+    "path": "/api/production/orders/{id}/issues"
+  },
+  {
+    "module": "production",
+    "method": "POST",
+    "path": "/api/production/orders/{id}/receipts"
+  },
+  {
+    "module": "production",
+    "method": "GET",
+    "path": "/api/production/wip"
+  },
+  {
     "module": "stored-value",
     "method": "GET",
     "path": "/api/promo/campaigns"
