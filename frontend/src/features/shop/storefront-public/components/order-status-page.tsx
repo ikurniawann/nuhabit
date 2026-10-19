@@ -2,7 +2,8 @@
 
 // Public order status page (the Xendit redirect and the ARK Coin checkout
 // land here). Polls lightly while the order is pending so the paid status
-// shows without a manual refresh. A signed-in member rates paid items here.
+// shows without a manual refresh. The member who bought and received the
+// order rates its items here; the API sets `reviewable` for the viewer.
 
 import { Check, CheckCircle2, Clock, Loader2, MapPin, MessageCircle, Package, Store, Truck, XCircle } from 'lucide-react';
 import Link from 'next/link';
