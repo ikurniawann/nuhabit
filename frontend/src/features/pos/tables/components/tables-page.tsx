@@ -462,8 +462,9 @@ export function TablesPage() {
             <DialogPanelBody className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <FormFieldLabel required>Table Number</FormFieldLabel>
+                  <FormFieldLabel required htmlFor="table-number">Table Number</FormFieldLabel>
                   <Input
+                    id="table-number"
                     value={form.table_number}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, table_number: e.target.value }))
@@ -474,8 +475,9 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FormFieldLabel>Name</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-name">Name</FormFieldLabel>
                   <Input
+                    id="table-name"
                     value={form.name ?? ""}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, name: e.target.value }))
@@ -485,8 +487,9 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FormFieldLabel>Floor</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-floor">Floor</FormFieldLabel>
                   <Combobox
+                    id="table-floor"
                     options={floorOptions}
                     value={form.floor ?? ""}
                     onChange={(value) =>
@@ -499,8 +502,9 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FormFieldLabel>Area</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-area">Area</FormFieldLabel>
                   <Combobox
+                    id="table-area"
                     options={areaOptions}
                     value={form.area ?? ""}
                     onChange={(value) =>
@@ -513,8 +517,9 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FormFieldLabel required>Capacity</FormFieldLabel>
+                  <FormFieldLabel required htmlFor="table-capacity">Capacity</FormFieldLabel>
                   <Input
+                    id="table-capacity"
                     type="number"
                     min={1}
                     value={form.capacity}
@@ -529,8 +534,9 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <FormFieldLabel>Status</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-status">Status</FormFieldLabel>
                   <Combobox
+                    id="table-status"
                     options={STATUS_OPTIONS}
                     value={form.status}
                     onChange={(value) =>
@@ -544,9 +550,10 @@ export function TablesPage() {
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <FormFieldLabel>QR Code</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-qr-code">QR Code</FormFieldLabel>
                   <div className="flex gap-2">
                     <Input
+                      id="table-qr-code"
                       value={form.qr_code ?? ""}
                       readOnly
                       className={cn(formInputClassName, "font-mono text-xs")}
@@ -574,8 +581,9 @@ export function TablesPage() {
                   </p>
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <FormFieldLabel>Notes</FormFieldLabel>
+                  <FormFieldLabel htmlFor="table-notes">Notes</FormFieldLabel>
                   <Input
+                    id="table-notes"
                     value={form.notes ?? ""}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, notes: e.target.value }))

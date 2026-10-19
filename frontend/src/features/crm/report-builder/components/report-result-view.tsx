@@ -6,6 +6,7 @@ import { ApexChart } from "@/features/pos/reports/components/apex-chart";
 import { formatCellValue } from "@/lib/crm/report-builder";
 import { formatNumber, formatRupiah, formatRupiahCompact } from "@/lib/format";
 import type { ChartType, ReportResult } from "../types";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const PALETTE = ["#00281a", "#203b32", "#1c261b", "#c9a227", "#abde67", "#daff59", "#eeffb1", "#f3ece2"];
 
@@ -19,7 +20,7 @@ function labelOf(result: ReportResult, row: Record<string, unknown>): string {
 export function ReportTable({ result, maxRows }: { result: ReportResult; maxRows?: number }) {
   const rows = maxRows ? result.rows.slice(0, maxRows) : result.rows;
   return (
-    <div className="overflow-x-auto">
+    <ScrollRegion label="Hasil laporan" className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
@@ -45,7 +46,7 @@ export function ReportTable({ result, maxRows }: { result: ReportResult; maxRows
       {maxRows && result.rows.length > maxRows ? (
         <p className="px-4 py-2 text-xs text-gray-500">Menampilkan {maxRows} dari {result.rows.length} baris.</p>
       ) : null}
-    </div>
+    </ScrollRegion>
   );
 }
 

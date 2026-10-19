@@ -49,7 +49,7 @@ export function AdditionalCostsCard({ lines, total, onAdd, onChange, onRemove }:
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {lines.map((line) => (
+              {lines.map((line, index) => (
                 <tr key={line.id} className="hover:bg-gray-50/80">
                   <td className="px-4 py-3 align-middle">
                     <Input
@@ -64,7 +64,10 @@ export function AdditionalCostsCard({ lines, total, onAdd, onChange, onRemove }:
                       value={line.type}
                       onValueChange={(value) => onChange(line.id, { type: value as AdditionalCostType })}
                     >
-                      <SelectTrigger className="h-10 w-full min-w-[140px] border-gray-200/80">
+                      <SelectTrigger
+                        className="h-10 w-full min-w-[140px] border-gray-200/80"
+                        aria-label={`Tipe biaya baris ${index + 1}`}
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

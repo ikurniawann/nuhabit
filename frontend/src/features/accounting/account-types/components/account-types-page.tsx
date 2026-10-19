@@ -263,8 +263,9 @@ export function AccountTypesPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div className="space-y-1.5">
-                <FormFieldLabel required>Kode</FormFieldLabel>
+                <FormFieldLabel htmlFor="account-type-code" required>Kode</FormFieldLabel>
                 <Input
+                  id="account-type-code"
                   value={form.code}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))
@@ -275,8 +276,9 @@ export function AccountTypesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>Nama</FormFieldLabel>
+                <FormFieldLabel htmlFor="account-type-name" required>Nama</FormFieldLabel>
                 <Input
+                  id="account-type-name"
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
@@ -287,8 +289,9 @@ export function AccountTypesPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>Normal Balance</FormFieldLabel>
+                <FormFieldLabel htmlFor="account-type-normal-balance" required>Normal Balance</FormFieldLabel>
                 <select
+                  id="account-type-normal-balance"
                   value={form.normal_balance}
                   onChange={(e) =>
                     setForm((f) => ({
@@ -303,8 +306,9 @@ export function AccountTypesPage() {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel>Urutan</FormFieldLabel>
+                <FormFieldLabel htmlFor="account-type-sort-order">Urutan</FormFieldLabel>
                 <Input
+                  id="account-type-sort-order"
                   type="number"
                   value={form.sort_order}
                   onChange={(e) =>

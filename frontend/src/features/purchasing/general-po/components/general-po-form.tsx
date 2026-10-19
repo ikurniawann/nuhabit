@@ -44,10 +44,10 @@ export function GeneralPOForm({ lookups, approvedPRs, initialPRId, onSubmit, isL
       isLoading={isLoading}
       cancelHref={cancelHref}
       onSubmit={(header: VendorPOHeaderInput, items) => onSubmit({ ...header, items: toGeneralPayloadItems(items) })}
-      renderPicker={(row, setRow) => (
+      renderPicker={(row, setRow, index) => (
         <>
-          <Label className="text-xs">Barang</Label>
-          <Combobox
+          <Label htmlFor={`vendor-po-${index}-item`} className="text-xs">Barang</Label>
+          <Combobox id={`vendor-po-${index}-item`}
             options={supplies.map((s) => ({ value: s.id, label: s.nama, description: s.kode }))}
             value={row.supply_item_id}
             onChange={(value) => {

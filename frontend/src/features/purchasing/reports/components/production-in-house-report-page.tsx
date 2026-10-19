@@ -141,8 +141,8 @@ export function ProductionInHouseReportPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <DateFilterField label="Dari Tanggal" value={dateFrom} onChange={setDateFrom} />
             <DateFilterField label="Sampai Tanggal" value={dateTo} onChange={setDateTo} />
-            <ReportFilterField label="Mode Tanggal">
-              <Combobox
+            <ReportFilterField htmlFor="production-report-date-mode" label="Mode Tanggal">
+              <Combobox id="production-report-date-mode"
                 className="h-10"
                 options={DATE_FIELD_OPTIONS}
                 value={dateField}
@@ -152,8 +152,8 @@ export function ProductionInHouseReportPage() {
                 emptyMessage="Tidak ditemukan"
               />
             </ReportFilterField>
-            <ReportFilterField label="Status">
-              <Combobox
+            <ReportFilterField htmlFor="production-report-status" label="Status">
+              <Combobox id="production-report-status"
                 className="h-10"
                 options={STATUS_OPTIONS}
                 value={status}
@@ -163,8 +163,8 @@ export function ProductionInHouseReportPage() {
                 emptyMessage="Status tidak ditemukan"
               />
             </ReportFilterField>
-            <ReportFilterField label="Tipe Output">
-              <Combobox
+            <ReportFilterField htmlFor="production-report-output" label="Tipe Output">
+              <Combobox id="production-report-output"
                 className="h-10"
                 options={OUTPUT_OPTIONS}
                 value={outputType}
@@ -174,8 +174,8 @@ export function ProductionInHouseReportPage() {
                 emptyMessage="Tidak ditemukan"
               />
             </ReportFilterField>
-            <ReportFilterField label="Produk">
-              <Combobox
+            <ReportFilterField htmlFor="production-report-product" label="Produk">
+              <Combobox id="production-report-product"
                 className="h-10"
                 options={productOptions}
                 value={productId}
@@ -185,8 +185,8 @@ export function ProductionInHouseReportPage() {
                 emptyMessage="Produk tidak ditemukan"
               />
             </ReportFilterField>
-            <ReportFilterField label={STALL_LABELS.singular} className="md:col-span-2 xl:col-span-3">
-              <Combobox
+            <ReportFilterField htmlFor="production-report-warehouse" label={STALL_LABELS.singular} className="md:col-span-2 xl:col-span-3">
+              <Combobox id="production-report-warehouse"
                 className="h-10"
                 options={warehouseOptions}
                 value={warehouseId}

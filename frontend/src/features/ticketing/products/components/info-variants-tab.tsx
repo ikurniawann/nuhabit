@@ -96,17 +96,17 @@ export function InfoVariantsTab({ detail }: InfoVariantsTabProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Kategori</Label>
-            <CategoryAutocomplete value={categoryName} onChange={setCategoryName} />
+            <Label htmlFor="ticket-edit-category">Kategori</Label>
+            <CategoryAutocomplete id="ticket-edit-category" value={categoryName} onChange={setCategoryName} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Status</Label>
+              <Label htmlFor="ticket-edit-status">Status</Label>
               <Select
                 value={status}
                 onValueChange={(v) => setStatus(v as TicketStatus)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="ticket-edit-status" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -207,6 +207,7 @@ export function InfoVariantsTab({ detail }: InfoVariantsTabProps) {
                           min={0}
                           step={5000}
                           placeholder="belum diisi"
+                          aria-label={`Harga regular ${variant.name}`}
                           value={variant.price_regular}
                           onChange={(e) =>
                             setVariant(index, { price_regular: e.target.value })
@@ -220,6 +221,7 @@ export function InfoVariantsTab({ detail }: InfoVariantsTabProps) {
                           min={0}
                           step={5000}
                           placeholder="belum diisi"
+                          aria-label={`Harga high season ${variant.name}`}
                           value={variant.price_high}
                           onChange={(e) =>
                             setVariant(index, { price_high: e.target.value })

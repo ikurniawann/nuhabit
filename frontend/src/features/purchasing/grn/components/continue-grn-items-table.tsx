@@ -69,6 +69,7 @@ export function ContinueGrnItemsTable({ lines, poLines, onGoodQtyChange }: Props
                       max={maxTotalGoodQty(line, po) || undefined}
                       value={line.qty_diterima}
                       onValueChange={(value) => onGoodQtyChange(index, value || 0)}
+                      aria-label={`Qty baik ${line.nama_bahan}`}
                       decimalScale={4}
                       disabled={remaining <= 0 && line.qty_diterima <= line.previous_qty_diterima}
                       className="h-9 w-full border-gray-200/80 bg-white px-2 text-center text-sm focus-visible:border-pink-300 focus-visible:ring-1 focus-visible:ring-pink-200/80 disabled:bg-gray-50"

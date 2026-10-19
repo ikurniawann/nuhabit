@@ -123,10 +123,10 @@ export function POForm({ poId, title, description, initialForm, initialItems, pr
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="min-w-0 space-y-1.5">
-                <Label className="text-xs">
+                <Label htmlFor="po-supplier" className="text-xs">
                   Supplier <span className="text-red-500">*</span>
                 </Label>
-                <Combobox
+                <Combobox id="po-supplier"
                   options={lookups.suppliers.map((supplier) => ({
                     value: supplier.id,
                     label: supplier.nama_supplier,
@@ -160,8 +160,8 @@ export function POForm({ poId, title, description, initialForm, initialItems, pr
               </div>
 
               <div className="min-w-0 space-y-1.5">
-                <Label className="text-xs">Catatan</Label>
-                <Textarea
+                <Label htmlFor="po-notes" className="text-xs">Catatan</Label>
+                <Textarea id="po-notes"
                   value={form.catatan}
                   onChange={(e) => patch({ catatan: e.target.value })}
                   placeholder="Catatan untuk supplier..."
@@ -171,8 +171,8 @@ export function POForm({ poId, title, description, initialForm, initialItems, pr
               </div>
 
               <div className="min-w-0 space-y-1.5">
-                <Label className="text-xs">Alamat Pengiriman</Label>
-                <Textarea
+                <Label htmlFor="po-address" className="text-xs">Alamat Pengiriman</Label>
+                <Textarea id="po-address"
                   value={form.alamat_pengiriman}
                   onChange={(e) => patch({ alamat_pengiriman: e.target.value })}
                   placeholder="Alamat pengiriman..."

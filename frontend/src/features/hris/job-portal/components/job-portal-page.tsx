@@ -100,8 +100,9 @@ export function JobPortalPage() {
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium text-gray-700">Status</label>
+        <label htmlFor="job-portal-status-filter" className="text-sm font-medium text-gray-700">Status</label>
         <select
+          id="job-portal-status-filter"
           value={filterStatus}
           onChange={(event) => setFilterStatus(event.target.value as JobStatus | "all")}
           className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700"

@@ -151,7 +151,7 @@ export function WorkflowRulesPage() {
           <ul className="divide-y divide-gray-200/60">
             {rules.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${r.name}`} />
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{r.name}</p>
                   <p className="text-xs text-gray-500">
@@ -260,34 +260,34 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
       <div className="space-y-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Nama</Label>
-            <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Lead diam 3 hari → ingatkan PJ" />
+            <Label htmlFor="workflow-rule-name">Nama</Label>
+            <Input id="workflow-rule-name" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Lead diam 3 hari → ingatkan PJ" />
           </div>
           <div className="space-y-1.5">
-            <Label>Objek</Label>
+            <Label htmlFor="workflow-rule-object">Objek</Label>
             <Select value={f.object} onValueChange={(v) => set("object", v as WorkflowObject)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="workflow-rule-object"><SelectValue /></SelectTrigger>
               <SelectContent>{WORKFLOW_OBJECTS.map((o) => <SelectItem key={o} value={o}>{OBJECT_LABELS[o]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Trigger</Label>
+            <Label htmlFor="workflow-rule-trigger">Trigger</Label>
             <Select value={f.trigger_type} onValueChange={(v) => set("trigger_type", v as WorkflowTrigger)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="workflow-rule-trigger"><SelectValue /></SelectTrigger>
               <SelectContent>{WORKFLOW_TRIGGERS.map((t) => <SelectItem key={t} value={t}>{TRIGGER_LABELS[t]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           {f.trigger_type === "inactive_days" || f.trigger_type === "due_soon" ? (
-            <div className="space-y-1.5"><Label>Jumlah hari</Label><Input type="number" min={1} value={f.days} onChange={(e) => set("days", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="workflow-rule-days">Jumlah hari</Label><Input id="workflow-rule-days" type="number" min={1} value={f.days} onChange={(e) => set("days", e.target.value)} /></div>
           ) : null}
           {f.trigger_type === "score_reached" ? (
-            <div className="space-y-1.5"><Label>Skor ≥</Label><Input type="number" value={f.score} onChange={(e) => set("score", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="workflow-rule-score">Skor ≥</Label><Input id="workflow-rule-score" type="number" value={f.score} onChange={(e) => set("score", e.target.value)} /></div>
           ) : null}
           {f.trigger_type === "stage_changed" ? (
             <div className="space-y-1.5">
-              <Label>Ke tahap (opsional)</Label>
+              <Label htmlFor="workflow-rule-to-stage">Ke tahap (opsional)</Label>
               <Select value={f.to_stage || "any"} onValueChange={(v) => set("to_stage", v === "any" ? "" : v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="workflow-rule-to-stage"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="any">Tahap apa pun</SelectItem>
                   {(stagesQuery.data ?? []).map((s) => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>)}
@@ -296,7 +296,7 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
             </div>
           ) : null}
           {f.trigger_type === "status_changed" ? (
-            <div className="space-y-1.5"><Label>Ke status (opsional)</Label><Input value={f.to_status} onChange={(e) => set("to_status", e.target.value)} placeholder="cth. done / qualified / terkirim" /></div>
+            <div className="space-y-1.5"><Label htmlFor="workflow-rule-to-status">Ke status (opsional)</Label><Input id="workflow-rule-to-status" value={f.to_status} onChange={(e) => set("to_status", e.target.value)} placeholder="cth. done / qualified / terkirim" /></div>
           ) : null}
         </div>
 
@@ -313,11 +313,11 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
                 <Input list={`fields-${f.object}`} value={c.field} onChange={(e) => setCond(i, { field: e.target.value })} placeholder="field" className="h-9" />
                 <datalist id={`fields-${f.object}`}>{CONDITION_FIELDS[f.object].map((x) => <option key={x} value={x} />)}</datalist>
                 <Select value={c.op} onValueChange={(v) => setCond(i, { op: v as WorkflowCondition["op"] })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9" aria-label={`Operator kondisi ${i + 1}`}><SelectValue /></SelectTrigger>
                   <SelectContent>{CONDITION_OPS.map((op) => <SelectItem key={op} value={op}>{CONDITION_OP_LABELS[op]}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input value={c.value} onChange={(e) => setCond(i, { value: e.target.value })} placeholder={["in", "not_in"].includes(c.op) ? "a, b, c" : "nilai"} className="h-9" disabled={["is_empty", "not_empty", "changed"].includes(c.op)} />
-                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => set("conditions", f.conditions.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></button>
+                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => set("conditions", f.conditions.filter((_, j) => j !== i))} aria-label={`Hapus kondisi ${i + 1}`}><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>
@@ -328,7 +328,7 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
           <div className="mb-2 flex items-center justify-between">
             <Label>Aksi (berurutan)</Label>
             <Select value="__add" onValueChange={(v) => { if (v !== "__add") set("actions", [...f.actions, { ...DEFAULT_ACTION[v as WorkflowAction["type"]] }]); }}>
-              <SelectTrigger className="h-7 w-44 text-xs"><SelectValue placeholder="+ aksi" /></SelectTrigger>
+              <SelectTrigger className="h-7 w-44 text-xs" aria-label="Tambah aksi"><SelectValue placeholder="+ aksi" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__add">+ tambah aksi</SelectItem>
                 {(Object.keys(ACTION_LABELS) as WorkflowAction["type"][]).map((t) => <SelectItem key={t} value={t}>{ACTION_LABELS[t]}</SelectItem>)}
@@ -343,12 +343,12 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
                 <div key={i} className="rounded-xl border border-gray-200/80 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <Badge className="border-0 bg-pink-100 font-semibold text-pink-700">{i + 1}. {ACTION_LABELS[t]}</Badge>
-                    <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => set("actions", f.actions.filter((_, j) => j !== i))}><Trash2 className="h-4 w-4" /></button>
+                    <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => set("actions", f.actions.filter((_, j) => j !== i))} aria-label={`Hapus aksi ${i + 1}`}><Trash2 className="h-4 w-4" /></button>
                   </div>
                   {t === "send_wa" ? (
                     <div className="grid gap-2 sm:grid-cols-[10rem_1fr]">
                       <Select value={String(a.to)} onValueChange={(v) => setAct(i, { to: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Tujuan WA aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="owner">Ke penanggung jawab</SelectItem><SelectItem value="pic">Ke PIC/contact</SelectItem><SelectItem value="number">Ke nomor</SelectItem></SelectContent>
                       </Select>
                       {a.to === "number" ? <Input value={String(a.number ?? "")} onChange={(e) => setAct(i, { number: e.target.value })} placeholder="0812…" className="h-9" /> : <span />}
@@ -358,17 +358,17 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Input value={String(a.title ?? "")} onChange={(e) => setAct(i, { title: e.target.value })} placeholder="Judul task" className="h-9 sm:col-span-2" />
                       <Select value={String(a.activity_type)} onValueChange={(v) => setAct(i, { activity_type: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Jenis task aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent>{["tugas", "telepon", "wa", "meeting", "email", "catatan"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                       </Select>
                       <Select value={String(a.priority)} onValueChange={(v) => setAct(i, { priority: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Prioritas aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent>{["low", "normal", "high", "urgent"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                       </Select>
                       <label className="text-xs text-gray-600">Jatuh tempo +hari<Input type="number" min={0} value={String(a.due_in_days ?? 1)} onChange={(e) => setAct(i, { due_in_days: e.target.value })} className="mt-1 h-9" /></label>
                       <label className="text-xs text-gray-600">Ditugaskan ke
                         <Select value={String(a.assign_to || "owner")} onValueChange={(v) => setAct(i, { assign_to: v })}>
-                          <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="mt-1 h-9" aria-label="Ditugaskan ke"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="owner">Penanggung jawab record</SelectItem>
                             <SelectItem value="creator">Pemicu event</SelectItem>
@@ -380,24 +380,24 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
                   ) : t === "assign_owner" ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Select value={String(a.strategy)} onValueChange={(v) => setAct(i, { strategy: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Cara penugasan aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="fixed">User tertentu</SelectItem><SelectItem value="round_robin">Bergiliran (round-robin)</SelectItem></SelectContent>
                       </Select>
                       {a.strategy === "round_robin" ? (
                         <Input value={String(a.user_ids ?? "")} onChange={(e) => setAct(i, { user_ids: e.target.value })} placeholder="ID user dipisah koma" className="h-9" />
                       ) : (
                         <Select value={String(a.user_id || "none")} onValueChange={(v) => setAct(i, { user_id: v === "none" ? "" : v })}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Pilih user" /></SelectTrigger>
+                          <SelectTrigger className="h-9" aria-label={`User aksi ${i + 1}`}><SelectValue placeholder="Pilih user" /></SelectTrigger>
                           <SelectContent><SelectItem value="none">— pilih —</SelectItem>{owners.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name} · {o.role}</SelectItem>)}</SelectContent>
                         </Select>
                       )}
-                      <label className="inline-flex items-center gap-2 text-xs text-gray-600 sm:col-span-2"><Switch checked={Boolean(a.only_if_empty)} onCheckedChange={(v) => setAct(i, { only_if_empty: v })} /> Hanya bila belum punya penanggung jawab</label>
+                      <label className="inline-flex items-center gap-2 text-xs text-gray-600 sm:col-span-2"><Switch checked={Boolean(a.only_if_empty)} onCheckedChange={(v) => setAct(i, { only_if_empty: v })} aria-label="Hanya bila belum punya penanggung jawab" /> Hanya bila belum punya penanggung jawab</label>
                       {a.strategy === "round_robin" ? <p className="text-[11px] text-gray-500 sm:col-span-2">Kandidat: {owners.map((o) => `${o.full_name}=${o.id}`).join(" · ")}</p> : null}
                     </div>
                   ) : t === "update_field" ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Select value={String(a.field || "none")} onValueChange={(v) => setAct(i, { field: v === "none" ? "" : v })}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Field" /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Field aksi ${i + 1}`}><SelectValue placeholder="Field" /></SelectTrigger>
                         <SelectContent><SelectItem value="none">— field —</SelectItem>{UPDATABLE_FIELDS[f.object].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                       </Select>
                       <Input value={String(a.value ?? "")} onChange={(e) => setAct(i, { value: e.target.value })} placeholder="nilai baru" className="h-9" />
@@ -405,12 +405,12 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
                   ) : t === "notify_in_app" ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Select value={String(a.to)} onValueChange={(v) => setAct(i, { to: v })}>
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9" aria-label={`Penerima notifikasi aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent><SelectItem value="owner">Penanggung jawab</SelectItem><SelectItem value="user">User tertentu</SelectItem><SelectItem value="role">Semua user ber-role</SelectItem></SelectContent>
                       </Select>
                       {a.to === "user" ? (
                         <Select value={String(a.user_id || "none")} onValueChange={(v) => setAct(i, { user_id: v === "none" ? "" : v })}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-9" aria-label={`User aksi ${i + 1}`}><SelectValue /></SelectTrigger>
                           <SelectContent><SelectItem value="none">— pilih —</SelectItem>{owners.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name}</SelectItem>)}</SelectContent>
                         </Select>
                       ) : a.to === "role" ? (
@@ -437,11 +437,11 @@ function RuleForm({ initial, isEdit, pending, onCancel, onSubmit }: { initial: F
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.run_once_per_record} onCheckedChange={(v) => set("run_once_per_record", v)} /> Sekali per record</label>
-          <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", v)} /> Aktif</label>
+          <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.run_once_per_record} onCheckedChange={(v) => set("run_once_per_record", v)} aria-label="Sekali per record" /> Sekali per record</label>
+          <label className="inline-flex items-center gap-2 text-sm"><Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", v)} aria-label="Aktif" /> Aktif</label>
           <div className="space-y-1.5 sm:col-span-2">
-            <Label>Deskripsi (opsional)</Label>
-            <Textarea value={f.description} onChange={(e) => set("description", e.target.value)} rows={2} />
+            <Label htmlFor="workflow-rule-description">Deskripsi (opsional)</Label>
+            <Textarea id="workflow-rule-description" value={f.description} onChange={(e) => set("description", e.target.value)} rows={2} />
           </div>
         </div>
       </div>

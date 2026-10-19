@@ -92,7 +92,7 @@ export function PeriodClosingPage() {
       >
         <div className="space-y-6 px-4 py-4">
           <div className="max-w-md space-y-2">
-            <Label>Period OPEN</Label>
+            <Label htmlFor="period-closing-period">Period OPEN</Label>
             {openPeriodsQuery.isLoading ? (
               <div className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" /> Memuat...
@@ -110,7 +110,7 @@ export function PeriodClosingPage() {
                 dulu.
               </p>
             ) : (
-              <Combobox
+              <Combobox id="period-closing-period"
                 options={periodOptions}
                 value={periodId}
                 onChange={setPeriodId}

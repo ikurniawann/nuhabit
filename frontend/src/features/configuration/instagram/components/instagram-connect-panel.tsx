@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { InstagramCredentials } from "../api";
 import {
   useDeleteInstagramConfig,
@@ -127,11 +127,12 @@ export function InstagramConnectPanel({ onSaved }: { onSaved?: () => void }) {
 
       {/* URL webhook untuk disalin ke dashboard Meta. */}
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600">
+        <label htmlFor="instagram-callback-url" className="mb-1 block text-xs font-medium text-slate-600">
           Callback URL (salin ke Meta)
         </label>
         <div className="flex gap-2">
           <input
+            id="instagram-callback-url"
             readOnly
             value={webhookUrl}
             className="h-9 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 font-mono text-xs text-slate-700"
@@ -248,12 +249,14 @@ function Field({
   type?: string;
   placeholder?: string;
 }) {
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600">
         {label}
       </label>
       <input
+        id={id}
         type={type}
         value={value}
         placeholder={placeholder}

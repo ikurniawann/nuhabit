@@ -277,11 +277,11 @@ export function ItemsLookupPage({
         loadingLabel="Menyimpan..."
       >
         <div>
-          <FormFieldLabel htmlFor="code" required>
+          <FormFieldLabel htmlFor="item-code" required>
             Kode
           </FormFieldLabel>
           <Input
-            id="code"
+            id="item-code"
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
             placeholder="CONTOH_KODE"
@@ -291,11 +291,11 @@ export function ItemsLookupPage({
           />
         </div>
         <div>
-          <FormFieldLabel htmlFor="nama" required>
+          <FormFieldLabel htmlFor="item-nama" required>
             Nama
           </FormFieldLabel>
           <Input
-            id="nama"
+            id="item-nama"
             value={formData.nama}
             onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
             placeholder="Nama"
@@ -305,9 +305,9 @@ export function ItemsLookupPage({
           />
         </div>
         <div>
-          <FormFieldLabel htmlFor="deskripsi">Deskripsi</FormFieldLabel>
+          <FormFieldLabel htmlFor="item-deskripsi">Deskripsi</FormFieldLabel>
           <Textarea
-            id="deskripsi"
+            id="item-deskripsi"
             value={formData.deskripsi}
             onChange={(e) => setFormData({ ...formData, deskripsi: e.target.value })}
             placeholder="Deskripsi opsional"
@@ -316,11 +316,12 @@ export function ItemsLookupPage({
           />
         </div>
         <div className="flex items-center justify-between rounded-lg border border-gray-200/70 px-3 py-2.5">
-          <FormFieldLabel htmlFor="is_active" className="mb-0">
+          <FormFieldLabel htmlFor="item-is-active" className="mb-0">
             Status aktif
           </FormFieldLabel>
           <Switch
-            id="is_active"
+            id="item-is-active"
+            aria-label="Status aktif"
             checked={formData.is_active}
             onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
           />

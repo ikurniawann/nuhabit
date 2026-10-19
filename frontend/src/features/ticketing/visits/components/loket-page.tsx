@@ -95,7 +95,7 @@ export function LoketPage({ canVoidCharges = false }: { canVoidCharges?: boolean
                 setPage(1);
               }}
             >
-              <SelectTrigger className="h-9 w-32">
+              <SelectTrigger className="h-9 w-32" aria-label="Filter status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

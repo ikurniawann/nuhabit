@@ -43,7 +43,7 @@ export function PipelinesSection() {
             {pipelines.map((p) => (
               <li key={p.id} className="px-5 py-3 text-sm">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Switch checked={p.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: p.id, values: { is_active: Boolean(v) } })} />
+                  <Switch aria-label={`Aktifkan ${p.name}`} checked={p.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: p.id, values: { is_active: Boolean(v) } })} />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-900">
                       {p.name}
@@ -79,8 +79,8 @@ export function PipelinesSection() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Tambah tahap — {stageFor?.name}</DialogTitle></DialogHeader>
           <div className="grid gap-3">
-            <div className="space-y-1.5"><Label>Nama tahap</Label><Input value={stageName} onChange={(e) => setStageName(e.target.value)} placeholder="cth. Survey Lokasi" /></div>
-            <div className="space-y-1.5"><Label>Probability (%)</Label><Input type="number" min={0} max={100} value={stageProb} onChange={(e) => setStageProb(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor="stage-add-name">Nama tahap</Label><Input id="stage-add-name" value={stageName} onChange={(e) => setStageName(e.target.value)} placeholder="cth. Survey Lokasi" /></div>
+            <div className="space-y-1.5"><Label htmlFor="stage-add-probability">Probability (%)</Label><Input id="stage-add-probability" type="number" min={0} max={100} value={stageProb} onChange={(e) => setStageProb(e.target.value)} /></div>
             <p className="text-xs text-gray-500">Tahap baru diletakkan sebelum Menang/Kalah. Urutan bisa diubah di daftar Tahap Pipeline di bawah.</p>
           </div>
           <DialogFooter>
@@ -108,8 +108,8 @@ function CreatePipelineForm({ pending, onCancel, onSubmit }: { pending: boolean;
     <>
       <DialogHeader><DialogTitle>Pipeline Baru</DialogTitle></DialogHeader>
       <div className="grid gap-3">
-        <div className="space-y-1.5"><Label>Nama</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Resort & Akomodasi" /></div>
-        <div className="space-y-1.5"><Label>Deskripsi (opsional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="pipeline-create-name">Nama</Label><Input id="pipeline-create-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Resort & Akomodasi" /></div>
+        <div className="space-y-1.5"><Label htmlFor="pipeline-create-description">Deskripsi (opsional)</Label><Input id="pipeline-create-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <Label>Tahap (Menang & Kalah dibuat otomatis)</Label>
@@ -119,8 +119,8 @@ function CreatePipelineForm({ pending, onCancel, onSubmit }: { pending: boolean;
             {stages.map((s, i) => (
               <div key={i} className="grid grid-cols-[1fr_5rem_auto] items-center gap-2">
                 <Input value={s.name} onChange={(e) => setStages(stages.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder={`Tahap ${i + 1}`} className="h-9" />
-                <Input type="number" min={0} max={100} value={s.probability} onChange={(e) => setStages(stages.map((x, j) => (j === i ? { ...x, probability: e.target.value } : x)))} className="h-9" />
-                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => setStages(stages.filter((_, j) => j !== i))} disabled={stages.length <= 1}><Trash2 className="h-4 w-4" /></button>
+                <Input type="number" min={0} max={100} aria-label={`Probability tahap ${i + 1}`} value={s.probability} onChange={(e) => setStages(stages.map((x, j) => (j === i ? { ...x, probability: e.target.value } : x)))} className="h-9" />
+                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => setStages(stages.filter((_, j) => j !== i))} disabled={stages.length <= 1} aria-label={`Hapus tahap ${i + 1}`}><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
           </div>

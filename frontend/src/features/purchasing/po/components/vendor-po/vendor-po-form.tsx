@@ -43,8 +43,8 @@ interface VendorPOFormProps<Row extends VendorPOFormRow> {
   /** Baris item dari PR terpilih; null bila PR tidak punya item (baris yang ada dipertahankan). */
   itemsFromPR: (prId: string) => Row[] | null;
   /** Kolom pemilih barang/produk (lebar 4 kolom) untuk satu baris. */
-  renderPicker: (row: Row, setRow: (row: Row) => void) => ReactNode;
-  renderExtra?: (row: Row, setRow: (row: Row) => void) => ReactNode;
+  renderPicker: (row: Row, setRow: (row: Row) => void, index: number) => ReactNode;
+  renderExtra?: (row: Row, setRow: (row: Row) => void, index: number) => ReactNode;
   validate: (vendorId: string, items: Row[]) => string | null;
   onSubmit: (header: VendorPOHeaderInput, items: Row[]) => Promise<void>;
   isLoading: boolean;
@@ -122,10 +122,10 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
             </CardHeader>
             <CardContent className="grid gap-4 pt-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs">
+                <Label htmlFor="vendor-po-vendor" className="text-xs">
                   Vendor <span className="text-red-500">*</span>
                 </Label>
-                <Combobox
+                <Combobox id="vendor-po-vendor"
                   options={vendors.map((v) => ({ value: v.id, label: v.name, description: v.code }))}
                   value={vendorId}
                   onChange={setVendorId}
@@ -136,8 +136,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Sumber Permintaan Barang</Label>
-                <Combobox
+                <Label htmlFor="vendor-po-pr" className="text-xs">Sumber Permintaan Barang</Label>
+                <Combobox id="vendor-po-pr"
                   options={approvedPRs.map((pr) => ({
                     value: pr.id,
                     label: pr.pr_number,
@@ -155,8 +155,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
               <DsDateTimePicker label="Tanggal PO" value={tanggalPo} onChange={setTanggalPo} dateOnly />
               <DsDateTimePicker label="Estimasi Kirim" value={tanggalKirim} onChange={setTanggalKirim} dateOnly />
               <div className="space-y-1.5 md:col-span-2">
-                <Label className="text-xs">Alamat Pengiriman</Label>
-                <Textarea value={alamat} onChange={(e) => setAlamat(e.target.value)} rows={2} className="text-sm" />
+                <Label htmlFor="vendor-po-address" className="text-xs">Alamat Pengiriman</Label>
+                <Textarea id="vendor-po-address" value={alamat} onChange={(e) => setAlamat(e.target.value)} rows={2} className="text-sm" />
               </div>
             </CardContent>
           </Card>
@@ -184,16 +184,17 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                         size="sm"
                         className="text-red-500"
                         onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
+                        aria-label={`Hapus baris ${index + 1}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
                   <div className="grid gap-4 md:grid-cols-12">
-                    <div className="space-y-1.5 md:col-span-4">{renderPicker(item, setRow(index))}</div>
+                    <div className="space-y-1.5 md:col-span-4">{renderPicker(item, setRow(index), index)}</div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label className="text-xs">Jumlah</Label>
-                      <NumericInput
+                      <Label htmlFor={`vendor-po-${index}-qty`} className="text-xs">Jumlah</Label>
+                      <NumericInput id={`vendor-po-${index}-qty`}
                         value={item.qty_ordered}
                         onValueChange={(value) => setRow(index)({ ...item, qty_ordered: value || 1 })}
                         decimalScale={4}
@@ -207,8 +208,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                       </div>
                     </div>
                     <div className="space-y-1.5 md:col-span-2">
-                      <Label className="text-xs">Harga Satuan</Label>
-                      <NumericInput
+                      <Label htmlFor={`vendor-po-${index}-price`} className="text-xs">Harga Satuan</Label>
+                      <NumericInput id={`vendor-po-${index}-price`}
                         value={item.harga_satuan}
                         onValueChange={(value) => setRow(index)({ ...item, harga_satuan: value || 0 })}
                         decimalScale={0}
@@ -222,7 +223,7 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                         {formatRupiah((item.qty_ordered || 0) * (item.harga_satuan || 0))}
                       </p>
                     </div>
-                    {renderExtra?.(item, setRow(index))}
+                    {renderExtra?.(item, setRow(index), index)}
                   </div>
                 </div>
               ))}
@@ -238,8 +239,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
             <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Diskon %</Label>
-                  <NumericInput
+                  <Label htmlFor="vendor-po-discount" className="text-xs">Diskon %</Label>
+                  <NumericInput id="vendor-po-discount"
                     value={diskonPersen}
                     onValueChange={(value) => setDiskonPersen(value || 0)}
                     decimalScale={2}
@@ -247,8 +248,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">PPN %</Label>
-                  <NumericInput
+                  <Label htmlFor="vendor-po-ppn" className="text-xs">PPN %</Label>
+                  <NumericInput id="vendor-po-ppn"
                     value={ppnPersen}
                     onValueChange={(value) => setPpnPersen(value || 0)}
                     decimalScale={2}
@@ -257,8 +258,8 @@ export function VendorPOForm<Row extends VendorPOFormRow>({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Catatan</Label>
-                <Textarea value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={3} className="text-sm" />
+                <Label htmlFor="vendor-po-notes" className="text-xs">Catatan</Label>
+                <Textarea id="vendor-po-notes" value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={3} className="text-sm" />
               </div>
               <div className="space-y-2 rounded-xl border border-gray-200/70 bg-gray-50/70 p-4 text-sm">
                 <div className="flex justify-between">

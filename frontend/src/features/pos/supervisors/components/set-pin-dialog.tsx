@@ -49,8 +49,9 @@ function SetPinForm({ target, onClose, onSubmit }: SetPinDialogProps) {
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">PIN baru</label>
+            <label htmlFor="supervisor-pin" className="text-xs font-medium text-muted-foreground">PIN baru</label>
             <Input
+              id="supervisor-pin"
               type="password"
               inputMode="numeric"
               maxLength={6}
@@ -61,8 +62,9 @@ function SetPinForm({ target, onClose, onSubmit }: SetPinDialogProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Ulangi PIN</label>
+            <label htmlFor="supervisor-pin-confirm" className="text-xs font-medium text-muted-foreground">Ulangi PIN</label>
             <Input
+              id="supervisor-pin-confirm"
               type="password"
               inputMode="numeric"
               maxLength={6}

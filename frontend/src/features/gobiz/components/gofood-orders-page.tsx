@@ -177,7 +177,7 @@ export function GofoodOrdersPage() {
               </button>
             ))}
           </div>
-          <Button type="button" variant="outline" onClick={() => void load()} className="h-9">
+          <Button type="button" variant="outline" onClick={() => void load()} className="h-9" aria-label="Muat ulang">
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
@@ -314,6 +314,7 @@ export function GofoodOrdersPage() {
                     <div className="text-xs font-semibold text-red-800">Tolak order — alasan dikirim ke GoFood</div>
                     <div className="mt-2 grid gap-2 sm:grid-cols-[180px_1fr_auto]">
                       <select
+                        aria-label="Alasan penolakan"
                         value={rejecting.code}
                         onChange={(event) => setRejecting({ ...rejecting, code: event.target.value as typeof rejecting.code })}
                         className="h-9 rounded-lg border border-red-200 bg-white px-2 text-sm"

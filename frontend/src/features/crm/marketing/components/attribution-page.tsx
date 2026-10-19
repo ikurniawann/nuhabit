@@ -65,11 +65,11 @@ export function AttributionPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={dimension} onValueChange={(v) => { setDimension(v as DimensionKey); run(v as DimensionKey); }}>
-            <SelectTrigger className="h-10 w-44 bg-white"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 w-44 bg-white" aria-label="Dimensi atribusi"><SelectValue /></SelectTrigger>
             <SelectContent>{DIMENSIONS.map((d) => <SelectItem key={d.key} value={d.key}>{d.label}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={preset} onValueChange={(v) => { setPreset(v as DatePreset); run(dimension, v as DatePreset); }}>
-            <SelectTrigger className="h-10 w-40 bg-white"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 w-40 bg-white" aria-label="Periode"><SelectValue /></SelectTrigger>
             <SelectContent>{DATE_PRESETS.filter((p) => p !== "custom").map((p) => <SelectItem key={p} value={p}>{DATE_PRESET_LABELS[p]}</SelectItem>)}</SelectContent>
           </Select>
           <Button type="button" className="h-10 bg-pink-600 text-white hover:bg-pink-700" onClick={() => run()} disabled={pending}>

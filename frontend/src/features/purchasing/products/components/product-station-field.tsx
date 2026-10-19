@@ -16,7 +16,7 @@ export function ProductStationField({ value, onChange, disabled }: ProductStatio
       <Label htmlFor="station" className="text-xs">
         Station <span className="text-red-500">*</span>
       </Label>
-      <Combobox
+      <Combobox id="station"
         options={POS_STATION_OPTIONS.map((option) => ({
           value: option.value,
           label: option.label,

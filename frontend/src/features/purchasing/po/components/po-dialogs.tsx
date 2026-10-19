@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,8 +114,8 @@ function SendPOForm({
   return (
     <>
       <div className="space-y-1.5 px-5 py-4">
-        <Label className="text-xs">Metode Pengiriman</Label>
-        <Combobox
+        <Label htmlFor="po-send-via" className="text-xs">Metode Pengiriman</Label>
+        <Combobox id="po-send-via"
           options={[...SEND_VIA_OPTIONS]}
           value={sendVia}
           onChange={(value) => setSendVia(value as SendVia)}
@@ -188,13 +188,14 @@ function ReasonForm({
   onCancel,
   onConfirm,
 }: Omit<ReasonPODialogProps, "open" | "onOpenChange" | "title" | "description"> & { onCancel: () => void }) {
+  const id = useId();
   const [reason, setReason] = useState("");
   const trimmed = reason.trim();
   return (
     <>
       <div className="space-y-1.5 px-5 py-4">
-        <Label className="text-xs">{label} *</Label>
-        <Input
+        <Label htmlFor={`${id}-reason`} className="text-xs">{label} *</Label>
+        <Input id={`${id}-reason`}
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder={placeholder}

@@ -74,7 +74,7 @@ export function PurchaseAdditionalCostsSection() {
       toolbar={
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Select value={filter} onValueChange={(value) => setFilter(value as ReferenceFilter)}>
-            <SelectTrigger className="h-10 w-full border-gray-200/80 sm:w-40">
+            <SelectTrigger className="h-10 w-full border-gray-200/80 sm:w-40" aria-label="Filter dokumen">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -245,12 +245,12 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
     >
       <div className="grid gap-4 sm:grid-cols-[8rem_1fr]">
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">Dokumen</Label>
+          <Label htmlFor="additional-cost-reference-type" className="text-xs text-gray-600">Dokumen</Label>
           <Select
             value={form.reference_type}
             onValueChange={(value) => update({ reference_type: value as AdditionalCostReferenceType, reference_id: "" })}
           >
-            <SelectTrigger className="h-10 w-full border-gray-200/80">
+            <SelectTrigger id="additional-cost-reference-type" className="h-10 w-full border-gray-200/80">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -263,10 +263,10 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">
+          <Label htmlFor="additional-cost-reference" className="text-xs text-gray-600">
             Nomor {form.reference_type} <span className="text-red-500">*</span>
           </Label>
-          <Combobox
+          <Combobox id="additional-cost-reference"
             options={options}
             value={form.reference_id}
             onChange={(value) => update({ reference_id: value })}
@@ -280,9 +280,9 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">Jenis biaya</Label>
+          <Label htmlFor="additional-cost-type" className="text-xs text-gray-600">Jenis biaya</Label>
           <Select value={form.tipe_biaya} onValueChange={(value) => update({ tipe_biaya: value as AdditionalCostType })}>
-            <SelectTrigger className="h-10 w-full border-gray-200/80">
+            <SelectTrigger id="additional-cost-type" className="h-10 w-full border-gray-200/80">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -295,8 +295,8 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">Tanggal</Label>
-          <Input
+          <Label htmlFor="additional-cost-date" className="text-xs text-gray-600">Tanggal</Label>
+          <Input id="additional-cost-date"
             type="date"
             value={form.tanggal_transaksi}
             onChange={(event) => update({ tanggal_transaksi: event.target.value })}
@@ -307,8 +307,8 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
 
       <div className="grid gap-4 sm:grid-cols-[6rem_1fr_1fr]">
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">Mata uang</Label>
-          <Input
+          <Label htmlFor="additional-cost-currency" className="text-xs text-gray-600">Mata uang</Label>
+          <Input id="additional-cost-currency"
             value={form.currency}
             maxLength={3}
             onChange={(event) => update({ currency: event.target.value.toUpperCase() })}
@@ -316,14 +316,14 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">
+          <Label htmlFor="additional-cost-amount" className="text-xs text-gray-600">
             Nominal <span className="text-red-500">*</span>
           </Label>
-          <NumericInput value={form.jumlah} onValueChange={(value) => update({ jumlah: value })} decimalScale={2} />
+          <NumericInput id="additional-cost-amount" value={form.jumlah} onValueChange={(value) => update({ jumlah: value })} decimalScale={2} />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs text-gray-600">Kurs ke Rupiah</Label>
-          <NumericInput
+          <Label htmlFor="additional-cost-exchange-rate" className="text-xs text-gray-600">Kurs ke Rupiah</Label>
+          <NumericInput id="additional-cost-exchange-rate"
             value={form.currency === "IDR" ? 1 : form.exchange_rate}
             onValueChange={(value) => update({ exchange_rate: value })}
             decimalScale={6}
@@ -333,8 +333,8 @@ function AdditionalCostFormModal({ onClose }: { onClose: () => void }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label className="text-xs text-gray-600">Keterangan</Label>
-        <Input
+        <Label htmlFor="additional-cost-description" className="text-xs text-gray-600">Keterangan</Label>
+        <Input id="additional-cost-description"
           value={form.deskripsi}
           onChange={(event) => update({ deskripsi: event.target.value })}
           placeholder="mis. Ongkir ekspedisi, bea masuk impor"

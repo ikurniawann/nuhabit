@@ -76,8 +76,8 @@ function CompleteProductionPanel({
           <CardContent className="grid gap-4 p-4 md:grid-cols-5">
             {COMPLETE_HEADER_FIELDS.map(({ field, label }) => (
               <div key={field} className="space-y-1.5">
-                <Label className="text-xs text-gray-500">{label}</Label>
-                <Input
+                <Label htmlFor={`complete-production-${field}`} className="text-xs text-gray-500">{label}</Label>
+                <Input id={`complete-production-${field}`}
                   value={form[field]}
                   onChange={(event) => dispatch({ type: "setField", field, value: event.target.value })}
                   type="number"
@@ -131,6 +131,7 @@ function CompleteProductionPanel({
                             }
                             type="number"
                             min="0"
+                            aria-label={`Qty ${row.sku}`}
                             className={`${INPUT_CLASS} w-28 text-right`}
                           />
                         </td>

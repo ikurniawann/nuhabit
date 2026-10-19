@@ -58,7 +58,7 @@ export function PipelinePage() {
             />
           </div>
           <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-            <SelectTrigger className="h-9 w-44 text-sm">
+            <SelectTrigger className="h-9 w-44 text-sm" aria-label="Filter brand">
               <SelectValue placeholder="Semua Brand" />
             </SelectTrigger>
             <SelectContent>

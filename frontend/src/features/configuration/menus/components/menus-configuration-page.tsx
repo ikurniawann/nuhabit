@@ -292,7 +292,7 @@ export function MenusConfigurationPage() {
                   setStatusFilter(value === "all" ? "" : value)
                 }
               >
-                <SelectTrigger className="h-9 w-full sm:w-36">
+                <SelectTrigger className="h-9 w-full sm:w-36" aria-label="Filter status">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -307,7 +307,7 @@ export function MenusConfigurationPage() {
                   setMenuTypeFilter(value === "all" ? "" : value)
                 }
               >
-                <SelectTrigger className="h-9 w-full sm:w-40">
+                <SelectTrigger className="h-9 w-full sm:w-40" aria-label="Filter jenis menu">
                   <SelectValue placeholder="Menu type" />
                 </SelectTrigger>
                 <SelectContent>

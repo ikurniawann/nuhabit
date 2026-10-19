@@ -61,8 +61,9 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
     <>
       <div className="space-y-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Karyawan</label>
+          <label htmlFor="loan-form-employee" className="mb-1 block text-xs font-medium text-gray-600">Karyawan</label>
           <Combobox
+            id="loan-form-employee"
             options={employeeOptions}
             value={form.employee_id}
             onChange={(value) => setForm((f) => ({ ...f, employee_id: value }))}
@@ -70,8 +71,9 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
+          <label htmlFor="loan-form-type" className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
           <Combobox
+            id="loan-form-type"
             options={LOAN_TYPE_OPTIONS}
             value={form.loan_type}
             onChange={(value) => setForm((f) => ({ ...f, loan_type: value }))}
@@ -80,8 +82,9 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jumlah (Rp)</label>
+            <label htmlFor="loan-form-amount" className="mb-1 block text-xs font-medium text-gray-600">Jumlah (Rp)</label>
             <Input
+              id="loan-form-amount"
               type="number"
               min="0"
               value={form.principal_amount}
@@ -89,8 +92,9 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Tenor (bulan)</label>
+            <label htmlFor="loan-form-tenor" className="mb-1 block text-xs font-medium text-gray-600">Tenor (bulan)</label>
             <Input
+              id="loan-form-tenor"
               type="number"
               min="1"
               max="60"
@@ -100,10 +104,11 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
+          <label htmlFor="loan-form-interest" className="mb-1 block text-xs font-medium text-gray-600">
             Bunga flat (%/bulan — 0 untuk kasbon)
           </label>
           <Input
+            id="loan-form-interest"
             type="number"
             min="0"
             step="0.5"
@@ -112,8 +117,9 @@ function LoanFormBody({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Keperluan</label>
+          <label htmlFor="loan-form-purpose" className="mb-1 block text-xs font-medium text-gray-600">Keperluan</label>
           <Input
+            id="loan-form-purpose"
             placeholder="cth. biaya sekolah anak"
             value={form.purpose}
             onChange={(e) => setForm((f) => ({ ...f, purpose: e.target.value }))}

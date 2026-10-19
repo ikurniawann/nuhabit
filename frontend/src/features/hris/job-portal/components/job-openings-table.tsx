@@ -78,7 +78,7 @@ export function JobOpeningsTable({
                 <Edit3 className="h-3.5 w-3.5" />
                 Edit
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => onDelete(job)}>
+              <Button variant="destructive" size="sm" onClick={() => onDelete(job)} aria-label={`Hapus ${job.title}`}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>

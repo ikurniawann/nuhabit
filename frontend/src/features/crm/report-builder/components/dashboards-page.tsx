@@ -41,7 +41,7 @@ export function CrmDashboardsPage() {
         <div className="flex flex-wrap items-center gap-2">
           {dashboards.length > 0 ? (
             <Select value={activeId ?? ""} onValueChange={setSelectedId}>
-              <SelectTrigger className="h-10 w-56 bg-white"><SelectValue placeholder="Pilih dashboard" /></SelectTrigger>
+              <SelectTrigger className="h-10 w-56 bg-white" aria-label="Pilih dashboard"><SelectValue placeholder="Pilih dashboard" /></SelectTrigger>
               <SelectContent>
                 {dashboards.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}{d.is_default ? " · Overview" : ""}</SelectItem>)}
               </SelectContent>
@@ -150,14 +150,14 @@ function DashboardDetailView({ id, onDelete }: { id: string; onDelete: (d: Dashb
               <div className="flex items-center gap-2 border-b border-gray-200/60 px-4 py-2.5">
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">{w.title}</p>
                 <Select value={String(w.width)} onValueChange={(v) => saveWidgets(widgets.map((x) => (x.id === w.id ? { ...x, width: Number(v) } : x)))}>
-                  <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-7 w-24 text-xs" aria-label={`Lebar widget ${w.title}`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1 kolom</SelectItem>
                     <SelectItem value="2">2 kolom</SelectItem>
                     <SelectItem value="3">Penuh</SelectItem>
                   </SelectContent>
                 </Select>
-                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => saveWidgets(widgets.filter((x) => x.id !== w.id))}>
+                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => saveWidgets(widgets.filter((x) => x.id !== w.id))} aria-label={`Hapus widget ${w.title}`}>
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -216,10 +216,10 @@ function CreateDashboardForm({ pending, onCancel, onSubmit }: {
     <>
       <DialogHeader><DialogTitle>Dashboard Baru</DialogTitle></DialogHeader>
       <div className="grid gap-3">
-        <div className="space-y-1.5"><Label>Nama</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Dashboard Sales Harian" /></div>
-        <div className="space-y-1.5"><Label>Deskripsi (opsional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="dashboard-name">Nama</Label><Input id="dashboard-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Dashboard Sales Harian" /></div>
+        <div className="space-y-1.5"><Label htmlFor="dashboard-description">Deskripsi (opsional)</Label><Input id="dashboard-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <label className="inline-flex items-center gap-2 text-sm">
-          <Switch checked={isDefault} onCheckedChange={(v) => setIsDefault(Boolean(v))} /> Jadikan Overview tim
+          <Switch checked={isDefault} onCheckedChange={(v) => setIsDefault(Boolean(v))} aria-label="Jadikan Overview tim" /> Jadikan Overview tim
         </label>
       </div>
       <DialogFooter>
@@ -247,22 +247,22 @@ function AddWidgetForm({ reports, pending, onCancel, onSubmit }: {
       <DialogHeader><DialogTitle>Tambah Widget</DialogTitle></DialogHeader>
       <div className="grid gap-3">
         <div className="space-y-1.5">
-          <Label>Report</Label>
+          <Label htmlFor="widget-report">Report</Label>
           {reports.length === 0 ? (
             <p className="text-xs text-gray-500">Belum ada report tersimpan. Buat dulu di Report Builder.</p>
           ) : (
             <Select value={reportId} onValueChange={setReportId}>
-              <SelectTrigger><SelectValue placeholder="pilih report" /></SelectTrigger>
+              <SelectTrigger id="widget-report"><SelectValue placeholder="pilih report" /></SelectTrigger>
               <SelectContent>{reports.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}</SelectContent>
             </Select>
           )}
         </div>
-        <div className="space-y-1.5"><Label>Judul widget (opsional)</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ikut nama report bila kosong" /></div>
+        <div className="space-y-1.5"><Label htmlFor="widget-title">Judul widget (opsional)</Label><Input id="widget-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ikut nama report bila kosong" /></div>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1.5">
-            <Label>Tampilan</Label>
+            <Label htmlFor="widget-type">Tampilan</Label>
             <Select value={widgetType} onValueChange={(v) => setWidgetType(v as WidgetInput["widget_type"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="widget-type"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="chart">Grafik report</SelectItem>
                 <SelectItem value="table">Tabel</SelectItem>
@@ -271,9 +271,9 @@ function AddWidgetForm({ reports, pending, onCancel, onSubmit }: {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Lebar</Label>
+            <Label htmlFor="widget-width">Lebar</Label>
             <Select value={width} onValueChange={setWidth}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="widget-width"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="1">1 kolom</SelectItem>
                 <SelectItem value="2">2 kolom</SelectItem>

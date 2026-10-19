@@ -100,9 +100,10 @@ export function CampaignDetailDialog({
 
           <DialogPanelBody className="space-y-5">
             <div className="space-y-1.5 rounded-xl border border-gray-200/70 p-3">
-              <Label>Generate Batch Voucher (sekali pakai)</Label>
+              <Label htmlFor="campaign-batch-count">Generate Batch Voucher (sekali pakai)</Label>
               <div className="flex gap-2">
                 <Input
+                  id="campaign-batch-count"
                   type="number"
                   min={1}
                   max={1000}
@@ -209,6 +210,7 @@ export function CampaignDetailDialog({
                             </>
                           )}
                           <Switch
+                            aria-label={`Aktifkan ${code.code}`}
                             checked={code.is_active}
                             disabled={codeBusy}
                             onCheckedChange={(checked) =>

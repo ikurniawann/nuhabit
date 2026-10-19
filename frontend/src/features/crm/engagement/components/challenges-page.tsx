@@ -266,7 +266,7 @@ function ChallengeDialog({
               <Input type="number" min={0} value={form.reward_ark_idr} onChange={set("reward_ark_idr")} />
             </Field>
             <label className="flex items-center gap-3 sm:col-span-2">
-              <Switch checked={form.is_active} onCheckedChange={(is_active) => setForm((cur) => ({ ...cur, is_active }))} />
+              <Switch checked={form.is_active} onCheckedChange={(is_active) => setForm((cur) => ({ ...cur, is_active }))} aria-label="Tampil di portal member" />
               <span className="text-sm font-medium">Tampil di portal member</span>
             </label>
           </DialogPanelBody>

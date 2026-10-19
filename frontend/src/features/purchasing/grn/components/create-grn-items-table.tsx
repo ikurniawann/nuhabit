@@ -57,6 +57,7 @@ export function CreateGrnItemsTable({ lines, isProduct, onEdit }: Props) {
                       max={line.remaining || undefined}
                       value={line.qty_diterima}
                       onValueChange={(value) => onEdit(line.purchase_order_item_id, { acceptQty: value || 0 })}
+                      aria-label={`Qty diterima ${line.nama_bahan}`}
                       decimalScale={4}
                       className="h-10 w-full border-gray-200/80 bg-white px-3 text-center text-sm focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/30"
                     />

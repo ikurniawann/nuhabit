@@ -140,7 +140,7 @@ function PaymentForm({
           />
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">Nominal Pembayaran</Label>
+              <Label htmlFor="po-payment-amount" className="text-xs">Nominal Pembayaran</Label>
               {outstanding > 0 && (
                 <button
                   type="button"
@@ -151,7 +151,7 @@ function PaymentForm({
                 </button>
               )}
             </div>
-            <NumericInput
+            <NumericInput id="po-payment-amount"
               value={form.amount}
               max={outstanding}
               onValueChange={(value) => patch({ amount: value || undefined })}
@@ -162,8 +162,8 @@ function PaymentForm({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs">Metode</Label>
-            <Combobox
+            <Label htmlFor="po-payment-method" className="text-xs">Metode</Label>
+            <Combobox id="po-payment-method"
               options={METHOD_OPTIONS}
               value={form.method}
               onChange={(value) => patch({ method: value as VendorPayment["method"] })}
@@ -174,8 +174,8 @@ function PaymentForm({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Nomor Referensi</Label>
-            <Input
+            <Label htmlFor="po-payment-reference" className="text-xs">Nomor Referensi</Label>
+            <Input id="po-payment-reference"
               value={form.reference_number}
               onChange={(event) => patch({ reference_number: event.target.value })}
               placeholder="Nomor transfer / bukti pembayaran"
@@ -184,8 +184,8 @@ function PaymentForm({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Catatan</Label>
-          <Input
+          <Label htmlFor="po-payment-notes" className="text-xs">Catatan</Label>
+          <Input id="po-payment-notes"
             value={form.notes}
             onChange={(event) => patch({ notes: event.target.value })}
             placeholder="Opsional"

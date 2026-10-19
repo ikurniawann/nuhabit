@@ -52,10 +52,10 @@ export function ContractTerminateDialog({
       loading={actionMutation.isPending}
       onConfirm={handleConfirm}
     >
-      <label className="mb-1 block text-xs font-medium text-gray-600">
+      <label htmlFor="contract-terminate-reason" className="mb-1 block text-xs font-medium text-gray-600">
         Alasan pemutusan kontrak:
       </label>
-      <Input value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
+      <Input id="contract-terminate-reason" value={reason} onChange={(e) => setReason(e.target.value)} autoFocus />
     </ConfirmDialog>
   );
 }

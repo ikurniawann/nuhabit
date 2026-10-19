@@ -81,8 +81,9 @@ export function InterviewSendDialog({ candidate, positionTitle, open, onOpenChan
           ) : (
             <div className="flex flex-wrap gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Maks Pertanyaan</Label>
+                <Label htmlFor="interview-send-max-questions" className="text-xs font-medium">Maks Pertanyaan</Label>
                 <Input
+                  id="interview-send-max-questions"
                   type="number"
                   min={3}
                   max={15}
@@ -92,8 +93,9 @@ export function InterviewSendDialog({ candidate, positionTitle, open, onOpenChan
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Masa Berlaku (hari)</Label>
+                <Label htmlFor="interview-send-expires-days" className="text-xs font-medium">Masa Berlaku (hari)</Label>
                 <Input
+                  id="interview-send-expires-days"
                   type="number"
                   min={1}
                   max={30}

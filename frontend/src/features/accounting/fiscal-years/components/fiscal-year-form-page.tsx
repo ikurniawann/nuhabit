@@ -252,8 +252,9 @@ function FiscalYearForm({
             </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <FormFieldLabel required>Kode</FormFieldLabel>
+                <FormFieldLabel htmlFor="fiscal-year-code" required>Kode</FormFieldLabel>
                 <Input
+                  id="fiscal-year-code"
                   value={form.code}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, code: e.target.value }))
@@ -263,8 +264,9 @@ function FiscalYearForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>Nama</FormFieldLabel>
+                <FormFieldLabel htmlFor="fiscal-year-name" required>Nama</FormFieldLabel>
                 <Input
+                  id="fiscal-year-name"
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
@@ -274,8 +276,9 @@ function FiscalYearForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>Start date</FormFieldLabel>
+                <FormFieldLabel htmlFor="fiscal-year-start-date" required>Start date</FormFieldLabel>
                 <Input
+                  id="fiscal-year-start-date"
                   type="date"
                   value={form.start_date}
                   onChange={(e) =>
@@ -286,8 +289,9 @@ function FiscalYearForm({
                 />
               </div>
               <div className="space-y-1.5">
-                <FormFieldLabel required>End date</FormFieldLabel>
+                <FormFieldLabel htmlFor="fiscal-year-end-date" required>End date</FormFieldLabel>
                 <Input
+                  id="fiscal-year-end-date"
                   type="date"
                   value={form.end_date}
                   onChange={(e) =>
@@ -373,6 +377,7 @@ function FiscalYearForm({
                             onChange={(e) =>
                               updatePeriod(p.key, { name: e.target.value })
                             }
+                            aria-label={`Nama period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>
@@ -385,6 +390,7 @@ function FiscalYearForm({
                                 start_date: e.target.value,
                               })
                             }
+                            aria-label={`Tanggal mulai period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>
@@ -397,6 +403,7 @@ function FiscalYearForm({
                                 end_date: e.target.value,
                               })
                             }
+                            aria-label={`Tanggal akhir period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>

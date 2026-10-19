@@ -22,6 +22,7 @@ import { PurchasingPageHeader } from "@/features/purchasing/components/shared/pu
 import type { RevenueCompositionBucket, RevenueCompositionGroup } from "@/lib/pos/reports/types";
 import { useRevenueCompositionReport } from "../queries";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatPct = (value: number) => `${formatNumber(value, 1)}%`;
 
@@ -137,7 +138,7 @@ function GroupSection({
         </button>
 
         {expanded && (
-          <div className="overflow-x-auto border-t border-gray-200/70">
+          <ScrollRegion label="Tabel komposisi pendapatan" className="overflow-x-auto border-t border-gray-200/70">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="bg-gray-50/80 text-xs uppercase tracking-wide text-gray-500">
@@ -184,7 +185,7 @@ function GroupSection({
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </CardContent>
     </Card>
@@ -222,8 +223,9 @@ export function RevenueCompositionReportPage() {
             actions={
               <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200/70 bg-white p-3 sm:flex-row sm:items-end">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">Dari</Label>
+                  <Label htmlFor="revenue-composition-date-from" className="text-xs text-gray-600">Dari</Label>
                   <Input
+                    id="revenue-composition-date-from"
                     type="date"
                     value={dateFrom}
                     onChange={(event) => setDateFrom(event.target.value)}
@@ -231,8 +233,9 @@ export function RevenueCompositionReportPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">Sampai</Label>
+                  <Label htmlFor="revenue-composition-date-to" className="text-xs text-gray-600">Sampai</Label>
                   <Input
+                    id="revenue-composition-date-to"
                     type="date"
                     value={dateTo}
                     onChange={(event) => setDateTo(event.target.value)}

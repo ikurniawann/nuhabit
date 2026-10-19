@@ -150,10 +150,10 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
             <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="vendor-price-vendor" className="text-xs">
                     Vendor <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="vendor-price-vendor"
                     options={vendors.map((vendor) => ({
                       value: vendor.id,
                       label: vendor.name,
@@ -169,10 +169,10 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="vendor-price-product" className="text-xs">
                     Product <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="vendor-price-product"
                     options={products.map((product) => ({
                       value: product.id,
                       label: product.nama,
@@ -215,10 +215,10 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
             <CardContent className="space-y-4 pt-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="vendor-price-amount" className="text-xs">
                     Price per Unit <span className="text-red-500">*</span>
                   </Label>
-                  <NumericInput
+                  <NumericInput id="vendor-price-amount"
                     min="0"
                     step="0.01"
                     value={formData.harga}
@@ -228,9 +228,9 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Minimum Quantity</Label>
+                  <Label htmlFor="vendor-price-min-qty" className="text-xs">Minimum Quantity</Label>
                   <div className="flex rounded-lg border border-gray-200/80 bg-white focus-within:border-pink-300 focus-within:ring-1 focus-within:ring-pink-100">
-                    <NumericInput
+                    <NumericInput id="vendor-price-min-qty"
                       min="1"
                       value={formData.minimum_qty}
                       onValueChange={(value) =>
@@ -245,9 +245,9 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Lead Time (days)</Label>
+                  <Label htmlFor="vendor-price-lead-time" className="text-xs">Lead Time (days)</Label>
                   <div className="flex rounded-lg border border-gray-200/80 bg-white focus-within:border-pink-300 focus-within:ring-1 focus-within:ring-pink-100">
-                    <NumericInput
+                    <NumericInput id="vendor-price-lead-time"
                       min="0"
                       value={formData.lead_time_days}
                       onValueChange={(value) =>
@@ -291,8 +291,8 @@ function EditVendorPriceListForm({ priceListId, data }: { priceListId: string; d
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Notes</Label>
-                <Textarea
+                <Label htmlFor="vendor-price-notes" className="text-xs">Notes</Label>
+                <Textarea id="vendor-price-notes"
                   value={formData.catatan}
                   onChange={(e) => setFormData((prev) => ({ ...prev, catatan: e.target.value }))}
                   placeholder="Additional notes..."

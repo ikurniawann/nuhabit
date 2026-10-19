@@ -150,7 +150,7 @@ export function BundleTab({ detail }: { detail: TicketProductDetail }) {
                     updateRow(index, { component_variant_id: v })
                   }
                 >
-                  <SelectTrigger className="h-9 min-w-0 flex-1">
+                  <SelectTrigger className="h-9 min-w-0 flex-1" aria-label={`Tiket satuan baris ${index + 1}`}>
                     <SelectValue placeholder={label || "Pilih tiket satuan"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -193,6 +193,7 @@ export function BundleTab({ detail }: { detail: TicketProductDetail }) {
                   size="sm"
                   variant="ghost"
                   onClick={() => removeRow(index)}
+                  aria-label={`Hapus baris ${index + 1}`}
                   className="h-8 w-8 p-0 text-gray-400 hover:bg-red-50 hover:text-red-600"
                 >
                   <TrashIcon className="h-4 w-4" />

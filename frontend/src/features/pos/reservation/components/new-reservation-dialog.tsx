@@ -146,8 +146,9 @@ export function NewReservationDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Time</Label>
+                <Label htmlFor="reservation-time" className="text-xs text-muted-foreground">Time</Label>
                 <Combobox
+                  id="reservation-time"
                   options={TIME_SLOT_OPTIONS}
                   value={form.time}
                   onChange={(value) =>

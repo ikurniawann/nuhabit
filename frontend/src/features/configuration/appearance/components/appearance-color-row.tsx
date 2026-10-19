@@ -22,11 +22,13 @@ export function AppearanceColorRow({
       <label className="flex h-9 w-[9.5rem] cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-2">
         <input
           type="color"
+          aria-label={`Warna ${label}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="h-6 w-6 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0"
         />
         <Input
+          aria-label={`Kode warna ${label}`}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="h-7 border-0 bg-transparent px-0 font-mono text-xs uppercase shadow-none focus-visible:ring-0"

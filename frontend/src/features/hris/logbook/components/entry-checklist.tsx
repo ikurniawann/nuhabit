@@ -70,6 +70,7 @@ export function LogbookEntryChecklist({
               checked={item.is_checked}
               disabled={!canEdit || !onToggle}
               onCheckedChange={(checked) => onToggle?.(item, checked === true)}
+              aria-label={item.title}
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">

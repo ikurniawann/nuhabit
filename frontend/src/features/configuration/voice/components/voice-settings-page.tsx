@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPost, apiPut } from "@/lib/api-client";
 import {
@@ -53,9 +53,10 @@ function SecretInput({
   masked: string | null;
 }) {
   const [show, setShow] = useState(false);
+  const id = useId();
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium">{label}</Label>
+      <Label htmlFor={id} className="text-xs font-medium">{label}</Label>
       {masked && (
         <p className="text-xs text-muted-foreground">
           Tersimpan: <code className="rounded bg-muted px-1">{masked}</code> —
@@ -65,6 +66,7 @@ function SecretInput({
       <div className="relative">
         <KeyRound className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          id={id}
           type={show ? "text" : "password"}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -278,9 +280,9 @@ function VoiceSettingsForm({
 
           <div className="grid gap-4 sm:max-w-xl">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Provider</Label>
+              <Label htmlFor="tts-provider" className="text-xs font-medium">Provider</Label>
               <Select value={provider} onValueChange={handleProviderChange}>
-                <SelectTrigger>
+                <SelectTrigger id="tts-provider">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -294,13 +296,13 @@ function VoiceSettingsForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Suara</Label>
+              <Label htmlFor="tts-voice" className="text-xs font-medium">Suara</Label>
               {meta.voices.length > 0 && (
                 <Select
                   value={voiceIsCustom ? "" : voice}
                   onValueChange={setVoice}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="tts-voice">
                     <SelectValue placeholder="Pilih suara" />
                   </SelectTrigger>
                   <SelectContent>
@@ -335,9 +337,9 @@ function VoiceSettingsForm({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Model</Label>
+              <Label htmlFor="tts-model" className="text-xs font-medium">Model</Label>
               <Select value={model} onValueChange={setModel}>
-                <SelectTrigger>
+                <SelectTrigger id="tts-model">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -371,8 +373,9 @@ function VoiceSettingsForm({
                   masked={data.credentials.azure.key_masked}
                 />
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Region</Label>
+                  <Label htmlFor="tts-azure-region" className="text-xs font-medium">Region</Label>
                   <Input
+                    id="tts-azure-region"
                     value={azureRegion}
                     onChange={(e) => setAzureRegion(e.target.value)}
                     placeholder="southeastasia"

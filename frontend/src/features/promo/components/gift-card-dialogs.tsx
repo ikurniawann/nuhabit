@@ -71,9 +71,9 @@ export function GiftCardReloadDialog({ card, onClose }: DialogProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Metode bayar</Label>
+            <Label htmlFor="gift-card-reload-method">Metode bayar</Label>
             <Select value={method} onValueChange={setMethod}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger id="gift-card-reload-method" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

@@ -67,6 +67,7 @@ export function CompleteProductionMaterials({
                       }
                       type="number"
                       min="0"
+                      aria-label={`Qty aktual ${material.name}`}
                       className={`${INPUT_CLASS} ${isShort ? "border-red-200/80 bg-red-50 text-red-700" : ""}`}
                     />
                   </td>
@@ -78,6 +79,7 @@ export function CompleteProductionMaterials({
                       }
                       type="number"
                       min="0"
+                      aria-label={`Qty susut ${material.name}`}
                       className={INPUT_CLASS}
                     />
                   </td>

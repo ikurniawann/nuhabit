@@ -31,6 +31,7 @@ import { useRushHourReport } from "../queries";
 import { firstDayOfMonthWib, todayWib } from "@/lib/pos/report-dates";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 function heatClass(intensity: number) {
   if (intensity <= 0) return "bg-muted/40 text-muted-foreground";
@@ -373,7 +374,7 @@ export function RushHourReportPage() {
                   </Card>
                 </div>
 
-                <div className="overflow-x-auto">
+                <ScrollRegion label="Tabel jam sibuk" className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -420,7 +421,7 @@ export function RushHourReportPage() {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </ScrollRegion>
               </>
             ) : (
               <p className="text-sm text-muted-foreground">Memuat…</p>
@@ -433,7 +434,7 @@ export function RushHourReportPage() {
           title="Heatmap jam × hari"
           description="08:00–22:00. Warna lebih tua = lebih banyak transaksi."
         >
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Heatmap jam sibuk" className="overflow-x-auto px-4 pb-4">
             <div
               className="grid min-w-[720px] gap-1"
               style={{ gridTemplateColumns: `3rem repeat(${RUSH_HOUR_HEATMAP_HOURS.length}, minmax(0, 1fr))` }}
@@ -473,7 +474,7 @@ export function RushHourReportPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
 
         <PurchasingListSection
@@ -514,7 +515,7 @@ export function RushHourReportPage() {
           title="Rekap per jam"
           description="Rata-rata bill = omzet ÷ jumlah transaksi."
         >
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel jam sibuk" className="overflow-x-auto px-4 pb-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -561,7 +562,7 @@ export function RushHourReportPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
       </div>
     </PageTransition>

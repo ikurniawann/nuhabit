@@ -92,9 +92,10 @@ export function DrawingInsightPanel({
     <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-500/30 dark:bg-violet-500/10">
       <div className="flex items-center gap-1.5">
         <Sparkles className="size-3.5 text-violet-600 dark:text-violet-400" />
-        <Label className="text-xs font-medium text-violet-900 dark:text-violet-200">Insight AI (DeepSeek)</Label>
+        <Label htmlFor="drawing-insight-observation" className="text-xs font-medium text-violet-900 dark:text-violet-200">Insight AI (DeepSeek)</Label>
       </div>
       <Textarea
+        id="drawing-insight-observation"
         value={observation}
         onChange={(e) => setObservation(e.target.value)}
         rows={3}

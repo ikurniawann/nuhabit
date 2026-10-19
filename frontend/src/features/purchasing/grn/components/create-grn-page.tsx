@@ -124,10 +124,10 @@ export function CreateGrnPage({ moduleType = "raw_material" }: { moduleType?: Pu
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="grn-delivery" className="text-xs">
                     Pengiriman <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="grn-delivery"
                     options={sources.deliveries.map((delivery) => ({
                       value: delivery.id,
                       label: delivery.no_resi || delivery.no_surat_jalan,
@@ -159,10 +159,10 @@ export function CreateGrnPage({ moduleType = "raw_material" }: { moduleType?: Pu
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">
+                    <Label htmlFor="grn-warehouse" className="text-xs">
                       Gudang Tujuan <span className="text-red-500">*</span>
                     </Label>
-                    <Combobox
+                    <Combobox id="grn-warehouse"
                       options={warehouses.map((warehouse) => ({
                         value: warehouse.id,
                         label: warehouse.name,

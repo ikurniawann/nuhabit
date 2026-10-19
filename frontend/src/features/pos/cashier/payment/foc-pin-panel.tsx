@@ -28,12 +28,13 @@ export function FocPinPanel({ customer, pin, disabled, onPinChange }: FocPinPane
   return (
     <div className="space-y-3 rounded-xl border border-amber-200/80 bg-amber-50/60 p-4">
       <div className="flex items-center justify-between gap-2">
-        <label className="text-sm font-medium text-foreground">PIN Supervisor</label>
+        <label htmlFor="payment-foc-pin" className="text-sm font-medium text-foreground">PIN Supervisor</label>
         <span className="max-w-[50%] truncate text-xs text-muted-foreground">
           Customer: {customer.name || "Member"}
         </span>
       </div>
       <Input
+        id="payment-foc-pin"
         type="password"
         inputMode="numeric"
         autoComplete="one-time-code"

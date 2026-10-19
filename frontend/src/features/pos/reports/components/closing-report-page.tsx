@@ -95,8 +95,9 @@ export function ClosingReportPage() {
               actions={
                 <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200/70 bg-white p-3 sm:flex-row sm:items-end">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-gray-600">Date</Label>
+                    <Label htmlFor="closing-report-date" className="text-xs text-gray-600">Date</Label>
                     <Input
+                      id="closing-report-date"
                       type="date"
                       value={date}
                       onChange={(event) => {
@@ -107,8 +108,9 @@ export function ClosingReportPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-gray-600">Shift</Label>
+                    <Label htmlFor="closing-report-shift" className="text-xs text-gray-600">Shift</Label>
                     <Combobox
+                      id="closing-report-shift"
                       options={shiftOptions}
                       value={shiftId || "all"}
                       onChange={(value) => setShiftId(value === "all" ? "" : value)}

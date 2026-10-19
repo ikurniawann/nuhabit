@@ -44,7 +44,7 @@ export function HolidayMonthCard({ month, holidays, onEdit, onDelete }: HolidayM
                 )}
               </div>
               <div className="flex shrink-0 gap-0.5 opacity-60 transition-opacity group-hover:opacity-100">
-                <Button size="sm" variant="ghost" onClick={() => onEdit(holiday)}>
+                <Button size="sm" variant="ghost" onClick={() => onEdit(holiday)} aria-label={`Edit ${holiday.name}`}>
                   <PencilIcon className="h-3.5 w-3.5" />
                 </Button>
                 <Button
@@ -52,6 +52,7 @@ export function HolidayMonthCard({ month, holidays, onEdit, onDelete }: HolidayM
                   variant="ghost"
                   className="text-red-600"
                   onClick={() => onDelete(holiday)}
+                  aria-label={`Hapus ${holiday.name}`}
                 >
                   <TrashIcon className="h-3.5 w-3.5" />
                 </Button>

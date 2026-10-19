@@ -186,8 +186,9 @@ export function CreateAccountDialog({ employee, onClose }: CreateAccountDialogPr
         ) : (
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-medium text-gray-600">Email Login</label>
+              <label htmlFor="create-account-email" className="text-xs font-medium text-gray-600">Email Login</label>
               <Input
+                id="create-account-email"
                 type="email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
@@ -201,8 +202,9 @@ export function CreateAccountDialog({ employee, onClose }: CreateAccountDialogPr
             </div>
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <label className="text-xs font-medium text-gray-600">Password</label>
+                <label htmlFor="create-account-password" className="text-xs font-medium text-gray-600">Password</label>
                 <Input
+                  id="create-account-password"
                   value={form.password}
                   onChange={(e) => setField({ password: e.target.value })}
                   className="mt-1 font-mono"
@@ -217,8 +219,9 @@ export function CreateAccountDialog({ employee, onClose }: CreateAccountDialogPr
               </Button>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600">Role</label>
+              <label htmlFor="create-account-role" className="text-xs font-medium text-gray-600">Role</label>
               <Combobox
+                id="create-account-role"
                 options={ROLE_OPTIONS}
                 value={form.role}
                 onChange={(value) =>

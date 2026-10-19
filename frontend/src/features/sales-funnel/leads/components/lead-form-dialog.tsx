@@ -124,12 +124,12 @@ function LeadFormBody({ lead, onClose }: { lead: SalesLead | null; onClose: () =
         </div>
 
         <div className="space-y-1.5">
-          <Label>Jenis Instansi</Label>
+          <Label htmlFor="lead-org-type">Jenis Instansi</Label>
           <Select
             value={form.org_type}
             onValueChange={(v) => set("org_type", v as LeadFormValues["org_type"])}
           >
-            <SelectTrigger>
+            <SelectTrigger id="lead-org-type">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -220,12 +220,12 @@ function LeadFormBody({ lead, onClose }: { lead: SalesLead | null; onClose: () =
         </div>
 
         <div className="space-y-1.5">
-          <Label>Sumber</Label>
+          <Label htmlFor="lead-source">Sumber</Label>
           <Select
             value={form.source}
             onValueChange={(v) => set("source", v as LeadFormValues["source"])}
           >
-            <SelectTrigger>
+            <SelectTrigger id="lead-source">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -239,12 +239,12 @@ function LeadFormBody({ lead, onClose }: { lead: SalesLead | null; onClose: () =
         </div>
 
         <div className="space-y-1.5">
-          <Label>Suhu</Label>
+          <Label htmlFor="lead-temperature">Suhu</Label>
           <Select
             value={form.temperature}
             onValueChange={(v) => set("temperature", v as LeadFormValues["temperature"])}
           >
-            <SelectTrigger>
+            <SelectTrigger id="lead-temperature">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -259,12 +259,12 @@ function LeadFormBody({ lead, onClose }: { lead: SalesLead | null; onClose: () =
 
         {isEdit && (
           <div className="space-y-1.5">
-            <Label>Status</Label>
+            <Label htmlFor="lead-status">Status</Label>
             <Select
               value={form.status}
               onValueChange={(v) => set("status", v as LeadFormValues["status"])}
             >
-              <SelectTrigger>
+              <SelectTrigger id="lead-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

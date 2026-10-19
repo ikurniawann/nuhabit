@@ -75,16 +75,16 @@ export function InventoryValuationPage() {
       <Card className="border-border shadow-xs">
         <CardContent className="pt-4">
           <div className="grid gap-4 md:grid-cols-[1.4fr_1fr]">
-            <ReportFilterField label="Cari Item">
-              <Input
+            <ReportFilterField htmlFor="inventory-valuation-search" label="Cari Item">
+              <Input id="inventory-valuation-search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Kode atau nama bahan..."
                 className="h-10"
               />
             </ReportFilterField>
-            <ReportFilterField label="Kategori">
-              <Combobox
+            <ReportFilterField htmlFor="inventory-valuation-category" label="Kategori">
+              <Combobox id="inventory-valuation-category"
                 options={categoryOptions}
                 value={kategori}
                 onChange={setKategori}

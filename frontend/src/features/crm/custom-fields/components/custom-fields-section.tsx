@@ -58,7 +58,7 @@ function CustomFieldInput({ def, value, onChange }: { def: CustomFieldDef; value
     case "boolean":
       return (
         <label className="flex items-center gap-2 pt-6 text-sm text-gray-700">
-          <Checkbox checked={Boolean(value)} onCheckedChange={(v) => onChange(Boolean(v))} />
+          <Checkbox checked={Boolean(value)} onCheckedChange={(v) => onChange(Boolean(v))} aria-label={def.label} />
           {def.label}
         </label>
       );
@@ -84,7 +84,7 @@ function CustomFieldInput({ def, value, onChange }: { def: CustomFieldDef; value
           <div className="flex flex-wrap gap-2 pt-1">
             {def.options.map((o) => (
               <label key={o} className="inline-flex items-center gap-1.5 text-sm text-gray-700">
-                <Checkbox checked={selected.includes(o)} onCheckedChange={(v) => onChange(v ? [...selected, o] : selected.filter((x) => x !== o))} />
+                <Checkbox checked={selected.includes(o)} onCheckedChange={(v) => onChange(v ? [...selected, o] : selected.filter((x) => x !== o))} aria-label={`${def.label}: ${o}`} />
                 {o}
               </label>
             ))}

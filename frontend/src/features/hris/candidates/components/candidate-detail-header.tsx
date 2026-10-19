@@ -59,11 +59,11 @@ export function CandidateDetailHeader({
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
-          <Link href="/dashboard/hris/candidates" className="mt-1">
-            <Button variant="ghost" size="icon" aria-label="Kembali">
+          <Button asChild variant="ghost" size="icon" className="mt-1">
+            <Link href="/dashboard/hris/candidates" aria-label="Kembali">
               <ArrowLeft className="size-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 text-2xl font-bold text-white shadow-sm">
             {candidate.full_name.charAt(0).toUpperCase()}
           </div>

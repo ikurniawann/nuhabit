@@ -225,7 +225,7 @@ function QuotationBuilderForm({
                     value={item.product_id || undefined}
                     onValueChange={(v) => pickProduct(index, v)}
                   >
-                    <SelectTrigger className="h-9 bg-white">
+                    <SelectTrigger className="h-9 bg-white" aria-label={`Produk baris ${index + 1}`}>
                       <SelectValue placeholder="Pilih produk..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -312,6 +312,7 @@ function QuotationBuilderForm({
             Pakai PPN
             <Input
               type="number"
+              aria-label="Persentase PPN"
               min={0}
               max={100}
               value={form.ppn_persen}

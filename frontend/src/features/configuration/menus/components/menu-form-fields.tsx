@@ -29,9 +29,11 @@ export function FormSection({
 }
 
 export function IconSelect({
+  id,
   value,
   onChange,
 }: {
+  id?: string;
   value: string;
   onChange: (icon: string) => void;
 }) {
@@ -51,6 +53,7 @@ export function IconSelect({
   return (
     <div className="space-y-2">
       <Combobox
+        id={id}
         options={iconOptions}
         value={value || "clipboard"}
         onChange={onChange}

@@ -134,7 +134,7 @@ export function NewVendorPriceListPage() {
                   <Label htmlFor="vendor" className="text-xs">
                     Vendor <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="vendor"
                     options={vendors.map((vendor) => ({
                       value: vendor.id,
                       label: vendor.name,
@@ -153,7 +153,7 @@ export function NewVendorPriceListPage() {
                   <Label htmlFor="product" className="text-xs">
                     Product <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="product"
                     options={products.map((product) => ({
                       value: product.id,
                       label: product.nama,

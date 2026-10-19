@@ -82,9 +82,9 @@ export function AttendanceMonitoringTab() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Tanggal</label>
+              <label htmlFor="attendance-monitoring-date" className="text-sm font-medium text-gray-700 mb-2 block">Tanggal</label>
               <div className="flex gap-2">
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                <Input id="attendance-monitoring-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 <Button
                   variant="outline"
                   size="icon"
@@ -96,9 +96,9 @@ export function AttendanceMonitoringTab() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Shift</label>
+              <label htmlFor="attendance-monitoring-shift" className="text-sm font-medium text-gray-700 mb-2 block">Shift</label>
               <Select value={filterShift} onValueChange={setFilterShift}>
-                <SelectTrigger>
+                <SelectTrigger id="attendance-monitoring-shift">
                   <SelectValue placeholder="Semua shift" />
                 </SelectTrigger>
                 <SelectContent>
@@ -113,12 +113,12 @@ export function AttendanceMonitoringTab() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
+              <label htmlFor="attendance-monitoring-status" className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
               <Select
                 value={filterStatus}
                 onValueChange={(value) => setFilterStatus(value as "all" | RosterStatus)}
               >
-                <SelectTrigger>
+                <SelectTrigger id="attendance-monitoring-status">
                   <SelectValue placeholder="Semua status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,8 +132,9 @@ export function AttendanceMonitoringTab() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
+              <label htmlFor="attendance-monitoring-search" className="text-sm font-medium text-gray-700 mb-2 block">Cari</label>
               <Input
+                id="attendance-monitoring-search"
                 placeholder="Nama / NIP…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}

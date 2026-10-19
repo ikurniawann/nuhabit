@@ -144,9 +144,9 @@ export function KpiTargetsDialog({
         <div className="space-y-5">
           <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-2">
             <div className="space-y-1 md:col-span-2">
-              <Label>Indikator</Label>
+              <Label htmlFor="kpi-target-indicator">Indikator</Label>
               <Select value={indicatorCode} onValueChange={setIndicatorCode}>
-                <SelectTrigger>
+                <SelectTrigger id="kpi-target-indicator">
                   <SelectValue placeholder="Pilih indikator" />
                 </SelectTrigger>
                 <SelectContent>
@@ -161,7 +161,7 @@ export function KpiTargetsDialog({
             </div>
 
             <div className="space-y-1">
-              <Label>Scope</Label>
+              <Label htmlFor="kpi-target-scope">Scope</Label>
               <Select
                 value={scopeType}
                 onValueChange={(value) => {
@@ -169,7 +169,7 @@ export function KpiTargetsDialog({
                   setScopeValue("");
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="kpi-target-scope">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,7 +180,7 @@ export function KpiTargetsDialog({
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>
+              <Label htmlFor="kpi-target-scope-value">
                 {scopeType === "role"
                   ? "Role"
                   : scopeType === "department"
@@ -189,7 +189,7 @@ export function KpiTargetsDialog({
               </Label>
               {scopeType === "role" ? (
                 <Select value={scopeValue} onValueChange={setScopeValue}>
-                  <SelectTrigger>
+                  <SelectTrigger id="kpi-target-scope-value">
                     <SelectValue placeholder="Pilih role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -202,7 +202,7 @@ export function KpiTargetsDialog({
                 </Select>
               ) : scopeType === "department" ? (
                 <Select value={scopeValue} onValueChange={setScopeValue}>
-                  <SelectTrigger>
+                  <SelectTrigger id="kpi-target-scope-value">
                     <SelectValue placeholder="Pilih department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -214,14 +214,14 @@ export function KpiTargetsDialog({
                   </SelectContent>
                 </Select>
               ) : (
-                <Input disabled placeholder="Berlaku semua" />
+                <Input id="kpi-target-scope-value" disabled placeholder="Berlaku semua" />
               )}
             </div>
 
             <div className="space-y-1">
-              <Label>Periode</Label>
+              <Label htmlFor="kpi-target-period">Periode</Label>
               <Select value={periodMode} onValueChange={setPeriodMode}>
-                <SelectTrigger>
+                <SelectTrigger id="kpi-target-period">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,7 +237,7 @@ export function KpiTargetsDialog({
                   value={String(periodMonth)}
                   onValueChange={(value) => setPeriodMonth(Number(value))}
                 >
-                  <SelectTrigger className="w-24">
+                  <SelectTrigger className="w-24" aria-label="Bulan periode">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -253,6 +253,7 @@ export function KpiTargetsDialog({
                 <Input
                   className="w-24"
                   type="number"
+                  aria-label="Tahun periode"
                   value={periodYear}
                   onChange={(event) => setPeriodYear(Number(event.target.value))}
                 />
@@ -260,10 +261,11 @@ export function KpiTargetsDialog({
             </div>
 
             <div className="space-y-1">
-              <Label>
+              <Label htmlFor="kpi-target-value">
                 Nilai Target{isPercentUnit ? " (%)" : ""}
               </Label>
               <Input
+                id="kpi-target-value"
                 value={targetValue}
                 onChange={(event) => setTargetValue(event.target.value)}
                 placeholder={isPercentUnit ? "mis. 95 atau 0,5" : "mis. 5000000"}

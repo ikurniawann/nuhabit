@@ -167,6 +167,7 @@ export function OpnameCountList({
           <div
             className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100"
             role="progressbar"
+            aria-label="Progres opname"
             aria-valuenow={stats.persen}
             aria-valuemin={0}
             aria-valuemax={100}

@@ -325,7 +325,7 @@ export function GobizSettingsPanel() {
           <span className="text-xs font-semibold text-black/60">URL webhook (didaftarkan ke GoBiz)</span>
           <div className="mt-1 flex items-center gap-2">
             <code className="min-w-0 flex-1 truncate rounded-xl bg-black/5 px-3 py-2 text-xs">{data?.webhook_url || "…"}</code>
-            <Button type="button" variant="outline" size="sm" onClick={copyWebhook} className="h-9">
+            <Button type="button" variant="outline" size="sm" onClick={copyWebhook} className="h-9" aria-label="Salin URL webhook">
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => run("regenerate_token")} disabled={busy !== null} className="h-9" title="Token baru">

@@ -218,7 +218,7 @@ export function DealDetailDialog({ deal, onClose, onEdit }: DealDetailDialogProp
                     value={templateId || "custom"}
                     onValueChange={(v) => setTemplateId(v === "custom" ? "" : v)}
                   >
-                    <SelectTrigger className="h-9">
+                    <SelectTrigger className="h-9" aria-label="Template WA">
                       <SelectValue placeholder="Pilih template..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -269,7 +269,7 @@ export function DealDetailDialog({ deal, onClose, onEdit }: DealDetailDialogProp
                       value={form.activity_type}
                       onValueChange={(v) => setField("activity_type", v as ActivityType)}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9" aria-label="Jenis aktivitas">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

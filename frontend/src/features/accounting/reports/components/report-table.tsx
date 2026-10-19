@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import type { ReportAccountBalance } from "../types";
 import { formatLedgerAmount } from "@/lib/accounting/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export function AccountBalanceTable({
   rows,
@@ -22,7 +23,7 @@ export function AccountBalanceTable({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <ScrollRegion label="Tabel laporan" className="overflow-x-auto">
       <table className="w-full min-w-180 text-sm">
         <thead>
           <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -64,7 +65,7 @@ export function AccountBalanceTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

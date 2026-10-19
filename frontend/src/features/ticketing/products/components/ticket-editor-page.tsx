@@ -32,7 +32,7 @@ export function TicketEditorPage({ productId }: { productId: string }) {
       <div className="border-b border-gray-200/70 pb-4">
         <div className="flex flex-wrap items-center gap-3">
           <Button size="sm" variant="ghost" className="h-8 px-2" asChild>
-            <Link href="/dashboard/ticketing/tickets">
+            <Link href="/dashboard/ticketing/tickets" aria-label="Kembali">
               <ArrowLeftIcon className="h-4 w-4" />
             </Link>
           </Button>

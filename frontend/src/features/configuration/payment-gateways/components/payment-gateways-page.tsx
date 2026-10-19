@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { CreditCard, Loader2, Save, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -267,8 +267,9 @@ function GatewayForm({
           onChange={(value) => onChange({ ...draft, webhook_secret: value })}
         />
         <div className="space-y-1.5">
-          <Label>Callback URL</Label>
+          <Label htmlFor="gateway-callback-url">Callback URL</Label>
           <Input
+            id="gateway-callback-url"
             disabled={disabled}
             value={draft.callback_url}
             onChange={(e) =>
@@ -314,10 +315,11 @@ function MaskedSecretField({
 }) {
   const isMaskedDisplay =
     /\*{4,}/.test(value) || value.includes("…") || value.includes("••••");
+  const id = useId();
 
   return (
     <div className="space-y-1.5">
-      <Label>
+      <Label htmlFor={id}>
         {label}
         {hasValue ? (
           <span className="ml-1 font-normal text-muted-foreground">
@@ -326,6 +328,7 @@ function MaskedSecretField({
         ) : null}
       </Label>
       <Input
+        id={id}
         type="text"
         autoComplete="off"
         spellCheck={false}

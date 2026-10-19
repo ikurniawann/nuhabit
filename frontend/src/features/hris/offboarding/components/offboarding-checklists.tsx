@@ -55,6 +55,7 @@ export function AssetReturnList({ status, disabled, onChange }: AssetReturnListP
                   checked={isReturned}
                   onCheckedChange={(checked) => onChange(asset.key, checked)}
                   disabled={disabled}
+                  aria-label={`${asset.label} dikembalikan`}
                 />
               </div>
             </div>
@@ -91,7 +92,7 @@ export function ClearanceList({ record, onChange }: ClearanceListProps) {
                   value={cleared ? "cleared" : "not_cleared"}
                   onValueChange={(val) => onChange(clearance.key, val === "cleared")}
                 >
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[150px]" aria-label={`Status clearance ${clearance.label}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

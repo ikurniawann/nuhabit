@@ -58,8 +58,8 @@ export function ContractRenewDialog({ employeeId, contract, onClose }: ContractR
             {formatDate(contract.end_date)}. Draft perpanjangan akan mulai sehari setelahnya, dalam
             rantai kontrak yang sama.
           </p>
-          <ContractField label="Tanggal berakhir perpanjangan">
-            <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <ContractField label="Tanggal berakhir perpanjangan" htmlFor="contract-renew-end-date">
+            <Input id="contract-renew-end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </ContractField>
           <PkwtNotice>
             Total seluruh PKWT karyawan (termasuk perpanjangan ini) maksimal 5 tahun — sistem

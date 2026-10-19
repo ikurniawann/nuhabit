@@ -85,8 +85,8 @@ export function SupplyAdjustmentPage() {
         </CardHeader>
         <CardContent className="space-y-4 p-4">
           <div className="space-y-1.5">
-            <Label className="text-xs">Gudang <span className="text-red-500">*</span></Label>
-            <Combobox
+            <Label htmlFor="supply-adjustment-warehouse" className="text-xs">Gudang <span className="text-red-500">*</span></Label>
+            <Combobox id="supply-adjustment-warehouse"
               options={warehouseOptions}
               value={warehouseId}
               onChange={(v) => setWarehouseId(v || "")}
@@ -95,8 +95,8 @@ export function SupplyAdjustmentPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Barang <span className="text-red-500">*</span></Label>
-            <Combobox
+            <Label htmlFor="supply-adjustment-item" className="text-xs">Barang <span className="text-red-500">*</span></Label>
+            <Combobox id="supply-adjustment-item"
               options={supplyOptions}
               value={supplyItemId}
               onChange={(v) => setSupplyItemId(v || "")}
@@ -107,12 +107,12 @@ export function SupplyAdjustmentPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Stok Aktual (hasil hitung fisik)</Label>
-            <NumericInput value={qtyActual} onValueChange={setQtyActual} decimalScale={3} className="h-9 text-sm" />
+            <Label htmlFor="supply-adjustment-qty" className="text-xs">Stok Aktual (hasil hitung fisik)</Label>
+            <NumericInput id="supply-adjustment-qty" value={qtyActual} onValueChange={setQtyActual} decimalScale={3} className="h-9 text-sm" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Alasan / Catatan</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="resize-none text-sm" />
+            <Label htmlFor="supply-adjustment-notes" className="text-xs">Alasan / Catatan</Label>
+            <Textarea id="supply-adjustment-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="resize-none text-sm" />
           </div>
           <div className="flex justify-end">
             <Button onClick={handleSubmit} disabled={saving} className="purchasing-main-button">

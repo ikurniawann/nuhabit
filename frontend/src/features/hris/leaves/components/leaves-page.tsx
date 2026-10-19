@@ -121,7 +121,7 @@ export function LeavesPage() {
             </div>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filter status">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
@@ -134,7 +134,7 @@ export function LeavesPage() {
             </Select>
 
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filter jenis cuti">
                 <SelectValue placeholder="Filter jenis" />
               </SelectTrigger>
               <SelectContent>

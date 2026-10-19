@@ -112,8 +112,9 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         </Button>
       </div>
 
-      <Field label="Judul">
+      <Field label="Judul" htmlFor="announcement-title">
         <Input
+          id="announcement-title"
           value={form.title}
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
           placeholder="cth. Libur Idul Fitri 2026"
@@ -124,7 +125,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         <RichTextEditor value={form.body_html} onChange={(html) => setForm((f) => ({ ...f, body_html: html }))} />
       </Field>
 
-      <Field label="Cover (opsional, JPG/PNG/WebP ≤ 5MB)">
+      <Field label="Cover (opsional, JPG/PNG/WebP ≤ 5MB)" htmlFor="announcement-cover">
         {form.cover_image_url && (
           <Image
             src={coverSrc(form.cover_image_url)}
@@ -136,7 +137,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
           />
         )}
         <div className="flex items-center gap-2">
-          <Input type="file" accept="image/*" onChange={handleCoverChange} disabled={upload.isPending} />
+          <Input id="announcement-cover" type="file" accept="image/*" onChange={handleCoverChange} disabled={upload.isPending} />
           {upload.isPending && <Loader2 className="h-4 w-4 animate-spin text-gray-400" />}
           {form.cover_image_url && (
             <Button variant="ghost" size="sm" onClick={() => setForm((f) => ({ ...f, cover_image_url: null }))}>
@@ -146,8 +147,9 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         </div>
       </Field>
 
-      <Field label="Embed Video (opsional — URL YouTube/Vimeo)">
+      <Field label="Embed Video (opsional — URL YouTube/Vimeo)" htmlFor="announcement-video-url">
         <Input
+          id="announcement-video-url"
           value={form.video_url}
           onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
           placeholder="https://youtu.be/…"
@@ -159,7 +161,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         )}
       </Field>
 
-      <Field label="Tag (bisa banyak)">
+      <Field label="Tag (bisa banyak)" htmlFor="announcement-tag-input">
         <div className="flex flex-wrap gap-1.5">
           {form.tags.map((tag) => (
             <span
@@ -179,6 +181,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         </div>
         <div className="mt-2 flex gap-2">
           <Input
+            id="announcement-tag-input"
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => {
@@ -204,12 +207,12 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
         </div>
       </Field>
 
-      <Field label="Target Pembaca">
+      <Field label="Target Pembaca" htmlFor="announcement-target-scope">
         <Select
           value={form.target_scope}
           onValueChange={(v) => setForm((f) => ({ ...f, target_scope: v as AnnouncementScope }))}
         >
-          <SelectTrigger className="w-56">
+          <SelectTrigger id="announcement-target-scope" className="w-56">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -229,6 +232,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
                     onCheckedChange={() =>
                       setForm((f) => ({ ...f, department_ids: toggleId(f.department_ids, d.id) }))
                     }
+                    aria-label={d.name}
                   />
                   {d.name}
                 </label>
@@ -239,15 +243,17 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
       </Field>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Tayang mulai (opsional)">
+        <Field label="Tayang mulai (opsional)" htmlFor="announcement-publish-at">
           <Input
+            id="announcement-publish-at"
             type="datetime-local"
             value={form.publish_at}
             onChange={(e) => setForm((f) => ({ ...f, publish_at: e.target.value }))}
           />
         </Field>
-        <Field label="Berakhir (opsional)">
+        <Field label="Berakhir (opsional)" htmlFor="announcement-expires-at">
           <Input
+            id="announcement-expires-at"
             type="datetime-local"
             value={form.expires_at}
             onChange={(e) => setForm((f) => ({ ...f, expires_at: e.target.value }))}
@@ -260,6 +266,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
           <Checkbox
             checked={form.is_pinned}
             onCheckedChange={(v) => setForm((f) => ({ ...f, is_pinned: Boolean(v) }))}
+            aria-label="Sematkan di atas (pin)"
           />
           Sematkan di atas (pin)
         </label>
@@ -267,7 +274,7 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
           value={form.status}
           onValueChange={(v) => setForm((f) => ({ ...f, status: v as AnnouncementStatus }))}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-44" aria-label="Status publikasi">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -289,10 +296,10 @@ export function AnnouncementEditor({ announcement, onClose }: AnnouncementEditor
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-gray-700">{label}</label>
       {children}
     </div>
   );

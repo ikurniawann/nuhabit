@@ -151,6 +151,7 @@ export function TargetBar({
       </div>
       <div
         role="progressbar"
+        aria-label={`Progres ${label.toLowerCase()}`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.min(100, pct)}

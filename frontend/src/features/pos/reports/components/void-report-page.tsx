@@ -29,6 +29,7 @@ import {
 import { loadOrderTransactionDetail } from "../utils/load-order-detail";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatDateTime, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export function VoidReportPage() {
   const [dateFrom, setDateFrom] = useState(firstDayOfMonthWib);
@@ -178,7 +179,7 @@ export function VoidReportPage() {
           title="Daftar void"
           description={`${rows.length} transaksi void untuk ${applied.date_from} s/d ${applied.date_to}`}
         >
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel void" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -248,7 +249,7 @@ export function VoidReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
 
         <Dialog

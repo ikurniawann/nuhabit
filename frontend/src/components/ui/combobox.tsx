@@ -35,6 +35,10 @@ export interface ComboboxProps {
   /** Extra classes for the dropdown panel (e.g. min-w for long labels). */
   contentClassName?: string;
   allowClear?: boolean;
+  /** Pair with `<label htmlFor>` so the trigger takes the visible label as its name. */
+  id?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 export function Combobox({
@@ -48,6 +52,9 @@ export function Combobox({
   className,
   contentClassName,
   allowClear = false,
+  id,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -79,6 +86,9 @@ export function Combobox({
       <PopoverTrigger
         data-slot="select-trigger"
         type="button"
+        id={id}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
         aria-expanded={open}
         className={cn(
           "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-transparent px-3 text-sm outline-none transition-colors hover:border-gray-300 hover:bg-muted focus-visible:border-pink-200 focus-visible:ring-1 focus-visible:ring-pink-100 disabled:pointer-events-none disabled:opacity-50",
@@ -94,21 +104,16 @@ export function Combobox({
         </span>
         <div className="flex items-center gap-2">
           {allowClear && value && (
+            // A focusable control inside the trigger button breaks screen
+            // readers, so this stays a mouse shortcut. Keyboard users clear
+            // the value by picking the selected option again.
             <span
-              role="button"
-              tabIndex={0}
+              aria-hidden
               onClick={(e) => {
                 e.stopPropagation();
                 onChange("");
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onChange("");
-                }
-              }}
-              className="text-muted-foreground hover:text-foreground"
+              className="cursor-pointer text-muted-foreground hover:text-foreground"
             >
               ×
             </span>

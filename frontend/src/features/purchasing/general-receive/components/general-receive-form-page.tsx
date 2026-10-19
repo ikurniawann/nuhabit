@@ -96,10 +96,10 @@ function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouse
       >
         <div className="space-y-4 px-5 py-4">
           <div className="max-w-md">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="general-receive-warehouse" className="mb-1 block text-sm font-medium text-gray-700">
               Gudang Penerimaan <span className="text-red-500">*</span>
             </label>
-            <Combobox
+            <Combobox id="general-receive-warehouse"
               options={warehouses.map((w) => ({ value: w.id, label: w.code ? `${w.name} (${w.code})` : w.name }))}
               value={warehouseId}
               onChange={setWarehouseChoice}
@@ -150,6 +150,7 @@ function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouse
                         value={line.qtyDiterima}
                         onChange={(e) => updateQty(line.poItemId, e.target.value)}
                         disabled={line.remaining <= 0}
+                        aria-label={`Qty diterima ${line.nama}`}
                         className="h-9 w-28 text-right text-sm"
                       />
                     </td>
@@ -160,8 +161,8 @@ function GeneralReceiveForm({ po, warehouses }: { po: GeneralPODetail; warehouse
           </div>
 
           <div className="max-w-md">
-            <label className="mb-1 block text-sm font-medium text-gray-700">Catatan</label>
-            <Input
+            <label htmlFor="general-receive-notes" className="mb-1 block text-sm font-medium text-gray-700">Catatan</label>
+            <Input id="general-receive-notes"
               placeholder="Catatan penerimaan (opsional)"
               value={catatan}
               onChange={(e) => setCatatan(e.target.value)}

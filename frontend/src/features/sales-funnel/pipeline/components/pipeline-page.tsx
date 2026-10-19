@@ -163,7 +163,7 @@ export function SalesFunnelPipelinePage() {
             ) : null}
           </label>
           <Select value={eventType} onValueChange={setEventType}>
-            <SelectTrigger className="h-10 bg-white sm:w-40">
+            <SelectTrigger className="h-10 bg-white sm:w-40" aria-label="Filter jenis acara">
               <SelectValue placeholder="Jenis Acara" />
             </SelectTrigger>
             <SelectContent>

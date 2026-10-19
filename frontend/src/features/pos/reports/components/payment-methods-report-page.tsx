@@ -22,6 +22,7 @@ import { usePaymentMethodsReport } from "../queries";
 import type { PaymentMethodsReportGranularity } from "@/lib/pos/reports/types";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatRupiah, formatRupiahCompact } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const GRANULARITY_OPTIONS: Array<{
   value: PaymentMethodsReportGranularity;
@@ -206,7 +207,7 @@ export function PaymentMethodsReportPage() {
             title="Summary per jenis"
             description={`Periode ${applied.date_from} s/d ${applied.date_to}`}
           >
-            <div className="overflow-x-auto px-4">
+            <ScrollRegion label="Tabel metode pembayaran" className="overflow-x-auto px-4">
               <table className="min-w-full text-sm">
                 <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -251,7 +252,7 @@ export function PaymentMethodsReportPage() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           </PurchasingListSection>
 
           <Card className="border-gray-200/70 shadow-xs">
@@ -302,7 +303,7 @@ export function PaymentMethodsReportPage() {
           title={`Detail per ${GRANULARITY_OPTIONS.find((o) => o.value === applied.granularity)?.label.toLowerCase()}`}
           description="Tanggal/bulan/tahun tanpa transaksi ditampilkan sebagai 0"
         >
-          <div className="overflow-x-auto px-4 pb-4">
+          <ScrollRegion label="Tabel metode pembayaran" className="overflow-x-auto px-4 pb-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -363,7 +364,7 @@ export function PaymentMethodsReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
       </div>
     </PageTransition>

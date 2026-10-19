@@ -3,10 +3,11 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { ScrollRegion } from "@/components/ui/scroll-region"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div
+    <ScrollRegion
       data-slot="table-container"
       className="relative w-full overflow-x-auto"
     >
@@ -15,7 +16,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
       />
-    </div>
+    </ScrollRegion>
   )
 }
 

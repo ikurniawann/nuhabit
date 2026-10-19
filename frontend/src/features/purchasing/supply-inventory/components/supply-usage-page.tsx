@@ -108,8 +108,8 @@ export function SupplyUsagePage() {
             <CardContent className="space-y-4 p-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Gudang <span className="text-red-500">*</span></Label>
-                  <Combobox
+                  <Label htmlFor="supply-usage-warehouse" className="text-xs">Gudang <span className="text-red-500">*</span></Label>
+                  <Combobox id="supply-usage-warehouse"
                     options={warehouseOptions}
                     value={warehouseId}
                     onChange={(v) => setWarehouseId(v || "")}
@@ -118,16 +118,16 @@ export function SupplyUsagePage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Tanggal</Label>
-                  <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-9 text-sm" />
+                  <Label htmlFor="supply-usage-date" className="text-xs">Tanggal</Label>
+                  <Input id="supply-usage-date" type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="h-9 text-sm" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Divisi / Unit</Label>
-                  <Input value={divisi} onChange={(e) => setDivisi(e.target.value)} placeholder="mis. Maintenance" className="h-9 text-sm" />
+                  <Label htmlFor="supply-usage-division" className="text-xs">Divisi / Unit</Label>
+                  <Input id="supply-usage-division" value={divisi} onChange={(e) => setDivisi(e.target.value)} placeholder="mis. Maintenance" className="h-9 text-sm" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Keperluan</Label>
-                  <Input value={keperluan} onChange={(e) => setKeperluan(e.target.value)} placeholder="untuk apa dipakai" className="h-9 text-sm" />
+                  <Label htmlFor="supply-usage-purpose" className="text-xs">Keperluan</Label>
+                  <Input id="supply-usage-purpose" value={keperluan} onChange={(e) => setKeperluan(e.target.value)} placeholder="untuk apa dipakai" className="h-9 text-sm" />
                 </div>
               </div>
 
@@ -135,8 +135,8 @@ export function SupplyUsagePage() {
                 {lines.map((line, idx) => (
                   <div key={line.key} className="grid grid-cols-12 items-end gap-2 rounded-lg border border-gray-200/70 p-3">
                     <div className="col-span-12 space-y-1.5 md:col-span-6">
-                      <Label className="text-xs">Barang {idx + 1}</Label>
-                      <Combobox
+                      <Label htmlFor={`supply-usage-${line.key}-item`} className="text-xs">Barang {idx + 1}</Label>
+                      <Combobox id={`supply-usage-${line.key}-item`}
                         options={supplyOptions}
                         value={line.supply_item_id}
                         onChange={(v) => updateLine(line.key, { supply_item_id: v || "" })}
@@ -147,8 +147,8 @@ export function SupplyUsagePage() {
                       />
                     </div>
                     <div className="col-span-7 space-y-1.5 md:col-span-3">
-                      <Label className="text-xs">Qty</Label>
-                      <NumericInput
+                      <Label htmlFor={`supply-usage-${line.key}-qty`} className="text-xs">Qty</Label>
+                      <NumericInput id={`supply-usage-${line.key}-qty`}
                         value={line.qty}
                         onValueChange={(v) => updateLine(line.key, { qty: v })}
                         decimalScale={3}
@@ -156,8 +156,8 @@ export function SupplyUsagePage() {
                       />
                     </div>
                     <div className="col-span-4 space-y-1.5 md:col-span-2">
-                      <Label className="text-xs">Catatan</Label>
-                      <Input
+                      <Label htmlFor={`supply-usage-${line.key}-note`} className="text-xs">Catatan</Label>
+                      <Input id={`supply-usage-${line.key}-note`}
                         value={line.catatan || ""}
                         onChange={(e) => updateLine(line.key, { catatan: e.target.value })}
                         className="h-9 text-sm"
@@ -171,6 +171,7 @@ export function SupplyUsagePage() {
                         disabled={lines.length === 1}
                         onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
                         className="text-red-500 hover:text-red-600"
+                        aria-label={`Hapus barang ${idx + 1}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

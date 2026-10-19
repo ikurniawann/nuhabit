@@ -207,9 +207,9 @@ export function SeasonPassesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Produk Pass *</Label>
+              <Label htmlFor="season-pass-product">Produk Pass *</Label>
               <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="season-pass-product" className="w-full">
                   <SelectValue placeholder="Pilih produk pass…" />
                 </SelectTrigger>
                 <SelectContent>

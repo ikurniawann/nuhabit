@@ -84,4 +84,37 @@ describe("Select", () => {
 
     expect(screen.getByText("Label Custom")).toBeInTheDocument();
   });
+
+  test("trigger tanpa label terlihat memakai aria-label sebagai nama", () => {
+    render(
+      <Select value="all">
+        <SelectTrigger aria-label="Filter status">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Semua</SelectItem>
+        </SelectContent>
+      </Select>
+    );
+
+    expect(screen.getByRole("combobox", { name: "Filter status" })).toBeInTheDocument();
+  });
+
+  test("trigger memakai label terlihat lewat aria-labelledby", () => {
+    render(
+      <>
+        <span id="loan-status-label">Status pinjaman</span>
+        <Select value="all">
+          <SelectTrigger aria-labelledby="loan-status-label">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua</SelectItem>
+          </SelectContent>
+        </Select>
+      </>
+    );
+
+    expect(screen.getByRole("combobox", { name: "Status pinjaman" })).toBeInTheDocument();
+  });
 });

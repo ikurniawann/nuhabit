@@ -116,6 +116,7 @@ function CandidateRow({
               variant="ghost"
               className="text-red-500 hover:text-red-600 hover:bg-red-50"
               onClick={() => onAction("archive", candidate)}
+              aria-label={`Arsipkan ${candidate.full_name}`}
             >
               <ArchiveBoxIcon className="w-4 h-4" />
             </Button>
@@ -234,7 +235,7 @@ export function TalentPoolPage() {
           />
         </div>
         <Select value={selectedBrand} onValueChange={(v) => setSelectedBrand(v ?? "all")}>
-          <SelectTrigger className="w-full sm:w-48">
+          <SelectTrigger className="w-full sm:w-48" aria-label="Filter outlet">
             <SelectValue
               placeholder={brands.find((b) => b.id === selectedBrand)?.name ?? "Semua Outlet"}
             />
@@ -285,6 +286,7 @@ export function TalentPoolPage() {
             rows={4}
             value={whatsappMsg}
             onChange={(e) => setWhatsappMsg(e.target.value)}
+            aria-label="Pesan WhatsApp"
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setActionDialog(null)}>

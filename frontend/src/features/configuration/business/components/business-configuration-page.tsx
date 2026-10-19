@@ -217,6 +217,7 @@ function BusinessTreeRow({
             size="sm"
             variant="ghost"
             onClick={() => onEdit(node)}
+            aria-label={`Edit ${node.data.name}`}
             className="h-8 w-8 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -226,6 +227,7 @@ function BusinessTreeRow({
             size="sm"
             variant="ghost"
             onClick={() => onDelete(node)}
+            aria-label={`Hapus ${node.data.name}`}
             className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -506,10 +508,11 @@ export function BusinessConfigurationPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label htmlFor="business-entity-name" className="mb-1.5 block text-xs font-medium text-gray-600">
                   Nama *
                 </label>
                 <Input
+                  id="business-entity-name"
                   value={form.name}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
@@ -520,10 +523,11 @@ export function BusinessConfigurationPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-gray-600">
+                <label htmlFor="business-entity-code" className="mb-1.5 block text-xs font-medium text-gray-600">
                   Kode
                 </label>
                 <Input
+                  id="business-entity-code"
                   value={form.code}
                   onChange={(e) =>
                     setForm((f) => ({

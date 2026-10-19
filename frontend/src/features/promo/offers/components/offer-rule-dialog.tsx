@@ -127,7 +127,7 @@ export function OfferRuleDialog({ offerType, rule, onClose }: {
               <div className="text-sm font-medium">Aktif</div>
               <div className="text-xs text-muted-foreground">Nonaktif = tidak dipakai di kasir POS</div>
             </div>
-            <Switch checked={form.is_active} onCheckedChange={(checked) => patch({ is_active: checked })} />
+            <Switch aria-label="Aktif" checked={form.is_active} onCheckedChange={(checked) => patch({ is_active: checked })} />
           </div>
 
           <OfferTypeFields

@@ -108,8 +108,8 @@ export function OfferSendDialog({
                 </p>
               )}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Gaji Pokok / bulan (Rp)</Label>
-                <Input type="number" min={0} value={form.salary} onChange={set("salary")} placeholder="mis. 5500000" />
+                <Label htmlFor="offer-send-salary" className="text-xs font-medium">Gaji Pokok / bulan (Rp)</Label>
+                <Input id="offer-send-salary" type="number" min={0} value={form.salary} onChange={set("salary")} placeholder="mis. 5500000" />
                 {salaryNumber > 0 && <p className="text-xs text-muted-foreground">{formatRupiah(salaryNumber)}</p>}
                 {overBudget && (
                   <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
@@ -118,8 +118,9 @@ export function OfferSendDialog({
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Benefit & Tunjangan (satu per baris)</Label>
+                <Label htmlFor="offer-send-benefits" className="text-xs font-medium">Benefit & Tunjangan (satu per baris)</Label>
                 <Textarea
+                  id="offer-send-benefits"
                   value={form.benefitsText}
                   onChange={set("benefitsText")}
                   rows={3}
@@ -128,12 +129,13 @@ export function OfferSendDialog({
               </div>
               <div className="flex flex-wrap gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Tanggal Mulai Kerja</Label>
-                  <Input type="date" value={form.startDate} onChange={set("startDate")} className="w-40" />
+                  <Label htmlFor="offer-send-start-date" className="text-xs font-medium">Tanggal Mulai Kerja</Label>
+                  <Input id="offer-send-start-date" type="date" value={form.startDate} onChange={set("startDate")} className="w-40" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Masa Berlaku (hari)</Label>
+                  <Label htmlFor="offer-send-expires-days" className="text-xs font-medium">Masa Berlaku (hari)</Label>
                   <Input
+                    id="offer-send-expires-days"
                     type="number"
                     min={1}
                     max={30}
@@ -144,8 +146,9 @@ export function OfferSendDialog({
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Catatan Internal (tidak dilihat kandidat)</Label>
+                <Label htmlFor="offer-send-notes" className="text-xs font-medium">Catatan Internal (tidak dilihat kandidat)</Label>
                 <Textarea
+                  id="offer-send-notes"
                   value={form.notes}
                   onChange={set("notes")}
                   rows={2}

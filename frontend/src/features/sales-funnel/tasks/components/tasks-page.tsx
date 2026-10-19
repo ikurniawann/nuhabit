@@ -163,7 +163,7 @@ export function SalesTasksPage() {
                 ))}
               </div>
               <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger className="h-10 bg-white sm:w-36"><SelectValue placeholder="Prioritas" /></SelectTrigger>
+                <SelectTrigger className="h-10 bg-white sm:w-36" aria-label="Filter prioritas"><SelectValue placeholder="Prioritas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={ALL}>Semua prioritas</SelectItem>
                   {Object.entries(PRIORITY_LABELS).map(([value, label]) => (

@@ -24,7 +24,7 @@ export function BillingSettingsPage() {
 
   const scopeControls = (
     <>
-      <label className="space-y-1.5">
+      <label htmlFor="billing-scope-branch" className="space-y-1.5">
         <span className="text-sm font-medium">Cabang</span>
         <Select
           value={branchId || "system"}
@@ -33,7 +33,7 @@ export function BillingSettingsPage() {
             setWarehouseId("");
           }}
         >
-          <SelectTrigger className="h-10 border-gray-200/80">
+          <SelectTrigger id="billing-scope-branch" className="h-10 border-gray-200/80">
             <SelectValue placeholder="Default sistem" />
           </SelectTrigger>
           <SelectContent>
@@ -47,7 +47,7 @@ export function BillingSettingsPage() {
         </Select>
       </label>
 
-      <label className="space-y-1.5">
+      <label htmlFor="billing-scope-stall" className="space-y-1.5">
         <span className="text-sm font-medium">Stall (opsional override)</span>
         <div className={!branchId ? "pointer-events-none opacity-50" : undefined}>
           <Select
@@ -57,7 +57,7 @@ export function BillingSettingsPage() {
               setWarehouseId(value === "all" ? "" : value);
             }}
           >
-            <SelectTrigger className="h-10 border-gray-200/80">
+            <SelectTrigger id="billing-scope-stall" className="h-10 border-gray-200/80">
               <SelectValue placeholder="Semua stall di cabang" />
             </SelectTrigger>
             <SelectContent>

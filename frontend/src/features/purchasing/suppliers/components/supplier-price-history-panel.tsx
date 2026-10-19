@@ -153,10 +153,10 @@ export function SupplierPriceHistoryPanel({
         <CardContent className="p-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label className="text-xs font-medium text-gray-600 mb-1 block">
+              <Label htmlFor="supplier-price-material" className="text-xs font-medium text-gray-600 mb-1 block">
                 Filter Bahan Baku
               </Label>
-              <Combobox
+              <Combobox id="supplier-price-material"
                 options={materialOptions}
                 value={selectedMaterial}
                 onChange={(value) => setSelectedMaterial(value || "all")}
@@ -168,10 +168,10 @@ export function SupplierPriceHistoryPanel({
             </div>
 
             <div>
-              <Label className="text-xs font-medium text-gray-600 mb-1 block">
+              <Label htmlFor="supplier-price-period" className="text-xs font-medium text-gray-600 mb-1 block">
                 Periode Waktu
               </Label>
-              <Combobox
+              <Combobox id="supplier-price-period"
                 options={timeRangeOptions}
                 value={String(timeRange)}
                 onChange={(value) => setTimeRange(Number(value || 6))}

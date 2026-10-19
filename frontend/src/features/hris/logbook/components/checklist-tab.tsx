@@ -140,9 +140,9 @@ export function LogbookChecklistTab({
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-[1fr_180px_auto_auto]">
           <div className="space-y-1">
-            <Label>1. Template</Label>
+            <Label htmlFor="logbook-checklist-template">1. Template</Label>
             <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-              <SelectTrigger>
+              <SelectTrigger id="logbook-checklist-template">
                 <SelectValue
                   placeholder={
                     templates.length
@@ -162,8 +162,9 @@ export function LogbookChecklistTab({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>2. Tanggal</Label>
+            <Label htmlFor="logbook-checklist-date">2. Tanggal</Label>
             <Input
+              id="logbook-checklist-date"
               type="date"
               value={entryDate}
               onChange={(event) => setEntryDate(event.target.value)}

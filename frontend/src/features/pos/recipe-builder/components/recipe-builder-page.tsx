@@ -157,8 +157,9 @@ export function RecipeBuilderPage() {
               <h2 className="mb-4 text-lg font-semibold text-gray-900">Informasi Produk</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Produk</label>
+                  <label htmlFor="recipe-product" className="mb-1 block text-sm font-medium text-gray-700">Produk</label>
                   <select
+                    id="recipe-product"
                     value={selectedProductId}
                     onChange={(event) => setSelectedProductId(event.target.value)}
                     className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
@@ -207,14 +208,14 @@ export function RecipeBuilderPage() {
                           <div className="text-xs text-gray-500">{ingredient.unit} · {formatCurrency(ingredient.costPerUnit)}</div>
                         </div>
                         <div className="col-span-2">
-                          <input type="number" step="0.01" value={ingredient.quantity} onChange={(event) => updateIngredient(index, { quantity: Number.parseFloat(event.target.value) || 0 })} className="w-full rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                          <input aria-label={`Jumlah ${ingredient.name}`} type="number" step="0.01" value={ingredient.quantity} onChange={(event) => updateIngredient(index, { quantity: Number.parseFloat(event.target.value) || 0 })} className="w-full rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                         </div>
                         <div className="col-span-2">
-                          <input type="number" step="0.01" value={Math.round(ingredient.wasteFactor * 100)} onChange={(event) => updateIngredient(index, { wasteFactor: (Number.parseFloat(event.target.value) || 0) / 100 })} className="w-full rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
+                          <input aria-label={`Waste ${ingredient.name} (%)`} type="number" step="0.01" value={Math.round(ingredient.wasteFactor * 100)} onChange={(event) => updateIngredient(index, { wasteFactor: (Number.parseFloat(event.target.value) || 0) / 100 })} className="w-full rounded border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500" />
                         </div>
                         <div className="col-span-3 font-medium text-gray-900">{formatCurrency(lineCost)}</div>
                         <div className="col-span-1">
-                          <button onClick={() => removeIngredient(index)} disabled={saving} className="text-red-500 hover:text-red-700 disabled:opacity-50">
+                          <button onClick={() => removeIngredient(index)} disabled={saving} aria-label={`Hapus ${ingredient.name}`} className="text-red-500 hover:text-red-700 disabled:opacity-50">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>

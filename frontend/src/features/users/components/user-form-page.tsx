@@ -110,11 +110,11 @@ function UserEmployeeForm({
     <FormPageLayout>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <Link href={backHref}>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-600">
+          <Button asChild variant="ghost" size="icon" className="h-9 w-9 text-gray-600">
+            <Link href={backHref} aria-label="Kembali">
               <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
               {isEdit ? "Edit Employee" : "Add Employee"}

@@ -24,6 +24,7 @@ import { formatNumber } from "@/lib/format";
 import { useCreateCashTransfer } from "../mutations";
 import { useCashBankAccounts, useCashTransfers } from "../queries";
 import { useDebouncedSearch } from "@/features/accounting/shared/use-debounced-search";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const NO_ACCOUNTS: never[] = [];
 
@@ -114,7 +115,7 @@ export function CashTransferPage() {
             Belum ada transfer kas/bank.
           </p>
         ) : (
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel transfer kas" className="overflow-x-auto px-4">
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-gray-200/70 text-left text-muted-foreground">
@@ -156,7 +157,7 @@ export function CashTransferPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         )}
       </PurchasingListSection>
 
@@ -263,8 +264,8 @@ function CashTransferForm({ onClose }: { onClose: () => void }) {
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
         <div className="space-y-2">
-          <Label>Tanggal</Label>
-          <Input
+          <Label htmlFor="cash-transfer-date">Tanggal</Label>
+          <Input id="cash-transfer-date"
             type="date"
             value={entryDate}
             onChange={(e) => setEntryDate(e.target.value)}
@@ -273,8 +274,8 @@ function CashTransferForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Dari akun (Credit)</Label>
-          <Combobox
+          <Label htmlFor="cash-transfer-from">Dari akun (Credit)</Label>
+          <Combobox id="cash-transfer-from"
             options={fromOptions}
             value={fromAccountId}
             onChange={(v) => {
@@ -287,8 +288,8 @@ function CashTransferForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Ke akun (Debit)</Label>
-          <Combobox
+          <Label htmlFor="cash-transfer-to">Ke akun (Debit)</Label>
+          <Combobox id="cash-transfer-to"
             options={toOptions}
             value={toAccountId}
             onChange={setToAccountId}
@@ -298,16 +299,16 @@ function CashTransferForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Amount</Label>
-          <NumericInput
+          <Label htmlFor="cash-transfer-amount">Amount</Label>
+          <NumericInput id="cash-transfer-amount"
             value={amount}
             onValueChange={setAmount}
             className="h-10 bg-card"
           />
         </div>
         <div className="space-y-2">
-          <Label>Keterangan</Label>
-          <Input
+          <Label htmlFor="cash-transfer-description">Keterangan</Label>
+          <Input id="cash-transfer-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Opsional"
@@ -315,8 +316,8 @@ function CashTransferForm({ onClose }: { onClose: () => void }) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Memo baris</Label>
-          <Input
+          <Label htmlFor="cash-transfer-memo">Memo baris</Label>
+          <Input id="cash-transfer-memo"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="Opsional"

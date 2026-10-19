@@ -71,10 +71,10 @@ export function EssKpiTeamDialog({
             <ScorecardBreakdown scorecard={scorecard} indicators={indicators} />
             {scorecard.status === "draft" ? (
               <div className="space-y-2 border-t pt-4">
-                <Label>Penilaian Anda (rubrik 1–5)</Label>
+                <Label htmlFor="ess-kpi-team-rubric">Penilaian Anda (rubrik 1–5)</Label>
                 <div className="flex gap-2">
                   <Select value={rubricValue} onValueChange={setRubricValue}>
-                    <SelectTrigger className="w-24">
+                    <SelectTrigger id="ess-kpi-team-rubric" className="w-24">
                       <SelectValue placeholder="Nilai" />
                     </SelectTrigger>
                     <SelectContent>

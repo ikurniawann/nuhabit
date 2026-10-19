@@ -131,7 +131,7 @@ export function NewSupplierPage() {
                   <Label htmlFor="kota" className="text-xs">
                     Kota <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="kota"
                     options={KOTA_OPTIONS.map((k) => ({ value: k, label: k }))}
                     value={formData.kota}
                     onChange={(v) => setFormData({ ...formData, kota: v })}
@@ -263,7 +263,7 @@ export function NewSupplierPage() {
                   <Label htmlFor="payment_terms" className="text-xs">
                     Termin Pembayaran <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="payment_terms"
                     options={PAYMENT_TERMS_OPTIONS.map((pt) => ({ value: pt, label: pt }))}
                     value={formData.payment_terms}
                     onChange={(v) => setFormData({ ...formData, payment_terms: v as PaymentTerms })}
@@ -278,7 +278,7 @@ export function NewSupplierPage() {
                   <Label htmlFor="currency" className="text-xs">
                     Mata Uang <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="currency"
                     options={CURRENCY_OPTIONS.map((c) => ({ value: c, label: c }))}
                     value={formData.currency}
                     onChange={(v) => setFormData({ ...formData, currency: v as Currency })}

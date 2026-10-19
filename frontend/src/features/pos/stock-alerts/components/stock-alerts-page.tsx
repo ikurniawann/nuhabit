@@ -157,6 +157,7 @@ export function StockAlertsPage() {
             variant="ghost"
             onClick={() => void refresh()}
             className="text-gray-400 hover:text-white"
+            aria-label="Muat ulang"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>

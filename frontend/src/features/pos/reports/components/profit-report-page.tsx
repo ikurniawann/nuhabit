@@ -34,6 +34,7 @@ import {
   ProfitMarginBarChart,
 } from "./profit-report-charts";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -120,7 +121,7 @@ function BreakdownTableSection({
 
   return (
     <PurchasingListSection icon={Icon} title={title} description={description}>
-      <div className="overflow-x-auto">
+      <ScrollRegion label="Tabel laporan laba" className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-gray-100 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
@@ -172,7 +173,7 @@ function BreakdownTableSection({
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </PurchasingListSection>
   );
 }
@@ -205,8 +206,9 @@ export function ProfitReportPage() {
             actions={
               <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200/70 bg-white p-3 sm:flex-row sm:items-end">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">From</Label>
+                  <Label htmlFor="profit-report-date-from" className="text-xs text-gray-600">From</Label>
                   <Input
+                    id="profit-report-date-from"
                     type="date"
                     value={dateFrom}
                     onChange={(event) => setDateFrom(event.target.value)}
@@ -214,8 +216,9 @@ export function ProfitReportPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">To</Label>
+                  <Label htmlFor="profit-report-date-to" className="text-xs text-gray-600">To</Label>
                   <Input
+                    id="profit-report-date-to"
                     type="date"
                     value={dateTo}
                     onChange={(event) => setDateTo(event.target.value)}

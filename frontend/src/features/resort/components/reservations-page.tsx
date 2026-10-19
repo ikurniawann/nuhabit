@@ -94,7 +94,7 @@ export function ResortReservationsPage() {
           </label>
           <form className="flex flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); setApplied(search.trim()); }}>
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama / no. HP / kode reservasi…" className="h-9" />
-            <Button type="submit" variant="outline" className="h-9"><Search className="h-4 w-4" /></Button>
+            <Button type="submit" variant="outline" className="h-9" aria-label="Cari reservasi"><Search className="h-4 w-4" /></Button>
           </form>
         </CardContent>
       </Card>

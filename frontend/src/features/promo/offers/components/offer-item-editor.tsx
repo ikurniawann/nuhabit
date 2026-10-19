@@ -59,7 +59,7 @@ export function OfferItemEditor({
                       onPatch(item.key, { kind: kind as DraftItem["kind"], product_id: "", category_id: "" })
                     }
                   >
-                    <SelectTrigger className="w-32 border-gray-200/80">
+                    <SelectTrigger className="w-32 border-gray-200/80" aria-label="Jenis item">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -75,7 +75,7 @@ export function OfferItemEditor({
                     onPatch(item.key, isCategory ? { category_id: id } : { product_id: id });
                   }}
                 >
-                  <SelectTrigger className="min-w-[220px] flex-1 border-gray-200/80">
+                  <SelectTrigger className="min-w-[220px] flex-1 border-gray-200/80" aria-label={isCategory ? "Kategori" : "Produk"}>
                     <SelectValue placeholder={placeholder} />
                   </SelectTrigger>
                   <SelectContent>
@@ -106,6 +106,7 @@ export function OfferItemEditor({
                   size="sm"
                   className="border-red-200 text-red-600"
                   onClick={() => onRemove(item.key)}
+                  aria-label="Hapus item"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,17 +40,19 @@ interface FieldGridProps {
 }
 
 function FieldGrid({ fields, state, onChange }: FieldGridProps) {
+  const id = useId();
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
       {fields.map((field) => (
         <div key={field.key}>
-          <label className="mb-1 block text-xs font-medium text-gray-600">
+          <label htmlFor={`${id}-${field.key}`} className="mb-1 block text-xs font-medium text-gray-600">
             {field.label}
             {field.suffix ? (
               <span className="ml-1 text-gray-400">({field.suffix})</span>
             ) : null}
           </label>
           <Input
+            id={`${id}-${field.key}`}
             type="number"
             step="any"
             value={state[field.key] ?? ""}
@@ -238,7 +240,7 @@ export function PayrollSettingsPage() {
             <CardContent>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                  <label htmlFor="payroll-late-deduction-mode" className="mb-1 block text-xs font-medium text-gray-600">
                     Mode Potongan
                   </label>
                   <Select
@@ -247,7 +249,7 @@ export function PayrollSettingsPage() {
                       handleSettingsChange("late_deduction_mode", value)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="payroll-late-deduction-mode">
                       <SelectValue placeholder="Pilih mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -260,13 +262,14 @@ export function PayrollSettingsPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600">
+                  <label htmlFor="payroll-late-deduction-amount" className="mb-1 block text-xs font-medium text-gray-600">
                     Tarif Potongan{" "}
                     <span className="text-gray-400">
                       (Rp — per menit / per kejadian sesuai mode)
                     </span>
                   </label>
                   <Input
+                    id="payroll-late-deduction-amount"
                     type="number"
                     step="any"
                     value={settingsForm.late_deduction_amount ?? ""}
@@ -289,10 +292,11 @@ export function PayrollSettingsPage() {
                 PPh 21 — PTKP & Bracket (per Tahun Pajak)
               </CardTitle>
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-600">
+                <label htmlFor="payroll-tax-year" className="text-xs font-medium text-gray-600">
                   Tahun Pajak
                 </label>
                 <Input
+                  id="payroll-tax-year"
                   type="number"
                   className="w-24"
                   value={taxYear}

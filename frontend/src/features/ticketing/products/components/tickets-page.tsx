@@ -259,12 +259,12 @@ export function TicketsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Jenis</Label>
+              <Label htmlFor="ticket-create-kind">Jenis</Label>
               <Select
                 value={kind}
                 onValueChange={(v) => setKind(v as TicketProductKind)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="ticket-create-kind" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -298,12 +298,12 @@ export function TicketsPage() {
                     </p>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Kebijakan masuk</Label>
+                    <Label htmlFor="ticket-create-entry-policy">Kebijakan masuk</Label>
                     <Select
                       value={entryPolicy}
                       onValueChange={(v) => setEntryPolicy(v as PassEntryPolicy)}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger id="ticket-create-entry-policy" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -359,14 +359,14 @@ export function TicketsPage() {
             ) : null}
             {kind === "single" ? (
               <div className="space-y-1.5">
-                <Label>Varian</Label>
+                <Label htmlFor="ticket-create-variant-preset">Varian</Label>
                 <Select
                   value={variantPreset}
                   onValueChange={(v) =>
                     setVariantPreset(v as TicketVariantPreset)
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id="ticket-create-variant-preset" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -396,8 +396,8 @@ export function TicketsPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Kategori</Label>
-              <CategoryAutocomplete value={categoryName} onChange={setCategoryName} />
+              <Label htmlFor="ticket-create-category">Kategori</Label>
+              <CategoryAutocomplete id="ticket-create-category" value={categoryName} onChange={setCategoryName} />
               <p className="text-xs text-gray-500">
                 Ketik nama baru → kategori otomatis ditambahkan
               </p>
@@ -442,6 +442,7 @@ export function TicketsPage() {
               </div>
               <Switch
                 id="ticket_has_gate"
+                aria-label="Punya gate?"
                 checked={hasGate}
                 onCheckedChange={setHasGate}
               />

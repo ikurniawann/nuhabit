@@ -16,6 +16,7 @@ import {
 } from "./report-shell";
 import { ErrorBlock, LoadingBlock } from "./report-table";
 import { formatLedgerAmount } from "@/lib/accounting/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export function GeneralLedgerPage() {
   const router = useRouter();
@@ -125,7 +126,7 @@ export function GeneralLedgerPage() {
                 {formatLedgerAmount(data.closing_balance)}.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <ScrollRegion label="Tabel buku besar" className="overflow-x-auto">
                 <table className="w-full min-w-220 text-sm">
                   <thead>
                     <tr className="border-b border-gray-200/70 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -181,7 +182,7 @@ export function GeneralLedgerPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </ScrollRegion>
             )}
           </>
         )}

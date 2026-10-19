@@ -56,12 +56,12 @@ export function NewPayrollDialog({
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
+            <label htmlFor="new-payroll-month" className="block text-sm font-medium text-gray-700 mb-1">Bulan</label>
             <Select
               value={String(period.month)}
               onValueChange={(v) => setPeriod((p) => ({ ...p, month: parseInt(v, 10) }))}
             >
-              <SelectTrigger>
+              <SelectTrigger id="new-payroll-month">
                 <SelectValue placeholder="Pilih bulan" />
               </SelectTrigger>
               <SelectContent>
@@ -74,8 +74,9 @@ export function NewPayrollDialog({
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
+            <label htmlFor="new-payroll-year" className="block text-sm font-medium text-gray-700 mb-1">Tahun</label>
             <Input
+              id="new-payroll-year"
               type="number"
               value={period.year}
               onChange={(e) => setPeriod((p) => ({ ...p, year: parseInt(e.target.value, 10) }))}

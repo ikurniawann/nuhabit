@@ -31,8 +31,8 @@ export function PoReportFilters({ filters }: { filters: ReturnType<typeof usePoR
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <DateFilterField label="Dari Tanggal" value={filters.dateFrom} onChange={filters.setDateFrom} />
           <DateFilterField label="Sampai Tanggal" value={filters.dateTo} onChange={filters.setDateTo} />
-          <ReportFilterField label="Status">
-            <Combobox
+          <ReportFilterField htmlFor="po-report-status" label="Status">
+            <Combobox id="po-report-status"
               options={PO_STATUS_OPTIONS}
               value={filters.status}
               onChange={filters.setStatus}
@@ -42,8 +42,8 @@ export function PoReportFilters({ filters }: { filters: ReturnType<typeof usePoR
               className="h-10"
             />
           </ReportFilterField>
-          <ReportFilterField label="Supplier">
-            <Combobox
+          <ReportFilterField htmlFor="po-report-supplier" label="Supplier">
+            <Combobox id="po-report-supplier"
               options={supplierOptions}
               value={filters.vendorId}
               onChange={filters.setVendorId}

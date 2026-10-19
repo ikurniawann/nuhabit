@@ -41,7 +41,7 @@ export function CustomerStrip(props: {
               )}
             </div>
           </div>
-          <button onClick={props.onClear} className="p-1 text-gray-400 hover:text-red-600 transition-colors">
+          <button onClick={props.onClear} aria-label="Hapus pelanggan" className="p-1 text-gray-400 hover:text-red-600 transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>

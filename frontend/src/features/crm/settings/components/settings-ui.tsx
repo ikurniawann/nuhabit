@@ -82,7 +82,7 @@ export function SwitchRow({
       <Label htmlFor={id} className="text-sm text-foreground">
         {label}
       </Label>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+      <Switch id={id} checked={checked} onCheckedChange={onChange} aria-label={label} />
     </div>
   );
 }

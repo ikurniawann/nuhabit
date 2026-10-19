@@ -157,8 +157,9 @@ export function AppAccessFormSection({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {!requiresNewPassword ? (
               <div>
-                <FormFieldLabel>New password (optional)</FormFieldLabel>
+                <FormFieldLabel htmlFor="user-access-password">New password (optional)</FormFieldLabel>
                 <Input
+                  id="user-access-password"
                   type="password"
                   value={form.password}
                   onChange={(e) => onChange({ password: e.target.value })}
@@ -168,8 +169,9 @@ export function AppAccessFormSection({
               </div>
             ) : (
               <div>
-                <FormFieldLabel required>Temporary password</FormFieldLabel>
+                <FormFieldLabel required htmlFor="user-access-password">Temporary password</FormFieldLabel>
                 <Input
+                  id="user-access-password"
                   type="password"
                   value={form.password}
                   onChange={(e) => onChange({ password: e.target.value })}
@@ -179,8 +181,9 @@ export function AppAccessFormSection({
               </div>
             )}
             <div>
-              <FormFieldLabel required>Role</FormFieldLabel>
+              <FormFieldLabel required htmlFor="user-access-role">Role</FormFieldLabel>
               <Combobox
+                id="user-access-role"
                 options={ROLE_OPTIONS}
                 value={form.role}
                 onChange={handleRoleChange}
@@ -191,8 +194,9 @@ export function AppAccessFormSection({
               />
             </div>
             <div>
-              <FormFieldLabel>Account status</FormFieldLabel>
+              <FormFieldLabel htmlFor="user-access-status">Account status</FormFieldLabel>
               <Combobox
+                id="user-access-status"
                 options={ACCOUNT_STATUS_OPTIONS}
                 value={form.account_status}
                 onChange={(value) => onChange({ account_status: value as "active" | "inactive" })}
@@ -321,6 +325,7 @@ export function AppAccessFormSection({
                             })
                           }
                           className="h-10 w-10 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                          aria-label="Hapus izin persetujuan"
                         >
                           <XMarkIcon className="h-4 w-4" />
                         </Button>

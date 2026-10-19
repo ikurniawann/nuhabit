@@ -69,7 +69,7 @@ export function OvertimePage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-44" aria-label="Filter status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -84,6 +84,7 @@ export function OvertimePage() {
           type="month"
           className="w-44"
           value={monthFilter}
+          aria-label="Filter bulan"
           onChange={(e) => setMonthFilter(e.target.value)}
         />
       </div>

@@ -68,7 +68,7 @@ export function LiveChatCard({ type, sessionId }: { type: LiveSessionType; sessi
           placeholder="Tulis pesan ke kandidat…"
           className="h-9 flex-1 rounded-md border border-gray-200 px-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-300"
         />
-        <Button type="button" size="icon" onClick={handleSend} disabled={send.isPending || !input.trim()}>
+        <Button type="button" size="icon" onClick={handleSend} disabled={send.isPending || !input.trim()} aria-label="Kirim pesan">
           {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
         </Button>
       </div>

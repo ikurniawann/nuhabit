@@ -74,9 +74,9 @@ export function OfferTypeFields({ offerType, form, dispatch, productOptions, cat
           <NumberField label="Qty beli (X)" placeholder="1" field="buy_qty" form={form} dispatch={dispatch} />
           <NumberField label="Qty gratis (Y)" placeholder="1" field="get_qty" form={form} dispatch={dispatch} />
           <label className="space-y-1.5">
-            <Label>Gratis berupa</Label>
+            <Label htmlFor="offer-get-mode">Gratis berupa</Label>
             <Select value={form.get_mode} onValueChange={(value) => patch({ get_mode: value as BxgyGetMode })}>
-              <SelectTrigger className="border-gray-200/80">
+              <SelectTrigger id="offer-get-mode" className="border-gray-200/80">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -96,9 +96,9 @@ export function OfferTypeFields({ offerType, form, dispatch, productOptions, cat
     <div className="space-y-3 rounded-xl border border-gray-200/70 p-3">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1.5">
-          <Label>Basis minimum</Label>
+          <Label htmlFor="offer-volume-basis">Basis minimum</Label>
           <Select value={form.volume_basis} onValueChange={(value) => patch({ volume_basis: value as VolumeBasis })}>
-            <SelectTrigger className="border-gray-200/80">
+            <SelectTrigger id="offer-volume-basis" className="border-gray-200/80">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -115,9 +115,9 @@ export function OfferTypeFields({ offerType, form, dispatch, productOptions, cat
           dispatch={dispatch}
         />
         <label className="space-y-1.5">
-          <Label>Tipe diskon</Label>
+          <Label htmlFor="offer-discount-type">Tipe diskon</Label>
           <Select value={form.discount_type} onValueChange={(value) => patch({ discount_type: value as OfferDiscountType })}>
-            <SelectTrigger className="border-gray-200/80">
+            <SelectTrigger id="offer-discount-type" className="border-gray-200/80">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

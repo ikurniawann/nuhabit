@@ -136,7 +136,7 @@ function ProfileForm({ branchId, branchName, initial, onClose }: { branchId: str
       <DialogPanelBody className="space-y-4">
         <div className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
           <span className="text-sm font-medium">Tampil di situs</span>
-          <Switch checked={form.is_public} onCheckedChange={(v) => set("is_public", v)} />
+          <Switch aria-label="Tampil di situs" checked={form.is_public} onCheckedChange={(v) => set("is_public", v)} />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LabeledField label="Slug" hint="Alamat halaman: /locations/<slug>">

@@ -98,8 +98,9 @@ export function EmployeeShiftsTab({ employeeId }: { employeeId: string }) {
 
       <div className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Berlaku mulai</label>
+          <label htmlFor="employee-shift-effective-from" className="mb-1 block text-xs font-medium text-gray-600">Berlaku mulai</label>
           <Input
+            id="employee-shift-effective-from"
             type="date"
             value={effectiveFrom}
             onChange={(e) => setEffectiveFrom(e.target.value)}

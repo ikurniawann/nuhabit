@@ -97,7 +97,7 @@ export function ApprovalRulesPage() {
           <ul className="divide-y divide-gray-200/60">
             {rules.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} />
+                <Switch checked={r.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: r.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${r.name}`} />
                 <Badge className="border-0 bg-gray-900 font-semibold text-white">Tingkat {r.level}</Badge>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-gray-900">{r.name}</p>
@@ -158,21 +158,21 @@ function RuleForm({ initial, isEdit, owners, pending, onCancel, onSubmit }: {
       <DialogHeader><DialogTitle>{isEdit ? "Edit Aturan Approval" : "Aturan Approval Baru"}</DialogTitle></DialogHeader>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5 sm:col-span-2">
-          <Label>Nama</Label>
-          <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Diskon > 10% — manajer" />
+          <Label htmlFor="approval-rule-name">Nama</Label>
+          <Input id="approval-rule-name" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="cth. Diskon > 10% — manajer" />
         </div>
         <div className="space-y-1.5">
-          <Label>Tingkat (urutan)</Label>
-          <Input type="number" min={1} max={5} value={f.level} onChange={(e) => set("level", e.target.value)} />
+          <Label htmlFor="approval-rule-level">Tingkat (urutan)</Label>
+          <Input id="approval-rule-level" type="number" min={1} max={5} value={f.level} onChange={(e) => set("level", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Diskon lebih dari (%)</Label>
-          <Input type="number" min={0} max={100} step="0.5" value={f.min_discount_percent} onChange={(e) => set("min_discount_percent", e.target.value)} />
+          <Label htmlFor="approval-rule-min-discount">Diskon lebih dari (%)</Label>
+          <Input id="approval-rule-min-discount" type="number" min={0} max={100} step="0.5" value={f.min_discount_percent} onChange={(e) => set("min_discount_percent", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Approver berdasarkan</Label>
+          <Label htmlFor="approval-rule-approver-kind">Approver berdasarkan</Label>
           <Select value={f.approver_kind} onValueChange={(v) => set("approver_kind", v as FormState["approver_kind"])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger id="approval-rule-approver-kind"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="role">Role</SelectItem>
               <SelectItem value="user">User tertentu</SelectItem>
@@ -180,15 +180,15 @@ function RuleForm({ initial, isEdit, owners, pending, onCancel, onSubmit }: {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>{f.approver_kind === "role" ? "Role" : "User"}</Label>
+          <Label htmlFor="approval-rule-approver">{f.approver_kind === "role" ? "Role" : "User"}</Label>
           {f.approver_kind === "role" ? (
             <Select value={f.approver_role} onValueChange={(v) => set("approver_role", v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id="approval-rule-approver"><SelectValue /></SelectTrigger>
               <SelectContent>{ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
             </Select>
           ) : (
             <Select value={f.approver_user_id || "none"} onValueChange={(v) => set("approver_user_id", v === "none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Pilih user" /></SelectTrigger>
+              <SelectTrigger id="approval-rule-approver"><SelectValue placeholder="Pilih user" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— pilih —</SelectItem>
                 {owners.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name} · {o.role}</SelectItem>)}
@@ -197,7 +197,7 @@ function RuleForm({ initial, isEdit, owners, pending, onCancel, onSubmit }: {
           )}
         </div>
         <label className="inline-flex items-center gap-2 text-sm sm:col-span-2">
-          <Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} /> Aktif
+          <Switch checked={f.is_active} onCheckedChange={(v) => set("is_active", Boolean(v))} aria-label="Aktif" /> Aktif
         </label>
       </div>
       <DialogFooter>

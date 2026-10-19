@@ -232,6 +232,7 @@ export function PurchaseOrdersPage() {
                     checked={selectedIds.size === pos.length && pos.length > 0}
                     onChange={(e) => toggleSelectAll(e.target.checked)}
                     className="rounded border-gray-300"
+                    aria-label="Pilih semua PO"
                   />
                 </th>
                 <th className="px-4 py-3 text-left font-semibold">Purchase Order</th>

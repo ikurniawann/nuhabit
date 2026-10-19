@@ -80,6 +80,7 @@ export function NewSalaryPage() {
             <Label htmlFor="employee_id">Karyawan *</Label>
             <div className="mt-1">
               <Combobox
+                id="employee_id"
                 options={employeeOptions}
                 value={formData.employee_id}
                 onChange={(value) => setFormData({ ...formData, employee_id: value })}

@@ -223,6 +223,7 @@ function KdsPageContent() {
               });
             }}
             className="text-gray-400 hover:text-white"
+            aria-label={soundEnabled ? "Matikan bunyi" : "Nyalakan bunyi"}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>

@@ -43,8 +43,9 @@ export function PersonalSection({ form, onChange }: SectionProps) {
           onChange={(birth_date) => onChange({ birth_date })}
         />
         <div>
-          <FormFieldLabel>Gender</FormFieldLabel>
+          <FormFieldLabel htmlFor="employee-gender">Gender</FormFieldLabel>
           <Combobox
+            id="employee-gender"
             options={GENDER_OPTIONS}
             value={form.gender}
             onChange={(gender) => onChange({ gender })}

@@ -67,16 +67,17 @@ export function VariantsDialog({
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">Name</label>
-                  <Input value={variant.name} onChange={(e) => update(variant.id, { name: e.target.value })} placeholder="Small" />
+                  <label htmlFor={`variant-${variant.id}-name`} className="mb-1 block text-xs text-gray-500">Name</label>
+                  <Input id={`variant-${variant.id}-name`} value={variant.name} onChange={(e) => update(variant.id, { name: e.target.value })} placeholder="Small" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">SKU</label>
-                  <Input value={variant.sku} onChange={(e) => update(variant.id, { sku: e.target.value })} placeholder="NF-SM" />
+                  <label htmlFor={`variant-${variant.id}-sku`} className="mb-1 block text-xs text-gray-500">SKU</label>
+                  <Input id={`variant-${variant.id}-sku`} value={variant.sku} onChange={(e) => update(variant.id, { sku: e.target.value })} placeholder="NF-SM" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-500">Price Adj.</label>
+                  <label htmlFor={`variant-${variant.id}-price-adj`} className="mb-1 block text-xs text-gray-500">Price Adj.</label>
                   <Input
+                    id={`variant-${variant.id}-price-adj`}
                     type="number"
                     value={variant.priceAdj}
                     onChange={(e) => update(variant.id, { priceAdj: Number.parseInt(e.target.value, 10) || 0 })}

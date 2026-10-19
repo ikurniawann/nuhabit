@@ -37,7 +37,7 @@ export function PolicyTab({ detail }: { detail: TicketProductDetail }) {
               : "Tanpa gate — penjaga keliling mengidentifikasi pengunjung dengan reader NFC (cek sudah booking/belum)."}
           </p>
         </div>
-        <Switch id="has_gate" checked={hasGate} onCheckedChange={setHasGate} />
+        <Switch id="has_gate" aria-label="Punya gate?" checked={hasGate} onCheckedChange={setHasGate} />
       </div>
 
       <div className="space-y-1.5">
@@ -57,9 +57,9 @@ export function PolicyTab({ detail }: { detail: TicketProductDetail }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label>Kebijakan Re-entry (tap gate ulang)</Label>
+        <Label htmlFor="ticket-reentry-policy">Kebijakan Re-entry (tap gate ulang)</Label>
         <Select value={policy} onValueChange={(v) => setPolicy(v as ReEntryPolicy)}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger id="ticket-reentry-policy" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

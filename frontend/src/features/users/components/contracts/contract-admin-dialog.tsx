@@ -148,23 +148,26 @@ export function ContractAdminDialog({ employeeId, contract, onClose }: ContractA
           </ContractField>
 
           <div className="grid grid-cols-2 gap-3">
-            <ContractField label="Tanggal tanda tangan">
+            <ContractField label="Tanggal tanda tangan" htmlFor="contract-signed-at">
               <Input
+                id="contract-signed-at"
                 type="date"
                 value={form.signed_at}
                 onChange={(e) => setField({ signed_at: e.target.value })}
               />
             </ContractField>
-            <ContractField label="Dicatatkan ke Kemnaker">
+            <ContractField label="Dicatatkan ke Kemnaker" htmlFor="contract-kemnaker-registered-at">
               <Input
+                id="contract-kemnaker-registered-at"
                 type="date"
                 value={form.kemnaker_registered_at}
                 onChange={(e) => setField({ kemnaker_registered_at: e.target.value })}
               />
             </ContractField>
             {contract.compensation_amount && (
-              <ContractField label="Kompensasi dibayar tanggal">
+              <ContractField label="Kompensasi dibayar tanggal" htmlFor="contract-compensation-paid-at">
                 <Input
+                  id="contract-compensation-paid-at"
                   type="date"
                   value={form.compensation_paid_at}
                   onChange={(e) => setField({ compensation_paid_at: e.target.value })}

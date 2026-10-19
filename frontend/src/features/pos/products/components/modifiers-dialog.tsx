@@ -52,12 +52,13 @@ export function ModifiersDialog({
               <div className="flex items-start justify-between gap-4">
                 <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Group Name</label>
-                    <Input value={group.name} onChange={(e) => updateGroup(group.id, { name: e.target.value })} placeholder="Sugar Level" />
+                    <label htmlFor={`modifier-group-${group.id}-name`} className="mb-1 block text-xs text-gray-500">Group Name</label>
+                    <Input id={`modifier-group-${group.id}-name`} value={group.name} onChange={(e) => updateGroup(group.id, { name: e.target.value })} placeholder="Sugar Level" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs text-gray-500">Max Select</label>
+                    <label htmlFor={`modifier-group-${group.id}-max-select`} className="mb-1 block text-xs text-gray-500">Max Select</label>
                     <Input
+                      id={`modifier-group-${group.id}-max-select`}
                       type="number"
                       value={group.maxSelect}
                       onChange={(e) => updateGroup(group.id, { maxSelect: Number.parseInt(e.target.value, 10) || 1 })}

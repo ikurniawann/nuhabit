@@ -271,10 +271,10 @@ export function InventoryTransfersPage() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
             <div className="min-w-0 space-y-1.5 md:col-span-4">
-              <Label className="text-xs">
+              <Label htmlFor="transfer-source" className="text-xs">
                 Stall Asal <span className="text-red-500">*</span>
               </Label>
-              <Combobox
+              <Combobox id="transfer-source"
                 value={sourceWarehouseId}
                 onChange={handleSourceChange}
                 options={sourceOptions}
@@ -289,10 +289,10 @@ export function InventoryTransfersPage() {
             </div>
 
             <div className="min-w-0 space-y-1.5 md:col-span-4">
-              <Label className="text-xs">
+              <Label htmlFor="transfer-destination" className="text-xs">
                 Stall Tujuan <span className="text-red-500">*</span>
               </Label>
-              <Combobox
+              <Combobox id="transfer-destination"
                 value={destWarehouseId}
                 onChange={handleDestChange}
                 options={destOptions}

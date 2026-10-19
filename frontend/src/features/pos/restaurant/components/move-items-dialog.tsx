@@ -115,6 +115,7 @@ function MoveItemsBody({
                       className="h-8 w-8 border-gray-200/80"
                       disabled={qty <= 0}
                       onClick={() => setQty(line.id, qty - 1, line.quantity)}
+                      aria-label={`Kurangi jumlah ${line.name}`}
                     >
                       <Minus className="h-3.5 w-3.5" />
                     </Button>
@@ -133,6 +134,7 @@ function MoveItemsBody({
                       className="h-8 w-8 border-gray-200/80"
                       disabled={qty >= line.quantity}
                       onClick={() => setQty(line.id, qty + 1, line.quantity)}
+                      aria-label={`Tambah jumlah ${line.name}`}
                     >
                       <Plus className="h-3.5 w-3.5" />
                     </Button>

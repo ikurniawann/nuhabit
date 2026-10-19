@@ -48,6 +48,7 @@ export function RedemptionRequests({
           </p>
         </div>
         <select
+          aria-label="Filter status"
           value={statusFilter}
           onChange={(event) => onStatusFilterChange(event.target.value)}
           className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100 sm:w-48"

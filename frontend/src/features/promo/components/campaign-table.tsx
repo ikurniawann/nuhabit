@@ -71,6 +71,7 @@ export function CampaignTable({ campaigns, onEdit, onDetail }: {
               </td>
               <td className="px-4 py-3">
                 <Switch
+                  aria-label={`Aktifkan ${campaign.name}`}
                   checked={campaign.is_active}
                   disabled={updateMutation.isPending}
                   onCheckedChange={(checked) => toggle(campaign.id, { is_active: checked })}

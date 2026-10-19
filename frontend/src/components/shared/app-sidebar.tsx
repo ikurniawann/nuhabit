@@ -876,10 +876,11 @@ function ChangePasswordDialog({
           </DialogPanelHeader>
           <DialogPanelBody className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
+              <label htmlFor="change-password-current" className="mb-1.5 block text-sm font-medium text-foreground">
                 Current Password
               </label>
               <Input
+                id="change-password-current"
                 type="password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
@@ -888,10 +889,11 @@ function ChangePasswordDialog({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
+              <label htmlFor="change-password-new" className="mb-1.5 block text-sm font-medium text-foreground">
                 New Password
               </label>
               <Input
+                id="change-password-new"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -901,10 +903,11 @@ function ChangePasswordDialog({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
+              <label htmlFor="change-password-confirm" className="mb-1.5 block text-sm font-medium text-foreground">
                 Confirm New Password
               </label>
               <Input
+                id="change-password-confirm"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}

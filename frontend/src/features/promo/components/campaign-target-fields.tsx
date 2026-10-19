@@ -71,12 +71,12 @@ export function CampaignTargetFields({
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label>Siapa yang boleh pakai</Label>
+          <Label htmlFor="promo-eligibility">Siapa yang boleh pakai</Label>
           <Select
             value={value.eligibility}
             onValueChange={(v) => onChange({ eligibility: v as PromoEligibility })}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger id="promo-eligibility" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

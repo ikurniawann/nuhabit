@@ -205,8 +205,9 @@ export function EssLemburPage() {
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
+              <label htmlFor="lembur-request-date" className="mb-1 block text-xs font-medium text-gray-600">Tanggal</label>
               <Input
+                id="lembur-request-date"
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
@@ -214,16 +215,18 @@ export function EssLemburPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Jam Mulai</label>
+                <label htmlFor="lembur-request-start" className="mb-1 block text-xs font-medium text-gray-600">Jam Mulai</label>
                 <Input
+                  id="lembur-request-start"
                   type="time"
                   value={form.start_time}
                   onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))}
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Jam Selesai</label>
+                <label htmlFor="lembur-request-end" className="mb-1 block text-xs font-medium text-gray-600">Jam Selesai</label>
                 <Input
+                  id="lembur-request-end"
                   type="time"
                   value={form.end_time}
                   onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
@@ -231,10 +234,11 @@ export function EssLemburPage() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="lembur-request-reason" className="mb-1 block text-xs font-medium text-gray-600">
                 Alasan / pekerjaan yang dilembur (min. 5 karakter)
               </label>
               <Input
+                id="lembur-request-reason"
                 placeholder="cth. closing stok bulanan"
                 value={form.reason}
                 onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}

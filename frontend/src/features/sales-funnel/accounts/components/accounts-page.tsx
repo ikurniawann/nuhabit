@@ -106,7 +106,7 @@ export function SalesAccountsPage() {
               ) : null}
             </label>
             <Select value={accountType} onValueChange={(v) => { setAccountType(v); setPage(1); }}>
-              <SelectTrigger className="h-10 bg-white sm:w-40"><SelectValue placeholder="Jenis" /></SelectTrigger>
+              <SelectTrigger className="h-10 bg-white sm:w-40" aria-label="Filter jenis"><SelectValue placeholder="Jenis" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>Semua Jenis</SelectItem>
                 {Object.entries(ORG_TYPE_LABELS).map(([value, label]) => (

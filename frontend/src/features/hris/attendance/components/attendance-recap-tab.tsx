@@ -21,6 +21,7 @@ import { currentMonthWib, monthRange } from "@/lib/hris/attendance-calendar";
 import { SelfiePhotoDialog } from "./selfie-photo-dialog";
 import { exportAttendanceCsv, type AttendanceExportFormat } from "../api";
 import { useActiveEmployees, useAttendanceList, useAttendanceMonthStats } from "../queries";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 /**
  * Tab "Rekap" absensi HRD: tabel absensi berpagination dengan filter
@@ -107,8 +108,9 @@ export function AttendanceRecapTab() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Karyawan</label>
+              <label htmlFor="attendance-recap-employee" className="text-sm font-medium text-gray-700 mb-2 block">Karyawan</label>
               <Combobox
+                id="attendance-recap-employee"
                 options={employeeOptions}
                 value={filterEmployee}
                 onChange={changeFilter(setFilterEmployee)}
@@ -119,18 +121,18 @@ export function AttendanceRecapTab() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Bulan</label>
-              <Input type="month" value={month} onChange={(e) => changeFilter(setMonth)(e.target.value)} />
+              <label htmlFor="attendance-recap-month" className="text-sm font-medium text-gray-700 mb-2 block">Bulan</label>
+              <Input id="attendance-recap-month" type="month" value={month} onChange={(e) => changeFilter(setMonth)(e.target.value)} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+              <label htmlFor="attendance-recap-late" className="text-sm font-medium text-gray-700 mb-2 block">
                 Keterlambatan
               </label>
               <Select
                 value={lateOnly ? "late" : "all"}
                 onValueChange={(value) => changeFilter(setLateOnly)(value === "late")}
               >
-                <SelectTrigger>
+                <SelectTrigger id="attendance-recap-late">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +218,7 @@ export function AttendanceRecapTab() {
               Tidak ada rekaman absensi untuk filter ini.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollRegion label="Tabel rekap absensi" className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50 text-left text-gray-600">
@@ -283,7 +285,7 @@ export function AttendanceRecapTab() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
           )}
         </CardContent>
       </Card>

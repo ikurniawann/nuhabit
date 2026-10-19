@@ -1,9 +1,17 @@
 import type { ReactNode } from "react";
 
-export function ContractField({ label, children }: { label: string; children: ReactNode }) {
+export function ContractField({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
+      <label htmlFor={htmlFor} className="mb-1 block text-xs font-medium text-gray-600">{label}</label>
       {children}
     </div>
   );

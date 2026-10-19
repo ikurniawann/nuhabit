@@ -11,10 +11,15 @@ import {
   type QcParameterResult,
 } from "@/lib/purchasing/grn-ui-qc";
 
-const QTY_FIELDS: { key: keyof QcLineChange; field: "qty_inspected" | "qty_accepted" | "qty_rejected"; className: string }[] = [
-  { key: "inspected", field: "qty_inspected", className: "h-9 text-right" },
-  { key: "accepted", field: "qty_accepted", className: "h-9 text-right border-emerald-200/80 focus-visible:ring-emerald-200" },
-  { key: "rejected", field: "qty_rejected", className: "h-9 text-right border-red-200/80 focus-visible:ring-red-200" },
+const QTY_FIELDS: {
+  key: keyof QcLineChange;
+  field: "qty_inspected" | "qty_accepted" | "qty_rejected";
+  label: string;
+  className: string;
+}[] = [
+  { key: "inspected", field: "qty_inspected", label: "Qty diinspeksi", className: "h-9 text-right" },
+  { key: "accepted", field: "qty_accepted", label: "Qty lolos", className: "h-9 text-right border-emerald-200/80 focus-visible:ring-emerald-200" },
+  { key: "rejected", field: "qty_rejected", label: "Qty gagal", className: "h-9 text-right border-red-200/80 focus-visible:ring-red-200" },
 ];
 
 export function QcItemsCard({
@@ -59,7 +64,7 @@ export function QcItemsCard({
                   <td className="px-4 py-3 text-right font-medium text-gray-900">
                     {formatNumber(line.qtyReceived, 4)}
                   </td>
-                  {QTY_FIELDS.map(({ key, field, className }) => (
+                  {QTY_FIELDS.map(({ key, field, label, className }) => (
                     <td key={key} className="px-4 py-3">
                       <Input
                         type="number"
@@ -68,6 +73,7 @@ export function QcItemsCard({
                         value={line[field]}
                         disabled={disabled}
                         onChange={(e) => onChange(line.grn_item_id, { [key]: e.target.value })}
+                        aria-label={`${label} ${line.materialName}`}
                         className={className}
                       />
                     </td>
@@ -108,6 +114,7 @@ export function QcParametersCard({
             <span className="text-sm font-medium text-gray-800">{QC_PARAMETER_LABELS[param]}</span>
             <Select value={results[param] || "OK"} onValueChange={(value) => onChange(param, value as QcParameterResult)}>
               <SelectTrigger
+                aria-label={`Hasil ${QC_PARAMETER_LABELS[param]}`}
                 className={`h-8 w-[120px] border-gray-200/80 ${disabled ? "pointer-events-none opacity-50" : ""}`}
               >
                 <SelectValue />

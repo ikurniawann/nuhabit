@@ -61,7 +61,7 @@ export function PublicFormsPage() {
               const url = f.slug === "kontak" ? "/public" : `/public/${f.slug}`;
               return (
                 <li key={f.id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                  <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} />
+                  <Switch checked={f.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: f.id, values: { is_active: Boolean(v) } })} aria-label={`Aktifkan ${f.name}`} />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-gray-900">{f.name}</p>
                     <p className="text-xs text-gray-500">
@@ -197,19 +197,19 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
       <DialogHeader><DialogTitle>{initial ? `Edit Form — ${initial.name}` : "Form Publik Baru"}</DialogTitle></DialogHeader>
       <div className="grid gap-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Nama internal</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Permintaan Penawaran" /></div>
+          <div className="space-y-1.5"><Label htmlFor="public-form-name">Nama internal</Label><Input id="public-form-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Permintaan Penawaran" /></div>
           <div className="space-y-1.5">
-            <Label>Slug URL</Label>
-            <Input value={initial?.slug ?? slug} disabled={Boolean(initial)} className="font-mono"
+            <Label htmlFor="public-form-slug">Slug URL</Label>
+            <Input id="public-form-slug" value={initial?.slug ?? slug} disabled={Boolean(initial)} className="font-mono"
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder="kontak-acara" />
             {initial ? <p className="text-xs text-gray-500">Slug tidak bisa diubah agar tautan yang sudah disebar tetap hidup.</p> : null}
           </div>
         </div>
-        <div className="space-y-1.5"><Label>Judul di halaman</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Hubungi NüHabit" /></div>
-        <div className="space-y-1.5"><Label>Deskripsi</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="public-form-title">Judul di halaman</Label><Input id="public-form-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Hubungi NüHabit" /></div>
+        <div className="space-y-1.5"><Label htmlFor="public-form-description">Deskripsi</Label><Input id="public-form-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Teks tombol</Label><Input value={submitLabel} onChange={(e) => setSubmitLabel(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Pesan setelah terkirim</Label><Input value={successMessage} onChange={(e) => setSuccessMessage(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="public-form-submit-label">Teks tombol</Label><Input id="public-form-submit-label" value={submitLabel} onChange={(e) => setSubmitLabel(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor="public-form-success-message">Pesan setelah terkirim</Label><Input id="public-form-success-message" value={successMessage} onChange={(e) => setSuccessMessage(e.target.value)} /></div>
         </div>
 
         <div>
@@ -231,14 +231,14 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
                 <Input className="h-8 text-xs" value={f.label} placeholder="Label"
                   onChange={(e) => setFields(fields.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
                 <Select value={f.type} onValueChange={(v) => setFields(fields.map((x, j) => (j === i ? { ...x, type: v as PublicFieldDef["type"] } : x)))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs" aria-label={`Tipe field ${f.label}`}><SelectValue /></SelectTrigger>
                   <SelectContent>{PUBLIC_FIELD_TYPES.map((t) => <SelectItem key={t} value={t}>{PUBLIC_FIELD_TYPE_LABELS[t]}</SelectItem>)}</SelectContent>
                 </Select>
                 <label className="inline-flex items-center gap-1.5 text-xs text-gray-600">
-                  <Switch checked={f.required} onCheckedChange={(v) => setFields(fields.map((x, j) => (j === i ? { ...x, required: Boolean(v) } : x)))} />
+                  <Switch checked={f.required} onCheckedChange={(v) => setFields(fields.map((x, j) => (j === i ? { ...x, required: Boolean(v) } : x)))} aria-label={`Wajib isi ${f.label}`} />
                   wajib
                 </label>
-                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => setFields(fields.filter((_, j) => j !== i))}>
+                <button type="button" className="text-gray-400 hover:text-red-600" onClick={() => setFields(fields.filter((_, j) => j !== i))} aria-label={`Hapus field ${f.label}`}>
                   <X className="h-4 w-4" />
                 </button>
                 {f.type === "select" ? (
@@ -263,20 +263,20 @@ function FormEditor({ initial, onClose }: { initial: FormRow | null; onClose: ()
             {notifyUsers.map((id) => (
               <span key={id} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
                 {owners.find((o) => o.id === id)?.full_name ?? "Pengguna"}
-                <button type="button" onClick={() => setNotifyUsers(notifyUsers.filter((x) => x !== id))}><X className="h-3 w-3" /></button>
+                <button type="button" onClick={() => setNotifyUsers(notifyUsers.filter((x) => x !== id))} aria-label={`Hapus ${owners.find((o) => o.id === id)?.full_name ?? "pengguna"}`}><X className="h-3 w-3" /></button>
               </span>
             ))}
             {notifyNumbers.map((n) => (
               <span key={n} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
                 {n}
-                <button type="button" onClick={() => setNotifyNumbers(notifyNumbers.filter((x) => x !== n))}><X className="h-3 w-3" /></button>
+                <button type="button" onClick={() => setNotifyNumbers(notifyNumbers.filter((x) => x !== n))} aria-label={`Hapus ${n}`}><X className="h-3 w-3" /></button>
               </span>
             ))}
             {notifyUsers.length + notifyNumbers.length === 0 ? <span className="text-xs text-gray-500">Belum ada penerima notifikasi.</span> : null}
           </div>
           <div className="flex gap-1.5">
             <Select value="" onValueChange={(v) => { if (v && !notifyUsers.includes(v)) setNotifyUsers([...notifyUsers, v]); }}>
-              <SelectTrigger className="h-9 flex-1"><SelectValue placeholder="+ pengguna" /></SelectTrigger>
+              <SelectTrigger className="h-9 flex-1" aria-label="Tambah pengguna penerima notifikasi"><SelectValue placeholder="+ pengguna" /></SelectTrigger>
               <SelectContent>{owners.map((o) => <SelectItem key={o.id} value={o.id}>{o.full_name}</SelectItem>)}</SelectContent>
             </Select>
             <Input className="h-9 flex-1" value={numberToAdd} onChange={(e) => setNumberToAdd(e.target.value)} placeholder="+ nomor WA" />

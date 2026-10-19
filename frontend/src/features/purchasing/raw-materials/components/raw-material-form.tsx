@@ -94,7 +94,7 @@ export function RawMaterialForm({
                   <Label htmlFor="kategori" className="text-xs">
                     Kategori <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="kategori"
                     options={categoryOptions}
                     value={formData.kategori || ""}
                     onChange={(v) => {
@@ -162,7 +162,7 @@ export function RawMaterialForm({
                 <Label htmlFor="satuan_besar" className="text-xs">
                   Satuan Besar <span className="text-red-500">*</span>
                 </Label>
-                <Combobox
+                <Combobox id="satuan_besar"
                   options={satuanBesar.map((u) => ({ value: u.id, label: u.nama, description: u.simbol }))}
                   value={formData.satuan_besar_id}
                   onChange={(v) => update({ satuan_besar_id: v })}
@@ -178,7 +178,7 @@ export function RawMaterialForm({
                 <Label htmlFor="satuan_kecil" className="text-xs">
                   Satuan Kecil
                 </Label>
-                <Combobox
+                <Combobox id="satuan_kecil"
                   options={[
                     { value: "", label: "Tidak ada", description: "Tanpa satuan kecil" },
                     ...satuanKecil.map((u) => ({ value: u.id, label: u.nama, description: u.simbol })),
@@ -229,8 +229,8 @@ export function RawMaterialForm({
 
               {onPurchasePackChange ? (
                 <div className="space-y-1.5">
-                  <Label className="text-sm">Pack bawaan pembelian</Label>
-                  <Combobox
+                  <Label htmlFor="raw-material-purchase-pack" className="text-sm">Pack bawaan pembelian</Label>
+                  <Combobox id="raw-material-purchase-pack"
                     options={purchasePackUnitIds(formData).map((unitId) => ({
                       value: unitId,
                       label: units.find((u) => u.id === unitId)?.nama || unitId,

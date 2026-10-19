@@ -45,10 +45,10 @@ export function ProductPOForm({ lookups, approvedPRs, initialPRId, onSubmit, isL
       isLoading={isLoading}
       cancelHref={cancelHref}
       onSubmit={(header, items) => onSubmit({ ...header, items: toProductPayloadItems(items) })}
-      renderPicker={(row, setRow) => (
+      renderPicker={(row, setRow, index) => (
         <>
-          <Label className="text-xs">Produk</Label>
-          <Combobox
+          <Label htmlFor={`vendor-po-${index}-product`} className="text-xs">Produk</Label>
+          <Combobox id={`vendor-po-${index}-product`}
             options={products.map((p) => ({ value: p.id, label: p.nama, description: p.kode }))}
             value={row.product_id}
             onChange={(value) => {
@@ -62,15 +62,15 @@ export function ProductPOForm({ lookups, approvedPRs, initialPRId, onSubmit, isL
           />
         </>
       )}
-      renderExtra={(row, setRow) => {
+      renderExtra={(row, setRow, index) => {
         const product = findProduct(row.product_id);
         if (!isVariantProduct(product)) return null;
         return (
           <div className="space-y-1.5 md:col-span-4">
-            <Label className="text-xs">
+            <Label htmlFor={`vendor-po-${index}-sku`} className="text-xs">
               SKU / Varian <span className="text-red-500">*</span>
             </Label>
-            <Combobox
+            <Combobox id={`vendor-po-${index}-sku`}
               options={(product?.pos_skus ?? []).map((sku) => ({ value: sku.id, label: `${sku.sku}, ${sku.name}` }))}
               value={row.pos_sku_id || ""}
               onChange={(value) => setRow({ ...row, pos_sku_id: value || null })}

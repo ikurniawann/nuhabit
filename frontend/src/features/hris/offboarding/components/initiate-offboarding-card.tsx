@@ -86,12 +86,12 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
 
             <div className="space-y-4 py-4">
               <div>
-                <Label>Jenis Resignasi</Label>
+                <Label htmlFor="offboarding-resignation-type">Jenis Resignasi</Label>
                 <Select
                   value={form.resignationType}
                   onValueChange={(value) => setField("resignationType", value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="offboarding-resignation-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -103,8 +103,9 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
               </div>
 
               <div>
-                <Label>Tanggal Resignasi</Label>
+                <Label htmlFor="offboarding-resignation-date">Tanggal Resignasi</Label>
                 <Input
+                  id="offboarding-resignation-date"
                   type="date"
                   value={form.resignationDate}
                   onChange={(e) => setField("resignationDate", e.target.value)}
@@ -112,8 +113,9 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
               </div>
 
               <div>
-                <Label>Last Working Day</Label>
+                <Label htmlFor="offboarding-last-working-day">Last Working Day</Label>
                 <Input
+                  id="offboarding-last-working-day"
                   type="date"
                   value={form.lastWorkingDay}
                   onChange={(e) => setField("lastWorkingDay", e.target.value)}
@@ -121,8 +123,9 @@ export function InitiateOffboardingCard({ employeeId, employeeName }: InitiateOf
               </div>
 
               <div>
-                <Label>Alasan (Opsional)</Label>
+                <Label htmlFor="offboarding-reason">Alasan (Opsional)</Label>
                 <Textarea
+                  id="offboarding-reason"
                   value={form.reason}
                   onChange={(e) => setField("reason", e.target.value)}
                   placeholder="Jelaskan alasan resignasi..."

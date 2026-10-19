@@ -86,10 +86,10 @@ export function PurchasingDashboardPage() {
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label htmlFor="purchasing-dashboard-start" className="block text-xs font-medium text-gray-600">
                     Tanggal Mulai
                   </label>
-                  <DatePicker
+                  <DatePicker id="purchasing-dashboard-start"
                     value={dateRange.start}
                     onChange={(v) => setDateRange((prev) => ({ ...prev, start: v }))}
                     placeholder="Dari..."
@@ -97,10 +97,10 @@ export function PurchasingDashboardPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-gray-600">
+                  <label htmlFor="purchasing-dashboard-end" className="block text-xs font-medium text-gray-600">
                     Tanggal Akhir
                   </label>
-                  <DatePicker
+                  <DatePicker id="purchasing-dashboard-end"
                     value={dateRange.end}
                     onChange={(v) => setDateRange((prev) => ({ ...prev, end: v }))}
                     placeholder="Sampai..."

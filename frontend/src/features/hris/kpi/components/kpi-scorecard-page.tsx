@@ -141,9 +141,9 @@ export function KpiScorecardPage() {
         </div>
         <div className="flex items-end gap-2">
           <div className="space-y-1">
-            <Label>Bulan</Label>
+            <Label htmlFor="kpi-scorecard-month">Bulan</Label>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger id="kpi-scorecard-month" className="w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -156,9 +156,9 @@ export function KpiScorecardPage() {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Tahun</Label>
+            <Label htmlFor="kpi-scorecard-year">Tahun</Label>
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="w-28">
+              <SelectTrigger id="kpi-scorecard-year" className="w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +275,7 @@ export function KpiScorecardPage() {
 
               {detail.status === "draft" && (
                 <div className="space-y-2 border-t pt-4">
-                  <Label>
+                  <Label htmlFor="kpi-scorecard-rubric">
                     Penilaian Atasan (rubrik 1–5)
                     {rubricSnapshot?.attainment != null && (
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
@@ -285,7 +285,7 @@ export function KpiScorecardPage() {
                   </Label>
                   <div className="flex gap-2">
                     <Select value={rubricValue} onValueChange={setRubricValue}>
-                      <SelectTrigger className="w-24">
+                      <SelectTrigger id="kpi-scorecard-rubric" className="w-24">
                         <SelectValue placeholder="Nilai" />
                       </SelectTrigger>
                       <SelectContent>

@@ -136,6 +136,7 @@ export function DeptTasksPage() {
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             className="h-9 w-40"
+            aria-label="Bulan"
           />
           {data?.can_manage ? (
             <Button onClick={() => setAddOpen(true)} disabled={!data.department_id}>

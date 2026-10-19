@@ -267,8 +267,9 @@ export function PositionsPage() {
             </DialogPanelHeader>
             <DialogPanelBody className="space-y-4">
               <div>
-                <FormFieldLabel required>Nama Jabatan</FormFieldLabel>
+                <FormFieldLabel required htmlFor="position-title">Nama Jabatan</FormFieldLabel>
                 <Input
+                  id="position-title"
                   value={form.title}
                   onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                   placeholder="Contoh: HR Manager"
@@ -276,8 +277,9 @@ export function PositionsPage() {
                 />
               </div>
               <div>
-                <FormFieldLabel>Departemen</FormFieldLabel>
+                <FormFieldLabel htmlFor="position-department">Departemen</FormFieldLabel>
                 <Combobox
+                  id="position-department"
                   options={departmentOptions}
                   value={form.department_name}
                   onChange={(value) => setForm((f) => ({ ...f, department_name: value }))}
@@ -289,8 +291,9 @@ export function PositionsPage() {
                 />
               </div>
               <div>
-                <FormFieldLabel>Level</FormFieldLabel>
+                <FormFieldLabel htmlFor="position-level">Level</FormFieldLabel>
                 <Combobox
+                  id="position-level"
                   options={LEVEL_OPTIONS}
                   value={form.level}
                   onChange={(value) => setForm((f) => ({ ...f, level: value || "Staff" }))}

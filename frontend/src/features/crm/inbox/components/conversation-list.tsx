@@ -45,6 +45,7 @@ export function ConversationList({
           />
         </label>
         <select
+          aria-label="Filter kanal"
           value={filters.channel}
           onChange={(event) => onFiltersChange({ channel: event.target.value })}
           className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs outline-none"
@@ -55,6 +56,7 @@ export function ConversationList({
         </select>
         <div className="grid grid-cols-2 gap-2">
           <select
+            aria-label="Filter status"
             value={filters.status}
             onChange={(event) => onFiltersChange({ status: event.target.value })}
             className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs outline-none"
@@ -66,6 +68,7 @@ export function ConversationList({
             <option value="resolved">Selesai</option>
           </select>
           <select
+            aria-label="Filter agent"
             value={filters.assigned}
             onChange={(event) => onFiltersChange({ assigned: event.target.value })}
             className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs outline-none"

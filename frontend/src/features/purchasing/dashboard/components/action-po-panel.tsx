@@ -59,11 +59,11 @@ export function ActionPOPanel({ pos }: ActionPOPanelProps) {
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
                     <Badge className={color}>{label}</Badge>
-                    <Link href={`/dashboard/purchasing/purchase-orders/${po.id}`}>
-                      <Button variant="ghost" size="sm" className="h-7 px-2">
+                    <Button asChild variant="ghost" size="sm" className="h-7 px-2">
+                      <Link href={`/dashboard/purchasing/purchase-orders/${po.id}`} aria-label={`Lihat ${po.po_number}`}>
                         <Eye className="w-3.5 h-3.5" />
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </div>
                 </div>
               );

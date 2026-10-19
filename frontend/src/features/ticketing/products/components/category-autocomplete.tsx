@@ -9,6 +9,7 @@ interface CategoryAutocompleteProps {
   value: string;
   onChange: (name: string) => void;
   disabled?: boolean;
+  id?: string;
 }
 
 /**
@@ -19,6 +20,7 @@ export function CategoryAutocomplete({
   value,
   onChange,
   disabled,
+  id,
 }: CategoryAutocompleteProps) {
   const [focused, setFocused] = useState(false);
   const categoriesQuery = useCategories(value.trim());
@@ -35,6 +37,7 @@ export function CategoryAutocomplete({
   return (
     <div className="relative">
       <Input
+        id={id}
         placeholder="mis. Reguler, Bundling, Event…"
         value={value}
         disabled={disabled}

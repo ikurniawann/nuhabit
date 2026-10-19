@@ -168,6 +168,7 @@ export function CalendarTab({ detail }: { detail: TicketProductDetail }) {
           variant="ghost"
           className="h-8 w-8 p-0"
           onClick={() => changeMonth(-1)}
+          aria-label="Bulan sebelumnya"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </Button>
@@ -179,6 +180,7 @@ export function CalendarTab({ detail }: { detail: TicketProductDetail }) {
           variant="ghost"
           className="h-8 w-8 p-0"
           onClick={() => changeMonth(1)}
+          aria-label="Bulan berikutnya"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </Button>

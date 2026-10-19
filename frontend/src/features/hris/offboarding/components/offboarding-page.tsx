@@ -50,7 +50,7 @@ export function OffboardingPage({ params }: OffboardingPageProps) {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/dashboard/employees">
+          <Link href="/dashboard/employees" aria-label="Kembali">
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </Button>

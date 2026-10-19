@@ -383,10 +383,10 @@ function ProductStockOpnameEditor({
         <CardContent className="space-y-4 p-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
             <div className="min-w-0 md:col-span-4">
-              <Label className="text-xs">
+              <Label htmlFor="product-stock-opname-warehouse" className="text-xs">
                 Stall <span className="text-red-500">*</span>
               </Label>
-              <Combobox
+              <Combobox id="product-stock-opname-warehouse"
                 options={warehouseOptions}
                 value={warehouseId}
                 onChange={setWarehouseId}

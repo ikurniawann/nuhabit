@@ -124,7 +124,7 @@ export function LeaveAttachmentField({ employeeId, onChange }: LeaveAttachmentFi
                 </p>
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={reset}>
+            <Button type="button" variant="outline" size="sm" onClick={reset} aria-label="Hapus lampiran">
               <X className="w-4 h-4" />
             </Button>
           </div>

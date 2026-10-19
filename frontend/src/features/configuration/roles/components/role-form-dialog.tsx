@@ -228,6 +228,7 @@ function RoleForm({
               </p>
             </div>
             <Switch
+              aria-label="Active"
               checked={values.isActive}
               onCheckedChange={(checked) =>
                 setValues((prev) => ({ ...prev, isActive: checked }))

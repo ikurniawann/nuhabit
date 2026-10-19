@@ -17,6 +17,7 @@ import { formatReportStallLabel } from "@/lib/pos/reports/transaction-labels";
 import { ReportExportActions, ReportPrintStyles } from "./report-export-actions";
 import { stallFilterValue } from "../utils/stall-filter";
 import { formatNumber, formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 const formatQty = (value: number) => formatNumber(value, 2);
 
@@ -199,6 +200,7 @@ export function ProductSalesReportPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">Tampilkan</span>
               <select
+                aria-label="Jumlah produk ditampilkan"
                 value={topN}
                 onChange={(e) => setTopN(Number(e.target.value))}
                 className="flex h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
@@ -210,7 +212,7 @@ export function ProductSalesReportPage() {
               </select>
             </div>
           </div>
-          <div className="overflow-x-auto px-4">
+          <ScrollRegion label="Tabel penjualan produk" className="overflow-x-auto px-4">
             <table className="min-w-full text-sm">
               <thead className="border-b border-gray-200/70 bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -258,7 +260,7 @@ export function ProductSalesReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </PurchasingListSection>
         <ReportPrintStyles />
       </div>

@@ -67,7 +67,7 @@ function DocumentRow({ title, subtitle, tone, onDownload }: { title: string; sub
           <p className="text-xs text-gray-500">{subtitle}</p>
         </div>
       </div>
-      <Button size="sm" variant="outline" onClick={onDownload}>
+      <Button size="sm" variant="outline" onClick={onDownload} aria-label="Unduh">
         <Download className="size-4" />
       </Button>
     </div>

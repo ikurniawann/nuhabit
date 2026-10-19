@@ -52,7 +52,7 @@ export function RewardCatalogList({
             className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"
           />
         </label>
-        <select value={typeFilter} onChange={(event) => onTypeFilterChange(event.target.value)} className={selectClass}>
+        <select aria-label="Filter jenis reward" value={typeFilter} onChange={(event) => onTypeFilterChange(event.target.value)} className={selectClass}>
           <option value="all">Semua jenis</option>
           {SELECTABLE_REWARD_TYPES.map((type) => (
             <option key={type} value={type}>

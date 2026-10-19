@@ -190,12 +190,12 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => (
+                  items.map((item, index) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="space-y-1.5">
-                          <Label className="text-xs text-gray-500">Komponen</Label>
-                          <Combobox
+                          <Label htmlFor={`raw-bom-${item.id}-material`} className="text-xs text-gray-500">Komponen</Label>
+                          <Combobox id={`raw-bom-${item.id}-material`}
                             options={options}
                             value={item.raw_material_id}
                             onChange={(value) => updateItem(item.id, { raw_material_id: value })}
@@ -210,6 +210,7 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
                         <NumericInput
                           value={item.qty_required}
                           onValueChange={(value) => updateItem(item.id, { qty_required: toNumber(value) })}
+                          aria-label={`Qty komponen ${index + 1}`}
                           className="h-9 text-sm"
                         />
                       </td>
@@ -217,6 +218,7 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
                         <NumericInput
                           value={item.waste_factor * 100}
                           onValueChange={(value) => updateItem(item.id, { waste_factor: toNumber(value) / 100 })}
+                          aria-label={`Susut komponen ${index + 1}`}
                           className="h-9 text-sm"
                         />
                       </td>
@@ -232,6 +234,7 @@ function BomEditor({ materialId, materialName, bom, components, backHref, refres
                           variant="ghost"
                           size="sm"
                           onClick={() => void removeItem(item)}
+                          aria-label={`Hapus komponen ${index + 1}`}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />

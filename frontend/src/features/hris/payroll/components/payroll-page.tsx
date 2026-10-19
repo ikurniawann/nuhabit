@@ -214,6 +214,7 @@ export function PayrollPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => router.push(`/dashboard/hris/payroll/${run.id}`)}
+                            aria-label="Lihat detail payroll"
                           >
                             <DocumentTextIcon className="w-4 h-4" />
                           </Button>

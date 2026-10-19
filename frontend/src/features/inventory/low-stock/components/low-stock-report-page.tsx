@@ -22,6 +22,7 @@ import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useLowStock } from "../queries";
 import type { LowStockItem } from "../types";
 import { formatRupiah } from "@/lib/format";
+import { ScrollRegion } from "@/components/ui/scroll-region";
 
 export function LowStockReportPage() {
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -171,11 +172,11 @@ export function LowStockReportPage() {
         <CardContent>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="text-sm text-gray-600 mb-1 block">
+              <label htmlFor="low-stock-category" className="text-sm text-gray-600 mb-1 block">
                 Kategori
               </label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="low-stock-category">
                   <SelectValue placeholder="Semua Kategori" />
                 </SelectTrigger>
                 <SelectContent>
@@ -187,9 +188,9 @@ export function LowStockReportPage() {
               </Select>
             </div>
             <div className="flex-1">
-              <label className="text-sm text-gray-600 mb-1 block">Status</label>
+              <label htmlFor="low-stock-status" className="text-sm text-gray-600 mb-1 block">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger id="low-stock-status">
                   <SelectValue placeholder="Semua Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,7 +214,7 @@ export function LowStockReportPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <ScrollRegion label="Tabel stok menipis" className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-y">
                 <tr>
@@ -321,7 +322,7 @@ export function LowStockReportPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </CardContent>
       </Card>
     </div>

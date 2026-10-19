@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Combobox } from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
 import { FormFieldLabel, formComboboxClassName } from "@/components/layout/form-field";
@@ -34,6 +35,7 @@ export function StallAssignmentPicker({
   required = false,
   onChange,
 }: StallAssignmentPickerProps) {
+  const id = useId();
   const stallOptions = stalls.map((stall) => ({
     value: stall.id,
     label: stall.name,
@@ -50,12 +52,13 @@ export function StallAssignmentPicker({
   return (
     <div className="space-y-4">
       <div>
-        <FormFieldLabel required={required}>Stall default</FormFieldLabel>
+        <FormFieldLabel required={required} htmlFor={`${id}-default-stall`}>Stall default</FormFieldLabel>
         <p className="mt-1 text-xs text-muted-foreground">
           Stall ini dipakai otomatis saat login. Transaksi kasir mengikuti stall aktif.
         </p>
         <div className="mt-2">
           <Combobox
+            id={`${id}-default-stall`}
             options={stallOptions}
             value={defaultWarehouseId}
             onChange={setDefaultStall}
@@ -78,6 +81,7 @@ export function StallAssignmentPicker({
         <Switch
           checked={canSwitchStall}
           onCheckedChange={(checked) => onChange({ can_switch_stall: checked })}
+          aria-label="Boleh pindah stall"
           className="mt-0.5 border-transparent focus-visible:ring-primary/30"
         />
       </div>
@@ -99,6 +103,7 @@ export function StallAssignmentPicker({
                 can_switch_stall: checked ? true : canSwitchStall,
               })
             }
+            aria-label="Kasir pusat"
             className="mt-0.5 border-transparent focus-visible:ring-primary/30"
           />
         </div>

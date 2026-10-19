@@ -57,7 +57,7 @@ export function RecipesSection() {
       <div className="space-y-4 px-4 pb-4">
         <div className="max-w-sm">
           <Select value={productId || undefined} onValueChange={setProductId}>
-            <SelectTrigger className="h-10 bg-white">
+            <SelectTrigger className="h-10 bg-white" aria-label="Produk katalog">
               <SelectValue placeholder="Pilih produk katalog..." />
             </SelectTrigger>
             <SelectContent>

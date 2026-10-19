@@ -213,6 +213,7 @@ export function TimeSlotsSection() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Switch
+                      aria-label={`Aktifkan slot ${slot.label}`}
                       checked={slot.is_active}
                       disabled={updateMutation.isPending}
                       onCheckedChange={(checked) =>

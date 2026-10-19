@@ -43,7 +43,13 @@ export function POListRow({ po, selected, processing, onToggle, onApprove, onSen
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-4 py-3">
-        <input type="checkbox" checked={selected} onChange={onToggle} className="rounded border-gray-300" />
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          className="rounded border-gray-300"
+          aria-label={`Pilih ${po.nomor_po}`}
+        />
       </td>
       <td className="px-4 py-3 font-medium">
         <Link href={RM_ROUTES.purchasingPoDetail(po.id)} className="text-pink-600 hover:underline">

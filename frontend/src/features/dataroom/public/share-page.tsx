@@ -172,9 +172,9 @@ function Gate({ token, meta, onVerified }: { token: string; meta: ShareMeta; onV
       <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); verify(); }}>
         {meta.steps.needEmail && (
           <div className="space-y-2">
-            <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Mail className="h-3.5 w-3.5" />Email penerima</label>
+            <label htmlFor="dataroom-access-email" className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Mail className="h-3.5 w-3.5" />Email penerima</label>
             <div className="flex gap-2">
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@perusahaan.com" autoFocus />
+              <Input id="dataroom-access-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nama@perusahaan.com" autoFocus />
               <Button type="button" variant="outline" onClick={requestCode} disabled={busy || !email.trim()}>
                 {codeSent ? "Kirim ulang" : "Kirim kode"}
               </Button>
@@ -184,8 +184,8 @@ function Gate({ token, meta, onVerified }: { token: string; meta: ShareMeta; onV
         )}
         {meta.steps.needPin && (
           <div className="space-y-2">
-            <label className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Lock className="h-3.5 w-3.5" />PIN dari pengirim</label>
-            <Input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="PIN" autoFocus={!meta.steps.needEmail} />
+            <label htmlFor="dataroom-access-pin" className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Lock className="h-3.5 w-3.5" />PIN dari pengirim</label>
+            <Input id="dataroom-access-pin" type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} placeholder="PIN" autoFocus={!meta.steps.needEmail} />
           </div>
         )}
         <Button type="submit" className="w-full" disabled={busy || (meta.steps.needEmail && (!email.trim() || code.length < 6)) || (meta.steps.needPin && pin.length < 4)}>

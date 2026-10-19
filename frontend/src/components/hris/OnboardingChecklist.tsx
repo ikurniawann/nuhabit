@@ -96,7 +96,7 @@ export function OnboardingChecklist({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Progress value={progressPercentage} className="h-3" />
+            <Progress value={progressPercentage} className="h-3" aria-label="Progres onboarding" />
             <p className="text-sm text-muted-foreground text-right">
               {progressPercentage}%
             </p>
@@ -105,7 +105,7 @@ export function OnboardingChecklist({
           {/* Filters */}
           <div className="flex gap-4 mt-4 pt-4 border-t">
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px]" aria-label="Filter kategori">
                 <SelectValue placeholder="Filter kategori" />
               </SelectTrigger>
               <SelectContent>
@@ -119,7 +119,7 @@ export function OnboardingChecklist({
             </Select>
 
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[150px]" aria-label="Filter status">
                 <SelectValue placeholder="Filter status" />
               </SelectTrigger>
               <SelectContent>
@@ -166,6 +166,7 @@ export function OnboardingChecklist({
                       onClick={() => handleCompleteTask(task.id)}
                       disabled={completingTaskId === task.id}
                       className="shrink-0"
+                      aria-label={`Tandai selesai ${task.task_name}`}
                     >
                       {completingTaskId === task.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />

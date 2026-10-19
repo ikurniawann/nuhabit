@@ -103,8 +103,9 @@ export function CutiRequestDialog({ open, onOpenChange, balance }: CutiRequestDi
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
+            <label htmlFor="cuti-request-type" className="mb-1 block text-xs font-medium text-gray-600">Jenis</label>
             <Combobox
+              id="cuti-request-type"
               options={LEAVE_TYPE_OPTIONS}
               value={form.leave_type}
               onChange={(value) => setForm((f) => ({ ...f, leave_type: value }))}
@@ -113,16 +114,18 @@ export function CutiRequestDialog({ open, onOpenChange, balance }: CutiRequestDi
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Mulai</label>
+              <label htmlFor="cuti-request-start" className="mb-1 block text-xs font-medium text-gray-600">Mulai</label>
               <Input
+                id="cuti-request-start"
                 type="date"
                 value={form.start_date}
                 onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))}
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Selesai</label>
+              <label htmlFor="cuti-request-end" className="mb-1 block text-xs font-medium text-gray-600">Selesai</label>
               <Input
+                id="cuti-request-end"
                 type="date"
                 value={form.end_date}
                 onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))}
@@ -130,20 +133,21 @@ export function CutiRequestDialog({ open, onOpenChange, balance }: CutiRequestDi
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
+            <label htmlFor="cuti-request-reason" className="mb-1 block text-xs font-medium text-gray-600">
               Alasan (min. 10 karakter)
             </label>
             <Input
+              id="cuti-request-reason"
               placeholder="cth. keperluan keluarga di luar kota"
               value={form.reason}
               onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">
+            <label htmlFor="cuti-request-attachment" className="mb-1 block text-xs font-medium text-gray-600">
               Lampiran (ops. — foto surat dokter dsb., maks 5 MB)
             </label>
-            <Input type="file" accept="image/*" onChange={handleAttachmentChange} />
+            <Input id="cuti-request-attachment" type="file" accept="image/*" onChange={handleAttachmentChange} />
             {attachment && <p className="mt-1 text-xs text-gray-500">📎 {attachment.name}</p>}
           </div>
           {/* Pratinjau potongan jatah (EPIC-036 Fase D): akhir pekan dan

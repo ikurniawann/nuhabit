@@ -80,7 +80,7 @@ export function ForecastPage() {
           <span className="min-w-36 text-center text-sm font-semibold text-gray-900">{monthLabel(month)}</span>
           <Button type="button" variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => setMonth((m) => shiftMonth(m, 1))} aria-label="Bulan berikutnya"><ChevronRight className="h-4 w-4" /></Button>
           <Select value={pipelineId || "all"} onValueChange={(v) => setPipelineId(v === "all" ? "" : v)}>
-            <SelectTrigger className="h-9 w-48 bg-white"><SelectValue placeholder="Pipeline" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-48 bg-white" aria-label="Filter pipeline"><SelectValue placeholder="Pipeline" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Semua pipeline</SelectItem>
               {(pipelinesQuery.data ?? []).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -203,7 +203,7 @@ function ForecastRowView({ row, edit, onEdit }: { row: ForecastRow; edit: Record
       <td className="px-4 py-3 font-medium text-gray-900">{row.user_name}<span className="ml-1 text-xs font-normal text-gray-400">{row.open_deals} terbuka</span></td>
       <td className="px-4 py-3 text-right">
         {edit && row.user_id ? (
-          <Input type="number" min={0} value={edit[row.user_id] ?? ""} onChange={(e) => onEdit(e.target.value)} className="ml-auto h-8 w-36 text-right" />
+          <Input type="number" min={0} value={edit[row.user_id] ?? ""} onChange={(e) => onEdit(e.target.value)} aria-label={`Target ${row.user_name}`} className="ml-auto h-8 w-36 text-right" />
         ) : formatRupiah(row.target_value)}
       </td>
       <td className="px-4 py-3 text-right text-emerald-700">{formatRupiah(row.won_value)}</td>

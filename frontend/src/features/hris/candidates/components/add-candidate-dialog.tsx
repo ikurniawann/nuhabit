@@ -153,6 +153,7 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
                 checked={ocrEnabled}
                 onCheckedChange={(checked) => handleOcrToggle(checked === true)}
                 disabled={ocr.isPending}
+                aria-label="Isi otomatis dari CV (OCR AI)"
               />
               <span className="text-xs text-gray-700 flex items-center gap-1">
                 <ScanText className="w-3.5 h-3.5 text-pink-600" />
@@ -170,10 +171,11 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">
+              <Label htmlFor="add-candidate-full-name" className="text-xs font-medium">
                 Nama Lengkap <span className="text-red-500">*</span>
               </Label>
               <Input
+                id="add-candidate-full-name"
                 placeholder="Nama lengkap"
                 {...form.register("full_name", { required: "Nama lengkap wajib diisi" })}
                 className="h-9 text-sm"
@@ -181,10 +183,11 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
               <FieldError message={errors.full_name?.message} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">
+              <Label htmlFor="add-candidate-email" className="text-xs font-medium">
                 Email <span className="text-red-500">*</span>
               </Label>
               <Input
+                id="add-candidate-email"
                 type="email"
                 placeholder="email@contoh.com"
                 {...form.register("email", {
@@ -199,10 +202,11 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">
+              <Label htmlFor="add-candidate-phone" className="text-xs font-medium">
                 No. WhatsApp <span className="text-red-500">*</span>
               </Label>
               <Input
+                id="add-candidate-phone"
                 placeholder="081234567890"
                 {...form.register("phone", { required: "No. WhatsApp wajib diisi" })}
                 className="h-9 text-sm"
@@ -210,10 +214,11 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
               <FieldError message={errors.phone?.message} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">
+              <Label htmlFor="add-candidate-domicile" className="text-xs font-medium">
                 Domisili <span className="text-red-500">*</span>
               </Label>
               <Input
+                id="add-candidate-domicile"
                 placeholder="Kota"
                 {...form.register("domicile", { required: "Domisili wajib diisi" })}
                 className="h-9 text-sm"
@@ -224,13 +229,13 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Outlet / Brand</Label>
+              <Label htmlFor="add-candidate-brand" className="text-xs font-medium">Outlet / Brand</Label>
               <Controller
                 name="brand_id"
                 control={form.control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger id="add-candidate-brand" className="h-9 text-sm">
                       <SelectValue placeholder={brands.find((b) => b.id === field.value)?.name ?? "Pilih Outlet"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -245,13 +250,13 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Sumber</Label>
+              <Label htmlFor="add-candidate-source" className="text-xs font-medium">Sumber</Label>
               <Controller
                 name="source"
                 control={form.control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="h-9 text-sm">
+                    <SelectTrigger id="add-candidate-source" className="h-9 text-sm">
                       <SelectValue placeholder="Pilih Sumber" />
                     </SelectTrigger>
                     <SelectContent>
@@ -268,13 +273,13 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Status Awal</Label>
+            <Label htmlFor="add-candidate-status" className="text-xs font-medium">Status Awal</Label>
             <Controller
               name="status"
               control={form.control}
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger className="h-9 text-sm w-[180px]">
+                  <SelectTrigger id="add-candidate-status" className="h-9 text-sm w-[180px]">
                     <SelectValue placeholder="Pilih Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -287,8 +292,9 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Catatan</Label>
+            <Label htmlFor="add-candidate-notes" className="text-xs font-medium">Catatan</Label>
             <Textarea
+              id="add-candidate-notes"
               placeholder="Catatan internal (opsional)"
               rows={3}
               {...form.register("notes")}
@@ -301,16 +307,18 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Pengalaman Kerja Terakhir</Label>
+                <Label htmlFor="add-candidate-last-experience" className="text-xs font-medium">Pengalaman Kerja Terakhir</Label>
                 <Input
+                  id="add-candidate-last-experience"
                   placeholder="PT Company - Position (2 tahun)"
                   {...form.register("last_experience")}
                   className="h-9 text-sm"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Pendidikan Terakhir</Label>
+                <Label htmlFor="add-candidate-last-education" className="text-xs font-medium">Pendidikan Terakhir</Label>
                 <Input
+                  id="add-candidate-last-education"
                   placeholder="S1/D3/SMA - Jurusan - Universitas/Sekolah"
                   {...form.register("last_education")}
                   className="h-9 text-sm"
@@ -320,13 +328,13 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
 
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Status Ketersediaan</Label>
+                <Label htmlFor="add-candidate-availability" className="text-xs font-medium">Status Ketersediaan</Label>
                 <Controller
                   name="availability"
                   control={form.control}
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger id="add-candidate-availability" className="h-9 text-sm">
                         <SelectValue placeholder="Pilih ketersediaan" />
                       </SelectTrigger>
                       <SelectContent>
@@ -340,8 +348,9 @@ export function AddCandidateDialog({ brands, onClose }: { brands: Brand[]; onClo
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Ekspektasi Gaji (Rp)</Label>
+                <Label htmlFor="add-candidate-expected-salary" className="text-xs font-medium">Ekspektasi Gaji (Rp)</Label>
                 <Input
+                  id="add-candidate-expected-salary"
                   type="number"
                   placeholder="5000000"
                   {...form.register("expected_salary")}
