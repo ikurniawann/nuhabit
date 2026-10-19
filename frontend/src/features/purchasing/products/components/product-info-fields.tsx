@@ -60,7 +60,7 @@ export function ProductInfoFields({
           <Label htmlFor="warehouse_id" className="text-xs">
             Stall <span className="text-red-500">*</span>
           </Label>
-          <Combobox
+          <Combobox id="warehouse_id"
             options={stallOptions}
             value={formData.warehouse_id || ""}
             onChange={(warehouse_id) => onChange({ warehouse_id })}
@@ -75,7 +75,7 @@ export function ProductInfoFields({
           <Label htmlFor="kategori" className="text-xs">
             Kategori <span className="text-red-500">*</span>
           </Label>
-          <Combobox
+          <Combobox id="kategori"
             options={categoryOptions}
             value={formData.kategori || ""}
             onChange={(kategori) => onChange({ kategori })}
@@ -91,7 +91,7 @@ export function ProductInfoFields({
           <Label htmlFor="satuan_id" className="text-xs">
             Satuan <span className="text-red-500">*</span>
           </Label>
-          <Combobox
+          <Combobox id="satuan_id"
             options={unitOptions}
             value={formData.satuan_id || ""}
             onChange={(satuan_id) => onChange({ satuan_id })}

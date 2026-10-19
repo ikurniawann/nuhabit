@@ -180,10 +180,11 @@ function ManualDiscountBody({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            <label htmlFor="manual-discount-value" className="mb-1.5 block text-xs font-medium text-muted-foreground">
               {type === "percent" ? "Nilai persen (maks. 100%)" : "Nilai rupiah"}
             </label>
             <Input
+              id="manual-discount-value"
               type="text"
               inputMode={type === "percent" ? "decimal" : "numeric"}
               value={valueStr}

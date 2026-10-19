@@ -271,8 +271,8 @@ function ApPayForm({
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
         <div className="space-y-2">
-          <Label>AP Invoice</Label>
-          <Combobox
+          <Label htmlFor="ap-payment-invoice">AP Invoice</Label>
+          <Combobox id="ap-payment-invoice"
             options={invoices.map((i) => ({
               value: i.id,
               label: `${i.invoice_no} — ${i.party_name || "Vendor"} (${formatNumber(i.outstanding_amount || 0)})`,
@@ -289,8 +289,8 @@ function ApPayForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Tanggal bayar</Label>
-          <Input
+          <Label htmlFor="ap-payment-date">Tanggal bayar</Label>
+          <Input id="ap-payment-date"
             type="date"
             value={paymentDate}
             onChange={(e) => setPaymentDate(e.target.value)}
@@ -298,16 +298,16 @@ function ApPayForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Amount (outstanding {formatNumber(outstanding)})</Label>
-          <NumericInput
+          <Label htmlFor="ap-payment-amount">Amount (outstanding {formatNumber(outstanding)})</Label>
+          <NumericInput id="ap-payment-amount"
             value={amount}
             onValueChange={setAmount}
             className="h-10 bg-card"
           />
         </div>
         <div className="space-y-2">
-          <Label>Metode</Label>
-          <Combobox
+          <Label htmlFor="ap-payment-method">Metode</Label>
+          <Combobox id="ap-payment-method"
             options={AP_PAYMENT_METHODS.map((m) => ({
               value: m,
               label: m,
@@ -320,16 +320,16 @@ function ApPayForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Referensi</Label>
-          <Input
+          <Label htmlFor="ap-payment-reference">Referensi</Label>
+          <Input id="ap-payment-reference"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"
           />
         </div>
         <div className="space-y-2">
-          <Label>Catatan</Label>
-          <Input
+          <Label htmlFor="ap-payment-notes">Catatan</Label>
+          <Input id="ap-payment-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"

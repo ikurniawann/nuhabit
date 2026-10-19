@@ -240,6 +240,7 @@ function MenuForm({
             <div className="space-y-1.5">
               <Label htmlFor="menu-parent">Parent Menu</Label>
               <Combobox
+                id="menu-parent"
                 options={parentComboboxOptions}
                 value={form.parentId ?? "root"}
                 onChange={(value) =>
@@ -368,6 +369,7 @@ function MenuForm({
             <div className="space-y-1.5">
               <Label htmlFor="menu-icon">Icon</Label>
               <IconSelect
+                id="menu-icon"
                 value={form.icon}
                 onChange={(icon) => setForm((prev) => ({ ...prev, icon }))}
               />
@@ -408,6 +410,7 @@ function MenuForm({
               </Label>
               <Switch
                 id="menu-active"
+                aria-label="Active"
                 checked={form.isActive}
                 onCheckedChange={(checked) =>
                   setForm((prev) => ({ ...prev, isActive: checked }))
@@ -420,6 +423,7 @@ function MenuForm({
               </Label>
               <Switch
                 id="menu-visible"
+                aria-label="Visible"
                 checked={form.isVisible}
                 onCheckedChange={(checked) =>
                   setForm((prev) => ({ ...prev, isVisible: checked }))
@@ -432,6 +436,7 @@ function MenuForm({
               </Label>
               <Switch
                 id="menu-new-tab"
+                aria-label="New Tab"
                 checked={form.openInNewTab}
                 onCheckedChange={(checked) =>
                   setForm((prev) => ({ ...prev, openInNewTab: checked }))

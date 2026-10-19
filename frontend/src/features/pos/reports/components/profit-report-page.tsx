@@ -206,8 +206,9 @@ export function ProfitReportPage() {
             actions={
               <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200/70 bg-white p-3 sm:flex-row sm:items-end">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">From</Label>
+                  <Label htmlFor="profit-report-date-from" className="text-xs text-gray-600">From</Label>
                   <Input
+                    id="profit-report-date-from"
                     type="date"
                     value={dateFrom}
                     onChange={(event) => setDateFrom(event.target.value)}
@@ -215,8 +216,9 @@ export function ProfitReportPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">To</Label>
+                  <Label htmlFor="profit-report-date-to" className="text-xs text-gray-600">To</Label>
                   <Input
+                    id="profit-report-date-to"
                     type="date"
                     value={dateTo}
                     onChange={(event) => setDateTo(event.target.value)}

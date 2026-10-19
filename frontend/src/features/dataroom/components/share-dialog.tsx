@@ -188,8 +188,8 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                 <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm dark:bg-emerald-950/30">
                   <p className="mb-1 font-medium text-emerald-800 dark:text-emerald-300">Link siap dibagikan</p>
                   <div className="flex items-center gap-2">
-                    <Input readOnly value={created.url} onFocus={(e) => e.target.select()} className="bg-background font-mono text-xs" />
-                    <Button type="button" variant="outline" size="sm" onClick={() => copy(created)}>
+                    <Input readOnly value={created.url} onFocus={(e) => e.target.select()} className="bg-background font-mono text-xs" aria-label="Link berbagi" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => copy(created)} aria-label="Salin link">
                       {copied === created.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
@@ -225,7 +225,7 @@ export function ShareDialog({ open, node, canManage, onClose }: {
                         {s.watermark && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Droplets className="h-3 w-3" />Watermark</span>}
                       </div>
                       <div className="flex items-center gap-2">
-                        <Input readOnly value={s.url} onFocus={(e) => e.target.select()} className="h-8 font-mono text-xs" />
+                        <Input readOnly value={s.url} onFocus={(e) => e.target.select()} className="h-8 font-mono text-xs" aria-label="Link berbagi" />
                         <Button type="button" variant="outline" size="sm" onClick={() => copy(s)} title="Salin link">
                           {copied === s.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                         </Button>

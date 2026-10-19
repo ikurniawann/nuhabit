@@ -149,6 +149,7 @@ export function ReservationDetailDialog({ id, onClose }: { id: string; onClose: 
                       </div>
                       {canCheckIn ? (
                         <select
+                          aria-label={`Unit kamar ${room.room_type_name}`}
                           value={assign[room.id] ?? room.room_id ?? ""}
                           onChange={(e) => setAssign((prev) => ({ ...prev, [room.id]: e.target.value }))}
                           className="h-9 rounded-md border bg-background px-2 text-sm"

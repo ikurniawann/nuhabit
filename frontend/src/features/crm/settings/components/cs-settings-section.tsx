@@ -85,10 +85,12 @@ export function CsSettingsSection({
         <div className="grid gap-4 md:grid-cols-2">
           <Field
             icon={Timer}
+            htmlFor="cs-sla-response"
             label="Batas balas pertama (menit)"
             hint="Percakapan yang belum dibalas melewati ini ditandai “Lewat SLA” di inbox."
           >
             <Input
+              id="cs-sla-response"
               type="number"
               min={1}
               max={1440}
@@ -103,10 +105,12 @@ export function CsSettingsSection({
 
           <Field
             icon={Timer}
+            htmlFor="cs-sla-resolution"
             label="Target penyelesaian (menit)"
             hint="Dipakai sebagai acuan di laporan. 1440 = 1 hari."
           >
             <Input
+              id="cs-sla-resolution"
               type="number"
               min={1}
               max={10080}
@@ -192,9 +196,11 @@ export function CsSettingsSection({
                 setDraft((current) => ({ ...current, cs_auto_reply_enabled: checked }))
               }
               disabled={disabled}
+              aria-label="Balas otomatis di luar jam operasional"
             />
           </div>
           <textarea
+            aria-label="Teks balasan otomatis"
             rows={3}
             value={draft.cs_auto_reply_text}
             onChange={(event) =>
@@ -220,9 +226,11 @@ export function CsSettingsSection({
                 setDraft((current) => ({ ...current, cs_csat_enabled: checked }))
               }
               disabled={disabled}
+              aria-label="Minta penilaian saat percakapan ditandai selesai"
             />
           </div>
           <textarea
+            aria-label="Teks permintaan penilaian"
             rows={2}
             value={draft.cs_csat_text}
             onChange={(event) =>
@@ -254,18 +262,20 @@ export function CsSettingsSection({
 
 function Field({
   icon: Icon,
+  htmlFor,
   label,
   hint,
   children,
 }: {
   icon: typeof Timer;
+  htmlFor: string;
   label: string;
   hint: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">
+      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </Label>

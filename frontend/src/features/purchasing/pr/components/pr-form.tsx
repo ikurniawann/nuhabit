@@ -203,7 +203,7 @@ export function PRForm({
                   <Label htmlFor="department_id" className="text-xs">
                     Departemen <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="department_id"
                     options={departments.map((dept) => ({
                       value: dept.id,
                       label: dept.name,
@@ -225,7 +225,7 @@ export function PRForm({
                   <Label htmlFor="priority" className="text-xs">
                     Prioritas <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="priority"
                     options={[
                       { value: "low", label: "Rendah" },
                       { value: "medium", label: "Sedang" },
@@ -423,7 +423,7 @@ export function PRForm({
                 <Label htmlFor="notes" className="text-xs">
                   Catatan
                 </Label>
-                <Textarea
+                <Textarea id="notes"
                   {...register("notes")}
                   placeholder="Catatan tambahan..."
                   rows={4}

@@ -304,8 +304,8 @@ function CashMovementForm({
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
         <div className="space-y-2">
-          <Label>Tanggal</Label>
-          <Input
+          <Label htmlFor="cash-movement-date">Tanggal</Label>
+          <Input id="cash-movement-date"
             type="date"
             value={entryDate}
             onChange={(e) => setEntryDate(e.target.value)}
@@ -314,8 +314,8 @@ function CashMovementForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Akun Kas/Bank</Label>
-          <Combobox
+          <Label htmlFor="cash-movement-account">Akun Kas/Bank</Label>
+          <Combobox id="cash-movement-account"
             options={cashOptions}
             value={cashAccountId}
             onChange={(v) => {
@@ -328,8 +328,8 @@ function CashMovementForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Akun Lawan</Label>
-          <Combobox
+          <Label htmlFor="cash-movement-counter-account">Akun Lawan</Label>
+          <Combobox id="cash-movement-counter-account"
             options={offsetOptions}
             value={offsetAccountId}
             onChange={setOffsetAccountId}
@@ -339,16 +339,16 @@ function CashMovementForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Amount</Label>
-          <NumericInput
+          <Label htmlFor="cash-movement-amount">Amount</Label>
+          <NumericInput id="cash-movement-amount"
             value={amount}
             onValueChange={setAmount}
             className="h-10 bg-card"
           />
         </div>
         <div className="space-y-2">
-          <Label>Keterangan</Label>
-          <Input
+          <Label htmlFor="cash-movement-description">Keterangan</Label>
+          <Input id="cash-movement-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Opsional"
@@ -356,8 +356,8 @@ function CashMovementForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Memo baris</Label>
-          <Input
+          <Label htmlFor="cash-movement-memo">Memo baris</Label>
+          <Input id="cash-movement-memo"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             placeholder="Opsional"

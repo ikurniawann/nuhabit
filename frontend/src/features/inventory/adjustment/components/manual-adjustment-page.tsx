@@ -252,10 +252,10 @@ export function ManualAdjustmentPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
             <div className="min-w-0 space-y-1.5 md:col-span-4">
-              <Label className="text-xs">
+              <Label htmlFor="manual-adjustment-warehouse" className="text-xs">
                 Stall <span className="text-red-500">*</span>
               </Label>
-              <Combobox
+              <Combobox id="manual-adjustment-warehouse"
                 value={warehouseId}
                 onChange={handleWarehouseChange}
                 options={warehouseOptions}

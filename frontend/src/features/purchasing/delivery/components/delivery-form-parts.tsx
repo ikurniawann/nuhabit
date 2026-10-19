@@ -76,10 +76,10 @@ export function DeliveryInfoCard({ poList, poId, onPoChange, fetchingPOs, poLock
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         <div className="min-w-0 space-y-1.5">
-          <Label className="text-xs">
+          <Label htmlFor="delivery-po" className="text-xs">
             Purchase Order <span className="text-red-500">*</span>
           </Label>
-          <Combobox
+          <Combobox id="delivery-po"
             options={poList.map((po) => ({ value: po.id, label: po.nomor_po, description: po.nama_supplier ?? undefined }))}
             value={poId}
             onChange={onPoChange}

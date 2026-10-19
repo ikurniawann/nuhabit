@@ -117,6 +117,7 @@ export function ReturnItemsTable({
                 }
                 decimalScale={4}
                 disabled={!item.selected}
+                aria-label={`Qty retur ${itemDisplay.nama}`}
                 className="h-9 w-full border-gray-200/80 bg-white px-2 text-center text-sm focus-visible:border-pink-300 focus-visible:ring-1 focus-visible:ring-pink-200/80 disabled:bg-gray-50"
               />
             </td>

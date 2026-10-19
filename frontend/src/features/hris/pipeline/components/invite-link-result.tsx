@@ -57,7 +57,7 @@ export function InviteLinkResult({
     <div className="space-y-3">
       <p className="text-sm text-emerald-700 dark:text-emerald-400">{intro}</p>
       <div className="flex items-center gap-2">
-        <Input readOnly value={link} className="text-xs" />
+        <Input readOnly value={link} className="text-xs" aria-label="Link undangan" />
         <Button type="button" variant="outline" size="icon" onClick={handleCopy} aria-label="Salin link">
           {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
         </Button>

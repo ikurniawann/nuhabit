@@ -207,6 +207,7 @@ export function ContractsListPage() {
             <button
               type="button"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              aria-label="Hapus pencarian"
               onClick={() => {
                 setSearchInput("");
                 setSearch("");

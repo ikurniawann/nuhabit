@@ -155,7 +155,7 @@ function PaymentDialog({
                   className="h-9 text-sm"
                 />
                 <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="h-9" aria-label="Metode pembayaran">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -172,6 +172,7 @@ function PaymentDialog({
                   type="date"
                   value={paidOn}
                   onChange={(e) => setPaidOn(e.target.value)}
+                  aria-label="Tanggal bayar"
                   className="h-9 text-sm"
                 />
                 <Button
@@ -302,7 +303,7 @@ export function FinanceInvoicesPage() {
               />
             </div>
             <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="h-9 w-40">
+              <SelectTrigger className="h-9 w-40" aria-label="Filter status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

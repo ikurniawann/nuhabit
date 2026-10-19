@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPut } from "@/lib/api-client";
 import {
@@ -90,6 +90,7 @@ function ProviderCard({
   const [showKey, setShowKey] = useState(false);
   const [model, setModel] = useState(config.model);
   const [baseUrl, setBaseUrl] = useState(config.base_url);
+  const id = useId();
 
   const putConfig = async (fields: Record<string, unknown>) => {
     await apiPut(INTEGRATIONS_URL, buildPayload(provider, fields));
@@ -150,7 +151,7 @@ function ProviderCard({
 
       <div className="grid gap-4 sm:max-w-xl">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium">API Key</Label>
+          <Label htmlFor={`${id}-api-key`} className="text-xs font-medium">API Key</Label>
           {config.has_api_key && (
             <p className="text-xs text-muted-foreground">
               Key tersimpan:{" "}
@@ -164,6 +165,7 @@ function ProviderCard({
             <div className="relative flex-1">
               <KeyRound className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                id={`${id}-api-key`}
                 type={showKey ? "text" : "password"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
@@ -203,12 +205,13 @@ function ProviderCard({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Model</Label>
-            <Input value={model} onChange={(e) => setModel(e.target.value)} />
+            <Label htmlFor={`${id}-model`} className="text-xs font-medium">Model</Label>
+            <Input id={`${id}-model`} value={model} onChange={(e) => setModel(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Base URL</Label>
+            <Label htmlFor={`${id}-base-url`} className="text-xs font-medium">Base URL</Label>
             <Input
+              id={`${id}-base-url`}
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />

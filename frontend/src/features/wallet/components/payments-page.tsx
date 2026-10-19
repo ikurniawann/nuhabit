@@ -81,7 +81,7 @@ export function PaymentsPage() {
           onChange={(e) => setFilters((cur) => ({ ...cur, q: e.target.value || undefined }))}
         />
         <Select value={filters.status ?? ALL} onValueChange={setFilter("status")}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Filter status">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -94,7 +94,7 @@ export function PaymentsPage() {
           </SelectContent>
         </Select>
         <Select value={filters.source ?? ALL} onValueChange={setFilter("source")}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Filter sumber">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -103,8 +103,8 @@ export function PaymentsPage() {
             <SelectItem value="member">Portal member</SelectItem>
           </SelectContent>
         </Select>
-        <Input type="date" className="w-40" value={filters.from ?? ""} onChange={(e) => setFilter("from")(e.target.value || ALL)} />
-        <Input type="date" className="w-40" value={filters.to ?? ""} onChange={(e) => setFilter("to")(e.target.value || ALL)} />
+        <Input type="date" className="w-40" aria-label="Dari tanggal" value={filters.from ?? ""} onChange={(e) => setFilter("from")(e.target.value || ALL)} />
+        <Input type="date" className="w-40" aria-label="Sampai tanggal" value={filters.to ?? ""} onChange={(e) => setFilter("to")(e.target.value || ALL)} />
       </Card>
 
       <Card className="py-0">

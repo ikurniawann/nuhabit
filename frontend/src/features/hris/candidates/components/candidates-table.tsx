@@ -69,16 +69,17 @@ export function CandidatesTable({ candidates, loading, offset, onDelete }: Candi
                   <TableCell className="text-gray-500 text-xs">{formatDate(c.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Link href={`/dashboard/hris/candidates/${c.id}`}>
-                        <Button variant="ghost" size="sm" title="Detail">
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/dashboard/hris/candidates/${c.id}`} title="Detail" aria-label={`Detail ${c.full_name}`}>
                           <User className="w-4 h-4" />
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => onDelete(c)}
+                        aria-label={`Hapus ${c.full_name}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -122,6 +123,7 @@ export function CandidatesTable({ candidates, loading, offset, onDelete }: Candi
                   size="sm"
                   className="text-red-500 hover:text-red-600 hover:bg-red-50 h-8 w-8 p-0"
                   onClick={() => onDelete(c)}
+                  aria-label={`Hapus ${c.full_name}`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </Button>

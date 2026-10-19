@@ -157,6 +157,7 @@ export function PaymentMethodsPage() {
                         <Switch
                           checked={original.is_active}
                           disabled={busy}
+                          aria-label={`Aktifkan ${original.name}`}
                           onCheckedChange={(checked) =>
                             updateMutation.mutate({
                               code: row.code,
@@ -170,6 +171,7 @@ export function PaymentMethodsPage() {
                           <Input
                             value={row.code_text}
                             disabled={busy}
+                            aria-label={`Kode ${original.name}`}
                             onChange={(e) =>
                               setDraft(original.code, {
                                 code: slugifyPaymentMethodCode(e.target.value),
@@ -187,6 +189,7 @@ export function PaymentMethodsPage() {
                         <Input
                           value={row.name}
                           disabled={busy}
+                          aria-label={`Nama ${original.name}`}
                           onChange={(e) =>
                             setDraft(row.code, { name: e.target.value })
                           }
@@ -197,6 +200,7 @@ export function PaymentMethodsPage() {
                         <Input
                           value={row.description}
                           disabled={busy}
+                          aria-label={`Deskripsi ${original.name}`}
                           onChange={(e) =>
                             setDraft(row.code, { description: e.target.value })
                           }
@@ -212,6 +216,7 @@ export function PaymentMethodsPage() {
                           min={0}
                           value={row.sort_order_text}
                           disabled={busy}
+                          aria-label={`Urutan ${original.name}`}
                           onChange={(e) =>
                             setDraft(row.code, {
                               sort_order: e.target.value.replace(/\D/g, ""),

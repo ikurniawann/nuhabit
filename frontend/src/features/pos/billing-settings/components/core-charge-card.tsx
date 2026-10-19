@@ -35,6 +35,7 @@ export function CoreChargeCard({
           <Switch
             checked={charge.is_enabled}
             onCheckedChange={(checked) => onChange({ is_enabled: checked })}
+            aria-label={`Aktifkan ${title}`}
           />
         </div>
       </div>
@@ -80,6 +81,7 @@ export function CoreChargeCard({
           checked={charge.is_optional}
           onCheckedChange={(checked) => onChange({ is_optional: checked })}
           disabled={!charge.is_enabled}
+          aria-label={`${title} opsional di kasir`}
         />
       </label>
     </div>

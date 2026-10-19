@@ -189,6 +189,7 @@ export function WaMessageHistory() {
             />
           </label>
           <FilterSelect
+            label="Filter arah"
             value={direction}
             onChange={setDirection}
             options={[
@@ -198,6 +199,7 @@ export function WaMessageHistory() {
             ]}
           />
           <FilterSelect
+            label="Filter jenis"
             value={typeFilter}
             onChange={setTypeFilter}
             options={[
@@ -209,6 +211,7 @@ export function WaMessageHistory() {
             ]}
           />
           <FilterSelect
+            label="Filter status"
             value={statusFilter}
             onChange={setStatusFilter}
             options={[
@@ -355,16 +358,19 @@ function SummaryCard({
 }
 
 function FilterSelect({
+  label,
   value,
   onChange,
   options,
 }: {
+  label: string;
   value: string;
   onChange: (value: string) => void;
   options: [string, string][];
 }) {
   return (
     <select
+      aria-label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-100"

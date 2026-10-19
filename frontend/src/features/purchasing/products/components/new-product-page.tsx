@@ -239,7 +239,7 @@ export function NewProductPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {bomItems.map((item) => {
+                        {bomItems.map((item, index) => {
                           const selectedMaterial = materials.find(
                             (material) => material.id === item.raw_material_id
                           );
@@ -273,6 +273,7 @@ export function NewProductPage() {
                                       updateBOMItem(item.id, { qty_needed: value })
                                     }
                                     decimalScale={4}
+                                    aria-label={`Qty bahan ${index + 1}`}
                                     className="h-9 rounded-r-none border-0 text-sm shadow-none focus-visible:ring-0"
                                   />
                                   <div className="flex min-w-14 items-center justify-center rounded-r-lg border-l border-gray-200/70 bg-muted/50 px-3 text-xs font-semibold uppercase text-muted-foreground">
@@ -290,6 +291,7 @@ export function NewProductPage() {
                                       updateBOMItem(item.id, { waste_persen: value })
                                     }
                                     decimalScale={2}
+                                    aria-label={`Waste bahan ${index + 1}`}
                                     className="h-9 rounded-r-none border-0 text-sm shadow-none focus-visible:ring-0"
                                   />
                                   <div className="flex min-w-10 items-center justify-center rounded-r-lg border-l border-gray-200/70 bg-muted/50 px-3 text-xs font-semibold text-muted-foreground">

@@ -128,7 +128,7 @@ export function AppearancePage() {
           <div className="w-64">
             <p className="mb-1 text-xs font-medium text-muted-foreground">Company</p>
             <Select value={companyId ?? ""} onValueChange={handleCompanyChange}>
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger className="h-9 w-full" aria-label="Company">
                 <SelectValue placeholder="Pilih company" />
               </SelectTrigger>
               <SelectContent>
@@ -190,7 +190,7 @@ export function AppearancePage() {
                 }))
               }
             >
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger className="h-9 w-full" aria-label="Ukuran dasar">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

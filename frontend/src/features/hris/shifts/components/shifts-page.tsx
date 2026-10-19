@@ -85,7 +85,7 @@ export function ShiftsPage() {
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => openDialog(shift)}>
+                  <Button size="sm" variant="ghost" onClick={() => openDialog(shift)} aria-label={`Edit ${shift.name}`}>
                     <PencilIcon className="h-4 w-4" />
                   </Button>
                   <Button
@@ -93,6 +93,7 @@ export function ShiftsPage() {
                     variant="ghost"
                     className="text-red-600"
                     onClick={() => handleDelete(shift)}
+                    aria-label={`Hapus ${shift.name}`}
                   >
                     <TrashIcon className="h-4 w-4" />
                   </Button>

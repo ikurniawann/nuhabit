@@ -164,10 +164,11 @@ export function ReceiptSettingsCard() {
         <div className="mt-4 grid gap-5 lg:grid-cols-2">
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="receipt-scope" className="mb-1 block text-xs font-medium text-gray-600">
                 Scope
               </label>
               <select
+                id="receipt-scope"
                 className="w-full rounded-md border border-gray-200 bg-white p-2 text-sm"
                 value={scope}
                 onChange={(e) => setScope(e.target.value)}
@@ -186,10 +187,11 @@ export function ReceiptSettingsCard() {
               )}
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="receipt-header" className="mb-1 block text-xs font-medium text-gray-600">
                 Header — nama usaha, alamat, kontak
               </label>
               <textarea
+                id="receipt-header"
                 rows={4}
                 className={textareaClass}
                 placeholder={
@@ -200,10 +202,11 @@ export function ReceiptSettingsCard() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
+              <label htmlFor="receipt-footer" className="mb-1 block text-xs font-medium text-gray-600">
                 Footer — ucapan penutup, WiFi, promo
               </label>
               <textarea
+                id="receipt-footer"
                 rows={3}
                 className={textareaClass}
                 placeholder={

@@ -68,7 +68,7 @@ export function CandidatesMobileHeader({ totalCount, onExport, onAdd }: Candidat
           >
             <Download className="w-4 h-4" />
           </button>
-          <Button size="sm" onClick={onAdd}>
+          <Button size="sm" onClick={onAdd} aria-label="Tambah kandidat">
             <Plus className="w-4 h-4" />
           </Button>
         </div>

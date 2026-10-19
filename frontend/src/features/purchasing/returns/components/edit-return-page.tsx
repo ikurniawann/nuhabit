@@ -332,10 +332,10 @@ export function EditReturnPage({
                     required
                   />
                   <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">
+                    <Label htmlFor="return-reason" className="text-xs">
                       Alasan Retur <span className="text-red-500">*</span>
                     </Label>
-                    <Combobox
+                    <Combobox id="return-reason"
                       options={RETURN_REASON_OPTIONS}
                       value={formData.reason_type}
                       onChange={(value) =>

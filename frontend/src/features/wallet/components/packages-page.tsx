@@ -260,11 +260,12 @@ function PackageDialog({ pkg, onClose, onSaved }: { pkg: TopupPackage | null; on
             )}
             <label className="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-4 py-3 text-sm">
               Aktif
-              <Switch checked={form.is_active} onCheckedChange={(v) => setForm((cur) => ({ ...cur, is_active: v }))} />
+              <Switch aria-label="Aktif" checked={form.is_active} onCheckedChange={(v) => setForm((cur) => ({ ...cur, is_active: v }))} />
             </label>
             <label className="flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-4 py-3 text-sm">
               Tampil di portal member
               <Switch
+                aria-label="Tampil di portal member"
                 checked={form.available_online}
                 onCheckedChange={(v) => setForm((cur) => ({ ...cur, available_online: v }))}
               />

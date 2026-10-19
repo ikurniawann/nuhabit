@@ -172,6 +172,7 @@ export function CrmReviewsPage() {
             }`}
           >
             <select
+              aria-label="Filter status"
               value={filters.status}
               onChange={(event) => setFilter({ status: event.target.value })}
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none"
@@ -182,6 +183,7 @@ export function CrmReviewsPage() {
               <option value="all">Semua status</option>
             </select>
             <select
+              aria-label="Filter rating"
               value={filters.rating}
               onChange={(event) => setFilter({ rating: event.target.value })}
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none"
@@ -193,6 +195,7 @@ export function CrmReviewsPage() {
             </select>
             {locations.length > 1 && (
               <select
+                aria-label="Filter lokasi"
                 value={filters.location}
                 onChange={(event) => setFilter({ location: event.target.value })}
                 className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none"

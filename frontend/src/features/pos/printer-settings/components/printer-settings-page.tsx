@@ -178,8 +178,9 @@ export function PrinterSettingsPage() {
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="sm:w-40">
-                  <label className="text-xs font-medium text-muted-foreground">Baud rate</label>
+                  <label htmlFor="printer-baud-rate" className="text-xs font-medium text-muted-foreground">Baud rate</label>
                   <select
+                    id="printer-baud-rate"
                     value={baud}
                     onChange={(event) => {
                       const next = Number(event.target.value) as ThermalBaud;
@@ -305,8 +306,9 @@ export function PrinterSettingsPage() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500">Nama Printer</label>
+                  <label htmlFor={`printer-${item.station}-name`} className="text-xs font-semibold text-gray-500">Nama Printer</label>
                   <input
+                    id={`printer-${item.station}-name`}
                     value={item.printerName}
                     onChange={(event) => updateSetting(item.station, { printerName: event.target.value })}
                     className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-100"
@@ -314,8 +316,9 @@ export function PrinterSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500">Jumlah Copy</label>
+                  <label htmlFor={`printer-${item.station}-copies`} className="text-xs font-semibold text-gray-500">Jumlah Copy</label>
                   <input
+                    id={`printer-${item.station}-copies`}
                     type="number"
                     min={1}
                     max={5}
@@ -327,8 +330,9 @@ export function PrinterSettingsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-gray-500">Endpoint / IP Printer</label>
+                <label htmlFor={`printer-${item.station}-endpoint`} className="text-xs font-semibold text-gray-500">Endpoint / IP Printer</label>
                 <input
+                  id={`printer-${item.station}-endpoint`}
                   value={item.endpoint}
                   onChange={(event) => updateSetting(item.station, { endpoint: event.target.value })}
                   className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-950 outline-none transition focus:border-pink-500 focus:ring-2 focus:ring-pink-100"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Loader2, Plus, Sparkles, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -240,6 +240,7 @@ export function CrmXpRulesPage() {
           value={channel}
           onChange={setChannel}
           placeholder="Semua kanal"
+          aria-label="Filter kanal"
         />
       </div>
 
@@ -343,8 +344,9 @@ export function CrmXpRulesPage() {
             />
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Kanal</label>
+              <label htmlFor="xp-rule-channel" className="mb-1 block text-xs font-medium text-slate-600">Kanal</label>
               <Combobox
+                id="xp-rule-channel"
                 options={XP_SOURCE_CHANNELS.map((value) => ({
                   value,
                   label: CHANNEL_LABELS[value],
@@ -354,10 +356,11 @@ export function CrmXpRulesPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
+              <label htmlFor="xp-rule-source-type" className="mb-1 block text-xs font-medium text-slate-600">
                 Jenis kejadian
               </label>
               <Combobox
+                id="xp-rule-source-type"
                 options={XP_SOURCE_TYPES.map((value) => ({
                   value,
                   label: SOURCE_TYPE_LABELS[value] ?? value,
@@ -371,8 +374,9 @@ export function CrmXpRulesPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600">Perhitungan</label>
+              <label htmlFor="xp-rule-mode" className="mb-1 block text-xs font-medium text-slate-600">Perhitungan</label>
               <Combobox
+                id="xp-rule-mode"
                 options={XP_MODES.map((value) => ({ value, label: MODE_LABELS[value] }))}
                 value={form.xp_mode}
                 onChange={(v) => setForm((f) => ({ ...f, xp_mode: v as XpMode }))}
@@ -474,6 +478,7 @@ function Field({
   /** "Rp" → pratinjau "Rp1.000"; "XP" → pratinjau "1 XP". */
   satuan?: "Rp" | "XP";
 }) {
+  const id = useId();
   const n = Number(value);
   const pratinjau =
     numeric && satuan && value !== "" && Number.isFinite(n)
@@ -484,9 +489,10 @@ function Field({
 
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
       <div className="relative">
         <input
+          id={id}
           value={value}
           inputMode={numeric ? "numeric" : undefined}
           onChange={(event) =>

@@ -223,8 +223,9 @@ export function RevenueCompositionReportPage() {
             actions={
               <div className="flex w-full flex-col gap-3 rounded-lg border border-gray-200/70 bg-white p-3 sm:flex-row sm:items-end">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">Dari</Label>
+                  <Label htmlFor="revenue-composition-date-from" className="text-xs text-gray-600">Dari</Label>
                   <Input
+                    id="revenue-composition-date-from"
                     type="date"
                     value={dateFrom}
                     onChange={(event) => setDateFrom(event.target.value)}
@@ -232,8 +233,9 @@ export function RevenueCompositionReportPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-600">Sampai</Label>
+                  <Label htmlFor="revenue-composition-date-to" className="text-xs text-gray-600">Sampai</Label>
                   <Input
+                    id="revenue-composition-date-to"
                     type="date"
                     value={dateTo}
                     onChange={(event) => setDateTo(event.target.value)}

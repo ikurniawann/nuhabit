@@ -253,10 +253,10 @@ export function NewReturnPage({
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div className="min-w-0 space-y-1.5">
-                  <Label className="text-xs">
+                  <Label htmlFor="return-grn" className="text-xs">
                     Penerimaan Barang <span className="text-red-500">*</span>
                   </Label>
-                  <Combobox
+                  <Combobox id="return-grn"
                     options={grnOptions.map((grn) => ({
                       value: grn.id,
                       label: grn.nomor_grn,
@@ -304,10 +304,10 @@ export function NewReturnPage({
                     required
                   />
                   <div className="min-w-0 space-y-1.5">
-                    <Label className="text-xs">
+                    <Label htmlFor="return-reason" className="text-xs">
                       Alasan Retur <span className="text-red-500">*</span>
                     </Label>
-                    <Combobox
+                    <Combobox id="return-reason"
                       options={RETURN_REASON_OPTIONS}
                       value={formData.reason_type}
                       onChange={(value) =>

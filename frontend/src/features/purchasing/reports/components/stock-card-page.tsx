@@ -121,8 +121,8 @@ export function StockCardPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <ReportFilterField label={STALL_LABELS.singular}>
-              <Combobox
+            <ReportFilterField htmlFor="stock-card-warehouse" label={STALL_LABELS.singular}>
+              <Combobox id="stock-card-warehouse"
                 options={stallOptions}
                 value={warehouseId}
                 onChange={setWarehouseId}
@@ -132,8 +132,8 @@ export function StockCardPage() {
                 className="h-10"
               />
             </ReportFilterField>
-            <ReportFilterField label={itemLabel}>
-              <Combobox
+            <ReportFilterField htmlFor="stock-card-item" label={itemLabel}>
+              <Combobox id="stock-card-item"
                 options={itemOptions}
                 value={selectedItem}
                 onChange={setSelectedItem}
@@ -143,8 +143,8 @@ export function StockCardPage() {
                 className="h-10"
               />
             </ReportFilterField>
-            <ReportFilterField label="Tipe Mutasi">
-              <Combobox
+            <ReportFilterField htmlFor="stock-card-movement-type" label="Tipe Mutasi">
+              <Combobox id="stock-card-movement-type"
                 options={MOVEMENT_TYPE_OPTIONS}
                 value={movementType}
                 onChange={(value) => setMovementType(value as StockMovementType)}

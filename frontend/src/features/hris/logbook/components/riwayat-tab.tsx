@@ -226,6 +226,7 @@ export function LogbookRiwayatTab({
                     variant="outline"
                     disabled={page <= 1}
                     onClick={() => setPage((current) => current - 1)}
+                    aria-label="Halaman sebelumnya"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -234,6 +235,7 @@ export function LogbookRiwayatTab({
                     variant="outline"
                     disabled={page >= totalPages}
                     onClick={() => setPage((current) => current + 1)}
+                    aria-label="Halaman berikutnya"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

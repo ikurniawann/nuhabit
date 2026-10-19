@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { useCoaList } from "@/features/accounting/chart-of-accounts/queries";
@@ -29,6 +29,7 @@ export function RawMaterialCoaFields({
   kategori,
   disabled,
 }: Props) {
+  const id = useId();
   const { data: coaData, isLoading } = useCoaList({
     is_postable: "true",
     is_active: "true",
@@ -64,8 +65,8 @@ export function RawMaterialCoaFields({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div className="space-y-1.5">
-        <Label className="text-xs">Produksi</Label>
-        <Combobox
+        <Label htmlFor={`${id}-production`} className="text-xs">Produksi</Label>
+        <Combobox id={`${id}-production`}
           options={options}
           value={value.coa_production}
           onChange={(v) => onChange({ ...value, coa_production: v })}
@@ -79,8 +80,8 @@ export function RawMaterialCoaFields({
         <p className="text-xs text-muted-foreground">{hintProduction}</p>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs">Riset &amp; Pengembangan</Label>
-        <Combobox
+        <Label htmlFor={`${id}-research`} className="text-xs">Riset &amp; Pengembangan</Label>
+        <Combobox id={`${id}-research`}
           options={options}
           value={value.coa_rnd}
           onChange={(v) => onChange({ ...value, coa_rnd: v })}
@@ -96,8 +97,8 @@ export function RawMaterialCoaFields({
         </p>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-xs">Aset</Label>
-        <Combobox
+        <Label htmlFor={`${id}-asset`} className="text-xs">Aset</Label>
+        <Combobox id={`${id}-asset`}
           options={options}
           value={value.coa_asset}
           onChange={(v) => onChange({ ...value, coa_asset: v })}

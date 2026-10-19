@@ -131,13 +131,13 @@ export function CampaignFormDialog({ campaign, onClose }: {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Jenis Diskon</Label>
+              <Label htmlFor="promo-discount-type">Jenis Diskon</Label>
               <Select
                 value={form.discount_type}
                 disabled={busy}
                 onValueChange={(v) => set({ discount_type: v as PromoDiscountType })}
               >
-                <SelectTrigger className="w-full border-gray-200/80">
+                <SelectTrigger id="promo-discount-type" className="w-full border-gray-200/80">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,9 +180,9 @@ export function CampaignFormDialog({ campaign, onClose }: {
               onChange={(min_purchase) => set({ min_purchase })}
             />
             <div className="space-y-1.5">
-              <Label>Kanal Berlaku</Label>
+              <Label htmlFor="promo-scope">Kanal Berlaku</Label>
               <Select value={form.scope} disabled={busy} onValueChange={(v) => set({ scope: v as PromoScope })}>
-                <SelectTrigger className="w-full border-gray-200/80">
+                <SelectTrigger id="promo-scope" className="w-full border-gray-200/80">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,9 +279,9 @@ function CodeModeFields({ form, prefix, busy, set }: {
   return (
     <div className="space-y-3 rounded-xl border border-gray-200/70 bg-muted/20 p-3">
       <div className="space-y-1.5">
-        <Label>Keluarkan Kode Saat Simpan</Label>
+        <Label htmlFor="promo-code-mode">Keluarkan Kode Saat Simpan</Label>
         <Select value={form.code_mode} disabled={busy} onValueChange={(v) => set({ code_mode: v as CodeMode })}>
-          <SelectTrigger className="w-full border-gray-200/80 bg-white">
+          <SelectTrigger id="promo-code-mode" className="w-full border-gray-200/80 bg-white">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

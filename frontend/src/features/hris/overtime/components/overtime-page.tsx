@@ -84,6 +84,7 @@ export function OvertimePage() {
           type="month"
           className="w-44"
           value={monthFilter}
+          aria-label="Filter bulan"
           onChange={(e) => setMonthFilter(e.target.value)}
         />
       </div>

@@ -377,6 +377,7 @@ function FiscalYearForm({
                             onChange={(e) =>
                               updatePeriod(p.key, { name: e.target.value })
                             }
+                            aria-label={`Nama period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>
@@ -389,6 +390,7 @@ function FiscalYearForm({
                                 start_date: e.target.value,
                               })
                             }
+                            aria-label={`Tanggal mulai period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>
@@ -401,6 +403,7 @@ function FiscalYearForm({
                                 end_date: e.target.value,
                               })
                             }
+                            aria-label={`Tanggal akhir period ${p.period_no}`}
                             className="h-9 border-gray-200/80"
                           />
                         </td>

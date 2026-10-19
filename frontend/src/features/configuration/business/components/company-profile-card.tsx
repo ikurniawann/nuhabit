@@ -97,10 +97,11 @@ export function CompanyProfileCard() {
                 key={field.key}
                 className={field.key === "address" ? "sm:col-span-2" : ""}
               >
-                <label className="mb-1 block text-xs font-medium text-gray-600">
+                <label htmlFor={`company-${field.key}`} className="mb-1 block text-xs font-medium text-gray-600">
                   {field.label}
                 </label>
                 <Input
+                  id={`company-${field.key}`}
                   value={form[field.key] ?? ""}
                   placeholder={field.placeholder}
                   onChange={(e) =>

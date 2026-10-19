@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { ArrowPathIcon, DocumentArrowDownIcon } from "@heroicons/react/24/outline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -64,19 +64,30 @@ export function ExportButton({
   );
 }
 
-export function ReportFilterField({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+export function ReportFilterField({
+  label,
+  htmlFor,
+  className,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
     <div className={`space-y-1.5 ${className ?? ""}`}>
-      <Label className="text-xs">{label}</Label>
+      <Label htmlFor={htmlFor} className="text-xs">{label}</Label>
       {children}
     </div>
   );
 }
 
 export function DateFilterField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const id = useId();
   return (
-    <ReportFilterField label={label}>
-      <Input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10" />
+    <ReportFilterField label={label} htmlFor={id}>
+      <Input id={id} type="date" value={value} onChange={(event) => onChange(event.target.value)} className="h-10" />
     </ReportFilterField>
   );
 }

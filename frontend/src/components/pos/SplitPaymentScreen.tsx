@@ -122,7 +122,7 @@ export function SplitPaymentScreen({
     <div className="flex flex-col h-full gap-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={onBack} className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
+        <button onClick={onBack} aria-label="Kembali" className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
           <ArrowLeft className="w-4 h-4 text-gray-600" />
         </button>
         <div>

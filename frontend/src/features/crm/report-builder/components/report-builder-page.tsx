@@ -171,18 +171,18 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
         <PurchasingListSection icon={ChartBarIcon} title="Susun Report" description="Perubahan diterapkan saat menekan Jalankan.">
           <div className="space-y-4 px-5 py-4">
             <div className="space-y-1.5">
-              <Label>Data</Label>
+              <Label htmlFor="report-dataset">Data</Label>
               <Select value={def.dataset} onValueChange={(v) => changeDataset(v as ReportDataset)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="report-dataset"><SelectValue /></SelectTrigger>
                 <SelectContent>{registry.map((d) => <SelectItem key={d.key} value={d.key}>{d.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label>Tanggal acuan</Label>
+                <Label htmlFor="report-date-field">Tanggal acuan</Label>
                 <Select value={def.date_field ?? ds?.date_field ?? ""} onValueChange={(v) => patch({ date_field: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="report-date-field"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {fields.filter((f) => f.type === "date" || f.type === "datetime").map((f) => (
                       <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
@@ -191,17 +191,17 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Periode</Label>
+                <Label htmlFor="report-date-preset">Periode</Label>
                 <Select value={def.date_preset} onValueChange={(v) => patch({ date_preset: v as ReportDefinition["date_preset"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="report-date-preset"><SelectValue /></SelectTrigger>
                   <SelectContent>{registryMeta.date_presets.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
             {def.date_preset === "custom" ? (
               <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5"><Label>Dari</Label><Input type="date" value={def.date_from ?? ""} onChange={(e) => patch({ date_from: e.target.value })} /></div>
-                <div className="space-y-1.5"><Label>Sampai</Label><Input type="date" value={def.date_to ?? ""} onChange={(e) => patch({ date_to: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label htmlFor="report-date-from">Dari</Label><Input id="report-date-from" type="date" value={def.date_from ?? ""} onChange={(e) => patch({ date_from: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label htmlFor="report-date-to">Sampai</Label><Input id="report-date-to" type="date" value={def.date_to ?? ""} onChange={(e) => patch({ date_to: e.target.value })} /></div>
               </div>
             ) : null}
 
@@ -222,22 +222,22 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
                     <div key={i} className="space-y-1.5 rounded-lg border border-gray-200/70 bg-gray-50/50 p-2">
                       <div className="flex gap-1.5">
                         <Select value={f.field} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, field: v } : x)) })}>
-                          <SelectTrigger className="h-8 flex-1 bg-white text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-8 flex-1 bg-white text-xs" aria-label={`Field filter ${i + 1}`}><SelectValue /></SelectTrigger>
                           <SelectContent>{fields.map((x) => <SelectItem key={x.key} value={x.key}>{x.label}</SelectItem>)}</SelectContent>
                         </Select>
-                        <button type="button" className="px-1 text-gray-400 hover:text-red-600" onClick={() => patch({ filters: def.filters.filter((_, j) => j !== i) })}>
+                        <button type="button" className="px-1 text-gray-400 hover:text-red-600" onClick={() => patch({ filters: def.filters.filter((_, j) => j !== i) })} aria-label={`Hapus filter ${i + 1}`}>
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                       <div className="flex gap-1.5">
                         <Select value={f.op} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, op: v as typeof x.op } : x)) })}>
-                          <SelectTrigger className="h-8 w-32 bg-white text-xs"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-8 w-32 bg-white text-xs" aria-label={`Operator filter ${i + 1}`}><SelectValue /></SelectTrigger>
                           <SelectContent>{registryMeta.filter_ops.map((o) => <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                         {needsValue ? (
                           meta?.options?.length ? (
                             <Select value={String(f.value ?? "")} onValueChange={(v) => patch({ filters: def.filters.map((x, j) => (j === i ? { ...x, value: v } : x)) })}>
-                              <SelectTrigger className="h-8 flex-1 bg-white text-xs"><SelectValue placeholder="pilih" /></SelectTrigger>
+                              <SelectTrigger className="h-8 flex-1 bg-white text-xs" aria-label={`Nilai filter ${i + 1}`}><SelectValue placeholder="pilih" /></SelectTrigger>
                               <SelectContent>{meta.options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                             </Select>
                           ) : (
@@ -262,12 +262,12 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
             </div>
 
             <div className="space-y-1.5">
-              <Label>Kelompokkan (group by)</Label>
+              <Label htmlFor="report-group-by">Kelompokkan (group by)</Label>
               <Select
                 value={def.group_by[0] ?? "none"}
                 onValueChange={(v) => patch({ group_by: v === "none" ? [] : [v], chart_type: v === "none" ? "table" : def.chart_type === "table" ? "column" : def.chart_type })}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="report-group-by"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Tanpa pengelompokan (tabel rinci)</SelectItem>
                   {fields.map((f) => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
@@ -275,7 +275,7 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
               </Select>
               {def.group_by.length > 0 && fieldByKey.get(def.group_by[0])?.type?.includes("date") ? (
                 <Select value={def.date_bucket} onValueChange={(v) => patch({ date_bucket: v as ReportDefinition["date_bucket"] })}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9" aria-label="Rentang waktu pengelompokan"><SelectValue /></SelectTrigger>
                   <SelectContent>{registryMeta.date_buckets.map((b) => <SelectItem key={b.key} value={b.key}>{b.label}</SelectItem>)}</SelectContent>
                 </Select>
               ) : null}
@@ -295,18 +295,18 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
                   {def.aggregates.map((a, i) => (
                     <div key={i} className="flex gap-1.5">
                       <Select value={a.fn} onValueChange={(v) => patch({ aggregates: def.aggregates.map((x, j) => (j === i ? { ...x, fn: v as typeof x.fn } : x)) })}>
-                        <SelectTrigger className="h-8 w-32 bg-white text-xs"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-8 w-32 bg-white text-xs" aria-label={`Fungsi hitungan ${i + 1}`}><SelectValue /></SelectTrigger>
                         <SelectContent>{registryMeta.aggregations.map((x) => <SelectItem key={x.key} value={x.key}>{x.label}</SelectItem>)}</SelectContent>
                       </Select>
                       {a.fn !== "count" ? (
                         <Select value={a.field ?? ""} onValueChange={(v) => patch({ aggregates: def.aggregates.map((x, j) => (j === i ? { ...x, field: v } : x)) })}>
-                          <SelectTrigger className="h-8 flex-1 bg-white text-xs"><SelectValue placeholder="field" /></SelectTrigger>
+                          <SelectTrigger className="h-8 flex-1 bg-white text-xs" aria-label={`Field hitungan ${i + 1}`}><SelectValue placeholder="field" /></SelectTrigger>
                           <SelectContent>
                             {(a.fn === "count_distinct" ? fields : aggregatable).map((f) => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       ) : <div className="flex-1" />}
-                      <button type="button" className="px-1 text-gray-400 hover:text-red-600" onClick={() => patch({ aggregates: def.aggregates.filter((_, j) => j !== i) })}>
+                      <button type="button" className="px-1 text-gray-400 hover:text-red-600" onClick={() => patch({ aggregates: def.aggregates.filter((_, j) => j !== i) })} aria-label={`Hapus hitungan ${i + 1}`}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -340,9 +340,9 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label>Tampilan</Label>
+                <Label htmlFor="report-chart-type">Tampilan</Label>
                 <Select value={def.chart_type} onValueChange={(v) => patch({ chart_type: v as ReportDefinition["chart_type"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="report-chart-type"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {/* Grafik butuh kolom agregasi, jadi hanya muncul saat ada group by. */}
                     {registryMeta.chart_types
@@ -352,15 +352,15 @@ function BuilderBody({ registry, registryMeta, saved, initialResult, onSaved }: 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Batas baris</Label>
-                <Input type="number" min={1} max={5000} value={def.limit} onChange={(e) => patch({ limit: Math.min(5000, Math.max(1, Number(e.target.value) || 1)) })} />
+                <Label htmlFor="report-limit">Batas baris</Label>
+                <Input id="report-limit" type="number" min={1} max={5000} value={def.limit} onChange={(e) => patch({ limit: Math.min(5000, Math.max(1, Number(e.target.value) || 1)) })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label>Urut</Label>
+                <Label htmlFor="report-sort-dir">Urut</Label>
                 <Select value={def.sort_dir} onValueChange={(v) => patch({ sort_dir: v as "asc" | "desc" })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="report-sort-dir"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="desc">Terbesar / terbaru dulu</SelectItem>
                     <SelectItem value="asc">Terkecil / terlama dulu</SelectItem>
@@ -452,10 +452,10 @@ function SaveForm({ defaultName, pending, onCancel, onSubmit }: {
     <>
       <DialogHeader><DialogTitle>Simpan Report</DialogTitle></DialogHeader>
       <div className="grid gap-3">
-        <div className="space-y-1.5"><Label>Nama</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Pipeline per PIC bulan ini" /></div>
-        <div className="space-y-1.5"><Label>Deskripsi (opsional)</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label htmlFor="save-report-name">Nama</Label><Input id="save-report-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="cth. Pipeline per PIC bulan ini" /></div>
+        <div className="space-y-1.5"><Label htmlFor="save-report-description">Deskripsi (opsional)</Label><Input id="save-report-description" value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         <label className="inline-flex items-center gap-2 text-sm">
-          <Switch checked={shared} onCheckedChange={(v) => setShared(Boolean(v))} /> Bagikan ke tim
+          <Switch checked={shared} onCheckedChange={(v) => setShared(Boolean(v))} aria-label="Bagikan ke tim" /> Bagikan ke tim
         </label>
       </div>
       <DialogFooter>

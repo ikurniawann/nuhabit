@@ -96,6 +96,7 @@ export function SalaryPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => router.push(`/dashboard/hris/salary/${salary.id}`)}
+                          aria-label="Edit gaji"
                         >
                           <PencilIcon className="w-4 h-4" />
                         </Button>

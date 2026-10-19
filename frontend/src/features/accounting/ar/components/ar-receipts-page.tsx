@@ -274,8 +274,8 @@ function ReceiptForm({
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
         <div className="space-y-2">
-          <Label>AR Invoice</Label>
-          <Combobox
+          <Label htmlFor="ar-receipt-invoice">AR Invoice</Label>
+          <Combobox id="ar-receipt-invoice"
             options={invoices.map((i) => ({
               value: i.id,
               label: `${i.invoice_no} — ${i.customer_name || "Customer"} (${formatNumber(i.outstanding_amount || 0)})`,
@@ -292,8 +292,8 @@ function ReceiptForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Tanggal</Label>
-          <Input
+          <Label htmlFor="ar-receipt-date">Tanggal</Label>
+          <Input id="ar-receipt-date"
             type="date"
             value={receiptDate}
             onChange={(e) => setReceiptDate(e.target.value)}
@@ -301,16 +301,16 @@ function ReceiptForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Amount (outstanding {formatNumber(outstanding)})</Label>
-          <NumericInput
+          <Label htmlFor="ar-receipt-amount">Amount (outstanding {formatNumber(outstanding)})</Label>
+          <NumericInput id="ar-receipt-amount"
             value={amount}
             onValueChange={setAmount}
             className="h-10 bg-card"
           />
         </div>
         <div className="space-y-2">
-          <Label>Metode</Label>
-          <Combobox
+          <Label htmlFor="ar-receipt-method">Metode</Label>
+          <Combobox id="ar-receipt-method"
             options={AR_RECEIPT_METHODS.map((m) => ({ value: m, label: m }))}
             value={method}
             onChange={setMethod}
@@ -320,8 +320,8 @@ function ReceiptForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Catatan</Label>
-          <Input
+          <Label htmlFor="ar-receipt-notes">Catatan</Label>
+          <Input id="ar-receipt-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="h-10 bg-card focus:border-primary/40 focus:ring-1 focus:ring-primary/30"

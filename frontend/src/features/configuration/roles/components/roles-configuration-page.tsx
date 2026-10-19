@@ -226,7 +226,7 @@ export function RolesConfigurationPage() {
                 setStatusFilter(value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-40" aria-label="Filter status">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>

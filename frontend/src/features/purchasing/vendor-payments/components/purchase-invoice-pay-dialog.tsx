@@ -286,7 +286,7 @@ function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
               />
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs">Nominal Pembayaran</Label>
+                  <Label htmlFor="invoice-pay-amount" className="text-xs">Nominal Pembayaran</Label>
                   {outstanding > 0 && (
                     <button
                       type="button"
@@ -297,7 +297,7 @@ function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
                     </button>
                   )}
                 </div>
-                <NumericInput
+                <NumericInput id="invoice-pay-amount"
                   value={amount}
                   max={outstanding}
                   onValueChange={(value) => setAmount(value || undefined)}
@@ -309,8 +309,8 @@ function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs">Metode Pembayaran</Label>
-                <Combobox
+                <Label htmlFor="invoice-pay-method" className="text-xs">Metode Pembayaran</Label>
+                <Combobox id="invoice-pay-method"
                   options={[
                     { value: "bank_transfer", label: "Transfer Bank" },
                     { value: "cash", label: "Tunai" },
@@ -327,8 +327,8 @@ function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Nomor Referensi</Label>
-                <Input
+                <Label htmlFor="invoice-pay-reference" className="text-xs">Nomor Referensi</Label>
+                <Input id="invoice-pay-reference"
                   value={referenceNumber}
                   onChange={(event) => setReferenceNumber(event.target.value)}
                   placeholder="Nomor transfer / bukti pembayaran"
@@ -338,8 +338,8 @@ function PayDialogBody({ row, open, onOpenChange }: PayDialogProps) {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs">Catatan</Label>
-              <Input
+              <Label htmlFor="invoice-pay-notes" className="text-xs">Catatan</Label>
+              <Input id="invoice-pay-notes"
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Opsional"

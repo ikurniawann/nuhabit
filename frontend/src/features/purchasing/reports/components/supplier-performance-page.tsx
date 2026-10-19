@@ -65,8 +65,8 @@ export function SupplierPerformancePage() {
           <div className="grid gap-4 md:grid-cols-3">
             <DateFilterField label="Dari Tanggal" value={dateFrom} onChange={setDateFrom} />
             <DateFilterField label="Sampai Tanggal" value={dateTo} onChange={setDateTo} />
-            <ReportFilterField label="Supplier">
-              <Combobox
+            <ReportFilterField htmlFor="supplier-performance-supplier" label="Supplier">
+              <Combobox id="supplier-performance-supplier"
                 options={supplierOptions}
                 value={supplierId}
                 onChange={setSupplierId}

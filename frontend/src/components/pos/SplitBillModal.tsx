@@ -302,6 +302,7 @@ function SplitBillBody({
                 className="h-8 w-8 border-gray-200/80"
                 onClick={handleDecrease}
                 disabled={count <= 2 || confirming}
+                aria-label="Kurangi jumlah tamu"
               >
                 <Minus className="h-4 w-4" />
               </Button>
@@ -315,6 +316,7 @@ function SplitBillBody({
                 className="h-8 w-8 border-gray-200/80"
                 onClick={handleIncrease}
                 disabled={confirming}
+                aria-label="Tambah jumlah tamu"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -387,6 +389,7 @@ function SplitBillBody({
                                   −
                                 </button>
                                 <input
+                                  aria-label={`Jumlah ${item.name} untuk ${labels[splitIdx]?.trim() || guestLabel(splitIdx)}`}
                                   type="number"
                                   min={0}
                                   max={item.quantity}

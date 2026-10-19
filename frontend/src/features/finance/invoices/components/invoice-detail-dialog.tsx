@@ -285,6 +285,7 @@ export function InvoiceDetailDialog({
                       value={label}
                       onChange={(e) => setLabel(e.target.value)}
                       className="h-9 text-sm"
+                      aria-label="Label"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -303,6 +304,7 @@ export function InvoiceDetailDialog({
                         value={dueDate}
                         onChange={(e) => setDueDate(e.target.value)}
                         className="h-9 text-sm"
+                        aria-label="Jatuh tempo"
                       />
                     </div>
                   </div>
@@ -313,6 +315,7 @@ export function InvoiceDetailDialog({
                       onChange={(e) => setNote(e.target.value)}
                       rows={2}
                       className="text-sm"
+                      aria-label="Catatan"
                     />
                   </div>
                 </div>

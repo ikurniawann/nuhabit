@@ -200,6 +200,7 @@ export function ProductSalesReportPage() {
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">Tampilkan</span>
               <select
+                aria-label="Jumlah produk ditampilkan"
                 value={topN}
                 onChange={(e) => setTopN(Number(e.target.value))}
                 className="flex h-8 rounded-md border border-border bg-background px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-primary/30"

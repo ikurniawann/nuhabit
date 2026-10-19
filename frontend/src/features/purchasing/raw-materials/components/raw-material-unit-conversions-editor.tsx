@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
@@ -32,6 +33,7 @@ export function RawMaterialUnitConversionsEditor({
   conversions,
   onChange,
 }: RawMaterialUnitConversionsEditorProps) {
+  const id = useId();
   const baseUnit = units.find((unit) => unit.id === baseUnitId);
   const bigUnit = units.find((unit) => unit.id === bigUnitId);
   const selectableUnits = units.filter((unit) => unit.tipe === "BESAR" || unit.tipe === "KECIL" || unit.tipe === "KONVERSI");
@@ -103,8 +105,8 @@ export function RawMaterialUnitConversionsEditor({
               <div key={conversion.id || conversion.key || index} className="rounded-lg border border-gray-200/70 bg-white p-3">
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Satuan Alternatif</Label>
-                    <Combobox
+                    <Label htmlFor={`${id}-${index}-unit`} className="text-xs">Satuan Alternatif</Label>
+                    <Combobox id={`${id}-${index}-unit`}
                       options={options}
                       value={conversion.satuan_id}
                       onChange={(value) => updateConversion(index, { satuan_id: value })}
@@ -116,9 +118,9 @@ export function RawMaterialUnitConversionsEditor({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Jumlah dalam Satuan Dasar</Label>
+                    <Label htmlFor={`${id}-${index}-qty`} className="text-xs">Jumlah dalam Satuan Dasar</Label>
                     <div className="flex rounded-lg border border-gray-300 bg-white focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-100">
-                      <NumericInput
+                      <NumericInput id={`${id}-${index}-qty`}
                         value={conversion.qty_in_base_unit}
                         onValueChange={(value) => updateConversion(index, { qty_in_base_unit: value || 1 })}
                         decimalScale={4}
