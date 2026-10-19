@@ -149,8 +149,8 @@ function RecipientList({
 }
 
 /** Input angka kecil di bawah jenis notifikasi yang punya ambang. */
-function ThresholdInput({ ui, value, width, onChange }: { ui: Ui; value: string; width: string; onChange: (raw: string) => void }) {
-  return <input value={value} onChange={(e) => onChange(e.target.value)} inputMode="numeric" className={`${ui.input} ${width} rounded-lg px-2 py-1 text-xs`} />;
+function ThresholdInput({ ui, label, value, width, onChange }: { ui: Ui; label: string; value: string; width: string; onChange: (raw: string) => void }) {
+  return <input aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} inputMode="numeric" className={`${ui.input} ${width} rounded-lg px-2 py-1 text-xs`} />;
 }
 
 function WaNotifForm({ ui, initial }: { ui: Ui; initial: WaNotifSettings }) {
@@ -233,6 +233,7 @@ function WaNotifForm({ ui, initial }: { ui: Ui; initial: WaNotifSettings }) {
                         Ambang: Rp
                         <ThresholdInput
                           ui={ui}
+                          label="Ambang void besar (Rp)"
                           width="w-28"
                           value={config.voidThresholdRp.toLocaleString("id-ID")}
                           onChange={(raw) => setConfig({ ...config, voidThresholdRp: parseBoundedInt(raw, 0, Infinity, 0) })}
@@ -244,6 +245,7 @@ function WaNotifForm({ ui, initial }: { ui: Ui; initial: WaNotifSettings }) {
                         Anjlok bila MTD di bawah
                         <ThresholdInput
                           ui={ui}
+                          label="Ambang omzet anjlok (%)"
                           width="w-12"
                           value={String(config.omzetAnjlokPct)}
                           onChange={(raw) => setConfig({ ...config, omzetAnjlokPct: parseBoundedInt(raw, 1, 99, 80) })}
@@ -256,6 +258,7 @@ function WaNotifForm({ ui, initial }: { ui: Ui; initial: WaNotifSettings }) {
                         Jam kirim (WIB):
                         <ThresholdInput
                           ui={ui}
+                          label="Jam kirim ringkasan (WIB)"
                           width="w-14"
                           value={String(config.digestHour)}
                           onChange={(raw) => setConfig({ ...config, digestHour: parseBoundedInt(raw, 0, 23, 0) })}

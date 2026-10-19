@@ -135,16 +135,18 @@ function ProviderSection({ settings }: { settings: ShippingSettings }) {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs text-gray-500">Nama pengirim</label>
+            <label htmlFor="shipping-origin-name" className="mb-1 block text-xs text-gray-500">Nama pengirim</label>
             <Input
+              id="shipping-origin-name"
               defaultValue={settings.origin_contact_name ?? ''}
               placeholder="Toko BCD"
               onBlur={saveTextOnBlur('origin_contact_name', 'Nama pengirim tersimpan')}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-500">No. HP pengirim</label>
+            <label htmlFor="shipping-origin-phone" className="mb-1 block text-xs text-gray-500">No. HP pengirim</label>
             <Input
+              id="shipping-origin-phone"
               defaultValue={settings.origin_contact_phone ?? ''}
               placeholder="08xxxxxxxxxx"
               onBlur={saveTextOnBlur('origin_contact_phone', 'No. HP tersimpan')}
@@ -153,8 +155,9 @@ function ProviderSection({ settings }: { settings: ShippingSettings }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs text-gray-500">Alamat lengkap origin</label>
+          <label htmlFor="shipping-origin-address" className="mb-1 block text-xs text-gray-500">Alamat lengkap origin</label>
           <Input
+            id="shipping-origin-address"
             defaultValue={settings.origin_address ?? ''}
             placeholder="Jl. ... (alamat penjemputan paket)"
             onBlur={saveTextOnBlur('origin_address', 'Alamat origin tersimpan')}
@@ -162,7 +165,7 @@ function ProviderSection({ settings }: { settings: ShippingSettings }) {
         </div>
 
         <div>
-          <label className="mb-1 block text-xs text-gray-500">
+          <label htmlFor="shipping-origin-area" className="mb-1 block text-xs text-gray-500">
             Area origin ({isRajaOngkir ? 'kecamatan RajaOngkir' : 'area Biteship'})
           </label>
           {originId ? (
@@ -179,6 +182,7 @@ function ProviderSection({ settings }: { settings: ShippingSettings }) {
           <div className="relative max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
+              id="shipping-origin-area"
               value={originQuery}
               placeholder="Cari kecamatan/kota origin (min 3 huruf)..."
               className="pl-9"
@@ -212,8 +216,9 @@ function ProviderSection({ settings }: { settings: ShippingSettings }) {
         </div>
 
         <div className="max-w-xs">
-          <label className="mb-1 block text-xs text-gray-500">Markup ongkir (Rp, flat)</label>
+          <label htmlFor="shipping-markup" className="mb-1 block text-xs text-gray-500">Markup ongkir (Rp, flat)</label>
           <Input
+            id="shipping-markup"
             type="number"
             min={0}
             defaultValue={String(settings.markup_amount ?? 0)}

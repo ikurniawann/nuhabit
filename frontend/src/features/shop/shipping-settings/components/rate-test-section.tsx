@@ -41,8 +41,9 @@ export function RateTestSection() {
       <div className="space-y-4 px-5 py-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="relative sm:col-span-2">
-            <label className="mb-1 block text-xs text-gray-500">Area tujuan</label>
+            <label htmlFor="rate-test-destination" className="mb-1 block text-xs text-gray-500">Area tujuan</label>
             <Input
+              id="rate-test-destination"
               value={destination ? destination.label : query}
               placeholder="Cari kecamatan/kota tujuan..."
               onChange={(event) => {
@@ -53,8 +54,8 @@ export function RateTestSection() {
             <AreaSuggestions areas={areas} onSelect={setDestination} />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-gray-500">Berat (gram)</label>
-            <Input type="number" min={1} value={weight} onChange={(event) => setWeight(event.target.value)} />
+            <label htmlFor="rate-test-weight" className="mb-1 block text-xs text-gray-500">Berat (gram)</label>
+            <Input id="rate-test-weight" type="number" min={1} value={weight} onChange={(event) => setWeight(event.target.value)} />
           </div>
         </div>
         <Button type="button" onClick={runRateTest} disabled={rateTest.isPending} className="purchasing-main-button">

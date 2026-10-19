@@ -141,6 +141,7 @@ export function AccountingDashboardPage() {
               size="sm"
               disabled={isFetching}
               onClick={() => refetch()}
+              aria-label="Refresh"
               className="h-11 rounded-lg border-gray-200/80 px-3"
             >
               <ArrowPathIcon
