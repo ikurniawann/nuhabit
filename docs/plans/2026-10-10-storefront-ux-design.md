@@ -46,7 +46,8 @@ Approved on 2026-10-10. Base branch `feat/storefront-ux` (on top of
 
 ## Trust and polish
 
-- Product reviews from members with a paid order containing the product,
+- Product reviews from members with a received order (completed or picked
+  up) containing the product, one review per product,
   written from their order page, shown on the product sheet with average and
   count, moderated from the dashboard. New table `shop.product_reviews`.
 - Free-shipping progress bar in the cart (threshold in storefront settings).
