@@ -48,6 +48,56 @@ integration keys Next uses (Xendit, WhatsApp gateway, Meta, OpenAI, VAPID).
 At startup it logs one warning listing the integrations that stay off, as
 Next does, and exits when `DATABASE_URL` is not a `postgres://` URL.
 
+## Metrics
+
+Set `METRICS_ADDR` (in `ENV_FILE`, or `environment:` for compose) and the
+API serves Prometheus text-format metrics at `GET /metrics` on that address,
+a second listener next to `PORT`. The main port never serves `/metrics`, and
+the Next proxy forwards only API routes, so the public site cannot reach it.
+The metrics listener has no auth: access control is where it binds.
+
+- Docker script or compose: `METRICS_ADDR=:9090` and no `-p`/`ports:` for
+  it. A Prometheus container on the network `<CONTAINER_NAME>-net` (compose:
+  the compose network) scrapes `<CONTAINER_NAME>-api:9090`.
+- Prometheus on the host instead: publish it on loopback only,
+  `-p 127.0.0.1:9090:9090`, and scrape `127.0.0.1:9090`.
+- Unset (the default): no listener, no metrics.
+
+A taken or invalid address stops the API at startup.
+
+```yaml
+scrape_configs:
+  - job_name: nuhabit-api
+    static_configs:
+      - targets: ["arkiv-api:9090"]
+```
+
+| Metric | Type | Labels |
+|---|---|---|
+| `http_requests_total` | counter | `route`, `method`, `status` |
+| `http_request_duration_seconds` | histogram (5 ms to 30 s) | `route`, `method`, `status` |
+| `http_requests_in_flight` | gauge | none |
+| `pgxpool_acquired_conns`, `_idle_conns`, `_constructing_conns`, `_total_conns`, `_max_conns` | gauge | none |
+| `pgxpool_acquires_total`, `_empty_acquires_total`, `_canceled_acquires_total`, `_acquire_duration_seconds_total`, `_empty_acquire_wait_seconds_total`, `_new_conns_total`, `_max_lifetime_destroys_total`, `_max_idle_destroys_total` | counter | none |
+| `go_goroutines`, `go_memstats_heap_alloc_bytes`, `go_memstats_sys_bytes`, `go_gc_heap_goal_bytes`, `go_sched_gomaxprocs_threads` | gauge | none |
+| `go_gc_cycles_total` | counter | none |
+
+`route` is the ServeMux pattern without its method (`/api/crm/members/{id}`),
+or `unmatched` for 404 and 405 answers, so ids never become label values.
+`method` is the HTTP method, or `OTHER` for nonstandard ones. `status` is the
+class: `2xx`, `3xx`, `4xx`, `5xx`. Requests the auth gate rejects count under
+the route they asked for. SSE streams count once, when they end, with their
+full duration; leave `route="/api/desktop/stream"` out of latency alerts.
+
+Useful queries:
+
+```promql
+sum by (route) (rate(http_requests_total{status="5xx"}[5m]))
+histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m])))
+pgxpool_acquired_conns / pgxpool_max_conns
+rate(pgxpool_empty_acquire_wait_seconds_total[5m])
+```
+
 ## Member sign-in flags
 
 Two variables decide how members get into the member app:
