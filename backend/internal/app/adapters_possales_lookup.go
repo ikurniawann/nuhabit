@@ -6,6 +6,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits"
 	"nuhabit/backend/internal/modules/gymscheduling"
+	memberdomain "nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/modules/possales/lookup"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -20,11 +21,13 @@ func possalesLookupPorts(d module.Deps) lookup.Ports {
 	return lookup.Ports{Gym: posGymCheckIn{
 		now: d.Now,
 		ports: gymscheduling.Ports{
-			Credits:  credits,
-			Packages: credits,
-			Rules:    credits,
-			Members:  gymscheduling.MembersSQL{},
-			Notifier: gymscheduling.NotificationsSQL{},
+			Credits:       credits,
+			Packages:      credits,
+			Passes:        credits,
+			Rules:         credits,
+			Members:       gymscheduling.MembersSQL{},
+			Notifier:      gymscheduling.NotificationsSQL{},
+			WaiverVersion: memberdomain.WaiverVersion,
 		},
 	}}
 }

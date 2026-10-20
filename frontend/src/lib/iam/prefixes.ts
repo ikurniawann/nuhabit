@@ -113,6 +113,8 @@ export const IAM = {
   gymPt: ["gym.pt"],
   /** Gym → Asesmen Kebugaran (metrik tubuh dan benchmark HYROX member). */
   gymAssessments: ["gym.assessments"],
+  /** Gym → Perangkat Gate (turnstile per cabang, kunci perangkat). */
+  gymGateDevices: ["gym.gate-devices"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

@@ -11,6 +11,7 @@ import (
 // every method takes the Querier to run on (pool or transaction).
 type Repository interface {
 	ScheduleRepository
+	GateRepository
 
 	ListClassTypes(ctx context.Context, q Q) ([]*Row, error)
 	// InsertClassType returns "" when the name is taken (ON CONFLICT DO NOTHING).
@@ -60,9 +61,12 @@ type Repository interface {
 	PassStrikeTimes(ctx context.Context, q Q, customerID string) ([]time.Time, error)
 	// SessionsWithLapsedOffers lists sessions holding an offer that lapsed by now.
 	SessionsWithLapsedOffers(ctx context.Context, q Q, now time.Time) ([]string, error)
-	// CancelLapsedOffers cancels the session's offers that lapsed by now and
-	// returns the members they were made to.
-	CancelLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]string, error)
+	// LockLapsedOffers locks the session's offers that lapsed by now.
+	LockLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]BookingRow, error)
+	// RequeueOffer withdraws a lapsed offer and counts the lapse. The member
+	// keeps their waitlist position unless another entry holds it now; then
+	// they go to the end of the queue. It returns the position.
+	RequeueOffer(ctx context.Context, q Q, id string) (int, error)
 	InsertBooking(ctx context.Context, q Q, sessionID, customerID string, status domain.BookingStatus, position *int, source string) (string, error)
 	// BookingRef returns empty ids when the booking does not exist.
 	BookingRef(ctx context.Context, q Q, id string) (sessionID, customerID string, err error)
@@ -87,7 +91,9 @@ type Repository interface {
 	MemberBookings(ctx context.Context, q Q, customerID string, past bool) ([]*Row, error)
 
 	LastAllowedEntry(ctx context.Context, q Q, customerID string) (*time.Time, error)
-	LockCheckInCandidate(ctx context.Context, q Q, customerID string, branchID *string, now time.Time) (*Candidate, error)
+	// LockCheckInCandidate is the member's first confirmed booking at the
+	// branch whose class starts by now+early and ends at or after now-late.
+	LockCheckInCandidate(ctx context.Context, q Q, customerID string, branchID *string, now time.Time, early, late time.Duration) (*Candidate, error)
 	LogAccess(ctx context.Context, q Q, e AccessEntry) error
 	AccessLog(ctx context.Context, q Q) (log []*Row, today *Row, err error)
 
@@ -223,6 +229,9 @@ type BookingRow struct {
 	PromotionOfferedAt        *time.Time
 	PromotionExpiresAt        *time.Time
 	CreatedAt                 time.Time
+	// CorrectionSeq counts undone check-ins and no-shows (see domain.ChargeKey);
+	// OfferLapses the waitlist offers that lapsed unanswered.
+	CorrectionSeq, OfferLapses int
 }
 
 func (b BookingRow) waitlistEntry() domain.WaitlistEntry {
@@ -242,18 +251,18 @@ type BookingListFilter struct {
 // Candidate is the confirmed booking the gate may check in now.
 type Candidate struct {
 	ID, SessionID, ClassTypeID string
-	CreditCost                 int
+	CreditCost, CorrectionSeq  int
 	StartsAt                   time.Time
 	ClassName                  string
 }
 
 // AccessEntry is one gym.access_logs row.
 type AccessEntry struct {
-	CustomerID, BookingID, BranchID *string
-	Decision                        domain.Decision
-	Reason                          *string
-	EntryKind                       *string
-	CreditsDeducted                 int
-	Source                          string
-	ScannedBy                       *string
+	CustomerID, BookingID, BranchID, DeviceID *string
+	Decision                                  domain.Decision
+	Reason                                    *string
+	EntryKind                                 *string
+	CreditsDeducted                           int
+	Source                                    string
+	ScannedBy                                 *string
 }

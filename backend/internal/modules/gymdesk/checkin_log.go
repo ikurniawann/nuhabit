@@ -27,6 +27,7 @@ type LogEntry struct {
 	ClassTypeName *string    `json:"class_type_name"`
 	StartsAt      *time.Time `json:"starts_at"`
 	StaffName     *string    `json:"staff_name"`
+	DeviceName    *string    `json:"device_name"`
 }
 
 // LogFilter is the check-in log query.
@@ -68,13 +69,14 @@ func (s *Service) CheckinLog(ctx context.Context, f LogFilter) (*LogPage, error)
 func (s *Service) logRows(ctx context.Context, f LogFilter, limit, offset int) ([]LogEntry, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT l.id::text, l.customer_id::text, l.decision, l.reason, l.entry_kind, l.credit_delta, l.source, l.created_at,
-		       c.name, c.phone, t.name, s.starts_at, u.full_name
+		       c.name, c.phone, t.name, s.starts_at, u.full_name, d.name
 		  FROM gym.access_logs l
 		  LEFT JOIN pos.pos_customers c ON c.id = l.customer_id
 		  LEFT JOIN gym.bookings b ON b.id = l.booking_id
 		  LEFT JOIN gym.class_sessions s ON s.id = b.session_id
 		  LEFT JOIN gym.class_types t ON t.id = s.class_type_id
-		  LEFT JOIN configuration.users u ON u.id = l.scanned_by`+logWhere+`
+		  LEFT JOIN configuration.users u ON u.id = l.scanned_by
+		  LEFT JOIN gym.gate_devices d ON d.id = l.device_id`+logWhere+`
 		 ORDER BY l.created_at DESC, l.id
 		 LIMIT $4 OFFSET $5`, f.Period.From, f.Period.To, f.Decision, limit, offset)
 	if err != nil {
@@ -85,14 +87,14 @@ func (s *Service) logRows(ctx context.Context, f LogFilter, limit, offset int) (
 
 var (
 	decisionLabel = map[string]string{"allowed": "Diterima", "denied": "Ditolak"}
-	sourceLabel   = map[string]string{"gate": "Gate", "pos": "Kasir", "manual": "Front desk"}
+	sourceLabel   = map[string]string{"gate": "Gate", "pos": "Kasir", "manual": "Front desk", "device": "Perangkat gate"}
 	// reasonLabel is GATE_DENIAL_LABEL in frontend/src/lib/gym/booking.ts, shortened.
 	reasonLabel = map[string]string{
 		"token_invalid": "QR tidak dikenal", "token_expired": "QR kedaluwarsa", "token_consumed": "QR sudah dipakai",
 		"member_not_active": "Keanggotaan tidak aktif", "anti_passback": "Baru saja masuk", "no_booking": "Tidak ada booking kelas",
-		"insufficient_credits": "Kredit tidak cukup",
+		"insufficient_credits": "Kredit tidak cukup", "waiver_required": "Belum waiver", "open_gym_closed": "Di luar jam open gym",
 	}
-	kindLabel = map[string]string{"booking": "Check-in kelas", "re_entry": "Masuk ulang"}
+	kindLabel = map[string]string{"booking": "Check-in kelas", "re_entry": "Masuk ulang", "open_gym": "Open gym"}
 )
 
 func label(m map[string]string, v *string) string {
@@ -127,7 +129,7 @@ func (s *Service) CheckinCSV(ctx context.Context, f LogFilter) ([]byte, error) {
 	}
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
-	_ = out.Write([]string{"Waktu (WIB)", "Member", "Telepon", "Hasil", "Keterangan", "Kelas", "Jadwal kelas", "Kredit", "Sumber", "Staf"})
+	_ = out.Write([]string{"Waktu (WIB)", "Member", "Telepon", "Hasil", "Keterangan", "Kelas", "Jadwal kelas", "Kredit", "Sumber", "Staf", "Perangkat"})
 	for _, r := range rows {
 		note := label(kindLabel, r.EntryKind)
 		if r.Decision == "denied" {
@@ -135,7 +137,7 @@ func (s *Service) CheckinCSV(ctx context.Context, f LogFilter) ([]byte, error) {
 		}
 		_ = out.Write([]string{
 			wibTime(&r.CreatedAt), text(r.MemberName), text(r.MemberPhone), label(decisionLabel, &r.Decision), note,
-			text(r.ClassTypeName), wibTime(r.StartsAt), strconv.Itoa(-r.CreditDelta), label(sourceLabel, &r.Source), text(r.StaffName),
+			text(r.ClassTypeName), wibTime(r.StartsAt), strconv.Itoa(-r.CreditDelta), label(sourceLabel, &r.Source), text(r.StaffName), text(r.DeviceName),
 		})
 	}
 	out.Flush()

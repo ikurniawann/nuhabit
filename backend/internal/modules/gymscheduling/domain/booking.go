@@ -47,6 +47,19 @@ type Rules struct {
 	ClassReminderMinutes int
 	// ScheduleHorizonDays is how far ahead templates generate sessions.
 	ScheduleHorizonDays int
+	// RequireWaiver: booking and gate entry need the current waiver.
+	RequireWaiver bool
+	// The gate admits a booking from CheckinOpensMinBefore before the start
+	// until CheckinClosesMinAfter after the end (minutes).
+	CheckinOpensMinBefore int
+	CheckinClosesMinAfter int
+	// OpenGymEnabled admits members without a booking in open gym hours;
+	// OpenGymCreditCost is charged once per WIB day (0 = free).
+	OpenGymEnabled    bool
+	OpenGymCreditCost int
+	// CorrectionWindowDays: how long after the class staff may undo a
+	// check-in or no-show.
+	CorrectionWindowDays int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────
@@ -128,6 +141,7 @@ type BookingDenialReason string
 
 const (
 	DenyMemberNotActive     BookingDenialReason = "member_not_active"
+	DenyWaiverRequired      BookingDenialReason = "waiver_required"
 	DenySessionNotBookable  BookingDenialReason = "session_not_bookable"
 	DenyBookingNotOpenYet   BookingDenialReason = "booking_not_open_yet"
 	DenyBookingWindowClosed BookingDenialReason = "booking_window_closed"
@@ -144,6 +158,7 @@ const (
 
 var BookingDenialLabel = map[BookingDenialReason]string{
 	DenyMemberNotActive:     "Keanggotaan ini belum bisa booking kelas",
+	DenyWaiverRequired:      "Waiver belum disetujui. Setujui waiver digital terlebih dulu untuk booking kelas",
 	DenySessionNotBookable:  "Kelas ini tidak dibuka untuk booking",
 	DenyBookingNotOpenYet:   "Booking kelas ini belum dibuka",
 	DenyBookingWindowClosed: "Booking kelas ini sudah ditutup",
@@ -187,8 +202,10 @@ type BookableSession struct {
 // EligibilityInput collects the facts eligibility is decided on.
 type EligibilityInput struct {
 	MemberActive bool
-	Session      BookableSession
-	Balance      int
+	// WaiverMissing: the rules require a waiver the member has not accepted.
+	WaiverMissing bool
+	Session       BookableSession
+	Balance       int
 	// Reserved is the credit cost of the member's other confirmed bookings
 	// for classes not started yet and not covered by a pass. Those credits
 	// are spoken for, so only Balance - Reserved is available.
@@ -247,13 +264,15 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 
 // EvaluateMemberEligibility is what a member must meet to hold a seat,
 // checked at booking and again before a waitlist promotion or an accepted
-// offer: active, not suspended, under the booking caps, then enough
-// available credits and a package covering the class (a pass waives both).
-// It returns "" when the member qualifies.
+// offer: active, waiver accepted, not suspended, under the booking caps, then
+// enough available credits and a package covering the class (a pass waives
+// both). It returns "" when the member qualifies.
 func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
 	switch {
 	case !in.MemberActive:
 		return DenyMemberNotActive
+	case in.WaiverMissing:
+		return DenyWaiverRequired
 	case in.SuspendedUntil != nil && in.Now.Before(*in.SuspendedUntil):
 		return DenyPassSuspended
 	case in.MaxConcurrent > 0 && in.UpcomingConfirmed >= in.MaxConcurrent:

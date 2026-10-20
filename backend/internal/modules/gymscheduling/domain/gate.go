@@ -6,15 +6,56 @@ import (
 	"time"
 )
 
-// The gate admits a member for a class from 45 minutes before it starts until
-// 15 minutes after it ends.
-const (
-	CheckInEarlyMin = 45
-	CheckInLateMin  = 15
-)
+// CheckInWindow is how far before a class starts (early) and after it ends
+// (late) the gate admits its bookings, from checkinOpensMinBefore and
+// checkinClosesMinAfter.
+func CheckInWindow(rules Rules) (early, late time.Duration) {
+	return time.Duration(rules.CheckinOpensMinBefore) * time.Minute, time.Duration(rules.CheckinClosesMinAfter) * time.Minute
+}
 
-func IsWithinCheckInWindow(startsAt, endsAt, now time.Time) bool {
-	return !now.Before(startsAt.Add(-CheckInEarlyMin*time.Minute)) && !now.After(endsAt.Add(CheckInLateMin*time.Minute))
+func IsWithinCheckInWindow(startsAt, endsAt, now time.Time, rules Rules) bool {
+	early, late := CheckInWindow(rules)
+	return !now.Before(startsAt.Add(-early)) && !now.After(endsAt.Add(late))
+}
+
+// WaiverMissing: the rules ask for a waiver and the member has not accepted
+// one, or accepted a version other than current. An empty current version
+// accepts any version.
+func WaiverMissing(rules Rules, acceptedVersion *string, acceptedAt *time.Time, current string) bool {
+	if !rules.RequireWaiver {
+		return false
+	}
+	if acceptedAt == nil || acceptedVersion == nil {
+		return true
+	}
+	return current != "" && *acceptedVersion != current
+}
+
+// OpenHours is one weekday's open gym window, in minutes after midnight WIB.
+// Weekday is ISO: 1 = Monday … 7 = Sunday.
+type OpenHours struct {
+	Weekday       int
+	Opens, Closes int
+}
+
+// IsOpenGymTime: a branch with no hours set is open all day; otherwise now
+// (WIB) must fall inside that weekday's window [Opens, Closes).
+func IsOpenGymTime(hours []OpenHours, now time.Time) bool {
+	if len(hours) == 0 {
+		return true
+	}
+	w := now.In(WIB)
+	weekday := int(w.Weekday())
+	if weekday == 0 {
+		weekday = 7
+	}
+	minute := w.Hour()*60 + w.Minute()
+	for _, h := range hours {
+		if h.Weekday == weekday && minute >= h.Opens && minute < h.Closes {
+			return true
+		}
+	}
+	return false
 }
 
 // QrTokenProblem is why a scanned QR token cannot be used.
@@ -54,8 +95,10 @@ const (
 	GateTokenExpired        GateDenialReason = "token_expired"
 	GateTokenConsumed       GateDenialReason = "token_consumed"
 	GateMemberNotActive     GateDenialReason = "member_not_active"
+	GateWaiverRequired      GateDenialReason = "waiver_required"
 	GateAntiPassback        GateDenialReason = "anti_passback"
 	GateNoBooking           GateDenialReason = "no_booking"
+	GateOpenGymClosed       GateDenialReason = "open_gym_closed"
 	GateInsufficientCredits GateDenialReason = "insufficient_credits"
 )
 
@@ -64,8 +107,10 @@ var GateDenialLabel = map[GateDenialReason]string{
 	GateTokenExpired:        "QR kedaluwarsa, minta member membuka ulang kartunya",
 	GateTokenConsumed:       "QR sudah dipakai",
 	GateMemberNotActive:     "Keanggotaan tidak aktif",
+	GateWaiverRequired:      "Waiver belum disetujui, minta member menyetujui waiver dulu",
 	GateAntiPassback:        "Baru saja masuk, tunggu sebelum scan lagi",
 	GateNoBooking:           "Tidak ada booking kelas",
+	GateOpenGymClosed:       "Di luar jam open gym",
 	GateInsufficientCredits: "Kredit tidak cukup untuk kelas ini",
 }
 
@@ -80,6 +125,7 @@ type GateEntryKind string
 const (
 	EntryBooking GateEntryKind = "booking"
 	EntryReEntry GateEntryKind = "re_entry"
+	EntryOpenGym GateEntryKind = "open_gym"
 )
 
 type Decision string
@@ -95,6 +141,8 @@ const (
 	EffectConsumeToken  EffectKind = "consume_token"
 	EffectDeductCredits EffectKind = "deduct_credits"
 	EffectCheckIn       EffectKind = "check_in_booking"
+	// EffectChargeOpenGym takes the day's open gym fee.
+	EffectChargeOpenGym EffectKind = "charge_open_gym"
 )
 
 // GateEffect is one side effect the server applies, in order, inside the
@@ -120,21 +168,34 @@ type GateCandidate struct {
 	HasPass bool
 }
 
+// OpenGymVisit is what open gym entry is decided on, when the rules enable it.
+type OpenGymVisit struct {
+	// Open: now is inside the branch's open gym hours.
+	Open bool
+	// HasPass: a pass covers today, so entry is free.
+	HasPass bool
+	// PaidToday: the member already entered open gym this WIB day.
+	PaidToday bool
+}
+
 type GateScanInput struct {
 	// TokenProblem is empty when the caller already validated the token.
 	TokenProblem       QrTokenProblem
 	MemberActive       bool
+	WaiverMissing      bool
 	LastAllowedEntryAt *time.Time
 	Candidate          *GateCandidate
-	Balance            int
-	Rules              Rules
-	Now                time.Time
+	// OpenGym is set when no booking is around now and the rules enable open gym.
+	OpenGym *OpenGymVisit
+	Balance int
+	Rules   Rules
+	Now     time.Time
 }
 
-// EvaluateGateScan runs the gate pipeline: QR, membership, re-entry and
-// anti-passback, booking, credits. It returns the decision plus the effects
-// to apply in one transaction, so the gate never opens without its deduction.
-// There is no open gym: without a class booking around now, entry is denied.
+// EvaluateGateScan runs the gate pipeline: QR, membership, waiver, re-entry
+// and anti-passback, booking or open gym, credits. It returns the decision
+// plus the effects to apply in one transaction, so the gate never opens
+// without its deduction.
 func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 	denied := func(reason GateDenialReason, effects ...GateEffect) GateScanEvaluation {
 		return GateScanEvaluation{Decision: Denied, Reason: reason, Effects: effects}
@@ -146,9 +207,12 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 	}
 	consume := GateEffect{Kind: EffectConsumeToken}
 
-	// 2. Active membership?
+	// 2. Active membership and an accepted waiver?
 	if !in.MemberActive {
 		return denied(GateMemberNotActive, consume)
+	}
+	if in.WaiverMissing {
+		return denied(GateWaiverRequired, consume)
 	}
 
 	// 3. Free re-entry within the grace period, then anti-passback. A booking
@@ -164,9 +228,12 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 		}
 	}
 
-	// 4. A class booking around now is required.
+	// 4. A class booking around now, else open gym when the branch has it.
 	if in.Candidate == nil {
-		return denied(GateNoBooking, consume)
+		if in.OpenGym == nil {
+			return denied(GateNoBooking, consume)
+		}
+		return evaluateOpenGym(*in.OpenGym, in.Balance, in.Rules.OpenGymCreditCost, consume)
 	}
 
 	// 5. A pass covers the class, or the balance does.
@@ -190,6 +257,24 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 			{Kind: EffectCheckIn, BookingID: in.Candidate.BookingID},
 		},
 	}
+}
+
+// evaluateOpenGym admits an open gym visit inside the open hours. Pass
+// holders, a free open gym and a second visit the same day cost nothing;
+// otherwise the day's fee is charged.
+func evaluateOpenGym(v OpenGymVisit, balance, cost int, consume GateEffect) GateScanEvaluation {
+	if !v.Open {
+		return GateScanEvaluation{Decision: Denied, Reason: GateOpenGymClosed, Effects: []GateEffect{consume}}
+	}
+	allowed := GateScanEvaluation{Decision: Allowed, EntryKind: EntryOpenGym, Effects: []GateEffect{consume}}
+	if v.HasPass || v.PaidToday || cost <= 0 {
+		return allowed
+	}
+	if balance < cost {
+		return GateScanEvaluation{Decision: Denied, Reason: GateInsufficientCredits, Effects: []GateEffect{consume}}
+	}
+	allowed.Effects = append(allowed.Effects, GateEffect{Kind: EffectChargeOpenGym, Amount: cost})
+	return allowed
 }
 
 // GateDetail feeds DescribeGateDecision. Zero Credits and nil BalanceAfter
@@ -218,14 +303,36 @@ func DescribeGateDecision(decision Decision, reason GateDenialReason, entryKind 
 		className = "kelas"
 	}
 	parts := []string{"Check-in " + className}
+	if entryKind == EntryOpenGym {
+		parts = []string{"Open gym"}
+	}
 	if d.Pass {
 		return strings.Join(append(parts, "pass aktif, tanpa potong kredit"), " · ")
 	}
 	if d.Credits != 0 {
 		parts = append(parts, strconv.Itoa(d.Credits)+" kredit dipotong")
+	} else if entryKind == EntryOpenGym {
+		parts = append(parts, "tanpa potong kredit")
 	}
 	if d.BalanceAfter != nil {
 		parts = append(parts, "sisa "+strconv.Itoa(*d.BalanceAfter)+" kredit")
 	}
 	return strings.Join(parts, " · ")
+}
+
+// DeviceDisplay is the short text a gate device shows: a greeting with the
+// member's first name, or the denial label.
+func DeviceDisplay(decision Decision, reason GateDenialReason, memberName *string) string {
+	if decision == Denied {
+		if reason == "" {
+			reason = GateNoBooking
+		}
+		return "Ditolak: " + GateDenialLabel[reason]
+	}
+	if memberName != nil {
+		if first, _, _ := strings.Cut(strings.TrimSpace(*memberName), " "); first != "" {
+			return "Silakan masuk, " + first
+		}
+	}
+	return "Silakan masuk"
 }

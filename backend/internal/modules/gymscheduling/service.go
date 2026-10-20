@@ -92,6 +92,9 @@ type Passes interface {
 type Member struct {
 	Name     *string
 	IsActive *bool
+	// WaiverVersion and WaiverAcceptedAt are the waiver the member accepted.
+	WaiverVersion    *string
+	WaiverAcceptedAt *time.Time
 }
 
 // Active treats a NULL is_active as active, like `is_active !== false`.
@@ -152,6 +155,18 @@ type Ports struct {
 	Members  Members
 	Qr       QrTokens
 	Notifier Notifier
+	// WaiverVersion is the waiver text members accept today; "" accepts
+	// any version on record.
+	WaiverVersion string
+}
+
+// waiverMissing: the branch rules need a waiver this member has not
+// accepted in its current version.
+func (s *Service) waiverMissing(rules domain.Rules, m *Member) bool {
+	if m == nil {
+		return false
+	}
+	return domain.WaiverMissing(rules, m.WaiverVersion, m.WaiverAcceptedAt, s.WaiverVersion)
 }
 
 // Service implements the scheduling use cases.

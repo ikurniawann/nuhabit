@@ -7,7 +7,9 @@
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    message: string
+    message: string,
+    /** Kode kegagalan yang bisa ditindaklanjuti layar, mis. "waiver_required". */
+    readonly code?: string
   ) {
     super(message);
     this.name = "ApiError";
@@ -22,9 +24,9 @@ export async function memberApi<T>(path: string, init?: RequestInit & { json?: u
     headers: json === undefined ? headers : { "Content-Type": "application/json", ...headers },
     body: json === undefined ? rest.body : JSON.stringify(json),
   });
-  const payload = (await res.json().catch(() => null)) as { success?: boolean; data?: T; error?: string } | null;
+  const payload = (await res.json().catch(() => null)) as { success?: boolean; data?: T; error?: string; code?: string } | null;
   if (!res.ok || payload?.success === false) {
-    throw new ApiError(res.status, payload?.error ?? `Permintaan gagal (${res.status})`);
+    throw new ApiError(res.status, payload?.error ?? `Permintaan gagal (${res.status})`, payload?.code);
   }
   return payload?.data as T;
 }

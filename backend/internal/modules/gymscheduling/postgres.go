@@ -364,12 +364,32 @@ func (Postgres) SessionsWithLapsedOffers(ctx context.Context, q Q, now time.Time
       WHERE status = 'waitlist' AND promotion_expires_at <= $1`, now))
 }
 
-func (Postgres) CancelLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]string, error) {
-	return collectStrings(q.Query(ctx, `UPDATE gym.bookings
-        SET status = 'cancelled', waitlist_position = NULL, promotion_offered_at = NULL, promotion_expires_at = NULL,
-            cancelled_at = $2, updated_at = now()
+func (Postgres) LockLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]BookingRow, error) {
+	rows, err := q.Query(ctx, `SELECT `+bookingColumns+` FROM gym.bookings
       WHERE session_id = $1 AND status = 'waitlist' AND promotion_expires_at <= $2
-      RETURNING customer_id::text`, sessionID, now))
+      ORDER BY waitlist_position NULLS LAST, created_at
+      FOR UPDATE`, sessionID, now)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, scanBooking)
+}
+
+func (Postgres) RequeueOffer(ctx context.Context, q Q, id string) (int, error) {
+	var position int
+	err := q.QueryRow(ctx, `UPDATE gym.bookings b
+        SET promotion_offered_at = NULL, promotion_expires_at = NULL, offer_lapses = b.offer_lapses + 1, updated_at = now(),
+            waitlist_position = CASE
+              WHEN b.waitlist_position IS NOT NULL AND NOT EXISTS (
+                     SELECT 1 FROM gym.bookings o WHERE o.session_id = b.session_id AND o.id <> b.id
+                        AND o.status = 'waitlist' AND o.waitlist_position = b.waitlist_position)
+              THEN b.waitlist_position
+              ELSE (SELECT COALESCE(max(o.waitlist_position), 0) + 1 FROM gym.bookings o
+                     WHERE o.session_id = b.session_id AND o.id <> b.id AND o.status = 'waitlist')
+            END
+      WHERE b.id = $1
+      RETURNING b.waitlist_position`, id).Scan(&position)
+	return position, err
 }
 
 func (Postgres) InsertBooking(ctx context.Context, q Q, sessionID, customerID string, status domain.BookingStatus, position *int, source string) (string, error) {
@@ -385,11 +405,13 @@ func (Postgres) BookingRef(ctx context.Context, q Q, id string) (sessionID, cust
 	return sessionID, customerID, err
 }
 
-const bookingColumns = `id, session_id, customer_id, status, waitlist_position, promotion_offered_at, promotion_expires_at, created_at`
+const bookingColumns = `id, session_id, customer_id, status, waitlist_position, promotion_offered_at, promotion_expires_at, created_at,
+       correction_seq, offer_lapses`
 
 func scanBooking(r pgx.CollectableRow) (BookingRow, error) {
 	var b BookingRow
-	err := r.Scan(&b.ID, &b.SessionID, &b.CustomerID, &b.Status, &b.WaitlistPosition, &b.PromotionOfferedAt, &b.PromotionExpiresAt, &b.CreatedAt)
+	err := r.Scan(&b.ID, &b.SessionID, &b.CustomerID, &b.Status, &b.WaitlistPosition, &b.PromotionOfferedAt, &b.PromotionExpiresAt, &b.CreatedAt,
+		&b.CorrectionSeq, &b.OfferLapses)
 	return b, err
 }
 
@@ -548,21 +570,21 @@ func (Postgres) LastAllowedEntry(ctx context.Context, q Q, customerID string) (*
 	return at, err
 }
 
-func (Postgres) LockCheckInCandidate(ctx context.Context, q Q, customerID string, branchID *string, now time.Time) (*Candidate, error) {
+func (Postgres) LockCheckInCandidate(ctx context.Context, q Q, customerID string, branchID *string, now time.Time, early, late time.Duration) (*Candidate, error) {
 	var c Candidate
-	err := q.QueryRow(ctx, `SELECT b.id, b.session_id, s.class_type_id, s.credit_cost, s.starts_at, t.name AS class_name
+	err := q.QueryRow(ctx, `SELECT b.id, b.session_id, s.class_type_id, s.credit_cost, s.starts_at, t.name AS class_name, b.correction_seq
        FROM gym.bookings b
        JOIN gym.class_sessions s ON s.id = b.session_id
        JOIN gym.class_types t ON t.id = s.class_type_id
       WHERE b.customer_id = $1 AND b.status = 'confirmed'
         AND s.status IN ('published', 'full')
         AND ($2::uuid IS NULL OR s.branch_id IS NULL OR s.branch_id = $2)
-        AND s.starts_at <= $3::timestamptz + make_interval(mins => $4)
-        AND s.ends_at >= $3::timestamptz - make_interval(mins => $5)
+        AND s.starts_at <= $3::timestamptz
+        AND s.ends_at >= $4::timestamptz
       ORDER BY s.starts_at
       LIMIT 1
-      FOR UPDATE OF b`, customerID, branchID, now, domain.CheckInEarlyMin, domain.CheckInLateMin).
-		Scan(&c.ID, &c.SessionID, &c.ClassTypeID, &c.CreditCost, &c.StartsAt, &c.ClassName)
+      FOR UPDATE OF b`, customerID, branchID, now.Add(early), now.Add(-late)).
+		Scan(&c.ID, &c.SessionID, &c.ClassTypeID, &c.CreditCost, &c.StartsAt, &c.ClassName, &c.CorrectionSeq)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -570,27 +592,29 @@ func (Postgres) LockCheckInCandidate(ctx context.Context, q Q, customerID string
 }
 
 func (Postgres) LogAccess(ctx context.Context, q Q, e AccessEntry) error {
-	_, err := q.Exec(ctx, `INSERT INTO gym.access_logs (customer_id, booking_id, branch_id, decision, reason, entry_kind, credit_delta, source, scanned_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-		e.CustomerID, e.BookingID, e.BranchID, e.Decision, e.Reason, e.EntryKind, -e.CreditsDeducted, e.Source, e.ScannedBy)
+	_, err := q.Exec(ctx, `INSERT INTO gym.access_logs (customer_id, booking_id, branch_id, decision, reason, entry_kind, credit_delta, source, scanned_by, device_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		e.CustomerID, e.BookingID, e.BranchID, e.Decision, e.Reason, e.EntryKind, -e.CreditsDeducted, e.Source, e.ScannedBy, e.DeviceID)
 	return err
 }
 
 func (Postgres) AccessLog(ctx context.Context, q Q) ([]*Row, *Row, error) {
 	log, err := queryRows(ctx, q, `SELECT l.id, l.decision, l.reason, l.entry_kind, l.credit_delta, l.source, l.created_at,
               c.name AS member_name, c.phone AS member_phone, t.name AS class_type_name, s.starts_at,
-              u.full_name AS staff_name
+              u.full_name AS staff_name, d.name AS device_name
          FROM gym.access_logs l
          LEFT JOIN pos.pos_customers c ON c.id = l.customer_id
          LEFT JOIN gym.bookings b ON b.id = l.booking_id
          LEFT JOIN gym.class_sessions s ON s.id = b.session_id
          LEFT JOIN gym.class_types t ON t.id = s.class_type_id
          LEFT JOIN configuration.users u ON u.id = l.scanned_by
+         LEFT JOIN gym.gate_devices d ON d.id = l.device_id
         ORDER BY l.created_at DESC LIMIT 100`)
 	if err != nil {
 		return nil, nil, err
 	}
 	today, err := queryRow(ctx, q, `SELECT count(*) FILTER (WHERE decision = 'allowed' AND entry_kind = 'booking')::int AS checked_in,
+              count(*) FILTER (WHERE decision = 'allowed' AND entry_kind = 'open_gym')::int AS open_gym,
               count(*) FILTER (WHERE decision = 'denied')::int AS denied,
               COALESCE(-sum(credit_delta), 0)::int AS credits
          FROM gym.access_logs

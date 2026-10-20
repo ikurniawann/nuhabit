@@ -39,8 +39,33 @@ describe("GYM_RULE_DEFAULTS", () => {
       renewalRetryCount: 2,
       renewalRetryHours: 24,
       renewalGraceDays: 3,
+      requireWaiver: true,
+      checkinOpensMinBefore: 45,
+      checkinClosesMinAfter: 15,
+      openGymEnabled: false,
+      openGymCreditCost: 1,
+      correctionWindowDays: 7,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(27);
+    expect(GYM_RULE_KEYS).toHaveLength(33);
+  });
+});
+
+describe("gate rules", () => {
+  it("validates the waiver, check-in window, open gym and correction keys", () => {
+    expect(validateGymRulesPatch({ requireWaiver: "ya" })).toEqual({
+      ok: false,
+      error: "requireWaiver: Wajib waiver harus ya/tidak",
+    });
+    expect(validateGymRulesPatch({ openGymCreditCost: 21 })).toEqual({
+      ok: false,
+      error: "openGymCreditCost: Kredit open gym maksimal 20",
+    });
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, checkinClosesMinAfter: 1441 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, correctionWindowDays: 91 }).ok).toBe(false);
+    expect(validateGymRulesPatch({ openGymEnabled: true, openGymCreditCost: 0, requireWaiver: false })).toEqual({
+      ok: true,
+      rules: { openGymEnabled: true, openGymCreditCost: 0, requireWaiver: false },
+    });
   });
 });
 

@@ -169,13 +169,15 @@ func TestWaitlistOfferHoldsSeatAndLapses(t *testing.T) {
 		t.Fatalf("an open offer fills the session, got %s", got)
 	}
 
-	// The sweep lapses B's offer and offers the seat to C.
+	// The sweep lapses B's offer, offers the seat to C and puts B back in
+	// the queue at their old position.
 	svc := f.service(NotificationsSQL{})
 	if err := svc.SweepWaitlistOffers(f.ctx, time.Now().Add(31*time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if f.bookingStatus(bookingB) != "cancelled" {
-		t.Fatalf("B after the sweep: %s", f.bookingStatus(bookingB))
+	if got := f.scalar(`SELECT status || ':' || waitlist_position || ':' || offer_lapses || ':' || (promotion_offered_at IS NULL)::text
+		FROM gym.bookings WHERE id = $1`, bookingB); got != "waitlist:1:1:true" {
+		t.Fatalf("B after the sweep: %s", got)
 	}
 	if n := f.scalar(`SELECT count(*)::text FROM crm.member_notifications WHERE customer_id = $1 AND type = 'gym_waitlist_offer_expired'`, b); n != "1" {
 		t.Fatalf("lapse notifications = %s", n)

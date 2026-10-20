@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarCheck, Coins, ExternalLink, Pencil, Ticket, UserX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { METHOD_LABELS, type CreditPurchase } from "@/features/gym/credits/api";
-import { BOOKING_BADGE } from "@/features/gym/scheduling/api";
+import { BOOKING_BADGE, entryLabel } from "@/features/gym/scheduling/api";
+import { WaiverDeskForm } from "@/features/gym/scheduling/components/waiver-desk-form";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MEMBER_KEYS, membersApi, type Member360, type MemberBooking } from "../api";
@@ -181,6 +182,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function ProfileTab({ member }: { member: Member360 }) {
+  const queryClient = useQueryClient();
   const p = member.profile;
   const c = p.emergency_contact;
   const w = p.waiver;
@@ -203,6 +205,14 @@ function ProfileTab({ member }: { member: Member360 }) {
             <Badge variant="warning">Versi lama {w.version}, perlu setuju versi {w.current_version}</Badge>
           ) : (
             <Badge variant="destructive">Belum disetujui</Badge>
+          )}
+          {!w.current && (
+            <div className="mt-2 font-normal">
+              <WaiverDeskForm
+                customerId={member.profile.id}
+                onRecorded={() => void queryClient.invalidateQueries({ queryKey: MEMBER_KEYS.detail(member.profile.id) })}
+              />
+            </div>
           )}
         </Row>
         <Row label="Tier">{p.membership_tier ?? "-"}</Row>
@@ -350,7 +360,7 @@ function CheckinTable({ member }: { member: Member360 }) {
                 <TableCell className="whitespace-normal">
                   {v.decision === "allowed" ? (
                     <Badge variant="success">
-                      {v.entry_kind === "re_entry" ? "Masuk ulang" : `Check-in · ${-v.credit_delta} kredit`}
+                      {entryLabel(v.entry_kind, v.credit_delta)}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">{v.reason ? GATE_DENIAL_LABEL[v.reason] : "Ditolak"}</Badge>

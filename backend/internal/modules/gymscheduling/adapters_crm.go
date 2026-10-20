@@ -24,7 +24,8 @@ var _ Members = MembersSQL{}
 
 func (MembersSQL) Get(ctx context.Context, q database.Querier, id string) (*Member, error) {
 	var m Member
-	err := q.QueryRow(ctx, `SELECT name, is_active FROM pos.pos_customers WHERE id = $1`, id).Scan(&m.Name, &m.IsActive)
+	err := q.QueryRow(ctx, `SELECT name, is_active, waiver_version, waiver_accepted_at FROM pos.pos_customers WHERE id = $1`, id).
+		Scan(&m.Name, &m.IsActive, &m.WaiverVersion, &m.WaiverAcceptedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

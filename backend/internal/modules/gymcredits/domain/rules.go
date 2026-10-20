@@ -58,6 +58,20 @@ type Rules struct {
 	RenewalRetryCount int `json:"renewalRetryCount"`
 	RenewalRetryHours int `json:"renewalRetryHours"`
 	RenewalGraceDays  int `json:"renewalGraceDays"`
+	// RequireWaiver: booking and gate entry need the current waiver accepted.
+	RequireWaiver bool `json:"requireWaiver"`
+	// The gate admits a class booking from CheckinOpensMinBefore minutes
+	// before the start until CheckinClosesMinAfter minutes after the end.
+	CheckinOpensMinBefore int `json:"checkinOpensMinBefore"`
+	CheckinClosesMinAfter int `json:"checkinClosesMinAfter"`
+	// OpenGymEnabled admits members without a class booking during the
+	// branch's open gym hours; OpenGymCreditCost is charged once per WIB day
+	// (0 = free, pass holders never pay).
+	OpenGymEnabled    bool `json:"openGymEnabled"`
+	OpenGymCreditCost int  `json:"openGymCreditCost"`
+	// CorrectionWindowDays: staff may undo a check-in or no-show this many
+	// days after the class started.
+	CorrectionWindowDays int `json:"correctionWindowDays"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -89,6 +103,12 @@ type RulesPatch struct {
 	RenewalRetryCount         *int    `json:"renewalRetryCount,omitempty"`
 	RenewalRetryHours         *int    `json:"renewalRetryHours,omitempty"`
 	RenewalGraceDays          *int    `json:"renewalGraceDays,omitempty"`
+	RequireWaiver             *bool   `json:"requireWaiver,omitempty"`
+	CheckinOpensMinBefore     *int    `json:"checkinOpensMinBefore,omitempty"`
+	CheckinClosesMinAfter     *int    `json:"checkinClosesMinAfter,omitempty"`
+	OpenGymEnabled            *bool   `json:"openGymEnabled,omitempty"`
+	OpenGymCreditCost         *int    `json:"openGymCreditCost,omitempty"`
+	CorrectionWindowDays      *int    `json:"correctionWindowDays,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -123,6 +143,12 @@ var RuleDefaults = Rules{
 	RenewalRetryCount:         2,
 	RenewalRetryHours:         24,
 	RenewalGraceDays:          3,
+	RequireWaiver:             true,
+	CheckinOpensMinBefore:     45,
+	CheckinClosesMinAfter:     15,
+	OpenGymEnabled:            false,
+	OpenGymCreditCost:         1,
+	CorrectionWindowDays:      7,
 }
 
 type ruleKind int
@@ -153,6 +179,10 @@ func policyRule(key string, f func(*RulesPatch) **string) ruleSpec {
 	return ruleSpec{key: key, kind: kindPolicy, strField: f}
 }
 
+func boolRule(key, label string, f func(*RulesPatch) **bool) ruleSpec {
+	return ruleSpec{key: key, kind: kindBool, label: label, boolFld: f}
+}
+
 // ruleSpecs is in GYM_RULE_KEYS order.
 var ruleSpecs = []ruleSpec{
 	intRule("creditExpiryDays", 1, 3650, "Masa berlaku kredit", func(p *RulesPatch) **int { return &p.CreditExpiryDays }),
@@ -162,7 +192,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("reEntryGraceMin", 0, 1440, "Grace masuk ulang", func(p *RulesPatch) **int { return &p.ReEntryGraceMin }),
 	intRule("antiPassbackMin", 0, 1440, "Anti-passback", func(p *RulesPatch) **int { return &p.AntiPassbackMin }),
 	intRule("qrTtlSec", 10, 3600, "Umur QR", func(p *RulesPatch) **int { return &p.QRTTLSec }),
-	{key: "waitlistAutoPromote", kind: kindBool, boolFld: func(p *RulesPatch) **bool { return &p.WaitlistAutoPromote }},
+	boolRule("waitlistAutoPromote", "Promosi waitlist", func(p *RulesPatch) **bool { return &p.WaitlistAutoPromote }),
 	intRule("lowBalanceThreshold", 0, 1000, "Ambang saldo menipis", func(p *RulesPatch) **int { return &p.LowBalanceThreshold }),
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
@@ -182,6 +212,12 @@ var ruleSpecs = []ruleSpec{
 	intRule("renewalRetryCount", 0, 10, "Ulang perpanjangan gagal", func(p *RulesPatch) **int { return &p.RenewalRetryCount }),
 	intRule("renewalRetryHours", 1, 168, "Jeda ulang perpanjangan", func(p *RulesPatch) **int { return &p.RenewalRetryHours }),
 	intRule("renewalGraceDays", 0, 30, "Masa tenggang perpanjangan", func(p *RulesPatch) **int { return &p.RenewalGraceDays }),
+	boolRule("requireWaiver", "Wajib waiver", func(p *RulesPatch) **bool { return &p.RequireWaiver }),
+	intRule("checkinOpensMinBefore", 0, 1440, "Check-in dibuka", func(p *RulesPatch) **int { return &p.CheckinOpensMinBefore }),
+	intRule("checkinClosesMinAfter", 0, 1440, "Check-in ditutup", func(p *RulesPatch) **int { return &p.CheckinClosesMinAfter }),
+	boolRule("openGymEnabled", "Open gym", func(p *RulesPatch) **bool { return &p.OpenGymEnabled }),
+	intRule("openGymCreditCost", 0, 20, "Kredit open gym", func(p *RulesPatch) **int { return &p.OpenGymCreditCost }),
+	intRule("correctionWindowDays", 0, 90, "Batas koreksi", func(p *RulesPatch) **int { return &p.CorrectionWindowDays }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -223,7 +259,7 @@ func (s ruleSpec) check(v any, p *RulesPatch) string {
 	case kindBool:
 		b, ok := v.(bool)
 		if !ok {
-			return "Promosi waitlist harus ya/tidak"
+			return s.label + " harus ya/tidak"
 		}
 		*s.boolFld(p) = &b
 	}
@@ -334,9 +370,12 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.ReEntryGraceMin, p.ReEntryGraceMin)
 	setInt(&base.AntiPassbackMin, p.AntiPassbackMin)
 	setInt(&base.QRTTLSec, p.QRTTLSec)
-	if p.WaitlistAutoPromote != nil {
-		base.WaitlistAutoPromote = *p.WaitlistAutoPromote
+	setBool := func(dst *bool, v *bool) {
+		if v != nil {
+			*dst = *v
+		}
 	}
+	setBool(&base.WaitlistAutoPromote, p.WaitlistAutoPromote)
 	setInt(&base.LowBalanceThreshold, p.LowBalanceThreshold)
 	setInt(&base.ExpiryReminderDays, p.ExpiryReminderDays)
 	setInt(&base.BookingOpensDaysBefore, p.BookingOpensDaysBefore)
@@ -356,6 +395,12 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.RenewalRetryCount, p.RenewalRetryCount)
 	setInt(&base.RenewalRetryHours, p.RenewalRetryHours)
 	setInt(&base.RenewalGraceDays, p.RenewalGraceDays)
+	setBool(&base.RequireWaiver, p.RequireWaiver)
+	setInt(&base.CheckinOpensMinBefore, p.CheckinOpensMinBefore)
+	setInt(&base.CheckinClosesMinAfter, p.CheckinClosesMinAfter)
+	setBool(&base.OpenGymEnabled, p.OpenGymEnabled)
+	setInt(&base.OpenGymCreditCost, p.OpenGymCreditCost)
+	setInt(&base.CorrectionWindowDays, p.CorrectionWindowDays)
 	return base
 }
 

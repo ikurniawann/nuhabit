@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
-import { GYM_KEYS, waktu, type AccessLogRow } from "@/features/gym/scheduling/api";
+import { ACCESS_SOURCE_LABEL, entryLabel, GYM_KEYS, waktu, type AccessLogRow } from "@/features/gym/scheduling/api";
 import { call, SELECT } from "@/features/gym/shared";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatNumber, formatTime } from "@/lib/format";
@@ -22,7 +22,6 @@ interface LogRow extends AccessLogRow {
 }
 
 const PAGE_SIZE = 50;
-const SOURCE_LABEL: Record<AccessLogRow["source"], string> = { gate: "Gate", pos: "Kasir", manual: "Front desk" };
 
 /** Log scan gate per rentang tanggal (WIB), dengan halaman dan unduhan CSV. */
 export function CheckinLog() {
@@ -117,15 +116,16 @@ export function CheckinLog() {
                 <TableCell className="whitespace-normal">
                   {row.decision === "allowed" ? (
                     <Badge variant="success">
-                      {row.entry_kind === "re_entry" ? "Masuk ulang" : `Check-in · ${-row.credit_delta} kredit`}
+                      {entryLabel(row.entry_kind, row.credit_delta)}
                     </Badge>
                   ) : (
                     <Badge variant="destructive">{row.reason ? GATE_DENIAL_LABEL[row.reason] : "Ditolak"}</Badge>
                   )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {SOURCE_LABEL[row.source]}
+                  {ACCESS_SOURCE_LABEL[row.source]}
                   {row.staff_name && <span className="block text-xs text-muted-foreground">{row.staff_name}</span>}
+                  {row.device_name && <span className="block text-xs text-muted-foreground">{row.device_name}</span>}
                 </TableCell>
               </TableRow>
             ))}

@@ -1,5 +1,5 @@
 /** Klien API Gym → jadwal kelas, sesi, booking, jenis kelas, coach, check-in. */
-import type { BookingStatus, GateDenialReason, SessionStatus } from "@/lib/gym/booking";
+import type { BookingStatus, GateDenialReason, GateEntryKind, SessionStatus } from "@/lib/gym/booking";
 import { formatTime } from "@/lib/format";
 import { call, send, upload } from "../shared";
 
@@ -211,32 +211,76 @@ export interface DeskMember {
   phone: string;
   is_active: boolean | null;
   member_code: string | null;
+  waiver_version: string | null;
+  waiver_accepted_at: string | null;
+  /** Waiver disetujui dalam versi yang berlaku sekarang. */
+  waiver_current: boolean;
   bookings: DeskBooking[];
 }
 
 export interface CheckInResult {
   decision: "allowed" | "denied";
   reason: GateDenialReason | null;
-  entryKind: "booking" | "re_entry" | null;
+  entryKind: GateEntryKind | null;
   message: string;
   memberName: string | null;
   creditsDeducted: number;
   balanceAfter: number | null;
 }
 
+export type AccessSource = "gate" | "pos" | "manual" | "device";
+
 export interface AccessLogRow {
   id: string;
   decision: "allowed" | "denied";
   reason: GateDenialReason | null;
-  entry_kind: "booking" | "re_entry" | null;
+  entry_kind: GateEntryKind | null;
   credit_delta: number;
-  source: "gate" | "pos" | "manual";
+  source: AccessSource;
   created_at: string;
   member_name: string | null;
   member_phone: string | null;
   class_type_name: string | null;
   starts_at: string | null;
   staff_name: string | null;
+  device_name: string | null;
+}
+
+/** Koreksi staf atas check-in atau tidak hadir. */
+export type CorrectionAction = "undo_check_in" | "undo_no_show";
+
+export interface CorrectionResult {
+  status: BookingStatus;
+  refundedCredits: number;
+  strikeCleared: boolean;
+}
+
+/** Jam open gym satu hari: weekday 1 = Senin … 7 = Minggu, jam "HH:MM" WIB. */
+export interface OpenGymHours {
+  weekday: number;
+  opens_at: string;
+  closes_at: string;
+}
+
+export interface GateDevice {
+  id: string;
+  branch_id: string;
+  branch_name: string | null;
+  name: string;
+  /** Awal kunci, untuk membedakan kunci; kunci lengkap hanya tampil sekali. */
+  key_prefix: string;
+  relay_open_ms: number;
+  active: boolean;
+  last_seen_at: string | null;
+  created_at: string;
+  rotated_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface IssuedDeviceKey {
+  id: string;
+  key: string;
+  key_prefix: string;
 }
 
 const qs = (params: Record<string, string | undefined>) =>
@@ -300,13 +344,34 @@ export const schedulingApi = {
       action,
       ...(options?.waivePenalty ? { waive_penalty: true } : {}),
     }),
+  /** Batalkan check-in atau tidak hadir; alasan wajib dan tercatat di audit log. */
+  correctBooking: (id: string, action: CorrectionAction, reason: string) =>
+    send<CorrectionResult>(`/api/gym/bookings/${id}`, { action, reason }),
   checkInBooking: (id: string) => send<CheckInResult>(`/api/gym/bookings/${id}`, { action: "check_in" }),
   searchMembers: (q: string) => call<MemberHit[]>(`/api/gym/bookings/members?${qs({ q })}`),
 
   checkinLog: () =>
-    call<{ log: AccessLogRow[]; today: { checked_in: number; denied: number; credits: number } }>("/api/gym/checkin"),
+    call<{ log: AccessLogRow[]; today: { checked_in: number; open_gym: number; denied: number; credits: number } }>(
+      "/api/gym/checkin"
+    ),
   scan: (token: string, branchId: string | null) => send<CheckInResult>("/api/gym/checkin", { token, branch_id: branchId }),
   deskMembers: (q: string) => call<DeskMember[]>(`/api/gym/checkin/members?${qs({ q })}`),
+  /** Catat waiver yang disetujui member di front desk (akun staf + waktu tersimpan). */
+  recordWaiver: (customerId: string) =>
+    send<{ version: string; accepted_at: string; accepted_by: string }>(`/api/gym/checkin/members/${customerId}/waiver`, {
+      accepted: true,
+    }),
+
+  openGymHours: (branchId: string) =>
+    call<{ branch_id: string; hours: OpenGymHours[] }>(`/api/gym/open-gym-hours?${qs({ branch_id: branchId })}`),
+  saveOpenGymHours: (branchId: string, hours: OpenGymHours[]) =>
+    send<{ branch_id: string; hours: OpenGymHours[] }>("/api/gym/open-gym-hours", { branch_id: branchId, hours }, "PUT"),
+
+  gateDevices: () => call<GateDevice[]>("/api/gym/gate-devices"),
+  createGateDevice: (input: { branch_id: string; name: string; relay_open_ms: number }) =>
+    send<IssuedDeviceKey>("/api/gym/gate-devices", input),
+  rotateGateDevice: (id: string) => send<IssuedDeviceKey>(`/api/gym/gate-devices/${id}/rotate`, {}),
+  revokeGateDevice: (id: string) => send<{ id: string }>(`/api/gym/gate-devices/${id}/revoke`, {}),
 };
 
 export const GYM_KEYS = {
@@ -317,6 +382,8 @@ export const GYM_KEYS = {
   bookings: ["gym", "bookings"],
   checkin: ["gym", "checkin"],
   deskMembers: ["gym", "desk-members"],
+  gateDevices: ["gym", "gate-devices"],
+  openGymHours: ["gym", "open-gym-hours"],
 } as const;
 
 /* ── Label & format ──────────────────────────────────────────────────── */
@@ -361,6 +428,19 @@ export const BOOKING_BADGE: Record<
   no_show: { label: "Tidak hadir", variant: "destructive" },
   cancelled: { label: "Batal", variant: "muted" },
 };
+
+export const ACCESS_SOURCE_LABEL: Record<AccessSource, string> = {
+  gate: "Gate",
+  pos: "Kasir",
+  manual: "Front desk",
+  device: "Perangkat gate",
+};
+
+/** Label scan yang diterima: masuk ulang, open gym, atau check-in kelas. */
+export function entryLabel(kind: GateEntryKind | null, creditDelta: number) {
+  if (kind === "re_entry") return "Masuk ulang";
+  return `${kind === "open_gym" ? "Open gym" : "Check-in"} · ${-creditDelta} kredit`;
+}
 
 /** Nama hari untuk weekday ISO (1 = Senin … 7 = Minggu). */
 export const WEEKDAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"] as const;

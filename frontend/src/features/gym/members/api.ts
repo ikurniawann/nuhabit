@@ -1,5 +1,6 @@
 /** Klien API Gym → Member: daftar member, profil 360, catatan staf, daftar di front desk. */
-import type { BookingStatus, GateDenialReason } from "@/lib/gym/booking";
+import type { BookingStatus, GateDenialReason, GateEntryKind } from "@/lib/gym/booking";
+import type { AccessSource } from "@/features/gym/scheduling/api";
 import type { MemberCredits } from "../credits/api";
 import { call, remove, send } from "../shared";
 
@@ -66,9 +67,9 @@ export interface MemberVisit {
   id: string;
   decision: "allowed" | "denied";
   reason: GateDenialReason | null;
-  entry_kind: "booking" | "re_entry" | null;
+  entry_kind: GateEntryKind | null;
   credit_delta: number;
-  source: "gate" | "pos" | "manual";
+  source: AccessSource;
   created_at: string;
   class_type_name: string | null;
   starts_at: string | null;

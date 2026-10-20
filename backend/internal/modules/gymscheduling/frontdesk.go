@@ -42,7 +42,8 @@ func (h *handler) staffUsers(w http.ResponseWriter, r *http.Request, _ *auth.Use
 }
 
 // deskMembers finds members by name, phone or member code, each with the
-// bookings of today (WIB) that are not cancelled.
+// bookings of today (WIB) that are not cancelled and the waiver on record
+// (waiver_current: accepted in the version members accept today).
 func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	term := strings.TrimSpace(r.URL.Query().Get("q"))
 	if len(term) < 2 {
@@ -52,6 +53,9 @@ func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	from, _ := wibMidnight(day)
 	rows, err := queryRows(r.Context(), h.svc.db,
 		`SELECT c.id, c.name, c.phone, c.is_active, p.member_code,
+            c.waiver_version, c.waiver_accepted_at,
+            (c.waiver_accepted_at IS NOT NULL AND c.waiver_version IS NOT NULL
+              AND ($4 = '' OR c.waiver_version = $4)) AS waiver_current,
             COALESCE((SELECT json_agg(json_build_object(
                 'id', b.id, 'status', b.status, 'session_id', s.id, 'starts_at', s.starts_at,
                 'ends_at', s.ends_at, 'class_type_name', t.name, 'coach_name', co.name,
@@ -67,7 +71,7 @@ func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.Us
                            WHERE customer_id = c.id ORDER BY member_code LIMIT 1) p ON true
       WHERE c.name ILIKE '%' || $1 || '%' OR c.phone ILIKE '%' || $1 || '%' OR p.member_code ILIKE '%' || $1 || '%'
       ORDER BY c.name
-      LIMIT 10`, term, from, from.Add(24*time.Hour))
+      LIMIT 10`, term, from, from.Add(24*time.Hour), h.svc.WaiverVersion)
 	if err != nil {
 		return err
 	}

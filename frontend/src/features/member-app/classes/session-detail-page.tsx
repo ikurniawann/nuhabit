@@ -12,6 +12,7 @@ import { classTypeKey } from "../lib/images";
 import { m } from "../lib/links";
 import {
   confirmSpot,
+  declineSpot,
   useBookMutation,
   useCancelMutation,
   useInvalidateAll,
@@ -29,21 +30,25 @@ export function SessionDetailPage() {
   const { data: wallet } = useWallet();
   const book = useBookMutation();
   const cancel = useCancelMutation();
-  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  // waiver: the booking failed for a missing waiver, so the message links to the waiver screen.
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string; waiver?: boolean } | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const invalidate = useInvalidateAll();
 
-  const onConfirmSpot = async (bookingId: string) => {
+  const onOffer = async (bookingId: string, accept: boolean) => {
     setConfirmBusy(true);
     setMessage(null);
     try {
-      await confirmSpot(bookingId);
-      setMessage({ kind: "ok", text: t("You're in - spot confirmed!") });
-      invalidate();
+      await (accept ? confirmSpot(bookingId) : declineSpot(bookingId));
+      setMessage({ kind: "ok", text: accept ? t("You're in - spot confirmed!") : t("Spot declined - you left the waitlist.") });
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Could not confirm.") });
-      invalidate();
+      setMessage({
+        kind: "err",
+        text: e instanceof ApiError ? e.message : t("Could not confirm."),
+        waiver: e instanceof ApiError && e.code === "waiver_required",
+      });
     } finally {
+      invalidate();
       setConfirmBusy(false);
     }
   };
@@ -76,7 +81,11 @@ export function SessionDetailPage() {
             : fill(t("Class is full - you're #{n} on the waitlist."), { n: res.booking.waitlistPosition ?? "" }),
       });
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Booking failed.") });
+      setMessage({
+        kind: "err",
+        text: e instanceof ApiError ? e.message : t("Booking failed."),
+        waiver: e instanceof ApiError && e.code === "waiver_required",
+      });
     }
   };
 
@@ -170,6 +179,11 @@ export function SessionDetailPage() {
           }`}
         >
           {message.text}
+          {message.waiver ? (
+            <Link href={m("/profile/waiver")} className="mt-2 block text-nh-forest underline">
+              {t("Read and sign the waiver")} →
+            </Link>
+          ) : null}
         </div>
       ) : null}
 
@@ -196,11 +210,16 @@ export function SessionDetailPage() {
             </a>
           ) : null}
           {mine.status === "WAITLIST" && mine.promotionOfferedAt ? (
-            <button className="nh-btn-brand" disabled={confirmBusy} onClick={() => void onConfirmSpot(mine.id)}>
-              {t("Confirm spot")}
-            </button>
+            <>
+              <button className="nh-btn-brand" disabled={confirmBusy} onClick={() => void onOffer(mine.id, true)}>
+                {t("Confirm spot")}
+              </button>
+              <button className="nh-btn-ghost" disabled={confirmBusy} onClick={() => void onOffer(mine.id, false)}>
+                {t("Decline spot")}
+              </button>
+            </>
           ) : null}
-          {["CONFIRMED", "WAITLIST"].includes(mine.status) ? (
+          {mine.status === "CONFIRMED" || (mine.status === "WAITLIST" && !mine.promotionOfferedAt) ? (
             <button className="nh-btn-ghost text-nh-danger" disabled={cancel.isPending} onClick={() => void onCancel()}>
               {mine.status === "WAITLIST" ? t("Leave waitlist") : t("Cancel booking")}
             </button>

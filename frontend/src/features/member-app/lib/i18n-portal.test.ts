@@ -10,6 +10,8 @@ const FILES = [
   "../auth/register-page.tsx",
   "../home/promo-detail-page.tsx",
   "../wallet/topup-page.tsx",
+  "../profile/waiver-page.tsx",
+  "../classes/session-detail-page.tsx",
 ];
 
 describe("member portal dictionary", () => {

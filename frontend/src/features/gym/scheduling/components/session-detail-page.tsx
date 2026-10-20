@@ -36,10 +36,12 @@ import {
   type Session,
 } from "../api";
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
+import { CorrectionDialog, type PendingCorrection } from "./correction-dialog";
 import { SessionDialog } from "./session-dialog";
 
 type SessionAction = "publish" | "cancel" | "complete" | "delete";
 type BookingAction = "cancel" | "no_show" | "check_in";
+type RosterAction = BookingAction | PendingCorrection["action"];
 
 const SESSION_CONFIRM: Record<Exclude<SessionAction, "publish">, { title: string; description: string; label: string }> = {
   cancel: {
@@ -125,6 +127,7 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
     },
     onError: (error) => toast.error("Aksi booking gagal", { description: error.message }),
   });
+  const [pendingCorrection, setPendingCorrection] = useState<PendingCorrection | null>(null);
 
   if (detail.isLoading) return <TableNote>Memuat sesi…</TableNote>;
   if (detail.error || !detail.data) return <TableNote tone="danger">{detail.error?.message ?? "Sesi tidak ditemukan"}</TableNote>;
@@ -199,11 +202,16 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
           rows={[...attending, ...waitlist]}
           empty="Belum ada member yang booking."
           disabled={busy}
-          onAction={(b, action) =>
-            action === "check_in"
-              ? bookingAction.mutate({ id: b.id, action })
-              : setPendingBooking({ id: b.id, action, memberName: b.name, waitlist: b.status === "waitlist" })
-          }
+          correctable={session.status !== "cancelled"}
+          onAction={(b, action) => {
+            if (action === "undo_check_in" || action === "undo_no_show") {
+              setPendingCorrection({ id: b.id, action, memberName: b.name });
+            } else if (action === "check_in") {
+              bookingAction.mutate({ id: b.id, action });
+            } else {
+              setPendingBooking({ id: b.id, action, memberName: b.name, waitlist: b.status === "waitlist" });
+            }
+          }}
         />
         {cancelled.length > 0 && (
           <p className="px-5 pb-4 text-xs text-muted-foreground">
@@ -231,6 +239,14 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         onClose={() => setPendingBooking(null)}
         onConfirm={(input) => bookingAction.mutate(input)}
       />
+      <CorrectionDialog
+        pending={pendingCorrection}
+        onClose={() => setPendingCorrection(null)}
+        onDone={() => {
+          setPendingCorrection(null);
+          refresh();
+        }}
+      />
     </div>
   );
 }
@@ -239,12 +255,15 @@ function RosterTable({
   rows,
   empty,
   disabled,
+  correctable,
   onAction,
 }: {
   rows: RosterEntry[];
   empty: string;
   disabled: boolean;
-  onAction: (booking: RosterEntry, action: BookingAction) => void;
+  /** Koreksi check-in dan tidak hadir; sesi yang dibatalkan sudah mengembalikan kredit. */
+  correctable: boolean;
+  onAction: (booking: RosterEntry, action: RosterAction) => void;
 }) {
   if (rows.length === 0) return <TableNote>{empty}</TableNote>;
   return (
@@ -292,6 +311,16 @@ function RosterTable({
                   {(b.status === "confirmed" || b.status === "waitlist") && (
                     <Button size="sm" variant="ghost" className="text-danger" disabled={disabled} onClick={() => onAction(b, "cancel")}>
                       {b.status === "waitlist" ? "Keluarkan" : "Batalkan"}
+                    </Button>
+                  )}
+                  {correctable && (b.status === "checked_in" || b.status === "completed") && (
+                    <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b, "undo_check_in")}>
+                      Batalkan check-in
+                    </Button>
+                  )}
+                  {correctable && b.status === "no_show" && (
+                    <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b, "undo_no_show")}>
+                      Hapus tidak hadir
                     </Button>
                   )}
                 </div>

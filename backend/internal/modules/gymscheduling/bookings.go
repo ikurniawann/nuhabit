@@ -66,6 +66,7 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 	}
 	in = domain.EligibilityInput{
 		MemberActive:   member.Active(),
+		WaiverMissing:  s.waiverMissing(rules, member),
 		Session:        session.bookable(),
 		Balance:        balance,
 		HasPass:        pass != nil,
@@ -147,7 +148,7 @@ func (s *Service) bookSession(ctx context.Context, customerID, sessionID, source
 		in.OverrideWindow = overrideWindow && now.Before(session.EndsAt)
 		decision := domain.EvaluateBookingEligibility(in)
 		if decision.Kind == domain.DecisionDeny {
-			return schedulingError(in.DenialMessage(decision.Reason))
+			return eligibilityError(in, decision.Reason)
 		}
 
 		status := domain.BookingConfirmed
@@ -254,8 +255,7 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 				return err
 			}
 		}
-		penalty, err := s.chargePenalty(ctx, q, booking.CustomerID, outcome.PenaltyCredits, "late_cancel", booking.ID,
-			"Batal terlambat: "+session.label())
+		penalty, err := s.chargePenalty(ctx, q, booking, outcome.PenaltyCredits, "late_cancel", "Batal terlambat: "+session.label())
 		if err != nil {
 			return err
 		}
@@ -434,8 +434,9 @@ func (s *Service) ConfirmWaitlistOffer(ctx context.Context, bookingID, customerI
 	})
 }
 
-// SweepWaitlistOffers cancels the waitlist offers that lapsed by now, tells
-// those members, and passes each freed seat to the next eligible member.
+// SweepWaitlistOffers withdraws the waitlist offers that lapsed by now,
+// passes each freed seat to the next eligible member, then puts the lapsed
+// members back in the queue (see requeueLapsed) and tells them.
 // Each session runs in its own transaction, so one failure does not hold up
 // the others. A job runner calls it every minute.
 func (s *Service) SweepWaitlistOffers(ctx context.Context, now time.Time) error {
@@ -457,19 +458,21 @@ func (s *Service) lapseOffers(ctx context.Context, q Q, sessionID string, now ti
 	if err != nil {
 		return err
 	}
-	customers, err := s.repo.CancelLapsedOffers(ctx, q, session.ID, now)
+	lapsed, err := s.repo.LockLapsedOffers(ctx, q, session.ID, now)
 	if err != nil {
 		return err
 	}
-	for _, c := range customers {
-		s.notify(ctx, q, c, Notification{
-			Type:  "gym_waitlist_offer_expired",
-			Title: "Tawaran kursi berakhir: " + session.ClassTypeName,
-			Body:  "Kursi untuk " + domain.FormatWib(session.StartsAt) + " tidak dikonfirmasi tepat waktu, jadi tempat Anda di waitlist dilepas.",
-		})
-	}
 	rules, err := s.Rules.ForBranch(ctx, q, session.BranchID)
 	if err != nil {
+		return err
+	}
+	// The lapsed offers still mark their members as offered, so the freed
+	// seats go to the next members in line first. A seat nobody else takes
+	// goes back to the re-queued members.
+	if _, err := s.promoteWaitlist(ctx, q, session, rules, now); err != nil {
+		return err
+	}
+	if err := s.requeueLapsed(ctx, q, session, lapsed, now); err != nil {
 		return err
 	}
 	if _, err := s.promoteWaitlist(ctx, q, session, rules, now); err != nil {

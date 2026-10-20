@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { gymCreditsApi, type GymRules, type RulesAdmin } from "../api";
+import { OpenGymHoursCard } from "./open-gym-hours-card";
 
 const RULES_KEY = ["gym-credits", "rules"];
 const GLOBAL = "global";
@@ -76,9 +77,20 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
   {
     title: "Check-in & gate",
     fields: [
+      { key: "requireWaiver", kind: "boolean", label: "Wajib waiver", hint: "Member tanpa waiver versi terbaru tidak bisa booking atau masuk gate. Staf bisa mencatat waiver di front desk." },
+      { key: "checkinOpensMinBefore", kind: "number", label: "Check-in dibuka", unit: "menit sebelum kelas", hint: "Gate menerima booking kelas mulai saat ini.", min: 0 },
+      { key: "checkinClosesMinAfter", kind: "number", label: "Check-in ditutup", unit: "menit setelah kelas", hint: "Setelah ini booking tidak bisa check-in di gate.", min: 0 },
       { key: "qrTtlSec", kind: "number", label: "Umur QR member", unit: "detik", hint: "QR di aplikasi diperbarui setelah waktu ini. Minimal 10 detik.", min: 10 },
       { key: "antiPassbackMin", kind: "number", label: "Anti-passback", unit: "menit", hint: "QR yang sama ditolak bila dipakai masuk lagi dalam jendela ini.", min: 0 },
       { key: "reEntryGraceMin", kind: "number", label: "Grace masuk ulang", unit: "menit", hint: "Keluar-masuk dalam jendela ini tidak dihitung kunjungan baru.", min: 0 },
+      { key: "correctionWindowDays", kind: "number", label: "Batas koreksi staf", unit: "hari setelah kelas", hint: "Staf bisa membatalkan check-in atau tidak hadir selama ini; kredit dikembalikan.", min: 0 },
+    ],
+  },
+  {
+    title: "Open gym",
+    fields: [
+      { key: "openGymEnabled", kind: "boolean", label: "Open gym", hint: "Member tanpa booking kelas boleh masuk selama jam open gym cabang. Anti-passback tetap berlaku." },
+      { key: "openGymCreditCost", kind: "number", label: "Kredit open gym", unit: "kredit per hari", hint: "Dipotong saat masuk pertama hari itu; masuk lagi gratis. 0 = gratis. Pemegang pass tidak bayar.", min: 0 },
     ],
   },
 ];
@@ -129,6 +141,7 @@ export function RulesPage() {
         // key: form dimuat ulang saat cakupan atau data tersimpan berganti.
         <RulesForm key={`${scope}:${JSON.stringify(branch?.override ?? data.global)}`} data={data} branch={branch} />
       )}
+      {branch && <OpenGymHoursCard branchId={branch.id} branchName={branch.name} />}
     </div>
   );
 }

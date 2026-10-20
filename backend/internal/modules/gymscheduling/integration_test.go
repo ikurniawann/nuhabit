@@ -17,6 +17,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -79,9 +80,9 @@ func newFixture(t *testing.T) *fixture {
 	credits := newTestCredits(tx)
 	svc := NewService(tx, Postgres{}, Ports{
 		Credits: credits, Packages: credits, Passes: credits, Rules: credits,
-		Members: MembersSQL{}, Qr: QrTokensSQL{}, Notifier: NotificationsSQL{},
+		Members: MembersSQL{}, Qr: QrTokensSQL{}, Notifier: NotificationsSQL{}, WaiverVersion: testWaiverVersion,
 	}, nil)
-	h := &handler{svc: svc, guard: headerGuard{}, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	h := &handler{svc: svc, guard: headerGuard{}, log: slog.New(slog.NewTextHandler(io.Discard, nil)), limiter: ratelimit.New(tx)}
 	return &fixture{t: t, credits: credits, svc: svc, ctx: ctx, tx: tx, mux: testutil.Mux(mod{h: h}), staff: "6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11"}
 }
 
@@ -145,11 +146,16 @@ func (f *fixture) scalar(sql string, args ...any) string {
 	return *v
 }
 
-// member inserts a customer and grants credits through a lot + top_up entry.
+// testWaiverVersion is the waiver text the fixture's members accepted.
+const testWaiverVersion = "1.0"
+
+// member inserts a customer who accepted the current waiver and grants
+// credits through a lot + top_up entry.
 func (f *fixture) member(credits int) string {
 	f.t.Helper()
 	phone := "+6298" + testutil.RandomHex(4)
-	id := f.scalar(`INSERT INTO pos.pos_customers (phone, name) VALUES ($1, $2) RETURNING id::text`, phone, "Go Sched "+phone)
+	id := f.scalar(`INSERT INTO pos.pos_customers (phone, name, waiver_version, waiver_accepted_at)
+		VALUES ($1, $2, $3, now()) RETURNING id::text`, phone, "Go Sched "+phone, testWaiverVersion)
 	if credits > 0 {
 		lot := f.scalar(`INSERT INTO gym.credit_lots (customer_id, credits, expires_at)
 			VALUES ($1, $2, now() + interval '30 days') RETURNING id::text`, id, credits)
