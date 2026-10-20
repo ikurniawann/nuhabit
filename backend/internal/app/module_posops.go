@@ -21,6 +21,7 @@ func PosOpsPorts(d module.Deps) posops.Ports {
 	return posops.Ports{
 		Sales:       posOpsSales{},
 		MemberBills: posOpsMemberBills{},
+		GymSales:    posOpsGymSales{},
 		Directory:   posOpsDirectory{},
 		Stalls:      posOpsStalls{},
 		Inventory:   posOpsInventory{},

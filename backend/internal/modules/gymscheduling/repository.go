@@ -191,7 +191,7 @@ type NewSession struct {
 
 type SessionUpdate struct {
 	ClassTypeID                     string
-	CoachID, Area, Notes            *string
+	CoachID, BranchID, Area, Notes  *string
 	StartsAt                        time.Time
 	DurationMin, Capacity           int
 	CreditCost                      int

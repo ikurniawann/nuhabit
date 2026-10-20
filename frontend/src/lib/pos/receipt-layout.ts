@@ -26,10 +26,14 @@ export function groupCartItemsByStallName<
 }
 
 export function receiptDocumentLabel(payload: {
+  receiptNumber?: string | null;
   checkoutNumber?: string | null;
   orderNumber?: string | null;
   orderId?: string | null;
 }): string {
+  if (payload.receiptNumber) {
+    return `No. ${payload.receiptNumber}`;
+  }
   if (payload.checkoutNumber) {
     return `Checkout #${payload.checkoutNumber}`;
   }

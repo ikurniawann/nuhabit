@@ -6,6 +6,7 @@ import { Banknote } from "lucide-react";
 import { toast } from "sonner";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -86,26 +87,28 @@ export function PayoutsTab({ month, query }: { month: string; query: UseQueryRes
                     <Button variant="ghost" size="sm" onClick={() => setViewing(p)}>
                       Rincian
                     </Button>
-                    {p.status === "draft" && (
-                      <Button size="sm" variant="soft" disabled={approve.isPending} onClick={() => approve.mutate(p.id)}>
-                        Setujui
-                      </Button>
-                    )}
-                    {p.status === "approved" && (
-                      <Button size="sm" onClick={() => setActing({ payout: p, action: "pay" })}>
-                        <Banknote /> Bayar
-                      </Button>
-                    )}
-                    {(p.status === "draft" || p.status === "approved") && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger"
-                        onClick={() => setActing({ payout: p, action: "void" })}
-                      >
-                        Void
-                      </Button>
-                    )}
+                    <Can menu="gym.incentives" action="update">
+                      {p.status === "draft" && (
+                        <Button size="sm" variant="soft" disabled={approve.isPending} onClick={() => approve.mutate(p.id)}>
+                          Setujui
+                        </Button>
+                      )}
+                      {p.status === "approved" && (
+                        <Button size="sm" onClick={() => setActing({ payout: p, action: "pay" })}>
+                          <Banknote /> Bayar
+                        </Button>
+                      )}
+                      {(p.status === "draft" || p.status === "approved") && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-danger"
+                          onClick={() => setActing({ payout: p, action: "void" })}
+                        >
+                          Void
+                        </Button>
+                      )}
+                    </Can>
                   </div>
                 </TableCell>
               </TableRow>

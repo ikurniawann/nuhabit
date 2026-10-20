@@ -64,6 +64,14 @@ export const loadGrantedMenuCodesForUser = cache(
   }
 );
 
+/** granted_actions per kode menu milik user, sebagai objek agar bisa dikirim ke klien. */
+export const loadGrantedMenuActionsForUser = cache(
+  async (userId: string, role: UserRole): Promise<Record<string, string[]>> => {
+    const roleIds = await resolveRoleIds(userId, role);
+    return Object.fromEntries(await loadGrantedMenuActions(roleIds));
+  }
+);
+
 export async function userHasIamPrefix(
   userId: string,
   role: UserRole,

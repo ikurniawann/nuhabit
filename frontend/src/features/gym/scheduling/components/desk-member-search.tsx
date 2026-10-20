@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { formatTime } from "@/lib/format";
 import { BOOKING_BADGE, GYM_KEYS, schedulingApi, type CheckInResult, type DeskMember } from "../api";
 import { useDebounced } from "@/features/gym/use-debounced";
+import { useBookingActions } from "@/features/gym/permissions";
 import { WaiverDeskForm } from "./waiver-desk-form";
 
 /**
@@ -84,6 +85,7 @@ function MemberRow({
   onCheckIn: (bookingId: string) => void;
   onWaiver: () => void;
 }) {
+  const can = useBookingActions();
   return (
     <li className="rounded-2xl bg-surface-2 px-4 py-3">
       <p className="flex flex-wrap items-center gap-2 font-medium">
@@ -111,7 +113,7 @@ function MemberRow({
                 {b.class_type_name}, {formatTime(b.starts_at)}
                 {b.coach_name && <span className="text-xs text-muted-foreground"> · {b.coach_name}</span>}
               </span>
-              {b.status === "confirmed" ? (
+              {b.status === "confirmed" && can.checkIn ? (
                 <Button size="sm" disabled={pending} onClick={() => onCheckIn(b.id)}>
                   <UserCheck /> Check-in
                 </Button>

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Layers, Package, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -76,9 +77,11 @@ export function PackagesPage() {
         title="Paket Kredit"
         description="Paket kredit dan pass yang dijual ke member. Satu kredit = satu slot kelas sesuai biaya kelasnya; pass membuka booking tanpa batas selama masa berlakunya. Paket yang sudah pernah dibeli hanya bisa diarsipkan."
         actions={
-          <Button onClick={() => setEditing("new")}>
-            <Plus /> Paket baru
-          </Button>
+          <Can menu="gym.packages" action="create" mode="disable">
+            <Button onClick={() => setEditing("new")}>
+              <Plus /> Paket baru
+            </Button>
+          </Can>
         }
       />
 
@@ -156,16 +159,20 @@ export function PackagesPage() {
                   <TableCell className="hidden lg:table-cell text-right tabular-nums">{formatNumber(p.sold_count)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>
-                        Ubah
-                      </Button>
-                      <Button variant="ghost" size="sm" disabled={setStatus.isPending} onClick={() => setStatus.mutate(p)}>
-                        {p.status === "active" ? "Arsipkan" : "Jual lagi"}
-                      </Button>
-                      {!p.referenced && (
-                        <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleting(p)}>
-                          Hapus
+                      <Can menu="gym.packages" action="update">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>
+                          Ubah
                         </Button>
+                        <Button variant="ghost" size="sm" disabled={setStatus.isPending} onClick={() => setStatus.mutate(p)}>
+                          {p.status === "active" ? "Arsipkan" : "Jual lagi"}
+                        </Button>
+                      </Can>
+                      {!p.referenced && (
+                        <Can menu="gym.packages" action="delete">
+                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleting(p)}>
+                            Hapus
+                          </Button>
+                        </Can>
                       )}
                     </div>
                   </TableCell>

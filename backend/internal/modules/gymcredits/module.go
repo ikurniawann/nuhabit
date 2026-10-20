@@ -36,13 +36,13 @@ func (s *Service) WithVouchers(v Vouchers) *Service {
 func NewDefaultService(deps module.Deps, db DB) *Service {
 	xendit := NewXenditGateway()
 	ports := Ports{
-		Members:   SQLMembers{},
-		Wallet:    SQLArkWallet{Log: deps.Log},
-		Directory: SQLDirectory{},
-		Gateway:   xendit,
-		Invoices:  xendit,
-		Notifier:  SQLNotifier{},
-
+		Members:      SQLMembers{},
+		Wallet:       SQLArkWallet{Log: deps.Log},
+		Directory:    SQLDirectory{},
+		Gateway:      xendit,
+		Invoices:     xendit,
+		Notifier:     SQLNotifier{},
+		Till:         SQLTill{},
 		SavedMethods: xendit,
 	}
 	canSimulate := func() bool { return deps.Auth != nil && deps.Auth.MemberOTPDevCode() != "" }

@@ -7,6 +7,8 @@ import { CalendarDays, Plus, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
+import { useCan } from "@/components/iam/iam-access-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -60,6 +62,7 @@ export function ScheduleTemplatesPage() {
     },
     onError: (error) => toast.error("Generate jadwal gagal", { description: error.message }),
   });
+  const canUpdate = useCan("gym.schedule", "update");
   const toggle = useMutation({
     mutationFn: (t: SessionTemplate) => schedulingApi.setTemplateActive(t.id, !t.active),
     onSuccess: (_data, t) => {
@@ -91,12 +94,14 @@ export function ScheduleTemplatesPage() {
             <Link href="/dashboard/gym/schedule" className={buttonVariants({ variant: "ghost" })}>
               <CalendarDays /> Jadwal kelas
             </Link>
-            <Button variant="outline" onClick={() => generate.mutate()} disabled={generate.isPending}>
-              <RefreshCw className={cn(generate.isPending && "animate-spin")} /> Generate sekarang
-            </Button>
-            <Button onClick={() => setEditing("new")}>
-              <Plus /> Template baru
-            </Button>
+            <Can menu="gym.schedule" action="create" mode="disable">
+              <Button variant="outline" onClick={() => generate.mutate()} disabled={generate.isPending}>
+                <RefreshCw className={cn(generate.isPending && "animate-spin")} /> Generate sekarang
+              </Button>
+              <Button onClick={() => setEditing("new")}>
+                <Plus /> Template baru
+              </Button>
+            </Can>
           </>
         }
       />
@@ -176,15 +181,19 @@ export function ScheduleTemplatesPage() {
                       <Switch
                         checked={t.active}
                         onCheckedChange={() => toggle.mutate(t)}
-                        disabled={toggle.isPending}
+                        disabled={toggle.isPending || !canUpdate}
                         aria-label={t.active ? "Nonaktifkan template" : "Aktifkan template"}
                       />
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
-                        Ubah
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleting(t)}>
-                        Hapus
-                      </Button>
+                      {canUpdate && (
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+                          Ubah
+                        </Button>
+                      )}
+                      <Can menu="gym.schedule" action="delete">
+                        <Button variant="ghost" size="sm" className="text-danger" onClick={() => setDeleting(t)}>
+                          Hapus
+                        </Button>
+                      </Can>
                     </div>
                   </TableCell>
                 </TableRow>

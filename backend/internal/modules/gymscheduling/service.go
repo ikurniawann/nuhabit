@@ -101,15 +101,18 @@ type Member struct {
 func (m *Member) Active() bool { return m != nil && (m.IsActive == nil || *m.IsActive) }
 
 // MemberHit is a member search result for staff booking, with the pass
-// strikes counting now and the end of a strike suspension.
+// strikes counting now and the end of a strike suspension, under the rules
+// of RulesBranchID (nil: the global rules).
 type MemberHit struct {
-	ID             string  `json:"id"`
-	Name           *string `json:"name"`
-	Phone          *string `json:"phone"`
-	IsActive       *bool   `json:"is_active"`
-	Credits        int     `json:"credits"`
-	PassStrikes    int     `json:"pass_strikes"`
-	SuspendedUntil *jsTime `json:"suspended_until"`
+	ID              string  `json:"id"`
+	Name            *string `json:"name"`
+	Phone           *string `json:"phone"`
+	IsActive        *bool   `json:"is_active"`
+	Credits         int     `json:"credits"`
+	PassStrikes     int     `json:"pass_strikes"`
+	SuspendedUntil  *jsTime `json:"suspended_until"`
+	RulesBranchID   *string `json:"rules_branch_id"`
+	RulesBranchName *string `json:"rules_branch_name"`
 }
 
 // Members reads pos.pos_customers (owned by the POS/CRM context).

@@ -73,10 +73,21 @@ func generateShiftNumber(ctx context.Context, q database.Querier) (*string, erro
 	return n, err
 }
 
-func insertShift(ctx context.Context, q database.Querier, number string, cashierID, openingCash, notes any, openedBy string) (*Obj, error) {
-	return QueryObj(ctx, q, `INSERT INTO pos.pos_shifts (shift_number, cashier_id, opening_cash, notes, status, opened_by)
-		VALUES ($1, $2::text::uuid, $3, $4, 'active', $5) RETURNING *`,
-		number, cashierID, openingCash, notes, openedBy)
+func insertShift(ctx context.Context, q database.Querier, number string, cashierID, branchID, openingCash, notes any, openedBy string) (*Obj, error) {
+	return QueryObj(ctx, q, `INSERT INTO pos.pos_shifts (shift_number, cashier_id, branch_id, opening_cash, notes, status, opened_by)
+		VALUES ($1, $2::text::uuid, $3::text::uuid, $4, $5, 'active', $6) RETURNING *`,
+		number, cashierID, branchID, openingCash, notes, openedBy)
+}
+
+// myActiveShift is the newest open shift of userID, as cashier (gym desk
+// shifts) or as opener (the POS cashier uses a placeholder cashier), that
+// serves branchID: opened there or for no branch. gym-credits' SQLTill
+// links sales with the same rule.
+func myActiveShift(ctx context.Context, q database.Querier, userID string, branchID *string) (*Obj, error) {
+	return QueryObj(ctx, q, `SELECT * FROM pos.pos_shifts
+		WHERE status = 'active' AND (cashier_id::text = $1 OR opened_by = $1)
+		  AND (branch_id IS NULL OR $2::uuid IS NULL OR branch_id = $2::uuid)
+		ORDER BY opened_at DESC LIMIT 1`, userID, branchID)
 }
 
 // shiftForClose is the shift row the close validates.
@@ -101,6 +112,7 @@ type shiftClose struct {
 	ClosedBy                                     string
 	ClosingCash, ExpectedCash                    float64
 	Cash, Qris, Debit, Credit, ArkCoin, TotalSum float64
+	Refunds                                      float64
 	TotalOrders                                  int
 	Notes                                        *string
 }
@@ -109,10 +121,11 @@ func closeShift(ctx context.Context, q database.Querier, id string, c shiftClose
 	return QueryObj(ctx, q, `UPDATE pos.pos_shifts SET
 		status = 'closed', closed_at = now(), closed_by = $2, closing_cash = $3, expected_cash = $4,
 		total_cash_sales = $5, total_qris_sales = $6, total_debit_sales = $7, total_credit_sales = $8,
-		total_ark_coin_sales = $9, total_sales = $10, total_orders = $11, notes = $12, updated_at = now()
+		total_ark_coin_sales = $9, total_sales = $10, total_orders = $11, notes = $12, total_refunds = $13,
+		updated_at = now()
 		WHERE id = $1::text::uuid RETURNING *`,
 		id, c.ClosedBy, c.ClosingCash, c.ExpectedCash, c.Cash, c.Qris, c.Debit, c.Credit, c.ArkCoin,
-		c.TotalSum, c.TotalOrders, c.Notes)
+		c.TotalSum, c.TotalOrders, c.Notes, c.Refunds)
 }
 
 // shiftReportRow is the closed shift the WhatsApp report reads.

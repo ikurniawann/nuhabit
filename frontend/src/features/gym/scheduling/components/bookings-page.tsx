@@ -18,6 +18,7 @@ import { addDays, BOOKING_BADGE, GYM_KEYS, schedulingApi, waktu, wibDay, wibDayS
 import { SELECT } from "@/features/gym/shared";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { formatNumber } from "@/lib/format";
+import { useBookingActions } from "@/features/gym/permissions";
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 import { CorrectionDialog, type PendingCorrection } from "./correction-dialog";
 
@@ -46,6 +47,7 @@ export function BookingsPage() {
     queryFn: () => schedulingApi.bookings(params),
   });
   const [pending, setPending] = useState<PendingBookingAction | null>(null);
+  const can = useBookingActions();
   const action = useMutation({
     mutationFn: (input: { id: string; action: "cancel" | "no_show" | "check_in"; waivePenalty?: boolean }) =>
       schedulingApi.bookingAction(input.id, input.action, { waivePenalty: input.waivePenalty }),
@@ -153,22 +155,22 @@ export function BookingsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex flex-wrap justify-end gap-1">
-                        {b.status === "confirmed" && (
-                          <>
-                            <Button size="sm" variant="soft" disabled={action.isPending} onClick={() => action.mutate({ id: b.id, action: "check_in" })}>
-                              Check-in
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={action.isPending}
-                              onClick={() => setPending({ id: b.id, action: "no_show", memberName: b.member_name, waitlist: false })}
-                            >
-                              Tidak hadir
-                            </Button>
-                          </>
+                        {b.status === "confirmed" && can.checkIn && (
+                          <Button size="sm" variant="soft" disabled={action.isPending} onClick={() => action.mutate({ id: b.id, action: "check_in" })}>
+                            Check-in
+                          </Button>
                         )}
-                        {(b.status === "confirmed" || b.status === "waitlist") && (
+                        {b.status === "confirmed" && can.noShow && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={action.isPending}
+                            onClick={() => setPending({ id: b.id, action: "no_show", memberName: b.member_name, waitlist: false })}
+                          >
+                            Tidak hadir
+                          </Button>
+                        )}
+                        {can.cancel && (b.status === "confirmed" || b.status === "waitlist") && (
                           <Button
                             size="sm"
                             variant="ghost"

@@ -22,6 +22,8 @@ import (
 type Error struct {
 	Status  int
 	Message string
+	// Code, when set, goes out as details.code for the client to branch on.
+	Code string
 }
 
 func (e *Error) Error() string { return e.Message }
@@ -210,6 +212,7 @@ type Ports struct {
 	Notifier Notifier
 	// SavedMethods charges saved cards and e-wallets; nil turns them off.
 	SavedMethods SavedMethodGateway
+	Till         Till
 }
 
 // Service holds the credit use cases.
@@ -354,6 +357,8 @@ type NewPurchase struct {
 	BranchID      *string
 	Note          *string
 	CreatedBy     *string
+	// PosShiftID is the POS shift the payment joined.
+	PosShiftID *string
 }
 
 // PackageInput is the body of POST /api/gym/packages after validation.
@@ -442,12 +447,13 @@ type Repository interface {
 	// PendingGatewayPurchases lists pending QRIS and invoice purchases created
 	// at or before createdBefore, oldest first.
 	PendingGatewayPurchases(ctx context.Context, q database.Querier, createdBefore time.Time, limit int) ([]Purchase, error)
-	// MarkPurchasePaid returns paid_at and the package validity.
+	// MarkPurchasePaid gives the purchase its receipt number and returns
+	// paid_at and the package validity.
 	MarkPurchasePaid(ctx context.Context, q database.Querier, id string, meta map[string]any) (time.Time, int, error)
 	ClosePurchase(ctx context.Context, q database.Querier, id, status string) error
 	// MarkPurchaseRefunded records the amount paid back, appends note and
 	// merges meta into payment_meta.
-	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any) error
+	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any, shiftID *string) error
 	// PurchaseCompany is the company a purchase books to: its branch's,
 	// else the only company; nil when neither resolves.
 	PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error)

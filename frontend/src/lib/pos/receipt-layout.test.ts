@@ -46,6 +46,10 @@ describe("receiptDocumentLabel", () => {
     ).toBe("Checkout #CHK-20260815-0001");
   });
 
+  it("prints a full receipt number when the sale has one", () => {
+    expect(receiptDocumentLabel({ receiptNumber: "GYM-20261022-0001", orderId: "x" })).toBe("No. GYM-20261022-0001");
+  });
+
   it("keeps Order # for a single-stall sale", () => {
     expect(
       receiptDocumentLabel({

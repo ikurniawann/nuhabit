@@ -44,7 +44,19 @@ func setup(t *testing.T) *env {
 	}
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
 	h := newHandler(deps, tx)
-	return &env{t: t, ctx: ctx, tx: tx, mux: testutil.Mux(creditsModule{routes: h.Routes()}), svc: h.svc, staff: staff, member: member}
+	e := &env{t: t, ctx: ctx, tx: tx, mux: testutil.Mux(creditsModule{routes: h.Routes()}), svc: h.svc, staff: staff, member: member}
+	e.openShift(staff.UserID, nil)
+	return e
+}
+
+// openShift opens a POS shift with userID as cashier, for branchID (nil: any
+// branch), and returns its id. Cash sales and refunds need one.
+func (e *env) openShift(userID string, branchID any) string {
+	e.t.Helper()
+	var id string
+	e.scalar(&id, `INSERT INTO pos.pos_shifts (shift_number, cashier_id, branch_id, opening_cash, status, opened_by)
+		VALUES ('GT' || substr(md5(random()::text), 1, 12), $1, $2, 0, 'active', $3) RETURNING id::text`, userID, branchID, userID)
+	return id
 }
 
 func (e *env) exec(sql string, args ...any) {
@@ -429,6 +441,7 @@ func TestFrontDeskSaleNeedsBranchAndNoCorrections(t *testing.T) {
 	if out["error"] != "Paket ini khusus satu cabang. Pilih cabang penjualan." {
 		t.Fatalf("no branch: %v", out)
 	}
+	e.openShift(desk.UserID, org.BranchID)
 	sale := sell(map[string]any{"package_id": local, "payment_method": "cash", "branch_id": org.BranchID}, http.StatusOK)["data"].(map[string]any)
 	if sale["status"] != "paid" || sale["branch_id"] != org.BranchID {
 		t.Fatalf("sale %v", sale)

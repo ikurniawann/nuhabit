@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -221,14 +222,16 @@ function RulesForm({ data, branch }: { data: RulesAdmin; branch: RulesAdmin["bra
         </Card>
       ))}
       <div className="flex flex-wrap justify-end gap-2">
-        {!branch && (
-          <Button type="button" variant="outline" onClick={() => setValues(data.defaults)}>
-            <RotateCcw /> Kembalikan bawaan
+        <Can menu="gym.rules" action="update" mode="disable">
+          {!branch && (
+            <Button type="button" variant="outline" onClick={() => setValues(data.defaults)}>
+              <RotateCcw /> Kembalikan bawaan
+            </Button>
+          )}
+          <Button type="submit" disabled={save.isPending}>
+            {save.isPending ? "Menyimpan…" : branch ? `Simpan aturan ${branch.name}` : "Simpan aturan global"}
           </Button>
-        )}
-        <Button type="submit" disabled={save.isPending}>
-          {save.isPending ? "Menyimpan…" : branch ? `Simpan aturan ${branch.name}` : "Simpan aturan global"}
-        </Button>
+        </Can>
       </div>
     </form>
   );

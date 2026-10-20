@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
+import { useCan } from "@/components/iam/iam-access-provider";
+import { GymApiError } from "@/features/gym/shared";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
-import { gymCreditsApi, type CreditPurchase, type MemberCredits, type MemberPass, type RefundMode, type RenewWith } from "../api";
+import { gymCreditsApi, TILL_METHODS, type CreditPurchase, type MemberCredits, type MemberPass, type RefundMode, type RenewWith } from "../api";
+import { ShiftRequired } from "./desk-shift";
 
 const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Invoice online", saved_method: "Metode tersimpan member" };
 
@@ -38,6 +41,8 @@ function PassStatus({ pass }: { pass: MemberPass }) {
 /** Pass member: status, bekukan/aktifkan, perpanjang, dan perpanjangan otomatis. */
 export function PassesCard({ credits, onDone }: { credits: MemberCredits; onDone: () => void }) {
   const [dialog, setDialog] = useState<{ kind: "freeze" | "extend"; pass: MemberPass } | null>(null);
+  // Freeze, extend and auto-renew change what the member paid for: update on gym.credits.
+  const canChange = useCan("gym.credits", "update");
   const { freeze } = credits;
   const canFreeze = freeze.max_days_per_year > 0 && freeze.remaining_days >= freeze.min_days;
   const change = useMutation({
@@ -82,7 +87,9 @@ export function PassesCard({ credits, onDone }: { credits: MemberCredits; onDone
                 {formatDate(p.starts_at)} s.d. {formatDate(p.ends_at)}
               </TableCell>
               <TableCell>
-                {isLive(p) ? (
+                {isLive(p) && !canChange ? (
+                  <span className="text-xs text-muted-foreground">{p.auto_renew ? `Ya, ${RENEW_LABELS[p.renew_with]}` : "Tidak"}</span>
+                ) : isLive(p) ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <Switch
                       checked={p.auto_renew}
@@ -123,7 +130,7 @@ export function PassesCard({ credits, onDone }: { credits: MemberCredits; onDone
                 )}
               </TableCell>
               <TableCell className="text-right">
-                {isLive(p) && (
+                {canChange && isLive(p) && (
                   <div className="flex flex-wrap justify-end gap-1">
                     {p.status === "frozen" ? (
                       <Button
@@ -263,6 +270,8 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
   });
   const [mode, setMode] = useState<RefundMode>("prorated");
   const [reason, setReason] = useState("");
+  const [needsShift, setNeedsShift] = useState(false);
+  const queryClient = useQueryClient();
   const isPass = purchase.kind === "pass";
   const q = quote.data;
   const amount = q ? (isPass && mode === "full" ? q.full_idr : q.prorated_idr) : 0;
@@ -270,15 +279,25 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
     mutationFn: () => gymCreditsApi.refundPurchase(purchase.id, reason.trim(), isPass ? mode : "full"),
     onSuccess: (res) => {
       toast.success("Refund berhasil", { description: `${formatRupiah(res.refunded_idr ?? amount)} dikembalikan` });
+      void queryClient.invalidateQueries({ queryKey: ["gym-credits", "shift"] });
       onDone();
       onClose();
     },
-    onError: (error) => toast.error("Refund gagal", { description: error.message }),
+    onError: (error) => {
+      if (error instanceof GymApiError && error.code === "SHIFT_REQUIRED") {
+        setNeedsShift(true);
+        return;
+      }
+      toast.error("Refund gagal", { description: error.message });
+    },
   });
+  const viaTill = purchase.payment_method != null && TILL_METHODS.includes(purchase.payment_method);
   const payBack =
     purchase.payment_method === "ark_coin"
       ? `${formatRupiah(amount)} kembali ke saldo ARK Coin member.`
-      : `Kembalikan ${formatRupiah(amount)} ke member secara manual di kasir.`;
+      : viaTill
+        ? `Kembalikan ${formatRupiah(amount)} ke member di kasir. Refund tercatat di shift kasir Anda.`
+        : `Kembalikan ${formatRupiah(amount)} ke member secara manual di kasir.`;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -334,6 +353,13 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
             <Field label="Alasan" hint="Wajib. Tercatat di buku besar.">
               <Input value={reason} onChange={(e) => setReason(e.target.value)} required />
             </Field>
+            {needsShift && (
+              <ShiftRequired
+                branchId={purchase.branch_id}
+                message="Refund tunai dibayar dari laci: buka shift kasir dulu, lalu ulangi refund."
+                onOpened={() => setNeedsShift(false)}
+              />
+            )}
           </DialogPanelBody>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

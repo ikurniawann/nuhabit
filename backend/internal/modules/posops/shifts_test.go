@@ -97,7 +97,8 @@ func TestShiftsLifecycle(t *testing.T) {
 	jsonEq(t, r.body["summary"], `{"total_orders":3,"total_sales":85000,"opening_cash":"100000.00","expected_cash":170000,
 		"closing_cash":165000,"variance":-5000,
 		"method_breakdown":{"cash":50000,"qris":25000,"debit":0,"credit":10000,"ark_coin":0,"nfc_tab":0},
-		"member_bill_payments":{"cash":20000,"qris":5000,"card":0,"total":25000}}`)
+		"member_bill_payments":{"cash":20000,"qris":5000,"card":0,"total":25000},"total_refunds":0,
+		"gym_sales":{"cash":0,"qris":0,"card":0,"transfer":0,"sales":0,"count":0,"refunds":0,"cash_refunds":0,"refund_count":0}}`)
 	closed := data(r)
 	if closed["status"] != "closed" || closed["expected_cash"] != "170000.00" || closed["variance"] != "-5000.00" ||
 		closed["total_sales"] != "85000.00" || closed["total_orders"] != float64(3) || closed["notes"] != "tutup" ||

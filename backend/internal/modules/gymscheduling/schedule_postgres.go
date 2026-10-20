@@ -33,6 +33,8 @@ type ScheduleRepository interface {
 
 	ListTemplates(ctx context.Context, q Q) ([]*Row, error)
 	Branches(ctx context.Context, q Q) ([]*Row, error)
+	// BranchName is nil when the branch does not exist.
+	BranchName(ctx context.Context, q Q, id string) (*string, error)
 	// GetTemplate returns nil when the template does not exist.
 	GetTemplate(ctx context.Context, q Q, id string) (*SessionTemplate, error)
 	InsertTemplate(ctx context.Context, q Q, t SessionTemplate) (string, error)
@@ -190,6 +192,15 @@ func (Postgres) ListTemplates(ctx context.Context, q Q) ([]*Row, error) {
        LEFT JOIN gym.coaches c ON c.id = st.coach_id
        LEFT JOIN configuration.branches b ON b.id = st.branch_id
       ORDER BY st.active DESC, st.weekday, st.start_time, t.name`)
+}
+
+func (Postgres) BranchName(ctx context.Context, q Q, id string) (*string, error) {
+	var name *string
+	err := q.QueryRow(ctx, `SELECT name FROM configuration.branches WHERE id = $1`, id).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return name, err
 }
 
 func (Postgres) Branches(ctx context.Context, q Q) ([]*Row, error) {

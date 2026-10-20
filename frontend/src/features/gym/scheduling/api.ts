@@ -183,6 +183,24 @@ export interface MemberHit {
   pass_strikes: number;
   /** Akhir penangguhan booking karena strike; null bila tidak ditangguhkan. */
   suspended_until: string | null;
+  /** Cabang yang aturannya menghitung strike; null = aturan global. */
+  rules_branch_id: string | null;
+  rules_branch_name: string | null;
+}
+
+/** Cabang aturan strike dalam hasil cari: sesi yang dibooking, cabang yang dipilih, atau cabang staf. */
+export interface StrikeScope {
+  session_id?: string;
+  branch_id?: string;
+}
+
+/** Catatan aturan mana yang menghitung strike pada hasil cari member. */
+export function strikeRulesNote(hits: readonly MemberHit[] | undefined): string | null {
+  const hit = hits?.[0];
+  if (!hit) return null;
+  return hit.rules_branch_id
+    ? `Strike dihitung dengan aturan cabang ${hit.rules_branch_name ?? "sesi ini"}.`
+    : "Strike dihitung dengan aturan global.";
 }
 
 /** Akun staf yang bisa ditautkan ke profil coach. */
@@ -348,7 +366,7 @@ export const schedulingApi = {
   correctBooking: (id: string, action: CorrectionAction, reason: string) =>
     send<CorrectionResult>(`/api/gym/bookings/${id}`, { action, reason }),
   checkInBooking: (id: string) => send<CheckInResult>(`/api/gym/bookings/${id}`, { action: "check_in" }),
-  searchMembers: (q: string) => call<MemberHit[]>(`/api/gym/bookings/members?${qs({ q })}`),
+  searchMembers: (q: string, scope: StrikeScope = {}) => call<MemberHit[]>(`/api/gym/bookings/members?${qs({ q, ...scope })}`),
 
   checkinLog: () =>
     call<{ log: AccessLogRow[]; today: { checked_in: number; open_gym: number; denied: number; credits: number } }>(

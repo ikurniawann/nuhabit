@@ -254,10 +254,10 @@ func (Postgres) UpdateSession(ctx context.Context, q Q, id string, u SessionUpda
             capacity = $6, notes = $7, booking_opens_at = $8, booking_closes_at = $9,
             class_type_id = $10, credit_cost = $11,
             moved_at = COALESCE($12, moved_at), original_starts_at = COALESCE($13, original_starts_at),
-            updated_at = now()
+            branch_id = $14, updated_at = now()
       WHERE id = $1`,
 		id, u.CoachID, u.Area, u.StartsAt, u.DurationMin, u.Capacity, u.Notes, u.BookingOpensAt, u.BookingClosesAt,
-		u.ClassTypeID, u.CreditCost, u.MovedAt, u.OriginalStartsAt)
+		u.ClassTypeID, u.CreditCost, u.MovedAt, u.OriginalStartsAt, u.BranchID)
 	return err
 }
 

@@ -53,6 +53,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/gym/credits/reverse", Handler: h.api(h.reverse)},
 		{Pattern: "GET /api/gym/credits/purchases/{id}/refund-quote", Handler: h.api(h.refundQuote)},
 		{Pattern: "POST /api/gym/credits/purchases/{id}/refund", Handler: h.api(h.refund)},
+		{Pattern: "GET /api/gym/credits/purchases/{id}/receipt", Handler: h.api(h.receipt)},
 		{Pattern: "POST /api/gym/passes/{id}/freeze", Handler: h.api(h.freezePass)},
 		{Pattern: "POST /api/gym/passes/{id}/unfreeze", Handler: h.api(h.unfreezePass)},
 		{Pattern: "POST /api/gym/passes/{id}/extend", Handler: h.api(h.extendPass)},
@@ -92,7 +93,11 @@ func ok(w http.ResponseWriter, data any) error {
 func asHTTP(err error) error {
 	var e *Error
 	if errors.As(err, &e) {
-		return httpx.Status(e.Status, e.Message)
+		out := httpx.Status(e.Status, e.Message)
+		if e.Code != "" {
+			out.Details = map[string]string{"code": e.Code}
+		}
+		return out
 	}
 	return err
 }
@@ -322,6 +327,22 @@ func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return ok(w, quote)
+}
+
+// receipt is the printable receipt of a purchase, for reprints too.
+func (h *Handler) receipt(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
+		return err
+	}
+	id, err := requireUUID(r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	view, err := h.svc.Receipt(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	return ok(w, view)
 }
 
 /* ── Staff: pass lifecycle ───────────────────────────────────────────── */

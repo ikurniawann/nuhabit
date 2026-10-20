@@ -207,6 +207,32 @@ func (posOpsMemberBills) ShiftPayments(ctx context.Context, q database.Querier, 
 	})
 }
 
+/* ── Gym package sales (gym-credits) ─────────────────────────────────── */
+
+type posOpsGymSales struct{}
+
+var _ posops.GymSales = posOpsGymSales{}
+
+// ShiftPayments lists the gym sales taken in the shift (still counted when
+// refunded later) and the refunds paid back from it.
+func (posOpsGymSales) ShiftPayments(ctx context.Context, q database.Querier, shiftID string) ([]domain.GymShiftPayment, error) {
+	rows, err := q.Query(ctx, `SELECT total_idr::text, payment_method, false FROM gym.credit_purchases
+		WHERE pos_shift_id = $1::text::uuid AND status IN ('paid', 'refunded')
+		UNION ALL
+		SELECT refunded_idr::text, payment_method, true FROM gym.credit_purchases
+		WHERE refund_shift_id = $1::text::uuid AND refunded_idr > 0`, shiftID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (domain.GymShiftPayment, error) {
+		var p domain.GymShiftPayment
+		var amount, method string
+		err := r.Scan(&amount, &method, &p.Refund)
+		p.Amount, p.Method = amount, method
+		return p, err
+	})
+}
+
 /* ── Directory (configuration) ───────────────────────────────────────── */
 
 type posOpsDirectory struct{}

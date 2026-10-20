@@ -14,6 +14,7 @@ import (
 type Ports struct {
 	Sales       Sales
 	MemberBills MemberBills
+	GymSales    GymSales
 	Directory   Directory
 	Stalls      Stalls
 	Inventory   Inventory
@@ -174,6 +175,13 @@ type ShiftOrderPayment struct {
 // MemberBills reads member bill instalments (stored-value).
 type MemberBills interface {
 	ShiftPayments(ctx context.Context, q database.Querier, shiftID string) ([]domain.MemberBillPayment, error)
+}
+
+// GymSales reads the gym package sales and refunds the gym front desk took
+// in a shift (gym-credits). They carry their own journals; the shift only
+// counts them.
+type GymSales interface {
+	ShiftPayments(ctx context.Context, q database.Querier, shiftID string) ([]domain.GymShiftPayment, error)
 }
 
 // Directory reads configuration data: settings, companies, staff names.

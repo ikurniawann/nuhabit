@@ -51,6 +51,11 @@ type Purchase struct {
 	RefundedIdr   *float64        `json:"refunded_idr"`
 	CreatedBy     *string         `json:"created_by"`
 	CreatedAt     JSTime          `json:"created_at"`
+	ReceiptNumber *string         `json:"receipt_number"`
+	PosShiftID    *string         `json:"pos_shift_id"`
+	RefundShiftID *string         `json:"refund_shift_id"`
+	// ShiftNumber is the number of the POS shift the sale joined.
+	ShiftNumber *string `json:"shift_number"`
 }
 
 // meta decodes payment_meta (an object; {} when unreadable).

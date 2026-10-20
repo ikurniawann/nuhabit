@@ -14,7 +14,7 @@ import {
   isPathAllowedByMenus,
   ESS_HOME_PATH,
 } from "@/lib/iam/access";
-import { loadGrantedMenuCodesForUser } from "@/lib/iam/has-menu";
+import { loadGrantedMenuActionsForUser, loadGrantedMenuCodesForUser } from "@/lib/iam/has-menu";
 import { IamAccessProvider } from "@/components/iam/iam-access-provider";
 import { AppSidebar } from "@/components/shared";
 import { LayoutLoadError } from "@/components/layout-load-error";
@@ -42,9 +42,10 @@ export default async function DashboardGroupLayout({
   }
   // Kebijakan ESS-only ditentukan IAM (permission menu non-ESS), bukan daftar role di kode.
   const essOnly = await isEssOnlyUser(user.id, user.role);
-  const [allNavItems, grantedCodes] = await Promise.all([
+  const [allNavItems, grantedCodes, grantedActions] = await Promise.all([
     getUserMenus(user.id, user.role),
     loadGrantedMenuCodesForUser(user.id, user.role),
+    loadGrantedMenuActionsForUser(user.id, user.role),
   ]);
 
   const pathname = (await headers()).get("x-pathname") ?? "";
@@ -77,7 +78,7 @@ export default async function DashboardGroupLayout({
     : allNavItems.filter((item) => item.href !== "/dashboard/me");
 
   return (
-    <IamAccessProvider grantedCodes={grantedCodes}>
+    <IamAccessProvider grantedCodes={grantedCodes} grantedActions={grantedActions}>
     <AppSidebar
       user={{
         full_name: user.full_name,

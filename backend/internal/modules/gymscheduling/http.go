@@ -510,6 +510,7 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	var patch SessionPatch
 	patch.ClassTypeID = f.UUID("class_type_id", optional)
 	patch.CoachID = optionalField(f, "coach_id", f.UUID("coach_id", nullableOptional))
+	patch.BranchID = optionalField(f, "branch_id", f.UUID("branch_id", nullableOptional))
 	patch.Area = optionalField(f, "area", f.Str("area", nullableOptional, validate.StrOpts{Trim: true, Max: 80}))
 	patch.StartsAt = datetime(f, "starts_at", optional)
 	patch.DurationMin = f.Int("duration_min", optional, between(15, 240))
@@ -588,8 +589,15 @@ func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User
 	return ok(w, out)
 }
 
-func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	hits, err := h.svc.SearchBookableMembers(r.Context(), strings.TrimSpace(r.URL.Query().Get("q")))
+// searchMembers counts strikes under the rules of ?session_id='s branch,
+// else ?branch_id=, else the caller's branch.
+func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, user *auth.User) error {
+	query := r.URL.Query()
+	scope := StrikeScope{SessionID: optionalUUID(query, "session_id"), BranchID: optionalUUID(query, "branch_id")}
+	if scope.BranchID == nil && user != nil {
+		scope.BranchID = user.BranchID
+	}
+	hits, err := h.svc.SearchBookableMembers(r.Context(), strings.TrimSpace(query.Get("q")), scope)
 	if err != nil {
 		return err
 	}

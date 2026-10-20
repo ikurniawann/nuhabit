@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -53,9 +54,11 @@ export function ClassTypesPage() {
         title="Jenis Kelas"
         description="Template kelas. Sesi menyalin kapasitas dan biaya kredit saat dibuat, jadi mengubah template tidak mengubah sesi yang sudah ada."
         actions={
-          <Button onClick={() => setEditing("new")}>
-            <Plus /> Jenis kelas baru
-          </Button>
+          <Can menu="gym.class-types" action="create" mode="disable">
+            <Button onClick={() => setEditing("new")}>
+              <Plus /> Jenis kelas baru
+            </Button>
+          </Can>
         }
       />
 
@@ -95,13 +98,17 @@ export function ClassTypesPage() {
                   <TableCell className="hidden text-right tabular-nums md:table-cell">{formatNumber(t.upcoming_sessions)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
-                        Ubah
-                      </Button>
-                      {t.status === "active" && (
-                        <Button variant="ghost" size="sm" className="text-danger" onClick={() => setArchiving(t)}>
-                          Arsipkan
+                      <Can menu="gym.class-types" action="update">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(t)}>
+                          Ubah
                         </Button>
+                      </Can>
+                      {t.status === "active" && (
+                        <Can menu="gym.class-types" action="delete">
+                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => setArchiving(t)}>
+                            Arsipkan
+                          </Button>
+                        </Can>
                       )}
                     </div>
                   </TableCell>
