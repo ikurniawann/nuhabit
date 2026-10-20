@@ -284,7 +284,14 @@ func TestSocialProfileAndRecords(t *testing.T) {
 	if ok := e.obj(&a, "PATCH", "/api/member-portal/app/home/settings", map[string]any{"language": "EN"}); ok["ok"] != true {
 		t.Fatal(ok)
 	}
-	if h := e.obj(&a, "GET", "/api/member-portal/app/home/settings", nil); h["language"] != "EN" || h["units"] != "METRIC" || h["weeklyGoalKm"] != nil {
+	if h := e.obj(&a, "GET", "/api/member-portal/app/home/settings", nil); h["language"] != "EN" || h["units"] != "METRIC" || h["weeklyGoalKm"] != nil ||
+		h["gymWhatsapp"] != true || h["gymEmail"] != true {
+		t.Fatal(h)
+	}
+	// The gym channel opt-outs survive a train settings save.
+	e.obj(&a, "PATCH", "/api/member-portal/app/home/settings", map[string]any{"gymWhatsapp": false})
+	e.obj(&a, "PUT", base+"/settings", map[string]any{"units": "METRIC"})
+	if h := e.obj(&a, "GET", "/api/member-portal/app/home/settings", nil); h["gymWhatsapp"] != false || h["gymEmail"] != true || h["language"] != "EN" {
 		t.Fatal(h)
 	}
 

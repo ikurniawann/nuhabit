@@ -180,6 +180,19 @@ type InvoiceGateway interface {
 	InvoiceStatus(ctx context.Context, invoiceID string) (string, error)
 }
 
+// Notice is an in-app message to a member.
+type Notice struct {
+	Type  string
+	Title string
+	Body  string
+}
+
+// Notifier stores a member notification and asks CRM to deliver it, in the
+// caller's transaction.
+type Notifier interface {
+	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notice) error
+}
+
 /* ── Service ─────────────────────────────────────────────────────────── */
 
 // Ports bundles the adapters the service needs from other contexts.
@@ -191,6 +204,7 @@ type Ports struct {
 	Invoices  InvoiceGateway
 	// Vouchers is the promo-code engine; nil turns voucher codes away.
 	Vouchers Vouchers
+	Notifier Notifier
 }
 
 // Service holds the credit use cases.
@@ -355,6 +369,9 @@ type Repository interface {
 	Purchase(ctx context.Context, q database.Querier, id string, lock bool) (*Purchase, error)
 	PurchasesOf(ctx context.Context, q database.Querier, customerID string, limit int) ([]Purchase, error)
 	PurchaseIDByReference(ctx context.Context, q database.Querier, referenceID string) (string, error)
+	// PendingGatewayPurchases lists pending QRIS and invoice purchases created
+	// at or before createdBefore, oldest first.
+	PendingGatewayPurchases(ctx context.Context, q database.Querier, createdBefore time.Time, limit int) ([]Purchase, error)
 	// MarkPurchasePaid returns paid_at and the package validity.
 	MarkPurchasePaid(ctx context.Context, q database.Querier, id string, meta map[string]any) (time.Time, int, error)
 	ClosePurchase(ctx context.Context, q database.Querier, id, status string) error

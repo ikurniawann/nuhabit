@@ -386,17 +386,35 @@ type SettingsPatch struct {
 	GoalSet          bool
 	WeeklyGoalKm     *float64
 	Language         *string
+	GymWhatsapp      *bool
+	GymEmail         *bool
 }
 
-// homeSettingsBody is the home settings PATCH schema: no weeklyGoalKm key.
+// homeSettingsBody is the home settings PATCH schema: no weeklyGoalKm key,
+// plus the gym notification channels.
 type homeSettingsBody struct {
 	Units            opt[string] `json:"units"`
 	BookingReminders opt[bool]   `json:"bookingReminders"`
 	Language         opt[string] `json:"language"`
+	GymWhatsapp      opt[bool]   `json:"gymWhatsapp"`
+	GymEmail         opt[bool]   `json:"gymEmail"`
 }
 
 func (b homeSettingsBody) validate() (SettingsPatch, bool) {
-	return settingsBody{Units: b.Units, BookingReminders: b.BookingReminders, Language: b.Language}.validate()
+	p, ok := settingsBody{Units: b.Units, BookingReminders: b.BookingReminders, Language: b.Language}.validate()
+	for _, f := range []struct {
+		in  opt[bool]
+		out **bool
+	}{{b.GymWhatsapp, &p.GymWhatsapp}, {b.GymEmail, &p.GymEmail}} {
+		if !f.in.Set {
+			continue
+		}
+		if f.in.Null {
+			return p, false
+		}
+		*f.out = &f.in.V
+	}
+	return p, ok
 }
 
 // validate ports settingsSchema.

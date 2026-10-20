@@ -31,8 +31,9 @@ describe("GYM_RULE_DEFAULTS", () => {
       strikeSuspendDays: 7,
       waitlistPromoteCutoffMin: 60,
       waitlistOfferMinutes: 30,
+      classReminderMinutes: 120,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(19);
+    expect(GYM_RULE_KEYS).toHaveLength(20);
   });
 });
 

@@ -93,7 +93,7 @@ export function SettingsPage() {
         {saveError ? <p className="text-xs font-semibold text-nh-danger">{saveError}</p> : null}
       </div>
 
-      <NotificationSettings />
+      <NotificationSettings settings={settings} update={update} />
 
       <PasswordSection />
 
@@ -105,8 +105,17 @@ export function SettingsPage() {
   );
 }
 
-/** Web push di perangkat ini dan persetujuan promo WhatsApp (dulu di profil portal lama). */
-function NotificationSettings() {
+/**
+ * Web push di perangkat ini, kanal notifikasi gym (WhatsApp dan email, disimpan
+ * di akun) dan persetujuan promo WhatsApp (dulu di profil portal lama).
+ */
+function NotificationSettings({
+  settings,
+  update,
+}: {
+  settings: MemberSettingsView;
+  update: (patch: Partial<MemberSettingsView>) => Promise<void>;
+}) {
   const t = useT();
   const push = useMemberPush();
   const refresh = useRefresh();
@@ -150,6 +159,34 @@ function NotificationSettings() {
           checked={push.state === "on"}
           disabled={pushLocked}
           onChange={(e) => void (e.target.checked ? push.enable() : push.disable())}
+          className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-3 font-bold">
+        <span>
+          {t("Gym updates on WhatsApp")}
+          <span className="block text-xs font-medium text-nh-muted">
+            {t("Bookings, class reminders, and credit reminders")}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={settings.gymWhatsapp}
+          onChange={(e) => void update({ gymWhatsapp: e.target.checked })}
+          className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-3 font-bold">
+        <span>
+          {t("Gym updates by email")}
+          <span className="block text-xs font-medium text-nh-muted">
+            {t("Sent to the email on your profile")}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          checked={settings.gymEmail}
+          onChange={(e) => void update({ gymEmail: e.target.checked })}
           className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
         />
       </label>

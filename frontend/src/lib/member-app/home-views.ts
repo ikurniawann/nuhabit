@@ -87,4 +87,8 @@ export interface MemberSettingsView {
   units: "METRIC" | "IMPERIAL";
   bookingReminders: boolean;
   language: "EN" | "ID";
+  /** Notifikasi gym (booking, pengingat kelas, kredit) juga lewat WhatsApp. */
+  gymWhatsapp: boolean;
+  /** Notifikasi gym juga lewat email. */
+  gymEmail: boolean;
 }

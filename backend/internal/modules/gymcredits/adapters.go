@@ -5,8 +5,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/contracts/gym"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/members"
+	"nuhabit/backend/internal/platform/outbox"
 )
 
 // Read adapters for data owned by other contexts (customers, branches, class
@@ -165,4 +167,22 @@ func (SQLDirectory) StaffNames(ctx context.Context, db database.Querier, ids []s
 		return nil
 	})
 	return out, err
+}
+
+// SQLNotifier writes crm.member_notifications and publishes
+// gym.member.notified in the same transaction; the CRM subscriber sends the
+// web push, WhatsApp and email after commit.
+type SQLNotifier struct{}
+
+var _ Notifier = SQLNotifier{}
+
+func (SQLNotifier) NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notice) error {
+	if _, err := q.Exec(ctx,
+		`INSERT INTO crm.member_notifications (customer_id, type, title, body) VALUES ($1, $2, $3, $4)`,
+		customerID, n.Type, n.Title, n.Body); err != nil {
+		return err
+	}
+	return outbox.Publish(ctx, q, gym.TopicMemberNotified, customerID, gym.MemberNotified{
+		CustomerID: customerID, Type: n.Type, Title: n.Title, Body: n.Body,
+	})
 }

@@ -43,6 +43,8 @@ export interface GymRules {
   waitlistPromoteCutoffMin: number;
   /** Lama kursi yang ditawarkan ditahan untuk member (menit). */
   waitlistOfferMinutes: number;
+  /** Member yang booking diingatkan N menit sebelum kelas; 0 = tanpa pengingat. */
+  classReminderMinutes: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -67,6 +69,7 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   strikeSuspendDays: 7,
   waitlistPromoteCutoffMin: 60,
   waitlistOfferMinutes: 30,
+  classReminderMinutes: 120,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -99,6 +102,7 @@ const rulesShape = {
   strikeSuspendDays: int(1, 365, "Lama penangguhan"),
   waitlistPromoteCutoffMin: int(0, 10080, "Batas promosi otomatis"),
   waitlistOfferMinutes: int(5, 1440, "Masa tawaran kursi"),
+  classReminderMinutes: int(0, 10080, "Pengingat kelas"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();

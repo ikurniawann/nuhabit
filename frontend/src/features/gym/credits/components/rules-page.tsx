@@ -37,6 +37,7 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
     fields: [
       { key: "bookingOpensDaysBefore", kind: "number", label: "Booking dibuka", unit: "hari sebelum kelas", hint: "Jadwal lebih jauh dari ini belum bisa dibooking.", min: 0 },
       { key: "bookingClosesMinBefore", kind: "number", label: "Booking ditutup", unit: "menit sebelum kelas", hint: "0 = sampai kelas mulai.", min: 0 },
+      { key: "classReminderMinutes", kind: "number", label: "Pengingat kelas", unit: "menit sebelum kelas", hint: "Member yang booking diingatkan lewat aplikasi, WhatsApp, dan email. 0 = tanpa pengingat.", min: 0 },
       { key: "cancellationDeadlineHours", kind: "number", label: "Batas batal gratis", unit: "jam sebelum kelas", hint: "Batal setelah ini dihitung batal terlambat.", min: 0 },
       { key: "lateCancelPolicy", kind: "policy", label: "Batal terlambat", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
       { key: "noShowPolicy", kind: "policy", label: "Tidak hadir (no-show)", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },

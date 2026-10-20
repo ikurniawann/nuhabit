@@ -43,6 +43,8 @@ type Rules struct {
 	StrikeSuspendDays        int
 	WaitlistPromoteCutoffMin int
 	WaitlistOfferMinutes     int
+	// ClassReminderMinutes: remind booked members this long before class; 0 = never.
+	ClassReminderMinutes int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────

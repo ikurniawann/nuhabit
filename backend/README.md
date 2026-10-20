@@ -45,6 +45,7 @@ From `backend/` the Makefile wraps the same commands: `make run`, `make test`,
 | `TZ` | `Asia/Jakarta` | process zone; the pool also forces `timezone=Asia/Jakarta` per session |
 | `LOG_LEVEL` | `info` | slog level; logs are JSON on stdout |
 | `METRICS_ADDR` | unset | listen address of the internal Prometheus `/metrics` server (see `docs/DEPLOY.md`); unset serves none |
+| `JOBS_ENABLED` | `true` | `false` stops this process from running background jobs (see `docs/DEPLOY.md`) |
 | `TEST_DATABASE_URL` | unset | enables integration tests |
 
 Values come from the shell first, then `backend/.env.local`, then `backend/.env`.

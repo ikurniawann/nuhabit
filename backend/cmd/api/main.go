@@ -26,6 +26,7 @@ import (
 	"nuhabit/backend/internal/platform/config"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/jobs"
 	"nuhabit/backend/internal/platform/metrics"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ocr"
@@ -108,6 +109,7 @@ func run(cfg config.Config, log *slog.Logger) error {
 			log.Error("outbox dispatcher stopped", "error", err)
 		}
 	}()
+	startJobs(ctx, cfg, deps, reg, log)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -147,6 +149,19 @@ func run(cfg config.Config, log *slog.Logger) error {
 		_ = metricsSrv.Shutdown(shutdownCtx)
 	}
 	return err
+}
+
+// startJobs runs the background jobs of the mounted modules unless
+// JOBS_ENABLED is off. A job runs on one replica at a time (see jobs.PostgresLocker).
+func startJobs(ctx context.Context, cfg config.Config, deps module.Deps, reg *metrics.Registry, log *slog.Logger) {
+	if !cfg.JobsEnabled {
+		log.Info("background jobs disabled (JOBS_ENABLED)")
+		return
+	}
+	runner := jobs.NewRunner(jobs.PostgresLocker{DB: deps.DB}, log, deps.Now, reg)
+	runner.Add(app.Jobs(deps)...)
+	log.Info("background jobs started", "jobs", runner.Names())
+	go runner.Run(ctx)
 }
 
 // serveMetrics starts the /metrics server on addr and returns it, or nil

@@ -45,6 +45,7 @@ func (headerGuard) RequireMember(r *http.Request) (string, error) {
 type fixture struct {
 	t       *testing.T
 	credits testCredits
+	svc     *Service
 	ctx     context.Context
 	tx      pgx.Tx
 	mux     *http.ServeMux
@@ -66,7 +67,7 @@ func newFixture(t *testing.T) *fixture {
 		Members: MembersSQL{}, Qr: QrTokensSQL{}, Notifier: NotificationsSQL{},
 	}, nil)
 	h := &handler{svc: svc, guard: headerGuard{}, log: slog.New(slog.NewTextHandler(io.Discard, nil))}
-	return &fixture{t: t, credits: credits, ctx: ctx, tx: tx, mux: testutil.Mux(mod{h: h}), staff: "6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11"}
+	return &fixture{t: t, credits: credits, svc: svc, ctx: ctx, tx: tx, mux: testutil.Mux(mod{h: h}), staff: "6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11"}
 }
 
 type response struct {

@@ -85,6 +85,9 @@ scrape_configs:
 | `pgxpool_acquires_total`, `_empty_acquires_total`, `_canceled_acquires_total`, `_acquire_duration_seconds_total`, `_empty_acquire_wait_seconds_total`, `_new_conns_total`, `_max_lifetime_destroys_total`, `_max_idle_destroys_total` | counter | none |
 | `go_goroutines`, `go_memstats_heap_alloc_bytes`, `go_memstats_sys_bytes`, `go_gc_heap_goal_bytes`, `go_sched_gomaxprocs_threads` | gauge | none |
 | `go_gc_cycles_total` | counter | none |
+| `job_runs_total`, `job_failures_total`, `job_skipped_total` | counter | `job` |
+| `job_last_success_timestamp_seconds` | gauge | `job` |
+| `job_duration_seconds` | histogram (50 ms to 5 min) | `job` |
 
 `route` is the ServeMux pattern without its method (`/api/crm/members/{id}`),
 or `unmatched` for 404 and 405 answers, so ids never become label values.
@@ -100,7 +103,46 @@ sum by (route) (rate(http_requests_total{status="5xx"}[5m]))
 histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket[5m])))
 pgxpool_acquired_conns / pgxpool_max_conns
 rate(pgxpool_empty_acquire_wait_seconds_total[5m])
+increase(job_failures_total[1h]) > 0
+time() - max by (job) (job_last_success_timestamp_seconds) > 3 * 3600
 ```
+
+The `job_*` series count this replica only: `job_runs_total` and the
+last-success gauge stay flat on a replica whose ticks the others won
+(`job_skipped_total` grows instead), so aggregate with `max by (job)` or
+`sum by (job)` across replicas.
+
+## Background jobs
+
+The API runs periodic jobs next to the outbox dispatcher. Each mounted module
+registers its own jobs in `internal/app/module_<name>.go`
+(`RegisterJob(...)`), so `MODULES` decides which jobs a process runs.
+
+| Job | Every | Work |
+|---|---|---|
+| `gym-credits.purchase-reconcile` | 2 min | Asks Xendit about QRIS and invoice purchases still pending after a minute, settles paid ones, closes expired ones. |
+| `gym-credits.reminders` | 1 h | Credit expiry and pass expiry reminders (`expiryReminderDays`), low-balance nudges (`lowBalanceThreshold`). |
+| `gym-scheduling.class-reminders` | 5 min | Reminds booked members `classReminderMinutes` before class, unless they turned off booking reminders in the member app. |
+
+- Replicas: a job takes a Postgres advisory lock for the length of a run and
+  starts only when its last start (`platform.job_runs`) is at least one
+  interval old, so N replicas run each job about once per interval between
+  them. `platform.job_runs` also keeps the last error and the last success.
+- Reminders are claimed in `platform.reminder_sends` (kind, subject, period)
+  in the transaction that writes them, so a rerun never sends twice.
+- `JOBS_ENABLED=false` (or `0`, `off`, `no`) stops a replica from running
+  jobs; the default is on. Keep it on for at least one replica that mounts
+  the gym modules, or purchases stay pending until the member polls and no
+  reminder goes out.
+- A failed run is logged (`job failed`) and retried on the next tick.
+
+Gym notifications (bookings, waitlist, class changes, check-in, reminders)
+land in the member inbox and go out through the outbox to web push
+(`VAPID_*`), WhatsApp (any configured provider: `services/wa-gateway`, Meta
+or Fonnte) and email (Resend, when `RESEND_API_KEY` and `GYM_FROM_EMAIL` or
+`FROM_EMAIL` are set). Members turn WhatsApp and email off in the member app
+settings. A delivery failure is logged and never fails the booking or
+the job.
 
 ## Member sign-in flags
 

@@ -24,6 +24,9 @@ type Config struct {
 	// MetricsAddr is METRICS_ADDR, the listen address of the internal
 	// /metrics server; empty disables it.
 	MetricsAddr string
+	// JobsEnabled is JOBS_ENABLED: false (or 0, off, no) stops this process
+	// from running background jobs. Default on.
+	JobsEnabled bool
 }
 
 // IsProduction reports whether APP_ENV (or NODE_ENV) says production.
@@ -89,7 +92,16 @@ func Load() Config {
 		AppEnv:      appEnv,
 		TimeZone:    firstNonEmpty(os.Getenv("TZ"), "Asia/Jakarta"),
 		MetricsAddr: firstNonEmpty(os.Getenv("METRICS_ADDR")),
+		JobsEnabled: !isOff(os.Getenv("JOBS_ENABLED")),
 	}
+}
+
+func isOff(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "false", "0", "off", "no":
+		return true
+	}
+	return false
 }
 
 // LoadDotenv loads KEY=VALUE files into the process environment. Earlier

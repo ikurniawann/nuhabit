@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"strings"
@@ -491,8 +492,8 @@ func jsString(v any) string {
 }
 
 // RefreshMemberPurchase is the member's purchase status for polling. While
-// pending it asks Xendit directly (the webhook can be late) and closes a QR
-// past its expiry. nil means not found or not the member's.
+// pending it reconciles with Xendit (see reconcilePending). nil means not
+// found or not the member's.
 func (s *Service) RefreshMemberPurchase(ctx context.Context, customerID, purchaseID string) (*MemberPurchaseView, error) {
 	row, err := s.repo.Purchase(ctx, s.db, purchaseID, false)
 	if err != nil || row == nil || row.CustomerID != customerID {
@@ -501,36 +502,69 @@ func (s *Service) RefreshMemberPurchase(ctx context.Context, customerID, purchas
 	if row.Status != "pending" {
 		return memberPurchaseView(row), nil
 	}
+	current, err := s.reconcilePending(ctx, row)
+	if err != nil {
+		return nil, err
+	}
+	return memberPurchaseView(current), nil
+}
+
+// pendingSweepAge leaves a purchase's first minute to the member's own polling.
+const (
+	pendingSweepAge   = time.Minute
+	pendingSweepBatch = 200
+)
+
+// ReconcilePendingPurchases is the background twin of the member's polling:
+// every QRIS or invoice purchase still pending a minute after it started is
+// asked about at Xendit (the webhook can be late or lost), and one past its
+// expiry is closed. Front-desk sales without a gateway reference are left
+// alone. The errors of single purchases come back joined after the sweep.
+func (s *Service) ReconcilePendingPurchases(ctx context.Context, now time.Time) error {
+	rows, err := s.repo.PendingGatewayPurchases(ctx, s.db, now.Add(-pendingSweepAge), pendingSweepBatch)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for i := range rows {
+		if _, err := s.reconcilePending(ctx, &rows[i]); err != nil {
+			errs = append(errs, fmt.Errorf("purchase %s: %w", rows[i].ID, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// reconcilePending asks Xendit about a pending purchase and settles a paid
+// one, then closes a QR or invoice past its expiry. It returns the purchase
+// as it stands afterwards. Gateway failures are logged, not returned, so the
+// expiry check still runs.
+func (s *Service) reconcilePending(ctx context.Context, row *Purchase) (*Purchase, error) {
 	meta := row.meta()
 	if qrID, _ := meta["qr_id"].(string); qrID != "" {
-		settled, err := s.reconcileQR(ctx, purchaseID, qrID)
+		settled, err := s.reconcileQR(ctx, row.ID, qrID)
 		if err != nil {
 			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi QR gagal", "qr_id", qrID, "error", err)
 		} else if settled != nil {
-			return memberPurchaseView(settled), nil
+			return settled, nil
 		}
 	}
 	if invoiceID, _ := meta["invoice_id"].(string); invoiceID != "" {
-		settled, err := s.reconcileInvoice(ctx, purchaseID, invoiceID)
+		settled, err := s.reconcileInvoice(ctx, row.ID, invoiceID)
 		if err != nil {
 			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi invoice gagal", "invoice_id", invoiceID, "error", err)
 		} else if settled != nil {
-			return memberPurchaseView(settled), nil
+			return settled, nil
 		}
 	}
 	if expiresAt, ok := meta["expires_at"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, expiresAt); err == nil && t.Before(s.clock()) {
-			if err := s.closePurchase(ctx, purchaseID, "expired"); err != nil {
+			if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {
 				return nil, err
 			}
-			reloaded, err := s.repo.Purchase(ctx, s.db, purchaseID, false)
-			if err != nil {
-				return nil, err
-			}
-			return memberPurchaseView(reloaded), nil
+			return s.repo.Purchase(ctx, s.db, row.ID, false)
 		}
 	}
-	return memberPurchaseView(row), nil
+	return row, nil
 }
 
 func (s *Service) reconcileQR(ctx context.Context, purchaseID, qrID string) (*Purchase, error) {

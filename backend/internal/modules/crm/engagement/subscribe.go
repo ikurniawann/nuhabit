@@ -5,6 +5,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/contracts/gym"
 	"nuhabit/backend/internal/contracts/storedvalue"
 	"nuhabit/backend/internal/modules/crm/engagement/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -12,18 +13,23 @@ import (
 	"nuhabit/backend/internal/platform/outbox"
 )
 
-// subscriberWalletNotice is a contract: renaming it drops pending deliveries.
-const subscriberWalletNotice = "crm.member-notification-from-wallet"
+// Subscriber names are contracts: renaming one drops pending deliveries.
+const (
+	subscriberWalletNotice = "crm.member-notification-from-wallet"
+	subscriberGymNotice    = "crm.member-delivery-from-gym"
+)
 
-// Subscribe registers the engagement outbox subscribers: the member inbox
-// row and web push the wallet sweep asks for (notifyMember in
+// Subscribe registers the engagement outbox subscribers: the delivery of
+// gym notifications, and the member inbox row and web push the wallet sweep
+// asks for (notifyMember in
 // lib/crm/engagement/server.ts).
 func Subscribe(bus *outbox.Bus, d module.Deps, p Ports) {
 	if bus == nil {
 		return
 	}
-	w := walletSubscriber{h: newHandler(d.DB, d, p)}
-	bus.Subscribe(storedvalue.TopicMemberNotified, subscriberWalletNotice, w.handle)
+	h := newHandler(d.DB, d, p)
+	bus.Subscribe(storedvalue.TopicMemberNotified, subscriberWalletNotice, walletSubscriber{h: h}.handle)
+	bus.Subscribe(gym.TopicMemberNotified, subscriberGymNotice, gymSubscriber{h: h, channels: p.Gym}.handle)
 }
 
 type walletSubscriber struct{ h *handler }
@@ -47,6 +53,48 @@ func (w walletSubscriber) handle(ctx context.Context, tx pgx.Tx, e outbox.Event)
 	}
 	if first {
 		w.h.send(n)
+	}
+	return nil
+}
+
+// inAppOnly are gym notifications about the member's own action. They stay
+// in the inbox and on push; WhatsApp and email carry the rest.
+var inAppOnly = map[string]bool{
+	"gym_booking_confirmed": true,
+	"gym_booking_waitlist":  true,
+	"gym_checked_in":        true,
+}
+
+type gymSubscriber struct {
+	h        *handler
+	channels GymChannels
+}
+
+// handle delivers a gym notification the publisher already stored in the
+// inbox: web push, then WhatsApp and email. Each is claimed once per event
+// and member before it is sent, as the wallet push is, so a redelivery never
+// sends twice. A failed send is logged by the sender and never retried.
+func (g gymSubscriber) handle(ctx context.Context, _ pgx.Tx, e outbox.Event) error {
+	var in gym.MemberNotified
+	if err := e.Decode(&in); err != nil {
+		return err
+	}
+	first, err := claimPush(ctx, g.h.db, e.ID, in.CustomerID)
+	if err != nil {
+		return err
+	}
+	if first && g.h.push != nil {
+		g.h.push.SendMember(in.CustomerID, domain.PushMessage{Type: in.Type, Title: in.Title, Body: in.Body})
+	}
+	if g.channels == nil || inAppOnly[in.Type] {
+		return nil
+	}
+	first, err = claimPush(ctx, g.h.db, e.ID, "channels:"+in.CustomerID)
+	if err != nil {
+		return err
+	}
+	if first {
+		g.channels.Send(in.CustomerID, in.Title, in.Body)
 	}
 	return nil
 }

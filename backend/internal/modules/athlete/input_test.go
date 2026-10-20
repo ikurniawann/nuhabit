@@ -127,6 +127,14 @@ func TestPatchAndSettingsValidation(t *testing.T) {
 	if !ok || !valid || hp.GoalSet || *hp.Language != "EN" {
 		t.Fatalf("%+v", hp)
 	}
+	h, _ = decodeString[homeSettingsBody](t, `{"gymWhatsapp":false}`)
+	if hp, valid = h.validate(); !valid || hp.GymWhatsapp == nil || *hp.GymWhatsapp || hp.GymEmail != nil {
+		t.Fatalf("%+v", hp)
+	}
+	h, _ = decodeString[homeSettingsBody](t, `{"gymEmail":null}`)
+	if _, valid = h.validate(); valid {
+		t.Error("accepted gymEmail null")
+	}
 }
 
 func TestSmallSchemas(t *testing.T) {

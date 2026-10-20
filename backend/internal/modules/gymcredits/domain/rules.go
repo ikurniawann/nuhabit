@@ -39,6 +39,9 @@ type Rules struct {
 	// holds the seat.
 	WaitlistPromoteCutoffMin int `json:"waitlistPromoteCutoffMin"`
 	WaitlistOfferMinutes     int `json:"waitlistOfferMinutes"`
+	// ClassReminderMinutes: booked members are reminded this many minutes
+	// before class; 0 sends no reminder.
+	ClassReminderMinutes int `json:"classReminderMinutes"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -62,6 +65,7 @@ type RulesPatch struct {
 	StrikeSuspendDays         *int    `json:"strikeSuspendDays,omitempty"`
 	WaitlistPromoteCutoffMin  *int    `json:"waitlistPromoteCutoffMin,omitempty"`
 	WaitlistOfferMinutes      *int    `json:"waitlistOfferMinutes,omitempty"`
+	ClassReminderMinutes      *int    `json:"classReminderMinutes,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -88,6 +92,7 @@ var RuleDefaults = Rules{
 	StrikeSuspendDays:         7,
 	WaitlistPromoteCutoffMin:  60,
 	WaitlistOfferMinutes:      30,
+	ClassReminderMinutes:      120,
 }
 
 type ruleKind int
@@ -139,6 +144,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("strikeSuspendDays", 1, 365, "Lama penangguhan", func(p *RulesPatch) **int { return &p.StrikeSuspendDays }),
 	intRule("waitlistPromoteCutoffMin", 0, 10080, "Batas promosi otomatis", func(p *RulesPatch) **int { return &p.WaitlistPromoteCutoffMin }),
 	intRule("waitlistOfferMinutes", 5, 1440, "Masa tawaran kursi", func(p *RulesPatch) **int { return &p.WaitlistOfferMinutes }),
+	intRule("classReminderMinutes", 0, 10080, "Pengingat kelas", func(p *RulesPatch) **int { return &p.ClassReminderMinutes }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -305,6 +311,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.StrikeSuspendDays, p.StrikeSuspendDays)
 	setInt(&base.WaitlistPromoteCutoffMin, p.WaitlistPromoteCutoffMin)
 	setInt(&base.WaitlistOfferMinutes, p.WaitlistOfferMinutes)
+	setInt(&base.ClassReminderMinutes, p.ClassReminderMinutes)
 	return base
 }
 
