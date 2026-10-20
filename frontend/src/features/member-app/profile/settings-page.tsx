@@ -6,7 +6,7 @@ import { useState } from "react";
 import { setLang, useLang } from "../lib/lang";
 import type { MemberSettingsView } from "@/lib/member-app/home-views";
 import { useMemberPush } from "../components/pwa";
-import { memberApi } from "../lib/api";
+import { ApiError, memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { useInvalidateAll, useSettings } from "../lib/queries-home";
 import { loyaltyKeys, useLoyaltyMe, useRefresh } from "../lib/queries-loyalty";
@@ -24,12 +24,18 @@ export function SettingsPage() {
   const lang = useLang();
   const invalidate = useInvalidateAll();
   const { data: settings, isLoading } = useSettings();
+  const [saveError, setSaveError] = useState("");
 
   if (isLoading || !settings) return <Spinner label={t("Loading settings…")} />;
 
   const update = async (patch: Partial<MemberSettingsView>) => {
-    await memberApi("/app/home/settings", { method: "PATCH", json: patch });
-    invalidate();
+    setSaveError("");
+    try {
+      await memberApi("/app/home/settings", { method: "PATCH", json: patch });
+      invalidate();
+    } catch (e) {
+      setSaveError(e instanceof ApiError ? e.message : t("Save failed."));
+    }
   };
 
   return (
@@ -47,7 +53,7 @@ export function SettingsPage() {
               <button
                 key={code}
                 onClick={() => {
-                  // Bahasa berlaku per perangkat (portal member); disimpan juga di akun.
+                  // Berlaku langsung di perangkat ini; perangkat lain mengikuti nilai akun.
                   setLang(code === "EN" ? "en" : "id");
                   void update({ language: code });
                 }}
@@ -84,6 +90,7 @@ export function SettingsPage() {
             className="h-5 w-5 accent-[var(--color-nh-forest)]"
           />
         </label>
+        {saveError ? <p className="text-xs font-semibold text-nh-danger">{saveError}</p> : null}
       </div>
 
       <NotificationSettings />
@@ -92,7 +99,7 @@ export function SettingsPage() {
 
       <div className="nh-card text-sm text-nh-muted">
         <p className="nh-label">{t("About")}</p>
-        <p>{t("NüHabit member app. Units and reminders are saved to your account; language applies to this device.")}</p>
+        <p>{t("NüHabit member app. Units, reminders and language are saved to your account.")}</p>
       </div>
     </div>
   );

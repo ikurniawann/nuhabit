@@ -8,6 +8,7 @@ export type PromoScope =
   | "ticketing_online"
   | "ticketing_loket"
   | "pos"
+  | "gym"
   | "semua";
 
 export type PromoDiscountType = "percent" | "fixed";

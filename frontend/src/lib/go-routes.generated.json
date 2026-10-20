@@ -3010,6 +3010,11 @@
     "path": "/api/member-portal/gym/credits/purchases/{id}/simulate-paid"
   },
   {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/vouchers/preview"
+  },
+  {
     "module": "gym-training",
     "method": "GET",
     "path": "/api/member-portal/gym/races"

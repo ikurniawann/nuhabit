@@ -14,7 +14,11 @@ const SCOPE_LABEL: Record<PromoView["scope"], string> = {
   pos: "In-store purchases",
   ticketing_online: "Online tickets",
   ticketing_loket: "Box office tickets",
+  gym: "Class packages",
 };
+
+/** Scopes a credit package top up accepts. */
+const TOP_UP_SCOPES = new Set<PromoView["scope"]>(["semua", "gym"]);
 
 export function PromoDetailPage() {
   const t = useT();
@@ -86,12 +90,14 @@ export function PromoDetailPage() {
         </div>
       </div>
 
-      <Link
-        href={`${m("/wallet/topup")}?voucher=${encodeURIComponent(p.code)}`}
-        className={`nh-btn-brand ${p.live ? "" : "pointer-events-none opacity-40"}`}
-      >
-        {t("Use it at top up")}
-      </Link>
+      {TOP_UP_SCOPES.has(p.scope) ? (
+        <Link
+          href={`${m("/wallet/topup")}?voucher=${encodeURIComponent(p.code)}`}
+          className={`nh-btn-brand ${p.live ? "" : "pointer-events-none opacity-40"}`}
+        >
+          {t("Use it at top up")}
+        </Link>
+      ) : null}
     </div>
   );
 }

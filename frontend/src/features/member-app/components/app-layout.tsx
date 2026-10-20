@@ -8,7 +8,9 @@ import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { asset, m } from "../lib/links";
+import { syncAccountLang } from "../lib/lang";
 import { useMe } from "../lib/queries";
+import { useSettings } from "../lib/queries-home";
 import { Spinner } from "../ui";
 import { OfflineBanner, useMemberServiceWorker } from "./pwa";
 import "../member-app.css";
@@ -26,6 +28,7 @@ const ROUND_BUTTON =
 
 /** Sesi member wajib; tanpa sesi diarahkan ke /member/auth/login (kembali ke halaman asal). */
 function RequireAuth({ children }: { children: ReactNode }) {
+  const t = useT();
   const { data, error } = useMe();
   const router = useRouter();
   const pathname = usePathname();
@@ -39,13 +42,13 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (error && !unauthenticated) {
     return (
       <div className="flex min-h-dvh items-center justify-center px-8 text-center text-sm text-nh-muted">
-        NüHabit could not load. Check your connection and reload the page.
+        {t("NüHabit could not load. Check your connection and reload the page.")}
       </div>
     );
   }
   return (
     <div className="flex min-h-dvh items-center justify-center">
-      <Spinner label="Opening NüHabit…" />
+      <Spinner label={t("Opening NüHabit…")} />
     </div>
   );
 }
@@ -62,7 +65,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
   );
 }
 
+/** Follows the account language once the session is known (see syncAccountLang). */
+function useAccountLanguage() {
+  const { data } = useSettings();
+  const language = data?.language;
+  useEffect(() => {
+    if (language) syncAccountLang(language);
+  }, [language]);
+}
+
 function Shell({ children }: { children: ReactNode }) {
+  useAccountLanguage();
   const { data: me } = useMe();
   const t = useT();
   const pathname = usePathname();
@@ -87,7 +100,7 @@ function Shell({ children }: { children: ReactNode }) {
               </span>
             )}
           </Link>
-          <Link href={m("/train/explore")} aria-label="Explore" className={ROUND_BUTTON}>
+          <Link href={m("/train/explore")} aria-label={t("Explore")} className={ROUND_BUTTON}>
             <Search size={17} strokeWidth={2.4} />
           </Link>
         </div>

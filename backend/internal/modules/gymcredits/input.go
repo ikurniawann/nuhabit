@@ -514,6 +514,8 @@ type memberPurchaseBody struct {
 	// FromSite marks the public /join checkout, whose invoice returns to
 	// /join/status instead of the member wallet.
 	FromSite bool
+	// VoucherCode is an optional promo code ("" for none).
+	VoucherCode string
 }
 
 func parseMemberPurchase(body any) (memberPurchaseBody, error) {
@@ -523,5 +525,21 @@ func parseMemberPurchase(body any) (memberPurchaseBody, error) {
 	b.Method = f.enum("method", []string{"qris", "ark_coin", "invoice"})
 	b.BranchID = optString(f.str("branch_id", strRule{uuid: true, uuidMsg: "Cabang tidak valid", optional: true, nullable: true}))
 	b.FromSite = f.get("source") == "site"
+	b.VoucherCode, _ = f.str("voucher_code", strRule{trim: true, max: 40, optional: true, nullable: true})
+	return b, f.memberErr()
+}
+
+type voucherPreviewBody struct {
+	PackageID string
+	Code      string
+	BranchID  *string
+}
+
+func parseVoucherPreview(body any) (voucherPreviewBody, error) {
+	f := newForm(body)
+	var b voucherPreviewBody
+	b.PackageID, _ = f.str("package_id", strRule{uuid: true, uuidMsg: "Pilih paket"})
+	b.Code, _ = f.str("code", strRule{trim: true, min: 1, max: 40, minMsg: "Masukkan kode voucher"})
+	b.BranchID = optString(f.str("branch_id", strRule{uuid: true, uuidMsg: "Cabang tidak valid", optional: true, nullable: true}))
 	return b, f.memberErr()
 }

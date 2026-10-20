@@ -27,6 +27,9 @@ export const HOME_ID: Record<string, string> = {
   "Use it at top up": "Pakai saat isi ulang",
   "All purchases": "Semua pembelian",
   "In-store purchases": "Pembelian di kasir",
+  "Class packages": "Paket kelas",
+  Promo: "Promo",
+  "Per member": "Tiap member",
   "Online tickets": "Tiket online",
   "Box office tickets": "Tiket loket",
   // Notifikasi
@@ -72,6 +75,7 @@ export const HOME_ID: Record<string, string> = {
   // Profil
   "Loading profile…": "Memuat profil…",
   "Change photo": "Ganti foto",
+  "Could not upload the photo.": "Foto gagal diunggah.",
   Phone: "Telepon",
   "Phone is your sign-in number and cannot be changed here.":
     "Nomor HP adalah nomor masuk dan tidak bisa diubah di sini.",
@@ -88,8 +92,8 @@ export const HOME_ID: Record<string, string> = {
   "Loading settings…": "Memuat pengaturan…",
   "Language / Bahasa": "Bahasa / Language",
   About: "Tentang",
-  "NüHabit member app. Units and reminders are saved to your account; language applies to this device.":
-    "Aplikasi member NüHabit. Satuan dan pengingat tersimpan di akunmu; bahasa berlaku di perangkat ini.",
+  "NüHabit member app. Units, reminders and language are saved to your account.":
+    "Aplikasi member NüHabit. Satuan, pengingat, dan bahasa tersimpan di akunmu.",
   // Kontak darurat
   "Shown to studio staff if something happens during training.":
     "Ditampilkan ke staf studio bila terjadi sesuatu saat latihan.",
@@ -117,6 +121,7 @@ export const HOME_ID: Record<string, string> = {
   Verify: "Verifikasi",
   Personal: "Data diri",
   Emergency: "Darurat",
+  Waiver: "Waiver",
   "Send verification code": "Kirim kode verifikasi",
   "We sent a code to WhatsApp {phone}.": "Kode dikirim ke WhatsApp {phone}.",
   "Local dev: no code needed, continue.": "Dev lokal: tanpa kode, lanjutkan.",
@@ -133,6 +138,10 @@ export const HOME_ID: Record<string, string> = {
   "I have read and accept the digital waiver.": "Saya sudah membaca dan menyetujui waiver digital.",
   "I agree to the membership terms & conditions.": "Saya setuju dengan syarat & ketentuan membership.",
   "Create my membership": "Buat membership saya",
+  "Send me promos and news on WhatsApp.": "Kirimi saya promo dan kabar terbaru lewat WhatsApp.",
+  "Your account is ready, but your waiver and details did not save. Try again.":
+    "Akunmu sudah jadi, tapi waiver dan datamu belum tersimpan. Coba lagi.",
+  "Try again": "Coba lagi",
   "← Back": "← Kembali",
   "I already have an account": "Saya sudah punya akun",
 };

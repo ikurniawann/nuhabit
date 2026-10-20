@@ -14,7 +14,9 @@ import "../member-app.css";
 
 const STEPS = ["Contact", "Verify", "Personal", "Emergency", "Waiver"] as const;
 
-type Gender = "MALE" | "FEMALE" | "OTHER";
+/** The member profile stores male or female only (pos_customers.gender check). */
+const GENDERS = ["MALE", "FEMALE"] as const;
+type Gender = (typeof GENDERS)[number];
 
 type PostResult<T> = Partial<T> & { success: boolean; error?: string; field?: string };
 
@@ -29,6 +31,18 @@ async function post<T = object>(path: string, body: unknown): Promise<PostResult
     return (await res.json()) as PostResult<T>;
   } catch {
     return { success: false } as PostResult<T>;
+  }
+}
+
+/** Runs a write up to `attempts` times with a short backoff; the last failure is thrown. */
+async function withRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await run();
+    } catch (e) {
+      if (attempt >= attempts) throw e;
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
   }
 }
 
@@ -89,6 +103,9 @@ function Register() {
   const [ecRelation, setEcRelation] = useState("");
   const [waiverAccepted, setWaiverAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [waConsent, setWaConsent] = useState(false);
+  // The account exists once /register succeeds; a retry only resends the details.
+  const [registered, setRegistered] = useState(false);
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
@@ -109,27 +126,10 @@ function Register() {
     }
   };
 
-  const submit = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      const res = await post("/register", {
-        phone,
-        code,
-        name: fullName,
-        email,
-        birth_date: dateOfBirth,
-        wa_consent: false,
-        ...(googleTicket ? { google_ticket: googleTicket } : {}),
-      });
-      if (!res.success) {
-        setError(res.error ?? t("Something went wrong."));
-        if (res.field === "code") setStep(1);
-        if (res.field === "google_ticket") router.replace(m("/auth/login"));
-        return;
-      }
-      // Akun sudah dibuat dan sesi aktif; kontak darurat, waiver, dan gender menyusul.
-      await Promise.allSettled([
+  /** Waiver, emergency contact and gender go to the new account; false when one still failed after retries. */
+  const saveDetails = async () => {
+    const results = await Promise.allSettled([
+      withRetry(() =>
         memberApi("/app/home/me", {
           method: "PATCH",
           json: {
@@ -137,11 +137,39 @@ function Register() {
               ecName && ecPhone ? { name: ecName, phone: ecPhone, relation: ecRelation || "Contact" } : null,
             acceptWaiver: true,
           },
-        }),
-        gender === "MALE" || gender === "FEMALE"
-          ? memberApi("/profile", { method: "PUT", json: { gender: gender.toLowerCase() } })
-          : Promise.resolve(),
-      ]);
+        })
+      ),
+      gender ? withRetry(() => memberApi("/profile", { method: "PUT", json: { gender: gender.toLowerCase() } })) : null,
+    ]);
+    return results.every((r) => r.status === "fulfilled");
+  };
+
+  const submit = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      if (!registered) {
+        const res = await post("/register", {
+          phone,
+          code,
+          name: fullName,
+          email,
+          birth_date: dateOfBirth,
+          wa_consent: waConsent,
+          ...(googleTicket ? { google_ticket: googleTicket } : {}),
+        });
+        if (!res.success) {
+          setError(res.error ?? t("Something went wrong."));
+          if (res.field === "code") setStep(1);
+          if (res.field === "google_ticket") router.replace(m("/auth/login"));
+          return;
+        }
+        setRegistered(true);
+      }
+      if (!(await saveDetails())) {
+        setError(t("Your account is ready, but your waiver and details did not save. Try again."));
+        return;
+      }
       qc.clear();
       router.replace(m("/"));
     } finally {
@@ -244,7 +272,7 @@ function Register() {
             <div>
               <label className="nh-label">{t("Gender")}</label>
               <div className="flex gap-2">
-                {(["MALE", "FEMALE", "OTHER"] as const).map((g) => (
+                {GENDERS.map((g) => (
                   <button
                     key={g}
                     type="button"
@@ -321,12 +349,22 @@ function Register() {
               />
               {t("I agree to the membership terms & conditions.")}
             </label>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={waConsent}
+                disabled={registered}
+                onChange={(e) => setWaConsent(e.target.checked)}
+                className="mt-0.5 h-5 w-5 accent-[var(--color-nh-forest)]"
+              />
+              {t("Send me promos and news on WhatsApp.")}
+            </label>
             <button
               className="nh-btn-brand"
               disabled={busy || !waiverAccepted || !termsAccepted}
               onClick={() => void submit()}
             >
-              {t("Create my membership")}
+              {registered ? t("Try again") : t("Create my membership")}
             </button>
           </div>
         ) : null}

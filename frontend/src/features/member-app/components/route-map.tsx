@@ -1,3 +1,4 @@
+import { useT } from "../lib/i18n";
 import type { TrackPoint } from "../lib/queries-train";
 
 /**
@@ -8,20 +9,21 @@ export function RouteMap({
   points,
   height = 160,
   className = "",
-  emptyLabel = "No GPS track",
+  emptyLabel,
 }: {
   points: TrackPoint[];
   height?: number;
   className?: string;
   emptyLabel?: string;
 }) {
+  const t = useT();
   if (points.length < 2) {
     return (
       <div
         className={`flex items-center justify-center rounded-xl bg-nh-raised text-xs font-bold uppercase tracking-wider text-nh-muted ${className}`}
         style={{ height }}
       >
-        {emptyLabel}
+        {emptyLabel ?? t("No GPS track")}
       </div>
     );
   }
@@ -62,7 +64,7 @@ export function RouteMap({
       className={`w-full rounded-xl bg-nh-raised ${className}`}
       style={{ height }}
       role="img"
-      aria-label="Route map"
+      aria-label={t("Route map")}
     >
       <path
         d={path}
