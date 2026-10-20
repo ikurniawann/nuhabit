@@ -110,6 +110,7 @@ type MemberSession struct {
 	CoachPhotoURL     *string       `json:"coach_photo_url"`
 	ClassTypeName     string        `json:"class_type_name"`
 	BranchName        *string       `json:"branch_name"`
+	Timezone          string        `json:"timezone"`
 	StartsAt          httpx.JSTime  `json:"starts_at"`
 	EndsAt            httpx.JSTime  `json:"ends_at"`
 	CreditCost        int           `json:"credit_cost"`
@@ -126,7 +127,7 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string) ([]Memb
 	err := s.inTx(ctx, func(q Q) error {
 		rows, err := q.Query(ctx, `SELECT p.id::text, a.id::text, p.status, a.status, p.late_cancel, p.credits_charged,
        a.coach_id::text, c.name, c.photo_url, t.name, b.name, a.starts_at, a.ends_at, a.credit_cost, a.capacity,
-       a.notes, a.cancel_reason, a.branch_id::text
+       a.notes, a.cancel_reason, a.branch_id::text, COALESCE(b.timezone, 'Asia/Jakarta')
   FROM gym.pt_participants p
   JOIN gym.pt_appointments a ON a.id = p.appointment_id
   JOIN gym.coaches c ON c.id = a.coach_id
@@ -145,7 +146,7 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string) ([]Memb
 			var branch *string
 			err := r.Scan(&m.ParticipantID, &m.AppointmentID, &m.Status, &m.AppointmentStatus, &m.LateCancel, &m.CreditsCharged,
 				&m.CoachID, &m.CoachName, &m.CoachPhotoURL, &m.ClassTypeName, &m.BranchName, &start, &end, &m.CreditCost,
-				&m.Capacity, &m.Notes, &m.CancelReason, &branch)
+				&m.Capacity, &m.Notes, &m.CancelReason, &branch, &m.Timezone)
 			m.StartsAt, m.EndsAt = httpx.JSTime(start), httpx.JSTime(end)
 			branches = append(branches, branch)
 			return m, err

@@ -118,6 +118,7 @@ type bookingSession struct {
 	StartsAt    string `json:"startsAt"`
 	EndsAt      string `json:"endsAt"`
 	CreditCost  int    `json:"creditCost"`
+	Timezone    string `json:"timezone,omitempty"`
 }
 
 // BookingView is an active class booking card.
@@ -139,7 +140,7 @@ func (s *Service) ActiveBookings(ctx context.Context, customerID string) ([]Book
 		out = append(out, BookingView{
 			Booking: bookingRef{ID: r.ID, Status: strings.ToUpper(r.Status), WaitlistPosition: r.WaitlistPosition},
 			Session: bookingSession{ID: r.SessionID, ClassTypeID: r.ClassTypeID, StartsAt: isoString(r.StartsAt),
-				EndsAt: isoString(r.EndsAt), CreditCost: r.CreditCost},
+				EndsAt: isoString(r.EndsAt), CreditCost: r.CreditCost, Timezone: r.Timezone},
 			ClassTypeName: r.ClassTypeName,
 			BranchName:    coalesce("Studio", r.BranchName, r.Area),
 		})
@@ -187,6 +188,7 @@ type homeSessionRef struct {
 	ID          string `json:"id"`
 	ClassTypeID string `json:"classTypeId"`
 	StartsAt    string `json:"startsAt"`
+	Timezone    string `json:"timezone,omitempty"`
 }
 
 type homeSessionView struct {
@@ -270,7 +272,7 @@ func (s *Service) HomeFeed(ctx context.Context, customerID string) (*HomeFeedVie
 			coach = *sess.CoachName
 		}
 		feed.TodaySessions = append(feed.TodaySessions, homeSessionView{
-			Session:       homeSessionRef{ID: sess.ID, ClassTypeID: sess.ClassTypeID, StartsAt: isoString(sess.StartsAt)},
+			Session:       homeSessionRef{ID: sess.ID, ClassTypeID: sess.ClassTypeID, StartsAt: isoString(sess.StartsAt), Timezone: sess.Timezone},
 			ClassTypeName: sess.ClassTypeName,
 			BranchName:    branch,
 			CoachName:     coach,

@@ -249,6 +249,7 @@ type GymBookingRow struct {
 	Area             *string
 	ClassTypeName    string
 	BranchName       *string
+	Timezone         string // branch zone, Jakarta without a branch
 }
 
 // ActiveGymBookings are confirmed, waitlisted or checked-in bookings whose
@@ -257,7 +258,7 @@ func (s *store) ActiveGymBookings(ctx context.Context, customerID string, lateMi
 	rows, err := s.q.Query(ctx,
 		`SELECT b.id, b.status, b.waitlist_position,
 		        s.id, s.class_type_id, s.starts_at, s.ends_at, s.credit_cost, s.area,
-		        t.name, br.name
+		        t.name, br.name, COALESCE(br.timezone, 'Asia/Jakarta')
 		   FROM gym.bookings b
 		   JOIN gym.class_sessions s ON s.id = b.session_id
 		   JOIN gym.class_types t ON t.id = s.class_type_id
@@ -273,7 +274,7 @@ func (s *store) ActiveGymBookings(ctx context.Context, customerID string, lateMi
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (GymBookingRow, error) {
 		var b GymBookingRow
 		err := row.Scan(&b.ID, &b.Status, &b.WaitlistPosition, &b.SessionID, &b.ClassTypeID, &b.StartsAt,
-			&b.EndsAt, &b.CreditCost, &b.Area, &b.ClassTypeName, &b.BranchName)
+			&b.EndsAt, &b.CreditCost, &b.Area, &b.ClassTypeName, &b.BranchName, &b.Timezone)
 		return b, err
 	})
 }
@@ -321,17 +322,19 @@ type HomeSession struct {
 	StartsAt      time.Time
 	SeatsLeft     int
 	MyBooking     *string // status of the member's live booking
+	Timezone      string  // branch zone, Jakarta without a branch
 }
 
 // UpcomingSessions lists published/full sessions in [from, to) with the
 // member's booking (listSessions in lib/gym/session-queries).
 func (s *store) UpcomingSessions(ctx context.Context, customerID string, from, to time.Time) ([]HomeSession, error) {
 	rows, err := s.q.Query(ctx,
-		`SELECT x.id, x.class_type_id, x.class_type_name, x.coach_name, x.branch_id, x.area, x.starts_at,
+		`SELECT x.id, x.class_type_id, x.class_type_name, x.coach_name, x.branch_id, x.area, x.starts_at, x.timezone,
 		        GREATEST(x.capacity - COALESCE(k.confirmed, 0), 0)::int AS seats_left,
 		        mine.status
 		   FROM (SELECT s.id, s.class_type_id, t.name AS class_type_name, c.name AS coach_name,
-		                s.branch_id, s.area, s.starts_at, s.capacity
+		                s.branch_id, s.area, s.starts_at, s.capacity,
+		                COALESCE((SELECT br.timezone FROM configuration.branches br WHERE br.id = s.branch_id), 'Asia/Jakarta') AS timezone
 		           FROM gym.class_sessions s
 		           JOIN gym.class_types t ON t.id = s.class_type_id
 		           LEFT JOIN gym.coaches c ON c.id = s.coach_id
@@ -355,7 +358,7 @@ func (s *store) UpcomingSessions(ctx context.Context, customerID string, from, t
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (HomeSession, error) {
 		var h HomeSession
 		err := row.Scan(&h.ID, &h.ClassTypeID, &h.ClassTypeName, &h.CoachName, &h.BranchID, &h.Area,
-			&h.StartsAt, &h.SeatsLeft, &h.MyBooking)
+			&h.StartsAt, &h.Timezone, &h.SeatsLeft, &h.MyBooking)
 		return h, err
 	})
 }
