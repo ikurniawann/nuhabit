@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"math"
+	"nuhabit/backend/internal/platform/localtime"
 	"regexp"
 	"slices"
 	"sort"
@@ -71,8 +72,9 @@ func RateFor(scheme IncentiveScheme, classTypeID string) SchemeRate {
 
 var periodRE = regexp.MustCompile(`^(\d{4})-(0[1-9]|1[0-2])$`)
 
-// studioZone is WIB (UTC+7), the studio's calendar.
-var studioZone = time.FixedZone("WIB", 7*3600)
+// studioZone is the payroll calendar incentives are paid on. Payroll runs
+// per company month, so a coach of any branch counts Jakarta months.
+var studioZone = localtime.Jakarta
 
 // IsPeriodMonth reports whether value is a YYYY-MM month.
 func IsPeriodMonth(value string) bool { return periodRE.MatchString(value) }
@@ -83,7 +85,7 @@ func PeriodMonthOf(t time.Time) string { return t.In(studioZone).Format("2006-01
 // Period is [Start, End) in absolute time.
 type Period struct{ Start, End time.Time }
 
-// MonthPeriod bounds the calendar month YYYY-MM in the studio zone (WIB).
+// MonthPeriod bounds the calendar month YYYY-MM in the studio zone.
 func MonthPeriod(periodMonth string) (Period, error) {
 	m := periodRE.FindStringSubmatch(periodMonth)
 	if m == nil {

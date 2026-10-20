@@ -77,6 +77,8 @@ type gymSession struct {
 	Kapasitas float64 `json:"kapasitas"`
 	Waitlist  float64 `json:"waitlist"`
 	Status    string  `json:"status"`
+	// Timezone is the branch zone "mulai" reads in.
+	Timezone string `json:"timezone"`
 }
 
 type gymPulse struct {
@@ -190,7 +192,7 @@ func (s *Service) buildExecutive(ctx context.Context) (executiveDashboard, error
 		section(5, func() (err error) { d.KontrakHabis30Hari, err = s.expiringContracts(ctx, today); return }),
 		section(6, func() (err error) { d.OmzetPerOutlet, err = s.outletBreakdown(ctx, today); return }),
 		section(7, func() (err error) { d.BulanBerjalan, err = s.monthToDate(ctx, today); return }),
-		section(8, func() (err error) { d.Gym, err = s.gymPulse(ctx, today); return }),
+		section(8, func() (err error) { d.Gym, err = s.gymPulse(ctx, s.now()); return }),
 	)
 	if overviewErr != nil {
 		return d, overviewErr
@@ -412,7 +414,9 @@ const liveCreditsSQL = `WITH lot_left AS (
 SELECT COALESCE(sum(GREATEST(0, m.live - GREATEST(0, COALESCE(p.used, 0) - m.lapsed))), 0)::int
   FROM per_member m LEFT JOIN pool p USING (customer_id)`
 
-func (s *Service) gymPulse(ctx context.Context, today string) (*gymPulse, error) {
+// gymPulse is today's classes, each on the day of its branch zone, and the
+// package sales of the last 30 days.
+func (s *Service) gymPulse(ctx context.Context, now time.Time) (*gymPulse, error) {
 	var ready *bool
 	if err := s.db.QueryRow(ctx, `SELECT to_regclass('gym.class_sessions') IS NOT NULL
 	    AND to_regclass('gym.credit_purchases') IS NOT NULL AS ok`).Scan(&ready); err != nil {
@@ -429,16 +433,19 @@ func (s *Service) gymPulse(ctx context.Context, today string) (*gymPulse, error)
 			rows, err := s.db.Query(ctx, `SELECT s.id::text, t.name AS kelas, c.name AS coach, s.starts_at AS mulai, s.capacity AS kapasitas, s.status,
 			        count(b.id) FILTER (WHERE b.status IN ('confirmed','checked_in','completed'))::int AS terisi,
 			        count(b.id) FILTER (WHERE b.status = 'waitlist')::int AS waitlist,
-			        count(b.id) FILTER (WHERE b.status IN ('checked_in','completed'))::int AS checkin
+			        count(b.id) FILTER (WHERE b.status IN ('checked_in','completed'))::int AS checkin,
+			        COALESCE(br.timezone, 'Asia/Jakarta') AS timezone
 			   FROM gym.class_sessions s
 			   JOIN gym.class_types t ON t.id = s.class_type_id
 			   LEFT JOIN gym.coaches c ON c.id = s.coach_id
 			   LEFT JOIN gym.bookings b ON b.session_id = s.id
-			  WHERE s.starts_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Jakarta')
-			    AND s.starts_at < (($1::date + 1)::timestamp AT TIME ZONE 'Asia/Jakarta')
+			   LEFT JOIN configuration.branches br ON br.id = s.branch_id
+			  WHERE s.starts_at > $1::timestamptz - interval '1 day' AND s.starts_at < $1::timestamptz + interval '1 day'
+			    AND (s.starts_at AT TIME ZONE COALESCE(br.timezone, 'Asia/Jakarta'))::date
+			        = ($1::timestamptz AT TIME ZONE COALESCE(br.timezone, 'Asia/Jakarta'))::date
 			    AND s.status <> 'cancelled' AND s.status <> 'draft'
-			  GROUP BY s.id, t.name, c.name
-			  ORDER BY s.starts_at`, today)
+			  GROUP BY s.id, t.name, c.name, br.timezone
+			  ORDER BY s.starts_at`, now)
 			if err != nil {
 				sesiErr = err
 				return
@@ -447,7 +454,7 @@ func (s *Service) gymPulse(ctx context.Context, today string) (*gymPulse, error)
 			var mulai time.Time
 			var checkin float64
 			var capacity *float64
-			_, sesiErr = pgx.ForEachRow(rows, []any{&x.ID, &x.Kelas, &x.Coach, &mulai, &capacity, &x.Status, &x.Terisi, &x.Waitlist, &checkin}, func() error {
+			_, sesiErr = pgx.ForEachRow(rows, []any{&x.ID, &x.Kelas, &x.Coach, &mulai, &capacity, &x.Status, &x.Terisi, &x.Waitlist, &checkin, &x.Timezone}, func() error {
 				x.Mulai = domain.ISO(mulai)
 				x.Kapasitas = 0
 				if capacity != nil {

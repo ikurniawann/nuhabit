@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"nuhabit/backend/internal/platform/localtime"
 	"slices"
 	"sort"
 	"strings"
@@ -292,11 +293,9 @@ type BoardFilter struct {
 	IncludeUnverified bool
 }
 
-// wib is Asia/Jakarta (no daylight saving): a race's year is the gym's year.
-var wib = time.FixedZone("WIB", 7*3600)
-
-// ResultYear is the gym-local year a result was raced in.
-func ResultYear(t time.Time) int { return t.In(wib).Year() }
+// ResultYear is the year a result was raced in. A result belongs to the
+// member, not a branch, so the year is Jakarta's.
+func ResultYear(t time.Time) int { return t.In(localtime.Jakarta).Year() }
 
 // Match reports whether a candidate belongs on the board.
 func (f BoardFilter) Match(c BoardCandidate) bool {

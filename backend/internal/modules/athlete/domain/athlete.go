@@ -49,7 +49,8 @@ const (
 	SegmentBoardSize  = 20
 	SuggestionCount   = 8
 	StatsWeeks        = 8
-	// StudioTZOffsetMin is WIB (UTC+7), the studio's week boundary.
+	// StudioTZOffsetMin is WIB (UTC+7), the week boundary of athlete stats.
+	// Activities belong to the member, not a branch, so weeks stay on Jakarta.
 	StudioTZOffsetMin = 7 * 60
 )
 

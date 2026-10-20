@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/big"
+	"nuhabit/backend/internal/platform/localtime"
 	"regexp"
 	"strings"
 	"time"
@@ -140,8 +141,9 @@ func HashDevice(id string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// wib is the zone the monthly cap counts in.
-var wib = time.FixedZone("WIB", 7*60*60)
+// wib is the zone the monthly cap and leaderboard count in. A referral
+// belongs to the member, not a branch, so months are Jakarta's.
+var wib = localtime.Jakarta
 
 // MonthBounds is the WIB calendar month containing t, as [start, end).
 func MonthBounds(t time.Time) (start, end time.Time) {
