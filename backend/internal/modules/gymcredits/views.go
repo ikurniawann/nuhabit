@@ -2,8 +2,9 @@ package gymcredits
 
 import (
 	"encoding/json"
-	"math"
 	"time"
+
+	"nuhabit/backend/internal/modules/gymcredits/domain"
 )
 
 // JSTime marshals like a JS Date through JSON.stringify: UTC, milliseconds, "Z".
@@ -47,6 +48,7 @@ type Purchase struct {
 	Note          *string         `json:"note"`
 	PaidAt        *JSTime         `json:"paid_at"`
 	RefundedAt    *JSTime         `json:"refunded_at"`
+	RefundedIdr   *float64        `json:"refunded_idr"`
 	CreatedBy     *string         `json:"created_by"`
 	CreatedAt     JSTime          `json:"created_at"`
 }
@@ -156,7 +158,8 @@ type PortalPackageRow struct {
 	Status                 string
 }
 
-// PassRow is one gym.member_passes row.
+// PassRow is one gym.member_passes row; BranchID is the branch of the
+// purchase that issued it.
 type PassRow struct {
 	ID          string
 	CustomerID  string
@@ -166,9 +169,23 @@ type PassRow struct {
 	StartsAt    time.Time
 	EndsAt      time.Time
 	Status      string
+	FrozenAt    *time.Time
+	FrozenUntil *time.Time
+	AutoRenew   bool
+	RenewWith   string
+	BranchID    *string
 }
 
-// PassView is a member pass as the wallet lists it.
+func (p PassRow) state() domain.PassState {
+	s := domain.PassState{Status: p.Status, StartsAt: p.StartsAt, EndsAt: p.EndsAt}
+	if p.FrozenAt != nil && p.FrozenUntil != nil {
+		s.FrozenAt, s.FrozenUntil = *p.FrozenAt, *p.FrozenUntil
+	}
+	return s
+}
+
+// PassView is a member pass as the wallet lists it. Upcoming marks an
+// active pass queued behind another one.
 type PassView struct {
 	ID          string  `json:"id"`
 	PackageID   string  `json:"package_id"`
@@ -176,18 +193,21 @@ type PassView struct {
 	StartsAt    JSTime  `json:"starts_at"`
 	EndsAt      JSTime  `json:"ends_at"`
 	Status      string  `json:"status"`
+	Upcoming    bool    `json:"upcoming"`
 	DaysLeft    int     `json:"days_left"`
+	FrozenAt    *JSTime `json:"frozen_at"`
+	FrozenUntil *JSTime `json:"frozen_until"`
+	AutoRenew   bool    `json:"auto_renew"`
+	RenewWith   string  `json:"renew_with"`
 	PurchaseID  *string `json:"purchase_id"`
 }
 
 func passView(p PassRow, now time.Time) PassView {
-	daysLeft := 0
-	if p.Status == "active" && p.EndsAt.After(now) {
-		daysLeft = int(math.Ceil(p.EndsAt.Sub(now).Hours() / 24))
-	}
 	return PassView{
 		ID: p.ID, PackageID: p.PackageID, PackageName: p.PackageName, StartsAt: JSTime(p.StartsAt), EndsAt: JSTime(p.EndsAt),
-		Status: p.Status, DaysLeft: daysLeft, PurchaseID: p.PurchaseID,
+		Status: p.Status, Upcoming: p.Status == domain.PassActive && p.StartsAt.After(now), DaysLeft: p.state().DaysLeft(now),
+		FrozenAt: jsTimePtr(p.FrozenAt), FrozenUntil: jsTimePtr(p.FrozenUntil), AutoRenew: p.AutoRenew, RenewWith: p.RenewWith,
+		PurchaseID: p.PurchaseID,
 	}
 }
 
@@ -246,15 +266,17 @@ type EntryView struct {
 
 // WalletView is CreditWalletView.
 type WalletView struct {
-	Balance             int         `json:"balance"`
-	ExpiringCredits     int         `json:"expiring_credits"`
-	ExpiryReminderDays  int         `json:"expiry_reminder_days"`
-	LowBalance          bool        `json:"low_balance"`
-	LowBalanceThreshold int         `json:"low_balance_threshold"`
-	Lots                []LotView   `json:"lots"`
-	ExpiringLots        []LotView   `json:"expiring_lots"`
-	Passes              []PassView  `json:"passes"`
-	Entries             []EntryView `json:"entries"`
+	Balance             int        `json:"balance"`
+	ExpiringCredits     int        `json:"expiring_credits"`
+	ExpiryReminderDays  int        `json:"expiry_reminder_days"`
+	LowBalance          bool       `json:"low_balance"`
+	LowBalanceThreshold int        `json:"low_balance_threshold"`
+	Lots                []LotView  `json:"lots"`
+	ExpiringLots        []LotView  `json:"expiring_lots"`
+	Passes              []PassView `json:"passes"`
+	// Freeze is the member's pass freeze budget under the global rules.
+	Freeze  domain.FreezeAllowance `json:"freeze"`
+	Entries []EntryView            `json:"entries"`
 }
 
 // MemberCreditsView is loadMemberCredits: { member, ...wallet, purchases }.

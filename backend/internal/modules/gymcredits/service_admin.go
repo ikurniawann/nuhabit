@@ -297,9 +297,9 @@ func (s *Service) ReverseTx(ctx context.Context, entryID, reason, actorID string
 }
 
 // RefundPurchaseTx is RefundPurchase in a new transaction.
-func (s *Service) RefundPurchaseTx(ctx context.Context, purchaseID, reason, actorID string) (res *Purchase, err error) {
+func (s *Service) RefundPurchaseTx(ctx context.Context, purchaseID, reason, actorID string, full bool) (res *Purchase, err error) {
 	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		res, err = s.RefundPurchase(ctx, tx, purchaseID, reason, actorID)
+		res, err = s.RefundPurchase(ctx, tx, purchaseID, reason, actorID, full)
 		return err
 	})
 	return res, err

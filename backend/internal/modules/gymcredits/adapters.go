@@ -166,3 +166,16 @@ func (SQLDirectory) StaffNames(ctx context.Context, db database.Querier, ids []s
 	})
 	return out, err
 }
+
+// SQLNotifier writes crm.member_notifications, like the gym scheduling
+// adapter. The web push the TS notifyMember sends stays with CRM.
+type SQLNotifier struct{}
+
+var _ Notifier = SQLNotifier{}
+
+func (SQLNotifier) NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error {
+	_, err := q.Exec(ctx,
+		`INSERT INTO crm.member_notifications (customer_id, type, title, body) VALUES ($1, $2, $3, $4)`,
+		customerID, n.Type, n.Title, n.Body)
+	return err
+}

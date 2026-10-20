@@ -101,8 +101,8 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 
 // markPaid marks the purchase paid and issues what it bought in the
 // caller's transaction: a credit lot with its top_up entry, or a pass that
-// starts at payment time and runs for the package validity. A duplicate
-// webhook is safe: the row is locked and the second call sees status paid.
+// runs for the package validity. A duplicate webhook is safe: the row is
+// locked and the second call sees status paid.
 func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID string, meta map[string]any) (alreadyPaid bool, p *Purchase, err error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
@@ -125,10 +125,7 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	}
 	paidAt = paidAt.Truncate(time.Millisecond)
 	if purchase.Kind == KindPass {
-		_, err = s.repo.InsertPass(ctx, tx, NewPass{
-			CustomerID: purchase.CustomerID, PackageID: purchase.PackageID, PurchaseID: purchaseID,
-			StartsAt: paidAt, EndsAt: domain.LotExpiry(paidAt, validityDays),
-		})
+		err = s.issuePass(ctx, tx, purchase, paidAt, validityDays, renewsPassID(purchase, meta))
 	} else {
 		_, _, err = s.GrantCredits(ctx, tx, Grant{
 			CustomerID: purchase.CustomerID, Type: domain.TopUp, Credits: purchase.Credits,
@@ -144,6 +141,47 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	return false, p, err
 }
 
+// issuePass inserts the pass a paid purchase bought. It starts at payment,
+// or when the member's last live pass ends, so a member who buys early
+// loses no days. A renewal keeps the auto-renew choice of the pass it renews.
+func (s *Service) issuePass(ctx context.Context, tx database.Querier, purchase *Purchase, paidAt time.Time, validityDays int, renews string) error {
+	if err := s.repo.LockMemberCredits(ctx, tx, purchase.CustomerID); err != nil {
+		return err
+	}
+	lastEnd, err := s.repo.LastPassEnd(ctx, tx, purchase.CustomerID)
+	if err != nil {
+		return err
+	}
+	start := domain.StackedStart(paidAt, lastEnd)
+	pass := NewPass{
+		CustomerID: purchase.CustomerID, PackageID: purchase.PackageID, PurchaseID: purchase.ID,
+		StartsAt: start, EndsAt: domain.LotExpiry(start, validityDays), RenewWith: RenewWithInvoice,
+	}
+	if renews != "" {
+		prev, err := s.repo.Pass(ctx, tx, renews, false)
+		if err != nil {
+			return err
+		}
+		if prev != nil {
+			pass.AutoRenew, pass.RenewWith = prev.AutoRenew, prev.RenewWith
+		}
+	}
+	_, err = s.repo.InsertPass(ctx, tx, pass)
+	return err
+}
+
+// renewsPassID is the pass an auto-renewal purchase renews: stored in its
+// payment_meta, or in the meta being written when it is paid at once.
+func renewsPassID(p *Purchase, meta map[string]any) string {
+	if id, _ := p.meta()["renews_pass_id"].(string); id != "" {
+		return id
+	}
+	id, _ := meta["renews_pass_id"].(string)
+	return id
+}
+
+const msgArkShort = "Saldo ARK Coin tidak cukup"
+
 // moveArk changes the ARK Coin balance for a purchase; the wallet keeps the
 // balance from going negative.
 func (s *Service) moveArk(ctx context.Context, tx database.Querier, p *Purchase, delta float64, notes string, actorID *string) error {
@@ -154,25 +192,78 @@ func (s *Service) moveArk(ctx context.Context, tx database.Querier, p *Purchase,
 	case errors.Is(err, ErrArkMemberNotFound):
 		return fail(http.StatusNotFound, "Member tidak ditemukan")
 	case errors.Is(err, ErrArkInsufficient):
-		return fail(http.StatusConflict, "Saldo ARK Coin tidak cukup")
+		return fail(http.StatusConflict, msgArkShort)
 	}
 	return err
 }
 
-// payWithArk debits the ARK Coin balance and issues the credits.
-func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purchase, actorID *string) (*Purchase, error) {
+// payWithArk debits the ARK Coin balance and issues what was bought; meta
+// is added to payment_meta.
+func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purchase, actorID *string, meta map[string]any) (*Purchase, error) {
 	if err := s.moveArk(ctx, tx, p, -p.TotalIdr, "Beli paket kredit gym: "+p.PackageName, actorID); err != nil {
 		return nil, err
 	}
-	_, paid, err := s.markPaid(ctx, tx, p.ID, map[string]any{"provider": "ark_coin"})
+	_, paid, err := s.markPaid(ctx, tx, p.ID, withMeta(meta, "provider", "ark_coin"))
 	return paid, err
+}
+
+// withMeta returns a copy of meta with key set.
+func withMeta(meta map[string]any, key string, value any) map[string]any {
+	out := make(map[string]any, len(meta)+1)
+	for k, v := range meta {
+		out[k] = v
+	}
+	out[key] = value
+	return out
+}
+
+// RefundQuoteView is what a refund pays back, shown before confirming. A
+// pass offers the prorated amount and the full price; a credit pack is
+// always refunded in full (its credits are reversed).
+type RefundQuoteView struct {
+	PurchaseID    string  `json:"purchase_id"`
+	Kind          string  `json:"kind"`
+	Credits       int     `json:"credits"`
+	PaymentMethod *string `json:"payment_method"`
+	FullIdr       float64 `json:"full_idr"`
+	domain.RefundQuote
+}
+
+// RefundQuote prices the refund of a paid purchase.
+func (s *Service) RefundQuote(ctx context.Context, purchaseID string) (*RefundQuoteView, error) {
+	purchase, err := s.repo.Purchase(ctx, s.db, purchaseID, false)
+	if err != nil {
+		return nil, err
+	}
+	if purchase == nil {
+		return nil, fail(http.StatusNotFound, "Pembelian tidak ditemukan")
+	}
+	if purchase.Status != "paid" {
+		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
+	}
+	quote := domain.RefundQuote{ProratedIdr: purchase.TotalIdr}
+	if purchase.Kind == KindPass {
+		pass, err := s.repo.PassByPurchase(ctx, s.db, purchaseID)
+		if err != nil {
+			return nil, err
+		}
+		if pass != nil {
+			quote = domain.ProratedRefund(purchase.TotalIdr, pass.state(), s.clock())
+		}
+	}
+	return &RefundQuoteView{
+		PurchaseID: purchase.ID, Kind: purchase.Kind, Credits: purchase.Credits, PaymentMethod: purchase.PaymentMethod,
+		FullIdr: purchase.TotalIdr, RefundQuote: quote,
+	}, nil
 }
 
 // RefundPurchase refunds a paid purchase: status refunded plus a reversal of
 // its top_up, or the pass it issued marked refunded. Used credits make the
-// balance short and the reversal fails. ARK Coin goes back to the wallet;
-// other methods are paid back by the cashier.
-func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purchaseID, reason, actorID string) (*Purchase, error) {
+// balance short and the reversal fails. A pass pays back the prorated
+// amount unless full is set, and the passes queued behind it move up into
+// the days it leaves. ARK Coin goes back to the wallet; other methods are
+// paid back by the cashier.
+func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purchaseID, reason, actorID string, full bool) (*Purchase, error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
 		return nil, err
@@ -183,8 +274,9 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 	if purchase.Status != "paid" {
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
+	amount := purchase.TotalIdr
 	if purchase.Kind == KindPass {
-		if err := s.repo.RefundPassByPurchase(ctx, tx, purchaseID); err != nil {
+		if amount, err = s.refundPass(ctx, tx, purchase, full); err != nil {
 			return nil, err
 		}
 	}
@@ -197,15 +289,41 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 			return nil, err
 		}
 	}
-	if deref(purchase.PaymentMethod) == "ark_coin" && purchase.TotalIdr > 0 {
-		if err := s.moveArk(ctx, tx, purchase, purchase.TotalIdr, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
+	if deref(purchase.PaymentMethod) == "ark_coin" && amount > 0 {
+		if err := s.moveArk(ctx, tx, purchase, amount, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason)); err != nil {
+	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), amount); err != nil {
 		return nil, err
 	}
 	return s.repo.Purchase(ctx, tx, purchaseID, false)
+}
+
+// refundPass marks the pass of a purchase refunded, moves the passes queued
+// behind it up by the days it had left, and returns the amount to pay back.
+func (s *Service) refundPass(ctx context.Context, tx database.Querier, purchase *Purchase, full bool) (float64, error) {
+	pass, err := s.repo.PassByPurchase(ctx, tx, purchase.ID)
+	if err != nil || pass == nil {
+		return purchase.TotalIdr, err
+	}
+	now := s.clock()
+	amount := purchase.TotalIdr
+	if !full {
+		amount = domain.ProratedRefund(purchase.TotalIdr, pass.state(), now).ProratedIdr
+	}
+	if pass.Status == domain.PassActive || pass.Status == domain.PassFrozen {
+		from := pass.StartsAt
+		if now.After(from) {
+			from = now
+		}
+		if left := pass.EndsAt.Sub(from); left > 0 {
+			if err := s.repo.ShiftQueuedPasses(ctx, tx, pass.CustomerID, pass.ID, pass.EndsAt, -left); err != nil {
+				return 0, err
+			}
+		}
+	}
+	return amount, s.repo.RefundPassByPurchase(ctx, tx, purchase.ID)
 }
 
 // FrontDeskSale is a package sold at the front desk.
@@ -237,7 +355,7 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 			return err
 		}
 		if sale.PaymentMethod == "ark_coin" {
-			result, err = s.payWithArk(ctx, tx, purchase, &sale.CashierID)
+			result, err = s.payWithArk(ctx, tx, purchase, &sale.CashierID, nil)
 			return err
 		}
 		_, result, err = s.markPaid(ctx, tx, purchase.ID, map[string]any{"provider": "front_desk", "cashier_id": sale.CashierID})
@@ -248,17 +366,18 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 
 /* ── Member portal payments ──────────────────────────────────────────── */
 
-// BuyWithArk buys a package with ARK Coin: debit and credits in one transaction.
-func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID string) (*MemberPurchaseView, error) {
+// BuyWithArk buys a package with ARK Coin: debit and credits in one
+// transaction, at the price of the branch the member buys at.
+func (s *Service) BuyWithArk(ctx context.Context, in MemberPurchase) (*MemberPurchaseView, error) {
 	var view *MemberPurchaseView
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		purchase, err := s.createPurchase(ctx, tx, purchaseInput{
-			CustomerID: customerID, PackageID: packageID, Channel: "member_portal", PaymentMethod: "ark_coin",
+			CustomerID: in.CustomerID, PackageID: in.PackageID, Channel: "member_portal", PaymentMethod: "ark_coin", BranchID: in.BranchID,
 		})
 		if err != nil {
 			return err
 		}
-		paid, err := s.payWithArk(ctx, tx, purchase, nil)
+		paid, err := s.payWithArk(ctx, tx, purchase, nil, in.meta())
 		if err != nil {
 			return err
 		}
@@ -269,11 +388,21 @@ func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID string) 
 }
 
 // MemberPurchase is a package bought from the member portal or the public
-// checkout: BranchID applies that branch's price.
+// checkout: BranchID applies that branch's price. RenewsPassID is set when
+// the auto-renew sweep buys it.
 type MemberPurchase struct {
-	CustomerID string
-	PackageID  string
-	BranchID   *string
+	CustomerID   string
+	PackageID    string
+	BranchID     *string
+	RenewsPassID string
+}
+
+// meta is what the purchase adds to payment_meta.
+func (in MemberPurchase) meta() map[string]any {
+	if in.RenewsPassID == "" {
+		return nil
+	}
+	return map[string]any{"renews_pass_id": in.RenewsPassID}
 }
 
 // StartQRISPurchase buys a package through a dynamic QRIS. Without an active
@@ -336,7 +465,7 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 		var paid *Purchase
 		err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 			var err error
-			_, paid, err = s.markPaid(ctx, tx, purchase.ID, map[string]any{"provider": "free"})
+			_, paid, err = s.markPaid(ctx, tx, purchase.ID, withMeta(in.meta(), "provider", "free"))
 			return err
 		})
 		if err != nil {
@@ -351,6 +480,9 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 			s.log.ErrorContext(ctx, "gym-credits: close failed purchase", "purchase_id", purchase.ID, "error", closeErr)
 		}
 		return nil, err
+	}
+	for k, v := range in.meta() {
+		meta[k] = v
 	}
 	if err := s.repo.AttachQR(ctx, s.db, purchase.ID, referenceID, meta); err != nil {
 		return nil, err

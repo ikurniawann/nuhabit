@@ -220,7 +220,7 @@ func TestLedgerAgainstPostgres(t *testing.T) {
 	if _, _, err := e.svc.Deduct(e.ctx, e.tx, CreditMove{CustomerID: c, Amount: 1, SourceType: "booking", SourceID: c, IdempotencyKey: "u-" + c}); err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.svc.RefundPurchaseTx(e.ctx, first.ID, "minta refund", e.staff.UserID)
+	_, err = e.svc.RefundPurchaseTx(e.ctx, first.ID, "minta refund", e.staff.UserID, true)
 	wantErr(t, err, 409, "tidak cukup")
 
 	// Purchase limit and ARK Coin refunds.
@@ -233,7 +233,7 @@ func TestLedgerAgainstPostgres(t *testing.T) {
 	if ark := e.arkBalance(); ark != 1_800_000 {
 		t.Fatalf("ark after buy %v", ark)
 	}
-	refunded, err := e.svc.RefundPurchaseTx(e.ctx, arkSale.ID, "batal ikut", e.staff.UserID)
+	refunded, err := e.svc.RefundPurchaseTx(e.ctx, arkSale.ID, "batal ikut", e.staff.UserID, true)
 	if err != nil || refunded.Status != "refunded" || refunded.Note == nil || *refunded.Note != "Refund: batal ikut" {
 		t.Fatalf("refund: %+v %v", refunded, err)
 	}

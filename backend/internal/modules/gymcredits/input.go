@@ -351,10 +351,64 @@ func parseReverse(body any) (reasonBody, error) {
 	return b, f.staffErr()
 }
 
-func parseRefund(body any) (string, error) {
+// parseRefund reads { reason, mode? }: mode "full" pays a pass back in full
+// instead of prorated.
+func parseRefund(body any) (reason string, full bool, err error) {
 	f := newForm(body)
-	reason, _ := f.str("reason", strRule{trim: true, min: 3, minMsg: "Alasan refund wajib diisi", max: 500})
-	return reason, f.staffErr()
+	reason, _ = f.str("reason", strRule{trim: true, min: 3, minMsg: "Alasan refund wajib diisi", max: 500})
+	if f.get("mode") != undefined {
+		full = f.enum("mode", []string{"prorated", "full"}) == "full"
+	}
+	return reason, full, f.staffErr()
+}
+
+// passDays validates a whole number of pass days, 1 to 365.
+func (f *form) passDays(key string) int {
+	n, _ := f.num(key, numRule{integer: true, intMsg: "Jumlah hari harus bilangan bulat", min: bound(1), minMsg: "Minimal 1 hari", max: bound(365)})
+	return int(n)
+}
+
+func parseFreeze(body any, member bool) (int, error) {
+	f := newForm(body)
+	days := f.passDays("days")
+	if member {
+		return days, f.memberErr()
+	}
+	return days, f.staffErr()
+}
+
+type extendBody struct {
+	Days   int
+	Reason string
+}
+
+func parseExtend(body any) (extendBody, error) {
+	f := newForm(body)
+	days := f.passDays("days")
+	reason, _ := f.str("reason", strRule{trim: true, min: 3, minMsg: "Alasan perpanjangan wajib diisi", max: 500})
+	return extendBody{Days: days, Reason: reason}, f.staffErr()
+}
+
+type autoRenewBody struct {
+	On        bool
+	RenewWith string // "" keeps the current choice
+}
+
+func parseAutoRenew(body any, member bool) (autoRenewBody, error) {
+	f := newForm(body)
+	var b autoRenewBody
+	if v, ok := f.get("auto_renew").(bool); ok {
+		b.On = v
+	} else if f.obj != nil {
+		f.add(typeIssue([]any{"auto_renew"}, "boolean", f.get("auto_renew"), ""))
+	}
+	if v := f.get("renew_with"); v != undefined && v != nil {
+		b.RenewWith = f.enum("renew_with", []string{RenewWithArk, RenewWithInvoice})
+	}
+	if member {
+		return b, f.memberErr()
+	}
+	return b, f.staffErr()
 }
 
 func parsePackageStatus(body any) (string, error) {

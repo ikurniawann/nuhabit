@@ -292,7 +292,7 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 	if err != nil {
 		return nil, err
 	}
-	passes, err := s.Passes(ctx, q, customerID)
+	passes, freeze, err := s.passViews(ctx, q, customerID, rules)
 	if err != nil {
 		return nil, err
 	}
@@ -320,6 +320,7 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 		Lots:                []LotView{},
 		ExpiringLots:        []LotView{},
 		Passes:              passes,
+		Freeze:              freeze,
 		Entries:             make([]EntryView, 0, len(recent)),
 	}
 	for _, r := range domain.LotRemainders(state.lots, state.entries) {
@@ -343,22 +344,30 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 	return view, nil
 }
 
-// Passes lists the member's passes, newest active first, after lapsed
-// ones are marked expired.
-func (s *Service) Passes(ctx context.Context, q database.Querier, customerID string) ([]PassView, error) {
+// passViews lists the member's passes, live ones first in the order they
+// run, and the freeze allowance under the rules of the branch the current
+// pass was bought at.
+func (s *Service) passViews(ctx context.Context, q database.Querier, customerID string, global domain.Rules) ([]PassView, domain.FreezeAllowance, error) {
 	now := s.clock()
-	if err := s.repo.ExpireLapsedPasses(ctx, q, customerID, now); err != nil {
-		return nil, err
-	}
-	rows, err := s.repo.Passes(ctx, q, customerID)
+	rows, err := s.passRows(ctx, q, customerID, now)
 	if err != nil {
-		return nil, err
+		return nil, domain.FreezeAllowance{}, err
+	}
+	rules := global
+	if len(rows) > 0 && isLive(&rows[0]) && rows[0].BranchID != nil {
+		if rules, err = s.Rules(ctx, q, rows[0].BranchID); err != nil {
+			return nil, domain.FreezeAllowance{}, err
+		}
+	}
+	allowance, err := s.freezeAllowance(ctx, q, customerID, rules)
+	if err != nil {
+		return nil, allowance, err
 	}
 	out := make([]PassView, 0, len(rows))
 	for _, p := range rows {
 		out = append(out, passView(p, now))
 	}
-	return out, nil
+	return out, allowance, nil
 }
 
 // ActivePass is a pass that covers one instant (booking or check-in time).
