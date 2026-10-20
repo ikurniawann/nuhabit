@@ -1,5 +1,5 @@
 {
- "generated_route_count": 1342,
+ "generated_route_count": 1385,
  "paths": {
   "/api/accounting/account-types/{id}": {
    "put": {
@@ -5979,6 +5979,120 @@
     ]
    }
   },
+  "/api/gym/assessments/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/assessments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/assessments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/assessments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/assessments": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/assessments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/assessments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/bookings/{id}": {
    "post": {
     "tags": [
@@ -6059,12 +6173,48 @@
     ]
    }
   },
+  "/api/gym/branches": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/branches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/checkin/log": {
    "get": {
     "tags": [
      "gym"
     ],
     "summary": "GET /api/gym/checkin/log",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/checkin/members": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/checkin/members",
     "responses": {
      "200": {
       "description": "OK"
@@ -6261,6 +6411,24 @@
     ]
    }
   },
+  "/api/gym/coaches/staff": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/coaches/staff",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/credits/{customerId}/adjust": {
    "post": {
     "tags": [
@@ -6351,6 +6519,34 @@
      "gym"
     ],
     "summary": "POST /api/gym/credits/purchases/{id}/refund",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/purchases/{id}/refund-quote": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/credits/purchases/{id}/refund-quote",
     "parameters": [
      {
       "name": "id",
@@ -6889,6 +7085,462 @@
     ]
    }
   },
+  "/api/gym/passes/{id}/auto-renew": {
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/passes/{id}/auto-renew",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/passes/{id}/extend": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/passes/{id}/extend",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/passes/{id}/freeze": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/passes/{id}/freeze",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/passes/{id}/unfreeze": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/passes/{id}/unfreeze",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/appointments/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/appointments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/pt/appointments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/appointments": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/appointments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/pt/appointments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/availability/{coachId}/exceptions": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/pt/availability/{coachId}/exceptions",
+    "parameters": [
+     {
+      "name": "coachId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/availability/{coachId}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/availability/{coachId}",
+    "parameters": [
+     {
+      "name": "coachId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/pt/availability/{coachId}",
+    "parameters": [
+     {
+      "name": "coachId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/availability/exceptions/{id}": {
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/pt/availability/exceptions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/class-type-flags/{id}": {
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/pt/class-type-flags/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/class-type-flags": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/class-type-flags",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/class-types": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/class-types",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/coaches": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/coaches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/members": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/participants/{id}": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/pt/participants/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/pt/slots": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/pt/slots",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/races/{id}/entrants": {
    "get": {
     "tags": [
@@ -7061,6 +7713,112 @@
      "gym"
     ],
     "summary": "PUT /api/gym/rules",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/session-templates/{id}": {
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/session-templates/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/session-templates/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/session-templates/generate": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/session-templates/generate",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/session-templates": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/session-templates",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/session-templates",
     "responses": {
      "200": {
       "description": "OK"
@@ -13025,6 +13783,24 @@
     ]
    }
   },
+  "/api/member-portal/gym/assessments": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/assessments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/gym/bookings/{id}": {
    "post": {
     "tags": [
@@ -13257,6 +14033,206 @@
      "member-portal"
     ],
     "summary": "GET /api/member-portal/gym/credits",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/credits/vouchers/preview": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/credits/vouchers/preview",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/passes/{id}/auto-renew": {
+   "put": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PUT /api/member-portal/gym/passes/{id}/auto-renew",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/passes/{id}/freeze": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/passes/{id}/freeze",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/passes/{id}/unfreeze": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/passes/{id}/unfreeze",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/pt/appointments/{id}": {
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/gym/pt/appointments/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/pt/appointments": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/pt/appointments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/pt/appointments",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/pt/options": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/pt/options",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/pt/slots": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/pt/slots",
     "responses": {
      "200": {
       "description": "OK"
