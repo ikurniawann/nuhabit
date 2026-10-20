@@ -12,7 +12,9 @@ import { useDebounced } from "@/features/gym/use-debounced";
 import { gymCreditsApi } from "@/features/gym/credits/api";
 import { SellDialog } from "@/features/gym/credits/components/sell-dialog";
 import { formatNumber, formatTime } from "@/lib/format";
-import { GYM_KEYS, schedulingApi, type CheckInResult, type MemberHit, type Session } from "../api";
+import { Can } from "@/components/iam/can";
+import { DESK_MENUS } from "@/features/gym/permissions";
+import { GYM_KEYS, schedulingApi, strikeRulesNote, waktu, type CheckInResult, type MemberHit, type Session } from "../api";
 import { DROP_IN_LEAD_MS, dropInSessions } from "../drop-in";
 
 const HOUR = 3_600_000;
@@ -46,8 +48,9 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
   const [q, setQ] = useState("");
   const term = useDebounced(q.trim());
   const members = useQuery({
-    queryKey: ["gym", "member-search", term],
-    queryFn: () => schedulingApi.searchMembers(term),
+    queryKey: ["gym", "member-search", term, sessionId, branchId],
+    // Strike dihitung dengan aturan cabang sesi yang dipilih, sama seperti saat booking.
+    queryFn: () => schedulingApi.searchMembers(term, { session_id: sessionId || undefined, branch_id: branchId || undefined }),
     enabled: term.length >= 2,
   });
   const [member, setMember] = useState<MemberHit | null>(null);
@@ -125,7 +128,11 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
                         <span className="block text-xs text-muted-foreground">
                           {m.phone}
                           {m.is_active ? "" : " · nonaktif"}
+                          {m.pass_strikes > 0 && ` · ${formatNumber(m.pass_strikes)} strike`}
                         </span>
+                        {m.suspended_until && (
+                          <span className="block text-xs font-medium text-warning">Booking ditangguhkan sampai {waktu(m.suspended_until)}</span>
+                        )}
                       </span>
                       <span className="text-xs tabular-nums text-muted-foreground">{formatNumber(m.credits)} kredit</span>
                     </button>
@@ -133,19 +140,24 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
                 ))}
               </ul>
               {members.data?.length === 0 && <p className="text-sm text-muted-foreground">Member tidak ditemukan.</p>}
+              {strikeRulesNote(members.data) && <p className="text-xs text-muted-foreground">{strikeRulesNote(members.data)}</p>}
             </>
           )}
 
           {member && (
             <div className="flex flex-wrap gap-2">
               {short && (
-                <Button variant="outline" onClick={() => setSelling(true)} disabled={!member.is_active}>
-                  <ShoppingCart /> Jual paket
-                </Button>
+                <Can menu="gym.credits" action="create">
+                  <Button variant="outline" onClick={() => setSelling(true)} disabled={!member.is_active}>
+                    <ShoppingCart /> Jual paket
+                  </Button>
+                </Can>
               )}
-              <Button onClick={() => admit.mutate({ session, member })} disabled={admit.isPending}>
-                <UserCheck /> {admit.isPending ? "Memproses…" : "Daftarkan & check-in"}
-              </Button>
+              <Can menu={DESK_MENUS} action="create" mode="disable">
+                <Button onClick={() => admit.mutate({ session, member })} disabled={admit.isPending}>
+                  <UserCheck /> {admit.isPending ? "Memproses…" : "Daftarkan & check-in"}
+                </Button>
+              </Can>
             </div>
           )}
           {short && (

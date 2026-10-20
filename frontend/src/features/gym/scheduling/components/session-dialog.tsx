@@ -23,16 +23,20 @@ import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 /**
  * Buat sesi baru (date = hari awal, "YYYY-MM-DD") atau ubah sesi yang ada.
  * Kosongkan kapasitas/kredit/durasi untuk memakai default jenis kelas.
- * Jenis kelas dan biaya kredit hanya bisa diubah selama belum ada booking.
+ * Jenis kelas dan biaya kredit hanya bisa diubah selama belum ada booking;
+ * cabang hanya selama sesi belum pernah dibooking (booking batal ikut dihitung).
  */
 export function SessionDialog({
   session,
   date,
+  hasAnyBooking = false,
   onClose,
   onSaved,
 }: {
   session?: Session | null;
   date?: string;
+  /** Roster sesi tidak kosong, termasuk booking yang dibatalkan. */
+  hasAnyBooking?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -41,6 +45,7 @@ export function SessionDialog({
   const branches = useGymBranches();
   const editing = Boolean(session);
   const hasBookings = Boolean(session && (session.confirmed_count > 0 || session.waitlist_count > 0));
+  const branchLocked = hasBookings || hasAnyBooking;
   // null = belum dipilih: sesi baru ikut cabang staf begitu daftar cabang termuat.
   const [chosenBranch, setChosenBranch] = useState<string | null>(session ? (session.branch_id ?? "") : null);
   const branchId = chosenBranch ?? defaultBranchId(branches.data);
@@ -70,6 +75,7 @@ export function SessionDialog({
       session
         ? schedulingApi.updateSession(session.id, {
             ...(hasBookings ? {} : { class_type_id: form.class_type_id, credit_cost: num(form.credit_cost) ?? undefined }),
+            ...(branchId !== (session.branch_id ?? "") ? { branch_id: branchId || null } : {}),
             coach_id: form.coach_id || null,
             area: form.area.trim() || null,
             starts_at: startsAt,
@@ -141,13 +147,19 @@ export function SessionDialog({
               <Field
                 label="Cabang"
                 className="sm:col-span-2"
-                hint={editing ? "Cabang sesi tidak bisa diubah." : "Aturan booking cabang ini yang dipakai."}
+                hint={
+                  editing && branchLocked
+                    ? "Sesi ini sudah pernah dibooking; cabang terkunci."
+                    : editing
+                      ? "Pindah cabang memakai aturan booking dan ruangan cabang tujuan."
+                      : "Aturan booking cabang ini yang dipakai."
+                }
               >
                 <select
                   className={SELECT}
                   value={branchId}
                   onChange={(e) => setChosenBranch(e.target.value)}
-                  disabled={editing}
+                  disabled={editing && branchLocked}
                 >
                   <option value="">Tanpa cabang (aturan global)</option>
                   {(branches.data?.branches ?? []).map((b) => (

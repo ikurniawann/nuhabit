@@ -32,9 +32,12 @@ import {
   schedulingApi,
   SESSION_BADGE,
   waktu,
+  strikeRulesNote,
   type RosterEntry,
   type Session,
 } from "../api";
+import { Can } from "@/components/iam/can";
+import { DESK_MENUS, SCHEDULE_MENUS, useBookingActions } from "@/features/gym/permissions";
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 import { SessionDialog } from "./session-dialog";
 
@@ -149,25 +152,29 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         actions={
           <>
             <Badge variant={badge.variant}>{badge.label}</Badge>
-            {session.status === "draft" && (
-              <Button onClick={() => sessionAction.mutate("publish")} disabled={busy}>
-                Terbitkan
-              </Button>
-            )}
+            <Can menu={SCHEDULE_MENUS} action="update">
+              {session.status === "draft" && (
+                <Button onClick={() => sessionAction.mutate("publish")} disabled={busy}>
+                  Terbitkan
+                </Button>
+              )}
+              {(open || session.status === "draft") && (
+                <Button variant="outline" onClick={() => setEditing(true)}>
+                  Ubah
+                </Button>
+              )}
+              {open && (
+                <Button variant="ink" onClick={() => setConfirming("complete")} disabled={busy}>
+                  Tutup sesi
+                </Button>
+              )}
+            </Can>
             {(open || session.status === "draft") && (
-              <Button variant="outline" onClick={() => setEditing(true)}>
-                Ubah
-              </Button>
-            )}
-            {open && (
-              <Button variant="ink" onClick={() => setConfirming("complete")} disabled={busy}>
-                Tutup sesi
-              </Button>
-            )}
-            {(open || session.status === "draft") && (
-              <Button variant="ghost" className="text-danger" onClick={() => setConfirming(roster.length ? "cancel" : "delete")}>
-                {roster.length ? "Batalkan" : "Hapus"}
-              </Button>
+              <Can menu={SCHEDULE_MENUS} action={roster.length ? "update" : "delete"}>
+                <Button variant="ghost" className="text-danger" onClick={() => setConfirming(roster.length ? "cancel" : "delete")}>
+                  {roster.length ? "Batalkan" : "Hapus"}
+                </Button>
+              </Can>
             )}
           </>
         }
@@ -190,9 +197,11 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
           <h2 className="text-base font-semibold">Peserta</h2>
           {open && (
-            <Button size="sm" variant="soft" onClick={() => setAdding(true)}>
-              <UserPlus /> Daftarkan member
-            </Button>
+            <Can menu={DESK_MENUS} action="create">
+              <Button size="sm" variant="soft" onClick={() => setAdding(true)}>
+                <UserPlus /> Daftarkan member
+              </Button>
+            </Can>
           )}
         </div>
         <RosterTable
@@ -213,7 +222,9 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         )}
       </Card>
 
-      {editing && <SessionDialog session={session} onClose={() => setEditing(false)} onSaved={refresh} />}
+      {editing && (
+        <SessionDialog session={session} hasAnyBooking={roster.length > 0} onClose={() => setEditing(false)} onSaved={refresh} />
+      )}
       {adding && <AddMemberDialog session={session} onClose={() => setAdding(false)} onAdded={refresh} />}
       <ConfirmDialog
         open={confirming !== null}
@@ -246,6 +257,7 @@ function RosterTable({
   disabled: boolean;
   onAction: (booking: RosterEntry, action: BookingAction) => void;
 }) {
+  const can = useBookingActions();
   if (rows.length === 0) return <TableNote>{empty}</TableNote>;
   return (
     <Table>
@@ -279,17 +291,17 @@ function RosterTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex flex-wrap justify-end gap-1">
-                  {b.status === "confirmed" && (
-                    <>
-                      <Button size="sm" variant="soft" disabled={disabled} onClick={() => onAction(b, "check_in")}>
-                        Check-in
-                      </Button>
-                      <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b, "no_show")}>
-                        Tidak hadir
-                      </Button>
-                    </>
+                  {b.status === "confirmed" && can.checkIn && (
+                    <Button size="sm" variant="soft" disabled={disabled} onClick={() => onAction(b, "check_in")}>
+                      Check-in
+                    </Button>
                   )}
-                  {(b.status === "confirmed" || b.status === "waitlist") && (
+                  {b.status === "confirmed" && can.noShow && (
+                    <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b, "no_show")}>
+                      Tidak hadir
+                    </Button>
+                  )}
+                  {can.cancel && (b.status === "confirmed" || b.status === "waitlist") && (
                     <Button size="sm" variant="ghost" className="text-danger" disabled={disabled} onClick={() => onAction(b, "cancel")}>
                       {b.status === "waitlist" ? "Keluarkan" : "Batalkan"}
                     </Button>
@@ -312,8 +324,9 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
   const [walkIn, setWalkIn] = useState(opened > Date.parse(session.booking_closes_at));
   const walkInAllowed = opened < Date.parse(session.ends_at);
   const members = useQuery({
-    queryKey: ["gym", "member-search", q],
-    queryFn: () => schedulingApi.searchMembers(q),
+    queryKey: ["gym", "member-search", q, session.id],
+    // Strike dihitung dengan aturan cabang sesi ini, sama seperti saat booking.
+    queryFn: () => schedulingApi.searchMembers(q, { session_id: session.id }),
     enabled: q.trim().length >= 2,
   });
   const book = useMutation({
@@ -366,6 +379,7 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
             </div>
           ))}
           {members.data?.length === 0 && <p className="text-sm text-muted-foreground">Member tidak ditemukan.</p>}
+          {strikeRulesNote(members.data) && <p className="text-xs text-muted-foreground">{strikeRulesNote(members.data)}</p>}
         </DialogPanelBody>
       </DialogPanel>
     </Dialog>
