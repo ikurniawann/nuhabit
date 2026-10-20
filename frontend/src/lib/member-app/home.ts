@@ -21,7 +21,7 @@ export type NotificationKind =
 
 export function notificationKind(type: string): NotificationKind {
   const t = type.replace(/^gym_/, "");
-  if (t === "booking_confirmed") return "BOOKING_CONFIRMED";
+  if (t === "booking_confirmed" || t === "pt_confirmed") return "BOOKING_CONFIRMED";
   if (t.includes("reminder")) return "BOOKING_REMINDER";
   if (t.startsWith("waitlist_") || t === "booking_waitlist") return "WAITLIST_PROMOTED";
   if (t.includes("low_balance")) return "LOW_BALANCE";
