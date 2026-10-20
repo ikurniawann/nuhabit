@@ -224,13 +224,14 @@ func (s *Service) ListMembers(ctx context.Context, f MemberFilter) (*MemberPage,
 
 // Branch is a branch option of the filters.
 type Branch struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Timezone string `json:"timezone"`
 }
 
 // Branches lists the active branches by name.
 func (s *Service) Branches(ctx context.Context) ([]Branch, error) {
-	rows, err := s.db.Query(ctx, `SELECT id::text, name FROM configuration.branches WHERE COALESCE(is_active, true) ORDER BY name`)
+	rows, err := s.db.Query(ctx, `SELECT id::text, name, timezone FROM configuration.branches WHERE COALESCE(is_active, true) ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}

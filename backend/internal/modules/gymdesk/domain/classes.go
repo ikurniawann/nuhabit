@@ -45,7 +45,7 @@ type ClassTotals struct {
 	AvgFill        float64 `json:"avg_fill"`
 }
 
-// DayAttendance is one WIB day of the attendance chart.
+// DayAttendance is one local day of the attendance chart.
 type DayAttendance struct {
 	Day        string `json:"day"`
 	CheckedIn  int    `json:"checked_in"`
@@ -68,7 +68,7 @@ type GroupStat struct {
 	LateCancelRate float64 `json:"late_cancel_rate"`
 }
 
-// HeatCell is the average fill of the sessions that start in one WIB
+// HeatCell is the average fill of the sessions that start in one local
 // weekday (1 Monday to 7 Sunday) and hour.
 type HeatCell struct {
 	Weekday  int     `json:"weekday"`
@@ -79,6 +79,8 @@ type HeatCell struct {
 
 // ClassReport is attendance, occupancy and coach utilisation.
 type ClassReport struct {
+	// Timezone is the zone the report's days and heatmap hours read in.
+	Timezone     string          `json:"timezone"`
 	Totals       ClassTotals     `json:"totals"`
 	PerDay       []DayAttendance `json:"per_day"`
 	PerClassType []GroupStat     `json:"per_class_type"`
@@ -133,7 +135,7 @@ func RollUpClasses(sessions []SessionStat, p Period, now time.Time) ClassReport 
 			continue
 		}
 		all.add(s)
-		local := s.StartsAt.In(WIB)
+		local := s.StartsAt.In(p.Zone)
 		if d := days[local.Format(dateLayout)]; d != nil {
 			d.CheckedIn += s.CheckedIn
 			d.NoShow += s.NoShow
@@ -157,6 +159,7 @@ func RollUpClasses(sessions []SessionStat, p Period, now time.Time) ClassReport 
 
 	totals := all.done()
 	report := ClassReport{
+		Timezone: p.ZoneName(),
 		Totals: ClassTotals{
 			Sessions: totals.Sessions, CheckedIn: totals.CheckedIn, NoShow: totals.NoShow,
 			LateCancel: totals.LateCancel, Bookings: totals.Bookings, NoShowRate: totals.NoShowRate,

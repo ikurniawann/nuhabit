@@ -14,11 +14,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"nuhabit/backend/internal/modules/gymdesk/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -57,7 +57,7 @@ func (fakeCredits) MemberCredits(_ context.Context, id string) (json.RawMessage,
 	return json.RawMessage(`{"member":{"id":"` + id + `"},"balance":8}`), nil
 }
 
-var testNow = time.Date(2031, 3, 20, 12, 0, 0, 0, domain.WIB)
+var testNow = time.Date(2031, 3, 20, 12, 0, 0, 0, localtime.Jakarta)
 
 const (
 	staffA = "6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11"
@@ -79,7 +79,7 @@ type fixture struct {
 }
 
 func wib(s string) time.Time {
-	t, err := time.ParseInLocation("2006-01-02 15:04", s, domain.WIB)
+	t, err := time.ParseInLocation("2006-01-02 15:04", s, localtime.Jakarta)
 	if err != nil {
 		panic(err)
 	}
@@ -393,6 +393,17 @@ func TestReports(t *testing.T) {
 	}
 	if branches := f.call("GET", "/api/gym/reports/branches", staffA, nil); branches.status != http.StatusOK {
 		t.Errorf("branches = %d", branches.status)
+	}
+
+	// A WITA branch reads its days in WITA; every branch reads Jakarta days.
+	if classes["timezone"] != "Asia/Jakarta" || f.get("/api/gym/reports/revenue?from=2031-03-01&to=2031-03-20")["timezone"] != "Asia/Jakarta" {
+		t.Errorf("Jakarta report zone = %v", classes["timezone"])
+	}
+	if _, err := f.tx.Exec(f.ctx, `UPDATE configuration.branches SET timezone = 'Asia/Makassar' WHERE id = $1`, f.branch); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.get("/api/gym/reports/members" + q)["timezone"]; got != "Asia/Makassar" {
+		t.Errorf("WITA report zone = %v", got)
 	}
 }
 

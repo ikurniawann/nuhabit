@@ -8,12 +8,14 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"nuhabit/backend/internal/modules/gymdesk/domain"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -113,22 +115,28 @@ func branchParam(q url.Values) (*string, error) {
 	return &raw, nil
 }
 
-func (h *handler) period(q url.Values, defaultDays int) (domain.Period, error) {
-	p, err := domain.ParsePeriod(q.Get("from"), q.Get("to"), h.svc.now(), defaultDays, maxReportDays)
+// period reads from and to as days in zone.
+func (h *handler) period(q url.Values, defaultDays int, zone *time.Location) (domain.Period, error) {
+	p, err := domain.ParsePeriod(q.Get("from"), q.Get("to"), h.svc.now(), defaultDays, maxReportDays, zone)
 	if errors.Is(err, domain.ErrPeriod) {
 		return p, httpx.BadRequest(err.Error())
 	}
 	return p, err
 }
 
-// reportParams reads from, to and branch_id.
+// reportParams reads branch_id, then from and to as days in that branch's
+// zone; without a branch the days are Jakarta days.
 func (h *handler) reportParams(r *http.Request) (domain.Period, *string, error) {
 	q := r.URL.Query()
-	p, err := h.period(q, defaultReportDays)
-	if err != nil {
-		return p, nil, err
-	}
 	branch, err := branchParam(q)
+	if err != nil {
+		return domain.Period{}, nil, err
+	}
+	zone, err := localtime.BranchZone(r.Context(), h.svc.db, branch)
+	if err != nil {
+		return domain.Period{}, nil, err
+	}
+	p, err := h.period(q, defaultReportDays, zone)
 	return p, branch, err
 }
 
@@ -307,7 +315,8 @@ func (h *handler) membersReport(w http.ResponseWriter, r *http.Request, _ *auth.
 // downloads the range instead.
 func (h *handler) checkinLog(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	q := r.URL.Query()
-	p, err := h.period(q, 1)
+	// The log spans branches: its days and times are Jakarta's.
+	p, err := h.period(q, 1, localtime.Jakarta)
 	if err != nil {
 		return err
 	}

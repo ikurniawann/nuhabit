@@ -2,12 +2,13 @@ package domain
 
 import (
 	"math"
+	"nuhabit/backend/internal/platform/localtime"
 	"testing"
 	"time"
 )
 
 func wib(s string) time.Time {
-	t, err := time.ParseInLocation("2006-01-02 15:04", s, WIB)
+	t, err := time.ParseInLocation("2006-01-02 15:04", s, localtime.Jakarta)
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +33,7 @@ func TestParsePeriod(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			p, err := ParsePeriod(c.from, c.to, now, 30, 366)
+			p, err := ParsePeriod(c.from, c.to, now, 30, 366, localtime.Jakarta)
 			if c.err {
 				if err == nil {
 					t.Fatalf("want error, got %v", p)
@@ -47,10 +48,18 @@ func TestParsePeriod(t *testing.T) {
 			}
 		})
 	}
+
+	// 23.30 WIB is already tomorrow in Makassar: a WITA report ends a day later.
+	wita := localtime.Zone("Asia/Makassar")
+	p, err := ParsePeriod("", "", now, 30, 366, wita)
+	if err != nil || p.From.Format("2006-01-02") != "2026-09-22" || p.ZoneName() != "Asia/Makassar" ||
+		!p.From.Equal(time.Date(2026, 9, 21, 16, 0, 0, 0, time.UTC)) {
+		t.Fatalf("WITA period %v .. %v %v", p.From, p.To, err)
+	}
 }
 
 func TestPreviousPeriod(t *testing.T) {
-	p, _ := ParsePeriod("2026-10-08", "2026-10-14", time.Now(), 30, 366)
+	p, _ := ParsePeriod("2026-10-08", "2026-10-14", time.Now(), 30, 366, localtime.Jakarta)
 	prev := p.Previous()
 	if prev.From.Format("2006-01-02") != "2026-10-01" || !prev.To.Equal(p.From) {
 		t.Fatalf("previous = %v .. %v", prev.From, prev.To)
@@ -60,7 +69,7 @@ func TestPreviousPeriod(t *testing.T) {
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
 func TestRollUpClasses(t *testing.T) {
-	p, _ := ParsePeriod("2026-10-05", "2026-10-06", time.Now(), 30, 366)
+	p, _ := ParsePeriod("2026-10-05", "2026-10-06", time.Now(), 30, 366, localtime.Jakarta)
 	coach := "c1"
 	name := "Maya"
 	sessions := []SessionStat{
@@ -100,7 +109,7 @@ func TestRollUpClasses(t *testing.T) {
 }
 
 func TestRollUpRevenue(t *testing.T) {
-	p, _ := ParsePeriod("2026-10-05", "2026-10-06", time.Now(), 30, 366)
+	p, _ := ParsePeriod("2026-10-05", "2026-10-06", time.Now(), 30, 366, localtime.Jakarta)
 	sales := []SaleRow{
 		{Day: "2026-10-05", PackageID: "p1", PackageName: "10 Kredit", Kind: "credits", Method: "cash", BranchID: "b1", BranchName: "Kemang", Sales: 2, Gross: 2_000_000},
 		{Day: "2026-10-06", PackageID: "p2", PackageName: "Pass 4 Minggu", Kind: "pass", Method: "qris", Sales: 1, Gross: 1_200_000},

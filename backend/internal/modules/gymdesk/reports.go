@@ -44,7 +44,7 @@ func (s *Service) ClassReport(ctx context.Context, p domain.Period, branchID *st
 // RevenueReport is package and pass sales over p.
 func (s *Service) RevenueReport(ctx context.Context, p domain.Period, branchID *string) (domain.RevenueReport, error) {
 	rows, err := s.db.Query(ctx, `
-		SELECT to_char(cp.paid_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD'), pk.id::text, pk.name, pk.kind,
+		SELECT to_char(cp.paid_at AT TIME ZONE $4, 'YYYY-MM-DD'), pk.id::text, pk.name, pk.kind,
 		       COALESCE(cp.payment_method, 'lainnya'), COALESCE(cp.branch_id::text, ''), COALESCE(br.name, ''),
 		       count(*)::int, sum(cp.total_idr)::float8
 		  FROM gym.credit_purchases cp
@@ -52,7 +52,7 @@ func (s *Service) RevenueReport(ctx context.Context, p domain.Period, branchID *
 		  LEFT JOIN configuration.branches br ON br.id = cp.branch_id
 		 WHERE cp.paid_at >= $1 AND cp.paid_at < $2 AND cp.status IN ('paid', 'refunded')
 		   AND ($3::uuid IS NULL OR cp.branch_id = $3)
-		 GROUP BY 1, 2, 3, 4, 5, 6, 7`, p.From, p.To, branchID)
+		 GROUP BY 1, 2, 3, 4, 5, 6, 7`, p.From, p.To, branchID, p.ZoneName())
 	if err != nil {
 		return domain.RevenueReport{}, err
 	}
@@ -61,11 +61,11 @@ func (s *Service) RevenueReport(ctx context.Context, p domain.Period, branchID *
 		return domain.RevenueReport{}, err
 	}
 	rows, err = s.db.Query(ctx, `
-		SELECT to_char(refunded_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD'), count(*)::int, sum(total_idr)::float8
+		SELECT to_char(refunded_at AT TIME ZONE $4, 'YYYY-MM-DD'), count(*)::int, sum(total_idr)::float8
 		  FROM gym.credit_purchases
 		 WHERE refunded_at >= $1 AND refunded_at < $2 AND status = 'refunded'
 		   AND ($3::uuid IS NULL OR branch_id = $3)
-		 GROUP BY 1`, p.From, p.To, branchID)
+		 GROUP BY 1`, p.From, p.To, branchID, p.ZoneName())
 	if err != nil {
 		return domain.RevenueReport{}, err
 	}
@@ -106,6 +106,8 @@ type ChurnedMember struct {
 // MembersReport is member growth, activity and churn over p, and the passes
 // and credits that lapse in the next ExpiryHorizonDays days.
 type MembersReport struct {
+	// Timezone is the zone the report's days read in.
+	Timezone       string            `json:"timezone"`
 	New            int               `json:"new_members"`
 	NewPerDay      []DayCount        `json:"new_per_day"`
 	Active         int               `json:"active_members"`
@@ -117,7 +119,7 @@ type MembersReport struct {
 	ExpiringCredit []ExpiringCredits `json:"expiring_credits"`
 }
 
-// DayCount is a count on one WIB day.
+// DayCount is a count on one day of the report zone.
 type DayCount struct {
 	Day   string `json:"day"`
 	Count int    `json:"count"`
@@ -149,10 +151,10 @@ const visitorsCTEs = `
 // MembersReport builds the member report. New members and the expiring
 // lists cover every branch; activity and churn follow the branch filter.
 func (s *Service) MembersReport(ctx context.Context, p domain.Period, branchID *string) (*MembersReport, error) {
-	out := &MembersReport{}
+	out := &MembersReport{Timezone: p.ZoneName()}
 	rows, err := s.db.Query(ctx, `
-		SELECT to_char(created_at AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD'), count(*)::int
-		  FROM pos.pos_customers WHERE created_at >= $1 AND created_at < $2 GROUP BY 1`, p.From, p.To)
+		SELECT to_char(created_at AT TIME ZONE $3, 'YYYY-MM-DD'), count(*)::int
+		  FROM pos.pos_customers WHERE created_at >= $1 AND created_at < $2 GROUP BY 1`, p.From, p.To, p.ZoneName())
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-// SaleRow is the paid sales of one package, method and branch on one WIB day.
+// SaleRow is the paid sales of one package, method and branch on one local day.
 type SaleRow struct {
 	Day         string
 	PackageID   string
@@ -18,7 +18,7 @@ type SaleRow struct {
 	Gross       float64
 }
 
-// RefundRow is the refunds of one WIB day.
+// RefundRow is the refunds of one local day.
 type RefundRow struct {
 	Day    string
 	Count  int
@@ -34,7 +34,7 @@ type RevenueTotals struct {
 	Net     float64 `json:"net"`
 }
 
-// RevenueDay is one WIB day of the revenue chart.
+// RevenueDay is one local day of the revenue chart.
 type RevenueDay struct {
 	Day    string  `json:"day"`
 	Sales  int     `json:"sales"`
@@ -55,6 +55,8 @@ type RevenueGroup struct {
 
 // RevenueReport is package and pass sales over the period.
 type RevenueReport struct {
+	// Timezone is the zone the report's days read in.
+	Timezone   string         `json:"timezone"`
 	Totals     RevenueTotals  `json:"totals"`
 	PerDay     []RevenueDay   `json:"per_day"`
 	PerPackage []RevenueGroup `json:"per_package"`
@@ -103,6 +105,7 @@ func RollUpRevenue(sales []SaleRow, refunds []RefundRow, p Period) RevenueReport
 	}
 	totals.Net = totals.Gross - totals.Refund
 	return RevenueReport{
+		Timezone:   p.ZoneName(),
 		Totals:     totals,
 		PerDay:     perDay,
 		PerPackage: byGross(packages, totals.Gross),

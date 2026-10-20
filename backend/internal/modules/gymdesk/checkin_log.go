@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymdesk/domain"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // LogEntry is one gate scan of the check-in log.
@@ -114,30 +115,30 @@ func text(v *string) string {
 	return *v
 }
 
-func wibTime(t *time.Time) string {
-	if t == nil {
-		return ""
-	}
-	return t.In(domain.WIB).Format("2006-01-02 15:04")
-}
-
-// CheckinCSV is up to CSVLimit scans of the period as CSV, newest first.
+// CheckinCSV is up to CSVLimit scans of the period as CSV, newest first,
+// times in the period's zone.
 func (s *Service) CheckinCSV(ctx context.Context, f LogFilter) ([]byte, error) {
 	rows, err := s.logRows(ctx, f, CSVLimit, 0)
 	if err != nil {
 		return nil, err
 	}
+	clock := func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.In(f.Period.Zone).Format("2006-01-02 15:04")
+	}
 	var buf bytes.Buffer
 	out := csv.NewWriter(&buf)
-	_ = out.Write([]string{"Waktu (WIB)", "Member", "Telepon", "Hasil", "Keterangan", "Kelas", "Jadwal kelas", "Kredit", "Sumber", "Staf", "Perangkat"})
+	_ = out.Write([]string{"Waktu (" + localtime.Abbrev(f.Period.Zone) + ")", "Member", "Telepon", "Hasil", "Keterangan", "Kelas", "Jadwal kelas", "Kredit", "Sumber", "Staf", "Perangkat"})
 	for _, r := range rows {
 		note := label(kindLabel, r.EntryKind)
 		if r.Decision == "denied" {
 			note = label(reasonLabel, r.Reason)
 		}
 		_ = out.Write([]string{
-			wibTime(&r.CreatedAt), text(r.MemberName), text(r.MemberPhone), label(decisionLabel, &r.Decision), note,
-			text(r.ClassTypeName), wibTime(r.StartsAt), strconv.Itoa(-r.CreditDelta), label(sourceLabel, &r.Source), text(r.StaffName), text(r.DeviceName),
+			clock(&r.CreatedAt), text(r.MemberName), text(r.MemberPhone), label(decisionLabel, &r.Decision), note,
+			text(r.ClassTypeName), clock(r.StartsAt), strconv.Itoa(-r.CreditDelta), label(sourceLabel, &r.Source), text(r.StaffName), text(r.DeviceName),
 		})
 	}
 	out.Flush()
