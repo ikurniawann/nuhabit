@@ -195,9 +195,9 @@ func TestLedgerAgainstPostgres(t *testing.T) {
 	}
 
 	// Adjusts with a reason and reverses an entry once.
-	_, err = e.svc.Adjust(e.ctx, e.tx, c, 2, "", e.staff.UserID)
+	_, err = e.svc.Adjust(e.ctx, e.tx, c, 2, "", e.staff.UserID, nil)
 	wantErr(t, err, 400, "Alasan")
-	adj, err := e.svc.Adjust(e.ctx, e.tx, c, 2, "kompensasi", e.staff.UserID)
+	adj, err := e.svc.Adjust(e.ctx, e.tx, c, 2, "kompensasi", e.staff.UserID, nil)
 	if err != nil || adj.BalanceAfter != 12 {
 		t.Fatalf("adjust: %+v %v", adj, err)
 	}
@@ -216,12 +216,13 @@ func TestLedgerAgainstPostgres(t *testing.T) {
 		}
 	}
 
-	// Refuses a refund once credits were used (balance 10, used 3 then refunded: use 1 now).
-	if _, _, err := e.svc.Deduct(e.ctx, e.tx, CreditMove{CustomerID: c, Amount: 1, SourceType: "booking", SourceID: c, IdempotencyKey: "u-" + c}); err != nil {
+	// A purchase top-up is undone by the purchase refund, not a reversal.
+	topUp, err := e.svc.repo.EntryIDByKey(e.ctx, e.tx, topUpKey(first.ID))
+	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = e.svc.RefundPurchaseTx(e.ctx, first.ID, "minta refund", e.staff.UserID)
-	wantErr(t, err, 409, "tidak cukup")
+	_, err = e.svc.Reverse(e.ctx, e.tx, topUp, "salah jual", e.staff.UserID)
+	wantErr(t, err, 409, "refund pembelian")
 
 	// Purchase limit and ARK Coin refunds.
 	arkSale, err := e.svc.SellPackage(e.ctx, FrontDeskSale{CustomerID: c, PackageID: trial, PaymentMethod: "ark_coin", CashierID: e.staff.UserID})

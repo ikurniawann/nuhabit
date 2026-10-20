@@ -195,7 +195,7 @@ func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	res, err := h.svc.AdjustTx(r.Context(), customerID, in.Amount, in.Reason, user.ID)
+	res, err := h.svc.AdjustTx(r.Context(), customerID, in.Amount, in.Reason, user.ID, in.BranchID)
 	if err != nil {
 		return err
 	}
@@ -348,7 +348,7 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 	origin := appOrigin(r)
 	switch in.Method {
 	case "ark_coin":
-		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID)
+		view, err = h.svc.BuyWithArk(r.Context(), purchase)
 	case "invoice":
 		view, err = h.svc.StartInvoicePurchase(r.Context(), purchase, func(purchaseID string) string {
 			if in.FromSite {

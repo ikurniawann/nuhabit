@@ -160,29 +160,124 @@ func TestCoveredClassTypeIDs(t *testing.T) {
 	})
 }
 
+func TestPinnedEntries(t *testing.T) {
+	t.Run("deductions and refunds move their own lot, the pool still goes FIFO", func(t *testing.T) {
+		lots := []Lot{lot("a", 5, 10, ""), lot("b", 5, 40, "")}
+		entries := []Entry{
+			entry(TopUp, 5, "a"), entry(TopUp, 5, "b"),
+			entry(ClassDeduction, -3, "b"), entry(Refund, 1, "b"), entry(ClassDeduction, -2, ""),
+		}
+		eq(t, remaindersByID(lots, entries), map[string]int{"a": 3, "b": 3})
+	})
+
+	t.Run("a refund into a lapsed lot expires again", func(t *testing.T) {
+		lots := []Lot{lot("old", 4, -1, "")}
+		entries := []Entry{entry(TopUp, 4, "old"), entry(ClassDeduction, -1, "old"), entry(Expiration, -3, "old"), entry(Refund, 1, "old")}
+		got := ExpirationEntries(lots, entries, now)
+		eq(t, [2]any{len(got), got[0].Amount}, [2]any{1, -1})
+	})
+}
+
+func TestAllocateDeduction(t *testing.T) {
+	coverage := map[string][]string{"race": {"sim"}, "strength": {"lift"}, "open": nil}
+	lots := []Lot{
+		lot("open-early", 2, 5, "open"), lot("race", 3, 20, "race"),
+		lot("strength", 4, 1, "strength"), lot("bonus", 1, 3, ""), lot("gone", 9, -1, ""),
+	}
+	entries := []Entry{
+		entry(TopUp, 2, "open-early"), entry(TopUp, 3, "race"), entry(TopUp, 4, "strength"),
+		entry(Bonus, 1, "bonus"), entry(TopUp, 9, "gone"),
+	}
+	rs := LotRemainders(lots, entries)
+
+	t.Run("restricted lots that cover the class go first, then unrestricted by expiry", func(t *testing.T) {
+		got, ok := AllocateDeduction(rs, coverage, "sim", 5, now)
+		eq(t, ok, true)
+		eq(t, got, []Allocation{{"race", 3}, {"bonus", 1}, {"open-early", 1}})
+	})
+
+	t.Run("lots restricted to other classes and lapsed lots never pay", func(t *testing.T) {
+		eq(t, UsableBalance(rs, coverage, "sim", now), 6)
+		eq(t, UsableBalance(rs, coverage, "lift", now), 7)
+		eq(t, UsableBalance(rs, coverage, "yoga", now), 3)
+		_, ok := AllocateDeduction(rs, coverage, "yoga", 4, now)
+		eq(t, ok, false)
+	})
+
+	t.Run("unknown class takes any live lot by expiry", func(t *testing.T) {
+		got, ok := AllocateDeduction(rs, coverage, "", 6, now)
+		eq(t, ok, true)
+		eq(t, got, []Allocation{{"strength", 4}, {"bonus", 1}, {"open-early", 1}})
+	})
+}
+
+func TestAllocateClassRefund(t *testing.T) {
+	d1 := entry(ClassDeduction, -2, "a")
+	d1.SourceID = "booking"
+	d2 := entry(ClassDeduction, -1, "b")
+	d2.SourceID = "booking"
+	other := entry(ClassDeduction, -4, "a")
+	other.SourceID = "other"
+
+	t.Run("returns credits to the lots drawn, last lot first", func(t *testing.T) {
+		eq(t, AllocateClassRefund([]Entry{d1, d2, other}, "booking", 3), []Allocation{{"b", 1}, {"a", 2}})
+	})
+
+	t.Run("nets earlier refunds and reversals; the rest goes to the pool", func(t *testing.T) {
+		refund := entry(Refund, 1, "b")
+		refund.SourceID = "booking"
+		reversal := entry(Reversal, 1, "a")
+		reversal.ReversesEntryID = d1.ID
+		eq(t, AllocateClassRefund([]Entry{d1, d2, other, refund, reversal}, "booking", 3), []Allocation{{"a", 1}, {"", 2}})
+	})
+}
+
+func TestPurchaseRefundIdr(t *testing.T) {
+	eq(t, PurchaseRefundIdr(1_500_000, 10, 9), 1_350_000.0)
+	eq(t, PurchaseRefundIdr(100_000, 3, 1), 33_333.0)
+	eq(t, PurchaseRefundIdr(400_000.5, 5, 5), 400_000.5)
+	eq(t, PurchaseRefundIdr(400_000, 5, 0), 0.0)
+}
+
 func TestBuildReversal(t *testing.T) {
-	t.Run("reverses a top-up against its own lot", func(t *testing.T) {
-		original := entry(TopUp, 5, "lotA")
-		original.SourceType, original.SourceID = "purchase", "p1"
-		draft, problem := BuildReversal(original, " salah input ", false, 5)
+	t.Run("reverses a bonus against its own lot", func(t *testing.T) {
+		original := entry(Bonus, 5, "lotA")
+		original.SourceType, original.SourceID = "promo", "p1"
+		draft, problem := BuildReversal(original, " salah input ", false, 5, 5)
 		eq(t, problem, ReversalProblem(""))
-		eq(t, draft, ReversalDraft{Amount: -5, LotID: "lotA", ReversesEntryID: original.ID, SourceType: "purchase", SourceID: "p1", Note: "salah input"})
+		eq(t, draft, ReversalDraft{Amount: -5, LotID: "lotA", ReversesEntryID: original.ID, SourceType: "promo", SourceID: "p1", Note: "salah input"})
+	})
+
+	t.Run("purchase top-ups go through the purchase refund", func(t *testing.T) {
+		_, p := BuildReversal(entry(TopUp, 5, "lotA"), "x", false, 5, 5)
+		eq(t, p, PurchaseTopUp)
 	})
 
 	t.Run("reverses a deduction back into the pool", func(t *testing.T) {
-		draft, problem := BuildReversal(entry(ClassDeduction, -2, ""), "kelas batal", false, 0)
+		draft, problem := BuildReversal(entry(ClassDeduction, -2, ""), "kelas batal", false, 0, 0)
 		eq(t, problem, ReversalProblem(""))
 		eq(t, [2]any{draft.Amount, draft.LotID}, [2]any{2, ""})
 	})
 
+	t.Run("reverses a deduction back into the lot it drew from", func(t *testing.T) {
+		draft, problem := BuildReversal(entry(ClassDeduction, -2, "lotA"), "kelas batal", false, 0, 0)
+		eq(t, problem, ReversalProblem(""))
+		eq(t, [2]any{draft.Amount, draft.LotID}, [2]any{2, "lotA"})
+	})
+
+	t.Run("refuses to cut more than the lot still holds", func(t *testing.T) {
+		_, p := BuildReversal(entry(Bonus, 5, "l"), "x", false, 20, 3)
+		eq(t, p, LotPartlyUsed)
+	})
+
 	t.Run("rejects reversal, expiration, reversed entry, negative balance", func(t *testing.T) {
-		_, p := BuildReversal(entry(Reversal, 1, ""), "x", false, 9)
+		_, p := BuildReversal(entry(Reversal, 1, ""), "x", false, 9, 0)
 		eq(t, p, CannotReverseReversal)
-		_, p = BuildReversal(entry(Expiration, -1, "l"), "x", false, 9)
+		_, p = BuildReversal(entry(Expiration, -1, "l"), "x", false, 9, 0)
 		eq(t, p, CannotReverseExpiration)
-		_, p = BuildReversal(entry(Bonus, 1, "l"), "x", true, 9)
+		_, p = BuildReversal(entry(Bonus, 1, "l"), "x", true, 9, 1)
 		eq(t, p, AlreadyReversed)
-		_, p = BuildReversal(entry(TopUp, 5, "l"), "x", false, 4)
+		_, p = BuildReversal(entry(Bonus, 5, "l"), "x", false, 4, 5)
 		eq(t, p, InsufficientBalance)
 	})
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	contracts "nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
 )
@@ -140,8 +141,10 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	if err != nil {
 		return false, nil, err
 	}
-	p, err = s.repo.Purchase(ctx, tx, purchaseID, false)
-	return false, p, err
+	if p, err = s.repo.Purchase(ctx, tx, purchaseID, false); err != nil {
+		return false, nil, err
+	}
+	return false, p, s.publishPurchaseJournal(ctx, tx, p, false, p.TotalIdr, deref(p.CreatedBy))
 }
 
 // moveArk changes the ARK Coin balance for a purchase; the wallet keeps the
@@ -168,10 +171,10 @@ func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purcha
 	return paid, err
 }
 
-// RefundPurchase refunds a paid purchase: status refunded plus a reversal of
-// its top_up, or the pass it issued marked refunded. Used credits make the
-// balance short and the reversal fails. ARK Coin goes back to the wallet;
-// other methods are paid back by the cashier.
+// RefundPurchase refunds a paid purchase. A credit package gives back the
+// credits still unused in its lot and pays price × unused / credits; a
+// pass is marked refunded and pays its total. ARK Coin goes back to the
+// wallet; other methods are paid back by the cashier.
 func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purchaseID, reason, actorID string) (*Purchase, error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
@@ -183,29 +186,85 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 	if purchase.Status != "paid" {
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
+	refund, meta := purchase.TotalIdr, map[string]any{}
 	if purchase.Kind == KindPass {
-		if err := s.repo.RefundPassByPurchase(ctx, tx, purchaseID); err != nil {
+		if err := s.refundPass(ctx, tx, purchase, actorID); err != nil {
 			return nil, err
 		}
+	} else {
+		credits, err := s.takeBackUnusedCredits(ctx, tx, purchase, reason, actorID)
+		if err != nil {
+			return nil, err
+		}
+		refund = domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, credits)
+		meta["refund_credits"] = credits
 	}
-	entryID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(purchaseID))
-	if err != nil {
+	meta["refund_idr"] = refund
+	if err := s.publishPurchaseJournal(ctx, tx, purchase, true, refund, actorID); err != nil {
 		return nil, err
 	}
-	if entryID != "" {
-		if _, err := s.Reverse(ctx, tx, entryID, reason, actorID); err != nil {
+	if deref(purchase.PaymentMethod) == "ark_coin" && refund > 0 {
+		if err := s.moveArk(ctx, tx, purchase, refund, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
 			return nil, err
 		}
 	}
-	if deref(purchase.PaymentMethod) == "ark_coin" && purchase.TotalIdr > 0 {
-		if err := s.moveArk(ctx, tx, purchase, purchase.TotalIdr, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
-			return nil, err
-		}
-	}
-	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason)); err != nil {
+	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), meta); err != nil {
 		return nil, err
 	}
 	return s.repo.Purchase(ctx, tx, purchaseID, false)
+}
+
+// refundPass marks the pass refunded and takes back the revenue already
+// released for it.
+func (s *Service) refundPass(ctx context.Context, tx database.Querier, p *Purchase, actorID string) error {
+	if err := s.repo.LockPassRevenue(ctx, tx); err != nil {
+		return err
+	}
+	if err := s.repo.RefundPassByPurchase(ctx, tx, p.ID); err != nil {
+		return err
+	}
+	released, err := s.repo.PassRevenueReleased(ctx, tx, p.ID)
+	if err != nil {
+		return err
+	}
+	company, err := s.repo.PurchaseCompany(ctx, tx, p.ID)
+	if err != nil {
+		return err
+	}
+	return s.publishJournal(ctx, tx, contracts.Journal{
+		EventCode: "GYM_PASS_REVENUE_REVERSAL", DocumentType: "gym_purchase", DocumentID: p.ID, CompanyID: company,
+		UserID: actorID, EntryDate: entryDate(s.clock()), Amount: released, Description: "Refund pass gym " + p.PackageName,
+	})
+}
+
+// takeBackUnusedCredits reverses the unused part of a credit purchase's
+// top-up and returns how many credits it took back.
+func (s *Service) takeBackUnusedCredits(ctx context.Context, tx database.Querier, p *Purchase, reason, actorID string) (int, error) {
+	topUpID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(p.ID))
+	if err != nil || topUpID == "" {
+		return p.Credits, err
+	}
+	topUp, err := s.repo.Entry(ctx, tx, topUpID)
+	if err != nil {
+		return 0, err
+	}
+	if err := s.repo.LockMemberCredits(ctx, tx, p.CustomerID); err != nil {
+		return 0, err
+	}
+	state, _, err := s.expireLapsedLots(ctx, tx, p.CustomerID, s.clock())
+	if err != nil {
+		return 0, err
+	}
+	unused := domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), topUp.LotID)
+	if unused <= 0 {
+		return 0, fail(http.StatusConflict, "Semua kredit dari pembelian ini sudah terpakai atau kedaluwarsa, tidak ada yang bisa direfund")
+	}
+	_, err = s.repo.InsertEntry(ctx, tx, NewEntry{
+		CustomerID: p.CustomerID, Type: domain.Reversal, Amount: -unused, LotID: topUp.LotID,
+		SourceType: topUp.SourceType, SourceID: topUp.SourceID, ReversesEntryID: topUp.ID,
+		Note: strings.TrimSpace(reason), CreatedBy: actorID,
+	})
+	return unused, err
 }
 
 // FrontDeskSale is a package sold at the front desk.
@@ -248,12 +307,13 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 
 /* ── Member portal payments ──────────────────────────────────────────── */
 
-// BuyWithArk buys a package with ARK Coin: debit and credits in one transaction.
-func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID string) (*MemberPurchaseView, error) {
+// BuyWithArk buys a package with ARK Coin: debit and credits in one
+// transaction, at the price of in.BranchID when it has one.
+func (s *Service) BuyWithArk(ctx context.Context, in MemberPurchase) (*MemberPurchaseView, error) {
 	var view *MemberPurchaseView
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		purchase, err := s.createPurchase(ctx, tx, purchaseInput{
-			CustomerID: customerID, PackageID: packageID, Channel: "member_portal", PaymentMethod: "ark_coin",
+			CustomerID: in.CustomerID, PackageID: in.PackageID, Channel: "member_portal", PaymentMethod: "ark_coin", BranchID: in.BranchID,
 		})
 		if err != nil {
 			return err

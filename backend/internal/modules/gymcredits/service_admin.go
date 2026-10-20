@@ -279,9 +279,9 @@ func (s *Service) MemberCredits(ctx context.Context, customerID string) (*Member
 }
 
 // AdjustTx is Adjust in a new transaction.
-func (s *Service) AdjustTx(ctx context.Context, customerID string, amount int, reason, actorID string) (res *AdjustResult, err error) {
+func (s *Service) AdjustTx(ctx context.Context, customerID string, amount int, reason, actorID string, branchID *string) (res *AdjustResult, err error) {
 	err = database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		res, err = s.Adjust(ctx, tx, customerID, amount, reason, actorID)
+		res, err = s.Adjust(ctx, tx, customerID, amount, reason, actorID, branchID)
 		return err
 	})
 	return res, err
