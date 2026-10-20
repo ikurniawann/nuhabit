@@ -1,7 +1,7 @@
 /** Klien API Gym → jadwal kelas, sesi, booking, jenis kelas, coach, check-in. */
 import type { BookingStatus, GateDenialReason, SessionStatus } from "@/lib/gym/booking";
 import { formatTime } from "@/lib/format";
-import { call, send } from "../shared";
+import { call, send, upload } from "../shared";
 
 export interface ClassType {
   id: string;
@@ -62,7 +62,25 @@ export interface Session {
   confirmed_count: number;
   waitlist_count: number;
   checked_in_count: number;
+  no_show_count: number;
   seats_left: number;
+}
+
+/** Beban kerja coach: sesi berjalan (terbit, penuh, selesai) minggu dan bulan ini. */
+export interface CoachWorkload {
+  week_sessions: number;
+  month_sessions: number;
+  /** Rata-rata kursi terisi per kapasitas (0–1) sebulan; null tanpa sesi. */
+  avg_fill: number | null;
+}
+
+export interface CoachSchedule {
+  /** Senin minggu yang ditampilkan ("YYYY-MM-DD", WIB). */
+  week_start: string;
+  /** Bulan statistik ("YYYY-MM"). */
+  month: string;
+  sessions: Session[];
+  workload: CoachWorkload;
 }
 
 /** Pola mingguan: weekday 1 = Senin … 7 = Minggu, start_time "HH:MM" WIB. */
@@ -234,6 +252,14 @@ export const schedulingApi = {
   staffUsers: () => call<StaffUser[]>("/api/gym/coaches/staff"),
   saveCoach: (input: CoachInput, id?: string) =>
     id ? send<{ id: string }>(`/api/gym/coaches/${id}`, input, "PATCH") : send<{ id: string }>("/api/gym/coaches", input),
+  /** Unggah foto coach (JPG/PNG/WebP, maks. 5 MB); URL-nya disimpan sebagai photo_url. */
+  uploadCoachPhoto: (file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return upload<{ url: string }>("/api/gym/coaches/photo", body);
+  },
+  /** Minggu coach yang memuat `day` ("YYYY-MM-DD", default hari ini) beserta beban kerjanya. */
+  coachSchedule: (id: string, day?: string) => call<CoachSchedule>(`/api/gym/coaches/${id}/schedule?${qs({ day })}`),
 
   sessions: (params: { from: string; to: string; status?: string; class_type_id?: string; coach_id?: string; branch_id?: string }) =>
     call<Session[]>(`/api/gym/sessions?${qs(params)}`),

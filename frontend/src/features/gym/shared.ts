@@ -16,4 +16,12 @@ export async function call<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const send = <T>(url: string, body: unknown, method = "POST") =>
   call<T>(url, { method, body: JSON.stringify(body) });
+
+/** POST multipart; browser yang mengisi Content-Type beserta boundary-nya. */
+export async function upload<T>(url: string, body: FormData): Promise<T> {
+  const res = await fetch(url, { method: "POST", body, cache: "no-store" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success) throw new Error(json.error || "Unggahan gagal");
+  return json.data as T;
+}
 export const remove = <T>(url: string) => call<T>(url, { method: "DELETE" });

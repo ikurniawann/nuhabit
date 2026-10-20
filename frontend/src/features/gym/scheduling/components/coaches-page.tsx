@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { CalendarDays, ImageUp, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +26,15 @@ import { SELECT } from "@/features/gym/shared";
 import { useGymBranches } from "@/features/gym/branches";
 import { Combobox } from "@/components/ui/combobox";
 import { formatNumber } from "@/lib/format";
+import { CoachAvatar } from "./coach-avatar";
+import { CoachScheduleDialog } from "./coach-schedule-dialog";
 
 /** Gym → Coach: profil yang tampil di portal member dan jadwal kelas. */
 export function CoachesPage() {
   const queryClient = useQueryClient();
   const coaches = useQuery({ queryKey: GYM_KEYS.coaches, queryFn: schedulingApi.coaches });
   const [editing, setEditing] = useState<Coach | "new" | null>(null);
+  const [viewing, setViewing] = useState<Coach | null>(null);
   const rows = coaches.data ?? [];
 
   return (
@@ -68,26 +71,36 @@ export function CoachesPage() {
             <TableBody>
               {rows.map((c) => (
                 <TableRow key={c.id} className={c.status === "inactive" ? "opacity-60" : undefined}>
-                  <TableCell className="max-w-[18rem] whitespace-normal">
-                    <p className="flex items-center gap-2 font-medium">
-                      {c.name}
-                      {c.status === "inactive" && <Badge variant="muted">Nonaktif</Badge>}
-                    </p>
-                    <p className="text-xs text-muted-foreground md:hidden">{c.specialization}</p>
-                    {(c.branch_name || c.user_name) && (
-                      <p className="text-xs text-muted-foreground">
-                        {[c.branch_name, c.user_name && `Akun ${c.user_name}`].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                    <p className="line-clamp-2 text-xs text-muted-foreground">{c.bio}</p>
+                  <TableCell className="max-w-[20rem] whitespace-normal">
+                    <div className="flex items-start gap-3">
+                      <CoachAvatar name={c.name} url={c.photo_url} />
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 font-medium">
+                          {c.name}
+                          {c.status === "inactive" && <Badge variant="muted">Nonaktif</Badge>}
+                        </p>
+                        <p className="text-xs text-muted-foreground md:hidden">{c.specialization}</p>
+                        {(c.branch_name || c.user_name) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[c.branch_name, c.user_name && `Akun ${c.user_name}`].filter(Boolean).join(" · ")}
+                          </p>
+                        )}
+                        <p className="line-clamp-2 text-xs text-muted-foreground">{c.bio}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{c.specialization || "—"}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatNumber(c.upcoming_sessions)}</TableCell>
                   <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(c.completed_sessions)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
-                      Ubah
-                    </Button>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <Button variant="soft" size="sm" onClick={() => setViewing(c)}>
+                        <CalendarDays /> Jadwal
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
+                        Ubah
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -103,6 +116,45 @@ export function CoachesPage() {
           onSaved={() => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.coaches })}
         />
       )}
+      {viewing && <CoachScheduleDialog coach={viewing} onClose={() => setViewing(null)} />}
+    </div>
+  );
+}
+
+/** Foto coach: unggah, ganti atau hapus. Tampil di portal member dan situs. */
+function CoachPhotoField({ name, url, onChange }: { name: string; url: string; onChange: (url: string) => void }) {
+  const upload = useMutation({
+    mutationFn: schedulingApi.uploadCoachPhoto,
+    onSuccess: (data) => onChange(data.url),
+    onError: (error) => toast.error("Foto gagal diunggah", { description: error.message }),
+  });
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-sm font-medium text-foreground">Foto</span>
+      <div className="flex items-center gap-3">
+        <CoachAvatar name={name} url={url || null} className="size-14" />
+        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-full border border-dashed border-border px-4 text-sm text-body hover:bg-surface">
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={upload.isPending}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) upload.mutate(file);
+            }}
+          />
+          <ImageUp className="size-4" />
+          {upload.isPending ? "Mengunggah…" : url ? "Ganti" : "Unggah"}
+        </label>
+        {url && !upload.isPending && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange("")} aria-label="Hapus foto">
+            <X /> Hapus
+          </Button>
+        )}
+      </div>
+      <span className="text-xs text-muted-foreground">JPG, PNG atau WebP, maks. 5 MB.</span>
     </div>
   );
 }
@@ -171,9 +223,11 @@ function CoachDialog({ coach, onClose, onSaved }: { coach: Coach | null; onClose
             <Field label="Bio" className="sm:col-span-2">
               <textarea className={TEXTAREA} value={form.bio} onChange={set("bio")} />
             </Field>
-            <Field label="URL foto">
-              <Input type="url" value={form.photo_url} onChange={set("photo_url")} placeholder="https://…" />
-            </Field>
+            <CoachPhotoField
+              name={form.name}
+              url={form.photo_url}
+              onChange={(photo_url) => setForm((cur) => ({ ...cur, photo_url }))}
+            />
             <Field label="Cabang">
               <select className={SELECT} value={form.branch_id} onChange={set("branch_id")}>
                 <option value="">Semua cabang</option>
