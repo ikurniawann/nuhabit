@@ -38,7 +38,7 @@ type resultsRepository interface {
 	InsertResult(ctx context.Context, customerID string, in resultInput, memberRaceID *string, totals domain.Totals, racedAt time.Time) (string, error)
 	LockResult(ctx context.Context, customerID, id string) (*resultView, error)
 	MemberResult(ctx context.Context, customerID, id string) (*resultView, error)
-	UpdateResult(ctx context.Context, id string, w resultWrite) error
+	UpdateResult(ctx context.Context, id string, in resultFields, totals domain.Totals) error
 	SetMemberRaceResult(ctx context.Context, memberRaceID string, totalSec int) error
 	InsertEntryResult(ctx context.Context, entryID string) error
 	SetNotifiedPRs(ctx context.Context, id string, keys []string) error
@@ -52,6 +52,9 @@ type resultsRepository interface {
 
 // boardSize caps a leaderboard; the viewer's rank is returned either way.
 const boardSize = 100
+
+// simulationName stands in for a race name in a simulation's PR notification.
+const simulationName = "simulasi HYROX"
 
 /* ── Member: log and edit ────────────────────────────────────────────── */
 
@@ -117,7 +120,7 @@ func (s *Service) resultSubject(ctx context.Context, tx Repository, customerID s
 		if sim.Type != "FULL_SIMULATION" || sim.Status != "completed" || sim.EndedAt == nil {
 			return time.Time{}, "", nil, httpx.Conflict("Hanya simulasi penuh yang sudah selesai yang bisa dicatat.")
 		}
-		return *sim.EndedAt, "simulasi HYROX", nil, nil
+		return *sim.EndedAt, simulationName, nil, nil
 	}
 	race, err := tx.RaceForResult(ctx, *in.RaceEventID)
 	if err != nil {
@@ -149,7 +152,7 @@ func (s *Service) UpdateResult(ctx context.Context, customerID, id string, in re
 		if current == nil {
 			return httpx.NotFound("Hasil tidak ditemukan")
 		}
-		if err := tx.UpdateResult(ctx, id, resultWrite{resultFields: in, Totals: totals}); err != nil {
+		if err := tx.UpdateResult(ctx, id, in, totals); err != nil {
 			return err
 		}
 		if current.MemberRaceID != nil {
@@ -161,7 +164,7 @@ func (s *Service) UpdateResult(ctx context.Context, customerID, id string, in re
 		if err != nil {
 			return err
 		}
-		where := "simulasi HYROX"
+		where := simulationName
 		if saved.RaceName != nil {
 			where = *saved.RaceName
 		}
@@ -181,12 +184,8 @@ func (s *Service) recordPRs(ctx context.Context, tx Repository, saved resultView
 	if err != nil {
 		return nil, err
 	}
-	records := make([]domain.ResultRecord, len(mine))
-	for i, r := range mine {
-		records[i] = r.record()
-	}
 	current := saved.record()
-	fresh := domain.UnnotifiedPRs(domain.NewPRs(current.Values, domain.PreviousBests(current, records)), saved.NotifiedPRs)
+	fresh := domain.UnnotifiedPRs(domain.NewPRs(current.Values, domain.PreviousBests(current, records(mine))), saved.NotifiedPRs)
 	if len(fresh) == 0 {
 		return nil, nil
 	}
@@ -271,16 +270,12 @@ func (s *Service) ResultDetail(ctx context.Context, customerID, id string) (resu
 	if err != nil {
 		return resultDetail{}, err
 	}
-	records := make([]domain.ResultRecord, len(mine))
-	for i, r := range mine {
-		records[i] = r.record()
-	}
 	values := make([]map[string]int, len(division))
 	for i, r := range division {
 		values[i] = r.record().Values
 	}
 	current := result.record()
-	previous := domain.PreviousBests(current, records)
+	previous := domain.PreviousBests(current, records(mine))
 	averages := domain.SplitAverages(values)
 	prs := domain.NewPRs(current.Values, previous)
 
@@ -327,20 +322,21 @@ func (s *Service) Leaderboard(ctx context.Context, viewerID string, q boardQuery
 
 	board := domain.Leaderboard(candidates, q.Filter, q.Station, viewerID)
 	view := leaderboardView{Rows: []boardRowView{}, Years: years}
-	ids := []string{}
 	for _, row := range board {
 		if row.CustomerID == viewerID {
 			view.MyRank = ptrTo(row.Rank)
 		}
-		if len(ids) < boardSize {
-			ids = append(ids, row.CustomerID)
-		}
+	}
+	shown := board[:min(len(board), boardSize)]
+	ids := make([]string, len(shown))
+	for i, row := range shown {
+		ids[i] = row.CustomerID
 	}
 	contacts, err := s.customers.Contacts(ctx, ids)
 	if err != nil {
 		return leaderboardView{}, err
 	}
-	for _, row := range board[:len(ids)] {
+	for _, row := range shown {
 		v := boardRowView{
 			Rank: row.Rank, ResultID: row.ResultID, Name: "Member", IsMe: row.CustomerID == viewerID,
 			Division: row.Division, AgeGroup: row.AgeGroup, Source: row.Source, RaceName: raceNames[row.ResultID],

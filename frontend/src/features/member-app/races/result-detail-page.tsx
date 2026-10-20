@@ -10,7 +10,7 @@ import { useResult } from "../lib/queries-workout";
 import { Spinner, formatDay, formatDuration } from "../ui";
 
 /** "Run 3" goes through the dictionary; station names stay as HYROX names them. */
-export function splitName(key: string, t: T): string {
+function splitName(key: string, t: T): string {
   const run = key.match(/^run(\d)$/);
   return run ? t("Run {n}", { n: run[1]! }) : key === "total" ? t("Total") : splitLabel(key);
 }

@@ -41,7 +41,6 @@ export const RACES_ID: Record<string, string> = {
   below: "di bawah",
   "Use m:ss for splits, for example 4:12.": "Gunakan m:dd untuk split, misalnya 4:12.",
   "Enter the official total or all 8 runs and 8 stations.": "Isi total resmi atau semua 8 lari dan 8 stasiun.",
-  "Save changes": "Simpan perubahan",
   // Detail hasil
   "Loading result…": "Memuat hasil…",
   Verified: "Terverifikasi",

@@ -97,20 +97,20 @@ func abs(n int) int { return max(n, -n) }
 /* ── Split keys, personal bests and PRs ──────────────────────────────── */
 
 // Split keys: "run1".."run8", "station1".."station8" and "total".
-const TotalKey = "total"
+const totalKey = "total"
 
-func RunKey(i int) string     { return fmt.Sprintf("run%d", i+1) }
-func StationKey(i int) string { return fmt.Sprintf("station%d", i+1) }
+func runKey(i int) string     { return fmt.Sprintf("run%d", i+1) }
+func stationKey(i int) string { return fmt.Sprintf("station%d", i+1) }
 
 // SplitValues maps each entered run and station, plus the total, by key.
 func SplitValues(s Splits, totalSec int) map[string]int {
-	out := map[string]int{TotalKey: totalSec}
+	out := map[string]int{totalKey: totalSec}
 	for i := range SplitCount {
 		if s.Runs[i] != nil {
-			out[RunKey(i)] = *s.Runs[i]
+			out[runKey(i)] = *s.Runs[i]
 		}
 		if s.Stations[i] != nil {
-			out[StationKey(i)] = *s.Stations[i]
+			out[stationKey(i)] = *s.Stations[i]
 		}
 	}
 	return out
@@ -120,7 +120,7 @@ func SplitValues(s Splits, totalSec int) map[string]int {
 func SplitLabel(key string) string {
 	var n int
 	switch {
-	case key == TotalKey:
+	case key == totalKey:
 		return "Total"
 	case scanKey(key, "run%d", &n):
 		return fmt.Sprintf("Lari %d", n)
@@ -188,9 +188,9 @@ func NewPRs(current map[string]int, previous map[string]int) []string {
 func SplitKeys() []string {
 	keys := make([]string, 0, 2*SplitCount+1)
 	for i := range SplitCount {
-		keys = append(keys, RunKey(i), StationKey(i))
+		keys = append(keys, runKey(i), stationKey(i))
 	}
-	return append(keys, TotalKey)
+	return append(keys, totalKey)
 }
 
 // UnnotifiedPRs drops PR keys a notification already went out for.

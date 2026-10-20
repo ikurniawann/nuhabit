@@ -46,6 +46,14 @@ func (v resultView) record() domain.ResultRecord {
 		Values: domain.SplitValues(v.splits(), v.TotalSec)}
 }
 
+func records(rows []resultView) []domain.ResultRecord {
+	out := make([]domain.ResultRecord, len(rows))
+	for i, r := range rows {
+		out[i] = r.record()
+	}
+	return out
+}
+
 // splitCompare is one split on the detail page: the member's time, their
 // best before this result, the gym average in the division, and whether it
 // is a PR.

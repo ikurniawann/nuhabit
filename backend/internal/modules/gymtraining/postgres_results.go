@@ -87,16 +87,7 @@ func (r *pgRepo) LockLiveMemberRace(ctx context.Context, customerID, raceEventID
 	return &id, err
 }
 
-// resultWrite is what a save stores.
-type resultWrite struct {
-	resultFields
-	Totals domain.Totals
-}
-
-func splitArgs(s domain.Splits) ([]*int, []*int) { return s.Runs[:], s.Stations[:] }
-
 func (r *pgRepo) InsertResult(ctx context.Context, customerID string, in resultInput, memberRaceID *string, totals domain.Totals, racedAt time.Time) (string, error) {
-	runs, stations := splitArgs(in.Splits)
 	return returningID(ctx, r.db,
 		`INSERT INTO gym.hyrox_results (customer_id, source, race_event_id, member_race_id, workout_session_id, division,
 		        age_group, run_sec, station_sec, roxzone_sec, official_total_sec, splits_total_sec, total_sec,
@@ -104,7 +95,7 @@ func (r *pgRepo) InsertResult(ctx context.Context, customerID string, in resultI
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8::int[], $9::int[], $10, $11, $12, $13, $14, $15)
 		 RETURNING id`,
 		customerID, in.Source, in.RaceEventID, memberRaceID, in.WorkoutSessionID, in.Division, in.AgeGroup,
-		runs, stations, in.Splits.Roxzone, in.OfficialTotalSec, totals.SplitsTotalSec, totals.TotalSec,
+		in.Splits.Runs[:], in.Splits.Stations[:], in.Splits.Roxzone, in.OfficialTotalSec, totals.SplitsTotalSec, totals.TotalSec,
 		totals.Mismatch, racedAt)
 }
 
@@ -117,16 +108,15 @@ func (r *pgRepo) MemberResult(ctx context.Context, customerID, id string) (*resu
 }
 
 // UpdateResult saves a member's edit; the result needs verifying again.
-func (r *pgRepo) UpdateResult(ctx context.Context, id string, w resultWrite) error {
-	runs, stations := splitArgs(w.Splits)
+func (r *pgRepo) UpdateResult(ctx context.Context, id string, in resultFields, totals domain.Totals) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE gym.hyrox_results
 		    SET division = $2, age_group = $3, run_sec = $4::int[], station_sec = $5::int[], roxzone_sec = $6,
 		        official_total_sec = $7, splits_total_sec = $8, total_sec = $9, total_mismatch = $10,
 		        verified_at = NULL, verified_by = NULL, updated_at = now()
 		  WHERE id = $1`,
-		id, w.Division, w.AgeGroup, runs, stations, w.Splits.Roxzone, w.OfficialTotalSec,
-		w.Totals.SplitsTotalSec, w.Totals.TotalSec, w.Totals.Mismatch)
+		id, in.Division, in.AgeGroup, in.Splits.Runs[:], in.Splits.Stations[:], in.Splits.Roxzone, in.OfficialTotalSec,
+		totals.SplitsTotalSec, totals.TotalSec, totals.Mismatch)
 	return err
 }
 
