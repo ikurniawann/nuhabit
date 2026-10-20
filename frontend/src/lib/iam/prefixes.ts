@@ -91,6 +91,18 @@ export const IAM = {
   gymScheduling: ["gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"],
   /** Gym → Check-in (scan QR front desk; juga dibuka dari Sesi & Absensi). */
   gymCheckin: ["gym.checkin", "gym.sessions"],
+  /** Gym → seluruh menu gym (daftar cabang untuk form gym). */
+  gym: ["gym"],
+  /** Gym → Jadwal Kelas (kalender mingguan, salin minggu). */
+  gymSchedule: ["gym.schedule"],
+  /** Gym → Sesi & Absensi (roster, check-in manual, no-show, tutup sesi). */
+  gymSessions: ["gym.sessions"],
+  /** Gym → Booking (daftar booking, batal, booking oleh staf). */
+  gymBookings: ["gym.bookings"],
+  /** Gym → Jenis Kelas. */
+  gymClassTypes: ["gym.class-types"],
+  /** Gym → Coach. */
+  gymCoaches: ["gym.coaches"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */
