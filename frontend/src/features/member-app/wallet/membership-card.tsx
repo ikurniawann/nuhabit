@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BottomSheet } from "../components/bottom-sheet";
-import { ApiError } from "../lib/api";
+import { useErrorText } from "../lib/error-codes";
 import type { FreezeAllowance, PassView, RenewWith } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { usePassMutation, type PassAction } from "../lib/queries-classes";
@@ -29,6 +29,7 @@ export function MembershipCard({
   freeze: FreezeAllowance | null;
 }) {
   const t = useT();
+  const errorText = useErrorText();
   const change = usePassMutation();
   const [sheet, setSheet] = useState(false);
   const [error, setError] = useState("");
@@ -39,7 +40,7 @@ export function MembershipCard({
     setError("");
     change.mutate(action, {
       onSuccess: then,
-      onError: (e) => setError(e instanceof ApiError ? e.message : t("Could not update your pass.")),
+      onError: (e) => setError(errorText(e, t("Could not update your pass."))),
     });
   };
 

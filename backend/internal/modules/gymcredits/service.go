@@ -18,15 +18,24 @@ import (
 )
 
 // Error is a credit rule failure that is safe to show (GymCreditError and
-// the ApiErrors of the TS libs). Handlers render it with its status.
+// the ApiErrors of the TS libs). Handlers render it with its status. Code
+// and Params, when set, let the member app show the failure in its own
+// language.
 type Error struct {
 	Status  int
 	Message string
+	Code    string
+	Params  map[string]any
 }
 
 func (e *Error) Error() string { return e.Message }
 
 func fail(status int, msg string) *Error { return &Error{Status: status, Message: msg} }
+
+// failCode is fail with a stable code and optional params.
+func failCode(status int, code, msg string, params map[string]any) *Error {
+	return &Error{Status: status, Message: msg, Code: code, Params: params}
+}
 
 // DB is what the service runs on: the pool, or an open transaction (tests run
 // every use case inside a rolled-back tx). Begin on a tx opens a savepoint.

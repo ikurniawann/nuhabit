@@ -654,7 +654,7 @@ func (h *handler) member(failMessage string, fn memberFunc) http.Handler {
 		var appErr *httpx.Error
 		switch {
 		case errors.As(err, &appErr):
-			_ = memberError(w, appErr.Message, appErr.Status)
+			httpx.WriteError(w, r, appErr)
 		case errors.Is(err, errInvalidData):
 			_ = memberError(w, "Data tidak valid", http.StatusBadRequest)
 		default:

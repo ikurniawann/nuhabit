@@ -89,7 +89,7 @@ func ok(w http.ResponseWriter, data any) error {
 func asHTTP(err error) error {
 	var e *Error
 	if errors.As(err, &e) {
-		return httpx.Status(e.Status, e.Message)
+		return httpx.Coded(e.Status, e.Code, e.Message, e.Params)
 	}
 	return err
 }

@@ -3,7 +3,7 @@
 import { ArrowLeft, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ApiError } from "../lib/api";
+import { useErrorText } from "../lib/error-codes";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
 import { buyPackage, previewVoucher, useInvalidateAll, usePackages, type VoucherQuote } from "../lib/queries-classes";
@@ -28,6 +28,7 @@ export function TopUpPage() {
 
 function TopUp() {
   const t = useT();
+  const errorText = useErrorText();
   const router = useRouter();
   const searchParams = useSearchParams();
   const invalidate = useInvalidateAll();
@@ -57,7 +58,7 @@ function TopUp() {
     try {
       setVoucher(await previewVoucher(forPackage, voucherCode));
     } catch (e) {
-      setVoucherError(e instanceof ApiError ? e.message : t("Could not check the voucher."));
+      setVoucherError(errorText(e, t("Could not check the voucher.")));
     } finally {
       setChecking(false);
     }
@@ -72,7 +73,7 @@ function TopUp() {
       invalidate();
       router.push(m(`/wallet/pay/${purchase.id}`));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("Checkout failed."));
+      setError(errorText(e, t("Checkout failed.")));
     } finally {
       setBusy(false);
     }

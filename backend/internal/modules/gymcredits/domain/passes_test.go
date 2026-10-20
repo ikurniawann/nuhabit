@@ -43,17 +43,17 @@ func TestCheckFreeze(t *testing.T) {
 	eq(t, NewFreezeAllowance(Rules{MaxFreezeDaysPerYear: 10, MinFreezeDays: 7}, 14).RemainingDays, 0)
 
 	p := running(-days(1), days(27))
-	eq(t, CheckFreeze(p, t0, 7, a), "")
-	eq(t, CheckFreeze(p, t0, 10, a), "")
-	eq(t, CheckFreeze(p, t0, 6, a), "Pembekuan minimal 7 hari")
-	eq(t, CheckFreeze(p, t0, 11, a), "Sisa jatah pembekuan tahun ini 10 hari")
-	eq(t, CheckFreeze(p, t0, 7, NewFreezeAllowance(Rules{MinFreezeDays: 7}, 0)), "Pembekuan pass tidak tersedia")
-	eq(t, CheckFreeze(running(days(27), days(55)), t0, 7, a), "Pass belum mulai berjalan")
-	eq(t, CheckFreeze(running(-days(28), -days(1)), t0, 7, a), "Hanya pass aktif yang bisa dibekukan")
+	eq(t, CheckFreeze(p, t0, 7, a).Message, "")
+	eq(t, CheckFreeze(p, t0, 10, a).Message, "")
+	eq(t, CheckFreeze(p, t0, 6, a).Message, "Pembekuan minimal 7 hari")
+	eq(t, CheckFreeze(p, t0, 11, a).Message, "Sisa jatah pembekuan tahun ini 10 hari")
+	eq(t, CheckFreeze(p, t0, 7, NewFreezeAllowance(Rules{MinFreezeDays: 7}, 0)).Message, "Pembekuan pass tidak tersedia")
+	eq(t, CheckFreeze(running(days(27), days(55)), t0, 7, a).Message, "Pass belum mulai berjalan")
+	eq(t, CheckFreeze(running(-days(28), -days(1)), t0, 7, a).Message, "Hanya pass aktif yang bisa dibekukan")
 	p.Status = PassFrozen
-	eq(t, CheckFreeze(p, t0, 7, a), "Pass sudah dibekukan")
+	eq(t, CheckFreeze(p, t0, 7, a).Message, "Pass sudah dibekukan")
 	p.Status = PassRefunded
-	eq(t, CheckFreeze(p, t0, 7, a), "Hanya pass aktif yang bisa dibekukan")
+	eq(t, CheckFreeze(p, t0, 7, a).Message, "Hanya pass aktif yang bisa dibekukan")
 }
 
 func TestUnfreezeDays(t *testing.T) {

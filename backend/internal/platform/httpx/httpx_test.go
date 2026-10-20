@@ -35,6 +35,7 @@ func TestHandleErrors(t *testing.T) {
 		{Conflict("Sudah ada"), 409, `{"success":false,"error":"Sudah ada"}`},
 		{TooManyRequests(""), 429, `{"success":false,"error":"Terlalu banyak permintaan. Silakan coba lagi dalam beberapa saat."}`},
 		{fmt.Errorf("wrapped: %w", Status(418, "teh")), 418, `{"success":false,"error":"teh"}`},
+		{Coded(409, "BOOKING_DAILY_LIMIT", "Batas", map[string]any{"max": 2}), 409, `{"success":false,"error":"Batas","code":"BOOKING_DAILY_LIMIT","params":{"max":2}}`},
 		{&pgconn.PgError{Code: "23505"}, 409, `{"success":false,"error":"Data sudah ada di sistem"}`},
 		{fmt.Errorf("x: %w", &pgconn.PgError{Code: "23503"}), 400, `{"success":false,"error":"Referensi data tidak valid"}`},
 		{&pgconn.PgError{Code: "23514"}, 400, `{"success":false,"error":"Data tidak memenuhi ketentuan"}`},

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useLang } from "./lang";
 import { AUTH_ID } from "./i18n-auth";
 import { CLASSES_ID } from "./i18n-classes";
+import { ERRORS_ID } from "./i18n-errors";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
 import { TRAIN_ID } from "./i18n-train";
@@ -162,6 +163,7 @@ export const ID: Record<string, string> = {
   ...CLASSES_ID,
   ...ID_WORKOUT,
   ...AUTH_ID,
+  ...ERRORS_ID,
 };
 
 /** Isi placeholder `{name}` pada teks yang sudah diterjemahkan; yang tak berisi dibiarkan. */

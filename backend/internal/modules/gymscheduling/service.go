@@ -12,6 +12,7 @@ package gymscheduling
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -206,4 +207,33 @@ func schedulingError(msg string, status ...int) *httpx.Error {
 		code = status[0]
 	}
 	return httpx.Status(code, msg)
+}
+
+// codedError is a schedulingError with the stable code the member app
+// translates; params are the numbers its copy interpolates.
+func codedError(code, msg string, params map[string]any, status ...int) *httpx.Error {
+	e := schedulingError(msg, status...)
+	e.Code, e.Params = code, params
+	return e
+}
+
+// denialCode is the stable code of a booking denial, e.g. BOOKING_DAILY_LIMIT.
+func denialCode(r domain.BookingDenialReason) string {
+	return "BOOKING_" + strings.ToUpper(string(r))
+}
+
+// denialError is a booking denial with its code and the numbers behind it.
+func denialError(in domain.EligibilityInput, r domain.BookingDenialReason) *httpx.Error {
+	var params map[string]any
+	switch r {
+	case domain.DenyInsufficientCredits:
+		params = map[string]any{"available": max(in.Available(), 0), "needed": in.Session.CreditCost, "reserved": in.Reserved}
+	case domain.DenyConcurrentLimit:
+		params = map[string]any{"max": in.MaxConcurrent}
+	case domain.DenyDailyLimit:
+		params = map[string]any{"max": in.MaxPerDay}
+	case domain.DenyPassSuspended:
+		params = map[string]any{"until": in.SuspendedUntil.UTC().Format(time.RFC3339)}
+	}
+	return codedError(denialCode(r), in.DenialMessage(r), params)
 }

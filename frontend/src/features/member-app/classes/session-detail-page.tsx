@@ -4,7 +4,7 @@ import { ArrowLeft, CalendarPlus2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ApiError } from "../lib/api";
+import { useErrorText } from "../lib/error-codes";
 import { coverageFor } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { googleCalendarEventUrl } from "../lib/google-calendar";
@@ -23,6 +23,7 @@ import { Spinner, formatDayTime } from "../ui";
 
 export function SessionDetailPage() {
   const t = useT();
+  const errorText = useErrorText();
   const { sessionId = "" } = useParams<{ sessionId: string }>();
   const router = useRouter();
   const { data: v, isLoading } = useSession(sessionId);
@@ -41,7 +42,7 @@ export function SessionDetailPage() {
       setMessage({ kind: "ok", text: t("You're in - spot confirmed!") });
       invalidate();
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Could not confirm.") });
+      setMessage({ kind: "err", text: errorText(e, t("Could not confirm.")) });
       invalidate();
     } finally {
       setConfirmBusy(false);
@@ -76,7 +77,7 @@ export function SessionDetailPage() {
             : fill(t("Class is full - you're #{n} on the waitlist."), { n: res.booking.waitlistPosition ?? "" }),
       });
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Booking failed.") });
+      setMessage({ kind: "err", text: errorText(e, t("Booking failed.")) });
     }
   };
 
@@ -93,7 +94,7 @@ export function SessionDetailPage() {
             : t("Booking cancelled."),
       });
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Cancel failed.") });
+      setMessage({ kind: "err", text: errorText(e, t("Cancel failed.")) });
     }
   };
 

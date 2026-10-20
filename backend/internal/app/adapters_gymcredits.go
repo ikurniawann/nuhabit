@@ -37,7 +37,7 @@ func gymVoucherMessage(r promodomain.RejectReason) string {
 }
 
 func rejectedVoucher(r promodomain.RejectReason) gymcredits.VoucherQuote {
-	return gymcredits.VoucherQuote{Message: gymVoucherMessage(r)}
+	return gymcredits.VoucherQuote{Message: gymVoucherMessage(r), Reason: string(r)}
 }
 
 func (v gymVouchers) Preview(ctx context.Context, q database.Querier, in gymcredits.VoucherCheck) (gymcredits.VoucherQuote, error) {

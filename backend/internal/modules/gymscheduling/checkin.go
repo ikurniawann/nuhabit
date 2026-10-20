@@ -255,7 +255,7 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 			return err
 		}
 		if !domain.CanTransitionBooking(booking.Status, domain.BookingCheckedIn) {
-			return schedulingError("Hanya booking terkonfirmasi yang bisa check-in")
+			return codedError("CHECKIN_NOT_CONFIRMED", "Hanya booking terkonfirmasi yang bisa check-in", nil)
 		}
 		pass, err := s.Passes.ActivePassAt(ctx, q, booking.CustomerID, session.StartsAt)
 		if err != nil {
@@ -269,7 +269,7 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 				return err
 			}
 			if !domain.IsClassTypeCovered(covered, session.ClassTypeID) {
-				return schedulingError("Paket kredit member tidak mencakup kelas ini")
+				return codedError("CHECKIN_CLASS_NOT_COVERED", "Paket kredit member tidak mencakup kelas ini", nil)
 			}
 			charged, err := s.Credits.Deduct(ctx, q, CreditMovement{
 				CustomerID:     booking.CustomerID,
@@ -283,7 +283,8 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 				return err
 			}
 			if !charged.OK {
-				return schedulingError("Kredit member tidak cukup untuk kelas ini")
+				return codedError("CHECKIN_INSUFFICIENT_CREDITS", "Kredit member tidak cukup untuk kelas ini",
+					map[string]any{"needed": session.CreditCost})
 			}
 			creditsDeducted = session.CreditCost
 			detail.Credits, detail.BalanceAfter = session.CreditCost, &charged.BalanceAfter
