@@ -2,6 +2,7 @@ package gymscheduling
 
 import (
 	"net/url"
+	"nuhabit/backend/internal/platform/localtime"
 	"testing"
 	"time"
 )
@@ -11,14 +12,14 @@ func TestWibMidnightRollsOverLikeJSDate(t *testing.T) {
 		"2026-10-05": "2026-10-04T17:00:00Z",
 		"2026-02-30": "2026-03-01T17:00:00Z", // new Date("2026-02-30T00:00:00+07:00") is 2 March WIB
 	} {
-		got, ok := wibMidnight(in)
+		got, ok := localMidnight(in, localtime.Jakarta)
 		if !ok || got.UTC().Format(time.RFC3339) != want {
-			t.Errorf("wibMidnight(%s) = %s %v, want %s", in, got.UTC().Format(time.RFC3339), ok, want)
+			t.Errorf("localMidnight(%s) = %s %v, want %s", in, got.UTC().Format(time.RFC3339), ok, want)
 		}
 	}
 	for _, bad := range []string{"2026-13-01", "2026-00-10", "2026-01-32", "2026/01/01"} {
-		if _, ok := wibMidnight(bad); ok {
-			t.Errorf("wibMidnight(%s) should be invalid", bad)
+		if _, ok := localMidnight(bad, localtime.Jakarta); ok {
+			t.Errorf("localMidnight(%s) should be invalid", bad)
 		}
 	}
 }

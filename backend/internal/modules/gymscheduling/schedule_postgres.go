@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // ScheduleRepository is the persistence for weekly templates, overlap
@@ -24,6 +25,8 @@ type ScheduleRepository interface {
 	SessionHasActiveBookings(ctx context.Context, q Q, id string) (bool, error)
 	// CoachName returns nil when the coach does not exist.
 	CoachName(ctx context.Context, q Q, id string) (*string, error)
+	// CoachZone is the zone of the coach's branch; Jakarta without one.
+	CoachZone(ctx context.Context, q Q, id string) (*time.Location, error)
 	// SessionCharges lists credits already taken for the session's bookings
 	// (check-in, late cancel, no-show) that were not reversed.
 	SessionCharges(ctx context.Context, q Q, sessionID string) ([]SessionCharge, error)
@@ -64,7 +67,7 @@ type SessionTemplate struct {
 	BranchID      *string
 	Area          *string
 	Weekday       int
-	StartTime     string // HH:MM, WIB
+	StartTime     string // HH:MM in the branch zone
 	DurationMin   int
 	Capacity      int
 	CreditCost    int
@@ -72,6 +75,7 @@ type SessionTemplate struct {
 	ValidUntil    *string
 	Active        bool
 	CreatedBy     *string
+	Zone          *time.Location // read only: the branch zone
 }
 
 func (t SessionTemplate) weeklySlot() domain.WeeklySlot {
@@ -80,7 +84,7 @@ func (t SessionTemplate) weeklySlot() domain.WeeklySlot {
 		until = *t.ValidUntil
 	}
 	return domain.WeeklySlot{Weekday: t.Weekday, StartTime: t.StartTime, DurationMin: t.DurationMin,
-		ValidFrom: t.ValidFrom, ValidUntil: until}
+		ValidFrom: t.ValidFrom, ValidUntil: until, Zone: t.Zone}
 }
 
 func (Postgres) LockSchedule(ctx context.Context, q Q) error {
@@ -89,10 +93,12 @@ func (Postgres) LockSchedule(ctx context.Context, q Q) error {
 }
 
 func (Postgres) ScheduleNeighbours(ctx context.Context, q Q, s domain.Slot) ([]domain.Slot, error) {
-	rows, err := q.Query(ctx, `SELECT s.id, t.name, s.coach_id, c.name, s.branch_id, s.area, s.starts_at, s.ends_at
+	rows, err := q.Query(ctx, `SELECT s.id, t.name, s.coach_id, c.name, s.branch_id, s.area, s.starts_at, s.ends_at,
+            `+sessionZone+`
        FROM gym.class_sessions s
        JOIN gym.class_types t ON t.id = s.class_type_id
        LEFT JOIN gym.coaches c ON c.id = s.coach_id
+       LEFT JOIN configuration.branches br ON br.id = s.branch_id
       WHERE s.status <> 'cancelled' AND s.starts_at < $3 AND s.ends_at > $2
         AND ($1::uuid IS NULL OR s.id <> $1)
         AND (s.coach_id = $4
@@ -100,10 +106,11 @@ func (Postgres) ScheduleNeighbours(ctx context.Context, q Q, s domain.Slot) ([]d
                  AND s.branch_id IS NOT DISTINCT FROM $5::uuid))
      UNION ALL
      -- Open personal training appointments hold their coach too (gym-coaching).
-     SELECT a.id, t.name, a.coach_id, c.name, a.branch_id, NULL, a.starts_at, a.ends_at
+     SELECT a.id, t.name, a.coach_id, c.name, a.branch_id, NULL, a.starts_at, a.ends_at, `+sessionZone+`
        FROM gym.pt_appointments a
        JOIN gym.class_types t ON t.id = a.class_type_id
        JOIN gym.coaches c ON c.id = a.coach_id
+       LEFT JOIN configuration.branches br ON br.id = a.branch_id
       WHERE a.status IN ('requested', 'confirmed') AND a.starts_at < $3 AND a.ends_at > $2
         AND ($1::uuid IS NULL OR a.id <> $1) AND a.coach_id = $4
       ORDER BY 7
@@ -113,7 +120,9 @@ func (Postgres) ScheduleNeighbours(ctx context.Context, q Q, s domain.Slot) ([]d
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (domain.Slot, error) {
 		var o domain.Slot
-		err := r.Scan(&o.ID, &o.ClassName, &o.CoachID, &o.CoachName, &o.BranchID, &o.Area, &o.StartsAt, &o.EndsAt)
+		var zone string
+		err := r.Scan(&o.ID, &o.ClassName, &o.CoachID, &o.CoachName, &o.BranchID, &o.Area, &o.StartsAt, &o.EndsAt, &zone)
+		o.Zone = localtime.Zone(zone)
 		return o, err
 	})
 }
@@ -139,6 +148,15 @@ func (Postgres) CoachName(ctx context.Context, q Q, id string) (*string, error) 
 		return nil, nil
 	}
 	return &name, err
+}
+
+func (Postgres) CoachZone(ctx context.Context, q Q, id string) (*time.Location, error) {
+	var branchID *string
+	err := q.QueryRow(ctx, `SELECT branch_id::text FROM gym.coaches WHERE id = $1`, id).Scan(&branchID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return localtime.BranchZone(ctx, q, branchID)
 }
 
 func (Postgres) SessionCharges(ctx context.Context, q Q, sessionID string) ([]SessionCharge, error) {
@@ -179,7 +197,8 @@ func (Postgres) EndedOpenSessions(ctx context.Context, q Q, cutoff time.Time) ([
 
 func (Postgres) ListTemplates(ctx context.Context, q Q) ([]*Row, error) {
 	return queryRows(ctx, q, `SELECT st.id, st.class_type_id, t.name AS class_type_name, t.color, st.coach_id, c.name AS coach_name,
-            st.branch_id, b.name AS branch_name, st.area, st.weekday::int AS weekday,
+            st.branch_id, b.name AS branch_name, COALESCE(b.timezone, 'Asia/Jakarta') AS timezone,
+            st.area, st.weekday::int AS weekday,
             to_char(st.start_time, 'HH24:MI') AS start_time, st.duration_min, st.capacity, st.credit_cost,
             st.valid_from::text AS valid_from, st.valid_until::text AS valid_until, st.active,
             (SELECT count(*)::int FROM gym.class_sessions s
@@ -204,17 +223,20 @@ func (Postgres) BranchName(ctx context.Context, q Q, id string) (*string, error)
 }
 
 func (Postgres) Branches(ctx context.Context, q Q) ([]*Row, error) {
-	return queryRows(ctx, q, `SELECT id, name FROM configuration.branches WHERE is_active = true ORDER BY name`)
+	return queryRows(ctx, q, `SELECT id, name, timezone FROM configuration.branches WHERE is_active = true ORDER BY name`)
 }
 
 const templateColumns = `id, class_type_id, (SELECT name FROM gym.class_types WHERE id = class_type_id),
        coach_id, branch_id, area, weekday, to_char(start_time, 'HH24:MI'),
-       duration_min, capacity, credit_cost, valid_from::text, valid_until::text, active, created_by`
+       duration_min, capacity, credit_cost, valid_from::text, valid_until::text, active, created_by,
+       COALESCE((SELECT timezone FROM configuration.branches WHERE id = branch_id), 'Asia/Jakarta')`
 
 func scanTemplate(r pgx.CollectableRow) (SessionTemplate, error) {
 	var t SessionTemplate
+	var zone string
 	err := r.Scan(&t.ID, &t.ClassTypeID, &t.ClassTypeName, &t.CoachID, &t.BranchID, &t.Area, &t.Weekday, &t.StartTime,
-		&t.DurationMin, &t.Capacity, &t.CreditCost, &t.ValidFrom, &t.ValidUntil, &t.Active, &t.CreatedBy)
+		&t.DurationMin, &t.Capacity, &t.CreditCost, &t.ValidFrom, &t.ValidUntil, &t.Active, &t.CreatedBy, &zone)
+	t.Zone = localtime.Zone(zone)
 	return t, err
 }
 

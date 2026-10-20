@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Booking decisions against the database: credit reservation, booking caps,
@@ -41,7 +42,7 @@ func (f *fixture) bookingStatus(id string) string {
 
 // wibDayAt is hour:00 WIB, days from today.
 func wibDayAt(days, hour int) time.Time {
-	start, _ := domain.WibDayBounds(time.Now())
+	start, _ := localtime.DayBounds(time.Now(), localtime.Jakarta)
 	return start.Add(time.Duration(days)*24*time.Hour + time.Duration(hour)*time.Hour)
 }
 

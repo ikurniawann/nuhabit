@@ -15,7 +15,7 @@ func at(s string) time.Time {
 
 func TestZone(t *testing.T) {
 	for name, abbrev := range map[string]string{"Asia/Jakarta": "WIB", "Asia/Makassar": "WITA", "Asia/Jayapura": "WIT"} {
-		if !Valid(name) || Abbrev(Zone(name)) != abbrev {
+		if !Valid(name) || Abbrev(Zone(name)) != abbrev || Name(Zone(name)) != name {
 			t.Fatalf("%s: valid %v, abbrev %q", name, Valid(name), Abbrev(Zone(name)))
 		}
 	}
@@ -56,6 +56,33 @@ func TestDayBoundaries(t *testing.T) {
 	}
 	if DayKey(instant, nil) != "2026-10-24" {
 		t.Fatal("nil location is Jakarta")
+	}
+}
+
+func TestJakarta(t *testing.T) {
+	for s, want := range map[string]string{
+		"2026-10-05T11:00:00Z": "Sen, 5 Okt, 18.00",
+		"2026-01-04T01:05:00Z": "Min, 4 Jan, 08.05",
+		"2026-05-06T17:30:00Z": "Kam, 7 Mei, 00.30",
+		"2026-08-07T00:00:00Z": "Jum, 7 Agu, 07.00",
+		"2026-12-12T03:00:00Z": "Sab, 12 Des, 10.00",
+	} {
+		if got := Format(at(s), Jakarta); got != want {
+			t.Errorf("Format(%s) = %q, want %q", s, got, want)
+		}
+	}
+	for s, want := range map[string]string{
+		"2026-10-03T05:00:00Z": "2026-09-28", // Saturday
+		"2026-10-04T18:00:00Z": "2026-10-05", // Monday 01.00 WIB
+		"2026-10-04T16:59:00Z": "2026-09-28", // Sunday 23.59 WIB
+	} {
+		if got := DayKey(WeekStart(at(s), Jakarta), Jakarta); got != want {
+			t.Errorf("week of %s = %s, want %s", s, got, want)
+		}
+	}
+	s, e := DayBounds(at("2026-10-04T17:30:00Z"), Jakarta) // Monday 00.30 WIB
+	if !s.Equal(at("2026-10-04T17:00:00Z")) || !e.Equal(at("2026-10-05T17:00:00Z")) {
+		t.Errorf("WIB day = %s .. %s", s, e)
 	}
 }
 

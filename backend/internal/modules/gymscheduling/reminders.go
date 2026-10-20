@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/jobs"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // reminderKind is the platform.reminder_sends kind of class reminders.
@@ -21,7 +22,10 @@ type ReminderSession struct {
 	BranchID      *string
 	ClassTypeName string
 	StartsAt      time.Time
+	Zone          *time.Location
 }
+
+func (s ReminderSession) when() string { return localtime.Format(s.StartsAt, s.Zone) }
 
 // ReminderBooking is a confirmed seat still owed a reminder.
 type ReminderBooking struct {
@@ -81,16 +85,17 @@ func (s *Service) remind(ctx context.Context, session ReminderSession, b Reminde
 		return s.Notifier.NotifyMember(ctx, q, b.CustomerID, Notification{
 			Type:  "gym_class_reminder",
 			Title: "Kelas segera dimulai: " + session.ClassTypeName,
-			Body:  "Kelas mulai " + domain.FormatWib(session.StartsAt) + ". Siapkan QR check-in di aplikasi.",
+			Body:  "Kelas mulai " + session.when() + ". Siapkan QR check-in di aplikasi.",
 		})
 	})
 }
 
 func (Postgres) ReminderSessions(ctx context.Context, q Q, from, to time.Time) ([]ReminderSession, error) {
 	rows, err := q.Query(ctx, `
-SELECT s.id, s.branch_id, t.name, s.starts_at
+SELECT s.id, s.branch_id, t.name, s.starts_at, `+sessionZone+`
   FROM gym.class_sessions s
   JOIN gym.class_types t ON t.id = s.class_type_id
+  LEFT JOIN configuration.branches br ON br.id = s.branch_id
  WHERE s.status IN ('published', 'full') AND s.starts_at > $1 AND s.starts_at <= $2
    AND EXISTS (SELECT 1 FROM gym.bookings b WHERE b.session_id = s.id AND b.status = 'confirmed')
  ORDER BY s.starts_at`, from, to)
@@ -99,7 +104,10 @@ SELECT s.id, s.branch_id, t.name, s.starts_at
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ReminderSession, error) {
 		var s ReminderSession
-		return s, r.Scan(&s.ID, &s.BranchID, &s.ClassTypeName, &s.StartsAt)
+		var zone string
+		err := r.Scan(&s.ID, &s.BranchID, &s.ClassTypeName, &s.StartsAt, &zone)
+		s.Zone = localtime.Zone(zone)
+		return s, err
 	})
 }
 

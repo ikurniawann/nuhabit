@@ -11,6 +11,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Sessions for staff: create, edit, publish, cancel, complete, delete, copy
@@ -59,6 +60,11 @@ func (s *Service) CreateSession(ctx context.Context, in SessionInput, createdBy 
 		if err != nil {
 			return err
 		}
+		// Read before the insert: a unique violation aborts the transaction.
+		zone, err := localtime.BranchZone(ctx, q, in.BranchID)
+		if err != nil {
+			return err
+		}
 		opens, closes := domain.DeriveBookingWindow(in.StartsAt, rules)
 		status := domain.SessionDraft
 		if in.Publish {
@@ -74,7 +80,7 @@ func (s *Service) CreateSession(ctx context.Context, in SessionInput, createdBy 
 			Status: status, Notes: in.Notes, CreatedBy: createdBy,
 		})
 		if database.IsUniqueViolation(err) {
-			return slotTaken(in.StartsAt)
+			return slotTaken(in.StartsAt, zone)
 		}
 		return err
 	})
@@ -83,8 +89,8 @@ func (s *Service) CreateSession(ctx context.Context, in SessionInput, createdBy 
 
 // slotTaken is the unique slot index firing: the class type already runs at
 // that start in that branch.
-func slotTaken(startsAt time.Time) error {
-	return schedulingError("Sesi jenis kelas ini pada " + domain.FormatWib(startsAt) + " sudah ada di jadwal")
+func slotTaken(startsAt time.Time, zone *time.Location) error {
+	return schedulingError("Sesi jenis kelas ini pada " + localtime.Format(startsAt, zone) + " sudah ada di jadwal")
 }
 
 // claimSlot takes the schedule lock and rejects a slot whose coach or room
@@ -177,6 +183,11 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 			return err
 		}
 		branchChanged := !sameValue(branchID, session.BranchID)
+		if branchChanged {
+			if session.Zone, err = localtime.BranchZone(ctx, q, branchID); err != nil {
+				return err
+			}
+		}
 		opens, closes := session.BookingOpensAt, session.BookingClosesAt
 		if moved || branchChanged {
 			rules, err := s.Rules.ForBranch(ctx, q, branchID)
@@ -208,7 +219,7 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 		}
 		err = s.repo.UpdateSession(ctx, q, id, update)
 		if database.IsUniqueViolation(err) {
-			return slotTaken(startsAt)
+			return slotTaken(startsAt, session.Zone)
 		}
 		if err != nil {
 			return err
@@ -228,12 +239,12 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 			notices = append(notices, Notification{
 				Type:  "gym_session_moved",
 				Title: "Jadwal berubah: " + session.ClassTypeName,
-				Body: "Kelas dipindah ke " + domain.FormatWib(startsAt) +
+				Body: "Kelas dipindah ke " + session.at(startsAt) +
 					". Bila tidak bisa hadir, batalkan dari portal dalam 24 jam tanpa potongan kredit.",
 			})
 		}
 		if coachChanged {
-			n, err := s.coachChangedNotice(ctx, q, session.ClassTypeName, startsAt, coachID)
+			n, err := s.coachChangedNotice(ctx, q, session.ClassTypeName, session.at(startsAt), coachID)
 			if err != nil {
 				return err
 			}
@@ -304,16 +315,16 @@ func (s *Service) rebranchedSession(ctx context.Context, q Q, session *SessionRo
 	return branchID, nil
 }
 
-// coachChangedNotice tells booked members who now leads the class.
-func (s *Service) coachChangedNotice(ctx context.Context, q Q, className string, startsAt time.Time, coachID *string) (Notification, error) {
-	body := "Coach kelas " + domain.FormatWib(startsAt) + " sedang dicarikan pengganti. Kami kabari lagi."
+// coachChangedNotice tells booked members who now leads the class at when.
+func (s *Service) coachChangedNotice(ctx context.Context, q Q, className, when string, coachID *string) (Notification, error) {
+	body := "Coach kelas " + when + " sedang dicarikan pengganti. Kami kabari lagi."
 	if coachID != nil {
 		name, err := s.repo.CoachName(ctx, q, *coachID)
 		if err != nil {
 			return Notification{}, err
 		}
 		if name != nil {
-			body = "Kelas " + domain.FormatWib(startsAt) + " kini dipandu " + *name + "."
+			body = "Kelas " + when + " kini dipandu " + *name + "."
 		}
 	}
 	return Notification{Type: "gym_session_coach_changed", Title: "Coach berganti: " + className, Body: body}, nil
@@ -383,9 +394,9 @@ func (s *Service) cancelSession(ctx context.Context, q Q, session *SessionRow, o
 		return err
 	}
 	for _, c := range customers {
-		body := "Kelas " + domain.FormatWib(session.StartsAt) + " dibatalkan studio. Kredit Anda tidak terpotong."
+		body := "Kelas " + session.when() + " dibatalkan studio. Kredit Anda tidak terpotong."
 		if n := refunded[c]; n > 0 {
-			body = "Kelas " + domain.FormatWib(session.StartsAt) + " dibatalkan studio. " + strconv.Itoa(n) +
+			body = "Kelas " + session.when() + " dibatalkan studio. " + strconv.Itoa(n) +
 				" kredit dikembalikan ke saldo Anda."
 		}
 		if err := s.Notifier.NotifyMember(ctx, q, c, Notification{
@@ -495,9 +506,10 @@ var errInvalidWeek = errors.New("gymscheduling: invalid week start")
 
 var dateOnlyPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
-// wibMidnight reads YYYY-MM-DD as 00:00 WIB the way `new Date("…T00:00:00+07:00")`
-// does: month 1-12, day 1-31, and a day past the month's end rolls over.
-func wibMidnight(day string) (time.Time, bool) {
+// localMidnight reads YYYY-MM-DD as 00:00 in loc the way
+// `new Date("…T00:00:00+07:00")` does: month 1-12, day 1-31, and a day past
+// the month's end rolls over.
+func localMidnight(day string, loc *time.Location) (time.Time, bool) {
 	if !dateOnlyPattern.MatchString(day) {
 		return time.Time{}, false
 	}
@@ -507,17 +519,19 @@ func wibMidnight(day string) (time.Time, bool) {
 	if m < 1 || m > 12 || d < 1 || d > 31 {
 		return time.Time{}, false
 	}
-	return time.Date(y, time.Month(m), d, 0, 0, 0, 0, domain.WIB), true
+	return time.Date(y, time.Month(m), d, 0, 0, 0, 0, loc), true
 }
 
 // DuplicateWeek copies every non-cancelled session of the source week
-// (Monday to Sunday WIB) to the target week, same times and coach. A slot
-// already taken in the target week, or whose coach or room is busy then, is
-// skipped. The unique slot index keeps concurrent copies from duplicating.
+// (seven days from sourceWeek, each session's dates in its branch zone) to
+// the target week, same local times and coach. A slot already taken in the
+// target week, or whose coach or room is busy then, is skipped. The unique
+// slot index keeps concurrent copies from duplicating.
 func (s *Service) DuplicateWeek(ctx context.Context, sourceWeek, targetWeek string, publish bool, createdBy *string) (DuplicateWeekResult, error) {
 	var out DuplicateWeekResult
-	source, ok1 := wibMidnight(sourceWeek)
-	target, ok2 := wibMidnight(targetWeek)
+	// Only the calendar dates matter here, so any zone reads them.
+	source, ok1 := localMidnight(sourceWeek, localtime.Jakarta)
+	target, ok2 := localMidnight(targetWeek, localtime.Jakarta)
 	if !ok1 || !ok2 {
 		// new Date("2026-02-31T00:00:00+07:00") is Invalid Date in TS and the
 		// insert fails the same way: a server error.
@@ -535,7 +549,7 @@ func (s *Service) DuplicateWeek(ctx context.Context, sourceWeek, targetWeek stri
 		if err := s.repo.LockSchedule(ctx, q); err != nil {
 			return err
 		}
-		rows, err := s.repo.SessionsInWeek(ctx, q, source)
+		rows, err := s.repo.SessionsInWeek(ctx, q, source.Format(time.DateOnly))
 		if err != nil {
 			return err
 		}

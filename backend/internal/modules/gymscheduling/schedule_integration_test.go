@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -47,7 +48,7 @@ func TestScheduleOverlap(t *testing.T) {
 	coachID, coachName := f.coach()
 	other, _ := f.coach()
 	room := "Go Room " + testutil.RandomHex(3)
-	start := time.Date(2031, 3, 4, 10, 0, 0, 0, domain.WIB)
+	start := time.Date(2031, 3, 4, 10, 0, 0, 0, localtime.Jakarta)
 	create := func(coach string, at time.Time, area string) response {
 		return f.asStaff("POST", "/api/gym/sessions", map[string]any{
 			"class_type_id": typeID, "coach_id": coach, "area": area, "starts_at": at.Format(time.RFC3339),
@@ -240,7 +241,7 @@ func TestTemplatesAndGeneration(t *testing.T) {
 
 	svc := f.service(NotificationsSQL{})
 	// Sunday 2 March 2031, 17.00 WIB.
-	now := time.Date(2031, 3, 2, 17, 0, 0, 0, domain.WIB)
+	now := time.Date(2031, 3, 2, 17, 0, 0, 0, localtime.Jakarta)
 	if n, err := svc.GenerateFromTemplates(f.ctx, now, 13); err != nil || n != 2 {
 		t.Fatalf("first run: %d %v", n, err)
 	}
@@ -271,7 +272,7 @@ func TestTemplatesAndGeneration(t *testing.T) {
 
 	// A busy coach is reported, not generated, and retried on the next run.
 	clash := f.asStaff("POST", "/api/gym/sessions", map[string]any{
-		"class_type_id": typeID, "coach_id": coachID, "starts_at": time.Date(2031, 3, 17, 6, 30, 0, 0, domain.WIB).Format(time.RFC3339),
+		"class_type_id": typeID, "coach_id": coachID, "starts_at": time.Date(2031, 3, 17, 6, 30, 0, 0, localtime.Jakarta).Format(time.RFC3339),
 	}).data()["id"].(string)
 	out, err := svc.generateFromTemplates(f.ctx, now, 21)
 	if err != nil || out.Created != 0 || out.Skipped != 1 || len(out.Conflicts) != 1 ||
@@ -349,7 +350,7 @@ func TestDuplicateWeekConcurrent(t *testing.T) {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM gym.class_sessions WHERE class_type_id = $1`, typeID)
 		_, _ = pool.Exec(context.Background(), `DELETE FROM gym.class_types WHERE id = $1`, typeID)
 	})
-	source := time.Date(2032, 6, 7, 0, 0, 0, 0, domain.WIB) // Monday
+	source := time.Date(2032, 6, 7, 0, 0, 0, 0, localtime.Jakarta) // Monday
 	for _, h := range []int{7, 9, 30} {
 		if _, err := svc.CreateSession(ctx, SessionInput{ClassTypeID: typeID, StartsAt: source.Add(time.Duration(h) * time.Hour)}, nil); err != nil {
 			t.Fatal(err)

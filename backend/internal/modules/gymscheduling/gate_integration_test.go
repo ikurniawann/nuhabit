@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -127,7 +128,7 @@ func TestOpenGymChargesOncePerDay(t *testing.T) {
 	f.setRules(map[string]any{"antiPassbackMin": 0})
 
 	// Hours on another weekday only: closed now.
-	today := int(time.Now().In(domain.WIB).Weekday())
+	today := int(time.Now().In(localtime.Jakarta).Weekday())
 	if today == 0 {
 		today = 7
 	}

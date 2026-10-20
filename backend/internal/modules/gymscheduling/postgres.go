@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Postgres implements Repository over the scheduling tables (gym.class_types,
@@ -159,7 +160,7 @@ func (Postgres) ClassDetails(ctx context.Context, q Q, classTypeID string, coach
 
 func (Postgres) Catalog(ctx context.Context, q Q) (branches, classTypes, coaches []*Row, err error) {
 	if branches, err = queryRows(ctx, q,
-		`SELECT id, name FROM configuration.branches WHERE is_active = true ORDER BY name`); err != nil {
+		`SELECT id, name, timezone FROM configuration.branches WHERE is_active = true ORDER BY name`); err != nil {
 		return
 	}
 	if classTypes, err = queryRows(ctx, q, `SELECT id, name, description, default_duration_min, default_credit_cost
@@ -176,10 +177,16 @@ const sessionSelect = `
   SELECT s.id, s.class_type_id, t.name AS class_type_name, t.color, s.coach_id, c.name AS coach_name,
          s.branch_id, s.area, s.starts_at, s.ends_at, s.capacity, s.credit_cost,
          s.booking_opens_at, s.booking_closes_at, s.status, s.notes,
-         s.moved_at, s.original_starts_at, s.template_id, s.occurrence_date::text AS occurrence_date
+         s.moved_at, s.original_starts_at, s.template_id, s.occurrence_date::text AS occurrence_date,
+         ` + sessionZone + ` AS timezone
     FROM gym.class_sessions s
     JOIN gym.class_types t ON t.id = s.class_type_id
-    LEFT JOIN gym.coaches c ON c.id = s.coach_id`
+    LEFT JOIN gym.coaches c ON c.id = s.coach_id
+    LEFT JOIN configuration.branches br ON br.id = s.branch_id`
+
+// sessionZone is the session's branch zone, Jakarta without a branch. It
+// needs configuration.branches joined as br.
+const sessionZone = `COALESCE(br.timezone, 'Asia/Jakarta')`
 
 // seatsHeldWhere: a seat is held by confirmed, checked-in and completed bookings.
 const seatsHeldWhere = `status IN ('confirmed', 'checked_in', 'completed')`
@@ -228,14 +235,16 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
 func (Postgres) LockSession(ctx context.Context, q Q, id string) (*SessionRow, error) {
 	var s SessionRow
 	var templateID, occurrenceDate any
+	var zone string
 	err := q.QueryRow(ctx, sessionSelect+` WHERE s.id = $1 FOR UPDATE OF s`, id).Scan(
 		&s.ID, &s.ClassTypeID, &s.ClassTypeName, &s.Color, &s.CoachID, &s.CoachName,
 		&s.BranchID, &s.Area, &s.StartsAt, &s.EndsAt, &s.Capacity, &s.CreditCost,
 		&s.BookingOpensAt, &s.BookingClosesAt, &s.Status, &s.Notes,
-		&s.MovedAt, &s.OriginalStartsAt, &templateID, &occurrenceDate)
+		&s.MovedAt, &s.OriginalStartsAt, &templateID, &occurrenceDate, &zone)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
+	s.Zone = localtime.Zone(zone)
 	return &s, err
 }
 
@@ -277,11 +286,14 @@ func (Postgres) DeleteSession(ctx context.Context, q Q, id string) error {
 	return err
 }
 
-func (Postgres) SessionsInWeek(ctx context.Context, q Q, weekStart time.Time) ([]WeekSession, error) {
-	rows, err := q.Query(ctx, `SELECT class_type_id, coach_id, branch_id, area, starts_at, ends_at, capacity, credit_cost, notes
-       FROM gym.class_sessions
-      WHERE starts_at >= $1 AND starts_at < $1::timestamptz + interval '7 days' AND status <> 'cancelled'
-      ORDER BY starts_at`, weekStart)
+func (Postgres) SessionsInWeek(ctx context.Context, q Q, weekStart string) ([]WeekSession, error) {
+	rows, err := q.Query(ctx, `SELECT s.class_type_id, s.coach_id, s.branch_id, s.area, s.starts_at, s.ends_at,
+            s.capacity, s.credit_cost, s.notes
+       FROM gym.class_sessions s
+       LEFT JOIN configuration.branches br ON br.id = s.branch_id
+      WHERE (s.starts_at AT TIME ZONE `+sessionZone+`)::date BETWEEN $1::date AND $1::date + 6
+        AND s.status <> 'cancelled'
+      ORDER BY s.starts_at`, weekStart)
 	if err != nil {
 		return nil, err
 	}
@@ -617,7 +629,9 @@ func (Postgres) AccessLog(ctx context.Context, q Q) ([]*Row, *Row, error) {
               count(*) FILTER (WHERE decision = 'allowed' AND entry_kind = 'open_gym')::int AS open_gym,
               count(*) FILTER (WHERE decision = 'denied')::int AS denied,
               COALESCE(-sum(credit_delta), 0)::int AS credits
-         FROM gym.access_logs
-        WHERE created_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Jakarta') AT TIME ZONE 'Asia/Jakarta'`)
+         FROM gym.access_logs l
+         LEFT JOIN configuration.branches br ON br.id = l.branch_id
+        WHERE l.created_at > now() - interval '1 day'
+          AND (l.created_at AT TIME ZONE `+sessionZone+`)::date = (now() AT TIME ZONE `+sessionZone+`)::date`)
 	return log, today, err
 }

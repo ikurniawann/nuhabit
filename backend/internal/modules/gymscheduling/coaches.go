@@ -12,6 +12,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/storage"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -131,34 +132,39 @@ func coachWorkload(rows []*Row, weekStart, weekEnd, monthStart, monthEnd time.Ti
 	return w
 }
 
-// coachSchedule is GET /api/gym/coaches/{id}/schedule?day=YYYY-MM-DD (WIB,
-// default today).
+// coachSchedule is GET /api/gym/coaches/{id}/schedule?day=YYYY-MM-DD (in
+// the coach's branch zone, default today).
 func (h *handler) coachSchedule(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	id, err := requireUUID(r.PathValue("id"))
 	if err != nil {
 		return err
 	}
-	day := h.svc.now()
-	if raw := r.URL.Query().Get("day"); raw != "" {
-		var valid bool
-		if day, valid = wibMidnight(raw); !valid {
-			return httpx.BadRequest("Parameter day harus tanggal (YYYY-MM-DD)")
-		}
-	}
-	out, err := h.svc.CoachSchedule(r.Context(), id, day)
+	out, err := h.svc.CoachSchedule(r.Context(), id, r.URL.Query().Get("day"))
 	if err != nil {
 		return err
 	}
 	return ok(w, out)
 }
 
-// CoachSchedule is the coach's sessions in the week holding day (Monday to
-// Sunday WIB) and the workload of that week and of day's month.
-func (s *Service) CoachSchedule(ctx context.Context, coachID string, day time.Time) (*Row, error) {
-	week := mondayOf(day)
+// CoachSchedule is the coach's sessions in the week holding rawDay (Monday
+// to Sunday in the coach's branch zone; "" is today) and the workload of
+// that week and of the day's month.
+func (s *Service) CoachSchedule(ctx context.Context, coachID, rawDay string) (*Row, error) {
+	zone, err := s.repo.CoachZone(ctx, s.db, coachID)
+	if err != nil {
+		return nil, err
+	}
+	day := s.now()
+	if rawDay != "" {
+		var valid bool
+		if day, valid = localMidnight(rawDay, zone); !valid {
+			return nil, httpx.BadRequest("Parameter day harus tanggal (YYYY-MM-DD)")
+		}
+	}
+	week := localtime.WeekStart(day, zone)
 	weekEnd := domain.ShiftDays(week, 7)
-	local := day.In(domain.WIB)
-	monthStart := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, domain.WIB)
+	local := day.In(zone)
+	monthStart := time.Date(local.Year(), local.Month(), 1, 0, 0, 0, 0, zone)
 	monthEnd := monthStart.AddDate(0, 1, 0)
 	// The week can start in the previous month or end in the next.
 	from, to := monthStart, monthEnd
@@ -179,7 +185,7 @@ func (s *Service) CoachSchedule(ctx context.Context, coachID string, day time.Ti
 		}
 	}
 	return object("week_start", week.Format(time.DateOnly), "month", monthStart.Format("2006-01"), "sessions", sessions,
-		"workload", coachWorkload(rows, week, weekEnd, monthStart, monthEnd)), nil
+		"workload", coachWorkload(rows, week, weekEnd, monthStart, monthEnd), "timezone", localtime.Name(zone)), nil
 }
 
 // ── Photo ───────────────────────────────────────────────────────────────────

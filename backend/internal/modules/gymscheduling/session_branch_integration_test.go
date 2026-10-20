@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -20,7 +20,7 @@ func TestSessionBranchChange(t *testing.T) {
 	typeID, _ := f.classType(1)
 	otherType, otherName := f.classType(1)
 	room := "Go Room " + testutil.RandomHex(3)
-	start := time.Date(2031, 5, 6, 9, 0, 0, 0, domain.WIB)
+	start := time.Date(2031, 5, 6, 9, 0, 0, 0, localtime.Jakarta)
 	create := func(classType, branch string) string {
 		res := f.asStaff("POST", "/api/gym/sessions", map[string]any{
 			"class_type_id": classType, "branch_id": branch, "area": room, "starts_at": start.Format(time.RFC3339),

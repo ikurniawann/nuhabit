@@ -12,7 +12,7 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 )
 
-// Open gym hours: one window per weekday per branch, in WIB. The rules
+// Open gym hours: one window per weekday per branch, in the branch zone. The rules
 // openGymEnabled and openGymCreditCost decide whether the gate uses them.
 
 // OpenHoursView is one weekday's window as the dashboard edits it.

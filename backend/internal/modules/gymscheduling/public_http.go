@@ -8,13 +8,14 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Public timetable: GET /api/public/site/sessions?branch=<slug>&week=<Monday>.
 // No session is required; the auth gate lists /api/public/site as public.
 
 // PublicTimetable is the response: the branch, the Monday the week starts
-// on (WIB, YYYY-MM-DD) and its open sessions.
+// on (YYYY-MM-DD in the branch zone) and its open sessions.
 type PublicTimetable struct {
 	Branch    PublicBranch    `json:"branch"`
 	WeekStart string          `json:"week_start"`
@@ -24,12 +25,7 @@ type PublicTimetable struct {
 // publicWeeksAhead caps how far the public timetable looks ahead.
 const publicWeeksAhead = 8
 
-// mondayOf is the Monday 00:00 WIB of the week holding t.
-func mondayOf(t time.Time) time.Time {
-	t = t.In(domain.WIB)
-	back := (int(t.Weekday()) + 6) % 7
-	return time.Date(t.Year(), t.Month(), t.Day()-back, 0, 0, 0, 0, domain.WIB)
-}
+var errNotMonday = httpx.BadRequest("Parameter week harus tanggal Senin (YYYY-MM-DD)")
 
 func (h *handler) publicSessions(w http.ResponseWriter, r *http.Request) error {
 	query := r.URL.Query()
@@ -37,15 +33,7 @@ func (h *handler) publicSessions(w http.ResponseWriter, r *http.Request) error {
 	if slug == "" {
 		return httpx.BadRequest("Parameter branch wajib diisi")
 	}
-	week := mondayOf(h.svc.now())
-	if raw := query.Get("week"); raw != "" {
-		day, valid := wibMidnight(raw)
-		if !valid || day.Weekday() != time.Monday {
-			return httpx.BadRequest("Parameter week harus tanggal Senin (YYYY-MM-DD)")
-		}
-		week = day
-	}
-	out, err := h.svc.PublicTimetable(r.Context(), slug, week)
+	out, err := h.svc.PublicTimetable(r.Context(), slug, query.Get("week"))
 	if err != nil {
 		return err
 	}
@@ -56,15 +44,25 @@ func (h *handler) publicSessions(w http.ResponseWriter, r *http.Request) error {
 }
 
 // PublicTimetable lists the branch's published sessions for the week
-// starting on week (a Monday), clamped to the current week and the next
-// publicWeeksAhead. nil when the branch is unknown.
-func (s *Service) PublicTimetable(ctx context.Context, slug string, week time.Time) (*PublicTimetable, error) {
+// starting on week (a Monday, YYYY-MM-DD in the branch zone; "" is this
+// week), clamped to the current week and the next publicWeeksAhead. nil
+// when the branch is unknown.
+func (s *Service) PublicTimetable(ctx context.Context, slug, rawWeek string) (*PublicTimetable, error) {
 	branch, err := s.repo.PublicBranch(ctx, s.db, slug)
 	if err != nil || branch == nil {
 		return nil, err
 	}
+	zone := localtime.Zone(branch.Timezone)
 	now := s.now()
-	first := mondayOf(now)
+	first := localtime.WeekStart(now, zone)
+	week := first
+	if rawWeek != "" {
+		day, valid := localMidnight(rawWeek, zone)
+		if !valid || day.Weekday() != time.Monday {
+			return nil, errNotMonday
+		}
+		week = day
+	}
 	last := domain.ShiftDays(first, 7*publicWeeksAhead)
 	if week.Before(first) {
 		week = first

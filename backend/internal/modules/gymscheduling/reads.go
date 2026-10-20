@@ -34,7 +34,8 @@ func (s *Service) ListBookings(ctx context.Context, f BookingListFilter) ([]*Row
 	return s.repo.ListBookings(ctx, s.db, f)
 }
 
-// AccessLog is the last 100 gym scans plus today's (WIB) totals.
+// AccessLog is the last 100 gym scans plus today's totals, each scan's day
+// read in the zone of the branch it happened at.
 func (s *Service) AccessLog(ctx context.Context) (*Row, error) {
 	log, today, err := s.repo.AccessLog(ctx, s.db)
 	if err != nil {

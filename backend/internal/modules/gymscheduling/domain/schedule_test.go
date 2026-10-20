@@ -3,6 +3,8 @@ package domain
 import (
 	"testing"
 	"time"
+
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 func sp(s string) *string { return &s }
@@ -73,6 +75,10 @@ func TestScheduleConflictMessage(t *testing.T) {
 	if got, want := room.Message(), "Area Studio B sudah dipakai Kelas b pada Sen, 5 Okt, 18.00–18.45"; got != want {
 		t.Fatalf("room message %q, want %q", got, want)
 	}
+	room.With.Zone = localtime.Zone("Asia/Makassar")
+	if got, want := room.Message(), "Area Studio B sudah dipakai Kelas b pada Sen, 5 Okt, 19.00–19.45 WITA"; got != want {
+		t.Fatalf("WITA room message %q, want %q", got, want)
+	}
 }
 
 func TestTemplateOccurrences(t *testing.T) {
@@ -97,6 +103,16 @@ func TestTemplateOccurrences(t *testing.T) {
 		early := WeeklySlot{Weekday: 1, StartTime: "07:00:00", DurationMin: 60, ValidFrom: "2026-01-01"}
 		got := TemplateOccurrences(early, at("2026-10-04T23:30:00Z"), 1)
 		if len(got) != 1 || got[0].Date != "2026-10-05" || !got[0].StartsAt.Equal(at("2026-10-05T00:00:00Z")) {
+			t.Fatalf("occurrences = %+v", got)
+		}
+	})
+
+	t.Run("a WITA template reads its weekday and clock in WITA", func(t *testing.T) {
+		wita := monday1830
+		wita.Zone = localtime.Zone("Asia/Makassar")
+		// 16.30 UTC Sunday is 23.30 WIB Sunday but 00.30 WITA Monday.
+		got := TemplateOccurrences(wita, at("2026-10-04T16:30:00Z"), 1)
+		if len(got) != 1 || got[0].Date != "2026-10-05" || !got[0].StartsAt.Equal(at("2026-10-05T10:30:00Z")) {
 			t.Fatalf("occurrences = %+v", got)
 		}
 	})

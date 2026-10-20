@@ -13,6 +13,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/validate"
@@ -182,7 +183,8 @@ func requireUUID(value string) (string, error) {
 
 // ── Query helpers (scheduling-route.ts) ──────────────────────────────────────
 
-// rangeParams is [from, to) from the query string; a bare date is 00:00 WIB.
+// rangeParams is [from, to) from the query string; a bare date is 00:00 WIB
+// (staff views span branches and send instants, so Jakarta is the default).
 // Defaults: now, and from + defaultDays.
 func rangeParams(query url.Values, now time.Time, defaultDays int) (time.Time, time.Time) {
 	parse := func(key string) (time.Time, bool) {
@@ -191,7 +193,7 @@ func rangeParams(query url.Values, now time.Time, defaultDays int) (time.Time, t
 			return time.Time{}, false
 		}
 		if dateOnlyPattern.MatchString(raw) {
-			return wibMidnight(raw)
+			return localMidnight(raw, localtime.Jakarta)
 		}
 		return validate.ParseJSDate(raw)
 	}
@@ -729,7 +731,8 @@ func memberBody(r *http.Request) (map[string]any, error) {
 func (h *handler) memberSessions(w http.ResponseWriter, r *http.Request, customerID string) error {
 	query := r.URL.Query()
 	if date := query.Get("date"); date != "" {
-		day, valid := wibMidnight(date)
+		// The member list spans branches, so a bare date is a Jakarta day.
+		day, valid := localMidnight(date, localtime.Jakarta)
 		if !valid {
 			// new Date("<bad>T00:00:00+07:00").toISOString() throws in TS.
 			return errors.New("member sessions: invalid date " + date)

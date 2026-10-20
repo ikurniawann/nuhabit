@@ -14,7 +14,7 @@ import (
 // the member back in the queue at their old position (or at the end when
 // another entry holds it now); a second lapse removes them from the waitlist.
 func (s *Service) requeueLapsed(ctx context.Context, q Q, session *SessionRow, lapsed []BookingRow, now time.Time) error {
-	when := domain.FormatWib(session.StartsAt)
+	when := session.when()
 	for _, b := range lapsed {
 		n := Notification{Type: "gym_waitlist_offer_expired", Title: "Tawaran kursi berakhir: " + session.ClassTypeName}
 		if domain.RequeueAfterLapse(b.OfferLapses) {

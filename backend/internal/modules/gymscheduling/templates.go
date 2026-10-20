@@ -6,6 +6,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Weekly schedule templates and the generator that turns them into dated
@@ -21,7 +22,7 @@ type TemplateInput struct {
 	DurationMin             *int
 	Capacity                *int
 	CreditCost              *int
-	ValidFrom               string
+	ValidFrom               string // "" is today in the branch zone
 	ValidUntil              *string
 	Active                  bool
 }
@@ -60,6 +61,13 @@ func (s *Service) CreateTemplate(ctx context.Context, in TemplateInput, createdB
 		def, err := s.activeClassType(ctx, q, in.ClassTypeID)
 		if err != nil {
 			return err
+		}
+		if in.ValidFrom == "" {
+			zone, err := localtime.BranchZone(ctx, q, in.BranchID)
+			if err != nil {
+				return err
+			}
+			in.ValidFrom = localtime.DayKey(s.now(), zone)
 		}
 		t := SessionTemplate{
 			ClassTypeID: in.ClassTypeID, CoachID: in.CoachID, BranchID: in.BranchID, Area: in.Area,
@@ -164,7 +172,9 @@ func (s *Service) generateFromTemplates(ctx context.Context, now time.Time, hori
 		if err := s.repo.LockSchedule(ctx, q); err != nil {
 			return err
 		}
-		templates, err := s.repo.ActiveTemplates(ctx, q, now.In(domain.WIB).Format(time.DateOnly))
+		// Jakarta is the westernmost zone: its date is never later than a
+		// branch's, so this keeps every template still valid somewhere.
+		templates, err := s.repo.ActiveTemplates(ctx, q, localtime.DayKey(now, localtime.Jakarta))
 		if err != nil {
 			return err
 		}
@@ -211,7 +221,7 @@ func (s *Service) generateOccurrence(ctx context.Context, q Q, t SessionTemplate
 	if err != nil {
 		return false, err
 	}
-	label := t.ClassTypeName + " " + domain.FormatWib(occ.StartsAt) + ": "
+	label := t.ClassTypeName + " " + localtime.Format(occ.StartsAt, t.Zone) + ": "
 	if clash != nil {
 		out.Conflicts = append(out.Conflicts, label+clash.Message())
 		return false, nil

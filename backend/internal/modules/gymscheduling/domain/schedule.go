@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // ── Overlap ─────────────────────────────────────────────────────────────────
@@ -18,6 +20,8 @@ type Slot struct {
 	Area      *string
 	StartsAt  time.Time
 	EndsAt    time.Time
+	// Zone is the branch zone the slot's times read in; nil is Jakarta.
+	Zone *time.Location
 }
 
 type ConflictKind string
@@ -35,7 +39,7 @@ type ScheduleConflict struct {
 
 // Message is the Indonesian error shown to staff.
 func (c ScheduleConflict) Message() string {
-	when := FormatWib(c.With.StartsAt) + "–" + c.With.EndsAt.In(WIB).Format("15.04")
+	when := localtime.FormatSpan(c.With.StartsAt, c.With.EndsAt, c.With.Zone)
 	if c.Kind == ConflictCoach {
 		name := "Coach ini"
 		if c.With.CoachName != nil {
@@ -87,19 +91,21 @@ func FindScheduleConflict(s Slot, others []Slot) *ScheduleConflict {
 // ── Weekly templates ────────────────────────────────────────────────────────
 
 // WeeklySlot is a recurring template: an ISO weekday (1 = Monday … 7 =
-// Sunday) and a start time in WIB, valid between two dates (YYYY-MM-DD,
-// ValidUntil "" = open ended).
+// Sunday) and a start time in the branch zone, valid between two dates
+// (YYYY-MM-DD, ValidUntil "" = open ended).
 type WeeklySlot struct {
 	Weekday     int
 	StartTime   string // "HH:MM" or "HH:MM:SS"
 	DurationMin int
 	ValidFrom   string
 	ValidUntil  string
+	// Zone is the template branch's zone; nil is Jakarta.
+	Zone *time.Location
 }
 
 // Occurrence is one dated session a template produces.
 type Occurrence struct {
-	Date     string // YYYY-MM-DD in WIB
+	Date     string // YYYY-MM-DD in the branch zone
 	StartsAt time.Time
 	EndsAt   time.Time
 }
@@ -127,17 +133,17 @@ func isoWeekday(t time.Time) int {
 }
 
 // TemplateOccurrences lists the sessions a weekly slot produces that start
-// after now and before now + horizonDays. Dates and times are WIB.
+// after now and before now + horizonDays. Dates and times are in t.Zone.
 func TemplateOccurrences(t WeeklySlot, now time.Time, horizonDays int) []Occurrence {
 	minute, ok := ParseClock(t.StartTime)
 	if !ok || horizonDays <= 0 {
 		return nil
 	}
 	until := now.Add(time.Duration(horizonDays) * 24 * time.Hour)
-	local := now.In(WIB)
+	today := localtime.DayStart(now, t.Zone)
 	var out []Occurrence
 	for i := 0; i <= horizonDays; i++ {
-		day := time.Date(local.Year(), local.Month(), local.Day()+i, 0, 0, 0, 0, WIB)
+		day := today.AddDate(0, 0, i)
 		date := day.Format(time.DateOnly)
 		if isoWeekday(day) != t.Weekday || date < t.ValidFrom || (t.ValidUntil != "" && date > t.ValidUntil) {
 			continue

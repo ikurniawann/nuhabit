@@ -31,24 +31,22 @@ func WaiverMissing(rules Rules, acceptedVersion *string, acceptedAt *time.Time, 
 	return current != "" && *acceptedVersion != current
 }
 
-// OpenHours is one weekday's open gym window, in minutes after midnight WIB.
-// Weekday is ISO: 1 = Monday … 7 = Sunday.
+// OpenHours is one weekday's open gym window, in minutes after midnight in
+// the branch zone. Weekday is ISO: 1 = Monday … 7 = Sunday.
 type OpenHours struct {
 	Weekday       int
 	Opens, Closes int
 }
 
-// IsOpenGymTime: a branch with no hours set is open all day; otherwise now
-// (WIB) must fall inside that weekday's window [Opens, Closes).
-func IsOpenGymTime(hours []OpenHours, now time.Time) bool {
+// IsOpenGymTime: a branch with no hours set is open all day; otherwise now,
+// read in the branch zone loc, must fall inside that weekday's window
+// [Opens, Closes).
+func IsOpenGymTime(hours []OpenHours, now time.Time, loc *time.Location) bool {
 	if len(hours) == 0 {
 		return true
 	}
-	w := now.In(WIB)
-	weekday := int(w.Weekday())
-	if weekday == 0 {
-		weekday = 7
-	}
+	w := now.In(loc)
+	weekday := isoWeekday(w)
 	minute := w.Hour()*60 + w.Minute()
 	for _, h := range hours {
 		if h.Weekday == weekday && minute >= h.Opens && minute < h.Closes {
@@ -174,7 +172,7 @@ type OpenGymVisit struct {
 	Open bool
 	// HasPass: a pass covers today, so entry is free.
 	HasPass bool
-	// PaidToday: the member already entered open gym this WIB day.
+	// PaidToday: the member already entered open gym this day (branch zone).
 	PaidToday bool
 }
 

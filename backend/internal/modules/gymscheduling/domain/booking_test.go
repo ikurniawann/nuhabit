@@ -402,10 +402,6 @@ func TestStaffWaiverAndNoShowTiming(t *testing.T) {
 	if CanMarkNoShow(start, start.Add(-time.Second)) || !CanMarkNoShow(start, start) {
 		t.Error("no-show only once the class started")
 	}
-	s, e := WibDayBounds(at("2026-10-04T17:30:00Z")) // Monday 00.30 WIB
-	if !s.Equal(at("2026-10-04T17:00:00Z")) || !e.Equal(at("2026-10-05T17:00:00Z")) {
-		t.Errorf("WIB day = %s .. %s", s, e)
-	}
 }
 
 func TestCheckInWindowAndWeeks(t *testing.T) {
@@ -429,31 +425,8 @@ func TestCheckInWindowAndWeeks(t *testing.T) {
 			t.Errorf("narrow window at %s = %v", s, got)
 		}
 	}
-	for s, want := range map[string]string{
-		"2026-10-03T05:00:00Z": "2026-09-28", // Saturday
-		"2026-10-04T18:00:00Z": "2026-10-05", // Monday 01.00 WIB
-		"2026-10-04T16:59:00Z": "2026-09-28", // Sunday 23.59 WIB
-	} {
-		if got := WeekStartWib(at(s)); got != want {
-			t.Errorf("week of %s = %s, want %s", s, got, want)
-		}
-	}
 	if !ShiftDays(start, 7).Equal(at("2026-10-12T11:00:00Z")) {
 		t.Error("shift days")
-	}
-}
-
-func TestFormatWib(t *testing.T) {
-	for s, want := range map[string]string{
-		"2026-10-05T11:00:00Z": "Sen, 5 Okt, 18.00",
-		"2026-01-04T01:05:00Z": "Min, 4 Jan, 08.05",
-		"2026-05-06T17:30:00Z": "Kam, 7 Mei, 00.30",
-		"2026-08-07T00:00:00Z": "Jum, 7 Agu, 07.00",
-		"2026-12-12T03:00:00Z": "Sab, 12 Des, 10.00",
-	} {
-		if got := FormatWib(at(s)); got != want {
-			t.Errorf("FormatWib(%s) = %q, want %q", s, got, want)
-		}
 	}
 }
 

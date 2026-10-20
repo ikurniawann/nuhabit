@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Gate check-in: QR scan, the booking pipeline (membership, waiver, re-entry
@@ -76,8 +77,9 @@ func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, booking
 
 // openGymVisit gathers the open gym facts for a member without a booking
 // around now: the branch hours, a pass covering now, whether they already
-// entered open gym today (WIB) and, when they would pay, the balance.
-func (s *Service) openGymVisit(ctx context.Context, q Q, customerID string, branchID *string, rules domain.Rules, now time.Time) (*domain.OpenGymVisit, *ActivePass, int, error) {
+// entered open gym today (in the branch zone) and, when they would pay, the
+// balance.
+func (s *Service) openGymVisit(ctx context.Context, q Q, customerID string, branchID *string, zone *time.Location, rules domain.Rules, now time.Time) (*domain.OpenGymVisit, *ActivePass, int, error) {
 	var hours []domain.OpenHours
 	if branchID != nil {
 		var err error
@@ -89,12 +91,11 @@ func (s *Service) openGymVisit(ctx context.Context, q Q, customerID string, bran
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	dayStart, _ := domain.WibDayBounds(now)
-	paid, err := s.repo.EnteredOpenGymSince(ctx, q, customerID, dayStart)
+	paid, err := s.repo.EnteredOpenGymSince(ctx, q, customerID, localtime.DayStart(now, zone))
 	if err != nil {
 		return nil, nil, 0, err
 	}
-	visit := &domain.OpenGymVisit{Open: domain.IsOpenGymTime(hours, now), HasPass: pass != nil, PaidToday: paid}
+	visit := &domain.OpenGymVisit{Open: domain.IsOpenGymTime(hours, now, zone), HasPass: pass != nil, PaidToday: paid}
 	balance := 0
 	if pass == nil && !paid && rules.OpenGymCreditCost > 0 {
 		if balance, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
@@ -116,6 +117,10 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 		return res, err
 	}
 	rules, err := s.Rules.ForBranch(ctx, q, at.BranchID)
+	if err != nil {
+		return res, err
+	}
+	zone, err := localtime.BranchZone(ctx, q, at.BranchID)
 	if err != nil {
 		return res, err
 	}
@@ -152,7 +157,7 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 			}
 		}
 	case rules.OpenGymEnabled:
-		if openGym, pass, balance, err = s.openGymVisit(ctx, q, customerID, at.BranchID, rules, now); err != nil {
+		if openGym, pass, balance, err = s.openGymVisit(ctx, q, customerID, at.BranchID, zone, rules, now); err != nil {
 			return res, err
 		}
 	}
@@ -189,10 +194,10 @@ effects:
 				SourceType:     "class_booking",
 				SourceID:       candidate.ID,
 				IdempotencyKey: domain.ChargeKey("checkin", candidate.ID, candidate.CorrectionSeq),
-				Note:           "Check-in " + candidate.ClassName + ", " + domain.FormatWib(candidate.StartsAt),
+				Note:           "Check-in " + candidate.ClassName + ", " + localtime.Format(candidate.StartsAt, zone),
 			}
 		case domain.EffectChargeOpenGym:
-			day := now.In(domain.WIB).Format(time.DateOnly)
+			day := localtime.DayKey(now, zone)
 			charge = &CreditMovement{
 				SourceType:     "open_gym",
 				IdempotencyKey: "gym:open_gym:" + customerID + ":" + day,

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Repository is the persistence the use cases need. Postgres implements it;
@@ -38,7 +39,9 @@ type Repository interface {
 	SetSessionStatus(ctx context.Context, q Q, id string, status domain.SessionStatus) error
 	SessionHasBookings(ctx context.Context, q Q, id string) (bool, error)
 	DeleteSession(ctx context.Context, q Q, id string) error
-	SessionsInWeek(ctx context.Context, q Q, weekStart time.Time) ([]WeekSession, error)
+	// SessionsInWeek lists live sessions whose local date, in their branch
+	// zone, falls in the seven days from weekStart (YYYY-MM-DD).
+	SessionsInWeek(ctx context.Context, q Q, weekStart string) ([]WeekSession, error)
 	// InsertSessionIfFree returns "" when the class type already has a
 	// session at that start in that branch.
 	InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (string, error)
@@ -159,6 +162,8 @@ type SessionRow struct {
 	Status                                domain.SessionStatus
 	Notes                                 *string
 	MovedAt, OriginalStartsAt             *time.Time
+	// Zone is the branch zone: days and times shown to members read in it.
+	Zone *time.Location
 }
 
 // Move is the studio's last move of the session, for the late-cancel waiver.
@@ -169,11 +174,17 @@ func (s *SessionRow) Move() domain.SessionMove {
 // slot is the session's place in the timetable for overlap checks.
 func (s *SessionRow) slot() domain.Slot {
 	return domain.Slot{ID: s.ID, ClassName: s.ClassTypeName, CoachID: s.CoachID, CoachName: s.CoachName,
-		BranchID: s.BranchID, Area: s.Area, StartsAt: s.StartsAt, EndsAt: s.EndsAt}
+		BranchID: s.BranchID, Area: s.Area, StartsAt: s.StartsAt, EndsAt: s.EndsAt, Zone: s.Zone}
 }
 
-// label is "<class>, <start in WIB>" for ledger notes.
-func (s *SessionRow) label() string { return s.ClassTypeName + ", " + domain.FormatWib(s.StartsAt) }
+// when is the start as "Sab, 24 Okt, 18.00" in the branch zone.
+func (s *SessionRow) when() string { return s.at(s.StartsAt) }
+
+// at formats an instant in the session's branch zone.
+func (s *SessionRow) at(t time.Time) string { return localtime.Format(t, s.Zone) }
+
+// label is "<class>, <start>" for ledger notes.
+func (s *SessionRow) label() string { return s.ClassTypeName + ", " + s.when() }
 
 type NewSession struct {
 	ClassTypeID                     string

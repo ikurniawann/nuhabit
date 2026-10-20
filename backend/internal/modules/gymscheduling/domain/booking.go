@@ -12,8 +12,9 @@ import (
 	"math"
 	"slices"
 	"sort"
-	"strconv"
 	"time"
+
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // CreditPolicy says whether credits are forfeited (late cancel, no-show).
@@ -54,7 +55,7 @@ type Rules struct {
 	CheckinOpensMinBefore int
 	CheckinClosesMinAfter int
 	// OpenGymEnabled admits members without a booking in open gym hours;
-	// OpenGymCreditCost is charged once per WIB day (0 = free).
+	// OpenGymCreditCost is charged once per day in the branch zone (0 = free).
 	OpenGymEnabled    bool
 	OpenGymCreditCost int
 	// CorrectionWindowDays: how long after the class staff may undo a
@@ -220,13 +221,15 @@ type EligibilityInput struct {
 	ClassNotCovered bool
 	// UpcomingConfirmed counts the member's other confirmed bookings for
 	// classes not started yet; SameDayBookings their other bookings
-	// (confirmed, checked in or completed) on the session's WIB day.
+	// (confirmed, checked in or completed) on the session's local day.
 	UpcomingConfirmed int
 	SameDayBookings   int
 	MaxConcurrent     int
 	MaxPerDay         int
 	// SuspendedUntil is set while pass strikes suspend booking.
 	SuspendedUntil *time.Time
+	// Zone is the session's branch zone, for times in denial messages.
+	Zone *time.Location
 	// ConfirmedCount is the seats taken, open waitlist offers included.
 	ConfirmedCount       int
 	LastWaitlistPosition int
@@ -320,17 +323,10 @@ func (in EligibilityInput) DenialMessage(r BookingDenialReason) string {
 	case DenyDailyLimit:
 		return fmt.Sprintf("Batas booking tercapai: maksimal %d kelas per hari", in.MaxPerDay)
 	case DenyPassSuspended:
-		return "Booking ditangguhkan sampai " + FormatWib(*in.SuspendedUntil) +
+		return "Booking ditangguhkan sampai " + localtime.Format(*in.SuspendedUntil, in.Zone) +
 			" karena batas strike pass tercapai (batal terlambat atau tidak hadir)"
 	}
 	return BookingDenialLabel[r]
-}
-
-// WibDayBounds is the WIB calendar day containing t, as [start, end).
-func WibDayBounds(t time.Time) (start, end time.Time) {
-	w := t.In(WIB)
-	start = time.Date(w.Year(), w.Month(), w.Day(), 0, 0, 0, 0, WIB)
-	return start, start.Add(24 * time.Hour)
 }
 
 // ── Pass strikes ────────────────────────────────────────────────────────────
@@ -562,35 +558,9 @@ func BookingStatusOnComplete(status BookingStatus) BookingStatus {
 
 // ── Week helpers ────────────────────────────────────────────────────────────
 
-// WIB is Asia/Jakarta (UTC+7, no DST). A fixed zone keeps the binary free of tzdata.
-var WIB = time.FixedZone("WIB", 7*3600)
-
-// WeekStartWib returns Monday (WIB) of the week containing t, as YYYY-MM-DD.
-func WeekStartWib(t time.Time) string {
-	wib := t.In(WIB)
-	isoDow := int(wib.Weekday())
-	if isoDow == 0 {
-		isoDow = 7
-	}
-	return wib.AddDate(0, 0, -(isoDow - 1)).Format(time.DateOnly)
-}
-
 // ShiftDays moves an instant by whole 24-hour days.
 func ShiftDays(t time.Time, days int) time.Time {
 	return t.Add(time.Duration(days) * 24 * time.Hour)
-}
-
-var (
-	wibWeekdays = [...]string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
-	wibMonths   = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
-)
-
-// FormatWib renders an instant the way toLocaleString("id-ID", {weekday,
-// day, month: short, hour, minute, timeZone: Asia/Jakarta}) does, e.g.
-// "Sen, 5 Okt, 18.00".
-func FormatWib(t time.Time) string {
-	w := t.In(WIB)
-	return wibWeekdays[w.Weekday()] + ", " + strconv.Itoa(w.Day()) + " " + wibMonths[w.Month()-1] + ", " + w.Format("15.04")
 }
 
 // IsClassTypeCovered: nil coverage means every class type is allowed.

@@ -15,6 +15,8 @@ type PublicBranch struct {
 	ID   string `json:"-"`
 	Slug string `json:"slug"`
 	Name string `json:"name"`
+	// Timezone is the IANA zone the timetable's days and times read in.
+	Timezone string `json:"timezone"`
 }
 
 // PublicSession is one row of the public timetable.
@@ -38,9 +40,9 @@ type PublicClassType struct {
 
 func (Postgres) PublicBranch(ctx context.Context, q Q, slug string) (*PublicBranch, error) {
 	var b PublicBranch
-	err := q.QueryRow(ctx, `SELECT id::text, COALESCE(slug, lower(code)), name FROM configuration.branches
+	err := q.QueryRow(ctx, `SELECT id::text, COALESCE(slug, lower(code)), name, timezone FROM configuration.branches
       WHERE is_active AND (lower(slug) = lower($1) OR (slug IS NULL AND lower(code) = lower($1)))
-      ORDER BY created_at LIMIT 1`, slug).Scan(&b.ID, &b.Slug, &b.Name)
+      ORDER BY created_at LIMIT 1`, slug).Scan(&b.ID, &b.Slug, &b.Name, &b.Timezone)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}

@@ -81,7 +81,7 @@ func (s *Service) CorrectBooking(ctx context.Context, bookingID string, c domain
 }
 
 func correctionNotice(c domain.Correction, session *SessionRow, out CorrectionResult) Notification {
-	when := domain.FormatWib(session.StartsAt)
+	when := session.when()
 	n := Notification{Type: "gym_booking_corrected", Title: "Koreksi booking: " + session.ClassTypeName}
 	if c == domain.UndoCheckIn {
 		n.Body = "Check-in kelas " + when + " dibatalkan oleh staf. Booking Anda kembali terdaftar."

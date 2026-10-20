@@ -75,6 +75,17 @@ func BranchZone(ctx context.Context, q database.Querier, branchID *string) (*tim
 	return Zone(name), nil
 }
 
+// Name is the IANA name of loc, the value APIs return as "timezone".
+func Name(loc *time.Location) string {
+	loc = or(loc)
+	for name, l := range fixed {
+		if l == loc {
+			return name
+		}
+	}
+	return loc.String()
+}
+
 func or(loc *time.Location) *time.Location {
 	if loc == nil {
 		return Jakarta

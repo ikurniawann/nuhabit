@@ -2,10 +2,10 @@ package gymscheduling
 
 import (
 	"net/http"
-	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -17,7 +17,7 @@ var (
 		return "invalid_format", "Jam harus HH:MM", ok && len(s) == 5
 	}}
 	dateOpts = validate.StrOpts{Check: func(s string) (string, string, bool) {
-		_, ok := wibMidnight(s)
+		_, ok := localMidnight(s, localtime.Jakarta)
 		return "invalid_format", "Tanggal harus YYYY-MM-DD", ok
 	}}
 )
@@ -59,7 +59,6 @@ func (h *handler) createTemplate(w http.ResponseWriter, r *http.Request, user *a
 		ClassTypeID: *p.ClassTypeID, CoachID: p.CoachID.Value, BranchID: p.BranchID.Value, Area: p.Area.Value,
 		Weekday: *p.Weekday, StartTime: *p.StartTime, DurationMin: p.DurationMin, Capacity: p.Capacity,
 		CreditCost: p.CreditCost, ValidUntil: p.ValidUntil.Value, Active: p.Active == nil || *p.Active,
-		ValidFrom: h.svc.now().In(domain.WIB).Format(time.DateOnly),
 	}
 	if p.ValidFrom != nil {
 		in.ValidFrom = *p.ValidFrom

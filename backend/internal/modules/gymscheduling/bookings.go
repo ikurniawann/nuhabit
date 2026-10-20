@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Booking writes: take a seat or a waitlist place, cancel (with the late
@@ -73,9 +74,10 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 		MaxConcurrent:  rules.MaxConcurrentBookings,
 		MaxPerDay:      rules.MaxBookingsPerDay,
 		SuspendedUntil: domain.EvaluatePassStrikes(strikes, rules, now).SuspendedUntil,
+		Zone:           session.Zone,
 		Now:            now,
 	}
-	dayStart, dayEnd := domain.WibDayBounds(session.StartsAt)
+	dayStart, dayEnd := localtime.DayBounds(session.StartsAt, session.Zone)
 	commitments, err := s.repo.MemberCommitments(ctx, q, customerID, session.ID, dayStart, dayEnd, now)
 	if err != nil {
 		return in, true, err
@@ -180,7 +182,7 @@ func (s *Service) bookSession(ctx context.Context, customerID, sessionID, source
 		n := Notification{
 			Type:  "gym_booking_confirmed",
 			Title: "Terdaftar: " + session.ClassTypeName,
-			Body:  "Sampai jumpa " + domain.FormatWib(session.StartsAt) + ". " + charge,
+			Body:  "Sampai jumpa " + session.when() + ". " + charge,
 		}
 		if status == domain.BookingWaitlist {
 			n = Notification{
@@ -281,13 +283,13 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 
 		// A member cancelling their own booking already sees the result on screen.
 		if customerID == "" {
-			body := "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan."
+			body := "Booking " + session.when() + " dibatalkan."
 			switch {
 			case penalty > 0:
-				body = "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan setelah batas gratis; " +
+				body = "Booking " + session.when() + " dibatalkan setelah batas gratis; " +
 					strconv.Itoa(penalty) + " kredit hangus."
 			case outcome.PassStrike:
-				body = "Booking " + domain.FormatWib(session.StartsAt) + " dibatalkan setelah batas gratis; tercatat satu strike pada pass Anda."
+				body = "Booking " + session.when() + " dibatalkan setelah batas gratis; tercatat satu strike pada pass Anda."
 			}
 			s.notify(ctx, q, booking.CustomerID, Notification{
 				Type: "gym_booking_cancelled", Title: "Booking dibatalkan: " + session.ClassTypeName, Body: body,
@@ -343,7 +345,7 @@ func (s *Service) promoteWaitlist(ctx context.Context, q Q, session *SessionRow,
 			s.notify(ctx, q, e.CustomerID, Notification{
 				Type:  "gym_waitlist_skipped",
 				Title: "Kursi tersedia: " + session.ClassTypeName,
-				Body: "Ada kursi kosong untuk " + domain.FormatWib(session.StartsAt) + ", tetapi Anda belum bisa naik dari waitlist: " +
+				Body: "Ada kursi kosong untuk " + session.when() + ", tetapi Anda belum bisa naik dari waitlist: " +
 					in.DenialMessage(reason) + ". Anda tetap di waitlist.",
 			})
 			continue
@@ -351,7 +353,7 @@ func (s *Service) promoteWaitlist(ctx context.Context, q Q, session *SessionRow,
 		n := Notification{
 			Type:  "gym_waitlist_promoted",
 			Title: "Kursi tersedia: " + session.ClassTypeName,
-			Body:  "Anda naik dari waitlist dan sudah terdaftar untuk " + domain.FormatWib(session.StartsAt) + ".",
+			Body:  "Anda naik dari waitlist dan sudah terdaftar untuk " + session.when() + ".",
 		}
 		if mode == domain.PromoteAuto {
 			err = s.repo.AutoPromote(ctx, q, e.ID)
@@ -361,8 +363,8 @@ func (s *Service) promoteWaitlist(ctx context.Context, q Q, session *SessionRow,
 			n = Notification{
 				Type:  "gym_waitlist_offer",
 				Title: "Kursi ditawarkan: " + session.ClassTypeName,
-				Body: "Ada kursi kosong untuk " + domain.FormatWib(session.StartsAt) +
-					". Konfirmasi di portal sebelum " + domain.FormatWib(expires) + " atau kursi ditawarkan ke member berikutnya.",
+				Body: "Ada kursi kosong untuk " + session.when() +
+					". Konfirmasi di portal sebelum " + session.at(expires) + " atau kursi ditawarkan ke member berikutnya.",
 			}
 		}
 		if err != nil {

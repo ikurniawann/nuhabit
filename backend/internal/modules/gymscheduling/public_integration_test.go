@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -18,7 +19,7 @@ func TestPublicTimetable(t *testing.T) {
 	slug := "go-" + testutil.RandomHex(3)
 	f.exec(`UPDATE configuration.branches SET slug = $2 WHERE id = $1`, org.BranchID, slug)
 	classID, className := f.classType(1)
-	nextMonday := domain.ShiftDays(mondayOf(time.Now()), 7)
+	nextMonday := domain.ShiftDays(localtime.WeekStart(time.Now(), localtime.Jakarta), 7)
 	at := func(day int, hour int) time.Time {
 		return domain.ShiftDays(nextMonday, day).Add(time.Duration(hour) * time.Hour)
 	}
@@ -75,9 +76,9 @@ func TestPublicTimetable(t *testing.T) {
 	past := f.do("GET", "/api/public/site/sessions?branch="+slug+"&week="+domain.ShiftDays(nextMonday, -28).Format("2006-01-02"), "", "", nil)
 	far := f.do("GET", "/api/public/site/sessions?branch="+slug+"&week="+domain.ShiftDays(nextMonday, 7*20).Format("2006-01-02"), "", "", nil)
 	current := f.do("GET", "/api/public/site/sessions?branch="+slug, "", "", nil)
-	thisMonday := mondayOf(time.Now()).Format("2006-01-02")
+	thisMonday := localtime.WeekStart(time.Now(), localtime.Jakarta).Format("2006-01-02")
 	if past.data()["week_start"] != thisMonday || current.data()["week_start"] != thisMonday ||
-		far.data()["week_start"] != domain.ShiftDays(mondayOf(time.Now()), 56).Format("2006-01-02") {
+		far.data()["week_start"] != domain.ShiftDays(localtime.WeekStart(time.Now(), localtime.Jakarta), 56).Format("2006-01-02") {
 		t.Errorf("clamp: %v %v %v", past.data()["week_start"], current.data()["week_start"], far.data()["week_start"])
 	}
 

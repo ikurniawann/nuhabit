@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 func TestWaiverMissing(t *testing.T) {
@@ -70,12 +72,23 @@ func TestIsOpenGymTime(t *testing.T) {
 		"2026-10-05T15:00:00Z": false, // Monday 22.00 WIB
 		"2026-10-06T03:00:00Z": false, // Tuesday 10.00 WIB
 	} {
-		if got := IsOpenGymTime(hours, at(s)); got != want {
+		if got := IsOpenGymTime(hours, at(s), localtime.Jakarta); got != want {
 			t.Errorf("%s: got %v", s, got)
 		}
 	}
-	if !IsOpenGymTime(nil, now) {
+	if !IsOpenGymTime(nil, now, localtime.Jakarta) {
 		t.Error("no hours set means open all day")
+	}
+	// The same hours in a WITA branch: 06.00 WITA is 05.00 WIB.
+	wita := localtime.Zone("Asia/Makassar")
+	for s, want := range map[string]bool{
+		"2026-10-04T22:00:00Z": true,  // Monday 06.00 WITA
+		"2026-10-04T21:59:00Z": false, // Monday 05.59 WITA
+		"2026-10-05T14:00:00Z": false, // Monday 22.00 WITA, 21.00 WIB
+	} {
+		if got := IsOpenGymTime(hours, at(s), wita); got != want {
+			t.Errorf("WITA %s: got %v", s, got)
+		}
 	}
 }
 
