@@ -33,6 +33,8 @@ type Rules struct {
 	WaitlistAutoPromote       bool
 	BookingOpensDaysBefore    int
 	BookingClosesMinBefore    int
+	// ClassReminderMinutes: remind booked members this long before class; 0 = never.
+	ClassReminderMinutes int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────

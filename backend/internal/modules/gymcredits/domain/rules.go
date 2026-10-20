@@ -24,6 +24,9 @@ type Rules struct {
 	ExpiryReminderDays     int `json:"expiryReminderDays"`
 	BookingOpensDaysBefore int `json:"bookingOpensDaysBefore"`
 	BookingClosesMinBefore int `json:"bookingClosesMinBefore"`
+	// ClassReminderMinutes: booked members are reminded this many minutes
+	// before class; 0 sends no reminder.
+	ClassReminderMinutes int `json:"classReminderMinutes"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -40,6 +43,7 @@ type RulesPatch struct {
 	ExpiryReminderDays        *int    `json:"expiryReminderDays,omitempty"`
 	BookingOpensDaysBefore    *int    `json:"bookingOpensDaysBefore,omitempty"`
 	BookingClosesMinBefore    *int    `json:"bookingClosesMinBefore,omitempty"`
+	ClassReminderMinutes      *int    `json:"classReminderMinutes,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -59,6 +63,7 @@ var RuleDefaults = Rules{
 	ExpiryReminderDays:        7,
 	BookingOpensDaysBefore:    7,
 	BookingClosesMinBefore:    0,
+	ClassReminderMinutes:      120,
 }
 
 type ruleKind int
@@ -103,6 +108,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
 	intRule("bookingClosesMinBefore", 0, 10080, "Booking ditutup", func(p *RulesPatch) **int { return &p.BookingClosesMinBefore }),
+	intRule("classReminderMinutes", 0, 10080, "Pengingat kelas", func(p *RulesPatch) **int { return &p.ClassReminderMinutes }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -262,6 +268,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.ExpiryReminderDays, p.ExpiryReminderDays)
 	setInt(&base.BookingOpensDaysBefore, p.BookingOpensDaysBefore)
 	setInt(&base.BookingClosesMinBefore, p.BookingClosesMinBefore)
+	setInt(&base.ClassReminderMinutes, p.ClassReminderMinutes)
 	return base
 }
 

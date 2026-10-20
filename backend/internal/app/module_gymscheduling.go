@@ -23,17 +23,27 @@ import (
 // POS/CRM modules expose those operations.
 func init() {
 	Register(gymscheduling.Name, func(d module.Deps) module.Module {
-		credits := schedulingCredits{svc: gymcredits.NewDefaultService(d, d.DB)}
-		return gymscheduling.New(d, gymscheduling.Ports{
-			Credits:  credits,
-			Packages: credits,
-			Passes:   credits,
-			Rules:    credits,
-			Members:  gymscheduling.MembersSQL{},
-			Qr:       gymscheduling.QrTokensSQL{},
-			Notifier: gymscheduling.NotificationsSQL{},
-		})
+		return gymscheduling.New(d, schedulingPorts(d))
 	})
+	RegisterJob(gymscheduling.Name, "gym-scheduling.class-reminders", 5*time.Minute, schedulingService, (*gymscheduling.Service).SendClassReminders)
+}
+
+func schedulingPorts(d module.Deps) gymscheduling.Ports {
+	credits := schedulingCredits{svc: gymcredits.NewDefaultService(d, d.DB)}
+	return gymscheduling.Ports{
+		Credits:  credits,
+		Packages: credits,
+		Passes:   credits,
+		Rules:    credits,
+		Members:  gymscheduling.MembersSQL{},
+		Qr:       gymscheduling.QrTokensSQL{},
+		Notifier: gymscheduling.NotificationsSQL{},
+	}
+}
+
+// schedulingService is the scheduling service for background jobs.
+func schedulingService(d module.Deps) *gymscheduling.Service {
+	return gymscheduling.NewService(d.DB, gymscheduling.Postgres{}, schedulingPorts(d), d.Now)
 }
 
 // schedulingCredits adapts gymcredits.Service to the scheduling ports.
@@ -122,5 +132,6 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		WaitlistAutoPromote:       r.WaitlistAutoPromote,
 		BookingOpensDaysBefore:    r.BookingOpensDaysBefore,
 		BookingClosesMinBefore:    r.BookingClosesMinBefore,
+		ClassReminderMinutes:      r.ClassReminderMinutes,
 	}
 }

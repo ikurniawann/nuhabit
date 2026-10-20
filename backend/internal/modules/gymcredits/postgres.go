@@ -311,6 +311,17 @@ func (Postgres) PurchasesOf(ctx context.Context, q database.Querier, customerID 
 	return pgx.CollectRows(rows, scanPurchase)
 }
 
+func (Postgres) PendingGatewayPurchases(ctx context.Context, q database.Querier, createdBefore time.Time, limit int) ([]Purchase, error) {
+	rows, err := q.Query(ctx, purchaseSelect+`
+		 WHERE p.status = 'pending' AND p.created_at <= $1
+		   AND p.payment_meta ?| array['qr_id', 'invoice_id', 'expires_at']
+		 ORDER BY p.created_at LIMIT $2`, createdBefore, limit)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, scanPurchase)
+}
+
 func (Postgres) PurchaseIDByReference(ctx context.Context, q database.Querier, referenceID string) (string, error) {
 	var id string
 	err := q.QueryRow(ctx, `SELECT id FROM gym.credit_purchases WHERE external_id = $1`, referenceID).Scan(&id)

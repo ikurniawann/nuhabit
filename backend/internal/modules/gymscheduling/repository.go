@@ -70,6 +70,11 @@ type Repository interface {
 	LockCheckInCandidate(ctx context.Context, q Q, customerID string, branchID *string, now time.Time) (*Candidate, error)
 	LogAccess(ctx context.Context, q Q, e AccessEntry) error
 	AccessLog(ctx context.Context, q Q) (log []*Row, today *Row, err error)
+
+	// ReminderSessions lists open sessions starting in (from, to] that have a confirmed booking.
+	ReminderSessions(ctx context.Context, q Q, from, to time.Time) ([]ReminderSession, error)
+	// ReminderBookings lists a session's confirmed bookings still owed the reminder for period.
+	ReminderBookings(ctx context.Context, q Q, sessionID, period string) ([]ReminderBooking, error)
 }
 
 // ClassTypeInput is classTypeSchema after defaults.

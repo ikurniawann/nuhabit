@@ -10,7 +10,7 @@ func defaultsKV() []KV {
 		{"creditExpiryDays", 60.0}, {"cancellationDeadlineHours", 4.0}, {"lateCancelPolicy", "forfeit"},
 		{"noShowPolicy", "forfeit"}, {"reEntryGraceMin", 15.0}, {"antiPassbackMin", 60.0}, {"qrTtlSec", 45.0},
 		{"waitlistAutoPromote", true}, {"lowBalanceThreshold", 3.0}, {"expiryReminderDays", 7.0},
-		{"bookingOpensDaysBefore", 7.0}, {"bookingClosesMinBefore", 0.0},
+		{"bookingOpensDaysBefore", 7.0}, {"bookingClosesMinBefore", 0.0}, {"classReminderMinutes", 120.0},
 	}
 }
 
@@ -36,9 +36,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"classReminderMinutes":120}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 12)
+	eq(t, len(RuleKeys()), 13)
 }
 
 func TestResolveRules(t *testing.T) {
