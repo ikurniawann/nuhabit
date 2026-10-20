@@ -35,9 +35,6 @@ var Jakarta = fixed[Default]
 
 var loaded sync.Map // name -> *time.Location
 
-// Valid reports whether name is a zone a branch may use.
-func Valid(name string) bool { return fixed[name] != nil }
-
 // Zone is the location for an IANA name. The supported zones are fixed
 // offsets; another name is loaded from tzdata once and cached. An empty or
 // unknown name is Jakarta.

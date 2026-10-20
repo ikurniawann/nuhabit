@@ -15,15 +15,15 @@ func at(s string) time.Time {
 
 func TestZone(t *testing.T) {
 	for name, abbrev := range map[string]string{"Asia/Jakarta": "WIB", "Asia/Makassar": "WITA", "Asia/Jayapura": "WIT"} {
-		if !Valid(name) || Abbrev(Zone(name)) != abbrev || Name(Zone(name)) != name {
-			t.Fatalf("%s: valid %v, abbrev %q", name, Valid(name), Abbrev(Zone(name)))
+		if Abbrev(Zone(name)) != abbrev || Name(Zone(name)) != name {
+			t.Fatalf("%s: abbrev %q, name %q", name, Abbrev(Zone(name)), Name(Zone(name)))
 		}
 	}
 	if Zone("") != Jakarta || Zone("Mars/Olympus") != Jakarta || Zone("Mars/Olympus") != Jakarta {
 		t.Fatal("empty or unknown name must fall back to Jakarta")
 	}
-	if Valid("Asia/Pontianak") || Valid("") {
-		t.Fatal("only the branch zones are valid")
+	if len(Names) != 3 || Names[0] != Default {
+		t.Fatalf("branch zones %v", Names)
 	}
 	if Zone("UTC") != Zone("UTC") {
 		t.Fatal("loaded zones are cached")
