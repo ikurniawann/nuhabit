@@ -58,18 +58,17 @@ type SessionTemplate struct {
 	ClassTypeID   string
 	ClassTypeName string // read only
 	CoachID       *string
-
-	BranchID    *string
-	Area        *string
-	Weekday     int
-	StartTime   string // HH:MM, WIB
-	DurationMin int
-	Capacity    int
-	CreditCost  int
-	ValidFrom   string // YYYY-MM-DD
-	ValidUntil  *string
-	Active      bool
-	CreatedBy   *string
+	BranchID      *string
+	Area          *string
+	Weekday       int
+	StartTime     string // HH:MM, WIB
+	DurationMin   int
+	Capacity      int
+	CreditCost    int
+	ValidFrom     string // YYYY-MM-DD
+	ValidUntil    *string
+	Active        bool
+	CreatedBy     *string
 }
 
 func (t SessionTemplate) weeklySlot() domain.WeeklySlot {

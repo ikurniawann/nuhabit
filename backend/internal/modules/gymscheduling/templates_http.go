@@ -106,7 +106,7 @@ func (h *handler) generateTemplates(w http.ResponseWriter, r *http.Request, _ *a
 	if err := invalid(f); err != nil {
 		return err
 	}
-	out, err := h.svc.GenerateNow(r.Context(), deref(horizon))
+	out, err := h.svc.generateFromTemplates(r.Context(), h.svc.now(), deref(horizon))
 	if err != nil {
 		return err
 	}

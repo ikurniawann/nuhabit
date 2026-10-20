@@ -199,10 +199,7 @@ func (s *Service) generateFromTemplates(ctx context.Context, now time.Time, hori
 		}
 		return nil
 	})
-	if err != nil {
-		return GenerateResult{Conflicts: []string{}}, err
-	}
-	return out, nil
+	return out, err
 }
 
 // generateOccurrence creates one dated session and records the date as
@@ -234,9 +231,4 @@ func (s *Service) generateOccurrence(ctx context.Context, q Q, t SessionTemplate
 		return false, nil
 	}
 	return true, s.repo.RecordOccurrence(ctx, q, t.ID, occ.Date, id)
-}
-
-// GenerateNow backs the "Generate sekarang" button.
-func (s *Service) GenerateNow(ctx context.Context, horizonDays int) (GenerateResult, error) {
-	return s.generateFromTemplates(ctx, s.now(), horizonDays)
 }

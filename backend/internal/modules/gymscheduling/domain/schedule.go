@@ -118,8 +118,8 @@ func ParseClock(s string) (int, bool) {
 	return h*60 + m, true
 }
 
-// IsoWeekday is 1 for Monday … 7 for Sunday.
-func IsoWeekday(t time.Time) int {
+// isoWeekday is 1 for Monday … 7 for Sunday.
+func isoWeekday(t time.Time) int {
 	if d := int(t.Weekday()); d != 0 {
 		return d
 	}
@@ -139,7 +139,7 @@ func TemplateOccurrences(t WeeklySlot, now time.Time, horizonDays int) []Occurre
 	for i := 0; i <= horizonDays; i++ {
 		day := time.Date(local.Year(), local.Month(), local.Day()+i, 0, 0, 0, 0, WIB)
 		date := day.Format(time.DateOnly)
-		if IsoWeekday(day) != t.Weekday || date < t.ValidFrom || (t.ValidUntil != "" && date > t.ValidUntil) {
+		if isoWeekday(day) != t.Weekday || date < t.ValidFrom || (t.ValidUntil != "" && date > t.ValidUntil) {
 			continue
 		}
 		startsAt := day.Add(time.Duration(minute) * time.Minute)
