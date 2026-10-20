@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ShiftModal } from "@/components/pos/ShiftModal";
 import type { PosShift } from "@/lib/pos-api";
 import { formatRupiah, formatTime } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { gymCreditsApi, type DeskShift } from "../api";
 
 export const deskShiftKey = (branchId: string | null) => ["gym-credits", "shift", branchId ?? "any"];
@@ -83,6 +84,39 @@ export function DeskShiftDialog({
         }
       }}
     />
+  );
+}
+
+/** Uang tunai butuh shift terbuka: pesan dan tombol buka shift di dalam dialog jual/refund. */
+export function ShiftRequired({
+  branchId,
+  message,
+  className,
+  onOpened,
+}: {
+  branchId: string | null;
+  message: string;
+  className?: string;
+  onOpened?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={cn("flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-sm", className)}>
+      <p className="min-w-0">{message}</p>
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>
+        Buka shift
+      </Button>
+      {open && (
+        <DeskShiftDialog
+          branchId={branchId}
+          shift={null}
+          onClose={() => {
+            setOpen(false);
+            onOpened?.();
+          }}
+        />
+      )}
+    </div>
   );
 }
 

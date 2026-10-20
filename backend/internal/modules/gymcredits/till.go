@@ -26,18 +26,12 @@ var tillMethods = map[string]bool{"cash": true, "card": true, "transfer": true, 
 
 // Till reads POS cashier shifts and receipt settings (pos-ops).
 type Till interface {
-	// ActiveShift is the open shift userID runs that serves branchID: one
-	// opened for that branch or for no branch. nil when none.
-	ActiveShift(ctx context.Context, q database.Querier, userID string, branchID *string) (*ShiftRef, error)
+	// ActiveShift is the id of the open shift userID runs that serves
+	// branchID: one opened for that branch or for no branch. nil when none.
+	ActiveShift(ctx context.Context, q database.Querier, userID string, branchID *string) (*string, error)
 	// ReceiptLines are the receipt header and footer of the branch (the
 	// global setting when the branch has none).
 	ReceiptLines(ctx context.Context, q database.Querier, branchID *string) (header, footer []string, err error)
-}
-
-// ShiftRef is an open POS shift.
-type ShiftRef struct {
-	ID     string
-	Number string
 }
 
 // tillShift is the shift a payment of method joins: nil for methods outside
@@ -46,17 +40,11 @@ func (s *Service) tillShift(ctx context.Context, q database.Querier, method, use
 	if !tillMethods[method] {
 		return nil, nil
 	}
-	shift, err := s.ports.Till.ActiveShift(ctx, q, userID, branchID)
-	if err != nil {
-		return nil, err
+	shiftID, err := s.ports.Till.ActiveShift(ctx, q, userID, branchID)
+	if err == nil && shiftID == nil && method == "cash" {
+		err = &Error{Status: http.StatusConflict, Message: msgShiftRequired, Code: CodeShiftRequired}
 	}
-	if shift == nil {
-		if method == "cash" {
-			return nil, &Error{Status: http.StatusConflict, Message: msgShiftRequired, Code: CodeShiftRequired}
-		}
-		return nil, nil
-	}
-	return &shift.ID, nil
+	return shiftID, err
 }
 
 // SQLTill reads pos.pos_shifts and pos.pos_receipt_settings.
@@ -66,16 +54,16 @@ var _ Till = SQLTill{}
 
 // ActiveShift matches cashier_id (shifts opened from the gym desk) or
 // opened_by (the POS cashier opens under a placeholder cashier).
-func (SQLTill) ActiveShift(ctx context.Context, q database.Querier, userID string, branchID *string) (*ShiftRef, error) {
-	var s ShiftRef
-	err := q.QueryRow(ctx, `SELECT id::text, shift_number FROM pos.pos_shifts
+func (SQLTill) ActiveShift(ctx context.Context, q database.Querier, userID string, branchID *string) (*string, error) {
+	var id string
+	err := q.QueryRow(ctx, `SELECT id::text FROM pos.pos_shifts
 		WHERE status = 'active' AND (cashier_id::text = $1 OR opened_by = $1)
 		  AND (branch_id IS NULL OR $2::uuid IS NULL OR branch_id = $2::uuid)
-		ORDER BY opened_at DESC LIMIT 1`, userID, branchID).Scan(&s.ID, &s.Number)
+		ORDER BY opened_at DESC LIMIT 1`, userID, branchID).Scan(&id)
 	if database.IsNoRows(err) {
 		return nil, nil
 	}
-	return &s, err
+	return &id, err
 }
 
 // ReceiptLines takes the branch row, else the global one (no branch, no

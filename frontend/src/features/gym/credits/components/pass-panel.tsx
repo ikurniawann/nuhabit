@@ -25,7 +25,7 @@ import { useCan } from "@/components/iam/iam-access-provider";
 import { GymApiError } from "@/features/gym/shared";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { gymCreditsApi, TILL_METHODS, type CreditPurchase, type MemberCredits, type MemberPass, type RefundMode, type RenewWith } from "../api";
-import { DeskShiftDialog } from "./desk-shift";
+import { ShiftRequired } from "./desk-shift";
 
 const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Invoice online" };
 
@@ -271,7 +271,6 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
   const [mode, setMode] = useState<RefundMode>("prorated");
   const [reason, setReason] = useState("");
   const [needsShift, setNeedsShift] = useState(false);
-  const [openingShift, setOpeningShift] = useState(false);
   const queryClient = useQueryClient();
   const isPass = purchase.kind === "pass";
   const q = quote.data;
@@ -355,12 +354,11 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
               <Input value={reason} onChange={(e) => setReason(e.target.value)} required />
             </Field>
             {needsShift && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-sm">
-                <p className="min-w-0">Refund tunai dibayar dari laci: buka shift kasir dulu, lalu ulangi refund.</p>
-                <Button type="button" size="sm" onClick={() => setOpeningShift(true)}>
-                  Buka shift
-                </Button>
-              </div>
+              <ShiftRequired
+                branchId={purchase.branch_id}
+                message="Refund tunai dibayar dari laci: buka shift kasir dulu, lalu ulangi refund."
+                onOpened={() => setNeedsShift(false)}
+              />
             )}
           </DialogPanelBody>
           <DialogFooter>
@@ -373,16 +371,6 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
           </DialogFooter>
         </DialogPanelForm>
       </DialogPanel>
-      {openingShift && (
-        <DeskShiftDialog
-          branchId={purchase.branch_id}
-          shift={null}
-          onClose={() => {
-            setOpeningShift(false);
-            setNeedsShift(false);
-          }}
-        />
-      )}
     </Dialog>
   );
 }

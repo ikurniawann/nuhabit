@@ -24,7 +24,7 @@ import { GymApiError } from "@/features/gym/shared";
 import { gymCreditsApi, METHOD_LABELS, TILL_METHODS, type CreditPurchase, type MemberCredits, type PaymentMethod } from "../api";
 import { printPurchaseReceipt } from "../print-receipt";
 import { priceAt, sellablePackages } from "../pricing";
-import { DeskShiftDialog, useDeskShift } from "./desk-shift";
+import { ShiftRequired, useDeskShift } from "./desk-shift";
 
 /**
  * Jual paket di front desk. Cabang awal = cabang staf (atau cabang sesi pada
@@ -61,7 +61,6 @@ export function SellDialog({
   const queryClient = useQueryClient();
   const shift = useDeskShift(branchId || null, TILL_METHODS.includes(method));
   const needsShift = method === "cash" && shift.isSuccess && !shift.data;
-  const [openingShift, setOpeningShift] = useState(false);
 
   const sell = useMutation({
     mutationFn: () =>
@@ -175,12 +174,11 @@ export function SellDialog({
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="No. struk EDC, nama kasir, dll." />
             </Field>
             {needsShift ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-sm sm:col-span-2">
-                <p className="min-w-0">Belum ada shift kasir di cabang ini. Buka shift dulu untuk menerima tunai.</p>
-                <Button type="button" size="sm" onClick={() => setOpeningShift(true)}>
-                  Buka shift
-                </Button>
-              </div>
+              <ShiftRequired
+                branchId={branchId || null}
+                className="sm:col-span-2"
+                message="Belum ada shift kasir di cabang ini. Buka shift dulu untuk menerima tunai."
+              />
             ) : (
               TILL_METHODS.includes(method) &&
               shift.isSuccess && (
@@ -219,7 +217,6 @@ export function SellDialog({
           </DialogFooter>
         </DialogPanelForm>
       </DialogPanel>
-      {openingShift && <DeskShiftDialog branchId={branchId || null} shift={null} onClose={() => setOpeningShift(false)} />}
     </Dialog>
   );
 }
