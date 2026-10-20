@@ -33,6 +33,8 @@ type Rules struct {
 	WaitlistAutoPromote       bool
 	BookingOpensDaysBefore    int
 	BookingClosesMinBefore    int
+	// ScheduleHorizonDays is how far ahead templates generate sessions.
+	ScheduleHorizonDays int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────

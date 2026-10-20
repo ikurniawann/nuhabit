@@ -122,5 +122,6 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		WaitlistAutoPromote:       r.WaitlistAutoPromote,
 		BookingOpensDaysBefore:    r.BookingOpensDaysBefore,
 		BookingClosesMinBefore:    r.BookingClosesMinBefore,
+		ScheduleHorizonDays:       r.ScheduleHorizonDays,
 	}
 }
