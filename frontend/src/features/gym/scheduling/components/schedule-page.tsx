@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, Copy, Hourglass, Plus, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Copy, Hourglass, Plus, Repeat, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Field } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Dialog,
@@ -66,6 +66,9 @@ export function SchedulePage() {
         description="Jadwal mingguan kelas HYROX. Member booking dari portal; kredit dipotong saat check-in."
         actions={
           <>
+            <Link href="/dashboard/gym/schedule-templates" className={buttonVariants({ variant: "ghost" })}>
+              <Repeat /> Template jadwal
+            </Link>
             <Button variant="outline" onClick={() => setCopying(true)} disabled={rows.length === 0}>
               <Copy /> Salin minggu
             </Button>

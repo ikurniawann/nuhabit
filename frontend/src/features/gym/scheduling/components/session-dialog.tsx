@@ -22,6 +22,7 @@ import { SELECT } from "@/features/gym/shared";
 /**
  * Buat sesi baru (date = hari awal, "YYYY-MM-DD") atau ubah sesi yang ada.
  * Kosongkan kapasitas/kredit/durasi untuk memakai default jenis kelas.
+ * Jenis kelas dan biaya kredit hanya bisa diubah selama belum ada booking.
  */
 export function SessionDialog({
   session,
@@ -37,6 +38,7 @@ export function SessionDialog({
   const classTypes = useQuery({ queryKey: GYM_KEYS.classTypes, queryFn: schedulingApi.classTypes });
   const coaches = useQuery({ queryKey: GYM_KEYS.coaches, queryFn: schedulingApi.coaches });
   const editing = Boolean(session);
+  const hasBookings = Boolean(session && (session.confirmed_count > 0 || session.waitlist_count > 0));
   const [form, setForm] = useState(() => ({
     class_type_id: session?.class_type_id ?? "",
     coach_id: session?.coach_id ?? "",
@@ -62,6 +64,7 @@ export function SessionDialog({
     mutationFn: (publish: boolean) =>
       session
         ? schedulingApi.updateSession(session.id, {
+            ...(hasBookings ? {} : { class_type_id: form.class_type_id, credit_cost: num(form.credit_cost) ?? undefined }),
             coach_id: form.coach_id || null,
             area: form.area.trim() || null,
             starts_at: startsAt,
@@ -103,21 +106,25 @@ export function SessionDialog({
             <DialogPanelTitle>{session ? `Ubah ${session.class_type_name}` : "Sesi kelas baru"}</DialogPanelTitle>
             <DialogPanelDescription>
               {editing
-                ? "Memindah jam mengabari member yang sudah booking. Kapasitas tidak bisa di bawah jumlah terdaftar."
+                ? "Memindah jam atau mengganti coach mengabari member yang sudah booking. Kapasitas tidak bisa di bawah jumlah terdaftar."
                 : "Kosongkan kapasitas, kredit, dan durasi untuk memakai default jenis kelas. Jendela booking mengikuti aturan gym."}
             </DialogPanelDescription>
           </DialogPanelHeader>
           <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Jenis kelas" className="sm:col-span-2">
+            <Field
+              label="Jenis kelas"
+              className="sm:col-span-2"
+              hint={hasBookings ? "Sudah ada booking, jenis kelas dan biaya kredit terkunci." : undefined}
+            >
               <select
                 className={SELECT}
                 value={form.class_type_id}
                 onChange={set("class_type_id")}
-                disabled={editing}
+                disabled={hasBookings}
                 required
               >
                 <option value="">Pilih jenis kelas</option>
-                {(editing ? classTypes.data ?? [] : activeTypes).map((t) => (
+                {(classTypes.data ?? []).filter((t) => t.status === "active" || t.id === session?.class_type_id).map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name} · {t.default_duration_min} mnt · {t.default_credit_cost} kredit
                   </option>
@@ -163,7 +170,7 @@ export function SessionDialog({
                 placeholder={chosenType ? String(chosenType.default_capacity) : "default"}
               />
             </Field>
-            {!editing && (
+            {!hasBookings && (
               <Field label="Biaya kredit" hint="Dipotong saat check-in, bukan saat booking.">
                 <Input
                   type="number"
