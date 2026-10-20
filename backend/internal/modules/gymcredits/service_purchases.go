@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	contracts "nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
 )
@@ -155,8 +156,10 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	if err != nil {
 		return false, nil, err
 	}
-	p, err = s.repo.Purchase(ctx, tx, purchaseID, false)
-	return false, p, err
+	if p, err = s.repo.Purchase(ctx, tx, purchaseID, false); err != nil {
+		return false, nil, err
+	}
+	return false, p, s.publishPurchaseJournal(ctx, tx, p, false, p.TotalIdr, deref(p.CreatedBy))
 }
 
 // issuePass inserts the pass a paid purchase bought. It starts at payment,
@@ -227,8 +230,8 @@ func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purcha
 }
 
 // RefundQuoteView is what a refund pays back, shown before confirming. A
-// pass offers the prorated amount and the full price; a credit pack is
-// always refunded in full (its credits are reversed).
+// pass offers the prorated amount and the full price; a credit pack pays
+// for its unused credits only.
 type RefundQuoteView struct {
 	PurchaseID    string  `json:"purchase_id"`
 	Kind          string  `json:"kind"`
@@ -251,7 +254,13 @@ func (s *Service) RefundQuote(ctx context.Context, purchaseID string) (*RefundQu
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
 	quote := domain.RefundQuote{ProratedIdr: purchase.TotalIdr}
-	if purchase.Kind == KindPass {
+	if purchase.Kind != KindPass {
+		unused, err := s.unusedCredits(ctx, purchase)
+		if err != nil {
+			return nil, err
+		}
+		quote = domain.RefundQuote{UnusedCredits: unused, ProratedIdr: domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, unused)}
+	} else {
 		pass, err := s.repo.PassByPurchase(ctx, s.db, purchaseID)
 		if err != nil {
 			return nil, err
@@ -266,12 +275,11 @@ func (s *Service) RefundQuote(ctx context.Context, purchaseID string) (*RefundQu
 	}, nil
 }
 
-// RefundPurchase refunds a paid purchase: status refunded plus a reversal of
-// its top_up, or the pass it issued marked refunded. Used credits make the
-// balance short and the reversal fails. A pass pays back the prorated
-// amount unless full is set, and the passes queued behind it move up into
-// the days it leaves. ARK Coin goes back to the wallet; other methods are
-// paid back by the cashier.
+// RefundPurchase refunds a paid purchase. A credit package gives back the
+// credits still unused in its lot and pays price × unused / credits. A pass
+// is marked refunded and pays the prorated amount unless full is set; the
+// passes queued behind it move up into the days it leaves. ARK Coin goes
+// back to the wallet; other methods are paid back by the cashier.
 func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purchaseID, reason, actorID string, full bool) (*Purchase, error) {
 	purchase, err := s.repo.Purchase(ctx, tx, purchaseID, true)
 	if err != nil {
@@ -283,27 +291,29 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 	if purchase.Status != "paid" {
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
-	amount := purchase.TotalIdr
+	refund, meta := purchase.TotalIdr, map[string]any{}
 	if purchase.Kind == KindPass {
-		if amount, err = s.refundPass(ctx, tx, purchase, full); err != nil {
+		if refund, err = s.refundPass(ctx, tx, purchase, full, actorID); err != nil {
 			return nil, err
 		}
+	} else {
+		credits, err := s.takeBackUnusedCredits(ctx, tx, purchase, reason, actorID)
+		if err != nil {
+			return nil, err
+		}
+		refund = domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, credits)
+		meta["refund_credits"] = credits
 	}
-	entryID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(purchaseID))
-	if err != nil {
+	meta["refund_idr"] = refund
+	if err := s.publishPurchaseJournal(ctx, tx, purchase, true, refund, actorID); err != nil {
 		return nil, err
 	}
-	if entryID != "" {
-		if _, err := s.Reverse(ctx, tx, entryID, reason, actorID); err != nil {
+	if deref(purchase.PaymentMethod) == "ark_coin" && refund > 0 {
+		if err := s.moveArk(ctx, tx, purchase, refund, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
 			return nil, err
 		}
 	}
-	if deref(purchase.PaymentMethod) == "ark_coin" && amount > 0 {
-		if err := s.moveArk(ctx, tx, purchase, amount, "Refund paket kredit gym: "+purchase.PackageName, &actorID); err != nil {
-			return nil, err
-		}
-	}
-	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), amount); err != nil {
+	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), refund, meta); err != nil {
 		return nil, err
 	}
 	return s.repo.Purchase(ctx, tx, purchaseID, false)
@@ -311,28 +321,110 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 
 // refundPass marks the pass of a purchase refunded, moves the passes queued
 // behind it up by the days it had left, and returns the amount to pay back.
-func (s *Service) refundPass(ctx context.Context, tx database.Querier, purchase *Purchase, full bool) (float64, error) {
-	pass, err := s.repo.PassByPurchase(ctx, tx, purchase.ID)
-	if err != nil || pass == nil {
-		return purchase.TotalIdr, err
+// The revenue the daily release already recognised is trued up so the
+// deferred revenue of the pass ends at zero: a full refund reverses all of
+// it, a prorated one keeps what the used days earned.
+func (s *Service) refundPass(ctx context.Context, tx database.Querier, p *Purchase, full bool, actorID string) (float64, error) {
+	if err := s.repo.LockPassRevenue(ctx, tx); err != nil {
+		return 0, err
+	}
+	pass, err := s.repo.PassByPurchase(ctx, tx, p.ID)
+	if err != nil {
+		return 0, err
 	}
 	now := s.clock()
-	amount := purchase.TotalIdr
-	if !full {
-		amount = domain.ProratedRefund(purchase.TotalIdr, pass.state(), now).ProratedIdr
-	}
-	if pass.Status == domain.PassActive || pass.Status == domain.PassFrozen {
-		from := pass.StartsAt
-		if now.After(from) {
-			from = now
+	amount := p.TotalIdr
+	if pass != nil {
+		if !full {
+			amount = domain.ProratedRefund(p.TotalIdr, pass.state(), now).ProratedIdr
 		}
-		if left := pass.EndsAt.Sub(from); left > 0 {
-			if err := s.repo.ShiftQueuedPasses(ctx, tx, pass.CustomerID, pass.ID, pass.EndsAt, -left); err != nil {
-				return 0, err
+		if pass.Status == domain.PassActive || pass.Status == domain.PassFrozen {
+			from := pass.StartsAt
+			if now.After(from) {
+				from = now
+			}
+			if left := pass.EndsAt.Sub(from); left > 0 {
+				if err := s.repo.ShiftQueuedPasses(ctx, tx, pass.CustomerID, pass.ID, pass.EndsAt, -left); err != nil {
+					return 0, err
+				}
 			}
 		}
 	}
-	return amount, s.repo.RefundPassByPurchase(ctx, tx, purchase.ID)
+	if err := s.repo.RefundPassByPurchase(ctx, tx, p.ID); err != nil {
+		return 0, err
+	}
+	released, err := s.repo.PassRevenueReleased(ctx, tx, p.ID)
+	if err != nil {
+		return 0, err
+	}
+	company, err := s.repo.PurchaseCompany(ctx, tx, p.ID)
+	if err != nil {
+		return 0, err
+	}
+	// Kept revenue is total - amount; released beyond it is reversed, and
+	// any shortfall is recognised now.
+	journal := contracts.Journal{
+		EventCode: "GYM_PASS_REVENUE_REVERSAL", DocumentType: "gym_purchase", DocumentID: p.ID, CompanyID: company,
+		UserID: actorID, EntryDate: entryDate(now), Amount: released - (p.TotalIdr - amount),
+		Description: "Refund pass gym " + p.PackageName,
+	}
+	if journal.Amount < 0 {
+		journal.EventCode, journal.Amount = "GYM_PASS_REVENUE", -journal.Amount
+	}
+	return amount, s.publishJournal(ctx, tx, journal)
+}
+
+// unusedCredits is what is left of a credit purchase's lot now, without
+// writing the expirations a refund would.
+func (s *Service) unusedCredits(ctx context.Context, p *Purchase) (int, error) {
+	topUpID, err := s.repo.EntryIDByKey(ctx, s.db, topUpKey(p.ID))
+	if err != nil || topUpID == "" {
+		return p.Credits, err
+	}
+	topUp, err := s.repo.Entry(ctx, s.db, topUpID)
+	if err != nil {
+		return 0, err
+	}
+	state, err := s.loadState(ctx, s.db, p.CustomerID)
+	if err != nil {
+		return 0, err
+	}
+	for _, lot := range state.lots {
+		if lot.ID == topUp.LotID && !lot.ExpiresAt.After(s.clock()) {
+			return 0, nil
+		}
+	}
+	return domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), topUp.LotID), nil
+}
+
+// takeBackUnusedCredits reverses the unused part of a credit purchase's
+// top-up and returns how many credits it took back.
+func (s *Service) takeBackUnusedCredits(ctx context.Context, tx database.Querier, p *Purchase, reason, actorID string) (int, error) {
+	topUpID, err := s.repo.EntryIDByKey(ctx, tx, topUpKey(p.ID))
+	if err != nil || topUpID == "" {
+		return p.Credits, err
+	}
+	topUp, err := s.repo.Entry(ctx, tx, topUpID)
+	if err != nil {
+		return 0, err
+	}
+	if err := s.repo.LockMemberCredits(ctx, tx, p.CustomerID); err != nil {
+		return 0, err
+	}
+	state, _, err := s.expireLapsedLots(ctx, tx, p.CustomerID, s.clock())
+	if err != nil {
+		return 0, err
+	}
+	unused := domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), topUp.LotID)
+	if unused <= 0 {
+		return 0, fail(http.StatusConflict, "Semua kredit dari pembelian ini sudah terpakai atau kedaluwarsa, tidak ada yang bisa direfund")
+	}
+	_, err = s.repo.InsertEntry(ctx, tx, NewEntry{
+		CustomerID: p.CustomerID, Type: domain.Reversal, Amount: -unused, LotID: topUp.LotID,
+		SourceType: topUp.SourceType, SourceID: topUp.SourceID, ReversesEntryID: topUp.ID,
+		Note: strings.TrimSpace(reason), CreatedBy: actorID,
+	})
+	return unused, err
 }
 
 // FrontDeskSale is a package sold at the front desk.

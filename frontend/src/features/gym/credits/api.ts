@@ -81,6 +81,7 @@ export interface RefundQuote {
   prorated_idr: number;
   total_days: number;
   unused_days: number;
+  unused_credits: number;
 }
 
 export type RefundMode = "prorated" | "full";

@@ -2,6 +2,7 @@ package gymcredits
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -33,45 +34,89 @@ func (s *Service) loadState(ctx context.Context, q database.Querier, customerID 
 	return ledgerState{lots: lots, entries: entries}, nil
 }
 
-// expireLapsedLots writes expiration entries for lapsed lots, then returns
-// the current state.
-func (s *Service) expireLapsedLots(ctx context.Context, q database.Querier, customerID string, now time.Time) (ledgerState, error) {
+// expireLapsedLots writes expiration entries for lapsed lots (with their
+// breakage journals), then returns the current state and how many it wrote.
+func (s *Service) expireLapsedLots(ctx context.Context, q database.Querier, customerID string, now time.Time) (ledgerState, int, error) {
 	state, err := s.loadState(ctx, q, customerID)
 	if err != nil {
-		return state, err
+		return state, 0, err
 	}
 	drafts := domain.ExpirationEntries(state.lots, state.entries, now)
 	if len(drafts) == 0 {
-		return state, nil
+		return state, 0, nil
 	}
+	moves := make([]lotMove, 0, len(drafts))
 	for _, d := range drafts {
-		if _, err := s.repo.InsertEntry(ctx, q, NewEntry{
+		id, err := s.repo.InsertEntry(ctx, q, NewEntry{
 			CustomerID: customerID, Type: domain.Expiration, Amount: d.Amount, LotID: d.LotID,
 			SourceType: "system", Note: d.Note, IdempotencyKey: d.IdempotencyKey,
-		}); err != nil {
-			return state, err
+		})
+		if err != nil {
+			return state, 0, err
 		}
+		moves = append(moves, lotMove{EntryID: id, LotID: d.LotID, Type: domain.Expiration, Amount: d.Amount})
 	}
-	return s.loadState(ctx, q, customerID)
+	if err := s.publishLotJournals(ctx, q, moves, "", now); err != nil {
+		return state, 0, err
+	}
+	state, err = s.loadState(ctx, q, customerID)
+	return state, len(drafts), err
 }
 
 // Balance is the ledger sum after lapsed credits are expired.
 func (s *Service) Balance(ctx context.Context, q database.Querier, customerID string) (int, error) {
-	state, err := s.expireLapsedLots(ctx, q, customerID, s.clock())
+	state, _, err := s.expireLapsedLots(ctx, q, customerID, s.clock())
 	return domain.Balance(state.entries), err
 }
 
+// UsableBalance is the credits that may pay for a class of classTypeID
+// (after lapsed credits are expired): lots restricted to other class types
+// do not count. Booking checks it before reserving a seat.
+func (s *Service) UsableBalance(ctx context.Context, q database.Querier, customerID, classTypeID string) (int, error) {
+	now := s.clock()
+	state, _, err := s.expireLapsedLots(ctx, q, customerID, now)
+	if err != nil {
+		return 0, err
+	}
+	coverage, err := s.repo.PackageCoverage(ctx, q)
+	if err != nil {
+		return 0, err
+	}
+	return domain.UsableBalance(domain.LotRemainders(state.lots, state.entries), coverage, classTypeID, now), nil
+}
+
 // CreditMove is a deduction or class refund from another context (booking).
+// ClassTypeID is the class the credits pay for; when empty, a SourceID that
+// is a booking supplies it.
 type CreditMove struct {
 	CustomerID     string
 	Amount         int
+	ClassTypeID    string
 	SourceType     string
 	SourceID       string
 	IdempotencyKey string
 	Note           string
 }
 
-// Deduct takes credits for a booking. ok=false means insufficient balance.
+// classTypeOf is the class type a move pays for, "" when unknown.
+func (s *Service) classTypeOf(ctx context.Context, q database.Querier, in CreditMove) (string, error) {
+	if in.ClassTypeID != "" || in.SourceID == "" {
+		return in.ClassTypeID, nil
+	}
+	return s.ports.Directory.BookingClassType(ctx, q, in.SourceID)
+}
+
+// splitKey is the idempotency key of the i-th entry of a move split over
+// lots: the first keeps the move's key.
+func splitKey(key string, i int) string {
+	if key == "" || i == 0 {
+		return key
+	}
+	return fmt.Sprintf("%s#%d", key, i+1)
+}
+
+// Deduct takes credits for a booking from the lots that cover its class
+// type, one entry per lot. ok=false means those lots hold too few credits.
 // A repeated idempotency key returns ok with the current balance.
 func (s *Service) Deduct(ctx context.Context, q database.Querier, in CreditMove) (ok bool, balanceAfter int, err error) {
 	if in.Amount <= 0 {
@@ -80,7 +125,8 @@ func (s *Service) Deduct(ctx context.Context, q database.Querier, in CreditMove)
 	if err := s.repo.LockMemberCredits(ctx, q, in.CustomerID); err != nil {
 		return false, 0, err
 	}
-	state, err := s.expireLapsedLots(ctx, q, in.CustomerID, s.clock())
+	now := s.clock()
+	state, _, err := s.expireLapsedLots(ctx, q, in.CustomerID, now)
 	if err != nil {
 		return false, 0, err
 	}
@@ -92,17 +138,45 @@ func (s *Service) Deduct(ctx context.Context, q database.Querier, in CreditMove)
 	if existing != "" {
 		return true, balance, nil
 	}
-	if balance < in.Amount {
+	classTypeID, err := s.classTypeOf(ctx, q, in)
+	if err != nil {
+		return false, 0, err
+	}
+	coverage, err := s.repo.PackageCoverage(ctx, q)
+	if err != nil {
+		return false, 0, err
+	}
+	allocations, enough := domain.AllocateDeduction(domain.LotRemainders(state.lots, state.entries), coverage, classTypeID, in.Amount, now)
+	if !enough {
 		return false, 0, nil
 	}
-	_, err = s.repo.InsertEntry(ctx, q, NewEntry{
-		CustomerID: in.CustomerID, Type: domain.ClassDeduction, Amount: -in.Amount,
-		SourceType: in.SourceType, SourceID: in.SourceID, Note: in.Note, IdempotencyKey: in.IdempotencyKey,
-	})
-	return err == nil, balance - in.Amount, err
+	moves, err := s.writeMoves(ctx, q, in, domain.ClassDeduction, -1, allocations)
+	if err != nil {
+		return false, 0, err
+	}
+	return true, balance - in.Amount, s.publishLotJournals(ctx, q, moves, "", now)
 }
 
-// RefundClass gives credits back (cancelled booking). Idempotent by key.
+// writeMoves writes one entry of type t per allocation, sign giving the
+// direction, and returns them as lot moves.
+func (s *Service) writeMoves(ctx context.Context, q database.Querier, in CreditMove, t domain.EntryType, sign int, allocations []domain.Allocation) ([]lotMove, error) {
+	moves := make([]lotMove, 0, len(allocations))
+	for i, a := range allocations {
+		id, err := s.repo.InsertEntry(ctx, q, NewEntry{
+			CustomerID: in.CustomerID, Type: t, Amount: sign * a.Credits, LotID: a.LotID,
+			SourceType: in.SourceType, SourceID: in.SourceID, Note: in.Note, IdempotencyKey: splitKey(in.IdempotencyKey, i),
+		})
+		if err != nil {
+			return nil, err
+		}
+		moves = append(moves, lotMove{EntryID: id, LotID: a.LotID, Type: t, Amount: sign * a.Credits})
+	}
+	return moves, nil
+}
+
+// RefundClass gives credits back (cancelled booking) to the lots the
+// booking's deductions drew from. Credits returned to a lot that has lapsed
+// since expire again at once. Idempotent by key.
 func (s *Service) RefundClass(ctx context.Context, q database.Querier, in CreditMove) error {
 	if in.Amount <= 0 {
 		return fail(http.StatusBadRequest, "Refund kredit harus bilangan bulat positif")
@@ -110,10 +184,23 @@ func (s *Service) RefundClass(ctx context.Context, q database.Querier, in Credit
 	if err := s.repo.LockMemberCredits(ctx, q, in.CustomerID); err != nil {
 		return err
 	}
-	_, err := s.repo.InsertEntry(ctx, q, NewEntry{
-		CustomerID: in.CustomerID, Type: domain.Refund, Amount: in.Amount,
-		SourceType: in.SourceType, SourceID: in.SourceID, Note: in.Note, IdempotencyKey: in.IdempotencyKey,
-	})
+	existing, err := s.repo.EntryIDByKey(ctx, q, in.IdempotencyKey)
+	if err != nil || existing != "" {
+		return err
+	}
+	state, err := s.loadState(ctx, q, in.CustomerID)
+	if err != nil {
+		return err
+	}
+	moves, err := s.writeMoves(ctx, q, in, domain.Refund, 1, domain.AllocateClassRefund(state.entries, in.SourceID, in.Amount))
+	if err != nil {
+		return err
+	}
+	now := s.clock()
+	if err := s.publishLotJournals(ctx, q, moves, "", now); err != nil {
+		return err
+	}
+	_, _, err = s.expireLapsedLots(ctx, q, in.CustomerID, now)
 	return err
 }
 
@@ -171,8 +258,8 @@ type AdjustResult struct {
 }
 
 // Adjust is a manual staff correction. A positive amount becomes a new lot
-// with the default validity of the gym rules.
-func (s *Service) Adjust(ctx context.Context, q database.Querier, customerID string, amount int, reason, actorID string) (*AdjustResult, error) {
+// that expires by the gym rules of branchID (global when nil).
+func (s *Service) Adjust(ctx context.Context, q database.Querier, customerID string, amount int, reason, actorID string, branchID *string) (*AdjustResult, error) {
 	if err := s.repo.LockMemberCredits(ctx, q, customerID); err != nil {
 		return nil, err
 	}
@@ -186,7 +273,7 @@ func (s *Service) Adjust(ctx context.Context, q database.Querier, customerID str
 	note := strings.TrimSpace(reason)
 	var entryID string
 	if amount > 0 {
-		rules, err := s.Rules(ctx, q, nil)
+		rules, err := s.Rules(ctx, q, branchID)
 		if err != nil {
 			return nil, err
 		}
@@ -216,6 +303,7 @@ type ReverseResult struct {
 }
 
 // Reverse writes the entry that cancels entryID; the original never changes.
+// A reversed deduction gives its credits back to the lot it drew from.
 func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reason, actorID string) (*ReverseResult, error) {
 	if len([]rune(strings.TrimSpace(reason))) < domain.MinReasonLength {
 		return nil, fail(http.StatusBadRequest, "Alasan pembatalan wajib diisi")
@@ -234,11 +322,13 @@ func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reas
 	if err != nil {
 		return nil, err
 	}
-	balance, err := s.Balance(ctx, q, original.CustomerID)
+	now := s.clock()
+	state, _, err := s.expireLapsedLots(ctx, q, original.CustomerID, now)
 	if err != nil {
 		return nil, err
 	}
-	draft, problem := domain.BuildReversal(original.Entry, reason, reversed, balance)
+	lotRemaining := domain.RemainingIn(domain.LotRemainders(state.lots, state.entries), original.LotID)
+	draft, problem := domain.BuildReversal(original.Entry, reason, reversed, domain.Balance(state.entries), lotRemaining)
 	if problem != "" {
 		return nil, fail(http.StatusConflict, domain.ReversalProblemMessages[problem])
 	}
@@ -250,6 +340,10 @@ func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reas
 	if err != nil {
 		return nil, err
 	}
+	move := lotMove{EntryID: id, LotID: draft.LotID, Type: domain.Reversal, Amount: draft.Amount}
+	if err := s.publishLotJournals(ctx, q, []lotMove{move}, actorID, now); err != nil {
+		return nil, err
+	}
 	return &ReverseResult{EntryID: id, CustomerID: original.CustomerID, Amount: draft.Amount}, nil
 }
 
@@ -257,7 +351,7 @@ func (s *Service) Reverse(ctx context.Context, q database.Querier, entryID, reas
 // nil means every class.
 func (s *Service) CoveredClassTypeIDs(ctx context.Context, q database.Querier, customerID string) ([]string, error) {
 	now := s.clock()
-	state, err := s.expireLapsedLots(ctx, q, customerID, now)
+	state, _, err := s.expireLapsedLots(ctx, q, customerID, now)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +366,7 @@ func (s *Service) CoveredClassTypeIDs(ctx context.Context, q database.Querier, c
 // entryLimit entries (writing pending expirations first).
 func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID string, entryLimit int) (*WalletView, error) {
 	now := s.clock()
-	state, err := s.expireLapsedLots(ctx, q, customerID, now)
+	state, _, err := s.expireLapsedLots(ctx, q, customerID, now)
 	if err != nil {
 		return nil, err
 	}

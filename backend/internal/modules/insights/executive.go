@@ -393,6 +393,25 @@ func (s *Service) monthToDate(ctx context.Context, today string) (*monthToDate, 
 }
 
 // gymPulse is nil, not a failure, while the gym schema is not migrated.
+// liveCreditsSQL is the credits members can still use: what each lot holds
+// after the entries pinned to it, in lots that have not lapsed, less the
+// shared pool of unpinned usage. The pool drains the earliest lots first,
+// so lapsed lots absorb it before live ones. Lapsed credits that no sweep
+// or balance read has expired yet do not count.
+const liveCreditsSQL = `WITH lot_left AS (
+  SELECT l.customer_id, l.expires_at > now() AS live,
+         GREATEST(0, l.credits + COALESCE((SELECT sum(e.amount) FROM gym.credit_ledger e
+           WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment'))), 0)) AS n
+    FROM gym.credit_lots l
+), per_member AS (
+  SELECT customer_id, COALESCE(sum(n) FILTER (WHERE live), 0) AS live, COALESCE(sum(n) FILTER (WHERE NOT live), 0) AS lapsed
+    FROM lot_left GROUP BY customer_id
+), pool AS (
+  SELECT customer_id, GREATEST(0, -sum(amount)) AS used FROM gym.credit_ledger WHERE lot_id IS NULL GROUP BY customer_id
+)
+SELECT COALESCE(sum(GREATEST(0, m.live - GREATEST(0, COALESCE(p.used, 0) - m.lapsed))), 0)::int
+  FROM per_member m LEFT JOIN pool p USING (customer_id)`
+
 func (s *Service) gymPulse(ctx context.Context, today string) (*gymPulse, error) {
 	var ready *bool
 	if err := s.db.QueryRow(ctx, `SELECT to_regclass('gym.class_sessions') IS NOT NULL
@@ -447,7 +466,7 @@ func (s *Service) gymPulse(ctx context.Context, today string) (*gymPulse, error)
 			            WHERE status = 'paid' AND paid_at >= now() - interval '30 days')::int AS terjual,
 			          (SELECT COALESCE(sum(total_idr), 0) FROM gym.credit_purchases
 			            WHERE status = 'paid' AND paid_at >= now() - interval '30 days')::float8 AS pendapatan,
-			          (SELECT COALESCE(sum(amount), 0) FROM gym.credit_ledger)::int AS beredar`).
+			          (`+liveCreditsSQL+`) AS beredar`).
 				Scan(&g.PaketTerjual30Hari, &g.PendapatanPaket30Hari, &g.KreditBeredar)
 		},
 	)

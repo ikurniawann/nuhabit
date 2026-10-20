@@ -106,6 +106,9 @@ type Directory interface {
 	PublicBranch(ctx context.Context, db database.Querier, key string) (*PublicBranch, error)
 	// ActiveClassTypes is empty while gym.class_types does not exist.
 	ActiveClassTypes(ctx context.Context, db database.Querier) ([]ClassType, error)
+	// BookingClassType is the class type of a booking's session; "" when
+	// bookingID is no booking.
+	BookingClassType(ctx context.Context, db database.Querier, bookingID string) (string, error)
 	StaffNames(ctx context.Context, db database.Querier, ids []string) (map[string]*string, error)
 }
 
@@ -359,6 +362,34 @@ type PackageInput struct {
 	SortOrder              int
 }
 
+// LotValue is what the credits of a paid lot are worth in the journals:
+// the purchase total over the lot's credits, booked to the purchase company.
+type LotValue struct {
+	TotalIdr  float64
+	Credits   int
+	CompanyID *string
+}
+
+// PassRevenue is a paid pass with revenue still to release.
+type PassRevenue struct {
+	PassID     string
+	PurchaseID string
+	CompanyID  *string
+	TotalIdr   float64
+	Released   float64
+	StartsAt   time.Time
+	EndsAt     time.Time
+}
+
+// PassRelease is pass revenue released on Day (YYYY-MM-DD) in the journal
+// batch BatchID.
+type PassRelease struct {
+	PassID  string
+	BatchID string
+	Day     string
+	Amount  float64
+}
+
 // RulesRow is one gym.business_rules row; Rules is the decoded jsonb.
 type RulesRow struct {
 	BranchID *string
@@ -382,6 +413,11 @@ type Repository interface {
 	RecentEntries(ctx context.Context, q database.Querier, customerID string, limit int) ([]RecentEntry, error)
 	Balances(ctx context.Context, q database.Querier, customerIDs []string) (map[string]int, error)
 	RecentlyActive(ctx context.Context, q database.Querier, limit int) ([]string, error)
+	// LotValues returns the value of the paid lots among ids.
+	LotValues(ctx context.Context, q database.Querier, ids []string) (map[string]LotValue, error)
+	// MembersWithLapsedLots lists up to limit members, by id after after,
+	// whose lapsed lots still hold credits.
+	MembersWithLapsedLots(ctx context.Context, q database.Querier, now time.Time, after string, limit int) ([]string, error)
 
 	PackageForPurchase(ctx context.Context, q database.Querier, id string) (*PackageForPurchase, error)
 	// BranchPrice is the package's price override at branchID, nil when none.
@@ -397,7 +433,12 @@ type Repository interface {
 	// MarkPurchasePaid returns paid_at and the package validity.
 	MarkPurchasePaid(ctx context.Context, q database.Querier, id string, meta map[string]any) (time.Time, int, error)
 	ClosePurchase(ctx context.Context, q database.Querier, id, status string) error
-	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64) error
+	// MarkPurchaseRefunded records the amount paid back, appends note and
+	// merges meta into payment_meta.
+	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any) error
+	// PurchaseCompany is the company a purchase books to: its branch's,
+	// else the only company; nil when neither resolves.
+	PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error)
 	AttachQR(ctx context.Context, q database.Querier, id, referenceID string, meta map[string]any) error
 
 	// InsertPass returns "" when the purchase already issued a pass.
@@ -433,6 +474,14 @@ type Repository interface {
 	ClaimRenewal(ctx context.Context, q database.Querier, id string) (bool, error)
 	ReleaseRenewal(ctx context.Context, q database.Querier, id string) error
 	SetRenewalPurchase(ctx context.Context, q database.Querier, id, purchaseID string) error
+	// ExpireAllLapsedPasses flips every active pass past ends_at to expired.
+	ExpireAllLapsedPasses(ctx context.Context, q database.Querier, now time.Time) (int, error)
+	// LockPassRevenue serializes pass revenue releases and pass refunds
+	// until the transaction ends.
+	LockPassRevenue(ctx context.Context, q database.Querier) error
+	PassesWithRevenueDue(ctx context.Context, q database.Querier, now time.Time) ([]PassRevenue, error)
+	InsertPassReleases(ctx context.Context, q database.Querier, releases []PassRelease) error
+	PassRevenueReleased(ctx context.Context, q database.Querier, purchaseID string) (float64, error)
 
 	Packages(ctx context.Context, q database.Querier) ([]PackageRow, error)
 	ActivePackages(ctx context.Context, q database.Querier) ([]PortalPackageRow, error)

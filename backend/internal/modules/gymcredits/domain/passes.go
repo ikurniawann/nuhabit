@@ -113,11 +113,13 @@ func RenewalDue(endsAt, now time.Time, leadDays int) bool {
 	return now.Before(endsAt) && !now.Before(endsAt.Add(-time.Duration(leadDays)*day))
 }
 
-// RefundQuote is the money back for a pass purchase.
+// RefundQuote is the money back for a purchase: unused days of a pass, or
+// unused credits of a credit pack.
 type RefundQuote struct {
-	TotalDays   int     `json:"total_days"`
-	UnusedDays  int     `json:"unused_days"`
-	ProratedIdr float64 `json:"prorated_idr"`
+	TotalDays     int     `json:"total_days"`
+	UnusedDays    int     `json:"unused_days"`
+	UnusedCredits int     `json:"unused_credits"`
+	ProratedIdr   float64 `json:"prorated_idr"`
 }
 
 // ProratedRefund pays back paidIdr * unused days / total days, rounded to

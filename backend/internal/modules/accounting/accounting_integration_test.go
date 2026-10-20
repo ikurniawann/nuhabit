@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/app"
+	"nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/contracts/inventory"
 	"nuhabit/backend/internal/contracts/payroll"
 	"nuhabit/backend/internal/contracts/possales"
@@ -962,6 +963,37 @@ func TestProductionJournals(t *testing.T) {
 		"PRODUCTION_OUTPUT_RECEIPT:DEBIT=46000.00,CREDIT=46000.00", "PRODUCTION_SCRAP:DEBIT=1500.00,CREDIT=1500.00"}
 	if got := e.journals(batch); fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("batch:\n got %v\nwant %v", got, want)
+	}
+}
+
+// Gym packages: a sale goes into deferred revenue and a used credit moves
+// out of it into class revenue, once per document; unknown events and zero
+// amounts post nothing.
+func TestGymCreditJournals(t *testing.T) {
+	e := setup(t)
+	cash := e.account("1101001", "Kas", "ASSET", true)
+	deferred := e.account("2201001", "Pendapatan Diterima di Muka - Kredit Gym", "LIABILITY", false)
+	class := e.account("4201001", "Pendapatan Kelas Gym", "REVENUE", false)
+	e.fiscal2026()
+	e.mapping("GYM_SALE_CASH", "POS", mline("DEBIT", "CASH", cash, "TOTAL"), mline("CREDIT", "GYM_DEFERRED_REVENUE", deferred, "TOTAL"))
+	e.mapping("GYM_CREDIT_USAGE", "POS", mline("DEBIT", "GYM_DEFERRED_REVENUE", deferred, "TOTAL"), mline("CREDIT", "GYM_CLASS_REVENUE", class, "TOTAL"))
+
+	sale, used := "6f1d5c2e-5555-4a1b-9c1d-000000000001", "6f1d5c2e-5555-4a1b-9c1d-000000000002"
+	journal := func(event, doc string, amount float64) gymcredits.Journal {
+		return gymcredits.Journal{EventCode: event, DocumentType: "gym_purchase", DocumentID: doc, CompanyID: &e.company,
+			UserID: e.staff.UserID, EntryDate: "2026-10-05", Amount: amount, Description: "Penjualan paket gym"}
+	}
+	e.publish(gymcredits.TopicJournal, sale, journal("GYM_SALE_CASH", sale, 500000))
+	e.publish(gymcredits.TopicJournal, sale, journal("GYM_SALE_CASH", sale, 500000))
+	e.publish(gymcredits.TopicJournal, used, journal("GYM_CREDIT_USAGE", used, 100000))
+	e.publish(gymcredits.TopicJournal, used, journal("POS_SALE_CASH", used, 100000))
+	e.publish(gymcredits.TopicJournal, used, journal("GYM_CREDIT_BREAKAGE", used, 0))
+	e.dispatch()
+	if got, want := e.journals(sale), []string{"GYM_SALE_CASH:DEBIT=500000.00,CREDIT=500000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("sale:\n got %v\nwant %v", got, want)
+	}
+	if got, want := e.journals(used), []string{"GYM_CREDIT_USAGE:DEBIT=100000.00,CREDIT=100000.00"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("usage:\n got %v\nwant %v", got, want)
 	}
 }
 

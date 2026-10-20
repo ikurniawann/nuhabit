@@ -265,7 +265,7 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
   const [reason, setReason] = useState("");
   const isPass = purchase.kind === "pass";
   const q = quote.data;
-  const amount = q ? (isPass && mode === "prorated" ? q.prorated_idr : q.full_idr) : 0;
+  const amount = q ? (isPass && mode === "full" ? q.full_idr : q.prorated_idr) : 0;
   const run = useMutation({
     mutationFn: () => gymCreditsApi.refundPurchase(purchase.id, reason.trim(), isPass ? mode : "full"),
     onSuccess: (res) => {
@@ -292,7 +292,11 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
           <DialogPanelHeader>
             <DialogPanelTitle>Refund {purchase.package_name}?</DialogPanelTitle>
             <DialogPanelDescription>
-              {isPass ? "Pass dihentikan dan pass yang antre setelahnya dimajukan." : `${formatNumber(purchase.credits)} kredit ditarik.`}
+              {isPass
+                ? "Pass dihentikan dan pass yang antre setelahnya dimajukan."
+                : q
+                  ? `${formatNumber(q.unused_credits)} dari ${formatNumber(purchase.credits)} kredit belum terpakai dan ditarik. Refund dihitung dari kredit sisa itu.`
+                  : "Kredit yang belum terpakai dari pembelian ini ditarik."}
             </DialogPanelDescription>
           </DialogPanelHeader>
           <DialogPanelBody className="grid grid-cols-1 gap-4">

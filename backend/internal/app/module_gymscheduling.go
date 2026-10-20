@@ -89,6 +89,13 @@ func (c schedulingCredits) GetBalance(ctx context.Context, q database.Querier, c
 	return n, creditErr(err)
 }
 
+// UsableBalance is the credits that may pay for a class of classTypeID:
+// lots restricted to other class types do not count.
+func (c schedulingCredits) UsableBalance(ctx context.Context, q database.Querier, customerID, classTypeID string) (int, error) {
+	n, err := c.svc.UsableBalance(ctx, q, customerID, classTypeID)
+	return n, creditErr(err)
+}
+
 func (c schedulingCredits) Deduct(ctx context.Context, q database.Querier, in gymscheduling.CreditMovement) (gymscheduling.DeductResult, error) {
 	ok, after, err := c.svc.Deduct(ctx, q, move(in))
 	return gymscheduling.DeductResult{OK: ok, BalanceAfter: after}, creditErr(err)

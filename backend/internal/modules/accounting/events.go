@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/contracts/inventory"
 	"nuhabit/backend/internal/contracts/payroll"
 	"nuhabit/backend/internal/contracts/possales"
@@ -21,7 +22,7 @@ import (
 // Outbox subscribers: the journals the TS posted inline after POS sales,
 // member bill instalments, GRNs, purchase returns, stock movements and
 // landed costs, plus the payroll journals of a paid run and the production
-// journals of issues and batches (new in Go).
+// journals of issues and batches and the gym package journals (new in Go).
 // Subscriber names are contracts; renaming one drops its pending deliveries.
 
 // subscribe registers every journal subscriber on bus.
@@ -73,6 +74,10 @@ func (s *Service) subscribe(bus *outbox.Bus) {
 	}))
 	bus.Subscribe(production.TopicOutputReceived, "accounting.journal-production-receipt", handle(s, func(ctx context.Context, tx pgx.Tx, in production.OutputReceived) ([]domain.PostResult, error) {
 		return s.PostProductionReceipt(ctx, tx, in)
+	}))
+	bus.Subscribe(gymcredits.TopicJournal, "accounting.journal-gym-credits", handle(s, func(ctx context.Context, tx pgx.Tx, in gymcredits.Journal) ([]domain.PostResult, error) {
+		r, err := s.PostGymCredits(ctx, tx, in)
+		return []domain.PostResult{r}, err
 	}))
 	bus.Subscribe(payroll.TopicRunPaid, "accounting.journal-payroll-run", handle(s, func(ctx context.Context, tx pgx.Tx, in payroll.RunPaid) ([]domain.PostResult, error) {
 		return s.PostPayrollRun(ctx, tx, in)

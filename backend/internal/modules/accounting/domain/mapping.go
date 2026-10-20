@@ -58,6 +58,19 @@ var EventNames = map[string][2]string{
 	"PRODUCTION_SCRAP":              {"Production Scrap", "Sisa WIP tanpa hasil baik dibebankan sebagai kerugian produksi"},
 	"PRODUCTION_ABNORMAL_SCRAP":     {"Production Abnormal Scrap", "Scrap di atas toleransi dibebankan sebagai kerugian produksi dari WIP"},
 	"PRODUCTION_MATERIAL_RETURN":    {"Production Material Return", "Bahan sisa produksi dikembalikan ke persediaan dari WIP"},
+	"GYM_SALE_CASH":                 {"Gym Package Sale (Cash)", "Paket gym dibayar tunai: kas ke pendapatan diterima di muka"},
+	"GYM_SALE_BANK":                 {"Gym Package Sale (Bank)", "Paket gym dibayar kartu atau transfer: bank ke pendapatan diterima di muka"},
+	"GYM_SALE_QRIS":                 {"Gym Package Sale (QRIS)", "Paket gym dibayar QRIS atau invoice online: kliring QRIS ke pendapatan diterima di muka"},
+	"GYM_SALE_ARK_COIN":             {"Gym Package Sale (ARK Coin)", "Paket gym dibayar ARK Coin: kewajiban ARK Coin ke pendapatan diterima di muka"},
+	"GYM_REFUND_CASH":               {"Gym Package Refund (Cash)", "Refund paket gym tunai: pendapatan diterima di muka ke kas"},
+	"GYM_REFUND_BANK":               {"Gym Package Refund (Bank)", "Refund paket gym kartu atau transfer: pendapatan diterima di muka ke bank"},
+	"GYM_REFUND_QRIS":               {"Gym Package Refund (QRIS)", "Refund paket gym QRIS atau invoice online: pendapatan diterima di muka ke kliring QRIS"},
+	"GYM_REFUND_ARK_COIN":           {"Gym Package Refund (ARK Coin)", "Refund paket gym ke ARK Coin: pendapatan diterima di muka ke kewajiban ARK Coin"},
+	"GYM_CREDIT_USAGE":              {"Gym Credit Usage", "Kredit gym terpakai (check-in, no-show, batal telat): pendapatan diterima di muka ke pendapatan kelas"},
+	"GYM_CREDIT_USAGE_REVERSAL":     {"Gym Credit Usage Reversal", "Kredit gym dikembalikan ke member: pendapatan kelas ke pendapatan diterima di muka"},
+	"GYM_CREDIT_BREAKAGE":           {"Gym Credit Breakage", "Kredit gym kedaluwarsa: pendapatan diterima di muka ke pendapatan kredit kedaluwarsa"},
+	"GYM_PASS_REVENUE":              {"Gym Pass Revenue", "Pengakuan harian pendapatan pass gym dari pendapatan diterima di muka"},
+	"GYM_PASS_REVENUE_REVERSAL":     {"Gym Pass Revenue Reversal", "Pass gym direfund: pendapatan pass yang sudah diakui kembali ke pendapatan diterima di muka"},
 }
 
 // Amounts is a JournalAmountBag: amount source -> value. A missing key is 0.

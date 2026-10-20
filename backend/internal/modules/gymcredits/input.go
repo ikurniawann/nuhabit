@@ -308,15 +308,17 @@ func optString(s string, ok bool) *string {
 var frontDeskMethods = []string{"cash", "card", "transfer", "qris", "ark_coin", "complimentary"}
 
 type adjustBody struct {
-	Amount int
-	Reason string
+	Amount   int
+	Reason   string
+	BranchID *string
 }
 
 func parseAdjust(body any) (adjustBody, error) {
 	f := newForm(body)
 	amount, _ := f.num("amount", numRule{integer: true, intMsg: "Jumlah harus bilangan bulat"})
 	reason, _ := f.str("reason", strRule{trim: true, min: 3, minMsg: "Alasan penyesuaian wajib diisi", max: 500})
-	return adjustBody{Amount: int(amount), Reason: reason}, f.staffErr()
+	branchID := optString(f.str("branch_id", strRule{uuid: true, uuidMsg: "Cabang tidak valid", optional: true, nullable: true}))
+	return adjustBody{Amount: int(amount), Reason: reason, BranchID: branchID}, f.staffErr()
 }
 
 type sellBody struct {

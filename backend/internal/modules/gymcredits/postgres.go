@@ -210,7 +210,70 @@ func (Postgres) RecentlyActive(ctx context.Context, q database.Querier, limit in
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
+// purchaseCompany is the company purchase p books to: its branch's, else the
+// only company when there is exactly one.
+const purchaseCompany = `COALESCE((SELECT b.company_id FROM configuration.branches b WHERE b.id = p.branch_id),
+	(SELECT min(c.id::text)::uuid FROM configuration.companies c HAVING count(*) = 1))`
+
+func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string) (map[string]LotValue, error) {
+	out := map[string]LotValue{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := q.Query(ctx,
+		`SELECT l.id::text, p.total_idr::float, l.credits, `+purchaseCompany+`::text
+		   FROM gym.credit_lots l JOIN gym.credit_purchases p ON p.id = l.purchase_id
+		  WHERE l.id = ANY($1::uuid[]) AND p.total_idr > 0`, ids)
+	if err != nil {
+		return nil, err
+	}
+	var id string
+	var v LotValue
+	_, err = pgx.ForEachRow(rows, []any{&id, &v.TotalIdr, &v.Credits, &v.CompanyID}, func() error {
+		out[id] = v
+		v = LotValue{}
+		return nil
+	})
+	return out, err
+}
+
+// lotLeft is each lot's credits after the entries pinned to it, before the
+// pool; lot-creating entries are already in credits.
+const lotLeft = `SELECT l.customer_id, l.expires_at,
+       GREATEST(0, l.credits + COALESCE((SELECT sum(e.amount) FROM gym.credit_ledger e
+         WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment'))), 0)) AS left_credits
+  FROM gym.credit_lots l`
+
+// MembersWithLapsedLots: the pool goes FIFO to the lots that expire first,
+// so it drains lapsed lots before live ones. A member still holds lapsed
+// credits when their lapsed lots hold more than the pool took.
+func (Postgres) MembersWithLapsedLots(ctx context.Context, q database.Querier, now time.Time, after string, limit int) ([]string, error) {
+	rows, err := q.Query(ctx,
+		`WITH lapsed AS (
+		   SELECT x.customer_id, sum(x.left_credits) AS left_credits
+		     FROM (`+lotLeft+` WHERE l.expires_at <= $1 AND ($2 = '' OR l.customer_id > NULLIF($2, '')::uuid)) x
+		    GROUP BY x.customer_id
+		 )
+		 SELECT a.customer_id::text FROM lapsed a
+		  WHERE a.left_credits > GREATEST(0, -COALESCE((SELECT sum(e.amount) FROM gym.credit_ledger e
+		          WHERE e.customer_id = a.customer_id AND e.lot_id IS NULL), 0))
+		  ORDER BY a.customer_id LIMIT $3`, now, after, limit)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
+}
+
 /* ── Purchases ───────────────────────────────────────────────────────── */
+
+func (Postgres) PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error) {
+	var company *string
+	err := q.QueryRow(ctx, `SELECT `+purchaseCompany+`::text FROM gym.credit_purchases p WHERE p.id = $1`, id).Scan(&company)
+	if database.IsNoRows(err) {
+		return nil, nil
+	}
+	return company, err
+}
 
 func (Postgres) PackageForPurchase(ctx context.Context, q database.Querier, id string) (*PackageForPurchase, error) {
 	var p PackageForPurchase
@@ -354,12 +417,16 @@ func (Postgres) ClosePurchase(ctx context.Context, q database.Querier, id, statu
 	return err
 }
 
-func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64) error {
-	_, err := q.Exec(ctx,
+func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any) error {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	_, err = q.Exec(ctx,
 		`UPDATE gym.credit_purchases
 		    SET status = 'refunded', refunded_at = now(), refunded_idr = $3, updated_at = now(),
-		        note = concat_ws(' · ', note, $2::text)
-		  WHERE id = $1`, id, note, amountIdr)
+		        note = concat_ws(' · ', note, $2::text), payment_meta = payment_meta || $4::jsonb
+		  WHERE id = $1`, id, note, amountIdr, string(raw))
 	return err
 }
 
@@ -577,6 +644,57 @@ func (Postgres) ReleaseRenewal(ctx context.Context, q database.Querier, id strin
 func (Postgres) SetRenewalPurchase(ctx context.Context, q database.Querier, id, purchaseID string) error {
 	_, err := q.Exec(ctx, `UPDATE gym.member_passes SET renewal_purchase_id = $2 WHERE id = $1`, id, purchaseID)
 	return err
+}
+
+func (Postgres) ExpireAllLapsedPasses(ctx context.Context, q database.Querier, now time.Time) (int, error) {
+	tag, err := q.Exec(ctx,
+		`UPDATE gym.member_passes SET status = 'expired', updated_at = now() WHERE status = 'active' AND ends_at <= $1`, now)
+	return int(tag.RowsAffected()), err
+}
+
+func (Postgres) LockPassRevenue(ctx context.Context, q database.Querier) error {
+	_, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('gym-pass-revenue'))`)
+	return err
+}
+
+func (Postgres) PassesWithRevenueDue(ctx context.Context, q database.Querier, now time.Time) ([]PassRevenue, error) {
+	rows, err := q.Query(ctx,
+		`SELECT mp.id::text, p.id::text, `+purchaseCompany+`::text, p.total_idr::float,
+		        COALESCE(r.released, 0)::float, mp.starts_at, mp.ends_at
+		   FROM gym.member_passes mp
+		   JOIN gym.credit_purchases p ON p.id = mp.purchase_id
+		   LEFT JOIN (SELECT pass_id, sum(amount_idr) AS released FROM gym.pass_revenue_releases GROUP BY pass_id) r
+		          ON r.pass_id = mp.id
+		  WHERE mp.status IN ('active', 'expired') AND mp.starts_at <= $1
+		    AND p.status = 'paid' AND p.total_idr > COALESCE(r.released, 0)
+		  ORDER BY mp.id`, now)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (PassRevenue, error) {
+		var p PassRevenue
+		err := row.Scan(&p.PassID, &p.PurchaseID, &p.CompanyID, &p.TotalIdr, &p.Released, &p.StartsAt, &p.EndsAt)
+		return p, err
+	})
+}
+
+func (Postgres) InsertPassReleases(ctx context.Context, q database.Querier, releases []PassRelease) error {
+	for _, r := range releases {
+		if _, err := q.Exec(ctx,
+			`INSERT INTO gym.pass_revenue_releases (pass_id, release_date, amount_idr, batch_id) VALUES ($1, $2::date, $3, $4)`,
+			r.PassID, r.Day, r.Amount, r.BatchID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (Postgres) PassRevenueReleased(ctx context.Context, q database.Querier, purchaseID string) (float64, error) {
+	var released float64
+	err := q.QueryRow(ctx,
+		`SELECT COALESCE(sum(r.amount_idr), 0)::float FROM gym.pass_revenue_releases r
+		   JOIN gym.member_passes mp ON mp.id = r.pass_id WHERE mp.purchase_id = $1`, purchaseID).Scan(&released)
+	return released, err
 }
 
 /* ── Packages ────────────────────────────────────────────────────────── */

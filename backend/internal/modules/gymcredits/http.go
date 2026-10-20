@@ -203,7 +203,7 @@ func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	res, err := h.svc.AdjustTx(r.Context(), customerID, in.Amount, in.Reason, user.ID)
+	res, err := h.svc.AdjustTx(r.Context(), customerID, in.Amount, in.Reason, user.ID, in.BranchID)
 	if err != nil {
 		return err
 	}

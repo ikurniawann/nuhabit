@@ -31,6 +31,8 @@ func TestJobsFollowMountedModules(t *testing.T) {
 		"gym-scheduling.complete-past-sessions":  10 * time.Minute,
 		"gym-credits.pass-renewals":              time.Hour,
 		"gym-credits.pass-unfreeze":              15 * time.Minute,
+		"gym-credits.expiry":                     time.Hour,
+		"gym-credits.pass-revenue":               time.Hour,
 	}
 	for name, every := range want {
 		if all[name] != every {
@@ -43,7 +45,7 @@ func TestJobsFollowMountedModules(t *testing.T) {
 		names = append(names, n)
 	}
 	slices.Sort(names)
-	if !slices.Equal(names, []string{"gym-credits.pass-renewals", "gym-credits.pass-unfreeze", "gym-credits.purchase-reconcile", "gym-credits.reminders"}) {
+	if !slices.Equal(names, []string{"gym-credits.expiry", "gym-credits.pass-renewals", "gym-credits.pass-revenue", "gym-credits.pass-unfreeze", "gym-credits.purchase-reconcile", "gym-credits.reminders"}) {
 		t.Fatalf("MODULES=gym-credits jobs = %v", names)
 	}
 }

@@ -150,6 +150,17 @@ func (SQLDirectory) ActiveClassTypes(ctx context.Context, db database.Querier) (
 	return out, err
 }
 
+func (SQLDirectory) BookingClassType(ctx context.Context, db database.Querier, bookingID string) (string, error) {
+	var id string
+	err := db.QueryRow(ctx,
+		`SELECT s.class_type_id::text FROM gym.bookings b JOIN gym.class_sessions s ON s.id = b.session_id
+		  WHERE b.id = $1::uuid`, bookingID).Scan(&id)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
+	return id, err
+}
+
 func (SQLDirectory) StaffNames(ctx context.Context, db database.Querier, ids []string) (map[string]*string, error) {
 	out := map[string]*string{}
 	if len(ids) == 0 {

@@ -190,7 +190,7 @@ func (s *Service) SweepFrozen(ctx context.Context, now time.Time) error {
 			endsAt := p.EndsAt.Add(time.Duration(domain.UnfreezeDays(*p.FrozenAt, *p.FrozenUntil, now)) * day)
 			return s.ports.Notifier.NotifyMember(ctx, tx, p.CustomerID, Notice{
 				Type: "gym_pass_unfrozen", Title: "Pass aktif lagi: " + p.PackageName,
-				Body: "Masa beku selesai. Pass berlaku sampai " + wibDay(endsAt) + ".",
+				Body: "Masa beku selesai. Pass berlaku sampai " + wibDate(endsAt) + ".",
 			})
 		})
 		if err != nil {
@@ -346,12 +346,12 @@ func renewalNotice(p PassRow, v *MemberPurchaseView) Notice {
 		}
 		return Notice{
 			Type: "gym_pass_renewal", Title: "Pass diperpanjang: " + p.PackageName,
-			Body: "Pass baru sudah dibayar" + via + " dan mulai saat pass sekarang berakhir pada " + wibDay(p.EndsAt) + ".",
+			Body: "Pass baru sudah dibayar" + via + " dan mulai saat pass sekarang berakhir pada " + wibDate(p.EndsAt) + ".",
 		}
 	}
 	return Notice{
 		Type: "gym_pass_renewal", Title: "Perpanjang pass kamu: " + p.PackageName,
-		Body: "Pass kamu berakhir pada " + wibDay(p.EndsAt) + ". Bayar " + pdfgen.Rupiah(v.TotalIdr) +
+		Body: "Pass kamu berakhir pada " + wibDate(p.EndsAt) + ". Bayar " + pdfgen.Rupiah(v.TotalIdr) +
 			" di menu Dompet supaya langsung lanjut tanpa jeda.",
 	}
 }
@@ -368,10 +368,8 @@ func envOrigin() string {
 
 var wibMonths = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
 
-var wib = time.FixedZone("WIB", 7*60*60)
-
-// wibDay renders a date in Jakarta time, e.g. "21 Okt 2026".
-func wibDay(t time.Time) string {
+// wibDate renders a date in Jakarta time, e.g. "21 Okt 2026".
+func wibDate(t time.Time) string {
 	w := t.In(wib)
 	return strconv.Itoa(w.Day()) + " " + wibMonths[w.Month()-1] + " " + strconv.Itoa(w.Year())
 }
