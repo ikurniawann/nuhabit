@@ -43,15 +43,15 @@ function seatsLabel(s: PublicSession): { text: string; full: boolean } {
   return { text: s.waitlist_open ? "Full · waitlist open" : "Full", full: true };
 }
 
-function SessionRow({ session }: { session: PublicSession }) {
+function SessionRow({ session, timeZone }: { session: PublicSession; timeZone?: string }) {
   const seats = seatsLabel(session);
   return (
     <li>
       <Link
         href={sessionHref(session.id)}
-        className="grid grid-cols-[minmax(0,3.5rem)_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-2xl bg-card px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
+        className="grid grid-cols-[minmax(3.5rem,auto)_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-2xl bg-card px-4 py-3 shadow-card transition-colors hover:bg-surface-2"
       >
-        <span className="font-display text-base font-semibold text-foreground tabular-nums">{formatSiteTime(session.starts_at)}</span>
+        <span className="font-display text-base font-semibold text-foreground tabular-nums">{formatSiteTime(session.starts_at, timeZone)}</span>
         <span className="flex min-w-0 items-center gap-2">
           <span aria-hidden className={cn("size-2.5 shrink-0 rounded-full", CLASS_COLOR[session.class_type.color as ClassColor]?.bar ?? "bg-forest")} />
           <span className="truncate font-semibold text-foreground">{session.class_type.name}</span>
@@ -91,7 +91,7 @@ export default function TimetablePanel({ branchSlug }: { branchSlug?: string; on
 
   const days = weekDays(week);
   const selectedDay = days.includes(day) ? day : days[0];
-  const groups = useMemo(() => groupByDay(data?.sessions ?? [], week), [data, week]);
+  const groups = useMemo(() => groupByDay(data?.sessions ?? [], week, data?.branch.timezone), [data, week]);
   const sessions = groups.get(selectedDay) ?? [];
 
   const move = (delta: number) => {
@@ -176,7 +176,7 @@ export default function TimetablePanel({ branchSlug }: { branchSlug?: string; on
         ) : (
           <ul className="space-y-2">
             {sessions.map((s) => (
-              <SessionRow key={s.id} session={s} />
+              <SessionRow key={s.id} session={s} timeZone={data?.branch.timezone} />
             ))}
           </ul>
         )}

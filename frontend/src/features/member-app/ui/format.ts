@@ -1,3 +1,5 @@
+import { zoneName, zoneSuffix } from '@/lib/timezone';
+
 export function formatIdr(amount: number): string {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -6,26 +8,38 @@ export function formatIdr(amount: number): string {
   }).format(amount);
 }
 
-export function formatDayTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+/*
+ * Dates read in the device zone. A class or PT time passes its branch zone
+ * (`timezone` from the API): the time is then the branch's wall clock, with
+ * "WITA" or "WIT" added outside WIB.
+ */
+const inZone = (timeZone?: string) => (timeZone ? { timeZone: zoneName(timeZone) } : {});
+const suffix = (timeZone?: string) => (timeZone ? zoneSuffix(timeZone) : '');
+
+export function formatDayTime(iso: string, timeZone?: string): string {
+  return (
+    new Date(iso).toLocaleString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      ...inZone(timeZone),
+    }) + suffix(timeZone)
+  );
 }
 
-export function formatDay(iso: string): string {
+export function formatDay(iso: string, timeZone?: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
+    ...inZone(timeZone),
   });
 }
 
-export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+export function formatTime(iso: string, timeZone?: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', ...inZone(timeZone) }) + suffix(timeZone);
 }
 
 // ── Athlete formatting ────────────────────────────────────────────────────────

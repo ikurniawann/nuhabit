@@ -120,7 +120,7 @@ export function PtPage() {
                   <div className="min-w-0">
                     <p className="truncate font-black">{s.class_type_name}</p>
                     <p className="truncate text-sm text-nh-muted">
-                      {joinDot(formatDayTime(s.starts_at), s.coach_name, s.branch_name)}
+                      {joinDot(formatDayTime(s.starts_at, s.timezone), s.coach_name, s.branch_name)}
                     </p>
                   </div>
                   <StatusBadge status={status.label} tone={status.tone} />
@@ -147,7 +147,7 @@ export function PtPage() {
       {cancelling ? (
         <BottomSheet title={t("Cancel this session?")} onClose={() => setCancelling(null)}>
           <div className="flex flex-col gap-3 text-sm">
-            <p>{joinDot(cancelling.class_type_name, formatDayTime(cancelling.starts_at), cancelling.coach_name)}</p>
+            <p>{joinDot(cancelling.class_type_name, formatDayTime(cancelling.starts_at, cancelling.timezone), cancelling.coach_name)}</p>
             {cancelling.status === "confirmed" && now > Date.parse(cancelling.free_cancel_until) ? (
               <p className="rounded-xl bg-nh-warn/15 p-3 font-bold text-nh-warn">
                 {fill(t("The free cancellation window has passed: {n} PT credit may be forfeited."), {

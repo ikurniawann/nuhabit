@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { addDays, clampWeek, groupByDay, mondayOf, sessionHref, weekDays, weekWindow, weekdayIndex, wibDay } from "./timetable";
+import { localDay } from "@/lib/timezone";
+import { addDays, clampWeek, groupByDay, mondayOf, sessionHref, weekDays, weekWindow, weekdayIndex } from "./timetable";
 
 const session = (id: string, starts_at: string) => ({
   id,
@@ -46,7 +47,7 @@ describe("timetable weeks", () => {
     expect(groups.get("2026-10-07")?.map((s) => s.id)).toEqual(["a", "b"]);
     expect(groups.get("2026-10-09")?.map((s) => s.id)).toEqual(["c"]);
     expect(groups.get("2026-10-08")).toEqual([]);
-    expect(wibDay("2026-10-08T17:30:00.000Z")).toBe("2026-10-09");
+    expect(localDay("2026-10-08T17:30:00.000Z")).toBe("2026-10-09");
   });
 
   it("links each session into the member app", () => {

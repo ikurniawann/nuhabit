@@ -10,10 +10,9 @@ import { initialsOf } from "../lib/initials";
 import { useLang } from "../lib/lang";
 import { m } from "../lib/links";
 import { usePtOptions, usePtSlots, useRequestPt } from "../lib/queries-coaching";
+import { localDay } from "@/lib/timezone";
 import { Spinner, formatTime } from "../ui";
 
-/** "YYYY-MM-DD" of an instant in WIB, the day the gym schedules in. */
-const wibDay = (iso: string | number) => new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
 const chipClass = (active: boolean) =>
@@ -36,10 +35,11 @@ export function PtBookPage() {
   const [error, setError] = useState("");
   const request = useRequestPt();
 
-  const firstDay = options ? wibDay(options.earliest_start) : "";
+  // Days and slots read in the coach's branch zone, the zone the coach's hours are set in.
+  const coach = options?.coaches.find((c) => c.id === coachId) ?? options?.coaches[0];
+  const firstDay = options ? localDay(options.earliest_start, coach?.timezone) : "";
   const from = firstDay ? addDays(firstDay, weekOffset * 7) : "";
   const type = options?.class_types.find((ct) => ct.id === typeId) ?? options?.class_types[0];
-  const coach = options?.coaches.find((c) => c.id === coachId) ?? options?.coaches[0];
   const { data: slots, isLoading: slotsLoading } = usePtSlots(coach?.id ?? "", type?.id ?? "", from);
 
   const days = useMemo(
@@ -53,7 +53,7 @@ export function PtBookPage() {
         : [],
     [from, locale]
   );
-  const byDay = (key: string) => (slots ?? []).filter((s) => wibDay(s.starts_at) === key);
+  const byDay = (key: string) => (slots ?? []).filter((s) => localDay(s.starts_at, coach?.timezone) === key);
   const activeDay = day && days.some((d) => d.key === day) ? day : (days.find((d) => byDay(d.key).length > 0)?.key ?? days[0]?.key ?? "");
   const maxOffset = options ? Math.floor((options.horizon_days - 1) / 7) : 0;
 
@@ -205,7 +205,7 @@ export function PtBookPage() {
                 }`}
                 aria-pressed={slot === s.starts_at}
               >
-                {formatTime(s.starts_at)}
+                {formatTime(s.starts_at, coach?.timezone)}
               </button>
             ))}
           </div>

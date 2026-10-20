@@ -9,11 +9,14 @@ import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { m } from "../lib/links";
 import { useBranches, useSessions, useTrainers } from "../lib/queries-classes";
+import { localDay } from "@/lib/timezone";
 import { Spinner, formatTime } from "../ui";
 
-function dayKey(iso: string): string {
+/** "YYYY-MM-DD" of an instant: in the class's branch zone when known, else on the device. */
+function dayKey(iso: string, timeZone?: string): string {
+  if (timeZone) return localDay(iso, timeZone);
   const d = new Date(iso);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** A filter chip: one line, never squeezed, so the row scrolls sideways instead. */
@@ -53,7 +56,7 @@ export function SchedulePage() {
 
   const visible = (sessions ?? []).filter(
     (v) =>
-      dayKey(v.session.startsAt) === selectedDay &&
+      dayKey(v.session.startsAt, v.session.timezone) === selectedDay &&
       ["PUBLISHED", "FULL"].includes(v.session.status) &&
       new Date(v.session.endsAt).getTime() > now
   );

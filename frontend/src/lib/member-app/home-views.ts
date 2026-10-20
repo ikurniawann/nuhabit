@@ -30,7 +30,8 @@ export interface MemberAccountView {
 
 export interface BookingView {
   booking: { id: string; status: "CONFIRMED" | "WAITLIST" | "CHECKED_IN"; waitlistPosition: number | null };
-  session: { id: string; classTypeId: string; startsAt: string; endsAt: string; creditCost: number };
+  /** timezone: branch zone the times read in. */
+  session: { id: string; classTypeId: string; startsAt: string; endsAt: string; creditCost: number; timezone?: string };
   classTypeName: string;
   branchName: string;
 }
@@ -46,7 +47,7 @@ export interface AnnouncementView {
 }
 
 export interface HomeSessionView {
-  session: { id: string; classTypeId: string; startsAt: string };
+  session: { id: string; classTypeId: string; startsAt: string; timezone?: string };
   classTypeName: string;
   branchName: string;
   coachName: string;

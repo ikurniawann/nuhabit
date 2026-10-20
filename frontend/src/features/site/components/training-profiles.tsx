@@ -108,7 +108,7 @@ export function CoachPage({ coach, sessions, classes, others }: {
       <Section id="schedule" className="scroll-mt-24 pt-0">
         <Container className="space-y-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHeading kicker="Schedule" title={`Train with ${coach.name.split(" ")[0]}`} text="The next two weeks. Times shown in Western Indonesia Time (WIB)." />
+            <SectionHeading kicker="Schedule" title={`Train with ${coach.name.split(" ")[0]}`} text="The next two weeks. Times shown in the branch's local time." />
             <Button asChild variant="outline" className="uppercase"><Link href={timetableHref()}>Full timetable <ArrowRight /></Link></Button>
           </div>
           <SessionSchedule sessions={sessions} />

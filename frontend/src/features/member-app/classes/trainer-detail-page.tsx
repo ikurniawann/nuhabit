@@ -76,7 +76,7 @@ export function TrainerDetailPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-black">{v.classTypeName}</p>
                   <p className="truncate text-sm text-nh-muted">
-                    {joinDot(formatDayTime(v.session.startsAt), v.branchName)}
+                    {joinDot(formatDayTime(v.session.startsAt, v.session.timezone), v.branchName)}
                   </p>
                 </div>
                 <div className="shrink-0 text-right text-xs font-black uppercase">

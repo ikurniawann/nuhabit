@@ -14,7 +14,7 @@ export function UpcomingSessions({ branch, sessions, title }: { branch: BranchSu
     <Section className="pt-0">
       <Container className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <SectionHeading kicker="Coming up" title={title ?? `Classes at ${branch.name}`} text="Times shown in Western Indonesia Time (WIB)." />
+          <SectionHeading kicker="Coming up" title={title ?? `Classes at ${branch.name}`} text="Times shown in the branch's local time." />
           <Button asChild variant="outline"><Link href={timetableHref(branch.slug)}><CalendarDays className="size-4" /> Full timetable</Link></Button>
         </div>
         {sessions.length > 0 ? (
@@ -27,10 +27,10 @@ export function UpcomingSessions({ branch, sessions, title }: { branch: BranchSu
                     "notch group flex h-full flex-col p-6 transition-transform hover:-translate-y-1 focus-visible:outline-2 focus-visible:outline-forest",
                     i === 0 ? "bg-accent text-accent-foreground" : "bg-ink text-on-ink",
                   )}
-                  aria-label={`View ${session.class_type.name} on ${formatSiteDate(session.starts_at)} at ${formatSiteTime(session.starts_at)}`}
+                  aria-label={`View ${session.class_type.name} on ${formatSiteDate(session.starts_at, session.timezone)} at ${formatSiteTime(session.starts_at, session.timezone)}`}
                 >
-                  <p className={cn("text-xs font-semibold tracking-wider uppercase", i === 0 ? "text-forest" : "text-accent")}>{formatSiteDate(session.starts_at)}</p>
-                  <p className="mt-6 font-display text-6xl font-extrabold leading-none tabular-nums">{formatSiteTime(session.starts_at)}</p>
+                  <p className={cn("text-xs font-semibold tracking-wider uppercase", i === 0 ? "text-forest" : "text-accent")}>{formatSiteDate(session.starts_at, session.timezone)}</p>
+                  <p className="mt-6 font-display text-6xl font-extrabold leading-none tabular-nums">{formatSiteTime(session.starts_at, session.timezone)}</p>
                   <h3 className="mt-4 font-display text-xl font-extrabold uppercase">{session.class_type.name}</h3>
                   <p className={cn("mt-1 text-sm", i === 0 ? "text-forest/80" : "text-on-ink-muted")}>{session.duration_min} min{session.coach_name ? ` · Coach ${session.coach_name}` : ""}</p>
                   <p className="mt-auto flex items-center justify-between pt-6 text-xs font-bold tracking-wider uppercase">

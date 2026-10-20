@@ -34,6 +34,8 @@ export interface PtCoach {
   specialization: string;
   bio: string;
   photo_url: string | null;
+  /** Zone of the coach's branch: free slots and days read in it. */
+  timezone?: string;
 }
 
 export interface PtOptions {
@@ -55,6 +57,7 @@ export interface PtSession {
   coach_photo_url: string | null;
   class_type_name: string;
   branch_name: string | null;
+  timezone?: string;
   starts_at: string;
   ends_at: string;
   credit_cost: number;
@@ -84,7 +87,7 @@ export function useMyPtSessions() {
   return useQuery({ queryKey: keys.sessions, queryFn: () => memberApi<PtSession[]>("/gym/pt/appointments") });
 }
 
-/** Free slots of one coach for one PT type, a week from `from` (YYYY-MM-DD, WIB). */
+/** Free slots of one coach for one PT type, a week from `from` (YYYY-MM-DD in the coach's zone). */
 export function usePtSlots(coachId: string, typeId: string, from: string) {
   return useQuery({
     queryKey: keys.slots(coachId, typeId, from),

@@ -59,7 +59,7 @@ export function BookingsPage() {
                 <div className="min-w-0">
                   <p className="truncate font-black">{b.classTypeName}</p>
                   <p className="truncate text-sm text-nh-muted">
-                    {joinDot(formatDayTime(b.session.startsAt), b.branchName)}
+                    {joinDot(formatDayTime(b.session.startsAt, b.session.timezone), b.branchName)}
                   </p>
                 </div>
                 <StatusBadge status={b.booking.status} />

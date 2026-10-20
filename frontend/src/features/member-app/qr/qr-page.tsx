@@ -104,7 +104,8 @@ export function QrPage() {
             </p>
             <p className="truncate font-black">{gate.booking.classTypeName}</p>
             <p className="truncate text-sm text-nh-muted">
-              {formatDayTime(gate.booking.session.startsAt)} – {formatTime(gate.booking.session.endsAt)} ·{" "}
+              {formatDayTime(gate.booking.session.startsAt, gate.booking.session.timezone)} –{" "}
+              {formatTime(gate.booking.session.endsAt, gate.booking.session.timezone)} ·{" "}
               {gate.booking.branchName}
             </p>
             <p className="mt-1 text-xs text-nh-muted">

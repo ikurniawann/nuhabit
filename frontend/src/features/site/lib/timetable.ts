@@ -1,9 +1,11 @@
 import { todayWib } from "@/lib/dates";
+import { localDay } from "@/lib/timezone";
 
 /**
- * Pure helpers for the public timetable panel. Dates are WIB calendar days
- * as "YYYY-MM-DD"; weeks start on Monday, matching
- * GET /api/public/site/sessions?branch=&week=.
+ * Pure helpers for the public timetable panel. Dates are calendar days in
+ * the branch zone as "YYYY-MM-DD"; weeks start on Monday, matching
+ * GET /api/public/site/sessions?branch=&week=. The week window opens on the
+ * WIB week; the API moves an earlier Monday to the branch's own week.
  */
 
 /** How many weeks past the current one the API serves. */
@@ -28,10 +30,12 @@ export interface PublicSession {
   capacity: number;
   seats_left: number;
   waitlist_open: boolean;
+  /** The branch zone, copied from the timetable's branch by fetchSessionsAhead. */
+  timezone?: string;
 }
 
 export interface PublicTimetable {
-  branch: { slug: string; name: string };
+  branch: { slug: string; name: string; timezone?: string };
   week_start: string;
   sessions: PublicSession[];
 }
@@ -73,16 +77,11 @@ export function clampWeek(monday: string, window: { first: string; last: string 
   return monday;
 }
 
-/** The WIB calendar day of an instant. */
-export function wibDay(iso: string): string {
-  return todayWib(new Date(iso));
-}
-
-/** Sessions keyed by their WIB day, in start order, for the week's seven days. */
-export function groupByDay(sessions: PublicSession[], monday: string): Map<string, PublicSession[]> {
+/** Sessions keyed by their day in the branch zone (WIB without one), in start order, for the week's seven days. */
+export function groupByDay(sessions: PublicSession[], monday: string, timeZone?: string): Map<string, PublicSession[]> {
   const groups = new Map<string, PublicSession[]>(weekDays(monday).map((day) => [day, []]));
   for (const s of [...sessions].sort((a, b) => a.starts_at.localeCompare(b.starts_at))) {
-    groups.get(wibDay(s.starts_at))?.push(s);
+    groups.get(localDay(s.starts_at, timeZone))?.push(s);
   }
   return groups;
 }

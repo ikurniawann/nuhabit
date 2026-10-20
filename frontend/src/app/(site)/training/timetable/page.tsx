@@ -12,7 +12,7 @@ export default async function Page({ searchParams }: Props) {
   const branchSlug = (await searchParams).branch || (await cookies()).get(BRANCH_COOKIE)?.value || undefined;
   return (
     <>
-      <PageHero kicker="Timetable" title="Find your class." text="Pick a branch and a week. Times are in Western Indonesia Time (WIB)." />
+      <PageHero kicker="Timetable" title="Find your class." text="Pick a branch and a week. Times are in the branch's local time." />
       <TimetableSection branchSlug={branchSlug} />
     </>
   );

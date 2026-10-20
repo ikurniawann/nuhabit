@@ -243,11 +243,11 @@ export function HomePage() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
                       <span className="nh-display absolute bottom-2 left-3 text-xl text-white drop-shadow-[0_1px_4px_rgb(0_0_0/0.6)]">
-                        {formatTime(v.session.startsAt)}
+                        {formatTime(v.session.startsAt, v.session.timezone)}
                       </span>
                     </div>
                   ) : (
-                    <p className="nh-display px-3.5 pt-3 text-xl">{formatTime(v.session.startsAt)}</p>
+                    <p className="nh-display px-3.5 pt-3 text-xl">{formatTime(v.session.startsAt, v.session.timezone)}</p>
                   )}
                   <div className="p-3.5 pt-2.5">
                     <p className="truncate text-sm font-extrabold">{v.classTypeName}</p>
@@ -305,7 +305,7 @@ export function HomePage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-extrabold">{b.classTypeName}</p>
                     <p className="truncate text-sm text-nh-muted">
-                      {formatDayTime(b.session.startsAt)} · {b.branchName}
+                      {formatDayTime(b.session.startsAt, b.session.timezone)} · {b.branchName}
                     </p>
                   </div>
                   <span

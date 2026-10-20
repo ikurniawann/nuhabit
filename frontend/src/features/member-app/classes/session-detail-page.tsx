@@ -117,7 +117,7 @@ export function SessionDetailPage() {
 
       <div>
         <h1 className="nh-display text-3xl font-black">{v.classTypeName}</h1>
-        <p className="mt-1 text-nh-muted">{formatDayTime(v.session.startsAt)}</p>
+        <p className="mt-1 text-nh-muted">{formatDayTime(v.session.startsAt, v.session.timezone)}</p>
       </div>
 
       {covered === false ? (
@@ -159,7 +159,7 @@ export function SessionDetailPage() {
             (item, i, arr) => (
               <div key={item.label} className="flex gap-3">
                 <p className="w-16 shrink-0 pt-0.5 text-right font-mono text-xs font-bold whitespace-nowrap text-nh-muted">
-                  {item.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {item.startsAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: v.session.timezone })}
                 </p>
                 <div className="flex flex-col items-center">
                   <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i === 0 ? "bg-nh-forest" : "bg-nh-ink/25"}`} />

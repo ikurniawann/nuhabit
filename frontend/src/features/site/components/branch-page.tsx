@@ -77,7 +77,7 @@ export function BranchPage({ branch, sessions, coaches }: { branch: BranchProfil
 
       <Section id="schedule" className="scroll-mt-24">
         <Container className="space-y-6">
-          <SectionHeading kicker="Schedule" title={`Classes at ${branch.name}`} text="The next two weeks. Times shown in Western Indonesia Time (WIB)." />
+          <SectionHeading kicker="Schedule" title={`Classes at ${branch.name}`} text="The next two weeks. Times shown in the branch's local time." />
           <SessionSchedule sessions={sessions} />
         </Container>
       </Section>

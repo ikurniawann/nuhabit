@@ -70,7 +70,7 @@ export async function fetchSessionsAhead(branchSlug: string, now = new Date()): 
   const timetables = await Promise.all(weeks.map((week) =>
     read<PublicTimetable>(`/sessions?branch=${encodeURIComponent(branchSlug)}&week=${week}`)
   ));
-  return timetables.flatMap((table) => table?.sessions ?? [])
+  return timetables.flatMap((table) => (table?.sessions ?? []).map((session) => ({ ...session, timezone: table?.branch.timezone })))
     .filter((session) => new Date(session.starts_at).getTime() > now.getTime())
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 }

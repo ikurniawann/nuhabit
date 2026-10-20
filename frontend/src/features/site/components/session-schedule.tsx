@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatSiteDate, formatSiteTime, formatSiteWeekday } from "../lib/dates";
-import { sessionHref, wibDay, type PublicSession } from "../lib/timetable";
+import { localDay } from "@/lib/timezone";
+import { sessionHref, type PublicSession } from "../lib/timetable";
 import { EmptyNote } from "./site-section";
 
 export type ScheduledSession = PublicSession & { branch: { slug: string; name: string } };
@@ -15,11 +16,11 @@ function seats(session: PublicSession): string {
   return session.waitlist_open ? "Waitlist open" : "Full";
 }
 
-/** Sessions in date order, split into one list per WIB calendar day. */
-export function groupByWibDay<T extends PublicSession>(sessions: T[]): T[][] {
+/** Sessions in date order, split into one list per calendar day of each session's branch zone. */
+export function groupByLocalDay<T extends PublicSession>(sessions: T[]): T[][] {
   const days = new Map<string, T[]>();
   for (const session of sessions) {
-    const day = wibDay(session.starts_at);
+    const day = localDay(session.starts_at, session.timezone);
     days.set(day, [...(days.get(day) ?? []), session]);
   }
   return [...days.values()];
@@ -30,7 +31,7 @@ export function SessionSchedule({ sessions }: { sessions: ScheduledSession[] }) 
   const branches = [...new Map(sessions.map((s) => [s.branch.slug, s.branch.name])).entries()];
   const [branch, setBranch] = useState<string | null>(null);
   const shown = branch ? sessions.filter((s) => s.branch.slug === branch) : sessions;
-  const days = groupByWibDay(shown);
+  const days = groupByLocalDay(shown);
 
   if (sessions.length === 0) return <EmptyNote>No classes on the timetable for the next two weeks.</EmptyNote>;
   return (
@@ -57,14 +58,14 @@ export function SessionSchedule({ sessions }: { sessions: ScheduledSession[] }) 
         {days.map((day) => (
           <li key={day[0].starts_at} className="grid gap-3 border-b border-border py-5 md:grid-cols-[12rem_minmax(0,1fr)] md:gap-8">
             <div>
-              <p className="font-display text-xl font-extrabold uppercase">{formatSiteWeekday(day[0].starts_at)}</p>
-              <p className="text-sm text-muted-foreground">{formatSiteDate(day[0].starts_at)}</p>
+              <p className="font-display text-xl font-extrabold uppercase">{formatSiteWeekday(day[0].starts_at, day[0].timezone)}</p>
+              <p className="text-sm text-muted-foreground">{formatSiteDate(day[0].starts_at, day[0].timezone)}</p>
             </div>
             <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {day.map((session) => (
                 <li key={session.id}>
                   <Link href={sessionHref(session.id)} className="group flex items-center gap-4 border border-border bg-card p-4 transition-colors hover:border-forest/40">
-                    <span className="font-display text-3xl font-extrabold tabular-nums">{formatSiteTime(session.starts_at)}</span>
+                    <span className="font-display text-3xl font-extrabold tabular-nums">{formatSiteTime(session.starts_at, session.timezone)}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-display font-extrabold uppercase">{session.class_type.name}</span>
                       <span className="block truncate text-xs text-muted-foreground">{session.branch.name} · {session.duration_min} min · {seats(session)}</span>

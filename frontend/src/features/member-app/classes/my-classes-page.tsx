@@ -112,7 +112,7 @@ export function MyClassesPage() {
                         <span className="min-w-0">
                           <span className="block font-extrabold">{t("Next session")}</span>
                           <span className="block truncate text-xs text-nh-muted">
-                            {joinDot(formatDayTime(next.session.startsAt), next.branchName)}
+                            {joinDot(formatDayTime(next.session.startsAt, next.session.timezone), next.branchName)}
                           </span>
                         </span>
                         <ChevronRight size={16} className="shrink-0 text-nh-muted" />

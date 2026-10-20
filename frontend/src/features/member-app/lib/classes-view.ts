@@ -29,6 +29,8 @@ export interface RawSession {
   waitlist_count: number;
   seats_left: number;
   my_booking: RawMyBooking | null;
+  /** Branch zone (IANA) the session times read in. */
+  timezone?: string;
 }
 
 export interface RawCoach {
@@ -46,6 +48,7 @@ export interface RawBooking {
   branch_id: string | null;
   starts_at: string;
   class_type_name: string;
+  timezone?: string;
 }
 
 export interface RawCatalog {
@@ -159,6 +162,7 @@ export interface SessionView {
     status: string;
     creditCost: number;
     capacity: number;
+    timezone?: string;
   };
   classTypeName: string;
   branchName: string;
@@ -178,7 +182,7 @@ export interface TrainerView {
 
 export interface BookingView {
   booking: { id: string; status: string; promotionOfferedAt: string | null };
-  session: { id: string; startsAt: string };
+  session: { id: string; startsAt: string; timezone?: string };
   classTypeName: string;
   branchName: string;
 }
@@ -283,6 +287,7 @@ export function toSessionView(raw: RawSession, catalog: RawCatalog | undefined):
       status: upper(raw.status),
       creditCost: raw.credit_cost,
       capacity: raw.capacity,
+      timezone: raw.timezone,
     },
     classTypeName: raw.class_type_name,
     branchName: branchNameOf(catalog, raw.branch_id),
@@ -341,7 +346,7 @@ export function toTrainerViews(
 export function toBookingView(raw: RawBooking, catalog: RawCatalog | undefined): BookingView {
   return {
     booking: { id: raw.id, status: upper(raw.status), promotionOfferedAt: raw.promotion_offered_at },
-    session: { id: raw.session_id, startsAt: raw.starts_at },
+    session: { id: raw.session_id, startsAt: raw.starts_at, timezone: raw.timezone },
     classTypeName: raw.class_type_name,
     branchName: branchNameOf(catalog, raw.branch_id),
   };

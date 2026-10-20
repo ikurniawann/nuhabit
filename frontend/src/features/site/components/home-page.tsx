@@ -62,9 +62,9 @@ function Hero({ hero, pillars, branch, nextSession }: {
           {nextSession && branch ? (
             <Link href={sessionHref(nextSession.id)} className="group block rounded-2xl bg-white/10 p-5 ring-1 ring-white/15 backdrop-blur-md transition-colors hover:bg-white/15">
               <p className="text-xs font-semibold tracking-wider text-accent uppercase">Next class · {branch.name}</p>
-              <p className="mt-3 font-display text-5xl font-extrabold leading-none tabular-nums">{formatSiteTime(nextSession.starts_at)}</p>
+              <p className="mt-3 font-display text-5xl font-extrabold leading-none tabular-nums">{formatSiteTime(nextSession.starts_at, nextSession.timezone)}</p>
               <p className="mt-2 font-display text-lg font-bold uppercase">{nextSession.class_type.name}</p>
-              <p className="text-sm text-on-ink-muted">{formatSiteDate(nextSession.starts_at)} · {nextSession.duration_min} min</p>
+              <p className="text-sm text-on-ink-muted">{formatSiteDate(nextSession.starts_at, nextSession.timezone)} · {nextSession.duration_min} min</p>
               <p className="mt-4 flex items-center justify-between text-xs font-bold tracking-wider uppercase">
                 {nextSession.seats_left > 0 ? `${nextSession.seats_left} seats left` : "View class"}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
