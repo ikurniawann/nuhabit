@@ -117,6 +117,8 @@ type SavedMethodGateway interface {
 	CancelToken(ctx context.Context, cfg *XenditConfig, tokenID string) error
 	Charge(ctx context.Context, cfg *XenditConfig, in ChargeRequest) (*Charge, error)
 	ChargeStatus(ctx context.Context, cfg *XenditConfig, requestID string) (*Charge, error)
+	// CancelCharge stops a pending charge so it can no longer be paid.
+	CancelCharge(ctx context.Context, cfg *XenditConfig, requestID string) error
 }
 
 // SavedMethod is a gym.member_payment_methods row.
@@ -203,10 +205,11 @@ func savedMethodsFlagOn() bool {
 }
 
 // savedRail returns the rail for real (simulated=false) or simulated
-// methods; ok=false when the flag is off, or the gateway is inactive and
-// this is not local dev.
+// methods; ok=false when the gateway is inactive, or a simulated method is
+// met outside local dev. It ignores the flag: methods and charges made
+// before the flag went off still settle and cancel.
 func (s *Service) savedRail(ctx context.Context, simulated bool) (savedRail, bool) {
-	if !savedMethodsFlagOn() || s.ports.SavedMethods == nil {
+	if s.ports.SavedMethods == nil {
 		return savedRail{}, false
 	}
 	if simulated {
@@ -219,9 +222,12 @@ func (s *Service) savedRail(ctx context.Context, simulated bool) (savedRail, boo
 	return savedRail{cfg: cfg, gw: s.ports.SavedMethods}, true
 }
 
-// linkRail is the rail new links use: the real gateway, else the simulated
-// one in local dev.
+// linkRail is the rail new links use while the flag is on: the real
+// gateway, else the simulated one in local dev.
 func (s *Service) linkRail(ctx context.Context) (savedRail, bool) {
+	if !savedMethodsFlagOn() {
+		return savedRail{}, false
+	}
 	if rail, ok := s.savedRail(ctx, false); ok {
 		return rail, true
 	}
@@ -571,6 +577,9 @@ func (s *Service) closeSavedMethod(ctx context.Context, id, status, failureCode,
 // activeSavedMethod is the member's method a renewal can charge, with its
 // rail; ok=false when there is none or saved methods are off.
 func (s *Service) activeSavedMethod(ctx context.Context, q database.Querier, customerID string) (*SavedMethod, savedRail, bool, error) {
+	if !savedMethodsFlagOn() {
+		return nil, savedRail{}, false, nil
+	}
 	methods, err := s.repo.SavedMethodsOf(ctx, q, customerID)
 	if err != nil {
 		return nil, savedRail{}, false, err
@@ -653,18 +662,31 @@ func (s *Service) applyCharge(ctx context.Context, purchaseID string, c *Charge,
 	return nil, nil
 }
 
-// reconcileCharge asks Xendit about a pending saved-method charge.
+// reconcileCharge asks Xendit about a pending saved-method charge. One
+// still pending past its expires_at is canceled at Xendit first and only
+// then closed as expired; nil means it stays pending.
 func (s *Service) reconcileCharge(ctx context.Context, row *Purchase, requestID string) (*Purchase, error) {
-	simulated, _ := row.meta()["simulated"].(bool)
+	meta := row.meta()
+	simulated, _ := meta["simulated"].(bool)
 	rail, ok := s.savedRail(ctx, simulated)
 	if !ok {
-		return nil, errors.New("saved methods are off")
+		return nil, errors.New("no Xendit gateway for the saved-method charge")
 	}
 	c, err := rail.gw.ChargeStatus(ctx, rail.cfg, requestID)
 	if err != nil {
 		return nil, err
 	}
-	return s.applyCharge(ctx, row.ID, c, true)
+	expiresAt, _ := time.Parse(time.RFC3339Nano, jsString(meta["expires_at"]))
+	if settled, err := s.applyCharge(ctx, row.ID, c, true); err != nil || settled != nil || expiresAt.IsZero() || expiresAt.After(s.clock()) {
+		return settled, err
+	}
+	if err := rail.gw.CancelCharge(ctx, rail.cfg, requestID); err != nil {
+		return nil, err
+	}
+	if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {
+		return nil, err
+	}
+	return s.repo.Purchase(ctx, s.db, row.ID, false)
 }
 
 /* ── Gateway events (Xendit webhook) ─────────────────────────────────── */

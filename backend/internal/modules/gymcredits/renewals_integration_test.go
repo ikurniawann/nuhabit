@@ -58,6 +58,11 @@ func (f *fakeSaved) Charge(_ context.Context, _ *XenditConfig, in ChargeRequest)
 	return c, nil
 }
 
+func (f *fakeSaved) CancelCharge(_ context.Context, _ *XenditConfig, requestID string) error {
+	f.canceled = append(f.canceled, requestID)
+	return nil
+}
+
 func (f *fakeSaved) ChargeStatus(_ context.Context, _ *XenditConfig, requestID string) (*Charge, error) {
 	return &Charge{ID: requestID, Status: f.outcome}, nil
 }
@@ -338,5 +343,46 @@ func TestRenewalByInvoiceNeedsAppURL(t *testing.T) {
 	e.scalar(&url, `SELECT cp.payment_meta->>'invoice_url' FROM gym.member_passes mp JOIN gym.credit_purchases cp ON cp.id = mp.renewal_purchase_id WHERE mp.id = $1`, pass.ID)
 	if !strings.HasPrefix(url, "https://base.example.test/member/wallet/pay/") {
 		t.Fatalf("invoice redirect %q", url)
+	}
+}
+
+func TestSavedChargeExpiresOnlyAfterCancel(t *testing.T) {
+	e, gw := savedSetup(t)
+	pass := e.passOf(e.buy(e.passPkg("Go Pass Pending", 450_000, 28)).ID)
+	e.link()
+	e.data(asMember, "PUT", "/api/member-portal/gym/passes/"+pass.ID+"/auto-renew", map[string]any{"auto_renew": true, "renew_with": "saved_method"})
+	gw.outcome = "PENDING"
+	first := pass.EndsAt.Add(-2 * day)
+	if err := e.sweep(first); err != nil {
+		t.Fatal(err)
+	}
+	var purchaseID string
+	e.scalar(&purchaseID, `SELECT renewal_purchase_id::text FROM gym.member_passes WHERE id = $1`, pass.ID)
+	e.exec(`UPDATE gym.credit_purchases SET created_at = now() - interval '1 hour' WHERE id = $1`, purchaseID)
+	status := func() string {
+		var s string
+		e.scalar(&s, `SELECT status FROM gym.credit_purchases WHERE id = $1`, purchaseID)
+		return s
+	}
+
+	// Inside its 24 hours the reconcile job leaves the charge alone.
+	e.at(first, 2*time.Hour)
+	if err := e.svc.ReconcilePendingPurchases(e.ctx, time.Now()); err != nil || status() != "pending" || len(gw.canceled) != 0 {
+		t.Fatalf("early reconcile: %s, canceled %v, %v", status(), gw.canceled, err)
+	}
+	// Past it, Xendit cancels the charge first, then the purchase expires
+	// and the next sweep plans a retry.
+	e.at(first, savedChargeTTL+time.Minute)
+	if err := e.svc.ReconcilePendingPurchases(e.ctx, time.Now()); err != nil || status() != "expired" {
+		t.Fatalf("late reconcile: %s %v", status(), err)
+	}
+	if len(gw.canceled) != 1 || gw.canceled[0] != "pr-test-1" {
+		t.Fatalf("canceled %v", gw.canceled)
+	}
+	if err := e.sweep(first.Add(savedChargeTTL + time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, attempts, retryAt, _ := e.passState(pass.ID); attempts != 1 || retryAt == nil {
+		t.Fatalf("after expiry: %d %v", attempts, retryAt)
 	}
 }

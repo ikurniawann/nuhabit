@@ -228,6 +228,18 @@ func (g *XenditGateway) ChargeStatus(ctx context.Context, cfg *XenditConfig, req
 	return parseCharge(raw), nil
 }
 
+// CancelCharge cancels a payment request (POST /v3/payment_requests/{id}/cancel).
+func (g *XenditGateway) CancelCharge(ctx context.Context, cfg *XenditConfig, requestID string) error {
+	status, raw, err := g.send(ctx, http.MethodPost, "/v3/payment_requests/"+url.PathEscape(requestID)+"/cancel", cfg.SecretKey, paymentsAPIVersion, nil, map[string]any{})
+	if err != nil {
+		return err
+	}
+	if status < 200 || status > 299 {
+		return fmt.Errorf("Gagal membatalkan tagihan (%s)", xenditFailure(status, raw))
+	}
+	return nil
+}
+
 func parseCharge(raw any) *Charge {
 	payload, _ := raw.(map[string]any)
 	return &Charge{
@@ -262,6 +274,8 @@ func (simulatedSavedMethods) CancelToken(context.Context, *XenditConfig, string)
 func (simulatedSavedMethods) Charge(_ context.Context, _ *XenditConfig, in ChargeRequest) (*Charge, error) {
 	return &Charge{ID: "sim-pr-" + in.ReferenceID, Status: "SUCCEEDED"}, nil
 }
+
+func (simulatedSavedMethods) CancelCharge(context.Context, *XenditConfig, string) error { return nil }
 
 func (simulatedSavedMethods) ChargeStatus(_ context.Context, _ *XenditConfig, requestID string) (*Charge, error) {
 	return &Charge{ID: requestID, Status: "SUCCEEDED"}, nil
