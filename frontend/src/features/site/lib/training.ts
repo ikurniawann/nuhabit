@@ -24,3 +24,16 @@ export function findBySlug<T extends Named>(items: T[], slug: string): { item: T
 export const classHref = (item: Named) => `/training/classes/${pageSlug(item)}`;
 export const coachHref = (item: Named) => `/training/coaches/${pageSlug(item)}`;
 export const stationHref = (item: Named) => `/training/stations/${pageSlug(item)}`;
+
+/** An active coach of the gym schedule with the photo staff uploaded. */
+export interface GymCoachPhoto {
+  name: string;
+  photo_url: string | null;
+}
+
+/** Content coaches without a photo take the photo of the gym coach with the same name. */
+export function withCoachPhotos<T extends { name: string; image_url: string }>(coaches: T[], gym: GymCoachPhoto[]): T[] {
+  const key = (name: string) => name.trim().toLowerCase();
+  const photos = new Map(gym.flatMap((c) => (c.photo_url ? [[key(c.name), c.photo_url] as const] : [])));
+  return coaches.map((coach) => (coach.image_url ? coach : { ...coach, image_url: photos.get(key(coach.name)) ?? "" }));
+}

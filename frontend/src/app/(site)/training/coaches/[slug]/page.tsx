@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CoachPage } from "@/features/site/components/training-profiles";
-import { fetchAllSessionsAhead, fetchBranches, fetchContent } from "@/features/site/lib/public-api";
+import { fetchAllSessionsAhead, fetchBranches, fetchContent, fetchTraining } from "@/features/site/lib/public-api";
 import { findBySlug } from "@/features/site/lib/training";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function Page({ params }: Props) {
-  const training = await fetchContent("training");
+  const training = await fetchTraining();
   const { item: coach } = findBySlug(training.coaches, (await params).slug);
   if (!coach) notFound();
   const sessions = (await fetchAllSessionsAhead(await fetchBranches())).filter((s) => s.coach_name === coach.name);

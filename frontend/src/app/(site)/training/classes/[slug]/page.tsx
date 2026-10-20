@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { ClassPage } from "@/features/site/components/training-page";
 import { BRANCH_COOKIE } from "@/features/site/lib/branch-cookie";
-import { fetchAllSessionsAhead, fetchBranches, fetchContent } from "@/features/site/lib/public-api";
+import { fetchAllSessionsAhead, fetchBranches, fetchContent, fetchTraining } from "@/features/site/lib/public-api";
 import { findBySlug } from "@/features/site/lib/training";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function Page({ params }: Props) {
-  const training = await fetchContent("training");
+  const training = await fetchTraining();
   const { item, index } = findBySlug(training.class_types, (await params).slug);
   if (!item) notFound();
   const [branches, cookieStore] = await Promise.all([fetchBranches(), cookies()]);

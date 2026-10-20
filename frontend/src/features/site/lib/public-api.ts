@@ -3,6 +3,7 @@ import { appOrigin } from "@/lib/app-origin";
 import { backendUrl } from "@/lib/env";
 import { withDefaults } from "../content-defaults";
 import { addDays, weekWindow, type PublicSession, type PublicTimetable } from "./timetable";
+import { withCoachPhotos, type GymCoachPhoto } from "./training";
 import type { Article, BranchProfile, BranchSummary, ContentByKey, ContentKey, PublicPlansView, SiteEvent } from "../types";
 
 /**
@@ -33,6 +34,12 @@ async function read<T>(path: string): Promise<T | null> {
 
 export async function fetchContent<K extends ContentKey>(key: K): Promise<ContentByKey[K]> {
   return withDefaults(key, await read<unknown>(`/content/${key}`));
+}
+
+/** Training content with each coach's gym profile photo where the content has none. */
+export async function fetchTraining(): Promise<ContentByKey["training"]> {
+  const [training, coaches] = await Promise.all([fetchContent("training"), read<GymCoachPhoto[]>("/coaches")]);
+  return { ...training, coaches: withCoachPhotos(training.coaches, coaches ?? []) };
 }
 
 export async function fetchBranches(): Promise<BranchSummary[]> {
