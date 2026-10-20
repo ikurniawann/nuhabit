@@ -26,6 +26,8 @@ export interface PayoutRow {
   approved_at: string | null;
   paid_at: string | null;
   voided_at: string | null;
+  /** Periode payroll ("YYYY-MM") tempat payout yang dibayar masuk sebagai bonus slip. */
+  payroll_period: string | null;
 }
 
 export interface PayoutDetail extends Omit<PayoutRow, "sessions"> {

@@ -76,6 +76,9 @@ export function PayoutsTab({ month, query }: { month: string; query: UseQueryRes
                 </TableCell>
                 <TableCell className="hidden max-w-[16rem] whitespace-normal text-xs lg:table-cell">
                   {p.payment_reference && <span className="font-mono">{p.payment_reference}</span>}
+                  {p.payroll_period && (
+                    <span className="block text-muted-foreground">Payroll {monthLabel(p.payroll_period)}</span>
+                  )}
                   {p.note && <span className="block text-muted-foreground">{p.note}</span>}
                 </TableCell>
                 <TableCell className="text-right">
@@ -163,7 +166,7 @@ function PayoutActionDialog({
             </DialogPanelTitle>
             <DialogPanelDescription>
               {isPay
-                ? `${formatRupiah(payout.total_idr)} untuk ${monthLabel(payout.month)}. Catat nomor transfer atau bukti bayar.`
+                ? `${formatRupiah(payout.total_idr)} untuk ${monthLabel(payout.month)} masuk slip gaji karyawan coach ini sebagai bonus, pada periode payroll yang belum diproses. Coach harus tertaut ke karyawan HRIS dengan struktur gaji aktif. Catat referensinya.`
                 : "Payout yang di-void tidak bisa dipulihkan. Buat payout baru dari tab Statement bila perlu."}
             </DialogPanelDescription>
           </DialogPanelHeader>
