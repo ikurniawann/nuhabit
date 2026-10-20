@@ -222,6 +222,7 @@ function AccountForm({ onSignedIn, otpEnabled }: { onSignedIn(): void; otpEnable
   const register = (e: FormEvent) => {
     e.preventDefault();
     if (phase.kind !== "register") return;
+    const referralCode = storedReferralCode();
     void run(async () => {
       try {
         await postAuth("/register", {
@@ -231,7 +232,7 @@ function AccountForm({ onSignedIn, otpEnabled }: { onSignedIn(): void; otpEnable
           email: google?.email ?? email,
           wa_consent: false,
           ...(google ? { google_ticket: google.ticket } : {}),
-          ...(storedReferralCode() ? { referral_code: storedReferralCode() } : {}),
+          ...(referralCode ? { referral_code: referralCode } : {}),
           device_id: deviceId(),
         });
         forgetReferralCode();

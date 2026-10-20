@@ -3,15 +3,13 @@ import { useEffect, useState } from "react";
 /** Dataroom email verification stays opt-in while its flow is paused. */
 export const OTP_ENABLED = process.env.NEXT_PUBLIC_OTP_ENABLED === "true";
 
-export const OTP_UNAVAILABLE_MESSAGE = "Verifikasi dengan kode sedang tidak tersedia.";
-
 /**
  * Member portal codes (self sign-up, code sign-in, code password reset) are
  * a runtime decision of the Go API, read from GET /api/member-portal/config:
  * on when a WhatsApp or email channel is configured. A build with
  * NEXT_PUBLIC_OTP_ENABLED=false keeps them off whatever the server says.
  */
-export const MEMBER_OTP_FORCED_OFF = process.env.NEXT_PUBLIC_OTP_ENABLED === "false";
+const MEMBER_OTP_FORCED_OFF = process.env.NEXT_PUBLIC_OTP_ENABLED === "false";
 
 export type OtpChannel = "whatsapp" | "email";
 
@@ -42,7 +40,7 @@ export function parseMemberOtpConfig(payload: unknown, forcedOff = MEMBER_OTP_FO
 let request: Promise<MemberOtpConfig> | null = null;
 
 /** One request per page load; a failed one is retried on the next call. */
-export function fetchMemberOtpConfig(): Promise<MemberOtpConfig> {
+function fetchMemberOtpConfig(): Promise<MemberOtpConfig> {
   request ??= fetch("/api/member-portal/config", { credentials: "same-origin" })
     .then((res) => res.json())
     .then((payload) => parseMemberOtpConfig(payload))

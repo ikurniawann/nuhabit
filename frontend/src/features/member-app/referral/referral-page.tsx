@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { discountLabel } from "@/lib/member-portal/referral";
 import { useErrorText } from "../lib/error-codes";
-import { useT } from "../lib/i18n";
+import { useT, type T } from "../lib/i18n";
 import { m } from "../lib/links";
 import { FRIEND_STATUS, referralLink, useReferral, type ReferralStatus, type ReferralView } from "../lib/queries-referral";
 import { Notice, PageTitle } from "../loyalty/loyalty-ui";
@@ -184,10 +184,8 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-type Translate = ReturnType<typeof useT>;
-
 /** What the member gets per friend, one line per reward. */
-export function referrerRewards(view: ReferralView, t: Translate): string[] {
+export function referrerRewards(view: ReferralView, t: T): string[] {
   const { referrer_credits: credits, referrer_ark_idr: ark } = view.program;
   const lines: string[] = [];
   if (credits > 0) lines.push(t("{n} bonus class credits", { n: credits }));
@@ -196,7 +194,7 @@ export function referrerRewards(view: ReferralView, t: Translate): string[] {
 }
 
 /** What the friend gets, one line per reward. */
-export function refereeRewards(view: ReferralView, t: Translate): string[] {
+export function refereeRewards(view: ReferralView, t: T): string[] {
   const { referee_credits: credits, referee_discount: discount } = view.program;
   const lines: string[] = [];
   if (discount) lines.push(t("{discount} off their first package", { discount: discountLabel(discount, formatIdr) }));
