@@ -299,7 +299,7 @@ function PackageDialog({
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {isPass
-                  ? "Pass: booking kelas tanpa batas selama masa berlaku, dihitung sejak pembayaran lunas."
+                  ? "Pass: booking kelas tanpa batas selama masa berlaku, dihitung sejak pembayaran lunas atau sejak pass member sebelumnya berakhir."
                   : "Paket kredit: sejumlah kredit yang dipotong tiap check-in."}
               </p>
             </fieldset>
