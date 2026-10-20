@@ -59,6 +59,7 @@ type Repository interface {
 	Settings(ctx context.Context, customerID string) (*SettingsView, error)
 	UpsertSettings(ctx context.Context, customerID string, s SettingsView) error
 	PatchHomeSettings(ctx context.Context, customerID string, p SettingsPatch, defaults SettingsView) error
+	HiddenFromLeaderboards(ctx context.Context) (map[string]bool, error)
 
 	Challenges(ctx context.Context) ([]ChallengeInfoRow, error)
 	ChallengeParticipants(ctx context.Context) (map[string][]string, error)

@@ -109,7 +109,8 @@ type boardRowView struct {
 type leaderboardView struct {
 	Rows   []boardRowView `json:"rows"`
 	MyRank *int           `json:"my_rank"`
-	// Hidden: the viewer turned leaderboards off, so they are not listed.
+	// Hidden: the viewer turned leaderboards off; they see their own row,
+	// other members do not.
 	Hidden bool `json:"hidden"`
 	// Years with results, newest first, for the period filter.
 	Years []int `json:"years"`

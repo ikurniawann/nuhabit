@@ -324,14 +324,15 @@ type BoardRow struct {
 	ValueSec int
 }
 
-// Leaderboard ranks each visible member's best value: the total, or one
-// station (1..8) when station is set. Members who turned leaderboards off
-// are left out. Ties share a rank; among them the earlier result lists
+// Leaderboard ranks each member's best value: the total, or one station
+// (1..8) when station is set. Members who turned leaderboards off are left
+// out, except that viewerID (the member asking, "" for staff) always sees
+// their own row. Ties share a rank; among them the earlier result lists
 // first.
-func Leaderboard(candidates []BoardCandidate, f BoardFilter, station int) []BoardRow {
+func Leaderboard(candidates []BoardCandidate, f BoardFilter, station int, viewerID string) []BoardRow {
 	best := map[string]BoardRow{}
 	for _, c := range candidates {
-		if !c.Visible || !f.Match(c) {
+		if !(c.Visible || c.CustomerID == viewerID) || !f.Match(c) {
 			continue
 		}
 		value := c.TotalSec

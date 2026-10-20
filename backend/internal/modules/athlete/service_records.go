@@ -2,6 +2,7 @@ package athlete
 
 import (
 	"context"
+	"slices"
 
 	"nuhabit/backend/internal/modules/athlete/domain"
 	"nuhabit/backend/internal/platform/httpx"
@@ -120,7 +121,7 @@ func (s *Service) UpdateSettings(ctx context.Context, customerID string, p Setti
 func (s *Service) HomeSettings(ctx context.Context, customerID string) (HomeSettingsView, error) {
 	v, err := s.Settings(ctx, customerID)
 	return HomeSettingsView{Units: v.Units, BookingReminders: v.BookingReminders, Language: v.Language,
-		GymWhatsapp: v.GymWhatsapp, GymEmail: v.GymEmail}, err
+		GymWhatsapp: v.GymWhatsapp, GymEmail: v.GymEmail, ShowOnLeaderboard: v.ShowOnLeaderboard}, err
 }
 
 // PatchHomeSettings changes some settings; the row is created on first save.
@@ -181,6 +182,12 @@ func (s *Service) Stats(ctx context.Context, customerID string) (StatsView, erro
 
 // ── Segments ─────────────────────────────────────────────────────────────────
 
+// onBoard keeps the leaderboard rows viewerID may see.
+func (s *Service) onBoard(ctx context.Context, viewerID string) (func(memberID string) bool, error) {
+	hidden, err := s.repo.HiddenFromLeaderboards(ctx)
+	return func(memberID string) bool { return domain.OnBoard(memberID, viewerID, hidden) }, err
+}
+
 func (s *Service) Segments(ctx context.Context, customerID string) ([]SegmentSummaryView, error) {
 	list, err := s.repo.Segments(ctx)
 	if err != nil {
@@ -190,16 +197,25 @@ func (s *Service) Segments(ctx context.Context, customerID string) ([]SegmentSum
 	if err != nil {
 		return nil, err
 	}
+	keep, err := s.onBoard(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
 	out := []SegmentSummaryView{}
 	for _, segment := range list {
-		all := []domain.Effort{}
+		count := 0
+		shown := []domain.Effort{}
 		for _, e := range efforts {
-			if e.SegmentID == segment.ID {
-				all = append(all, e)
+			if e.SegmentID != segment.ID {
+				continue
+			}
+			count++
+			if keep(e.MemberID) {
+				shown = append(shown, e)
 			}
 		}
-		board := domain.BestPerMember(all)
-		view := SegmentSummaryView{Segment: segment, EffortCount: len(all), MyRank: domain.RankOf(board, customerID)}
+		board := domain.BestPerMember(shown)
+		view := SegmentSummaryView{Segment: segment, EffortCount: count, MyRank: domain.RankOf(board, customerID)}
 		if len(board) > 0 {
 			best := board[0].ElapsedSec
 			view.BestElapsedSec = &best
@@ -232,6 +248,11 @@ func (s *Service) SegmentDetail(ctx context.Context, customerID, segmentID strin
 	if err != nil {
 		return SegmentDetailView{}, err
 	}
+	keep, err := s.onBoard(ctx, customerID)
+	if err != nil {
+		return SegmentDetailView{}, err
+	}
+	efforts = slices.DeleteFunc(efforts, func(e domain.Effort) bool { return !keep(e.MemberID) })
 	board := domain.BestPerMember(efforts)
 	shown := board
 	if len(shown) > domain.SegmentBoardSize {

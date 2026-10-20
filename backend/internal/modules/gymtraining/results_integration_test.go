@@ -212,14 +212,20 @@ func TestHyroxResults(t *testing.T) {
 		}
 	}
 
-	// Budi turns leaderboards off: he is left out, and his own view says so.
+	// Budi turns leaderboards off: staff and Ana no longer see him; he still
+	// sees his own row, and his view says he is hidden.
 	h.exec(`INSERT INTO gym.athlete_settings (customer_id, show_on_leaderboard) VALUES ($1, false)`, budi.CustomerID)
 	if got := boardNames(h.asStaff("GET", board+"&include_unverified=true", nil), anaName, budiName); len(got) != 1 || got[0] != "1:"+anaName {
 		t.Fatalf("board without Budi = %v", got)
 	}
-	hidden := h.as(budi, "GET", "/api/member-portal/app/workout/leaderboard?include_unverified=true", nil)
-	if hidden.data()["hidden"] != true || hidden.data()["my_rank"] != nil {
-		t.Fatalf("Budi's board = %v", hidden.data())
+	anaView := h.as(ana, "GET", "/api/member-portal/app/workout/leaderboard?include_unverified=true&race_id="+raceID, nil)
+	if got := boardNames(anaView, anaName, budiName); len(got) != 1 || got[0] != "1:"+anaName {
+		t.Fatalf("Ana's board without Budi = %v", got)
+	}
+	hidden := h.as(budi, "GET", "/api/member-portal/app/workout/leaderboard?include_unverified=true&race_id="+raceID, nil)
+	if got := boardNames(hidden, anaName, budiName); hidden.data()["hidden"] != true || hidden.data()["my_rank"] != 1.0 ||
+		len(got) != 2 || got[0] != "1:"+budiName {
+		t.Fatalf("Budi's board = %v (%v)", hidden.data(), got)
 	}
 	if v := h.scalar(`SELECT official_total_sec || '|' || total_sec FROM gym.hyrox_results WHERE id = $1`, budiResult); v != "4300|4300" {
 		t.Fatalf("Budi's result = %s", v)

@@ -510,6 +510,12 @@ func ChallengeProgressKm(challengeType string, startsAt, endsAt time.Time, activ
 // IsChallengeRunning: a challenge can be joined until it ends.
 func IsChallengeRunning(endsAt, now time.Time) bool { return msOf(endsAt) >= msOf(now) }
 
+// OnBoard reports whether a member's row shows on a leaderboard viewerID is
+// looking at. A member who turned leaderboards off still sees their own row.
+func OnBoard(memberID, viewerID string, hidden map[string]bool) bool {
+	return memberID == viewerID || !hidden[memberID]
+}
+
 // LeaderboardEntry is one row of a km board.
 type LeaderboardEntry struct {
 	MemberName string  `json:"memberName"`

@@ -158,28 +158,31 @@ func TestLeaderboard(t *testing.T) {
 	t.Run("keeps each member's best and ranks fastest first", func(t *testing.T) {
 		rows := Leaderboard([]BoardCandidate{
 			candidate("ana", "a1", 5000, 0), candidate("ana", "a2", 4800, 5), candidate("budi", "b1", 4900, 1),
-		}, BoardFilter{}, 0)
+		}, BoardFilter{}, 0, "")
 		eq(t, ranks(rows), []string{"1:ana", "2:budi"})
 		eq(t, rows[0].ResultID, "a2")
 	})
 	t.Run("ties share a rank and the next rank skips", func(t *testing.T) {
 		rows := Leaderboard([]BoardCandidate{
 			candidate("cici", "c", 4900, 3), candidate("ana", "a", 4800, 0), candidate("budi", "b", 4900, 1), candidate("dodi", "d", 5000, 0),
-		}, BoardFilter{}, 0)
+		}, BoardFilter{}, 0, "")
 		// budi raced before cici, so budi lists first at the shared rank.
 		eq(t, ranks(rows), []string{"1:ana", "2:budi", "2:cici", "4:dodi"})
 	})
-	t.Run("leaves out members who turned leaderboards off", func(t *testing.T) {
+	t.Run("leaves out members who turned leaderboards off, except for themselves", func(t *testing.T) {
 		hidden := candidate("ana", "a", 4000, 0)
 		hidden.Visible = false
-		eq(t, ranks(Leaderboard([]BoardCandidate{hidden, candidate("budi", "b", 4900, 0)}, BoardFilter{}, 0)), []string{"1:budi"})
+		all := []BoardCandidate{hidden, candidate("budi", "b", 4900, 0)}
+		eq(t, ranks(Leaderboard(all, BoardFilter{}, 0, "")), []string{"1:budi"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{}, 0, "budi")), []string{"1:budi"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{}, 0, "ana")), []string{"1:ana", "2:budi"})
 	})
 	t.Run("counts verified results unless unverified are included", func(t *testing.T) {
 		pending := candidate("ana", "a", 4000, 0)
 		pending.Verified = false
 		all := []BoardCandidate{pending, candidate("budi", "b", 4900, 0)}
-		eq(t, ranks(Leaderboard(all, BoardFilter{}, 0)), []string{"1:budi"})
-		eq(t, ranks(Leaderboard(all, BoardFilter{IncludeUnverified: true}, 0)), []string{"1:ana", "2:budi"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{}, 0, "")), []string{"1:budi"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{IncludeUnverified: true}, 0, "")), []string{"1:ana", "2:budi"})
 	})
 	t.Run("filters by division, age group, race, source and year", func(t *testing.T) {
 		women := candidate("ana", "a", 4000, 0)
@@ -193,17 +196,17 @@ func TestLeaderboard(t *testing.T) {
 		lastYear := candidate("eka", "e", 4400, -200)
 		all := []BoardCandidate{women, older, noAge, sim, lastYear, candidate("fani", "f", 4500, 0)}
 
-		eq(t, ranks(Leaderboard(all, BoardFilter{Division: strp("WOMEN_OPEN")}, 0)), []string{"1:ana"})
-		eq(t, ranks(Leaderboard(all, BoardFilter{AgeGroup: strp("40-44")}, 0)), []string{"1:budi"})
-		eq(t, ranks(Leaderboard(all, BoardFilter{Source: strp("simulation")}, 0)), []string{"1:dodi"})
-		eq(t, len(Leaderboard(all, BoardFilter{RaceEventID: strp("jkt")}, 0)), 5)
-		eq(t, ranks(Leaderboard(all, BoardFilter{Year: intp(2025)}, 0)), []string{"1:eka"})
-		eq(t, len(Leaderboard(all, BoardFilter{Year: intp(2026), Division: strp("MEN_OPEN")}, 0)), 4)
+		eq(t, ranks(Leaderboard(all, BoardFilter{Division: strp("WOMEN_OPEN")}, 0, "")), []string{"1:ana"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{AgeGroup: strp("40-44")}, 0, "")), []string{"1:budi"})
+		eq(t, ranks(Leaderboard(all, BoardFilter{Source: strp("simulation")}, 0, "")), []string{"1:dodi"})
+		eq(t, len(Leaderboard(all, BoardFilter{RaceEventID: strp("jkt")}, 0, "")), 5)
+		eq(t, ranks(Leaderboard(all, BoardFilter{Year: intp(2025)}, 0, "")), []string{"1:eka"})
+		eq(t, len(Leaderboard(all, BoardFilter{Year: intp(2026), Division: strp("MEN_OPEN")}, 0, "")), 4)
 	})
 	t.Run("the year follows Jakarta time", func(t *testing.T) {
 		newYear := candidate("ana", "a", 4000, 0)
 		newYear.RacedAt = time.Date(2025, 12, 31, 18, 0, 0, 0, time.UTC) // 01:00 WIB on 1 January
-		eq(t, len(Leaderboard([]BoardCandidate{newYear}, BoardFilter{Year: intp(2026)}, 0)), 1)
+		eq(t, len(Leaderboard([]BoardCandidate{newYear}, BoardFilter{Year: intp(2026)}, 0, "")), 1)
 	})
 	t.Run("a station board ranks that split and skips results without it", func(t *testing.T) {
 		a := candidate("ana", "a", 4000, 0)
@@ -211,9 +214,9 @@ func TestLeaderboard(t *testing.T) {
 		b := candidate("budi", "b", 5000, 0)
 		b.StationSec[0] = intp(240)
 		c := candidate("cici", "c", 4500, 0)
-		rows := Leaderboard([]BoardCandidate{a, b, c}, BoardFilter{}, 1)
+		rows := Leaderboard([]BoardCandidate{a, b, c}, BoardFilter{}, 1, "")
 		eq(t, ranks(rows), []string{"1:budi", "2:ana"})
 		eq(t, rows[0].ValueSec, 240)
-		eq(t, len(Leaderboard([]BoardCandidate{a}, BoardFilter{}, 9)), 0)
+		eq(t, len(Leaderboard([]BoardCandidate{a}, BoardFilter{}, 9, "")), 0)
 	})
 }

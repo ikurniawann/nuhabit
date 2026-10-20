@@ -285,7 +285,7 @@ func TestSocialProfileAndRecords(t *testing.T) {
 		t.Fatal(ok)
 	}
 	if h := e.obj(&a, "GET", "/api/member-portal/app/home/settings", nil); h["language"] != "EN" || h["units"] != "METRIC" || h["weeklyGoalKm"] != nil ||
-		h["gymWhatsapp"] != true || h["gymEmail"] != true {
+		h["gymWhatsapp"] != true || h["gymEmail"] != true || h["showOnLeaderboard"] != true {
 		t.Fatal(h)
 	}
 	// The gym channel opt-outs survive a train settings save.
@@ -344,6 +344,19 @@ func TestSegmentsChallengesClubs(t *testing.T) {
 		summary["myBestElapsedSec"] != board[1].(map[string]any)["elapsedSec"] || summary["myRank"] != 2.0 {
 		t.Fatalf("segment summary %v", summary)
 	}
+
+	// A turns leaderboards off: B no longer sees A, A still sees their own row.
+	e.obj(&a, "PATCH", "/api/member-portal/app/home/settings", map[string]any{"showOnLeaderboard": false})
+	if s := e.obj(&a, "GET", "/api/member-portal/app/home/settings", nil); s["showOnLeaderboard"] != false {
+		t.Fatal(s)
+	}
+	if hidden := e.obj(&b, "GET", base+"/segments/"+segment, nil); len(hidden["leaderboard"].([]any)) != 1 || hidden["myRank"] != 1.0 {
+		t.Fatalf("segment without A %v", hidden)
+	}
+	if own := e.obj(&a, "GET", base+"/segments/"+segment, nil); len(own["leaderboard"].([]any)) != 2 || own["myRank"] != 1.0 {
+		t.Fatalf("A's own segment view %v", own)
+	}
+	e.obj(&a, "PATCH", "/api/member-portal/app/home/settings", map[string]any{"showOnLeaderboard": true})
 
 	now := time.Now()
 	challenge := insertID(t, "gym.athlete_challenges",

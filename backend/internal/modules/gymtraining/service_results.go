@@ -325,7 +325,7 @@ func (s *Service) Leaderboard(ctx context.Context, viewerID string, q boardQuery
 	slices.Sort(years)
 	slices.Reverse(years)
 
-	board := domain.Leaderboard(candidates, q.Filter, q.Station)
+	board := domain.Leaderboard(candidates, q.Filter, q.Station, viewerID)
 	view := leaderboardView{Rows: []boardRowView{}, Years: years}
 	ids := []string{}
 	for _, row := range board {
