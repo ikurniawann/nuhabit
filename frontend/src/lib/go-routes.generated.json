@@ -1535,6 +1535,11 @@
     "path": "/api/gym/credits/{customerId}/sell"
   },
   {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/transfer"
+  },
+  {
     "module": "gym-training",
     "method": "DELETE",
     "path": "/api/gym/exercises"
@@ -3128,6 +3133,11 @@
     "module": "gym-credits",
     "method": "POST",
     "path": "/api/member-portal/gym/credits/purchases/{id}/simulate-paid"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/credits/transfer"
   },
   {
     "module": "gym-credits",
