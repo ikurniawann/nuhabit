@@ -1506,6 +1506,11 @@
   },
   {
     "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits/purchases/{id}/receipt"
+  },
+  {
+    "module": "gym-credits",
     "method": "POST",
     "path": "/api/gym/credits/purchases/{id}/refund"
   },
@@ -3838,6 +3843,21 @@
     "module": "pos-ops",
     "method": "GET",
     "path": "/api/pos/shifts/current"
+  },
+  {
+    "module": "pos-ops",
+    "method": "GET",
+    "path": "/api/pos/shifts/mine"
+  },
+  {
+    "module": "pos-ops",
+    "method": "POST",
+    "path": "/api/pos/shifts/mine"
+  },
+  {
+    "module": "pos-ops",
+    "method": "PATCH",
+    "path": "/api/pos/shifts/mine/close"
   },
   {
     "module": "pos-ops",

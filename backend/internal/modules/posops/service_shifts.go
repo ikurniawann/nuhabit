@@ -109,7 +109,8 @@ func (s *Service) OpenShift(ctx context.Context, userID string, body any) (*Obj,
 	if number != nil && *number != "" {
 		shiftNumber = *number
 	}
-	return insertShift(ctx, s.db, shiftNumber, nodeParam(cashierID), domain.Number(openingCash), nodeParam(notes), userID)
+	return insertShift(ctx, s.db, shiftNumber, nodeParam(cashierID), nodeParam(field(body, "branch_id")),
+		domain.Number(openingCash), nodeParam(notes), userID)
 }
 
 // ShiftClosed is the close response: the updated row and its summary.
@@ -118,10 +119,64 @@ type ShiftClosed struct {
 	Summary *Obj
 }
 
+// shiftTotals is what a shift took: POS orders, member bill instalments and
+// gym package sales. Gym card sales count as debit and transfers as credit,
+// like a custom catalog method of a POS order.
+type shiftTotals struct {
+	Orders     int
+	POS        domain.ShiftOrderTotals
+	MemberBill domain.MemberBillShiftTotals
+	Gym        domain.GymShiftTotals
+}
+
+func (s *Service) loadShiftTotals(ctx context.Context, q database.Querier, shiftID string) (*shiftTotals, error) {
+	orders, err := s.ports.Sales.ShiftCloseOrders(ctx, q, shiftID)
+	if err != nil {
+		return nil, err
+	}
+	bills, err := s.ports.MemberBills.ShiftPayments(ctx, q, shiftID)
+	if err != nil {
+		return nil, err
+	}
+	gym, err := s.ports.GymSales.ShiftPayments(ctx, q, shiftID)
+	if err != nil {
+		return nil, err
+	}
+	return &shiftTotals{
+		Orders: len(orders), POS: domain.SummarizeShiftOrders(orders),
+		MemberBill: domain.SummarizeMemberBillShiftPayments(bills), Gym: domain.SummarizeGymShiftPayments(gym),
+	}, nil
+}
+
+func (t *shiftTotals) cash() float64   { return t.POS.Cash + t.Gym.Cash }
+func (t *shiftTotals) qris() float64   { return t.POS.Qris + t.Gym.Qris }
+func (t *shiftTotals) debit() float64  { return t.POS.Debit + t.Gym.Card }
+func (t *shiftTotals) credit() float64 { return t.POS.Credit + t.Gym.Transfer }
+func (t *shiftTotals) orderCount() int { return t.Orders + t.Gym.Count }
+func (t *shiftTotals) sales() float64 {
+	return t.cash() + t.qris() + t.debit() + t.credit() + t.POS.ArkCoin
+}
+func (t *shiftTotals) drawerIn() float64 { return t.cash() + t.MemberBill.Cash - t.Gym.CashRefunds }
+
+// summary is the close summary without the counted cash.
+func (t *shiftTotals) summary(openingCash string) *Obj {
+	return NewObj(
+		"total_orders", t.orderCount(),
+		"total_sales", t.sales(),
+		"total_refunds", t.Gym.Refunds,
+		"opening_cash", openingCash,
+		"expected_cash", domain.Number(openingCash)+t.drawerIn(),
+		"method_breakdown", NewObj("cash", t.cash(), "qris", t.qris(), "debit", t.debit(), "credit", t.credit(),
+			"ark_coin", t.POS.ArkCoin, "nfc_tab", t.POS.NfcTab),
+		"member_bill_payments", t.MemberBill,
+		"gym_sales", t.Gym,
+	)
+}
+
 // CloseShift mirrors PATCH /api/pos/shifts/{id}/close: expected cash is the
-// opening cash plus drawer-cash orders plus drawer-cash member bill
-// instalments of the shift; the variance is what the cashier counted
-// minus that.
+// opening cash plus drawer-cash orders, member bill instalments and gym
+// sales of the shift, minus gym cash refunds; the variance is what the
+// cashier counted minus that.
 func (s *Service) CloseShift(ctx context.Context, userID, shiftID string, body any) (*ShiftClosed, error) {
 	closingRaw := field(body, "closing_cash")
 	if domain.IsNullish(closingRaw) {
@@ -143,41 +198,68 @@ func (s *Service) CloseShift(ctx context.Context, userID, shiftID string, body a
 		if shift.Status == nil || *shift.Status != "active" {
 			return fail(http.StatusBadRequest, "Shift is not active")
 		}
-		orders, err := s.ports.Sales.ShiftCloseOrders(ctx, tx, shiftID)
+		t, err := s.loadShiftTotals(ctx, tx, shiftID)
 		if err != nil {
 			return err
 		}
-		t := domain.SummarizeShiftOrders(orders)
-		payments, err := s.ports.MemberBills.ShiftPayments(ctx, tx, shiftID)
-		if err != nil {
-			return err
-		}
-		memberBill := domain.SummarizeMemberBillShiftPayments(payments)
-
-		expected := domain.Number(shift.OpeningCash) + t.Cash + memberBill.Cash
-		totalSales := t.Cash + t.Qris + t.Debit + t.Credit + t.ArkCoin
+		expected := domain.Number(shift.OpeningCash) + t.drawerIn()
 		updated, err := closeShift(ctx, tx, shiftID, shiftClose{
 			ClosedBy: userID, ClosingCash: closingCash, ExpectedCash: expected,
-			Cash: t.Cash, Qris: t.Qris, Debit: t.Debit, Credit: t.Credit, ArkCoin: t.ArkCoin,
-			TotalSum: totalSales, TotalOrders: len(orders), Notes: notes,
+			Cash: t.cash(), Qris: t.qris(), Debit: t.debit(), Credit: t.credit(), ArkCoin: t.POS.ArkCoin,
+			TotalSum: t.sales(), TotalOrders: t.orderCount(), Refunds: t.Gym.Refunds, Notes: notes,
 		})
 		if err != nil {
 			return err
 		}
-		out = &ShiftClosed{Shift: updated, Summary: NewObj(
-			"total_orders", len(orders),
-			"total_sales", totalSales,
-			"opening_cash", shift.OpeningCash,
-			"expected_cash", expected,
-			"closing_cash", closingCash,
-			"variance", closingCash-expected,
-			"method_breakdown", NewObj("cash", t.Cash, "qris", t.Qris, "debit", t.Debit, "credit", t.Credit,
-				"ark_coin", t.ArkCoin, "nfc_tab", t.NfcTab),
-			"member_bill_payments", memberBill,
-		)}
+		out = &ShiftClosed{Shift: updated, Summary: t.summary(shift.OpeningCash).
+			Set("closing_cash", closingCash).Set("variance", closingCash-expected)}
 		return nil
 	})
 	return out, err
+}
+
+/* ── The caller's own shift (gym front desk) ─────────────────────────── */
+
+// MyShift is the caller's open shift serving branchID with the totals so
+// far, or nil.
+func (s *Service) MyShift(ctx context.Context, userID string, branchID *string) (*Obj, error) {
+	shift, err := myActiveShift(ctx, s.db, userID, branchID)
+	if err != nil || shift == nil {
+		return nil, err
+	}
+	t, err := s.loadShiftTotals(ctx, s.db, shift.Str("id"))
+	if err != nil {
+		return nil, err
+	}
+	return shift.Set("summary", t.summary(shift.Str("opening_cash"))), nil
+}
+
+// OpenMyShift opens a shift with the caller as cashier at branchID.
+func (s *Service) OpenMyShift(ctx context.Context, userID string, branchID *string, body any) (*Obj, error) {
+	open, err := myActiveShift(ctx, s.db, userID, nil)
+	if err != nil {
+		return nil, err
+	}
+	if open != nil {
+		return nil, fail(http.StatusConflict, "Anda masih punya shift kasir yang terbuka", "active_shift", open)
+	}
+	in := map[string]any{"cashier_id": userID, "opening_cash": field(body, "opening_cash"), "notes": field(body, "notes")}
+	if branchID != nil {
+		in["branch_id"] = *branchID
+	}
+	return s.OpenShift(ctx, userID, in)
+}
+
+// CloseMyShift closes the caller's open shift serving branchID.
+func (s *Service) CloseMyShift(ctx context.Context, userID string, branchID *string, body any) (*ShiftClosed, error) {
+	shift, err := myActiveShift(ctx, s.db, userID, branchID)
+	if err != nil {
+		return nil, err
+	}
+	if shift == nil {
+		return nil, fail(http.StatusNotFound, "Tidak ada shift kasir yang terbuka")
+	}
+	return s.CloseShift(ctx, userID, shift.Str("id"), body)
 }
 
 // ShiftReportSent is the send-report outcome.

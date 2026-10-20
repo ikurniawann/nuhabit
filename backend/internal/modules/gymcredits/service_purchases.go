@@ -49,7 +49,8 @@ type purchaseInput struct {
 	VoucherCode string
 }
 
-// createPurchase records a pending purchase after the package eligibility rules.
+// createPurchase records a pending purchase after the package eligibility
+// rules. A front desk sale joins the seller's POS shift (see till.go).
 func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in purchaseInput) (*Purchase, error) {
 	pkg, err := s.repo.PackageForPurchase(ctx, tx, in.PackageID)
 	if err != nil {
@@ -97,6 +98,12 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		}
 		in.DiscountIdr = quote.Discount
 	}
+	var shiftID *string
+	if in.Channel == "front_desk" {
+		if shiftID, err = s.tillShift(ctx, tx, in.PaymentMethod, deref(in.CreatedBy), in.BranchID); err != nil {
+			return nil, err
+		}
+	}
 	discount, total := domain.PurchaseTotal(pkg.PriceIdr, in.DiscountIdr)
 	var note *string
 	if in.Note != nil && strings.TrimSpace(*in.Note) != "" {
@@ -106,7 +113,7 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 	id, err := s.repo.InsertPurchase(ctx, tx, NewPurchase{
 		CustomerID: in.CustomerID, PackageID: pkg.ID, Credits: pkg.Credits, PriceIdr: pkg.PriceIdr,
 		DiscountIdr: discount, TotalIdr: total, Channel: in.Channel, PaymentMethod: in.PaymentMethod,
-		BranchID: in.BranchID, Note: note, CreatedBy: in.CreatedBy,
+		BranchID: in.BranchID, Note: note, CreatedBy: in.CreatedBy, PosShiftID: shiftID,
 	})
 	if err != nil {
 		return nil, err
@@ -309,6 +316,12 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 		meta["refund_credits"] = credits
 	}
 	meta["refund_idr"] = refund
+	var shiftID *string
+	if refund > 0 {
+		if shiftID, err = s.tillShift(ctx, tx, deref(purchase.PaymentMethod), actorID, purchase.BranchID); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.publishPurchaseJournal(ctx, tx, purchase, true, refund, actorID); err != nil {
 		return nil, err
 	}
@@ -317,7 +330,7 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 			return nil, err
 		}
 	}
-	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), refund, meta); err != nil {
+	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), refund, meta, shiftID); err != nil {
 		return nil, err
 	}
 	return s.repo.Purchase(ctx, tx, purchaseID, false)
@@ -443,7 +456,8 @@ type FrontDeskSale struct {
 }
 
 // SellPackage sells at the front desk: money is taken at the till (or from
-// ARK Coin), so the purchase is paid and the credits issued at once.
+// ARK Coin), so the purchase is paid and the credits issued at once. Till
+// payments join the cashier's open POS shift (see till.go).
 func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchase, error) {
 	var result *Purchase
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {

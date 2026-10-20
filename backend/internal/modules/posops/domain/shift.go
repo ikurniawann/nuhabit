@@ -109,6 +109,58 @@ func SummarizeMemberBillShiftPayments(rows []MemberBillPayment) MemberBillShiftT
 	return t
 }
 
+// GymShiftPayment is a gym package sale (or its refund) the gym front desk
+// took in a shift. Method is cash, card, transfer or qris.
+type GymShiftPayment struct {
+	Amount any
+	Method string
+	Refund bool
+}
+
+// GymShiftTotals splits a shift's gym sales per method; refunds are paid
+// out, and CashRefunds leave the drawer.
+type GymShiftTotals struct {
+	Cash        float64 `json:"cash"`
+	Qris        float64 `json:"qris"`
+	Card        float64 `json:"card"`
+	Transfer    float64 `json:"transfer"`
+	Sales       float64 `json:"sales"`
+	Count       int     `json:"count"`
+	Refunds     float64 `json:"refunds"`
+	CashRefunds float64 `json:"cash_refunds"`
+	RefundCount int     `json:"refund_count"`
+}
+
+// SummarizeGymShiftPayments totals the gym sales and refunds of a shift.
+func SummarizeGymShiftPayments(rows []GymShiftPayment) GymShiftTotals {
+	var t GymShiftTotals
+	for _, row := range rows {
+		amount := orZero(Number(row.Amount))
+		method := strings.ToLower(row.Method)
+		if row.Refund {
+			t.Refunds += amount
+			t.RefundCount++
+			if method == "cash" {
+				t.CashRefunds += amount
+			}
+			continue
+		}
+		t.Sales += amount
+		t.Count++
+		switch method {
+		case "cash":
+			t.Cash += amount
+		case "qris":
+			t.Qris += amount
+		case "transfer":
+			t.Transfer += amount
+		default:
+			t.Card += amount
+		}
+	}
+	return t
+}
+
 /* ── Shift report WhatsApp message (lib/pos/receipt-wa.ts) ───────────── */
 
 // NormalizeWaPhone mirrors normalizeWaPhone: 08xx / +62 / spaces → 628xx;

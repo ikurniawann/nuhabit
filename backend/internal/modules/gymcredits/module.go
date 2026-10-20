@@ -42,6 +42,7 @@ func NewDefaultService(deps module.Deps, db DB) *Service {
 		Gateway:   xendit,
 		Invoices:  xendit,
 		Notifier:  SQLNotifier{},
+		Till:      SQLTill{},
 	}
 	canSimulate := func() bool { return deps.Auth != nil && deps.Auth.MemberOTPDevCode() != "" }
 	return NewService(db, Postgres{}, ports, deps.Now, deps.Log, canSimulate)

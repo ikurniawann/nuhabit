@@ -324,10 +324,11 @@ func (Postgres) InsertPurchase(ctx context.Context, q database.Querier, p NewPur
 	var id string
 	err := q.QueryRow(ctx,
 		`INSERT INTO gym.credit_purchases
-		   (customer_id, package_id, credits, price_idr, discount_idr, total_idr, channel, payment_method, branch_id, note, created_by)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+		   (customer_id, package_id, credits, price_idr, discount_idr, total_idr, channel, payment_method, branch_id, note, created_by,
+		    pos_shift_id)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
 		p.CustomerID, p.PackageID, p.Credits, p.PriceIdr, p.DiscountIdr, p.TotalIdr, p.Channel, p.PaymentMethod,
-		p.BranchID, p.Note, p.CreatedBy,
+		p.BranchID, p.Note, p.CreatedBy, p.PosShiftID,
 	).Scan(&id)
 	return id, err
 }
@@ -335,8 +336,10 @@ func (Postgres) InsertPurchase(ctx context.Context, q database.Querier, p NewPur
 const purchaseSelect = `SELECT p.id, p.customer_id, p.package_id, pk.name AS package_name, pk.kind, p.credits, pk.validity_days,
        p.price_idr::float AS price_idr, p.discount_idr::float AS discount_idr, p.total_idr::float AS total_idr,
        p.channel, p.payment_method, p.status, p.external_id, p.payment_meta, p.branch_id, p.note,
-       p.paid_at, p.refunded_at, p.refunded_idr::float AS refunded_idr, p.created_by, p.created_at
-  FROM gym.credit_purchases p JOIN gym.credit_packages pk ON pk.id = p.package_id`
+       p.paid_at, p.refunded_at, p.refunded_idr::float AS refunded_idr, p.created_by, p.created_at,
+       p.receipt_number, p.pos_shift_id, p.refund_shift_id, sh.shift_number
+  FROM gym.credit_purchases p JOIN gym.credit_packages pk ON pk.id = p.package_id
+  LEFT JOIN pos.pos_shifts sh ON sh.id = p.pos_shift_id`
 
 func scanPurchase(row pgx.CollectableRow) (Purchase, error) {
 	var p Purchase
@@ -344,7 +347,8 @@ func scanPurchase(row pgx.CollectableRow) (Purchase, error) {
 	var createdAt time.Time
 	err := row.Scan(&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.Kind, &p.Credits, &p.ValidityDays, &p.PriceIdr, &p.DiscountIdr,
 		&p.TotalIdr, &p.Channel, &p.PaymentMethod, &p.Status, &p.ExternalID, &p.PaymentMeta, &p.BranchID, &p.Note,
-		&paidAt, &refundedAt, &p.RefundedIdr, &p.CreatedBy, &createdAt)
+		&paidAt, &refundedAt, &p.RefundedIdr, &p.CreatedBy, &createdAt,
+		&p.ReceiptNumber, &p.PosShiftID, &p.RefundShiftID, &p.ShiftNumber)
 	p.PaidAt, p.RefundedAt, p.CreatedAt = jsTimePtr(paidAt), jsTimePtr(refundedAt), JSTime(createdAt)
 	return p, err
 }
@@ -401,9 +405,17 @@ func (Postgres) MarkPurchasePaid(ctx context.Context, q database.Querier, id str
 	}
 	var paidAt time.Time
 	var validity int
+	// The counter row of the WIB day is locked until commit, so receipt
+	// numbers of one day never repeat.
 	err = q.QueryRow(ctx,
-		`UPDATE gym.credit_purchases
-		    SET status = 'paid', paid_at = now(), updated_at = now(), payment_meta = payment_meta || $2::jsonb
+		`WITH n AS (
+		   INSERT INTO gym.receipt_counters AS c (day, last_no)
+		   VALUES ((now() AT TIME ZONE 'Asia/Jakarta')::date, 1)
+		   ON CONFLICT (day) DO UPDATE SET last_no = c.last_no + 1
+		   RETURNING 'GYM-' || to_char(day, 'YYYYMMDD') || '-' || lpad(last_no::text, 4, '0') AS receipt_number)
+		 UPDATE gym.credit_purchases
+		    SET status = 'paid', paid_at = now(), updated_at = now(), payment_meta = payment_meta || $2::jsonb,
+		        receipt_number = COALESCE(receipt_number, (SELECT receipt_number FROM n))
 		  WHERE id = $1
 		  RETURNING paid_at, (SELECT validity_days FROM gym.credit_packages WHERE id = package_id) AS validity_days`,
 		id, string(raw),
@@ -417,7 +429,7 @@ func (Postgres) ClosePurchase(ctx context.Context, q database.Querier, id, statu
 	return err
 }
 
-func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any) error {
+func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any, shiftID *string) error {
 	raw, err := json.Marshal(meta)
 	if err != nil {
 		return err
@@ -425,8 +437,8 @@ func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id
 	_, err = q.Exec(ctx,
 		`UPDATE gym.credit_purchases
 		    SET status = 'refunded', refunded_at = now(), refunded_idr = $3, updated_at = now(),
-		        note = concat_ws(' · ', note, $2::text), payment_meta = payment_meta || $4::jsonb
-		  WHERE id = $1`, id, note, amountIdr, string(raw))
+		        note = concat_ws(' · ', note, $2::text), payment_meta = payment_meta || $4::jsonb, refund_shift_id = $5
+		  WHERE id = $1`, id, note, amountIdr, string(raw), shiftID)
 	return err
 }
 
