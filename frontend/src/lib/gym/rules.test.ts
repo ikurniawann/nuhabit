@@ -36,8 +36,11 @@ describe("GYM_RULE_DEFAULTS", () => {
       maxFreezeDaysPerYear: 30,
       minFreezeDays: 7,
       renewalLeadDays: 3,
+      renewalRetryCount: 2,
+      renewalRetryHours: 24,
+      renewalGraceDays: 3,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(24);
+    expect(GYM_RULE_KEYS).toHaveLength(27);
   });
 });
 
@@ -85,6 +88,9 @@ describe("validateGymRules", () => {
       error: "minFreezeDays: Durasi bekukan minimal 1",
     });
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalLeadDays: 31 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalRetryCount: 11 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalRetryHours: 0 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalGraceDays: 31 }).ok).toBe(false);
   });
 });
 
