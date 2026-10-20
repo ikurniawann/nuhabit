@@ -182,9 +182,9 @@ type SavedMethodStore interface {
 // RenewalState is a pass with its renewal bookkeeping.
 type RenewalState struct {
 	PassRow
-	Attempts       int
-	PurchaseID     string // the latest renewal purchase, "" when none
-	PurchaseStatus string
+	Attempts          int
+	RenewalPurchaseID string // the latest renewal purchase, "" when none
+	RenewalStatus     string
 }
 
 /* ── Feature gate ────────────────────────────────────────────────────── */

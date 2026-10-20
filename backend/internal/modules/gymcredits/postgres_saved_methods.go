@@ -135,7 +135,7 @@ func collectRenewals(rows pgx.Rows, err error) ([]RenewalState, error) {
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (RenewalState, error) {
 		var r RenewalState
-		err := row.Scan(append(r.scanTargets(), &r.Attempts, &r.PurchaseID, &r.PurchaseStatus)...)
+		err := row.Scan(append(r.scanTargets(), &r.Attempts, &r.RenewalPurchaseID, &r.RenewalStatus)...)
 		r.truncate()
 		return r, err
 	})

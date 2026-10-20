@@ -25,8 +25,8 @@ import (
 
 // Alert reasons (the gym_credits_alerts_total metric).
 const (
-	AlertRenewalNoAppURL     = "renewal_invoice_no_app_url"
-	AlertSavedMethodsNoGatew = "saved_methods_gateway_inactive"
+	AlertRenewalNoAppURL       = "renewal_invoice_no_app_url"
+	AlertSavedMethodsNoGateway = "saved_methods_gateway_inactive"
 )
 
 // errNoAppOrigin: an invoice renewal needs NEXT_PUBLIC_APP_URL (or
@@ -48,7 +48,7 @@ func (s *Service) CheckRenewalSetup(ctx context.Context) error {
 			"auto_renewing_passes", n)
 	}
 	if savedMethodsFlagOn() && !s.SavedMethodsEnabled(ctx) {
-		s.alert(AlertSavedMethodsNoGatew)
+		s.alert(AlertSavedMethodsNoGateway)
 		s.log.ErrorContext(ctx, "[gym-credits] "+SavedMethodsFlag+" aktif tetapi gateway Xendit belum aktif di Pengaturan → Payment Gateways")
 	}
 	return nil
@@ -259,18 +259,18 @@ func (s *Service) planRetry(ctx context.Context, p RenewalState, now time.Time, 
 		return s.stopRenewal(ctx, p)
 	}
 	return database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
-		planned, err := s.repo.ScheduleRenewalRetry(ctx, tx, p.ID, p.PurchaseID, next.At)
+		planned, err := s.repo.ScheduleRenewalRetry(ctx, tx, p.ID, p.RenewalPurchaseID, next.At)
 		if err != nil || !planned {
 			return err
 		}
 		if err := s.repo.InsertPassEvent(ctx, tx, PassEvent{PassID: p.ID, CustomerID: p.CustomerID, Kind: EventRenewal, Meta: map[string]any{
-			"attempt": p.Attempts, "purchase_id": p.PurchaseID, "status": p.PurchaseStatus, "retry_at": isoString(next.At),
+			"attempt": p.Attempts, "purchase_id": p.RenewalPurchaseID, "status": p.RenewalStatus, "retry_at": isoString(next.At),
 		}}); err != nil {
 			return err
 		}
 		return s.ports.Notifier.NotifyMember(ctx, tx, p.CustomerID, Notice{
 			Type: "gym_pass_renewal", Title: "Perpanjangan otomatis belum berhasil",
-			Body: "Pembayaran perpanjangan " + p.PackageName + " " + purchaseOutcome(p.PurchaseStatus) +
+			Body: "Pembayaran perpanjangan " + p.PackageName + " " + purchaseOutcome(p.RenewalStatus) +
 				". Kami coba lagi " + wibDateTime(next.At) + " (percobaan " + strconv.Itoa(p.Attempts+1) + " dari " +
 				strconv.Itoa(r.RenewalRetryCount+1) + "). Pastikan saldo atau metode pembayaranmu siap.",
 		})
@@ -285,7 +285,7 @@ func (s *Service) stopRenewal(ctx context.Context, p RenewalState) error {
 			return err
 		}
 		if err := s.repo.InsertPassEvent(ctx, tx, PassEvent{PassID: p.ID, CustomerID: p.CustomerID, Kind: EventAutoRenew, Meta: map[string]any{
-			"auto_renew": false, "reason": "renewal_failed", "attempts": p.Attempts, "purchase_id": p.PurchaseID,
+			"auto_renew": false, "reason": "renewal_failed", "attempts": p.Attempts, "purchase_id": p.RenewalPurchaseID,
 		}}); err != nil {
 			return err
 		}
