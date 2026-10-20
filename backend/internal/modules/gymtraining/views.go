@@ -113,6 +113,8 @@ type memberRaceEntry struct {
 	GoalSec     *int   `json:"goal_sec"`
 	ResultSec   *int   `json:"result_sec"`
 	Status      string `json:"status"`
+	// The member's HYROX result for this race, when logged.
+	ResultID *string `json:"result_id"`
 }
 
 type memberRaceView struct {

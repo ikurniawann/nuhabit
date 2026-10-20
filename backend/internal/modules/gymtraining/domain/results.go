@@ -174,7 +174,7 @@ func PreviousBests(current ResultRecord, all []ResultRecord) map[string]int {
 // nothing earlier to beat is not a PR, so a first result has none.
 func NewPRs(current map[string]int, previous map[string]int) []string {
 	out := []string{}
-	for _, key := range orderedKeys() {
+	for _, key := range SplitKeys() {
 		v, ok := current[key]
 		if b, had := previous[key]; ok && had && v < b {
 			out = append(out, key)
@@ -183,7 +183,9 @@ func NewPRs(current map[string]int, previous map[string]int) []string {
 	return out
 }
 
-func orderedKeys() []string {
+// SplitKeys lists the keys in race order (runs and stations interleaved),
+// total last.
+func SplitKeys() []string {
 	keys := make([]string, 0, 2*SplitCount+1)
 	for i := range SplitCount {
 		keys = append(keys, RunKey(i), StationKey(i))
@@ -293,6 +295,9 @@ type BoardFilter struct {
 // wib is Asia/Jakarta (no daylight saving): a race's year is the gym's year.
 var wib = time.FixedZone("WIB", 7*3600)
 
+// ResultYear is the gym-local year a result was raced in.
+func ResultYear(t time.Time) int { return t.In(wib).Year() }
+
 // Match reports whether a candidate belongs on the board.
 func (f BoardFilter) Match(c BoardCandidate) bool {
 	switch {
@@ -306,7 +311,7 @@ func (f BoardFilter) Match(c BoardCandidate) bool {
 		return false
 	case f.AgeGroup != nil && (c.AgeGroup == nil || *c.AgeGroup != *f.AgeGroup):
 		return false
-	case f.Year != nil && c.RacedAt.In(wib).Year() != *f.Year:
+	case f.Year != nil && ResultYear(c.RacedAt) != *f.Year:
 		return false
 	}
 	return true

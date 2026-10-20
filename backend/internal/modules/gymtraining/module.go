@@ -9,6 +9,7 @@ const Name = "gym-training"
 type Ports struct {
 	Scheduling Scheduling
 	Customers  Customers
+	Notifier   Notifier
 }
 
 type mod struct{ handlers }
@@ -17,6 +18,6 @@ func (mod) Name() string { return Name }
 
 // New builds the module from its dependencies and ports.
 func New(deps module.Deps, ports Ports) module.Module {
-	svc := NewService(newPgRepo(deps.DB), ports.Scheduling, ports.Customers, deps.Now)
+	svc := NewService(newPgRepo(deps.DB), ports.Scheduling, ports.Customers, ports.Notifier, deps.Now)
 	return mod{handlers{svc: svc, auth: deps.Auth, guard: deps.Auth}}
 }

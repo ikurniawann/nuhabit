@@ -57,6 +57,7 @@ type Customers interface {
 type Repository interface {
 	// InTx runs fn with a repository bound to one transaction.
 	InTx(ctx context.Context, fn func(Repository) error) error
+	resultsRepository
 
 	Library(ctx context.Context) (library, error)
 	ExerciseAdmin(ctx context.Context) (exerciseAdmin, error)
@@ -110,16 +111,18 @@ type Service struct {
 	repo      Repository
 	sched     Scheduling
 	customers Customers
-	now       func() time.Time
-	pick      func(n int) int
+	// notifier sends PR notifications; nil sends none.
+	notifier Notifier
+	now      func() time.Time
+	pick     func(n int) int
 }
 
-// NewService wires the use cases. now may be nil.
-func NewService(repo Repository, sched Scheduling, customers Customers, now func() time.Time) *Service {
+// NewService wires the use cases. notifier and now may be nil.
+func NewService(repo Repository, sched Scheduling, customers Customers, notifier Notifier, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{repo: repo, sched: sched, customers: customers, now: now, pick: randomPick}
+	return &Service{repo: repo, sched: sched, customers: customers, notifier: notifier, now: now, pick: randomPick}
 }
 
 func randomPick(n int) int {
@@ -752,6 +755,7 @@ func (s *Service) RegisterForRace(ctx context.Context, customerID string, in reg
 }
 
 // UpdateMemberRace changes goal/division, logs a result (→ raced) or cancels.
+// A logged total also becomes a total-only HYROX result.
 func (s *Service) UpdateMemberRace(ctx context.Context, customerID, entryID string, u domain.MemberRaceUpdate) error {
 	return s.repo.InTx(ctx, func(tx Repository) error {
 		status, found, err := tx.LockMemberRaceStatus(ctx, customerID, entryID)
@@ -765,6 +769,9 @@ func (s *Service) UpdateMemberRace(ctx context.Context, customerID, entryID stri
 		if refusal != "" {
 			return httpx.Conflict(refusal)
 		}
-		return tx.ApplyMemberRacePatch(ctx, entryID, patch)
+		if err := tx.ApplyMemberRacePatch(ctx, entryID, patch); err != nil || patch.ResultSec == nil {
+			return err
+		}
+		return tx.InsertEntryResult(ctx, entryID)
 	})
 }
