@@ -20,7 +20,7 @@ import (
 // journal is posted: deferred revenue stays where it is until the receiver
 // uses or loses them.
 
-// TransferChannel is gym.credit_transfers.channel.
+// Values of gym.credit_transfers.channel.
 const (
 	TransferByStaff  = "staff"
 	TransferByMember = "member"
@@ -126,13 +126,9 @@ func (s *Service) Transfer(ctx context.Context, tx database.Querier, in Transfer
 		return nil, err
 	}
 	now := s.clock()
-	moved, err := s.planTransfer(ctx, tx, in, now)
+	moved, credits, err := s.planTransfer(ctx, tx, in, now)
 	if err != nil {
 		return nil, err
-	}
-	credits := 0
-	for _, m := range moved {
-		credits += m.Credits
 	}
 	transferID, err := s.repo.InsertTransfer(ctx, tx, NewTransfer{
 		FromCustomerID: in.FromCustomerID, ToCustomerID: in.ToCustomerID, Credits: credits, Channel: in.Channel,
@@ -177,23 +173,24 @@ func (s *Service) transferParties(ctx context.Context, tx database.Querier, in T
 }
 
 // planTransfer applies the rules (member transfers on, monthly cap) and
-// picks the lots, keeping what the sender's upcoming bookings need.
-func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in TransferInput, now time.Time) ([]domain.TransferLot, error) {
+// picks the lots, keeping what the sender's upcoming bookings need. It
+// returns the lots and the credits they add up to.
+func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in TransferInput, now time.Time) ([]domain.TransferLot, int, error) {
 	rules, err := s.Rules(ctx, tx, in.BranchID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if in.Channel == TransferByMember && !rules.AllowMemberCreditTransfer {
-		return nil, transferFail(domain.TransferDisabled)
+		return nil, 0, transferFail(domain.TransferDisabled)
 	}
 	state, _, err := s.expireLapsedLots(ctx, tx, in.FromCustomerID, now)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	remainders := domain.LotRemainders(state.lots, state.entries)
 	moved, problem := domain.PlanTransfer(remainders, in.Lots, in.Credits, now)
 	if problem != "" {
-		return nil, transferFail(problem)
+		return nil, 0, transferFail(problem)
 	}
 	credits := 0
 	for _, m := range moved {
@@ -201,24 +198,24 @@ func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in Tran
 	}
 	sent, err := s.repo.CreditsSentSince(ctx, tx, in.FromCustomerID, monthStart(now))
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !domain.WithinTransferCap(rules.MaxTransferCreditsPerMonth, sent, credits) {
-		return nil, fail(http.StatusConflict, fmt.Sprintf("%s Sisa bulan ini: %d kredit.",
+		return nil, 0, fail(http.StatusConflict, fmt.Sprintf("%s Sisa bulan ini: %d kredit.",
 			domain.TransferProblemMessages[domain.TransferMonthlyCap], max(0, rules.MaxTransferCreditsPerMonth-sent)))
 	}
 	demands, err := s.creditBookings(ctx, tx, in.FromCustomerID, now)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	coverage, err := s.repo.PackageCoverage(ctx, tx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !domain.CanCover(domain.AfterTransfer(remainders, moved), coverage, demands, now) {
-		return nil, transferFail(domain.TransferReserved)
+		return nil, 0, transferFail(domain.TransferReserved)
 	}
-	return moved, nil
+	return moved, credits, nil
 }
 
 // creditBookings is what the member's upcoming bookings will draw, leaving

@@ -322,10 +322,8 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
         <TransferDialog
           credits={d}
           onClose={() => setDialog(null)}
-          onDone={() => {
-            refresh();
-            void queryClient.invalidateQueries({ queryKey: ["gym-credits", "member"] });
-          }}
+          // The receiver's balance changes too.
+          onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
         />
       )}
       {reversing && (
