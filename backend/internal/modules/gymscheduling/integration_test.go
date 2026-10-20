@@ -16,6 +16,7 @@ import (
 
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -26,12 +27,26 @@ import (
 
 type headerGuard struct{}
 
-func (headerGuard) RequireMenuPrefix(r *http.Request, _ ...string) (*auth.User, error) {
+// RequireAnyGrant lets staff through on the first grant, or, with an
+// X-Test-Grants header (menu code to actions as JSON), on the first grant
+// those actions hold.
+func (headerGuard) RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error) {
 	id := r.Header.Get("X-Test-Staff")
 	if id == "" {
-		return nil, httpx.Unauthorized("")
+		return nil, -1, httpx.Unauthorized("")
 	}
-	return &auth.User{ID: id}, nil
+	raw := r.Header.Get("X-Test-Grants")
+	if raw == "" {
+		return &auth.User{ID: id}, 0, nil
+	}
+	var granted map[string][]string
+	if err := json.Unmarshal([]byte(raw), &granted); err != nil {
+		return nil, -1, err
+	}
+	if i := iam.FirstGrant(granted, grants); i >= 0 {
+		return &auth.User{ID: id}, i, nil
+	}
+	return nil, -1, httpx.Forbidden("Insufficient permissions")
 }
 
 func (headerGuard) RequireMember(r *http.Request) (string, error) {

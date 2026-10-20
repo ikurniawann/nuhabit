@@ -310,6 +310,12 @@ func TestCheckPackagePurchase(t *testing.T) {
 	eq(t, CheckPackagePurchase(branch, 0, true, "b2"), PurchaseBranchMismatch)
 	eq(t, CheckPackagePurchase(branch, 0, true, "b1"), PurchaseProblem(""))
 	eq(t, CheckPackagePurchase(branch, 0, true, ""), PurchaseProblem(""))
+
+	eq(t, CheckFrontDeskSale(branch, 0, true, ""), PurchaseBranchRequired)
+	eq(t, CheckFrontDeskSale(branch, 0, true, "b1"), PurchaseProblem(""))
+	eq(t, CheckFrontDeskSale(branch, 0, true, "b2"), PurchaseBranchMismatch)
+	eq(t, CheckFrontDeskSale(pkg, 0, true, ""), PurchaseProblem(""))
+	eq(t, CheckFrontDeskSale(branch, 0, false, ""), PurchaseMemberInactive)
 }
 
 func TestPurchaseTotalAndLotExpiry(t *testing.T) {

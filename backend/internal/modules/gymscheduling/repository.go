@@ -123,12 +123,12 @@ type CoachInput struct {
 	Status                     string
 }
 
-// CoachPatch is coachSchema.partial(). PhotoURL and BranchID may be cleared,
-// so the *Sent flags say whether the key was in the body.
+// CoachPatch is coachSchema.partial(). PhotoURL, BranchID and UserID may be
+// cleared, so the *Sent flags say whether the key was in the body.
 type CoachPatch struct {
-	Name, Bio, Specialization, Status *string
-	PhotoURL, BranchID                *string
-	PhotoURLSent, BranchIDSent        bool
+	Name, Bio, Specialization, Status      *string
+	PhotoURL, BranchID, UserID             *string
+	PhotoURLSent, BranchIDSent, UserIDSent bool
 }
 
 // SessionFilter narrows ListSessions; nil fields do not filter.

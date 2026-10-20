@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { GYM_KEYS, schedulingApi, type Session, wibDay, wibTime } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 
 /**
  * Buat sesi baru (date = hari awal, "YYYY-MM-DD") atau ubah sesi yang ada.
@@ -37,8 +38,12 @@ export function SessionDialog({
 }) {
   const classTypes = useQuery({ queryKey: GYM_KEYS.classTypes, queryFn: schedulingApi.classTypes });
   const coaches = useQuery({ queryKey: GYM_KEYS.coaches, queryFn: schedulingApi.coaches });
+  const branches = useGymBranches();
   const editing = Boolean(session);
   const hasBookings = Boolean(session && (session.confirmed_count > 0 || session.waitlist_count > 0));
+  // null = belum dipilih: sesi baru ikut cabang staf begitu daftar cabang termuat.
+  const [chosenBranch, setChosenBranch] = useState<string | null>(session ? (session.branch_id ?? "") : null);
+  const branchId = chosenBranch ?? defaultBranchId(branches.data);
   const [form, setForm] = useState(() => ({
     class_type_id: session?.class_type_id ?? "",
     coach_id: session?.coach_id ?? "",
@@ -75,6 +80,7 @@ export function SessionDialog({
         : schedulingApi.createSession({
             class_type_id: form.class_type_id,
             coach_id: form.coach_id || null,
+            branch_id: branchId || null,
             area: form.area.trim() || null,
             starts_at: startsAt,
             duration_min: num(form.duration_min),
@@ -131,11 +137,36 @@ export function SessionDialog({
                 ))}
               </select>
             </Field>
+            {(branches.data?.branches.length ?? 0) > 0 && (
+              <Field
+                label="Cabang"
+                className="sm:col-span-2"
+                hint={editing ? "Cabang sesi tidak bisa diubah." : "Aturan booking cabang ini yang dipakai."}
+              >
+                <select
+                  className={SELECT}
+                  value={branchId}
+                  onChange={(e) => setChosenBranch(e.target.value)}
+                  disabled={editing}
+                >
+                  <option value="">Tanpa cabang (aturan global)</option>
+                  {(branches.data?.branches ?? []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="Coach">
               <select className={SELECT} value={form.coach_id} onChange={set("coach_id")}>
                 <option value="">Belum ditentukan</option>
                 {(coaches.data ?? [])
-                  .filter((c) => c.status === "active" || c.id === form.coach_id)
+                  .filter(
+                    (c) =>
+                      c.id === form.coach_id ||
+                      (c.status === "active" && (!branchId || !c.branch_id || c.branch_id === branchId))
+                  )
                   .map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}

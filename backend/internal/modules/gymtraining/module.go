@@ -18,5 +18,5 @@ func (mod) Name() string { return Name }
 // New builds the module from its dependencies and ports.
 func New(deps module.Deps, ports Ports) module.Module {
 	svc := NewService(newPgRepo(deps.DB), ports.Scheduling, ports.Customers, deps.Now)
-	return mod{handlers{svc: svc, auth: deps.Auth}}
+	return mod{handlers{svc: svc, auth: deps.Auth, guard: deps.Auth}}
 }

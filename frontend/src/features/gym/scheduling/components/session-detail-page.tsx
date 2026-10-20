@@ -20,6 +20,7 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -304,13 +305,18 @@ function RosterTable({
 
 function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onClose: () => void; onAdded: () => void }) {
   const [q, setQ] = useState("");
+  // Walk-in / terlambat: jendela booking sudah tutup tapi kelas belum selesai.
+  // Dibaca sekali saat dialog dibuka.
+  const [opened] = useState(() => Date.now());
+  const [walkIn, setWalkIn] = useState(opened > Date.parse(session.booking_closes_at));
+  const walkInAllowed = opened < Date.parse(session.ends_at);
   const members = useQuery({
     queryKey: ["gym", "member-search", q],
     queryFn: () => schedulingApi.searchMembers(q),
     enabled: q.trim().length >= 2,
   });
   const book = useMutation({
-    mutationFn: (customerId: string) => schedulingApi.book(session.id, customerId),
+    mutationFn: (customerId: string) => schedulingApi.book(session.id, customerId, walkIn && walkInAllowed),
     onSuccess: (data) => {
       toast.success(data.status === "confirmed" ? "Member terdaftar" : `Kelas penuh, member di waitlist #${data.waitlistPosition}`);
       onAdded();
@@ -330,6 +336,15 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-3">
+          {walkInAllowed && (
+            <label className="flex items-start gap-3 text-sm">
+              <Switch checked={walkIn} onCheckedChange={setWalkIn} aria-label="Walk-in atau terlambat" />
+              <span>
+                Walk-in atau terlambat
+                <span className="block text-xs text-muted-foreground">Abaikan jendela booking. Saldo dan kapasitas tetap dicek.</span>
+              </span>
+            </label>
+          )}
           <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari nama atau nomor HP" />
           {members.isFetching && <p className="text-sm text-muted-foreground">Mencari…</p>}
           {(members.data ?? []).map((m) => (

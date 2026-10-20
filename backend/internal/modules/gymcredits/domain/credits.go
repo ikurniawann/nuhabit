@@ -428,6 +428,7 @@ var PurchaseProblemMessages = map[PurchaseProblem]string{
 	PurchaseLimitReached:   "Batas pembelian paket ini per member sudah tercapai.",
 	PurchaseBranchMismatch: "Paket ini tidak dijual di cabang ini.",
 	PurchaseMemberInactive: "Keanggotaan tidak aktif, tidak bisa membeli kredit.",
+	PurchaseBranchRequired: "Paket ini khusus satu cabang. Pilih cabang penjualan.",
 }
 
 // CheckPackagePurchase returns the problem, or "" when the purchase is allowed.
@@ -443,6 +444,21 @@ func CheckPackagePurchase(pkg PurchasablePackage, purchaseCount int, memberActiv
 		return PurchaseBranchMismatch
 	case pkg.PurchaseLimitPerMember != nil && purchaseCount >= *pkg.PurchaseLimitPerMember:
 		return PurchaseLimitReached
+	}
+	return ""
+}
+
+// PurchaseBranchRequired: a front desk sale of a branch-only package names no branch.
+const PurchaseBranchRequired PurchaseProblem = "branch_required"
+
+// CheckFrontDeskSale is CheckPackagePurchase for a sale at the desk, which
+// always sells at a branch: a branch-only package needs that branch named.
+func CheckFrontDeskSale(pkg PurchasablePackage, purchaseCount int, memberActive bool, branchID string) PurchaseProblem {
+	if problem := CheckPackagePurchase(pkg, purchaseCount, memberActive, branchID); problem != "" {
+		return problem
+	}
+	if pkg.BranchID != "" && branchID == "" {
+		return PurchaseBranchRequired
 	}
 	return ""
 }

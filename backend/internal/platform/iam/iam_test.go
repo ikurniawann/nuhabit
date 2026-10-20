@@ -73,4 +73,11 @@ func TestMatchers(t *testing.T) {
 	if !HasMenuCode([]string{"a", "b"}, "b") || HasMenuCode([]string{"a"}, "a.b") {
 		t.Error("HasMenuCode is exact")
 	}
+	grants := []Grant{{"update", []string{"pos"}}, {"read", []string{"pos.catalog"}}}
+	if got := FirstGrant(granted, grants); got != 1 {
+		t.Errorf("FirstGrant = %d, want 1", got)
+	}
+	if got := FirstGrant(granted, grants[:1]); got != -1 {
+		t.Errorf("FirstGrant without a match = %d, want -1", got)
+	}
 }

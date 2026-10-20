@@ -211,6 +211,9 @@ type EligibilityInput struct {
 	LastWaitlistPosition int
 	HasActiveBooking     bool
 	Now                  time.Time
+	// OverrideWindow: staff book a walk-in or late arrival, so the booking
+	// window does not apply.
+	OverrideWindow bool
 }
 
 // Available is the balance left after the credits reserved by other bookings.
@@ -226,9 +229,9 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 		return deny(DenyMemberNotActive)
 	case !slices.Contains(BookableSessionStatuses, in.Session.Status):
 		return deny(DenySessionNotBookable)
-	case in.Now.Before(in.Session.BookingOpensAt):
+	case !in.OverrideWindow && in.Now.Before(in.Session.BookingOpensAt):
 		return deny(DenyBookingNotOpenYet)
-	case in.Now.After(in.Session.BookingClosesAt):
+	case !in.OverrideWindow && in.Now.After(in.Session.BookingClosesAt):
 		return deny(DenyBookingWindowClosed)
 	case in.HasActiveBooking:
 		return deny(DenyAlreadyBooked)

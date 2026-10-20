@@ -179,8 +179,10 @@ export const gymCreditsApi = {
   memberCredits: (customerId: string) => call<MemberCredits>(`/api/gym/credits/${customerId}`),
   adjust: (customerId: string, amount: number, reason: string) =>
     send<{ balanceAfter: number }>(`/api/gym/credits/${customerId}/adjust`, { amount, reason }),
-  sell: (customerId: string, input: { package_id: string; payment_method: PaymentMethod; discount_idr: number; note: string }) =>
-    send<CreditPurchase>(`/api/gym/credits/${customerId}/sell`, input),
+  sell: (
+    customerId: string,
+    input: { package_id: string; payment_method: PaymentMethod; discount_idr: number; note: string; branch_id: string | null }
+  ) => send<CreditPurchase>(`/api/gym/credits/${customerId}/sell`, input),
   reverse: (entryId: string, reason: string) => send("/api/gym/credits/reverse", { entry_id: entryId, reason }),
   refundQuote: (purchaseId: string) => call<RefundQuote>(`/api/gym/credits/purchases/${purchaseId}/refund-quote`),
   refundPurchase: (purchaseId: string, reason: string, mode: RefundMode) =>

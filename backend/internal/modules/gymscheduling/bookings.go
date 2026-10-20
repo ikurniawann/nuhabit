@@ -111,7 +111,17 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 // BookSession takes a seat or a waitlist place. The session row is locked, so
 // two requests for the last seat run in turn: one confirmed, the next
 // waitlisted. A seat offered to the waitlist counts as taken.
-func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source string) (out BookResult, err error) {
+func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source string) (BookResult, error) {
+	return s.bookSession(ctx, customerID, sessionID, source, false)
+}
+
+// StaffBookSession is a front desk booking. overrideWindow books a walk-in or
+// late arrival outside the booking window until the session ends.
+func (s *Service) StaffBookSession(ctx context.Context, customerID, sessionID string, overrideWindow bool) (BookResult, error) {
+	return s.bookSession(ctx, customerID, sessionID, "admin", overrideWindow)
+}
+
+func (s *Service) bookSession(ctx context.Context, customerID, sessionID, source string, overrideWindow bool) (out BookResult, err error) {
 	now := s.now()
 	err = s.inTx(ctx, func(q Q) error {
 		session, err := s.lockSession(ctx, q, sessionID)
@@ -134,6 +144,7 @@ func (s *Service) BookSession(ctx context.Context, customerID, sessionID, source
 			return err
 		}
 		in.ConfirmedCount, in.LastWaitlistPosition, in.HasActiveBooking = stats.Confirmed+stats.Offered, stats.LastWaitlist, stats.Mine
+		in.OverrideWindow = overrideWindow && now.Before(session.EndsAt)
 		decision := domain.EvaluateBookingEligibility(in)
 		if decision.Kind == domain.DecisionDeny {
 			return schedulingError(in.DenialMessage(decision.Reason))

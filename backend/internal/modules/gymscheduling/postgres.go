@@ -103,7 +103,7 @@ func (Postgres) ActiveClassTypes(ctx context.Context, q Q) ([]*Row, error) {
 // ── Coaches ─────────────────────────────────────────────────────────────────
 
 func (Postgres) ListCoaches(ctx context.Context, q Q) ([]*Row, error) {
-	return queryRows(ctx, q, `SELECT c.*, b.name AS branch_name,
+	return queryRows(ctx, q, `SELECT c.*, b.name AS branch_name, u.full_name AS user_name,
             (SELECT count(*)::int FROM gym.class_sessions s
               WHERE s.coach_id = c.id AND s.starts_at > now() AND s.starts_at < now() + interval '14 days'
                 AND s.status IN ('published', 'full')) AS upcoming_sessions,
@@ -111,6 +111,7 @@ func (Postgres) ListCoaches(ctx context.Context, q Q) ([]*Row, error) {
               WHERE s.coach_id = c.id AND s.status = 'completed') AS completed_sessions
        FROM gym.coaches c
        LEFT JOIN configuration.branches b ON b.id = c.branch_id
+       LEFT JOIN configuration.users u ON u.id = c.user_id
       ORDER BY c.status, c.name`)
 }
 
@@ -126,9 +127,11 @@ func (Postgres) UpdateCoach(ctx context.Context, q Q, id string, in CoachPatch) 
         name = COALESCE($2, name), bio = COALESCE($3, bio), specialization = COALESCE($4, specialization),
         photo_url = CASE WHEN $8 THEN $5 ELSE photo_url END,
         branch_id = CASE WHEN $9 THEN $6::uuid ELSE branch_id END,
+        user_id = CASE WHEN $11 THEN $10::uuid ELSE user_id END,
         status = COALESCE($7, status), updated_at = now()
       WHERE id = $1 RETURNING id`,
-		id, in.Name, in.Bio, in.Specialization, in.PhotoURL, in.BranchID, in.Status, in.PhotoURLSent, in.BranchIDSent)
+		id, in.Name, in.Bio, in.Specialization, in.PhotoURL, in.BranchID, in.Status, in.PhotoURLSent, in.BranchIDSent,
+		in.UserID, in.UserIDSent)
 }
 
 func (Postgres) MemberCoaches(ctx context.Context, q Q) ([]*Row, error) {

@@ -40,3 +40,20 @@ func HasGrantedAction(granted map[string][]string, prefixes []string, action str
 	}
 	return false
 }
+
+// Grant is one way past a guard: Action on some menu under Prefixes.
+type Grant struct {
+	Action   string
+	Prefixes []string
+}
+
+// FirstGrant is the index of the first grant the granted actions satisfy,
+// -1 when none does.
+func FirstGrant(granted map[string][]string, grants []Grant) int {
+	for i, g := range grants {
+		if HasGrantedAction(granted, g.Prefixes, g.Action) {
+			return i
+		}
+	}
+	return -1
+}

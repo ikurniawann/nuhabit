@@ -67,6 +67,12 @@ var (
 	GymRules                = []string{"gym.rules"}
 	GymScheduling           = []string{"gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"}
 	GymCheckin              = []string{"gym.checkin", "gym.sessions"}
+	Gym                     = []string{"gym"}
+	GymSchedule             = []string{"gym.schedule"}
+	GymSessions             = []string{"gym.sessions"}
+	GymBookings             = []string{"gym.bookings"}
+	GymClassTypes           = []string{"gym.class-types"}
+	GymCoaches              = []string{"gym.coaches"}
 	HrisMaster              = []string{"hris.master"}
 	HrisOrganization        = []string{"hris.organization"}
 	HrisInsights            = []string{"hris.insights"}
@@ -147,6 +153,12 @@ var ByKey = map[string][]string{
 	"gymRules":                GymRules,
 	"gymScheduling":           GymScheduling,
 	"gymCheckin":              GymCheckin,
+	"gym":                     Gym,
+	"gymSchedule":             GymSchedule,
+	"gymSessions":             GymSessions,
+	"gymBookings":             GymBookings,
+	"gymClassTypes":           GymClassTypes,
+	"gymCoaches":              GymCoaches,
 	"hrisMaster":              HrisMaster,
 	"hrisOrganization":        HrisOrganization,
 	"hrisInsights":            HrisInsights,

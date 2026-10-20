@@ -69,7 +69,11 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 	if err != nil {
 		return nil, err
 	}
-	problem := domain.CheckPackagePurchase(domain.PurchasablePackage{
+	check := domain.CheckPackagePurchase
+	if in.Channel == "front_desk" {
+		check = domain.CheckFrontDeskSale
+	}
+	problem := check(domain.PurchasablePackage{
 		ID: pkg.ID, Status: pkg.Status, PurchaseLimitPerMember: pkg.PurchaseLimitPerMember, BranchID: deref(pkg.BranchID),
 	}, counts[pkg.ID], active, deref(in.BranchID))
 	if problem != "" {

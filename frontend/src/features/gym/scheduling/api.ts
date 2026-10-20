@@ -26,12 +26,15 @@ export interface Coach {
   photo_url: string | null;
   branch_id: string | null;
   branch_name: string | null;
+  /** Akun staf coach ini; dipakai untuk akses "kelas sendiri". */
+  user_id: string | null;
+  user_name: string | null;
   status: "active" | "inactive";
   upcoming_sessions: number;
   completed_sessions: number;
 }
 
-export type CoachInput = Pick<Coach, "name" | "bio" | "specialization" | "photo_url" | "status">;
+export type CoachInput = Pick<Coach, "name" | "bio" | "specialization" | "photo_url" | "status" | "branch_id" | "user_id">;
 
 export interface Session {
   id: string;
@@ -110,6 +113,7 @@ export interface GenerateResult {
 export interface SessionInput {
   class_type_id: string;
   coach_id: string | null;
+  branch_id: string | null;
   area: string | null;
   starts_at: string;
   duration_min?: number | null;
@@ -163,6 +167,35 @@ export interface MemberHit {
   suspended_until: string | null;
 }
 
+/** Akun staf yang bisa ditautkan ke profil coach. */
+export interface StaffUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  branch_name: string | null;
+}
+
+/** Booking hari ini (WIB) seorang member di pencarian front desk. */
+export interface DeskBooking {
+  id: string;
+  status: BookingStatus;
+  session_id: string;
+  starts_at: string;
+  ends_at: string;
+  class_type_name: string;
+  coach_name: string | null;
+  checked_in_at: string | null;
+}
+
+export interface DeskMember {
+  id: string;
+  name: string | null;
+  phone: string;
+  is_active: boolean | null;
+  member_code: string | null;
+  bookings: DeskBooking[];
+}
+
 export interface CheckInResult {
   decision: "allowed" | "denied";
   reason: GateDenialReason | null;
@@ -198,10 +231,11 @@ export const schedulingApi = {
   archiveClassType: (id: string) => call<{ id: string }>(`/api/gym/class-types/${id}`, { method: "DELETE" }),
 
   coaches: () => call<Coach[]>("/api/gym/coaches"),
+  staffUsers: () => call<StaffUser[]>("/api/gym/coaches/staff"),
   saveCoach: (input: CoachInput, id?: string) =>
     id ? send<{ id: string }>(`/api/gym/coaches/${id}`, input, "PATCH") : send<{ id: string }>("/api/gym/coaches", input),
 
-  sessions: (params: { from: string; to: string; status?: string; class_type_id?: string; coach_id?: string }) =>
+  sessions: (params: { from: string; to: string; status?: string; class_type_id?: string; coach_id?: string; branch_id?: string }) =>
     call<Session[]>(`/api/gym/sessions?${qs(params)}`),
   createSession: (input: SessionInput) => send<{ id: string }>("/api/gym/sessions", input),
   updateSession: (id: string, patch: Partial<SessionInput>) => send<{ id: string }>(`/api/gym/sessions/${id}`, patch, "PATCH"),
@@ -228,21 +262,25 @@ export const schedulingApi = {
 
   bookings: (params: { from: string; to: string; status?: string; q?: string; session_id?: string }) =>
     call<BookingRow[]>(`/api/gym/bookings?${qs(params)}`),
-  book: (sessionId: string, customerId: string) =>
-    send<{ status: "confirmed" | "waitlist"; waitlistPosition: number | null }>("/api/gym/bookings", {
+  /** overrideWindow: walk-in atau terlambat, boleh di luar jendela booking selama sesi belum selesai. */
+  book: (sessionId: string, customerId: string, overrideWindow = false) =>
+    send<{ bookingId: string; status: "confirmed" | "waitlist"; waitlistPosition: number | null }>("/api/gym/bookings", {
       session_id: sessionId,
       customer_id: customerId,
+      override_window: overrideWindow,
     }),
   bookingAction: (id: string, action: "cancel" | "no_show" | "check_in", options?: { waivePenalty?: boolean }) =>
     send<{ penaltyCredits?: number; passStrike?: boolean; late?: boolean; message?: string }>(`/api/gym/bookings/${id}`, {
       action,
       ...(options?.waivePenalty ? { waive_penalty: true } : {}),
     }),
+  checkInBooking: (id: string) => send<CheckInResult>(`/api/gym/bookings/${id}`, { action: "check_in" }),
   searchMembers: (q: string) => call<MemberHit[]>(`/api/gym/bookings/members?${qs({ q })}`),
 
   checkinLog: () =>
     call<{ log: AccessLogRow[]; today: { checked_in: number; denied: number; credits: number } }>("/api/gym/checkin"),
-  scan: (token: string) => send<CheckInResult>("/api/gym/checkin", { token }),
+  scan: (token: string, branchId: string | null) => send<CheckInResult>("/api/gym/checkin", { token, branch_id: branchId }),
+  deskMembers: (q: string) => call<DeskMember[]>(`/api/gym/checkin/members?${qs({ q })}`),
 };
 
 export const GYM_KEYS = {
@@ -252,6 +290,7 @@ export const GYM_KEYS = {
   coaches: ["gym", "coaches"],
   bookings: ["gym", "bookings"],
   checkin: ["gym", "checkin"],
+  deskMembers: ["gym", "desk-members"],
 } as const;
 
 /* ── Label & format ──────────────────────────────────────────────────── */

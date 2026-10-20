@@ -163,6 +163,29 @@ func (s *Service) RequireMenuAction(r *http.Request, action string, prefixes ...
 	return u, nil
 }
 
+// RequireAnyGrant passes when the caller holds any of the grants and reports
+// the index of the first one held, so a route can serve a narrower view (a
+// coach's own classes) when only the narrower grant matched.
+func (s *Service) RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*User, int, error) {
+	u, err := s.RequireUser(r)
+	if err != nil {
+		return nil, -1, err
+	}
+	roleIDs, err := s.ResolveRoleIDs(r.Context(), u.ID, u.Role)
+	if err != nil {
+		return nil, -1, err
+	}
+	granted, err := s.GrantedMenuActions(r.Context(), roleIDs)
+	if err != nil {
+		return nil, -1, err
+	}
+	i := iam.FirstGrant(granted, grants)
+	if i < 0 {
+		return nil, -1, httpx.Forbidden("Insufficient permissions")
+	}
+	return u, i, nil
+}
+
 // HasMenuPrefix mirrors userHasIamPrefix, for routes that branch on a grant
 // instead of rejecting.
 func (s *Service) HasMenuPrefix(ctx context.Context, u *User, prefixes ...string) (bool, error) {

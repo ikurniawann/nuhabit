@@ -12,25 +12,37 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SELECT } from "@/features/gym/shared";
+import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatNumber, formatTime } from "@/lib/format";
 import { GYM_KEYS, schedulingApi, waktu, type AccessLogRow, type CheckInResult } from "../api";
+import { DeskMemberSearch } from "./desk-member-search";
+import { DropInPanel } from "./drop-in-panel";
+import { QrCamera } from "./qr-camera";
 
 const TOKEN_INPUT_ID = "gym-checkin-token";
 const SOURCE_LABEL: Record<AccessLogRow["source"], string> = { gate: "Gate", pos: "Kasir", manual: "Front desk" };
 
 /**
- * Gym → Check-in: pindai QR kartu member (scanner bertindak sebagai keyboard
- * + Enter) atau tempel tokennya. Keputusan gate tampil di kartu hasil dan log.
+ * Gym → Check-in: pindai QR kartu member (scanner keyboard + Enter, kamera,
+ * atau tempel token), cari member untuk check-in tanpa QR, atau drop-in untuk
+ * walk-in. Keputusan tampil di kartu hasil dan log.
  */
 export function CheckinPage() {
   const queryClient = useQueryClient();
   const [token, setToken] = useState("");
   const [last, setLast] = useState<CheckInResult | null>(null);
+  const branches = useGymBranches();
+  // null = belum dipilih: pakai cabang staf.
+  const [chosenBranch, setChosenBranch] = useState<string | null>(null);
+  const branchId = chosenBranch ?? defaultBranchId(branches.data);
+  const branchOptions = branches.data?.branches ?? [];
   const log = useQuery({ queryKey: GYM_KEYS.checkin, queryFn: schedulingApi.checkinLog, refetchInterval: 10_000 });
 
   const scan = useMutation({
-    mutationFn: (value: string) => schedulingApi.scan(value),
+    mutationFn: (value: string) => schedulingApi.scan(value, branchId || null),
     onSuccess: (result) => {
       setLast(result);
       void queryClient.invalidateQueries({ queryKey: GYM_KEYS.checkin });
@@ -51,31 +63,67 @@ export function CheckinPage() {
         kicker="Gym & Kelas"
         title="Check-in"
         description="Tidak ada open gym: member masuk hanya dengan booking kelas terkonfirmasi, mulai 45 menit sebelum kelas. Kredit dipotong saat scan diterima."
+        actions={
+          branchOptions.length > 1 && (
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Cabang</span>
+              <select
+                className={`${SELECT} w-48`}
+                value={branchId}
+                onChange={(e) => setChosenBranch(e.target.value)}
+                aria-label="Cabang check-in"
+              >
+                <option value="">Semua cabang</option>
+                {branchOptions.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
-          <form
-            className="flex flex-col gap-3 sm:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (token.trim().length >= 8) scan.mutate(token.trim());
-            }}
-          >
-            <Input
-              id={TOKEN_INPUT_ID}
-              autoFocus
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Pindai QR atau tempel token nhqr_…"
-              aria-label="Token QR member"
-              className="font-mono"
-            />
-            <Button type="submit" disabled={scan.isPending || token.trim().length < 8}>
-              <QrCode /> Periksa
-            </Button>
-          </form>
-          <p className="mt-2 text-xs text-muted-foreground">QR member hanya berlaku sebentar dan sekali pakai.</p>
+          <Tabs defaultValue="qr" className="w-full flex-col">
+            <TabsList>
+              <TabsTrigger value="qr">Scan QR</TabsTrigger>
+              <TabsTrigger value="member">Cari member</TabsTrigger>
+              <TabsTrigger value="drop-in">Drop-in</TabsTrigger>
+            </TabsList>
+            <TabsContent value="qr" className="space-y-3 pt-2">
+              <form
+                className="flex flex-col gap-3 sm:flex-row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (token.trim().length >= 8) scan.mutate(token.trim());
+                }}
+              >
+                <Input
+                  id={TOKEN_INPUT_ID}
+                  autoFocus
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Pindai QR atau tempel token nhqr_…"
+                  aria-label="Token QR member"
+                  className="font-mono"
+                />
+                <Button type="submit" disabled={scan.isPending || token.trim().length < 8}>
+                  <QrCode /> Periksa
+                </Button>
+              </form>
+              <p className="text-xs text-muted-foreground">QR member hanya berlaku sebentar dan sekali pakai.</p>
+              <QrCamera onToken={(value) => value.length >= 8 && scan.mutate(value)} disabled={scan.isPending} />
+            </TabsContent>
+            <TabsContent value="member" className="pt-2">
+              <DeskMemberSearch onResult={setLast} />
+            </TabsContent>
+            <TabsContent value="drop-in" className="pt-2">
+              <DropInPanel branchId={branchId} onResult={setLast} />
+            </TabsContent>
+          </Tabs>
         </Card>
         <ScanResult result={last} />
       </div>
