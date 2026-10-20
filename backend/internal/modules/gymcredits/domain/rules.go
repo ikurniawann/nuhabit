@@ -117,8 +117,8 @@ var ruleSpecs = []ruleSpec{
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
 	intRule("bookingClosesMinBefore", 0, 10080, "Booking ditutup", func(p *RulesPatch) **int { return &p.BookingClosesMinBefore }),
-	intRule("maxFreezeDaysPerYear", 0, 365, "Batas bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
-	intRule("minFreezeDays", 1, 365, "Minimal bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
+	intRule("maxFreezeDaysPerYear", 0, 365, "Jatah bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
+	intRule("minFreezeDays", 1, 365, "Durasi bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
 	intRule("renewalLeadDays", 0, 30, "Perpanjangan otomatis", func(p *RulesPatch) **int { return &p.RenewalLeadDays }),
 }
 

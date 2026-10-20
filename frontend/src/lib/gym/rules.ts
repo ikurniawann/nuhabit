@@ -31,6 +31,12 @@ export interface GymRules {
   expiryReminderDays: number;
   bookingOpensDaysBefore: number;
   bookingClosesMinBefore: number;
+  /** Batas hari pass dibekukan dalam 365 hari; 0 = pembekuan mati. */
+  maxFreezeDaysPerYear: number;
+  /** Pembekuan terpendek; unfreeze lebih awal tetap memotong jatah sebanyak ini. */
+  minFreezeDays: number;
+  /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
+  renewalLeadDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -48,6 +54,9 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   expiryReminderDays: 7,
   bookingOpensDaysBefore: 7,
   bookingClosesMinBefore: 0,
+  maxFreezeDaysPerYear: 30,
+  minFreezeDays: 7,
+  renewalLeadDays: 3,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -73,6 +82,9 @@ const rulesShape = {
   expiryReminderDays: int(1, 365, "Pengingat kedaluwarsa"),
   bookingOpensDaysBefore: int(0, 365, "Booking dibuka"),
   bookingClosesMinBefore: int(0, 10080, "Booking ditutup"),
+  maxFreezeDaysPerYear: int(0, 365, "Jatah bekukan per tahun"),
+  minFreezeDays: int(1, 365, "Durasi bekukan"),
+  renewalLeadDays: int(0, 30, "Perpanjangan otomatis"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
