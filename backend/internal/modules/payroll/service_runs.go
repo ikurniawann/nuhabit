@@ -384,7 +384,12 @@ func (s *service) payrollInput(ctx context.Context, e EmployeeBrief, month, year
 	if err != nil {
 		return nil, err
 	}
+	additions, err := periodAdditions(ctx, s.db, e.ID, month, year)
+	if err != nil {
+		return nil, err
+	}
 	emp := domain.Employee{ID: e.ID, EmploymentStatus: e.EmploymentStatus, JoinDate: e.JoinDate}
 	in := domain.BuildInput(emp, *salary, records, loans, holidays, month, year, includeThr)
+	in.Bonus = additions
 	return &in, nil
 }
