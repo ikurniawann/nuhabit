@@ -19,6 +19,7 @@ import { SELECT } from "@/features/gym/shared";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { formatNumber } from "@/lib/format";
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
+import { CorrectionDialog, type PendingCorrection } from "./correction-dialog";
 
 const RANGES = {
   next7: { label: "7 hari ke depan", from: 0, to: 8 },
@@ -62,6 +63,7 @@ export function BookingsPage() {
     },
     onError: (error) => toast.error("Aksi booking gagal", { description: error.message }),
   });
+  const [correction, setCorrection] = useState<PendingCorrection | null>(null);
   const rows = bookings.data ?? [];
   const count = (s: BookingStatus) => rows.filter((b) => b.status === s).length;
 
@@ -179,6 +181,24 @@ export function BookingsPage() {
                             Batalkan
                           </Button>
                         )}
+                        {(b.status === "checked_in" || b.status === "completed") && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setCorrection({ id: b.id, action: "undo_check_in", memberName: b.member_name })}
+                          >
+                            Batalkan check-in
+                          </Button>
+                        )}
+                        {b.status === "no_show" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setCorrection({ id: b.id, action: "undo_no_show", memberName: b.member_name })}
+                          >
+                            Hapus tidak hadir
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -193,6 +213,15 @@ export function BookingsPage() {
         loading={action.isPending}
         onClose={() => setPending(null)}
         onConfirm={(input) => action.mutate(input)}
+      />
+      <CorrectionDialog
+        pending={correction}
+        onClose={() => setCorrection(null)}
+        onDone={() => {
+          setCorrection(null);
+          void queryClient.invalidateQueries({ queryKey: GYM_KEYS.bookings });
+          void queryClient.invalidateQueries({ queryKey: GYM_KEYS.sessions });
+        }}
       />
     </div>
   );
