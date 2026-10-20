@@ -401,7 +401,7 @@ func (s *Service) monthToDate(ctx context.Context, today string) (*monthToDate, 
 const liveCreditsSQL = `WITH lot_left AS (
   SELECT l.customer_id, l.expires_at > now() AS live,
          GREATEST(0, l.credits + COALESCE((SELECT sum(e.amount) FROM gym.credit_ledger e
-           WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment'))), 0)) AS n
+           WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment', 'transfer_in'))), 0)) AS n
     FROM gym.credit_lots l
 ), per_member AS (
   SELECT customer_id, COALESCE(sum(n) FILTER (WHERE live), 0) AS live, COALESCE(sum(n) FILTER (WHERE NOT live), 0) AS lapsed

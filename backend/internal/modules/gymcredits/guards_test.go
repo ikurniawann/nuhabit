@@ -55,6 +55,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"POST /api/gym/credits/{customerId}/adjust":        "update gym.credits",
 		"POST /api/gym/credits/{customerId}/sell":          "create gym.credits",
 		"POST /api/gym/credits/reverse":                    "update gym.credits",
+		"POST /api/gym/credits/{customerId}/transfer":      "update gym.credits",
 		"POST /api/gym/credits/purchases/{id}/refund":      "update gym.credits",
 		"GET /api/gym/credits/purchases/{id}/refund-quote": "update gym.credits",
 		"POST /api/gym/passes/{id}/freeze":                 "update gym.credits",

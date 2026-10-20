@@ -41,7 +41,7 @@ func (h *Handler) require(r *http.Request, action string, prefixes []string) (*a
 
 // Routes lists every route of the module.
 func (h *Handler) Routes() []module.Route {
-	return []module.Route{
+	return append([]module.Route{
 		{Pattern: "GET /api/gym/packages", Handler: h.api(h.listPackages)},
 		{Pattern: "POST /api/gym/packages", Handler: h.api(h.savePackage)},
 		{Pattern: "PATCH /api/gym/packages/{id}", Handler: h.api(h.setPackageStatus)},
@@ -71,7 +71,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/member-portal/gym/passes/{id}/freeze", Handler: h.auth.MemberHandler("Gagal membekukan pass", h.memberFreeze)},
 		{Pattern: "POST /api/member-portal/gym/passes/{id}/unfreeze", Handler: h.auth.MemberHandler("Gagal mengaktifkan pass", h.memberUnfreeze)},
 		{Pattern: "PUT /api/member-portal/gym/passes/{id}/auto-renew", Handler: h.auth.MemberHandler("Gagal mengubah perpanjangan otomatis", h.memberAutoRenew)},
-	}
+	}, h.transferRoutes()...)
 }
 
 /* ── Envelopes ───────────────────────────────────────────────────────── */

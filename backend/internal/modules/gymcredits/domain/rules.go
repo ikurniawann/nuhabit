@@ -52,34 +52,42 @@ type Rules struct {
 	MinFreezeDays int `json:"minFreezeDays"`
 	// RenewalLeadDays: an auto-renewing pass renews this many days before it ends.
 	RenewalLeadDays int `json:"renewalLeadDays"`
+	// AllowMemberCreditTransfer lets members send credits to another member
+	// from the member app; staff can always transfer.
+	AllowMemberCreditTransfer bool `json:"allowMemberCreditTransfer"`
+	// MaxTransferCreditsPerMonth caps the credits one member sends in a WIB
+	// calendar month, staff and member transfers together. 0 = no cap.
+	MaxTransferCreditsPerMonth int `json:"maxTransferCreditsPerMonth"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
 type RulesPatch struct {
-	CreditExpiryDays          *int    `json:"creditExpiryDays,omitempty"`
-	CancellationDeadlineHours *int    `json:"cancellationDeadlineHours,omitempty"`
-	LateCancelPolicy          *string `json:"lateCancelPolicy,omitempty"`
-	NoShowPolicy              *string `json:"noShowPolicy,omitempty"`
-	ReEntryGraceMin           *int    `json:"reEntryGraceMin,omitempty"`
-	AntiPassbackMin           *int    `json:"antiPassbackMin,omitempty"`
-	QRTTLSec                  *int    `json:"qrTtlSec,omitempty"`
-	WaitlistAutoPromote       *bool   `json:"waitlistAutoPromote,omitempty"`
-	LowBalanceThreshold       *int    `json:"lowBalanceThreshold,omitempty"`
-	ExpiryReminderDays        *int    `json:"expiryReminderDays,omitempty"`
-	BookingOpensDaysBefore    *int    `json:"bookingOpensDaysBefore,omitempty"`
-	BookingClosesMinBefore    *int    `json:"bookingClosesMinBefore,omitempty"`
-	MaxConcurrentBookings     *int    `json:"maxConcurrentBookings,omitempty"`
-	MaxBookingsPerDay         *int    `json:"maxBookingsPerDay,omitempty"`
-	StrikeLimit               *int    `json:"strikeLimit,omitempty"`
-	StrikeWindowDays          *int    `json:"strikeWindowDays,omitempty"`
-	StrikeSuspendDays         *int    `json:"strikeSuspendDays,omitempty"`
-	WaitlistPromoteCutoffMin  *int    `json:"waitlistPromoteCutoffMin,omitempty"`
-	WaitlistOfferMinutes      *int    `json:"waitlistOfferMinutes,omitempty"`
-	ClassReminderMinutes      *int    `json:"classReminderMinutes,omitempty"`
-	ScheduleHorizonDays       *int    `json:"scheduleHorizonDays,omitempty"`
-	MaxFreezeDaysPerYear      *int    `json:"maxFreezeDaysPerYear,omitempty"`
-	MinFreezeDays             *int    `json:"minFreezeDays,omitempty"`
-	RenewalLeadDays           *int    `json:"renewalLeadDays,omitempty"`
+	CreditExpiryDays           *int    `json:"creditExpiryDays,omitempty"`
+	CancellationDeadlineHours  *int    `json:"cancellationDeadlineHours,omitempty"`
+	LateCancelPolicy           *string `json:"lateCancelPolicy,omitempty"`
+	NoShowPolicy               *string `json:"noShowPolicy,omitempty"`
+	ReEntryGraceMin            *int    `json:"reEntryGraceMin,omitempty"`
+	AntiPassbackMin            *int    `json:"antiPassbackMin,omitempty"`
+	QRTTLSec                   *int    `json:"qrTtlSec,omitempty"`
+	WaitlistAutoPromote        *bool   `json:"waitlistAutoPromote,omitempty"`
+	LowBalanceThreshold        *int    `json:"lowBalanceThreshold,omitempty"`
+	ExpiryReminderDays         *int    `json:"expiryReminderDays,omitempty"`
+	BookingOpensDaysBefore     *int    `json:"bookingOpensDaysBefore,omitempty"`
+	BookingClosesMinBefore     *int    `json:"bookingClosesMinBefore,omitempty"`
+	MaxConcurrentBookings      *int    `json:"maxConcurrentBookings,omitempty"`
+	MaxBookingsPerDay          *int    `json:"maxBookingsPerDay,omitempty"`
+	StrikeLimit                *int    `json:"strikeLimit,omitempty"`
+	StrikeWindowDays           *int    `json:"strikeWindowDays,omitempty"`
+	StrikeSuspendDays          *int    `json:"strikeSuspendDays,omitempty"`
+	WaitlistPromoteCutoffMin   *int    `json:"waitlistPromoteCutoffMin,omitempty"`
+	WaitlistOfferMinutes       *int    `json:"waitlistOfferMinutes,omitempty"`
+	ClassReminderMinutes       *int    `json:"classReminderMinutes,omitempty"`
+	ScheduleHorizonDays        *int    `json:"scheduleHorizonDays,omitempty"`
+	MaxFreezeDaysPerYear       *int    `json:"maxFreezeDaysPerYear,omitempty"`
+	MinFreezeDays              *int    `json:"minFreezeDays,omitempty"`
+	RenewalLeadDays            *int    `json:"renewalLeadDays,omitempty"`
+	AllowMemberCreditTransfer  *bool   `json:"allowMemberCreditTransfer,omitempty"`
+	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -133,6 +141,10 @@ type ruleSpec struct {
 	boolFld  func(*RulesPatch) **bool
 }
 
+func boolRule(key, label string, f func(*RulesPatch) **bool) ruleSpec {
+	return ruleSpec{key: key, kind: kindBool, label: label, boolFld: f}
+}
+
 func intRule(key string, lo, hi int, label string, f func(*RulesPatch) **int) ruleSpec {
 	return ruleSpec{key: key, kind: kindInt, min: lo, max: hi, label: label, intField: f}
 }
@@ -150,7 +162,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("reEntryGraceMin", 0, 1440, "Grace masuk ulang", func(p *RulesPatch) **int { return &p.ReEntryGraceMin }),
 	intRule("antiPassbackMin", 0, 1440, "Anti-passback", func(p *RulesPatch) **int { return &p.AntiPassbackMin }),
 	intRule("qrTtlSec", 10, 3600, "Umur QR", func(p *RulesPatch) **int { return &p.QRTTLSec }),
-	{key: "waitlistAutoPromote", kind: kindBool, boolFld: func(p *RulesPatch) **bool { return &p.WaitlistAutoPromote }},
+	boolRule("waitlistAutoPromote", "Promosi waitlist", func(p *RulesPatch) **bool { return &p.WaitlistAutoPromote }),
 	intRule("lowBalanceThreshold", 0, 1000, "Ambang saldo menipis", func(p *RulesPatch) **int { return &p.LowBalanceThreshold }),
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
@@ -167,6 +179,8 @@ var ruleSpecs = []ruleSpec{
 	intRule("maxFreezeDaysPerYear", 0, 365, "Jatah bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
 	intRule("minFreezeDays", 1, 365, "Durasi bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
 	intRule("renewalLeadDays", 0, 30, "Perpanjangan otomatis", func(p *RulesPatch) **int { return &p.RenewalLeadDays }),
+	boolRule("allowMemberCreditTransfer", "Transfer kredit oleh member", func(p *RulesPatch) **bool { return &p.AllowMemberCreditTransfer }),
+	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -208,7 +222,7 @@ func (s ruleSpec) check(v any, p *RulesPatch) string {
 	case kindBool:
 		b, ok := v.(bool)
 		if !ok {
-			return "Promosi waitlist harus ya/tidak"
+			return s.label + " harus ya/tidak"
 		}
 		*s.boolFld(p) = &b
 	}
@@ -338,6 +352,10 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.MaxFreezeDaysPerYear, p.MaxFreezeDaysPerYear)
 	setInt(&base.MinFreezeDays, p.MinFreezeDays)
 	setInt(&base.RenewalLeadDays, p.RenewalLeadDays)
+	if p.AllowMemberCreditTransfer != nil {
+		base.AllowMemberCreditTransfer = *p.AllowMemberCreditTransfer
+	}
+	setInt(&base.MaxTransferCreditsPerMonth, p.MaxTransferCreditsPerMonth)
 	return base
 }
 

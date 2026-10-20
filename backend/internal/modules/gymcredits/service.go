@@ -264,6 +264,8 @@ type NewLot struct {
 	PurchaseID string
 	Credits    int
 	ExpiresAt  time.Time
+	// SourceLotID is the sender's lot of a lot received by transfer.
+	SourceLotID string
 }
 
 // StoredEntry is a ledger row with its owner, as the reversal reads it.
@@ -500,4 +502,12 @@ type Repository interface {
 	SaveGlobalRules(ctx context.Context, q database.Querier, rules json.RawMessage, actorID string) error
 	SaveBranchRules(ctx context.Context, q database.Querier, branchID string, rules json.RawMessage, actorID string) error
 	DeleteBranchRules(ctx context.Context, q database.Querier, branchID string) error
+
+	// InsertTransfer returns "" when the idempotency key already exists.
+	InsertTransfer(ctx context.Context, q database.Querier, t NewTransfer) (string, error)
+	// TransferByKey is nil when no transfer has the key.
+	TransferByKey(ctx context.Context, q database.Querier, key string) (*TransferRow, error)
+	InsertTransferLot(ctx context.Context, q database.Querier, transferID, sourceLotID, targetLotID string, credits int) error
+	// CreditsSentSince sums the credits the member transferred out since.
+	CreditsSentSince(ctx context.Context, q database.Querier, customerID string, since time.Time) (int, error)
 }

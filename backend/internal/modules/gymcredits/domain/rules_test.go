@@ -16,6 +16,7 @@ func defaultsKV() []KV {
 		{"classReminderMinutes", 120.0},
 		{"scheduleHorizonDays", 14.0},
 		{"maxFreezeDaysPerYear", 30.0}, {"minFreezeDays", 7.0}, {"renewalLeadDays", 3.0},
+		{"allowMemberCreditTransfer", false}, {"maxTransferCreditsPerMonth", 0.0},
 	}
 }
 
@@ -41,9 +42,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"allowMemberCreditTransfer":false,"maxTransferCreditsPerMonth":0}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 24)
+	eq(t, len(RuleKeys()), 26)
 }
 
 func TestResolveRules(t *testing.T) {
@@ -119,6 +120,15 @@ func TestValidateRulesPatch(t *testing.T) {
 
 	_, msg = ValidateRulesPatch([]KV{{"waitlistAutoPromote", "yes"}})
 	eq(t, msg, "waitlistAutoPromote: Promosi waitlist harus ya/tidak")
+
+	_, msg = ValidateRulesPatch([]KV{{"allowMemberCreditTransfer", 1.0}})
+	eq(t, msg, "allowMemberCreditTransfer: Transfer kredit oleh member harus ya/tidak")
+	_, msg = ValidateRulesPatch([]KV{{"maxTransferCreditsPerMonth", 1001.0}})
+	eq(t, msg, "maxTransferCreditsPerMonth: Batas transfer kredit per bulan maksimal 1000")
+	p, msg = ValidateRulesPatch([]KV{{"allowMemberCreditTransfer", true}, {"maxTransferCreditsPerMonth", 10.0}})
+	eq(t, msg, "")
+	rules := p.Over(RuleDefaults)
+	eq(t, rules.AllowMemberCreditTransfer && rules.MaxTransferCreditsPerMonth == 10, true)
 
 	_, msg = ValidateRulesPatch([]KV{{"qrTtlSec", nil}})
 	eq(t, msg, "qrTtlSec: Umur QR harus berupa angka")
