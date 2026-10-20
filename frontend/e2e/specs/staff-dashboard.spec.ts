@@ -6,6 +6,8 @@ const PAGES = [
   { path: "/dashboard/pos", heading: "POS Dashboard" },
   { path: "/dashboard/crm/members", heading: "Members" },
   { path: "/dashboard/gym/schedule", heading: "Jadwal Kelas" },
+  { path: "/dashboard/gym/members", heading: "Member" },
+  { path: "/dashboard/gym/reports", heading: "Laporan Gym" },
 ];
 
 test.describe("staff dashboard", () => {

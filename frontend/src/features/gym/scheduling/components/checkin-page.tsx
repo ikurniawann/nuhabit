@@ -4,20 +4,16 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Coins, QrCode, ShieldX } from "lucide-react";
 import { toast } from "sonner";
-import { TableNote } from "@/features/crm/engagement/components/shared";
-import { Badge } from "@/components/ui/badge";
+import { CheckinLog } from "@/features/gym/members/components/checkin-log";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
-import { formatNumber, formatTime } from "@/lib/format";
-import { GYM_KEYS, schedulingApi, waktu, type AccessLogRow, type CheckInResult } from "../api";
+import { formatNumber } from "@/lib/format";
+import { GYM_KEYS, schedulingApi, type CheckInResult } from "../api";
 
 const TOKEN_INPUT_ID = "gym-checkin-token";
-const SOURCE_LABEL: Record<AccessLogRow["source"], string> = { gate: "Gate", pos: "Kasir", manual: "Front desk" };
 
 /**
  * Gym → Check-in: pindai QR kartu member (scanner bertindak sebagai keyboard
@@ -43,7 +39,6 @@ export function CheckinPage() {
     },
   });
   const today = log.data?.today ?? { checked_in: 0, denied: 0, credits: 0 };
-  const rows = log.data?.log ?? [];
 
   return (
     <div className="space-y-4">
@@ -92,54 +87,7 @@ export function CheckinPage() {
         />
       </div>
 
-      <Card className="py-0">
-        {log.isLoading ? (
-          <TableNote>Memuat log…</TableNote>
-        ) : log.error ? (
-          <TableNote tone="danger">{log.error.message}</TableNote>
-        ) : rows.length === 0 ? (
-          <TableNote>Belum ada scan.</TableNote>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Waktu</TableHead>
-                <TableHead>Member</TableHead>
-                <TableHead>Hasil</TableHead>
-                <TableHead className="hidden md:table-cell">Sumber</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="text-xs">{waktu(row.created_at)}</TableCell>
-                  <TableCell>
-                    <p className="font-medium">{row.member_name ?? "Tidak diketahui"}</p>
-                    {row.class_type_name && row.starts_at && (
-                      <p className="text-xs text-muted-foreground">
-                        {row.class_type_name}, {formatTime(row.starts_at)}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    {row.decision === "allowed" ? (
-                      <Badge variant="success">
-                        {row.entry_kind === "re_entry" ? "Masuk ulang" : `Check-in · ${-row.credit_delta} kredit`}
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">{row.reason ? GATE_DENIAL_LABEL[row.reason] : "Ditolak"}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {SOURCE_LABEL[row.source]}
-                    {row.staff_name && <span className="block text-xs text-muted-foreground">{row.staff_name}</span>}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+      <CheckinLog />
     </div>
   );
 }

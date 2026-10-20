@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Field, TableNote } from "@/features/crm/engagement/components/shared";
+import { MemberLink } from "@/features/gym/members/member-link";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import {
   ENTRY_LABELS,
@@ -57,7 +59,11 @@ function useDebounced<T>(value: T, ms = 300) {
 /** Gym → Kredit Member: cari member, lihat saldo & lot, koreksi, jual paket di front desk. */
 export function CreditsPage() {
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
+  // ?member=<id> keeps the open member in the URL, so the member page can link here.
+  const router = useRouter();
+  const pathname = usePathname();
+  const selected = useSearchParams().get("member");
+  const setSelected = (id: string) => router.replace(`${pathname}?member=${id}`, { scroll: false });
   const term = useDebounced(q.trim());
   const hits = useQuery({
     queryKey: ["gym-credits", "search", term],
@@ -148,7 +154,9 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
     <div className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold">{d.member.name ?? "Tanpa nama"}</h2>
+          <h2 className="truncate text-lg font-semibold">
+            <MemberLink id={d.member.id} name={d.member.name ?? "Tanpa nama"} className="font-semibold" />
+          </h2>
           <p className="font-mono text-xs text-muted-foreground">
             {d.member.phone}
             {!d.member.is_active && <Badge variant="destructive" className="ml-2">Nonaktif</Badge>}
