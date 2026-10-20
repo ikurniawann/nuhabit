@@ -119,7 +119,8 @@ func (s *Service) UpdateSettings(ctx context.Context, customerID string, p Setti
 // HomeSettings is the home tab view of the same row (no weekly goal).
 func (s *Service) HomeSettings(ctx context.Context, customerID string) (HomeSettingsView, error) {
 	v, err := s.Settings(ctx, customerID)
-	return HomeSettingsView{Units: v.Units, BookingReminders: v.BookingReminders, Language: v.Language}, err
+	return HomeSettingsView{Units: v.Units, BookingReminders: v.BookingReminders, Language: v.Language,
+		GymWhatsapp: v.GymWhatsapp, GymEmail: v.GymEmail}, err
 }
 
 // PatchHomeSettings changes some settings; the row is created on first save.

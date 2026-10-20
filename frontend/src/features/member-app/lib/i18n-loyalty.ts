@@ -283,4 +283,8 @@ export const LOYALTY_ID: Record<string, string> = {
   "Promos on WhatsApp": "Promo lewat WhatsApp",
   "You get promos and news": "Kamu menerima promo dan kabar terbaru",
   "WhatsApp promos are off": "Promo WhatsApp dimatikan",
+  "Gym updates on WhatsApp": "Notifikasi gym lewat WhatsApp",
+  "Bookings, class reminders, and credit reminders": "Booking, pengingat kelas, dan pengingat kredit",
+  "Gym updates by email": "Notifikasi gym lewat email",
+  "Sent to the email on your profile": "Dikirim ke email di profil kamu",
 };

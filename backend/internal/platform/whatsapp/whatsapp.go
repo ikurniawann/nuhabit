@@ -103,6 +103,12 @@ func (c *Client) provider(ctx context.Context, q database.Querier) string {
 	return ""
 }
 
+// Configured reports whether a provider can send, so optional senders can
+// skip a member instead of logging a failed message.
+func (c *Client) Configured(ctx context.Context, q database.Querier) bool {
+	return c.provider(ctx, q) != ""
+}
+
 // Dispatch is dispatchText without the log.
 func (c *Client) Dispatch(ctx context.Context, q database.Querier, target, message string) Result {
 	switch c.provider(ctx, q) {

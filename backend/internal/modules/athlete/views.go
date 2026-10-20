@@ -99,11 +99,15 @@ type SettingsView struct {
 	BookingReminders bool     `json:"bookingReminders"`
 	WeeklyGoalKm     *float64 `json:"weeklyGoalKm"`
 	Language         string   `json:"language"`
+	// GymWhatsapp and GymEmail let gym notifications reach the member on
+	// WhatsApp and email (read by the CRM delivery in internal/app).
+	GymWhatsapp bool `json:"gymWhatsapp"`
+	GymEmail    bool `json:"gymEmail"`
 }
 
 // defaultSettings is DEFAULT_SETTINGS: what a member who never saved settings gets.
 func defaultSettings() SettingsView {
-	return SettingsView{Units: "METRIC", BookingReminders: true, Language: "ID"}
+	return SettingsView{Units: "METRIC", BookingReminders: true, Language: "ID", GymWhatsapp: true, GymEmail: true}
 }
 
 // HomeSettingsView is MemberSettingsView (home tab settings, no weekly goal).
@@ -111,6 +115,8 @@ type HomeSettingsView struct {
 	Units            string `json:"units"`
 	BookingReminders bool   `json:"bookingReminders"`
 	Language         string `json:"language"`
+	GymWhatsapp      bool   `json:"gymWhatsapp"`
+	GymEmail         bool   `json:"gymEmail"`
 }
 
 type WeekBucketView struct {

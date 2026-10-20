@@ -45,6 +45,15 @@ type Pusher interface {
 type Ports struct {
 	Orders OrderReads
 	Push   Pusher
+	// Gym sends gym notifications outside the app; nil sends none.
+	Gym GymChannels
+}
+
+// GymChannels delivers a gym notification on WhatsApp and email, each only
+// when it is configured and the member has not opted out of it. Send returns
+// at once and delivers in the background, best effort.
+type GymChannels interface {
+	Send(customerID, title, body string)
 }
 
 type handler struct {

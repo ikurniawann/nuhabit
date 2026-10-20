@@ -456,8 +456,9 @@ func (r *pgRepository) DeleteRoute(ctx context.Context, routeID, customerID stri
 func (r *pgRepository) Settings(ctx context.Context, customerID string) (*SettingsView, error) {
 	var s SettingsView
 	err := r.q.QueryRow(ctx,
-		`SELECT units, booking_reminders, weekly_goal_km, language FROM gym.athlete_settings WHERE customer_id = $1`,
-		customerID).Scan(&s.Units, &s.BookingReminders, &s.WeeklyGoalKm, &s.Language)
+		`SELECT units, booking_reminders, weekly_goal_km, language, gym_whatsapp, gym_email
+		   FROM gym.athlete_settings WHERE customer_id = $1`,
+		customerID).Scan(&s.Units, &s.BookingReminders, &s.WeeklyGoalKm, &s.Language, &s.GymWhatsapp, &s.GymEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -477,14 +478,18 @@ func (r *pgRepository) UpsertSettings(ctx context.Context, customerID string, s 
 // PatchHomeSettings is the home tab PATCH: COALESCE keeps unsent fields.
 func (r *pgRepository) PatchHomeSettings(ctx context.Context, customerID string, p SettingsPatch, d SettingsView) error {
 	_, err := r.exec(ctx,
-		`INSERT INTO gym.athlete_settings (customer_id, units, booking_reminders, language)
-     VALUES ($1, COALESCE($2::text, $5), COALESCE($3::boolean, $6), COALESCE($4::text, $7))
+		`INSERT INTO gym.athlete_settings (customer_id, units, booking_reminders, language, gym_whatsapp, gym_email)
+     VALUES ($1, COALESCE($2::text, $5), COALESCE($3::boolean, $6), COALESCE($4::text, $7),
+             COALESCE($8::boolean, $10), COALESCE($9::boolean, $11))
      ON CONFLICT (customer_id) DO UPDATE
         SET units = COALESCE($2::text, gym.athlete_settings.units),
             booking_reminders = COALESCE($3::boolean, gym.athlete_settings.booking_reminders),
             language = COALESCE($4::text, gym.athlete_settings.language),
+            gym_whatsapp = COALESCE($8::boolean, gym.athlete_settings.gym_whatsapp),
+            gym_email = COALESCE($9::boolean, gym.athlete_settings.gym_email),
             updated_at = now()`,
-		customerID, p.Units, p.BookingReminders, p.Language, d.Units, d.BookingReminders, d.Language)
+		customerID, p.Units, p.BookingReminders, p.Language, d.Units, d.BookingReminders, d.Language,
+		p.GymWhatsapp, p.GymEmail, d.GymWhatsapp, d.GymEmail)
 	return err
 }
 
