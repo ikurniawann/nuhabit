@@ -256,7 +256,7 @@ func (h handlers) listPayouts(w http.ResponseWriter, r *http.Request, _ *auth.Us
 		}
 		month = &m
 	}
-	out, err := h.svc.Payouts(r.Context(), month)
+	out, err := h.svc.Payouts(r.Context(), month, nil)
 	if err != nil {
 		return err
 	}
@@ -300,6 +300,23 @@ func (h handlers) actOnPayout(w http.ResponseWriter, r *http.Request, u *auth.Us
 		return err
 	}
 	return ok(w, map[string]string{"id": id})
+}
+
+/* ── Staff: coach portal ─────────────────────────────────────────────── */
+
+func (h handlers) myIncentives(w http.ResponseWriter, r *http.Request, u *auth.User) error {
+	month := r.URL.Query().Get("month")
+	if month == "" {
+		month = domain.PeriodMonthOf(h.svc.now())
+	}
+	if !domain.IsPeriodMonth(month) {
+		return httpx.BadRequest(badMonth)
+	}
+	out, err := h.svc.MyIncentives(r.Context(), u.ID, month)
+	if err != nil {
+		return err
+	}
+	return ok(w, out)
 }
 
 /* ── Member: workouts ────────────────────────────────────────────────── */
@@ -520,6 +537,8 @@ func (h handlers) Routes() []module.Route {
 		{Pattern: "POST /api/gym/incentives/payouts", Handler: h.staff(actCreate, inc, h.createPayout)},
 		{Pattern: "GET /api/gym/incentives/payouts/{id}", Handler: h.staff(actRead, inc, h.getPayout)},
 		{Pattern: "POST /api/gym/incentives/payouts/{id}", Handler: h.staff(actUpdate, inc, h.actOnPayout)},
+
+		{Pattern: "GET /api/gym/my-classes/incentives", Handler: h.staff(actRead, iam.GymMyClasses, h.myIncentives)},
 
 		{Pattern: "GET /api/member-portal/gym/workouts", Handler: h.member("Gagal memuat workout", h.workoutsPage)},
 		{Pattern: "POST /api/member-portal/gym/workouts", Handler: h.member("Gagal menyusun workout", h.generateWorkout)},

@@ -107,6 +107,8 @@ export const IAM = {
   gymMembers: ["gym.members"],
   /** Gym → Laporan Gym (kehadiran, okupansi, pendapatan, member, coach). */
   gymReports: ["gym.reports"],
+  /** Gym → Kelas Saya (portal coach: kelas, roster, absensi, insentif sendiri). */
+  gymMyClasses: ["gym.my-classes"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */

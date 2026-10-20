@@ -2,12 +2,9 @@ package gymscheduling
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/auth"
@@ -80,13 +77,7 @@ func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.Us
 // CoachForUser is the active coach profile linked to a staff account, ""
 // when there is none.
 func (s *Service) CoachForUser(ctx context.Context, userID string) (string, error) {
-	var id string
-	err := s.db.QueryRow(ctx,
-		`SELECT id FROM gym.coaches WHERE user_id = $1 AND status = 'active' ORDER BY created_at LIMIT 1`, userID).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	return id, err
+	return NewReader(s.db).CoachForUser(ctx, userID)
 }
 
 // RequireOwnBooking is 404 unless the booking belongs to a session coached

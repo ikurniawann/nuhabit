@@ -39,7 +39,37 @@ type Scheduling interface {
 	// AttendedClassTimes: start of each class the member checked in to or
 	// completed since the given time.
 	AttendedClassTimes(ctx context.Context, customerID string, since time.Time) ([]time.Time, error)
+	// CoachForUser is the active coach linked to a staff account, "" when none.
+	CoachForUser(ctx context.Context, userID string) (string, error)
 }
+
+// IncentivePosting is a paid payout on its way to payroll.
+type IncentivePosting struct {
+	PayoutID    string
+	CoachID     string
+	PeriodMonth string // the month the classes ran, YYYY-MM
+	AmountIDR   float64
+	// FromMonth is the first payroll period (YYYY-MM) that may take it.
+	FromMonth string
+	ActorID   string
+}
+
+// Payroll is HRIS payroll: a paid incentive becomes a one-off earning of
+// the employee linked to the coach (gym.coaches.user_id to
+// hris.employees.user_id).
+type Payroll interface {
+	// PostIncentive adds the payout to the first payroll period from
+	// FromMonth whose run is still open and returns that period (YYYY-MM).
+	// It runs on q, the transaction that marks the payout paid, and refuses
+	// with ErrCoachNotEmployee or ErrEmployeeNotPayable.
+	PostIncentive(ctx context.Context, q database.Querier, p IncentivePosting) (string, error)
+}
+
+// Refusals of Payroll.PostIncentive.
+var (
+	ErrCoachNotEmployee   = errors.New("gym-training: coach has no linked employee")
+	ErrEmployeeNotPayable = errors.New("gym-training: employee is inactive or has no active salary")
+)
 
 // Contact is a POS customer's name and phone.
 type Contact struct {
@@ -98,11 +128,14 @@ type Repository interface {
 	SaveScheme(ctx context.Context, s schemeInput, actorID string) (string, error)
 	DeleteScheme(ctx context.Context, id string) (bool, error)
 	LivePayouts(ctx context.Context, periodMonth string) ([]livePayout, error)
-	Payouts(ctx context.Context, month *string, coachOrder []string) ([]payoutListRow, error)
+	Payouts(ctx context.Context, month, coachID *string, coachOrder []string) ([]payoutListRow, error)
 	Payout(ctx context.Context, id string) (*payoutDetail, error)
 	InsertPayout(ctx context.Context, coachID, periodMonth string, statement any, totalIDR float64, userID string) (string, error)
-	LockPayoutStatus(ctx context.Context, id string) (string, bool, error)
-	ApplyPayoutDecision(ctx context.Context, id, userID string, d domain.PayoutDecision) error
+	LockPayout(ctx context.Context, id string) (*lockedPayout, error)
+	ApplyPayoutDecision(ctx context.Context, id, userID string, d domain.PayoutDecision, payrollPeriod *string) error
+	// Querier is what the repository runs on (the pool or its transaction),
+	// for ports that write in the same transaction.
+	Querier() database.Querier
 }
 
 // Service holds the use cases.
@@ -110,16 +143,17 @@ type Service struct {
 	repo      Repository
 	sched     Scheduling
 	customers Customers
+	payroll   Payroll
 	now       func() time.Time
 	pick      func(n int) int
 }
 
 // NewService wires the use cases. now may be nil.
-func NewService(repo Repository, sched Scheduling, customers Customers, now func() time.Time) *Service {
+func NewService(repo Repository, ports Ports, now func() time.Time) *Service {
 	if now == nil {
 		now = time.Now
 	}
-	return &Service{repo: repo, sched: sched, customers: customers, now: now, pick: randomPick}
+	return &Service{repo: repo, sched: ports.Scheduling, customers: ports.Customers, payroll: ports.Payroll, now: now, pick: randomPick}
 }
 
 func randomPick(n int) int {
@@ -368,9 +402,10 @@ func (s *Service) Statements(ctx context.Context, periodMonth string, coachID *s
 	return out, nil
 }
 
-// Payouts lists payouts, newest month first, with the coach name.
-func (s *Service) Payouts(ctx context.Context, month *string) ([]payoutListRow, error) {
-	coaches, err := s.sched.Coaches(ctx, nil)
+// Payouts lists payouts, newest month first, with the coach name; only
+// one coach's when coachID is set.
+func (s *Service) Payouts(ctx context.Context, month, coachID *string) ([]payoutListRow, error) {
+	coaches, err := s.sched.Coaches(ctx, coachID)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +415,7 @@ func (s *Service) Payouts(ctx context.Context, month *string) ([]payoutListRow, 
 		order[i] = c.ID
 		names[c.ID] = c.Name
 	}
-	rows, err := s.repo.Payouts(ctx, month, order)
+	rows, err := s.repo.Payouts(ctx, month, coachID, order)
 	for i := range rows {
 		rows[i].CoachName = names[rows[i].CoachID]
 	}
@@ -427,21 +462,73 @@ func (s *Service) CreatePayout(ctx context.Context, userID, coachID, periodMonth
 }
 
 // ActOnPayout approves, pays (reference required) or voids (reason required).
+// Paying hands a non-zero payout to payroll in the same transaction, so a
+// coach without a payable employee cannot be marked paid.
 func (s *Service) ActOnPayout(ctx context.Context, userID, id string, in payoutActionInput) error {
 	return s.repo.InTx(ctx, func(tx Repository) error {
-		status, found, err := tx.LockPayoutStatus(ctx, id)
+		p, err := tx.LockPayout(ctx, id)
 		if err != nil {
 			return err
 		}
-		if !found {
+		if p == nil {
 			return httpx.NotFound("Payout tidak ditemukan")
 		}
-		decision, refusal := domain.DecidePayoutAction(status, in.Action, in.PaymentReference, in.Note)
+		decision, refusal := domain.DecidePayoutAction(p.Status, in.Action, in.PaymentReference, in.Note)
 		if refusal != "" {
 			return httpx.Conflict(refusal)
 		}
-		return tx.ApplyPayoutDecision(ctx, id, userID, decision)
+		var period *string
+		if decision.Status == domain.PayoutPaid && p.TotalIDR > 0 {
+			posted, err := s.payroll.PostIncentive(ctx, tx.Querier(), IncentivePosting{
+				PayoutID: id, CoachID: p.CoachID, PeriodMonth: p.Month, AmountIDR: p.TotalIDR,
+				FromMonth: domain.PeriodMonthOf(s.now()), ActorID: userID,
+			})
+			switch {
+			case errors.Is(err, ErrCoachNotEmployee):
+				return httpx.Conflict("Coach ini belum tertaut ke karyawan HRIS. Tautkan akun staf coach ke data karyawan agar insentif masuk payroll.")
+			case errors.Is(err, ErrEmployeeNotPayable):
+				return httpx.Conflict("Karyawan coach ini nonaktif atau belum punya struktur gaji aktif, jadi payroll belum bisa membayar insentifnya.")
+			case err != nil:
+				return err
+			}
+			period = &posted
+		}
+		return tx.ApplyPayoutDecision(ctx, id, userID, decision, period)
 	})
+}
+
+/* ── Coach portal ────────────────────────────────────────────────────── */
+
+type myIncentives struct {
+	Coach     *CatalogEntry   `json:"coach"`
+	Statement *statementView  `json:"statement"`
+	Payouts   []payoutListRow `json:"payouts"`
+}
+
+// MyIncentives is the running statement for a month and the payouts of the
+// coach linked to the caller, read-only. Coach is nil without a link.
+func (s *Service) MyIncentives(ctx context.Context, userID, periodMonth string) (myIncentives, error) {
+	out := myIncentives{Payouts: []payoutListRow{}}
+	coachID, err := s.sched.CoachForUser(ctx, userID)
+	if err != nil || coachID == "" {
+		return out, err
+	}
+	statements, err := s.Statements(ctx, periodMonth, &coachID)
+	if err != nil {
+		return out, err
+	}
+	if len(statements) > 0 {
+		out.Statement = &statements[0]
+	}
+	coaches, err := s.sched.Coaches(ctx, &coachID)
+	if err != nil {
+		return out, err
+	}
+	if len(coaches) > 0 {
+		out.Coach = &coaches[0]
+	}
+	out.Payouts, err = s.Payouts(ctx, nil, &coachID)
+	return out, err
 }
 
 /* ── Workouts (member) ───────────────────────────────────────────────── */

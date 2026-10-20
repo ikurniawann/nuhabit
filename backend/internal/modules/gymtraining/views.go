@@ -261,6 +261,8 @@ type payoutListRow struct {
 	ApprovedAt       *domain.Timestamp `json:"approved_at"`
 	PaidAt           *domain.Timestamp `json:"paid_at"`
 	VoidedAt         *domain.Timestamp `json:"voided_at"`
+	// PayrollPeriod is the payroll month (YYYY-MM) a paid payout went into.
+	PayrollPeriod *string `json:"payroll_period"`
 }
 
 type payoutDetail struct {
@@ -277,4 +279,5 @@ type payoutDetail struct {
 	ApprovedAt       *domain.Timestamp `json:"approved_at"`
 	PaidAt           *domain.Timestamp `json:"paid_at"`
 	VoidedAt         *domain.Timestamp `json:"voided_at"`
+	PayrollPeriod    *string           `json:"payroll_period"`
 }

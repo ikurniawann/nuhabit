@@ -15,10 +15,12 @@ func init() {
 
 // GymTrainingPorts wires gym-training's ports: coaches, class types,
 // completed classes and attendance from gym-scheduling's Reader, member
-// contacts from platform/members. The module's integration tests use it too.
+// contacts from platform/members, paid incentives into HRIS payroll. The
+// module's integration tests use it too.
 func GymTrainingPorts(d module.Deps) gymtraining.Ports {
 	return gymtraining.Ports{
 		Scheduling: gymTrainingScheduling{r: gymscheduling.NewReader(d.DB)},
 		Customers:  gymtraining.CustomersSQL{DB: d.DB},
+		Payroll:    gymTrainingPayroll{},
 	}
 }

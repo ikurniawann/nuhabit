@@ -64,6 +64,29 @@ func (r *Reader) Coaches(ctx context.Context, coachID *string) ([]CatalogEntry, 
 	return pgx.CollectRows(rows, pgx.RowToStructByPos[CatalogEntry])
 }
 
+// CoachForUser is the active coach linked to a staff account (the oldest
+// when several are), "" when none.
+func (r *Reader) CoachForUser(ctx context.Context, userID string) (string, error) {
+	var id string
+	err := r.q.QueryRow(ctx,
+		`SELECT id FROM gym.coaches WHERE user_id = $1 AND status = 'active' ORDER BY created_at LIMIT 1`, userID).Scan(&id)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
+	return id, err
+}
+
+// CoachUserID is the staff account linked to a coach, "" when none or when
+// the coach does not exist.
+func (r *Reader) CoachUserID(ctx context.Context, coachID string) (string, error) {
+	var userID *string
+	err := r.q.QueryRow(ctx, `SELECT user_id::text FROM gym.coaches WHERE id = $1`, coachID).Scan(&userID)
+	if database.IsNoRows(err) || userID == nil {
+		return "", nil
+	}
+	return *userID, err
+}
+
 // ClassTypes lists class types ordered by name.
 func (r *Reader) ClassTypes(ctx context.Context) ([]CatalogEntry, error) {
 	rows, err := r.q.Query(ctx, `SELECT id, name, status FROM gym.class_types ORDER BY name`)

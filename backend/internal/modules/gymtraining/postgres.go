@@ -542,23 +542,24 @@ func (r *pgRepo) LivePayouts(ctx context.Context, periodMonth string) ([]livePay
 }
 
 // Payouts lists payouts newest period first, void last, then in coachOrder.
-func (r *pgRepo) Payouts(ctx context.Context, month *string, coachOrder []string) ([]payoutListRow, error) {
+func (r *pgRepo) Payouts(ctx context.Context, month, coachID *string, coachOrder []string) ([]payoutListRow, error) {
 	return collect[payoutListRow](ctx, r.db,
 		`SELECT p.id, p.coach_id, to_char(p.period_month, 'YYYY-MM') AS month,
 		        p.total_idr::float AS total_idr, p.status, p.payment_reference, p.note,
 		        (p.statement->'totals'->>'sessions')::int AS sessions,
-		        p.created_at, p.approved_at, p.paid_at, p.voided_at
+		        p.created_at, p.approved_at, p.paid_at, p.voided_at, p.payroll_period
 		   FROM gym.coach_payouts p
 		  WHERE ($1::text IS NULL OR p.period_month = ($1 || '-01')::date)
+		    AND ($3::uuid IS NULL OR p.coach_id = $3)
 		  ORDER BY p.period_month DESC, (p.status = 'void'), array_position($2::uuid[], p.coach_id)
-		  LIMIT 200`, month, coachOrder)
+		  LIMIT 200`, month, coachOrder, coachID)
 }
 
 func (r *pgRepo) Payout(ctx context.Context, id string) (*payoutDetail, error) {
 	return one[payoutDetail](ctx, r.db,
 		`SELECT p.id, p.coach_id, to_char(p.period_month, 'YYYY-MM') AS month, p.statement,
 		        p.total_idr::float AS total_idr, p.status, p.payment_reference, p.note,
-		        p.created_at, p.approved_at, p.paid_at, p.voided_at
+		        p.created_at, p.approved_at, p.paid_at, p.voided_at, p.payroll_period
 		   FROM gym.coach_payouts p
 		  WHERE p.id = $1`, id)
 }
@@ -577,16 +578,23 @@ func (r *pgRepo) InsertPayout(ctx context.Context, coachID, periodMonth string, 
 		 RETURNING id`, coachID, periodMonth+"-01", string(raw), totalIDR, userID)
 }
 
-func (r *pgRepo) LockPayoutStatus(ctx context.Context, id string) (string, bool, error) {
-	var status string
-	err := r.db.QueryRow(ctx, `SELECT status FROM gym.coach_payouts WHERE id = $1 FOR UPDATE`, id).Scan(&status)
-	if database.IsNoRows(err) {
-		return "", false, nil
-	}
-	return status, err == nil, err
+// lockedPayout is a payout row under FOR UPDATE.
+type lockedPayout struct {
+	Status   string
+	CoachID  string
+	Month    string
+	TotalIDR float64
 }
 
-func (r *pgRepo) ApplyPayoutDecision(ctx context.Context, id, userID string, d domain.PayoutDecision) error {
+func (r *pgRepo) LockPayout(ctx context.Context, id string) (*lockedPayout, error) {
+	return one[lockedPayout](ctx, r.db,
+		`SELECT status, coach_id::text, to_char(period_month, 'YYYY-MM'), total_idr::float
+		   FROM gym.coach_payouts WHERE id = $1 FOR UPDATE`, id)
+}
+
+func (r *pgRepo) Querier() database.Querier { return r.db }
+
+func (r *pgRepo) ApplyPayoutDecision(ctx context.Context, id, userID string, d domain.PayoutDecision, payrollPeriod *string) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE gym.coach_payouts SET
 		    status = $2,
@@ -598,7 +606,8 @@ func (r *pgRepo) ApplyPayoutDecision(ctx context.Context, id, userID string, d d
 		    voided_by = CASE WHEN $2 = 'void' THEN $3::uuid ELSE voided_by END,
 		    voided_at = CASE WHEN $2 = 'void' THEN now() ELSE voided_at END,
 		    note = COALESCE($5, note),
+		    payroll_period = COALESCE($6, payroll_period),
 		    updated_at = now()
-		  WHERE id = $1`, id, d.Status, userID, d.PaymentReference, d.Note)
+		  WHERE id = $1`, id, d.Status, userID, d.PaymentReference, d.Note, payrollPeriod)
 	return err
 }

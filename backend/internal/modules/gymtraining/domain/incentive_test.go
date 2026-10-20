@@ -163,6 +163,10 @@ func TestPeriods(t *testing.T) {
 			t.Fatal("bad period should fail")
 		}
 	})
+	t.Run("names the WIB month of an instant", func(t *testing.T) {
+		eq(t, PeriodMonthOf(time.Date(2026, 10, 31, 17, 0, 0, 0, time.UTC)), "2026-11")
+		eq(t, PeriodMonthOf(time.Date(2026, 10, 31, 16, 59, 0, 0, time.UTC)), "2026-10")
+	})
 }
 
 func TestDecidePayoutAction(t *testing.T) {

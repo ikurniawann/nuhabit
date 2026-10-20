@@ -77,6 +77,9 @@ var studioZone = time.FixedZone("WIB", 7*3600)
 // IsPeriodMonth reports whether value is a YYYY-MM month.
 func IsPeriodMonth(value string) bool { return periodRE.MatchString(value) }
 
+// PeriodMonthOf is the YYYY-MM month holding t on the studio calendar.
+func PeriodMonthOf(t time.Time) string { return t.In(studioZone).Format("2006-01") }
+
 // Period is [Start, End) in absolute time.
 type Period struct{ Start, End time.Time }
 

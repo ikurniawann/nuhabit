@@ -64,6 +64,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"POST /api/gym/incentives/payouts":        "create gym.incentives",
 		"GET /api/gym/incentives/payouts/{id}":    "read gym.incentives",
 		"POST /api/gym/incentives/payouts/{id}":   "update gym.incentives",
+		"GET /api/gym/my-classes/incentives":      "read gym.my-classes",
 	}
 	seen := 0
 	for _, route := range (handlers{}).Routes() {

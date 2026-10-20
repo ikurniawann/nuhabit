@@ -444,7 +444,31 @@ func TestIncentives(t *testing.T) {
 	expect(t, h.asStaff("POST", pp, map[string]any{"action": "pay", "payment_reference": "TRF"}), 409, "Payout berstatus draf tidak bisa dibayar.")
 	expect(t, h.asStaff("POST", pp, map[string]any{"action": "approve"}), 200, "")
 	expect(t, h.asStaff("POST", pp, map[string]any{"action": "pay", "payment_reference": "  "}), 409, "Referensi pembayaran wajib diisi.")
-	expect(t, h.asStaff("POST", pp, map[string]any{"action": "pay", "payment_reference": " TRF-1 "}), 200, "")
+	notEmployee := "Coach ini belum tertaut ke karyawan HRIS. Tautkan akun staf coach ke data karyawan agar insentif masuk payroll."
+	notPayable := "Karyawan coach ini nonaktif atau belum punya struktur gaji aktif, jadi payroll belum bisa membayar insentifnya."
+	payIt := map[string]any{"action": "pay", "payment_reference": " TRF-1 "}
+	expect(t, h.asStaff("POST", pp, payIt), 409, notEmployee)
+	coachStaff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.my-classes": {"read"}}})
+	h.exec(`UPDATE gym.coaches SET user_id = $2 WHERE id = $1`, coachID, coachStaff.UserID)
+	expect(t, h.asStaff("POST", pp, payIt), 409, notEmployee)
+	employeeID := h.scalar(`INSERT INTO hris.employees (full_name, nip, email, phone, join_date, employment_status, is_active, user_id)
+		VALUES ($1, $2, $3, '0812000111', '2024-01-15', 'permanent', true, $4) RETURNING id::text`,
+		coachName, "GOT-"+testutil.RandomHex(4), coachStaff.Email, coachStaff.UserID)
+	t.Cleanup(func() {
+		h.exec(`DELETE FROM hris.payroll_additions WHERE employee_id = $1`, employeeID)
+		h.exec(`DELETE FROM hris.employee_salary WHERE employee_id = $1`, employeeID)
+		h.exec(`DELETE FROM hris.employees WHERE id = $1`, employeeID)
+	})
+	expect(t, h.asStaff("POST", pp, payIt), 409, notPayable)
+	h.exec(`INSERT INTO hris.employee_salary (employee_id, base_salary, effective_date) VALUES ($1, 5000000, '2026-01-01')`, employeeID)
+	expect(t, h.asStaff("POST", pp, payIt), 200, "")
+	addition := h.scalar(`SELECT format('%s|%s|%s|%s', amount::float8, label, source_type,
+		  to_char(make_date(period_year, period_month, 1), 'YYYY-MM'))
+		FROM hris.payroll_additions WHERE source_id = $1`, payoutID)
+	payrollPeriod := h.scalar(`SELECT payroll_period FROM gym.coach_payouts WHERE id = $1`, payoutID)
+	if addition != "171000|Insentif coach 2031-03|gym.coach_payout|"+payrollPeriod {
+		t.Fatalf("payroll addition = %q, payout period %q", addition, payrollPeriod)
+	}
 	expect(t, h.asStaff("POST", pp, map[string]any{"action": "void", "note": "x"}), 409, "Payout berstatus dibayar tidak bisa dibatalkan.")
 
 	detail := h.asStaff("GET", pp, nil)
@@ -456,8 +480,29 @@ func TestIncentives(t *testing.T) {
 	}
 	list := h.asStaff("GET", "/api/gym/incentives/payouts?month=2031-03", nil)
 	expect(t, list, 200, "")
-	if row := list.list()[0].(map[string]any); row["id"] != payoutID || row["sessions"] != 1.0 || row["coach_name"] != coachName {
+	if row := list.list()[0].(map[string]any); row["id"] != payoutID || row["sessions"] != 1.0 || row["coach_name"] != coachName ||
+		row["payroll_period"] != payrollPeriod {
 		t.Fatalf("payouts = %v", list.list())
+	}
+
+	// The coach reads its own statement and payouts.
+	asCoach := func(path string) call {
+		rec, out := testutil.Do(t, h.mux, testutil.AsStaff(testutil.Request("GET", path, nil), coachStaff))
+		return call{rec.Code, out}
+	}
+	expect(t, asCoach("/api/gym/my-classes/incentives?month=2031-3"), 400, "Bulan harus berformat YYYY-MM")
+	own := asCoach("/api/gym/my-classes/incentives?month=2031-03")
+	expect(t, own, 200, "")
+	ownStatement, _ := own.data()["statement"].(map[string]any)
+	ownPayouts, _ := own.data()["payouts"].([]any)
+	if own.data()["coach"].(map[string]any)["id"] != coachID || ownStatement == nil || ownStatement["coachId"] != coachID ||
+		len(ownPayouts) != 1 || ownPayouts[0].(map[string]any)["id"] != payoutID {
+		t.Fatalf("my incentives = %v", own.data())
+	}
+	unlinked := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.my-classes": {"read"}}})
+	rec, body := testutil.Do(t, h.mux, testutil.AsStaff(testutil.Request("GET", "/api/gym/my-classes/incentives", nil), unlinked))
+	if none := (call{rec.Code, body}); none.status != 200 || none.data()["coach"] != nil || len(none.data()["payouts"].([]any)) != 0 {
+		t.Fatalf("unlinked incentives = %v", body)
 	}
 	expect(t, h.asStaff("GET", "/api/gym/incentives/payouts?month=bad", nil), 400, "Bulan harus berformat YYYY-MM")
 	expect(t, h.asStaff("GET", "/api/gym/incentives/payouts/00000000-0000-4000-8000-000000000000", nil), 404, "Payout tidak ditemukan")
