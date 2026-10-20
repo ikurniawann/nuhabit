@@ -22,6 +22,14 @@ export const AUTH_ID: Record<string, string> = {
   "Send code": "Kirim kode",
   "Enter the code": "Masukkan kode",
   "We sent a code to WhatsApp {phone}.": "Kode dikirim ke WhatsApp {phone}.",
+  // Email codes (when email is the only channel)
+  "Sign in with an email code": "Masuk dengan kode email",
+  "We will send a 6-digit code to the email on your account.": "Kami kirim kode 6 digit ke email akunmu.",
+  "We sent a code to the email on your account.": "Kode dikirim ke email akunmu.",
+  "We sent a code to {email}.": "Kode dikirim ke {email}.",
+  "Enter the WhatsApp number or email on your account and we will send a code to its email.":
+    "Masukkan nomor WhatsApp atau email akunmu, kami kirim kode ke email akun itu.",
+  "If that account exists, a code is on its way to its email.": "Bila akun itu ada, kode sedang dikirim ke emailnya.",
   "Verification code": "Kode verifikasi",
   Verify: "Verifikasi",
   "Change number": "Ganti nomor",

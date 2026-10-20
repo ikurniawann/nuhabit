@@ -3056,6 +3056,11 @@
   },
   {
     "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/config"
+  },
+  {
+    "module": "member-portal",
     "method": "PUT",
     "path": "/api/member-portal/consent"
   },

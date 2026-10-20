@@ -27,6 +27,7 @@ type Repository interface {
 type Service struct {
 	repo       Repository
 	notifier   Notifier
+	mailer     OTPMailer
 	pusher     Pusher
 	payments   Payments
 	wallet     WalletLedger

@@ -3,19 +3,28 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useReducer, useState, type FormEvent } from "react";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { useMemberOtpConfig, type OtpChannel } from "@/lib/otp-availability";
 import { ApiError, memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
+import { Spinner } from "../ui";
 import { forgotTransition, initialForgotPhase } from "./forgot-steps";
 import { passwordError } from "./password-rules";
 import "../member-app.css";
 
-type ForgotStarted = { status: "otp_sent"; phone_masked: string } | { status: "front_desk" };
+type ForgotStarted = { status: "otp_sent"; phone_masked: string; channel?: OtpChannel } | { status: "front_desk" };
 
+/** The flow starts once the server says whether codes can be sent. */
 export function ForgotPasswordPage() {
+  const otp = useMemberOtpConfig();
+  if (!otp) return <Spinner />;
+  return <ForgotFlow otpEnabled={otp.enabled} channel={otp.channel} />;
+}
+
+function ForgotFlow({ otpEnabled, channel }: { otpEnabled: boolean; channel: OtpChannel | null }) {
   const t = useT();
-  const [phase, dispatch] = useReducer(forgotTransition, OTP_ENABLED, initialForgotPhase);
+  const [phase, dispatch] = useReducer(forgotTransition, otpEnabled, initialForgotPhase);
+  const [sentTo, setSentTo] = useState<OtpChannel | null>(channel);
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -43,6 +52,7 @@ export function ForgotPasswordPage() {
     void run(async () => {
       const started = await memberApi<ForgotStarted>("/password/forgot", { method: "POST", json: { username: username.trim() } });
       if (started.status === "otp_sent") {
+        setSentTo(started.channel ?? channel);
         dispatch({ type: "otp_sent", username: username.trim(), phoneMasked: started.phone_masked });
       } else {
         dispatch({ type: "front_desk" });
@@ -82,7 +92,9 @@ export function ForgotPasswordPage() {
         {phase.kind === "username" ? (
           <form className="flex flex-col gap-4" noValidate onSubmit={requestCode}>
             <p className="text-sm text-nh-muted">
-              {t("Enter the WhatsApp number or email on your account and we will send a code to your WhatsApp.")}
+              {channel === "email"
+                ? t("Enter the WhatsApp number or email on your account and we will send a code to its email.")
+                : t("Enter the WhatsApp number or email on your account and we will send a code to your WhatsApp.")}
             </p>
             <div>
               <label className="nh-label" htmlFor="forgot-username">
@@ -111,7 +123,9 @@ export function ForgotPasswordPage() {
         {phase.kind === "code" ? (
           <form className="flex flex-col gap-4" noValidate onSubmit={reset}>
             <p className="text-sm text-nh-muted">
-              {t("If that account exists, a code is on its way to WhatsApp {phone}.", { phone: phase.phoneMasked })}
+              {sentTo === "email"
+                ? t("If that account exists, a code is on its way to its email.")
+                : t("If that account exists, a code is on its way to WhatsApp {phone}.", { phone: phase.phoneMasked })}
             </p>
             <div>
               <label className="nh-label" htmlFor="forgot-code">

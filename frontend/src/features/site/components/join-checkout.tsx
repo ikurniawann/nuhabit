@@ -12,7 +12,7 @@ import { GoogleSignIn } from "@/features/member-app/auth/google-sign-in";
 import { ApiError, memberApi } from "@/features/member-app/lib/api";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { useMemberOtpConfig, whatsappOtpOn } from "@/lib/otp-availability";
 import { planPayload, pushSiteEvent } from "../lib/analytics";
 import {
   accountTransition,
@@ -148,8 +148,21 @@ const noSubscribe = () => () => {};
 /** The login page returns to this checkout; the URL is only known in the browser. */
 const loginHrefSnapshot = () => `${MEMBER_LOGIN}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
 
+/** The account step starts once the server says whether WhatsApp codes can be sent. */
 function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
-  const [phase, dispatch] = useReducer(accountTransition, OTP_ENABLED, initialAccountPhase);
+  const otp = useMemberOtpConfig();
+  if (!otp) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-body">
+        <LoaderCircle className="size-4 animate-spin" /> Loading sign-in options
+      </p>
+    );
+  }
+  return <AccountForm onSignedIn={onSignedIn} otpEnabled={whatsappOtpOn(otp)} />;
+}
+
+function AccountForm({ onSignedIn, otpEnabled }: { onSignedIn(): void; otpEnabled: boolean }) {
+  const [phase, dispatch] = useReducer(accountTransition, otpEnabled, initialAccountPhase);
   const loginHref = useSyncExternalStore(noSubscribe, loginHrefSnapshot, () => MEMBER_LOGIN);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");

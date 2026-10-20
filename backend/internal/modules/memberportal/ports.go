@@ -12,9 +12,18 @@ import (
 
 // Notifier delivers WhatsApp messages (lib/whatsapp). It never fails the
 // caller: a delivery problem comes back as Delivered=false with a reason.
+// Configured reports whether a WhatsApp provider is set up.
 type Notifier interface {
+	Configured(ctx context.Context) bool
 	SendOTP(ctx context.Context, target, code, fallbackText string) Delivery
 	SendText(ctx context.Context, target, message, messageType string) Delivery
+}
+
+// OTPMailer sends sign-in codes by email, the channel used when WhatsApp
+// is not set up. Send reports whether the provider accepted the message.
+type OTPMailer interface {
+	Configured() bool
+	Send(ctx context.Context, to, subject, html string) bool
 }
 
 // Delivery is the outcome of one WhatsApp send.

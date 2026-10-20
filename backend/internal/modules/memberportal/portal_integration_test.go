@@ -15,10 +15,14 @@ import (
 )
 
 // fakeNotifier records the last OTP per number instead of sending it.
+// unconfigured makes it report no WhatsApp provider.
 type fakeNotifier struct {
-	mu    sync.Mutex
-	codes map[string]string
+	mu           sync.Mutex
+	codes        map[string]string
+	unconfigured bool
 }
+
+func (f *fakeNotifier) Configured(context.Context) bool { return !f.unconfigured }
 
 func (f *fakeNotifier) SendOTP(_ context.Context, target, code, _ string) Delivery {
 	f.mu.Lock()

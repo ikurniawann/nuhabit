@@ -26,6 +26,9 @@ type Options struct {
 	Credits CreditWallet
 	// Loyalty is the CRM XP engine (profile, challenge, badge and top-up XP).
 	Loyalty Loyalty
+	// OTPMail sends codes by email when WhatsApp is not set up; nil means
+	// WhatsApp only.
+	OTPMail OTPMailer
 }
 
 // New builds the module with its in-package adapters.
@@ -35,6 +38,7 @@ func New(deps module.Deps, opts Options) *Module {
 	svc := &Service{
 		repo:       repo,
 		notifier:   newWhatsAppNotifier(deps.DB, getenv, deps.Log),
+		mailer:     opts.OTPMail,
 		loyalty:    opts.Loyalty,
 		log:        deps.Log,
 		now:        deps.Now,

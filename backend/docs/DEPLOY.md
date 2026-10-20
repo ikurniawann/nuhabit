@@ -144,23 +144,47 @@ or Fonnte) and email (Resend, when `RESEND_API_KEY` and `GYM_FROM_EMAIL` or
 settings. A delivery failure is logged and never fails the booking or
 the job.
 
-## Member sign-in flags
+## Member sign-in and self sign-up
 
-Two variables decide how members get into the member app:
+The Go API decides at runtime whether members can use codes (OTP): self
+sign-up, code sign-in, Google sign-in for members without an account and
+forgot-password by code. `GET /api/member-portal/config` reports the answer
+(`otp_enabled`, `otp_channels`) and the member app, the table order sheet and
+the public `/join` checkout read it on load. No rebuild is needed when a
+channel is added or removed.
+
+Codes are on when at least one channel is configured:
+
+| Channel | What to configure |
+|---|---|
+| WhatsApp (preferred) | One provider, the same setup gym notifications use: Meta Cloud API (`META_WA_ACCESS_TOKEN` and `META_WA_PHONE_NUMBER_ID`, with an approved `otp_login` authentication template or `META_WA_OTP_TEMPLATE`), the `services/wa-gateway` token (`WA_GATEWAY_TOKEN`, or `wa_gateway_token` in the dashboard settings, with `WA_GATEWAY_URL` when not the default), or `FONNTE_API_KEY`. `WHATSAPP_PROVIDER` pins one. |
+| Email (fallback) | `RESEND_API_KEY` plus a sender in `GYM_FROM_EMAIL` or `FROM_EMAIL` on a domain verified in Resend. Codes then go to the email typed at sign-up or the one on the account; a member without an email gets a 409 and signs in with a password. The public `/join` checkout speaks WhatsApp only, so on an email-only setup it sends new members to the front desk; the member app sign-up works. |
+
+To open self sign-up in production:
+
+1. Configure one channel above in the API container's env (`RUNTIME_CONFIG_CONTENT`).
+2. Remove `OTP_ENABLED=false` from the API env and `NEXT_PUBLIC_OTP_ENABLED=false`
+   from the build env. Both now only force codes off; `NEXT_PUBLIC_OTP_ENABLED`
+   is inlined at `next build`, so dropping it needs a new image.
+3. Check `GET /api/member-portal/config` answers `"otp_enabled": true`.
 
 | Variable | Read by | Effect |
 |---|---|---|
-| `OTP_ENABLED` | Go API, at runtime | `true` enables the WhatsApp OTP routes under `/api/member-portal`: self sign-up, OTP sign-in, Google sign-in for members without an account, and forgot-password by WhatsApp. Anything else makes them answer 503. |
-| `NEXT_PUBLIC_OTP_ENABLED` | Next, at `next build` | The same switch for the UI: with `false` the member app hides sign-up and the WhatsApp reset and tells members to ask the front desk. It is inlined into the bundle, so it must be in `RUNTIME_CONFIG_CONTENT` (the file the build reads as a BuildKit secret) at build time. Setting it on the running container changes nothing. |
+| `OTP_ENABLED` | Go API, at runtime | `false` keeps member codes off whatever is configured: the OTP routes answer 503. `true` also enables dataroom email verification. Empty or unset leaves member codes to the channels. |
+| `NEXT_PUBLIC_OTP_ENABLED` | Next, at `next build` | `false` hides sign-up and code sign-in in this build. `true` also enables dataroom email verification in the UI. |
 
-Keep the two in step. With both `false` (the default) members sign in with
-username (WhatsApp number or email) and password only; new sign-ups, Google
-sign-in for new members and forgot-password by WhatsApp are unavailable.
-The fallback is the staff reset: `POST /api/crm/members/{id}/password`
-(IAM menu `crm.members`, action `update`) from the member detail page
-generates a password, ends the member's sessions, writes an audit row and
-shows the password once or sends it by WhatsApp. Members can change their
-own password afterwards (`PUT /api/member-portal/password`).
+Abuse limits on code sends: 3 per number per 10 minutes, 10 per number per
+day, 30 per network (IP) per 10 minutes and 200 per network per day, plus 5
+attempts per code. The per-network and per-number counters live in
+`platform.rate_limits`, shared by every replica.
+
+With codes off, members sign in with username (WhatsApp number or email) and
+password only. The fallback is the staff reset:
+`POST /api/crm/members/{id}/password` (IAM menu `crm.members`, action
+`update`) from the member detail page generates a password, ends the
+member's sessions, writes an audit row and shows the password once or sends
+it by WhatsApp. Members can change their own password afterwards
+(`PUT /api/member-portal/password`).
 
 ## Schema drift check
 

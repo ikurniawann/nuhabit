@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { OtpChannel } from "@/lib/otp-availability";
 
 /**
- * WhatsApp code sign-in through the existing endpoints: POST /otp {phone},
+ * Code sign-in through the existing endpoints: POST /otp {phone},
  * then POST /verify {phone, code}, which sets the member_session cookie.
  * Messages are English keys; the screen runs them through t().
  */
@@ -20,6 +21,8 @@ export function useMemberOtp({
   const [code, setCodeRaw] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** Where the last code went: WhatsApp, or the account email on an email-only setup. */
+  const [sentTo, setSentTo] = useState<OtpChannel | null>(null);
 
   const setPhone = (value: string) => {
     setPhoneRaw(value);
@@ -62,6 +65,7 @@ export function useMemberOtp({
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || "Could not send the code.");
+      setSentTo(json.channel === "email" ? "email" : "whatsapp");
       setStep("code");
       onCodeSent?.();
     } catch (err) {
@@ -96,5 +100,5 @@ export function useMemberOtp({
     }
   }, [code, phone, onSignedIn]);
 
-  return { step, phone, setPhone, code, setCode, busy, error, requestOtp, verifyOtp, backToPhone };
+  return { step, phone, setPhone, code, setCode, busy, error, sentTo, requestOtp, verifyOtp, backToPhone };
 }

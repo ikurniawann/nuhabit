@@ -49,6 +49,7 @@ const prefix = "/api/member-portal"
 func (h *Handler) Routes() []module.Route {
 	routes := []module.Route{
 		// Sign-in, registration, session
+		{Pattern: "GET " + prefix + "/config", Handler: h.public("Gagal memuat konfigurasi", h.config)},
 		{Pattern: "POST " + prefix + "/otp", Handler: h.public("Gagal mengirim OTP", h.requestOTP)},
 		{Pattern: "POST " + prefix + "/register/otp", Handler: h.public("Gagal mengirim OTP", h.requestRegisterOTP)},
 		{Pattern: "POST " + prefix + "/verify", Handler: h.public("Gagal verifikasi OTP", h.verify)},

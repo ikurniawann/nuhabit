@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { useMemberOtpConfig, type OtpChannel } from "@/lib/otp-availability";
 import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
@@ -48,15 +48,17 @@ async function withRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
 
 /** useSearchParams needs a Suspense boundary for prerendering. */
 export function RegisterPage() {
-  if (!OTP_ENABLED) return <FrontDeskSignup />;
+  const otp = useMemberOtpConfig();
+  if (!otp) return <Spinner />;
+  if (!otp.enabled) return <FrontDeskSignup />;
   return (
     <Suspense fallback={<Spinner />}>
-      <Register />
+      <Register channel={otp.channel} />
     </Suspense>
   );
 }
 
-/** Without WhatsApp verification there is no self-service sign-up. */
+/** Without code verification there is no self-service sign-up. */
 function FrontDeskSignup() {
   const t = useT();
   return (
@@ -79,7 +81,7 @@ function FrontDeskSignup() {
   );
 }
 
-function Register() {
+function Register({ channel }: { channel: OtpChannel | null }) {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
@@ -94,6 +96,7 @@ function Register() {
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [phone, setPhone] = useState("");
   const [devBypass, setDevBypass] = useState(false);
+  const [sentTo, setSentTo] = useState<OtpChannel | null>(channel);
   const [code, setCode] = useState("");
   const [fullName, setFullName] = useState(searchParams.get("name") ?? "");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -114,12 +117,13 @@ function Register() {
     setBusy(true);
     setError("");
     try {
-      const res = await post<{ dev_bypass?: boolean }>("/register/otp", { phone });
+      const res = await post<{ dev_bypass?: boolean; channel?: OtpChannel }>("/register/otp", { phone, email });
       if (!res.success) {
         setError(res.error ?? t("Something went wrong."));
         return;
       }
       setDevBypass(Boolean(res.dev_bypass));
+      setSentTo(res.channel ?? channel);
       next();
     } finally {
       setBusy(false);
@@ -245,7 +249,9 @@ function Register() {
               <p className="mt-2 text-xs text-nh-muted">
                 {devBypass
                   ? t("Local dev: no code needed, continue.")
-                  : t("We sent a code to WhatsApp {phone}.", { phone })}
+                  : sentTo === "email"
+                    ? t("We sent a code to {email}.", { email })
+                    : t("We sent a code to WhatsApp {phone}.", { phone })}
               </p>
             </div>
             <button className="nh-btn-brand" disabled={!devBypass && code.length < 6} onClick={next}>

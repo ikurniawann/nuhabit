@@ -22,6 +22,12 @@ func newWhatsAppNotifier(db database.Querier, getenv func(string) string, log *s
 	return &whatsappNotifier{db: db, wa: wa}
 }
 
+// Configured reports whether a WhatsApp provider (gateway, Meta or Fonnte)
+// is set up.
+func (n *whatsappNotifier) Configured(ctx context.Context) bool {
+	return n.wa.Configured(ctx, n.db)
+}
+
 // SendOTP sends a login code: a Meta AUTHENTICATION template, or the
 // fallback text on the gateway and Fonnte.
 func (n *whatsappNotifier) SendOTP(ctx context.Context, target, code, fallbackText string) Delivery {
