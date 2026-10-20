@@ -355,11 +355,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
       {refunding && (
         <ReasonDialog
           title={`Refund ${refunding.package_name}?`}
-          description={
-            refunding.payment_method === "ark_coin"
-              ? `${formatNumber(refunding.credits)} kredit ditarik dan ${formatRupiah(refunding.total_idr)} kembali ke saldo ARK Coin member.`
-              : `${formatNumber(refunding.credits)} kredit ditarik. Kembalikan ${formatRupiah(refunding.total_idr)} ke member secara manual di kasir.`
-          }
+          description={refundDescription(refunding)}
           confirmLabel="Refund"
           action={(reason) => gymCreditsApi.refundPurchase(refunding.id, reason)}
           onClose={() => setRefunding(null)}
@@ -368,6 +364,17 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
       )}
     </div>
   );
+}
+
+// A credit package refunds only the credits still unused, at their share
+// of the price; a pass refunds its total.
+function refundDescription(p: CreditPurchase): string {
+  const payback =
+    p.payment_method === "ark_coin" ? "kembali ke saldo ARK Coin member" : "dikembalikan ke member secara manual di kasir";
+  if (p.kind === "pass") {
+    return `Pass dibatalkan dan ${formatRupiah(p.total_idr)} ${payback}.`;
+  }
+  return `Kredit yang belum terpakai dari pembelian ini ditarik. Nilai refund ${formatRupiah(p.total_idr)} × kredit sisa ÷ ${formatNumber(p.credits)} kredit, ${payback}.`;
 }
 
 function AdjustDialog({ credits, onClose, onDone }: { credits: MemberCredits; onClose: () => void; onDone: () => void }) {
