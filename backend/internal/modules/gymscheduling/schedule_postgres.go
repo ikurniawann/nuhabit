@@ -17,7 +17,8 @@ type ScheduleRepository interface {
 	// for the rest of the transaction, so two overlap checks never race.
 	LockSchedule(ctx context.Context, q Q) error
 	// ScheduleNeighbours lists live sessions overlapping s in time that share
-	// its coach or its area; domain.FindScheduleConflict picks the clash.
+	// its coach or its area, and open personal training appointments of its
+	// coach; domain.FindScheduleConflict picks the clash.
 	ScheduleNeighbours(ctx context.Context, q Q, s domain.Slot) ([]domain.Slot, error)
 	// SessionHasActiveBookings: any booking that is not cancelled.
 	SessionHasActiveBookings(ctx context.Context, q Q, id string) (bool, error)
@@ -95,7 +96,15 @@ func (Postgres) ScheduleNeighbours(ctx context.Context, q Q, s domain.Slot) ([]d
         AND (s.coach_id = $4
              OR (NULLIF(btrim($6), '') IS NOT NULL AND lower(btrim(s.area)) = lower(btrim($6))
                  AND s.branch_id IS NOT DISTINCT FROM $5::uuid))
-      ORDER BY s.starts_at
+     UNION ALL
+     -- Open personal training appointments hold their coach too (gym-coaching).
+     SELECT a.id, t.name, a.coach_id, c.name, a.branch_id, NULL, a.starts_at, a.ends_at
+       FROM gym.pt_appointments a
+       JOIN gym.class_types t ON t.id = a.class_type_id
+       JOIN gym.coaches c ON c.id = a.coach_id
+      WHERE a.status IN ('requested', 'confirmed') AND a.starts_at < $3 AND a.ends_at > $2
+        AND ($1::uuid IS NULL OR a.id <> $1) AND a.coach_id = $4
+      ORDER BY 7
       LIMIT 20`, nullIfEmpty(s.ID), s.StartsAt, s.EndsAt, s.CoachID, s.BranchID, s.Area)
 	if err != nil {
 		return nil, err

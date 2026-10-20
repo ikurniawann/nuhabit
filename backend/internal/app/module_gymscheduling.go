@@ -124,6 +124,7 @@ func (schedulingCredits) Coverage(ctx context.Context, q database.Querier) ([]gy
 	if err != nil {
 		return nil, err
 	}
+	delete(byID, creditsdomain.PersonalOnly)
 	out := make([]gymscheduling.PackageCoverage, 0, len(byID))
 	for id, ids := range byID {
 		out = append(out, gymscheduling.PackageCoverage{ID: id, ClassTypeIDs: ids})

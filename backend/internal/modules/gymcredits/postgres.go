@@ -132,8 +132,12 @@ func (Postgres) IsReversed(ctx context.Context, q database.Querier, entryID stri
 	return exists, err
 }
 
+// PackageCoverage maps each package to its class type list (nil = all) and
+// domain.PersonalOnly to the personal training class types, when any exist.
 func (Postgres) PackageCoverage(ctx context.Context, q database.Querier) (map[string][]string, error) {
-	rows, err := q.Query(ctx, `SELECT id, applicable_class_type_ids::text[] FROM gym.credit_packages`)
+	rows, err := q.Query(ctx, `SELECT id::text, applicable_class_type_ids::text[] FROM gym.credit_packages
+UNION ALL
+SELECT $1, array_agg(id::text) FROM gym.class_types WHERE is_personal HAVING count(*) > 0`, domain.PersonalOnly)
 	if err != nil {
 		return nil, err
 	}
