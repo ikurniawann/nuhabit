@@ -438,6 +438,8 @@ type Repository interface {
 	// MarkPurchaseRefunded records the amount paid back, appends note and
 	// merges meta into payment_meta.
 	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any) error
+	// NotePurchase appends note and merges meta into payment_meta.
+	NotePurchase(ctx context.Context, q database.Querier, id, note string, meta map[string]any) error
 	// PurchaseCompany is the company a purchase books to: its branch's,
 	// else the only company; nil when neither resolves.
 	PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error)

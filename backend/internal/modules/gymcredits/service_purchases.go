@@ -45,7 +45,7 @@ type purchaseInput struct {
 	BranchID      *string
 	Note          *string
 	CreatedBy     *string
-	// VoucherCode is a promo code; its discount replaces DiscountIdr.
+	// VoucherCode is a promo code; its discount comes off before DiscountIdr.
 	VoucherCode string
 }
 
@@ -90,14 +90,16 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		}
 	}
 
+	// A voucher comes off first; a manual discount then comes off the rest.
+	voucherDiscount := 0.0
 	if in.VoucherCode != "" {
-		quote, err := s.quoteVoucher(ctx, tx, in.CustomerID, in.VoucherCode, pkg.PriceIdr)
+		quote, err := s.quoteVoucher(ctx, tx, in.CustomerID, pkg.ID, in.VoucherCode, pkg.PriceIdr)
 		if err != nil {
 			return nil, err
 		}
-		in.DiscountIdr = quote.Discount
+		voucherDiscount = quote.Discount
 	}
-	discount, total := domain.PurchaseTotal(pkg.PriceIdr, in.DiscountIdr)
+	discount, total := domain.PurchaseTotal(pkg.PriceIdr, voucherDiscount+in.DiscountIdr)
 	var note *string
 	if in.Note != nil && strings.TrimSpace(*in.Note) != "" {
 		trimmed := strings.TrimSpace(*in.Note)
@@ -112,7 +114,7 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		return nil, err
 	}
 	if in.VoucherCode != "" {
-		if err := s.holdVoucher(ctx, tx, in.CustomerID, in.VoucherCode, pkg.PriceIdr, discount, id); err != nil {
+		if err := s.holdVoucher(ctx, tx, in.CustomerID, pkg.ID, in.VoucherCode, pkg.PriceIdr, voucherDiscount, id); err != nil {
 			return nil, err
 		}
 	}
@@ -143,7 +145,7 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	if err != nil {
 		return false, nil, err
 	}
-	if err := s.captureVoucher(ctx, tx, purchaseID); err != nil {
+	if err := s.captureVoucher(ctx, tx, purchase); err != nil {
 		return false, nil, err
 	}
 	paidAt = paidAt.Truncate(time.Millisecond)
@@ -317,7 +319,14 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 			return nil, err
 		}
 	}
-	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, "Refund: "+strings.TrimSpace(reason), refund, meta); err != nil {
+	note := "Refund: " + strings.TrimSpace(reason)
+	if released, err := s.releaseVoucher(ctx, tx, purchaseID); err != nil {
+		return nil, err
+	} else if released {
+		note += " · Voucher dikembalikan"
+		meta["voucher_released"] = true
+	}
+	if err := s.repo.MarkPurchaseRefunded(ctx, tx, purchaseID, note, refund, meta); err != nil {
 		return nil, err
 	}
 	return s.repo.Purchase(ctx, tx, purchaseID, false)
@@ -440,6 +449,8 @@ type FrontDeskSale struct {
 	BranchID      *string
 	Note          *string
 	CashierID     string
+	// VoucherCode is an optional promo code, captured with the sale.
+	VoucherCode string
 }
 
 // SellPackage sells at the front desk: money is taken at the till (or from
@@ -448,13 +459,16 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 	var result *Purchase
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		discount := sale.DiscountIdr
+		if sale.VoucherCode != "" && sale.PaymentMethod == "complimentary" {
+			return fail(http.StatusBadRequest, "Voucher tidak bisa dipakai untuk penjualan gratis")
+		}
 		if sale.PaymentMethod == "complimentary" {
 			// Complimentary = full discount (capped at the price by PurchaseTotal).
 			discount = math.MaxFloat64
 		}
 		purchase, err := s.createPurchase(ctx, tx, purchaseInput{
 			CustomerID: sale.CustomerID, PackageID: sale.PackageID, Channel: "front_desk", PaymentMethod: sale.PaymentMethod,
-			DiscountIdr: discount, BranchID: sale.BranchID, Note: sale.Note, CreatedBy: &sale.CashierID,
+			DiscountIdr: discount, BranchID: sale.BranchID, Note: sale.Note, CreatedBy: &sale.CashierID, VoucherCode: sale.VoucherCode,
 		})
 		if err != nil {
 			return err

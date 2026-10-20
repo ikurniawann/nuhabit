@@ -44,6 +44,7 @@ type campaignRow struct {
 	ShowInMemberPortal bool     `json:"show_in_member_portal"`
 	TargetProductIDs   []string `json:"target_product_ids"`
 	TargetCategoryIDs  []string `json:"target_category_ids"`
+	TargetGymPackages  []string `json:"target_gym_package_ids"`
 	Eligibility        string   `json:"eligibility"`
 	NewMemberDays      *int     `json:"new_member_days"`
 	CreatedAt          jsTime   `json:"created_at"`
@@ -92,6 +93,7 @@ func (s *Service) listCampaigns(ctx context.Context, v venue) ([]campaignRow, er
 		       c.usage_limit, c.per_phone_limit, c.scope, c.is_active,
 		       c.show_in_member_portal,
 		       c.target_product_ids::text[], c.target_category_ids::text[],
+		       c.target_gym_package_ids::text[],
 		       c.eligibility, c.new_member_days, c.created_at,
 		       (SELECT COUNT(*) FROM promo.promo_codes k
 		         WHERE k.campaign_id = c.id)::text,
@@ -123,6 +125,7 @@ type campaignCreate struct {
 	Scope             string
 	TargetProductIDs  []string
 	TargetCategoryIDs []string
+	TargetGymPackages []string
 	Eligibility       string // "" = absent
 	NewMemberDays     *int
 	PublicCode        string // "" = absent
@@ -150,13 +153,13 @@ func (s *Service) createCampaign(ctx context.Context, v venue, userID string, b 
 			  (company_id, branch_id, name, description, discount_type, value,
 			   max_discount, min_purchase, valid_from, valid_until, usage_limit,
 			   per_phone_limit, scope, created_by, target_product_ids,
-			   target_category_ids, eligibility, new_member_days)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+			   target_category_ids, eligibility, new_member_days, target_gym_package_ids)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
 			RETURNING id`,
 			v.companyID, v.branchID, b.Name, b.Description, b.DiscountType, b.Value,
 			maxDiscount, b.MinPurchase, b.ValidFrom, b.ValidUntil, b.UsageLimit,
 			b.PerPhoneLimit, b.Scope, userID, orEmpty(b.TargetProductIDs),
-			orEmpty(b.TargetCategoryIDs), eligibility, newMemberDays,
+			orEmpty(b.TargetCategoryIDs), eligibility, newMemberDays, orEmpty(b.TargetGymPackages),
 		).Scan(&id); err != nil {
 			return err
 		}

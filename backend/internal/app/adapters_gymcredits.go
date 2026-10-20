@@ -15,7 +15,8 @@ import (
 // gymVouchers adapts the stored-value promo service to gym-credits: codes
 // of the default CRM venue on the "gym" channel, so campaigns scoped to
 // class packages or to every channel apply. A package is no catalog
-// product, so campaigns that target products or categories turn it away.
+// product, so campaigns that target products or categories turn it away;
+// campaigns may instead target gym packages.
 type gymVouchers struct{ s *promo.Service }
 
 var _ gymcredits.Vouchers = gymVouchers{}
@@ -32,6 +33,8 @@ func gymVoucherMessage(r promodomain.RejectReason) string {
 	switch r {
 	case promodomain.RejectScope, promodomain.RejectProductMismatch:
 		return "Kode voucher ini tidak berlaku untuk paket kelas"
+	case promodomain.RejectPackageMismatch:
+		return "Kode voucher ini tidak berlaku untuk paket ini"
 	}
 	return promodomain.RejectMessages[r]
 }
@@ -47,6 +50,7 @@ func (v gymVouchers) Preview(ctx context.Context, q database.Querier, in gymcred
 	}
 	res, err := v.s.PreviewPromoCode(ctx, q, promo.PreviewInput{
 		Scope: scope, Code: in.Code, Channel: gymVoucherChannel, Subtotal: in.Subtotal, Phone: &in.Phone, CustomerID: &in.CustomerID,
+		GymPackageID: in.PackageID,
 	})
 	if err != nil || !res.OK {
 		return rejectedVoucher(res.Reason), err
@@ -61,7 +65,7 @@ func (v gymVouchers) Hold(ctx context.Context, q database.Querier, in gymcredits
 	}
 	hold, err := v.s.HoldPromoRedemption(ctx, q, promo.HoldInput{
 		Scope: scope, Code: in.Code, Channel: gymVoucherChannel, ContextType: gymcredits.VoucherContextType, ContextID: purchaseID,
-		Subtotal: in.Subtotal, Phone: &in.Phone, CustomerID: &in.CustomerID,
+		Subtotal: in.Subtotal, Phone: &in.Phone, CustomerID: &in.CustomerID, GymPackageID: in.PackageID,
 	})
 	if rej, ok := errors.AsType[*promo.PromoRejectedError](err); ok {
 		return rejectedVoucher(rej.Reason), nil
@@ -77,7 +81,11 @@ func (v gymVouchers) Capture(ctx context.Context, q database.Querier, purchaseID
 	return err
 }
 
-func (v gymVouchers) Release(ctx context.Context, q database.Querier, purchaseID string) error {
-	_, err := v.s.ReleasePromoRedemption(ctx, q, gymcredits.VoucherContextType, purchaseID)
-	return err
+func (v gymVouchers) Release(ctx context.Context, q database.Querier, purchaseID string) (bool, error) {
+	return v.s.ReleasePromoRedemption(ctx, q, gymcredits.VoucherContextType, purchaseID)
+}
+
+func (v gymVouchers) Recapture(ctx context.Context, q database.Querier, purchaseID string) (gymcredits.VoucherRecapture, error) {
+	result, err := v.s.RecapturePromoRedemption(ctx, q, gymcredits.VoucherContextType, purchaseID)
+	return gymcredits.VoucherRecapture(result), err
 }

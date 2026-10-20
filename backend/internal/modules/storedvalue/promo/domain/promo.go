@@ -5,6 +5,7 @@
 package domain
 
 import (
+	"slices"
 	"strings"
 	"unicode"
 
@@ -39,6 +40,9 @@ type CampaignRule struct {
 	TargetCategoryIDs []string
 	Eligibility       string // "" means semua
 	NewMemberDays     *int
+	// TargetGymPackageIDs limits the campaign to these gym packages; empty
+	// = every package.
+	TargetGymPackageIDs []string
 }
 
 // Line is one cart line (net of line discounts).
@@ -78,6 +82,8 @@ type UsageContext struct {
 	// Lines is required when the campaign targets products or categories.
 	Lines  []Line
 	Member *MemberContext
+	// GymPackageID is the gym package bought ("" outside gym purchases).
+	GymPackageID string
 }
 
 // RejectReason is PromoRejectReason.
@@ -95,6 +101,7 @@ const (
 	RejectMinPurchase     RejectReason = "min-pembelian"
 	RejectQuotaUsed       RejectReason = "kuota-habis"
 	RejectPhoneLimit      RejectReason = "limit-nomor"
+	RejectPackageMismatch RejectReason = "paket-tidak-sesuai"
 )
 
 // RejectMessages are the visitor-facing rejection messages
@@ -110,6 +117,7 @@ var RejectMessages = map[RejectReason]string{
 	RejectMinPurchase:     "Belanja belum mencapai minimum untuk kode ini",
 	RejectQuotaUsed:       "Kuota kode promo sudah habis",
 	RejectPhoneLimit:      "Nomor ini sudah memakai kode promo ini",
+	RejectPackageMismatch: "Kode ini hanya berlaku untuk paket tertentu",
 }
 
 // RejectLabels are the short cashier badges (PROMO_REJECT_LABELS).
@@ -124,6 +132,7 @@ var RejectLabels = map[RejectReason]string{
 	RejectMinPurchase:     "Belum capai minimum",
 	RejectQuotaUsed:       "Kuota habis",
 	RejectPhoneLimit:      "Sudah dipakai",
+	RejectPackageMismatch: "Paket tidak sesuai",
 }
 
 // EvalResult is PromoEvalResult: OK with a discount, or a reason.
@@ -223,6 +232,14 @@ func EvaluatePromo(c CampaignRule, code CodeState, ctx UsageContext) EvalResult 
 	}
 	if c.Scope != "semua" && c.Scope != ctx.Channel {
 		return reject(RejectScope)
+	}
+	// A campaign for some gym packages applies to those packages only, and
+	// never outside gym purchases.
+	if len(c.TargetGymPackageIDs) > 0 && !slices.Contains(c.TargetGymPackageIDs, ctx.GymPackageID) {
+		if ctx.GymPackageID == "" {
+			return reject(RejectScope)
+		}
+		return reject(RejectPackageMismatch)
 	}
 	if r := eligibilityReject(c, ctx.Member); r != "" {
 		return reject(r)

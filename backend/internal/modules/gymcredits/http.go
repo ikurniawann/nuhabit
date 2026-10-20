@@ -260,7 +260,7 @@ func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
 	}
 	purchase, err := h.svc.SellPackage(r.Context(), FrontDeskSale{
 		CustomerID: customerID, PackageID: in.PackageID, PaymentMethod: in.PaymentMethod, DiscountIdr: in.DiscountIdr,
-		BranchID: in.BranchID, Note: in.Note, CashierID: user.ID,
+		BranchID: in.BranchID, Note: in.Note, CashierID: user.ID, VoucherCode: in.VoucherCode,
 	})
 	if err != nil {
 		return err

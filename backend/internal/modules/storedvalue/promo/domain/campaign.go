@@ -33,6 +33,7 @@ type CampaignPatch struct {
 	ShowInMemberPortal Field[bool]
 	TargetProductIDs   Field[[]string]
 	TargetCategoryIDs  Field[[]string]
+	TargetGymPackages  Field[[]string]
 	Eligibility        Field[string]
 	NewMemberDays      Field[*int]
 }
@@ -68,7 +69,7 @@ func (e *PlanError) Error() string { return e.Message }
 func PlanCampaignUpdate(b CampaignPatch, cur CampaignSnapshot) ([]Column, error) {
 	nonToggle := b.Name.Set || b.Description.Set || b.DiscountType.Set || b.Value.Set || b.MaxDiscount.Set ||
 		b.MinPurchase.Set || b.ValidFrom.Set || b.ValidUntil.Set || b.UsageLimit.Set || b.PerPhoneLimit.Set ||
-		b.Scope.Set || b.TargetProductIDs.Set || b.TargetCategoryIDs.Set || b.Eligibility.Set || b.NewMemberDays.Set
+		b.Scope.Set || b.TargetProductIDs.Set || b.TargetCategoryIDs.Set || b.TargetGymPackages.Set || b.Eligibility.Set || b.NewMemberDays.Set
 	onlyToggles := !nonToggle && (b.IsActive.Set || b.ShowInMemberPortal.Set)
 	if !onlyToggles && cur.CapturedCount > 0 {
 		return nil, &PlanError{Conflict: true, Message: "Campaign sudah punya voucher terpakai — hanya status aktif yang boleh diubah"}
@@ -142,6 +143,9 @@ func PlanCampaignUpdate(b CampaignPatch, cur CampaignSnapshot) ([]Column, error)
 	}
 	if b.TargetCategoryIDs.Set {
 		add("target_category_ids", b.TargetCategoryIDs.Value)
+	}
+	if b.TargetGymPackages.Set {
+		add("target_gym_package_ids", b.TargetGymPackages.Value)
 	}
 	if b.Eligibility.Set {
 		add("eligibility", b.Eligibility.Value)
