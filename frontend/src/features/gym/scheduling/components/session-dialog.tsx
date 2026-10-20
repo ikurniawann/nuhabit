@@ -16,7 +16,8 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { GYM_KEYS, schedulingApi, type Session, wibDay, wibTime } from "../api";
+import { localClock, localDay, localInstant, zoneAbbr } from "@/lib/timezone";
+import { GYM_KEYS, schedulingApi, type Session } from "../api";
 import { SELECT } from "@/features/gym/shared";
 import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
 
@@ -52,8 +53,8 @@ export function SessionDialog({
   const [form, setForm] = useState(() => ({
     class_type_id: session?.class_type_id ?? "",
     coach_id: session?.coach_id ?? "",
-    day: session ? wibDay(session.starts_at) : (date ?? wibDay(new Date())),
-    time: session ? wibTime(session.starts_at) : "18:30",
+    day: session ? localDay(session.starts_at, session.timezone) : (date ?? localDay(new Date())),
+    time: session ? localClock(session.starts_at, session.timezone) : "18:30",
     area: session?.area ?? "Main Floor",
     duration_min: session
       ? String(Math.round((Date.parse(session.ends_at) - Date.parse(session.starts_at)) / 60_000))
@@ -68,7 +69,9 @@ export function SessionDialog({
   const activeTypes = (classTypes.data ?? []).filter((t) => t.status === "active");
   const chosenType = activeTypes.find((t) => t.id === form.class_type_id);
   const num = (value: string) => (value.trim() ? Number(value) : null);
-  const startsAt = new Date(`${form.day}T${form.time}:00+07:00`).toISOString();
+  // Tanggal dan jam form adalah jam lokal cabang yang dipilih.
+  const branchZone = branches.data?.branches.find((b) => b.id === branchId)?.timezone;
+  const startsAt = localInstant(form.day, form.time, branchZone).toISOString();
 
   const save = useMutation({
     mutationFn: (publish: boolean) =>
@@ -192,7 +195,7 @@ export function SessionDialog({
             <Field label="Tanggal">
               <Input type="date" value={form.day} onChange={set("day")} required />
             </Field>
-            <Field label="Jam mulai (WIB)">
+            <Field label={`Jam mulai (${zoneAbbr(branchZone)})`}>
               <Input type="time" value={form.time} onChange={set("time")} required />
             </Field>
             <Field label="Durasi (menit)">

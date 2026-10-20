@@ -14,7 +14,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BOOKING_STATUSES, type BookingStatus } from "@/lib/gym/booking";
-import { addDays, BOOKING_BADGE, GYM_KEYS, schedulingApi, waktu, wibDay, wibDayStart } from "../api";
+import { localDay } from "@/lib/timezone";
+import { addDays, BOOKING_BADGE, dayStart, GYM_KEYS, schedulingApi, waktu } from "../api";
 import { SELECT } from "@/features/gym/shared";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { formatNumber } from "@/lib/format";
@@ -35,10 +36,10 @@ export function BookingsPage() {
   const [range, setRange] = useState<RangeKey>("next7");
   const [status, setStatus] = useState<BookingStatus | "">("");
   const [q, setQ] = useState("");
-  const today = wibDay(new Date());
+  const today = localDay(new Date());
   const params = {
-    from: wibDayStart(addDays(today, RANGES[range].from)),
-    to: wibDayStart(addDays(today, RANGES[range].to)),
+    from: dayStart(addDays(today, RANGES[range].from)),
+    to: dayStart(addDays(today, RANGES[range].to)),
     status: status || undefined,
     q: q.trim().length >= 2 ? q.trim() : undefined,
   };
@@ -143,7 +144,7 @@ export function BookingsPage() {
                         {b.class_type_name}
                       </Link>
                       <p className="text-xs text-muted-foreground">
-                        {waktu(b.starts_at)} · {b.credit_cost} kredit{b.coach_name ? ` · ${b.coach_name}` : ""}
+                        {waktu(b.starts_at, b.timezone)} · {b.credit_cost} kredit{b.coach_name ? ` · ${b.coach_name}` : ""}
                       </p>
                     </TableCell>
                     <TableCell className="whitespace-normal">

@@ -105,6 +105,7 @@ export interface ProfileInput {
 export interface Branch {
   id: string;
   name: string;
+  timezone?: string;
 }
 
 /** Penolakan API yang menyebut field dan, untuk data ganda, member pemiliknya. */

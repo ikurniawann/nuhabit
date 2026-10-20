@@ -16,8 +16,9 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { formatNumber, formatTime } from "@/lib/format";
-import { tanggal } from "@/features/gym/scheduling/api";
+import { formatNumber } from "@/lib/format";
+import { zoneSuffix } from "@/lib/timezone";
+import { rentangJam, tanggal } from "@/features/gym/scheduling/api";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { coachingApi, PT_BADGE, type PtAppointment, type PtParticipant } from "../api";
 import { MemberPicker } from "./member-picker";
@@ -83,7 +84,8 @@ export function AppointmentDialog({
         <DialogPanelHeader>
           <DialogPanelTitle>{a.class_type_name}</DialogPanelTitle>
           <DialogPanelDescription>
-            {tanggal(a.starts_at)}, {formatTime(a.starts_at)}–{formatTime(a.ends_at)} WIB · {a.coach_name}
+            {tanggal(a.starts_at, a.timezone)}, {rentangJam(a.starts_at, a.ends_at, a.timezone)}
+            {zoneSuffix(a.timezone) ? "" : " WIB"} · {a.coach_name}
             {a.branch_name && ` · ${a.branch_name}`}
           </DialogPanelDescription>
         </DialogPanelHeader>

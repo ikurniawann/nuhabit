@@ -52,7 +52,7 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
       { key: "lateCancelPolicy", kind: "policy", label: "Batal terlambat", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
       { key: "noShowPolicy", kind: "policy", label: "Tidak hadir (no-show)", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
       { key: "maxConcurrentBookings", kind: "number", label: "Batas booking aktif", unit: "kelas mendatang", hint: "Berlaku juga untuk pemegang pass. 0 = tanpa batas.", min: 0 },
-      { key: "maxBookingsPerDay", kind: "number", label: "Batas booking per hari", unit: "kelas", hint: "Dihitung per hari kalender WIB. 0 = tanpa batas.", min: 0 },
+      { key: "maxBookingsPerDay", kind: "number", label: "Batas booking per hari", unit: "kelas", hint: "Dihitung per hari kalender di zona cabang kelas. 0 = tanpa batas.", min: 0 },
     ],
   },
   {

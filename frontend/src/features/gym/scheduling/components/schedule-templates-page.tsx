@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SELECT } from "@/features/gym/shared";
 import { formatNumber } from "@/lib/format";
+import { localDay, zoneAbbr, zoneSuffix } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 import {
   CLASS_COLOR,
@@ -35,8 +36,7 @@ import {
   schedulingApi,
   tanggal,
   WEEKDAYS,
-  wibDay,
-  wibDayStart,
+  dayStart,
   type GenerateResult,
   type SessionTemplate,
 } from "../api";
@@ -150,7 +150,7 @@ export function ScheduleTemplatesPage() {
                   <TableCell className="whitespace-nowrap">
                     <p className="font-medium">{WEEKDAYS[t.weekday - 1]}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {t.start_time.replace(":", ".")} · {t.duration_min} mnt
+                      {t.start_time.replace(":", ".")}{zoneSuffix(t.timezone)} · {t.duration_min} mnt
                     </p>
                   </TableCell>
                   <TableCell className="max-w-[16rem] whitespace-normal">
@@ -168,12 +168,12 @@ export function ScheduleTemplatesPage() {
                   <TableCell className="hidden text-right tabular-nums sm:table-cell">{t.credit_cost}</TableCell>
                   <TableCell className="hidden text-right tabular-nums lg:table-cell">{t.capacity}</TableCell>
                   <TableCell className="hidden text-xs lg:table-cell">
-                    {tanggal(wibDayStart(t.valid_from))} – {t.valid_until ? tanggal(wibDayStart(t.valid_until)) : "seterusnya"}
+                    {tanggal(dayStart(t.valid_from))} – {t.valid_until ? tanggal(dayStart(t.valid_until)) : "seterusnya"}
                   </TableCell>
                   <TableCell className="hidden text-right tabular-nums md:table-cell">
                     {formatNumber(t.upcoming_sessions)}
                     {t.generated_until && (
-                      <p className="text-xs text-muted-foreground">s.d. {tanggal(wibDayStart(t.generated_until))}</p>
+                      <p className="text-xs text-muted-foreground">s.d. {tanggal(dayStart(t.generated_until))}</p>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -232,28 +232,34 @@ function TemplateDialog({
   onSaved,
 }: {
   template: SessionTemplate | null;
-  branches: { id: string; name: string }[];
+  branches: { id: string; name: string; timezone: string }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const classTypes = useQuery({ queryKey: GYM_KEYS.classTypes, queryFn: schedulingApi.classTypes });
   const coaches = useQuery({ queryKey: GYM_KEYS.coaches, queryFn: schedulingApi.coaches });
-  const [form, setForm] = useState(() => ({
-    class_type_id: template?.class_type_id ?? "",
-    coach_id: template?.coach_id ?? "",
-    branch_id: template?.branch_id ?? (branches.length === 1 ? branches[0].id : ""),
-    area: template?.area ?? "Main Floor",
-    weekday: String(template?.weekday ?? 1),
-    start_time: template?.start_time ?? "18:30",
-    duration_min: template ? String(template.duration_min) : "",
-    capacity: template ? String(template.capacity) : "",
-    credit_cost: template ? String(template.credit_cost) : "",
-    valid_from: template?.valid_from ?? wibDay(new Date()),
-    valid_until: template?.valid_until ?? "",
-    active: template?.active ?? true,
-  }));
+  const zoneOfBranch = (id: string) => branches.find((b) => b.id === id)?.timezone;
+  const [form, setForm] = useState(() => {
+    const branchId = template?.branch_id ?? (branches.length === 1 ? branches[0].id : "");
+    return {
+      class_type_id: template?.class_type_id ?? "",
+      coach_id: template?.coach_id ?? "",
+      branch_id: branchId,
+      area: template?.area ?? "Main Floor",
+      weekday: String(template?.weekday ?? 1),
+      start_time: template?.start_time ?? "18:30",
+      duration_min: template ? String(template.duration_min) : "",
+      capacity: template ? String(template.capacity) : "",
+      credit_cost: template ? String(template.credit_cost) : "",
+      valid_from: template?.valid_from ?? localDay(new Date(), zoneOfBranch(branchId)),
+      valid_until: template?.valid_until ?? "",
+      active: template?.active ?? true,
+    };
+  });
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((cur) => ({ ...cur, [key]: e.target.value }));
+  // Jam template dibaca di zona cabangnya; tanpa cabang, WIB.
+  const branchZone = zoneOfBranch(form.branch_id);
 
   const types = (classTypes.data ?? []).filter((t) => t.status === "active" || t.id === form.class_type_id);
   const chosenType = types.find((t) => t.id === form.class_type_id);
@@ -330,7 +336,7 @@ function TemplateDialog({
                 ))}
               </select>
             </Field>
-            <Field label="Jam mulai (WIB)">
+            <Field label={`Jam mulai (${zoneAbbr(branchZone)})`} hint="Jam lokal cabang yang dipilih.">
               <Input type="time" value={form.start_time} onChange={set("start_time")} required />
             </Field>
             <Field label="Coach" hint="Coach yang sama tidak bisa mengajar dua sesi di jam yang bertumpuk.">

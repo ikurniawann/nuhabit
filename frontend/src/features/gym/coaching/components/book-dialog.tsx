@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { SELECT } from "@/features/gym/shared";
-import { wibDay, wibTime } from "@/features/gym/scheduling/api";
+import { localClock, localDay, localInstant, zoneAbbr } from "@/lib/timezone";
 import { COACHING_KEYS, coachingApi, type PtMemberHit } from "../api";
 import { MemberPicker } from "./member-picker";
 
@@ -47,6 +47,8 @@ export function BookDialog({
   const [members, setMembers] = useState<PtMemberHit[]>([]);
   const type = (types.data ?? []).find((t) => t.id === form.class_type_id) ?? types.data?.[0];
   const capacity = Number(form.capacity) || type?.capacity || 1;
+  // Tanggal dan jam form serta saran slot dibaca di zona cabang coach.
+  const zone = (coaches.data ?? []).find((c) => c.id === form.coach_id)?.timezone;
 
   const slots = useQuery({
     queryKey: [...COACHING_KEYS.slots, form.coach_id, type?.id, form.day],
@@ -59,7 +61,7 @@ export function BookDialog({
       coachingApi.book({
         coach_id: form.coach_id,
         class_type_id: type!.id,
-        starts_at: new Date(`${form.day}T${form.time}:00+07:00`).toISOString(),
+        starts_at: localInstant(form.day, form.time, zone).toISOString(),
         capacity,
         customer_ids: members.map((m) => m.id),
         notes: form.notes.trim(),
@@ -115,7 +117,7 @@ export function BookDialog({
             <Field label="Tanggal">
               <Input type="date" value={form.day} onChange={set("day")} required />
             </Field>
-            <Field label="Jam mulai (WIB)">
+            <Field label={`Jam mulai (${zoneAbbr(zone)})`}>
               <Input type="time" value={form.time} onChange={set("time")} required />
             </Field>
             {form.coach_id && type && (
@@ -130,12 +132,12 @@ export function BookDialog({
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {(slots.data ?? []).map((s) => {
-                      const time = wibTime(s.starts_at);
+                      const time = localClock(s.starts_at, zone);
                       return (
                         <button
                           key={s.starts_at}
                           type="button"
-                          onClick={() => setForm((cur) => ({ ...cur, time, day: wibDay(s.starts_at) }))}
+                          onClick={() => setForm((cur) => ({ ...cur, time, day: localDay(s.starts_at, zone) }))}
                           className={cn(
                             "rounded-full px-3 py-1 text-xs font-semibold tabular-nums transition",
                             form.time === time ? "bg-ink text-on-ink" : "bg-surface-2 text-foreground hover:bg-surface"

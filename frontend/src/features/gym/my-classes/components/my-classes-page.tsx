@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import { TableNote } from "@/features/crm/engagement/components/shared";
-import { addDays, SESSION_BADGE, tanggal, wibDay, wibDayStart, type Session } from "@/features/gym/scheduling/api";
+import { addDays, dayStart, jam, SESSION_BADGE, tanggal, waktu, type Session } from "@/features/gym/scheduling/api";
+import { localDay } from "@/lib/timezone";
 import { bookedSeats, sessionsByDay } from "@/features/gym/scheduling/coach-schedule";
 import { CoachAvatar } from "@/features/gym/scheduling/components/coach-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
 import { MyIncentives } from "./my-incentives";
 
@@ -21,11 +22,11 @@ const HISTORY_DAYS = 30;
 
 /** Rentang yang dibaca sekali saat halaman dibuka: hari ini s.d. 14 hari, dan 30 hari ke belakang. */
 function windows() {
-  const today = wibDay(new Date());
+  const today = localDay(new Date());
   return {
     today,
-    upcoming: { from: wibDayStart(today), to: wibDayStart(addDays(today, UPCOMING_DAYS)) },
-    history: { from: wibDayStart(addDays(today, -HISTORY_DAYS)), to: wibDayStart(today) },
+    upcoming: { from: dayStart(today), to: dayStart(addDays(today, UPCOMING_DAYS)) },
+    history: { from: dayStart(addDays(today, -HISTORY_DAYS)), to: dayStart(today) },
   };
 }
 
@@ -58,7 +59,7 @@ export function MyClassesPage() {
 
   const sessions = upcoming.data?.sessions ?? [];
   const live = sessions.filter((s) => s.status !== "cancelled");
-  const todayCount = live.filter((s) => wibDay(s.starts_at) === range.today).length;
+  const todayCount = live.filter((s) => localDay(s.starts_at, s.timezone) === range.today).length;
   const past = [...(history.data?.sessions ?? [])].filter((s) => s.status !== "cancelled").reverse();
 
   return (
@@ -124,7 +125,7 @@ function DayList({ sessions, today, render }: { sessions: Session[]; today: stri
       {sessionsByDay(sessions).map((group) => (
         <li key={group.day}>
           <p className="mb-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-            {group.day === today ? "Hari ini" : tanggal(group.sessions[0].starts_at)}
+            {group.day === today ? "Hari ini" : tanggal(group.sessions[0].starts_at, group.sessions[0].timezone)}
           </p>
           <Card className="divide-y divide-border py-0">
             {group.sessions.map((s) => (
@@ -141,7 +142,7 @@ function UpcomingRow({ session: s }: { session: Session }) {
   const badge = SESSION_BADGE[s.status];
   return (
     <Link href={`/dashboard/gym/my-classes/${s.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-surface">
-      <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(s.starts_at)}</span>
+      <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{jam(s.starts_at, s.timezone)}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{s.class_type_name}</span>
         <span className="block text-xs text-muted-foreground">
@@ -164,7 +165,7 @@ function HistoryRow({ session: s }: { session: Session }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{s.class_type_name}</span>
         <span className="block text-xs text-muted-foreground">
-          {tanggal(s.starts_at)}, {formatTime(s.starts_at)} · {formatNumber(bookedSeats(s))}/{formatNumber(s.capacity)} booking
+          {waktu(s.starts_at, s.timezone)} · {formatNumber(bookedSeats(s))}/{formatNumber(s.capacity)} booking
         </span>
       </span>
       <span className="shrink-0 text-right text-xs tabular-nums">

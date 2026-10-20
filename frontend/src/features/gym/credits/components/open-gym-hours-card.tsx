@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TableNote } from "@/features/crm/engagement/components/shared";
+import { useGymBranches } from "@/features/gym/branches";
 import { GYM_KEYS, schedulingApi, WEEKDAYS, type OpenGymHours } from "@/features/gym/scheduling/api";
+import { zoneAbbr } from "@/lib/timezone";
 
 type Day = { open: boolean; opens_at: string; closes_at: string };
 
@@ -22,17 +24,18 @@ function toDays(hours: OpenGymHours[]): Day[] {
 }
 
 /**
- * Jam open gym mingguan satu cabang (WIB). Tanpa hari yang dibuka, open gym
+ * Jam open gym mingguan satu cabang, di zona cabang itu. Tanpa hari yang dibuka, open gym
  * berlaku sepanjang hari selama aturan Open gym aktif.
  */
 export function OpenGymHoursCard({ branchId, branchName }: { branchId: string; branchName: string }) {
   const key = [...GYM_KEYS.openGymHours, branchId];
   const hours = useQuery({ queryKey: key, queryFn: () => schedulingApi.openGymHours(branchId) });
+  const zone = useGymBranches().data?.branches.find((b) => b.id === branchId)?.timezone;
   return (
     <Card className="gap-0 py-2">
       <h2 className="px-5 pt-3 text-sm font-semibold">Jam open gym · {branchName}</h2>
       <p className="px-5 pb-2 text-xs text-muted-foreground">
-        Satu rentang per hari, jam WIB. Bila tidak ada hari yang dibuka, open gym berlaku sepanjang hari.
+        Satu rentang per hari, jam {zoneAbbr(zone)}. Bila tidak ada hari yang dibuka, open gym berlaku sepanjang hari.
       </p>
       {hours.isLoading ? (
         <TableNote>Memuat jam open gym…</TableNote>

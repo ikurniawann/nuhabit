@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Dumbbell, ReceiptText, ScanLine, Users } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
-import { formatRupiahCompact, formatTime } from "@/lib/format";
+import { formatRupiahCompact } from "@/lib/format";
+import { jam } from "@/features/gym/scheduling/api";
 import type { ExecutiveDashboard } from "@/lib/dashboard/executive";
 import { SectionCard } from "./executive-parts";
 
@@ -64,7 +65,7 @@ export function GymTodayCard({
                   className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl py-2.5 transition-colors hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-forest/40 focus-visible:outline-none"
                 >
                   <span className="font-display text-sm font-semibold tabular-nums">
-                    {formatTime(s.mulai)}
+                    {jam(s.mulai, s.timezone)}
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold">

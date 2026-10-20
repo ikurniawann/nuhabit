@@ -25,12 +25,15 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import {
   BOOKING_BADGE,
   GYM_KEYS,
+  jam,
+  rentangJam,
   schedulingApi,
   SESSION_BADGE,
+  tanggal,
   waktu,
   strikeRulesNote,
   type RosterEntry,
@@ -149,7 +152,7 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         <ArrowLeft /> Semua sesi
       </Link>
       <PageHeader
-        kicker={`${waktu(session.starts_at)}–${formatTime(session.ends_at)} · ${session.area ?? "Area belum ditentukan"}`}
+        kicker={`${tanggal(session.starts_at, session.timezone)}, ${rentangJam(session.starts_at, session.ends_at, session.timezone)} · ${session.area ?? "Area belum ditentukan"}`}
         title={session.class_type_name}
         description={`${session.coach_name ?? "Coach belum ditentukan"} · ${session.credit_cost} kredit per member, dipotong saat check-in.`}
         actions={
@@ -212,6 +215,7 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
           empty="Belum ada member yang booking."
           disabled={busy}
           correctable={session.status !== "cancelled"}
+          timeZone={session.timezone}
           onAction={(b, action) => {
             if (action === "undo_check_in" || action === "undo_no_show") {
               setPendingCorrection({ id: b.id, action, memberName: b.name });
@@ -267,6 +271,7 @@ function RosterTable({
   empty,
   disabled,
   correctable,
+  timeZone,
   onAction,
 }: {
   rows: RosterEntry[];
@@ -274,6 +279,8 @@ function RosterTable({
   disabled: boolean;
   /** Koreksi check-in dan tidak hadir; sesi yang dibatalkan sudah mengembalikan kredit. */
   correctable: boolean;
+  /** Zona cabang sesi, untuk jam tawaran dan check-in. */
+  timeZone?: string;
   onAction: (booking: RosterEntry, action: RosterAction) => void;
 }) {
   const can = useBookingActions();
@@ -302,10 +309,10 @@ function RosterTable({
                 </Badge>
                 {b.promotion_offered_at && (
                   <span className="ml-2 text-xs text-info">
-                    kursi ditawarkan{b.promotion_expires_at ? ` sampai ${formatTime(b.promotion_expires_at)}` : ""}
+                    kursi ditawarkan{b.promotion_expires_at ? ` sampai ${jam(b.promotion_expires_at, timeZone)}` : ""}
                   </span>
                 )}
-                {b.checked_in_at && <span className="ml-2 text-xs text-muted-foreground">{formatTime(b.checked_in_at)}</span>}
+                {b.checked_in_at && <span className="ml-2 text-xs text-muted-foreground">{jam(b.checked_in_at, timeZone)}</span>}
                 {b.source === "admin" && <span className="ml-2 text-xs text-muted-foreground">oleh staf</span>}
               </TableCell>
               <TableCell className="text-right">
@@ -399,7 +406,7 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
                   {m.pass_strikes > 0 && ` · ${formatNumber(m.pass_strikes)} strike`}
                 </p>
                 {m.suspended_until && (
-                  <p className="text-xs font-medium text-warning">Booking ditangguhkan sampai {waktu(m.suspended_until)}</p>
+                  <p className="text-xs font-medium text-warning">Booking ditangguhkan sampai {waktu(m.suspended_until, session.timezone)}</p>
                 )}
               </div>
               <Button size="sm" disabled={book.isPending} onClick={() => book.mutate(m.id)}>

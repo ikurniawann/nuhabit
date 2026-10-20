@@ -11,10 +11,10 @@ import { SELECT } from "@/features/gym/shared";
 import { useDebounced } from "@/features/gym/use-debounced";
 import { gymCreditsApi } from "@/features/gym/credits/api";
 import { SellDialog } from "@/features/gym/credits/components/sell-dialog";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { Can } from "@/components/iam/can";
 import { DESK_MENUS } from "@/features/gym/permissions";
-import { GYM_KEYS, schedulingApi, strikeRulesNote, waktu, type CheckInResult, type MemberHit, type Session } from "../api";
+import { GYM_KEYS, jam, schedulingApi, strikeRulesNote, waktu, type CheckInResult, type MemberHit, type Session } from "../api";
 import { DROP_IN_LEAD_MS, dropInSessions } from "../drop-in";
 
 const HOUR = 3_600_000;
@@ -88,7 +88,7 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
           <option value="">{sessions.isLoading ? "Memuat sesi…" : options.length ? "Pilih sesi" : "Tidak ada sesi saat ini"}</option>
           {options.map((s) => (
             <option key={s.id} value={s.id}>
-              {formatTime(s.starts_at)} · {s.class_type_name}
+              {jam(s.starts_at, s.timezone)} · {s.class_type_name}
               {s.coach_name ? ` · ${s.coach_name}` : ""} · sisa {formatNumber(s.seats_left)} kursi
             </option>
           ))}

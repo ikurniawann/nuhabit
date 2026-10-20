@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { metricInput, METRICS, parseMetricInput, type Assessment, type MetricKey } from "@/lib/gym/assessments";
 import { SELECT } from "@/features/gym/shared";
-import { wibDay } from "@/features/gym/scheduling/api";
+import { localDay } from "@/lib/timezone";
 import { COACHING_KEYS, coachingApi, type AssessmentInput, type PtMemberHit } from "../api";
 import { MemberPicker } from "./member-picker";
 
@@ -46,7 +46,7 @@ export function AssessmentDialog({
   const [member, setMember] = useState<PtMemberHit | null>(null);
   const memberId = customerId ?? assessment?.customer_id ?? member?.id ?? "";
   const [form, setForm] = useState(() => ({
-    assessed_on: assessment?.assessed_on ?? wibDay(new Date()),
+    assessed_on: assessment?.assessed_on ?? localDay(new Date()),
     coach_id: assessment?.coach_id ?? "",
     notes: assessment?.notes ?? "",
     goals: assessment?.goals ?? "",
@@ -119,7 +119,7 @@ export function AssessmentDialog({
               <Field label="Tanggal asesmen">
                 <Input
                   type="date"
-                  max={wibDay(new Date())}
+                  max={localDay(new Date())}
                   value={form.assessed_on}
                   onChange={(e) => setForm({ ...form, assessed_on: e.target.value })}
                   required

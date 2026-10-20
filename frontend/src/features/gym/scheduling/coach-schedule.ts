@@ -1,16 +1,17 @@
-import { wibDay, type Session } from "./api";
+import { localDay } from "@/lib/timezone";
+import type { Session } from "./api";
 
 export interface DayGroup<T> {
-  /** Hari WIB, "YYYY-MM-DD". */
+  /** Hari "YYYY-MM-DD" di zona cabang sesi. */
   day: string;
   sessions: T[];
 }
 
-/** Kelompokkan sesi per hari WIB, urut waktu mulai. */
-export function sessionsByDay<T extends Pick<Session, "starts_at">>(sessions: readonly T[]): DayGroup<T>[] {
+/** Kelompokkan sesi per hari di zona cabangnya, urut waktu mulai. */
+export function sessionsByDay<T extends Pick<Session, "starts_at" | "timezone">>(sessions: readonly T[]): DayGroup<T>[] {
   const groups = new Map<string, T[]>();
   for (const session of [...sessions].sort((a, b) => a.starts_at.localeCompare(b.starts_at))) {
-    const day = wibDay(session.starts_at);
+    const day = localDay(session.starts_at, session.timezone);
     groups.set(day, [...(groups.get(day) ?? []), session]);
   }
   return [...groups].map(([day, rows]) => ({ day, sessions: rows }));

@@ -12,17 +12,18 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addDays, GYM_KEYS, schedulingApi, SESSION_BADGE, waktu, wibDay, wibDayStart } from "../api";
+import { localDay } from "@/lib/timezone";
+import { addDays, dayStart, GYM_KEYS, schedulingApi, SESSION_BADGE, waktu } from "../api";
 import { SELECT } from "@/features/gym/shared";
 import { formatNumber } from "@/lib/format";
 
 type Range = "today" | "upcoming" | "past";
 
 function rangeFor(range: Range) {
-  const today = wibDay(new Date());
-  if (range === "today") return { from: wibDayStart(today), to: wibDayStart(addDays(today, 1)) };
-  if (range === "past") return { from: wibDayStart(addDays(today, -14)), to: new Date().toISOString() };
-  return { from: new Date().toISOString(), to: wibDayStart(addDays(today, 15)) };
+  const today = localDay(new Date());
+  if (range === "today") return { from: dayStart(today), to: dayStart(addDays(today, 1)) };
+  if (range === "past") return { from: dayStart(addDays(today, -14)), to: new Date().toISOString() };
+  return { from: new Date().toISOString(), to: dayStart(addDays(today, 15)) };
 }
 
 /** Gym → Sesi & Absensi: daftar sesi per rentang, buka untuk roster dan check-in. */
@@ -112,9 +113,9 @@ export function SessionsPage() {
                       <p className="text-xs text-muted-foreground">
                         {[s.coach_name ?? "Coach belum ditentukan", s.area].filter(Boolean).join(" · ")}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{waktu(s.starts_at)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{waktu(s.starts_at, s.timezone)}</p>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">{waktu(s.starts_at)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{waktu(s.starts_at, s.timezone)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatNumber(s.confirmed_count)} / {formatNumber(s.capacity)}
                       {s.waitlist_count > 0 && <span className="block text-xs text-info">+{formatNumber(s.waitlist_count)} waitlist</span>}

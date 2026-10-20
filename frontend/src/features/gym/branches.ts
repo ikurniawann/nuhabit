@@ -6,6 +6,8 @@ import { call } from "./shared";
 export interface GymBranch {
   id: string;
   name: string;
+  /** Zona cabang (IANA): jadwal, jam buka dan hari laporan cabang. */
+  timezone?: string;
 }
 
 export interface GymBranches {

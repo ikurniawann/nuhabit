@@ -3,13 +3,14 @@
 import { Card } from "@/components/ui/card";
 import { ScrollRegion } from "@/components/ui/scroll-region";
 import { formatNumber } from "@/lib/format";
+import { zoneAbbr } from "@/lib/timezone";
 import { percent } from "../csv";
 import type { ClassReport } from "../api";
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
-/** Rata-rata keterisian kelas per hari dan jam mulai (WIB). Satu hue, makin pekat makin penuh. */
-export function OccupancyHeatmap({ cells }: { cells: ClassReport["heatmap"] }) {
+/** Rata-rata keterisian kelas per hari dan jam mulai di zona laporan. Satu hue, makin pekat makin penuh. */
+export function OccupancyHeatmap({ cells, timeZone }: { cells: ClassReport["heatmap"]; timeZone?: string }) {
   if (cells.length === 0) return null;
   const hours = cells.map((c) => c.hour);
   const range = Array.from({ length: Math.max(...hours) - Math.min(...hours) + 1 }, (_, i) => Math.min(...hours) + i);
@@ -18,7 +19,7 @@ export function OccupancyHeatmap({ cells }: { cells: ClassReport["heatmap"] }) {
   return (
     <Card className="p-4">
       <h3 className="text-sm font-semibold">Keterisian per hari dan jam</h3>
-      <p className="text-xs text-muted-foreground">Rata-rata kursi terisi dari kapasitas, menurut jam mulai kelas (WIB).</p>
+      <p className="text-xs text-muted-foreground">Rata-rata kursi terisi dari kapasitas, menurut jam mulai kelas ({zoneAbbr(timeZone)}).</p>
       <ScrollRegion label="Peta keterisian kelas" className="overflow-x-auto">
         <table className="w-full border-separate border-spacing-0.5 text-xs">
           <caption className="sr-only">Rata-rata keterisian kelas per hari dan jam mulai</caption>

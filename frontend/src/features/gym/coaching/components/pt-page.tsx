@@ -13,10 +13,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { weekStartWib } from "@/lib/gym/booking";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { SELECT } from "@/features/gym/shared";
-import { addDays, tanggal, wibDay, wibDayStart } from "@/features/gym/scheduling/api";
+import { addDays, dayStart, rentangJam, tanggal } from "@/features/gym/scheduling/api";
+import { localDay } from "@/lib/timezone";
 import { COACHING_KEYS, coachingApi, PT_BADGE, type PtAppointment } from "../api";
 import { AppointmentDialog } from "./appointment-dialog";
 import { AvailabilityPanel } from "./availability-panel";
@@ -94,7 +95,7 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
   const [status, setStatus] = useState("");
   const [booking, setBooking] = useState(false);
   const [open, setOpen] = useState<PtAppointment | null>(null);
-  const params = { from: wibDayStart(week), to: wibDayStart(addDays(week, 7)), coach_id: coachId, status };
+  const params = { from: dayStart(week), to: dayStart(addDays(week, 7)), coach_id: coachId, status };
   const list = useQuery({
     queryKey: [...COACHING_KEYS.appointments, params],
     queryFn: () => coachingApi.appointments(params),
@@ -103,7 +104,7 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
 
   const rows = list.data ?? [];
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
-  const today = wibDay(new Date());
+  const today = localDay(new Date());
   const requestedCount = rows.filter((a) => a.status === "requested").length;
   const confirmedCount = rows.filter((a) => a.status === "confirmed").length;
   const completedCount = rows.filter((a) => a.status === "completed").length;
@@ -148,7 +149,7 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
           <ChevronLeft /> Sebelumnya
         </Button>
         <p className="text-sm font-semibold">
-          {tanggal(wibDayStart(week))} – {tanggal(wibDayStart(addDays(week, 6)))}
+          {tanggal(dayStart(week))} – {tanggal(dayStart(addDays(week, 6)))}
         </p>
         <Button variant="ghost" size="sm" onClick={() => setWeek(addDays(week, 7))} aria-label="Minggu berikutnya">
           Berikutnya <ChevronRight />
@@ -166,10 +167,10 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
           {days.map((day) => {
-            const items = rows.filter((a) => wibDay(a.starts_at) === day);
+            const items = rows.filter((a) => localDay(a.starts_at, a.timezone) === day);
             return (
               <Card key={day} size="sm" variant={day === today ? "default" : "soft"} className="min-w-0 gap-2 p-3">
-                <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(wibDayStart(day))}</p>
+                <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(dayStart(day))}</p>
                 {items.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Tidak ada sesi</p>
                 ) : (
@@ -203,7 +204,7 @@ function AppointmentTile({ appointment: a, onOpen }: { appointment: PtAppointmen
       )}
     >
       <span className="text-xs text-muted-foreground tabular-nums">
-        {formatTime(a.starts_at)}–{formatTime(a.ends_at)}
+        {rentangJam(a.starts_at, a.ends_at, a.timezone)}
       </span>
       <span className="truncate text-sm font-semibold">{names || a.class_type_name}</span>
       <span className="truncate text-xs text-muted-foreground">

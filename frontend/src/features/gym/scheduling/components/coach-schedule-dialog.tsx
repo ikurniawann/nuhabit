@@ -16,15 +16,15 @@ import {
   DialogPanelHeader,
   DialogPanelTitle,
 } from "@/components/ui/dialog";
-import { formatDate, formatNumber, formatTime } from "@/lib/format";
-import { addDays, GYM_KEYS, schedulingApi, SESSION_BADGE, tanggal, type Coach } from "../api";
+import { formatDate, formatNumber } from "@/lib/format";
+import { addDays, GYM_KEYS, rentangJam, schedulingApi, SESSION_BADGE, tanggal, type Coach } from "../api";
 import { bookedSeats, fillLabel, sessionsByDay } from "../coach-schedule";
 import { CoachAvatar } from "./coach-avatar";
 import { MiniStats } from "./mini-stats";
 
 /** Minggu seorang coach: sesi per hari dan beban kerja minggu serta bulan ini. */
 export function CoachScheduleDialog({ coach, onClose }: { coach: Coach; onClose: () => void }) {
-  // Kosong berarti minggu ini (dihitung server dalam WIB).
+  // Kosong berarti minggu ini (dihitung server di zona cabang coach).
   const [day, setDay] = useState("");
   const schedule = useQuery({
     queryKey: [...GYM_KEYS.coaches, "schedule", coach.id, day],
@@ -87,7 +87,7 @@ export function CoachScheduleDialog({ coach, onClose }: { coach: Coach; onClose:
               {sessionsByDay(data.sessions).map((group) => (
                 <li key={group.day}>
                   <p className="mb-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    {tanggal(group.sessions[0].starts_at)}
+                    {tanggal(group.sessions[0].starts_at, group.sessions[0].timezone)}
                   </p>
                   <ul className="divide-y divide-border rounded-2xl border border-border">
                     {group.sessions.map((s) => {
@@ -101,7 +101,7 @@ export function CoachScheduleDialog({ coach, onClose }: { coach: Coach; onClose:
                             <span className="min-w-0">
                               <span className="block truncate text-sm font-medium">{s.class_type_name}</span>
                               <span className="block text-xs text-muted-foreground">
-                                {formatTime(s.starts_at)}–{formatTime(s.ends_at)}
+                                {rentangJam(s.starts_at, s.ends_at, s.timezone)}
                                 {s.area ? ` · ${s.area}` : ""}
                               </span>
                             </span>

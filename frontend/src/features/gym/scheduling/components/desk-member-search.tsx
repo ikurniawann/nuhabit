@@ -7,8 +7,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatTime } from "@/lib/format";
-import { BOOKING_BADGE, GYM_KEYS, schedulingApi, type CheckInResult, type DeskMember } from "../api";
+import { BOOKING_BADGE, GYM_KEYS, jam, schedulingApi, type CheckInResult, type DeskMember } from "../api";
 import { useDebounced } from "@/features/gym/use-debounced";
 import { useBookingActions } from "@/features/gym/permissions";
 import { WaiverDeskForm } from "./waiver-desk-form";
@@ -110,7 +109,7 @@ function MemberRow({
           {member.bookings.map((b) => (
             <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <span className="min-w-0">
-                {b.class_type_name}, {formatTime(b.starts_at)}
+                {b.class_type_name}, {jam(b.starts_at, b.timezone)}
                 {b.coach_name && <span className="text-xs text-muted-foreground"> · {b.coach_name}</span>}
               </span>
               {b.status === "confirmed" && can.checkIn ? (

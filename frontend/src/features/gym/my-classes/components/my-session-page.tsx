@@ -6,14 +6,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { TableNote } from "@/features/crm/engagement/components/shared";
-import { BOOKING_BADGE, schedulingApi, SESSION_BADGE, waktu, type RosterEntry } from "@/features/gym/scheduling/api";
+import { BOOKING_BADGE, jam, rentangJam, schedulingApi, SESSION_BADGE, tanggal, type RosterEntry } from "@/features/gym/scheduling/api";
 import { BookingActionConfirm, type PendingBookingAction } from "@/features/gym/scheduling/components/booking-action-confirm";
 import { MiniStats } from "@/features/gym/scheduling/components/mini-stats";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { MY_CLASSES_KEYS, myClassesApi } from "../api";
 
 /** Kelas Saya → satu kelas: roster dengan check-in dan tandai tidak hadir. */
@@ -53,7 +53,7 @@ export function MySessionPage({ sessionId }: { sessionId: string }) {
         <ArrowLeft /> Kelas Saya
       </Link>
       <PageHeader
-        kicker={`${waktu(session.starts_at)}–${formatTime(session.ends_at)}${session.area ? ` · ${session.area}` : ""}`}
+        kicker={`${tanggal(session.starts_at, session.timezone)}, ${rentangJam(session.starts_at, session.ends_at, session.timezone)}${session.area ? ` · ${session.area}` : ""}`}
         title={session.class_type_name}
         actions={<Badge variant={badge.variant}>{badge.label}</Badge>}
       />
@@ -77,6 +77,7 @@ export function MySessionPage({ sessionId }: { sessionId: string }) {
               <RosterRow
                 key={b.id}
                 booking={b}
+                timeZone={session.timezone}
                 busy={act.isPending}
                 onCheckIn={() => act.mutate({ id: b.id, action: "check_in" })}
                 onNoShow={() => setPending({ id: b.id, action: "no_show", memberName: b.name, waitlist: false })}
@@ -112,11 +113,14 @@ export function MySessionPage({ sessionId }: { sessionId: string }) {
 
 function RosterRow({
   booking: b,
+  timeZone,
   busy,
   onCheckIn,
   onNoShow,
 }: {
   booking: RosterEntry;
+  /** Zona cabang sesi, untuk jam check-in. */
+  timeZone?: string;
   busy: boolean;
   onCheckIn: () => void;
   onNoShow: () => void;
@@ -139,7 +143,7 @@ function RosterRow({
         </span>
       ) : (
         <span className="flex items-center gap-2">
-          {b.checked_in_at && <span className="text-xs text-muted-foreground">{formatTime(b.checked_in_at)}</span>}
+          {b.checked_in_at && <span className="text-xs text-muted-foreground">{jam(b.checked_in_at, timeZone)}</span>}
           <Badge variant={badge.variant}>{badge.label}</Badge>
         </span>
       )}

@@ -12,6 +12,8 @@ export interface GymSessionToday {
   kapasitas: number;
   waitlist: number;
   status: string;
+  /** Zona cabang kelas; "mulai" dibaca di zona ini. */
+  timezone?: string;
 }
 
 export interface GymPulse {

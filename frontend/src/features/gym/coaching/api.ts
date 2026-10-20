@@ -21,6 +21,8 @@ export interface PtCoach {
   bio: string;
   photo_url: string | null;
   branch_id: string | null;
+  /** Zona cabang coach: jadwal PT dan slot dibaca di zona ini. */
+  timezone?: string;
 }
 
 export interface PtParticipant {
@@ -42,6 +44,8 @@ export interface PtAppointment {
   class_type_name: string;
   branch_id: string | null;
   branch_name: string | null;
+  /** Zona cabang sesi PT. */
+  timezone?: string;
   starts_at: string;
   ends_at: string;
   capacity: number;
@@ -72,6 +76,8 @@ export interface AvailabilityException {
 
 export interface Availability {
   coach_id: string;
+  /** Zona cabang coach; jam mingguan dan pengecualian dibaca di zona ini. */
+  timezone?: string;
   weekly: Window[];
   exceptions: AvailabilityException[];
 }

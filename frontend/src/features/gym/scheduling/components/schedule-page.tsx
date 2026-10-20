@@ -22,17 +22,18 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { weekStartWib } from "@/lib/gym/booking";
+import { localDay } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
-import { formatNumber, formatTime } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import {
   addDays,
   CLASS_COLOR,
   GYM_KEYS,
+  rentangJam,
   schedulingApi,
   SESSION_BADGE,
   tanggal,
-  wibDay,
-  wibDayStart,
+  dayStart,
   type Session,
 } from "../api";
 import { Can } from "@/components/iam/can";
@@ -47,7 +48,7 @@ export function SchedulePage() {
   const [week, setWeek] = useState(() => weekStartWib(new Date()));
   const [creatingOn, setCreatingOn] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
-  const range = { from: wibDayStart(week), to: wibDayStart(addDays(week, 7)) };
+  const range = { from: dayStart(week), to: dayStart(addDays(week, 7)) };
   const sessions = useQuery({
     queryKey: [...GYM_KEYS.sessions, "week", week],
     queryFn: () => schedulingApi.sessions(range),
@@ -55,7 +56,7 @@ export function SchedulePage() {
   const refresh = () => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.sessions });
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
-  const today = wibDay(new Date());
+  const today = localDay(new Date());
   const rows = (sessions.data ?? []).filter((s) => s.status !== "cancelled");
   const live = rows.filter((s) => s.status === "published" || s.status === "full");
   const seatsTaken = live.reduce((sum, s) => sum + s.confirmed_count, 0);
@@ -106,7 +107,7 @@ export function SchedulePage() {
           <ChevronLeft /> Sebelumnya
         </Button>
         <p className="text-sm font-semibold">
-          {tanggal(wibDayStart(week))} – {tanggal(wibDayStart(addDays(week, 6)))}
+          {tanggal(dayStart(week))} – {tanggal(dayStart(addDays(week, 6)))}
         </p>
         <Button variant="ghost" size="sm" onClick={() => setWeek(addDays(week, 7))} aria-label="Minggu berikutnya">
           Berikutnya <ChevronRight />
@@ -120,11 +121,11 @@ export function SchedulePage() {
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
           {days.map((day) => {
-            const daySessions = rows.filter((s) => wibDay(s.starts_at) === day);
+            const daySessions = rows.filter((s) => localDay(s.starts_at, s.timezone) === day);
             return (
               <Card key={day} size="sm" variant={day === today ? "default" : "soft"} className="min-w-0 gap-2 p-3">
                 <div className="flex items-center justify-between gap-1">
-                  <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(wibDayStart(day))}</p>
+                  <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(dayStart(day))}</p>
                   {canCreate && (
                     <Button variant="ghost" size="icon-xs" onClick={() => setCreatingOn(day)} aria-label={`Sesi baru ${day}`}>
                       <Plus />
@@ -162,7 +163,7 @@ function SessionTile({ session }: { session: Session }) {
       <span className={cn("w-1 shrink-0 rounded-full", CLASS_COLOR[session.color]?.bar ?? "bg-forest")} aria-hidden />
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-muted-foreground tabular-nums">
-          {formatTime(session.starts_at)}–{formatTime(session.ends_at)}
+          {rentangJam(session.starts_at, session.ends_at, session.timezone)}
         </span>
         <span className="block truncate text-sm font-semibold">{session.class_type_name}</span>
         <span className="block truncate text-xs text-muted-foreground">{session.coach_name ?? "Coach belum ditentukan"}</span>
@@ -213,7 +214,7 @@ function CopyWeekDialog({
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="grid grid-cols-1 gap-4">
-          <Field label="Minggu tujuan" hint={`Mulai Senin ${tanggal(wibDayStart(targetWeek))}`}>
+          <Field label="Minggu tujuan" hint={`Mulai Senin ${tanggal(dayStart(targetWeek))}`}>
             <Input type="date" value={target} onChange={(e) => setTarget(e.target.value)} />
           </Field>
           <label className="flex items-center gap-2 text-sm">

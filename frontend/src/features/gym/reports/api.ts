@@ -16,6 +16,8 @@ export interface GroupStat {
 }
 
 export interface ClassReport {
+  /** Zona hari dan jam laporan: zona cabang filter, atau Asia/Jakarta untuk semua cabang. */
+  timezone?: string;
   totals: {
     sessions: number;
     checked_in: number;
@@ -42,6 +44,7 @@ export interface RevenueGroup {
 }
 
 export interface RevenueReport {
+  timezone?: string;
   totals: { sales: number; gross: number; refunds: number; refund_amount: number; net: number };
   per_day: { day: string; sales: number; gross: number; refund_amount: number; net: number }[];
   per_package: RevenueGroup[];
@@ -56,6 +59,7 @@ interface MemberRef {
 }
 
 export interface MembersReport {
+  timezone?: string;
   new_members: number;
   new_per_day: { day: string; count: number }[];
   active_members: number;

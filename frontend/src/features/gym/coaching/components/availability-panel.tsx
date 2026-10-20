@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SELECT } from "@/features/gym/shared";
-import { tanggal, wibDay, wibDayStart, WEEKDAYS } from "@/features/gym/scheduling/api";
+import { dayStart, tanggal, WEEKDAYS } from "@/features/gym/scheduling/api";
+import { localDay, zoneAbbr } from "@/lib/timezone";
 import { COACHING_KEYS, coachingApi, type Availability, type ExceptionInput, type PtCoach, type Window } from "../api";
 
 /** Ketersediaan PT per coach: jendela mingguan dan pengecualian per tanggal. */
@@ -82,7 +83,8 @@ function WeeklyEditor({ availability }: { availability: Availability }) {
         <div>
           <h2 className="text-sm font-semibold">Jam PT mingguan</h2>
           <p className="text-xs text-muted-foreground">
-            Member hanya bisa meminta sesi di jam ini. Jam yang bentrok dengan kelas grup coach otomatis tidak ditawarkan.
+            Jam {zoneAbbr(availability.timezone)}, zona cabang coach. Member hanya bisa meminta sesi di jam ini. Jam yang bentrok
+            dengan kelas grup coach otomatis tidak ditawarkan.
           </p>
         </div>
         <Button
@@ -141,7 +143,7 @@ function WeeklyEditor({ availability }: { availability: Availability }) {
 
 function ExceptionsCard({ availability }: { availability: Availability }) {
   const queryClient = useQueryClient();
-  const today = wibDay(new Date());
+  const today = localDay(new Date(), availability.timezone);
   const empty: ExceptionInput = { date: today, kind: "off", start_time: null, end_time: null, note: "" };
   const [form, setForm] = useState(empty);
   const [allDay, setAllDay] = useState(true);
@@ -185,7 +187,7 @@ function ExceptionsCard({ availability }: { availability: Availability }) {
           {availability.exceptions.map((x) => (
             <li key={x.id} className="flex items-center justify-between gap-2 rounded-2xl bg-surface-2 px-3 py-2 text-sm">
               <span className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="font-medium">{tanggal(wibDayStart(x.date))}</span>
+                <span className="font-medium">{tanggal(dayStart(x.date))}</span>
                 <Badge variant={x.kind === "off" ? "warning" : "success"}>{x.kind === "off" ? "Libur" : "Jam tambahan"}</Badge>
                 <span className="tabular-nums">{x.start_time ? `${x.start_time}–${x.end_time}` : "Seharian"}</span>
                 {x.note && <span className="text-muted-foreground">{x.note}</span>}

@@ -14,6 +14,7 @@ import { MEMBER_KEYS, membersApi } from "@/features/gym/members/api";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { SELECT } from "@/features/gym/shared";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { zoneAbbr, zoneName } from "@/lib/timezone";
 import { REPORT_KEYS, reportsApi, type ClassReport, type GroupStat, type MembersReport, type RevenueGroup, type RevenueReport } from "../api";
 import { percent, type ReportColumn } from "../csv";
 import {
@@ -34,6 +35,13 @@ import { OccupancyHeatmap } from "./heatmap";
 import { ReportTable } from "./report-table";
 
 const pct = (ratio: number) => `${formatNumber(percent(ratio), 1)}%`;
+
+/** Zona hari laporan: zona cabang yang difilter, atau WIB untuk semua cabang. */
+function zoneNote(branchId: string, branches: { id: string; timezone?: string }[] | undefined): string {
+  if (!branchId) return "Semua cabang: hari dan jam dihitung dalam WIB (Asia/Jakarta).";
+  const zone = branches?.find((b) => b.id === branchId)?.timezone;
+  return `Hari dan jam dihitung dalam ${zoneAbbr(zone)} (${zoneName(zone)}), zona cabang ini.`;
+}
 const methodLabel = (key: string) => METHOD_LABELS[key as PaymentMethod] ?? "Lainnya";
 
 /** Gym → Laporan Gym: kehadiran, okupansi, pendapatan, member dan coach per rentang tanggal dan cabang. */
@@ -122,6 +130,7 @@ export function ReportsPage() {
             </select>
           </Field>
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">{zoneNote(params.branch_id, branches.data)}</p>
       </Card>
 
       <Tabs value={params.tab} onValueChange={(tab) => navigate({ ...params, tab: tab as ReportTab })} className="w-full flex-col">
@@ -226,7 +235,7 @@ function OccupancySection({ report, period }: { report: ClassReport; period: Per
           { label: "Rata-rata terisi (%)", value: (r) => percent(r.avg_fill), render: (r) => pct(r.avg_fill), numeric: true },
         ]}
       />
-      <OccupancyHeatmap cells={report.heatmap} />
+      <OccupancyHeatmap cells={report.heatmap} timeZone={report.timezone} />
       <ReportTable
         title="Keterisian per slot waktu"
         rows={report.heatmap}

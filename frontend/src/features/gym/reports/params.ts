@@ -1,4 +1,4 @@
-/** Rentang tanggal, cabang dan tab laporan gym di URL. Tanggal adalah hari kalender WIB (YYYY-MM-DD, inklusif). */
+/** Rentang tanggal, cabang dan tab laporan gym di URL. Tanggal adalah hari kalender (YYYY-MM-DD, inklusif) di zona cabang filter, atau WIB untuk semua cabang. */
 
 export const REPORT_TABS = [
   { value: "kehadiran", label: "Kehadiran" },

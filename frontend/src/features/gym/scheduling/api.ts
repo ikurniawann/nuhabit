@@ -1,6 +1,6 @@
 /** Klien API Gym → jadwal kelas, sesi, booking, jenis kelas, coach, check-in. */
 import type { BookingStatus, GateDenialReason, GateEntryKind, SessionStatus } from "@/lib/gym/booking";
-import { formatTime } from "@/lib/format";
+import { localInstant, zoneName, zoneSuffix } from "@/lib/timezone";
 import { call, send, upload } from "../shared";
 
 export interface ClassType {
@@ -59,6 +59,8 @@ export interface Session {
   /** Diisi untuk sesi hasil generate template jadwal. */
   template_id: string | null;
   occurrence_date: string | null;
+  /** Zona cabang sesi (IANA); jam sesi dibaca dalam zona ini. */
+  timezone?: string;
   confirmed_count: number;
   waitlist_count: number;
   checked_in_count: number;
@@ -75,15 +77,17 @@ export interface CoachWorkload {
 }
 
 export interface CoachSchedule {
-  /** Senin minggu yang ditampilkan ("YYYY-MM-DD", WIB). */
+  /** Senin minggu yang ditampilkan ("YYYY-MM-DD", zona cabang coach). */
   week_start: string;
   /** Bulan statistik ("YYYY-MM"). */
   month: string;
   sessions: Session[];
   workload: CoachWorkload;
+  /** Zona cabang coach (IANA). */
+  timezone?: string;
 }
 
-/** Pola mingguan: weekday 1 = Senin … 7 = Minggu, start_time "HH:MM" WIB. */
+/** Pola mingguan: weekday 1 = Senin … 7 = Minggu, start_time "HH:MM" di zona cabangnya. */
 export interface SessionTemplate {
   id: string;
   class_type_id: string;
@@ -93,6 +97,8 @@ export interface SessionTemplate {
   coach_name: string | null;
   branch_id: string | null;
   branch_name: string | null;
+  /** Zona cabang template (IANA). */
+  timezone?: string;
   area: string | null;
   weekday: number;
   start_time: string;
@@ -171,6 +177,8 @@ export interface BookingRow {
   credit_cost: number;
   class_type_name: string;
   coach_name: string | null;
+  /** Zona cabang sesi. */
+  timezone?: string;
 }
 
 export interface MemberHit {
@@ -211,7 +219,7 @@ export interface StaffUser {
   branch_name: string | null;
 }
 
-/** Booking hari ini (WIB) seorang member di pencarian front desk. */
+/** Booking hari ini (hari zona cabang sesinya) seorang member di pencarian front desk. */
 export interface DeskBooking {
   id: string;
   status: BookingStatus;
@@ -221,6 +229,7 @@ export interface DeskBooking {
   class_type_name: string;
   coach_name: string | null;
   checked_in_at: string | null;
+  timezone?: string;
 }
 
 export interface DeskMember {
@@ -273,7 +282,7 @@ export interface CorrectionResult {
   strikeCleared: boolean;
 }
 
-/** Jam open gym satu hari: weekday 1 = Senin … 7 = Minggu, jam "HH:MM" WIB. */
+/** Jam open gym satu hari: weekday 1 = Senin … 7 = Minggu, jam "HH:MM" di zona cabang. */
 export interface OpenGymHours {
   weekday: number;
   opens_at: string;
@@ -338,7 +347,7 @@ export const schedulingApi = {
     send<{ created: number; skipped: number }>("/api/gym/sessions/duplicate-week", input),
 
   templates: () =>
-    call<{ templates: SessionTemplate[]; branches: { id: string; name: string }[] }>("/api/gym/session-templates"),
+    call<{ templates: SessionTemplate[]; branches: { id: string; name: string; timezone: string }[] }>("/api/gym/session-templates"),
   saveTemplate: (input: SessionTemplateInput, id?: string) =>
     id
       ? send<{ id: string }>(`/api/gym/session-templates/${id}`, input, "PATCH")
@@ -406,23 +415,29 @@ export const GYM_KEYS = {
 
 /* ── Label & format ──────────────────────────────────────────────────── */
 
-/** "Sen, 5 Okt" (WIB). Jadwal kelas butuh nama hari, jadi tidak memakai formatDate. */
-export const tanggal = (iso: string) =>
-  new Date(iso).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Jakarta" });
-/** "Sen, 5 Okt, 14.30" (WIB). */
-export const waktu = (iso: string) => `${tanggal(iso)}, ${formatTime(iso)}`;
+/*
+ * Jam kelas dibaca di zona cabang sesi (timezone dari API). Tanpa zona,
+ * WIB. Di luar WIB teks jam diberi label zona ("14.30 WITA").
+ */
 
-/** "YYYY-MM-DD" (WIB) → ISO awal hari WIB. */
-export const wibDayStart = (day: string) => new Date(`${day}T00:00:00+07:00`).toISOString();
+/** "Sen, 5 Okt". Jadwal kelas butuh nama hari, jadi tidak memakai formatDate. */
+export const tanggal = (iso: string, timeZone?: string | null) =>
+  new Date(iso).toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short", timeZone: zoneName(timeZone) });
+const clock = (iso: string, timeZone?: string | null) =>
+  new Date(iso).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: zoneName(timeZone) });
+/** "14.30", dengan label zona di luar WIB. */
+export const jam = (iso: string, timeZone?: string | null) => clock(iso, timeZone) + zoneSuffix(timeZone);
+/** "14.30–15.30", dengan label zona di luar WIB. */
+export const rentangJam = (start: string, end: string, timeZone?: string | null) =>
+  `${clock(start, timeZone)}–${clock(end, timeZone)}${zoneSuffix(timeZone)}`;
+/** "Sen, 5 Okt, 14.30", dengan label zona di luar WIB. */
+export const waktu = (iso: string, timeZone?: string | null) => `${tanggal(iso, timeZone)}, ${jam(iso, timeZone)}`;
+
+/** "YYYY-MM-DD" → ISO awal hari itu di zona cabang (WIB tanpa zona). */
+export const dayStart = (day: string, timeZone?: string | null) => localInstant(day, "00:00", timeZone).toISOString();
 /** Geser "YYYY-MM-DD" sejumlah hari. */
 export const addDays = (day: string, days: number) =>
   new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
-/** Hari WIB ("YYYY-MM-DD") dari sebuah instan. */
-export const wibDay = (iso: string | Date) =>
-  new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(0, 10);
-/** Jam WIB ("HH:MM", nilai <input type="time">) dari sebuah instan. */
-export const wibTime = (iso: string | Date) =>
-  new Date(new Date(iso).getTime() + 7 * 3_600_000).toISOString().slice(11, 16);
 
 export const SESSION_BADGE: Record<
   SessionStatus,
