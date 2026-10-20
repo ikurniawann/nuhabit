@@ -36,5 +36,5 @@ func NewDefaultService(deps module.Deps, db DB) *Service {
 }
 
 func newHandler(deps module.Deps, db DB) *Handler {
-	return &Handler{svc: NewDefaultService(deps, db), auth: deps.Auth}
+	return &Handler{svc: NewDefaultService(deps, db), auth: deps.Auth, guard: deps.Auth}
 }

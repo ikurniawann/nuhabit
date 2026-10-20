@@ -19,7 +19,7 @@ import (
 
 // Guard is the slice of platform/auth the handlers use; tests swap it.
 type Guard interface {
-	RequireMenuPrefix(r *http.Request, prefixes ...string) (*auth.User, error)
+	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
 	RequireMember(r *http.Request) (string, error)
 }
 
@@ -29,30 +29,65 @@ type handler struct {
 	log   *slog.Logger
 }
 
+// Menu actions. readOwn on gym.sessions is the coach grant: only the
+// sessions the caller coaches, with their roster and no-shows.
+const (
+	actRead    = "read"
+	actReadOwn = "read_own"
+	actCreate  = "create"
+	actUpdate  = "update"
+	actDelete  = "delete"
+)
+
+// can is one grant: action on a menu under any of the prefix groups.
+func can(action string, groups ...[]string) iam.Grant {
+	return iam.Grant{Action: action, Prefixes: slices.Concat(groups...)}
+}
+
+// oneOf lists the grants that each let a request through.
+func oneOf(grants ...iam.Grant) []iam.Grant { return grants }
+
+var (
+	// planners manage sessions from the weekly calendar or the session list.
+	planners = slices.Concat(iam.GymSchedule, iam.GymSessions)
+	// desk staff book members in and check them in; GymCheckin covers gym.sessions too.
+	desk     = slices.Concat(iam.GymBookings, iam.GymCheckin)
+	ownClass = can(actReadOwn, iam.GymSessions)
+)
+
+// bookingActionGrants is what each roster action needs on top of seeing the booking.
+var bookingActionGrants = map[string][]iam.Grant{
+	"cancel":   oneOf(can(actUpdate, iam.GymBookings, iam.GymSessions)),
+	"no_show":  oneOf(can(actUpdate, iam.GymBookings, iam.GymSessions), ownClass),
+	"check_in": oneOf(can(actCreate, iam.GymCheckin), can(actUpdate, iam.GymBookings), ownClass),
+}
+
 // Routes lists the staff (/api/gym/**) and member portal routes.
 func (h *handler) Routes() []module.Route {
-	sched, checkin := iam.GymScheduling, iam.GymCheckin
 	return []module.Route{
-		{Pattern: "GET /api/gym/class-types", Handler: h.staff(sched, h.listClassTypes)},
-		{Pattern: "POST /api/gym/class-types", Handler: h.staff(sched, h.createClassType)},
-		{Pattern: "PATCH /api/gym/class-types/{id}", Handler: h.staff(sched, h.updateClassType)},
-		{Pattern: "DELETE /api/gym/class-types/{id}", Handler: h.staff(sched, h.archiveClassType)},
-		{Pattern: "GET /api/gym/coaches", Handler: h.staff(sched, h.listCoaches)},
-		{Pattern: "POST /api/gym/coaches", Handler: h.staff(sched, h.createCoach)},
-		{Pattern: "PATCH /api/gym/coaches/{id}", Handler: h.staff(sched, h.updateCoach)},
-		{Pattern: "GET /api/gym/sessions", Handler: h.staff(sched, h.listSessions)},
-		{Pattern: "POST /api/gym/sessions", Handler: h.staff(sched, h.createSession)},
-		{Pattern: "POST /api/gym/sessions/duplicate-week", Handler: h.staff(sched, h.duplicateWeek)},
-		{Pattern: "GET /api/gym/sessions/{id}", Handler: h.staff(sched, h.getSession)},
-		{Pattern: "PATCH /api/gym/sessions/{id}", Handler: h.staff(sched, h.updateSession)},
-		{Pattern: "POST /api/gym/sessions/{id}", Handler: h.staff(sched, h.sessionAction)},
-		{Pattern: "DELETE /api/gym/sessions/{id}", Handler: h.staff(sched, h.deleteSession)},
-		{Pattern: "GET /api/gym/bookings", Handler: h.staff(sched, h.listBookings)},
-		{Pattern: "POST /api/gym/bookings", Handler: h.staff(sched, h.staffBook)},
-		{Pattern: "GET /api/gym/bookings/members", Handler: h.staff(sched, h.searchMembers)},
-		{Pattern: "POST /api/gym/bookings/{id}", Handler: h.staff(sched, h.bookingAction)},
-		{Pattern: "GET /api/gym/checkin", Handler: h.staff(checkin, h.accessLog)},
-		{Pattern: "POST /api/gym/checkin", Handler: h.staff(checkin, h.scan)},
+		{Pattern: "GET /api/gym/branches", Handler: h.staff(oneOf(can(actRead, iam.Gym)), h.branches)},
+		{Pattern: "GET /api/gym/class-types", Handler: h.staff(oneOf(can(actRead, iam.GymClassTypes, planners), ownClass), h.listClassTypes)},
+		{Pattern: "POST /api/gym/class-types", Handler: h.staff(oneOf(can(actCreate, iam.GymClassTypes)), h.createClassType)},
+		{Pattern: "PATCH /api/gym/class-types/{id}", Handler: h.staff(oneOf(can(actUpdate, iam.GymClassTypes)), h.updateClassType)},
+		{Pattern: "DELETE /api/gym/class-types/{id}", Handler: h.staff(oneOf(can(actDelete, iam.GymClassTypes)), h.archiveClassType)},
+		{Pattern: "GET /api/gym/coaches", Handler: h.staff(oneOf(can(actRead, iam.GymCoaches, planners)), h.listCoaches)},
+		{Pattern: "GET /api/gym/coaches/staff", Handler: h.staff(oneOf(can(actCreate, iam.GymCoaches), can(actUpdate, iam.GymCoaches)), h.staffUsers)},
+		{Pattern: "POST /api/gym/coaches", Handler: h.staff(oneOf(can(actCreate, iam.GymCoaches)), h.createCoach)},
+		{Pattern: "PATCH /api/gym/coaches/{id}", Handler: h.staff(oneOf(can(actUpdate, iam.GymCoaches)), h.updateCoach)},
+		{Pattern: "GET /api/gym/sessions", Handler: h.scoped(oneOf(can(actRead, planners), ownClass), h.listSessions)},
+		{Pattern: "POST /api/gym/sessions", Handler: h.staff(oneOf(can(actCreate, planners)), h.createSession)},
+		{Pattern: "POST /api/gym/sessions/duplicate-week", Handler: h.staff(oneOf(can(actCreate, iam.GymSchedule)), h.duplicateWeek)},
+		{Pattern: "GET /api/gym/sessions/{id}", Handler: h.scoped(oneOf(can(actRead, planners), ownClass), h.getSession)},
+		{Pattern: "PATCH /api/gym/sessions/{id}", Handler: h.staff(oneOf(can(actUpdate, planners)), h.updateSession)},
+		{Pattern: "POST /api/gym/sessions/{id}", Handler: h.staff(oneOf(can(actUpdate, planners)), h.sessionAction)},
+		{Pattern: "DELETE /api/gym/sessions/{id}", Handler: h.staff(oneOf(can(actDelete, planners)), h.deleteSession)},
+		{Pattern: "GET /api/gym/bookings", Handler: h.staff(oneOf(can(actRead, iam.GymBookings, iam.GymSessions)), h.listBookings)},
+		{Pattern: "POST /api/gym/bookings", Handler: h.staff(oneOf(can(actCreate, desk)), h.staffBook)},
+		{Pattern: "GET /api/gym/bookings/members", Handler: h.staff(oneOf(can(actRead, desk)), h.searchMembers)},
+		{Pattern: "POST /api/gym/bookings/{id}", Handler: h.staff(oneOf(can(actRead, desk), ownClass), h.bookingAction)},
+		{Pattern: "GET /api/gym/checkin", Handler: h.staff(oneOf(can(actRead, iam.GymCheckin)), h.accessLog)},
+		{Pattern: "POST /api/gym/checkin", Handler: h.staff(oneOf(can(actCreate, iam.GymCheckin)), h.scan)},
+		{Pattern: "GET /api/gym/checkin/members", Handler: h.staff(oneOf(can(actRead, desk)), h.deskMembers)},
 
 		{Pattern: "GET /api/member-portal/gym/sessions", Handler: h.member("Gagal memuat jadwal kelas", h.memberSessions)},
 		{Pattern: "GET /api/member-portal/gym/sessions/{id}", Handler: h.member("Gagal memuat kelas", h.memberSession)},
@@ -70,14 +105,36 @@ func (h *handler) Routes() []module.Route {
 
 type staffFunc func(w http.ResponseWriter, r *http.Request, user *auth.User) error
 
-// staff guards a route by IAM menu prefix, like requireIamMenuPrefix inside apiHandler.
-func (h *handler) staff(prefixes []string, fn staffFunc) http.Handler {
+// staff guards a route by IAM menu action: any one of the grants passes.
+func (h *handler) staff(grants []iam.Grant, fn staffFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		user, err := h.guard.RequireMenuPrefix(r, prefixes...)
+		user, _, err := h.guard.RequireAnyGrant(r, grants...)
 		if err != nil {
 			return err
 		}
 		return fn(w, r, user)
+	})
+}
+
+// scopedFunc gets the coach the caller is limited to; nil means every session.
+type scopedFunc func(w http.ResponseWriter, r *http.Request, user *auth.User, coachID *string) error
+
+// scoped is staff for the session reads: when only the read_own grant let
+// the caller in, fn sees the sessions of the coach linked to the caller.
+func (h *handler) scoped(grants []iam.Grant, fn scopedFunc) http.Handler {
+	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
+		user, matched, err := h.guard.RequireAnyGrant(r, grants...)
+		if err != nil {
+			return err
+		}
+		if grants[matched].Action != actReadOwn {
+			return fn(w, r, user, nil)
+		}
+		coachID, err := h.svc.CoachForUser(r.Context(), user.ID)
+		if err != nil {
+			return err
+		}
+		return fn(w, r, user, &coachID)
 	})
 }
 
@@ -316,6 +373,7 @@ func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err := h.svc.UpdateCoach(r.Context(), id, CoachPatch{
 		Name: name, Bio: &in.Bio, Specialization: &in.Specialization, Status: &in.Status,
 		PhotoURL: in.PhotoURL, BranchID: in.BranchID, PhotoURLSent: photoSent, BranchIDSent: branchSent,
+		UserID: in.UserID, UserIDSent: sent(f, "user_id"),
 	}); err != nil {
 		return err
 	}
@@ -324,7 +382,7 @@ func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 
 // ── Sessions ────────────────────────────────────────────────────────────────
 
-func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.User, ownCoach *string) error {
 	query := r.URL.Query()
 	from, to := rangeParams(query, h.svc.now(), 7)
 	var statuses []domain.SessionStatus
@@ -333,10 +391,17 @@ func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.U
 			statuses = append(statuses, domain.SessionStatus(s))
 		}
 	}
+	coachID := optionalUUID(query, "coach_id")
+	if ownCoach != nil {
+		if *ownCoach == "" {
+			return ok(w, []any{})
+		}
+		coachID = ownCoach
+	}
 	rows, err := h.svc.ListSessions(r.Context(), SessionFilter{
 		From: &from, To: &to,
 		ClassTypeID: optionalUUID(query, "class_type_id"),
-		CoachID:     optionalUUID(query, "coach_id"),
+		CoachID:     coachID,
 		BranchID:    optionalUUID(query, "branch_id"),
 		Statuses:    statuses,
 	})
@@ -389,7 +454,7 @@ func (h *handler) duplicateWeek(w http.ResponseWriter, r *http.Request, user *au
 	return ok(w, out)
 }
 
-func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.User, ownCoach *string) error {
 	id, err := requireUUID(r.PathValue("id"))
 	if err != nil {
 		return err
@@ -398,7 +463,7 @@ func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	if session == nil {
+	if session == nil || (ownCoach != nil && (*ownCoach == "" || session.Str("coach_id") != *ownCoach)) {
 		return httpx.NotFound("Sesi tidak ditemukan")
 	}
 	roster, err := h.svc.Roster(r.Context(), id)
@@ -485,10 +550,12 @@ func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User
 	f := form(r)
 	sessionID := f.UUID("session_id", validate.Rule{})
 	customerID := f.UUID("customer_id", validate.Rule{})
+	// override_window books a walk-in or late arrival outside the booking window.
+	overrideWindow := f.BoolDefault("override_window", false)
 	if err := invalid(f); err != nil {
 		return err
 	}
-	out, err := h.svc.BookSession(r.Context(), *customerID, *sessionID, "admin")
+	out, err := h.svc.StaffBookSession(r.Context(), *customerID, *sessionID, overrideWindow)
 	if err != nil {
 		return err
 	}
@@ -512,6 +579,16 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 	action := f.Enum("action", validate.Rule{}, []string{"cancel", "no_show", "check_in"})
 	if err := invalid(f); err != nil {
 		return err
+	}
+	grants := bookingActionGrants[*action]
+	_, matched, err := h.guard.RequireAnyGrant(r, grants...)
+	if err != nil {
+		return err
+	}
+	if grants[matched].Action == actReadOwn {
+		if err := h.svc.RequireOwnBooking(r.Context(), id, user.ID); err != nil {
+			return err
+		}
 	}
 	var out any
 	switch *action {

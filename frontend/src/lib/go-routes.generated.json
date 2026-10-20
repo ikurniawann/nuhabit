@@ -1437,12 +1437,22 @@
   {
     "module": "gym-scheduling",
     "method": "GET",
+    "path": "/api/gym/branches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
     "path": "/api/gym/checkin"
   },
   {
     "module": "gym-scheduling",
     "method": "POST",
     "path": "/api/gym/checkin"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/checkin/members"
   },
   {
     "module": "gym-scheduling",
@@ -1473,6 +1483,11 @@
     "module": "gym-scheduling",
     "method": "POST",
     "path": "/api/gym/coaches"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/coaches/staff"
   },
   {
     "module": "gym-scheduling",

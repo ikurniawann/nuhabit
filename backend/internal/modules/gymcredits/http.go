@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"nuhabit/backend/internal/platform/auth"
@@ -14,8 +15,29 @@ import (
 
 // Handler serves the staff (/api/gym/...) and member portal routes.
 type Handler struct {
-	svc  *Service
-	auth *auth.Service
+	svc   *Service
+	auth  *auth.Service
+	guard Guard
+}
+
+// Guard is the slice of platform/auth the staff routes use; tests swap it.
+type Guard interface {
+	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
+}
+
+// Menu actions. On gym.credits, create sells a package; update corrects the
+// ledger (adjust, reverse, refund), so front desk can sell without it.
+const (
+	actRead   = "read"
+	actCreate = "create"
+	actUpdate = "update"
+	actDelete = "delete"
+)
+
+// require passes when the caller holds action on a menu under prefixes.
+func (h *Handler) require(r *http.Request, action string, prefixes []string) (*auth.User, error) {
+	u, _, err := h.guard.RequireAnyGrant(r, iam.Grant{Action: action, Prefixes: prefixes})
+	return u, err
 }
 
 // Routes lists every route of the module.
@@ -91,8 +113,8 @@ func (h *Handler) rejectIfArkCoinDisabled(w http.ResponseWriter, r *http.Request
 /* ── Staff: packages ─────────────────────────────────────────────────── */
 
 func (h *Handler) listPackages(w http.ResponseWriter, r *http.Request) error {
-	prefixes := append(append([]string{}, iam.GymPackages...), iam.GymCredits...)
-	if _, err := h.auth.RequireMenuPrefix(r, prefixes...); err != nil {
+	// The front desk sell dialog lists packages too.
+	if _, err := h.require(r, actRead, slices.Concat(iam.GymPackages, iam.GymCredits)); err != nil {
 		return err
 	}
 	view, err := h.svc.ListPackages(r.Context())
@@ -103,13 +125,22 @@ func (h *Handler) listPackages(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) savePackage(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymPackages...)
+	// An upsert: new packages need create, edits need update.
+	user, _, err := h.guard.RequireAnyGrant(r,
+		iam.Grant{Action: actCreate, Prefixes: iam.GymPackages}, iam.Grant{Action: actUpdate, Prefixes: iam.GymPackages})
 	if err != nil {
 		return err
 	}
 	body, _ := readJSON(r, undefined)
 	input, err := parsePackage(body)
 	if err != nil {
+		return err
+	}
+	action := actCreate
+	if input.ID != nil {
+		action = actUpdate
+	}
+	if _, err := h.require(r, action, iam.GymPackages); err != nil {
 		return err
 	}
 	saved, err := h.svc.SavePackage(r.Context(), input, user.ID)
@@ -120,7 +151,7 @@ func (h *Handler) savePackage(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) setPackageStatus(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.GymPackages...); err != nil {
+	if _, err := h.require(r, actUpdate, iam.GymPackages); err != nil {
 		return err
 	}
 	id, err := requireUUID(r.PathValue("id"))
@@ -140,7 +171,7 @@ func (h *Handler) setPackageStatus(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.GymPackages...); err != nil {
+	if _, err := h.require(r, actDelete, iam.GymPackages); err != nil {
 		return err
 	}
 	id, err := requireUUID(r.PathValue("id"))
@@ -156,7 +187,7 @@ func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) error {
 /* ── Staff: member credits ───────────────────────────────────────────── */
 
 func (h *Handler) searchMembers(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...); err != nil {
+	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
 		return err
 	}
 	rows, err := h.svc.SearchMembers(r.Context(), strings.TrimSpace(r.URL.Query().Get("q")))
@@ -167,7 +198,7 @@ func (h *Handler) searchMembers(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) memberCredits(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...); err != nil {
+	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
 		return err
 	}
 	customerID, err := requireUUID(r.PathValue("customerId"))
@@ -182,7 +213,7 @@ func (h *Handler) memberCredits(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...)
+	user, err := h.require(r, actUpdate, iam.GymCredits)
 	if err != nil {
 		return err
 	}
@@ -203,7 +234,7 @@ func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...)
+	user, err := h.require(r, actCreate, iam.GymCredits)
 	if err != nil {
 		return err
 	}
@@ -230,7 +261,7 @@ func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) reverse(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...)
+	user, err := h.require(r, actUpdate, iam.GymCredits)
 	if err != nil {
 		return err
 	}
@@ -247,7 +278,7 @@ func (h *Handler) reverse(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...)
+	user, err := h.require(r, actUpdate, iam.GymCredits)
 	if err != nil {
 		return err
 	}
@@ -270,7 +301,7 @@ func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
 /* ── Staff: rules ────────────────────────────────────────────────────── */
 
 func (h *Handler) rules(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.auth.RequireMenuPrefix(r, iam.GymRules...); err != nil {
+	if _, err := h.require(r, actRead, iam.GymRules); err != nil {
 		return err
 	}
 	view, err := h.svc.RulesAdmin(r.Context())
@@ -281,7 +312,7 @@ func (h *Handler) rules(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) saveRules(w http.ResponseWriter, r *http.Request) error {
-	user, err := h.auth.RequireMenuPrefix(r, iam.GymRules...)
+	user, err := h.require(r, actUpdate, iam.GymRules)
 	if err != nil {
 		return err
 	}

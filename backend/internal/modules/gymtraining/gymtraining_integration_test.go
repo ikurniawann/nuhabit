@@ -15,6 +15,9 @@ import (
 // Integration tests run every route against TEST_DATABASE_URL. Fixtures are
 // created per test and removed in t.Cleanup.
 
+// everything is the staff grant on each gym training menu.
+var everything = []string{"read", "create", "update", "delete"}
+
 type harness struct {
 	t      *testing.T
 	deps   module.Deps
@@ -32,7 +35,7 @@ func newHarness(t *testing.T) *harness {
 		deps: deps,
 		mux:  testutil.Mux(m),
 		staff: testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{
-			"gym.exercises": nil, "gym.races": nil, "gym.incentives": nil,
+			"gym.exercises": everything, "gym.races": everything, "gym.incentives": everything,
 		}}),
 		member: testutil.CreateMember(t),
 	}

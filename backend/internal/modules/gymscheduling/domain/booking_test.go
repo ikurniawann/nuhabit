@@ -132,6 +132,13 @@ func TestEligibilityOrder(t *testing.T) {
 			BookingDecision{Kind: DecisionWaitlist, Position: 1}},
 		{"not open yet", func(in *EligibilityInput) { in.Now = at("2026-09-27T00:00:00Z") }, deny(DenyBookingNotOpenYet)},
 		{"closed", func(in *EligibilityInput) { in.Now = at("2026-10-05T11:00:01Z") }, deny(DenyBookingWindowClosed)},
+		{"staff override after close", func(in *EligibilityInput) { in.Now, in.OverrideWindow = at("2026-10-05T11:00:01Z"), true },
+			BookingDecision{Kind: DecisionConfirm}},
+		{"staff override before open", func(in *EligibilityInput) { in.Now, in.OverrideWindow = at("2026-09-27T00:00:00Z"), true },
+			BookingDecision{Kind: DecisionConfirm}},
+		{"override keeps the credit check", func(in *EligibilityInput) {
+			in.Now, in.OverrideWindow, in.Balance = at("2026-10-05T11:00:01Z"), true, 1
+		}, deny(DenyInsufficientCredits)},
 		{"double booking before balance", func(in *EligibilityInput) { in.HasActiveBooking, in.Balance = true, 0 },
 			deny(DenyAlreadyBooked)},
 		{"low balance", func(in *EligibilityInput) { in.Balance = 1 }, deny(DenyInsufficientCredits)},

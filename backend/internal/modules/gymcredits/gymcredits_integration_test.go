@@ -34,7 +34,7 @@ func setup(t *testing.T) *env {
 	t.Helper()
 	deps := testutil.Deps(t, nil)
 	staff := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{
-		"gym.packages": nil, "gym.credits": nil, "gym.rules": nil,
+		"gym.packages": {"read", "create", "update", "delete"}, "gym.credits": {"read", "create", "update"}, "gym.rules": {"read", "update"},
 	}})
 	member := testutil.CreateMember(t)
 	ctx := context.Background()
@@ -404,6 +404,41 @@ func TestCreditDeskRoutes(t *testing.T) {
 		t.Fatalf("refunded %v", refunded)
 	}
 	e.fail(asStaff, "POST", "/api/gym/credits/purchases/"+purchaseID+"/refund", map[string]any{"reason": "lagi"}, 409, "Hanya pembelian lunas yang bisa direfund")
+}
+
+// Front desk holds read and create on gym.credits: it sells, at a branch, and
+// cannot correct the ledger.
+func TestFrontDeskSaleNeedsBranchAndNoCorrections(t *testing.T) {
+	e := setup(t)
+	org := testutil.CreateOrg(t, e.tx)
+	c := e.member.CustomerID
+	desk := testutil.CreateStaff(t, testutil.StaffOptions{Menus: map[string][]string{"gym.credits": {"read", "create"}}})
+	sell := func(body map[string]any, status int) map[string]any {
+		t.Helper()
+		rec, out := testutil.Do(t, e.mux, testutil.AsStaff(testutil.Request("POST", "/api/gym/credits/"+c+"/sell", body), desk))
+		if rec.Code != status {
+			t.Fatalf("sell %v: status %d, want %d: %v", body, rec.Code, status, out)
+		}
+		return out
+	}
+
+	local := e.pkg("Go Branch Pack", 4, 400_000, 30, nil)
+	e.exec(`UPDATE gym.credit_packages SET branch_id = $2 WHERE id = $1`, local, org.BranchID)
+	out := sell(map[string]any{"package_id": local, "payment_method": "cash"}, http.StatusConflict)
+	if out["error"] != "Paket ini khusus satu cabang. Pilih cabang penjualan." {
+		t.Fatalf("no branch: %v", out)
+	}
+	sale := sell(map[string]any{"package_id": local, "payment_method": "cash", "branch_id": org.BranchID}, http.StatusOK)["data"].(map[string]any)
+	if sale["status"] != "paid" || sale["branch_id"] != org.BranchID {
+		t.Fatalf("sale %v", sale)
+	}
+
+	for _, path := range []string{"/api/gym/credits/" + c + "/adjust", "/api/gym/credits/reverse", "/api/gym/credits/purchases/" + sale["id"].(string) + "/refund"} {
+		rec, _ := testutil.Do(t, e.mux, testutil.AsStaff(testutil.Request("POST", path, map[string]any{"amount": 1, "reason": "coba koreksi"}), desk))
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("front desk %s: status %d, want 403", path, rec.Code)
+		}
+	}
 }
 
 func TestRulesRoutes(t *testing.T) {

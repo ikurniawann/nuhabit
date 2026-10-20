@@ -13,20 +13,53 @@ import (
 )
 
 type handlers struct {
-	svc  *Service
-	auth *auth.Service
+	svc   *Service
+	auth  *auth.Service
+	guard Guard
+}
+
+// Guard is the slice of platform/auth the staff routes use; tests swap it.
+type Guard interface {
+	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
 }
 
 func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
 
-// staff wraps a /api/gym route: apiHandler + requireIamMenuPrefix(prefixes).
-func (h handlers) staff(prefixes []string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) http.Handler {
+const (
+	actRead   = "read"
+	actCreate = "create"
+	actUpdate = "update"
+	actDelete = "delete"
+)
+
+// staff wraps a /api/gym route: the caller holds action on a menu under prefixes.
+func (h handlers) staff(action string, prefixes []string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		u, err := h.auth.RequireMenuPrefix(r, prefixes...)
+		u, _, err := h.guard.RequireAnyGrant(r, iam.Grant{Action: action, Prefixes: prefixes})
 		if err != nil {
 			return err
 		}
 		return fn(w, r, u)
+	})
+}
+
+// upsert wraps a save route that creates without an id and edits with one.
+// The caller needs create or update to reach fn, and fn passes the parsed id
+// to require before saving, which checks the action the body asks for.
+func (h handlers) upsert(prefixes []string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User, require func(id *string) error) error) http.Handler {
+	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
+		u, _, err := h.guard.RequireAnyGrant(r, iam.Grant{Action: actCreate, Prefixes: prefixes}, iam.Grant{Action: actUpdate, Prefixes: prefixes})
+		if err != nil {
+			return err
+		}
+		return fn(w, r, u, func(id *string) error {
+			action := actCreate
+			if id != nil {
+				action = actUpdate
+			}
+			_, _, err := h.guard.RequireAnyGrant(r, iam.Grant{Action: action, Prefixes: prefixes})
+			return err
+		})
 	})
 }
 
@@ -54,9 +87,12 @@ func (h handlers) listExercises(w http.ResponseWriter, r *http.Request, _ *auth.
 	return ok(w, out)
 }
 
-func (h handlers) saveExercise(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+func (h handlers) saveExercise(w http.ResponseWriter, r *http.Request, _ *auth.User, require func(id *string) error) error {
 	in, err := parseExercise(r)
 	if err != nil {
+		return err
+	}
+	if err := require(in.ID); err != nil {
 		return err
 	}
 	out, err := h.svc.SaveExercise(r.Context(), in)
@@ -110,9 +146,12 @@ func (h handlers) listRaces(w http.ResponseWriter, r *http.Request, _ *auth.User
 	return ok(w, out)
 }
 
-func (h handlers) saveRace(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+func (h handlers) saveRace(w http.ResponseWriter, r *http.Request, _ *auth.User, require func(id *string) error) error {
 	in, err := parseRace(r)
 	if err != nil {
+		return err
+	}
+	if err := require(in.ID); err != nil {
 		return err
 	}
 	out, err := h.svc.SaveRaceEvent(r.Context(), in)
@@ -156,9 +195,12 @@ func (h handlers) schemeForm(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	return ok(w, out)
 }
 
-func (h handlers) saveScheme(w http.ResponseWriter, r *http.Request, u *auth.User) error {
+func (h handlers) saveScheme(w http.ResponseWriter, r *http.Request, u *auth.User, require func(id *string) error) error {
 	in, err := parseScheme(r)
 	if err != nil {
+		return err
+	}
+	if err := require(in.ID); err != nil {
 		return err
 	}
 	out, err := h.svc.SaveScheme(r.Context(), in, u.ID)
@@ -459,25 +501,25 @@ func (h handlers) raceDetail(w http.ResponseWriter, r *http.Request, customerID 
 func (h handlers) Routes() []module.Route {
 	ex, races, inc := iam.GymExercises, iam.GymRaces, iam.GymIncentives
 	return []module.Route{
-		{Pattern: "GET /api/gym/exercises", Handler: h.staff(ex, h.listExercises)},
-		{Pattern: "POST /api/gym/exercises", Handler: h.staff(ex, h.saveExercise)},
-		{Pattern: "DELETE /api/gym/exercises", Handler: h.staff(ex, h.deleteExercise)},
-		{Pattern: "POST /api/gym/exercises/substitutions", Handler: h.staff(ex, h.saveSubstitution)},
-		{Pattern: "DELETE /api/gym/exercises/substitutions", Handler: h.staff(ex, h.deleteSubstitution)},
+		{Pattern: "GET /api/gym/exercises", Handler: h.staff(actRead, ex, h.listExercises)},
+		{Pattern: "POST /api/gym/exercises", Handler: h.upsert(ex, h.saveExercise)},
+		{Pattern: "DELETE /api/gym/exercises", Handler: h.staff(actDelete, ex, h.deleteExercise)},
+		{Pattern: "POST /api/gym/exercises/substitutions", Handler: h.staff(actCreate, ex, h.saveSubstitution)},
+		{Pattern: "DELETE /api/gym/exercises/substitutions", Handler: h.staff(actDelete, ex, h.deleteSubstitution)},
 
-		{Pattern: "GET /api/gym/races", Handler: h.staff(races, h.listRaces)},
-		{Pattern: "POST /api/gym/races", Handler: h.staff(races, h.saveRace)},
-		{Pattern: "DELETE /api/gym/races", Handler: h.staff(races, h.deleteRace)},
-		{Pattern: "GET /api/gym/races/{id}/entrants", Handler: h.staff(races, h.raceEntrants)},
+		{Pattern: "GET /api/gym/races", Handler: h.staff(actRead, races, h.listRaces)},
+		{Pattern: "POST /api/gym/races", Handler: h.upsert(races, h.saveRace)},
+		{Pattern: "DELETE /api/gym/races", Handler: h.staff(actDelete, races, h.deleteRace)},
+		{Pattern: "GET /api/gym/races/{id}/entrants", Handler: h.staff(actRead, races, h.raceEntrants)},
 
-		{Pattern: "GET /api/gym/incentives/schemes", Handler: h.staff(inc, h.schemeForm)},
-		{Pattern: "POST /api/gym/incentives/schemes", Handler: h.staff(inc, h.saveScheme)},
-		{Pattern: "DELETE /api/gym/incentives/schemes", Handler: h.staff(inc, h.deleteScheme)},
-		{Pattern: "GET /api/gym/incentives/statements", Handler: h.staff(inc, h.statements)},
-		{Pattern: "GET /api/gym/incentives/payouts", Handler: h.staff(inc, h.listPayouts)},
-		{Pattern: "POST /api/gym/incentives/payouts", Handler: h.staff(inc, h.createPayout)},
-		{Pattern: "GET /api/gym/incentives/payouts/{id}", Handler: h.staff(inc, h.getPayout)},
-		{Pattern: "POST /api/gym/incentives/payouts/{id}", Handler: h.staff(inc, h.actOnPayout)},
+		{Pattern: "GET /api/gym/incentives/schemes", Handler: h.staff(actRead, inc, h.schemeForm)},
+		{Pattern: "POST /api/gym/incentives/schemes", Handler: h.upsert(inc, h.saveScheme)},
+		{Pattern: "DELETE /api/gym/incentives/schemes", Handler: h.staff(actDelete, inc, h.deleteScheme)},
+		{Pattern: "GET /api/gym/incentives/statements", Handler: h.staff(actRead, inc, h.statements)},
+		{Pattern: "GET /api/gym/incentives/payouts", Handler: h.staff(actRead, inc, h.listPayouts)},
+		{Pattern: "POST /api/gym/incentives/payouts", Handler: h.staff(actCreate, inc, h.createPayout)},
+		{Pattern: "GET /api/gym/incentives/payouts/{id}", Handler: h.staff(actRead, inc, h.getPayout)},
+		{Pattern: "POST /api/gym/incentives/payouts/{id}", Handler: h.staff(actUpdate, inc, h.actOnPayout)},
 
 		{Pattern: "GET /api/member-portal/gym/workouts", Handler: h.member("Gagal memuat workout", h.workoutsPage)},
 		{Pattern: "POST /api/member-portal/gym/workouts", Handler: h.member("Gagal menyusun workout", h.generateWorkout)},
