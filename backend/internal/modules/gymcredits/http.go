@@ -71,6 +71,9 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/member-portal/gym/passes/{id}/freeze", Handler: h.auth.MemberHandler("Gagal membekukan pass", h.memberFreeze)},
 		{Pattern: "POST /api/member-portal/gym/passes/{id}/unfreeze", Handler: h.auth.MemberHandler("Gagal mengaktifkan pass", h.memberUnfreeze)},
 		{Pattern: "PUT /api/member-portal/gym/passes/{id}/auto-renew", Handler: h.auth.MemberHandler("Gagal mengubah perpanjangan otomatis", h.memberAutoRenew)},
+		{Pattern: "GET /api/member-portal/gym/payment-methods", Handler: h.auth.MemberHandler("Gagal memuat metode pembayaran", h.savedMethods)},
+		{Pattern: "POST /api/member-portal/gym/payment-methods", Handler: h.auth.MemberHandler("Gagal menautkan metode pembayaran", h.linkSavedMethod)},
+		{Pattern: "DELETE /api/member-portal/gym/payment-methods/{id}", Handler: h.auth.MemberHandler("Gagal menghapus metode pembayaran", h.unlinkSavedMethod)},
 	}
 }
 
@@ -569,6 +572,41 @@ func (h *Handler) memberAutoRenew(w http.ResponseWriter, r *http.Request, custom
 		}
 		return h.svc.SetAutoRenew(r.Context(), id, in.On, in.RenewWith, by)
 	})
+}
+
+/* ── Member portal: saved payment methods ────────────────────────────── */
+
+func (h *Handler) savedMethods(w http.ResponseWriter, r *http.Request, customerID string) error {
+	view, err := h.svc.SavedMethods(r.Context(), customerID)
+	if err != nil {
+		return err
+	}
+	return ok(w, view)
+}
+
+// linkSavedMethod opens the Xendit hosted page; Xendit sends the member
+// back to the payment methods screen with ?linked=<id> or ?canceled=<id>.
+func (h *Handler) linkSavedMethod(w http.ResponseWriter, r *http.Request, customerID string) error {
+	origin := appOrigin(r)
+	view, err := h.svc.StartLink(r.Context(), customerID, func(id, outcome string) string {
+		return origin + "/member/profile/payment-methods?" + outcome + "=" + id
+	})
+	if err != nil {
+		return asHTTP(err)
+	}
+	return ok(w, view)
+}
+
+func (h *Handler) unlinkSavedMethod(w http.ResponseWriter, r *http.Request, customerID string) error {
+	id := r.PathValue("id")
+	if !isUUID(id) {
+		return httpx.BadRequest("ID tidak valid")
+	}
+	view, err := h.svc.UnlinkSavedMethod(r.Context(), customerID, id)
+	if err != nil {
+		return asHTTP(err)
+	}
+	return ok(w, view)
 }
 
 // appOrigin mirrors frontend/src/lib/app-origin.ts: NEXT_PUBLIC_APP_URL (or

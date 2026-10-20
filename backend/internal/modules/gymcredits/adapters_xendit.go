@@ -136,6 +136,12 @@ func (g *XenditGateway) ActiveConfig(ctx context.Context, db database.Querier) (
 }
 
 func (g *XenditGateway) do(ctx context.Context, method, path, secretKey string, body any) (int, any, error) {
+	return g.send(ctx, method, path, secretKey, "2022-07-31", nil, body)
+}
+
+// send calls the Xendit API with basic auth. apiVersion "" sends no
+// api-version header; headers are added as given.
+func (g *XenditGateway) send(ctx context.Context, method, path, secretKey, apiVersion string, headers map[string]string, body any) (int, any, error) {
 	var raw []byte
 	if body != nil {
 		var err error
@@ -148,7 +154,12 @@ func (g *XenditGateway) do(ctx context.Context, method, path, secretKey string, 
 		return 0, nil, err
 	}
 	req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(secretKey+":")))
-	req.Header.Set("api-version", "2022-07-31")
+	if apiVersion != "" {
+		req.Header.Set("api-version", apiVersion)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

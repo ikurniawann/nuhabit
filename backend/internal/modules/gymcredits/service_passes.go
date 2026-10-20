@@ -14,7 +14,6 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
-	"nuhabit/backend/internal/platform/pdfgen"
 )
 
 // Pass lifecycle: a paid pass is active (queued while its start is ahead),
@@ -26,6 +25,7 @@ import (
 const (
 	RenewWithArk     = "ark"
 	RenewWithInvoice = "invoice"
+	RenewWithSaved   = "saved_method"
 )
 
 const (
@@ -228,6 +228,15 @@ func (s *Service) SetAutoRenew(ctx context.Context, id string, on bool, renewWit
 		if renewWith == "" {
 			renewWith = p.RenewWith
 		}
+		if on && renewWith == RenewWithSaved && renewWith != p.RenewWith {
+			_, _, usable, err := s.activeSavedMethod(ctx, tx, p.CustomerID)
+			if err != nil {
+				return err
+			}
+			if !usable {
+				return fail(http.StatusConflict, "Tautkan kartu atau e-wallet dulu di menu Metode pembayaran")
+			}
+		}
 		if err := s.repo.SetAutoRenew(ctx, tx, p.ID, on, renewWith); err != nil {
 			return err
 		}
@@ -236,124 +245,6 @@ func (s *Service) SetAutoRenew(ctx context.Context, id string, on bool, renewWit
 			Meta: map[string]any{"auto_renew": on, "renew_with": renewWith},
 		})
 	})
-}
-
-/* ── Auto-renewal ────────────────────────────────────────────────────── */
-
-// SweepRenewals buys the next pass for every auto-renewing pass inside its
-// renewal window (renewalLeadDays before it ends). With renew_with 'ark'
-// and enough ARK Coin it pays at once; otherwise it opens a Xendit invoice
-// and tells the member to pay it. Each pass renews at most once: the claim
-// on renewal_handled_at is taken before buying and released only when the
-// attempt hit a passing failure (gateway or database), so a later run retries.
-func (s *Service) SweepRenewals(ctx context.Context, now time.Time) error {
-	candidates, err := s.repo.RenewalCandidates(ctx, s.db, now, now.Add(maxRenewalLeadDays*day))
-	if err != nil {
-		return err
-	}
-	rulesOf := map[string]domain.Rules{}
-	var errs []error
-	for _, p := range candidates {
-		key := deref(p.BranchID)
-		rules, ok := rulesOf[key]
-		if !ok {
-			if rules, err = s.Rules(ctx, s.db, p.BranchID); err != nil {
-				return errors.Join(append(errs, err)...)
-			}
-			rulesOf[key] = rules
-		}
-		if !domain.RenewalDue(p.EndsAt, now, rules.RenewalLeadDays) {
-			continue
-		}
-		if err := s.renew(ctx, p); err != nil {
-			errs = append(errs, fmt.Errorf("renew pass %s: %w", p.ID, err))
-		}
-	}
-	return errors.Join(errs...)
-}
-
-func (s *Service) renew(ctx context.Context, p PassRow) error {
-	claimed, err := s.repo.ClaimRenewal(ctx, s.db, p.ID)
-	if err != nil || !claimed {
-		return err
-	}
-	logRenewal := func(meta map[string]any) error {
-		return s.repo.InsertPassEvent(ctx, s.db, PassEvent{PassID: p.ID, CustomerID: p.CustomerID, Kind: EventRenewal, Meta: meta})
-	}
-	// The member already bought the pass that follows this one.
-	lastEnd, err := s.repo.LastPassEnd(ctx, s.db, p.CustomerID)
-	if err != nil {
-		return s.releaseRenewal(ctx, p.ID, err)
-	}
-	if lastEnd != nil && lastEnd.After(p.EndsAt) {
-		return logRenewal(map[string]any{"skipped": "already_renewed"})
-	}
-
-	view, err := s.buyRenewal(ctx, p)
-	if err != nil {
-		var ce *Error
-		if !errors.As(err, &ce) || ce.Status >= http.StatusInternalServerError {
-			return s.releaseRenewal(ctx, p.ID, err)
-		}
-		// A rule failure (package archived, member inactive) repeats on
-		// every run: record it and tell the member instead of retrying.
-		if err := logRenewal(map[string]any{"error": ce.Message}); err != nil {
-			return err
-		}
-		return s.ports.Notifier.NotifyMember(ctx, s.db, p.CustomerID, Notice{
-			Type: "gym_pass_renewal", Title: "Perpanjangan otomatis gagal",
-			Body: p.PackageName + " tidak bisa diperpanjang otomatis: " + ce.Message + ". Beli pass baru dari menu Dompet.",
-		})
-	}
-	if err := s.repo.SetRenewalPurchase(ctx, s.db, p.ID, view.ID); err != nil {
-		return err
-	}
-	if err := logRenewal(map[string]any{"purchase_id": view.ID, "payment_method": deref(view.PaymentMethod), "status": view.Status}); err != nil {
-		return err
-	}
-	return s.ports.Notifier.NotifyMember(ctx, s.db, p.CustomerID, renewalNotice(p, view))
-}
-
-func (s *Service) releaseRenewal(ctx context.Context, passID string, cause error) error {
-	if err := s.repo.ReleaseRenewal(ctx, s.db, passID); err != nil {
-		return errors.Join(cause, err)
-	}
-	return cause
-}
-
-// buyRenewal buys the same package at the branch of the pass it renews:
-// with ARK Coin when chosen, enabled and the balance covers it, else by
-// invoice.
-func (s *Service) buyRenewal(ctx context.Context, p PassRow) (*MemberPurchaseView, error) {
-	in := MemberPurchase{CustomerID: p.CustomerID, PackageID: p.PackageID, BranchID: p.BranchID, RenewsPassID: p.ID}
-	if p.RenewWith == RenewWithArk && s.ports.Wallet.Enabled(ctx, s.db) {
-		view, err := s.BuyWithArk(ctx, in)
-		var ce *Error
-		if err == nil || !errors.As(err, &ce) || ce.Message != msgArkShort {
-			return view, err
-		}
-	}
-	return s.StartInvoicePurchase(ctx, in, func(purchaseID string) string {
-		return envOrigin() + "/member/wallet/pay/" + purchaseID
-	})
-}
-
-func renewalNotice(p PassRow, v *MemberPurchaseView) Notice {
-	if v.Status == "paid" {
-		via := ""
-		if deref(v.PaymentMethod) == "ark_coin" {
-			via = " dengan ARK Coin (" + pdfgen.Rupiah(v.TotalIdr) + ")"
-		}
-		return Notice{
-			Type: "gym_pass_renewal", Title: "Pass diperpanjang: " + p.PackageName,
-			Body: "Pass baru sudah dibayar" + via + " dan mulai saat pass sekarang berakhir pada " + wibDate(p.EndsAt) + ".",
-		}
-	}
-	return Notice{
-		Type: "gym_pass_renewal", Title: "Perpanjang pass kamu: " + p.PackageName,
-		Body: "Pass kamu berakhir pada " + wibDate(p.EndsAt) + ". Bayar " + pdfgen.Rupiah(v.TotalIdr) +
-			" di menu Dompet supaya langsung lanjut tanpa jeda.",
-	}
 }
 
 // envOrigin is the configured public origin of the app (NEXT_PUBLIC_APP_URL,

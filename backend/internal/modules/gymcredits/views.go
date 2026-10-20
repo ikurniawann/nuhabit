@@ -174,6 +174,8 @@ type PassRow struct {
 	AutoRenew   bool
 	RenewWith   string
 	BranchID    *string
+	// AutoRenewOffReason is why the system turned auto-renew off.
+	AutoRenewOffReason *string
 }
 
 func (p PassRow) state() domain.PassState {
@@ -200,6 +202,8 @@ type PassView struct {
 	AutoRenew   bool    `json:"auto_renew"`
 	RenewWith   string  `json:"renew_with"`
 	PurchaseID  *string `json:"purchase_id"`
+	// AutoRenewOffReason is "renewal_failed" after the renewal retries ran out.
+	AutoRenewOffReason *string `json:"auto_renew_off_reason"`
 }
 
 func passView(p PassRow, now time.Time) PassView {
@@ -207,7 +211,7 @@ func passView(p PassRow, now time.Time) PassView {
 		ID: p.ID, PackageID: p.PackageID, PackageName: p.PackageName, StartsAt: JSTime(p.StartsAt), EndsAt: JSTime(p.EndsAt),
 		Status: p.Status, Upcoming: p.Status == domain.PassActive && p.StartsAt.After(now), DaysLeft: p.state().DaysLeft(now),
 		FrozenAt: jsTimePtr(p.FrozenAt), FrozenUntil: jsTimePtr(p.FrozenUntil), AutoRenew: p.AutoRenew, RenewWith: p.RenewWith,
-		PurchaseID: p.PurchaseID,
+		PurchaseID: p.PurchaseID, AutoRenewOffReason: p.AutoRenewOffReason,
 	}
 }
 

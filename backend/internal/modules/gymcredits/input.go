@@ -405,7 +405,7 @@ func parseAutoRenew(body any, member bool) (autoRenewBody, error) {
 		f.add(typeIssue([]any{"auto_renew"}, "boolean", f.get("auto_renew"), ""))
 	}
 	if v := f.get("renew_with"); v != undefined && v != nil {
-		b.RenewWith = f.enum("renew_with", []string{RenewWithArk, RenewWithInvoice})
+		b.RenewWith = f.enum("renew_with", []string{RenewWithArk, RenewWithInvoice, RenewWithSaved})
 	}
 	if member {
 		return b, f.memberErr()
