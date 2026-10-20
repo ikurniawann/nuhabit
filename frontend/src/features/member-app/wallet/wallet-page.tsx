@@ -16,6 +16,8 @@ const ENTRY_LABEL: Record<string, string> = {
   EXPIRATION: "Expired",
   ADJUSTMENT: "Adjustment",
   REVERSAL: "Reversal",
+  TRANSFER_IN: "Credits received",
+  TRANSFER_OUT: "Credits sent",
 };
 
 export function WalletPage() {
@@ -48,6 +50,11 @@ export function WalletPage() {
       <Link href={m("/wallet/topup")} className="nh-btn-brand">
         {wallet.membership ? t("Buy a package or pass") : t("Top up credits")}
       </Link>
+      {wallet.transfer.enabled && wallet.balance > 0 ? (
+        <Link href={m("/wallet/send")} className="nh-btn-ghost">
+          {t("Send credits")}
+        </Link>
+      ) : null}
 
       {wallet.membership ? (
         <div className="nh-card flex items-center justify-between !py-4 text-sm">

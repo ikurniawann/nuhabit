@@ -162,6 +162,16 @@ describe("wallet coverage", () => {
     expect(w.myPackages[0]).toMatchObject({ lotId: "l1", coverageIds: ["ct-sim"], coverageNames: ["Race Simulation"] });
     expect(w.myPackages[1]).toMatchObject({ name: "Bonus credits", coverageIds: null, coverageNames: null });
     expect(w.entries[0]).toMatchObject({ type: "CLASS_DEDUCTION", amount: -2, description: null });
+    expect(w.transfer).toEqual({ enabled: false, leftThisMonth: null });
+  });
+
+  it("transfer: what is left of the monthly cap", () => {
+    const transfer = { member_enabled: true, monthly_cap: 10, sent_this_month: 4 };
+    expect(toWalletView({ ...raw([]), transfer }, catalog).transfer).toEqual({ enabled: true, leftThisMonth: 6 });
+    expect(toWalletView({ ...raw([]), transfer: { ...transfer, monthly_cap: 0 } }, catalog).transfer).toEqual({
+      enabled: true,
+      leftThisMonth: null,
+    });
   });
 
   it("coverageFor: null without active packages, else whether any active one covers the class", () => {

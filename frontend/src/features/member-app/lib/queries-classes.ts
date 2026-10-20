@@ -177,6 +177,27 @@ export type PassAction =
   | { kind: "unfreeze"; passId: string }
   | { kind: "auto-renew"; passId: string; autoRenew: boolean; renewWith?: RenewWith };
 
+export interface SendCredits {
+  phone: string;
+  credits: number;
+  note: string;
+  /** One per send screen, so a retried tap moves the credits once. */
+  idempotencyKey: string;
+}
+
+/** Send credits to the member with that phone number. */
+export function useSendCredits() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: (s: SendCredits) =>
+      memberApi<{ credits: number }>("/gym/credits/transfer", {
+        method: "POST",
+        json: { phone: s.phone, credits: s.credits, note: s.note || null, idempotency_key: s.idempotencyKey },
+      }),
+    onSuccess: invalidate,
+  });
+}
+
 /** Freeze, unfreeze or switch auto-renew on the member's own pass. */
 export function usePassMutation() {
   const invalidate = useInvalidateAll();
