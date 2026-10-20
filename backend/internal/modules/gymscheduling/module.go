@@ -22,5 +22,6 @@ func New(deps module.Deps, ports Ports) module.Module {
 		log = slog.Default()
 	}
 	svc := NewService(deps.DB, Postgres{}, ports, deps.Now)
+	svc.log = log
 	return mod{h: &handler{svc: svc, guard: deps.Auth, log: log}}
 }

@@ -43,7 +43,8 @@ func (s *Service) AccessLog(ctx context.Context) (*Row, error) {
 	return object("log", log, "today", today), nil
 }
 
-// SearchBookableMembers finds members by name or phone, with their balance.
+// SearchBookableMembers finds members by name or phone, with their balance
+// and their pass strikes under the global rules.
 func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]MemberHit, error) {
 	if validate.UTF16Len(term) < 2 {
 		return []MemberHit{}, nil
@@ -52,9 +53,24 @@ func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]Mem
 	if err != nil {
 		return nil, err
 	}
+	rules, err := s.Rules.ForBranch(ctx, s.db, nil)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
 	for i := range hits {
 		if hits[i].Credits, err = s.Credits.GetBalance(ctx, s.db, hits[i].ID); err != nil {
 			return nil, err
+		}
+		strikes, err := s.repo.PassStrikeTimes(ctx, s.db, hits[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		st := domain.EvaluatePassStrikes(strikes, rules, now)
+		hits[i].PassStrikes = st.Strikes
+		if st.SuspendedUntil != nil {
+			until := jsTime(*st.SuspendedUntil)
+			hits[i].SuspendedUntil = &until
 		}
 	}
 	return hits, nil

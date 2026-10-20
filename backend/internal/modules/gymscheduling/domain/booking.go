@@ -8,6 +8,7 @@
 package domain
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"sort"
@@ -33,6 +34,15 @@ type Rules struct {
 	WaitlistAutoPromote       bool
 	BookingOpensDaysBefore    int
 	BookingClosesMinBefore    int
+	// 0 = no cap.
+	MaxConcurrentBookings int
+	MaxBookingsPerDay     int
+	// 0 = strikes never suspend.
+	StrikeLimit              int
+	StrikeWindowDays         int
+	StrikeSuspendDays        int
+	WaitlistPromoteCutoffMin int
+	WaitlistOfferMinutes     int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────
@@ -118,7 +128,14 @@ const (
 	DenyBookingNotOpenYet   BookingDenialReason = "booking_not_open_yet"
 	DenyBookingWindowClosed BookingDenialReason = "booking_window_closed"
 	DenyAlreadyBooked       BookingDenialReason = "already_booked"
+	DenyPassSuspended       BookingDenialReason = "pass_suspended"
+	DenyConcurrentLimit     BookingDenialReason = "concurrent_limit"
+	DenyDailyLimit          BookingDenialReason = "daily_limit"
 	DenyInsufficientCredits BookingDenialReason = "insufficient_credits"
+	DenyClassNotCovered     BookingDenialReason = "class_not_covered"
+	DenyNoOffer             BookingDenialReason = "no_offer"
+	DenyOfferExpired        BookingDenialReason = "offer_expired"
+	DenySeatTaken           BookingDenialReason = "seat_taken"
 )
 
 var BookingDenialLabel = map[BookingDenialReason]string{
@@ -127,7 +144,14 @@ var BookingDenialLabel = map[BookingDenialReason]string{
 	DenyBookingNotOpenYet:   "Booking kelas ini belum dibuka",
 	DenyBookingWindowClosed: "Booking kelas ini sudah ditutup",
 	DenyAlreadyBooked:       "Anda sudah punya tempat di kelas ini",
+	DenyPassSuspended:       "Booking ditangguhkan karena batas strike pass tercapai",
+	DenyConcurrentLimit:     "Batas booking aktif sudah tercapai",
+	DenyDailyLimit:          "Batas booking per hari sudah tercapai",
 	DenyInsufficientCredits: "Kredit tidak cukup untuk kelas ini",
+	DenyClassNotCovered:     "Paket kredit Anda tidak mencakup kelas ini",
+	DenyNoOffer:             "Belum ada kursi yang ditawarkan untuk Anda di kelas ini",
+	DenyOfferExpired:        "Tawaran kursi ini sudah kedaluwarsa",
+	DenySeatTaken:           "Kursi itu sudah diambil member lain",
 }
 
 type DecisionKind string
@@ -151,6 +175,7 @@ type BookableSession struct {
 	Status          SessionStatus
 	Capacity        int
 	CreditCost      int
+	StartsAt        time.Time
 	BookingOpensAt  time.Time
 	BookingClosesAt time.Time
 }
@@ -160,17 +185,36 @@ type EligibilityInput struct {
 	MemberActive bool
 	Session      BookableSession
 	Balance      int
+	// Reserved is the credit cost of the member's other confirmed bookings
+	// for classes not started yet and not covered by a pass. Those credits
+	// are spoken for, so only Balance - Reserved is available.
+	Reserved int
 	// HasPass: a pass covers the session start, so no credits are needed.
-	HasPass              bool
+	HasPass bool
+	// ClassNotCovered: the member's credit packages exclude this class type.
+	ClassNotCovered bool
+	// UpcomingConfirmed counts the member's other confirmed bookings for
+	// classes not started yet; SameDayBookings their other bookings
+	// (confirmed, checked in or completed) on the session's WIB day.
+	UpcomingConfirmed int
+	SameDayBookings   int
+	MaxConcurrent     int
+	MaxPerDay         int
+	// SuspendedUntil is set while pass strikes suspend booking.
+	SuspendedUntil *time.Time
+	// ConfirmedCount is the seats taken, open waitlist offers included.
 	ConfirmedCount       int
 	LastWaitlistPosition int
 	HasActiveBooking     bool
 	Now                  time.Time
 }
 
+// Available is the balance left after the credits reserved by other bookings.
+func (in EligibilityInput) Available() int { return in.Balance - in.Reserved }
+
 // EvaluateBookingEligibility checks, in this order: active member, bookable
-// session, booking window, no active booking, enough credits (unless a pass
-// covers the session), then a seat or the waitlist.
+// session, booking window, no active booking, the member checks of
+// EvaluateMemberEligibility, then a seat or the waitlist.
 func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 	deny := func(r BookingDenialReason) BookingDecision { return BookingDecision{Kind: DecisionDeny, Reason: r} }
 	switch {
@@ -184,12 +228,102 @@ func EvaluateBookingEligibility(in EligibilityInput) BookingDecision {
 		return deny(DenyBookingWindowClosed)
 	case in.HasActiveBooking:
 		return deny(DenyAlreadyBooked)
-	case !in.HasPass && in.Balance < in.Session.CreditCost:
-		return deny(DenyInsufficientCredits)
-	case in.ConfirmedCount >= in.Session.Capacity:
+	}
+	if reason := EvaluateMemberEligibility(in); reason != "" {
+		return deny(reason)
+	}
+	if in.ConfirmedCount >= in.Session.Capacity {
 		return BookingDecision{Kind: DecisionWaitlist, Position: in.LastWaitlistPosition + 1}
 	}
 	return BookingDecision{Kind: DecisionConfirm}
+}
+
+// EvaluateMemberEligibility is what a member must meet to hold a seat,
+// checked at booking and again before a waitlist promotion or an accepted
+// offer: active, not suspended, under the booking caps, then enough
+// available credits and a package covering the class (a pass waives both).
+// It returns "" when the member qualifies.
+func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
+	switch {
+	case !in.MemberActive:
+		return DenyMemberNotActive
+	case in.SuspendedUntil != nil && in.Now.Before(*in.SuspendedUntil):
+		return DenyPassSuspended
+	case in.MaxConcurrent > 0 && in.UpcomingConfirmed >= in.MaxConcurrent:
+		return DenyConcurrentLimit
+	case in.MaxPerDay > 0 && in.SameDayBookings >= in.MaxPerDay:
+		return DenyDailyLimit
+	case in.HasPass:
+		return ""
+	case in.Available() < in.Session.CreditCost:
+		return DenyInsufficientCredits
+	case in.ClassNotCovered:
+		return DenyClassNotCovered
+	}
+	return ""
+}
+
+// DenialMessage is the reason shown to the member or staff, with the
+// numbers behind a credit, cap or suspension denial.
+func (in EligibilityInput) DenialMessage(r BookingDenialReason) string {
+	switch r {
+	case DenyInsufficientCredits:
+		if in.Reserved > 0 {
+			return fmt.Sprintf("Kredit tidak cukup untuk kelas ini: tersedia %d, butuh %d (%d kredit sudah terpakai untuk booking lain)",
+				max(in.Available(), 0), in.Session.CreditCost, in.Reserved)
+		}
+	case DenyConcurrentLimit:
+		return fmt.Sprintf("Batas booking aktif tercapai: maksimal %d kelas mendatang", in.MaxConcurrent)
+	case DenyDailyLimit:
+		return fmt.Sprintf("Batas booking tercapai: maksimal %d kelas per hari", in.MaxPerDay)
+	case DenyPassSuspended:
+		return "Booking ditangguhkan sampai " + FormatWib(*in.SuspendedUntil) +
+			" karena batas strike pass tercapai (batal terlambat atau tidak hadir)"
+	}
+	return BookingDenialLabel[r]
+}
+
+// WibDayBounds is the WIB calendar day containing t, as [start, end).
+func WibDayBounds(t time.Time) (start, end time.Time) {
+	w := t.In(WIB)
+	start = time.Date(w.Year(), w.Month(), w.Day(), 0, 0, 0, 0, WIB)
+	return start, start.Add(24 * time.Hour)
+}
+
+// ── Pass strikes ────────────────────────────────────────────────────────────
+
+// StrikeStatus: Strikes count toward the limit now; SuspendedUntil is set
+// while booking is suspended.
+type StrikeStatus struct {
+	Strikes        int
+	SuspendedUntil *time.Time
+}
+
+// EvaluatePassStrikes walks the strikes oldest first. A strike counts while
+// it is inside the strike window. Reaching the limit suspends booking for
+// StrikeSuspendDays from that strike and starts the count again, so the
+// strikes behind one suspension never trigger a second one.
+func EvaluatePassStrikes(strikes []time.Time, rules Rules, now time.Time) StrikeStatus {
+	sorted := slices.Clone(strikes)
+	slices.SortFunc(sorted, func(a, b time.Time) int { return a.Compare(b) })
+	window := time.Duration(rules.StrikeWindowDays) * 24 * time.Hour
+	inWindow := func(list []time.Time, at time.Time) []time.Time {
+		return slices.DeleteFunc(list, func(s time.Time) bool { return !s.After(at.Add(-window)) })
+	}
+	var counted []time.Time
+	var until time.Time
+	for _, at := range sorted {
+		counted = append(inWindow(counted, at), at)
+		if rules.StrikeLimit > 0 && len(counted) >= rules.StrikeLimit {
+			until = at.Add(time.Duration(rules.StrikeSuspendDays) * 24 * time.Hour)
+			counted = nil
+		}
+	}
+	out := StrikeStatus{Strikes: len(inWindow(counted, now))}
+	if now.Before(until) {
+		out.SuspendedUntil = &until
+	}
+	return out
 }
 
 // ── Cancellation & no-show ──────────────────────────────────────────────────
@@ -237,6 +371,16 @@ func NoShowPenalty(creditCost int, hasPass bool, rules Rules) (penalty int, pass
 	return creditCost, false
 }
 
+// Waived drops the penalty and the strike: staff cancelled for the member
+// without charging. Late stays as it was.
+func (o CancellationOutcome) Waived() CancellationOutcome {
+	o.PenaltyCredits, o.PassStrike = 0, false
+	return o
+}
+
+// CanMarkNoShow: a member is absent only once the class has started.
+func CanMarkNoShow(startsAt, now time.Time) bool { return !now.Before(startsAt) }
+
 // ── Waitlist ────────────────────────────────────────────────────────────────
 
 // WaitlistEntry is a booking as the waitlist sees it.
@@ -256,26 +400,23 @@ func positionOr(p *int, fallback int) int {
 	return *p
 }
 
-// PickWaitlistPromotion is FIFO: lowest position wins, ties broken by sign-up
-// time. Entries already offered a seat are skipped.
-func PickWaitlistPromotion(rows []WaitlistEntry) *WaitlistEntry {
-	var candidates []WaitlistEntry
+// WaitlistQueue is the promotion order, FIFO: lowest position first, ties
+// broken by sign-up time. Entries already offered a seat are left out.
+func WaitlistQueue(rows []WaitlistEntry) []WaitlistEntry {
+	var queue []WaitlistEntry
 	for _, b := range rows {
 		if b.Status == BookingWaitlist && b.PromotionOfferedAt == nil {
-			candidates = append(candidates, b)
+			queue = append(queue, b)
 		}
 	}
-	if len(candidates) == 0 {
-		return nil
-	}
-	sort.SliceStable(candidates, func(i, j int) bool {
-		pi, pj := positionOr(candidates[i].WaitlistPosition, math.MaxInt), positionOr(candidates[j].WaitlistPosition, math.MaxInt)
+	sort.SliceStable(queue, func(i, j int) bool {
+		pi, pj := positionOr(queue[i].WaitlistPosition, math.MaxInt), positionOr(queue[j].WaitlistPosition, math.MaxInt)
 		if pi != pj {
 			return pi < pj
 		}
-		return candidates[i].CreatedAt.Before(candidates[j].CreatedAt)
+		return queue[i].CreatedAt.Before(queue[j].CreatedAt)
 	})
-	return &candidates[0]
+	return queue
 }
 
 func NextWaitlistPosition(rows []WaitlistEntry) int {
@@ -295,17 +436,69 @@ const (
 	PromoteOffer PromotionMode = "offer"
 )
 
-// PlanWaitlistPromotion gives a freed seat to the head of the queue: confirmed
-// at once (auto) or offered for the member to accept (offer).
-func PlanWaitlistPromotion(rows []WaitlistEntry, autoPromote bool) (*WaitlistEntry, PromotionMode) {
-	booking := PickWaitlistPromotion(rows)
-	if booking == nil {
-		return nil, ""
+// CanPromoteWaitlist: seats move up from the waitlist only while the
+// session is open, its booking window has not closed and it has not started.
+func CanPromoteWaitlist(s BookableSession, now time.Time) bool {
+	return slices.Contains(BookableSessionStatuses, s.Status) && !now.After(s.BookingClosesAt) && now.Before(s.StartsAt)
+}
+
+// HoldsSeat: a confirmed booking takes a seat, and so does a waitlist offer
+// until it lapses.
+func HoldsSeat(status BookingStatus, offerExpiresAt *time.Time, now time.Time) bool {
+	return status == BookingConfirmed || (status == BookingWaitlist && offerExpiresAt != nil && now.Before(*offerExpiresAt))
+}
+
+// FreeSeats is what is left for the waitlist once confirmed seats and open
+// offers are counted.
+func FreeSeats(capacity, taken, offered int) int { return max(capacity-taken-offered, 0) }
+
+// WaitlistPromotionMode: a freed seat is confirmed at once (auto) unless
+// auto promotion is off or the class starts within the cutoff. Then the seat
+// is offered for the member to accept.
+func WaitlistPromotionMode(rules Rules, startsAt, now time.Time) PromotionMode {
+	cutoff := startsAt.Add(-time.Duration(rules.WaitlistPromoteCutoffMin) * time.Minute)
+	if rules.WaitlistAutoPromote && now.Before(cutoff) {
+		return PromoteAuto
 	}
-	if autoPromote {
-		return booking, PromoteAuto
+	return PromoteOffer
+}
+
+// OfferExpiry is when an offer made now lapses: WaitlistOfferMinutes from
+// now, but never after booking closes.
+func OfferExpiry(rules Rules, closesAt, now time.Time) time.Time {
+	expires := now.Add(time.Duration(rules.WaitlistOfferMinutes) * time.Minute)
+	if expires.After(closesAt) {
+		return closesAt
 	}
-	return booking, PromoteOffer
+	return expires
+}
+
+// OfferInput is what accepting an offered seat is decided on. SeatsTaken
+// counts confirmed seats plus the other open offers.
+type OfferInput struct {
+	Status     BookingStatus
+	OfferedAt  *time.Time
+	ExpiresAt  *time.Time
+	Session    BookableSession
+	SeatsTaken int
+	Now        time.Time
+}
+
+// EvaluateOfferAcceptance returns "" when the member may take the seat: the
+// offer exists, booking is still open, the offer has not lapsed and the
+// seat is free. The member checks run separately (EvaluateMemberEligibility).
+func EvaluateOfferAcceptance(in OfferInput) BookingDenialReason {
+	switch {
+	case in.Status != BookingWaitlist || in.OfferedAt == nil:
+		return DenyNoOffer
+	case !CanPromoteWaitlist(in.Session, in.Now):
+		return DenyBookingWindowClosed
+	case in.ExpiresAt != nil && !in.Now.Before(*in.ExpiresAt):
+		return DenyOfferExpired
+	case in.SeatsTaken >= in.Session.Capacity:
+		return DenySeatTaken
+	}
+	return ""
 }
 
 // ── Closing a session ───────────────────────────────────────────────────────

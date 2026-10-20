@@ -11,6 +11,7 @@ package gymscheduling
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -33,6 +34,13 @@ type CreditLedger interface {
 	Refund(ctx context.Context, q database.Querier, in CreditMovement) error
 	// CoveredClassTypeIDs lists the class types live credits may book; nil means all.
 	CoveredClassTypeIDs(ctx context.Context, q database.Querier, customerID string) ([]string, error)
+}
+
+// UsableBalancer is an optional CreditLedger method: the balance that may
+// pay for one class type, when credits are restricted by class type.
+// Without it booking falls back to GetBalance.
+type UsableBalancer interface {
+	UsableBalance(ctx context.Context, q database.Querier, customerID, classTypeID string) (int, error)
 }
 
 // CreditMovement is one deduction or refund on the ledger.
@@ -89,13 +97,16 @@ type Member struct {
 // Active treats a NULL is_active as active, like `is_active !== false`.
 func (m *Member) Active() bool { return m != nil && (m.IsActive == nil || *m.IsActive) }
 
-// MemberHit is a member search result for staff booking.
+// MemberHit is a member search result for staff booking, with the pass
+// strikes counting now and the end of a strike suspension.
 type MemberHit struct {
-	ID       string  `json:"id"`
-	Name     *string `json:"name"`
-	Phone    *string `json:"phone"`
-	IsActive *bool   `json:"is_active"`
-	Credits  int     `json:"credits"`
+	ID             string  `json:"id"`
+	Name           *string `json:"name"`
+	Phone          *string `json:"phone"`
+	IsActive       *bool   `json:"is_active"`
+	Credits        int     `json:"credits"`
+	PassStrikes    int     `json:"pass_strikes"`
+	SuspendedUntil *jsTime `json:"suspended_until"`
 }
 
 // Members reads pos.pos_customers (owned by the POS/CRM context).
@@ -149,6 +160,16 @@ type Service struct {
 	repo Repository
 	Ports
 	now func() time.Time
+	// log records failures that must not undo the write around them
+	// (member notifications). nil means slog.Default().
+	log *slog.Logger
+}
+
+func (s *Service) logger() *slog.Logger {
+	if s.log == nil {
+		return slog.Default()
+	}
+	return s.log
 }
 
 func NewService(db DB, repo Repository, ports Ports, now func() time.Time) *Service {

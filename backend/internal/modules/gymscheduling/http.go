@@ -510,13 +510,14 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 	}
 	f := form(r)
 	action := f.Enum("action", validate.Rule{}, []string{"cancel", "no_show", "check_in"})
+	waivePenalty := f.BoolDefault("waive_penalty", false)
 	if err := invalid(f); err != nil {
 		return err
 	}
 	var out any
 	switch *action {
 	case "cancel":
-		out, err = h.svc.CancelBooking(r.Context(), id, "")
+		out, err = h.svc.CancelBooking(r.Context(), id, "", waivePenalty)
 	case "no_show":
 		out, err = h.svc.MarkNoShow(r.Context(), id)
 	default:
@@ -669,7 +670,7 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 	if !validate.IsUUID(id) {
 		return errInvalidData
 	}
-	out, err := h.svc.CancelBooking(r.Context(), id, customerID)
+	out, err := h.svc.CancelBooking(r.Context(), id, customerID, false)
 	if err != nil {
 		return err
 	}

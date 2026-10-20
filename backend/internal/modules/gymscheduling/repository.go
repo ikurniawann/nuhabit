@@ -44,7 +44,21 @@ type Repository interface {
 	PublicWeekSessions(ctx context.Context, q Q, branchID string, from, to time.Time) ([]PublicSession, error)
 
 	SeatsHeld(ctx context.Context, q Q, sessionID string) (int, error)
-	BookingStats(ctx context.Context, q Q, sessionID, customerID string) (BookingStats, error)
+	// OffersHeld counts waitlist offers still open at now: each holds a seat.
+	OffersHeld(ctx context.Context, q Q, sessionID string, now time.Time) (int, error)
+	// BookingStats counts open offers (at now) apart from confirmed seats.
+	BookingStats(ctx context.Context, q Q, sessionID, customerID string, now time.Time) (BookingStats, error)
+	// MemberCommitments lists the member's bookings outside sessionID that
+	// limit a new one: confirmed for a class starting after now, or held
+	// (confirmed, checked in, completed) for a class starting in [dayStart, dayEnd).
+	MemberCommitments(ctx context.Context, q Q, customerID, sessionID string, dayStart, dayEnd, now time.Time) ([]Commitment, error)
+	// PassStrikeTimes lists when each of the member's pass strikes was recorded.
+	PassStrikeTimes(ctx context.Context, q Q, customerID string) ([]time.Time, error)
+	// SessionsWithLapsedOffers lists sessions holding an offer that lapsed by now.
+	SessionsWithLapsedOffers(ctx context.Context, q Q, now time.Time) ([]string, error)
+	// CancelLapsedOffers cancels the session's offers that lapsed by now and
+	// returns the members they were made to.
+	CancelLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]string, error)
 	InsertBooking(ctx context.Context, q Q, sessionID, customerID string, status domain.BookingStatus, position *int, source string) (string, error)
 	// BookingRef returns empty ids when the booking does not exist.
 	BookingRef(ctx context.Context, q Q, id string) (sessionID, customerID string, err error)
@@ -54,10 +68,10 @@ type Repository interface {
 	CancelBooking(ctx context.Context, q Q, id string, late bool, at time.Time) error
 	ConfirmFromWaitlist(ctx context.Context, q Q, id string) error
 	AutoPromote(ctx context.Context, q Q, id string) error
-	OfferPromotion(ctx context.Context, q Q, id string, at time.Time) error
+	OfferPromotion(ctx context.Context, q Q, id string, at, expiresAt time.Time) error
 	MarkNoShow(ctx context.Context, q Q, id string) error
 	// MarkPassStrike flags a late cancel or no-show by a pass holder.
-	MarkPassStrike(ctx context.Context, q Q, id string) error
+	MarkPassStrike(ctx context.Context, q Q, id string, at time.Time) error
 	MarkCheckedIn(ctx context.Context, q Q, id string, at time.Time) error
 	CloseBooking(ctx context.Context, q Q, id string, status domain.BookingStatus) error
 	ActiveBookingCustomers(ctx context.Context, q Q, sessionID string) ([]string, error)
@@ -161,8 +175,16 @@ type WeekSession struct {
 }
 
 type BookingStats struct {
-	Confirmed, LastWaitlist int
-	Mine                    bool
+	Confirmed, Offered, LastWaitlist int
+	Mine                             bool
+}
+
+// Commitment is one of the member's other bookings, as reservation and
+// booking caps see it.
+type Commitment struct {
+	Status     domain.BookingStatus
+	StartsAt   time.Time
+	CreditCost int
 }
 
 type BookingRow struct {
@@ -170,6 +192,7 @@ type BookingRow struct {
 	Status                    domain.BookingStatus
 	WaitlistPosition          *int
 	PromotionOfferedAt        *time.Time
+	PromotionExpiresAt        *time.Time
 	CreatedAt                 time.Time
 }
 

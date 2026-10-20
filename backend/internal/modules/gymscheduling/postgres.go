@@ -189,7 +189,7 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
             COALESCE(k.confirmed, 0)::int AS confirmed_count,
             COALESCE(k.waitlist, 0)::int AS waitlist_count,
             COALESCE(k.checked_in, 0)::int AS checked_in_count,
-            GREATEST(x.capacity - COALESCE(k.confirmed, 0), 0)::int AS seats_left,
+            GREATEST(x.capacity - COALESCE(k.confirmed, 0) - COALESCE(k.offered, 0), 0)::int AS seats_left,
             CASE WHEN mine.id IS NULL THEN NULL ELSE json_build_object(
               'id', mine.id, 'status', mine.status, 'waitlist_position', mine.waitlist_position,
               'promotion_offered_at', mine.promotion_offered_at) END AS my_booking
@@ -206,6 +206,7 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
        LEFT JOIN LATERAL (
          SELECT count(*) FILTER (WHERE b.`+seatsHeldWhere+`) AS confirmed,
                 count(*) FILTER (WHERE b.status = 'waitlist') AS waitlist,
+                count(*) FILTER (WHERE b.status = 'waitlist' AND b.promotion_expires_at > now()) AS offered,
                 count(*) FILTER (WHERE b.status IN ('checked_in', 'completed')) AS checked_in
            FROM gym.bookings b WHERE b.session_id = x.id
        ) k ON true
@@ -298,14 +299,62 @@ func (Postgres) SeatsHeld(ctx context.Context, q Q, sessionID string) (int, erro
 	return n, err
 }
 
-func (Postgres) BookingStats(ctx context.Context, q Q, sessionID, customerID string) (BookingStats, error) {
+// openOfferWhere: a waitlist offer holds a seat until it lapses ($2 = now).
+const openOfferWhere = `status = 'waitlist' AND promotion_expires_at > $2`
+
+func (Postgres) OffersHeld(ctx context.Context, q Q, sessionID string, now time.Time) (int, error) {
+	var n int
+	err := q.QueryRow(ctx, `SELECT count(*)::int FROM gym.bookings WHERE session_id = $1 AND `+openOfferWhere, sessionID, now).Scan(&n)
+	return n, err
+}
+
+func (Postgres) BookingStats(ctx context.Context, q Q, sessionID, customerID string, now time.Time) (BookingStats, error) {
 	var s BookingStats
 	err := q.QueryRow(ctx, `SELECT count(*) FILTER (WHERE `+seatsHeldWhere+`)::int AS confirmed,
+            count(*) FILTER (WHERE `+openOfferWhere+`)::int AS offered,
             COALESCE(max(waitlist_position) FILTER (WHERE status = 'waitlist'), 0)::int AS last_waitlist,
-            COALESCE(bool_or(customer_id = $2 AND status IN ('confirmed', 'waitlist', 'checked_in')), false) AS mine
-       FROM gym.bookings WHERE session_id = $1`, sessionID, customerID).
-		Scan(&s.Confirmed, &s.LastWaitlist, &s.Mine)
+            COALESCE(bool_or(customer_id = $3 AND status IN ('confirmed', 'waitlist', 'checked_in')), false) AS mine
+       FROM gym.bookings WHERE session_id = $1`, sessionID, now, customerID).
+		Scan(&s.Confirmed, &s.Offered, &s.LastWaitlist, &s.Mine)
 	return s, err
+}
+
+func (Postgres) MemberCommitments(ctx context.Context, q Q, customerID, sessionID string, dayStart, dayEnd, now time.Time) ([]Commitment, error) {
+	rows, err := q.Query(ctx, `SELECT b.status, s.starts_at, s.credit_cost
+       FROM gym.bookings b JOIN gym.class_sessions s ON s.id = b.session_id
+      WHERE b.customer_id = $1 AND b.session_id <> $2
+        AND ((b.status = 'confirmed' AND s.starts_at > $5)
+          OR (b.`+seatsHeldWhere+` AND s.starts_at >= $3 AND s.starts_at < $4))`,
+		customerID, sessionID, dayStart, dayEnd, now)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Commitment, error) {
+		var c Commitment
+		return c, r.Scan(&c.Status, &c.StartsAt, &c.CreditCost)
+	})
+}
+
+func (Postgres) PassStrikeTimes(ctx context.Context, q Q, customerID string) ([]time.Time, error) {
+	rows, err := q.Query(ctx,
+		`SELECT pass_strike_at FROM gym.bookings WHERE customer_id = $1 AND pass_strike_at IS NOT NULL`, customerID)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[time.Time])
+}
+
+func (Postgres) SessionsWithLapsedOffers(ctx context.Context, q Q, now time.Time) ([]string, error) {
+	return collectStrings(q.Query(ctx, `SELECT DISTINCT session_id::text FROM gym.bookings
+      WHERE status = 'waitlist' AND promotion_expires_at <= $1`, now))
+}
+
+func (Postgres) CancelLapsedOffers(ctx context.Context, q Q, sessionID string, now time.Time) ([]string, error) {
+	return collectStrings(q.Query(ctx, `UPDATE gym.bookings
+        SET status = 'cancelled', waitlist_position = NULL, promotion_offered_at = NULL, promotion_expires_at = NULL,
+            cancelled_at = $2, updated_at = now()
+      WHERE session_id = $1 AND status = 'waitlist' AND promotion_expires_at <= $2
+      RETURNING customer_id::text`, sessionID, now))
 }
 
 func (Postgres) InsertBooking(ctx context.Context, q Q, sessionID, customerID string, status domain.BookingStatus, position *int, source string) (string, error) {
@@ -321,11 +370,11 @@ func (Postgres) BookingRef(ctx context.Context, q Q, id string) (sessionID, cust
 	return sessionID, customerID, err
 }
 
-const bookingColumns = `id, session_id, customer_id, status, waitlist_position, promotion_offered_at, created_at`
+const bookingColumns = `id, session_id, customer_id, status, waitlist_position, promotion_offered_at, promotion_expires_at, created_at`
 
 func scanBooking(r pgx.CollectableRow) (BookingRow, error) {
 	var b BookingRow
-	err := r.Scan(&b.ID, &b.SessionID, &b.CustomerID, &b.Status, &b.WaitlistPosition, &b.PromotionOfferedAt, &b.CreatedAt)
+	err := r.Scan(&b.ID, &b.SessionID, &b.CustomerID, &b.Status, &b.WaitlistPosition, &b.PromotionOfferedAt, &b.PromotionExpiresAt, &b.CreatedAt)
 	return b, err
 }
 
@@ -361,7 +410,7 @@ func (Postgres) LockOpenBookings(ctx context.Context, q Q, sessionID string) ([]
 
 func (Postgres) CancelBooking(ctx context.Context, q Q, id string, late bool, at time.Time) error {
 	_, err := q.Exec(ctx, `UPDATE gym.bookings
-        SET status = 'cancelled', waitlist_position = NULL, promotion_offered_at = NULL,
+        SET status = 'cancelled', waitlist_position = NULL, promotion_offered_at = NULL, promotion_expires_at = NULL,
             late_cancel = $2, cancelled_at = $3, updated_at = now()
       WHERE id = $1`, id, late, at)
 	return err
@@ -369,7 +418,7 @@ func (Postgres) CancelBooking(ctx context.Context, q Q, id string, late bool, at
 
 func (Postgres) ConfirmFromWaitlist(ctx context.Context, q Q, id string) error {
 	_, err := q.Exec(ctx, `UPDATE gym.bookings SET status = 'confirmed', waitlist_position = NULL, promotion_offered_at = NULL,
-            updated_at = now() WHERE id = $1`, id)
+            promotion_expires_at = NULL, updated_at = now() WHERE id = $1`, id)
 	return err
 }
 
@@ -379,8 +428,9 @@ func (Postgres) AutoPromote(ctx context.Context, q Q, id string) error {
 	return err
 }
 
-func (Postgres) OfferPromotion(ctx context.Context, q Q, id string, at time.Time) error {
-	_, err := q.Exec(ctx, `UPDATE gym.bookings SET promotion_offered_at = $2, updated_at = now() WHERE id = $1`, id, at)
+func (Postgres) OfferPromotion(ctx context.Context, q Q, id string, at, expiresAt time.Time) error {
+	_, err := q.Exec(ctx, `UPDATE gym.bookings SET promotion_offered_at = $2, promotion_expires_at = $3, updated_at = now()
+      WHERE id = $1`, id, at, expiresAt)
 	return err
 }
 
@@ -389,8 +439,9 @@ func (Postgres) MarkNoShow(ctx context.Context, q Q, id string) error {
 	return err
 }
 
-func (Postgres) MarkPassStrike(ctx context.Context, q Q, id string) error {
-	_, err := q.Exec(ctx, `UPDATE gym.bookings SET pass_strike = true, updated_at = now() WHERE id = $1`, id)
+func (Postgres) MarkPassStrike(ctx context.Context, q Q, id string, at time.Time) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.bookings SET pass_strike = true, pass_strike_at = $2, updated_at = now() WHERE id = $1`, id, at)
 	return err
 }
 
@@ -427,7 +478,7 @@ func (Postgres) CancelSessionBookings(ctx context.Context, q Q, sessionID string
 
 func (Postgres) Roster(ctx context.Context, q Q, sessionID string) ([]*Row, error) {
 	return queryRows(ctx, q, `SELECT b.id, b.customer_id, c.name, c.phone, b.status, b.waitlist_position, b.source, b.late_cancel,
-            b.promotion_offered_at, b.checked_in_at, b.cancelled_at, b.created_at
+            b.promotion_offered_at, b.promotion_expires_at, b.checked_in_at, b.cancelled_at, b.created_at
        FROM gym.bookings b JOIN pos.pos_customers c ON c.id = b.customer_id
       WHERE b.session_id = $1
       ORDER BY CASE b.status WHEN 'checked_in' THEN 0 WHEN 'confirmed' THEN 1 WHEN 'completed' THEN 2

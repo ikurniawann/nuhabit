@@ -201,28 +201,192 @@ func TestWaitlistFIFO(t *testing.T) {
 		{ID: "b", Status: BookingWaitlist, WaitlistPosition: ptr(1), CreatedAt: at("2026-10-02T00:00:00Z")},
 		{ID: "a", Status: BookingWaitlist, WaitlistPosition: ptr(1), CreatedAt: at("2026-10-01T12:00:00Z")},
 	}
-	if got := PickWaitlistPromotion(rows); got == nil || got.ID != "a" {
-		t.Fatalf("lowest position, then earliest: %+v", got)
+	ids := func(q []WaitlistEntry) string {
+		s := ""
+		for _, e := range q {
+			s += e.ID
+		}
+		return s
+	}
+	if got := ids(WaitlistQueue(rows)); got != "abc" {
+		t.Fatalf("lowest position, then earliest: %s", got)
 	}
 	offered := append([]WaitlistEntry(nil), rows...)
 	offered[3].PromotionOfferedAt = ptr(at("2026-10-03T00:00:00Z"))
-	if got := PickWaitlistPromotion(offered); got == nil || got.ID != "b" {
-		t.Fatalf("offered entries are skipped: %+v", got)
+	if got := ids(WaitlistQueue(offered)); got != "bc" {
+		t.Fatalf("offered entries are skipped: %s", got)
 	}
-	if PickWaitlistPromotion(rows[1:2]) != nil {
-		t.Error("empty queue gives nil")
+	if len(WaitlistQueue(rows[1:2])) != 0 {
+		t.Error("empty queue")
 	}
 	if NextWaitlistPosition(rows) != 3 || NextWaitlistPosition(nil) != 1 {
 		t.Error("next position = max + 1")
 	}
-	if b, mode := PlanWaitlistPromotion(rows, true); b == nil || b.ID != "a" || mode != PromoteAuto {
-		t.Errorf("auto: %+v %s", b, mode)
+}
+
+func TestWaitlistPromotionRules(t *testing.T) {
+	r := rules
+	r.WaitlistPromoteCutoffMin, r.WaitlistOfferMinutes = 60, 30
+	cases := []struct {
+		name string
+		auto bool
+		now  string
+		want PromotionMode
+	}{
+		{"auto before the cutoff", true, "2026-10-05T09:59:59Z", PromoteAuto},
+		{"offer at the cutoff", true, "2026-10-05T10:00:00Z", PromoteOffer},
+		{"offer when auto is off", false, "2026-10-04T00:00:00Z", PromoteOffer},
 	}
-	if _, mode := PlanWaitlistPromotion(rows, false); mode != PromoteOffer {
-		t.Errorf("offer: %s", mode)
+	for _, c := range cases {
+		r.WaitlistAutoPromote = c.auto
+		if got := WaitlistPromotionMode(r, start, at(c.now)); got != c.want {
+			t.Errorf("%s: %s", c.name, got)
+		}
 	}
-	if b, _ := PlanWaitlistPromotion(nil, true); b != nil {
-		t.Error("empty plan")
+	if got := OfferExpiry(r, start, at("2026-10-05T10:00:00Z")); !got.Equal(at("2026-10-05T10:30:00Z")) {
+		t.Errorf("expiry = %s", got)
+	}
+	if got := OfferExpiry(r, start, at("2026-10-05T10:45:00Z")); !got.Equal(start) {
+		t.Errorf("expiry is capped at booking close: %s", got)
+	}
+	if FreeSeats(5, 3, 1) != 1 || FreeSeats(2, 2, 1) != 0 {
+		t.Error("free seats")
+	}
+	lapse := at("2026-10-05T10:30:00Z")
+	if !HoldsSeat(BookingConfirmed, nil, now) || !HoldsSeat(BookingWaitlist, &lapse, lapse.Add(-time.Second)) ||
+		HoldsSeat(BookingWaitlist, &lapse, lapse) || HoldsSeat(BookingWaitlist, nil, now) || HoldsSeat(BookingCancelled, &lapse, now) {
+		t.Error("holds seat")
+	}
+	open := session(func(s *BookableSession) { s.StartsAt = start })
+	if !CanPromoteWaitlist(open, now) || CanPromoteWaitlist(open, start) ||
+		CanPromoteWaitlist(session(func(s *BookableSession) { s.StartsAt, s.Status = start, SessionCompleted }), now) {
+		t.Error("promotion only while booking is open")
+	}
+}
+
+func TestOfferAcceptance(t *testing.T) {
+	offeredAt, expires := at("2026-10-05T09:00:00Z"), at("2026-10-05T09:30:00Z")
+	base := OfferInput{
+		Status: BookingWaitlist, OfferedAt: &offeredAt, ExpiresAt: &expires,
+		Session: session(func(s *BookableSession) { s.StartsAt = start }), SeatsTaken: 1, Now: at("2026-10-05T09:10:00Z"),
+	}
+	cases := []struct {
+		name string
+		mut  func(*OfferInput)
+		want BookingDenialReason
+	}{
+		{"open offer", func(*OfferInput) {}, ""},
+		{"no offer", func(in *OfferInput) { in.OfferedAt = nil }, DenyNoOffer},
+		{"not on the waitlist", func(in *OfferInput) { in.Status = BookingConfirmed }, DenyNoOffer},
+		{"expired", func(in *OfferInput) { in.Now = expires }, DenyOfferExpired},
+		{"class started", func(in *OfferInput) { in.Now, in.ExpiresAt = start, nil }, DenyBookingWindowClosed},
+		{"seat taken", func(in *OfferInput) { in.SeatsTaken = 2 }, DenySeatTaken},
+	}
+	for _, c := range cases {
+		in := base
+		c.mut(&in)
+		if got := EvaluateOfferAcceptance(in); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestMemberEligibility(t *testing.T) {
+	until := at("2026-10-06T00:00:00Z")
+	cases := []struct {
+		name string
+		mut  func(*EligibilityInput)
+		want BookingDenialReason
+	}{
+		{"qualifies", nil, ""},
+		{"reserved credits count", func(in *EligibilityInput) { in.Balance, in.Reserved = 5, 4 }, DenyInsufficientCredits},
+		{"reserved but enough left", func(in *EligibilityInput) { in.Balance, in.Reserved = 5, 3 }, ""},
+		{"pass ignores credits", func(in *EligibilityInput) { in.Balance, in.Reserved, in.HasPass = 0, 4, true }, ""},
+		{"package does not cover", func(in *EligibilityInput) { in.ClassNotCovered = true }, DenyClassNotCovered},
+		{"pass ignores coverage", func(in *EligibilityInput) { in.ClassNotCovered, in.HasPass = true, true }, ""},
+		{"concurrent cap", func(in *EligibilityInput) { in.MaxConcurrent, in.UpcomingConfirmed = 2, 2 }, DenyConcurrentLimit},
+		{"under concurrent cap", func(in *EligibilityInput) { in.MaxConcurrent, in.UpcomingConfirmed = 2, 1 }, ""},
+		{"no concurrent cap", func(in *EligibilityInput) { in.UpcomingConfirmed = 50 }, ""},
+		{"daily cap applies to pass holders", func(in *EligibilityInput) { in.HasPass, in.MaxPerDay, in.SameDayBookings = true, 1, 1 },
+			DenyDailyLimit},
+		{"suspended", func(in *EligibilityInput) { in.SuspendedUntil = &until }, DenyPassSuspended},
+		{"suspension over", func(in *EligibilityInput) { in.SuspendedUntil, in.Now = &until, until }, ""},
+		{"suspension before caps", func(in *EligibilityInput) {
+			in.SuspendedUntil, in.MaxConcurrent, in.UpcomingConfirmed = &until, 1, 1
+		}, DenyPassSuspended},
+	}
+	for _, c := range cases {
+		in := EligibilityInput{MemberActive: true, Session: session(nil), Balance: 5, Now: now}
+		if c.mut != nil {
+			c.mut(&in)
+		}
+		if got := EvaluateMemberEligibility(in); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+
+	in := EligibilityInput{Session: session(nil), Balance: 3, Reserved: 2, MaxConcurrent: 4, MaxPerDay: 2, SuspendedUntil: &until}
+	for r, want := range map[BookingDenialReason]string{
+		DenyInsufficientCredits: "Kredit tidak cukup untuk kelas ini: tersedia 1, butuh 2 (2 kredit sudah terpakai untuk booking lain)",
+		DenyConcurrentLimit:     "Batas booking aktif tercapai: maksimal 4 kelas mendatang",
+		DenyDailyLimit:          "Batas booking tercapai: maksimal 2 kelas per hari",
+		DenyPassSuspended:       "Booking ditangguhkan sampai Sel, 6 Okt, 07.00 karena batas strike pass tercapai (batal terlambat atau tidak hadir)",
+		DenyAlreadyBooked:       "Anda sudah punya tempat di kelas ini",
+	} {
+		if got := in.DenialMessage(r); got != want {
+			t.Errorf("message %s = %q", r, got)
+		}
+	}
+	in.Reserved = 0
+	if got := in.DenialMessage(DenyInsufficientCredits); got != "Kredit tidak cukup untuk kelas ini" {
+		t.Errorf("plain credit message = %q", got)
+	}
+	if got := eligibility(func(in *EligibilityInput) { in.Balance, in.Reserved, in.ConfirmedCount = 5, 4, 2 }); got != deny(DenyInsufficientCredits) {
+		t.Errorf("reservation also guards the waitlist: %+v", got)
+	}
+}
+
+func TestPassStrikes(t *testing.T) {
+	r := Rules{StrikeLimit: 3, StrikeWindowDays: 30, StrikeSuspendDays: 7}
+	day := func(d int) time.Time { return at("2026-10-01T00:00:00Z").Add(time.Duration(d) * 24 * time.Hour) }
+	cases := []struct {
+		name    string
+		strikes []time.Time
+		now     time.Time
+		count   int
+		until   *time.Time
+	}{
+		{"none", nil, day(0), 0, nil},
+		{"two in the window", []time.Time{day(0), day(10)}, day(11), 2, nil},
+		{"third suspends from the third strike", []time.Time{day(20), day(0), day(10)}, day(21), 0, ptr(day(27))},
+		{"suspension ends", []time.Time{day(0), day(10), day(20)}, day(27), 0, nil},
+		{"spread past the window", []time.Time{day(0), day(10), day(31)}, day(32), 2, nil},
+		{"a strike on the window edge drops out", []time.Time{day(0), day(30)}, day(30), 1, nil},
+		{"count restarts after a suspension", []time.Time{day(0), day(1), day(2), day(3), day(4)}, day(5), 2, ptr(day(9))},
+	}
+	for _, c := range cases {
+		got := EvaluatePassStrikes(c.strikes, r, c.now)
+		if got.Strikes != c.count || (got.SuspendedUntil == nil) != (c.until == nil) ||
+			(c.until != nil && !got.SuspendedUntil.Equal(*c.until)) {
+			t.Errorf("%s: %+v", c.name, got)
+		}
+	}
+	if got := EvaluatePassStrikes([]time.Time{day(0), day(1), day(2)}, Rules{StrikeWindowDays: 30}, day(3)); got.SuspendedUntil != nil || got.Strikes != 3 {
+		t.Errorf("limit 0 never suspends: %+v", got)
+	}
+}
+
+func TestStaffWaiverAndNoShowTiming(t *testing.T) {
+	out := EvaluateCancellation(BookingConfirmed, start, 2, true, rules, at("2026-10-05T10:00:00Z")).Waived()
+	if !out.Late || out.PassStrike || out.PenaltyCredits != 0 {
+		t.Errorf("waived: %+v", out)
+	}
+	if CanMarkNoShow(start, start.Add(-time.Second)) || !CanMarkNoShow(start, start) {
+		t.Error("no-show only once the class started")
+	}
+	s, e := WibDayBounds(at("2026-10-04T17:30:00Z")) // Monday 00.30 WIB
+	if !s.Equal(at("2026-10-04T17:00:00Z")) || !e.Equal(at("2026-10-05T17:00:00Z")) {
+		t.Errorf("WIB day = %s .. %s", s, e)
 	}
 }
 

@@ -138,6 +138,9 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 		if err := s.syncSessionSeats(ctx, q, session); err != nil {
 			return err
 		}
+		if _, err := s.PromoteFromWaitlist(ctx, q, id); err != nil {
+			return err
+		}
 		if !moved {
 			return nil
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
+	"nuhabit/backend/internal/platform/database"
 )
 
 // Shared steps of the write paths. Port of booking-store.ts.
@@ -35,13 +36,18 @@ func (s *Service) lockBookingWithSession(ctx context.Context, q Q, id, customerI
 	return booking, session, err
 }
 
-// syncSessionSeats keeps published and full in step with the seats held now.
+// syncSessionSeats keeps published and full in step with the seats held
+// now, open waitlist offers included.
 func (s *Service) syncSessionSeats(ctx context.Context, q Q, session *SessionRow) error {
 	held, err := s.repo.SeatsHeld(ctx, q, session.ID)
 	if err != nil {
 		return err
 	}
-	next := domain.SessionStatusForSeats(session.Status, held, session.Capacity)
+	offered, err := s.repo.OffersHeld(ctx, q, session.ID, s.now())
+	if err != nil {
+		return err
+	}
+	next := domain.SessionStatusForSeats(session.Status, held+offered, session.Capacity)
 	if next == session.Status {
 		return nil
 	}
@@ -96,9 +102,33 @@ func (s *Service) applyNoShow(ctx context.Context, q Q, booking *BookingRow, ses
 	}
 	penalty, strike := domain.NoShowPenalty(session.CreditCost, pass != nil, rules)
 	if strike {
-		return 0, s.repo.MarkPassStrike(ctx, q, booking.ID)
+		return 0, s.repo.MarkPassStrike(ctx, q, booking.ID, s.now())
 	}
 	return s.chargePenalty(ctx, q, booking.CustomerID, penalty, "no_show", booking.ID, "Tidak hadir: "+session.label())
+}
+
+// notify sends a member notification without risking the write it reports
+// on: the insert runs in a savepoint, so a failure rolls back only the
+// notification and is logged.
+func (s *Service) notify(ctx context.Context, q Q, customerID string, n Notification) {
+	err := func() error {
+		tb, ok := q.(database.TxBeginner)
+		if !ok {
+			return s.Notifier.NotifyMember(ctx, q, customerID, n)
+		}
+		sp, err := tb.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		if err := s.Notifier.NotifyMember(ctx, sp, customerID, n); err != nil {
+			_ = sp.Rollback(ctx)
+			return err
+		}
+		return sp.Commit(ctx)
+	}()
+	if err != nil {
+		s.logger().WarnContext(ctx, "gym notification not sent", "type", n.Type, "customer_id", customerID, "error", err.Error())
+	}
 }
 
 // branchRules reads the rules once per branch for the length of one operation.
