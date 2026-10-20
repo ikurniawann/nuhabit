@@ -36,18 +36,17 @@ type Availability struct {
 	Exceptions []ExceptionRow `json:"exceptions"`
 }
 
-// span parses "HH:MM" start and end into a checked span.
-func span(weekday int, start, end string) (domain.Span, error) {
+// checkSpan rejects "HH:MM" times that are unreadable or out of order.
+func checkSpan(start, end string) error {
 	from, ok1 := domain.ParseClock(start)
 	to, ok2 := domain.ParseClock(end)
 	if !ok1 || !ok2 {
-		return domain.Span{}, httpx.BadRequest("Jam tidak valid")
+		return httpx.BadRequest("Jam tidak valid")
 	}
-	s := domain.Span{Start: from, End: to}
-	if p := domain.WindowProblem(weekday, s); p != "" {
-		return s, httpx.BadRequest(p)
+	if p := domain.SpanProblem(domain.Span{Start: from, End: to}); p != "" {
+		return httpx.BadRequest(p)
 	}
-	return s, nil
+	return nil
 }
 
 func (s *Service) requireCoach(ctx context.Context, q Q, coachID string) error {
@@ -87,7 +86,10 @@ func (s *Service) Availability(ctx context.Context, coachID string) (*Availabili
 // day are allowed and merge when slots are computed.
 func (s *Service) SetWeekly(ctx context.Context, coachID string, windows []Window) error {
 	for _, w := range windows {
-		if _, err := span(w.Weekday, w.StartTime, w.EndTime); err != nil {
+		if w.Weekday < 1 || w.Weekday > 7 {
+			return httpx.BadRequest("Hari tidak valid")
+		}
+		if err := checkSpan(w.StartTime, w.EndTime); err != nil {
 			return err
 		}
 	}
@@ -120,8 +122,7 @@ type NewException struct {
 
 // AddException records a day off, partial time off or extra hours.
 func (s *Service) AddException(ctx context.Context, coachID, actorID string, in NewException) (string, error) {
-	date, err := time.ParseInLocation(time.DateOnly, in.Date, domain.WIB)
-	if err != nil {
+	if _, err := time.Parse(time.DateOnly, in.Date); err != nil {
 		return "", httpx.BadRequest("Tanggal tidak valid")
 	}
 	if in.Date < s.todayWib() {
@@ -131,11 +132,7 @@ func (s *Service) AddException(ctx context.Context, coachID, actorID string, in 
 	switch {
 	case in.StartTime == "" && in.EndTime == "" && in.Kind == domain.Off:
 	case in.Kind == domain.Off || in.Kind == domain.Extra:
-		weekday := int(date.Weekday())
-		if weekday == 0 {
-			weekday = 7
-		}
-		if _, err := span(weekday, in.StartTime, in.EndTime); err != nil {
+		if err := checkSpan(in.StartTime, in.EndTime); err != nil {
 			return "", err
 		}
 		start, end = &in.StartTime, &in.EndTime
@@ -143,7 +140,7 @@ func (s *Service) AddException(ctx context.Context, coachID, actorID string, in 
 		return "", httpx.BadRequest("Jenis pengecualian tidak valid")
 	}
 	var id string
-	err = s.inTx(ctx, func(q Q) error {
+	err := s.inTx(ctx, func(q Q) error {
 		if err := s.requireCoach(ctx, q, coachID); err != nil {
 			return err
 		}

@@ -61,11 +61,8 @@ type Exception struct {
 	Span *Span
 }
 
-// WindowProblem checks a weekly window or an exception span.
-func WindowProblem(weekday int, s Span) string {
-	if weekday < 1 || weekday > 7 {
-		return "Hari tidak valid"
-	}
+// SpanProblem checks the times of a weekly window or an exception.
+func SpanProblem(s Span) string {
 	if s.Start < 0 || s.End > EndOfDay || s.End <= s.Start {
 		return "Jam selesai harus setelah jam mulai"
 	}

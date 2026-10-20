@@ -231,15 +231,15 @@ func lockAppointment(ctx context.Context, q Q, id string) (*Appointment, error) 
 	return a, err
 }
 
-// ParticipantAppointment is the appointment and owner of a participant row,
-// ("", "") when it does not exist.
-func (s *Service) ParticipantAppointment(ctx context.Context, participantID string) (appointmentID, customerID string, err error) {
-	err = s.db.QueryRow(ctx, `SELECT appointment_id::text, customer_id::text FROM gym.pt_participants WHERE id = $1`,
-		participantID).Scan(&appointmentID, &customerID)
+// ParticipantAppointment is the appointment of a participant row, "" when
+// it does not exist.
+func (s *Service) ParticipantAppointment(ctx context.Context, participantID string) (string, error) {
+	var appointmentID string
+	err := s.db.QueryRow(ctx, `SELECT appointment_id::text FROM gym.pt_participants WHERE id = $1`, participantID).Scan(&appointmentID)
 	if isNoRows(err) {
-		return "", "", nil
+		return "", nil
 	}
-	return appointmentID, customerID, err
+	return appointmentID, err
 }
 
 func nullable(s string) *string {

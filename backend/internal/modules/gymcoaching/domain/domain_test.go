@@ -93,11 +93,10 @@ func TestParseClock(t *testing.T) {
 	eq(t, EndOfDay.Clock(), "24:00")
 }
 
-func TestWindowProblem(t *testing.T) {
-	eq(t, WindowProblem(1, Span{360, 600}), "")
-	eq(t, WindowProblem(0, Span{360, 600}), "Hari tidak valid")
-	eq(t, WindowProblem(7, Span{600, 600}), "Jam selesai harus setelah jam mulai")
-	eq(t, WindowProblem(7, Span{600, EndOfDay + 1}), "Jam selesai harus setelah jam mulai")
+func TestSpanProblem(t *testing.T) {
+	eq(t, SpanProblem(Span{360, 600}), "")
+	eq(t, SpanProblem(Span{600, 600}), "Jam selesai harus setelah jam mulai")
+	eq(t, SpanProblem(Span{600, EndOfDay + 1}), "Jam selesai harus setelah jam mulai")
 }
 
 func TestDayWindows(t *testing.T) {

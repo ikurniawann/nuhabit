@@ -260,7 +260,7 @@ func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.
 
 // ── Availability ────────────────────────────────────────────────────────────
 
-func (h *handler) coachParam(r *http.Request, sc scope) (string, error) {
+func coachParam(r *http.Request, sc scope) (string, error) {
 	id, err := pathUUID(r, "coachId")
 	if err == nil && !sc.allows(id) {
 		err = httpx.NotFound("Coach tidak ditemukan")
@@ -269,7 +269,7 @@ func (h *handler) coachParam(r *http.Request, sc scope) (string, error) {
 }
 
 func (h *handler) availability(w http.ResponseWriter, r *http.Request, sc scope) error {
-	coachID, err := h.coachParam(r, sc)
+	coachID, err := coachParam(r, sc)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func (h *handler) availability(w http.ResponseWriter, r *http.Request, sc scope)
 }
 
 func (h *handler) setWeekly(w http.ResponseWriter, r *http.Request, sc scope) error {
-	coachID, err := h.coachParam(r, sc)
+	coachID, err := coachParam(r, sc)
 	if err != nil {
 		return err
 	}
@@ -305,16 +305,16 @@ func (h *handler) setWeekly(w http.ResponseWriter, r *http.Request, sc scope) er
 }
 
 func (h *handler) addException(w http.ResponseWriter, r *http.Request, sc scope) error {
-	coachID, err := h.coachParam(r, sc)
+	coachID, err := coachParam(r, sc)
 	if err != nil {
 		return err
 	}
 	var body struct {
-		Date      string  `json:"date"`
-		Kind      string  `json:"kind"`
-		StartTime *string `json:"start_time"`
-		EndTime   *string `json:"end_time"`
-		Note      string  `json:"note"`
+		Date      string `json:"date"`
+		Kind      string `json:"kind"`
+		StartTime string `json:"start_time"`
+		EndTime   string `json:"end_time"`
+		Note      string `json:"note"`
 	}
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		return err
@@ -322,15 +322,9 @@ func (h *handler) addException(w http.ResponseWriter, r *http.Request, sc scope)
 	if len([]rune(body.Note)) > 200 {
 		return httpx.BadRequest("Catatan terlalu panjang")
 	}
-	deref := func(p *string) string {
-		if p == nil {
-			return ""
-		}
-		return *p
-	}
 	id, err := h.svc.AddException(r.Context(), coachID, sc.user.ID, NewException{
 		Date: body.Date, Kind: domain.ExceptionKind(body.Kind),
-		StartTime: deref(body.StartTime), EndTime: deref(body.EndTime), Note: strings.TrimSpace(body.Note),
+		StartTime: body.StartTime, EndTime: body.EndTime, Note: strings.TrimSpace(body.Note),
 	})
 	if err != nil {
 		return err
@@ -556,7 +550,7 @@ func (h *handler) participantAction(w http.ResponseWriter, r *http.Request, sc s
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		return err
 	}
-	appointmentID, _, err := h.svc.ParticipantAppointment(r.Context(), id)
+	appointmentID, err := h.svc.ParticipantAppointment(r.Context(), id)
 	if err != nil {
 		return err
 	}
