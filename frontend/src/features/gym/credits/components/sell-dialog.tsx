@@ -20,8 +20,15 @@ import { cn } from "@/lib/utils";
 import { Field } from "@/features/crm/engagement/components/shared";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
-import { gymCreditsApi, METHOD_LABELS, type CreditPurchase, type MemberCredits, type PaymentMethod } from "../api";
-import { priceAt, sellablePackages } from "../pricing";
+import {
+  gymCreditsApi,
+  METHOD_LABELS,
+  type CreditPurchase,
+  type MemberCredits,
+  type PaymentMethod,
+  type VoucherQuote,
+} from "../api";
+import { priceAt, saleTotal, sellablePackages } from "../pricing";
 
 /**
  * Jual paket di front desk. Cabang awal = cabang staf (atau cabang sesi pada
@@ -47,13 +54,24 @@ export function SellDialog({
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [discount, setDiscount] = useState("0");
   const [note, setNote] = useState("");
+  const [code, setCode] = useState("");
+  const [quote, setQuote] = useState<VoucherQuote | null>(null);
   const active = sellablePackages(packages.data?.packages ?? [], branchId);
   const pkg = active.find((p) => p.id === packageId);
   const price = pkg ? priceAt(pkg, branchId) : 0;
-  const discountIdr = method === "complimentary" ? price : Math.min(Number(discount) || 0, price);
-  const total = price - discountIdr;
+  const complimentary = method === "complimentary";
+  const { voucher, manual: discountIdr, total } = saleTotal(price, quote?.discount_idr ?? 0, Number(discount) || 0, complimentary);
+  const voucherUnchecked = !complimentary && code.trim() !== "" && !quote;
   const arkShort = method === "ark_coin" && total > credits.member.ark_balance_idr;
   const branchOptions = branches.data?.branches ?? [];
+
+  const check = useMutation({
+    mutationFn: () => gymCreditsApi.previewVoucher(credits.member.id, { package_id: packageId, code: code.trim(), branch_id: branchId || null }),
+    onSuccess: setQuote,
+    onError: (error) => toast.error("Voucher tidak berlaku", { description: error.message }),
+  });
+  // A quote is for one package, branch and code; any change asks again.
+  const resetVoucher = () => setQuote(null);
 
   const sell = useMutation({
     mutationFn: () =>
@@ -63,6 +81,7 @@ export function SellDialog({
         discount_idr: discountIdr,
         note,
         branch_id: branchId || null,
+        voucher_code: complimentary || !quote ? null : quote.code,
       }),
     onSuccess: (purchase) => {
       toast.success("Paket terjual", {
@@ -96,6 +115,7 @@ export function SellDialog({
                   onValueChange={(v) => {
                     setChosenBranch(v as string);
                     setPackageId("");
+                    resetVoucher();
                   }}
                 >
                   <SelectTrigger aria-label="Cabang penjualan">
@@ -112,7 +132,13 @@ export function SellDialog({
               </Field>
             )}
             <Field label="Paket" className="sm:col-span-2">
-              <Select value={packageId} onValueChange={(v) => setPackageId(v as string)}>
+              <Select
+                value={packageId}
+                onValueChange={(v) => {
+                  setPackageId(v as string);
+                  resetVoucher();
+                }}
+              >
                 <SelectTrigger aria-label="Paket">
                   <SelectValue placeholder={packages.isLoading ? "Memuat paket…" : "Pilih paket"} />
                 </SelectTrigger>
@@ -140,21 +166,55 @@ export function SellDialog({
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Diskon (Rp)">
+            <Field label="Diskon manual (Rp)" hint={voucher > 0 ? "Dipotong setelah voucher." : undefined}>
               <Input
                 type="number"
                 min={0}
-                value={method === "complimentary" ? String(discountIdr) : discount}
-                disabled={method === "complimentary"}
+                value={complimentary ? String(discountIdr) : discount}
+                disabled={complimentary}
                 onChange={(e) => setDiscount(e.target.value)}
               />
             </Field>
+            {!complimentary && (
+              <Field
+                label="Kode voucher"
+                className="sm:col-span-2"
+                hint={quote ? `${quote.label}: potongan ${formatRupiah(voucher)}` : "Opsional. Cek dulu sebelum menyimpan."}
+              >
+                <div className="flex gap-2">
+                  <Input
+                    value={code}
+                    onChange={(e) => {
+                      setCode(e.target.value.toUpperCase());
+                      resetVoucher();
+                    }}
+                    placeholder="Contoh: GYM10"
+                    aria-label="Kode voucher"
+                    autoCapitalize="characters"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!pkg || code.trim() === "" || !!quote || check.isPending}
+                    onClick={() => check.mutate()}
+                  >
+                    {check.isPending ? "Mengecek…" : quote ? "Berlaku" : "Cek"}
+                  </Button>
+                </div>
+              </Field>
+            )}
             <Field label="Catatan" className="sm:col-span-2">
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="No. struk EDC, nama kasir, dll." />
             </Field>
             <div className="rounded-2xl bg-surface px-4 py-3 sm:col-span-2">
               <p className="text-xs text-muted-foreground">Total dibayar</p>
               <p className="text-2xl font-bold tabular-nums">{formatRupiah(total)}</p>
+              {voucher > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Voucher {quote?.code} −{formatRupiah(voucher)}
+                  {discountIdr > 0 ? ` · diskon manual −${formatRupiah(discountIdr)}` : ""}
+                </p>
+              )}
               {pkg && price !== pkg.price_idr && (
                 <p className="text-xs text-muted-foreground">Harga cabang · harga dasar {formatRupiah(pkg.price_idr)}</p>
               )}
@@ -170,7 +230,7 @@ export function SellDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
-            <Button type="submit" disabled={!pkg || arkShort || sell.isPending}>
+            <Button type="submit" disabled={!pkg || arkShort || voucherUnchecked || sell.isPending}>
               {sell.isPending ? "Menyimpan…" : "Simpan penjualan"}
             </Button>
           </DialogFooter>

@@ -106,7 +106,41 @@ export interface CreditLot {
   expired: boolean;
 }
 
-export type EntryType = "top_up" | "class_deduction" | "refund" | "bonus" | "expiration" | "adjustment" | "reversal";
+export type EntryType =
+  | "top_up"
+  | "class_deduction"
+  | "refund"
+  | "bonus"
+  | "expiration"
+  | "adjustment"
+  | "reversal"
+  | "transfer_in"
+  | "transfer_out";
+
+/** Transfer entries move credits between members; they are not reversed one by one. */
+export const isReversible = (e: CreditEntry) =>
+  !e.reversed && !["reversal", "expiration", "transfer_in", "transfer_out"].includes(e.type);
+
+/** Sending credits: whether members may, the monthly cap (0 = none) and what was sent this month. */
+export interface TransferAllowance {
+  member_enabled: boolean;
+  monthly_cap: number;
+  sent_this_month: number;
+}
+
+export interface TransferResult {
+  transferId: string;
+  credits: number;
+  replayed: boolean;
+}
+
+export interface VoucherQuote {
+  code: string;
+  label: string;
+  price_idr: number;
+  discount_idr: number;
+  total_idr: number;
+}
 
 export interface CreditEntry {
   id: string;
@@ -158,6 +192,7 @@ export interface MemberCredits {
   lots: CreditLot[];
   passes: MemberPass[];
   freeze: FreezeAllowance;
+  transfer: TransferAllowance;
   entries: CreditEntry[];
   purchases: CreditPurchase[];
 }
@@ -181,8 +216,21 @@ export const gymCreditsApi = {
     send<{ balanceAfter: number }>(`/api/gym/credits/${customerId}/adjust`, { amount, reason }),
   sell: (
     customerId: string,
-    input: { package_id: string; payment_method: PaymentMethod; discount_idr: number; note: string; branch_id: string | null }
+    input: {
+      package_id: string;
+      payment_method: PaymentMethod;
+      discount_idr: number;
+      note: string;
+      branch_id: string | null;
+      voucher_code: string | null;
+    }
   ) => send<CreditPurchase>(`/api/gym/credits/${customerId}/sell`, input),
+  previewVoucher: (customerId: string, input: { package_id: string; code: string; branch_id: string | null }) =>
+    send<VoucherQuote>(`/api/gym/credits/${customerId}/vouchers/preview`, input),
+  transfer: (
+    customerId: string,
+    input: { to_customer_id: string; lots: { lot_id: string; credits: number }[]; note: string; idempotency_key: string }
+  ) => send<TransferResult>(`/api/gym/credits/${customerId}/transfer`, input),
   reverse: (entryId: string, reason: string) => send("/api/gym/credits/reverse", { entry_id: entryId, reason }),
   refundQuote: (purchaseId: string) => call<RefundQuote>(`/api/gym/credits/purchases/${purchaseId}/refund-quote`),
   refundPurchase: (purchaseId: string, reason: string, mode: RefundMode) =>
@@ -210,6 +258,8 @@ export const ENTRY_LABELS: Record<EntryType, string> = {
   expiration: "Kedaluwarsa",
   adjustment: "Penyesuaian",
   reversal: "Pembatalan",
+  transfer_in: "Terima transfer",
+  transfer_out: "Kirim transfer",
 };
 
 export const METHOD_LABELS: Record<PaymentMethod, string> = {

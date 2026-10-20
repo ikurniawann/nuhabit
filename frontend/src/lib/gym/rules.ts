@@ -53,6 +53,10 @@ export interface GymRules {
   minFreezeDays: number;
   /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
   renewalLeadDays: number;
+  /** Member boleh mengirim kredit ke member lain dari aplikasi member. Staf selalu boleh. */
+  allowMemberCreditTransfer: boolean;
+  /** Batas kredit yang dikirim satu member per bulan WIB, staf dan member digabung (0 = tanpa batas). */
+  maxTransferCreditsPerMonth: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -82,6 +86,8 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   maxFreezeDaysPerYear: 30,
   minFreezeDays: 7,
   renewalLeadDays: 3,
+  allowMemberCreditTransfer: false,
+  maxTransferCreditsPerMonth: 0,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -119,6 +125,8 @@ const rulesShape = {
   maxFreezeDaysPerYear: int(0, 365, "Jatah bekukan per tahun"),
   minFreezeDays: int(1, 365, "Durasi bekukan"),
   renewalLeadDays: int(0, 30, "Perpanjangan otomatis"),
+  allowMemberCreditTransfer: z.boolean({ error: "Transfer kredit oleh member harus ya/tidak" }),
+  maxTransferCreditsPerMonth: int(0, 1000, "Batas transfer kredit per bulan"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();

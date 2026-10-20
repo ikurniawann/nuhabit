@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/fo
 import {
   ENTRY_LABELS,
   gymCreditsApi,
+  isReversible,
   METHOD_LABELS,
   type CreditEntry,
   type CreditPurchase,
@@ -36,6 +37,7 @@ import {
 } from "../api";
 import { PassesCard, RefundDialog } from "./pass-panel";
 import { SellDialog } from "./sell-dialog";
+import { TransferDialog } from "./transfer-dialog";
 import { useDebounced } from "@/features/gym/use-debounced";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
@@ -129,7 +131,7 @@ export function CreditsPage() {
 function MemberCreditsPanel({ customerId }: { customerId: string }) {
   const queryClient = useQueryClient();
   const detail = useQuery({ queryKey: memberKey(customerId), queryFn: () => gymCreditsApi.memberCredits(customerId) });
-  const [dialog, setDialog] = useState<"adjust" | "sell" | null>(null);
+  const [dialog, setDialog] = useState<"adjust" | "sell" | "transfer" | null>(null);
   const [reversing, setReversing] = useState<CreditEntry | null>(null);
   const [refunding, setRefunding] = useState<CreditPurchase | null>(null);
   const refresh = () => {
@@ -157,6 +159,9 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setDialog("adjust")}>
             <SlidersHorizontal /> Sesuaikan
+          </Button>
+          <Button variant="outline" onClick={() => setDialog("transfer")} disabled={d.balance <= 0}>
+            <ArrowLeftRight /> Transfer kredit
           </Button>
           <Button onClick={() => setDialog("sell")} disabled={!d.member.is_active}>
             <ShoppingCart /> Jual paket
@@ -244,7 +249,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{formatDateTime(e.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {!e.reversed && e.type !== "reversal" && e.type !== "expiration" && (
+                    {isReversible(e) && (
                       <Button variant="ghost" size="sm" onClick={() => setReversing(e)}>
                         Batalkan
                       </Button>
@@ -313,6 +318,16 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
 
       {dialog === "adjust" && <AdjustDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "sell" && <SellDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
+      {dialog === "transfer" && (
+        <TransferDialog
+          credits={d}
+          onClose={() => setDialog(null)}
+          onDone={() => {
+            refresh();
+            void queryClient.invalidateQueries({ queryKey: ["gym-credits", "member"] });
+          }}
+        />
+      )}
       {reversing && (
         <ReasonDialog
           title={`Batalkan ${ENTRY_LABELS[reversing.type].toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}

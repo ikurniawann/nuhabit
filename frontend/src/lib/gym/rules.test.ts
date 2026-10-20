@@ -36,8 +36,10 @@ describe("GYM_RULE_DEFAULTS", () => {
       maxFreezeDaysPerYear: 30,
       minFreezeDays: 7,
       renewalLeadDays: 3,
+      allowMemberCreditTransfer: false,
+      maxTransferCreditsPerMonth: 0,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(24);
+    expect(GYM_RULE_KEYS).toHaveLength(26);
   });
 });
 
@@ -85,6 +87,11 @@ describe("validateGymRules", () => {
       error: "minFreezeDays: Durasi bekukan minimal 1",
     });
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalLeadDays: 31 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, maxTransferCreditsPerMonth: 1001 })).toEqual({
+      ok: false,
+      error: "maxTransferCreditsPerMonth: Batas transfer kredit per bulan maksimal 1000",
+    });
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, allowMemberCreditTransfer: "ya" }).ok).toBe(false);
   });
 });
 
