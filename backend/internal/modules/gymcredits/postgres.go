@@ -272,7 +272,7 @@ func (Postgres) InsertPurchase(ctx context.Context, q database.Querier, p NewPur
 const purchaseSelect = `SELECT p.id, p.customer_id, p.package_id, pk.name AS package_name, pk.kind, p.credits, pk.validity_days,
        p.price_idr::float AS price_idr, p.discount_idr::float AS discount_idr, p.total_idr::float AS total_idr,
        p.channel, p.payment_method, p.status, p.external_id, p.payment_meta, p.branch_id, p.note,
-       p.paid_at, p.refunded_at, p.created_by, p.created_at
+       p.paid_at, p.refunded_at, p.refunded_idr::float AS refunded_idr, p.created_by, p.created_at
   FROM gym.credit_purchases p JOIN gym.credit_packages pk ON pk.id = p.package_id`
 
 func scanPurchase(row pgx.CollectableRow) (Purchase, error) {
@@ -281,7 +281,7 @@ func scanPurchase(row pgx.CollectableRow) (Purchase, error) {
 	var createdAt time.Time
 	err := row.Scan(&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.Kind, &p.Credits, &p.ValidityDays, &p.PriceIdr, &p.DiscountIdr,
 		&p.TotalIdr, &p.Channel, &p.PaymentMethod, &p.Status, &p.ExternalID, &p.PaymentMeta, &p.BranchID, &p.Note,
-		&paidAt, &refundedAt, &p.CreatedBy, &createdAt)
+		&paidAt, &refundedAt, &p.RefundedIdr, &p.CreatedBy, &createdAt)
 	p.PaidAt, p.RefundedAt, p.CreatedAt = jsTimePtr(paidAt), jsTimePtr(refundedAt), JSTime(createdAt)
 	return p, err
 }
@@ -354,12 +354,12 @@ func (Postgres) ClosePurchase(ctx context.Context, q database.Querier, id, statu
 	return err
 }
 
-func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string) error {
+func (Postgres) MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64) error {
 	_, err := q.Exec(ctx,
 		`UPDATE gym.credit_purchases
-		    SET status = 'refunded', refunded_at = now(), updated_at = now(),
+		    SET status = 'refunded', refunded_at = now(), refunded_idr = $3, updated_at = now(),
 		        note = concat_ws(' · ', note, $2::text)
-		  WHERE id = $1`, id, note)
+		  WHERE id = $1`, id, note, amountIdr)
 	return err
 }
 
@@ -379,15 +379,23 @@ func (Postgres) AttachQR(ctx context.Context, q database.Querier, id, referenceI
 func (Postgres) InsertPass(ctx context.Context, q database.Querier, p NewPass) (string, error) {
 	var id string
 	err := q.QueryRow(ctx,
-		`INSERT INTO gym.member_passes (customer_id, package_id, purchase_id, starts_at, ends_at)
-		 VALUES ($1,$2,$3,$4,$5)
+		`INSERT INTO gym.member_passes (customer_id, package_id, purchase_id, starts_at, ends_at, auto_renew, renew_with)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
 		 ON CONFLICT (purchase_id) WHERE purchase_id IS NOT NULL DO NOTHING
 		 RETURNING id`,
-		p.CustomerID, p.PackageID, null(p.PurchaseID), p.StartsAt, p.EndsAt).Scan(&id)
+		p.CustomerID, p.PackageID, null(p.PurchaseID), p.StartsAt, p.EndsAt, p.AutoRenew, p.RenewWith).Scan(&id)
 	if database.IsNoRows(err) {
 		return "", nil
 	}
 	return id, err
+}
+
+func (Postgres) LastPassEnd(ctx context.Context, q database.Querier, customerID string) (*time.Time, error) {
+	var end *time.Time
+	err := q.QueryRow(ctx,
+		`SELECT max(ends_at) FROM gym.member_passes WHERE customer_id = $1 AND status IN ('active', 'frozen')`,
+		customerID).Scan(&end)
+	return end, err
 }
 
 func (Postgres) ExpireLapsedPasses(ctx context.Context, q database.Querier, customerID string, now time.Time) error {
@@ -397,41 +405,177 @@ func (Postgres) ExpireLapsedPasses(ctx context.Context, q database.Querier, cust
 	return err
 }
 
-const passSelect = `SELECT mp.id, mp.customer_id, mp.package_id, pk.name, mp.purchase_id, mp.starts_at, mp.ends_at, mp.status
-  FROM gym.member_passes mp JOIN gym.credit_packages pk ON pk.id = mp.package_id`
+const passSelect = `SELECT mp.id, mp.customer_id, mp.package_id, pk.name, mp.purchase_id, mp.starts_at, mp.ends_at, mp.status,
+       mp.frozen_at, mp.frozen_until, mp.auto_renew, mp.renew_with, cp.branch_id
+  FROM gym.member_passes mp
+  JOIN gym.credit_packages pk ON pk.id = mp.package_id
+  LEFT JOIN gym.credit_purchases cp ON cp.id = mp.purchase_id`
 
 func scanPass(row pgx.CollectableRow) (PassRow, error) {
 	var p PassRow
-	err := row.Scan(&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.PurchaseID, &p.StartsAt, &p.EndsAt, &p.Status)
+	err := row.Scan(&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.PurchaseID, &p.StartsAt, &p.EndsAt, &p.Status,
+		&p.FrozenAt, &p.FrozenUntil, &p.AutoRenew, &p.RenewWith, &p.BranchID)
 	p.StartsAt, p.EndsAt = p.StartsAt.Truncate(time.Millisecond), p.EndsAt.Truncate(time.Millisecond)
 	return p, err
 }
 
-func (Postgres) Passes(ctx context.Context, q database.Querier, customerID string) ([]PassRow, error) {
-	rows, err := q.Query(ctx, passSelect+` WHERE mp.customer_id = $1 ORDER BY (mp.status = 'active') DESC, mp.ends_at DESC`, customerID)
+func collectPasses(rows pgx.Rows, err error) ([]PassRow, error) {
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, scanPass)
 }
 
-func (Postgres) ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*PassRow, error) {
-	rows, err := q.Query(ctx, passSelect+`
-		 WHERE mp.customer_id = $1 AND mp.status = 'active' AND mp.starts_at <= $2 AND mp.ends_at > $2
-		 ORDER BY mp.ends_at DESC LIMIT 1`, customerID, at)
-	if err != nil {
-		return nil, err
-	}
-	found, err := pgx.CollectRows(rows, scanPass)
+func firstPass(rows pgx.Rows, err error) (*PassRow, error) {
+	found, err := collectPasses(rows, err)
 	if err != nil || len(found) == 0 {
 		return nil, err
 	}
 	return &found[0], nil
 }
 
+// Passes lists live passes first in the order they run, then the rest
+// newest first.
+func (Postgres) Passes(ctx context.Context, q database.Querier, customerID string) ([]PassRow, error) {
+	return collectPasses(q.Query(ctx, passSelect+` WHERE mp.customer_id = $1
+		 ORDER BY (mp.status IN ('active', 'frozen')) DESC,
+		          CASE WHEN mp.status IN ('active', 'frozen') THEN mp.starts_at END,
+		          mp.ends_at DESC`, customerID))
+}
+
+func (Postgres) Pass(ctx context.Context, q database.Querier, id string, lock bool) (*PassRow, error) {
+	sql := passSelect + ` WHERE mp.id = $1`
+	if lock {
+		sql += ` FOR UPDATE OF mp`
+	}
+	return firstPass(q.Query(ctx, sql, id))
+}
+
+func (Postgres) PassByPurchase(ctx context.Context, q database.Querier, purchaseID string) (*PassRow, error) {
+	return firstPass(q.Query(ctx, passSelect+` WHERE mp.purchase_id = $1`, purchaseID))
+}
+
+// ActivePassAt skips frozen passes and the passes queued behind one: a
+// frozen membership grants nothing until it is unfrozen.
+func (Postgres) ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*PassRow, error) {
+	return firstPass(q.Query(ctx, passSelect+`
+		 WHERE mp.customer_id = $1 AND mp.status = 'active' AND mp.starts_at <= $2 AND mp.ends_at > $2
+		   AND NOT EXISTS (SELECT 1 FROM gym.member_passes f
+		                    WHERE f.customer_id = mp.customer_id AND f.status = 'frozen' AND f.ends_at <= mp.starts_at)
+		 ORDER BY mp.ends_at DESC LIMIT 1`, customerID, at))
+}
+
 func (Postgres) RefundPassByPurchase(ctx context.Context, q database.Querier, purchaseID string) error {
 	_, err := q.Exec(ctx,
 		`UPDATE gym.member_passes SET status = 'refunded', updated_at = now() WHERE purchase_id = $1`, purchaseID)
+	return err
+}
+
+func (Postgres) FreezePass(ctx context.Context, q database.Querier, id string, at, until time.Time) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.member_passes SET status = 'frozen', frozen_at = $2, frozen_until = $3, updated_at = now()
+		  WHERE id = $1`, id, at, until)
+	return err
+}
+
+func (Postgres) ThawPass(ctx context.Context, q database.Querier, id string, days int) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.member_passes
+		    SET status = 'active', ends_at = ends_at + make_interval(days => $2), frozen_at = NULL, frozen_until = NULL,
+		        updated_at = now()
+		  WHERE id = $1`, id, days)
+	return err
+}
+
+func (Postgres) ExtendPass(ctx context.Context, q database.Querier, id string, days int) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.member_passes SET ends_at = ends_at + make_interval(days => $2), updated_at = now() WHERE id = $1`, id, days)
+	return err
+}
+
+func (Postgres) ShiftQueuedPasses(ctx context.Context, q database.Querier, customerID, afterPassID string, from time.Time, by time.Duration) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.member_passes
+		    SET starts_at = starts_at + $4 * interval '1 microsecond', ends_at = ends_at + $4 * interval '1 microsecond',
+		        updated_at = now()
+		  WHERE customer_id = $1 AND id <> $2 AND status = 'active' AND starts_at >= $3`,
+		customerID, afterPassID, from, by.Microseconds())
+	return err
+}
+
+func (Postgres) DueFrozenPasses(ctx context.Context, q database.Querier, customerID string, now time.Time) ([]string, error) {
+	rows, err := q.Query(ctx,
+		`SELECT id FROM gym.member_passes
+		  WHERE status = 'frozen' AND frozen_until <= $2 AND ($1 = '' OR customer_id::text = $1)
+		  ORDER BY frozen_until`, customerID, now)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[string])
+}
+
+func (Postgres) SetAutoRenew(ctx context.Context, q database.Querier, id string, on bool, with string) error {
+	_, err := q.Exec(ctx,
+		`UPDATE gym.member_passes SET auto_renew = $2, renew_with = $3, updated_at = now() WHERE id = $1`, id, on, with)
+	return err
+}
+
+func (Postgres) InsertPassEvent(ctx context.Context, q database.Querier, e PassEvent) error {
+	meta := []byte("{}")
+	if e.Meta != nil {
+		var err error
+		if meta, err = json.Marshal(e.Meta); err != nil {
+			return err
+		}
+	}
+	var days any
+	if e.Days != 0 {
+		days = e.Days
+	}
+	_, err := q.Exec(ctx,
+		`INSERT INTO gym.member_pass_events (pass_id, customer_id, kind, days, reason, meta, actor_id)
+		 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
+		e.PassID, e.CustomerID, e.Kind, days, null(e.Reason), string(meta), null(e.ActorID))
+	return err
+}
+
+// FreezeDaysUsed counts the freeze days charged since `since` plus the
+// planned days of a freeze still running.
+func (Postgres) FreezeDaysUsed(ctx context.Context, q database.Querier, customerID string, since time.Time) (int, error) {
+	var used int
+	err := q.QueryRow(ctx,
+		`SELECT ((SELECT COALESCE(sum(COALESCE((meta->>'charged_days')::int, days)), 0)
+		            FROM gym.member_pass_events
+		           WHERE customer_id = $1 AND kind = 'unfreeze' AND created_at > $2)
+		       + (SELECT COALESCE(sum(ceil(extract(epoch FROM frozen_until - frozen_at) / 86400)), 0)
+		            FROM gym.member_passes WHERE customer_id = $1 AND status = 'frozen'))::int`,
+		customerID, since).Scan(&used)
+	return used, err
+}
+
+// RenewalCandidates lists auto-renewing passes not yet handled that end
+// after now and by `until`.
+func (Postgres) RenewalCandidates(ctx context.Context, q database.Querier, now, until time.Time) ([]PassRow, error) {
+	return collectPasses(q.Query(ctx, passSelect+`
+		 WHERE mp.status = 'active' AND mp.auto_renew AND mp.renewal_handled_at IS NULL
+		   AND mp.ends_at > $1 AND mp.ends_at <= $2
+		 ORDER BY mp.ends_at`, now, until))
+}
+
+func (Postgres) ClaimRenewal(ctx context.Context, q database.Querier, id string) (bool, error) {
+	tag, err := q.Exec(ctx,
+		`UPDATE gym.member_passes SET renewal_handled_at = now(), updated_at = now()
+		  WHERE id = $1 AND status = 'active' AND auto_renew AND renewal_handled_at IS NULL`, id)
+	return tag.RowsAffected() == 1, err
+}
+
+func (Postgres) ReleaseRenewal(ctx context.Context, q database.Querier, id string) error {
+	_, err := q.Exec(ctx, `UPDATE gym.member_passes SET renewal_handled_at = NULL WHERE id = $1`, id)
+	return err
+}
+
+func (Postgres) SetRenewalPurchase(ctx context.Context, q database.Querier, id, purchaseID string) error {
+	_, err := q.Exec(ctx, `UPDATE gym.member_passes SET renewal_purchase_id = $2 WHERE id = $1`, id, purchaseID)
 	return err
 }
 

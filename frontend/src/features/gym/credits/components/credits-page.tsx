@@ -34,6 +34,7 @@ import {
   type MemberCredits,
   type PaymentMethod,
 } from "../api";
+import { PassesCard, RefundDialog } from "./pass-panel";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
 
@@ -257,37 +258,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
         )}
       </Card>
 
-      {d.passes.length > 0 && (
-        <Card className="py-0">
-          <h3 className="px-5 pt-4 text-sm font-semibold">Pass</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Pass</TableHead>
-                <TableHead className="hidden md:table-cell">Periode</TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {d.passes.map((p) => (
-                <TableRow key={p.id} className={p.status === "active" ? undefined : "opacity-60"}>
-                  <TableCell className="font-medium">{p.package_name}</TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {formatDate(p.starts_at)} s.d. {formatDate(p.ends_at)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {p.status === "active" ? (
-                      <Badge variant="success">Aktif · {formatNumber(p.days_left)} hari lagi</Badge>
-                    ) : (
-                      <Badge variant="muted">{p.status === "refunded" ? "Refund" : "Berakhir"}</Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+      {d.passes.length > 0 && <PassesCard credits={d} onDone={refresh} />}
 
       <Card className="py-0">
         <h3 className="px-5 pt-4 text-sm font-semibold">Pembelian paket</h3>
@@ -316,6 +287,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                           p.payment_method ? METHOD_LABELS[p.payment_method] : null,
                           p.channel === "member_portal" ? "Portal" : "Front desk",
                           formatDate(p.paid_at ?? p.created_at),
+                          p.refunded_idr != null ? `Refund ${formatRupiah(p.refunded_idr)}` : null,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
@@ -352,20 +324,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
           onDone={refresh}
         />
       )}
-      {refunding && (
-        <ReasonDialog
-          title={`Refund ${refunding.package_name}?`}
-          description={
-            refunding.payment_method === "ark_coin"
-              ? `${formatNumber(refunding.credits)} kredit ditarik dan ${formatRupiah(refunding.total_idr)} kembali ke saldo ARK Coin member.`
-              : `${formatNumber(refunding.credits)} kredit ditarik. Kembalikan ${formatRupiah(refunding.total_idr)} ke member secara manual di kasir.`
-          }
-          confirmLabel="Refund"
-          action={(reason) => gymCreditsApi.refundPurchase(refunding.id, reason)}
-          onClose={() => setRefunding(null)}
-          onDone={refresh}
-        />
-      )}
+      {refunding && <RefundDialog purchase={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
     </div>
   );
 }
@@ -438,7 +397,12 @@ function SellDialog({ credits, onClose, onDone }: { credits: MemberCredits; onCl
     mutationFn: () =>
       gymCreditsApi.sell(credits.member.id, { package_id: packageId, payment_method: method, discount_idr: discountIdr, note }),
     onSuccess: (purchase) => {
-      toast.success("Paket terjual", { description: `${purchase.package_name}: +${formatNumber(purchase.credits)} kredit` });
+      toast.success("Paket terjual", {
+        description:
+          purchase.kind === "pass"
+            ? `${purchase.package_name}: pass ${formatNumber(purchase.validity_days)} hari`
+            : `${purchase.package_name}: +${formatNumber(purchase.credits)} kredit`,
+      });
       onDone();
       onClose();
     },

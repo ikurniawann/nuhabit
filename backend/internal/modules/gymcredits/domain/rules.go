@@ -44,6 +44,14 @@ type Rules struct {
 	ClassReminderMinutes int `json:"classReminderMinutes"`
 	// ScheduleHorizonDays: weekly templates generate sessions this many days ahead.
 	ScheduleHorizonDays int `json:"scheduleHorizonDays"`
+	// MaxFreezeDaysPerYear caps the pass days a member freezes in any 365
+	// days; 0 turns freezing off.
+	MaxFreezeDaysPerYear int `json:"maxFreezeDaysPerYear"`
+	// MinFreezeDays is the shortest freeze and the least an early unfreeze
+	// charges against the yearly allowance.
+	MinFreezeDays int `json:"minFreezeDays"`
+	// RenewalLeadDays: an auto-renewing pass renews this many days before it ends.
+	RenewalLeadDays int `json:"renewalLeadDays"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -69,6 +77,9 @@ type RulesPatch struct {
 	WaitlistOfferMinutes      *int    `json:"waitlistOfferMinutes,omitempty"`
 	ClassReminderMinutes      *int    `json:"classReminderMinutes,omitempty"`
 	ScheduleHorizonDays       *int    `json:"scheduleHorizonDays,omitempty"`
+	MaxFreezeDaysPerYear      *int    `json:"maxFreezeDaysPerYear,omitempty"`
+	MinFreezeDays             *int    `json:"minFreezeDays,omitempty"`
+	RenewalLeadDays           *int    `json:"renewalLeadDays,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -97,6 +108,9 @@ var RuleDefaults = Rules{
 	WaitlistOfferMinutes:      30,
 	ClassReminderMinutes:      120,
 	ScheduleHorizonDays:       14,
+	MaxFreezeDaysPerYear:      30,
+	MinFreezeDays:             7,
+	RenewalLeadDays:           3,
 }
 
 type ruleKind int
@@ -150,6 +164,9 @@ var ruleSpecs = []ruleSpec{
 	intRule("waitlistOfferMinutes", 5, 1440, "Masa tawaran kursi", func(p *RulesPatch) **int { return &p.WaitlistOfferMinutes }),
 	intRule("classReminderMinutes", 0, 10080, "Pengingat kelas", func(p *RulesPatch) **int { return &p.ClassReminderMinutes }),
 	intRule("scheduleHorizonDays", 1, 90, "Horizon jadwal", func(p *RulesPatch) **int { return &p.ScheduleHorizonDays }),
+	intRule("maxFreezeDaysPerYear", 0, 365, "Jatah bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
+	intRule("minFreezeDays", 1, 365, "Durasi bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
+	intRule("renewalLeadDays", 0, 30, "Perpanjangan otomatis", func(p *RulesPatch) **int { return &p.RenewalLeadDays }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -318,6 +335,9 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.WaitlistOfferMinutes, p.WaitlistOfferMinutes)
 	setInt(&base.ClassReminderMinutes, p.ClassReminderMinutes)
 	setInt(&base.ScheduleHorizonDays, p.ScheduleHorizonDays)
+	setInt(&base.MaxFreezeDaysPerYear, p.MaxFreezeDaysPerYear)
+	setInt(&base.MinFreezeDays, p.MinFreezeDays)
+	setInt(&base.RenewalLeadDays, p.RenewalLeadDays)
 	return base
 }
 

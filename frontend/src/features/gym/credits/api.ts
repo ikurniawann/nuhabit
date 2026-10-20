@@ -45,16 +45,45 @@ export interface BranchOption {
 
 export type PackageInput = Omit<CreditPackage, "id" | "branch_name" | "status" | "sold_count" | "referenced"> & { id?: string };
 
+export type RenewWith = "ark" | "invoice";
+
 export interface MemberPass {
   id: string;
   package_id: string;
   package_name: string;
   starts_at: string;
   ends_at: string;
-  status: "active" | "expired" | "refunded";
+  status: "active" | "frozen" | "expired" | "refunded";
+  /** Active but queued: starts when the pass before it ends. */
+  upcoming: boolean;
   days_left: number;
+  frozen_at: string | null;
+  frozen_until: string | null;
+  auto_renew: boolean;
+  renew_with: RenewWith;
   purchase_id: string | null;
 }
+
+/** Freeze budget over the last 365 days. */
+export interface FreezeAllowance {
+  max_days_per_year: number;
+  min_days: number;
+  used_days: number;
+  remaining_days: number;
+}
+
+export interface RefundQuote {
+  purchase_id: string;
+  kind: PackageKind;
+  credits: number;
+  payment_method: PaymentMethod | null;
+  full_idr: number;
+  prorated_idr: number;
+  total_days: number;
+  unused_days: number;
+}
+
+export type RefundMode = "prorated" | "full";
 
 export interface MemberHit {
   id: string;
@@ -98,6 +127,7 @@ export interface CreditPurchase {
   package_name: string;
   kind: PackageKind;
   credits: number;
+  validity_days: number;
   total_idr: number;
   discount_idr: number;
   channel: "member_portal" | "front_desk";
@@ -105,6 +135,7 @@ export interface CreditPurchase {
   status: "pending" | "paid" | "failed" | "expired" | "refunded";
   note: string | null;
   paid_at: string | null;
+  refunded_idr: number | null;
   created_at: string;
 }
 
@@ -125,6 +156,7 @@ export interface MemberCredits {
   low_balance_threshold: number;
   lots: CreditLot[];
   passes: MemberPass[];
+  freeze: FreezeAllowance;
   entries: CreditEntry[];
   purchases: CreditPurchase[];
 }
@@ -149,8 +181,16 @@ export const gymCreditsApi = {
   sell: (customerId: string, input: { package_id: string; payment_method: PaymentMethod; discount_idr: number; note: string }) =>
     send<CreditPurchase>(`/api/gym/credits/${customerId}/sell`, input),
   reverse: (entryId: string, reason: string) => send("/api/gym/credits/reverse", { entry_id: entryId, reason }),
-  refundPurchase: (purchaseId: string, reason: string) =>
-    send<CreditPurchase>(`/api/gym/credits/purchases/${purchaseId}/refund`, { reason }),
+  refundQuote: (purchaseId: string) => call<RefundQuote>(`/api/gym/credits/purchases/${purchaseId}/refund-quote`),
+  refundPurchase: (purchaseId: string, reason: string, mode: RefundMode) =>
+    send<CreditPurchase>(`/api/gym/credits/purchases/${purchaseId}/refund`, { reason, mode }),
+
+  freezePass: (passId: string, days: number) => send<MemberPass>(`/api/gym/passes/${passId}/freeze`, { days }),
+  unfreezePass: (passId: string) => send<MemberPass>(`/api/gym/passes/${passId}/unfreeze`, {}),
+  extendPass: (passId: string, days: number, reason: string) =>
+    send<MemberPass>(`/api/gym/passes/${passId}/extend`, { days, reason }),
+  setAutoRenew: (passId: string, autoRenew: boolean, renewWith?: RenewWith) =>
+    send<MemberPass>(`/api/gym/passes/${passId}/auto-renew`, { auto_renew: autoRenew, renew_with: renewWith }, "PUT"),
 
   rules: () => call<RulesAdmin>("/api/gym/rules"),
   saveRules: (branchId: string | null, rules: Partial<GymRules>) =>

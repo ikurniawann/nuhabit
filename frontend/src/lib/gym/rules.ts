@@ -47,6 +47,12 @@ export interface GymRules {
   classReminderMinutes: number;
   /** Template jadwal membuat sesi sejauh N hari ke depan. */
   scheduleHorizonDays: number;
+  /** Batas hari pass dibekukan dalam 365 hari; 0 = pembekuan mati. */
+  maxFreezeDaysPerYear: number;
+  /** Pembekuan terpendek; unfreeze lebih awal tetap memotong jatah sebanyak ini. */
+  minFreezeDays: number;
+  /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
+  renewalLeadDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -73,6 +79,9 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   waitlistOfferMinutes: 30,
   classReminderMinutes: 120,
   scheduleHorizonDays: 14,
+  maxFreezeDaysPerYear: 30,
+  minFreezeDays: 7,
+  renewalLeadDays: 3,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -107,6 +116,9 @@ const rulesShape = {
   waitlistOfferMinutes: int(5, 1440, "Masa tawaran kursi"),
   classReminderMinutes: int(0, 10080, "Pengingat kelas"),
   scheduleHorizonDays: int(1, 90, "Horizon jadwal"),
+  maxFreezeDaysPerYear: int(0, 365, "Jatah bekukan per tahun"),
+  minFreezeDays: int(1, 365, "Durasi bekukan"),
+  renewalLeadDays: int(0, 30, "Perpanjangan otomatis"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();

@@ -1491,6 +1491,11 @@
   },
   {
     "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/gym/credits/purchases/{id}/refund-quote"
+  },
+  {
+    "module": "gym-credits",
     "method": "POST",
     "path": "/api/gym/credits/reverse"
   },
@@ -1593,6 +1598,26 @@
     "module": "gym-credits",
     "method": "PATCH",
     "path": "/api/gym/packages/{id}"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PUT",
+    "path": "/api/gym/passes/{id}/auto-renew"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/passes/{id}/extend"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/passes/{id}/freeze"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/passes/{id}/unfreeze"
   },
   {
     "module": "gym-training",
@@ -3038,6 +3063,21 @@
     "module": "gym-credits",
     "method": "POST",
     "path": "/api/member-portal/gym/credits/vouchers/preview"
+  },
+  {
+    "module": "gym-credits",
+    "method": "PUT",
+    "path": "/api/member-portal/gym/passes/{id}/auto-renew"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/passes/{id}/freeze"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/passes/{id}/unfreeze"
   },
   {
     "module": "gym-training",

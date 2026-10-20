@@ -3,7 +3,6 @@ package gymcredits
 import (
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 
 	"nuhabit/backend/internal/platform/auth"
@@ -30,7 +29,12 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/gym/credits/{customerId}/adjust", Handler: h.api(h.adjust)},
 		{Pattern: "POST /api/gym/credits/{customerId}/sell", Handler: h.api(h.sell)},
 		{Pattern: "POST /api/gym/credits/reverse", Handler: h.api(h.reverse)},
+		{Pattern: "GET /api/gym/credits/purchases/{id}/refund-quote", Handler: h.api(h.refundQuote)},
 		{Pattern: "POST /api/gym/credits/purchases/{id}/refund", Handler: h.api(h.refund)},
+		{Pattern: "POST /api/gym/passes/{id}/freeze", Handler: h.api(h.freezePass)},
+		{Pattern: "POST /api/gym/passes/{id}/unfreeze", Handler: h.api(h.unfreezePass)},
+		{Pattern: "POST /api/gym/passes/{id}/extend", Handler: h.api(h.extendPass)},
+		{Pattern: "PUT /api/gym/passes/{id}/auto-renew", Handler: h.api(h.autoRenew)},
 		{Pattern: "GET /api/gym/rules", Handler: h.api(h.rules)},
 		{Pattern: "PUT /api/gym/rules", Handler: h.api(h.saveRules)},
 
@@ -42,6 +46,9 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "POST /api/member-portal/gym/credits/vouchers/preview", Handler: h.auth.MemberHandler("Gagal memeriksa voucher", h.previewVoucher)},
 		{Pattern: "GET /api/member-portal/gym/credits/purchases/{id}", Handler: h.auth.MemberHandler("Gagal memuat status pembelian", h.purchaseStatus)},
 		{Pattern: "POST /api/member-portal/gym/credits/purchases/{id}/simulate-paid", Handler: h.auth.MemberHandler("Gagal mensimulasikan pembayaran", h.simulatePaid)},
+		{Pattern: "POST /api/member-portal/gym/passes/{id}/freeze", Handler: h.auth.MemberHandler("Gagal membekukan pass", h.memberFreeze)},
+		{Pattern: "POST /api/member-portal/gym/passes/{id}/unfreeze", Handler: h.auth.MemberHandler("Gagal mengaktifkan pass", h.memberUnfreeze)},
+		{Pattern: "PUT /api/member-portal/gym/passes/{id}/auto-renew", Handler: h.auth.MemberHandler("Gagal mengubah perpanjangan otomatis", h.memberAutoRenew)},
 	}
 }
 
@@ -257,15 +264,86 @@ func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	body, _ := readJSON(r, undefined)
-	reason, err := parseRefund(body)
+	reason, full, err := parseRefund(body)
 	if err != nil {
 		return err
 	}
-	purchase, err := h.svc.RefundPurchaseTx(r.Context(), id, reason, user.ID)
+	purchase, err := h.svc.RefundPurchaseTx(r.Context(), id, reason, user.ID, full)
 	if err != nil {
 		return err
 	}
 	return ok(w, purchase)
+}
+
+func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
+	if _, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...); err != nil {
+		return err
+	}
+	id, err := requireUUID(r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	quote, err := h.svc.RefundQuote(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	return ok(w, quote)
+}
+
+/* ── Staff: pass lifecycle ───────────────────────────────────────────── */
+
+// staffPass checks the credits menu and the pass id, then runs fn.
+func (h *Handler) staffPass(w http.ResponseWriter, r *http.Request, fn func(id string, by PassActor, body any) (*PassView, error)) error {
+	user, err := h.auth.RequireMenuPrefix(r, iam.GymCredits...)
+	if err != nil {
+		return err
+	}
+	id, err := requireUUID(r.PathValue("id"))
+	if err != nil {
+		return err
+	}
+	body, _ := readJSON(r, undefined)
+	view, err := fn(id, PassActor{StaffID: user.ID}, body)
+	if err != nil {
+		return err
+	}
+	return ok(w, view)
+}
+
+func (h *Handler) freezePass(w http.ResponseWriter, r *http.Request) error {
+	return h.staffPass(w, r, func(id string, by PassActor, body any) (*PassView, error) {
+		days, err := parseFreeze(body, false)
+		if err != nil {
+			return nil, err
+		}
+		return h.svc.FreezePass(r.Context(), id, days, by)
+	})
+}
+
+func (h *Handler) unfreezePass(w http.ResponseWriter, r *http.Request) error {
+	return h.staffPass(w, r, func(id string, by PassActor, _ any) (*PassView, error) {
+		return h.svc.UnfreezePass(r.Context(), id, by)
+	})
+}
+
+func (h *Handler) extendPass(w http.ResponseWriter, r *http.Request) error {
+	return h.staffPass(w, r, func(id string, by PassActor, body any) (*PassView, error) {
+		in, err := parseExtend(body)
+		if err != nil {
+			return nil, err
+		}
+		return h.svc.ExtendPass(r.Context(), id, in.Days, in.Reason, by.StaffID)
+	})
+}
+
+func (h *Handler) autoRenew(w http.ResponseWriter, r *http.Request) error {
+	return h.staffPass(w, r, func(id string, by PassActor, body any) (*PassView, error) {
+		in, err := parseAutoRenew(body, false)
+		if err != nil {
+			return nil, err
+		}
+		return h.svc.SetAutoRenew(r.Context(), id, in.On, in.RenewWith, by)
+	})
 }
 
 /* ── Staff: rules ────────────────────────────────────────────────────── */
@@ -349,7 +427,7 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 	origin := appOrigin(r)
 	switch in.Method {
 	case "ark_coin":
-		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID, in.VoucherCode)
+		view, err = h.svc.BuyWithArk(r.Context(), purchase)
 	case "invoice":
 		view, err = h.svc.StartInvoicePurchase(r.Context(), purchase, func(purchaseID string) string {
 			if in.FromSite {
@@ -418,14 +496,54 @@ func (h *Handler) simulatePaid(w http.ResponseWriter, r *http.Request, customerI
 	return ok(w, view)
 }
 
+/* ── Member portal: own passes ───────────────────────────────────────── */
+
+// memberPass checks the pass id and runs fn as the member; rule failures
+// render with their status like the purchase routes.
+func memberPass(w http.ResponseWriter, r *http.Request, customerID string, fn func(id string, by PassActor, body any) (*PassView, error)) error {
+	id := r.PathValue("id")
+	if !isUUID(id) {
+		return httpx.BadRequest("ID tidak valid")
+	}
+	body, _ := readJSON(r, map[string]any{})
+	view, err := fn(id, PassActor{CustomerID: customerID}, body)
+	if err != nil {
+		return asHTTP(err)
+	}
+	return ok(w, view)
+}
+
+func (h *Handler) memberFreeze(w http.ResponseWriter, r *http.Request, customerID string) error {
+	return memberPass(w, r, customerID, func(id string, by PassActor, body any) (*PassView, error) {
+		days, err := parseFreeze(body, true)
+		if err != nil {
+			return nil, err
+		}
+		return h.svc.FreezePass(r.Context(), id, days, by)
+	})
+}
+
+func (h *Handler) memberUnfreeze(w http.ResponseWriter, r *http.Request, customerID string) error {
+	return memberPass(w, r, customerID, func(id string, by PassActor, _ any) (*PassView, error) {
+		return h.svc.UnfreezePass(r.Context(), id, by)
+	})
+}
+
+func (h *Handler) memberAutoRenew(w http.ResponseWriter, r *http.Request, customerID string) error {
+	return memberPass(w, r, customerID, func(id string, by PassActor, body any) (*PassView, error) {
+		in, err := parseAutoRenew(body, true)
+		if err != nil {
+			return nil, err
+		}
+		return h.svc.SetAutoRenew(r.Context(), id, in.On, in.RenewWith, by)
+	})
+}
+
 // appOrigin mirrors frontend/src/lib/app-origin.ts: NEXT_PUBLIC_APP_URL (or
 // NEXT_PUBLIC_BASE_URL), else the public origin of the request as the
 // Next.js proxy forwards it.
 func appOrigin(r *http.Request) string {
-	origin := strings.TrimSpace(os.Getenv("NEXT_PUBLIC_APP_URL"))
-	if origin == "" {
-		origin = strings.TrimSpace(os.Getenv("NEXT_PUBLIC_BASE_URL"))
-	}
+	origin := envOrigin()
 	if origin == "" {
 		scheme := "http"
 		if r.TLS != nil {

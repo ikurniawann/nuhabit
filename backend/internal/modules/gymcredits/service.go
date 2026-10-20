@@ -302,6 +302,28 @@ type NewPass struct {
 	PurchaseID string
 	StartsAt   time.Time
 	EndsAt     time.Time
+	AutoRenew  bool
+	RenewWith  string
+}
+
+// Pass event kinds (gym.member_pass_events.kind).
+const (
+	EventFreeze    = "freeze"
+	EventUnfreeze  = "unfreeze"
+	EventExtend    = "extend"
+	EventAutoRenew = "auto_renew"
+	EventRenewal   = "renewal"
+)
+
+// PassEvent is one row of the pass log. Empty strings and zero Days are NULL.
+type PassEvent struct {
+	PassID     string
+	CustomerID string
+	Kind       string
+	Days       int
+	Reason     string
+	Meta       map[string]any
+	ActorID    string
 }
 
 // NewPurchase is a pending purchase to insert.
@@ -375,17 +397,42 @@ type Repository interface {
 	// MarkPurchasePaid returns paid_at and the package validity.
 	MarkPurchasePaid(ctx context.Context, q database.Querier, id string, meta map[string]any) (time.Time, int, error)
 	ClosePurchase(ctx context.Context, q database.Querier, id, status string) error
-	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string) error
+	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64) error
 	AttachQR(ctx context.Context, q database.Querier, id, referenceID string, meta map[string]any) error
 
 	// InsertPass returns "" when the purchase already issued a pass.
 	InsertPass(ctx context.Context, q database.Querier, p NewPass) (string, error)
+	// LastPassEnd is the latest ends_at of the member's active or frozen
+	// passes, nil when none.
+	LastPassEnd(ctx context.Context, q database.Querier, customerID string) (*time.Time, error)
 	// ExpireLapsedPasses flips active passes past ends_at to expired.
 	ExpireLapsedPasses(ctx context.Context, q database.Querier, customerID string, now time.Time) error
 	Passes(ctx context.Context, q database.Querier, customerID string) ([]PassRow, error)
+	// Pass is nil when the pass does not exist; lock holds the row FOR UPDATE.
+	Pass(ctx context.Context, q database.Querier, id string, lock bool) (*PassRow, error)
+	PassByPurchase(ctx context.Context, q database.Querier, purchaseID string) (*PassRow, error)
 	// ActivePassAt is the active pass covering at, nil when none.
 	ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*PassRow, error)
 	RefundPassByPurchase(ctx context.Context, q database.Querier, purchaseID string) error
+	FreezePass(ctx context.Context, q database.Querier, id string, at, until time.Time) error
+	// ThawPass ends a freeze and moves ends_at out by days.
+	ThawPass(ctx context.Context, q database.Querier, id string, days int) error
+	ExtendPass(ctx context.Context, q database.Querier, id string, days int) error
+	// ShiftQueuedPasses moves the member's active passes starting at or after
+	// from (other than afterPassID) by `by`.
+	ShiftQueuedPasses(ctx context.Context, q database.Querier, customerID, afterPassID string, from time.Time, by time.Duration) error
+	// DueFrozenPasses lists frozen passes whose frozen_until has passed, of
+	// one member ("" for all).
+	DueFrozenPasses(ctx context.Context, q database.Querier, customerID string, now time.Time) ([]string, error)
+	SetAutoRenew(ctx context.Context, q database.Querier, id string, on bool, with string) error
+	InsertPassEvent(ctx context.Context, q database.Querier, e PassEvent) error
+	FreezeDaysUsed(ctx context.Context, q database.Querier, customerID string, since time.Time) (int, error)
+	RenewalCandidates(ctx context.Context, q database.Querier, now, until time.Time) ([]PassRow, error)
+	// ClaimRenewal marks the pass renewal as handled; false when another run
+	// already did or auto-renew is off.
+	ClaimRenewal(ctx context.Context, q database.Querier, id string) (bool, error)
+	ReleaseRenewal(ctx context.Context, q database.Querier, id string) error
+	SetRenewalPurchase(ctx context.Context, q database.Querier, id, purchaseID string) error
 
 	Packages(ctx context.Context, q database.Querier) ([]PackageRow, error)
 	ActivePackages(ctx context.Context, q database.Querier) ([]PortalPackageRow, error)

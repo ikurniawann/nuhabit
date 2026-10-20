@@ -60,7 +60,7 @@ func TestGymVouchersAgainstPromoEngine(t *testing.T) {
 		t.Fatalf("pos code: %v", err)
 	}
 
-	paid, err := svc.BuyWithArk(ctx, member.CustomerID, pkg, gymCode)
+	paid, err := svc.BuyWithArk(ctx, gymcredits.MemberPurchase{CustomerID: member.CustomerID, PackageID: pkg, VoucherCode: gymCode})
 	if err != nil || paid.Status != "paid" || paid.TotalIdr != 270_000 {
 		t.Fatalf("buy %+v %v", paid, err)
 	}
@@ -69,7 +69,7 @@ func TestGymVouchersAgainstPromoEngine(t *testing.T) {
 	if redemption != "captured|30000|"+member.Phone {
 		t.Fatalf("redemption %q", redemption)
 	}
-	if _, err := svc.BuyWithArk(ctx, member.CustomerID, pkg, gymCode); err == nil || err.Error() != "Nomor ini sudah memakai kode promo ini" {
+	if _, err := svc.BuyWithArk(ctx, gymcredits.MemberPurchase{CustomerID: member.CustomerID, PackageID: pkg, VoucherCode: gymCode}); err == nil || err.Error() != "Nomor ini sudah memakai kode promo ini" {
 		t.Fatalf("second use: %v", err)
 	}
 

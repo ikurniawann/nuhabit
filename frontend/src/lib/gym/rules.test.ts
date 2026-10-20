@@ -33,9 +33,11 @@ describe("GYM_RULE_DEFAULTS", () => {
       waitlistOfferMinutes: 30,
       classReminderMinutes: 120,
       scheduleHorizonDays: 14,
+      maxFreezeDaysPerYear: 30,
+      minFreezeDays: 7,
+      renewalLeadDays: 3,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(21);
-
+    expect(GYM_RULE_KEYS).toHaveLength(24);
   });
 });
 
@@ -77,6 +79,12 @@ describe("validateGymRules", () => {
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, expiryReminderDays: 0 }).ok).toBe(false);
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, cancellationDeadlineHours: 1.5 }).ok).toBe(false);
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, lateCancelPolicy: "charge" }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, maxFreezeDaysPerYear: -1 }).ok).toBe(false);
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, minFreezeDays: 0 })).toEqual({
+      ok: false,
+      error: "minFreezeDays: Durasi bekukan minimal 1",
+    });
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, renewalLeadDays: 31 }).ok).toBe(false);
   });
 });
 

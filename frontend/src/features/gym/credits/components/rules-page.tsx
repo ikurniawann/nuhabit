@@ -63,6 +63,14 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
     ],
   },
   {
+    title: "Pass & membership",
+    fields: [
+      { key: "maxFreezeDaysPerYear", kind: "number", label: "Jatah bekukan per tahun", unit: "hari", hint: "Total hari pass boleh dibekukan dalam 365 hari. 0 = member tidak bisa membekukan pass.", min: 0 },
+      { key: "minFreezeDays", kind: "number", label: "Durasi bekukan minimal", unit: "hari", hint: "Aktif lagi lebih awal tetap memotong jatah sebanyak ini.", min: 1 },
+      { key: "renewalLeadDays", kind: "number", label: "Perpanjangan otomatis", unit: "hari sebelum berakhir", hint: "Pass dengan perpanjangan otomatis dibeli ulang sejak H-sekian. Maksimal 30.", min: 0 },
+    ],
+  },
+  {
     title: "Check-in & gate",
     fields: [
       { key: "qrTtlSec", kind: "number", label: "Umur QR member", unit: "detik", hint: "QR di aplikasi diperbarui setelah waktu ini. Minimal 10 detik.", min: 10 },
