@@ -333,7 +333,7 @@ func (Postgres) BookingStats(ctx context.Context, q Q, sessionID, customerID str
 }
 
 func (Postgres) MemberCommitments(ctx context.Context, q Q, customerID, sessionID string, dayStart, dayEnd, now time.Time) ([]Commitment, error) {
-	rows, err := q.Query(ctx, `SELECT b.status, s.starts_at, s.credit_cost
+	rows, err := q.Query(ctx, `SELECT b.status, s.starts_at, s.credit_cost, COALESCE(s.class_type_id::text, '')
        FROM gym.bookings b JOIN gym.class_sessions s ON s.id = b.session_id
       WHERE b.customer_id = $1 AND b.session_id <> $2
         AND ((b.status = 'confirmed' AND s.starts_at > $5)
@@ -344,7 +344,7 @@ func (Postgres) MemberCommitments(ctx context.Context, q Q, customerID, sessionI
 	}
 	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Commitment, error) {
 		var c Commitment
-		return c, r.Scan(&c.Status, &c.StartsAt, &c.CreditCost)
+		return c, r.Scan(&c.Status, &c.StartsAt, &c.CreditCost, &c.ClassTypeID)
 	})
 }
 

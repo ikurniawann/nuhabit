@@ -310,6 +310,13 @@ func TestMemberEligibility(t *testing.T) {
 		{"reserved but enough left", func(in *EligibilityInput) { in.Balance, in.Reserved = 5, 3 }, ""},
 		{"pass ignores credits", func(in *EligibilityInput) { in.Balance, in.Reserved, in.HasPass = 0, 4, true }, ""},
 		{"package does not cover", func(in *EligibilityInput) { in.ClassNotCovered = true }, DenyClassNotCovered},
+		{"lot check fits despite reserved credits of other types", func(in *EligibilityInput) {
+			in.Balance, in.Reserved, in.CreditsFit = 1, 8, new(true)
+		}, ""},
+		{"lot check short despite the balance", func(in *EligibilityInput) { in.CreditsFit = new(false) }, DenyInsufficientCredits},
+		{"lot check leaves an uncovered class to coverage", func(in *EligibilityInput) {
+			in.CreditsFit, in.ClassNotCovered = new(false), true
+		}, DenyClassNotCovered},
 		{"pass ignores coverage", func(in *EligibilityInput) { in.ClassNotCovered, in.HasPass = true, true }, ""},
 		{"concurrent cap", func(in *EligibilityInput) { in.MaxConcurrent, in.UpcomingConfirmed = 2, 2 }, DenyConcurrentLimit},
 		{"under concurrent cap", func(in *EligibilityInput) { in.MaxConcurrent, in.UpcomingConfirmed = 2, 1 }, ""},
@@ -347,6 +354,10 @@ func TestMemberEligibility(t *testing.T) {
 	in.Reserved = 0
 	if got := in.DenialMessage(DenyInsufficientCredits); got != "Kredit tidak cukup untuk kelas ini" {
 		t.Errorf("plain credit message = %q", got)
+	}
+	in.Balance, in.CreditsFit = 5, new(false)
+	if got := in.DenialMessage(DenyInsufficientCredits); got != "Kredit tidak cukup untuk kelas ini: kredit yang berlaku sudah dipesan untuk booking lain atau kedaluwarsa sebelum kelas dimulai" {
+		t.Errorf("lot check message = %q", got)
 	}
 	if got := eligibility(func(in *EligibilityInput) { in.Balance, in.Reserved, in.ConfirmedCount = 5, 4, 2 }); got != deny(DenyInsufficientCredits) {
 		t.Errorf("reservation also guards the waitlist: %+v", got)
