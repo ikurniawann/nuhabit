@@ -209,6 +209,17 @@ func TestAllocateDeduction(t *testing.T) {
 		eq(t, ok, true)
 		eq(t, got, []Allocation{{"strength", 4}, {"bonus", 1}, {"open-early", 1}})
 	})
+
+	t.Run("personal training takes only lots that name it", func(t *testing.T) {
+		pt := map[string][]string{"race": {"sim"}, "strength": {"lift", "pt"}, "open": nil, PersonalOnly: {"pt"}}
+		eq(t, UsableBalance(rs, pt, "pt", now), 4)
+		got, ok := AllocateDeduction(rs, pt, "pt", 4, now)
+		eq(t, ok, true)
+		eq(t, got, []Allocation{{"strength", 4}})
+		_, ok = AllocateDeduction(rs, pt, "pt", 5, now)
+		eq(t, ok, false)
+		eq(t, UsableBalance(rs, pt, "sim", now), 6)
+	})
 }
 
 func TestAllocateClassRefund(t *testing.T) {

@@ -18,6 +18,7 @@ import { BOOKING_BADGE } from "@/features/gym/scheduling/api";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { MEMBER_KEYS, membersApi, type Member360, type MemberBooking } from "../api";
+import { MemberAssessments } from "@/features/gym/coaching/components/member-assessments";
 import { MemberNotes } from "./member-notes";
 import { ProfileDialog } from "./profile-dialog";
 
@@ -27,6 +28,7 @@ const TABS = [
   { value: "booking", label: "Booking" },
   { value: "checkin", label: "Check-in" },
   { value: "pembelian", label: "Pembelian" },
+  { value: "asesmen", label: "Asesmen" },
   { value: "catatan", label: "Catatan" },
 ] as const;
 type TabValue = (typeof TABS)[number]["value"];
@@ -155,6 +157,9 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         </TabsContent>
         <TabsContent value="pembelian" className="mt-4">
           <PurchaseTable purchases={m.credits.purchases} />
+        </TabsContent>
+        <TabsContent value="asesmen" className="mt-4">
+          <MemberAssessments customerId={p.id} />
         </TabsContent>
         <TabsContent value="catatan" className="mt-4">
           <MemberNotes customerId={p.id} notes={m.notes} />

@@ -2,12 +2,14 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Activity,
   Award,
   BookMarked,
   Camera,
   ChevronRight,
   Coins,
   CreditCard,
+  Dumbbell,
   Flag,
   Footprints,
   Gift,
@@ -274,6 +276,13 @@ export function ProfilePage() {
                   },
                 ]
               : []),
+            { to: "/pt", icon: Dumbbell, title: t("Personal training"), hint: t("Book 1:1 sessions with a coach") },
+            {
+              to: "/assessments",
+              icon: Activity,
+              title: t("Fitness assessments"),
+              hint: t("Body metrics and HYROX benchmarks"),
+            },
             {
               to: "/profile/emergency",
               icon: HeartPulse,

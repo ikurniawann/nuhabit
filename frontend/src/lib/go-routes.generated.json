@@ -1415,6 +1415,31 @@
     "path": "/api/finance/payments/{paymentId}"
   },
   {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/assessments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/gym/assessments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "DELETE",
+    "path": "/api/gym/assessments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/assessments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "PUT",
+    "path": "/api/gym/assessments/{id}"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/bookings"
@@ -1693,6 +1718,81 @@
     "module": "gym-credits",
     "method": "POST",
     "path": "/api/gym/passes/{id}/unfreeze"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/appointments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/gym/pt/appointments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/appointments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/gym/pt/appointments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "DELETE",
+    "path": "/api/gym/pt/availability/exceptions/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/availability/{coachId}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "PUT",
+    "path": "/api/gym/pt/availability/{coachId}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/gym/pt/availability/{coachId}/exceptions"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/class-type-flags"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "PATCH",
+    "path": "/api/gym/pt/class-type-flags/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/class-types"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/coaches"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/members"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/gym/pt/participants/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/gym/pt/slots"
   },
   {
     "module": "gym-training",
@@ -3130,6 +3230,11 @@
     "path": "/api/member-portal/events"
   },
   {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/member-portal/gym/assessments"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/member-portal/gym/bookings"
@@ -3218,6 +3323,31 @@
     "module": "gym-credits",
     "method": "DELETE",
     "path": "/api/member-portal/gym/payment-methods/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/member-portal/gym/pt/appointments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "POST",
+    "path": "/api/member-portal/gym/pt/appointments"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "DELETE",
+    "path": "/api/member-portal/gym/pt/appointments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/member-portal/gym/pt/options"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
+    "path": "/api/member-portal/gym/pt/slots"
   },
   {
     "module": "gym-training",

@@ -175,13 +175,18 @@ func ExpiringLots(lots []Lot, entries []Entry, now time.Time, withinDays int) []
 	return out
 }
 
+// PersonalOnly is the coverage entry that lists the personal training class
+// types. Only lots whose package names such a type may pay for it: an
+// unrestricted lot covers every class type except these.
+const PersonalOnly = "personal"
+
 // lotCoverage reports whether lot may pay for classTypeID and whether its
 // package restricts it to a list of class types. A lot without a package,
 // or whose package is unknown or has no list, is unrestricted.
 func lotCoverage(lot Lot, coverage map[string][]string, classTypeID string) (covers, restricted bool) {
 	ids, ok := coverage[lot.PackageID]
 	if lot.PackageID == "" || !ok || ids == nil {
-		return true, false
+		return !slices.Contains(coverage[PersonalOnly], classTypeID), false
 	}
 	return slices.Contains(ids, classTypeID), true
 }

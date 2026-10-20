@@ -8,6 +8,8 @@ const PAGES = [
   { path: "/dashboard/gym/schedule", heading: "Jadwal Kelas" },
   { path: "/dashboard/gym/members", heading: "Member" },
   { path: "/dashboard/gym/reports", heading: "Laporan Gym" },
+  { path: "/dashboard/gym/pt", heading: "Personal Training" },
+  { path: "/dashboard/gym/assessments", heading: "Asesmen Kebugaran" },
 ];
 
 test.describe("staff dashboard", () => {
