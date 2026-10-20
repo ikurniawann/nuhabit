@@ -1,5 +1,5 @@
 {
- "generated_route_count": 1320,
+ "generated_route_count": 1342,
  "paths": {
   "/api/accounting/account-types/{id}": {
    "put": {
@@ -6059,6 +6059,24 @@
     ]
    }
   },
+  "/api/gym/checkin/log": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/checkin/log",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/checkin": {
    "get": {
     "tags": [
@@ -6631,6 +6649,158 @@
     ]
    }
   },
+  "/api/gym/members/{id}/notes/{noteId}": {
+   "delete": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "DELETE /api/gym/members/{id}/notes/{noteId}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "noteId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/members/{id}/notes": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/members/{id}/notes",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/members/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/members/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "patch": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PATCH /api/gym/members/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/members": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/packages/{id}": {
    "patch": {
     "tags": [
@@ -6785,6 +6955,78 @@
      "gym"
     ],
     "summary": "DELETE /api/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/reports/branches": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/reports/branches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/reports/classes": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/reports/classes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/reports/members": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/reports/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/reports/revenue": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/reports/revenue",
     "responses": {
      "200": {
       "description": "OK"
@@ -16391,6 +16633,262 @@
      "positions"
     ],
     "summary": "POST /api/positions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/batches/{id}": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/batches/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/batches": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/batches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/bom/explode": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/bom/explode",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/orders/{id}/flow": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/orders/{id}/flow",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/orders/{id}/issues": {
+   "post": {
+    "tags": [
+     "production"
+    ],
+    "summary": "POST /api/production/orders/{id}/issues",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/orders/{id}/receipts": {
+   "post": {
+    "tags": [
+     "production"
+    ],
+    "summary": "POST /api/production/orders/{id}/receipts",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/orders/{id}/returns": {
+   "post": {
+    "tags": [
+     "production"
+    ],
+    "summary": "POST /api/production/orders/{id}/returns",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/orders/{id}/sub-orders": {
+   "post": {
+    "tags": [
+     "production"
+    ],
+    "summary": "POST /api/production/orders/{id}/sub-orders",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/recipe-settings": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/recipe-settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "production"
+    ],
+    "summary": "PUT /api/production/recipe-settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/production/wip": {
+   "get": {
+    "tags": [
+     "production"
+    ],
+    "summary": "GET /api/production/wip",
     "responses": {
      "200": {
       "description": "OK"

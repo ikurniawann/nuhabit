@@ -1445,6 +1445,11 @@
     "path": "/api/gym/checkin"
   },
   {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/checkin/log"
+  },
+  {
     "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/class-types"
@@ -1575,6 +1580,36 @@
     "path": "/api/gym/incentives/statements"
   },
   {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/members"
+  },
+  {
+    "module": "gym-desk",
+    "method": "POST",
+    "path": "/api/gym/members"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/members/{id}"
+  },
+  {
+    "module": "gym-desk",
+    "method": "PATCH",
+    "path": "/api/gym/members/{id}"
+  },
+  {
+    "module": "gym-desk",
+    "method": "POST",
+    "path": "/api/gym/members/{id}/notes"
+  },
+  {
+    "module": "gym-desk",
+    "method": "DELETE",
+    "path": "/api/gym/members/{id}/notes/{noteId}"
+  },
+  {
     "module": "gym-credits",
     "method": "GET",
     "path": "/api/gym/packages"
@@ -1613,6 +1648,26 @@
     "module": "gym-training",
     "method": "GET",
     "path": "/api/gym/races/{id}/entrants"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/reports/branches"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/reports/classes"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/reports/members"
+  },
+  {
+    "module": "gym-desk",
+    "method": "GET",
+    "path": "/api/gym/reports/revenue"
   },
   {
     "module": "gym-credits",

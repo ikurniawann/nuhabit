@@ -79,6 +79,7 @@ docs/ARCHITECTURE.md
 | `identity` | 1 | `GET /api/auth/me` |
 | `gym-credits` | 17 | class packages, credit ledger, credit rules, member credit purchases |
 | `gym-scheduling` | 29 | class types, coaches, sessions, bookings, check-in, member class catalog |
+| `gym-desk` | 11 | member list and 360 page, staff notes, front desk registration, gym reports, check-in log export |
 | `gym-training` | 30 | exercises, HYROX workouts and sessions, races, coach incentives and payouts |
 | `athlete` | 30 | member app train tab (activities, feed, clubs, challenges, gear) and home settings |
 | `member-portal` | 46 | member OTP sign-in, profile, inbox, push, top-up, engagement, collectibles, app home |

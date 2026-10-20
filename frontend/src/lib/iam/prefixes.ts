@@ -91,6 +91,10 @@ export const IAM = {
   gymScheduling: ["gym.schedule", "gym.sessions", "gym.bookings", "gym.class-types", "gym.coaches"],
   /** Gym → Check-in (scan QR front desk; juga dibuka dari Sesi & Absensi). */
   gymCheckin: ["gym.checkin", "gym.sessions"],
+  /** Gym → Member (daftar member, profil 360, catatan staf, daftar di front desk). */
+  gymMembers: ["gym.members"],
+  /** Gym → Laporan Gym (kehadiran, okupansi, pendapatan, member, coach). */
+  gymReports: ["gym.reports"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */
