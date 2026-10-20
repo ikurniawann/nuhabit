@@ -229,6 +229,8 @@ func (s *store) SaveAccount(ctx context.Context, customerID string, setContact b
 		    SET emergency_contact = CASE WHEN $2 THEN $3::jsonb ELSE emergency_contact END,
 		        waiver_version = CASE WHEN $4 THEN $5 ELSE waiver_version END,
 		        waiver_accepted_at = CASE WHEN $4 THEN now() ELSE waiver_accepted_at END,
+		        -- accepted by the member in the app, not recorded by staff
+		        waiver_accepted_by = CASE WHEN $4 THEN NULL ELSE waiver_accepted_by END,
 		        updated_at = now()
 		  WHERE id = $1`, customerID, setContact, contactArg, acceptWaiver, waiverVersion)
 	return err

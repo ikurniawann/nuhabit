@@ -399,12 +399,23 @@ func TestStaffWaiverAndNoShowTiming(t *testing.T) {
 
 func TestCheckInWindowAndWeeks(t *testing.T) {
 	end := at("2026-10-05T12:00:00Z")
+	window := Rules{CheckinOpensMinBefore: 45, CheckinClosesMinAfter: 15}
 	for s, want := range map[string]bool{
 		"2026-10-05T10:15:00Z": true, "2026-10-05T10:14:59Z": false,
 		"2026-10-05T12:15:00Z": true, "2026-10-05T12:15:01Z": false,
 	} {
-		if got := IsWithinCheckInWindow(start, end, at(s)); got != want {
+		if got := IsWithinCheckInWindow(start, end, at(s), window); got != want {
 			t.Errorf("window at %s = %v", s, got)
+		}
+	}
+	// A branch that opens the gate 10 minutes early and closes it at the end.
+	narrow := Rules{CheckinOpensMinBefore: 10, CheckinClosesMinAfter: 0}
+	for s, want := range map[string]bool{
+		"2026-10-05T10:50:00Z": true, "2026-10-05T10:49:59Z": false,
+		"2026-10-05T12:00:00Z": true, "2026-10-05T12:00:01Z": false,
+	} {
+		if got := IsWithinCheckInWindow(start, end, at(s), narrow); got != want {
+			t.Errorf("narrow window at %s = %v", s, got)
 		}
 	}
 	for s, want := range map[string]string{

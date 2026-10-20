@@ -48,6 +48,9 @@ const PUBLIC_AUTH_PREFIXES = [
   "/api/integrations/telegram/webhook/",
   // Event partner loyalty — autentikasi HMAC + timestamp per partner.
   "/api/integrations/loyalty-events/",
+  // Perangkat gate gym (turnstile) — autentikasi kunci perangkat di header X-Gate-Device-Key.
+  "/api/gym/gate/devices/scan",
+  "/api/gym/gate/devices/heartbeat",
   "/api/auth/login",
   "/api/auth/logout",
   "/api/settings/appearance",

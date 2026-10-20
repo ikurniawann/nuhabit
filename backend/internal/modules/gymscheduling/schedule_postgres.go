@@ -134,9 +134,13 @@ func (Postgres) SessionCharges(ctx context.Context, q Q, sessionID string) ([]Se
 	rows, err := q.Query(ctx, `SELECT b.id, b.customer_id, l.idempotency_key, -l.amount
        FROM gym.bookings b
        JOIN gym.credit_ledger l
-         ON l.idempotency_key IN ('gym:checkin:' || b.id, 'gym:late_cancel:' || b.id, 'gym:no_show:' || b.id)
+         ON l.source_type IN ('class_booking', 'late_cancel', 'no_show') AND l.source_id = b.id
+        AND l.idempotency_key ~ ('^gym:(checkin|late_cancel|no_show):' || b.id || '(:[0-9]+)?(#[0-9]+)?$')
       WHERE b.session_id = $1 AND l.amount < 0
         AND NOT EXISTS (SELECT 1 FROM gym.credit_ledger r WHERE r.reverses_entry_id = l.id)
+        -- a staff correction already refunded this charge
+        AND NOT EXISTS (SELECT 1 FROM gym.credit_ledger r
+                         WHERE r.idempotency_key = 'gym:correction:' || regexp_replace(l.idempotency_key, '#[0-9]+$', ''))
       ORDER BY b.created_at, l.created_at`, sessionID)
 	if err != nil {
 		return nil, err

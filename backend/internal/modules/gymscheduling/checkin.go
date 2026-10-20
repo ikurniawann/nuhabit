@@ -9,9 +9,10 @@ import (
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 )
 
-// Gate check-in: QR scan, the booking pipeline (membership, re-entry and
-// anti-passback, booking, balance) and manual front-desk check-in. Every
-// outcome is written to gym.access_logs. Port of gym-checkin-server.ts.
+// Gate check-in: QR scan, the booking pipeline (membership, waiver, re-entry
+// and anti-passback, booking or open gym, balance) and manual front-desk
+// check-in. Every outcome is written to gym.access_logs. Port of
+// gym-checkin-server.ts.
 
 // CheckInBookingRef is the booking a check-in admitted.
 type CheckInBookingRef struct {
@@ -58,22 +59,63 @@ func strPtr[T ~string](v *T) *string {
 	return &s
 }
 
-func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, bookingID, branchID *string, source string, scannedBy *string) error {
+// gatePoint is where a scan happened: the branch, the staff member or
+// device that scanned, and the access log source (gate, pos, manual, device).
+type gatePoint struct {
+	BranchID, ScannedBy, DeviceID *string
+	Source                        string
+}
+
+func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, bookingID *string, at gatePoint) error {
 	return s.repo.LogAccess(ctx, q, AccessEntry{
-		CustomerID: res.CustomerID, BookingID: bookingID, BranchID: branchID,
+		CustomerID: res.CustomerID, BookingID: bookingID, BranchID: at.BranchID,
 		Decision: res.Decision, Reason: strPtr(res.Reason), EntryKind: strPtr(res.EntryKind),
-		CreditsDeducted: res.CreditsDeducted, Source: source, ScannedBy: scannedBy,
+		CreditsDeducted: res.CreditsDeducted, Source: at.Source, ScannedBy: at.ScannedBy, DeviceID: at.DeviceID,
 	})
 }
 
+// openGymVisit gathers the open gym facts for a member without a booking
+// around now: the branch hours, a pass covering now, whether they already
+// entered open gym today (WIB) and, when they would pay, the balance.
+func (s *Service) openGymVisit(ctx context.Context, q Q, customerID string, branchID *string, rules domain.Rules, now time.Time) (*domain.OpenGymVisit, *ActivePass, int, error) {
+	var hours []domain.OpenHours
+	if branchID != nil {
+		var err error
+		if hours, err = s.repo.OpenGymHours(ctx, q, *branchID); err != nil {
+			return nil, nil, 0, err
+		}
+	}
+	pass, err := s.Passes.ActivePassAt(ctx, q, customerID, now)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	dayStart, _ := domain.WibDayBounds(now)
+	paid, err := s.repo.EnteredOpenGymSince(ctx, q, customerID, dayStart)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	visit := &domain.OpenGymVisit{Open: domain.IsOpenGymTime(hours, now), HasPass: pass != nil, PaidToday: paid}
+	balance := 0
+	if pass == nil && !paid && rules.OpenGymCreditCost > 0 {
+		if balance, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
+			return nil, nil, 0, err
+		}
+	}
+	return visit, pass, balance, nil
+}
+
 // checkInBooking runs the gate for a member whose QR is already valid:
-// membership, re-entry/anti-passback, a confirmed booking at this branch
-// around now, balance. On success the credits are deducted and the booking
-// checked in within the same transaction. token is consumed when set; the
-// access log records source.
-func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, branchID, scannedBy *string, token, source string, now time.Time) (CheckInResult, error) {
+// membership, waiver, re-entry/anti-passback, a confirmed booking at this
+// branch inside the check-in window, or open gym, then the balance. On
+// success the credits are deducted and the booking checked in within the
+// same transaction. token is consumed when set.
+func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at gatePoint, token string, now time.Time) (CheckInResult, error) {
 	var res CheckInResult
 	member, err := s.Members.Get(ctx, q, customerID)
+	if err != nil {
+		return res, err
+	}
+	rules, err := s.Rules.ForBranch(ctx, q, at.BranchID)
 	if err != nil {
 		return res, err
 	}
@@ -81,19 +123,19 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, br
 	if err != nil {
 		return res, err
 	}
-	candidate, err := s.repo.LockCheckInCandidate(ctx, q, customerID, branchID, now)
-	if err != nil {
-		return res, err
-	}
-	rules, err := s.Rules.ForBranch(ctx, q, branchID)
+	early, late := domain.CheckInWindow(rules)
+	candidate, err := s.repo.LockCheckInCandidate(ctx, q, customerID, at.BranchID, now, early, late)
 	if err != nil {
 		return res, err
 	}
 	// A pass covers the class; otherwise credits from a package that does
 	// not cover this class cannot pay for it.
 	var pass *ActivePass
+	var openGym *domain.OpenGymVisit
 	covered := true
-	if candidate != nil {
+	balance := 0
+	switch {
+	case candidate != nil:
 		if pass, err = s.Passes.ActivePassAt(ctx, q, customerID, candidate.StartsAt); err != nil {
 			return res, err
 		}
@@ -104,17 +146,22 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, br
 			}
 			covered = domain.IsClassTypeCovered(ids, candidate.ClassTypeID)
 		}
-	}
-	balance := 0
-	if covered && pass == nil {
-		if balance, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
+		if covered && pass == nil {
+			if balance, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
+				return res, err
+			}
+		}
+	case rules.OpenGymEnabled:
+		if openGym, pass, balance, err = s.openGymVisit(ctx, q, customerID, at.BranchID, rules, now); err != nil {
 			return res, err
 		}
 	}
 
 	in := domain.GateScanInput{
 		MemberActive:       member.Active(),
+		WaiverMissing:      s.waiverMissing(rules, member),
 		LastAllowedEntryAt: lastEntry,
+		OpenGym:            openGym,
 		Balance:            balance,
 		Rules:              rules,
 		Now:                now,
@@ -129,6 +176,7 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, br
 	balanceAfter := balance
 effects:
 	for _, effect := range eval.Effects {
+		var charge *CreditMovement
 		switch effect.Kind {
 		case domain.EffectConsumeToken:
 			if token != "" {
@@ -137,28 +185,38 @@ effects:
 				}
 			}
 		case domain.EffectDeductCredits:
-			charged, err := s.Credits.Deduct(ctx, q, CreditMovement{
-				CustomerID:     customerID,
-				Amount:         effect.Amount,
+			charge = &CreditMovement{
 				SourceType:     "class_booking",
 				SourceID:       candidate.ID,
-				IdempotencyKey: "gym:checkin:" + candidate.ID,
+				IdempotencyKey: domain.ChargeKey("checkin", candidate.ID, candidate.CorrectionSeq),
 				Note:           "Check-in " + candidate.ClassName + ", " + domain.FormatWib(candidate.StartsAt),
-			})
-			if err != nil {
-				return res, err
 			}
-			// The balance can change between read and charge: the gate stays shut.
-			if !charged.OK {
-				decision, reason = domain.Denied, domain.GateInsufficientCredits
-				break effects
+		case domain.EffectChargeOpenGym:
+			day := now.In(domain.WIB).Format(time.DateOnly)
+			charge = &CreditMovement{
+				SourceType:     "open_gym",
+				IdempotencyKey: "gym:open_gym:" + customerID + ":" + day,
+				Note:           "Open gym " + day,
 			}
-			creditsDeducted, balanceAfter = effect.Amount, charged.BalanceAfter
 		case domain.EffectCheckIn:
 			if err := s.repo.MarkCheckedIn(ctx, q, effect.BookingID, now); err != nil {
 				return res, err
 			}
 		}
+		if charge == nil {
+			continue
+		}
+		charge.CustomerID, charge.Amount = customerID, effect.Amount
+		charged, err := s.Credits.Deduct(ctx, q, *charge)
+		if err != nil {
+			return res, err
+		}
+		// The balance can change between read and charge: the gate stays shut.
+		if !charged.OK {
+			decision, reason = domain.Denied, domain.GateInsufficientCredits
+			break effects
+		}
+		creditsDeducted, balanceAfter = effect.Amount, charged.BalanceAfter
 	}
 
 	var entryKind domain.GateEntryKind
@@ -189,10 +247,11 @@ effects:
 	if candidate != nil {
 		bookingID = &candidate.ID
 	}
-	if err := s.logAccess(ctx, q, res, bookingID, branchID, source, scannedBy); err != nil {
+	if err := s.logAccess(ctx, q, res, bookingID, at); err != nil {
 		return res, err
 	}
-	if entryKind == domain.EntryBooking {
+	switch {
+	case entryKind == domain.EntryBooking:
 		body := strconv.Itoa(creditsDeducted) + " kredit dipotong. Sisa " + strconv.Itoa(balanceAfter) + " kredit. Selamat berlatih!"
 		if pass != nil {
 			body = "Pass aktif, tanpa potong kredit. Selamat berlatih!"
@@ -202,13 +261,23 @@ effects:
 		}); err != nil {
 			return res, err
 		}
+	case entryKind == domain.EntryOpenGym && creditsDeducted > 0:
+		s.notify(ctx, q, customerID, Notification{
+			Type: "gym_checked_in", Title: "Open gym",
+			Body: strconv.Itoa(creditsDeducted) + " kredit dipotong untuk open gym hari ini. Sisa " + strconv.Itoa(balanceAfter) +
+				" kredit. Masuk lagi hari ini gratis.",
+		})
 	}
 	return res, nil
 }
 
 // ScanQr validates the member QR at the gate or front desk, then runs the
 // check-in pipeline.
-func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scannedBy *string) (res CheckInResult, err error) {
+func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scannedBy *string) (CheckInResult, error) {
+	return s.scan(ctx, rawToken, gatePoint{BranchID: branchID, ScannedBy: scannedBy, Source: "gate"})
+}
+
+func (s *Service) scan(ctx context.Context, rawToken string, at gatePoint) (res CheckInResult, err error) {
 	now := s.now()
 	token := strings.ToLower(strings.TrimSpace(rawToken))
 	err = s.inTx(ctx, func(q Q) error {
@@ -218,7 +287,7 @@ func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scanned
 		}
 		problem := domain.CheckQrToken(row, now)
 		if problem == "" {
-			res, err = s.checkInBooking(ctx, q, row.CustomerID, branchID, scannedBy, token, "gate", now)
+			res, err = s.checkInBooking(ctx, q, row.CustomerID, at, token, now)
 			return err
 		}
 		reason := domain.TokenDenial[problem]
@@ -226,7 +295,7 @@ func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scanned
 		if row != nil {
 			res.CustomerID = &row.CustomerID
 		}
-		return s.logAccess(ctx, q, res, nil, branchID, "gate", scannedBy)
+		return s.logAccess(ctx, q, res, nil, at)
 	})
 	return res, err
 }
@@ -238,15 +307,15 @@ func (s *Service) ScanQr(ctx context.Context, rawToken string, branchID, scanned
 func (s *Service) CheckInBooking(ctx context.Context, customerID string, scannedBy *string, source string) (res CheckInResult, err error) {
 	now := s.now()
 	err = s.inTx(ctx, func(q Q) error {
-		res, err = s.checkInBooking(ctx, q, customerID, nil, scannedBy, "", source, now)
+		res, err = s.checkInBooking(ctx, q, customerID, gatePoint{ScannedBy: scannedBy, Source: source}, "", now)
 		return err
 	})
 	return res, err
 }
 
 // CheckInManually checks a booking in from the front-desk roster (no QR).
-// Credits are charged as at the gate; anti-passback and the time window do
-// not apply because staff decide.
+// Credits are charged as at the gate and the waiver rule applies;
+// anti-passback and the time window do not, because staff decide.
 func (s *Service) CheckInManually(ctx context.Context, bookingID string, scannedBy *string) (res CheckInResult, err error) {
 	now := s.now()
 	err = s.inTx(ctx, func(q Q) error {
@@ -256,6 +325,9 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 		}
 		if !domain.CanTransitionBooking(booking.Status, domain.BookingCheckedIn) {
 			return schedulingError("Hanya booking terkonfirmasi yang bisa check-in")
+		}
+		if err := s.requireWaiver(ctx, q, booking.CustomerID, session.BranchID); err != nil {
+			return err
 		}
 		pass, err := s.Passes.ActivePassAt(ctx, q, booking.CustomerID, session.StartsAt)
 		if err != nil {
@@ -276,7 +348,7 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 				Amount:         session.CreditCost,
 				SourceType:     "class_booking",
 				SourceID:       booking.ID,
-				IdempotencyKey: "gym:checkin:" + booking.ID,
+				IdempotencyKey: domain.ChargeKey("checkin", booking.ID, booking.CorrectionSeq),
 				Note:           "Check-in " + session.label() + " (front desk)",
 			})
 			if err != nil {
@@ -301,7 +373,7 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 			CreditsDeducted: creditsDeducted,
 			BalanceAfter:    detail.BalanceAfter,
 		}
-		return s.logAccess(ctx, q, res, &booking.ID, session.BranchID, "manual", scannedBy)
+		return s.logAccess(ctx, q, res, &booking.ID, gatePoint{BranchID: session.BranchID, ScannedBy: scannedBy, Source: "manual"})
 	})
 	return res, err
 }

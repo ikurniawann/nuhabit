@@ -1461,6 +1461,11 @@
   },
   {
     "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/checkin/members/{id}/waiver"
+  },
+  {
+    "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/class-types"
   },
@@ -1560,6 +1565,36 @@
     "path": "/api/gym/exercises/substitutions"
   },
   {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/gate-devices"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/gate-devices"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/gate-devices/{id}/revoke"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/gate-devices/{id}/rotate"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/gate/devices/heartbeat"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/gate/devices/scan"
+  },
+  {
     "module": "gym-training",
     "method": "GET",
     "path": "/api/gym/incentives/payouts"
@@ -1628,6 +1663,16 @@
     "module": "gym-desk",
     "method": "DELETE",
     "path": "/api/gym/members/{id}/notes/{noteId}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/open-gym-hours"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PUT",
+    "path": "/api/gym/open-gym-hours"
   },
   {
     "module": "gym-credits",

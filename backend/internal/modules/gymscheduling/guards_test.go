@@ -49,40 +49,48 @@ const (
 
 func TestStaffRouteGrants(t *testing.T) {
 	want := map[string]string{
-		"GET /api/gym/branches":                    "read gym",
-		"GET /api/gym/class-types":                 "read gym.class-types," + sched + " | " + ownAccess,
-		"POST /api/gym/class-types":                "create gym.class-types",
-		"PATCH /api/gym/class-types/{id}":          "update gym.class-types",
-		"DELETE /api/gym/class-types/{id}":         "delete gym.class-types",
-		"GET /api/gym/coaches":                     "read gym.coaches," + sched,
-		"GET /api/gym/coaches/staff":               "create gym.coaches | update gym.coaches",
-		"POST /api/gym/coaches":                    "create gym.coaches",
-		"PATCH /api/gym/coaches/{id}":              "update gym.coaches",
-		"GET /api/gym/sessions":                    "read " + sched + " | " + ownAccess,
-		"POST /api/gym/sessions":                   "create " + sched,
-		"POST /api/gym/sessions/duplicate-week":    "create gym.schedule",
-		"GET /api/gym/sessions/{id}":               "read " + sched + " | " + ownAccess,
-		"PATCH /api/gym/sessions/{id}":             "update " + sched,
-		"POST /api/gym/sessions/{id}":              "update " + sched,
-		"DELETE /api/gym/sessions/{id}":            "delete " + sched,
-		"GET /api/gym/session-templates":           "read gym.schedule",
-		"POST /api/gym/session-templates":          "create gym.schedule",
-		"POST /api/gym/session-templates/generate": "create gym.schedule",
-		"PATCH /api/gym/session-templates/{id}":    "update gym.schedule",
-		"DELETE /api/gym/session-templates/{id}":   "delete gym.schedule",
-		"GET /api/gym/bookings":                    "read gym.bookings,gym.sessions",
-		"POST /api/gym/bookings":                   "create " + deskMenus,
-		"GET /api/gym/bookings/members":            "read " + deskMenus,
-		"POST /api/gym/bookings/{id}":              "read " + deskMenus + " | " + ownAccess,
-		"GET /api/gym/checkin":                     "read gym.checkin,gym.sessions",
-		"POST /api/gym/checkin":                    "create gym.checkin,gym.sessions",
-		"GET /api/gym/checkin/members":             "read " + deskMenus,
+		"GET /api/gym/branches":                     "read gym",
+		"GET /api/gym/class-types":                  "read gym.class-types," + sched + " | " + ownAccess,
+		"POST /api/gym/class-types":                 "create gym.class-types",
+		"PATCH /api/gym/class-types/{id}":           "update gym.class-types",
+		"DELETE /api/gym/class-types/{id}":          "delete gym.class-types",
+		"GET /api/gym/coaches":                      "read gym.coaches," + sched,
+		"GET /api/gym/coaches/staff":                "create gym.coaches | update gym.coaches",
+		"POST /api/gym/coaches":                     "create gym.coaches",
+		"PATCH /api/gym/coaches/{id}":               "update gym.coaches",
+		"GET /api/gym/sessions":                     "read " + sched + " | " + ownAccess,
+		"POST /api/gym/sessions":                    "create " + sched,
+		"POST /api/gym/sessions/duplicate-week":     "create gym.schedule",
+		"GET /api/gym/sessions/{id}":                "read " + sched + " | " + ownAccess,
+		"PATCH /api/gym/sessions/{id}":              "update " + sched,
+		"POST /api/gym/sessions/{id}":               "update " + sched,
+		"DELETE /api/gym/sessions/{id}":             "delete " + sched,
+		"GET /api/gym/session-templates":            "read gym.schedule",
+		"POST /api/gym/session-templates":           "create gym.schedule",
+		"POST /api/gym/session-templates/generate":  "create gym.schedule",
+		"PATCH /api/gym/session-templates/{id}":     "update gym.schedule",
+		"DELETE /api/gym/session-templates/{id}":    "delete gym.schedule",
+		"GET /api/gym/bookings":                     "read gym.bookings,gym.sessions",
+		"POST /api/gym/bookings":                    "create " + deskMenus,
+		"GET /api/gym/bookings/members":             "read " + deskMenus,
+		"POST /api/gym/bookings/{id}":               "read " + deskMenus + " | " + ownAccess,
+		"GET /api/gym/checkin":                      "read gym.checkin,gym.sessions",
+		"POST /api/gym/checkin":                     "create gym.checkin,gym.sessions",
+		"GET /api/gym/checkin/members":              "read " + deskMenus,
+		"POST /api/gym/checkin/members/{id}/waiver": "create gym.checkin,gym.sessions | update gym.members",
+		"GET /api/gym/open-gym-hours":               "read gym.rules,gym.checkin,gym.sessions",
+		"PUT /api/gym/open-gym-hours":               "update gym.rules",
+		"GET /api/gym/gate-devices":                 "read gym.gate-devices",
+		"POST /api/gym/gate-devices":                "create gym.gate-devices",
+		"POST /api/gym/gate-devices/{id}/rotate":    "update gym.gate-devices",
+		"POST /api/gym/gate-devices/{id}/revoke":    "delete gym.gate-devices",
 	}
 	h := &handler{}
 	seen := 0
 	for _, route := range h.Routes() {
 		method, path, _ := strings.Cut(route.Pattern, " ")
-		if !strings.HasPrefix(path, "/api/gym/") {
+		// Device routes authenticate with the device key (devices_integration_test.go).
+		if !strings.HasPrefix(path, "/api/gym/") || strings.HasPrefix(path, "/api/gym/gate/devices/") {
 			continue
 		}
 		seen++
@@ -114,12 +122,16 @@ func TestBookingActionGrants(t *testing.T) {
 		"cancel":   "update gym.bookings,gym.sessions",
 		"no_show":  "update gym.bookings,gym.sessions | " + ownAccess,
 		"check_in": "create gym.checkin,gym.sessions | update gym.bookings | " + ownAccess,
+		// Corrections refund credits: no read_own grant for coaches.
+		"undo_check_in": "update gym.bookings,gym.sessions",
+		"undo_no_show":  "update gym.bookings,gym.sessions",
 	}
 	for action, expected := range want {
 		guard := &recordingGuard{allow: 1}
 		mux := testutil.Mux(mod{h: &handler{guard: guard}})
 		rec := httptest.NewRecorder()
-		mux.ServeHTTP(rec, httptest.NewRequest("POST", "/api/gym/bookings/"+anyID, strings.NewReader(`{"action":"`+action+`"}`)))
+		body := `{"action":"` + action + `","reason":"salah scan"}`
+		mux.ServeHTTP(rec, httptest.NewRequest("POST", "/api/gym/bookings/"+anyID, strings.NewReader(body)))
 		if rec.Code != http.StatusForbidden || len(guard.calls) != 2 {
 			t.Errorf("%s: status %d after %d guard calls", action, rec.Code, len(guard.calls))
 			continue

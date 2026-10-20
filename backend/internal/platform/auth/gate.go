@@ -38,6 +38,8 @@ var PublicAuthPrefixes = []string{
 	"/api/public/gofood-image/",
 	"/api/integrations/telegram/webhook/",
 	"/api/integrations/loyalty-events/",
+	"/api/gym/gate/devices/scan",
+	"/api/gym/gate/devices/heartbeat",
 	"/api/auth/login",
 	"/api/auth/logout",
 	"/api/settings/appearance",

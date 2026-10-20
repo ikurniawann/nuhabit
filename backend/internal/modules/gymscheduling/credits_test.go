@@ -90,5 +90,11 @@ func (c testCredits) ForBranch(ctx context.Context, q database.Querier, branchID
 		WaitlistOfferMinutes:      r.WaitlistOfferMinutes,
 		ClassReminderMinutes:      r.ClassReminderMinutes,
 		ScheduleHorizonDays:       r.ScheduleHorizonDays,
+		RequireWaiver:             r.RequireWaiver,
+		CheckinOpensMinBefore:     r.CheckinOpensMinBefore,
+		CheckinClosesMinAfter:     r.CheckinClosesMinAfter,
+		OpenGymEnabled:            r.OpenGymEnabled,
+		OpenGymCreditCost:         r.OpenGymCreditCost,
+		CorrectionWindowDays:      r.CorrectionWindowDays,
 	}, err
 }

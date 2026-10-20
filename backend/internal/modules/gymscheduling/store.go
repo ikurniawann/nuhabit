@@ -58,13 +58,14 @@ func (s *Service) syncSessionSeats(ctx context.Context, q Q, session *SessionRow
 	return nil
 }
 
-// chargePenalty deducts penalty credits (late cancel, no-show). A short
-// balance never goes negative: at most the current balance is taken.
-func (s *Service) chargePenalty(ctx context.Context, q Q, customerID string, amount int, sourceType, bookingID, note string) (int, error) {
+// chargePenalty deducts penalty credits (late cancel, no-show) for the
+// booking. A short balance never goes negative: at most the current balance
+// is taken.
+func (s *Service) chargePenalty(ctx context.Context, q Q, booking *BookingRow, amount int, sourceType, note string) (int, error) {
 	if amount <= 0 {
 		return 0, nil
 	}
-	balance, err := s.Credits.GetBalance(ctx, q, customerID)
+	balance, err := s.Credits.GetBalance(ctx, q, booking.CustomerID)
 	if err != nil {
 		return 0, err
 	}
@@ -73,11 +74,11 @@ func (s *Service) chargePenalty(ctx context.Context, q Q, customerID string, amo
 		return 0, nil
 	}
 	res, err := s.Credits.Deduct(ctx, q, CreditMovement{
-		CustomerID:     customerID,
+		CustomerID:     booking.CustomerID,
 		Amount:         amount,
 		SourceType:     sourceType,
-		SourceID:       bookingID,
-		IdempotencyKey: "gym:" + sourceType + ":" + bookingID,
+		SourceID:       booking.ID,
+		IdempotencyKey: domain.ChargeKey(sourceType, booking.ID, booking.CorrectionSeq),
 		Note:           note,
 	})
 	if err != nil || !res.OK {
@@ -104,7 +105,7 @@ func (s *Service) applyNoShow(ctx context.Context, q Q, booking *BookingRow, ses
 	if strike {
 		return 0, s.repo.MarkPassStrike(ctx, q, booking.ID, s.now())
 	}
-	return s.chargePenalty(ctx, q, booking.CustomerID, penalty, "no_show", booking.ID, "Tidak hadir: "+session.label())
+	return s.chargePenalty(ctx, q, booking, penalty, "no_show", "Tidak hadir: "+session.label())
 }
 
 // notify sends a member notification without risking the write it reports

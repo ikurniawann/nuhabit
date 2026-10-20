@@ -10,6 +10,7 @@ import (
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/modules/gymscheduling"
 	scheddomain "nuhabit/backend/internal/modules/gymscheduling/domain"
+	memberdomain "nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
@@ -42,13 +43,14 @@ func init() {
 func schedulingPorts(d module.Deps) gymscheduling.Ports {
 	credits := schedulingCredits{svc: gymcredits.NewDefaultService(d, d.DB)}
 	return gymscheduling.Ports{
-		Credits:  credits,
-		Packages: credits,
-		Passes:   credits,
-		Rules:    credits,
-		Members:  gymscheduling.MembersSQL{},
-		Qr:       gymscheduling.QrTokensSQL{},
-		Notifier: gymscheduling.NotificationsSQL{},
+		Credits:       credits,
+		Packages:      credits,
+		Passes:        credits,
+		Rules:         credits,
+		Members:       gymscheduling.MembersSQL{},
+		Qr:            gymscheduling.QrTokensSQL{},
+		Notifier:      gymscheduling.NotificationsSQL{},
+		WaiverVersion: memberdomain.WaiverVersion,
 	}
 }
 
@@ -159,5 +161,11 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		WaitlistOfferMinutes:      r.WaitlistOfferMinutes,
 		ClassReminderMinutes:      r.ClassReminderMinutes,
 		ScheduleHorizonDays:       r.ScheduleHorizonDays,
+		RequireWaiver:             r.RequireWaiver,
+		CheckinOpensMinBefore:     r.CheckinOpensMinBefore,
+		CheckinClosesMinAfter:     r.CheckinClosesMinAfter,
+		OpenGymEnabled:            r.OpenGymEnabled,
+		OpenGymCreditCost:         r.OpenGymCreditCost,
+		CorrectionWindowDays:      r.CorrectionWindowDays,
 	}
 }

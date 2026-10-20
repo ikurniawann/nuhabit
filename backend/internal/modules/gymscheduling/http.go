@@ -14,6 +14,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -27,6 +28,8 @@ type handler struct {
 	svc   *Service
 	guard Guard
 	log   *slog.Logger
+	// limiter caps the requests of each gate device.
+	limiter *ratelimit.Limiter
 }
 
 // Menu actions. read_own on gym.sessions is the coach grant: only the
@@ -57,6 +60,9 @@ var bookingActionGrants = map[string][]iam.Grant{
 	"cancel":   {can(actUpdate, iam.GymBookings, iam.GymSessions)},
 	"no_show":  {can(actUpdate, iam.GymBookings, iam.GymSessions), ownClass},
 	"check_in": {can(actCreate, iam.GymCheckin), can(actUpdate, iam.GymBookings), ownClass},
+	// Corrections refund credits, so coaches (read_own) cannot make them.
+	string(domain.UndoCheckIn): {can(actUpdate, iam.GymBookings, iam.GymSessions)},
+	string(domain.UndoNoShow):  {can(actUpdate, iam.GymBookings, iam.GymSessions)},
 }
 
 // Routes lists the staff (/api/gym/**) and member portal routes.
@@ -90,6 +96,17 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/gym/checkin", Handler: h.staff(h.accessLog, can(actRead, iam.GymCheckin))},
 		{Pattern: "POST /api/gym/checkin", Handler: h.staff(h.scan, can(actCreate, iam.GymCheckin))},
 		{Pattern: "GET /api/gym/checkin/members", Handler: h.staff(h.deskMembers, can(actRead, desk))},
+		{Pattern: "POST /api/gym/checkin/members/{id}/waiver", Handler: h.staff(h.recordWaiver, can(actCreate, iam.GymCheckin), can(actUpdate, iam.GymMembers))},
+		{Pattern: "GET /api/gym/open-gym-hours", Handler: h.staff(h.openGymHours, can(actRead, iam.GymRules, iam.GymCheckin))},
+		{Pattern: "PUT /api/gym/open-gym-hours", Handler: h.staff(h.saveOpenGymHours, can(actUpdate, iam.GymRules))},
+		{Pattern: "GET /api/gym/gate-devices", Handler: h.staff(h.listGateDevices, can(actRead, iam.GymGateDevices))},
+		{Pattern: "POST /api/gym/gate-devices", Handler: h.staff(h.createGateDevice, can(actCreate, iam.GymGateDevices))},
+		{Pattern: "POST /api/gym/gate-devices/{id}/rotate", Handler: h.staff(h.rotateGateDevice, can(actUpdate, iam.GymGateDevices))},
+		{Pattern: "POST /api/gym/gate-devices/{id}/revoke", Handler: h.staff(h.revokeGateDevice, can(actDelete, iam.GymGateDevices))},
+
+		// Gate devices authenticate with their key header, not a staff session.
+		{Pattern: "POST /api/gym/gate/devices/scan", Handler: h.device(deviceScanLimit, h.deviceScan)},
+		{Pattern: "POST /api/gym/gate/devices/heartbeat", Handler: h.device(deviceHeartbeatLimit, h.deviceHeartbeat)},
 
 		{Pattern: "GET /api/member-portal/gym/sessions", Handler: h.member("Gagal memuat jadwal kelas", h.memberSessions)},
 		{Pattern: "GET /api/member-portal/gym/sessions/{id}", Handler: h.member("Gagal memuat kelas", h.memberSession)},
@@ -580,10 +597,17 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 		return err
 	}
 	f := form(r)
-	action := f.Enum("action", validate.Rule{}, []string{"cancel", "no_show", "check_in"})
+	action := f.Enum("action", validate.Rule{}, []string{"cancel", "no_show", "check_in", string(domain.UndoCheckIn), string(domain.UndoNoShow)})
 	waivePenalty := f.BoolDefault("waive_penalty", false)
+	// reason is required for the corrections (undo_check_in, undo_no_show).
+	reason := f.Str("reason", nullableOptional, validate.StrOpts{Trim: true, Max: 500})
 	if err := invalid(f); err != nil {
 		return err
+	}
+	correction := domain.Correction(*action)
+	correcting := correction == domain.UndoCheckIn || correction == domain.UndoNoShow
+	if correcting && (reason == nil || len([]rune(*reason)) < 3) {
+		return httpx.BadRequest("Alasan koreksi wajib diisi (minimal 3 karakter)")
 	}
 	grants := bookingActionGrants[*action]
 	_, matched, err := h.guard.RequireAnyGrant(r, grants...)
@@ -601,6 +625,8 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 		out, err = h.svc.CancelBooking(r.Context(), id, "", waivePenalty)
 	case "no_show":
 		out, err = h.svc.MarkNoShow(r.Context(), id)
+	case string(domain.UndoCheckIn), string(domain.UndoNoShow):
+		out, err = h.svc.CorrectBooking(r.Context(), id, correction, *reason, user, r)
 	default:
 		out, err = h.svc.CheckInManually(r.Context(), id, &user.ID)
 	}
@@ -654,7 +680,8 @@ func (h *handler) member(failMessage string, fn memberFunc) http.Handler {
 		var appErr *httpx.Error
 		switch {
 		case errors.As(err, &appErr):
-			_ = memberError(w, appErr.Message, appErr.Status)
+			code, _ := appErr.Details.(errorCode)
+			_ = writeMemberError(w, appErr.Message, appErr.Status, code)
 		case errors.Is(err, errInvalidData):
 			_ = memberError(w, "Data tidak valid", http.StatusBadRequest)
 		default:
@@ -665,10 +692,17 @@ func (h *handler) member(failMessage string, fn memberFunc) http.Handler {
 }
 
 func memberError(w http.ResponseWriter, msg string, status int) error {
+	return writeMemberError(w, msg, status, "")
+}
+
+// writeMemberError adds code when the failure has one the app reacts to
+// (waiver_required links to the waiver screen).
+func writeMemberError(w http.ResponseWriter, msg string, status int, code errorCode) error {
 	return httpx.JSON(w, status, struct {
-		Success bool   `json:"success"`
-		Error   string `json:"error"`
-	}{false, msg})
+		Success bool      `json:"success"`
+		Error   string    `json:"error"`
+		Code    errorCode `json:"code,omitempty"`
+	}{false, msg, code})
 }
 
 // memberBody is `await request.json()` in a member route: a body that is not
@@ -767,13 +801,19 @@ func (h *handler) memberConfirmOffer(w http.ResponseWriter, r *http.Request, cus
 	if err != nil {
 		return err
 	}
-	if body["action"] != "confirm_offer" {
-		return errInvalidData
+	switch body["action"] {
+	case "confirm_offer":
+		if err := h.svc.ConfirmWaitlistOffer(r.Context(), id, customerID); err != nil {
+			return err
+		}
+		return ok(w, object("id", id, "status", "confirmed"))
+	case "decline_offer":
+		if err := h.svc.DeclineWaitlistOffer(r.Context(), id, customerID); err != nil {
+			return err
+		}
+		return ok(w, object("id", id, "status", "cancelled"))
 	}
-	if err := h.svc.ConfirmWaitlistOffer(r.Context(), id, customerID); err != nil {
-		return err
-	}
-	return ok(w, object("id", id, "status", "confirmed"))
+	return errInvalidData
 }
 
 func (h *handler) memberCoaches(w http.ResponseWriter, r *http.Request, _ string) error {

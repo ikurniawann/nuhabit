@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/ratelimit"
 )
 
 // Name is the MODULES key.
@@ -23,5 +24,5 @@ func New(deps module.Deps, ports Ports) module.Module {
 	}
 	svc := NewService(deps.DB, Postgres{}, ports, deps.Now)
 	svc.log = log
-	return mod{h: &handler{svc: svc, guard: deps.Auth, log: log}}
+	return mod{h: &handler{svc: svc, guard: deps.Auth, log: log, limiter: ratelimit.New(deps.DB)}}
 }
