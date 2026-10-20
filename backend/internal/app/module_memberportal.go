@@ -12,7 +12,9 @@ import (
 	"nuhabit/backend/internal/modules/crm"
 	"nuhabit/backend/internal/modules/crm/xp"
 	"nuhabit/backend/internal/modules/gymcredits"
+	creditdomain "nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/modules/memberportal"
+	"nuhabit/backend/internal/modules/memberportal/referral"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/module"
 )
@@ -20,14 +22,35 @@ import (
 func init() {
 	Register(memberportal.Name, func(deps module.Deps) module.Module {
 		return memberportal.New(deps, memberportal.Options{
-			Credits: memberCredits{svc: gymcredits.NewDefaultService(deps, deps.DB), deps: deps},
-			Loyalty: memberLoyalty{engine: crm.NewEngine(deps, crmPosReads{}), db: deps.DB},
+			Credits:         memberCredits{svc: gymcredits.NewDefaultService(deps, deps.DB), deps: deps},
+			Loyalty:         memberLoyalty{engine: crm.NewEngine(deps, crmPosReads{}), db: deps.DB},
+			ReferralCredits: referralCredits{svc: gymcredits.NewDefaultService(deps, deps.DB)},
 			OTPMail: memberOTPMail{
 				mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: deps.Log, client: &http.Client{Timeout: 15 * time.Second}},
 				from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("GYM_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
 			},
 		})
 	})
+	RegisterJob(memberportal.Name, "member-portal.referral-rewards", 15*time.Minute, referralService, (*referral.Service).Process)
+}
+
+// referralService is the referral program for the settlement job.
+func referralService(d module.Deps) *referral.Service {
+	return referral.New(d.DB, referralCredits{svc: gymcredits.NewDefaultService(d, d.DB)}, d.Log, d.Now)
+}
+
+// referralCredits grants referral rewards as bonus lots on the gym credit
+// ledger, sourced to the referral.
+type referralCredits struct {
+	svc *gymcredits.Service
+}
+
+func (c referralCredits) GrantBonus(ctx context.Context, q database.Querier, g referral.CreditGrant) error {
+	_, _, err := c.svc.GrantCredits(ctx, q, gymcredits.Grant{
+		CustomerID: g.CustomerID, Type: creditdomain.Bonus, Credits: g.Credits, ExpiresAt: g.ExpiresAt,
+		SourceType: "referral", SourceID: g.ReferralID, Note: g.Note, IdempotencyKey: g.Key,
+	})
+	return err
 }
 
 // memberOTPMail emails member sign-in codes through Resend when

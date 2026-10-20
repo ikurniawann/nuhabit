@@ -45,17 +45,26 @@ func (s *Service) otpChannel(ctx context.Context) string {
 
 // PortalConfig is the public configuration the member app reads at runtime.
 type PortalConfig struct {
-	OTPEnabled  bool     `json:"otp_enabled"`
-	OTPChannels []string `json:"otp_channels"`
+	OTPEnabled     bool     `json:"otp_enabled"`
+	OTPChannels    []string `json:"otp_channels"`
+	ReferralActive bool     `json:"referral_active"`
 }
 
-// Config reports what the sign-in screens may offer.
-func (s *Service) Config(ctx context.Context) PortalConfig {
+// Config reports what the sign-in and sign-up screens may offer.
+func (s *Service) Config(ctx context.Context) (PortalConfig, error) {
 	channels := s.OTPChannels(ctx)
 	if channels == nil {
 		channels = []string{}
 	}
-	return PortalConfig{OTPEnabled: s.OTPAvailable(ctx), OTPChannels: channels}
+	out := PortalConfig{OTPEnabled: s.OTPAvailable(ctx), OTPChannels: channels}
+	if s.referrals != nil {
+		active, err := s.referrals.Active(ctx)
+		if err != nil {
+			return out, err
+		}
+		out.ReferralActive = active
+	}
+	return out, nil
 }
 
 // otpEmail is the subject and body of a code sent by email.

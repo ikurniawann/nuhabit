@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/modules/memberportal/referral"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/ratelimit"
 	"nuhabit/backend/internal/platform/safehttp"
@@ -29,6 +30,9 @@ type Options struct {
 	// OTPMail sends codes by email when WhatsApp is not set up; nil means
 	// WhatsApp only.
 	OTPMail OTPMailer
+	// ReferralCredits grants the bonus credit lots of referral rewards
+	// (the gym credit ledger); nil leaves credit rewards out.
+	ReferralCredits referral.Credits
 }
 
 // New builds the module with its in-package adapters.
@@ -55,7 +59,8 @@ func New(deps module.Deps, opts Options) *Module {
 		svc.google = newGoogleKeys(GoogleJWKSURL, safehttp.NewClient(10*time.Second), deps.Now)
 	}
 	svc.ticketSecret = ticketSecret(getenv("MEMBER_TICKET_SECRET"), deps.Config.DatabaseURL)
-	return &Module{handler: &Handler{svc: svc, auth: deps.Auth, log: deps.Log, credits: opts.Credits}}
+	svc.referrals = referral.New(deps.DB, opts.ReferralCredits, deps.Log, deps.Now)
+	return &Module{handler: &Handler{svc: svc, auth: deps.Auth, guard: deps.Auth, log: deps.Log, credits: opts.Credits, referrals: svc.referrals}}
 }
 
 // ticketSecret signs Google tickets: MEMBER_TICKET_SECRET, else a key

@@ -451,11 +451,23 @@ func (s *Service) Register(ctx context.Context, ip string, body map[string]any) 
 	if rejected != nil {
 		return nil, rejected
 	}
+	s.attachReferral(ctx, member.ID, jsString(body["referral_code"]), jsString(body["device_id"]))
 	token, err := s.createSession(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 	return &SignedIn{Name: member.Name, Token: token}, nil
+}
+
+// attachReferral records the sign-up's referral code and device. A failure
+// is logged and never fails the registration.
+func (s *Service) attachReferral(ctx context.Context, customerID, code, deviceID string) {
+	if s.referrals == nil {
+		return
+	}
+	if err := s.referrals.Attach(ctx, customerID, code, deviceID); err != nil {
+		s.log.ErrorContext(ctx, "[member-portal] referral gagal dicatat", "customer_id", customerID, "error", err)
+	}
 }
 
 // createSession stores the hash of a random 32 byte token for 30 days.

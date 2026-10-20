@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/modules/memberportal/referral"
 	"nuhabit/backend/internal/platform/ratelimit"
 )
 
@@ -32,6 +33,7 @@ type Service struct {
 	payments   Payments
 	wallet     WalletLedger
 	loyalty    Loyalty
+	referrals  *referral.Service
 	log        *slog.Logger
 	now        func() time.Time
 	limits     *ratelimit.Limiter

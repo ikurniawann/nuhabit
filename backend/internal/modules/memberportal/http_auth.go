@@ -20,7 +20,11 @@ var errOTPUnavailable = httpx.Status(http.StatusServiceUnavailable, "Verifikasi 
 
 // GET /config is the runtime configuration of the sign-in screens.
 func (h *Handler) config(w http.ResponseWriter, r *http.Request) error {
-	return ok(w, h.svc.Config(r.Context()))
+	config, err := h.svc.Config(r.Context())
+	if err != nil {
+		return err
+	}
+	return ok(w, config)
 }
 
 // POST /otp { phone } sends a login code to a registered member.
