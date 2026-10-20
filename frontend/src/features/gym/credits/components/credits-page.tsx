@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -32,8 +31,9 @@ import {
   type CreditEntry,
   type CreditPurchase,
   type MemberCredits,
-  type PaymentMethod,
 } from "../api";
+import { SellDialog } from "./sell-dialog";
+import { useDebounced } from "@/features/gym/use-debounced";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
 
@@ -44,15 +44,6 @@ const PURCHASE_BADGE: Record<CreditPurchase["status"], { label: string; variant:
   expired: { label: "Kedaluwarsa", variant: "muted" },
   refunded: { label: "Direfund", variant: "warning" },
 };
-
-function useDebounced<T>(value: T, ms = 300) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), ms);
-    return () => clearTimeout(id);
-  }, [value, ms]);
-  return debounced;
-}
 
 /** Gym → Kredit Member: cari member, lihat saldo & lot, koreksi, jual paket di front desk. */
 export function CreditsPage() {
@@ -414,109 +405,6 @@ function AdjustDialog({ credits, onClose, onDone }: { credits: MemberCredits; on
             </Button>
             <Button type="submit" disabled={!valid || save.isPending}>
               Simpan
-            </Button>
-          </DialogFooter>
-        </DialogPanelForm>
-      </DialogPanel>
-    </Dialog>
-  );
-}
-
-function SellDialog({ credits, onClose, onDone }: { credits: MemberCredits; onClose: () => void; onDone: () => void }) {
-  const packages = useQuery({ queryKey: ["gym-credits", "packages"], queryFn: gymCreditsApi.packages });
-  const [packageId, setPackageId] = useState("");
-  const [method, setMethod] = useState<PaymentMethod>("cash");
-  const [discount, setDiscount] = useState("0");
-  const [note, setNote] = useState("");
-  const active = (packages.data?.packages ?? []).filter((p) => p.status === "active");
-  const pkg = active.find((p) => p.id === packageId);
-  const discountIdr = method === "complimentary" ? (pkg?.price_idr ?? 0) : Math.min(Number(discount) || 0, pkg?.price_idr ?? 0);
-  const total = (pkg?.price_idr ?? 0) - discountIdr;
-  const arkShort = method === "ark_coin" && total > credits.member.ark_balance_idr;
-
-  const sell = useMutation({
-    mutationFn: () =>
-      gymCreditsApi.sell(credits.member.id, { package_id: packageId, payment_method: method, discount_idr: discountIdr, note }),
-    onSuccess: (purchase) => {
-      toast.success("Paket terjual", { description: `${purchase.package_name}: +${formatNumber(purchase.credits)} kredit` });
-      onDone();
-      onClose();
-    },
-    onError: (error) => toast.error("Penjualan gagal", { description: error.message }),
-  });
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogPanel size="md">
-        <DialogPanelForm
-          onSubmit={(e) => {
-            e.preventDefault();
-            sell.mutate();
-          }}
-        >
-          <DialogPanelHeader>
-            <DialogPanelTitle>Jual paket ke {credits.member.name ?? "member"}</DialogPanelTitle>
-            <DialogPanelDescription>Terima pembayaran di kasir dulu. Kredit langsung masuk setelah disimpan.</DialogPanelDescription>
-          </DialogPanelHeader>
-          <DialogPanelBody className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Paket" className="sm:col-span-2">
-              <Select value={packageId} onValueChange={setPackageId}>
-                <SelectTrigger aria-label="Paket">
-                  <SelectValue placeholder={packages.isLoading ? "Memuat paket…" : "Pilih paket"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {active.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} · {p.kind === "pass" ? `Pass ${formatNumber(p.validity_days)} hari` : `${formatNumber(p.credits)} kredit`} ·{" "}
-                      {formatRupiah(p.price_idr)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Metode bayar">
-              <Select value={method} onValueChange={(v) => setMethod(v as PaymentMethod)}>
-                <SelectTrigger aria-label="Metode bayar">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(METHOD_LABELS) as PaymentMethod[]).map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {METHOD_LABELS[m]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Diskon (Rp)">
-              <Input
-                type="number"
-                min={0}
-                value={method === "complimentary" ? String(discountIdr) : discount}
-                disabled={method === "complimentary"}
-                onChange={(e) => setDiscount(e.target.value)}
-              />
-            </Field>
-            <Field label="Catatan" className="sm:col-span-2">
-              <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="No. struk EDC, nama kasir, dll." />
-            </Field>
-            <div className="rounded-2xl bg-surface px-4 py-3 sm:col-span-2">
-              <p className="text-xs text-muted-foreground">Total dibayar</p>
-              <p className="text-2xl font-bold tabular-nums">{formatRupiah(total)}</p>
-              {method === "ark_coin" && (
-                <p className={cn("text-xs", arkShort ? "text-danger" : "text-muted-foreground")}>
-                  Saldo ARK Coin {formatRupiah(credits.member.ark_balance_idr)}
-                  {arkShort ? " · tidak cukup" : ""}
-                </p>
-              )}
-            </div>
-          </DialogPanelBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Batal
-            </Button>
-            <Button type="submit" disabled={!pkg || arkShort || sell.isPending}>
-              {sell.isPending ? "Menyimpan…" : "Simpan penjualan"}
             </Button>
           </DialogFooter>
         </DialogPanelForm>

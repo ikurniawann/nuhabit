@@ -23,6 +23,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { GYM_KEYS, schedulingApi, type Coach } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { useGymBranches } from "@/features/gym/branches";
+import { Combobox } from "@/components/ui/combobox";
 import { formatNumber } from "@/lib/format";
 
 /** Gym → Coach: profil yang tampil di portal member dan jadwal kelas. */
@@ -72,6 +74,11 @@ export function CoachesPage() {
                       {c.status === "inactive" && <Badge variant="muted">Nonaktif</Badge>}
                     </p>
                     <p className="text-xs text-muted-foreground md:hidden">{c.specialization}</p>
+                    {(c.branch_name || c.user_name) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[c.branch_name, c.user_name && `Akun ${c.user_name}`].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                     <p className="line-clamp-2 text-xs text-muted-foreground">{c.bio}</p>
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{c.specialization || "—"}</TableCell>
@@ -107,7 +114,16 @@ function CoachDialog({ coach, onClose, onSaved }: { coach: Coach | null; onClose
     bio: coach?.bio ?? "",
     photo_url: coach?.photo_url ?? "",
     status: coach?.status ?? ("active" as const),
+    branch_id: coach?.branch_id ?? "",
+    user_id: coach?.user_id ?? "",
   });
+  const branches = useGymBranches();
+  const staff = useQuery({ queryKey: ["gym", "coach-staff"], queryFn: schedulingApi.staffUsers });
+  const staffOptions = (staff.data ?? []).map((u) => ({
+    value: u.id,
+    label: u.full_name ?? u.email ?? "Tanpa nama",
+    description: [u.email, u.branch_name].filter(Boolean).join(" · ") || undefined,
+  }));
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((cur) => ({ ...cur, [key]: e.target.value }));
   const save = useMutation({
@@ -119,6 +135,8 @@ function CoachDialog({ coach, onClose, onSaved }: { coach: Coach | null; onClose
           bio: form.bio.trim(),
           photo_url: form.photo_url.trim() || null,
           status: form.status,
+          branch_id: form.branch_id || null,
+          user_id: form.user_id || null,
         },
         coach?.id
       ),
@@ -156,6 +174,32 @@ function CoachDialog({ coach, onClose, onSaved }: { coach: Coach | null; onClose
             <Field label="URL foto">
               <Input type="url" value={form.photo_url} onChange={set("photo_url")} placeholder="https://…" />
             </Field>
+            <Field label="Cabang">
+              <select className={SELECT} value={form.branch_id} onChange={set("branch_id")}>
+                <option value="">Semua cabang</option>
+                {(branches.data?.branches ?? []).map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex min-w-0 flex-col">
+              <span id="coach-user-label" className="mb-1.5 text-sm font-medium text-foreground">
+                Akun staf
+              </span>
+              <Combobox
+                aria-labelledby="coach-user-label"
+                options={staffOptions}
+                value={form.user_id}
+                onChange={(value) => setForm((cur) => ({ ...cur, user_id: value }))}
+                placeholder={staff.isLoading ? "Memuat akun…" : "Belum ditautkan"}
+                searchPlaceholder="Cari nama atau email"
+                emptyMessage="Akun tidak ditemukan."
+                allowClear
+              />
+              <span className="mt-1 text-xs text-muted-foreground">Coach yang login melihat kelasnya sendiri.</span>
+            </div>
             <Field label="Status">
               <select className={SELECT} value={form.status} onChange={set("status")}>
                 <option value="active">Aktif</option>

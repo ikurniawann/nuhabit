@@ -24,6 +24,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
+import { SELECT } from "@/features/gym/shared";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import {
   gymCreditsApi,
@@ -215,6 +216,8 @@ function PackageDialog({
   const [coverage, setCoverage] = useState<string[]>(pkg?.applicable_class_type_ids ?? []);
   const [kind, setKind] = useState<PackageKind>(pkg?.kind ?? "credits");
   const [isPublic, setIsPublic] = useState(pkg?.is_public ?? true);
+  // Kosong = dijual di semua cabang.
+  const [branchId, setBranchId] = useState(pkg?.branch_id ?? "");
   // Harga per cabang; kosong = pakai harga dasar.
   const [branchPrices, setBranchPrices] = useState<Record<string, string>>(() =>
     Object.fromEntries((pkg?.branch_prices ?? []).map((bp) => [bp.branch_id, String(bp.price_idr)])),
@@ -245,7 +248,7 @@ function PackageDialog({
         validity_days: Number(form.validity_days) || 0,
         purchase_limit_per_member: Number(form.purchase_limit_per_member) || null,
         applicable_class_type_ids: !isPass && coverage.length > 0 ? coverage : null,
-        branch_id: pkg?.branch_id ?? null,
+        branch_id: branchId || null,
         is_public: isPublic,
         badge: form.badge.trim() || null,
         branch_prices: Object.entries(branchPrices)
@@ -343,6 +346,18 @@ function PackageDialog({
               <Switch checked={isPublic} onCheckedChange={setIsPublic} aria-label="Tampil di daftar harga situs" />
               Tampil di daftar harga situs
             </label>
+            {branches.length > 0 && (
+              <Field label="Dijual di" className="sm:col-span-2" hint="Paket khusus cabang hanya muncul di front desk cabang itu.">
+                <select className={SELECT} value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+                  <option value="">Semua cabang</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      Khusus {b.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             {branches.length > 0 && (
               <fieldset className="sm:col-span-2">
                 <legend className="mb-1.5 text-sm font-medium text-foreground">Harga per cabang</legend>
