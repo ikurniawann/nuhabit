@@ -330,8 +330,8 @@ const (
 	visitLimit    = 50
 )
 
-// Member360 loads the 360 page; nil when the member does not exist.
-func (s *Service) Member360(ctx context.Context, customerID string) (*Member360, error) {
+// Member360 loads the 360 page for readerID; nil when the member does not exist.
+func (s *Service) Member360(ctx context.Context, customerID, readerID string) (*Member360, error) {
 	profile, err := s.profile(ctx, customerID)
 	if err != nil || profile == nil {
 		return nil, err
@@ -360,7 +360,7 @@ func (s *Service) Member360(ctx context.Context, customerID string) (*Member360,
 	if out.Visits, err = s.visits(ctx, customerID); err != nil {
 		return nil, err
 	}
-	if out.Notes, err = s.Notes(ctx, customerID); err != nil {
+	if out.Notes, err = s.Notes(ctx, customerID, readerID); err != nil {
 		return nil, err
 	}
 	return out, nil

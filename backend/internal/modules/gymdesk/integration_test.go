@@ -311,8 +311,12 @@ func TestMember360AndNotes(t *testing.T) {
 	if r := f.call("DELETE", "/api/gym/members/"+f.m1+"/notes/"+noteID, staffB, nil); r.status != http.StatusForbidden {
 		t.Errorf("delete by another staff = %d", r.status)
 	}
-	if notes := f.get("/api/gym/members/" + f.m1)["notes"].([]any); len(notes) != 1 {
+	if notes := f.get("/api/gym/members/" + f.m1)["notes"].([]any); len(notes) != 1 || notes[0].(map[string]any)["mine"] != true {
 		t.Errorf("notes = %v", notes)
+	}
+	r := f.call("GET", "/api/gym/members/"+f.m1, staffB, nil)
+	if notes := r.data()["notes"].([]any); notes[0].(map[string]any)["mine"] != false {
+		t.Errorf("another staff sees mine = %v", notes)
 	}
 	if r := f.call("DELETE", "/api/gym/members/"+f.m1+"/notes/"+noteID, staffA, nil); r.status != http.StatusOK {
 		t.Errorf("delete own note = %d %s", r.status, r.raw)

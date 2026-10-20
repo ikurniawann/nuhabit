@@ -160,12 +160,12 @@ func (h *handler) register(w http.ResponseWriter, r *http.Request, _ *auth.User)
 	return httpx.DataMessage(w, http.StatusCreated, map[string]string{"id": id}, "Member terdaftar")
 }
 
-func (h *handler) member(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
+func (h *handler) member(w http.ResponseWriter, r *http.Request, user *auth.User) error {
 	id, err := pathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	out, err := h.svc.Member360(r.Context(), id)
+	out, err := h.svc.Member360(r.Context(), id, user.ID)
 	if err != nil {
 		return err
 	}

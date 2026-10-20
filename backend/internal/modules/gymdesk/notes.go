@@ -17,16 +17,18 @@ type Note struct {
 	AuthorName string    `json:"author_name"`
 	Body       string    `json:"body"`
 	CreatedAt  time.Time `json:"created_at"`
+	// Mine marks the reader's own notes, the ones they may delete.
+	Mine bool `json:"mine"`
 }
 
 // NoteMaxLength is the longest note, in characters.
 const NoteMaxLength = 2000
 
-// Notes lists the member's notes, newest first.
-func (s *Service) Notes(ctx context.Context, customerID string) ([]Note, error) {
+// Notes lists the member's notes, newest first, as readerID sees them.
+func (s *Service) Notes(ctx context.Context, customerID, readerID string) ([]Note, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id::text, author_id::text, author_name, body, created_at
-		   FROM gym.member_notes WHERE customer_id = $1 ORDER BY created_at DESC, id`, customerID)
+		`SELECT id::text, author_id::text, author_name, body, created_at, author_id::text = $2
+		   FROM gym.member_notes WHERE customer_id = $1 ORDER BY created_at DESC, id`, customerID, readerID)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func (s *Service) AddNote(ctx context.Context, customerID, authorID, authorName,
 	if err := s.requireMember(ctx, customerID); err != nil {
 		return nil, err
 	}
-	n := Note{AuthorID: authorID, AuthorName: authorName, Body: body}
+	n := Note{AuthorID: authorID, AuthorName: authorName, Body: body, Mine: true}
 	err := s.db.QueryRow(ctx,
 		`INSERT INTO gym.member_notes (customer_id, author_id, author_name, body)
 		 VALUES ($1, $2, $3, $4) RETURNING id::text, created_at`, customerID, authorID, authorName, body).
