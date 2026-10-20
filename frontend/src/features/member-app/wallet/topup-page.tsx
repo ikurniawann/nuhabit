@@ -52,7 +52,7 @@ function TopUp() {
   const checkVoucher = async (forPackage: string) => {
     setVoucher(null);
     setVoucherError("");
-    if (!voucherCode.trim() || !forPackage) return;
+    if (!voucherCode.trim()) return;
     setChecking(true);
     try {
       setVoucher(await previewVoucher(forPackage, voucherCode));
