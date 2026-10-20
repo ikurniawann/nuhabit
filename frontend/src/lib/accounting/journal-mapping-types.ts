@@ -51,6 +51,14 @@ export const JOURNAL_LINE_ROLES = [
   "OVERHEAD_APPLIED",
   /** Kerugian produksi (scrap di atas toleransi). */
   "PRODUCTION_LOSS",
+  /** Pendapatan diterima di muka dari paket kredit dan pass gym. */
+  "GYM_DEFERRED_REVENUE",
+  /** Pendapatan kelas gym dari kredit yang terpakai. */
+  "GYM_CLASS_REVENUE",
+  /** Pendapatan dari kredit gym yang kedaluwarsa. */
+  "GYM_BREAKAGE_REVENUE",
+  /** Pendapatan pass gym yang diakui per hari. */
+  "GYM_PASS_REVENUE",
   "OTHER",
 ] as const;
 export type JournalLineRole = (typeof JOURNAL_LINE_ROLES)[number];
@@ -99,6 +107,19 @@ export const JOURNAL_EVENT_CODES = [
   "PRODUCTION_SCRAP",
   "PRODUCTION_ABNORMAL_SCRAP",
   "PRODUCTION_MATERIAL_RETURN",
+  "GYM_SALE_CASH",
+  "GYM_SALE_BANK",
+  "GYM_SALE_QRIS",
+  "GYM_SALE_ARK_COIN",
+  "GYM_REFUND_CASH",
+  "GYM_REFUND_BANK",
+  "GYM_REFUND_QRIS",
+  "GYM_REFUND_ARK_COIN",
+  "GYM_CREDIT_USAGE",
+  "GYM_CREDIT_USAGE_REVERSAL",
+  "GYM_CREDIT_BREAKAGE",
+  "GYM_PASS_REVENUE",
+  "GYM_PASS_REVENUE_REVERSAL",
 ] as const;
 export type JournalEventCode = (typeof JOURNAL_EVENT_CODES)[number];
 
@@ -320,6 +341,71 @@ export const JOURNAL_EVENT_META: Record<
     name: "Production Material Return",
     module: "INVENTORY",
     description: "Bahan sisa produksi dikembalikan ke persediaan dari WIP",
+  },
+  GYM_SALE_CASH: {
+    name: "Gym Package Sale (Cash)",
+    module: "POS",
+    description: "Paket gym dibayar tunai: kas ke pendapatan diterima di muka",
+  },
+  GYM_SALE_BANK: {
+    name: "Gym Package Sale (Bank)",
+    module: "POS",
+    description: "Paket gym dibayar kartu atau transfer: bank ke pendapatan diterima di muka",
+  },
+  GYM_SALE_QRIS: {
+    name: "Gym Package Sale (QRIS)",
+    module: "POS",
+    description: "Paket gym dibayar QRIS atau invoice online: kliring QRIS ke pendapatan diterima di muka",
+  },
+  GYM_SALE_ARK_COIN: {
+    name: "Gym Package Sale (ARK Coin)",
+    module: "POS",
+    description: "Paket gym dibayar ARK Coin: kewajiban ARK Coin ke pendapatan diterima di muka",
+  },
+  GYM_REFUND_CASH: {
+    name: "Gym Package Refund (Cash)",
+    module: "POS",
+    description: "Refund paket gym tunai: pendapatan diterima di muka ke kas",
+  },
+  GYM_REFUND_BANK: {
+    name: "Gym Package Refund (Bank)",
+    module: "POS",
+    description: "Refund paket gym kartu atau transfer: pendapatan diterima di muka ke bank",
+  },
+  GYM_REFUND_QRIS: {
+    name: "Gym Package Refund (QRIS)",
+    module: "POS",
+    description: "Refund paket gym QRIS atau invoice online: pendapatan diterima di muka ke kliring QRIS",
+  },
+  GYM_REFUND_ARK_COIN: {
+    name: "Gym Package Refund (ARK Coin)",
+    module: "POS",
+    description: "Refund paket gym ke ARK Coin: pendapatan diterima di muka ke kewajiban ARK Coin",
+  },
+  GYM_CREDIT_USAGE: {
+    name: "Gym Credit Usage",
+    module: "POS",
+    description: "Kredit gym terpakai (check-in, no-show, batal telat): pendapatan diterima di muka ke pendapatan kelas",
+  },
+  GYM_CREDIT_USAGE_REVERSAL: {
+    name: "Gym Credit Usage Reversal",
+    module: "POS",
+    description: "Kredit gym dikembalikan ke member: pendapatan kelas ke pendapatan diterima di muka",
+  },
+  GYM_CREDIT_BREAKAGE: {
+    name: "Gym Credit Breakage",
+    module: "POS",
+    description: "Kredit gym kedaluwarsa: pendapatan diterima di muka ke pendapatan kredit kedaluwarsa",
+  },
+  GYM_PASS_REVENUE: {
+    name: "Gym Pass Revenue",
+    module: "POS",
+    description: "Pengakuan harian pendapatan pass gym dari pendapatan diterima di muka",
+  },
+  GYM_PASS_REVENUE_REVERSAL: {
+    name: "Gym Pass Revenue Reversal",
+    module: "POS",
+    description: "Pass gym direfund: pendapatan pass yang sudah diakui kembali ke pendapatan diterima di muka",
   },
 };
 
