@@ -25,8 +25,8 @@ type Rules struct {
 	BookingOpensDaysBefore int `json:"bookingOpensDaysBefore"`
 	BookingClosesMinBefore int `json:"bookingClosesMinBefore"`
 	// MaxConcurrentBookings caps confirmed bookings for classes still to
-	// come; MaxBookingsPerDay caps bookings on one WIB day. 0 = no cap. Pass
-	// holders are capped too.
+	// come; MaxBookingsPerDay caps bookings on one day of the session's
+	// branch zone. 0 = no cap. Pass holders are capped too.
 	MaxConcurrentBookings int `json:"maxConcurrentBookings"`
 	MaxBookingsPerDay     int `json:"maxBookingsPerDay"`
 	// StrikeLimit pass strikes inside StrikeWindowDays suspend booking for
@@ -65,8 +65,8 @@ type Rules struct {
 	CheckinOpensMinBefore int `json:"checkinOpensMinBefore"`
 	CheckinClosesMinAfter int `json:"checkinClosesMinAfter"`
 	// OpenGymEnabled admits members without a class booking during the
-	// branch's open gym hours; OpenGymCreditCost is charged once per WIB day
-	// (0 = free, pass holders never pay).
+	// branch's open gym hours; OpenGymCreditCost is charged once per day in
+	// the branch zone (0 = free, pass holders never pay).
 	OpenGymEnabled    bool `json:"openGymEnabled"`
 	OpenGymCreditCost int  `json:"openGymCreditCost"`
 	// CorrectionWindowDays: staff may undo a check-in or no-show this many
@@ -75,7 +75,7 @@ type Rules struct {
 	// AllowMemberCreditTransfer lets members send credits to another member
 	// from the member app; staff can always transfer.
 	AllowMemberCreditTransfer bool `json:"allowMemberCreditTransfer"`
-	// MaxTransferCreditsPerMonth caps the credits one member sends in a WIB
+	// MaxTransferCreditsPerMonth caps the credits one member sends in a Jakarta
 	// calendar month, staff and member transfers together. 0 = no cap.
 	MaxTransferCreditsPerMonth int `json:"maxTransferCreditsPerMonth"`
 }

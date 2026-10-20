@@ -55,7 +55,7 @@ func TestFrontDeskSaleJoinsTheShift(t *testing.T) {
 	}
 }
 
-// Every paid purchase gets the next receipt number of its WIB day; the
+// Every paid purchase gets the next receipt number of its day in the branch zone; the
 // receipt carries the member, the cashier and the shift.
 func TestReceiptNumbers(t *testing.T) {
 	e := setup(t)

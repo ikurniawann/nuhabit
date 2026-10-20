@@ -16,6 +16,7 @@ import (
 	contracts "nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Purchase lifecycle: pending -> paid -> refunded. Money and credits are
@@ -389,7 +390,7 @@ func (s *Service) refundPass(ctx context.Context, tx database.Querier, p *Purcha
 	if err != nil {
 		return 0, err
 	}
-	company, err := s.repo.PurchaseCompany(ctx, tx, p.ID)
+	company, zone, err := s.repo.PurchaseBooks(ctx, tx, p.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -397,7 +398,7 @@ func (s *Service) refundPass(ctx context.Context, tx database.Querier, p *Purcha
 	// any shortfall is recognised now.
 	journal := contracts.Journal{
 		EventCode: "GYM_PASS_REVENUE_REVERSAL", DocumentType: "gym_purchase", DocumentID: p.ID, CompanyID: company,
-		UserID: actorID, EntryDate: entryDate(now), Amount: released - (p.TotalIdr - amount),
+		UserID: actorID, EntryDate: localtime.DayKey(now, zone), Amount: released - (p.TotalIdr - amount),
 		Description: "Refund pass gym " + p.PackageName,
 	}
 	if journal.Amount < 0 {

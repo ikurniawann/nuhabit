@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"nuhabit/backend/internal/platform/localtime"
 	"testing"
 	"time"
 )
@@ -61,7 +62,7 @@ func TestExpiryPeriodAndDate(t *testing.T) {
 	if got := ExpiryPeriod(at); got != "2026-10-25T20:00:00Z" {
 		t.Fatalf("period = %q", got)
 	}
-	if got := FormatDateWib(at); got != "Senin, 26 Okt 2026" {
+	if got := localtime.FormatLongDate(at, localtime.Jakarta); got != "Senin, 26 Okt 2026" {
 		t.Fatalf("date = %q", got)
 	}
 }

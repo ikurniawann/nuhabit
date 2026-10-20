@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"strconv"
 	"time"
 )
 
@@ -46,16 +45,4 @@ func LowBalanceNudge(lots []Lot, entries []Entry, now time.Time, threshold int) 
 // ExpiryPeriod keys an expiry reminder by the expiry instant.
 func ExpiryPeriod(expiresAt time.Time) string {
 	return expiresAt.UTC().Format(time.RFC3339)
-}
-
-var (
-	wib       = time.FixedZone("WIB", 7*3600)
-	idMonths  = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
-	idDayName = [...]string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
-)
-
-// FormatDateWib renders a date in Jakarta time, e.g. "Senin, 5 Okt 2026".
-func FormatDateWib(t time.Time) string {
-	w := t.In(wib)
-	return idDayName[w.Weekday()] + ", " + strconv.Itoa(w.Day()) + " " + idMonths[w.Month()-1] + " " + strconv.Itoa(w.Year())
 }

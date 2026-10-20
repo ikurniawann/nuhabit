@@ -395,9 +395,11 @@ type LotValue struct {
 	TotalIdr  float64
 	Credits   int
 	CompanyID *string
+	Zone      *time.Location // the purchase branch's zone
 }
 
-// PassRevenue is a paid pass with revenue still to release.
+// PassRevenue is a paid pass with revenue still to release. Its days are
+// counted in Zone, the purchase branch's zone.
 type PassRevenue struct {
 	PassID     string
 	PurchaseID string
@@ -406,6 +408,7 @@ type PassRevenue struct {
 	Released   float64
 	StartsAt   time.Time
 	EndsAt     time.Time
+	Zone       *time.Location
 }
 
 // PassRelease is pass revenue released on Day (YYYY-MM-DD) in the journal
@@ -466,9 +469,10 @@ type Repository interface {
 	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any, shiftID *string) error
 	// NotePurchase appends note and merges meta into payment_meta.
 	NotePurchase(ctx context.Context, q database.Querier, id, note string, meta map[string]any) error
-	// PurchaseCompany is the company a purchase books to: its branch's,
-	// else the only company; nil when neither resolves.
-	PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error)
+	// PurchaseBooks is the company a purchase books to (its branch's, else
+	// the only company; nil when neither resolves) and the zone its journal
+	// dates read in (its branch's, else Jakarta).
+	PurchaseBooks(ctx context.Context, q database.Querier, id string) (company *string, zone *time.Location, err error)
 	AttachQR(ctx context.Context, q database.Querier, id, referenceID string, meta map[string]any) error
 
 	// InsertPass returns "" when the purchase already issued a pass.

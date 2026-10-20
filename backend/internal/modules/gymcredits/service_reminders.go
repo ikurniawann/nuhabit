@@ -12,6 +12,7 @@ import (
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/jobs"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Sent-log kinds (platform.reminder_sends) of the credit reminders.
@@ -108,7 +109,7 @@ SELECT DISTINCT l.customer_id::text FROM gym.credit_lots l
 			return Notice{
 				Type:  "gym_credit_expiring",
 				Title: "Kredit kelas segera hangus",
-				Body:  strconv.Itoa(credits) + " kredit berakhir " + domain.FormatDateWib(earliest) + ". Pakai untuk booking kelas sebelum tanggal itu.",
+				Body:  strconv.Itoa(credits) + " kredit berakhir " + localtime.FormatLongDate(earliest, memberZone) + ". Pakai untuk booking kelas sebelum tanggal itu.",
 			}
 		})
 		if err != nil {
@@ -147,7 +148,7 @@ SELECT mp.id, mp.customer_id, pk.name, mp.ends_at
 			return Notice{
 				Type:  "gym_pass_expiring",
 				Title: "Pass segera berakhir: " + p.PackageName,
-				Body:  "Pass Anda berakhir " + domain.FormatDateWib(p.EndsAt) + ". Perpanjang di aplikasi agar tetap bisa ikut kelas.",
+				Body:  "Pass Anda berakhir " + localtime.FormatLongDate(p.EndsAt, memberZone) + ". Perpanjang di aplikasi agar tetap bisa ikut kelas.",
 			}
 		})
 		if err != nil {

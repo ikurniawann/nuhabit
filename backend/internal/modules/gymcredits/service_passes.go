@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Pass lifecycle: a paid pass is active (queued while its start is ahead),
@@ -194,7 +194,7 @@ func (s *Service) SweepFrozen(ctx context.Context, now time.Time) error {
 			endsAt := p.EndsAt.Add(time.Duration(domain.UnfreezeDays(*p.FrozenAt, *p.FrozenUntil, now)) * day)
 			return s.ports.Notifier.NotifyMember(ctx, tx, p.CustomerID, Notice{
 				Type: "gym_pass_unfrozen", Title: "Pass aktif lagi: " + p.PackageName,
-				Body: "Masa beku selesai. Pass berlaku sampai " + wibDate(endsAt) + ".",
+				Body: "Masa beku selesai. Pass berlaku sampai " + localtime.FormatDate(endsAt, memberZone) + ".",
 			})
 		})
 		if err != nil {
@@ -259,12 +259,4 @@ func envOrigin() string {
 		origin = strings.TrimSpace(os.Getenv("NEXT_PUBLIC_BASE_URL"))
 	}
 	return strings.TrimRight(origin, "/")
-}
-
-var wibMonths = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
-
-// wibDate renders a date in Jakarta time, e.g. "21 Okt 2026".
-func wibDate(t time.Time) string {
-	w := t.In(wib)
-	return strconv.Itoa(w.Day()) + " " + wibMonths[w.Month()-1] + " " + strconv.Itoa(w.Year())
 }

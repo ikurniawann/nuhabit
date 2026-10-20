@@ -8,6 +8,7 @@ import (
 	contracts "nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/outbox"
 )
 
@@ -19,16 +20,17 @@ import (
 // it: a credit at the unit price of its lot (purchase total over the lot's
 // credits) when deducted, breakage when it expires, a pass by day through
 // SweepPassRevenue. Bonus and adjustment lots carry no money and post
-// nothing.
+// nothing. Journal dates are calendar dates in the zone of the purchase's
+// branch.
 
-var wib = time.FixedZone("WIB", 7*3600)
+// memberZone is the zone of member-level dates without a branch: pass and
+// credit expiry notices, renewals and the monthly transfer cap.
+var memberZone = localtime.Jakarta
 
-func entryDate(t time.Time) string { return t.In(wib).Format("2006-01-02") }
-
-// wibDay is the WIB calendar day of t, as midnight UTC.
-func wibDay(t time.Time) time.Time {
-	d := t.In(wib)
-	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.UTC)
+// localDay is t's calendar day in zone, as midnight UTC, for day counts.
+func localDay(t time.Time, zone *time.Location) time.Time {
+	y, m, d := t.In(zone).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
 
 // paymentGroup is the journal suffix of a payment method; "" posts nothing
@@ -61,7 +63,7 @@ func (s *Service) publishPurchaseJournal(ctx context.Context, q database.Querier
 	if group == "" || amount <= 0 {
 		return nil
 	}
-	company, err := s.repo.PurchaseCompany(ctx, q, p.ID)
+	company, zone, err := s.repo.PurchaseBooks(ctx, q, p.ID)
 	if err != nil {
 		return err
 	}
@@ -71,7 +73,7 @@ func (s *Service) publishPurchaseJournal(ctx context.Context, q database.Querier
 	}
 	return s.publishJournal(ctx, q, contracts.Journal{
 		EventCode: prefix + group, DocumentType: "gym_purchase", DocumentID: p.ID, CompanyID: company,
-		UserID: userID, EntryDate: entryDate(s.clock()), Amount: amount, Description: label + " paket gym " + p.PackageName,
+		UserID: userID, EntryDate: localtime.DayKey(s.clock(), zone), Amount: amount, Description: label + " paket gym " + p.PackageName,
 	})
 }
 
@@ -121,7 +123,7 @@ func (s *Service) publishLotJournals(ctx context.Context, q database.Querier, mo
 		event, label := lotMoveEvent(m)
 		if err := s.publishJournal(ctx, q, contracts.Journal{
 			EventCode: event, DocumentType: "gym_credit_entry", DocumentID: m.EntryID, CompanyID: v.CompanyID,
-			UserID: userID, EntryDate: entryDate(at), Amount: domain.UnitValue(v.TotalIdr, v.Credits, credits),
+			UserID: userID, EntryDate: localtime.DayKey(at, v.Zone), Amount: domain.UnitValue(v.TotalIdr, v.Credits, credits),
 			Description: fmt.Sprintf("%d kredit gym %s", credits, label),
 		}); err != nil {
 			return err

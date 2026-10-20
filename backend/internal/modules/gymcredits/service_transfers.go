@@ -34,7 +34,7 @@ type UpcomingBookings interface {
 
 // TransferAllowance is what the wallet shows about sending credits:
 // whether members may, the monthly cap (0 = none) and what was sent this
-// WIB month.
+// Jakarta calendar month.
 type TransferAllowance struct {
 	MemberEnabled bool `json:"member_enabled"`
 	MonthlyCap    int  `json:"monthly_cap"`
@@ -76,10 +76,11 @@ func transferFail(p domain.TransferProblem) error {
 	return fail(status, domain.TransferProblemMessages[p])
 }
 
-// monthStart is the first instant of t's WIB calendar month.
+// monthStart is the first instant of t's calendar month in memberZone: the
+// cap belongs to the member, not a branch.
 func monthStart(t time.Time) time.Time {
-	w := t.In(wib)
-	return time.Date(w.Year(), w.Month(), 1, 0, 0, 0, 0, wib)
+	w := t.In(memberZone)
+	return time.Date(w.Year(), w.Month(), 1, 0, 0, 0, 0, memberZone)
 }
 
 // TransferTx is Transfer in a new transaction.

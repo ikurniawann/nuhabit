@@ -12,6 +12,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/pdfgen"
 )
 
@@ -271,7 +272,7 @@ func (s *Service) planRetry(ctx context.Context, p RenewalState, now time.Time, 
 		return s.ports.Notifier.NotifyMember(ctx, tx, p.CustomerID, Notice{
 			Type: "gym_pass_renewal", Title: "Perpanjangan otomatis belum berhasil",
 			Body: "Pembayaran perpanjangan " + p.PackageName + " " + purchaseOutcome(p.RenewalStatus) +
-				". Kami coba lagi " + wibDateTime(next.At) + " (percobaan " + strconv.Itoa(p.Attempts+1) + " dari " +
+				". Kami coba lagi " + localtime.FormatDateTime(next.At, memberZone) + " (percobaan " + strconv.Itoa(p.Attempts+1) + " dari " +
 				strconv.Itoa(r.RenewalRetryCount+1) + "). Pastikan saldo atau metode pembayaranmu siap.",
 		})
 	})
@@ -315,7 +316,7 @@ func renewalNotice(p PassRow, v *MemberPurchaseView) Notice {
 		}
 		return Notice{
 			Type: "gym_pass_renewal", Title: "Pass diperpanjang: " + p.PackageName,
-			Body: "Pass baru sudah dibayar" + via + " dan mulai saat pass sekarang berakhir pada " + wibDate(p.EndsAt) + ".",
+			Body: "Pass baru sudah dibayar" + via + " dan mulai saat pass sekarang berakhir pada " + localtime.FormatDate(p.EndsAt, memberZone) + ".",
 		}
 	}
 	if deref(v.PaymentMethod) == PaySavedMethod {
@@ -326,12 +327,7 @@ func renewalNotice(p PassRow, v *MemberPurchaseView) Notice {
 	}
 	return Notice{
 		Type: "gym_pass_renewal", Title: "Perpanjang pass kamu: " + p.PackageName,
-		Body: "Pass kamu berakhir pada " + wibDate(p.EndsAt) + ". Bayar " + pdfgen.Rupiah(v.TotalIdr) +
+		Body: "Pass kamu berakhir pada " + localtime.FormatDate(p.EndsAt, memberZone) + ". Bayar " + pdfgen.Rupiah(v.TotalIdr) +
 			" di menu Dompet supaya langsung lanjut tanpa jeda.",
 	}
-}
-
-// wibDateTime renders a time in Jakarta time, e.g. "21 Okt 2026 pukul 14.00 WIB".
-func wibDateTime(t time.Time) string {
-	return wibDate(t) + " pukul " + t.In(wib).Format("15.04") + " WIB"
 }

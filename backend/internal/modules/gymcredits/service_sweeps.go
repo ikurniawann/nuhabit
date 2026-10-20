@@ -55,13 +55,12 @@ func (s *Service) SweepExpiry(ctx context.Context, now time.Time) (int, error) {
 	}
 }
 
-// SweepPassRevenue releases the revenue of paid passes for the WIB day of
+// SweepPassRevenue releases the revenue of paid passes through the day of
 // now, spread evenly over each pass's days, and posts one GYM_PASS_REVENUE
-// journal per company. Run it once a day or more often; it returns how
-// many passes it released revenue for.
+// journal per company and day. A pass counts its days in its purchase
+// branch's zone. Run it once a day or more often; it returns how many
+// passes it released revenue for.
 func (s *Service) SweepPassRevenue(ctx context.Context, now time.Time) (int, error) {
-	through := wibDay(now)
-	day := through.Format("2006-01-02")
 	released := 0
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		if err := s.repo.LockPassRevenue(ctx, tx); err != nil {
@@ -74,20 +73,23 @@ func (s *Service) SweepPassRevenue(ctx context.Context, now time.Time) (int, err
 		type batch struct {
 			id      string
 			company *string
+			day     string
 			amount  float64
 		}
 		batches := map[string]*batch{}
 		var order []string
 		var releases []PassRelease
 		for _, p := range passes {
-			amount := domain.PassRevenueDue(p.TotalIdr, wibDay(p.StartsAt), wibDay(p.EndsAt), through) - p.Released
+			through := localDay(now, p.Zone)
+			amount := domain.PassRevenueDue(p.TotalIdr, localDay(p.StartsAt, p.Zone), localDay(p.EndsAt, p.Zone), through) - p.Released
 			if amount < 0.005 {
 				continue
 			}
-			key := deref(p.CompanyID)
+			day := through.Format(time.DateOnly)
+			key := deref(p.CompanyID) + "|" + day
 			b := batches[key]
 			if b == nil {
-				b = &batch{id: newUUID(), company: p.CompanyID}
+				b = &batch{id: newUUID(), company: p.CompanyID, day: day}
 				batches[key] = b
 				order = append(order, key)
 			}
@@ -101,8 +103,8 @@ func (s *Service) SweepPassRevenue(ctx context.Context, now time.Time) (int, err
 			b := batches[key]
 			if err := s.publishJournal(ctx, tx, contracts.Journal{
 				EventCode: "GYM_PASS_REVENUE", DocumentType: "gym_pass_revenue", DocumentID: b.id, CompanyID: b.company,
-				EntryDate: day, Amount: b.amount,
-				Description: "Pengakuan pendapatan pass gym " + day,
+				EntryDate: b.day, Amount: b.amount,
+				Description: "Pengakuan pendapatan pass gym " + b.day,
 			}); err != nil {
 				return err
 			}

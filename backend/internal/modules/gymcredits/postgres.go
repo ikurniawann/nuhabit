@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Postgres is the Repository over the gym credit tables. The SQL is ported
@@ -219,6 +220,9 @@ func (Postgres) RecentlyActive(ctx context.Context, q database.Querier, limit in
 const purchaseCompany = `COALESCE((SELECT b.company_id FROM configuration.branches b WHERE b.id = p.branch_id),
 	(SELECT min(c.id::text)::uuid FROM configuration.companies c HAVING count(*) = 1))`
 
+// purchaseZone is the zone of purchase p's branch, Jakarta without one.
+const purchaseZone = `COALESCE((SELECT b.timezone FROM configuration.branches b WHERE b.id = p.branch_id), 'Asia/Jakarta')`
+
 func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string) (map[string]LotValue, error) {
 	out := map[string]LotValue{}
 	if len(ids) == 0 {
@@ -233,15 +237,16 @@ func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string)
 		   SELECT o.lot_id, s.source_lot_id, s.purchase_id, s.credits
 		     FROM origin o JOIN gym.credit_lots s ON s.id = o.source_lot_id WHERE o.purchase_id IS NULL
 		 )
-		 SELECT o.lot_id::text, p.total_idr::float, o.credits, `+purchaseCompany+`::text
+		 SELECT o.lot_id::text, p.total_idr::float, o.credits, `+purchaseCompany+`::text, `+purchaseZone+`
 		   FROM origin o JOIN gym.credit_purchases p ON p.id = o.purchase_id
 		  WHERE p.total_idr > 0`, ids)
 	if err != nil {
 		return nil, err
 	}
-	var id string
+	var id, zone string
 	var v LotValue
-	_, err = pgx.ForEachRow(rows, []any{&id, &v.TotalIdr, &v.Credits, &v.CompanyID}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&id, &v.TotalIdr, &v.Credits, &v.CompanyID, &zone}, func() error {
+		v.Zone = localtime.Zone(zone)
 		out[id] = v
 		v = LotValue{}
 		return nil
@@ -278,13 +283,15 @@ func (Postgres) MembersWithLapsedLots(ctx context.Context, q database.Querier, n
 
 /* ── Purchases ───────────────────────────────────────────────────────── */
 
-func (Postgres) PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error) {
+func (Postgres) PurchaseBooks(ctx context.Context, q database.Querier, id string) (*string, *time.Location, error) {
 	var company *string
-	err := q.QueryRow(ctx, `SELECT `+purchaseCompany+`::text FROM gym.credit_purchases p WHERE p.id = $1`, id).Scan(&company)
+	zone := localtime.Default
+	err := q.QueryRow(ctx, `SELECT `+purchaseCompany+`::text, `+purchaseZone+` FROM gym.credit_purchases p WHERE p.id = $1`, id).
+		Scan(&company, &zone)
 	if database.IsNoRows(err) {
-		return nil, nil
+		err = nil
 	}
-	return company, err
+	return company, localtime.Zone(zone), err
 }
 
 func (Postgres) PackageForPurchase(ctx context.Context, q database.Querier, id string) (*PackageForPurchase, error) {
@@ -417,12 +424,13 @@ func (Postgres) MarkPurchasePaid(ctx context.Context, q database.Querier, id str
 	}
 	var paidAt time.Time
 	var validity int
-	// The counter row of the WIB day is locked until commit, so receipt
-	// numbers of one day never repeat.
+	// The receipt day is the date in the purchase branch's zone. Its counter
+	// row, shared by every branch on that date, is locked until commit, so
+	// receipt numbers of one day never repeat.
 	err = q.QueryRow(ctx,
 		`WITH n AS (
 		   INSERT INTO gym.receipt_counters AS c (day, last_no)
-		   VALUES ((now() AT TIME ZONE 'Asia/Jakarta')::date, 1)
+		   VALUES ((now() AT TIME ZONE (SELECT `+purchaseZone+` FROM gym.credit_purchases p WHERE p.id = $1))::date, 1)
 		   ON CONFLICT (day) DO UPDATE SET last_no = c.last_no + 1
 		   RETURNING 'GYM-' || to_char(day, 'YYYYMMDD') || '-' || lpad(last_no::text, 4, '0') AS receipt_number)
 		 UPDATE gym.credit_purchases
@@ -709,7 +717,7 @@ func (Postgres) LockPassRevenue(ctx context.Context, q database.Querier) error {
 func (Postgres) PassesWithRevenueDue(ctx context.Context, q database.Querier, now time.Time) ([]PassRevenue, error) {
 	rows, err := q.Query(ctx,
 		`SELECT mp.id::text, p.id::text, `+purchaseCompany+`::text, p.total_idr::float,
-		        COALESCE(r.released, 0)::float, mp.starts_at, mp.ends_at
+		        COALESCE(r.released, 0)::float, mp.starts_at, mp.ends_at, `+purchaseZone+`
 		   FROM gym.member_passes mp
 		   JOIN gym.credit_purchases p ON p.id = mp.purchase_id
 		   LEFT JOIN (SELECT pass_id, sum(amount_idr) AS released FROM gym.pass_revenue_releases GROUP BY pass_id) r
@@ -722,7 +730,9 @@ func (Postgres) PassesWithRevenueDue(ctx context.Context, q database.Querier, no
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (PassRevenue, error) {
 		var p PassRevenue
-		err := row.Scan(&p.PassID, &p.PurchaseID, &p.CompanyID, &p.TotalIdr, &p.Released, &p.StartsAt, &p.EndsAt)
+		var zone string
+		err := row.Scan(&p.PassID, &p.PurchaseID, &p.CompanyID, &p.TotalIdr, &p.Released, &p.StartsAt, &p.EndsAt, &zone)
+		p.Zone = localtime.Zone(zone)
 		return p, err
 	})
 }
