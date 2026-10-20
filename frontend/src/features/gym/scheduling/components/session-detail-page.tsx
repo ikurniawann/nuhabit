@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Coins, Hourglass, UserCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { TableNote } from "@/features/crm/engagement/components/shared";
+import { MemberLink } from "@/features/gym/members/member-link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -261,7 +262,7 @@ function RosterTable({
           return (
             <TableRow key={b.id}>
               <TableCell>
-                <p className="font-medium">{b.name ?? "Member"}</p>
+                <MemberLink id={b.customer_id} name={b.name} />
                 <p className="font-mono text-xs text-muted-foreground">{b.phone}</p>
               </TableCell>
               <TableCell className="whitespace-normal">

@@ -199,18 +199,24 @@ func (s *store) InsertRegisteredMember(ctx context.Context, reg domain.Registrat
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.q.Exec(ctx,
+	if err := insertCRMProfile(ctx, s.q, m.ID, "member_portal_register"); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// insertCRMProfile enrols the customer on the regular (or lowest active)
+// tier; source lands in the profile metadata.
+func insertCRMProfile(ctx context.Context, q database.Querier, customerID, source string) error {
+	_, err := q.Exec(ctx,
 		`INSERT INTO crm.crm_member_profiles (customer_id, tier_id, status, metadata, last_activity_at)
-		 SELECT $1, t.id, 'active', '{"source":"member_portal_register"}'::jsonb, now()
+		 SELECT $1, t.id, 'active', jsonb_build_object('source', $2::text), now()
 		   FROM crm.crm_membership_tiers t
 		  WHERE t.code = 'regular' OR t.is_active
 		  ORDER BY (t.code = 'regular') DESC, t.rank
 		  LIMIT 1
-		 ON CONFLICT (customer_id) DO NOTHING`, m.ID)
-	if err != nil {
-		return nil, err
-	}
-	return &m, nil
+		 ON CONFLICT (customer_id) DO NOTHING`, customerID, source)
+	return err
 }
 
 // DefaultVenue reads crm_settings default_company_id/default_branch_id;

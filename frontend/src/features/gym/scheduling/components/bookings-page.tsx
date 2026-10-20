@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BOOKING_STATUSES, type BookingStatus } from "@/lib/gym/booking";
 import { addDays, BOOKING_BADGE, GYM_KEYS, schedulingApi, waktu, wibDay, wibDayStart } from "../api";
 import { SELECT } from "@/features/gym/shared";
+import { MemberLink } from "@/features/gym/members/member-link";
 import { formatNumber } from "@/lib/format";
 import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 
@@ -130,7 +131,7 @@ export function BookingsPage() {
                 return (
                   <TableRow key={b.id}>
                     <TableCell>
-                      <p className="font-medium">{b.member_name ?? "Member"}</p>
+                      <MemberLink id={b.customer_id} name={b.member_name} />
                       <p className="font-mono text-xs text-muted-foreground">{b.member_phone}</p>
                     </TableCell>
                     <TableCell className="max-w-[16rem] whitespace-normal">

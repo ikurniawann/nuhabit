@@ -103,6 +103,10 @@ export const IAM = {
   gymClassTypes: ["gym.class-types"],
   /** Gym → Coach. */
   gymCoaches: ["gym.coaches"],
+  /** Gym → Member (daftar member, profil 360, catatan staf, daftar di front desk). */
+  gymMembers: ["gym.members"],
+  /** Gym → Laporan Gym (kehadiran, okupansi, pendapatan, member, coach). */
+  gymReports: ["gym.reports"],
   /** HRIS → Master Data (departemen, jabatan, status kepegawaian). */
   hrisMaster: ["hris.master"],
   /** HRIS → Organisasi (struktur organisasi, seksi). */
