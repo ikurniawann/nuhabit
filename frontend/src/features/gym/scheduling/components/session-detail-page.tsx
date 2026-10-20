@@ -33,6 +33,7 @@ import {
   type RosterEntry,
   type Session,
 } from "../api";
+import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 import { SessionDialog } from "./session-dialog";
 
 type SessionAction = "publish" | "cancel" | "complete" | "delete";
@@ -95,9 +96,12 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
     onError: (error) => toast.error("Aksi sesi gagal", { description: error.message }),
   });
 
+  const [pendingBooking, setPendingBooking] = useState<PendingBookingAction | null>(null);
   const bookingAction = useMutation({
-    mutationFn: (input: { id: string; action: BookingAction }) => schedulingApi.bookingAction(input.id, input.action),
+    mutationFn: (input: { id: string; action: BookingAction; waivePenalty?: boolean }) =>
+      schedulingApi.bookingAction(input.id, input.action, { waivePenalty: input.waivePenalty }),
     onSuccess: (data, input) => {
+      setPendingBooking(null);
       if (input.action === "check_in") toast.success(data.message ?? "Check-in berhasil");
       if (input.action === "no_show")
         toast.success("Ditandai tidak hadir", {
@@ -105,7 +109,11 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         });
       if (input.action === "cancel")
         toast.success("Booking dibatalkan", {
-          description: data.penaltyCredits ? `Batal terlambat: ${data.penaltyCredits} kredit hangus.` : undefined,
+          description: data.penaltyCredits
+            ? `Batal terlambat: ${data.penaltyCredits} kredit hangus.`
+            : data.passStrike
+              ? "Batal terlambat: tercatat satu strike pada pass member."
+              : undefined,
         });
       refresh();
     },
@@ -185,7 +193,11 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
           rows={[...attending, ...waitlist]}
           empty="Belum ada member yang booking."
           disabled={busy}
-          onAction={(id, action) => bookingAction.mutate({ id, action })}
+          onAction={(b, action) =>
+            action === "check_in"
+              ? bookingAction.mutate({ id: b.id, action })
+              : setPendingBooking({ id: b.id, action, memberName: b.name, waitlist: b.status === "waitlist" })
+          }
         />
         {cancelled.length > 0 && (
           <p className="px-5 pb-4 text-xs text-muted-foreground">
@@ -207,6 +219,12 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         loading={sessionAction.isPending}
         onConfirm={() => confirming && sessionAction.mutate(confirming)}
       />
+      <BookingActionConfirm
+        pending={pendingBooking}
+        loading={bookingAction.isPending}
+        onClose={() => setPendingBooking(null)}
+        onConfirm={(input) => bookingAction.mutate(input)}
+      />
     </div>
   );
 }
@@ -220,7 +238,7 @@ function RosterTable({
   rows: RosterEntry[];
   empty: string;
   disabled: boolean;
-  onAction: (bookingId: string, action: BookingAction) => void;
+  onAction: (booking: RosterEntry, action: BookingAction) => void;
 }) {
   if (rows.length === 0) return <TableNote>{empty}</TableNote>;
   return (
@@ -245,7 +263,11 @@ function RosterTable({
                 <Badge variant={badge.variant}>
                   {b.status === "waitlist" ? `Waitlist #${b.waitlist_position}` : badge.label}
                 </Badge>
-                {b.promotion_offered_at && <span className="ml-2 text-xs text-info">kursi ditawarkan</span>}
+                {b.promotion_offered_at && (
+                  <span className="ml-2 text-xs text-info">
+                    kursi ditawarkan{b.promotion_expires_at ? ` sampai ${formatTime(b.promotion_expires_at)}` : ""}
+                  </span>
+                )}
                 {b.checked_in_at && <span className="ml-2 text-xs text-muted-foreground">{formatTime(b.checked_in_at)}</span>}
                 {b.source === "admin" && <span className="ml-2 text-xs text-muted-foreground">oleh staf</span>}
               </TableCell>
@@ -253,16 +275,16 @@ function RosterTable({
                 <div className="flex flex-wrap justify-end gap-1">
                   {b.status === "confirmed" && (
                     <>
-                      <Button size="sm" variant="soft" disabled={disabled} onClick={() => onAction(b.id, "check_in")}>
+                      <Button size="sm" variant="soft" disabled={disabled} onClick={() => onAction(b, "check_in")}>
                         Check-in
                       </Button>
-                      <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b.id, "no_show")}>
+                      <Button size="sm" variant="ghost" disabled={disabled} onClick={() => onAction(b, "no_show")}>
                         Tidak hadir
                       </Button>
                     </>
                   )}
                   {(b.status === "confirmed" || b.status === "waitlist") && (
-                    <Button size="sm" variant="ghost" className="text-danger" disabled={disabled} onClick={() => onAction(b.id, "cancel")}>
+                    <Button size="sm" variant="ghost" className="text-danger" disabled={disabled} onClick={() => onAction(b, "cancel")}>
                       {b.status === "waitlist" ? "Keluarkan" : "Batalkan"}
                     </Button>
                   )}
@@ -299,7 +321,8 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
         <DialogPanelHeader>
           <DialogPanelTitle>Daftarkan member</DialogPanelTitle>
           <DialogPanelDescription>
-            Aturan sama dengan booking dari portal: member aktif, jendela booking, dan saldo minimal {session.credit_cost} kredit.
+            Aturan sama dengan booking dari portal: member aktif, jendela booking, batas booking, strike pass, dan sisa saldo
+            minimal {session.credit_cost} kredit setelah booking lain yang belum berjalan.
           </DialogPanelDescription>
         </DialogPanelHeader>
         <DialogPanelBody className="space-y-3">
@@ -311,7 +334,11 @@ function AddMemberDialog({ session, onClose, onAdded }: { session: Session; onCl
                 <p className="truncate font-medium">{m.name ?? "Member"}</p>
                 <p className="text-xs text-muted-foreground">
                   {m.phone} · {formatNumber(m.credits)} kredit{m.is_active ? "" : " · nonaktif"}
+                  {m.pass_strikes > 0 && ` · ${formatNumber(m.pass_strikes)} strike`}
                 </p>
+                {m.suspended_until && (
+                  <p className="text-xs font-medium text-warning">Booking ditangguhkan sampai {waktu(m.suspended_until)}</p>
+                )}
               </div>
               <Button size="sm" disabled={book.isPending} onClick={() => book.mutate(m.id)}>
                 Daftarkan

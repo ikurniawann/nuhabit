@@ -17,6 +17,7 @@ import { BOOKING_STATUSES, type BookingStatus } from "@/lib/gym/booking";
 import { addDays, BOOKING_BADGE, GYM_KEYS, schedulingApi, waktu, wibDay, wibDayStart } from "../api";
 import { SELECT } from "@/features/gym/shared";
 import { formatNumber } from "@/lib/format";
+import { BookingActionConfirm, type PendingBookingAction } from "./booking-action-confirm";
 
 const RANGES = {
   next7: { label: "7 hari ke depan", from: 0, to: 8 },
@@ -42,12 +43,18 @@ export function BookingsPage() {
     queryKey: [...GYM_KEYS.bookings, params],
     queryFn: () => schedulingApi.bookings(params),
   });
+  const [pending, setPending] = useState<PendingBookingAction | null>(null);
   const action = useMutation({
-    mutationFn: (input: { id: string; action: "cancel" | "no_show" | "check_in" }) =>
-      schedulingApi.bookingAction(input.id, input.action),
+    mutationFn: (input: { id: string; action: "cancel" | "no_show" | "check_in"; waivePenalty?: boolean }) =>
+      schedulingApi.bookingAction(input.id, input.action, { waivePenalty: input.waivePenalty }),
     onSuccess: (data) => {
+      setPending(null);
       toast.success(data.message ?? "Booking diperbarui", {
-        description: data.penaltyCredits ? `${data.penaltyCredits} kredit hangus.` : undefined,
+        description: data.penaltyCredits
+          ? `${data.penaltyCredits} kredit hangus.`
+          : data.passStrike
+            ? "Tercatat satu strike pada pass member."
+            : undefined,
       });
       void queryClient.invalidateQueries({ queryKey: GYM_KEYS.bookings });
       void queryClient.invalidateQueries({ queryKey: GYM_KEYS.sessions });
@@ -148,7 +155,12 @@ export function BookingsPage() {
                             <Button size="sm" variant="soft" disabled={action.isPending} onClick={() => action.mutate({ id: b.id, action: "check_in" })}>
                               Check-in
                             </Button>
-                            <Button size="sm" variant="ghost" disabled={action.isPending} onClick={() => action.mutate({ id: b.id, action: "no_show" })}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={action.isPending}
+                              onClick={() => setPending({ id: b.id, action: "no_show", memberName: b.member_name, waitlist: false })}
+                            >
                               Tidak hadir
                             </Button>
                           </>
@@ -159,7 +171,9 @@ export function BookingsPage() {
                             variant="ghost"
                             className="text-danger"
                             disabled={action.isPending}
-                            onClick={() => action.mutate({ id: b.id, action: "cancel" })}
+                            onClick={() =>
+                              setPending({ id: b.id, action: "cancel", memberName: b.member_name, waitlist: b.status === "waitlist" })
+                            }
                           >
                             Batalkan
                           </Button>
@@ -173,6 +187,12 @@ export function BookingsPage() {
           </Table>
         )}
       </Card>
+      <BookingActionConfirm
+        pending={pending}
+        loading={action.isPending}
+        onClose={() => setPending(null)}
+        onConfirm={(input) => action.mutate(input)}
+      />
     </div>
   );
 }

@@ -78,6 +78,7 @@ export interface RosterEntry {
   source: "member" | "admin";
   late_cancel: boolean;
   promotion_offered_at: string | null;
+  promotion_expires_at: string | null;
   checked_in_at: string | null;
 }
 
@@ -105,6 +106,10 @@ export interface MemberHit {
   phone: string;
   is_active: boolean;
   credits: number;
+  /** Strike pass yang sedang dihitung menuju batas. */
+  pass_strikes: number;
+  /** Akhir penangguhan booking karena strike; null bila tidak ditangguhkan. */
+  suspended_until: string | null;
 }
 
 export interface CheckInResult {
@@ -166,8 +171,11 @@ export const schedulingApi = {
       session_id: sessionId,
       customer_id: customerId,
     }),
-  bookingAction: (id: string, action: "cancel" | "no_show" | "check_in") =>
-    send<{ penaltyCredits?: number; late?: boolean; message?: string }>(`/api/gym/bookings/${id}`, { action }),
+  bookingAction: (id: string, action: "cancel" | "no_show" | "check_in", options?: { waivePenalty?: boolean }) =>
+    send<{ penaltyCredits?: number; passStrike?: boolean; late?: boolean; message?: string }>(`/api/gym/bookings/${id}`, {
+      action,
+      ...(options?.waivePenalty ? { waive_penalty: true } : {}),
+    }),
   searchMembers: (q: string) => call<MemberHit[]>(`/api/gym/bookings/members?${qs({ q })}`),
 
   checkinLog: () =>
