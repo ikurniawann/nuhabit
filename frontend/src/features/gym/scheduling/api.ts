@@ -225,12 +225,11 @@ export interface AccessLogRow {
   class_type_name: string | null;
   starts_at: string | null;
   staff_name: string | null;
-  device_name?: string | null;
+  device_name: string | null;
 }
 
 /** Koreksi staf atas check-in atau tidak hadir. */
 export type CorrectionAction = "undo_check_in" | "undo_no_show";
-export type BookingAction = "cancel" | "no_show" | "check_in" | CorrectionAction;
 
 export interface CorrectionResult {
   status: BookingStatus;
@@ -314,7 +313,7 @@ export const schedulingApi = {
       customer_id: customerId,
       override_window: overrideWindow,
     }),
-  bookingAction: (id: string, action: Exclude<BookingAction, CorrectionAction>, options?: { waivePenalty?: boolean }) =>
+  bookingAction: (id: string, action: "cancel" | "no_show" | "check_in", options?: { waivePenalty?: boolean }) =>
     send<{ penaltyCredits?: number; passStrike?: boolean; late?: boolean; message?: string }>(`/api/gym/bookings/${id}`, {
       action,
       ...(options?.waivePenalty ? { waive_penalty: true } : {}),
