@@ -1540,6 +1540,11 @@
     "path": "/api/gym/credits/{customerId}/transfer"
   },
   {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/{customerId}/vouchers/preview"
+  },
+  {
     "module": "gym-training",
     "method": "DELETE",
     "path": "/api/gym/exercises"

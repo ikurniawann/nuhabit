@@ -15,6 +15,12 @@ func TestVoucherDeskRefundAndLatePayment(t *testing.T) {
 	pkg := e.pkg("Go Desk Voucher Pack", 4, 200_000, 30, nil)
 	sell := "/api/gym/credits/" + c + "/sell"
 
+	// The desk checks the code first.
+	quote := e.data(asStaff, "POST", "/api/gym/credits/"+c+"/vouchers/preview", map[string]any{"package_id": pkg, "code": "gym10"})
+	if quote["discount_idr"] != 25_000.0 || quote["total_idr"] != 175_000.0 {
+		t.Fatalf("desk preview %v", quote)
+	}
+
 	// The voucher comes off first, the manual discount after; the sale is
 	// paid at once, so the code is captured.
 	sale := e.data(asStaff, "POST", sell, map[string]any{"package_id": pkg, "payment_method": "cash", "discount_idr": 10_000, "voucher_code": "gym10"})
