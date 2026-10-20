@@ -24,6 +24,14 @@ type Rules struct {
 	ExpiryReminderDays     int `json:"expiryReminderDays"`
 	BookingOpensDaysBefore int `json:"bookingOpensDaysBefore"`
 	BookingClosesMinBefore int `json:"bookingClosesMinBefore"`
+	// MaxFreezeDaysPerYear caps the pass days a member freezes in any 365
+	// days; 0 turns freezing off.
+	MaxFreezeDaysPerYear int `json:"maxFreezeDaysPerYear"`
+	// MinFreezeDays is the shortest freeze and the least an early unfreeze
+	// charges against the yearly allowance.
+	MinFreezeDays int `json:"minFreezeDays"`
+	// RenewalLeadDays: an auto-renewing pass renews this many days before it ends.
+	RenewalLeadDays int `json:"renewalLeadDays"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -40,6 +48,9 @@ type RulesPatch struct {
 	ExpiryReminderDays        *int    `json:"expiryReminderDays,omitempty"`
 	BookingOpensDaysBefore    *int    `json:"bookingOpensDaysBefore,omitempty"`
 	BookingClosesMinBefore    *int    `json:"bookingClosesMinBefore,omitempty"`
+	MaxFreezeDaysPerYear      *int    `json:"maxFreezeDaysPerYear,omitempty"`
+	MinFreezeDays             *int    `json:"minFreezeDays,omitempty"`
+	RenewalLeadDays           *int    `json:"renewalLeadDays,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -59,6 +70,9 @@ var RuleDefaults = Rules{
 	ExpiryReminderDays:        7,
 	BookingOpensDaysBefore:    7,
 	BookingClosesMinBefore:    0,
+	MaxFreezeDaysPerYear:      30,
+	MinFreezeDays:             7,
+	RenewalLeadDays:           3,
 }
 
 type ruleKind int
@@ -103,6 +117,9 @@ var ruleSpecs = []ruleSpec{
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
 	intRule("bookingClosesMinBefore", 0, 10080, "Booking ditutup", func(p *RulesPatch) **int { return &p.BookingClosesMinBefore }),
+	intRule("maxFreezeDaysPerYear", 0, 365, "Batas bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
+	intRule("minFreezeDays", 1, 365, "Minimal bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
+	intRule("renewalLeadDays", 0, 30, "Perpanjangan otomatis", func(p *RulesPatch) **int { return &p.RenewalLeadDays }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -262,6 +279,9 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.ExpiryReminderDays, p.ExpiryReminderDays)
 	setInt(&base.BookingOpensDaysBefore, p.BookingOpensDaysBefore)
 	setInt(&base.BookingClosesMinBefore, p.BookingClosesMinBefore)
+	setInt(&base.MaxFreezeDaysPerYear, p.MaxFreezeDaysPerYear)
+	setInt(&base.MinFreezeDays, p.MinFreezeDays)
+	setInt(&base.RenewalLeadDays, p.RenewalLeadDays)
 	return base
 }
 

@@ -11,6 +11,7 @@ func defaultsKV() []KV {
 		{"noShowPolicy", "forfeit"}, {"reEntryGraceMin", 15.0}, {"antiPassbackMin", 60.0}, {"qrTtlSec", 45.0},
 		{"waitlistAutoPromote", true}, {"lowBalanceThreshold", 3.0}, {"expiryReminderDays", 7.0},
 		{"bookingOpensDaysBefore", 7.0}, {"bookingClosesMinBefore", 0.0},
+		{"maxFreezeDaysPerYear", 30.0}, {"minFreezeDays", 7.0}, {"renewalLeadDays", 3.0},
 	}
 }
 
@@ -36,9 +37,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 12)
+	eq(t, len(RuleKeys()), 15)
 }
 
 func TestResolveRules(t *testing.T) {
@@ -77,7 +78,10 @@ func TestValidateRules(t *testing.T) {
 
 	_, msg = ValidateRules(with(defaultsKV(), "qrTtlSec", 5.0))
 	eq(t, msg, "qrTtlSec: Umur QR minimal 10")
-	for key, v := range map[string]any{"creditExpiryDays": 0.0, "expiryReminderDays": 0.0, "cancellationDeadlineHours": 1.5, "lateCancelPolicy": "charge"} {
+	for key, v := range map[string]any{
+		"creditExpiryDays": 0.0, "expiryReminderDays": 0.0, "cancellationDeadlineHours": 1.5, "lateCancelPolicy": "charge",
+		"maxFreezeDaysPerYear": -1.0, "minFreezeDays": 0.0, "renewalLeadDays": 31.0,
+	} {
 		if _, msg := ValidateRules(with(defaultsKV(), key, v)); msg == "" {
 			t.Fatalf("%s=%v should be rejected", key, v)
 		}
