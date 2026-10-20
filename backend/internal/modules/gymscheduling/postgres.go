@@ -193,6 +193,7 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
             COALESCE(k.confirmed, 0)::int AS confirmed_count,
             COALESCE(k.waitlist, 0)::int AS waitlist_count,
             COALESCE(k.checked_in, 0)::int AS checked_in_count,
+            COALESCE(k.no_show, 0)::int AS no_show_count,
             GREATEST(x.capacity - COALESCE(k.confirmed, 0) - COALESCE(k.offered, 0), 0)::int AS seats_left,
             CASE WHEN mine.id IS NULL THEN NULL ELSE json_build_object(
               'id', mine.id, 'status', mine.status, 'waitlist_position', mine.waitlist_position,
@@ -211,7 +212,8 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
          SELECT count(*) FILTER (WHERE b.`+seatsHeldWhere+`) AS confirmed,
                 count(*) FILTER (WHERE b.status = 'waitlist') AS waitlist,
                 count(*) FILTER (WHERE b.status = 'waitlist' AND b.promotion_expires_at > now()) AS offered,
-                count(*) FILTER (WHERE b.status IN ('checked_in', 'completed')) AS checked_in
+                count(*) FILTER (WHERE b.status IN ('checked_in', 'completed')) AS checked_in,
+                count(*) FILTER (WHERE b.status = 'no_show') AS no_show
            FROM gym.bookings b WHERE b.session_id = x.id
        ) k ON true
        LEFT JOIN LATERAL (

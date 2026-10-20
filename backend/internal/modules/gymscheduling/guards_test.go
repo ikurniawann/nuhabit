@@ -41,10 +41,11 @@ func describe(grants []iam.Grant) string {
 }
 
 const (
-	sched     = "gym.schedule,gym.sessions"
-	deskMenus = "gym.bookings,gym.checkin,gym.sessions"
-	ownAccess = "read_own gym.sessions"
-	anyID     = "0b7a8f8e-2d7c-4f3e-9a1b-5c6d7e8f9a0b"
+	sched        = "gym.schedule,gym.sessions"
+	deskMenus    = "gym.bookings,gym.checkin,gym.sessions"
+	ownAccess    = "read_own gym.sessions"
+	myAttendance = "update gym.my-classes"
+	anyID        = "0b7a8f8e-2d7c-4f3e-9a1b-5c6d7e8f9a0b"
 )
 
 func TestStaffRouteGrants(t *testing.T) {
@@ -58,6 +59,10 @@ func TestStaffRouteGrants(t *testing.T) {
 		"GET /api/gym/coaches/staff":               "create gym.coaches | update gym.coaches",
 		"POST /api/gym/coaches":                    "create gym.coaches",
 		"PATCH /api/gym/coaches/{id}":              "update gym.coaches",
+		"POST /api/gym/coaches/photo":              "create gym.coaches | update gym.coaches",
+		"GET /api/gym/coaches/{id}/schedule":       "read gym.coaches," + sched,
+		"GET /api/gym/my-classes":                  "read gym.my-classes | " + ownAccess,
+		"GET /api/gym/my-classes/sessions/{id}":    "read gym.my-classes | " + ownAccess,
 		"GET /api/gym/sessions":                    "read " + sched + " | " + ownAccess,
 		"POST /api/gym/sessions":                   "create " + sched,
 		"POST /api/gym/sessions/duplicate-week":    "create gym.schedule",
@@ -73,7 +78,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"GET /api/gym/bookings":                    "read gym.bookings,gym.sessions",
 		"POST /api/gym/bookings":                   "create " + deskMenus,
 		"GET /api/gym/bookings/members":            "read " + deskMenus,
-		"POST /api/gym/bookings/{id}":              "read " + deskMenus + " | " + ownAccess,
+		"POST /api/gym/bookings/{id}":              "read " + deskMenus + " | " + ownAccess + " | " + myAttendance,
 		"GET /api/gym/checkin":                     "read gym.checkin,gym.sessions",
 		"POST /api/gym/checkin":                    "create gym.checkin,gym.sessions",
 		"GET /api/gym/checkin/members":             "read " + deskMenus,
@@ -112,8 +117,8 @@ func TestStaffRouteGrants(t *testing.T) {
 func TestBookingActionGrants(t *testing.T) {
 	want := map[string]string{
 		"cancel":   "update gym.bookings,gym.sessions",
-		"no_show":  "update gym.bookings,gym.sessions | " + ownAccess,
-		"check_in": "create gym.checkin,gym.sessions | update gym.bookings | " + ownAccess,
+		"no_show":  "update gym.bookings,gym.sessions | " + ownAccess + " | " + myAttendance,
+		"check_in": "create gym.checkin,gym.sessions | update gym.bookings | " + ownAccess + " | " + myAttendance,
 	}
 	for action, expected := range want {
 		guard := &recordingGuard{allow: 1}

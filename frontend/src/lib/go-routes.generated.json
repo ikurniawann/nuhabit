@@ -1491,6 +1491,11 @@
   },
   {
     "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/coaches/photo"
+  },
+  {
+    "module": "gym-scheduling",
     "method": "GET",
     "path": "/api/gym/coaches/staff"
   },
@@ -1498,6 +1503,11 @@
     "module": "gym-scheduling",
     "method": "PATCH",
     "path": "/api/gym/coaches/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/coaches/{id}/schedule"
   },
   {
     "module": "gym-credits",
@@ -1628,6 +1638,21 @@
     "module": "gym-desk",
     "method": "DELETE",
     "path": "/api/gym/members/{id}/notes/{noteId}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/my-classes"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/my-classes/incentives"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/gym/my-classes/sessions/{id}"
   },
   {
     "module": "gym-credits",
@@ -4333,6 +4358,11 @@
     "module": "site",
     "method": "GET",
     "path": "/api/public/site/branches/{slug}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
+    "path": "/api/public/site/coaches"
   },
   {
     "module": "site",

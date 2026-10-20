@@ -55,8 +55,8 @@ var (
 // bookingActionGrants is what each roster action needs on top of seeing the booking.
 var bookingActionGrants = map[string][]iam.Grant{
 	"cancel":   {can(actUpdate, iam.GymBookings, iam.GymSessions)},
-	"no_show":  {can(actUpdate, iam.GymBookings, iam.GymSessions), ownClass},
-	"check_in": {can(actCreate, iam.GymCheckin), can(actUpdate, iam.GymBookings), ownClass},
+	"no_show":  {can(actUpdate, iam.GymBookings, iam.GymSessions), ownClass, myClassesAttendance},
+	"check_in": {can(actCreate, iam.GymCheckin), can(actUpdate, iam.GymBookings), ownClass, myClassesAttendance},
 }
 
 // Routes lists the staff (/api/gym/**) and member portal routes.
@@ -71,6 +71,10 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/gym/coaches/staff", Handler: h.staff(h.staffUsers, can(actCreate, iam.GymCoaches), can(actUpdate, iam.GymCoaches))},
 		{Pattern: "POST /api/gym/coaches", Handler: h.staff(h.createCoach, can(actCreate, iam.GymCoaches))},
 		{Pattern: "PATCH /api/gym/coaches/{id}", Handler: h.staff(h.updateCoach, can(actUpdate, iam.GymCoaches))},
+		{Pattern: "POST /api/gym/coaches/photo", Handler: h.staff(h.uploadCoachPhoto, can(actCreate, iam.GymCoaches), can(actUpdate, iam.GymCoaches))},
+		{Pattern: "GET /api/gym/coaches/{id}/schedule", Handler: h.staff(h.coachSchedule, can(actRead, iam.GymCoaches, planners))},
+		{Pattern: "GET /api/gym/my-classes", Handler: h.staff(h.myClasses, myClassesRead, ownClass)},
+		{Pattern: "GET /api/gym/my-classes/sessions/{id}", Handler: h.staff(h.mySession, myClassesRead, ownClass)},
 		{Pattern: "GET /api/gym/sessions", Handler: h.scoped(h.listSessions, can(actRead, planners), ownClass)},
 		{Pattern: "POST /api/gym/sessions", Handler: h.staff(h.createSession, can(actCreate, planners))},
 		{Pattern: "POST /api/gym/sessions/duplicate-week", Handler: h.staff(h.duplicateWeek, can(actCreate, iam.GymSchedule))},
@@ -86,7 +90,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/gym/bookings", Handler: h.staff(h.listBookings, can(actRead, iam.GymBookings, iam.GymSessions))},
 		{Pattern: "POST /api/gym/bookings", Handler: h.staff(h.staffBook, can(actCreate, desk))},
 		{Pattern: "GET /api/gym/bookings/members", Handler: h.staff(h.searchMembers, can(actRead, desk))},
-		{Pattern: "POST /api/gym/bookings/{id}", Handler: h.staff(h.bookingAction, can(actRead, desk), ownClass)},
+		{Pattern: "POST /api/gym/bookings/{id}", Handler: h.staff(h.bookingAction, can(actRead, desk), ownClass, myClassesAttendance)},
 		{Pattern: "GET /api/gym/checkin", Handler: h.staff(h.accessLog, can(actRead, iam.GymCheckin))},
 		{Pattern: "POST /api/gym/checkin", Handler: h.staff(h.scan, can(actCreate, iam.GymCheckin))},
 		{Pattern: "GET /api/gym/checkin/members", Handler: h.staff(h.deskMembers, can(actRead, desk))},
@@ -102,6 +106,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/app/classes/catalog", Handler: h.member("Gagal memuat katalog kelas", h.catalog)},
 
 		{Pattern: "GET /api/public/site/sessions", Handler: httpx.Handle(h.publicSessions)},
+		{Pattern: "GET /api/public/site/coaches", Handler: httpx.Handle(h.publicCoaches)},
 	}
 }
 
@@ -325,7 +330,7 @@ func coachFields(f *validate.Form, partial bool) (CoachInput, bool, bool) {
 	name := f.Str("name", validate.Rule{Optional: partial}, validate.StrOpts{Trim: true, Min: 3, Max: 80})
 	bio := f.StrDefault("bio", "", validate.StrOpts{Trim: true, Max: 1000})
 	spec := f.StrDefault("specialization", "", validate.StrOpts{Trim: true, Max: 120})
-	photo := f.Str("photo_url", nullableOptional, validate.StrOpts{Trim: true, Max: 500, Check: validate.URLCheck})
+	photo := f.Str("photo_url", nullableOptional, validate.StrOpts{Trim: true, Max: 500, Check: photoURLCheck})
 	userID := f.UUID("user_id", nullableOptional)
 	branchID := f.UUID("branch_id", nullableOptional)
 	status := enumDefault(f, "status", "active", coachStatuses)
@@ -590,7 +595,7 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	if grants[matched].Action == actReadOwn {
+	if ownOnly(grants[matched]) {
 		if err := h.svc.RequireOwnBooking(r.Context(), id, user.ID); err != nil {
 			return err
 		}
