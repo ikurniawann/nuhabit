@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,9 +67,11 @@ export function MembersPage() {
         title="Member"
         description="Cari member dengan nama, nomor HP, email, atau kode member. Klik nama untuk membuka profil lengkapnya."
         actions={
-          <Button onClick={() => setRegistering(true)}>
-            <UserPlus /> Tambah member
-          </Button>
+          <Can menu="gym.members" action="create" mode="disable">
+            <Button onClick={() => setRegistering(true)}>
+              <UserPlus /> Tambah member
+            </Button>
+          </Can>
         }
       />
 

@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogPanel, DialogPanelBody, DialogPanelDescription, DialogPanelHeader, DialogPanelTitle } from "@/components/ui/dialog";
@@ -74,14 +75,16 @@ export function StatementsTab({ month, query }: { month: string; query: UseQuery
                     {s.payout ? (
                       <Badge variant={PAYOUT_VARIANT[s.payout.status]}>{PAYOUT_STATUS_LABELS[s.payout.status]}</Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="soft"
-                        disabled={create.isPending || s.totals.sessions === 0}
-                        onClick={() => create.mutate(s.coachId)}
-                      >
-                        <Plus /> Buat payout
-                      </Button>
+                      <Can menu="gym.incentives" action="create">
+                        <Button
+                          size="sm"
+                          variant="soft"
+                          disabled={create.isPending || s.totals.sessions === 0}
+                          onClick={() => create.mutate(s.coachId)}
+                        >
+                          <Plus /> Buat payout
+                        </Button>
+                      </Can>
                     )}
                   </div>
                 </TableCell>

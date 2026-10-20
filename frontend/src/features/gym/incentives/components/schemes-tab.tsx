@@ -6,6 +6,8 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
+import { useCan } from "@/components/iam/iam-access-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +22,7 @@ export function SchemesTab() {
   const schemes = useSchemes();
   const refresh = useRefreshAll();
   const [editing, setEditing] = useState<SchemeRow | "new" | null>(null);
+  const canDelete = useCan("gym.incentives", "delete");
   const remove = useMutation({
     mutationFn: (id: string) => incentivesApi.deleteScheme(id),
     onSuccess: () => {
@@ -40,9 +43,11 @@ export function SchemesTab() {
   return (
     <div className="space-y-3">
       <div className="flex justify-end">
-        <Button onClick={() => setEditing("new")}>
-          <Plus /> Skema khusus coach
-        </Button>
+        <Can menu="gym.incentives" action="create" mode="disable">
+          <Button onClick={() => setEditing("new")}>
+            <Plus /> Skema khusus coach
+          </Button>
+        </Can>
       </div>
       <Card className="py-0">
         {schemes.isLoading ? (
@@ -85,10 +90,12 @@ export function SchemesTab() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(s)}>
-                        Ubah
-                      </Button>
-                      {!s.isDefault && (
+                      <Can menu="gym.incentives" action="update">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(s)}>
+                          Ubah
+                        </Button>
+                      </Can>
+                      {!s.isDefault && canDelete && (
                         <Button
                           variant="ghost"
                           size="sm"

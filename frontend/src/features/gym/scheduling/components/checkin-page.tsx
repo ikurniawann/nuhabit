@@ -5,7 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Coins, QrCode, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 import { CheckinLog } from "@/features/gym/members/components/checkin-log";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
+import { CHECKIN_MENUS } from "@/features/gym/permissions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
@@ -105,9 +107,11 @@ export function CheckinPage() {
                   aria-label="Token QR member"
                   className="font-mono"
                 />
-                <Button type="submit" disabled={scan.isPending || token.trim().length < 8}>
-                  <QrCode /> Periksa
-                </Button>
+                <Can menu={CHECKIN_MENUS} action="create" mode="disable">
+                  <Button type="submit" disabled={scan.isPending || token.trim().length < 8}>
+                    <QrCode /> Periksa
+                  </Button>
+                </Can>
               </form>
               <p className="text-xs text-muted-foreground">QR member hanya berlaku sebentar dan sekali pakai.</p>
               <QrCamera onToken={(value) => value.length >= 8 && scan.mutate(value)} disabled={scan.isPending} />

@@ -35,11 +35,15 @@ import {
   wibDayStart,
   type Session,
 } from "../api";
+import { Can } from "@/components/iam/can";
+import { useCan } from "@/components/iam/iam-access-provider";
+import { SCHEDULE_MENUS } from "@/features/gym/permissions";
 import { SessionDialog } from "./session-dialog";
 
 /** Gym → Jadwal Kelas: grid mingguan Senin–Minggu, buat sesi, salin minggu. */
 export function SchedulePage() {
   const queryClient = useQueryClient();
+  const canCreate = useCan(SCHEDULE_MENUS, "create");
   const [week, setWeek] = useState(() => weekStartWib(new Date()));
   const [creatingOn, setCreatingOn] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
@@ -66,15 +70,21 @@ export function SchedulePage() {
         description="Jadwal mingguan kelas HYROX. Member booking dari portal; kredit dipotong saat check-in."
         actions={
           <>
-            <Link href="/dashboard/gym/schedule-templates" className={buttonVariants({ variant: "ghost" })}>
-              <Repeat /> Template jadwal
-            </Link>
-            <Button variant="outline" onClick={() => setCopying(true)} disabled={rows.length === 0}>
-              <Copy /> Salin minggu
-            </Button>
-            <Button onClick={() => setCreatingOn(days.includes(today) ? today : week)}>
-              <Plus /> Sesi baru
-            </Button>
+            <Can menu="gym.schedule" action="read">
+              <Link href="/dashboard/gym/schedule-templates" className={buttonVariants({ variant: "ghost" })}>
+                <Repeat /> Template jadwal
+              </Link>
+            </Can>
+            <Can menu="gym.schedule" action="create" mode="disable">
+              <Button variant="outline" onClick={() => setCopying(true)} disabled={rows.length === 0}>
+                <Copy /> Salin minggu
+              </Button>
+            </Can>
+            <Can menu={SCHEDULE_MENUS} action="create" mode="disable">
+              <Button onClick={() => setCreatingOn(days.includes(today) ? today : week)}>
+                <Plus /> Sesi baru
+              </Button>
+            </Can>
           </>
         }
       />
@@ -115,9 +125,11 @@ export function SchedulePage() {
               <Card key={day} size="sm" variant={day === today ? "default" : "soft"} className="min-w-0 gap-2 p-3">
                 <div className="flex items-center justify-between gap-1">
                   <p className={cn("text-sm font-semibold", day === today && "text-brand-text")}>{tanggal(wibDayStart(day))}</p>
-                  <Button variant="ghost" size="icon-xs" onClick={() => setCreatingOn(day)} aria-label={`Sesi baru ${day}`}>
-                    <Plus />
-                  </Button>
+                  {canCreate && (
+                    <Button variant="ghost" size="icon-xs" onClick={() => setCreatingOn(day)} aria-label={`Sesi baru ${day}`}>
+                      <Plus />
+                    </Button>
+                  )}
                 </div>
                 {sessions.isLoading ? (
                   <p className="text-xs text-muted-foreground">Memuat…</p>

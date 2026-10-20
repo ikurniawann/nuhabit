@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Field, TableNote, TEXTAREA } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
+import { Can } from "@/components/iam/can";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -41,9 +42,11 @@ export function CoachesPage() {
         title="Coach"
         description="Profil coach tampil di portal member beserta kelas mendatangnya. Coach nonaktif tidak bisa dipilih untuk sesi baru."
         actions={
-          <Button onClick={() => setEditing("new")}>
-            <Plus /> Coach baru
-          </Button>
+          <Can menu="gym.coaches" action="create" mode="disable">
+            <Button onClick={() => setEditing("new")}>
+              <Plus /> Coach baru
+            </Button>
+          </Can>
         }
       />
 
@@ -85,9 +88,11 @@ export function CoachesPage() {
                   <TableCell className="text-right tabular-nums">{formatNumber(c.upcoming_sessions)}</TableCell>
                   <TableCell className="hidden text-right tabular-nums sm:table-cell">{formatNumber(c.completed_sessions)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
-                      Ubah
-                    </Button>
+                    <Can menu="gym.coaches" action="update">
+                      <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
+                        Ubah
+                      </Button>
+                    </Can>
                   </TableCell>
                 </TableRow>
               ))}
