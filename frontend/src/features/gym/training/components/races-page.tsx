@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DIVISION_LABELS, formatDuration } from "@/lib/gym/hyrox";
 import {
   MEMBER_RACE_STATUS_LABELS,
@@ -35,6 +36,8 @@ import {
 import { trainingApi, type RaceEventRow } from "../api";
 import { SELECT } from "@/features/gym/shared";
 import { formatDateTime, formatNumber } from "@/lib/format";
+import { RaceLeaderboardPanel } from "./race-leaderboard-panel";
+import { RaceResultsPanel } from "./race-results-panel";
 
 const RACES_KEY = ["gym", "races"];
 
@@ -48,7 +51,10 @@ const STATUS_VARIANT: Record<RaceStatus, "outline" | "success" | "warning" | "in
   cancelled: "muted",
 };
 
-/** Gym → Race HYROX: kalender race yang bisa ditargetkan member dari portal. */
+/**
+ * Gym → Race HYROX: kalender race yang bisa ditargetkan member dari portal,
+ * hasil member untuk diverifikasi, dan leaderboard gym.
+ */
 export function RacesPage() {
   const queryClient = useQueryClient();
   const races = useQuery({ queryKey: RACES_KEY, queryFn: trainingApi.races });
@@ -79,7 +85,7 @@ export function RacesPage() {
       <PageHeader
         kicker="Gym · Race"
         title="Race HYROX"
-        description="Kalender race yang muncul di portal. Member memilih race, menetapkan target waktu, lalu mencatat hasilnya setelah race."
+        description="Kalender race yang muncul di portal. Member memilih race, menetapkan target waktu, lalu mencatat hasil dan split setelah race. Staf memverifikasi hasil sebelum masuk leaderboard."
         actions={
           <Button onClick={() => setEditing("new")}>
             <Plus /> Race baru
@@ -93,68 +99,83 @@ export function RacesPage() {
         <StatCard label="Hasil race tercatat" value={formatNumber(raced)} icon={<Trophy />} tone={raced ? "success" : "default"} />
       </div>
 
-      <Card className="py-0">
-        {races.isLoading ? (
-          <TableNote>Memuat race…</TableNote>
-        ) : races.error ? (
-          <TableNote tone="danger">{races.error.message}</TableNote>
-        ) : rows.length === 0 ? (
-          <TableNote>Belum ada race. Klik Race baru untuk menambah race pertama.</TableNote>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Race</TableHead>
-                <TableHead className="hidden md:table-cell">Tanggal</TableHead>
-                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                <TableHead className="text-right">Member</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((race) => {
-                const past = new Date(race.ends_at) < new Date();
-                return (
-                  <TableRow key={race.id} className={past || race.status === "cancelled" ? "opacity-60" : undefined}>
-                    <TableCell className="max-w-[18rem] whitespace-normal">
-                      <p className="font-medium">{race.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {[race.venue, race.city, race.country].filter(Boolean).join(" · ")}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{formatDateTime(race.starts_at)}</p>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{formatDateTime(race.starts_at)}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant={STATUS_VARIANT[race.status]}>{RACE_STATUS_LABELS[race.status]}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatNumber(race.training_count + race.raced_count)}
-                      {race.raced_count > 0 && (
-                        <span className="block text-xs text-success">{formatNumber(race.raced_count)} hasil</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setRoster(race)}>
-                          <Users /> Peserta
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditing(race)}>
-                          Ubah
-                        </Button>
-                        {race.status !== "cancelled" && (
-                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => setRemoving(race)}>
-                            Hapus
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+      <Tabs defaultValue="calendar" className="w-full flex-col">
+        <TabsList>
+          <TabsTrigger value="calendar">Kalender</TabsTrigger>
+          <TabsTrigger value="results">Hasil</TabsTrigger>
+          <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
+        </TabsList>
+        <TabsContent value="calendar" className="mt-4">
+          <Card className="py-0">
+            {races.isLoading ? (
+              <TableNote>Memuat race…</TableNote>
+            ) : races.error ? (
+              <TableNote tone="danger">{races.error.message}</TableNote>
+            ) : rows.length === 0 ? (
+              <TableNote>Belum ada race. Klik Race baru untuk menambah race pertama.</TableNote>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Race</TableHead>
+                    <TableHead className="hidden md:table-cell">Tanggal</TableHead>
+                    <TableHead className="hidden sm:table-cell">Status</TableHead>
+                    <TableHead className="text-right">Member</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
                   </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((race) => {
+                    const past = new Date(race.ends_at) < new Date();
+                    return (
+                      <TableRow key={race.id} className={past || race.status === "cancelled" ? "opacity-60" : undefined}>
+                        <TableCell className="max-w-[18rem] whitespace-normal">
+                          <p className="font-medium">{race.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {[race.venue, race.city, race.country].filter(Boolean).join(" · ")}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground md:hidden">{formatDateTime(race.starts_at)}</p>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">{formatDateTime(race.starts_at)}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge variant={STATUS_VARIANT[race.status]}>{RACE_STATUS_LABELS[race.status]}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatNumber(race.training_count + race.raced_count)}
+                          {race.raced_count > 0 && (
+                            <span className="block text-xs text-success">{formatNumber(race.raced_count)} hasil</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => setRoster(race)}>
+                              <Users /> Peserta
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setEditing(race)}>
+                              Ubah
+                            </Button>
+                            {race.status !== "cancelled" && (
+                              <Button variant="ghost" size="sm" className="text-danger" onClick={() => setRemoving(race)}>
+                                Hapus
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </Card>
+        </TabsContent>
+        <TabsContent value="results" className="mt-4">
+          <RaceResultsPanel races={rows} />
+        </TabsContent>
+        <TabsContent value="leaderboard" className="mt-4">
+          <RaceLeaderboardPanel races={rows} />
+        </TabsContent>
+      </Tabs>
 
       {editing && <RaceDialog race={editing === "new" ? null : editing} onClose={() => setEditing(null)} onSaved={refresh} />}
       {roster && <EntrantsDialog race={roster} onClose={() => setRoster(null)} />}

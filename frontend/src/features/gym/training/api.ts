@@ -1,6 +1,7 @@
 /** Klien API Gym → Stasiun & Latihan dan Race HYROX. */
 
 import type { Division, ExerciseCategory } from "@/lib/gym/hyrox";
+import { leaderboardParams, type HyroxResult, type LeaderboardQuery, type LeaderboardView } from "@/lib/gym/hyrox-results";
 import type { MemberRaceStatus, RaceRegion, RaceStatus } from "@/lib/gym/races";
 import { call, remove, send } from "../shared";
 
@@ -69,6 +70,13 @@ export interface RaceEntrant {
   created_at: string;
 }
 
+/** A HYROX result on the staff list, with the member's contact and leaderboard choice. */
+export interface RaceResultRow extends HyroxResult {
+  name: string | null;
+  phone: string | null;
+  show_on_leaderboard: boolean;
+}
+
 export const trainingApi = {
   library: () => call<{ exercises: ExerciseRow[]; substitutions: SubstitutionRow[] }>("/api/gym/exercises"),
   saveExercise: (input: ExerciseInput) => send<{ id: string }>("/api/gym/exercises", input),
@@ -80,4 +88,14 @@ export const trainingApi = {
   saveRace: (input: RaceInput) => send<{ id: string }>("/api/gym/races", input),
   deleteRace: (id: string) => remove<{ id: string; outcome: "deleted" | "cancelled" }>(`/api/gym/races?id=${id}`),
   entrants: (raceId: string) => call<RaceEntrant[]>(`/api/gym/races/${raceId}/entrants`),
+
+  results: (q: { raceId?: string; verified?: boolean }) => {
+    const params = new URLSearchParams();
+    if (q.raceId) params.set("race_id", q.raceId);
+    if (q.verified !== undefined) params.set("verified", String(q.verified));
+    return call<RaceResultRow[]>(`/api/gym/races/results?${params}`);
+  },
+  verifyResult: (id: string, verified: boolean) =>
+    send<{ id: string; verified: boolean }>(`/api/gym/races/results/${id}/verify`, { verified }),
+  leaderboard: (q: LeaderboardQuery) => call<LeaderboardView>(`/api/gym/races/leaderboard?${leaderboardParams(q)}`),
 };
