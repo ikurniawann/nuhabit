@@ -36,6 +36,8 @@ export interface MemberRaceView {
   goal_sec: number | null;
   result_sec: number | null;
   status: MemberRaceStatus;
+  /** The member's HYROX result for this race (Go API), when logged. */
+  result_id?: string | null;
   created_at: string;
   event: RaceEventRow;
   days_until: number;

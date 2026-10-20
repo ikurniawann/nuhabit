@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, MapPin } from "lucide-react";
+import { ArrowLeft, ExternalLink, MapPin, Trophy } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useT } from "../lib/i18n";
+import { m } from "../lib/links";
 import { api, useInvalidateAll } from "../lib/queries-workout";
 import { Spinner, StatusBadge, formatDayTime, formatDuration } from "../ui";
 import { RegisterSheet } from "./races-page";
@@ -24,6 +26,8 @@ export function RaceDetailPage() {
   const { view, myRace, daysToRace } = data;
   const e = view.event;
   const upcoming = daysToRace > 0 && e.status !== "COMPLETED" && e.status !== "CANCELLED";
+  const started = daysToRace <= 0 && e.status !== "CANCELLED";
+  const resultId = myRace?.userRace.resultId;
 
   return (
     <div className="flex flex-col gap-5">
@@ -86,6 +90,23 @@ export function RaceDetailPage() {
           {t("Add to my races")}
         </button>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href={m(`/races/leaderboard?race=${e.id}`)}
+          className={`nh-btn-ghost flex items-center justify-center gap-2 text-sm ${started ? "" : "col-span-2"}`}
+        >
+          <Trophy size={15} /> {t("Leaderboard")}
+        </Link>
+        {started ? (
+          <Link
+            href={m(resultId ? `/races/results/${resultId}` : `/races/results/new?race=${e.id}`)}
+            className="nh-btn-brand flex items-center justify-center text-sm"
+          >
+            {resultId ? t("View splits") : t("Log result")}
+          </Link>
+        ) : null}
+      </div>
 
       <a
         href={e.registrationUrl}

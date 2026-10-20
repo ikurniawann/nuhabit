@@ -129,6 +129,8 @@ export interface UserRace {
   resultSec: number | null;
   /** TRAINING | RACED | CANCELLED */
   status: string;
+  /** The HYROX result with splits, once logged. */
+  resultId: string | null;
 }
 
 export interface MyRaceView {
@@ -190,6 +192,7 @@ export function toMyRace(
       goalSec: row.goal_sec,
       resultSec: row.result_sec,
       status: row.status.toUpperCase(),
+      resultId: row.result_id ?? null,
     },
     event: toRaceEvent(row.event, assetUrl),
     daysToRace: row.days_until,
