@@ -245,7 +245,7 @@ func (s *Service) SetAutoRenew(ctx context.Context, id string, on bool, renewWit
 // and enough ARK Coin it pays at once; otherwise it opens a Xendit invoice
 // and tells the member to pay it. Each pass renews at most once: the claim
 // on renewal_handled_at is taken before buying and released only when the
-// attempt failed for a reason a later run may not hit (gateway errors).
+// attempt hit a passing failure (gateway or database), so a later run retries.
 func (s *Service) SweepRenewals(ctx context.Context, now time.Time) error {
 	candidates, err := s.repo.RenewalCandidates(ctx, s.db, now, now.Add(maxRenewalLeadDays*day))
 	if err != nil {

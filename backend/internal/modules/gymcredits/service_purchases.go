@@ -198,23 +198,14 @@ func (s *Service) moveArk(ctx context.Context, tx database.Querier, p *Purchase,
 }
 
 // payWithArk debits the ARK Coin balance and issues what was bought; meta
-// is added to payment_meta.
+// (non-nil) is added to payment_meta.
 func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purchase, actorID *string, meta map[string]any) (*Purchase, error) {
 	if err := s.moveArk(ctx, tx, p, -p.TotalIdr, "Beli paket kredit gym: "+p.PackageName, actorID); err != nil {
 		return nil, err
 	}
-	_, paid, err := s.markPaid(ctx, tx, p.ID, withMeta(meta, "provider", "ark_coin"))
+	meta["provider"] = "ark_coin"
+	_, paid, err := s.markPaid(ctx, tx, p.ID, meta)
 	return paid, err
-}
-
-// withMeta returns a copy of meta with key set.
-func withMeta(meta map[string]any, key string, value any) map[string]any {
-	out := make(map[string]any, len(meta)+1)
-	for k, v := range meta {
-		out[k] = v
-	}
-	out[key] = value
-	return out
 }
 
 // RefundQuoteView is what a refund pays back, shown before confirming. A
@@ -355,7 +346,7 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 			return err
 		}
 		if sale.PaymentMethod == "ark_coin" {
-			result, err = s.payWithArk(ctx, tx, purchase, &sale.CashierID, nil)
+			result, err = s.payWithArk(ctx, tx, purchase, &sale.CashierID, map[string]any{})
 			return err
 		}
 		_, result, err = s.markPaid(ctx, tx, purchase.ID, map[string]any{"provider": "front_desk", "cashier_id": sale.CashierID})
@@ -377,7 +368,7 @@ func (s *Service) BuyWithArk(ctx context.Context, in MemberPurchase) (*MemberPur
 		if err != nil {
 			return err
 		}
-		paid, err := s.payWithArk(ctx, tx, purchase, nil, in.meta())
+		paid, err := s.payWithArk(ctx, tx, purchase, nil, in.tag(map[string]any{}))
 		if err != nil {
 			return err
 		}
@@ -397,12 +388,12 @@ type MemberPurchase struct {
 	RenewsPassID string
 }
 
-// meta is what the purchase adds to payment_meta.
-func (in MemberPurchase) meta() map[string]any {
-	if in.RenewsPassID == "" {
-		return nil
+// tag adds the renewed pass to the payment_meta being written and returns it.
+func (in MemberPurchase) tag(meta map[string]any) map[string]any {
+	if in.RenewsPassID != "" {
+		meta["renews_pass_id"] = in.RenewsPassID
 	}
-	return map[string]any{"renews_pass_id": in.RenewsPassID}
+	return meta
 }
 
 // StartQRISPurchase buys a package through a dynamic QRIS. Without an active
@@ -465,7 +456,7 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 		var paid *Purchase
 		err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 			var err error
-			_, paid, err = s.markPaid(ctx, tx, purchase.ID, withMeta(in.meta(), "provider", "free"))
+			_, paid, err = s.markPaid(ctx, tx, purchase.ID, in.tag(map[string]any{"provider": "free"}))
 			return err
 		})
 		if err != nil {
@@ -481,10 +472,7 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 		}
 		return nil, err
 	}
-	for k, v := range in.meta() {
-		meta[k] = v
-	}
-	if err := s.repo.AttachQR(ctx, s.db, purchase.ID, referenceID, meta); err != nil {
+	if err := s.repo.AttachQR(ctx, s.db, purchase.ID, referenceID, in.tag(meta)); err != nil {
 		return nil, err
 	}
 	reloaded, err := s.repo.Purchase(ctx, s.db, purchase.ID, false)
