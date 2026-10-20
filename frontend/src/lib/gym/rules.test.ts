@@ -24,8 +24,15 @@ describe("GYM_RULE_DEFAULTS", () => {
       expiryReminderDays: 7,
       bookingOpensDaysBefore: 7,
       bookingClosesMinBefore: 0,
+      maxConcurrentBookings: 10,
+      maxBookingsPerDay: 3,
+      strikeLimit: 3,
+      strikeWindowDays: 30,
+      strikeSuspendDays: 7,
+      waitlistPromoteCutoffMin: 60,
+      waitlistOfferMinutes: 30,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(12);
+    expect(GYM_RULE_KEYS).toHaveLength(19);
   });
 });
 

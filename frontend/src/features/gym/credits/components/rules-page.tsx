@@ -40,7 +40,24 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
       { key: "cancellationDeadlineHours", kind: "number", label: "Batas batal gratis", unit: "jam sebelum kelas", hint: "Batal setelah ini dihitung batal terlambat.", min: 0 },
       { key: "lateCancelPolicy", kind: "policy", label: "Batal terlambat", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
       { key: "noShowPolicy", kind: "policy", label: "Tidak hadir (no-show)", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
-      { key: "waitlistAutoPromote", kind: "boolean", label: "Naikkan waitlist otomatis", hint: "Kursi yang kosong langsung diisi member teratas di waitlist." },
+      { key: "maxConcurrentBookings", kind: "number", label: "Batas booking aktif", unit: "kelas mendatang", hint: "Berlaku juga untuk pemegang pass. 0 = tanpa batas.", min: 0 },
+      { key: "maxBookingsPerDay", kind: "number", label: "Batas booking per hari", unit: "kelas", hint: "Dihitung per hari kalender WIB. 0 = tanpa batas.", min: 0 },
+    ],
+  },
+  {
+    title: "Waitlist",
+    fields: [
+      { key: "waitlistAutoPromote", kind: "boolean", label: "Naikkan waitlist otomatis", hint: "Kursi yang kosong langsung diisi member teratas di waitlist yang masih memenuhi syarat." },
+      { key: "waitlistPromoteCutoffMin", kind: "number", label: "Batas promosi otomatis", unit: "menit sebelum kelas", hint: "Lebih dekat dari ini, kursi ditawarkan dan member harus mengonfirmasi.", min: 0 },
+      { key: "waitlistOfferMinutes", kind: "number", label: "Masa tawaran kursi", unit: "menit", hint: "Kursi ditahan selama ini. Lewat dari itu, tawaran pindah ke member berikutnya.", min: 5 },
+    ],
+  },
+  {
+    title: "Strike pass",
+    fields: [
+      { key: "strikeLimit", kind: "number", label: "Batas strike", unit: "strike", hint: "Batal terlambat atau tidak hadir dengan pass dihitung satu strike. 0 = strike tidak menangguhkan booking.", min: 0 },
+      { key: "strikeWindowDays", kind: "number", label: "Jendela strike", unit: "hari", hint: "Strike dihitung bila terjadi dalam jendela ini.", min: 1 },
+      { key: "strikeSuspendDays", kind: "number", label: "Lama penangguhan", unit: "hari", hint: "Member tidak bisa booking selama ini setelah batas strike tercapai.", min: 1 },
     ],
   },
   {

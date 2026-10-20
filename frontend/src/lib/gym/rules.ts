@@ -31,6 +31,18 @@ export interface GymRules {
   expiryReminderDays: number;
   bookingOpensDaysBefore: number;
   bookingClosesMinBefore: number;
+  /** Maksimal booking terkonfirmasi untuk kelas mendatang (0 = tanpa batas). Berlaku juga untuk pemegang pass. */
+  maxConcurrentBookings: number;
+  /** Maksimal booking per hari WIB (0 = tanpa batas). */
+  maxBookingsPerDay: number;
+  /** Strike pass sebanyak ini dalam jendela strike menangguhkan booking (0 = nonaktif). */
+  strikeLimit: number;
+  strikeWindowDays: number;
+  strikeSuspendDays: number;
+  /** Lebih dekat dari ini ke jam mulai, kursi kosong ditawarkan, tidak langsung dikonfirmasi (menit). */
+  waitlistPromoteCutoffMin: number;
+  /** Lama kursi yang ditawarkan ditahan untuk member (menit). */
+  waitlistOfferMinutes: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -48,6 +60,13 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   expiryReminderDays: 7,
   bookingOpensDaysBefore: 7,
   bookingClosesMinBefore: 0,
+  maxConcurrentBookings: 10,
+  maxBookingsPerDay: 3,
+  strikeLimit: 3,
+  strikeWindowDays: 30,
+  strikeSuspendDays: 7,
+  waitlistPromoteCutoffMin: 60,
+  waitlistOfferMinutes: 30,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -73,6 +92,13 @@ const rulesShape = {
   expiryReminderDays: int(1, 365, "Pengingat kedaluwarsa"),
   bookingOpensDaysBefore: int(0, 365, "Booking dibuka"),
   bookingClosesMinBefore: int(0, 10080, "Booking ditutup"),
+  maxConcurrentBookings: int(0, 100, "Batas booking aktif"),
+  maxBookingsPerDay: int(0, 20, "Batas booking per hari"),
+  strikeLimit: int(0, 50, "Batas strike"),
+  strikeWindowDays: int(1, 365, "Jendela strike"),
+  strikeSuspendDays: int(1, 365, "Lama penangguhan"),
+  waitlistPromoteCutoffMin: int(0, 10080, "Batas promosi otomatis"),
+  waitlistOfferMinutes: int(5, 1440, "Masa tawaran kursi"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
