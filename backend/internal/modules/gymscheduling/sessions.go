@@ -116,14 +116,14 @@ type Optional[T any] struct {
 }
 
 // SessionPatch is sessionPatchSchema. ClassTypeID and CreditCost may change
-// only while the session has no booking.
+// only while the session has no booking, BranchID only while it never had one.
 type SessionPatch struct {
-	ClassTypeID          *string
-	CoachID, Area, Notes Optional[string]
-	StartsAt             *time.Time
-	DurationMin          *int
-	Capacity             *int
-	CreditCost           *int
+	ClassTypeID                    *string
+	CoachID, BranchID, Area, Notes Optional[string]
+	StartsAt                       *time.Time
+	DurationMin                    *int
+	Capacity                       *int
+	CreditCost                     *int
 }
 
 func pick[T any](o Optional[T], stored *T) *T {
@@ -139,7 +139,9 @@ func sameValue[T comparable](a, b *T) bool {
 
 // UpdateSession: capacity may not drop below the members already booked;
 // moving the start re-derives the booking window, records the move for the
-// late-cancel waiver and notifies members, as does a coach change.
+// late-cancel waiver and notifies members, as does a coach change. Moving to
+// another branch re-derives the window under that branch's rules and checks
+// its rooms and coaches.
 func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPatch) error {
 	now := s.now()
 	return s.inTx(ctx, func(q Q) error {
@@ -170,9 +172,14 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 			duration = *patch.DurationMin
 		}
 		moved := !startsAt.Equal(session.StartsAt)
+		branchID, err := s.rebranchedSession(ctx, q, session, patch.BranchID)
+		if err != nil {
+			return err
+		}
+		branchChanged := !sameValue(branchID, session.BranchID)
 		opens, closes := session.BookingOpensAt, session.BookingClosesAt
-		if moved {
-			rules, err := s.Rules.ForBranch(ctx, q, session.BranchID)
+		if moved || branchChanged {
+			rules, err := s.Rules.ForBranch(ctx, q, branchID)
 			if err != nil {
 				return err
 			}
@@ -184,15 +191,15 @@ func (s *Service) UpdateSession(ctx context.Context, id string, patch SessionPat
 		}
 		coachID, area := pick(patch.CoachID, session.CoachID), pick(patch.Area, session.Area)
 		coachChanged := !sameValue(coachID, session.CoachID)
-		slot := domain.Slot{ID: id, CoachID: coachID, BranchID: session.BranchID, Area: area,
+		slot := domain.Slot{ID: id, CoachID: coachID, BranchID: branchID, Area: area,
 			StartsAt: startsAt, EndsAt: startsAt.Add(time.Duration(duration) * time.Minute)}
-		if moved || coachChanged || !slot.EndsAt.Equal(session.EndsAt) || !sameValue(area, session.Area) {
+		if moved || coachChanged || branchChanged || !slot.EndsAt.Equal(session.EndsAt) || !sameValue(area, session.Area) {
 			if err := s.claimSlot(ctx, q, slot); err != nil {
 				return err
 			}
 		}
 		update := SessionUpdate{
-			ClassTypeID: classTypeID, CoachID: coachID, Area: area,
+			ClassTypeID: classTypeID, CoachID: coachID, BranchID: branchID, Area: area,
 			Notes: pick(patch.Notes, session.Notes), StartsAt: startsAt, DurationMin: duration, Capacity: capacity,
 			CreditCost: creditCost, BookingOpensAt: opens, BookingClosesAt: closes,
 		}
@@ -277,6 +284,24 @@ func (s *Service) repricedSession(ctx context.Context, q Q, session *SessionRow,
 		creditCost = *patch.CreditCost
 	}
 	return classTypeID, creditCost, nil
+}
+
+// rebranchedSession is the branch the session ends up in. Members booked a
+// class at a place, so the branch changes only while the session has no
+// booking at all, cancelled ones included.
+func (s *Service) rebranchedSession(ctx context.Context, q Q, session *SessionRow, patch Optional[string]) (*string, error) {
+	branchID := pick(patch, session.BranchID)
+	if sameValue(branchID, session.BranchID) {
+		return branchID, nil
+	}
+	booked, err := s.repo.SessionHasBookings(ctx, q, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	if booked {
+		return nil, schedulingError("Sesi ini sudah punya booking; cabang tidak bisa diubah")
+	}
+	return branchID, nil
 }
 
 // coachChangedNotice tells booked members who now leads the class.

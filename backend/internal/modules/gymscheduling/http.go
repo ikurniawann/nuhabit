@@ -488,6 +488,7 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	var patch SessionPatch
 	patch.ClassTypeID = f.UUID("class_type_id", optional)
 	patch.CoachID = optionalField(f, "coach_id", f.UUID("coach_id", nullableOptional))
+	patch.BranchID = optionalField(f, "branch_id", f.UUID("branch_id", nullableOptional))
 	patch.Area = optionalField(f, "area", f.Str("area", nullableOptional, validate.StrOpts{Trim: true, Max: 80}))
 	patch.StartsAt = datetime(f, "starts_at", optional)
 	patch.DurationMin = f.Int("duration_min", optional, between(15, 240))
