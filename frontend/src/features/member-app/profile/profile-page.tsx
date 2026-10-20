@@ -28,7 +28,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatNumber } from "@/lib/format";
 import { MemberCardSheet } from "../components/member-card";
-import { memberApi } from "../lib/api";
+import { ApiError, memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { m } from "../lib/links";
@@ -47,6 +47,7 @@ export function ProfilePage() {
   const [cardOpen, setCardOpen] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", birth_date: "", gender: "", city: "" });
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   if (isLoading || !me) return <Spinner label={t("Loading profile…")} />;
   const member = me.member;
@@ -61,15 +62,21 @@ export function ProfilePage() {
       gender: profile?.gender ?? "",
       city: profile?.city ?? "",
     });
+    setError("");
     setEditing(true);
   };
 
+  const failed = (e: unknown, fallback: string) => setError(e instanceof ApiError ? e.message : fallback);
+
   const save = async () => {
     setBusy(true);
+    setError("");
     try {
       await memberApi("/profile", { method: "PUT", json: { ...form, name: form.name.trim() } });
       invalidate();
       setEditing(false);
+    } catch (e) {
+      failed(e, t("Save failed."));
     } finally {
       setBusy(false);
     }
@@ -79,8 +86,13 @@ export function ProfilePage() {
     if (!file) return;
     const body = new FormData();
     body.append("file", file);
-    await memberApi("/profile/photo", { method: "POST", body });
-    invalidate();
+    setError("");
+    try {
+      await memberApi("/profile/photo", { method: "POST", body });
+      invalidate();
+    } catch (e) {
+      failed(e, t("Could not upload the photo."));
+    }
   };
 
   const logout = async () => {
@@ -116,6 +128,12 @@ export function ProfilePage() {
           <StatusBadge status={member.status} />
         </div>
       </div>
+
+      {error ? (
+        <p role="alert" className="text-sm font-bold text-nh-danger">
+          {error}
+        </p>
+      ) : null}
 
       <section className="nh-card flex flex-col gap-3 text-sm">
         <p className="nh-label !mb-0">{t("Personal information")}</p>
