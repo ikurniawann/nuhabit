@@ -9,6 +9,7 @@ import {
   isCampaignFormInvalid,
   isValidNewMemberDays,
   resolveVoucherPrefix,
+  scopeIncludesGym,
 } from "./campaign-form";
 import type { PromoCampaign } from "./types";
 
@@ -42,6 +43,14 @@ describe("campaign form", () => {
       value: 10, max_discount: 5000, min_purchase: 0, usage_limit: null, per_phone_limit: null, new_member_days: null,
     });
     expect(campaignPayload({ ...valid, discount_type: "fixed", max_discount: "5000" }).max_discount).toBeNull();
+  });
+
+  it("target paket gym: dikirim untuk kanal gym dan semua, kosong untuk kanal lain", () => {
+    const picked = { ...valid, target_gym_package_ids: ["pk-1"] };
+    expect(campaignPayload({ ...picked, scope: "gym" }).target_gym_package_ids).toEqual(["pk-1"]);
+    expect(campaignPayload({ ...picked, scope: "semua" }).target_gym_package_ids).toEqual(["pk-1"]);
+    expect(campaignPayload({ ...picked, scope: "pos" }).target_gym_package_ids).toEqual([]);
+    expect(scopeIncludesGym("ticketing_online")).toBe(false);
   });
 
   it("prefix voucher: isian admin atau bawaan kanal", () => {

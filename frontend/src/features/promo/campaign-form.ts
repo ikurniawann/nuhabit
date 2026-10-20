@@ -31,6 +31,7 @@ export interface CampaignForm {
   batch_count: string;
   target_product_ids: string[];
   target_category_ids: string[];
+  target_gym_package_ids: string[];
   eligibility: PromoEligibility;
   new_member_days: string;
 }
@@ -52,9 +53,13 @@ export const EMPTY_CAMPAIGN_FORM: CampaignForm = {
   batch_count: "10",
   target_product_ids: [],
   target_category_ids: [],
+  target_gym_package_ids: [],
   eligibility: "semua",
   new_member_days: "",
 };
+
+/** Kanal yang mencakup pembelian paket gym, tempat target paket berlaku. */
+export const scopeIncludesGym = (scope: PromoScope) => scope === "gym" || scope === "semua";
 
 /** Form edit dari campaign tersimpan; jumlah voucher = jumlah kode saat ini. */
 export function campaignFormFromCampaign(campaign: PromoCampaign): CampaignForm {
@@ -75,6 +80,7 @@ export function campaignFormFromCampaign(campaign: PromoCampaign): CampaignForm 
     batch_count: String(Number(campaign.codes_count) || 0),
     target_product_ids: campaign.target_product_ids ?? [],
     target_category_ids: campaign.target_category_ids ?? [],
+    target_gym_package_ids: campaign.target_gym_package_ids ?? [],
     eligibility: campaign.eligibility ?? "semua",
     new_member_days: campaign.new_member_days !== null ? String(campaign.new_member_days) : "",
   };
@@ -129,6 +135,8 @@ export function campaignPayload(form: CampaignForm): PromoCampaignFormValues {
     scope: form.scope,
     target_product_ids: form.target_product_ids,
     target_category_ids: form.target_category_ids,
+    // Target paket hanya bermakna di kanal gym; kanal lain menyimpannya kosong.
+    target_gym_package_ids: scopeIncludesGym(form.scope) ? form.target_gym_package_ids : [],
     eligibility: form.eligibility,
     new_member_days: form.eligibility === "member_baru" ? optionalNumber(form.new_member_days) : null,
   };
