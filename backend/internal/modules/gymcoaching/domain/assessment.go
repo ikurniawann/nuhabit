@@ -8,7 +8,7 @@ import (
 // Assessment is one fitness assessment of a member. Nil metrics were not
 // measured. Benchmark times are in seconds.
 type Assessment struct {
-	AssessedOn string // YYYY-MM-DD, WIB
+	AssessedOn string // YYYY-MM-DD in the coach's zone (Jakarta without a coach)
 
 	WeightKg     *float64
 	BodyFatPct   *float64
@@ -45,7 +45,7 @@ type intRange struct {
 }
 
 // Problem is the first thing wrong with the assessment, "" when it is
-// valid. today is the current WIB date: an assessment cannot be dated later.
+// valid. today is the current local date: an assessment cannot be dated later.
 func (a Assessment) Problem(today string) string {
 	on, err := time.Parse(time.DateOnly, a.AssessedOn)
 	if err != nil || on.Year() < 2000 {

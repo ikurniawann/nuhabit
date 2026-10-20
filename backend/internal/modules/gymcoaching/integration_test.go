@@ -20,6 +20,7 @@ import (
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -124,7 +125,7 @@ type fixture struct {
 }
 
 func wib(s string) time.Time {
-	t, err := time.ParseInLocation("2006-01-02 15:04", s, domain.WIB)
+	t, err := time.ParseInLocation("2006-01-02 15:04", s, localtime.Jakarta)
 	if err != nil {
 		panic(err)
 	}

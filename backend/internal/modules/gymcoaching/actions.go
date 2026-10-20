@@ -63,7 +63,7 @@ func (s *Service) Confirm(ctx context.Context, id string) error {
 			if err := setParticipant(ctx, q, p, domain.Confirmed); err != nil {
 				return err
 			}
-			s.notify(ctx, q, p.CustomerID, confirmedNotice(a.ClassTypeName, a.start()))
+			s.notify(ctx, q, p.CustomerID, confirmedNotice(a.ClassTypeName, a.when()))
 		}
 		return nil
 	})
@@ -91,7 +91,7 @@ func (s *Service) CancelAppointment(ctx context.Context, id, reason string) erro
 			if err := setParticipant(ctx, q, p, domain.Cancelled); err != nil {
 				return err
 			}
-			s.notify(ctx, q, p.CustomerID, cancelledNotice(a.ClassTypeName, a.start(), reason))
+			s.notify(ctx, q, p.CustomerID, cancelledNotice(a.ClassTypeName, a.when(), reason))
 		}
 		return nil
 	})
@@ -120,7 +120,7 @@ func (s *Service) Complete(ctx context.Context, id string) error {
 			ok, err := s.ports.Credits.Deduct(ctx, q, CreditMove{
 				CustomerID: p.CustomerID, ClassTypeID: a.ClassTypeID, Amount: a.CreditCost,
 				SourceType: "pt_session", SourceID: p.ID, IdempotencyKey: "gym:pt:" + p.ID,
-				Note: "Sesi PT: " + a.ClassTypeName + " " + domain.FormatWib(a.start()),
+				Note: "Sesi PT: " + a.ClassTypeName + " " + a.when(),
 			})
 			if err != nil {
 				return err
@@ -168,7 +168,7 @@ func (s *Service) AddMember(ctx context.Context, id, customerID string) error {
 			return err
 		}
 		if a.Status == domain.Confirmed {
-			s.notify(ctx, q, customerID, confirmedNotice(a.ClassTypeName, a.start()))
+			s.notify(ctx, q, customerID, confirmedNotice(a.ClassTypeName, a.when()))
 		}
 		return nil
 	})
@@ -224,7 +224,7 @@ func (s *Service) CancelParticipant(ctx context.Context, appointmentID, particip
 			return err
 		}
 		if !byMember {
-			s.notify(ctx, q, p.CustomerID, cancelledNotice(a.ClassTypeName, a.start(), ""))
+			s.notify(ctx, q, p.CustomerID, cancelledNotice(a.ClassTypeName, a.when(), ""))
 		}
 		for _, other := range a.Participants {
 			if other.Status.Open() {
@@ -287,7 +287,7 @@ func (s *Service) chargePenalty(ctx context.Context, q Q, a *Appointment, p *Par
 	ok, err := s.ports.Credits.Deduct(ctx, q, CreditMove{
 		CustomerID: p.CustomerID, ClassTypeID: a.ClassTypeID, Amount: amount,
 		SourceType: kind, SourceID: p.ID, IdempotencyKey: "gym:" + kind + ":" + p.ID,
-		Note: note + ": " + a.ClassTypeName + " " + domain.FormatWib(a.start()),
+		Note: note + ": " + a.ClassTypeName + " " + a.when(),
 	})
 	if err != nil || !ok {
 		return 0, err

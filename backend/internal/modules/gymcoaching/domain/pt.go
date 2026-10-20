@@ -8,9 +8,6 @@ import (
 	"time"
 )
 
-// WIB is Asia/Jakarta (UTC+7, no DST). A fixed zone keeps the binary free of tzdata.
-var WIB = time.FixedZone("WIB", 7*3600)
-
 // Status is the state of an appointment or of one participant in it.
 // NoShow is a participant state only.
 type Status string
@@ -127,14 +124,3 @@ func ReminderDue(startsAt, now time.Time, minutes int) bool {
 // ReminderPeriod keys the sent log by start time, so a moved session earns
 // a fresh reminder.
 func ReminderPeriod(startsAt time.Time) string { return startsAt.UTC().Format(time.RFC3339) }
-
-var (
-	wibWeekdays = [...]string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
-	wibMonths   = [...]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
-)
-
-// FormatWib renders an instant like "Sen, 5 Okt, 18.00".
-func FormatWib(t time.Time) string {
-	w := t.In(WIB)
-	return wibWeekdays[w.Weekday()] + ", " + strconv.Itoa(w.Day()) + " " + wibMonths[w.Month()-1] + ", " + w.Format("15.04")
-}

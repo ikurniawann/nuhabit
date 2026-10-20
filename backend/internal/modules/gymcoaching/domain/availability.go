@@ -4,9 +4,11 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"nuhabit/backend/internal/platform/localtime"
 )
 
-// Minutes is a time of day in WIB as minutes after midnight.
+// Minutes is a time of day in the coach's branch zone as minutes after midnight.
 type Minutes int
 
 // EndOfDay is "24:00", the end of a window that runs to midnight.
@@ -54,7 +56,7 @@ const (
 	Extra ExceptionKind = "extra"
 )
 
-// Exception changes one date (YYYY-MM-DD, WIB) of a coach's week.
+// Exception changes one date (YYYY-MM-DD, coach's zone) of a coach's week.
 type Exception struct {
 	Date string
 	Kind ExceptionKind
@@ -74,7 +76,7 @@ type Interval struct{ Start, End time.Time }
 
 func (a Interval) overlaps(b Interval) bool { return a.Start.Before(b.End) && b.Start.Before(a.End) }
 
-// isoWeekday of a WIB date.
+// isoWeekday of a local date.
 func isoWeekday(day time.Time) int {
 	if wd := int(day.Weekday()); wd != 0 {
 		return wd
@@ -82,11 +84,11 @@ func isoWeekday(day time.Time) int {
 	return 7
 }
 
-// DayWindows is when the coach takes PT on date (YYYY-MM-DD, WIB): the
-// weekly windows of its weekday, minus Off exceptions, plus Extra ones,
-// merged and sorted. A bad date yields nothing.
-func DayWindows(date string, weekly []WeeklyWindow, exceptions []Exception) []Interval {
-	day, err := time.ParseInLocation(time.DateOnly, date, WIB)
+// DayWindows is when the coach takes PT on date (YYYY-MM-DD in the coach's
+// zone loc): the weekly windows of its weekday, minus Off exceptions, plus
+// Extra ones, merged and sorted. A bad date yields nothing.
+func DayWindows(date string, weekly []WeeklyWindow, exceptions []Exception, loc *time.Location) []Interval {
+	day, err := localtime.ParseDay(date, loc)
 	if err != nil {
 		return nil
 	}

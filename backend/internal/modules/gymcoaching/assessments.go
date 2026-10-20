@@ -82,7 +82,11 @@ type AssessmentInput struct {
 }
 
 func (s *Service) checkAssessment(ctx context.Context, in AssessmentInput) error {
-	if p := in.Problem(s.todayWib()); p != "" {
+	zone, err := coachZone(ctx, s.db, in.CoachID)
+	if err != nil {
+		return err
+	}
+	if p := in.Problem(s.today(zone)); p != "" {
 		return httpx.BadRequest(p)
 	}
 	if in.CoachID == nil {

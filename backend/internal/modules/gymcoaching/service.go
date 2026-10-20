@@ -21,6 +21,7 @@ import (
 	"nuhabit/backend/internal/modules/gymcoaching/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Q runs queries inside the caller's transaction.
@@ -140,8 +141,21 @@ func (s *Service) branchRules(q Q) func(ctx context.Context, branchID *string) (
 // conflict is a business failure safe to show staff and members (409).
 func conflict(msg string) error { return httpx.Conflict(msg) }
 
-// todayWib is the current date in WIB.
-func (s *Service) todayWib() string { return s.now().In(domain.WIB).Format(time.DateOnly) }
+// today is the current date in zone.
+func (s *Service) today(zone *time.Location) string { return localtime.DayKey(s.now(), zone) }
+
+// coachZone is the zone of the coach's branch: weekly availability and
+// exceptions read in it. Jakarta without a coach or a branch.
+func coachZone(ctx context.Context, q Q, coachID *string) (*time.Location, error) {
+	var branchID *string
+	if coachID != nil {
+		err := q.QueryRow(ctx, `SELECT branch_id::text FROM gym.coaches WHERE id = $1`, *coachID).Scan(&branchID)
+		if err != nil && !isNoRows(err) {
+			return nil, err
+		}
+	}
+	return localtime.BranchZone(ctx, q, branchID)
+}
 
 // CoachForUser is the active coach linked to a staff account, "" when none.
 func (s *Service) CoachForUser(ctx context.Context, userID string) (string, error) {

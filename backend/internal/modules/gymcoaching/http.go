@@ -351,7 +351,8 @@ func (h *handler) deleteException(w http.ResponseWriter, r *http.Request, sc sco
 }
 
 // slots lists free slots for the query coach_id, class_type_id, from
-// (YYYY-MM-DD, default today WIB) and days, starting no earlier than earliest.
+// (YYYY-MM-DD in the coach's zone, default today) and days, starting no
+// earlier than earliest.
 func (h *handler) slots(w http.ResponseWriter, r *http.Request, earliest time.Time, allows func(string) bool) error {
 	q := r.URL.Query()
 	coachID, err := queryUUID(q, "coach_id")
@@ -368,15 +369,11 @@ func (h *handler) slots(w http.ResponseWriter, r *http.Request, earliest time.Ti
 	if !allows(coachID) {
 		return httpx.NotFound("Coach tidak ditemukan")
 	}
-	from := q.Get("from")
-	if from == "" {
-		from = h.svc.todayWib()
-	}
 	days, err := strconv.Atoi(q.Get("days"))
 	if err != nil {
 		days = 7
 	}
-	list, err := h.svc.Slots(r.Context(), coachID, classType, from, days, earliest)
+	list, err := h.svc.Slots(r.Context(), coachID, classType, q.Get("from"), days, earliest)
 	if err != nil {
 		return err
 	}

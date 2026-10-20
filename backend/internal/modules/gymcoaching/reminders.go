@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcoaching/domain"
 	"nuhabit/backend/internal/platform/jobs"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // reminderKind is the platform.reminder_sends kind of PT reminders.
@@ -26,6 +27,7 @@ type reminderRow struct {
 	ClassTypeName string
 	CoachName     string
 	StartsAt      time.Time
+	Timezone      string
 }
 
 // SendReminders notifies members of a confirmed PT session the
@@ -34,11 +36,13 @@ type reminderRow struct {
 // from sending twice. One member's failure does not stop the others.
 func (s *Service) SendReminders(ctx context.Context, now time.Time) error {
 	rows, err := s.db.Query(ctx, `
-SELECT p.id::text, p.customer_id::text, a.branch_id::text, t.name, c.name, a.starts_at
+SELECT p.id::text, p.customer_id::text, a.branch_id::text, t.name, c.name, a.starts_at,
+       COALESCE(b.timezone, 'Asia/Jakarta')
   FROM gym.pt_appointments a
   JOIN gym.pt_participants p ON p.appointment_id = a.id AND p.status = 'confirmed'
   JOIN gym.class_types t ON t.id = a.class_type_id
   JOIN gym.coaches c ON c.id = a.coach_id
+  LEFT JOIN configuration.branches b ON b.id = a.branch_id
  WHERE a.status = 'confirmed' AND a.starts_at > $1 AND a.starts_at <= $2
    AND NOT EXISTS (SELECT 1 FROM gym.athlete_settings x WHERE x.customer_id = p.customer_id AND NOT x.booking_reminders)
  ORDER BY a.starts_at`, now, now.Add(reminderHorizon))
@@ -77,7 +81,7 @@ func (s *Service) remind(ctx context.Context, r reminderRow) error {
 		return s.ports.Notifier.NotifyMember(ctx, q, r.CustomerID, Notification{
 			Type:  "gym_pt_reminder",
 			Title: "Sesi PT segera dimulai",
-			Body:  r.ClassTypeName + " bersama " + r.CoachName + " mulai " + domain.FormatWib(r.StartsAt) + ".",
+			Body:  r.ClassTypeName + " bersama " + r.CoachName + " mulai " + localtime.Format(r.StartsAt, localtime.Zone(r.Timezone)) + ".",
 		})
 	})
 }

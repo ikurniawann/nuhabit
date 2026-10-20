@@ -10,6 +10,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcoaching/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // PersonalType is an active class type flagged personal training.
@@ -114,6 +115,7 @@ type Appointment struct {
 	ClassTypeName string        `json:"class_type_name"`
 	BranchID      *string       `json:"branch_id"`
 	BranchName    *string       `json:"branch_name"`
+	Timezone      string        `json:"timezone"`
 	StartsAt      httpx.JSTime  `json:"starts_at"`
 	EndsAt        httpx.JSTime  `json:"ends_at"`
 	Capacity      int           `json:"capacity"`
@@ -128,6 +130,9 @@ type Appointment struct {
 
 func (a *Appointment) start() time.Time { return time.Time(a.StartsAt) }
 
+// when is the start as "Sab, 24 Okt, 18.00" in the branch zone.
+func (a *Appointment) when() string { return localtime.Format(a.start(), localtime.Zone(a.Timezone)) }
+
 // Filter narrows the appointment list. Zero values do not filter.
 type Filter struct {
 	From, To   time.Time
@@ -137,7 +142,7 @@ type Filter struct {
 }
 
 const appointmentSelect = `SELECT a.id::text, a.coach_id::text, c.name, a.class_type_id::text, t.name, a.branch_id::text, b.name,
-       a.starts_at, a.ends_at, a.capacity, a.credit_cost, a.status, a.source, a.notes, a.cancel_reason, a.created_at
+       COALESCE(b.timezone, 'Asia/Jakarta'), a.starts_at, a.ends_at, a.capacity, a.credit_cost, a.status, a.source, a.notes, a.cancel_reason, a.created_at
   FROM gym.pt_appointments a
   JOIN gym.coaches c ON c.id = a.coach_id
   JOIN gym.class_types t ON t.id = a.class_type_id
@@ -147,7 +152,7 @@ func scanAppointment(r pgx.CollectableRow) (*Appointment, error) {
 	var a Appointment
 	var start, end, created time.Time
 	err := r.Scan(&a.ID, &a.CoachID, &a.CoachName, &a.ClassTypeID, &a.ClassTypeName, &a.BranchID, &a.BranchName,
-		&start, &end, &a.Capacity, &a.CreditCost, &a.Status, &a.Source, &a.Notes, &a.CancelReason, &created)
+		&a.Timezone, &start, &end, &a.Capacity, &a.CreditCost, &a.Status, &a.Source, &a.Notes, &a.CancelReason, &created)
 	a.StartsAt, a.EndsAt, a.CreatedAt = httpx.JSTime(start), httpx.JSTime(end), httpx.JSTime(created)
 	a.Participants = []Participant{}
 	return &a, err
@@ -288,6 +293,10 @@ func (s *Service) Book(ctx context.Context, in BookInput) (string, error) {
 		if err != nil {
 			return err
 		}
+		zone, err := localtime.BranchZone(ctx, q, branch)
+		if err != nil {
+			return err
+		}
 		end := in.StartsAt.Add(time.Duration(ct.DurationMin) * time.Minute)
 		for _, m := range members {
 			if err := s.checkMember(ctx, q, m, ct, in.StartsAt, end); err != nil {
@@ -307,7 +316,7 @@ func (s *Service) Book(ctx context.Context, in BookInput) (string, error) {
 			if err := s.addParticipant(ctx, q, id, m, domain.Confirmed); err != nil {
 				return err
 			}
-			s.notify(ctx, q, m, confirmedNotice(ct.Name, in.StartsAt))
+			s.notify(ctx, q, m, confirmedNotice(ct.Name, localtime.Format(in.StartsAt, zone)))
 		}
 		return nil
 	})
@@ -333,6 +342,10 @@ func (s *Service) Request(ctx context.Context, in RequestInput) (string, error) 
 			return err
 		}
 		branch, err := s.coachBranch(ctx, q, in.CoachID, nil)
+		if err != nil {
+			return err
+		}
+		zone, err := localtime.BranchZone(ctx, q, branch)
 		if err != nil {
 			return err
 		}
@@ -369,7 +382,7 @@ func (s *Service) Request(ctx context.Context, in RequestInput) (string, error) 
 		s.notify(ctx, q, in.CustomerID, Notification{
 			Type:  "gym_pt_requested",
 			Title: "Permintaan PT terkirim",
-			Body:  ct.Name + " pada " + domain.FormatWib(in.StartsAt) + " menunggu konfirmasi coach.",
+			Body:  ct.Name + " pada " + localtime.Format(in.StartsAt, zone) + " menunggu konfirmasi coach.",
 		})
 		return nil
 	})
@@ -453,16 +466,18 @@ func (s *Service) addParticipant(ctx context.Context, q Q, appointmentID, custom
 	return err
 }
 
-func confirmedNotice(className string, start time.Time) Notification {
+// confirmedNotice and cancelledNotice take the start already formatted in
+// the branch zone.
+func confirmedNotice(className, when string) Notification {
 	return Notification{
 		Type:  "gym_pt_confirmed",
 		Title: "Sesi PT dikonfirmasi",
-		Body:  className + " pada " + domain.FormatWib(start) + ". Datang 10 menit lebih awal.",
+		Body:  className + " pada " + when + ". Datang 10 menit lebih awal.",
 	}
 }
 
-func cancelledNotice(className string, start time.Time, reason string) Notification {
-	body := className + " pada " + domain.FormatWib(start) + " dibatalkan."
+func cancelledNotice(className, when, reason string) Notification {
+	body := className + " pada " + when + " dibatalkan."
 	if reason != "" {
 		body += " Alasan: " + reason
 	}

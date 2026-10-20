@@ -18,13 +18,17 @@ type PTCoach struct {
 	Bio            string  `json:"bio"`
 	PhotoURL       *string `json:"photo_url"`
 	BranchID       *string `json:"branch_id"`
+	// Timezone is the zone the coach's availability and slots read in.
+	Timezone string `json:"timezone"`
 }
 
 // PTCoaches lists active coaches with weekly PT availability, or every
 // active coach when all is set.
 func (s *Service) PTCoaches(ctx context.Context, all bool) ([]PTCoach, error) {
-	rows, err := s.db.Query(ctx, `SELECT c.id::text, c.name, c.specialization, c.bio, c.photo_url, c.branch_id::text
+	rows, err := s.db.Query(ctx, `SELECT c.id::text, c.name, c.specialization, c.bio, c.photo_url, c.branch_id::text,
+            COALESCE(b.timezone, 'Asia/Jakarta')
        FROM gym.coaches c
+       LEFT JOIN configuration.branches b ON b.id = c.branch_id
       WHERE c.status = 'active' AND ($1 OR EXISTS (SELECT 1 FROM gym.coach_availability w WHERE w.coach_id = c.id))
       ORDER BY c.name`, all)
 	if err != nil {

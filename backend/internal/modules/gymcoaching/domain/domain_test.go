@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"nuhabit/backend/internal/platform/localtime"
 	"reflect"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ func eq(t *testing.T, got, want any) {
 }
 
 func wib(s string) time.Time {
-	t, err := time.ParseInLocation("2006-01-02 15:04", s, WIB)
+	t, err := time.ParseInLocation("2006-01-02 15:04", s, localtime.Jakarta)
 	if err != nil {
 		panic(err)
 	}
@@ -74,7 +75,6 @@ func TestReminder(t *testing.T) {
 	eq(t, ReminderDue(start, start, 60), false)
 	eq(t, ReminderDue(start, wib("2031-03-02 17:30"), 0), false)
 	eq(t, ReminderPeriod(start), "2031-03-02T11:00:00Z")
-	eq(t, FormatWib(start), "Min, 2 Mar, 18.00")
 }
 
 func TestParseClock(t *testing.T) {
@@ -107,7 +107,7 @@ func TestDayWindows(t *testing.T) {
 	iv := func(a, b string) Interval { return Interval{wib("2031-03-03 " + a), wib("2031-03-03 " + b)} }
 
 	t.Run("weekly windows of the weekday, merged", func(t *testing.T) {
-		eq(t, DayWindows("2031-03-03", weekly, nil), []Interval{iv("06:00", "12:00"), iv("16:00", "20:00")})
+		eq(t, DayWindows("2031-03-03", weekly, nil, localtime.Jakarta), []Interval{iv("06:00", "12:00"), iv("16:00", "20:00")})
 	})
 	t.Run("off with a span cuts a hole, extra adds time", func(t *testing.T) {
 		ex := []Exception{
@@ -115,15 +115,21 @@ func TestDayWindows(t *testing.T) {
 			{Date: "2031-03-03", Kind: Extra, Span: &Span{20 * 60, 21 * 60}},
 			{Date: "2031-03-04", Kind: Off},
 		}
-		eq(t, DayWindows("2031-03-03", weekly, ex), []Interval{iv("06:00", "08:00"), iv("09:00", "12:00"), iv("16:00", "21:00")})
-		eq(t, DayWindows("2031-03-04", weekly, ex), []Interval{})
+		eq(t, DayWindows("2031-03-03", weekly, ex, localtime.Jakarta), []Interval{iv("06:00", "08:00"), iv("09:00", "12:00"), iv("16:00", "21:00")})
+		eq(t, DayWindows("2031-03-04", weekly, ex, localtime.Jakarta), []Interval{})
 	})
 	t.Run("a whole day off keeps extra time", func(t *testing.T) {
 		ex := []Exception{{Date: "2031-03-03", Kind: Off}, {Date: "2031-03-03", Kind: Extra, Span: &Span{7 * 60, 8 * 60}}}
-		eq(t, DayWindows("2031-03-03", weekly, ex), []Interval{iv("07:00", "08:00")})
+		eq(t, DayWindows("2031-03-03", weekly, ex, localtime.Jakarta), []Interval{iv("07:00", "08:00")})
 	})
 	t.Run("bad date", func(t *testing.T) {
-		eq(t, DayWindows("03-03-2031", weekly, nil) == nil, true)
+		eq(t, DayWindows("03-03-2031", weekly, nil, localtime.Jakarta) == nil, true)
+	})
+	t.Run("a WITA coach's 06:00 is 05:00 WIB", func(t *testing.T) {
+		got := DayWindows("2031-03-03", weekly, nil, localtime.Zone("Asia/Makassar"))
+		if len(got) != 2 || !got[0].Start.Equal(wib("2031-03-03 05:00")) || !got[1].End.Equal(wib("2031-03-03 19:00")) {
+			t.Fatalf("WITA windows = %v", got)
+		}
 	})
 }
 

@@ -8,9 +8,11 @@ import (
 
 	"nuhabit/backend/internal/modules/gymcoaching/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
-// Window is a weekly availability row; times are "HH:MM" in WIB.
+// Window is a weekly availability row; times are "HH:MM" in the coach's
+// branch zone.
 type Window struct {
 	ID        string `json:"id,omitempty"`
 	Weekday   int    `json:"weekday"`
@@ -29,9 +31,11 @@ type ExceptionRow struct {
 	Note      string  `json:"note"`
 }
 
-// Availability is a coach's weekly windows and the exceptions from today on.
+// Availability is a coach's weekly windows and the exceptions from today
+// on, in the zone of the coach's branch.
 type Availability struct {
 	CoachID    string         `json:"coach_id"`
+	Timezone   string         `json:"timezone"`
 	Weekly     []Window       `json:"weekly"`
 	Exceptions []ExceptionRow `json:"exceptions"`
 }
@@ -63,7 +67,11 @@ func (s *Service) Availability(ctx context.Context, coachID string) (*Availabili
 	if err := s.requireCoach(ctx, s.db, coachID); err != nil {
 		return nil, err
 	}
-	out := &Availability{CoachID: coachID}
+	zone, err := coachZone(ctx, s.db, &coachID)
+	if err != nil {
+		return nil, err
+	}
+	out := &Availability{CoachID: coachID, Timezone: localtime.Name(zone)}
 	rows, err := s.db.Query(ctx, `SELECT id::text, weekday, to_char(start_time, 'HH24:MI'), to_char(end_time, 'HH24:MI')
        FROM gym.coach_availability WHERE coach_id = $1 ORDER BY weekday, start_time`, coachID)
 	if err != nil {
@@ -74,7 +82,7 @@ func (s *Service) Availability(ctx context.Context, coachID string) (*Availabili
 	}
 	rows, err = s.db.Query(ctx, `SELECT id::text, date::text, kind, to_char(start_time, 'HH24:MI'), to_char(end_time, 'HH24:MI'), note
        FROM gym.coach_availability_exceptions WHERE coach_id = $1 AND date >= $2::date ORDER BY date, start_time NULLS FIRST`,
-		coachID, s.todayWib())
+		coachID, s.today(zone))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +133,11 @@ func (s *Service) AddException(ctx context.Context, coachID, actorID string, in 
 	if _, err := time.Parse(time.DateOnly, in.Date); err != nil {
 		return "", httpx.BadRequest("Tanggal tidak valid")
 	}
-	if in.Date < s.todayWib() {
+	zone, err := coachZone(ctx, s.db, &coachID)
+	if err != nil {
+		return "", err
+	}
+	if in.Date < s.today(zone) {
 		return "", httpx.BadRequest("Tanggal sudah lewat")
 	}
 	var start, end *string
@@ -140,7 +152,7 @@ func (s *Service) AddException(ctx context.Context, coachID, actorID string, in 
 		return "", httpx.BadRequest("Jenis pengecualian tidak valid")
 	}
 	var id string
-	err := s.inTx(ctx, func(q Q) error {
+	err = s.inTx(ctx, func(q Q) error {
 		if err := s.requireCoach(ctx, q, coachID); err != nil {
 			return err
 		}
@@ -231,11 +243,18 @@ type Slot struct {
 const MaxSlotDays = 14
 
 // Slots lists the free starts of a classTypeID session with the coach on
-// the WIB dates from fromDate for days days: inside the coach's
-// availability, clear of the coach's classes and PT, and no earlier than
-// earliest.
+// the dates from fromDate ("" is today) for days days, dates in the coach's
+// zone: inside the coach's availability, clear of the coach's classes and
+// PT, and no earlier than earliest.
 func (s *Service) Slots(ctx context.Context, coachID, classTypeID, fromDate string, days int, earliest time.Time) ([]Slot, error) {
-	first, err := time.ParseInLocation(time.DateOnly, fromDate, domain.WIB)
+	zone, err := coachZone(ctx, s.db, &coachID)
+	if err != nil {
+		return nil, err
+	}
+	if fromDate == "" {
+		fromDate = s.today(zone)
+	}
+	first, err := localtime.ParseDay(fromDate, zone)
 	if err != nil {
 		return nil, httpx.BadRequest("Tanggal tidak valid")
 	}
@@ -259,7 +278,7 @@ func (s *Service) Slots(ctx context.Context, coachID, classTypeID, fromDate stri
 	duration := time.Duration(ct.DurationMin) * time.Minute
 	out := []Slot{}
 	for d := first; !d.After(last); d = d.AddDate(0, 0, 1) {
-		windows := domain.DayWindows(d.Format(time.DateOnly), weekly, exceptions)
+		windows := domain.DayWindows(d.Format(time.DateOnly), weekly, exceptions, zone)
 		for _, start := range domain.FreeSlots(windows, busy, duration, domain.SlotStep, earliest) {
 			out = append(out, Slot{StartsAt: httpx.JSTime(start), EndsAt: httpx.JSTime(start.Add(duration))})
 		}
@@ -268,12 +287,16 @@ func (s *Service) Slots(ctx context.Context, coachID, classTypeID, fromDate stri
 }
 
 // fitsAvailability reports whether [start, end) lies in the coach's
-// availability on the WIB date of start.
+// availability on the date of start in the coach's zone.
 func fitsAvailability(ctx context.Context, q Q, coachID string, start, end time.Time) (bool, error) {
-	date := start.In(domain.WIB).Format(time.DateOnly)
+	zone, err := coachZone(ctx, q, &coachID)
+	if err != nil {
+		return false, err
+	}
+	date := localtime.DayKey(start, zone)
 	weekly, exceptions, err := coachWeek(ctx, q, coachID, date, date)
 	if err != nil {
 		return false, err
 	}
-	return domain.Fits(domain.DayWindows(date, weekly, exceptions), start, end), nil
+	return domain.Fits(domain.DayWindows(date, weekly, exceptions, zone), start, end), nil
 }
