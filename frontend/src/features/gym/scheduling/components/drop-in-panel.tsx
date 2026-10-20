@@ -27,7 +27,6 @@ function useNow(everyMs = 60_000) {
   return now;
 }
 
-
 /**
  * Drop-in: pilih sesi yang sedang berjalan, cari member, jual paket bila
  * kreditnya kurang, lalu daftarkan di luar jendela booking dan check-in.
@@ -160,11 +159,10 @@ export function DropInPanel({ branchId, onResult }: { branchId: string; onResult
           credits={credits.data}
           branchId={session?.branch_id ?? (branchId || null)}
           onClose={() => setSelling(false)}
-          onDone={() => {
+          onDone={(purchase) => {
             void queryClient.invalidateQueries({ queryKey: ["gym", "member-search"] });
             void queryClient.invalidateQueries({ queryKey: ["gym-credits"] });
-            // Saldo baru tampil saat member dipilih ulang dari hasil cari.
-            setMember(null);
+            setMember((cur) => cur && { ...cur, credits: cur.credits + purchase.credits });
           }}
         />
       )}
