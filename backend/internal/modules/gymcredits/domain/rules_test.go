@@ -16,6 +16,8 @@ func defaultsKV() []KV {
 		{"classReminderMinutes", 120.0},
 		{"scheduleHorizonDays", 14.0},
 		{"maxFreezeDaysPerYear", 30.0}, {"minFreezeDays", 7.0}, {"renewalLeadDays", 3.0},
+		{"requireWaiver", true}, {"checkinOpensMinBefore", 45.0}, {"checkinClosesMinAfter", 15.0},
+		{"openGymEnabled", false}, {"openGymCreditCost", 1.0}, {"correctionWindowDays", 7.0},
 	}
 }
 
@@ -41,9 +43,32 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"requireWaiver":true,"checkinOpensMinBefore":45,"checkinClosesMinAfter":15,"openGymEnabled":false,"openGymCreditCost":1,"correctionWindowDays":7}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 24)
+	eq(t, len(RuleKeys()), 30)
+}
+
+func TestGateRules(t *testing.T) {
+	for key, v := range map[string]any{
+		"requireWaiver": "ya", "checkinOpensMinBefore": -1.0, "checkinClosesMinAfter": 1441.0,
+		"openGymEnabled": 1.0, "openGymCreditCost": 21.0, "correctionWindowDays": 91.0,
+	} {
+		if _, msg := ValidateRules(with(defaultsKV(), key, v)); msg == "" {
+			t.Fatalf("%s=%v should be rejected", key, v)
+		}
+	}
+	_, msg := ValidateRulesPatch([]KV{{"requireWaiver", "ya"}})
+	eq(t, msg, "requireWaiver: Wajib waiver harus ya/tidak")
+	_, msg = ValidateRulesPatch([]KV{{"openGymCreditCost", 21.0}})
+	eq(t, msg, "openGymCreditCost: Kredit open gym maksimal 20")
+
+	p, msg := ValidateRulesPatch([]KV{{"openGymEnabled", true}, {"openGymCreditCost", 0.0}, {"requireWaiver", false}})
+	eq(t, msg, "")
+	r := p.Over(RuleDefaults)
+	eq(t, r.OpenGymEnabled, true)
+	eq(t, r.OpenGymCreditCost, 0)
+	eq(t, r.RequireWaiver, false)
+	eq(t, r.CheckinOpensMinBefore, 45)
 }
 
 func TestResolveRules(t *testing.T) {
