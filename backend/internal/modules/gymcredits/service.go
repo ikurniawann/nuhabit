@@ -189,6 +189,8 @@ type Ports struct {
 	Directory Directory
 	Gateway   QRISGateway
 	Invoices  InvoiceGateway
+	// Vouchers is the promo-code engine; nil turns voucher codes away.
+	Vouchers Vouchers
 }
 
 // Service holds the credit use cases.

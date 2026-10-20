@@ -15,9 +15,20 @@ func (m creditsModule) Routes() []module.Route { return m.routes }
 // New wires the module on the shared database. Customers, branches, staff
 // names, class types, the ARK Coin wallet and Xendit are reached through the
 // Ports; the adapters in adapters*.go implement them with the TS SQL until
-// internal/app points them at their own modules.
-func New(deps module.Deps) module.Module {
-	return creditsModule{routes: newHandler(deps, deps.DB).Routes()}
+// internal/app points them at their own modules. vouchers is the promo-code
+// engine internal/app adapts (nil turns voucher codes away).
+func New(deps module.Deps, vouchers Vouchers) module.Module {
+	h := newHandler(deps, deps.DB)
+	h.svc.WithVouchers(vouchers)
+	return creditsModule{routes: h.Routes()}
+}
+
+// WithVouchers sets the promo-code port: package purchases then accept
+// voucher codes, and settling or closing a purchase captures or releases
+// its code.
+func (s *Service) WithVouchers(v Vouchers) *Service {
+	s.ports.Vouchers = v
+	return s
 }
 
 // NewDefaultService builds the service on db with the default adapters; other

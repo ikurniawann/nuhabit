@@ -39,6 +39,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/gym/credits", Handler: h.auth.MemberHandler("Gagal memuat kredit kelas", h.memberWallet)},
 		{Pattern: "GET /api/member-portal/gym/credits/packages", Handler: h.auth.MemberHandler("Gagal memuat paket kredit", h.portalPackages)},
 		{Pattern: "POST /api/member-portal/gym/credits/purchases", Handler: h.auth.MemberHandler("Gagal membeli paket", h.buy)},
+		{Pattern: "POST /api/member-portal/gym/credits/vouchers/preview", Handler: h.auth.MemberHandler("Gagal memeriksa voucher", h.previewVoucher)},
 		{Pattern: "GET /api/member-portal/gym/credits/purchases/{id}", Handler: h.auth.MemberHandler("Gagal memuat status pembelian", h.purchaseStatus)},
 		{Pattern: "POST /api/member-portal/gym/credits/purchases/{id}/simulate-paid", Handler: h.auth.MemberHandler("Gagal mensimulasikan pembayaran", h.simulatePaid)},
 	}
@@ -344,11 +345,11 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 		return err
 	}
 	var view *MemberPurchaseView
-	purchase := MemberPurchase{CustomerID: customerID, PackageID: in.PackageID, BranchID: in.BranchID}
+	purchase := MemberPurchase{CustomerID: customerID, PackageID: in.PackageID, BranchID: in.BranchID, VoucherCode: in.VoucherCode}
 	origin := appOrigin(r)
 	switch in.Method {
 	case "ark_coin":
-		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID)
+		view, err = h.svc.BuyWithArk(r.Context(), customerID, in.PackageID, in.VoucherCode)
 	case "invoice":
 		view, err = h.svc.StartInvoicePurchase(r.Context(), purchase, func(purchaseID string) string {
 			if in.FromSite {
@@ -366,6 +367,20 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 	}
 	if err != nil {
 		return asHTTP(err) // these routes catch GymCreditError
+	}
+	return ok(w, view)
+}
+
+// previewVoucher quotes a voucher code for a package without claiming it.
+func (h *Handler) previewVoucher(w http.ResponseWriter, r *http.Request, customerID string) error {
+	body, _ := readJSON(r, map[string]any{})
+	in, err := parseVoucherPreview(body)
+	if err != nil {
+		return err
+	}
+	view, err := h.svc.PreviewVoucher(r.Context(), customerID, in.PackageID, in.Code, in.BranchID)
+	if err != nil {
+		return asHTTP(err)
 	}
 	return ok(w, view)
 }

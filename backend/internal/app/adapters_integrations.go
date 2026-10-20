@@ -293,7 +293,7 @@ func (integrationsPayments) GymPurchase(ctx context.Context, q database.Querier,
 // SettleGymPurchase runs gym-credits' settlement on the caller's database
 // handle: the webhook answers with its result.
 func (p integrationsPayments) SettleGymPurchase(ctx context.Context, db database.DB, ref string, paymentID *string) (any, error) {
-	return gymcredits.NewDefaultService(p.deps, db).SettleByReference(ctx, ref, paymentID)
+	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).SettleByReference(ctx, ref, paymentID)
 }
 
 func (integrationsPayments) Topup(ctx context.Context, q database.Querier, column, value string) (*webhooks.Pending, error) {

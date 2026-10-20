@@ -43,6 +43,8 @@ type purchaseInput struct {
 	BranchID      *string
 	Note          *string
 	CreatedBy     *string
+	// VoucherCode is a promo code; its discount replaces DiscountIdr.
+	VoucherCode string
 }
 
 // createPurchase records a pending purchase after the package eligibility rules.
@@ -82,6 +84,13 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		}
 	}
 
+	if in.VoucherCode != "" {
+		quote, err := s.quoteVoucher(ctx, tx, in.CustomerID, in.VoucherCode, pkg.PriceIdr)
+		if err != nil {
+			return nil, err
+		}
+		in.DiscountIdr = quote.Discount
+	}
 	discount, total := domain.PurchaseTotal(pkg.PriceIdr, in.DiscountIdr)
 	var note *string
 	if in.Note != nil && strings.TrimSpace(*in.Note) != "" {
@@ -95,6 +104,11 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 	})
 	if err != nil {
 		return nil, err
+	}
+	if in.VoucherCode != "" {
+		if err := s.holdVoucher(ctx, tx, in.CustomerID, in.VoucherCode, pkg.PriceIdr, discount, id); err != nil {
+			return nil, err
+		}
 	}
 	return s.repo.Purchase(ctx, tx, id, false)
 }
@@ -121,6 +135,9 @@ func (s *Service) markPaid(ctx context.Context, tx database.Querier, purchaseID 
 	}
 	paidAt, validityDays, err := s.repo.MarkPurchasePaid(ctx, tx, purchaseID, meta)
 	if err != nil {
+		return false, nil, err
+	}
+	if err := s.captureVoucher(ctx, tx, purchaseID); err != nil {
 		return false, nil, err
 	}
 	paidAt = paidAt.Truncate(time.Millisecond)
@@ -249,11 +266,11 @@ func (s *Service) SellPackage(ctx context.Context, sale FrontDeskSale) (*Purchas
 /* ── Member portal payments ──────────────────────────────────────────── */
 
 // BuyWithArk buys a package with ARK Coin: debit and credits in one transaction.
-func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID string) (*MemberPurchaseView, error) {
+func (s *Service) BuyWithArk(ctx context.Context, customerID, packageID, voucherCode string) (*MemberPurchaseView, error) {
 	var view *MemberPurchaseView
 	err := database.WithTx(ctx, s.db, func(tx pgx.Tx) error {
 		purchase, err := s.createPurchase(ctx, tx, purchaseInput{
-			CustomerID: customerID, PackageID: packageID, Channel: "member_portal", PaymentMethod: "ark_coin",
+			CustomerID: customerID, PackageID: packageID, Channel: "member_portal", PaymentMethod: "ark_coin", VoucherCode: voucherCode,
 		})
 		if err != nil {
 			return err
@@ -274,6 +291,8 @@ type MemberPurchase struct {
 	CustomerID string
 	PackageID  string
 	BranchID   *string
+	// VoucherCode is an optional promo code ("" for none).
+	VoucherCode string
 }
 
 // StartQRISPurchase buys a package through a dynamic QRIS. Without an active
@@ -326,6 +345,7 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 		var err error
 		purchase, err = s.createPurchase(ctx, tx, purchaseInput{
 			CustomerID: in.CustomerID, PackageID: in.PackageID, Channel: "member_portal", PaymentMethod: method, BranchID: in.BranchID,
+			VoucherCode: in.VoucherCode,
 		})
 		return err
 	})
@@ -347,7 +367,7 @@ func (s *Service) startPendingPurchase(ctx context.Context, in MemberPurchase, m
 
 	meta, err := handle(purchase, referenceID)
 	if err != nil {
-		if closeErr := s.repo.ClosePurchase(ctx, s.db, purchase.ID, "failed"); closeErr != nil {
+		if closeErr := s.closePurchase(ctx, purchase.ID, "failed"); closeErr != nil {
 			s.log.ErrorContext(ctx, "gym-credits: close failed purchase", "purchase_id", purchase.ID, "error", closeErr)
 		}
 		return nil, err
@@ -500,7 +520,7 @@ func (s *Service) RefreshMemberPurchase(ctx context.Context, customerID, purchas
 	}
 	if expiresAt, ok := meta["expires_at"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, expiresAt); err == nil && t.Before(s.clock()) {
-			if err := s.repo.ClosePurchase(ctx, s.db, purchaseID, "expired"); err != nil {
+			if err := s.closePurchase(ctx, purchaseID, "expired"); err != nil {
 				return nil, err
 			}
 			reloaded, err := s.repo.Purchase(ctx, s.db, purchaseID, false)
@@ -545,7 +565,7 @@ func (s *Service) reconcileInvoice(ctx context.Context, purchaseID, invoiceID st
 	switch status {
 	case "PAID", "SETTLED":
 	case "EXPIRED":
-		if err := s.repo.ClosePurchase(ctx, s.db, purchaseID, "expired"); err != nil {
+		if err := s.closePurchase(ctx, purchaseID, "expired"); err != nil {
 			return nil, err
 		}
 		return s.repo.Purchase(ctx, s.db, purchaseID, false)
