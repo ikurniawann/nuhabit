@@ -18,6 +18,8 @@ import {
   type RawSession,
   type RawWallet,
   type RenewWith,
+  type SavedMethod,
+  type SavedMethods,
 } from "./classes-view";
 
 /**
@@ -35,6 +37,7 @@ const keys = {
   wallet: ["member-app", "wallet"] as const,
   packages: ["member-app", "packages"] as const,
   payment: (id: string) => ["member-app", "payment", id] as const,
+  savedMethods: ["member-app", "saved-methods"] as const,
 };
 
 /** Trainer browsing covers the next fortnight, like the reference. */
@@ -249,3 +252,25 @@ export const previewVoucher = (packageId: string, code: string) =>
 /** Local dev only: settle the simulated QR through the webhook path. */
 export const simulatePaid = (purchaseId: string) =>
   memberApi(`/gym/credits/purchases/${purchaseId}/simulate-paid`, { method: "POST" });
+
+const LINK_POLL_MS = 3_000;
+
+/** Saved cards and e-wallets; polled while a link waits for Xendit. */
+export const useSavedMethods = () =>
+  useQuery({
+    queryKey: keys.savedMethods,
+    queryFn: () => memberApi<SavedMethods>("/gym/payment-methods"),
+    refetchInterval: (query) => (query.state.data?.methods.some((m) => m.status === "pending") ? LINK_POLL_MS : false),
+  });
+
+/** Opens the Xendit page where the member saves a card or e-wallet. */
+export const linkSavedMethod = () =>
+  memberApi<{ method: SavedMethod; redirect_url: string }>("/gym/payment-methods", { method: "POST" });
+
+export function useUnlinkSavedMethod() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: (id: string) => memberApi<SavedMethod>(`/gym/payment-methods/${id}`, { method: "DELETE" }),
+    onSuccess: invalidate,
+  });
+}

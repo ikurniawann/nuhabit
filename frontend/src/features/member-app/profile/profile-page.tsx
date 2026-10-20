@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronRight,
   Coins,
+  CreditCard,
   Flag,
   Footprints,
   Gift,
@@ -33,6 +34,8 @@ import { useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { m } from "../lib/links";
 import { useAccount, useInvalidateAll } from "../lib/queries-home";
+import { activeMethod } from "../lib/classes-view";
+import { useSavedMethods } from "../lib/queries-classes";
 import { useLoyaltyMe } from "../lib/queries-loyalty";
 import { Spinner, StatusBadge, formatDay } from "../ui";
 
@@ -42,6 +45,7 @@ export function ProfilePage() {
   const qc = useQueryClient();
   const { data: me, isLoading } = useAccount();
   const { data: loyalty } = useLoyaltyMe();
+  const { data: saved } = useSavedMethods();
   const invalidate = useInvalidateAll();
   const [editing, setEditing] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
@@ -260,6 +264,16 @@ export function ProfilePage() {
           items={[
             { to: "/wallet", icon: Wallet, title: t("Wallet & credits"), hint: t("Balance, top up, history") },
             { to: "/my-classes", icon: BookMarked, title: t("My classes"), hint: t("What your packages cover") },
+            ...(saved?.enabled
+              ? [
+                  {
+                    to: "/profile/payment-methods",
+                    icon: CreditCard,
+                    title: t("Payment methods"),
+                    hint: activeMethod(saved)?.label ?? t("Save a card or e-wallet for auto-renew"),
+                  },
+                ]
+              : []),
             {
               to: "/profile/emergency",
               icon: HeartPulse,

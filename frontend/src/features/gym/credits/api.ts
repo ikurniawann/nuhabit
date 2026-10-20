@@ -45,7 +45,7 @@ export interface BranchOption {
 
 export type PackageInput = Omit<CreditPackage, "id" | "branch_name" | "status" | "sold_count" | "referenced"> & { id?: string };
 
-export type RenewWith = "ark" | "invoice";
+export type RenewWith = "ark" | "invoice" | "saved_method";
 
 export interface MemberPass {
   id: string;

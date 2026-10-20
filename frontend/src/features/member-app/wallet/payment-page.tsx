@@ -16,6 +16,7 @@ const CHANNEL_TITLE: Record<PaymentView["payment"]["channel"], string> = {
   QRIS: "Scan to pay with QRIS",
   ARK_COIN: "Pay with ARK Coin",
   INVOICE: "Pay on the secure checkout page",
+  SAVED_METHOD: "Charging your saved payment method",
 };
 
 /** Fallback checkout window when the gateway gives no QR expiry. */

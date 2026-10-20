@@ -24,7 +24,7 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
 import { gymCreditsApi, type CreditPurchase, type MemberCredits, type MemberPass, type RefundMode, type RenewWith } from "../api";
 
-const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Invoice online" };
+const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Invoice online", saved_method: "Metode tersimpan member" };
 
 const isLive = (p: MemberPass) => p.status === "active" || p.status === "frozen";
 

@@ -1,15 +1,17 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { BottomSheet } from "../components/bottom-sheet";
 import { ApiError } from "../lib/api";
-import type { FreezeAllowance, PassView, RenewWith } from "../lib/classes-view";
+import { activeMethod, type FreezeAllowance, type PassView, type RenewWith } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
-import { usePassMutation, type PassAction } from "../lib/queries-classes";
+import { m } from "../lib/links";
+import { usePassMutation, useSavedMethods, type PassAction } from "../lib/queries-classes";
 import { Toggle } from "../train/record/option-row";
 import { formatDay } from "../ui";
 
-const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Online invoice" };
+const RENEW_LABELS: Record<RenewWith, string> = { ark: "ARK Coin", invoice: "Online invoice", saved_method: "Saved method" };
 
 /** Freeze lengths offered: the minimum, two and four weeks, within what is left. */
 function freezeChoices(f: FreezeAllowance): number[] {
@@ -30,6 +32,13 @@ export function MembershipCard({
 }) {
   const t = useT();
   const change = usePassMutation();
+  const { data: saved } = useSavedMethods();
+  const method = activeMethod(saved);
+  // The saved-method choice shows only while the feature is on (or already picked).
+  const renewChoices = (Object.keys(RENEW_LABELS) as RenewWith[]).filter(
+    (w) => w !== "saved_method" || saved?.enabled || pass.renewWith === w
+  );
+  const renewLabel = (w: RenewWith) => (w === "saved_method" && method?.label ? method.label : t(RENEW_LABELS[w]));
   const [sheet, setSheet] = useState(false);
   const [error, setError] = useState("");
   const frozen = pass.status === "frozen";
@@ -78,9 +87,14 @@ export function MembershipCard({
             <p className="text-sm font-extrabold">{t("Auto-renew")}</p>
             <p className="text-xs text-nh-muted">
               {pass.autoRenew
-                ? `${t("Renews before it ends, paid with")} ${t(RENEW_LABELS[pass.renewWith])}`
+                ? `${t("Renews before it ends, paid with")} ${renewLabel(pass.renewWith)}`
                 : `${t("Off - your pass ends on")} ${formatDay(pass.endsAt)}`}
             </p>
+            {!pass.autoRenew && pass.autoRenewOffReason === "renewal_failed" ? (
+              <p className="text-xs font-bold text-nh-danger">
+                {t("Auto-renew was turned off after the renewal payment failed.")}
+              </p>
+            ) : null}
           </div>
           <Toggle
             on={pass.autoRenew}
@@ -90,18 +104,24 @@ export function MembershipCard({
         </div>
         {pass.autoRenew ? (
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(RENEW_LABELS) as RenewWith[]).map((w) => (
-              <button
-                key={w}
-                type="button"
-                aria-pressed={pass.renewWith === w}
-                disabled={change.isPending}
-                onClick={() => run({ kind: "auto-renew", passId: pass.id, autoRenew: true, renewWith: w })}
-                className={`nh-chip ${pass.renewWith === w ? "bg-nh-ink text-white" : "bg-nh-raised text-nh-muted"}`}
-              >
-                {t(RENEW_LABELS[w])}
-              </button>
-            ))}
+            {renewChoices.map((w) =>
+              w === "saved_method" && !method && pass.renewWith !== w ? (
+                <Link key={w} href={m("/profile/payment-methods")} className="nh-chip bg-nh-raised text-nh-muted">
+                  {t("Link a payment method")}
+                </Link>
+              ) : (
+                <button
+                  key={w}
+                  type="button"
+                  aria-pressed={pass.renewWith === w}
+                  disabled={change.isPending}
+                  onClick={() => run({ kind: "auto-renew", passId: pass.id, autoRenew: true, renewWith: w })}
+                  className={`nh-chip ${pass.renewWith === w ? "bg-nh-ink text-white" : "bg-nh-raised text-nh-muted"}`}
+                >
+                  {renewLabel(w)}
+                </button>
+              )
+            )}
           </div>
         ) : null}
 
