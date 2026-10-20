@@ -6,7 +6,7 @@ import { Suspense, useState } from "react";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
-import { buyPackage, useInvalidateAll, usePackages } from "../lib/queries-classes";
+import { buyPackage, previewVoucher, useInvalidateAll, usePackages, type VoucherQuote } from "../lib/queries-classes";
 import { Spinner, formatIdr } from "../ui";
 
 /** Payment methods the gym credit purchase API accepts. */
@@ -37,6 +37,8 @@ function TopUp() {
   // Promo cards on Home deep-link here with the code prefilled.
   const [voucherCode, setVoucherCode] = useState((searchParams.get("voucher") ?? "").toUpperCase());
   const [voucherError, setVoucherError] = useState("");
+  const [voucher, setVoucher] = useState<VoucherQuote | null>(null);
+  const [checking, setChecking] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,10 +48,19 @@ function TopUp() {
   const channels = CHANNELS.filter((c) => c.id !== "ark_coin" || arkEnabled);
   const selected = packages.find((p) => p.id === packageId);
 
-  // Credit package purchases take no voucher here; say so instead of failing silently.
-  const checkVoucher = () => {
-    if (!voucherCode || !packageId) return;
-    setVoucherError(t("Vouchers can't be applied to credit packages yet."));
+  // The quote is per package: picking another package checks the code again.
+  const checkVoucher = async (forPackage: string) => {
+    setVoucher(null);
+    setVoucherError("");
+    if (!voucherCode.trim() || !forPackage) return;
+    setChecking(true);
+    try {
+      setVoucher(await previewVoucher(forPackage, voucherCode));
+    } catch (e) {
+      setVoucherError(e instanceof ApiError ? e.message : t("Could not check the voucher."));
+    } finally {
+      setChecking(false);
+    }
   };
 
   const checkout = async () => {
@@ -57,7 +68,7 @@ function TopUp() {
     setBusy(true);
     setError("");
     try {
-      const purchase = await buyPackage(selected.id, channel);
+      const purchase = await buyPackage(selected.id, channel, voucher?.code);
       invalidate();
       router.push(m(`/wallet/pay/${purchase.id}`));
     } catch (e) {
@@ -81,7 +92,7 @@ function TopUp() {
             disabled={!p.canBuy}
             onClick={() => {
               setPackageId(p.id);
-              setVoucherError("");
+              void checkVoucher(p.id);
             }}
             className={`nh-card flex items-center justify-between text-left disabled:opacity-60 ${
               packageId === p.id ? "!border-nh-forest" : ""
@@ -124,15 +135,25 @@ function TopUp() {
                 value={voucherCode}
                 onChange={(e) => {
                   setVoucherCode(e.target.value.toUpperCase());
+                  setVoucher(null);
                   setVoucherError("");
                 }}
                 placeholder="WELCOME10"
               />
-              <button className="nh-btn-ghost !px-4 !py-2 text-sm" onClick={checkVoucher}>
+              <button
+                className="nh-btn-ghost !px-4 !py-2 text-sm"
+                disabled={checking || !voucherCode.trim()}
+                onClick={() => void checkVoucher(selected.id)}
+              >
                 {t("Apply")}
               </button>
             </div>
             {voucherError ? <p className="mt-1.5 text-sm font-bold text-nh-danger">{voucherError}</p> : null}
+            {voucher ? (
+              <p className="mt-1.5 text-sm font-bold text-nh-ok">
+                {t("{label} applied: {amount} off", { label: voucher.label, amount: formatIdr(voucher.discount_idr) })}
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -157,16 +178,22 @@ function TopUp() {
           <div className="nh-card flex flex-col gap-1 text-sm">
             <div className="flex justify-between">
               <span className="text-nh-muted">{selected.name}</span>
-              <span>{formatIdr(selected.priceIdr)}</span>
+              <span>{formatIdr(voucher?.price_idr ?? selected.priceIdr)}</span>
             </div>
+            {voucher ? (
+              <div className="flex justify-between">
+                <span className="text-nh-muted">{t("Voucher {code}", { code: voucher.code })}</span>
+                <span>-{formatIdr(voucher.discount_idr)}</span>
+              </div>
+            ) : null}
             <div className="mt-1 flex justify-between border-t border-nh-line pt-2 font-black">
               <span>{t("Total")}</span>
-              <span className="text-nh-forest">{formatIdr(selected.priceIdr)}</span>
+              <span className="text-nh-forest">{formatIdr(voucher?.total_idr ?? selected.priceIdr)}</span>
             </div>
           </div>
 
           {error ? <p className="text-sm font-bold text-nh-danger">{error}</p> : null}
-          <button className="nh-btn-brand" disabled={busy} onClick={() => void checkout()}>
+          <button className="nh-btn-brand" disabled={busy || checking} onClick={() => void checkout()}>
             {t("Checkout")}
           </button>
         </>

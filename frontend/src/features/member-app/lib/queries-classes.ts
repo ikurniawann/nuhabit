@@ -204,8 +204,23 @@ export function useCancelMutation() {
 export const confirmSpot = (bookingId: string) =>
   memberApi(`/gym/bookings/${bookingId}`, { method: "POST", json: { action: "confirm_offer" } });
 
-export const buyPackage = (packageId: string, method: "qris" | "ark_coin") =>
-  memberApi<RawPurchase>("/gym/credits/purchases", { method: "POST", json: { package_id: packageId, method } });
+export const buyPackage = (packageId: string, method: "qris" | "ark_coin", voucherCode?: string) =>
+  memberApi<RawPurchase>("/gym/credits/purchases", {
+    method: "POST",
+    json: { package_id: packageId, method, ...(voucherCode ? { voucher_code: voucherCode } : {}) },
+  });
+
+/** A voucher code quoted for one package; the purchase applies the same discount. */
+export interface VoucherQuote {
+  code: string;
+  label: string;
+  price_idr: number;
+  discount_idr: number;
+  total_idr: number;
+}
+
+export const previewVoucher = (packageId: string, code: string) =>
+  memberApi<VoucherQuote>("/gym/credits/vouchers/preview", { method: "POST", json: { package_id: packageId, code } });
 
 /** Local dev only: settle the simulated QR through the webhook path. */
 export const simulatePaid = (purchaseId: string) =>
