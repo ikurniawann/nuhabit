@@ -306,9 +306,13 @@ func (r *pgRepo) FinishedWorkoutTimes(ctx context.Context, customerID string, si
 	return pgx.CollectRows(rows, pgx.RowTo[time.Time])
 }
 
+// resultIDOfEntry is the member's HYROX result for race entry r.
+const resultIDOfEntry = `(SELECT h.id FROM gym.hyrox_results h
+	  WHERE h.customer_id = r.customer_id AND h.race_event_id = r.race_event_id AND h.source = 'race')`
+
 func (r *pgRepo) MemberRaces(ctx context.Context, customerID string) ([]memberRaceView, error) {
 	return collect[memberRaceView](ctx, r.db,
-		`SELECT r.id, r.race_event_id, r.division, r.goal_sec, r.result_sec, r.status, r.created_at,
+		`SELECT r.id, r.race_event_id, r.division, r.goal_sec, r.result_sec, r.status, `+resultIDOfEntry+`, r.created_at,
 		        to_jsonb(e) - 'created_at' - 'updated_at' AS event, e.starts_at
 		   FROM gym.member_races r JOIN gym.race_events e ON e.id = r.race_event_id
 		  WHERE r.customer_id = $1
@@ -352,8 +356,8 @@ func (r *pgRepo) RaceEvent(ctx context.Context, customerID, raceEventID string) 
 
 func (r *pgRepo) LiveMemberRace(ctx context.Context, customerID, raceEventID string) (*memberRaceEntry, error) {
 	return one[memberRaceEntry](ctx, r.db,
-		`SELECT id, race_event_id, division, goal_sec, result_sec, status
-		   FROM gym.member_races WHERE customer_id = $1 AND race_event_id = $2 AND status <> 'cancelled' LIMIT 1`,
+		`SELECT r.id, r.race_event_id, r.division, r.goal_sec, r.result_sec, r.status, `+resultIDOfEntry+`
+		   FROM gym.member_races r WHERE r.customer_id = $1 AND r.race_event_id = $2 AND r.status <> 'cancelled' LIMIT 1`,
 		customerID, raceEventID)
 }
 

@@ -90,6 +90,20 @@ export function SettingsPage() {
             className="h-5 w-5 accent-[var(--color-nh-forest)]"
           />
         </label>
+        <label className="flex items-center justify-between gap-3 font-bold">
+          <span>
+            {t("Show on leaderboards")}
+            <span className="block text-xs font-medium text-nh-muted">
+              {t("Other members see your name and times on HYROX, segment and challenge leaderboards")}
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={settings.showOnLeaderboard}
+            onChange={(e) => void update({ showOnLeaderboard: e.target.checked })}
+            className="h-5 w-5 shrink-0 accent-[var(--color-nh-forest)]"
+          />
+        </label>
         {saveError ? <p className="text-xs font-semibold text-nh-danger">{saveError}</p> : null}
       </div>
 

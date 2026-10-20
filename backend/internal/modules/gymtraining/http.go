@@ -528,6 +528,9 @@ func (h handlers) Routes() []module.Route {
 		{Pattern: "POST /api/gym/races", Handler: h.upsert(races, h.saveRace)},
 		{Pattern: "DELETE /api/gym/races", Handler: h.staff(actDelete, races, h.deleteRace)},
 		{Pattern: "GET /api/gym/races/{id}/entrants", Handler: h.staff(actRead, races, h.raceEntrants)},
+		{Pattern: "GET /api/gym/races/results", Handler: h.staff(actRead, races, h.listResults)},
+		{Pattern: "POST /api/gym/races/results/{id}/verify", Handler: h.staff(actUpdate, races, h.verifyResult)},
+		{Pattern: "GET /api/gym/races/leaderboard", Handler: h.staff(actRead, races, h.staffLeaderboard)},
 
 		{Pattern: "GET /api/gym/incentives/schemes", Handler: h.staff(actRead, inc, h.schemeForm)},
 		{Pattern: "POST /api/gym/incentives/schemes", Handler: h.upsert(inc, h.saveScheme)},
@@ -547,11 +550,16 @@ func (h handlers) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/gym/races", Handler: h.member("Gagal memuat race", h.raceOverview)},
 		{Pattern: "POST /api/member-portal/gym/races", Handler: h.member("Gagal mendaftar race", h.registerRace)},
 		{Pattern: "PATCH /api/member-portal/gym/races/{id}", Handler: h.member("Gagal memperbarui race", h.updateRace)},
+		{Pattern: "POST /api/member-portal/gym/results", Handler: h.member("Gagal menyimpan hasil", h.createResult)},
+		{Pattern: "PUT /api/member-portal/gym/results/{id}", Handler: h.member("Gagal memperbarui hasil", h.updateResult)},
 
 		{Pattern: "GET /api/member-portal/app/workout/exercises", Handler: h.member("Gagal memuat pustaka latihan", h.exerciseLibrary)},
 		{Pattern: "GET /api/member-portal/app/workout/races", Handler: h.member("Gagal memuat race", h.raceCalendar)},
 		{Pattern: "GET /api/member-portal/app/workout/races/mine", Handler: h.member("Gagal memuat race saya", h.myRaces)},
 		{Pattern: "GET /api/member-portal/app/workout/races/{id}", Handler: h.member("Gagal memuat race", h.raceDetail)},
+		{Pattern: "GET /api/member-portal/app/workout/results", Handler: h.member("Gagal memuat hasil", h.myResults)},
+		{Pattern: "GET /api/member-portal/app/workout/results/{id}", Handler: h.member("Gagal memuat hasil", h.resultDetail)},
+		{Pattern: "GET /api/member-portal/app/workout/leaderboard", Handler: h.member("Gagal memuat leaderboard", h.memberLeaderboard)},
 		{Pattern: "GET /api/member-portal/app/workout/workouts/{id}", Handler: h.member("Gagal memuat workout", h.getWorkout)},
 		{Pattern: "PATCH /api/member-portal/app/workout/workouts/{id}", Handler: h.member("Gagal mengganti latihan", h.replaceBlock)},
 	}

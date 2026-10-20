@@ -91,4 +91,6 @@ export interface MemberSettingsView {
   gymWhatsapp: boolean;
   /** Notifikasi gym juga lewat email. */
   gymEmail: boolean;
+  /** false: hidden from other members' leaderboards (HYROX, segments, challenges, clubs). */
+  showOnLeaderboard: boolean;
 }

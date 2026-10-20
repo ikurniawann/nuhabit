@@ -381,23 +381,25 @@ type settingsBody struct {
 // SettingsPatch is a validated partial settings update; GoalSet with a nil
 // WeeklyGoalKm removes the target.
 type SettingsPatch struct {
-	Units            *string
-	BookingReminders *bool
-	GoalSet          bool
-	WeeklyGoalKm     *float64
-	Language         *string
-	GymWhatsapp      *bool
-	GymEmail         *bool
+	Units             *string
+	BookingReminders  *bool
+	GoalSet           bool
+	WeeklyGoalKm      *float64
+	Language          *string
+	GymWhatsapp       *bool
+	GymEmail          *bool
+	ShowOnLeaderboard *bool
 }
 
 // homeSettingsBody is the home settings PATCH schema: no weeklyGoalKm key,
-// plus the gym notification channels.
+// plus the gym notification channels and the leaderboard choice.
 type homeSettingsBody struct {
-	Units            opt[string] `json:"units"`
-	BookingReminders opt[bool]   `json:"bookingReminders"`
-	Language         opt[string] `json:"language"`
-	GymWhatsapp      opt[bool]   `json:"gymWhatsapp"`
-	GymEmail         opt[bool]   `json:"gymEmail"`
+	Units             opt[string] `json:"units"`
+	BookingReminders  opt[bool]   `json:"bookingReminders"`
+	Language          opt[string] `json:"language"`
+	GymWhatsapp       opt[bool]   `json:"gymWhatsapp"`
+	GymEmail          opt[bool]   `json:"gymEmail"`
+	ShowOnLeaderboard opt[bool]   `json:"showOnLeaderboard"`
 }
 
 func (b homeSettingsBody) validate() (SettingsPatch, bool) {
@@ -405,7 +407,7 @@ func (b homeSettingsBody) validate() (SettingsPatch, bool) {
 	for _, f := range []struct {
 		in  opt[bool]
 		out **bool
-	}{{b.GymWhatsapp, &p.GymWhatsapp}, {b.GymEmail, &p.GymEmail}} {
+	}{{b.GymWhatsapp, &p.GymWhatsapp}, {b.GymEmail, &p.GymEmail}, {b.ShowOnLeaderboard, &p.ShowOnLeaderboard}} {
 		if !f.in.Set {
 			continue
 		}

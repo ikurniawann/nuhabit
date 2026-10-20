@@ -58,6 +58,10 @@ func (s *Service) Challenges(ctx context.Context, customerID string) ([]Challeng
 	if err != nil {
 		return nil, err
 	}
+	keep, err := s.onBoard(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
 
 	out := []ChallengeView{}
 	for _, c := range rows {
@@ -68,9 +72,11 @@ func (s *Service) Challenges(ctx context.Context, customerID string) ([]Challeng
 			return domain.ChallengeProgressKm(c.Type, c.StartsAt, c.EndsAt, byMember[id])
 		}
 		ids := participants[c.ID]
-		entries := make([]domain.LeaderboardEntry, len(ids))
-		for i, id := range ids {
-			entries[i] = domain.LeaderboardEntry{MemberName: nameOf(people, id), Km: progress(id), IsMe: id == customerID}
+		entries := []domain.LeaderboardEntry{}
+		for _, id := range ids {
+			if keep(id) {
+				entries = append(entries, domain.LeaderboardEntry{MemberName: nameOf(people, id), Km: progress(id), IsMe: id == customerID})
+			}
 		}
 		out = append(out, ChallengeView{
 			Challenge: ChallengeInfo{
@@ -124,15 +130,21 @@ func (s *Service) Clubs(ctx context.Context, customerID string) ([]ClubView, err
 	if err != nil {
 		return nil, err
 	}
+	keep, err := s.onBoard(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
 	out := []ClubView{}
 	for _, club := range rows {
 		ids := members[club.ID]
 		if ids == nil {
 			ids = []string{}
 		}
-		entries := make([]domain.LeaderboardEntry, len(ids))
-		for i, id := range ids {
-			entries[i] = domain.LeaderboardEntry{MemberName: nameOf(people, id), Km: weekly[id], IsMe: id == customerID}
+		entries := []domain.LeaderboardEntry{}
+		for _, id := range ids {
+			if keep(id) {
+				entries = append(entries, domain.LeaderboardEntry{MemberName: nameOf(people, id), Km: weekly[id], IsMe: id == customerID})
+			}
 		}
 		club.MemberIDs = ids
 		out = append(out, ClubView{

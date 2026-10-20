@@ -2,6 +2,17 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Division, Exercise, SubstitutionRule, WorkoutType } from "@/lib/gym/hyrox";
+import {
+  leaderboardParams,
+  type AgeGroup,
+  type HyroxResult,
+  type LeaderboardQuery,
+  type LeaderboardView,
+  type ResultDivision,
+  type ResultSource,
+  type SplitCompare,
+  type SplitList,
+} from "@/lib/gym/hyrox-results";
 import type { MemberRaceView } from "@/lib/gym/races-server";
 import type { WorkoutHistoryItem, WorkoutSessionView as SessionRow, WorkoutView } from "@/lib/gym/training-server";
 import type { MemberRaceEntry, RaceEventListRow } from "@/lib/member-app/workout-server";
@@ -78,8 +89,8 @@ export const api = {
     get: async (id: string) => {
       const data = await memberApi<{ event: RaceEventListRow; my_race: MemberRaceEntry | null }>(`/app/workout/races/${id}`);
       const entry = data.my_race;
-      const myRace: { userRace: Pick<UserRace, "division" | "goalSec"> } | null = entry
-        ? { userRace: { division: entry.division, goalSec: entry.goal_sec } }
+      const myRace: { userRace: Pick<UserRace, "division" | "goalSec" | "resultId"> } | null = entry
+        ? { userRace: { division: entry.division, goalSec: entry.goal_sec, resultId: entry.result_id ?? null } }
         : null;
       // Dihitung saat data diambil (bukan saat render) seperti `daysToRace` referensi.
       const daysToRace = Math.ceil((new Date(data.event.starts_at).getTime() - Date.now()) / 86_400_000);
@@ -97,10 +108,57 @@ export const api = {
         method: "POST",
         json: { race_event_id: raceEventId, division: input.division, goal_sec: input.goalSec },
       }),
-    update: (userRaceId: string, input: { resultSec: number }) =>
-      memberApi<{ id: string }>(`/gym/races/${userRaceId}`, { method: "PATCH", json: { result_sec: input.resultSec } }),
   },
 };
+
+/** What a member enters for a HYROX result; seconds, null when left empty. */
+export interface ResultFields {
+  division: ResultDivision;
+  age_group: AgeGroup | null;
+  run_sec: SplitList;
+  station_sec: SplitList;
+  roxzone_sec: number | null;
+  official_total_sec: number | null;
+}
+
+export interface ResultRaceOption {
+  id: string;
+  name: string;
+  city: string;
+  starts_at: string;
+  division: Division | null;
+}
+
+export interface SimulationOption {
+  session_id: string;
+  ended_at: string;
+  division: Division;
+  active_sec: number;
+  run_sec: SplitList;
+  station_sec: SplitList;
+}
+
+export interface MyResults {
+  results: HyroxResult[];
+  races: ResultRaceOption[];
+  simulations: SimulationOption[];
+}
+
+export const resultsApi = {
+  mine: () => memberApi<MyResults>("/app/workout/results"),
+  get: (id: string) => memberApi<{ result: HyroxResult; splits: SplitCompare[] }>(`/app/workout/results/${id}`),
+  create: (
+    input: ResultFields & { source: ResultSource; race_event_id: string | null; workout_session_id: string | null }
+  ) => memberApi<{ id: string }>("/gym/results", { method: "POST", json: input }),
+  update: (id: string, input: ResultFields) => memberApi<{ id: string }>(`/gym/results/${id}`, { method: "PUT", json: input }),
+  leaderboard: (q: LeaderboardQuery) => memberApi<LeaderboardView>(`/app/workout/leaderboard?${leaderboardParams(q)}`),
+};
+
+export const useMyResults = () => useQuery({ queryKey: ["member-app", "results"], queryFn: resultsApi.mine });
+export const useResult = (id: string) =>
+  useQuery({ queryKey: ["member-app", "results", id], queryFn: () => resultsApi.get(id), enabled: Boolean(id) });
+export const useLeaderboard = (q: LeaderboardQuery) =>
+  useQuery({ queryKey: ["member-app", "leaderboard", q], queryFn: () => resultsApi.leaderboard(q) });
 
 export const useExerciseLibrary = () =>
   useQuery({ queryKey: ["member-app", "workout", "exercises"], queryFn: api.workout.exercises, staleTime: Infinity });

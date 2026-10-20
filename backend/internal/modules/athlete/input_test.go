@@ -131,6 +131,10 @@ func TestPatchAndSettingsValidation(t *testing.T) {
 	if hp, valid = h.validate(); !valid || hp.GymWhatsapp == nil || *hp.GymWhatsapp || hp.GymEmail != nil {
 		t.Fatalf("%+v", hp)
 	}
+	h, _ = decodeString[homeSettingsBody](t, `{"showOnLeaderboard":false}`)
+	if hp, valid = h.validate(); !valid || hp.ShowOnLeaderboard == nil || *hp.ShowOnLeaderboard || hp.GymWhatsapp != nil {
+		t.Fatalf("%+v", hp)
+	}
 	h, _ = decodeString[homeSettingsBody](t, `{"gymEmail":null}`)
 	if _, valid = h.validate(); valid {
 		t.Error("accepted gymEmail null")

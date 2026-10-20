@@ -1712,6 +1712,21 @@
   {
     "module": "gym-training",
     "method": "GET",
+    "path": "/api/gym/races/leaderboard"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/gym/races/results"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/gym/races/results/{id}/verify"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
     "path": "/api/gym/races/{id}/entrants"
   },
   {
@@ -3012,6 +3027,11 @@
   {
     "module": "gym-training",
     "method": "GET",
+    "path": "/api/member-portal/app/workout/leaderboard"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
     "path": "/api/member-portal/app/workout/races"
   },
   {
@@ -3023,6 +3043,16 @@
     "module": "gym-training",
     "method": "GET",
     "path": "/api/member-portal/app/workout/races/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/results"
+  },
+  {
+    "module": "gym-training",
+    "method": "GET",
+    "path": "/api/member-portal/app/workout/results/{id}"
   },
   {
     "module": "gym-training",
@@ -3188,6 +3218,16 @@
     "module": "gym-training",
     "method": "PATCH",
     "path": "/api/member-portal/gym/races/{id}"
+  },
+  {
+    "module": "gym-training",
+    "method": "POST",
+    "path": "/api/member-portal/gym/results"
+  },
+  {
+    "module": "gym-training",
+    "method": "PUT",
+    "path": "/api/member-portal/gym/results/{id}"
   },
   {
     "module": "gym-scheduling",

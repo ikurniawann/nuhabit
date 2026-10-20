@@ -456,9 +456,10 @@ func (r *pgRepository) DeleteRoute(ctx context.Context, routeID, customerID stri
 func (r *pgRepository) Settings(ctx context.Context, customerID string) (*SettingsView, error) {
 	var s SettingsView
 	err := r.q.QueryRow(ctx,
-		`SELECT units, booking_reminders, weekly_goal_km, language, gym_whatsapp, gym_email
+		`SELECT units, booking_reminders, weekly_goal_km, language, gym_whatsapp, gym_email, show_on_leaderboard
 		   FROM gym.athlete_settings WHERE customer_id = $1`,
-		customerID).Scan(&s.Units, &s.BookingReminders, &s.WeeklyGoalKm, &s.Language, &s.GymWhatsapp, &s.GymEmail)
+		customerID).Scan(&s.Units, &s.BookingReminders, &s.WeeklyGoalKm, &s.Language, &s.GymWhatsapp, &s.GymEmail,
+		&s.ShowOnLeaderboard)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -478,19 +479,35 @@ func (r *pgRepository) UpsertSettings(ctx context.Context, customerID string, s 
 // PatchHomeSettings is the home tab PATCH: COALESCE keeps unsent fields.
 func (r *pgRepository) PatchHomeSettings(ctx context.Context, customerID string, p SettingsPatch, d SettingsView) error {
 	_, err := r.exec(ctx,
-		`INSERT INTO gym.athlete_settings (customer_id, units, booking_reminders, language, gym_whatsapp, gym_email)
+		`INSERT INTO gym.athlete_settings (customer_id, units, booking_reminders, language, gym_whatsapp, gym_email,
+                                       show_on_leaderboard)
      VALUES ($1, COALESCE($2::text, $5), COALESCE($3::boolean, $6), COALESCE($4::text, $7),
-             COALESCE($8::boolean, $10), COALESCE($9::boolean, $11))
+             COALESCE($8::boolean, $10), COALESCE($9::boolean, $11), COALESCE($12::boolean, $13))
      ON CONFLICT (customer_id) DO UPDATE
         SET units = COALESCE($2::text, gym.athlete_settings.units),
             booking_reminders = COALESCE($3::boolean, gym.athlete_settings.booking_reminders),
             language = COALESCE($4::text, gym.athlete_settings.language),
             gym_whatsapp = COALESCE($8::boolean, gym.athlete_settings.gym_whatsapp),
             gym_email = COALESCE($9::boolean, gym.athlete_settings.gym_email),
+            show_on_leaderboard = COALESCE($12::boolean, gym.athlete_settings.show_on_leaderboard),
             updated_at = now()`,
 		customerID, p.Units, p.BookingReminders, p.Language, d.Units, d.BookingReminders, d.Language,
-		p.GymWhatsapp, p.GymEmail, d.GymWhatsapp, d.GymEmail)
+		p.GymWhatsapp, p.GymEmail, d.GymWhatsapp, d.GymEmail, p.ShowOnLeaderboard, d.ShowOnLeaderboard)
 	return err
+}
+
+// HiddenFromLeaderboards lists the members who turned leaderboards off.
+func (r *pgRepository) HiddenFromLeaderboards(ctx context.Context) (map[string]bool, error) {
+	rows, err := r.q.Query(ctx, `SELECT customer_id::text FROM gym.athlete_settings WHERE NOT show_on_leaderboard`)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	hidden := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		hidden[id] = true
+	}
+	return hidden, err
 }
 
 // ── Challenges & clubs ───────────────────────────────────────────────────────

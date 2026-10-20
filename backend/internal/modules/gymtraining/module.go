@@ -10,6 +10,7 @@ type Ports struct {
 	Scheduling Scheduling
 	Customers  Customers
 	Payroll    Payroll
+	Notifier   Notifier
 }
 
 type mod struct{ handlers }

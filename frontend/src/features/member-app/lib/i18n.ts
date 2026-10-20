@@ -6,6 +6,7 @@ import { AUTH_ID } from "./i18n-auth";
 import { CLASSES_ID } from "./i18n-classes";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
+import { RACES_ID } from "./i18n-races";
 import { TRAIN_ID } from "./i18n-train";
 import { ID_WORKOUT } from "./i18n-workout";
 
@@ -161,6 +162,7 @@ export const ID: Record<string, string> = {
   ...HOME_ID,
   ...CLASSES_ID,
   ...ID_WORKOUT,
+  ...RACES_ID,
   ...AUTH_ID,
 };
 

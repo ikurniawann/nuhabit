@@ -1,15 +1,16 @@
 "use client";
 
-import { Flag, MapPin, Trophy } from "lucide-react";
+import { BadgeCheck, Flag, MapPin, Plus, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Division } from "@/lib/gym/hyrox";
+import { RESULT_DIVISION_LABELS } from "@/lib/gym/hyrox-results";
 import { parseHms, type MyRaceView, type RaceEventView } from "@/lib/member-app/workout";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
-import { api, useInvalidateAll, useMyRaces, useRaces } from "../lib/queries-workout";
+import { api, useInvalidateAll, useMyRaces, useMyResults, useRaces } from "../lib/queries-workout";
 import { Spinner, StatusBadge, formatDay, formatDuration } from "../ui";
 import { DIVISIONS } from "../workout/generator-page";
 
@@ -24,9 +25,14 @@ export function RacesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <Flag size={22} className="text-nh-forest" />
-        <h1 className="nh-display text-3xl">{t("Races")}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Flag size={22} className="text-nh-forest" />
+          <h1 className="nh-display text-3xl">{t("Races")}</h1>
+        </div>
+        <Link href={m("/races/leaderboard")} className="nh-btn-ghost flex items-center gap-1.5 !px-3 !py-2 text-sm">
+          <Trophy size={15} /> {t("Leaderboard")}
+        </Link>
       </div>
       <div className="flex rounded-xl bg-nh-cream p-1">
         {TABS.map((item) => (
@@ -202,13 +208,16 @@ function MyRacesTab() {
   const router = useRouter();
   const t = useT();
   const { data, isLoading } = useMyRaces();
-  const invalidate = useInvalidateAll();
-  const [resultTarget, setResultTarget] = useState<MyRaceView | null>(null);
   const [busy, setBusy] = useState(false);
 
   if (isLoading) return <Spinner label={t("Loading your races…")} />;
   if (!data || data.length === 0) {
-    return <p className="nh-card text-sm text-nh-muted">{t("Nothing yet - add a race from the Upcoming tab.")}</p>;
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="nh-card text-sm text-nh-muted">{t("Nothing yet - add a race from the Upcoming tab.")}</p>
+        <MyResults />
+      </div>
+    );
   }
 
   const runSimulation = async (race: MyRaceView) => {
@@ -282,9 +291,12 @@ function MyRacesTab() {
                   <button className="nh-btn-brand !py-2 text-sm" disabled={busy} onClick={() => void runSimulation(race)}>
                     {t("Run simulation")}
                   </button>
-                  <button className="nh-btn-ghost !py-2 text-sm" onClick={() => setResultTarget(race)}>
+                  <Link
+                    href={m(`/races/results/new?race=${race.event.id}`)}
+                    className="nh-btn-ghost flex items-center justify-center !py-2 text-sm"
+                  >
                     {t("Enter result")}
-                  </button>
+                  </Link>
                 </div>
               </>
             ) : race.analysis ? (
@@ -307,62 +319,66 @@ function MyRacesTab() {
                       : `${formatDuration(race.analysis.vsPredictionSec)} ${t("slower than predicted")}`}
                   </p>
                 ) : null}
+                {race.userRace.resultId ? (
+                  <Link
+                    href={m(`/races/results/${race.userRace.resultId}`)}
+                    className="mt-2 inline-block text-xs font-black uppercase text-nh-forest underline"
+                  >
+                    {t("View splits")}
+                  </Link>
+                ) : null}
               </div>
             ) : null}
           </div>
         </div>
       ))}
-
-      {resultTarget ? (
-        <ResultSheet
-          race={resultTarget}
-          onClose={() => setResultTarget(null)}
-          onDone={() => {
-            setResultTarget(null);
-            invalidate();
-          }}
-        />
-      ) : null}
+      <MyResults />
     </div>
   );
 }
 
-function ResultSheet({ race, onClose, onDone }: { race: MyRaceView; onClose: () => void; onDone: () => void }) {
+/** The member's HYROX results (races and simulations) with a way to log a new one. */
+function MyResults() {
   const t = useT();
-  const [result, setResult] = useState("01:32:00");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    const resultSec = parseHms(result);
-    if (resultSec === null) {
-      setError(t("Use hh:mm:ss."));
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await api.races.update(race.userRace.id, { resultSec });
-      onDone();
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("Could not save result."));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const { data, isLoading } = useMyResults();
+  if (isLoading || !data) return null;
+  const canLog = data.races.length > 0 || data.simulations.length > 0;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div className="w-full max-w-md rounded-t-3xl bg-nh-cream p-5" onClick={(e) => e.stopPropagation()}>
-        <h2 className="nh-display mb-1 text-xl">{t("Race result")}</h2>
-        <p className="mb-3 text-sm text-nh-muted">{race.event.name}</p>
-        <label className="nh-label">{t("Finish time (hh:mm:ss)")}</label>
-        <input className="nh-input" value={result} onChange={(e) => setResult(e.target.value)} />
-        {error ? <p className="mt-2 text-sm font-bold text-nh-danger">{error}</p> : null}
-        <button className="nh-btn-brand mt-3 w-full" disabled={busy} onClick={() => void submit()}>
-          {t("Save result")}
-        </button>
+    <div className="nh-card flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="nh-label !mb-0">{t("My HYROX results")}</p>
+        {canLog ? (
+          <Link href={m("/races/results/new")} className="flex items-center gap-1 text-xs font-black uppercase text-nh-forest">
+            <Plus size={14} /> {t("Log result")}
+          </Link>
+        ) : null}
       </div>
+      {data.results.map((r) => (
+        <Link
+          key={r.id}
+          href={m(`/races/results/${r.id}`)}
+          className="flex items-center justify-between gap-3 border-t border-nh-line pt-2 text-sm"
+        >
+          <span className="min-w-0">
+            <span className="block truncate font-bold">{r.race_name ?? t("HYROX simulation")}</span>
+            <span className="block truncate text-xs text-nh-muted">
+              {formatDay(r.raced_at)} · {RESULT_DIVISION_LABELS[r.division]}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {r.verified ? <BadgeCheck size={14} className="text-nh-forest" aria-label={t("Verified")} /> : null}
+            <span className="font-black tabular-nums">{formatDuration(r.total_sec)}</span>
+          </span>
+        </Link>
+      ))}
+      {data.results.length === 0 ? (
+        <p className="text-sm text-nh-muted">
+          {canLog
+            ? t("Log a race or a full simulation to see your splits.")
+            : t("Finish a full simulation or a race to log your splits.")}
+        </p>
+      ) : null}
     </div>
   );
 }

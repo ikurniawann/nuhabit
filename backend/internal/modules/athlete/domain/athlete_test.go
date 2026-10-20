@@ -218,6 +218,13 @@ func TestLeaderboards(t *testing.T) {
 	}
 }
 
+func TestOnBoard(t *testing.T) {
+	hidden := map[string]bool{"a": true}
+	if OnBoard("a", "b", hidden) || !OnBoard("b", "a", hidden) || !OnBoard("a", "a", hidden) || OnBoard("a", "", hidden) {
+		t.Fatal("a member who turned leaderboards off only sees their own row")
+	}
+}
+
 func TestFindGroupedActivities(t *testing.T) {
 	start := &TrackPoint{Lat: -6.229, Lng: 106.808}
 	base := GroupCandidate{ID: "a1", MemberID: "me", Type: TypeRun, StartedAt: ts("2026-10-01T23:00:00Z"), Start: start}

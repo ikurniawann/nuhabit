@@ -103,20 +103,25 @@ type SettingsView struct {
 	// WhatsApp and email (read by the CRM delivery in internal/app).
 	GymWhatsapp bool `json:"gymWhatsapp"`
 	GymEmail    bool `json:"gymEmail"`
+	// ShowOnLeaderboard: false hides the member from other members' and
+	// staff leaderboards (segments, challenges, clubs and HYROX results).
+	ShowOnLeaderboard bool `json:"showOnLeaderboard"`
 }
 
 // defaultSettings is DEFAULT_SETTINGS: what a member who never saved settings gets.
 func defaultSettings() SettingsView {
-	return SettingsView{Units: "METRIC", BookingReminders: true, Language: "ID", GymWhatsapp: true, GymEmail: true}
+	return SettingsView{Units: "METRIC", BookingReminders: true, Language: "ID", GymWhatsapp: true, GymEmail: true,
+		ShowOnLeaderboard: true}
 }
 
 // HomeSettingsView is MemberSettingsView (home tab settings, no weekly goal).
 type HomeSettingsView struct {
-	Units            string `json:"units"`
-	BookingReminders bool   `json:"bookingReminders"`
-	Language         string `json:"language"`
-	GymWhatsapp      bool   `json:"gymWhatsapp"`
-	GymEmail         bool   `json:"gymEmail"`
+	Units             string `json:"units"`
+	BookingReminders  bool   `json:"bookingReminders"`
+	Language          string `json:"language"`
+	GymWhatsapp       bool   `json:"gymWhatsapp"`
+	GymEmail          bool   `json:"gymEmail"`
+	ShowOnLeaderboard bool   `json:"showOnLeaderboard"`
 }
 
 type WeekBucketView struct {
