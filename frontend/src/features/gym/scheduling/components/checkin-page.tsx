@@ -50,14 +50,14 @@ export function CheckinPage() {
       document.getElementById(TOKEN_INPUT_ID)?.focus();
     },
   });
-  const today = log.data?.today ?? { checked_in: 0, denied: 0, credits: 0 };
+  const today = log.data?.today ?? { checked_in: 0, open_gym: 0, denied: 0, credits: 0 };
 
   return (
     <div className="space-y-4">
       <PageHeader
         kicker="Gym & Kelas"
         title="Check-in"
-        description="Tidak ada open gym: member masuk hanya dengan booking kelas terkonfirmasi, mulai 45 menit sebelum kelas. Kredit dipotong saat scan diterima."
+        description="Member masuk dengan booking kelas terkonfirmasi dalam jendela check-in cabang, atau lewat open gym bila cabang membukanya. Waiver wajib disetujui. Kredit dipotong saat scan diterima."
         actions={
           branchOptions.length > 1 && (
             <label className="flex items-center gap-2 text-sm">
@@ -124,12 +124,12 @@ export function CheckinPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard label="Check-in kelas hari ini" value={formatNumber(today.checked_in)} icon={<QrCode />} tone="ink" />
+        <StatCard label="Check-in kelas hari ini" value={formatNumber(today.checked_in)} hint={`Open gym: ${formatNumber(today.open_gym)}`} icon={<QrCode />} tone="ink" />
         <StatCard label="Kredit terpotong hari ini" value={formatNumber(today.credits)} icon={<Coins />} />
         <StatCard
           label="Scan ditolak hari ini"
           value={formatNumber(today.denied)}
-          hint="Tanpa booking, QR kedaluwarsa, saldo kurang"
+          hint="Tanpa booking, belum waiver, QR kedaluwarsa, saldo kurang"
           icon={<ShieldX />}
           tone={today.denied ? "warning" : "default"}
         />

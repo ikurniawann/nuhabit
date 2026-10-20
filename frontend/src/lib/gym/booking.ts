@@ -235,7 +235,11 @@ export function bookingStatusOnComplete(status: BookingStatus): BookingStatus {
 
 /* ── Gate check-in ───────────────────────────────────────────────────── */
 
-/** Gate menerima member untuk kelasnya mulai 45 menit sebelum mulai sampai 15 menit setelah selesai. */
+/**
+ * Jendela check-in bawaan: 45 menit sebelum mulai sampai 15 menit setelah
+ * selesai. Gate memakai aturan cabang checkinOpensMinBefore dan
+ * checkinClosesMinAfter; konstanta ini hanya untuk teks bawaan.
+ */
 export const CHECKIN_EARLY_MIN = 45;
 export const CHECKIN_LATE_MIN = 15;
 
@@ -253,7 +257,9 @@ export type GateDenialReason =
   | "member_not_active"
   | "anti_passback"
   | "no_booking"
-  | "insufficient_credits";
+  | "insufficient_credits"
+  | "waiver_required"
+  | "open_gym_closed";
 
 export const GATE_DENIAL_LABEL: Record<GateDenialReason, string> = {
   token_invalid: "QR tidak dikenal",
@@ -263,6 +269,8 @@ export const GATE_DENIAL_LABEL: Record<GateDenialReason, string> = {
   anti_passback: "Baru saja masuk, tunggu sebelum scan lagi",
   no_booking: "Tidak ada booking kelas",
   insufficient_credits: "Kredit tidak cukup untuk kelas ini",
+  waiver_required: "Waiver belum disetujui, minta member menyetujui waiver dulu",
+  open_gym_closed: "Di luar jam open gym",
 };
 
 export const TOKEN_DENIAL: Record<QrTokenProblem, GateDenialReason> = {
@@ -271,7 +279,7 @@ export const TOKEN_DENIAL: Record<QrTokenProblem, GateDenialReason> = {
   consumed: "token_consumed",
 };
 
-export type GateEntryKind = "booking" | "re_entry";
+export type GateEntryKind = "booking" | "re_entry" | "open_gym";
 
 export type GateEffect =
   | { kind: "consume_token" }

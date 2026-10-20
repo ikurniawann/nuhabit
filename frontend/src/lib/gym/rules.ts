@@ -53,6 +53,18 @@ export interface GymRules {
   minFreezeDays: number;
   /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
   renewalLeadDays: number;
+  /** Booking dan masuk gate butuh waiver versi terbaru. */
+  requireWaiver: boolean;
+  /** Gate menerima booking kelas mulai N menit sebelum kelas. */
+  checkinOpensMinBefore: number;
+  /** …sampai N menit setelah kelas selesai. */
+  checkinClosesMinAfter: number;
+  /** Member tanpa booking boleh masuk selama jam open gym cabang. */
+  openGymEnabled: boolean;
+  /** Kredit open gym per hari WIB (0 = gratis; pemegang pass tidak bayar). */
+  openGymCreditCost: number;
+  /** Staf bisa membatalkan check-in atau no-show sampai N hari setelah kelas. */
+  correctionWindowDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -82,6 +94,12 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   maxFreezeDaysPerYear: 30,
   minFreezeDays: 7,
   renewalLeadDays: 3,
+  requireWaiver: true,
+  checkinOpensMinBefore: 45,
+  checkinClosesMinAfter: 15,
+  openGymEnabled: false,
+  openGymCreditCost: 1,
+  correctionWindowDays: 7,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -93,6 +111,8 @@ const int = (min: number, max: number, label: string) =>
 
 const policy = z.enum(["forfeit", "free"], { error: "Kebijakan harus forfeit atau free" });
 
+const bool = (label: string) => z.boolean({ error: `${label} harus ya/tidak` });
+
 /** Batas nilai mengikuti CHECK constraint di skema referensi NüHabit. */
 const rulesShape = {
   creditExpiryDays: int(1, 3650, "Masa berlaku kredit"),
@@ -102,7 +122,7 @@ const rulesShape = {
   reEntryGraceMin: int(0, 1440, "Grace masuk ulang"),
   antiPassbackMin: int(0, 1440, "Anti-passback"),
   qrTtlSec: int(10, 3600, "Umur QR"),
-  waitlistAutoPromote: z.boolean({ error: "Promosi waitlist harus ya/tidak" }),
+  waitlistAutoPromote: bool("Promosi waitlist"),
   lowBalanceThreshold: int(0, 1000, "Ambang saldo menipis"),
   expiryReminderDays: int(1, 365, "Pengingat kedaluwarsa"),
   bookingOpensDaysBefore: int(0, 365, "Booking dibuka"),
@@ -119,6 +139,12 @@ const rulesShape = {
   maxFreezeDaysPerYear: int(0, 365, "Jatah bekukan per tahun"),
   minFreezeDays: int(1, 365, "Durasi bekukan"),
   renewalLeadDays: int(0, 30, "Perpanjangan otomatis"),
+  requireWaiver: bool("Wajib waiver"),
+  checkinOpensMinBefore: int(0, 1440, "Check-in dibuka"),
+  checkinClosesMinAfter: int(0, 1440, "Check-in ditutup"),
+  openGymEnabled: bool("Open gym"),
+  openGymCreditCost: int(0, 20, "Kredit open gym"),
+  correctionWindowDays: int(0, 90, "Batas koreksi"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
