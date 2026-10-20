@@ -24,8 +24,10 @@ describe("GYM_RULE_DEFAULTS", () => {
       expiryReminderDays: 7,
       bookingOpensDaysBefore: 7,
       bookingClosesMinBefore: 0,
+      scheduleHorizonDays: 14,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(12);
+    expect(GYM_RULE_KEYS).toHaveLength(13);
+
   });
 });
 

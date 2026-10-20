@@ -31,6 +31,8 @@ export interface GymRules {
   expiryReminderDays: number;
   bookingOpensDaysBefore: number;
   bookingClosesMinBefore: number;
+  /** Template jadwal membuat sesi sejauh N hari ke depan. */
+  scheduleHorizonDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -48,6 +50,7 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   expiryReminderDays: 7,
   bookingOpensDaysBefore: 7,
   bookingClosesMinBefore: 0,
+  scheduleHorizonDays: 14,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -73,6 +76,7 @@ const rulesShape = {
   expiryReminderDays: int(1, 365, "Pengingat kedaluwarsa"),
   bookingOpensDaysBefore: int(0, 365, "Booking dibuka"),
   bookingClosesMinBefore: int(0, 10080, "Booking ditutup"),
+  scheduleHorizonDays: int(1, 90, "Horizon jadwal"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
