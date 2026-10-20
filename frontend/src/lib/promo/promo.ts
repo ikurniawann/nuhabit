@@ -91,7 +91,9 @@ export type PromoRejectReason =
   | "produk-tidak-sesuai"
   | "min-pembelian"
   | "kuota-habis"
-  | "limit-nomor";
+  | "limit-nomor"
+  /** Campaign dibatasi ke paket gym tertentu (diputuskan di backend Go). */
+  | "paket-tidak-sesuai";
 
 export type PromoEvalResult =
   | { ok: true; discount: number }
@@ -235,6 +237,7 @@ export const PROMO_REJECT_MESSAGES: Record<PromoRejectReason, string> = {
   "min-pembelian": "Belanja belum mencapai minimum untuk kode ini",
   "kuota-habis": "Kuota kode promo sudah habis",
   "limit-nomor": "Nomor ini sudah memakai kode promo ini",
+  "paket-tidak-sesuai": "Kode ini hanya berlaku untuk paket tertentu",
 };
 
 /** Label pendek utk badge penolakan di kasir. */
@@ -249,4 +252,5 @@ export const PROMO_REJECT_LABELS: Record<PromoRejectReason, string> = {
   "min-pembelian": "Belum capai minimum",
   "kuota-habis": "Kuota habis",
   "limit-nomor": "Sudah dipakai",
+  "paket-tidak-sesuai": "Paket tidak sesuai",
 };

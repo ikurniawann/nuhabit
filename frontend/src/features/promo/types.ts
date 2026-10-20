@@ -50,6 +50,8 @@ export interface PromoCampaign {
   show_in_member_portal: boolean;
   target_product_ids: string[];
   target_category_ids: string[];
+  /** Paket gym yang boleh memakai kode; kosong = semua paket. */
+  target_gym_package_ids: string[];
   eligibility: PromoEligibility;
   new_member_days: number | null;
   created_at: string;
@@ -74,6 +76,7 @@ export interface PromoCampaignFormValues {
   public_code?: string;
   target_product_ids?: string[];
   target_category_ids?: string[];
+  target_gym_package_ids?: string[];
   eligibility?: PromoEligibility;
   new_member_days?: number | null;
 }

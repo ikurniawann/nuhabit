@@ -32,6 +32,7 @@ const credits = {
     },
   ],
   freeze: { max_days_per_year: 30, min_days: 7, used_days: 0, remaining_days: 30 },
+  transfer: { member_enabled: false, monthly_cap: 0, sent_this_month: 0 },
   entries: [],
   purchases: [],
 } satisfies MemberCredits;

@@ -210,6 +210,10 @@ type EligibilityInput struct {
 	// for classes not started yet and not covered by a pass. Those credits
 	// are spoken for, so only Balance - Reserved is available.
 	Reserved int
+	// CreditsFit, when set, is the ledger's answer lot by lot: whether the
+	// member's credits pay for this class and every reserved booking, class
+	// type restrictions and expiry included. It replaces Balance - Reserved.
+	CreditsFit *bool
 	// HasPass: a pass covers the session start, so no credits are needed.
 	HasPass bool
 	// ClassNotCovered: the member's credit packages exclude this class type.
@@ -235,6 +239,15 @@ type EligibilityInput struct {
 
 // Available is the balance left after the credits reserved by other bookings.
 func (in EligibilityInput) Available() int { return in.Balance - in.Reserved }
+
+// creditsShort: the member cannot pay for the class. When the ledger ran
+// the lot check, a class no package covers is left to DenyClassNotCovered.
+func (in EligibilityInput) creditsShort() bool {
+	if in.CreditsFit != nil {
+		return !*in.CreditsFit && !in.ClassNotCovered
+	}
+	return in.Available() < in.Session.CreditCost
+}
 
 // EvaluateBookingEligibility checks, in this order: active member, bookable
 // session, booking window, no active booking, the member checks of
@@ -281,7 +294,7 @@ func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
 		return DenyDailyLimit
 	case in.HasPass:
 		return ""
-	case in.Available() < in.Session.CreditCost:
+	case in.creditsShort():
 		return DenyInsufficientCredits
 	case in.ClassNotCovered:
 		return DenyClassNotCovered
@@ -294,7 +307,11 @@ func EvaluateMemberEligibility(in EligibilityInput) BookingDenialReason {
 func (in EligibilityInput) DenialMessage(r BookingDenialReason) string {
 	switch r {
 	case DenyInsufficientCredits:
-		if in.Reserved > 0 {
+		switch {
+		case in.CreditsFit != nil && in.Available() >= in.Session.CreditCost:
+			// The balance looks enough, but the lot check failed.
+			return "Kredit tidak cukup untuk kelas ini: kredit yang berlaku sudah dipesan untuk booking lain atau kedaluwarsa sebelum kelas dimulai"
+		case in.Reserved > 0:
 			return fmt.Sprintf("Kredit tidak cukup untuk kelas ini: tersedia %d, butuh %d (%d kredit sudah terpakai untuk booking lain)",
 				max(in.Available(), 0), in.Session.CreditCost, in.Reserved)
 		}

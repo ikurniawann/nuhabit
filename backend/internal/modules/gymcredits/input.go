@@ -327,6 +327,7 @@ type sellBody struct {
 	DiscountIdr   float64
 	BranchID      *string
 	Note          *string
+	VoucherCode   string
 }
 
 func parseSell(body any) (sellBody, error) {
@@ -337,6 +338,7 @@ func parseSell(body any) (sellBody, error) {
 	b.DiscountIdr, _ = f.num("discount_idr", numRule{min: bound(0), optional: true})
 	b.BranchID = optString(f.str("branch_id", strRule{uuid: true, optional: true, nullable: true}))
 	b.Note = optString(f.str("note", strRule{trim: true, max: 300, optional: true, nullable: true}))
+	b.VoucherCode, _ = f.str("voucher_code", strRule{trim: true, max: 40, optional: true, nullable: true})
 	return b, f.staffErr()
 }
 

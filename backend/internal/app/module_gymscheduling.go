@@ -67,6 +67,7 @@ var (
 	_ gymscheduling.CreditPackages = schedulingCredits{}
 	_ gymscheduling.Passes         = schedulingCredits{}
 	_ gymscheduling.RulesSource    = schedulingCredits{}
+	_ gymscheduling.CreditCoverer  = schedulingCredits{}
 )
 
 // creditErr turns a gym-credits rule failure into the transport error the
@@ -96,6 +97,20 @@ func (c schedulingCredits) GetBalance(ctx context.Context, q database.Querier, c
 func (c schedulingCredits) UsableBalance(ctx context.Context, q database.Querier, customerID, classTypeID string) (int, error) {
 	n, err := c.svc.UsableBalance(ctx, q, customerID, classTypeID)
 	return n, creditErr(err)
+}
+
+// CanCover checks the member's lots against their upcoming bookings plus
+// one more, class type by class type.
+func (c schedulingCredits) CanCover(ctx context.Context, q database.Querier, customerID string, pending []gymscheduling.CreditDemand, next gymscheduling.CreditDemand) (bool, error) {
+	demand := func(d gymscheduling.CreditDemand) creditsdomain.Demand {
+		return creditsdomain.Demand{ClassTypeID: d.ClassTypeID, Credits: d.Credits, At: d.At}
+	}
+	out := make([]creditsdomain.Demand, len(pending))
+	for i, d := range pending {
+		out[i] = demand(d)
+	}
+	fits, err := c.svc.CanCover(ctx, q, customerID, out, demand(next))
+	return fits, creditErr(err)
 }
 
 func (c schedulingCredits) Deduct(ctx context.Context, q database.Querier, in gymscheduling.CreditMovement) (gymscheduling.DeductResult, error) {

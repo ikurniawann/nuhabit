@@ -27,12 +27,14 @@ import {
   campaignPayload,
   isCampaignFormInvalid,
   resolveVoucherPrefix,
+  scopeIncludesGym,
   type CampaignForm,
   type CodeMode,
 } from "../campaign-form";
 import { useCreateCampaign, useUpdateCampaign } from "../queries";
 import { PROMO_SCOPE_LABELS, type PromoCampaign, type PromoDiscountType, type PromoScope } from "../types";
 import { CampaignTargetFields } from "./campaign-target-fields";
+import { GymPackageTargets } from "./gym-package-targets";
 
 const digits4 = (raw: string) => raw.replace(/\D/g, "").slice(0, 4);
 
@@ -223,6 +225,14 @@ export function CampaignFormDialog({ campaign, onClose }: {
           </div>
 
           <CampaignTargetFields value={form} disabled={busy} onChange={set} />
+
+          {scopeIncludesGym(form.scope) && (
+            <GymPackageTargets
+              value={form.target_gym_package_ids}
+              disabled={busy}
+              onChange={(target_gym_package_ids) => set({ target_gym_package_ids })}
+            />
+          )}
 
           {isEdit ? (
             <div className="space-y-3 rounded-xl border border-gray-200/70 bg-muted/20 p-3">

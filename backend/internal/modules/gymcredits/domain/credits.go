@@ -79,9 +79,9 @@ func LotExpiry(from time.Time, validityDays int) time.Time {
 }
 
 // createsLot: the positive entry that brought its lot into being (top_up,
-// bonus, positive adjustment). The lot's credits already count it.
+// bonus, positive adjustment, transfer_in). The lot's credits already count it.
 func createsLot(e Entry) bool {
-	return e.Amount > 0 && e.LotID != "" && (e.Type == TopUp || e.Type == Bonus || e.Type == Adjustment)
+	return e.Amount > 0 && e.LotID != "" && (e.Type == TopUp || e.Type == Bonus || e.Type == Adjustment || e.Type == TransferIn)
 }
 
 // LotRemainders returns the credits left per lot, earliest expiry first.
@@ -331,6 +331,7 @@ const (
 	InsufficientBalance     ReversalProblem = "insufficient_balance"
 	LotPartlyUsed           ReversalProblem = "lot_partly_used"
 	PurchaseTopUp           ReversalProblem = "purchase_top_up"
+	TransferEntry           ReversalProblem = "transfer_entry"
 )
 
 // ReversalProblemMessages are the user-facing messages per problem.
@@ -341,6 +342,7 @@ var ReversalProblemMessages = map[ReversalProblem]string{
 	InsufficientBalance:     "Saldo kredit member tidak cukup untuk membatalkan entri ini.",
 	LotPartlyUsed:           "Sebagian kredit lot ini sudah terpakai atau kedaluwarsa.",
 	PurchaseTopUp:           "Kredit dari pembelian dibatalkan lewat refund pembelian, agar uang dan kredit tetap cocok.",
+	TransferEntry:           "Transfer kredit tidak bisa dibatalkan lewat entri. Kirim balik kreditnya dengan transfer baru.",
 }
 
 // ReversalDraft is the reversing entry to write.
@@ -365,6 +367,8 @@ func BuildReversal(original Entry, reason string, alreadyReversed bool, balance,
 		return ReversalDraft{}, CannotReverseExpiration
 	case original.Type == TopUp:
 		return ReversalDraft{}, PurchaseTopUp
+	case original.Type == TransferIn || original.Type == TransferOut:
+		return ReversalDraft{}, TransferEntry
 	case alreadyReversed:
 		return ReversalDraft{}, AlreadyReversed
 	}

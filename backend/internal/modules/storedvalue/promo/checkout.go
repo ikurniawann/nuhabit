@@ -64,6 +64,7 @@ type codeRowFull struct {
 	TargetCategoryIDs []string
 	Eligibility       string
 	NewMemberDays     *int
+	TargetGymPackages []string
 }
 
 func (r codeRowFull) rule() domain.CampaignRule {
@@ -72,6 +73,7 @@ func (r codeRowFull) rule() domain.CampaignRule {
 		ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil, UsageLimit: r.UsageLimit, PerPhoneLimit: r.PerPhoneLimit,
 		Scope: r.Scope, IsActive: r.CampaignIsActive, TargetProductIDs: r.TargetProductIDs,
 		TargetCategoryIDs: r.TargetCategoryIDs, Eligibility: r.Eligibility, NewMemberDays: r.NewMemberDays,
+		TargetGymPackageIDs: r.TargetGymPackages,
 	}
 }
 
@@ -89,7 +91,7 @@ func findCode(ctx context.Context, q database.Querier, scope VenueScope, code st
 		       c.valid_from::text, c.valid_until::text,
 		       c.usage_limit, c.per_phone_limit, c.scope, c.is_active,
 		       c.target_product_ids::text[], c.target_category_ids::text[],
-		       c.eligibility, c.new_member_days
+		       c.eligibility, c.new_member_days, c.target_gym_package_ids::text[]
 		FROM promo.promo_codes k
 		JOIN promo.promo_campaigns c ON c.id = k.campaign_id
 		WHERE k.branch_id = $1 AND k.company_id = $2 AND upper(k.code) = upper($3)
@@ -157,6 +159,8 @@ type PreviewInput struct {
 	// Lines nil = not sent (a targeted campaign then rejects).
 	Lines      []LineInput
 	CustomerID *string
+	// GymPackageID is the gym package bought, for package-targeted campaigns.
+	GymPackageID string
 }
 
 // PromoPreview is the TS PromoPreview union: OK with Discount,
@@ -196,6 +200,7 @@ func (s *Service) PreviewPromoCode(ctx context.Context, q database.Querier, in P
 	if err != nil {
 		return PromoPreview{}, err
 	}
+	u.GymPackageID = in.GymPackageID
 	rule := row.rule()
 	res := domain.EvaluatePromo(rule, row.state(), u)
 	if !res.OK {
@@ -253,6 +258,8 @@ type HoldInput struct {
 	Phone       *string
 	CustomerID  *string
 	Lines       []LineInput
+	// GymPackageID is the gym package bought, for package-targeted campaigns.
+	GymPackageID string
 }
 
 // PromoHold is a held redemption.
@@ -294,6 +301,7 @@ func (s *Service) HoldPromoRedemption(ctx context.Context, q database.Querier, i
 	if err != nil {
 		return PromoHold{}, err
 	}
+	u.GymPackageID = in.GymPackageID
 	res := domain.EvaluatePromo(row.rule(), row.state(), u)
 	if !res.OK {
 		return PromoHold{}, &PromoRejectedError{Reason: res.Reason}

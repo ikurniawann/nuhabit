@@ -284,8 +284,9 @@ type WalletView struct {
 	ExpiringLots        []LotView  `json:"expiring_lots"`
 	Passes              []PassView `json:"passes"`
 	// Freeze is the member's pass freeze budget under the global rules.
-	Freeze  domain.FreezeAllowance `json:"freeze"`
-	Entries []EntryView            `json:"entries"`
+	Freeze   domain.FreezeAllowance `json:"freeze"`
+	Transfer TransferAllowance      `json:"transfer"`
+	Entries  []EntryView            `json:"entries"`
 }
 
 // MemberCreditsView is loadMemberCredits: { member, ...wallet, purchases }.

@@ -45,8 +45,10 @@ describe("GYM_RULE_DEFAULTS", () => {
       openGymEnabled: false,
       openGymCreditCost: 1,
       correctionWindowDays: 7,
+      allowMemberCreditTransfer: false,
+      maxTransferCreditsPerMonth: 0,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(33);
+    expect(GYM_RULE_KEYS).toHaveLength(35);
   });
 });
 

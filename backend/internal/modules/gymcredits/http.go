@@ -41,7 +41,7 @@ func (h *Handler) require(r *http.Request, action string, prefixes []string) (*a
 
 // Routes lists every route of the module.
 func (h *Handler) Routes() []module.Route {
-	return []module.Route{
+	return append([]module.Route{
 		{Pattern: "GET /api/gym/packages", Handler: h.api(h.listPackages)},
 		{Pattern: "POST /api/gym/packages", Handler: h.api(h.savePackage)},
 		{Pattern: "PATCH /api/gym/packages/{id}", Handler: h.api(h.setPackageStatus)},
@@ -75,7 +75,7 @@ func (h *Handler) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/gym/payment-methods", Handler: h.auth.MemberHandler("Gagal memuat metode pembayaran", h.savedMethods)},
 		{Pattern: "POST /api/member-portal/gym/payment-methods", Handler: h.auth.MemberHandler("Gagal menautkan metode pembayaran", h.linkSavedMethod)},
 		{Pattern: "DELETE /api/member-portal/gym/payment-methods/{id}", Handler: h.auth.MemberHandler("Gagal menghapus metode pembayaran", h.unlinkSavedMethod)},
-	}
+	}, slices.Concat(h.transferRoutes(), h.voucherRoutes())...)
 }
 
 /* ── Envelopes ───────────────────────────────────────────────────────── */
@@ -268,7 +268,7 @@ func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
 	}
 	purchase, err := h.svc.SellPackage(r.Context(), FrontDeskSale{
 		CustomerID: customerID, PackageID: in.PackageID, PaymentMethod: in.PaymentMethod, DiscountIdr: in.DiscountIdr,
-		BranchID: in.BranchID, Note: in.Note, CashierID: user.ID,
+		BranchID: in.BranchID, Note: in.Note, CashierID: user.ID, VoucherCode: in.VoucherCode,
 	})
 	if err != nil {
 		return err

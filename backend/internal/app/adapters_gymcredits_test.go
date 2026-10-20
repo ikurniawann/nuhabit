@@ -80,8 +80,8 @@ func TestGymVouchersAgainstPromoEngine(t *testing.T) {
 	if held, err := vouchers.Hold(ctx, tx, check, purchase); err != nil || !held.OK || held.Discount != 30_000 {
 		t.Fatalf("hold %+v %v", held, err)
 	}
-	if err := vouchers.Release(ctx, tx, purchase); err != nil {
-		t.Fatal(err)
+	if released, err := vouchers.Release(ctx, tx, purchase); err != nil || !released {
+		t.Fatalf("release %v %v", released, err)
 	}
 	if got := scalar(`SELECT r.status || '|' || k.usage_count FROM promo.promo_redemptions r JOIN promo.promo_codes k ON k.id = r.code_id
 		WHERE r.context_type = 'gym_purchase' AND r.context_id = $1`, purchase); got != "released|0" {

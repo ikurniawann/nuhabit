@@ -80,6 +80,7 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 	if err != nil {
 		return in, true, err
 	}
+	var pending []CreditDemand
 	for _, c := range commitments {
 		if !c.StartsAt.Before(dayStart) && c.StartsAt.Before(dayEnd) {
 			in.SameDayBookings++
@@ -95,6 +96,7 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 		}
 		if covering == nil {
 			in.Reserved += c.CreditCost
+			pending = append(pending, CreditDemand{ClassTypeID: c.ClassTypeID, Credits: c.CreditCost, At: c.StartsAt})
 		}
 	}
 	// A package may limit class types: the balance exists but not for this
@@ -105,6 +107,9 @@ func (s *Service) memberFacts(ctx context.Context, q Q, customerID string, sessi
 			return in, true, err
 		}
 		in.ClassNotCovered = !domain.IsClassTypeCovered(covered, session.ClassTypeID)
+		if in.CreditsFit, err = s.creditsFit(ctx, q, customerID, session, pending); err != nil {
+			return in, true, err
+		}
 	}
 	return in, true, nil
 }

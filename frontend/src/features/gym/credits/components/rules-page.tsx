@@ -35,6 +35,13 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
     ],
   },
   {
+    title: "Transfer kredit",
+    fields: [
+      { key: "allowMemberCreditTransfer", kind: "boolean", label: "Member boleh kirim kredit", hint: "Member mengirim kredit ke member lain dari dompet di aplikasi. Staf tetap bisa memindahkan kredit dari halaman Kredit Member." },
+      { key: "maxTransferCreditsPerMonth", kind: "number", label: "Batas transfer per bulan", unit: "kredit per member", hint: "Total kredit yang dikirim satu member dalam satu bulan kalender, oleh staf maupun member. 0 = tanpa batas.", min: 0 },
+    ],
+  },
+  {
     title: "Booking & pembatalan",
     fields: [
       { key: "bookingOpensDaysBefore", kind: "number", label: "Booking dibuka", unit: "hari sebelum kelas", hint: "Jadwal lebih jauh dari ini belum bisa dibooking.", min: 0 },

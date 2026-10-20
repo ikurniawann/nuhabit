@@ -91,6 +91,16 @@ func targetFields(f *validate.Form) (products, categories domain.Field[[]string]
 	return products, categories, eligibility, days
 }
 
+// gymPackages reads target_gym_package_ids: the gym packages a campaign
+// is limited to. Empty or null means every package.
+func gymPackages(f *validate.Form) domain.Field[[]string] {
+	ids := f.Strings("target_gym_package_ids", optionalNullable, 100, uuidOpts)
+	if ids == nil {
+		ids = []string{}
+	}
+	return domain.Field[[]string]{Set: sent(f, "target_gym_package_ids"), Value: ids}
+}
+
 func parseCampaignCreate(r *http.Request) (campaignCreate, error) {
 	f, err := bodyForm(r)
 	if err != nil {
@@ -117,6 +127,7 @@ func parseCampaignCreate(r *http.Request) (campaignCreate, error) {
 	b.Scope = f.StrDefault("scope", "ticketing_online", validate.StrOpts{Check: validate.EnumCheck(scopes)})
 	products, categories, eligibility, days := targetFields(f)
 	b.TargetProductIDs, b.TargetCategoryIDs = products.Value, categories.Value
+	b.TargetGymPackages = gymPackages(f).Value
 	b.Eligibility, b.NewMemberDays = eligibility.Value, days.Value
 	b.PublicCode = deref(f.Str("public_code", optional, codeOpts))
 	if refinable(f) {
@@ -165,6 +176,7 @@ func parseCampaignPatch(r *http.Request) (domain.CampaignPatch, error) {
 		b.ShowInMemberPortal = domain.Field[bool]{Set: true, Value: *v}
 	}
 	b.TargetProductIDs, b.TargetCategoryIDs, b.Eligibility, b.NewMemberDays = targetFields(f)
+	b.TargetGymPackages = gymPackages(f)
 	return b, f.Err("Validation failed")
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/gymcredits"
+	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
@@ -37,6 +38,23 @@ func toMove(m CreditMovement) gymcredits.CreditMove {
 func (c testCredits) GetBalance(ctx context.Context, q database.Querier, id string) (int, error) {
 	n, err := c.svc.Balance(ctx, q, id)
 	return n, creditErr(err)
+}
+
+func (c testCredits) UsableBalance(ctx context.Context, q database.Querier, id, classTypeID string) (int, error) {
+	n, err := c.svc.UsableBalance(ctx, q, id, classTypeID)
+	return n, creditErr(err)
+}
+
+func (c testCredits) CanCover(ctx context.Context, q database.Querier, id string, pending []CreditDemand, next CreditDemand) (bool, error) {
+	demand := func(d CreditDemand) creditsdomain.Demand {
+		return creditsdomain.Demand{ClassTypeID: d.ClassTypeID, Credits: d.Credits, At: d.At}
+	}
+	out := make([]creditsdomain.Demand, len(pending))
+	for i, d := range pending {
+		out[i] = demand(d)
+	}
+	fits, err := c.svc.CanCover(ctx, q, id, out, demand(next))
+	return fits, creditErr(err)
 }
 
 func (c testCredits) Deduct(ctx context.Context, q database.Querier, in CreditMovement) (DeductResult, error) {

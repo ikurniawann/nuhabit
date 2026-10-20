@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, Coins, Search, ShoppingCart, SlidersHorizontal, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/fo
 import {
   ENTRY_LABELS,
   gymCreditsApi,
+  isReversible,
   METHOD_LABELS,
   type CreditEntry,
   type CreditPurchase,
@@ -41,6 +42,7 @@ import { DeskShiftBar } from "./desk-shift";
 import { PassesCard, RefundDialog } from "./pass-panel";
 import { ReceiptButton } from "./receipt-button";
 import { SellDialog } from "./sell-dialog";
+import { TransferDialog } from "./transfer-dialog";
 import { useDebounced } from "@/features/gym/use-debounced";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
@@ -139,7 +141,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
   const queryClient = useQueryClient();
   const canCorrect = useCan("gym.credits", "update");
   const detail = useQuery({ queryKey: memberKey(customerId), queryFn: () => gymCreditsApi.memberCredits(customerId) });
-  const [dialog, setDialog] = useState<"adjust" | "sell" | null>(null);
+  const [dialog, setDialog] = useState<"adjust" | "sell" | "transfer" | null>(null);
   const [reversing, setReversing] = useState<CreditEntry | null>(null);
   const [refunding, setRefunding] = useState<CreditPurchase | null>(null);
   const refresh = () => {
@@ -169,6 +171,11 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
           <Can menu="gym.credits" action="update" mode="disable">
             <Button variant="outline" onClick={() => setDialog("adjust")}>
               <SlidersHorizontal /> Sesuaikan
+            </Button>
+          </Can>
+          <Can menu="gym.credits" action="update" mode="disable">
+            <Button variant="outline" onClick={() => setDialog("transfer")} disabled={d.balance <= 0}>
+              <ArrowLeftRight /> Transfer kredit
             </Button>
           </Can>
           <Can menu="gym.credits" action="create" mode="disable">
@@ -259,7 +266,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{formatDateTime(e.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {canCorrect && !e.reversed && e.type !== "reversal" && e.type !== "expiration" && (
+                    {canCorrect && isReversible(e) && (
                       <Button variant="ghost" size="sm" onClick={() => setReversing(e)}>
                         Batalkan
                       </Button>
@@ -332,6 +339,14 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
 
       {dialog === "adjust" && <AdjustDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
       {dialog === "sell" && <SellDialog credits={d} onClose={() => setDialog(null)} onDone={refresh} />}
+      {dialog === "transfer" && (
+        <TransferDialog
+          credits={d}
+          onClose={() => setDialog(null)}
+          // The receiver's balance changes too.
+          onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
+        />
+      )}
       {reversing && (
         <ReasonDialog
           title={`Batalkan ${ENTRY_LABELS[reversing.type].toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}

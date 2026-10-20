@@ -108,6 +108,7 @@ export interface RawWallet {
   lots: RawLot[];
   passes: RawPass[];
   freeze?: FreezeAllowance;
+  transfer?: { member_enabled: boolean; monthly_cap: number; sent_this_month: number };
   entries: { id: string; type: string; amount: number; note: string | null; created_at: string }[];
 }
 
@@ -219,6 +220,8 @@ export interface WalletView {
   freeze: FreezeAllowance | null;
   passes: PassView[];
   myPackages: MyPackageView[];
+  /** Sending credits to another member: allowed by the gym rules, and how much is left this month (null = no cap). */
+  transfer: { enabled: boolean; leftThisMonth: number | null };
   entries: { id: string; type: string; amount: number; description: string | null; createdAt: string }[];
 }
 
@@ -395,6 +398,10 @@ export function toWalletView(raw: RawWallet, catalog: RawCatalog | undefined): W
         coverageNames: coverageNamesOf(catalog, coverageIds),
       };
     }),
+    transfer: {
+      enabled: raw.transfer?.member_enabled ?? false,
+      leftThisMonth: raw.transfer?.monthly_cap ? Math.max(0, raw.transfer.monthly_cap - raw.transfer.sent_this_month) : null,
+    },
     entries: raw.entries.map((e) => ({
       id: e.id,
       type: upper(e.type),

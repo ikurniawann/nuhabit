@@ -220,6 +220,8 @@ type Commitment struct {
 	Status     domain.BookingStatus
 	StartsAt   time.Time
 	CreditCost int
+	// ClassTypeID is "" when the session has no class type.
+	ClassTypeID string
 }
 
 type BookingRow struct {

@@ -98,9 +98,9 @@ func (Postgres) EntryIDByKey(ctx context.Context, q database.Querier, key string
 func (Postgres) InsertLot(ctx context.Context, q database.Querier, l NewLot) (string, error) {
 	var id string
 	err := q.QueryRow(ctx,
-		`INSERT INTO gym.credit_lots (customer_id, package_id, purchase_id, credits, expires_at)
-		 VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-		l.CustomerID, null(l.PackageID), null(l.PurchaseID), l.Credits, l.ExpiresAt,
+		`INSERT INTO gym.credit_lots (customer_id, package_id, purchase_id, credits, expires_at, source_lot_id)
+		 VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+		l.CustomerID, null(l.PackageID), null(l.PurchaseID), l.Credits, l.ExpiresAt, null(l.SourceLotID),
 	).Scan(&id)
 	return id, err
 }
@@ -224,10 +224,18 @@ func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string)
 	if len(ids) == 0 {
 		return out, nil
 	}
+	// A lot received by transfer has no purchase: its credits are worth
+	// what they were in the lot they came from, followed back to the paid one.
 	rows, err := q.Query(ctx,
-		`SELECT l.id::text, p.total_idr::float, l.credits, `+purchaseCompany+`::text
-		   FROM gym.credit_lots l JOIN gym.credit_purchases p ON p.id = l.purchase_id
-		  WHERE l.id = ANY($1::uuid[]) AND p.total_idr > 0`, ids)
+		`WITH RECURSIVE origin AS (
+		   SELECT l.id AS lot_id, l.source_lot_id, l.purchase_id, l.credits FROM gym.credit_lots l WHERE l.id = ANY($1::uuid[])
+		   UNION ALL
+		   SELECT o.lot_id, s.source_lot_id, s.purchase_id, s.credits
+		     FROM origin o JOIN gym.credit_lots s ON s.id = o.source_lot_id WHERE o.purchase_id IS NULL
+		 )
+		 SELECT o.lot_id::text, p.total_idr::float, o.credits, `+purchaseCompany+`::text
+		   FROM origin o JOIN gym.credit_purchases p ON p.id = o.purchase_id
+		  WHERE p.total_idr > 0`, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +253,7 @@ func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string)
 // pool; lot-creating entries are already in credits.
 const lotLeft = `SELECT l.customer_id, l.expires_at,
        GREATEST(0, l.credits + COALESCE((SELECT sum(e.amount) FROM gym.credit_ledger e
-         WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment'))), 0)) AS left_credits
+         WHERE e.lot_id = l.id AND NOT (e.amount > 0 AND e.type IN ('top_up', 'bonus', 'adjustment', 'transfer_in'))), 0)) AS left_credits
   FROM gym.credit_lots l`
 
 // MembersWithLapsedLots: the pool goes FIFO to the lots that expire first,

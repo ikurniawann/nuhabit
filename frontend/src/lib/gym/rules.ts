@@ -71,6 +71,10 @@ export interface GymRules {
   openGymCreditCost: number;
   /** Staf bisa membatalkan check-in atau no-show sampai N hari setelah kelas. */
   correctionWindowDays: number;
+  /** Member boleh mengirim kredit ke member lain dari aplikasi member. Staf selalu boleh. */
+  allowMemberCreditTransfer: boolean;
+  /** Batas kredit yang dikirim satu member per bulan WIB, staf dan member digabung (0 = tanpa batas). */
+  maxTransferCreditsPerMonth: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -109,6 +113,8 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   openGymEnabled: false,
   openGymCreditCost: 1,
   correctionWindowDays: 7,
+  allowMemberCreditTransfer: false,
+  maxTransferCreditsPerMonth: 0,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -157,6 +163,8 @@ const rulesShape = {
   openGymEnabled: bool("Open gym"),
   openGymCreditCost: int(0, 20, "Kredit open gym"),
   correctionWindowDays: int(0, 90, "Batas koreksi"),
+  allowMemberCreditTransfer: z.boolean({ error: "Transfer kredit oleh member harus ya/tidak" }),
+  maxTransferCreditsPerMonth: int(0, 1000, "Batas transfer kredit per bulan"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();

@@ -279,6 +279,8 @@ type NewLot struct {
 	PurchaseID string
 	Credits    int
 	ExpiresAt  time.Time
+	// SourceLotID is the sender's lot of a lot received by transfer.
+	SourceLotID string
 }
 
 // StoredEntry is a ledger row with its owner, as the reversal reads it.
@@ -454,6 +456,8 @@ type Repository interface {
 	// MarkPurchaseRefunded records the amount paid back, appends note and
 	// merges meta into payment_meta.
 	MarkPurchaseRefunded(ctx context.Context, q database.Querier, id, note string, amountIdr float64, meta map[string]any, shiftID *string) error
+	// NotePurchase appends note and merges meta into payment_meta.
+	NotePurchase(ctx context.Context, q database.Querier, id, note string, meta map[string]any) error
 	// PurchaseCompany is the company a purchase books to: its branch's,
 	// else the only company; nil when neither resolves.
 	PurchaseCompany(ctx context.Context, q database.Querier, id string) (*string, error)
@@ -520,4 +524,11 @@ type Repository interface {
 	DeleteBranchRules(ctx context.Context, q database.Querier, branchID string) error
 
 	SavedMethodStore
+	// InsertTransfer returns "" when the idempotency key already exists.
+	InsertTransfer(ctx context.Context, q database.Querier, t NewTransfer) (string, error)
+	// TransferByKey is nil when no transfer has the key.
+	TransferByKey(ctx context.Context, q database.Querier, key string) (*TransferRow, error)
+	InsertTransferLot(ctx context.Context, q database.Querier, transferID, sourceLotID, targetLotID string, credits int) error
+	// CreditsSentSince sums the credits the member transferred out since.
+	CreditsSentSince(ctx context.Context, q database.Querier, customerID string, since time.Time) (int, error)
 }

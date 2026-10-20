@@ -390,6 +390,10 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 	if err != nil {
 		return nil, err
 	}
+	sent, err := s.repo.CreditsSentSince(ctx, q, customerID, monthStart(now))
+	if err != nil {
+		return nil, err
+	}
 
 	toView := func(r domain.LotRemainder) LotView {
 		v := LotView{
@@ -415,6 +419,7 @@ func (s *Service) Wallet(ctx context.Context, q database.Querier, customerID str
 		ExpiringLots:        []LotView{},
 		Passes:              passes,
 		Freeze:              freeze,
+		Transfer:            TransferAllowance{MemberEnabled: rules.AllowMemberCreditTransfer, MonthlyCap: rules.MaxTransferCreditsPerMonth, SentThisMonth: sent},
 		Entries:             make([]EntryView, 0, len(recent)),
 	}
 	for _, r := range domain.LotRemainders(state.lots, state.entries) {

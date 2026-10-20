@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CreditPackage } from "./api";
-import { priceAt, sellablePackages } from "./pricing";
+import { priceAt, saleTotal, sellablePackages } from "./pricing";
 
 const pkg = (over: Partial<CreditPackage>): CreditPackage => ({
   id: "p",
@@ -52,5 +52,19 @@ describe("priceAt", () => {
   it("falls back to the base price", () => {
     expect(priceAt(priced, "s")).toBe(800_000);
     expect(priceAt(priced, "")).toBe(800_000);
+  });
+});
+
+describe("saleTotal", () => {
+  it("takes the voucher off before the manual discount", () => {
+    expect(saleTotal(200_000, 25_000, 10_000, false)).toEqual({ voucher: 25_000, manual: 10_000, total: 165_000 });
+  });
+
+  it("caps the manual discount at what the voucher left", () => {
+    expect(saleTotal(100_000, 80_000, 50_000, false)).toEqual({ voucher: 80_000, manual: 20_000, total: 0 });
+  });
+
+  it("gives a complimentary sale away without a voucher", () => {
+    expect(saleTotal(100_000, 20_000, 0, true)).toEqual({ voucher: 0, manual: 100_000, total: 0 });
   });
 });

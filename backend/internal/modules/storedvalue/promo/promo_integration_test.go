@@ -234,7 +234,7 @@ func TestCampaignCreateListPatch(t *testing.T) {
 	want := `{"success":true,"data":[{"id":"` + id + `","name":"Merdeka","description":null,"discount_type":"fixed",` +
 		`"value":"25000.00","max_discount":null,"min_purchase":"0.00","valid_from":"2026-08-01","valid_until":"2026-08-31",` +
 		`"usage_limit":null,"per_phone_limit":1,"scope":"pos","is_active":true,"show_in_member_portal":false,` +
-		`"target_product_ids":["` + latteID + `"],"target_category_ids":[],"eligibility":"member_baru","new_member_days":30,` +
+		`"target_product_ids":["` + latteID + `"],"target_category_ids":[],"target_gym_package_ids":[],"eligibility":"member_baru","new_member_days":30,` +
 		`"created_at":"` + e.createdAt("promo.promo_campaigns", id) + `","codes_count":"1","held_count":"0","captured_count":"0","discount_captured":"0"}]}`
 	e.expect("GET", "/api/promo/campaigns", nil, 200, want)
 
@@ -253,6 +253,21 @@ func TestCampaignCreateListPatch(t *testing.T) {
 		[]any{&value, &maxDiscount, &eligibility, &days}, id)
 	if value != "20.00" || maxDiscount != "7000.00" || eligibility != "member" || days != nil {
 		t.Fatalf("after patch: %s %s %s %v", value, maxDiscount, eligibility, days)
+	}
+
+	// Gym package targets: set, then cleared with null.
+	e.expect("PATCH", path, map[string]any{"target_gym_package_ids": []string{latteID}}, 200,
+		`{"success":true,"data":{"id":"`+id+`"},"message":"Campaign diperbarui"}`)
+	var targets string
+	e.scalar(`SELECT target_gym_package_ids::text FROM promo.promo_campaigns WHERE id = $1`, []any{&targets}, id)
+	if targets != "{"+latteID+"}" {
+		t.Fatalf("gym package targets %s", targets)
+	}
+	e.expect("PATCH", path, map[string]any{"target_gym_package_ids": nil}, 200,
+		`{"success":true,"data":{"id":"`+id+`"},"message":"Campaign diperbarui"}`)
+	e.scalar(`SELECT target_gym_package_ids::text FROM promo.promo_campaigns WHERE id = $1`, []any{&targets}, id)
+	if targets != "{}" {
+		t.Fatalf("gym package targets after null %s", targets)
 	}
 
 	// Once a voucher is captured only the toggles may change.

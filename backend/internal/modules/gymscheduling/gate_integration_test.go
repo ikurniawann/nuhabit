@@ -395,7 +395,8 @@ func TestWaitlistOfferLapsesTwiceThenLeaves(t *testing.T) {
 	if f.bookingStatus(bookingB) != "cancelled" {
 		t.Fatalf("after the second lapse: %s", f.bookingStatus(bookingB))
 	}
-	if n := f.notifications(b, "gym_waitlist_offer_expired"); len(n) != 2 || !strings.Contains(n[1], "dua kali") {
+	// Both notices share the test transaction's now(), so their order is not fixed.
+	if n := f.notifications(b, "gym_waitlist_offer_expired"); len(n) != 2 || !strings.Contains(strings.Join(n, "\n"), "dua kali") {
 		t.Fatalf("second lapse notice: %v", n)
 	}
 }

@@ -15,7 +15,9 @@ import (
 // stored-value context decides whether a code applies and how much it takes
 // off; this file holds the code for the purchase while it is pending,
 // captures it when the purchase is paid and releases it when the purchase
-// expires or fails, the way the shop holds promo codes on its orders.
+// expires or fails, the way the shop holds promo codes on its orders. A
+// refund gives the code's use back; a purchase paid after it expired takes
+// the use again when the code still has quota.
 
 // VoucherContextType is promo_redemptions.context_type of a package purchase.
 const VoucherContextType = "gym_purchase"
@@ -26,6 +28,8 @@ type VoucherCheck struct {
 	Subtotal   float64
 	CustomerID string
 	Phone      string
+	// PackageID is the package bought; a campaign may target some packages.
+	PackageID string
 }
 
 // VoucherQuote is the engine's answer: the discount and campaign name, or a
@@ -37,14 +41,28 @@ type VoucherQuote struct {
 	Message  string
 }
 
-// Vouchers is the promo-code port. Hold, Capture and Release run in the
-// caller's transaction; Capture and Release are idempotent.
+// VoucherRecapture is what a late payment did with the purchase's
+// released code.
+type VoucherRecapture string
+
+const (
+	RecaptureNone      VoucherRecapture = ""
+	RecaptureCaptured  VoucherRecapture = "captured"
+	RecaptureQuotaUsed VoucherRecapture = "quota_used"
+)
+
+// Vouchers is the promo-code port. Every method runs in the caller's
+// transaction; Capture, Release and Recapture are idempotent.
 type Vouchers interface {
 	Preview(ctx context.Context, q database.Querier, in VoucherCheck) (VoucherQuote, error)
 	// Hold claims the code for the purchase; a refusal is a quote with OK false.
 	Hold(ctx context.Context, q database.Querier, in VoucherCheck, purchaseID string) (VoucherQuote, error)
 	Capture(ctx context.Context, q database.Querier, purchaseID string) error
-	Release(ctx context.Context, q database.Querier, purchaseID string) error
+	// Release gives the code's use back (held or captured); true when the
+	// purchase had one.
+	Release(ctx context.Context, q database.Querier, purchaseID string) (bool, error)
+	// Recapture takes a released code again when its quota allows.
+	Recapture(ctx context.Context, q database.Querier, purchaseID string) (VoucherRecapture, error)
 }
 
 // VoucherPreviewView is the member's quote for one package.
@@ -58,7 +76,7 @@ type VoucherPreviewView struct {
 
 // voucherCheck builds the engine input; per-member limits count the
 // member's phone.
-func (s *Service) voucherCheck(ctx context.Context, q database.Querier, customerID, code string, price float64) (VoucherCheck, error) {
+func (s *Service) voucherCheck(ctx context.Context, q database.Querier, customerID, packageID, code string, price float64) (VoucherCheck, error) {
 	if s.ports.Vouchers == nil {
 		return VoucherCheck{}, fail(http.StatusUnprocessableEntity, "Kode voucher belum bisa dipakai untuk paket kelas")
 	}
@@ -69,7 +87,7 @@ func (s *Service) voucherCheck(ctx context.Context, q database.Querier, customer
 	if profile == nil {
 		return VoucherCheck{}, fail(http.StatusNotFound, "Member tidak ditemukan")
 	}
-	return VoucherCheck{Code: strings.TrimSpace(code), Subtotal: price, CustomerID: customerID, Phone: profile.Phone}, nil
+	return VoucherCheck{Code: strings.TrimSpace(code), Subtotal: price, CustomerID: customerID, Phone: profile.Phone, PackageID: packageID}, nil
 }
 
 func voucherRejected(quote VoucherQuote) error {
@@ -78,8 +96,8 @@ func voucherRejected(quote VoucherQuote) error {
 
 // quoteVoucher checks the code against price without claiming it; a code
 // that does not apply is a 422 with the engine's message.
-func (s *Service) quoteVoucher(ctx context.Context, q database.Querier, customerID, code string, price float64) (VoucherQuote, error) {
-	check, err := s.voucherCheck(ctx, q, customerID, code, price)
+func (s *Service) quoteVoucher(ctx context.Context, q database.Querier, customerID, packageID, code string, price float64) (VoucherQuote, error) {
+	check, err := s.voucherCheck(ctx, q, customerID, packageID, code, price)
 	if err != nil {
 		return VoucherQuote{}, err
 	}
@@ -96,8 +114,8 @@ func (s *Service) quoteVoucher(ctx context.Context, q database.Querier, customer
 // holdVoucher claims the code for the new purchase under the engine's lock.
 // The purchase was priced with quoteVoucher, so a hold that grants a
 // different discount fails the transaction.
-func (s *Service) holdVoucher(ctx context.Context, tx database.Querier, customerID, code string, price, discount float64, purchaseID string) error {
-	check, err := s.voucherCheck(ctx, tx, customerID, code, price)
+func (s *Service) holdVoucher(ctx context.Context, tx database.Querier, customerID, packageID, code string, price, discount float64, purchaseID string) error {
+	check, err := s.voucherCheck(ctx, tx, customerID, packageID, code, price)
 	if err != nil {
 		return err
 	}
@@ -114,12 +132,36 @@ func (s *Service) holdVoucher(ctx context.Context, tx database.Querier, customer
 	return nil
 }
 
-// captureVoucher makes the purchase's held code final once it is paid.
-func (s *Service) captureVoucher(ctx context.Context, tx database.Querier, purchaseID string) error {
+// captureVoucher makes the purchase's code final once it is paid. A
+// purchase paid after it expired or failed had its code released: the code
+// is taken again when its quota allows, else the member keeps the discount
+// they paid with and the purchase notes it.
+func (s *Service) captureVoucher(ctx context.Context, tx database.Querier, p *Purchase) error {
 	if s.ports.Vouchers == nil {
 		return nil
 	}
-	return s.ports.Vouchers.Capture(ctx, tx, purchaseID)
+	if p.Status == "pending" {
+		return s.ports.Vouchers.Capture(ctx, tx, p.ID)
+	}
+	result, err := s.ports.Vouchers.Recapture(ctx, tx, p.ID)
+	if err != nil || result == RecaptureNone {
+		return err
+	}
+	note := "Voucher dipakai lagi karena pembayaran terlambat"
+	if result == RecaptureQuotaUsed {
+		note = "Kuota voucher habis saat pembayaran terlambat, diskon tetap berlaku"
+		s.log.WarnContext(ctx, "gym-credits: late payment kept a voucher discount without quota", "purchase_id", p.ID)
+	}
+	return s.repo.NotePurchase(ctx, tx, p.ID, note, map[string]any{"voucher_late_payment": string(result)})
+}
+
+// releaseVoucher gives a refunded purchase's code its use back; true when
+// the purchase had one.
+func (s *Service) releaseVoucher(ctx context.Context, tx database.Querier, purchaseID string) (bool, error) {
+	if s.ports.Vouchers == nil {
+		return false, nil
+	}
+	return s.ports.Vouchers.Release(ctx, tx, purchaseID)
 }
 
 // closePurchase closes a pending purchase as expired or failed and gives
@@ -134,10 +176,8 @@ func (s *Service) closePurchase(ctx context.Context, purchaseID, status string) 
 		if err := s.repo.ClosePurchase(ctx, tx, purchaseID, status); err != nil {
 			return err
 		}
-		if s.ports.Vouchers == nil {
-			return nil
-		}
-		return s.ports.Vouchers.Release(ctx, tx, purchaseID)
+		_, err = s.releaseVoucher(ctx, tx, purchaseID)
+		return err
 	})
 }
 
@@ -161,7 +201,7 @@ func (s *Service) PreviewVoucher(ctx context.Context, customerID, packageID, cod
 			price = *branchPrice
 		}
 	}
-	quote, err := s.quoteVoucher(ctx, s.db, customerID, code, price)
+	quote, err := s.quoteVoucher(ctx, s.db, customerID, pkg.ID, code, price)
 	if err != nil {
 		return nil, err
 	}

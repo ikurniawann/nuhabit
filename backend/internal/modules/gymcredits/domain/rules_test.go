@@ -19,6 +19,7 @@ func defaultsKV() []KV {
 		{"renewalRetryCount", 2.0}, {"renewalRetryHours", 24.0}, {"renewalGraceDays", 3.0},
 		{"requireWaiver", true}, {"checkinOpensMinBefore", 45.0}, {"checkinClosesMinAfter", 15.0},
 		{"openGymEnabled", false}, {"openGymCreditCost", 1.0}, {"correctionWindowDays", 7.0},
+		{"allowMemberCreditTransfer", false}, {"maxTransferCreditsPerMonth", 0.0},
 	}
 }
 
@@ -44,9 +45,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"renewalRetryCount":2,"renewalRetryHours":24,"renewalGraceDays":3,"requireWaiver":true,"checkinOpensMinBefore":45,"checkinClosesMinAfter":15,"openGymEnabled":false,"openGymCreditCost":1,"correctionWindowDays":7}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"renewalRetryCount":2,"renewalRetryHours":24,"renewalGraceDays":3,"requireWaiver":true,"checkinOpensMinBefore":45,"checkinClosesMinAfter":15,"openGymEnabled":false,"openGymCreditCost":1,"correctionWindowDays":7,"allowMemberCreditTransfer":false,"maxTransferCreditsPerMonth":0}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 33)
+	eq(t, len(RuleKeys()), 35)
 }
 
 func TestGateRules(t *testing.T) {
@@ -146,6 +147,15 @@ func TestValidateRulesPatch(t *testing.T) {
 
 	_, msg = ValidateRulesPatch([]KV{{"waitlistAutoPromote", "yes"}})
 	eq(t, msg, "waitlistAutoPromote: Promosi waitlist harus ya/tidak")
+
+	_, msg = ValidateRulesPatch([]KV{{"allowMemberCreditTransfer", 1.0}})
+	eq(t, msg, "allowMemberCreditTransfer: Transfer kredit oleh member harus ya/tidak")
+	_, msg = ValidateRulesPatch([]KV{{"maxTransferCreditsPerMonth", 1001.0}})
+	eq(t, msg, "maxTransferCreditsPerMonth: Batas transfer kredit per bulan maksimal 1000")
+	p, msg = ValidateRulesPatch([]KV{{"allowMemberCreditTransfer", true}, {"maxTransferCreditsPerMonth", 10.0}})
+	eq(t, msg, "")
+	rules := p.Over(RuleDefaults)
+	eq(t, rules.AllowMemberCreditTransfer && rules.MaxTransferCreditsPerMonth == 10, true)
 
 	_, msg = ValidateRulesPatch([]KV{{"qrTtlSec", nil}})
 	eq(t, msg, "qrTtlSec: Umur QR harus berupa angka")

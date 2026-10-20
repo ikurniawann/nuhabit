@@ -14,9 +14,10 @@ import (
 
 // fakeVouchers knows the code GYM10 and tracks each purchase's hold.
 type fakeVouchers struct {
-	discount float64
-	state    map[string]string // purchase id -> held | captured | released
-	last     VoucherCheck
+	discount  float64
+	state     map[string]string // purchase id -> held | captured | released
+	last      VoucherCheck
+	quotaUsed bool
 }
 
 func (f *fakeVouchers) quote(in VoucherCheck) VoucherQuote {
@@ -46,11 +47,24 @@ func (f *fakeVouchers) Capture(_ context.Context, _ database.Querier, purchaseID
 	return nil
 }
 
-func (f *fakeVouchers) Release(_ context.Context, _ database.Querier, purchaseID string) error {
-	if f.state[purchaseID] != "" {
-		f.state[purchaseID] = "released"
+func (f *fakeVouchers) Release(_ context.Context, _ database.Querier, purchaseID string) (bool, error) {
+	if f.state[purchaseID] == "" || f.state[purchaseID] == "released" {
+		return false, nil
 	}
-	return nil
+	f.state[purchaseID] = "released"
+	return true, nil
+}
+
+// Recapture takes a released code again unless quotaUsed is set.
+func (f *fakeVouchers) Recapture(_ context.Context, _ database.Querier, purchaseID string) (VoucherRecapture, error) {
+	if f.state[purchaseID] != "released" {
+		return RecaptureNone, nil
+	}
+	if f.quotaUsed {
+		return RecaptureQuotaUsed, nil
+	}
+	f.state[purchaseID] = "captured"
+	return RecaptureCaptured, nil
 }
 
 func TestVoucherOnPackagePurchases(t *testing.T) {
