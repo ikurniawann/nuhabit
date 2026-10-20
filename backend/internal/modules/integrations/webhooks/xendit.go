@@ -15,8 +15,10 @@ import (
 )
 
 // The Xendit QR payment callback (configured in the Xendit dashboard and in
-// Settings → Payment Gateways). Every outcome except a bad callback token is
-// a 200: Xendit retries any non-2xx, and nothing here improves on retry.
+// Settings → Payment Gateways). It also takes the Payments API events of
+// gym saved payment methods (payment_session.*, payment_token.*, payment.*).
+// Every outcome except a bad callback token is a 200: Xendit retries any
+// non-2xx, and nothing here improves on retry.
 
 // ignored is {success: true, ignored: true, reason, …}.
 type ignored struct {
@@ -89,6 +91,9 @@ func (h *Handler) handleXendit(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	body, _ := domain.ParseJSON(raw)
+	if ev, ok := domain.ParseXenditEvent(domain.Obj(body)); ok {
+		return h.xenditPaymentsEvent(w, r, ev)
+	}
 	p := domain.ParseQrWebhook(domain.Obj(body))
 	if !p.Paid {
 		return httpx.JSON(w, http.StatusOK, ignored{Success: true, Ignored: true, Reason: "not_paid", Status: &p.Status})
@@ -155,6 +160,41 @@ func (h *Handler) handleXendit(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	return h.queueSettlement(w, r, action, target.ID, p)
+}
+
+// xenditPaymentsEvent handles a Payments API event (the gym saved payment
+// methods, after the callback token check above). A captured gym charge
+// settles like a QR payment once its amount matches the purchase; the
+// rest (session, token and failure events) goes to gym-credits.
+func (h *Handler) xenditPaymentsEvent(w http.ResponseWriter, r *http.Request, ev domain.XenditEvent) error {
+	ctx := r.Context()
+	if ev.Paid() {
+		if !h.ports.Payments.IsGymPurchaseReference(ev.ReferenceID) {
+			ignore(w, "not_gym_payment")
+			return nil
+		}
+		purchase, err := h.ports.Payments.GymPurchase(ctx, h.db, ev.ReferenceID)
+		if err != nil {
+			return err
+		}
+		if purchase != nil && !domain.AmountMatches(purchase.Amount, ev.Amount) {
+			return h.amountMismatch(w, "gym_purchase", purchase, ev.Amount)
+		}
+		result, err := h.ports.Payments.SettleGymPurchase(ctx, h.db, ev.ReferenceID, firstNonEmpty(ev.PaymentID))
+		if err != nil {
+			return err
+		}
+		return httpx.Data(w, http.StatusOK, struct {
+			GymPurchase any `json:"gym_purchase"`
+		}{result})
+	}
+	result, err := h.ports.Payments.GymPaymentsEvent(ctx, h.db, ev)
+	if err != nil {
+		return err
+	}
+	return httpx.Data(w, http.StatusOK, struct {
+		GymEvent any `json:"gym_event"`
+	}{result})
 }
 
 // queueSettlement publishes the settlement for the owning context (stored
