@@ -53,6 +53,9 @@ test.describe("member books and cancels a class", () => {
 
   test("schedule, book with credits, see it in bookings, cancel", async ({ page }, testInfo) => {
     const offset = DAY_OFFSET[testInfo.project.name] ?? 2;
+    // Booking needs the current waiver (rule requireWaiver).
+    const waiver = await page.request.patch("/api/member-portal/app/home/me", { data: { acceptWaiver: true } });
+    expect(waiver.ok(), "accept waiver").toBeTruthy();
 
     await page.goto("/member/classes");
     await expect(page.getByRole("heading", { name: "Classes" })).toBeVisible();
