@@ -127,6 +127,9 @@ export const TRAIN_ID: Record<string, string> = {
     "Perangkatmu belum menemukan lokasi. Keluar ruangan atau pastikan layanan lokasi menyala.",
   "Finding you took too long. Try again somewhere with a clearer view of the sky.":
     "Mencari lokasimu terlalu lama. Coba lagi di tempat yang lebih terbuka.",
+  "Could not read your location.": "Lokasimu tidak bisa dibaca.",
+  "No GPS track": "Tanpa jejak GPS",
+  "Route map": "Peta rute",
   // You & gear
   "Loading your stats…": "Memuat statistikmu…",
   edit: "ubah",

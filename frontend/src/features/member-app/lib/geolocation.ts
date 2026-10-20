@@ -205,6 +205,6 @@ function describe(err: GeolocationPositionError): string {
     case 3:
       return "Finding you took too long. Try again somewhere with a clearer view of the sky.";
     default:
-      return err?.message || "Could not read your location.";
+      return "Could not read your location.";
   }
 }

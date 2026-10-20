@@ -1,3 +1,7 @@
+'use client';
+
+import { useT } from '../lib/i18n';
+
 export type Tone = 'ok' | 'warn' | 'danger' | 'info' | 'neutral' | 'brand';
 
 /* NüHabit palette: Lettuce / Golden Ochre tints for fills, deepened for text on beige;
@@ -66,11 +70,45 @@ export function statusTone(status: string): Tone {
   }
 }
 
+/**
+ * English labels (dictionary keys) for the status codes the member app
+ * shows: bookings, gate visits, membership, workout sessions and races.
+ */
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Active',
+  INACTIVE: 'Inactive',
+  CONFIRMED: 'Confirmed',
+  WAITLIST: 'Waitlist',
+  CHECKED_IN: 'Checked in',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  NO_SHOW: 'No-show',
+  ALLOWED: 'Allowed',
+  DENIED: 'Denied',
+  READY: 'Ready',
+  STARTED: 'In progress',
+  PAUSED: 'Paused',
+  PARTIAL: 'Partial',
+  ANNOUNCED: 'Announced',
+  REGISTRATION_OPEN: 'Registration open',
+  SOLD_OUT: 'Sold out',
+  UPCOMING: 'Upcoming',
+  ONGOING: 'Ongoing',
+  TRAINING: 'Training',
+  RACED: 'Raced',
+};
+
+/** The dictionary key for a status code; an unknown code (or a ready-made label) shows as is. */
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status] ?? status.replaceAll('_', ' ');
+}
+
 export function StatusBadge({ status, tone }: { status: string; tone?: Tone }) {
+  const t = useT();
   const style = TONE_STYLES[tone ?? statusTone(status)];
   return (
     <span className="hx-badge" style={style}>
-      {status.replaceAll('_', ' ')}
+      {t(statusLabel(status))}
     </span>
   );
 }

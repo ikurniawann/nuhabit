@@ -24,6 +24,8 @@ export const STORAGE_KEYS = {
   activityLogs: { key: "nuhabit.activity-logs", legacy: "arkivos_activity_logs" },
   tableOrderGuest: { key: "nuhabit.table-order.guest", legacy: "bcd-table-order-guest" },
   memberLang: { key: "nuhabit.member.lang", legacy: "bcd-member-lang" },
+  // Bahasa akun terakhir yang dilihat perangkat ini (pengaturan athlete).
+  memberAccountLang: { key: "nuhabit.member.account-lang", legacy: "bcd-member-account-lang" },
 } as const satisfies Record<string, StorageKey>;
 
 function browserStorage(): Storage | null {

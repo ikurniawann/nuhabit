@@ -25,6 +25,9 @@ const BASE_ID: Record<string, string> = {
   Back: 'Kembali',
   Save: 'Simpan',
   Cancel: 'Batal',
+  'Opening NüHabit…': 'Membuka NüHabit…',
+  'NüHabit could not load. Check your connection and reload the page.':
+    'NüHabit gagal dimuat. Periksa koneksi lalu muat ulang halaman.',
   // Home
   'Credit balance': 'Saldo kredit',
   'Open member card': 'Buka kartu member',

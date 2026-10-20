@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { OrderDetail } from "../lib/queries-loyalty";
+import { setLang } from "../lib/lang";
 import { OrdersPage } from "./orders-page";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ back: vi.fn() }) }));
@@ -94,6 +95,8 @@ function renderPage() {
 }
 
 describe("OrdersPage", () => {
+  // The assertions read the English copy; the app defaults to Indonesian.
+  beforeEach(() => setLang("en"));
   afterEach(() => vi.unstubAllGlobals());
 
   it("lists online shop orders with their source and status next to outlet receipts", async () => {

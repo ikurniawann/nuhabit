@@ -142,4 +142,22 @@ export const CLASSES_ID: Record<string, string> = {
   "Demo checkout - no real money moves. Xendit replaces this screen in production.":
     "Pembayaran demo - tidak ada uang yang berpindah. Xendit menggantikan layar ini di produksi.",
   "Cancel and go back": "Batal dan kembali",
+  // Status badges (ui/status-badge.tsx)
+  Active: "Aktif",
+  Inactive: "Nonaktif",
+  Confirmed: "Terkonfirmasi",
+  Waitlist: "Daftar tunggu",
+  "Checked in": "Sudah check-in",
+  "No-show": "Tidak hadir",
+  Allowed: "Diizinkan",
+  Denied: "Ditolak",
+  Ready: "Siap",
+  "In progress": "Berjalan",
+  Partial: "Sebagian",
+  Announced: "Diumumkan",
+  "Registration open": "Pendaftaran dibuka",
+  "Sold out": "Habis",
+  Ongoing: "Berlangsung",
+  Training: "Latihan",
+  Raced: "Sudah race",
 };
