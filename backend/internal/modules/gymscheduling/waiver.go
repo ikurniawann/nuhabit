@@ -17,22 +17,6 @@ import (
 // rule requireWaiver is on. Members accept it in the app; staff can record
 // an acceptance at the front desk, which keeps the staff account and time.
 
-// errorCode tags an httpx.Error (in Details) so a client can react to the
-// failure, such as the member app linking a waiver denial to the waiver screen.
-type errorCode string
-
-const codeWaiverRequired errorCode = "waiver_required"
-
-// eligibilityError is the 409 for a booking denial, tagged when the waiver
-// is missing.
-func eligibilityError(in domain.EligibilityInput, reason domain.BookingDenialReason) error {
-	err := schedulingError(in.DenialMessage(reason))
-	if reason == domain.DenyWaiverRequired {
-		err.Details = codeWaiverRequired
-	}
-	return err
-}
-
 // requireWaiver fails when the branch rules need a waiver the member has
 // not accepted in its current version.
 func (s *Service) requireWaiver(ctx context.Context, q Q, customerID string, branchID *string) error {
@@ -45,9 +29,7 @@ func (s *Service) requireWaiver(ctx context.Context, q Q, customerID string, bra
 		return err
 	}
 	if s.waiverMissing(rules, member) {
-		err := schedulingError("Waiver member belum disetujui. Catat persetujuan waiver di front desk dulu.")
-		err.Details = codeWaiverRequired
-		return err
+		return codedError(denialCode(domain.DenyWaiverRequired), "Waiver member belum disetujui. Catat persetujuan waiver di front desk dulu.", nil)
 	}
 	return nil
 }

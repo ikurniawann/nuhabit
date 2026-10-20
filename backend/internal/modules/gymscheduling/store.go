@@ -12,7 +12,7 @@ import (
 func (s *Service) lockSession(ctx context.Context, q Q, id string) (*SessionRow, error) {
 	session, err := s.repo.LockSession(ctx, q, id)
 	if err == nil && session == nil {
-		err = schedulingError("Sesi tidak ditemukan", 404)
+		err = codedError("SESSION_NOT_FOUND", "Sesi tidak ditemukan", nil, 404)
 	}
 	return session, err
 }
@@ -26,7 +26,7 @@ func (s *Service) lockBookingWithSession(ctx context.Context, q Q, id, customerI
 		return nil, nil, err
 	}
 	if sessionID == "" || (customerID != "" && owner != customerID) {
-		return nil, nil, schedulingError("Booking tidak ditemukan", 404)
+		return nil, nil, codedError("BOOKING_NOT_FOUND", "Booking tidak ditemukan", nil, 404)
 	}
 	session, err := s.lockSession(ctx, q, sessionID)
 	if err != nil {

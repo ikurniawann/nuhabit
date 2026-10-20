@@ -12,7 +12,8 @@ import { GoogleSignIn } from "@/features/member-app/auth/google-sign-in";
 import { ApiError, memberApi } from "@/features/member-app/lib/api";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { deviceId, forgetReferralCode, storedReferralCode } from "@/lib/member-portal/referral";
+import { useMemberOtpConfig, whatsappOtpOn } from "@/lib/otp-availability";
 import { planPayload, pushSiteEvent } from "../lib/analytics";
 import {
   accountTransition,
@@ -148,8 +149,21 @@ const noSubscribe = () => () => {};
 /** The login page returns to this checkout; the URL is only known in the browser. */
 const loginHrefSnapshot = () => `${MEMBER_LOGIN}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
 
+/** The account step starts once the server says whether WhatsApp codes can be sent. */
 function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
-  const [phase, dispatch] = useReducer(accountTransition, OTP_ENABLED, initialAccountPhase);
+  const otp = useMemberOtpConfig();
+  if (!otp) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-body">
+        <LoaderCircle className="size-4 animate-spin" /> Loading sign-in options
+      </p>
+    );
+  }
+  return <AccountForm onSignedIn={onSignedIn} otpEnabled={whatsappOtpOn(otp)} />;
+}
+
+function AccountForm({ onSignedIn, otpEnabled }: { onSignedIn(): void; otpEnabled: boolean }) {
+  const [phase, dispatch] = useReducer(accountTransition, otpEnabled, initialAccountPhase);
   const loginHref = useSyncExternalStore(noSubscribe, loginHrefSnapshot, () => MEMBER_LOGIN);
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -208,6 +222,7 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
   const register = (e: FormEvent) => {
     e.preventDefault();
     if (phase.kind !== "register") return;
+    const referralCode = storedReferralCode();
     void run(async () => {
       try {
         await postAuth("/register", {
@@ -217,7 +232,10 @@ function AccountStep({ onSignedIn }: { onSignedIn(): void }) {
           email: google?.email ?? email,
           wa_consent: false,
           ...(google ? { google_ticket: google.ticket } : {}),
+          ...(referralCode ? { referral_code: referralCode } : {}),
+          device_id: deviceId(),
         });
+        forgetReferralCode();
         onSignedIn();
       } catch (err) {
         // The phone already belongs to a member: sign that member in instead.

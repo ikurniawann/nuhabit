@@ -5,16 +5,19 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/modules/memberportal/referral"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/module"
 )
 
 // Handler is the HTTP transport of the member portal.
 type Handler struct {
-	svc     *Service
-	auth    *auth.Service
-	log     *slog.Logger
-	credits CreditWallet
+	svc       *Service
+	auth      *auth.Service
+	guard     StaffGuard
+	log       *slog.Logger
+	credits   CreditWallet
+	referrals *referral.Service
 }
 
 // memberFunc handles a request of a signed-in member.
@@ -49,6 +52,7 @@ const prefix = "/api/member-portal"
 func (h *Handler) Routes() []module.Route {
 	routes := []module.Route{
 		// Sign-in, registration, session
+		{Pattern: "GET " + prefix + "/config", Handler: h.public("Gagal memuat konfigurasi", h.config)},
 		{Pattern: "POST " + prefix + "/otp", Handler: h.public("Gagal mengirim OTP", h.requestOTP)},
 		{Pattern: "POST " + prefix + "/register/otp", Handler: h.public("Gagal mengirim OTP", h.requestRegisterOTP)},
 		{Pattern: "POST " + prefix + "/verify", Handler: h.public("Gagal verifikasi OTP", h.verify)},
@@ -88,6 +92,7 @@ func (h *Handler) Routes() []module.Route {
 	routes = append(routes, h.engagementRoutes()...)
 	routes = append(routes, h.collectionRoutes()...)
 	routes = append(routes, h.topupRoutes()...)
+	routes = append(routes, h.referralRoutes()...)
 	return routes
 }
 

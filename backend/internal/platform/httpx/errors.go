@@ -8,18 +8,28 @@ import (
 )
 
 // Error crosses the transport boundary. Handle renders it as
-// {"success":false,"error":Message[,"details":Details]} with Status, the
-// shape of ApiError.toResponse() in frontend/src/lib/api/auth.ts.
+// {"success":false,"error":Message[,"details":Details][,"code":Code,"params":Params]}
+// with Status, the shape of ApiError.toResponse() in
+// frontend/src/lib/api/auth.ts. Code is a stable identifier clients map to
+// their own copy; Params carries the values that copy interpolates. Message
+// stays the server text for clients that do not know the code.
 type Error struct {
 	Status  int
 	Message string
 	Details any
+	Code    string
+	Params  map[string]any
 }
 
 func (e *Error) Error() string { return e.Message }
 
 // Status builds an error with an arbitrary status.
 func Status(status int, msg string) *Error { return &Error{Status: status, Message: msg} }
+
+// Coded builds an error with a stable code and optional params.
+func Coded(status int, code, msg string, params map[string]any) *Error {
+	return &Error{Status: status, Message: msg, Code: code, Params: params}
+}
 
 // BadRequest is a 400; the optional details are serialized under "details".
 func BadRequest(msg string, details ...any) *Error {

@@ -6,7 +6,6 @@ import (
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
 	"nuhabit/backend/internal/platform/auth"
-	"nuhabit/backend/internal/platform/featureflags"
 )
 
 var (
@@ -109,9 +108,11 @@ func (s *Service) setPassword(ctx context.Context, customerID, password, keepTok
 	return s.repo.DeleteOtherSessions(ctx, customerID, keepTokenHash)
 }
 
-// ForgotResult is the answer of a forgot-password request.
+// ForgotResult is the answer of a forgot-password request. Channel says
+// where the code went (whatsapp, or email when that is the only channel).
 type ForgotResult struct {
 	Status      string `json:"status"`
+	Channel     string `json:"channel,omitempty"`
 	PhoneMasked string `json:"phone_masked,omitempty"`
 }
 
@@ -120,7 +121,7 @@ type ForgotResult struct {
 // never says whether the username exists: an unknown one gets the same
 // otp_sent status and nothing is sent.
 func (s *Service) ForgotPassword(ctx context.Context, ip, username string) (*ForgotResult, error) {
-	if !featureflags.OTPEnabled() {
+	if !s.OTPAvailable(ctx) {
 		return &ForgotResult{Status: "front_desk"}, nil
 	}
 	if err := s.ipBrake(ctx, "otp", ip); err != nil {
@@ -138,19 +139,33 @@ func (s *Service) ForgotPassword(ctx context.Context, ip, username string) (*For
 	if account != nil {
 		phone = domain.NormalizePhoneDigits(account.Phone)
 		if phone != "" {
-			if _, err := s.issueOTP(ctx, phone); err != nil {
+			if err := s.sendResetCode(ctx, account.ID, phone); err != nil {
 				return nil, err
 			}
 		}
 	}
-	return &ForgotResult{Status: "otp_sent", PhoneMasked: domain.MaskPhone(phone)}, nil
+	return &ForgotResult{Status: "otp_sent", Channel: s.otpChannel(ctx), PhoneMasked: domain.MaskPhone(phone)}, nil
+}
+
+// sendResetCode sends the reset code. An account without an email on an
+// email-only setup gets nothing, and the answer stays otp_sent so it never
+// tells which accounts exist.
+func (s *Service) sendResetCode(ctx context.Context, customerID, phone string) error {
+	email, err := s.repo.MemberEmail(ctx, customerID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.issueOTP(ctx, phone, email); err != nil && !errors.Is(err, errOTPNoEmail) {
+		return err
+	}
+	return nil
 }
 
 // ResetPassword consumes the code sent by ForgotPassword and sets the new
 // password, ending every session of the member. A username without an
 // account fails like a wrong code.
 func (s *Service) ResetPassword(ctx context.Context, ip, username, code, next string) error {
-	if !featureflags.OTPEnabled() {
+	if !s.OTPAvailable(ctx) {
 		return errResetUnavailable
 	}
 	if msg := domain.NewPasswordProblem(next); msg != "" {

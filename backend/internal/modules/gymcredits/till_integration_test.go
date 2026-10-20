@@ -27,7 +27,7 @@ func TestFrontDeskSaleJoinsTheShift(t *testing.T) {
 	}
 
 	out := sell(map[string]any{"package_id": pkg, "payment_method": "cash", "branch_id": org.BranchID}, http.StatusConflict)
-	if out["error"] != msgShiftRequired || out["details"].(map[string]any)["code"] != CodeShiftRequired {
+	if out["error"] != msgShiftRequired || out["code"] != CodeShiftRequired {
 		t.Fatalf("cash without a shift: %v", out)
 	}
 	card := sell(map[string]any{"package_id": pkg, "payment_method": "card", "branch_id": org.BranchID}, http.StatusOK)["data"].(map[string]any)

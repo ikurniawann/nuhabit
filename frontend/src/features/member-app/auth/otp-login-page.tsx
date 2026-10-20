@@ -5,13 +5,14 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useMemberOtpConfig } from "@/lib/otp-availability";
 import { useMemberOtp } from "../lib/use-member-otp";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
 import { returnPath } from "./return-path";
 import "../member-app.css";
 
-/** Secondary sign-in with a WhatsApp code; only linked when OTP is enabled. */
+/** Secondary sign-in with a code (WhatsApp, or email when that is the only channel); only linked when OTP is enabled. */
 export function OtpLoginPage() {
   const t = useT();
   const router = useRouter();
@@ -21,6 +22,7 @@ export function OtpLoginPage() {
     router.replace(returnPath());
   }, [qc, router]);
   const otp = useMemberOtp({ onSignedIn });
+  const byEmail = useMemberOtpConfig()?.channel === "email";
 
   return (
     <div className="nh-app">
@@ -29,12 +31,16 @@ export function OtpLoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={asset("/brand/wordmark-black.png")} alt="NüHabit" className="mb-5 h-6 w-auto" />
           <h1 className="nh-display text-3xl font-black">
-            {otp.step === "phone" ? t("Sign in with a WhatsApp code") : t("Enter the code")}
+            {otp.step !== "phone" ? t("Enter the code") : byEmail ? t("Sign in with an email code") : t("Sign in with a WhatsApp code")}
           </h1>
           <p className="mt-2 text-sm text-nh-muted">
             {otp.step === "phone"
-              ? t("We will send a 6-digit code to your WhatsApp.")
-              : t("We sent a code to WhatsApp {phone}.", { phone: otp.phone })}
+              ? byEmail
+                ? t("We will send a 6-digit code to the email on your account.")
+                : t("We will send a 6-digit code to your WhatsApp.")
+              : otp.sentTo === "email"
+                ? t("We sent a code to the email on your account.")
+                : t("We sent a code to WhatsApp {phone}.", { phone: otp.phone })}
           </p>
         </div>
 

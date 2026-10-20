@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ApiError } from "../lib/api";
+import { useErrorText, WAIVER_REQUIRED } from "../lib/error-codes";
 import { coverageFor } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { googleCalendarEventUrl } from "../lib/google-calendar";
@@ -24,6 +25,7 @@ import { Spinner, formatDayTime } from "../ui";
 
 export function SessionDetailPage() {
   const t = useT();
+  const errorText = useErrorText();
   const { sessionId = "" } = useParams<{ sessionId: string }>();
   const router = useRouter();
   const { data: v, isLoading } = useSession(sessionId);
@@ -44,9 +46,10 @@ export function SessionDetailPage() {
     } catch (e) {
       setMessage({
         kind: "err",
-        text: e instanceof ApiError ? e.message : t("Could not confirm."),
-        waiver: e instanceof ApiError && e.code === "waiver_required",
+        text: errorText(e, t("Could not confirm.")),
+        waiver: e instanceof ApiError && e.code === WAIVER_REQUIRED,
       });
+      invalidate();
     } finally {
       invalidate();
       setConfirmBusy(false);
@@ -83,8 +86,8 @@ export function SessionDetailPage() {
     } catch (e) {
       setMessage({
         kind: "err",
-        text: e instanceof ApiError ? e.message : t("Booking failed."),
-        waiver: e instanceof ApiError && e.code === "waiver_required",
+        text: errorText(e, t("Booking failed.")),
+        waiver: e instanceof ApiError && e.code === WAIVER_REQUIRED,
       });
     }
   };
@@ -102,7 +105,7 @@ export function SessionDetailPage() {
             : t("Booking cancelled."),
       });
     } catch (e) {
-      setMessage({ kind: "err", text: e instanceof ApiError ? e.message : t("Cancel failed.") });
+      setMessage({ kind: "err", text: errorText(e, t("Cancel failed.")) });
     }
   };
 

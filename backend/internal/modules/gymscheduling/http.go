@@ -693,8 +693,7 @@ func (h *handler) member(failMessage string, fn memberFunc) http.Handler {
 		var appErr *httpx.Error
 		switch {
 		case errors.As(err, &appErr):
-			code, _ := appErr.Details.(errorCode)
-			_ = writeMemberError(w, appErr.Message, appErr.Status, code)
+			httpx.WriteError(w, r, appErr)
 		case errors.Is(err, errInvalidData):
 			_ = memberError(w, "Data tidak valid", http.StatusBadRequest)
 		default:
@@ -705,17 +704,10 @@ func (h *handler) member(failMessage string, fn memberFunc) http.Handler {
 }
 
 func memberError(w http.ResponseWriter, msg string, status int) error {
-	return writeMemberError(w, msg, status, "")
-}
-
-// writeMemberError adds code when the failure has one the app reacts to
-// (waiver_required links to the waiver screen).
-func writeMemberError(w http.ResponseWriter, msg string, status int, code errorCode) error {
 	return httpx.JSON(w, status, struct {
-		Success bool      `json:"success"`
-		Error   string    `json:"error"`
-		Code    errorCode `json:"code,omitempty"`
-	}{false, msg, code})
+		Success bool   `json:"success"`
+		Error   string `json:"error"`
+	}{false, msg})
 }
 
 // memberBody is `await request.json()` in a member route: a body that is not

@@ -1890,6 +1890,26 @@
     "path": "/api/gym/races/{id}/entrants"
   },
   {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/gym/referrals"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/gym/referrals/leaderboard"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/gym/referrals/settings"
+  },
+  {
+    "module": "member-portal",
+    "method": "PUT",
+    "path": "/api/gym/referrals/settings"
+  },
+  {
     "module": "gym-desk",
     "method": "GET",
     "path": "/api/gym/reports/branches"
@@ -3040,6 +3060,11 @@
     "path": "/api/member-portal/app/home/visits"
   },
   {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/app/referral"
+  },
+  {
     "module": "athlete",
     "method": "GET",
     "path": "/api/member-portal/app/train/activities"
@@ -3268,6 +3293,11 @@
     "module": "member-portal",
     "method": "POST",
     "path": "/api/member-portal/collectibles/redeem"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/config"
   },
   {
     "module": "member-portal",
@@ -3558,6 +3588,11 @@
     "module": "member-portal",
     "method": "POST",
     "path": "/api/member-portal/qr"
+  },
+  {
+    "module": "member-portal",
+    "method": "GET",
+    "path": "/api/member-portal/referral/{code}"
   },
   {
     "module": "member-portal",

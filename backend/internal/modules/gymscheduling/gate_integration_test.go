@@ -37,7 +37,7 @@ func TestWaiverRequiredForBookingAndGate(t *testing.T) {
 
 	// The member app gets the code that links to the waiver screen.
 	res := f.book(m, sessionID)
-	if res.Status != 409 || res.Body["error"] != label || res.Body["code"] != "waiver_required" {
+	if res.Status != 409 || res.Body["error"] != label || res.Body["code"] != "BOOKING_WAIVER_REQUIRED" {
 		t.Fatalf("member booking: %d %s", res.Status, res.Raw)
 	}
 	expectError(t, f.asStaff("POST", "/api/gym/bookings", map[string]any{"session_id": sessionID, "customer_id": m}), 409, label)

@@ -15,5 +15,15 @@ var (
 	IPRuleVerify = RateRule{Limit: 60, Window: 10 * time.Minute}
 )
 
+// Daily caps on code sends, against SMS pumping: one network, and one
+// number across every network.
+var (
+	IPRuleOTPDaily    = RateRule{Limit: 200, Window: 24 * time.Hour}
+	PhoneRuleOTPDaily = RateRule{Limit: 10, Window: 24 * time.Hour}
+)
+
+// TooManyCodesToday is the per-number daily rejection message.
+const TooManyCodesToday = "Batas kode harian untuk nomor ini tercapai. Coba lagi besok"
+
 // TooManyFromIP is the per-IP rejection message.
 const TooManyFromIP = "Terlalu banyak permintaan dari jaringan ini. Coba lagi beberapa menit lagi"

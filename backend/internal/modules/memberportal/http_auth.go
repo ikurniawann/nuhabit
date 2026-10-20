@@ -2,46 +2,62 @@ package memberportal
 
 import (
 	"net/http"
+	"strings"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
-	"nuhabit/backend/internal/platform/featureflags"
 	"nuhabit/backend/internal/platform/httpx"
 )
 
 type otpSentBody struct {
 	Success     bool   `json:"success"`
 	Message     string `json:"message,omitempty"`
+	Channel     string `json:"channel,omitempty"`
 	WADelivered bool   `json:"wa_delivered"`
 	DevBypass   bool   `json:"dev_bypass"`
 }
 
-// POST /otp { phone } sends a WhatsApp login code to a registered member.
+var errOTPUnavailable = httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+
+// GET /config is the runtime configuration of the sign-in screens.
+func (h *Handler) config(w http.ResponseWriter, r *http.Request) error {
+	config, err := h.svc.Config(r.Context())
+	if err != nil {
+		return err
+	}
+	return ok(w, config)
+}
+
+// POST /otp { phone } sends a login code to a registered member.
 func (h *Handler) requestOTP(w http.ResponseWriter, r *http.Request) error {
-	if !featureflags.OTPEnabled() {
-		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	if !h.svc.OTPAvailable(r.Context()) {
+		return errOTPUnavailable
 	}
 	body, _ := readBody(r)
 	issued, err := h.svc.RequestLoginOTP(r.Context(), clientIP(r.Header), body["phone"])
 	if err != nil {
 		return err
 	}
+	message := "Kode OTP dikirim ke WhatsApp Anda"
+	if issued.Channel == ChannelEmail {
+		message = "Kode OTP dikirim ke email akun Anda"
+	}
 	return httpx.JSON(w, http.StatusOK, otpSentBody{
-		Success: true, Message: "Kode OTP dikirim ke WhatsApp Anda",
+		Success: true, Message: message, Channel: issued.Channel,
 		WADelivered: issued.WADelivered, DevBypass: issued.DevBypass,
 	})
 }
 
-// POST /register/otp { phone } is step one of self registration.
+// POST /register/otp { phone, email? } is step one of self registration.
 func (h *Handler) requestRegisterOTP(w http.ResponseWriter, r *http.Request) error {
-	if !featureflags.OTPEnabled() {
-		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	if !h.svc.OTPAvailable(r.Context()) {
+		return errOTPUnavailable
 	}
 	body, _ := readBody(r)
-	issued, err := h.svc.RequestRegisterOTP(r.Context(), clientIP(r.Header), body["phone"])
+	issued, err := h.svc.RequestRegisterOTP(r.Context(), clientIP(r.Header), body["phone"], strings.TrimSpace(jsString(body["email"])))
 	if err != nil {
 		return err
 	}
-	return httpx.JSON(w, http.StatusOK, otpSentBody{Success: true, WADelivered: issued.WADelivered, DevBypass: issued.DevBypass})
+	return httpx.JSON(w, http.StatusOK, otpSentBody{Success: true, Channel: issued.Channel, WADelivered: issued.WADelivered, DevBypass: issued.DevBypass})
 }
 
 type signedInData struct {
@@ -62,8 +78,8 @@ func (h *Handler) writeSignedIn(w http.ResponseWriter, r *http.Request, s *Signe
 
 // POST /verify { phone, code } opens a member session.
 func (h *Handler) verify(w http.ResponseWriter, r *http.Request) error {
-	if !featureflags.OTPEnabled() {
-		return httpx.Status(http.StatusServiceUnavailable, "Verifikasi dengan kode sedang tidak tersedia")
+	if !h.svc.OTPAvailable(r.Context()) {
+		return errOTPUnavailable
 	}
 	body, _ := readBody(r)
 	signed, err := h.svc.Verify(r.Context(), clientIP(r.Header), body["phone"], jsString(body["code"]))
@@ -75,7 +91,7 @@ func (h *Handler) verify(w http.ResponseWriter, r *http.Request) error {
 
 // POST /register { phone, code, name, email?, birth_date?, wa_consent }.
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
-	if !featureflags.OTPEnabled() {
+	if !h.svc.OTPAvailable(r.Context()) {
 		return httpx.Status(http.StatusServiceUnavailable, "Pendaftaran dengan kode sedang tidak tersedia")
 	}
 	body, _ := readBody(r)

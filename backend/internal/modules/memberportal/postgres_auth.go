@@ -46,6 +46,15 @@ func (s *store) FindMemberByPhone(ctx context.Context, phone string) (*MemberRef
 	return &m, nil
 }
 
+func (s *store) MemberEmail(ctx context.Context, customerID string) (string, error) {
+	var email string
+	err := s.q.QueryRow(ctx, `SELECT COALESCE(email, '') FROM pos.pos_customers WHERE id = $1`, customerID).Scan(&email)
+	if database.IsNoRows(err) {
+		return "", nil
+	}
+	return email, err
+}
+
 func (s *store) FindMemberByGoogle(ctx context.Context, sub, email string) (*MemberRef, error) {
 	var m MemberRef
 	err := s.q.QueryRow(ctx,

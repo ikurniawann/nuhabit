@@ -50,15 +50,14 @@ require_var DB_PASS_URLENCODED
 # secret, container lewat --env-file. Tanpa RUNTIME_CONFIG_CONTENT, file yang
 # sudah ada dipakai ulang (mis. diisi manual oleh admin).
 #
-# Dua flag login member hidup di file ini (lihat backend/docs/DEPLOY.md):
-#   OTP_ENABLED             dibaca Go API saat runtime; false = route OTP
-#                           member-portal menjawab 503 (tidak ada daftar
-#                           mandiri, Google untuk member baru, lupa password
-#                           via WhatsApp). Member masuk dengan password yang
-#                           di-set front desk dari halaman member di dashboard.
-#   NEXT_PUBLIC_OTP_ENABLED di-inline saat `next build`, jadi harus sudah ada
-#                           di RUNTIME_CONFIG_CONTENT SEBELUM build; mengubahnya
-#                           di container yang jalan tidak berpengaruh.
+# Kode OTP member (daftar mandiri, masuk dengan kode, lupa password) aktif
+# saat runtime bila Go API punya kanal WhatsApp atau email Resend (lihat
+# backend/docs/DEPLOY.md). Dua flag di file ini hanya untuk MEMATIKAN paksa:
+#   OTP_ENABLED=false             route OTP member-portal menjawab 503.
+#   NEXT_PUBLIC_OTP_ENABLED=false di-inline saat `next build`, jadi harus sudah
+#                                 ada di RUNTIME_CONFIG_CONTENT SEBELUM build;
+#                                 mengubahnya di container yang jalan tidak
+#                                 berpengaruh.
 ENV_FILE="${ENV_FILE:-$HOME/.config/arkiv/${CONTAINER_NAME}.env}"
 if [ -n "${RUNTIME_CONFIG_CONTENT:-}" ]; then
   mkdir -p "$(dirname "$ENV_FILE")"

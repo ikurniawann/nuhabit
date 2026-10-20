@@ -79,6 +79,7 @@ var (
 	GymPt                   = []string{"gym.pt"}
 	GymAssessments          = []string{"gym.assessments"}
 	GymGateDevices          = []string{"gym.gate-devices"}
+	GymReferrals            = []string{"gym.referrals"}
 	HrisMaster              = []string{"hris.master"}
 	HrisOrganization        = []string{"hris.organization"}
 	HrisInsights            = []string{"hris.insights"}
@@ -171,6 +172,7 @@ var ByKey = map[string][]string{
 	"gymPt":                   GymPt,
 	"gymAssessments":          GymAssessments,
 	"gymGateDevices":          GymGateDevices,
+	"gymReferrals":            GymReferrals,
 	"hrisMaster":              HrisMaster,
 	"hrisOrganization":        HrisOrganization,
 	"hrisInsights":            HrisInsights,

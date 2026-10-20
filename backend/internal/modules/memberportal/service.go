@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/modules/memberportal/referral"
 	"nuhabit/backend/internal/platform/ratelimit"
 )
 
@@ -27,10 +28,12 @@ type Repository interface {
 type Service struct {
 	repo       Repository
 	notifier   Notifier
+	mailer     OTPMailer
 	pusher     Pusher
 	payments   Payments
 	wallet     WalletLedger
 	loyalty    Loyalty
+	referrals  *referral.Service
 	log        *slog.Logger
 	now        func() time.Time
 	limits     *ratelimit.Limiter

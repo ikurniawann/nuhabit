@@ -74,24 +74,32 @@ func NewFreezeAllowance(r Rules, usedDays int) FreezeAllowance {
 	}
 }
 
-// CheckFreeze returns why the pass cannot be frozen for days from now, or "".
-// Only a running pass freezes: not a queued, frozen or ended one.
-func CheckFreeze(p PassState, now time.Time, days int, a FreezeAllowance) string {
+// FreezeProblem is why a pass cannot be frozen: a stable Code for clients
+// that translate it, the Message shown otherwise and the Days behind a
+// minimum or allowance refusal. The zero value means the freeze is allowed.
+type FreezeProblem struct {
+	Code    string
+	Message string
+	Days    int
+}
+
+// CheckFreeze returns why the pass cannot be frozen for days from now.
+func CheckFreeze(p PassState, now time.Time, days int, a FreezeAllowance) FreezeProblem {
 	switch {
 	case p.Status == PassFrozen:
-		return "Pass sudah dibekukan"
+		return FreezeProblem{Code: "PASS_ALREADY_FROZEN", Message: "Pass sudah dibekukan"}
 	case p.Status != PassActive || !p.EndsAt.After(now):
-		return "Hanya pass aktif yang bisa dibekukan"
+		return FreezeProblem{Code: "PASS_NOT_ACTIVE", Message: "Hanya pass aktif yang bisa dibekukan"}
 	case p.StartsAt.After(now):
-		return "Pass belum mulai berjalan"
+		return FreezeProblem{Code: "PASS_NOT_STARTED", Message: "Pass belum mulai berjalan"}
 	case a.MaxDaysPerYear == 0:
-		return "Pembekuan pass tidak tersedia"
+		return FreezeProblem{Code: "PASS_FREEZE_UNAVAILABLE", Message: "Pembekuan pass tidak tersedia"}
 	case days < a.MinDays:
-		return fmt.Sprintf("Pembekuan minimal %d hari", a.MinDays)
+		return FreezeProblem{Code: "PASS_FREEZE_TOO_SHORT", Message: fmt.Sprintf("Pembekuan minimal %d hari", a.MinDays), Days: a.MinDays}
 	case days > a.RemainingDays:
-		return fmt.Sprintf("Sisa jatah pembekuan tahun ini %d hari", a.RemainingDays)
+		return FreezeProblem{Code: "PASS_FREEZE_ALLOWANCE", Message: fmt.Sprintf("Sisa jatah pembekuan tahun ini %d hari", a.RemainingDays), Days: a.RemainingDays}
 	}
-	return ""
+	return FreezeProblem{}
 }
 
 // UnfreezeDays is how far ends_at moves when a freeze ends at `at`: the

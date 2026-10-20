@@ -5,9 +5,11 @@ import { useLang } from "./lang";
 import { AUTH_ID } from "./i18n-auth";
 import { CLASSES_ID } from "./i18n-classes";
 import { COACHING_ID } from "./i18n-coaching";
+import { ERRORS_ID } from "./i18n-errors";
 import { HOME_ID } from "./i18n-home";
 import { LOYALTY_ID } from "./i18n-loyalty";
 import { RACES_ID } from "./i18n-races";
+import { REFERRAL_ID } from "./i18n-referral";
 import { TRAIN_ID } from "./i18n-train";
 import { ID_WORKOUT } from "./i18n-workout";
 
@@ -166,6 +168,8 @@ export const ID: Record<string, string> = {
   ...ID_WORKOUT,
   ...RACES_ID,
   ...AUTH_ID,
+  ...ERRORS_ID,
+  ...REFERRAL_ID,
 };
 
 /** Isi placeholder `{name}` pada teks yang sudah diterjemahkan; yang tak berisi dibiarkan. */

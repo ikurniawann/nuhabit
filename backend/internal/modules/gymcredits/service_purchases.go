@@ -61,10 +61,10 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		return nil, err
 	}
 	if pkg == nil {
-		return nil, fail(http.StatusNotFound, "Paket tidak ditemukan")
+		return nil, errPackageNotFound
 	}
 	if !found {
-		return nil, fail(http.StatusNotFound, "Member tidak ditemukan")
+		return nil, errMemberNotFound
 	}
 	counts, err := s.repo.LivePurchaseCounts(ctx, tx, in.CustomerID)
 	if err != nil {
@@ -78,7 +78,7 @@ func (s *Service) createPurchase(ctx context.Context, tx database.Querier, in pu
 		ID: pkg.ID, Status: pkg.Status, PurchaseLimitPerMember: pkg.PurchaseLimitPerMember, BranchID: deref(pkg.BranchID),
 	}, counts[pkg.ID], active, deref(in.BranchID))
 	if problem != "" {
-		return nil, fail(http.StatusConflict, domain.PurchaseProblemMessages[problem])
+		return nil, failCode(http.StatusConflict, "PURCHASE_"+strings.ToUpper(string(problem)), domain.PurchaseProblemMessages[problem], nil)
 	}
 	// The branch the member buys at may price the package differently.
 	if in.BranchID != nil {
@@ -216,6 +216,12 @@ func renewsPassID(p *Purchase, meta map[string]any) string {
 
 const msgArkShort = "Saldo ARK Coin tidak cukup"
 
+// Member-facing failures shared by several use cases.
+var (
+	errPackageNotFound = failCode(http.StatusNotFound, "PACKAGE_NOT_FOUND", "Paket tidak ditemukan", nil)
+	errMemberNotFound  = failCode(http.StatusNotFound, "MEMBER_NOT_FOUND", "Member tidak ditemukan", nil)
+)
+
 // moveArk changes the ARK Coin balance for a purchase; the wallet keeps the
 // balance from going negative.
 func (s *Service) moveArk(ctx context.Context, tx database.Querier, p *Purchase, delta float64, notes string, actorID *string) error {
@@ -224,9 +230,9 @@ func (s *Service) moveArk(ctx context.Context, tx database.Querier, p *Purchase,
 	})
 	switch {
 	case errors.Is(err, ErrArkMemberNotFound):
-		return fail(http.StatusNotFound, "Member tidak ditemukan")
+		return errMemberNotFound
 	case errors.Is(err, ErrArkInsufficient):
-		return fail(http.StatusConflict, msgArkShort)
+		return failCode(http.StatusConflict, "ARK_INSUFFICIENT", msgArkShort, nil)
 	}
 	return err
 }
@@ -555,7 +561,7 @@ func (s *Service) StartQRISPurchase(ctx context.Context, in MemberPurchase, call
 // status page, which polls until the invoice is paid.
 func (s *Service) StartInvoicePurchase(ctx context.Context, in MemberPurchase, redirectURL func(purchaseID string) string) (*MemberPurchaseView, error) {
 	if !s.ports.Invoices.InvoiceConfigured() {
-		return nil, fail(http.StatusServiceUnavailable, "Pembayaran online belum tersedia: XENDIT_SECRET_KEY belum dikonfigurasi")
+		return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran online belum tersedia: XENDIT_SECRET_KEY belum dikonfigurasi", nil)
 	}
 	return s.startPendingPurchase(ctx, in, "invoice", func(purchase *Purchase, referenceID string) (map[string]any, error) {
 		profile, err := s.ports.Members.Profile(ctx, s.db, purchase.CustomerID)
@@ -631,7 +637,7 @@ func (s *Service) createQR(ctx context.Context, purchase *Purchase, referenceID 
 	config, err := s.ports.Gateway.ActiveConfig(ctx, s.db)
 	if err != nil {
 		if !s.canSimulate() {
-			return nil, fail(http.StatusServiceUnavailable, "Pembayaran QRIS belum tersedia: "+err.Error())
+			return nil, failCode(http.StatusServiceUnavailable, "PAYMENT_UNAVAILABLE", "Pembayaran QRIS belum tersedia: "+err.Error(), nil)
 		}
 		config = nil
 	}

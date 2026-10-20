@@ -13,7 +13,7 @@ import {
 } from "../api";
 import { BottomSheet } from "./sheet";
 import { formatNumber } from "@/lib/format";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { useMemberOtpConfig, whatsappOtpOn } from "@/lib/otp-availability";
 
 /**
  * Masuk member via OTP WhatsApp — memakai endpoint portal member yang sudah
@@ -37,6 +37,7 @@ export function MemberSheet({
   /** Dipanggil setelah login/logout berhasil supaya induk memuat ulang profil. */
   onChanged: () => Promise<void> | void;
 }) {
+  const otpOn = whatsappOtpOn(useMemberOtpConfig());
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -181,7 +182,7 @@ export function MemberSheet({
             Keluar
           </button>
         </div>
-      ) : !OTP_ENABLED ? (
+      ) : !otpOn ? (
         <p className="text-sm text-gray-600">Login member dengan kode WhatsApp sementara tidak tersedia. Anda masih dapat melanjutkan pesanan sebagai tamu.</p>
       ) : step === "phone" ? (
         <div>

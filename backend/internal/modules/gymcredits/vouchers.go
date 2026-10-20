@@ -33,12 +33,13 @@ type VoucherCheck struct {
 }
 
 // VoucherQuote is the engine's answer: the discount and campaign name, or a
-// member-facing Message when the code does not apply.
+// member-facing Message and the engine's Reason when the code does not apply.
 type VoucherQuote struct {
 	OK       bool
 	Discount float64
 	Label    string
 	Message  string
+	Reason   string
 }
 
 // VoucherRecapture is what a late payment did with the purchase's
@@ -78,20 +79,26 @@ type VoucherPreviewView struct {
 // member's phone.
 func (s *Service) voucherCheck(ctx context.Context, q database.Querier, customerID, packageID, code string, price float64) (VoucherCheck, error) {
 	if s.ports.Vouchers == nil {
-		return VoucherCheck{}, fail(http.StatusUnprocessableEntity, "Kode voucher belum bisa dipakai untuk paket kelas")
+		return VoucherCheck{}, failCode(http.StatusUnprocessableEntity, "VOUCHER_UNAVAILABLE", "Kode voucher belum bisa dipakai untuk paket kelas", nil)
 	}
 	profile, err := s.ports.Members.Profile(ctx, q, customerID)
 	if err != nil {
 		return VoucherCheck{}, err
 	}
 	if profile == nil {
-		return VoucherCheck{}, fail(http.StatusNotFound, "Member tidak ditemukan")
+		return VoucherCheck{}, errMemberNotFound
 	}
 	return VoucherCheck{Code: strings.TrimSpace(code), Subtotal: price, CustomerID: customerID, Phone: profile.Phone, PackageID: packageID}, nil
 }
 
+// voucherRejected is a 422 coded VOUCHER_<REASON> (VOUCHER_REJECTED when
+// the engine gave no reason).
 func voucherRejected(quote VoucherQuote) error {
-	return fail(http.StatusUnprocessableEntity, quote.Message)
+	code := "VOUCHER_REJECTED"
+	if quote.Reason != "" {
+		code = "VOUCHER_" + strings.ToUpper(strings.ReplaceAll(quote.Reason, "-", "_"))
+	}
+	return failCode(http.StatusUnprocessableEntity, code, quote.Message, nil)
 }
 
 // quoteVoucher checks the code against price without claiming it; a code
@@ -127,7 +134,7 @@ func (s *Service) holdVoucher(ctx context.Context, tx database.Querier, customer
 		return voucherRejected(quote)
 	}
 	if quote.Discount != discount {
-		return fail(http.StatusConflict, "Diskon voucher berubah, coba lagi")
+		return failCode(http.StatusConflict, "VOUCHER_CHANGED", "Diskon voucher berubah, coba lagi", nil)
 	}
 	return nil
 }
@@ -189,7 +196,7 @@ func (s *Service) PreviewVoucher(ctx context.Context, customerID, packageID, cod
 		return nil, err
 	}
 	if pkg == nil || pkg.Status != "active" {
-		return nil, fail(http.StatusNotFound, "Paket tidak ditemukan")
+		return nil, errPackageNotFound
 	}
 	price := pkg.PriceIdr
 	if branchID != nil {

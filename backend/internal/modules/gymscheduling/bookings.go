@@ -24,7 +24,7 @@ type BookResult struct {
 }
 
 func denial(reason domain.BookingDenialReason) error {
-	return schedulingError(domain.BookingDenialLabel[reason])
+	return codedError(denialCode(reason), domain.BookingDenialLabel[reason], nil)
 }
 
 func (s *SessionRow) bookable() domain.BookableSession {
@@ -143,7 +143,7 @@ func (s *Service) bookSession(ctx context.Context, customerID, sessionID, source
 			return err
 		}
 		if !found {
-			return schedulingError("Member tidak ditemukan", 404)
+			return codedError("MEMBER_NOT_FOUND", "Member tidak ditemukan", nil, 404)
 		}
 		stats, err := s.repo.BookingStats(ctx, q, session.ID, customerID, now)
 		if err != nil {
@@ -153,7 +153,7 @@ func (s *Service) bookSession(ctx context.Context, customerID, sessionID, source
 		in.OverrideWindow = overrideWindow && now.Before(session.EndsAt)
 		decision := domain.EvaluateBookingEligibility(in)
 		if decision.Kind == domain.DecisionDeny {
-			return eligibilityError(in, decision.Reason)
+			return denialError(in, decision.Reason)
 		}
 
 		status := domain.BookingConfirmed
@@ -236,7 +236,7 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 			return err
 		}
 		if !domain.CanTransitionBooking(booking.Status, domain.BookingCancelled) {
-			return schedulingError("Booking ini tidak bisa dibatalkan lagi")
+			return codedError("BOOKING_NOT_CANCELLABLE", "Booking ini tidak bisa dibatalkan lagi", nil)
 		}
 		rules, err := s.Rules.ForBranch(ctx, q, session.BranchID)
 		if err != nil {
@@ -430,7 +430,7 @@ func (s *Service) ConfirmWaitlistOffer(ctx context.Context, bookingID, customerI
 			return err
 		}
 		if reason := domain.EvaluateMemberEligibility(in); reason != "" {
-			return schedulingError(in.DenialMessage(reason))
+			return denialError(in, reason)
 		}
 		if err := s.repo.ConfirmFromWaitlist(ctx, q, booking.ID); err != nil {
 			return err

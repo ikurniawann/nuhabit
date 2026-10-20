@@ -49,13 +49,15 @@ func WriteError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 type errorEnvelope struct {
-	Success bool   `json:"success"`
-	Error   string `json:"error"`
-	Details any    `json:"details,omitempty"`
+	Success bool           `json:"success"`
+	Error   string         `json:"error"`
+	Details any            `json:"details,omitempty"`
+	Code    string         `json:"code,omitempty"`
+	Params  map[string]any `json:"params,omitempty"`
 }
 
 func writeEnvelope(w http.ResponseWriter, e *Error) {
-	_ = JSON(w, e.Status, errorEnvelope{Success: false, Error: e.Message, Details: e.Details})
+	_ = JSON(w, e.Status, errorEnvelope{Success: false, Error: e.Message, Details: e.Details, Code: e.Code, Params: e.Params})
 }
 
 // JSON writes body as JSON with the given status. HTML characters are not

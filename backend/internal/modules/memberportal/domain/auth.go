@@ -34,6 +34,11 @@ const (
 
 var nonDigit = regexp.MustCompile(`\D`)
 
+// ValidEmail reports whether email has the shape registration accepts.
+func ValidEmail(email string) bool {
+	return JSLength(email) <= registrationMailMax && emailRe.MatchString(email)
+}
+
 // NormalizePhoneDigits turns any Indonesian phone spelling into 62xxx digits.
 // It returns "" when the number is empty or not 10 to 15 digits long.
 func NormalizePhoneDigits(phone string) string {

@@ -43,6 +43,8 @@ type Venue struct {
 // AuthRepository is the OTP, session and registration storage.
 type AuthRepository interface {
 	FindMemberByPhone(ctx context.Context, phone string) (*MemberRef, error)
+	// MemberEmail is the member's email, "" when none is stored.
+	MemberEmail(ctx context.Context, customerID string) (string, error)
 	// FindMemberByGoogle matches the linked Google subject first, then an
 	// active member with that email.
 	FindMemberByGoogle(ctx context.Context, sub, email string) (*MemberRef, error)
@@ -72,7 +74,10 @@ var (
 	errOTPTooManyTries  = fail(429, "Terlalu banyak percobaan. Minta kode baru")
 	errOTPWrongCode     = fail(400, "Kode salah")
 	errOTPTooManyIssued = fail(429, "Terlalu banyak permintaan. Coba lagi dalam 10 menit")
+	errOTPTooManyToday  = fail(429, domain.TooManyCodesToday)
 	errTooManyFromIP    = fail(429, domain.TooManyFromIP)
+	errOTPNoEmail       = &failure{Status: 409, Code: "otp_no_email",
+		Message: "Kode masuk dikirim lewat email, tapi akun ini belum punya email. Masuk dengan password atau hubungi front desk."}
 )
 
 // ipBrake applies the per-IP brake for kind "otp", "verify", "google" or "login",
@@ -89,11 +94,21 @@ func (s *Service) ipBrake(ctx context.Context, kind, ip string) error {
 	if err == nil && !allowed {
 		return refusal
 	}
+	if err != nil || kind != "otp" {
+		return err
+	}
+	daily := domain.IPRuleOTPDaily
+	allowed, _, err = s.limits.Sliding(ctx, "member-otp-day:"+ip, daily.Limit, daily.Window, s.now())
+	if err == nil && !allowed {
+		return refusal
+	}
 	return err
 }
 
-// OTPIssued is the result of sending a code.
+// OTPIssued is the result of sending a code: the channel it went out on
+// and whether the provider accepted it.
 type OTPIssued struct {
+	Channel     string
 	WADelivered bool
 	DevBypass   bool
 }
@@ -119,16 +134,22 @@ func (s *Service) RequestLoginOTP(ctx context.Context, ip string, rawPhone any) 
 	if member == nil {
 		return nil, &failure{Status: 404, Message: "Nomor belum terdaftar sebagai member. Daftar dulu lewat tombol Daftar.", Code: "not_registered"}
 	}
-	delivered, err := s.issueOTP(ctx, phone)
+	email, err := s.repo.MemberEmail(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
-	return &OTPIssued{WADelivered: delivered, DevBypass: s.bypass().Active()}, nil
+	issued, err := s.issueOTP(ctx, phone, email)
+	if err != nil {
+		return nil, err
+	}
+	issued.DevBypass = s.bypass().Active()
+	return issued, nil
 }
 
-// RequestRegisterOTP sends a code for self registration. The answer is the
-// same for members and non-members so it never reveals who is registered.
-func (s *Service) RequestRegisterOTP(ctx context.Context, ip string, rawPhone any) (*OTPIssued, error) {
+// RequestRegisterOTP sends a code for self registration, to the email the
+// visitor typed when email is the only channel. The answer is the same for
+// members and non-members so it never reveals who is registered.
+func (s *Service) RequestRegisterOTP(ctx context.Context, ip string, rawPhone any, email string) (*OTPIssued, error) {
 	if err := s.ipBrake(ctx, "otp", ip); err != nil {
 		return nil, err
 	}
@@ -142,11 +163,10 @@ func (s *Service) RequestRegisterOTP(ctx context.Context, ip string, rawPhone an
 	if s.bypass().Active() {
 		return &OTPIssued{WADelivered: false, DevBypass: true}, nil
 	}
-	delivered, err := s.issueOTP(ctx, phone)
-	if err != nil {
-		return nil, err
+	if s.otpChannel(ctx) == ChannelEmail && !domain.ValidEmail(email) {
+		return nil, &failure{Status: 400, Message: "Masukkan email yang valid untuk menerima kode", Field: "email"}
 	}
-	return &OTPIssued{WADelivered: delivered}, nil
+	return s.issueOTP(ctx, phone, email)
 }
 
 // phoneArg mirrors normalizePhoneDigits(body.phone): missing is empty, a
@@ -161,33 +181,56 @@ func phoneArg(raw any) (string, error) {
 	return "", errors.New("phone is not a string")
 }
 
-// issueOTP stores and sends a fresh code, 3 per number per 10 minutes.
-func (s *Service) issueOTP(ctx context.Context, phone string) (bool, error) {
+// issueOTP stores a fresh code for the number and sends it on WhatsApp, or
+// to email when that is the only channel: 3 per number per 10 minutes and
+// 10 per number per day.
+func (s *Service) issueOTP(ctx context.Context, phone, email string) (*OTPIssued, error) {
+	channel := s.otpChannel(ctx)
+	if channel == ChannelEmail && email == "" {
+		return nil, errOTPNoEmail
+	}
 	recent, err := s.repo.CountRecentOTP(ctx, phone, domain.OTPRateLimitWindow)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if recent >= domain.OTPRateLimitCount {
-		return false, errOTPTooManyIssued
+		return nil, errOTPTooManyIssued
+	}
+	daily := domain.PhoneRuleOTPDaily
+	allowed, _, err := s.limits.Sliding(ctx, "member-otp-phone:"+phone, daily.Limit, daily.Window, s.now())
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
+		return nil, errOTPTooManyToday
 	}
 	code, err := domain.GenerateOTPCode()
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if err := s.repo.InsertOTP(ctx, phone, domain.HashSecret(code), domain.OTPTTL); err != nil {
-		return false, err
+		return nil, err
 	}
-	sent := s.notifier.SendOTP(ctx, phone, code, domain.OTPMessage(s.brand, code))
-	if !sent.Delivered {
+	var delivered bool
+	reason := "no channel configured"
+	switch channel {
+	case ChannelWhatsApp:
+		sent := s.notifier.SendOTP(ctx, phone, code, domain.OTPMessage(s.brand, code))
+		delivered, reason = sent.Delivered, sent.Reason
+	case ChannelEmail:
+		subject, body := otpEmail(s.brand, code)
+		delivered, reason = s.mailer.Send(ctx, email, subject, body), "email send failed"
+	}
+	if !delivered {
 		// The code only reaches non-production logs: in production anyone
 		// reading logs could sign in as any member.
 		if s.production {
-			s.log.Error("[member-portal] OTP WA gagal terkirim", "phone", phone, "reason", sent.Reason)
+			s.log.Error("[member-portal] OTP gagal terkirim", "phone", phone, "channel", channel, "reason", reason)
 		} else {
-			s.log.Warn("[member-portal] OTP WA gagal terkirim; kode utk debug dev", "phone", phone, "reason", sent.Reason, "code", code)
+			s.log.Warn("[member-portal] OTP gagal terkirim; kode utk debug dev", "phone", phone, "channel", channel, "reason", reason, "code", code)
 		}
 	}
-	return sent.Delivered, nil
+	return &OTPIssued{Channel: channel, WADelivered: delivered && channel == ChannelWhatsApp}, nil
 }
 
 // consumeOTP checks the newest code of the number and marks it used. Each
@@ -408,11 +451,23 @@ func (s *Service) Register(ctx context.Context, ip string, body map[string]any) 
 	if rejected != nil {
 		return nil, rejected
 	}
+	s.attachReferral(ctx, member.ID, jsString(body["referral_code"]), jsString(body["device_id"]))
 	token, err := s.createSession(ctx, member.ID)
 	if err != nil {
 		return nil, err
 	}
 	return &SignedIn{Name: member.Name, Token: token}, nil
+}
+
+// attachReferral records the sign-up's referral code and device. A failure
+// is logged and never fails the registration.
+func (s *Service) attachReferral(ctx context.Context, customerID, code, deviceID string) {
+	if s.referrals == nil {
+		return
+	}
+	if err := s.referrals.Attach(ctx, customerID, code, deviceID); err != nil {
+		s.log.ErrorContext(ctx, "[member-portal] referral gagal dicatat", "customer_id", customerID, "error", err)
+	}
 }
 
 // createSession stores the hash of a random 32 byte token for 30 days.

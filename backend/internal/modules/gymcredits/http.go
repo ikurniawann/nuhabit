@@ -93,11 +93,7 @@ func ok(w http.ResponseWriter, data any) error {
 func asHTTP(err error) error {
 	var e *Error
 	if errors.As(err, &e) {
-		out := httpx.Status(e.Status, e.Message)
-		if e.Code != "" {
-			out.Details = map[string]string{"code": e.Code}
-		}
-		return out
+		return httpx.Coded(e.Status, e.Code, e.Message, e.Params)
 	}
 	return err
 }

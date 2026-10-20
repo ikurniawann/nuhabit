@@ -3,8 +3,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { Suspense, useEffect, useState } from "react";
+import {
+  deviceId,
+  forgetReferralCode,
+  lookupReferral,
+  normalizeReferralCode,
+  rememberReferralCode,
+  storedReferralCode,
+  type ReferralInvite,
+} from "@/lib/member-portal/referral";
+import { useMemberOtpConfig, type OtpChannel } from "@/lib/otp-availability";
 import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
@@ -48,15 +57,17 @@ async function withRetry<T>(run: () => Promise<T>, attempts = 3): Promise<T> {
 
 /** useSearchParams needs a Suspense boundary for prerendering. */
 export function RegisterPage() {
-  if (!OTP_ENABLED) return <FrontDeskSignup />;
+  const otp = useMemberOtpConfig();
+  if (!otp) return <Spinner />;
+  if (!otp.enabled) return <FrontDeskSignup />;
   return (
     <Suspense fallback={<Spinner />}>
-      <Register />
+      <Register channel={otp.channel} referralActive={otp.referralActive} />
     </Suspense>
   );
 }
 
-/** Without WhatsApp verification there is no self-service sign-up. */
+/** Without code verification there is no self-service sign-up. */
 function FrontDeskSignup() {
   const t = useT();
   return (
@@ -79,11 +90,14 @@ function FrontDeskSignup() {
   );
 }
 
-function Register() {
+function Register({ channel, referralActive }: { channel: OtpChannel | null; referralActive: boolean }) {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
   const searchParams = useSearchParams();
+  // A shared link (?ref=CODE) is remembered so it survives the Google detour.
+  const [referralCode, setReferralCode] = useState(() => rememberReferralCode(searchParams.get("ref")) || storedReferralCode());
+  const invite = useReferralInvite(referralActive ? referralCode : "");
   // Datang dari "Masuk dengan Google": email dan nama sudah terverifikasi,
   // tiketnya ikut dikirim saat mendaftar.
   const googleTicket = searchParams.get("ticket") ?? "";
@@ -94,6 +108,7 @@ function Register() {
   const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [phone, setPhone] = useState("");
   const [devBypass, setDevBypass] = useState(false);
+  const [sentTo, setSentTo] = useState<OtpChannel | null>(channel);
   const [code, setCode] = useState("");
   const [fullName, setFullName] = useState(searchParams.get("name") ?? "");
   const [dateOfBirth, setDateOfBirth] = useState("");
@@ -114,12 +129,13 @@ function Register() {
     setBusy(true);
     setError("");
     try {
-      const res = await post<{ dev_bypass?: boolean }>("/register/otp", { phone });
+      const res = await post<{ dev_bypass?: boolean; channel?: OtpChannel }>("/register/otp", { phone, email });
       if (!res.success) {
         setError(res.error ?? t("Something went wrong."));
         return;
       }
       setDevBypass(Boolean(res.dev_bypass));
+      setSentTo(res.channel ?? channel);
       next();
     } finally {
       setBusy(false);
@@ -157,6 +173,8 @@ function Register() {
           birth_date: dateOfBirth,
           wa_consent: waConsent,
           ...(googleTicket ? { google_ticket: googleTicket } : {}),
+          ...(referralActive && referralCode ? { referral_code: referralCode } : {}),
+          device_id: deviceId(),
         });
         if (!res.success) {
           setError(res.error ?? t("Something went wrong."));
@@ -165,6 +183,7 @@ function Register() {
           return;
         }
         setRegistered(true);
+        forgetReferralCode();
       }
       if (!(await saveDetails())) {
         setError(t("Your account is ready, but your waiver and details did not save. Try again."));
@@ -220,6 +239,25 @@ function Register() {
                 placeholder="08xxxxxxxxxx"
               />
             </div>
+            {referralActive ? (
+              <div>
+                <label className="nh-label">{t("Referral code (optional)")}</label>
+                <input
+                  className="nh-input uppercase"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  autoCapitalize="characters"
+                  placeholder="NH2K7QXA"
+                />
+                {invite ? (
+                  <p className="mt-2 text-xs font-bold text-nh-forest">
+                    {t("Invited by {name}. Buy your first package after signing up to claim your welcome reward.", {
+                      name: invite.referrer_name,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <button
               className="nh-btn-brand"
               disabled={busy || !email.includes("@") || phone.length < 6}
@@ -245,7 +283,9 @@ function Register() {
               <p className="mt-2 text-xs text-nh-muted">
                 {devBypass
                   ? t("Local dev: no code needed, continue.")
-                  : t("We sent a code to WhatsApp {phone}.", { phone })}
+                  : sentTo === "email"
+                    ? t("We sent a code to {email}.", { email })
+                    : t("We sent a code to WhatsApp {phone}.", { phone })}
               </p>
             </div>
             <button className="nh-btn-brand" disabled={!devBypass && code.length < 6} onClick={next}>
@@ -386,4 +426,24 @@ function Register() {
       </div>
     </div>
   );
+}
+
+/** Who invited, for a code that looks valid; null while unknown or invalid. */
+function useReferralInvite(code: string): ReferralInvite | null {
+  const normalized = normalizeReferralCode(code);
+  const [invite, setInvite] = useState<ReferralInvite | null>(null);
+  useEffect(() => {
+    if (!normalized) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      void lookupReferral(normalized).then((found) => {
+        if (live) setInvite(found);
+      });
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [normalized]);
+  return normalized && invite?.code === normalized ? invite : null;
 }

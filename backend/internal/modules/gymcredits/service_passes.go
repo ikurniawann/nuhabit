@@ -71,7 +71,7 @@ func (s *Service) changePass(ctx context.Context, id string, by PassActor, fn fu
 			return err
 		}
 		if p == nil || (by.CustomerID != "" && p.CustomerID != by.CustomerID) {
-			return fail(http.StatusNotFound, "Pass tidak ditemukan")
+			return failCode(http.StatusNotFound, "PASS_NOT_FOUND", "Pass tidak ditemukan", nil)
 		}
 		now := s.clock()
 		if err := fn(tx, p, now); err != nil {
@@ -107,8 +107,12 @@ func (s *Service) FreezePass(ctx context.Context, id string, days int, by PassAc
 		if err != nil {
 			return err
 		}
-		if msg := domain.CheckFreeze(p.state(), now, days, allowance); msg != "" {
-			return fail(http.StatusConflict, msg)
+		if problem := domain.CheckFreeze(p.state(), now, days, allowance); problem.Code != "" {
+			var params map[string]any
+			if problem.Days > 0 {
+				params = map[string]any{"days": problem.Days}
+			}
+			return failCode(http.StatusConflict, problem.Code, problem.Message, params)
 		}
 		if err := s.repo.FreezePass(ctx, tx, p.ID, now, now.Add(time.Duration(days)*day)); err != nil {
 			return err
@@ -122,7 +126,7 @@ func (s *Service) FreezePass(ctx context.Context, id string, days int, by PassAc
 func (s *Service) UnfreezePass(ctx context.Context, id string, by PassActor) (*PassView, error) {
 	return s.changePass(ctx, id, by, func(tx pgx.Tx, p *PassRow, now time.Time) error {
 		if p.Status != domain.PassFrozen {
-			return fail(http.StatusConflict, "Pass tidak sedang dibekukan")
+			return failCode(http.StatusConflict, "PASS_NOT_FROZEN", "Pass tidak sedang dibekukan", nil)
 		}
 		rules, err := s.Rules(ctx, tx, p.BranchID)
 		if err != nil {
@@ -223,7 +227,7 @@ func (s *Service) ExtendPass(ctx context.Context, id string, days int, reason, s
 func (s *Service) SetAutoRenew(ctx context.Context, id string, on bool, renewWith string, by PassActor) (*PassView, error) {
 	return s.changePass(ctx, id, by, func(tx pgx.Tx, p *PassRow, _ time.Time) error {
 		if !isLive(p) {
-			return fail(http.StatusConflict, "Pass sudah berakhir")
+			return failCode(http.StatusConflict, "PASS_ENDED", "Pass sudah berakhir", nil)
 		}
 		if renewWith == "" {
 			renewWith = p.RenewWith

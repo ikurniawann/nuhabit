@@ -2,7 +2,7 @@
 export const SELECT =
   "h-10 w-full rounded-full border border-border bg-card px-4 text-sm text-foreground outline-none focus-visible:border-forest";
 
-/** Error API gym: pesan json.error dan details.code (mis. SHIFT_REQUIRED). */
+/** Error API gym: pesan json.error dan json.code (mis. SHIFT_REQUIRED). */
 export class GymApiError extends Error {
   constructor(
     message: string,
@@ -21,7 +21,7 @@ export async function call<T>(url: string, init?: RequestInit): Promise<T> {
     headers: init?.body ? { "Content-Type": "application/json" } : undefined,
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok || !json.success) throw new GymApiError(json.error || "Permintaan gagal", json.details?.code);
+  if (!res.ok || !json.success) throw new GymApiError(json.error || "Permintaan gagal", json.code);
   return json.data as T;
 }
 

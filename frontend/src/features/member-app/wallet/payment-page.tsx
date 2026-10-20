@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
-import { ApiError } from "../lib/api";
+import { useErrorText } from "../lib/error-codes";
 import type { PaymentView } from "../lib/classes-view";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
@@ -29,6 +29,7 @@ const DEFAULT_WINDOW_SEC = 15 * 60;
  */
 export function PaymentPage() {
   const t = useT();
+  const errorText = useErrorText();
   const { paymentId = "" } = useParams<{ paymentId: string }>();
   const invalidate = useInvalidateAll();
   const { data, refetch } = usePayment(paymentId);
@@ -55,7 +56,7 @@ export function PaymentPage() {
         if (res.data?.payment.status === "pending") setError(t("Payment not received yet. Try again in a moment."));
       }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("Payment failed."));
+      setError(errorText(e, t("Payment failed.")));
     } finally {
       setBusy(false);
     }

@@ -20,6 +20,7 @@ type collNotifier struct {
 	sent chan string
 }
 
+func (n *collNotifier) Configured(context.Context) bool                          { return true }
 func (n *collNotifier) SendOTP(context.Context, string, string, string) Delivery { return Delivery{} }
 
 func (n *collNotifier) SendText(_ context.Context, target, message, _ string) Delivery {

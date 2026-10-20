@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { OTP_ENABLED } from "@/lib/otp-availability";
+import { useMemberOtpConfig } from "@/lib/otp-availability";
 import { useMemberLogin } from "../lib/use-member-login";
 import { useT } from "../lib/i18n";
 import { asset, m } from "../lib/links";
@@ -15,6 +15,7 @@ import "../member-app.css";
 
 export function LoginPage() {
   const t = useT();
+  const otp = useMemberOtpConfig();
   const router = useRouter();
   const qc = useQueryClient();
   const onSignedIn = useCallback(() => {
@@ -135,20 +136,20 @@ export function LoginPage() {
               <GoogleSignIn onSignedIn={onSignedIn} onNeedsPhone={onNeedsPhone} />
             </div>
 
-            {OTP_ENABLED ? (
+            {otp?.enabled ? (
               <Link href={m("/auth/otp")} className="mt-4 block text-center text-sm font-bold text-nh-forest">
-                {t("Sign in with a WhatsApp code")}
+                {otp.channel === "email" ? t("Sign in with an email code") : t("Sign in with a WhatsApp code")}
               </Link>
             ) : null}
           </div>
 
-          {OTP_ENABLED ? (
+          {otp?.enabled ? (
             <Link href={m("/auth/register")} className="nh-btn-ghost mt-3 w-full">
               {t("Create your membership")}
             </Link>
-          ) : (
+          ) : otp ? (
             <p className="mt-4 text-center text-sm text-nh-muted">{t("New here? The front desk creates your membership.")}</p>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

@@ -26,6 +26,10 @@ export const STORAGE_KEYS = {
   memberLang: { key: "nuhabit.member.lang", legacy: "bcd-member-lang" },
   // Bahasa akun terakhir yang dilihat perangkat ini (pengaturan athlete).
   memberAccountLang: { key: "nuhabit.member.account-lang", legacy: "bcd-member-account-lang" },
+  // Id acak perangkat untuk penjaga referral "perangkat yang sama".
+  memberDeviceId: { key: "nuhabit.member.device-id", legacy: "bcd-member-device-id" },
+  // Kode referral dari tautan ajak teman, dipakai saat mendaftar.
+  memberReferralCode: { key: "nuhabit.member.referral-code", legacy: "bcd-member-referral-code" },
 } as const satisfies Record<string, StorageKey>;
 
 function browserStorage(): Storage | null {
