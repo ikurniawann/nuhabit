@@ -93,6 +93,8 @@ export interface BranchProfile {
   id: string;
   name: string;
   slug: string;
+  /** Zona cabang (IANA): jadwal kelas, jam buka dan hari laporan cabang. */
+  timezone: string;
   is_public: boolean;
   address: string | null;
   city: string | null;

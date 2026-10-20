@@ -206,7 +206,7 @@ function BusinessTreeRow({
               variant="ghost"
               onClick={() => onProfile(node)}
               className="h-8 gap-1 px-2 text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-800"
-              title="Profil publik cabang"
+              title="Profil publik dan zona waktu cabang"
             >
               <Globe className="h-3.5 w-3.5" />
               Profil

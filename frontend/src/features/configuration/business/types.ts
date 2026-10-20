@@ -15,6 +15,8 @@ export interface BusinessBranch {
   name: string;
   code: string;
   is_active: boolean;
+  /** Zona cabang (IANA), mis. Asia/Makassar. */
+  timezone?: string;
   warehouses: BusinessWarehouse[];
 }
 

@@ -6,7 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogFooter, DialogPanel, DialogPanelBody, DialogPanelDescription, DialogPanelForm, DialogPanelHeader, DialogPanelTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { BRANCH_TIME_ZONES } from "@/lib/timezone";
 import { ImageUrlField, ItemListField, LabeledField, LinesField, LongText } from "@/features/site/admin/fields";
 import { fetchBranchProfile, saveBranchProfile, type BranchProfile } from "../api";
 
@@ -25,6 +27,7 @@ const orNumber = (v: string) => (v.trim() === "" ? null : Number(v));
 
 interface Form {
   slug: string;
+  timezone: string;
   is_public: boolean;
   address: string;
   city: string;
@@ -45,6 +48,7 @@ interface Form {
 function toForm(p: BranchProfile): Form {
   return {
     slug: p.slug,
+    timezone: p.timezone,
     is_public: p.is_public,
     address: str(p.address),
     city: str(p.city),
@@ -66,6 +70,7 @@ function toForm(p: BranchProfile): Form {
 function toBody(f: Form) {
   return {
     slug: f.slug.trim(),
+    timezone: f.timezone,
     is_public: f.is_public,
     address: orNull(f.address),
     city: orNull(f.city),
@@ -84,7 +89,7 @@ function toBody(f: Form) {
   };
 }
 
-/** Settings → Business → branch row → "Profil publik": what /locations/[slug] shows. */
+/** Settings → Business → branch row → "Profil": the branch time zone and what /locations/[slug] shows. */
 export function BranchProfileDialog({ branchId, branchName, onClose }: { branchId: string | null; branchName: string; onClose(): void }) {
   const profile = useQuery({
     queryKey: ["business", "branch-profile", branchId],
@@ -130,10 +135,29 @@ function ProfileForm({ branchId, branchName, initial, onClose }: { branchId: str
       }}
     >
       <DialogPanelHeader>
-        <DialogPanelTitle>Profil publik: {branchName}</DialogPanelTitle>
-        <DialogPanelDescription>Halaman cabang di situs. Aktifkan &quot;Tampil di situs&quot; agar muncul di /locations.</DialogPanelDescription>
+        <DialogPanelTitle>Profil cabang: {branchName}</DialogPanelTitle>
+        <DialogPanelDescription>
+          Zona waktu cabang dan halaman cabang di situs. Aktifkan &quot;Tampil di situs&quot; agar muncul di /locations.
+        </DialogPanelDescription>
       </DialogPanelHeader>
       <DialogPanelBody className="space-y-4">
+        <LabeledField
+          label="Zona waktu"
+          hint="Jadwal kelas, jam open gym, jam PT coach, batas booking harian, struk dan laporan cabang ini memakai zona ini."
+        >
+          <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
+            <SelectTrigger aria-label="Zona waktu">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {BRANCH_TIME_ZONES.map((z) => (
+                <SelectItem key={z.value} value={z.value}>
+                  {z.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </LabeledField>
         <div className="flex items-center justify-between rounded-2xl bg-surface-2 px-4 py-3">
           <span className="text-sm font-medium">Tampil di situs</span>
           <Switch aria-label="Tampil di situs" checked={form.is_public} onCheckedChange={(v) => set("is_public", v)} />
