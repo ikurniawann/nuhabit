@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { formatTime } from "@/lib/format";
 import { BOOKING_BADGE, GYM_KEYS, schedulingApi, type CheckInResult, type DeskMember } from "../api";
 import { useDebounced } from "@/features/gym/use-debounced";
+import { WaiverDeskForm } from "./waiver-desk-form";
 
 /**
  * Check-in tanpa QR: cari member (nama, HP, kode member), lihat booking
@@ -58,7 +59,13 @@ export function DeskMemberSearch({ onResult }: { onResult: (result: CheckInResul
       ) : (
         <ul className="flex flex-col gap-2">
           {(members.data ?? []).map((m) => (
-            <MemberRow key={m.id} member={m} pending={checkIn.isPending} onCheckIn={(id) => checkIn.mutate(id)} />
+            <MemberRow
+              key={m.id}
+              member={m}
+              pending={checkIn.isPending}
+              onCheckIn={(id) => checkIn.mutate(id)}
+              onWaiver={() => void queryClient.invalidateQueries({ queryKey: GYM_KEYS.deskMembers })}
+            />
           ))}
         </ul>
       )}
@@ -66,14 +73,34 @@ export function DeskMemberSearch({ onResult }: { onResult: (result: CheckInResul
   );
 }
 
-function MemberRow({ member, pending, onCheckIn }: { member: DeskMember; pending: boolean; onCheckIn: (bookingId: string) => void }) {
+function MemberRow({
+  member,
+  pending,
+  onCheckIn,
+  onWaiver,
+}: {
+  member: DeskMember;
+  pending: boolean;
+  onCheckIn: (bookingId: string) => void;
+  onWaiver: () => void;
+}) {
   return (
     <li className="rounded-2xl bg-surface-2 px-4 py-3">
       <p className="flex flex-wrap items-center gap-2 font-medium">
         {member.name ?? "Tanpa nama"}
         {member.is_active === false && <Badge variant="destructive">Nonaktif</Badge>}
+        {member.waiver_current ? (
+          <Badge variant="success">Waiver v{member.waiver_version}</Badge>
+        ) : (
+          <Badge variant="warning">{member.waiver_accepted_at ? `Waiver lama v${member.waiver_version}` : "Belum waiver"}</Badge>
+        )}
       </p>
       <p className="font-mono text-xs text-muted-foreground">{[member.phone, member.member_code].filter(Boolean).join(" · ")}</p>
+      {!member.waiver_current && (
+        <div className="mt-2">
+          <WaiverDeskForm customerId={member.id} onRecorded={onWaiver} />
+        </div>
+      )}
       {member.bookings.length === 0 ? (
         <p className="mt-2 text-xs text-muted-foreground">Tidak ada booking hari ini. Pakai tab Drop-in untuk walk-in.</p>
       ) : (
