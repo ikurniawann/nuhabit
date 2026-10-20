@@ -69,6 +69,9 @@ export const ERROR_MESSAGES: Record<string, string> = {
   PASS_FREEZE_ALLOWANCE: "You have {days} freeze days left this year.",
   PASS_NOT_FROZEN: "Your pass isn't frozen.",
   PASS_ENDED: "Your pass has ended.",
+  // Referral
+  REFERRAL_INVALID: "Referral code not found, or the program is paused.",
+  REFERRAL_RATE_LIMITED: "Too many requests. Try again in a few minutes.",
 };
 
 /** The insufficient-credit denial names the numbers only when other bookings hold credits, as the server text does. */

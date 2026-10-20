@@ -3,7 +3,16 @@
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import {
+  deviceId,
+  forgetReferralCode,
+  lookupReferral,
+  normalizeReferralCode,
+  rememberReferralCode,
+  storedReferralCode,
+  type ReferralInvite,
+} from "@/lib/member-portal/referral";
 import { useMemberOtpConfig, type OtpChannel } from "@/lib/otp-availability";
 import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { memberApi } from "../lib/api";
@@ -53,7 +62,7 @@ export function RegisterPage() {
   if (!otp.enabled) return <FrontDeskSignup />;
   return (
     <Suspense fallback={<Spinner />}>
-      <Register channel={otp.channel} />
+      <Register channel={otp.channel} referralActive={otp.referralActive} />
     </Suspense>
   );
 }
@@ -81,11 +90,14 @@ function FrontDeskSignup() {
   );
 }
 
-function Register({ channel }: { channel: OtpChannel | null }) {
+function Register({ channel, referralActive }: { channel: OtpChannel | null; referralActive: boolean }) {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
   const searchParams = useSearchParams();
+  // A shared link (?ref=CODE) is remembered so it survives the Google detour.
+  const [referralCode, setReferralCode] = useState(() => rememberReferralCode(searchParams.get("ref")) || storedReferralCode());
+  const invite = useReferralInvite(referralActive ? referralCode : "");
   // Datang dari "Masuk dengan Google": email dan nama sudah terverifikasi,
   // tiketnya ikut dikirim saat mendaftar.
   const googleTicket = searchParams.get("ticket") ?? "";
@@ -161,6 +173,8 @@ function Register({ channel }: { channel: OtpChannel | null }) {
           birth_date: dateOfBirth,
           wa_consent: waConsent,
           ...(googleTicket ? { google_ticket: googleTicket } : {}),
+          ...(referralActive && referralCode ? { referral_code: referralCode } : {}),
+          device_id: deviceId(),
         });
         if (!res.success) {
           setError(res.error ?? t("Something went wrong."));
@@ -169,6 +183,7 @@ function Register({ channel }: { channel: OtpChannel | null }) {
           return;
         }
         setRegistered(true);
+        forgetReferralCode();
       }
       if (!(await saveDetails())) {
         setError(t("Your account is ready, but your waiver and details did not save. Try again."));
@@ -224,6 +239,25 @@ function Register({ channel }: { channel: OtpChannel | null }) {
                 placeholder="08xxxxxxxxxx"
               />
             </div>
+            {referralActive ? (
+              <div>
+                <label className="nh-label">{t("Referral code (optional)")}</label>
+                <input
+                  className="nh-input uppercase"
+                  value={referralCode}
+                  onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                  autoCapitalize="characters"
+                  placeholder="NH2K7QXA"
+                />
+                {invite ? (
+                  <p className="mt-2 text-xs font-bold text-nh-forest">
+                    {t("Invited by {name}. Buy your first package after signing up to claim your welcome reward.", {
+                      name: invite.referrer_name,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <button
               className="nh-btn-brand"
               disabled={busy || !email.includes("@") || phone.length < 6}
@@ -392,4 +426,24 @@ function Register({ channel }: { channel: OtpChannel | null }) {
       </div>
     </div>
   );
+}
+
+/** Who invited, for a code that looks valid; null while unknown or invalid. */
+function useReferralInvite(code: string): ReferralInvite | null {
+  const normalized = normalizeReferralCode(code);
+  const [invite, setInvite] = useState<ReferralInvite | null>(null);
+  useEffect(() => {
+    if (!normalized) return;
+    let live = true;
+    const timer = setTimeout(() => {
+      void lookupReferral(normalized).then((found) => {
+        if (live) setInvite(found);
+      });
+    }, 300);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [normalized]);
+  return normalized && invite?.code === normalized ? invite : null;
 }

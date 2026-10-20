@@ -20,6 +20,7 @@ import {
   Settings,
   Sparkles,
   TicketPercent,
+  UserPlus,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -294,6 +295,7 @@ export function ProfilePage() {
                 ? `${formatNumber(loyalty.totalXp)} XP · ${loyalty.tier?.name ?? "Member"}`
                 : t("Trade XP for rewards"),
             },
+            { to: "/referral", icon: UserPlus, title: t("Invite friends"), hint: t("Share your code, earn rewards") },
             { to: "/badges", icon: Award, title: t("Badges"), hint: t("Your achievements") },
             { to: "/collection", icon: Sparkles, title: t("Collection"), hint: t("Artwork & wallpapers") },
             { to: "/events", icon: PartyPopper, title: t("Events"), hint: t("Race days, workshops, meetups") },

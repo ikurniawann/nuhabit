@@ -12,6 +12,7 @@ import { GoogleSignIn } from "@/features/member-app/auth/google-sign-in";
 import { ApiError, memberApi } from "@/features/member-app/lib/api";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { deviceId, forgetReferralCode, storedReferralCode } from "@/lib/member-portal/referral";
 import { useMemberOtpConfig, whatsappOtpOn } from "@/lib/otp-availability";
 import { planPayload, pushSiteEvent } from "../lib/analytics";
 import {
@@ -230,7 +231,10 @@ function AccountForm({ onSignedIn, otpEnabled }: { onSignedIn(): void; otpEnable
           email: google?.email ?? email,
           wa_consent: false,
           ...(google ? { google_ticket: google.ticket } : {}),
+          ...(storedReferralCode() ? { referral_code: storedReferralCode() } : {}),
+          device_id: deviceId(),
         });
+        forgetReferralCode();
         onSignedIn();
       } catch (err) {
         // The phone already belongs to a member: sign that member in instead.
