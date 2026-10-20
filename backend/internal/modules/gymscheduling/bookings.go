@@ -230,6 +230,7 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID, customerID strin
 			return err
 		}
 		outcome := domain.EvaluateCancellation(booking.Status, session.StartsAt, session.CreditCost, pass != nil, rules, now)
+		outcome = domain.WaiveLateCancelForMove(outcome, session.Move(), booking.CreatedAt, rules, now)
 		if waivePenalty && customerID == "" {
 			outcome = outcome.Waived()
 		}

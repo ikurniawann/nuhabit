@@ -32,8 +32,10 @@ describe("GYM_RULE_DEFAULTS", () => {
       waitlistPromoteCutoffMin: 60,
       waitlistOfferMinutes: 30,
       classReminderMinutes: 120,
+      scheduleHorizonDays: 14,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(20);
+    expect(GYM_RULE_KEYS).toHaveLength(21);
+
   });
 });
 

@@ -27,6 +27,16 @@ func init() {
 	})
 	RegisterJob(gymscheduling.Name, "gym-scheduling.class-reminders", 5*time.Minute, schedulingService, (*gymscheduling.Service).SendClassReminders)
 	RegisterJob(gymscheduling.Name, "gym-scheduling.waitlist-offers", time.Minute, schedulingService, (*gymscheduling.Service).SweepWaitlistOffers)
+	RegisterJob(gymscheduling.Name, "gym-scheduling.generate-from-templates", time.Hour, schedulingService,
+		func(s *gymscheduling.Service, ctx context.Context, now time.Time) error {
+			_, err := s.GenerateFromTemplates(ctx, now, 0) // 0: each branch's scheduleHorizonDays
+			return err
+		})
+	RegisterJob(gymscheduling.Name, "gym-scheduling.complete-past-sessions", 10*time.Minute, schedulingService,
+		func(s *gymscheduling.Service, ctx context.Context, now time.Time) error {
+			_, err := s.CompletePastSessions(ctx, now, 30)
+			return err
+		})
 }
 
 func schedulingPorts(d module.Deps) gymscheduling.Ports {
@@ -141,5 +151,6 @@ func schedulingRules(r creditsdomain.Rules) scheddomain.Rules {
 		WaitlistPromoteCutoffMin:  r.WaitlistPromoteCutoffMin,
 		WaitlistOfferMinutes:      r.WaitlistOfferMinutes,
 		ClassReminderMinutes:      r.ClassReminderMinutes,
+		ScheduleHorizonDays:       r.ScheduleHorizonDays,
 	}
 }

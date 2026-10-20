@@ -50,10 +50,61 @@ export interface Session {
   booking_closes_at: string;
   status: SessionStatus;
   notes: string | null;
+  /** Diisi saat studio memindah jam; member yang sudah booking bisa batal gratis. */
+  moved_at: string | null;
+  original_starts_at: string | null;
+  /** Diisi untuk sesi hasil generate template jadwal. */
+  template_id: string | null;
+  occurrence_date: string | null;
   confirmed_count: number;
   waitlist_count: number;
   checked_in_count: number;
   seats_left: number;
+}
+
+/** Pola mingguan: weekday 1 = Senin … 7 = Minggu, start_time "HH:MM" WIB. */
+export interface SessionTemplate {
+  id: string;
+  class_type_id: string;
+  class_type_name: string;
+  color: ClassColor;
+  coach_id: string | null;
+  coach_name: string | null;
+  branch_id: string | null;
+  branch_name: string | null;
+  area: string | null;
+  weekday: number;
+  start_time: string;
+  duration_min: number;
+  capacity: number;
+  credit_cost: number;
+  valid_from: string;
+  valid_until: string | null;
+  active: boolean;
+  upcoming_sessions: number;
+  /** Tanggal terakhir yang sudah dibuat sesinya ("YYYY-MM-DD"). */
+  generated_until: string | null;
+}
+
+export interface SessionTemplateInput {
+  class_type_id: string;
+  coach_id: string | null;
+  branch_id: string | null;
+  area: string | null;
+  weekday: number;
+  start_time: string;
+  duration_min: number | null;
+  capacity: number | null;
+  credit_cost: number | null;
+  valid_from: string;
+  valid_until: string | null;
+  active: boolean;
+}
+
+export interface GenerateResult {
+  created: number;
+  skipped: number;
+  conflicts: string[];
 }
 
 export interface SessionInput {
@@ -156,13 +207,24 @@ export const schedulingApi = {
   updateSession: (id: string, patch: Partial<SessionInput>) => send<{ id: string }>(`/api/gym/sessions/${id}`, patch, "PATCH"),
   session: (id: string) => call<{ session: Session; roster: RosterEntry[] }>(`/api/gym/sessions/${id}`),
   sessionAction: (id: string, action: "publish" | "cancel" | "complete") =>
-    send<{ notified?: number; completed?: number; noShows?: number; penaltyCredits?: number }>(
+    send<{ notified?: number; refundedCredits?: number; completed?: number; noShows?: number; penaltyCredits?: number }>(
       `/api/gym/sessions/${id}`,
       { action }
     ),
   deleteSession: (id: string) => call<{ id: string }>(`/api/gym/sessions/${id}`, { method: "DELETE" }),
   duplicateWeek: (input: { source_week: string; target_week: string; publish: boolean }) =>
     send<{ created: number; skipped: number }>("/api/gym/sessions/duplicate-week", input),
+
+  templates: () =>
+    call<{ templates: SessionTemplate[]; branches: { id: string; name: string }[] }>("/api/gym/session-templates"),
+  saveTemplate: (input: SessionTemplateInput, id?: string) =>
+    id
+      ? send<{ id: string }>(`/api/gym/session-templates/${id}`, input, "PATCH")
+      : send<{ id: string }>("/api/gym/session-templates", input),
+  setTemplateActive: (id: string, active: boolean) =>
+    send<{ id: string }>(`/api/gym/session-templates/${id}`, { active }, "PATCH"),
+  deleteTemplate: (id: string) => call<{ id: string }>(`/api/gym/session-templates/${id}`, { method: "DELETE" }),
+  generateFromTemplates: () => send<GenerateResult>("/api/gym/session-templates/generate", {}),
 
   bookings: (params: { from: string; to: string; status?: string; q?: string; session_id?: string }) =>
     call<BookingRow[]>(`/api/gym/bookings?${qs(params)}`),
@@ -185,6 +247,7 @@ export const schedulingApi = {
 
 export const GYM_KEYS = {
   sessions: ["gym", "sessions"],
+  templates: ["gym", "session-templates"],
   classTypes: ["gym", "class-types"],
   coaches: ["gym", "coaches"],
   bookings: ["gym", "bookings"],
@@ -233,6 +296,9 @@ export const BOOKING_BADGE: Record<
   no_show: { label: "Tidak hadir", variant: "destructive" },
   cancelled: { label: "Batal", variant: "muted" },
 };
+
+/** Nama hari untuk weekday ISO (1 = Senin … 7 = Minggu). */
+export const WEEKDAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"] as const;
 
 /** Garis warna jenis kelas di kartu jadwal (token semantik, bukan hex). */
 export const CLASS_COLOR: Record<ClassColor, { bar: string; label: string }> = {

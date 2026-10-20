@@ -47,6 +47,11 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "PATCH /api/gym/sessions/{id}", Handler: h.staff(sched, h.updateSession)},
 		{Pattern: "POST /api/gym/sessions/{id}", Handler: h.staff(sched, h.sessionAction)},
 		{Pattern: "DELETE /api/gym/sessions/{id}", Handler: h.staff(sched, h.deleteSession)},
+		{Pattern: "GET /api/gym/session-templates", Handler: h.staff(sched, h.listTemplates)},
+		{Pattern: "POST /api/gym/session-templates", Handler: h.staff(sched, h.createTemplate)},
+		{Pattern: "POST /api/gym/session-templates/generate", Handler: h.staff(sched, h.generateTemplates)},
+		{Pattern: "PATCH /api/gym/session-templates/{id}", Handler: h.staff(sched, h.updateTemplate)},
+		{Pattern: "DELETE /api/gym/session-templates/{id}", Handler: h.staff(sched, h.deleteTemplate)},
 		{Pattern: "GET /api/gym/bookings", Handler: h.staff(sched, h.listBookings)},
 		{Pattern: "POST /api/gym/bookings", Handler: h.staff(sched, h.staffBook)},
 		{Pattern: "GET /api/gym/bookings/members", Handler: h.staff(sched, h.searchMembers)},
@@ -419,11 +424,13 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	}
 	f := form(r)
 	var patch SessionPatch
+	patch.ClassTypeID = f.UUID("class_type_id", optional)
 	patch.CoachID = optionalField(f, "coach_id", f.UUID("coach_id", nullableOptional))
 	patch.Area = optionalField(f, "area", f.Str("area", nullableOptional, validate.StrOpts{Trim: true, Max: 80}))
 	patch.StartsAt = datetime(f, "starts_at", optional)
 	patch.DurationMin = f.Int("duration_min", optional, between(15, 240))
 	patch.Capacity = f.Int("capacity", optional, between(1, 200))
+	patch.CreditCost = f.Int("credit_cost", optional, between(1, 20))
 	patch.Notes = optionalField(f, "notes", f.Str("notes", nullableOptional, validate.StrOpts{Trim: true, Max: 500}))
 	if err := invalid(f); err != nil {
 		return err

@@ -27,7 +27,7 @@ export function notificationKind(type: string): NotificationKind {
   if (t.includes("low_balance")) return "LOW_BALANCE";
   if (t.includes("expir")) return "CREDIT_EXPIRY";
   if (t === "checked_in" || t === "visit_recorded") return "VISIT_LOGGED";
-  if (t.endsWith("_cancelled") || t.endsWith("_moved")) return "SESSION_CHANGED";
+  if (t.endsWith("_cancelled") || t.endsWith("_moved") || t === "session_coach_changed") return "SESSION_CHANGED";
   if (t === "announcement" || t === "promo") return "ANNOUNCEMENT";
   return "OTHER";
 }

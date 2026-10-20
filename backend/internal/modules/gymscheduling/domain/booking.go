@@ -45,6 +45,8 @@ type Rules struct {
 	WaitlistOfferMinutes     int
 	// ClassReminderMinutes: remind booked members this long before class; 0 = never.
 	ClassReminderMinutes int
+	// ScheduleHorizonDays is how far ahead templates generate sessions.
+	ScheduleHorizonDays int
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────

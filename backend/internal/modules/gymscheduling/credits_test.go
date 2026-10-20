@@ -89,5 +89,6 @@ func (c testCredits) ForBranch(ctx context.Context, q database.Querier, branchID
 		WaitlistPromoteCutoffMin:  r.WaitlistPromoteCutoffMin,
 		WaitlistOfferMinutes:      r.WaitlistOfferMinutes,
 		ClassReminderMinutes:      r.ClassReminderMinutes,
+		ScheduleHorizonDays:       r.ScheduleHorizonDays,
 	}, err
 }

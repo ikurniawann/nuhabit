@@ -45,6 +45,8 @@ export interface GymRules {
   waitlistOfferMinutes: number;
   /** Member yang booking diingatkan N menit sebelum kelas; 0 = tanpa pengingat. */
   classReminderMinutes: number;
+  /** Template jadwal membuat sesi sejauh N hari ke depan. */
+  scheduleHorizonDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -70,6 +72,7 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   waitlistPromoteCutoffMin: 60,
   waitlistOfferMinutes: 30,
   classReminderMinutes: 120,
+  scheduleHorizonDays: 14,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -103,6 +106,7 @@ const rulesShape = {
   waitlistPromoteCutoffMin: int(0, 10080, "Batas promosi otomatis"),
   waitlistOfferMinutes: int(5, 1440, "Masa tawaran kursi"),
   classReminderMinutes: int(0, 10080, "Pengingat kelas"),
+  scheduleHorizonDays: int(1, 90, "Horizon jadwal"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();

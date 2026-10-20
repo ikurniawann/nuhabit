@@ -42,7 +42,8 @@ type BookingAction = "cancel" | "no_show" | "check_in";
 const SESSION_CONFIRM: Record<Exclude<SessionAction, "publish">, { title: string; description: string; label: string }> = {
   cancel: {
     title: "Batalkan sesi ini?",
-    description: "Semua booking dan waitlist batal tanpa potongan kredit, dan setiap member mendapat notifikasi.",
+    description:
+      "Semua booking dan waitlist batal. Kredit yang sudah terpotong (check-in, batal terlambat, no-show) dikembalikan, dan setiap member mendapat notifikasi.",
     label: "Batalkan sesi",
   },
   complete: {
@@ -86,7 +87,10 @@ export function SessionDetailPage({ sessionId }: { sessionId: string }) {
         return;
       }
       if (action === "publish") toast.success("Sesi diterbitkan");
-      if (action === "cancel") toast.success("Sesi dibatalkan", { description: `${formatNumber(result.notified ?? 0)} member dikabari.` });
+      if (action === "cancel")
+        toast.success("Sesi dibatalkan", {
+          description: `${formatNumber(result.notified ?? 0)} member dikabari, ${formatNumber(result.refundedCredits ?? 0)} kredit dikembalikan.`,
+        });
       if (action === "complete")
         toast.success("Sesi ditutup", {
           description: `${formatNumber(result.completed ?? 0)} hadir, ${formatNumber(result.noShows ?? 0)} no-show, ${formatNumber(result.penaltyCredits ?? 0)} kredit hangus.`,

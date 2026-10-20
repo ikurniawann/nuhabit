@@ -15,6 +15,7 @@ describe("notificationKind", () => {
     ["gym_checked_in", "VISIT_LOGGED"],
     ["visit_recorded", "VISIT_LOGGED"],
     ["gym_session_moved", "SESSION_CHANGED"],
+    ["gym_session_coach_changed", "SESSION_CHANGED"],
     ["gym_session_cancelled", "SESSION_CHANGED"],
     ["gym_booking_cancelled", "SESSION_CHANGED"],
     ["announcement", "ANNOUNCEMENT"],
