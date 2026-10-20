@@ -10,6 +10,8 @@ import (
 // Repository is the persistence the use cases need. Postgres implements it;
 // every method takes the Querier to run on (pool or transaction).
 type Repository interface {
+	ScheduleRepository
+
 	ListClassTypes(ctx context.Context, q Q) ([]*Row, error)
 	// InsertClassType returns "" when the name is taken (ON CONFLICT DO NOTHING).
 	InsertClassType(ctx context.Context, q Q, in ClassTypeInput) (string, error)
@@ -36,7 +38,9 @@ type Repository interface {
 	SessionHasBookings(ctx context.Context, q Q, id string) (bool, error)
 	DeleteSession(ctx context.Context, q Q, id string) error
 	SessionsInWeek(ctx context.Context, q Q, weekStart time.Time) ([]WeekSession, error)
-	InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (bool, error)
+	// InsertSessionIfFree returns "" when the class type already has a
+	// session at that start in that branch.
+	InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (string, error)
 	// PublicBranch finds an active branch by its public slug (or code while
 	// no slug is set); nil when none.
 	PublicBranch(ctx context.Context, q Q, slug string) (*PublicBranch, error)
@@ -61,6 +65,8 @@ type Repository interface {
 	MarkCheckedIn(ctx context.Context, q Q, id string, at time.Time) error
 	CloseBooking(ctx context.Context, q Q, id string, status domain.BookingStatus) error
 	ActiveBookingCustomers(ctx context.Context, q Q, sessionID string) ([]string, error)
+	// CancelSessionBookings cancels confirmed, waitlisted and checked-in
+	// bookings and returns their members.
 	CancelSessionBookings(ctx context.Context, q Q, sessionID string) ([]string, error)
 	Roster(ctx context.Context, q Q, sessionID string) ([]*Row, error)
 	ListBookings(ctx context.Context, q Q, f BookingListFilter) ([]*Row, error)
@@ -127,6 +133,18 @@ type SessionRow struct {
 	BookingOpensAt, BookingClosesAt       time.Time
 	Status                                domain.SessionStatus
 	Notes                                 *string
+	MovedAt, OriginalStartsAt             *time.Time
+}
+
+// Move is the studio's last move of the session, for the late-cancel waiver.
+func (s *SessionRow) Move() domain.SessionMove {
+	return domain.SessionMove{MovedAt: s.MovedAt, OriginalStartsAt: s.OriginalStartsAt}
+}
+
+// slot is the session's place in the timetable for overlap checks.
+func (s *SessionRow) slot() domain.Slot {
+	return domain.Slot{ID: s.ID, ClassName: s.ClassTypeName, CoachID: s.CoachID, CoachName: s.CoachName,
+		BranchID: s.BranchID, Area: s.Area, StartsAt: s.StartsAt, EndsAt: s.EndsAt}
 }
 
 // label is "<class>, <start in WIB>" for ledger notes.
@@ -142,13 +160,19 @@ type NewSession struct {
 	Status                          domain.SessionStatus
 	Notes                           *string
 	CreatedBy                       *string
+	// TemplateID and OccurrenceDate are set on sessions generated from a template.
+	TemplateID, OccurrenceDate *string
 }
 
 type SessionUpdate struct {
+	ClassTypeID                     string
 	CoachID, Area, Notes            *string
 	StartsAt                        time.Time
 	DurationMin, Capacity           int
+	CreditCost                      int
 	BookingOpensAt, BookingClosesAt time.Time
+	// MovedAt and OriginalStartsAt are set when the start changes.
+	MovedAt, OriginalStartsAt *time.Time
 }
 
 // WeekSession is a session copied by DuplicateWeek.

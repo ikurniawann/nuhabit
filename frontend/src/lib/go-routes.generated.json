@@ -1627,6 +1627,31 @@
   {
     "module": "gym-scheduling",
     "method": "GET",
+    "path": "/api/gym/session-templates"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/session-templates"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "POST",
+    "path": "/api/gym/session-templates/generate"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "DELETE",
+    "path": "/api/gym/session-templates/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "PATCH",
+    "path": "/api/gym/session-templates/{id}"
+  },
+  {
+    "module": "gym-scheduling",
+    "method": "GET",
     "path": "/api/gym/sessions"
   },
   {

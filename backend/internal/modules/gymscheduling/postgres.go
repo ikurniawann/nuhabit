@@ -172,7 +172,8 @@ func (Postgres) Catalog(ctx context.Context, q Q) (branches, classTypes, coaches
 const sessionSelect = `
   SELECT s.id, s.class_type_id, t.name AS class_type_name, t.color, s.coach_id, c.name AS coach_name,
          s.branch_id, s.area, s.starts_at, s.ends_at, s.capacity, s.credit_cost,
-         s.booking_opens_at, s.booking_closes_at, s.status, s.notes
+         s.booking_opens_at, s.booking_closes_at, s.status, s.notes,
+         s.moved_at, s.original_starts_at, s.template_id, s.occurrence_date::text AS occurrence_date
     FROM gym.class_sessions s
     JOIN gym.class_types t ON t.id = s.class_type_id
     LEFT JOIN gym.coaches c ON c.id = s.coach_id`
@@ -192,7 +193,7 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
             GREATEST(x.capacity - COALESCE(k.confirmed, 0), 0)::int AS seats_left,
             CASE WHEN mine.id IS NULL THEN NULL ELSE json_build_object(
               'id', mine.id, 'status', mine.status, 'waitlist_position', mine.waitlist_position,
-              'promotion_offered_at', mine.promotion_offered_at) END AS my_booking
+              'promotion_offered_at', mine.promotion_offered_at, 'created_at', mine.created_at) END AS my_booking
        FROM (`+sessionSelect+`
               WHERE ($1::timestamptz IS NULL OR s.starts_at >= $1)
                 AND ($2::timestamptz IS NULL OR s.starts_at < $2)
@@ -210,7 +211,7 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
            FROM gym.bookings b WHERE b.session_id = x.id
        ) k ON true
        LEFT JOIN LATERAL (
-         SELECT b.id, b.status, b.waitlist_position, b.promotion_offered_at FROM gym.bookings b
+         SELECT b.id, b.status, b.waitlist_position, b.promotion_offered_at, b.created_at FROM gym.bookings b
           WHERE b.session_id = x.id AND b.customer_id = $7 AND b.status <> 'cancelled'
           ORDER BY b.created_at DESC LIMIT 1
        ) mine ON $7::uuid IS NOT NULL
@@ -220,10 +221,12 @@ func (Postgres) ListSessions(ctx context.Context, q Q, f SessionFilter) ([]*Row,
 
 func (Postgres) LockSession(ctx context.Context, q Q, id string) (*SessionRow, error) {
 	var s SessionRow
+	var templateID, occurrenceDate any
 	err := q.QueryRow(ctx, sessionSelect+` WHERE s.id = $1 FOR UPDATE OF s`, id).Scan(
 		&s.ID, &s.ClassTypeID, &s.ClassTypeName, &s.Color, &s.CoachID, &s.CoachName,
 		&s.BranchID, &s.Area, &s.StartsAt, &s.EndsAt, &s.Capacity, &s.CreditCost,
-		&s.BookingOpensAt, &s.BookingClosesAt, &s.Status, &s.Notes)
+		&s.BookingOpensAt, &s.BookingClosesAt, &s.Status, &s.Notes,
+		&s.MovedAt, &s.OriginalStartsAt, &templateID, &occurrenceDate)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -242,9 +245,13 @@ func (Postgres) InsertSession(ctx context.Context, q Q, n NewSession) (string, e
 func (Postgres) UpdateSession(ctx context.Context, q Q, id string, u SessionUpdate) error {
 	_, err := q.Exec(ctx, `UPDATE gym.class_sessions
         SET coach_id = $2, area = $3, starts_at = $4, ends_at = $4::timestamptz + make_interval(mins => $5),
-            capacity = $6, notes = $7, booking_opens_at = $8, booking_closes_at = $9, updated_at = now()
+            capacity = $6, notes = $7, booking_opens_at = $8, booking_closes_at = $9,
+            class_type_id = $10, credit_cost = $11,
+            moved_at = COALESCE($12, moved_at), original_starts_at = COALESCE($13, original_starts_at),
+            updated_at = now()
       WHERE id = $1`,
-		id, u.CoachID, u.Area, u.StartsAt, u.DurationMin, u.Capacity, u.Notes, u.BookingOpensAt, u.BookingClosesAt)
+		id, u.CoachID, u.Area, u.StartsAt, u.DurationMin, u.Capacity, u.Notes, u.BookingOpensAt, u.BookingClosesAt,
+		u.ClassTypeID, u.CreditCost, u.MovedAt, u.OriginalStartsAt)
 	return err
 }
 
@@ -279,15 +286,18 @@ func (Postgres) SessionsInWeek(ctx context.Context, q Q, weekStart time.Time) ([
 	})
 }
 
-func (Postgres) InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (bool, error) {
-	tag, err := q.Exec(ctx, `INSERT INTO gym.class_sessions (class_type_id, coach_id, branch_id, area, starts_at, ends_at, capacity, credit_cost,
-                                       booking_opens_at, booking_closes_at, status, notes, created_by)
-       SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
-        WHERE NOT EXISTS (SELECT 1 FROM gym.class_sessions WHERE class_type_id = $1 AND starts_at = $5
-                            AND status <> 'cancelled')`,
+// slotConflict targets uq_gym_sessions_slot: one live session per class
+// type, branch and start, so concurrent copies cannot duplicate a slot.
+const slotConflict = `ON CONFLICT (class_type_id, COALESCE(branch_id, '00000000-0000-0000-0000-000000000000'::uuid), starts_at)
+       WHERE status <> 'cancelled' AND NOT legacy_duplicate DO NOTHING`
+
+func (Postgres) InsertSessionIfFree(ctx context.Context, q Q, n NewSession, endsAt time.Time) (string, error) {
+	return returningID(ctx, q, `INSERT INTO gym.class_sessions (class_type_id, coach_id, branch_id, area, starts_at, ends_at, capacity, credit_cost,
+                                       booking_opens_at, booking_closes_at, status, notes, created_by, template_id, occurrence_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::date)
+       `+slotConflict+` RETURNING id`,
 		n.ClassTypeID, n.CoachID, n.BranchID, n.Area, n.StartsAt, endsAt, n.Capacity, n.CreditCost,
-		n.BookingOpensAt, n.BookingClosesAt, n.Status, n.Notes, n.CreatedBy)
-	return tag.RowsAffected() > 0, err
+		n.BookingOpensAt, n.BookingClosesAt, n.Status, n.Notes, n.CreatedBy, n.TemplateID, n.OccurrenceDate)
 }
 
 // ── Bookings ────────────────────────────────────────────────────────────────
@@ -422,7 +432,7 @@ func (Postgres) ActiveBookingCustomers(ctx context.Context, q Q, sessionID strin
 func (Postgres) CancelSessionBookings(ctx context.Context, q Q, sessionID string) ([]string, error) {
 	return collectStrings(q.Query(ctx, `UPDATE gym.bookings SET status = 'cancelled', waitlist_position = NULL, promotion_offered_at = NULL,
             cancelled_at = now(), updated_at = now()
-      WHERE session_id = $1 AND status IN ('confirmed', 'waitlist') RETURNING customer_id`, sessionID))
+      WHERE session_id = $1 AND status IN ('confirmed', 'waitlist', 'checked_in') RETURNING customer_id`, sessionID))
 }
 
 func (Postgres) Roster(ctx context.Context, q Q, sessionID string) ([]*Row, error) {
@@ -461,6 +471,7 @@ func (Postgres) MemberBookings(ctx context.Context, q Q, customerID string, past
 	return queryRows(ctx, q, `SELECT b.id, b.status, b.waitlist_position, b.late_cancel, b.promotion_offered_at, b.checked_in_at,
             b.cancelled_at, b.created_at,
             s.id AS session_id, s.branch_id, s.starts_at, s.ends_at, s.area, s.credit_cost, s.status AS session_status,
+            s.moved_at, s.original_starts_at,
             t.name AS class_type_name, t.color, co.name AS coach_name
        FROM gym.bookings b
        JOIN gym.class_sessions s ON s.id = b.session_id

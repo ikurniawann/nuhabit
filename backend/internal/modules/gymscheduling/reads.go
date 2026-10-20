@@ -70,27 +70,43 @@ type cancelInfo struct {
 	Policy         domain.CreditPolicy `json:"policy"`
 }
 
-// myBookingStatus reads my_booking.status from a session row.
-func myBookingStatus(r *Row) domain.BookingStatus {
+// myBookingStatus reads my_booking.status and created_at from a session row.
+func myBookingStatus(r *Row) (domain.BookingStatus, time.Time) {
 	raw, ok := r.Get("my_booking").(json.RawMessage)
 	if !ok {
-		return ""
+		return "", time.Time{}
 	}
 	var mine struct {
-		Status domain.BookingStatus `json:"status"`
+		Status    domain.BookingStatus `json:"status"`
+		CreatedAt time.Time            `json:"created_at"`
 	}
 	_ = json.Unmarshal(raw, &mine)
-	return mine.Status
+	return mine.Status, mine.CreatedAt
 }
 
-func bookingStatusColumn(r *Row) domain.BookingStatus { return domain.BookingStatus(r.Str("status")) }
+func bookingStatusColumn(r *Row) (domain.BookingStatus, time.Time) {
+	return domain.BookingStatus(r.Str("status")), r.Time("created_at")
+}
+
+// sessionMove reads moved_at and original_starts_at from a row.
+func sessionMove(r *Row) domain.SessionMove {
+	at := func(key string) *time.Time {
+		if t, ok := r.Get(key).(jsTime); ok {
+			v := time.Time(t)
+			return &v
+		}
+		return nil
+	}
+	return domain.SessionMove{MovedAt: at("moved_at"), OriginalStartsAt: at("original_starts_at")}
+}
 
 // attachCancelInfo adds cancel_info to each row: null unless the member's
-// booking is confirmed. Rules are read once per branch.
-func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows []*Row, status func(*Row) domain.BookingStatus, now time.Time) error {
+// booking is confirmed. Rules are read once per branch. A session the studio
+// moved shows the waived deadline the cancel itself will apply.
+func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows []*Row, booking func(*Row) (domain.BookingStatus, time.Time), now time.Time) error {
 	rulesFor := s.branchRules(s.db)
 	for _, r := range rows {
-		st := status(r)
+		st, bookedAt := booking(r)
 		if st != domain.BookingConfirmed {
 			r.Set("cancel_info", nil)
 			continue
@@ -104,6 +120,7 @@ func (s *Service) attachCancelInfo(ctx context.Context, customerID string, rows 
 			return err
 		}
 		out := domain.EvaluateCancellation(st, r.Time("starts_at"), r.Int("credit_cost"), pass != nil, rules, now)
+		out = domain.WaiveLateCancelForMove(out, sessionMove(r), bookedAt, rules, now)
 		r.Set("cancel_info", cancelInfo{
 			Deadline: jsTime(out.Deadline), Late: out.Late, PenaltyCredits: out.PenaltyCredits, PassStrike: out.PassStrike,
 			Policy: rules.LateCancelPolicy,
