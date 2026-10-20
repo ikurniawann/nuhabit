@@ -130,6 +130,7 @@ func TestPassStackFreezeExtend(t *testing.T) {
 func TestPassAutoRenew(t *testing.T) {
 	t.Setenv("XENDIT_SECRET_KEY", "")
 	t.Setenv("XENDIT_MOCK", "1")
+	t.Setenv("NEXT_PUBLIC_APP_URL", "https://app.example.test")
 	e := setup(t)
 	c := e.member.CustomerID
 	pkg := e.passPkg("Go Pass Renew", 1_000_000, 28)

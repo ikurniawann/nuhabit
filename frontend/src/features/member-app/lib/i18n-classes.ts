@@ -109,6 +109,28 @@ export const CLASSES_ID: Record<string, string> = {
   "Renews before it ends, paid with": "Diperpanjang sebelum berakhir, dibayar dengan",
   "Off - your pass ends on": "Mati - pass berakhir pada",
   "Online invoice": "Invoice online",
+  "Saved method": "Metode tersimpan",
+  "Link a payment method": "Tautkan metode pembayaran",
+  "Auto-renew was turned off after the renewal payment failed.":
+    "Perpanjangan otomatis dimatikan karena pembayaran perpanjangan gagal.",
+  // Saved payment methods
+  "Payment methods": "Metode pembayaran",
+  "Loading payment methods…": "Memuat metode pembayaran…",
+  "Save a card or e-wallet so your membership renews without a checkout.":
+    "Simpan kartu atau e-wallet supaya membership diperpanjang tanpa checkout.",
+  "Save a card or e-wallet for auto-renew": "Simpan kartu atau e-wallet untuk perpanjang otomatis",
+  "Saved payment methods are not available yet.": "Metode pembayaran tersimpan belum tersedia.",
+  "Link a card or e-wallet": "Tautkan kartu atau e-wallet",
+  "Could not open the linking page.": "Halaman penautan gagal dibuka.",
+  "Waiting for Xendit to confirm your payment method…": "Menunggu konfirmasi Xendit untuk metode pembayaranmu…",
+  "Linking was canceled.": "Penautan dibatalkan.",
+  "Remove {label}? Auto-renew will send you an invoice instead.":
+    "Hapus {label}? Perpanjangan otomatis akan mengirim invoice sebagai gantinya.",
+  "Could not remove the payment method.": "Metode pembayaran gagal dihapus.",
+  Linked: "Ditautkan",
+  "You enter your card or e-wallet on Xendit's secure page. NüHabit keeps only a masked label.":
+    "Kamu memasukkan kartu atau e-wallet di halaman aman Xendit. NüHabit hanya menyimpan label tersamar.",
+  "Charging your saved payment method": "Menagih metode pembayaran tersimpan",
   "Freeze pass": "Bekukan pass",
   "Unfreeze now": "Aktifkan sekarang",
   "Freeze days left this year": "Sisa jatah bekukan tahun ini",

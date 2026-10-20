@@ -75,7 +75,7 @@ export interface RawLot {
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
 export type PackageKind = 'credits' | 'pass';
 
-export type RenewWith = 'ark' | 'invoice';
+export type RenewWith = 'ark' | 'invoice' | 'saved_method';
 
 export interface RawPass {
   id: string;
@@ -90,6 +90,8 @@ export interface RawPass {
   frozen_until?: string | null;
   auto_renew?: boolean;
   renew_with?: RenewWith;
+  /** "renewal_failed" once the renewal retries ran out. */
+  auto_renew_off_reason?: string | null;
 }
 
 /** Freeze budget over the last 365 days. */
@@ -202,6 +204,7 @@ export interface PassView {
   frozenUntil: string | null;
   autoRenew: boolean;
   renewWith: RenewWith;
+  autoRenewOffReason: string | null;
 }
 
 export interface WalletView {
@@ -235,7 +238,7 @@ export interface PackageView {
 export interface PaymentView {
   payment: {
     id: string;
-    channel: 'QRIS' | 'ARK_COIN' | 'INVOICE';
+    channel: 'QRIS' | 'ARK_COIN' | 'INVOICE' | 'SAVED_METHOD';
     status: RawPurchase['status'];
     kind: PackageKind;
     credits: number;
@@ -365,6 +368,7 @@ const toPassView = (p: RawPass): PassView => ({
   frozenUntil: p.frozen_until ?? null,
   autoRenew: p.auto_renew ?? false,
   renewWith: p.renew_with ?? 'invoice',
+  autoRenewOffReason: p.auto_renew_off_reason ?? null,
 });
 
 export function toWalletView(raw: RawWallet, catalog: RawCatalog | undefined): WalletView {
@@ -416,7 +420,11 @@ export function toPackageView(raw: RawPackage, catalog: RawCatalog | undefined):
   };
 }
 
-const CHANNELS: Record<string, PaymentView['payment']['channel']> = { ark_coin: 'ARK_COIN', invoice: 'INVOICE' };
+const CHANNELS: Record<string, PaymentView['payment']['channel']> = {
+  ark_coin: 'ARK_COIN',
+  invoice: 'INVOICE',
+  saved_method: 'SAVED_METHOD',
+};
 
 export function toPaymentView(raw: RawPurchase): PaymentView {
   return {
@@ -454,3 +462,25 @@ export function coverageFor(wallet: WalletView | undefined, classTypeId: string)
 
 /** "Name · Other" without dangling separators when a part is missing. */
 export const joinDot = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(' · ');
+
+/** A card or e-wallet the member saved at Xendit for auto-renew. Only a masked label is known. */
+export interface SavedMethod {
+  id: string;
+  status: 'pending' | 'active';
+  type: 'card' | 'ewallet' | 'other' | null;
+  channel: string | null;
+  label: string | null;
+  simulated: boolean;
+  linked_at: string | null;
+  created_at: string;
+}
+
+/** The payment methods screen: enabled is false while the feature is off. */
+export interface SavedMethods {
+  enabled: boolean;
+  methods: SavedMethod[];
+}
+
+/** The member's method renewals can charge, if any. */
+export const activeMethod = (s: SavedMethods | undefined): SavedMethod | null =>
+  s?.methods.find((m) => m.status === 'active') ?? null;

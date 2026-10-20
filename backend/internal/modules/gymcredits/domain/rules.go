@@ -52,6 +52,12 @@ type Rules struct {
 	MinFreezeDays int `json:"minFreezeDays"`
 	// RenewalLeadDays: an auto-renewing pass renews this many days before it ends.
 	RenewalLeadDays int `json:"renewalLeadDays"`
+	// RenewalRetryCount: how many times a failed or expired renewal payment
+	// is tried again, RenewalRetryHours apart, while the pass runs or within
+	// RenewalGraceDays after it ends. Then auto-renew turns off.
+	RenewalRetryCount int `json:"renewalRetryCount"`
+	RenewalRetryHours int `json:"renewalRetryHours"`
+	RenewalGraceDays  int `json:"renewalGraceDays"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -80,6 +86,9 @@ type RulesPatch struct {
 	MaxFreezeDaysPerYear      *int    `json:"maxFreezeDaysPerYear,omitempty"`
 	MinFreezeDays             *int    `json:"minFreezeDays,omitempty"`
 	RenewalLeadDays           *int    `json:"renewalLeadDays,omitempty"`
+	RenewalRetryCount         *int    `json:"renewalRetryCount,omitempty"`
+	RenewalRetryHours         *int    `json:"renewalRetryHours,omitempty"`
+	RenewalGraceDays          *int    `json:"renewalGraceDays,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -111,6 +120,9 @@ var RuleDefaults = Rules{
 	MaxFreezeDaysPerYear:      30,
 	MinFreezeDays:             7,
 	RenewalLeadDays:           3,
+	RenewalRetryCount:         2,
+	RenewalRetryHours:         24,
+	RenewalGraceDays:          3,
 }
 
 type ruleKind int
@@ -167,6 +179,9 @@ var ruleSpecs = []ruleSpec{
 	intRule("maxFreezeDaysPerYear", 0, 365, "Jatah bekukan per tahun", func(p *RulesPatch) **int { return &p.MaxFreezeDaysPerYear }),
 	intRule("minFreezeDays", 1, 365, "Durasi bekukan", func(p *RulesPatch) **int { return &p.MinFreezeDays }),
 	intRule("renewalLeadDays", 0, 30, "Perpanjangan otomatis", func(p *RulesPatch) **int { return &p.RenewalLeadDays }),
+	intRule("renewalRetryCount", 0, 10, "Ulang perpanjangan gagal", func(p *RulesPatch) **int { return &p.RenewalRetryCount }),
+	intRule("renewalRetryHours", 1, 168, "Jeda ulang perpanjangan", func(p *RulesPatch) **int { return &p.RenewalRetryHours }),
+	intRule("renewalGraceDays", 0, 30, "Masa tenggang perpanjangan", func(p *RulesPatch) **int { return &p.RenewalGraceDays }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -338,6 +353,9 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.MaxFreezeDaysPerYear, p.MaxFreezeDaysPerYear)
 	setInt(&base.MinFreezeDays, p.MinFreezeDays)
 	setInt(&base.RenewalLeadDays, p.RenewalLeadDays)
+	setInt(&base.RenewalRetryCount, p.RenewalRetryCount)
+	setInt(&base.RenewalRetryHours, p.RenewalRetryHours)
+	setInt(&base.RenewalGraceDays, p.RenewalGraceDays)
 	return base
 }
 

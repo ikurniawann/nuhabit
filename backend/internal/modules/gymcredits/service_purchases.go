@@ -772,6 +772,19 @@ func (s *Service) reconcilePending(ctx context.Context, row *Purchase) (*Purchas
 			return settled, nil
 		}
 	}
+	if requestID, _ := meta["payment_request_id"].(string); requestID != "" {
+		// The charge closes only once Xendit has canceled it (see
+		// reconcileCharge), so a late success cannot meet a retry.
+		settled, err := s.reconcileCharge(ctx, row, requestID)
+		if err != nil {
+			s.log.WarnContext(ctx, "[gym-credits] rekonsiliasi tagihan metode tersimpan gagal", "purchase_id", row.ID, "error", err)
+			return row, nil
+		}
+		if settled != nil {
+			return settled, nil
+		}
+		return row, nil
+	}
 	if expiresAt, ok := meta["expires_at"].(string); ok {
 		if t, err := time.Parse(time.RFC3339Nano, expiresAt); err == nil && t.Before(s.clock()) {
 			if err := s.closePurchase(ctx, row.ID, "expired"); err != nil {

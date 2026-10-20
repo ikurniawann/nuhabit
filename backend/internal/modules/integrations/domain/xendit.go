@@ -64,6 +64,60 @@ func ParseQrWebhook(body map[string]any) QrWebhook {
 	return w
 }
 
+// XenditEvent is a Payments API webhook (payment_session.*,
+// payment_token.* or payment.*). The QR callback's event is qr.payment, so
+// the two never mix.
+type XenditEvent struct {
+	Event       string
+	Status      string
+	ReferenceID string
+	SessionID   string
+	TokenID     string
+	PaymentID   string
+	FailureCode string
+	// Amount is request_amount, else the captured total.
+	Amount float64
+	// Data is the event's data object.
+	Data map[string]any
+}
+
+// Paid reports a captured payment.
+func (e XenditEvent) Paid() bool { return e.Event == "payment.capture" && e.Status == "SUCCEEDED" }
+
+var paymentsAPIEvent = []string{"payment_session.", "payment_token.", "payment."}
+
+// ParseXenditEvent reads a Payments API webhook; ok=false for any other body.
+func ParseXenditEvent(body map[string]any) (XenditEvent, bool) {
+	event, _ := body["event"].(string)
+	data, isObj := body["data"].(map[string]any)
+	matched := false
+	for _, prefix := range paymentsAPIEvent {
+		matched = matched || strings.HasPrefix(event, prefix)
+	}
+	if !matched || !isObj {
+		return XenditEvent{}, false
+	}
+	text := func(key string) string {
+		s, _ := data[key].(string)
+		return s
+	}
+	amount := jsNumber(data["request_amount"])
+	if captures, ok := data["captures"].([]any); ok && (!finite(amount) || amount <= 0) {
+		amount = 0
+		for _, c := range captures {
+			amount += jsNumber(Obj(c)["capture_amount"])
+		}
+	}
+	if !finite(amount) {
+		amount = 0
+	}
+	return XenditEvent{
+		Event: event, Status: strings.ToUpper(text("status")), ReferenceID: text("reference_id"),
+		SessionID: text("payment_session_id"), TokenID: text("payment_token_id"), PaymentID: text("payment_id"),
+		FailureCode: text("failure_code"), Amount: amount, Data: data,
+	}, true
+}
+
 // firstPresent is `a != null ? a : b != null ? b : …`.
 func firstPresent(values ...any) any {
 	for _, v := range values {

@@ -296,6 +296,14 @@ func (p integrationsPayments) SettleGymPurchase(ctx context.Context, db database
 	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).SettleByReference(ctx, ref, paymentID)
 }
 
+// GymPaymentsEvent hands a Payments API event to gym-credits.
+func (p integrationsPayments) GymPaymentsEvent(ctx context.Context, db database.DB, ev domain.XenditEvent) (any, error) {
+	return gymcredits.NewDefaultService(p.deps, db).WithVouchers(newGymVouchers(p.deps)).HandleGatewayEvent(ctx, gymcredits.GatewayEvent{
+		Event: ev.Event, Status: ev.Status, ReferenceID: ev.ReferenceID, SessionID: ev.SessionID,
+		TokenID: ev.TokenID, FailureCode: ev.FailureCode, Data: ev.Data,
+	})
+}
+
 func (integrationsPayments) Topup(ctx context.Context, q database.Querier, column, value string) (*webhooks.Pending, error) {
 	if column != "xendit_transaction_id" && column != "reference_id" {
 		return nil, fmt.Errorf("integrations: unknown top-up column %q", column)

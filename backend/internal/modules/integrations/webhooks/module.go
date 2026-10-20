@@ -33,6 +33,9 @@ type Payments interface {
 	GymPurchase(ctx context.Context, q database.Querier, referenceID string) (*Pending, error)
 	// SettleGymPurchase is settleGymPurchaseByReference: its JSON result.
 	SettleGymPurchase(ctx context.Context, db database.DB, referenceID string, paymentID *string) (any, error)
+	// GymPaymentsEvent applies a Payments API event other than a capture
+	// (saved method links, token changes, failed charges): its JSON result.
+	GymPaymentsEvent(ctx context.Context, db database.DB, ev domain.XenditEvent) (any, error)
 	// Topup is the pending ARK Coin top-up whose column (xendit_transaction_id
 	// or reference_id) equals value; nil when none or ambiguous.
 	Topup(ctx context.Context, q database.Querier, column, value string) (*Pending, error)

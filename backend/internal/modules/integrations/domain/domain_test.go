@@ -60,6 +60,36 @@ func TestParseQrWebhook(t *testing.T) {
 	}
 }
 
+func TestParseXenditEvent(t *testing.T) {
+	e, ok := ParseXenditEvent(parse(t, `{"event":"payment.capture","business_id":"b1","data":{"payment_id":"py-1",
+		"payment_request_id":"pr-1","reference_id":"gymcp_abc","payment_token_id":"pt-1","status":"SUCCEEDED","request_amount":250000}}`))
+	if !ok || !e.Paid() || e.ReferenceID != "gymcp_abc" || e.PaymentID != "py-1" || e.TokenID != "pt-1" || e.Amount != 250000 {
+		t.Errorf("capture = %+v %v", e, ok)
+	}
+	// Captured total when request_amount is missing.
+	e, _ = ParseXenditEvent(parse(t, `{"event":"payment.capture","data":{"status":"SUCCEEDED","captures":[{"capture_amount":100},{"capture_amount":50}]}}`))
+	if e.Amount != 150 {
+		t.Errorf("captured total = %v", e.Amount)
+	}
+	e, ok = ParseXenditEvent(parse(t, `{"event":"payment_session.completed","data":{"payment_session_id":"ps-1","reference_id":"gympm_1","status":"COMPLETED","payment_token_id":"pt-9"}}`))
+	if !ok || e.Paid() || e.SessionID != "ps-1" || e.TokenID != "pt-9" || e.Status != "COMPLETED" {
+		t.Errorf("session = %+v", e)
+	}
+	e, ok = ParseXenditEvent(parse(t, `{"event":"payment.failure","data":{"reference_id":"gymcp_x","status":"FAILED","failure_code":"INSUFFICIENT_BALANCE"}}`))
+	if !ok || e.Paid() || e.FailureCode != "INSUFFICIENT_BALANCE" {
+		t.Errorf("failure = %+v", e)
+	}
+	for _, raw := range []string{
+		`{"event":"qr.payment","data":{"status":"SUCCEEDED"}}`,
+		`{"event":"payment.capture","data":[]}`,
+		`{"data":{"status":"SUCCEEDED"}}`,
+	} {
+		if _, ok := ParseXenditEvent(parse(t, raw)); ok {
+			t.Errorf("%s parsed as a Payments API event", raw)
+		}
+	}
+}
+
 func TestResolvePaidAction(t *testing.T) {
 	cases := []struct {
 		topup, checkout string

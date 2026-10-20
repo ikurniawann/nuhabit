@@ -3205,6 +3205,21 @@
     "path": "/api/member-portal/gym/passes/{id}/unfreeze"
   },
   {
+    "module": "gym-credits",
+    "method": "GET",
+    "path": "/api/member-portal/gym/payment-methods"
+  },
+  {
+    "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/member-portal/gym/payment-methods"
+  },
+  {
+    "module": "gym-credits",
+    "method": "DELETE",
+    "path": "/api/member-portal/gym/payment-methods/{id}"
+  },
+  {
     "module": "gym-training",
     "method": "GET",
     "path": "/api/member-portal/gym/races"

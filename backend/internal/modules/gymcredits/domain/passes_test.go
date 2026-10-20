@@ -74,6 +74,23 @@ func TestRenewalDue(t *testing.T) {
 	eq(t, RenewalDue(end, end, 3), false)
 }
 
+func TestNextRenewalRetry(t *testing.T) {
+	end := t0.Add(days(3))
+	// Default rules: 2 retries, 24 hours apart, 3 grace days.
+	eq(t, NextRenewalRetry(1, t0, end, 2, 24, 3), RenewalRetry{At: t0.Add(24 * time.Hour)})
+	eq(t, NextRenewalRetry(2, t0.Add(days(1)), end, 2, 24, 3), RenewalRetry{At: t0.Add(days(2))})
+	// Retries used up.
+	eq(t, NextRenewalRetry(3, t0.Add(days(2)), end, 2, 24, 3), RenewalRetry{Final: true})
+	eq(t, NextRenewalRetry(1, t0, end, 0, 24, 3), RenewalRetry{Final: true})
+	// After the pass ended a retry still runs inside the grace period.
+	eq(t, NextRenewalRetry(1, end.Add(time.Hour), end, 2, 24, 3), RenewalRetry{At: end.Add(25 * time.Hour)})
+	// A retry that would start when the grace period is over is not planned.
+	eq(t, NextRenewalRetry(1, end.Add(days(2)), end, 2, 24, 3), RenewalRetry{Final: true})
+	eq(t, NextRenewalRetry(1, end.Add(-time.Hour), end, 2, 24, 0), RenewalRetry{Final: true})
+	eq(t, NextRenewalRetry(1, end.Add(-2*time.Hour), end, 2, 1, 0), RenewalRetry{At: end.Add(-time.Hour)})
+	eq(t, RenewalGraceEnd(end, 3), end.Add(days(3)))
+}
+
 func TestProratedRefund(t *testing.T) {
 	// 28-day pass, 7 days used: 21/28 of the price.
 	eq(t, ProratedRefund(1_200_000, running(-days(7), days(21)), t0), RefundQuote{TotalDays: 28, UnusedDays: 21, ProratedIdr: 900_000})

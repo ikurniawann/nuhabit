@@ -208,6 +208,8 @@ type Ports struct {
 	// Vouchers is the promo-code engine; nil turns voucher codes away.
 	Vouchers Vouchers
 	Notifier Notifier
+	// SavedMethods charges saved cards and e-wallets; nil turns them off.
+	SavedMethods SavedMethodGateway
 }
 
 // Service holds the credit use cases.
@@ -219,6 +221,8 @@ type Service struct {
 	log   *slog.Logger
 	// CanSimulate is the local-dev guard of canSimulateTopup (dev QR + simulate-paid).
 	canSimulate func() bool
+	// alert counts a problem an operator must fix (a metric in production).
+	alert func(reason string)
 }
 
 // NewService builds the service.
@@ -232,7 +236,15 @@ func NewService(db DB, repo Repository, ports Ports, now func() time.Time, log *
 	if canSimulate == nil {
 		canSimulate = func() bool { return false }
 	}
-	return &Service{db: db, repo: repo, ports: ports, now: now, log: log, canSimulate: canSimulate}
+	return &Service{db: db, repo: repo, ports: ports, now: now, log: log, canSimulate: canSimulate, alert: func(string) {}}
+}
+
+// WithAlerts sets the counter of problems an operator must fix.
+func (s *Service) WithAlerts(alert func(reason string)) *Service {
+	if alert != nil {
+		s.alert = alert
+	}
+	return s
 }
 
 // CanSimulate reports whether dev-only simulated payments are allowed.
@@ -500,4 +512,6 @@ type Repository interface {
 	SaveGlobalRules(ctx context.Context, q database.Querier, rules json.RawMessage, actorID string) error
 	SaveBranchRules(ctx context.Context, q database.Querier, branchID string, rules json.RawMessage, actorID string) error
 	DeleteBranchRules(ctx context.Context, q database.Querier, branchID string) error
+
+	SavedMethodStore
 }

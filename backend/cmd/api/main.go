@@ -92,17 +92,18 @@ func run(cfg config.Config, log *slog.Logger) error {
 	}
 	defer db.Close()
 
-	deps := module.Deps{
-		DB:     db,
-		Auth:   auth.NewService(db, log, time.Now, auth.Options{DatabaseURL: cfg.DatabaseURL, Production: cfg.IsProduction()}),
-		Log:    log,
-		Now:    time.Now,
-		Config: cfg,
-		Events: outbox.NewBus(db, log),
-	}
 	reg := metrics.NewRegistry()
 	metrics.RegisterRuntime(reg)
 	metrics.RegisterPool(reg, func() metrics.PoolStat { return db.Stat() })
+	deps := module.Deps{
+		DB:      db,
+		Auth:    auth.NewService(db, log, time.Now, auth.Options{DatabaseURL: cfg.DatabaseURL, Production: cfg.IsProduction()}),
+		Log:     log,
+		Now:     time.Now,
+		Config:  cfg,
+		Events:  outbox.NewBus(db, log),
+		Metrics: reg,
+	}
 	handler, mounted := app.Handler(deps, time.Now(), reg)
 	go func() {
 		if err := deps.Events.Run(ctx, 5*time.Second, 7*24*time.Hour); err != nil {

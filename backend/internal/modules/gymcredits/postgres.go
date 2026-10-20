@@ -472,17 +472,29 @@ func (Postgres) ExpireLapsedPasses(ctx context.Context, q database.Querier, cust
 	return err
 }
 
-const passSelect = `SELECT mp.id, mp.customer_id, mp.package_id, pk.name, mp.purchase_id, mp.starts_at, mp.ends_at, mp.status,
-       mp.frozen_at, mp.frozen_until, mp.auto_renew, mp.renew_with, cp.branch_id
+const (
+	passCols = `mp.id, mp.customer_id, mp.package_id, pk.name, mp.purchase_id, mp.starts_at, mp.ends_at, mp.status,
+       mp.frozen_at, mp.frozen_until, mp.auto_renew, mp.renew_with, cp.branch_id, mp.auto_renew_off_reason`
+	passFrom = `
   FROM gym.member_passes mp
   JOIN gym.credit_packages pk ON pk.id = mp.package_id
   LEFT JOIN gym.credit_purchases cp ON cp.id = mp.purchase_id`
+	passSelect = `SELECT ` + passCols + passFrom
+)
+
+func (p *PassRow) scanTargets() []any {
+	return []any{&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.PurchaseID, &p.StartsAt, &p.EndsAt, &p.Status,
+		&p.FrozenAt, &p.FrozenUntil, &p.AutoRenew, &p.RenewWith, &p.BranchID, &p.AutoRenewOffReason}
+}
+
+func (p *PassRow) truncate() {
+	p.StartsAt, p.EndsAt = p.StartsAt.Truncate(time.Millisecond), p.EndsAt.Truncate(time.Millisecond)
+}
 
 func scanPass(row pgx.CollectableRow) (PassRow, error) {
 	var p PassRow
-	err := row.Scan(&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.PurchaseID, &p.StartsAt, &p.EndsAt, &p.Status,
-		&p.FrozenAt, &p.FrozenUntil, &p.AutoRenew, &p.RenewWith, &p.BranchID)
-	p.StartsAt, p.EndsAt = p.StartsAt.Truncate(time.Millisecond), p.EndsAt.Truncate(time.Millisecond)
+	err := row.Scan(p.scanTargets()...)
+	p.truncate()
 	return p, err
 }
 
@@ -581,9 +593,22 @@ func (Postgres) DueFrozenPasses(ctx context.Context, q database.Querier, custome
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
+// SetAutoRenew also clears the renewal bookkeeping when auto-renew comes
+// back on with no renewal purchase pending or paid, so the sweep tries anew.
 func (Postgres) SetAutoRenew(ctx context.Context, q database.Querier, id string, on bool, with string) error {
 	_, err := q.Exec(ctx,
-		`UPDATE gym.member_passes SET auto_renew = $2, renew_with = $3, updated_at = now() WHERE id = $1`, id, on, with)
+		`UPDATE gym.member_passes mp
+		    SET auto_renew = $2, renew_with = $3, updated_at = now(),
+		        auto_renew_off_reason = CASE WHEN $2 THEN NULL ELSE mp.auto_renew_off_reason END,
+		        renewal_handled_at = CASE WHEN r.restart THEN NULL ELSE mp.renewal_handled_at END,
+		        renewal_purchase_id = CASE WHEN r.restart THEN NULL ELSE mp.renewal_purchase_id END,
+		        renewal_attempts = CASE WHEN r.restart THEN 0 ELSE mp.renewal_attempts END,
+		        renewal_retry_at = CASE WHEN r.restart THEN NULL ELSE mp.renewal_retry_at END
+		   FROM (SELECT $2 AND NOT p.auto_renew AND NOT EXISTS (
+		                SELECT 1 FROM gym.credit_purchases cp
+		                 WHERE cp.id = p.renewal_purchase_id AND cp.status IN ('pending', 'paid')) AS restart
+		           FROM gym.member_passes p WHERE p.id = $1) r
+		  WHERE mp.id = $1`, id, on, with)
 	return err
 }
 
@@ -631,13 +656,13 @@ func (Postgres) RenewalCandidates(ctx context.Context, q database.Querier, now, 
 
 func (Postgres) ClaimRenewal(ctx context.Context, q database.Querier, id string) (bool, error) {
 	tag, err := q.Exec(ctx,
-		`UPDATE gym.member_passes SET renewal_handled_at = now(), updated_at = now()
+		`UPDATE gym.member_passes SET renewal_handled_at = now(), renewal_attempts = 1, updated_at = now()
 		  WHERE id = $1 AND status = 'active' AND auto_renew AND renewal_handled_at IS NULL`, id)
 	return tag.RowsAffected() == 1, err
 }
 
 func (Postgres) ReleaseRenewal(ctx context.Context, q database.Querier, id string) error {
-	_, err := q.Exec(ctx, `UPDATE gym.member_passes SET renewal_handled_at = NULL WHERE id = $1`, id)
+	_, err := q.Exec(ctx, `UPDATE gym.member_passes SET renewal_handled_at = NULL, renewal_attempts = 0 WHERE id = $1`, id)
 	return err
 }
 

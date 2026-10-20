@@ -38,6 +38,7 @@ type fakePayments struct {
 	topups               map[string]*Pending // column=value
 	children             int
 	settled              []string
+	events               []domain.XenditEvent
 }
 
 func (f *fakePayments) IsGymPurchaseReference(ref string) bool {
@@ -49,6 +50,10 @@ func (f *fakePayments) GymPurchase(context.Context, database.Querier, string) (*
 func (f *fakePayments) SettleGymPurchase(_ context.Context, _ database.DB, ref string, paymentID *string) (any, error) {
 	f.settled = append(f.settled, ref+"/"+*paymentID)
 	return map[string]string{"status": "paid", "purchase_id": "gp-1"}, nil
+}
+func (f *fakePayments) GymPaymentsEvent(_ context.Context, _ database.DB, ev domain.XenditEvent) (any, error) {
+	f.events = append(f.events, ev)
+	return map[string]string{"status": "linked"}, nil
 }
 func (f *fakePayments) Topup(_ context.Context, _ database.Querier, column, value string) (*Pending, error) {
 	return f.topups[column+"="+value], nil
@@ -268,6 +273,42 @@ func TestXenditSettlements(t *testing.T) {
 	expect(t, f.xendit(paid(300000, "gymcp_abc"), token), 200, `{"success":true,"data":{"gym_purchase":{"purchase_id":"gp-1","status":"paid"}}}`)
 	if len(f.pay.settled) != 1 || f.pay.settled[0] != "gymcp_abc/qrpy_1" {
 		t.Errorf("settled = %v", f.pay.settled)
+	}
+}
+
+// Payments API events (gym saved methods) share the callback token check.
+func TestXenditPaymentsEvents(t *testing.T) {
+	f := newFixture(t)
+	token := "cb-token"
+	f.xenditGateway(&token)
+	capture := func(amount int, ref string) string {
+		return `{"event":"payment.capture","data":{"payment_id":"py-1","payment_request_id":"pr-1","reference_id":"` + ref +
+			`","status":"SUCCEEDED","request_amount":` + strconv.Itoa(amount) + `}}`
+	}
+	session := `{"event":"payment_session.completed","data":{"payment_session_id":"ps-1","reference_id":"gympm_1","status":"COMPLETED","payment_token_id":"pt-1"}}`
+
+	expect(t, f.xendit(session, "salah"), 401, `{"success":false,"error":"Invalid callback token"}`)
+	expect(t, f.xendit(capture(250000, "gymcp_abc"), ""), 401, `{"success":false,"error":"Invalid callback token"}`)
+	if len(f.pay.events) != 0 || len(f.pay.settled) != 0 {
+		t.Fatalf("unverified events reached gym: %v %v", f.pay.events, f.pay.settled)
+	}
+
+	// A capture settles only a gym purchase whose amount matches.
+	expect(t, f.xendit(capture(250000, "order-9"), token), 200, `{"success":true,"ignored":true,"reason":"not_gym_payment"}`)
+	f.pay.gym = &Pending{ID: "gp-1", Amount: "250000.00"}
+	expect(t, f.xendit(capture(1000, "gymcp_abc"), token), 200, `{"success":true,"ignored":true,"reason":"amount_mismatch"}`)
+	expect(t, f.xendit(capture(250000, "gymcp_abc"), token), 200, `{"success":true,"data":{"gym_purchase":{"purchase_id":"gp-1","status":"paid"}}}`)
+	if len(f.pay.settled) != 1 || f.pay.settled[0] != "gymcp_abc/py-1" {
+		t.Errorf("settled = %v", f.pay.settled)
+	}
+
+	// Session, token and failure events go to gym-credits as parsed.
+	expect(t, f.xendit(session, token), 200, `{"success":true,"data":{"gym_event":{"status":"linked"}}}`)
+	expect(t, f.xendit(`{"event":"payment.failure","data":{"reference_id":"gymcp_abc","status":"FAILED","failure_code":"CARD_DECLINED"}}`, token), 200,
+		`{"success":true,"data":{"gym_event":{"status":"linked"}}}`)
+	if len(f.pay.events) != 2 || f.pay.events[0].SessionID != "ps-1" || f.pay.events[0].TokenID != "pt-1" ||
+		f.pay.events[1].Event != "payment.failure" || f.pay.events[1].FailureCode != "CARD_DECLINED" {
+		t.Errorf("events = %+v", f.pay.events)
 	}
 }
 

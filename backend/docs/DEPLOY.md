@@ -52,6 +52,14 @@ integration keys Next uses (Xendit, WhatsApp gateway, Meta, OpenAI, VAPID).
 At startup it logs one warning listing the integrations that stay off, as
 Next does, and exits when `DATABASE_URL` is not a `postgres://` URL.
 
+Gym pass renewals:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NEXT_PUBLIC_APP_URL` (or `NEXT_PUBLIC_BASE_URL`) | none | Where Xendit sends members back after paying a renewal invoice. Any renewal can fall back to an invoice, so with auto-renewing passes and neither set, the renewal job logs an error at startup and on every run, counts `gym_credits_alerts_total{reason="renewal_invoice_no_app_url"}` and leaves the renewals for a later run instead of opening invoices. |
+| `XENDIT_SAVED_METHODS_ENABLED` | off | `1` lets members save a card or e-wallet (Metode pembayaran) and pick it for auto-renew. Needs the Xendit gateway active in Settings → Payment Gateways and the Payments API webhooks pointed at `/api/payments/xendit/webhook`; with the flag on and no active gateway the job logs an error and counts `reason="saved_methods_gateway_inactive"`. See [XENDIT_SAVED_METHODS.md](XENDIT_SAVED_METHODS.md). |
+| `XENDIT_SAVED_METHOD_CHANNELS` | all | Comma list of Xendit channel codes the hosted linking page offers, e.g. `CARDS,OVO,DANA,SHOPEEPAY`. |
+
 ## Metrics
 
 Set `METRICS_ADDR` (in `ENV_FILE`, or `environment:` for compose) and the
@@ -88,6 +96,7 @@ scrape_configs:
 | `job_runs_total`, `job_failures_total`, `job_skipped_total` | counter | `job` |
 | `job_last_success_timestamp_seconds` | gauge | `job` |
 | `job_duration_seconds` | histogram (50 ms to 5 min) | `job` |
+| `gym_credits_alerts_total` | counter | `reason` |
 
 `route` is the ServeMux pattern without its method (`/api/crm/members/{id}`),
 or `unmatched` for 404 and 405 answers, so ids never become label values.
@@ -104,6 +113,7 @@ histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_
 pgxpool_acquired_conns / pgxpool_max_conns
 rate(pgxpool_empty_acquire_wait_seconds_total[5m])
 increase(job_failures_total[1h]) > 0
+increase(gym_credits_alerts_total[1h]) > 0
 time() - max by (job) (job_last_success_timestamp_seconds) > 3 * 3600
 ```
 
@@ -120,7 +130,8 @@ registers its own jobs in `internal/app/module_<name>.go`
 
 | Job | Every | Work |
 |---|---|---|
-| `gym-credits.purchase-reconcile` | 2 min | Asks Xendit about QRIS and invoice purchases still pending after a minute, settles paid ones, closes expired ones. |
+| `gym-credits.purchase-reconcile` | 2 min | Asks Xendit about QRIS, invoice and saved-method purchases still pending after a minute, settles paid ones, closes expired or failed ones. |
+| `gym-credits.pass-renewals` | 1 h | Buys the next pass of auto-renewing passes inside `renewalLeadDays` (ARK Coin, saved method or invoice), retries failed or expired renewal payments `renewalRetryCount` times `renewalRetryHours` apart until `renewalGraceDays` after the pass ends, then turns auto-renew off. |
 | `gym-credits.reminders` | 1 h | Credit expiry and pass expiry reminders (`expiryReminderDays`), low-balance nudges (`lowBalanceThreshold`). |
 | `gym-scheduling.class-reminders` | 5 min | Reminds booked members `classReminderMinutes` before class, unless they turned off booking reminders in the member app. |
 

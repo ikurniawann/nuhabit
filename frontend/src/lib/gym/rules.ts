@@ -53,6 +53,12 @@ export interface GymRules {
   minFreezeDays: number;
   /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
   renewalLeadDays: number;
+  /** Pembayaran perpanjangan yang gagal atau kedaluwarsa dicoba ulang N kali. */
+  renewalRetryCount: number;
+  /** Jeda antar percobaan ulang perpanjangan, dalam jam. */
+  renewalRetryHours: number;
+  /** Percobaan ulang masih jalan sampai N hari setelah pass berakhir; lalu perpanjangan otomatis mati. */
+  renewalGraceDays: number;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -82,6 +88,9 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   maxFreezeDaysPerYear: 30,
   minFreezeDays: 7,
   renewalLeadDays: 3,
+  renewalRetryCount: 2,
+  renewalRetryHours: 24,
+  renewalGraceDays: 3,
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -119,6 +128,9 @@ const rulesShape = {
   maxFreezeDaysPerYear: int(0, 365, "Jatah bekukan per tahun"),
   minFreezeDays: int(1, 365, "Durasi bekukan"),
   renewalLeadDays: int(0, 30, "Perpanjangan otomatis"),
+  renewalRetryCount: int(0, 10, "Ulang perpanjangan gagal"),
+  renewalRetryHours: int(1, 168, "Jeda ulang perpanjangan"),
+  renewalGraceDays: int(0, 30, "Masa tenggang perpanjangan"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
