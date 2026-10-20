@@ -539,11 +539,13 @@ func (Postgres) ListBookings(ctx context.Context, q Q, f BookingListFilter) ([]*
 	return queryRows(ctx, q, `SELECT b.id, b.status, b.waitlist_position, b.source, b.late_cancel, b.promotion_offered_at,
             b.checked_in_at, b.cancelled_at, b.created_at,
             c.id AS customer_id, c.name AS member_name, c.phone AS member_phone,
-            s.id AS session_id, s.starts_at, s.credit_cost, t.name AS class_type_name, co.name AS coach_name
+            s.id AS session_id, s.starts_at, s.credit_cost, t.name AS class_type_name, co.name AS coach_name,
+            `+sessionZone+` AS timezone
        FROM gym.bookings b
        JOIN gym.class_sessions s ON s.id = b.session_id
        JOIN gym.class_types t ON t.id = s.class_type_id
        LEFT JOIN gym.coaches co ON co.id = s.coach_id
+       LEFT JOIN configuration.branches br ON br.id = s.branch_id
        JOIN pos.pos_customers c ON c.id = b.customer_id
       WHERE s.starts_at >= $1 AND s.starts_at < $2
         AND ($3::text IS NULL OR b.status = $3)
@@ -562,11 +564,12 @@ func (Postgres) MemberBookings(ctx context.Context, q Q, customerID string, past
             b.cancelled_at, b.created_at,
             s.id AS session_id, s.branch_id, s.starts_at, s.ends_at, s.area, s.credit_cost, s.status AS session_status,
             s.moved_at, s.original_starts_at,
-            t.name AS class_type_name, t.color, co.name AS coach_name
+            t.name AS class_type_name, t.color, co.name AS coach_name, `+sessionZone+` AS timezone
        FROM gym.bookings b
        JOIN gym.class_sessions s ON s.id = b.session_id
        JOIN gym.class_types t ON t.id = s.class_type_id
        LEFT JOIN gym.coaches co ON co.id = s.coach_id
+       LEFT JOIN configuration.branches br ON br.id = s.branch_id
       WHERE b.customer_id = $1
         AND `+where+`
       ORDER BY s.starts_at `+order+`
