@@ -23,6 +23,8 @@ import {
 } from "@/lib/pos/receipt-layout";
 
 export interface ReceiptPayload {
+  /** Nomor struk utuh di luar order POS (mis. paket gym GYM-YYYYMMDD-NNNN). */
+  receiptNumber?: string;
   orderId?: string;
   orderNumber?: string;
   checkoutNumber?: string;

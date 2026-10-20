@@ -34,7 +34,12 @@ import {
   type CreditPurchase,
   type MemberCredits,
 } from "../api";
+import { Can } from "@/components/iam/can";
+import { useCan } from "@/components/iam/iam-access-provider";
+import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
+import { DeskShiftBar } from "./desk-shift";
 import { PassesCard, RefundDialog } from "./pass-panel";
+import { ReceiptButton } from "./receipt-button";
 import { SellDialog } from "./sell-dialog";
 import { useDebounced } from "@/features/gym/use-debounced";
 
@@ -62,6 +67,9 @@ export function CreditsPage() {
     queryFn: () => gymCreditsApi.searchMembers(term),
     enabled: term.length === 0 || term.length >= 2,
   });
+  // Only sellers run a till shift here; the shift serves the staff branch.
+  const canSell = useCan("gym.credits", "create");
+  const branches = useGymBranches();
 
   return (
     <div className="space-y-4">
@@ -70,6 +78,7 @@ export function CreditsPage() {
         title="Kredit Member"
         description="Saldo kredit kelas tiap member. Saldo dihitung dari buku besar; koreksi selalu ditulis sebagai entri baru beserta alasannya."
       />
+      {canSell && branches.isSuccess && <DeskShiftBar branchId={defaultBranchId(branches.data) || null} />}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
         <Card className="gap-3 py-4">
@@ -128,6 +137,7 @@ export function CreditsPage() {
 
 function MemberCreditsPanel({ customerId }: { customerId: string }) {
   const queryClient = useQueryClient();
+  const canCorrect = useCan("gym.credits", "update");
   const detail = useQuery({ queryKey: memberKey(customerId), queryFn: () => gymCreditsApi.memberCredits(customerId) });
   const [dialog, setDialog] = useState<"adjust" | "sell" | null>(null);
   const [reversing, setReversing] = useState<CreditEntry | null>(null);
@@ -135,6 +145,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: memberKey(customerId) });
     void queryClient.invalidateQueries({ queryKey: ["gym-credits", "search"] });
+    void queryClient.invalidateQueries({ queryKey: ["gym-credits", "shift"] });
   };
 
   if (detail.isLoading) return <Card><TableNote>Memuat kredit member…</TableNote></Card>;
@@ -155,12 +166,16 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setDialog("adjust")}>
-            <SlidersHorizontal /> Sesuaikan
-          </Button>
-          <Button onClick={() => setDialog("sell")} disabled={!d.member.is_active}>
-            <ShoppingCart /> Jual paket
-          </Button>
+          <Can menu="gym.credits" action="update" mode="disable">
+            <Button variant="outline" onClick={() => setDialog("adjust")}>
+              <SlidersHorizontal /> Sesuaikan
+            </Button>
+          </Can>
+          <Can menu="gym.credits" action="create" mode="disable">
+            <Button onClick={() => setDialog("sell")} disabled={!d.member.is_active}>
+              <ShoppingCart /> Jual paket
+            </Button>
+          </Can>
         </div>
       </div>
 
@@ -244,7 +259,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{formatDateTime(e.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    {!e.reversed && e.type !== "reversal" && e.type !== "expiration" && (
+                    {canCorrect && !e.reversed && e.type !== "reversal" && e.type !== "expiration" && (
                       <Button variant="ghost" size="sm" onClick={() => setReversing(e)}>
                         Batalkan
                       </Button>
@@ -286,6 +301,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                           p.payment_method ? METHOD_LABELS[p.payment_method] : null,
                           p.channel === "member_portal" ? "Portal" : "Front desk",
                           formatDate(p.paid_at ?? p.created_at),
+                          p.receipt_number,
                           p.refunded_idr != null ? `Refund ${formatRupiah(p.refunded_idr)}` : null,
                         ]
                           .filter(Boolean)
@@ -297,11 +313,14 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {p.status === "paid" && (
-                        <Button variant="ghost" size="sm" className="text-danger" onClick={() => setRefunding(p)}>
-                          Refund
-                        </Button>
-                      )}
+                      <div className="flex flex-wrap justify-end gap-1">
+                        <ReceiptButton purchase={p} />
+                        {canCorrect && p.status === "paid" && (
+                          <Button variant="ghost" size="sm" className="text-danger" onClick={() => setRefunding(p)}>
+                            Refund
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

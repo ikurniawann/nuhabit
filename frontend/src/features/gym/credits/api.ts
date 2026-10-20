@@ -123,6 +123,9 @@ export interface CreditEntry {
 
 export type PaymentMethod = "cash" | "card" | "transfer" | "qris" | "ark_coin" | "complimentary";
 
+/** Metode yang dibayar lewat kasir dan masuk shift kasir POS. */
+export const TILL_METHODS: readonly PaymentMethod[] = ["cash", "card", "transfer", "qris"];
+
 export interface CreditPurchase {
   id: string;
   package_name: string;
@@ -138,6 +141,72 @@ export interface CreditPurchase {
   paid_at: string | null;
   refunded_idr: number | null;
   created_at: string;
+  branch_id: string | null;
+  /** GYM-YYYYMMDD-NNNN; null until paid. */
+  receipt_number: string | null;
+  pos_shift_id: string | null;
+  shift_number: string | null;
+}
+
+/** Struk pembelian (cetak ulang memakai data ini). */
+export interface PurchaseReceipt {
+  receipt_number: string;
+  purchase_id: string;
+  package_name: string;
+  kind: PackageKind;
+  credits: number;
+  validity_days: number;
+  price_idr: number;
+  discount_idr: number;
+  total_idr: number;
+  payment_method: PaymentMethod | null;
+  status: CreditPurchase["status"];
+  paid_at: string | null;
+  refunded_at: string | null;
+  refunded_idr: number | null;
+  member_name: string | null;
+  member_phone: string | null;
+  branch_name: string | null;
+  cashier_name: string | null;
+  shift_number: string | null;
+  header_lines: string[];
+  footer_lines: string[];
+}
+
+/** Penjualan gym dalam satu shift kasir. */
+export interface GymShiftSales {
+  cash: number;
+  qris: number;
+  card: number;
+  transfer: number;
+  sales: number;
+  count: number;
+  refunds: number;
+  cash_refunds: number;
+  refund_count: number;
+}
+
+/** Ringkasan shift berjalan atau saat ditutup (angka dari POS). */
+export interface DeskShiftSummary {
+  total_orders: number;
+  total_sales: number;
+  total_refunds: number;
+  opening_cash: number;
+  expected_cash: number;
+  closing_cash?: number;
+  variance?: number;
+  gym_sales: GymShiftSales;
+}
+
+/** Shift kasir milik staf yang sedang login (pos.pos_shifts). */
+export interface DeskShift {
+  id: string;
+  shift_number: string;
+  cashier_id: string;
+  branch_id: string | null;
+  opened_at: string;
+  opening_cash: number;
+  summary: DeskShiftSummary;
 }
 
 export interface MemberCredits {
@@ -195,10 +264,33 @@ export const gymCreditsApi = {
   setAutoRenew: (passId: string, autoRenew: boolean, renewWith?: RenewWith) =>
     send<MemberPass>(`/api/gym/passes/${passId}/auto-renew`, { auto_renew: autoRenew, renew_with: renewWith }, "PUT"),
 
+  receipt: (purchaseId: string) => call<PurchaseReceipt>(`/api/gym/credits/purchases/${purchaseId}/receipt`),
+
+  /* Shift kasir front desk; null = belum ada shift terbuka untuk cabang ini. */
+  myShift: (branchId: string | null) =>
+    call<DeskShift | null>(`/api/pos/shifts/mine${branchQuery(branchId)}`).then((shift) =>
+      // Kolom numeric PostgreSQL datang sebagai teks.
+      shift ? { ...shift, opening_cash: Number(shift.opening_cash), summary: { ...shift.summary, opening_cash: Number(shift.summary.opening_cash) } } : null
+    ),
+  openShift: (branchId: string | null, openingCash: number, notes?: string) =>
+    send<unknown>(`/api/pos/shifts/mine${branchQuery(branchId)}`, { opening_cash: openingCash, notes }),
+  closeShift: (branchId: string | null, closingCash: number, notes?: string) =>
+    closeDeskShift(`/api/pos/shifts/mine/close${branchQuery(branchId)}`, { closing_cash: closingCash, notes }),
+
   rules: () => call<RulesAdmin>("/api/gym/rules"),
   saveRules: (branchId: string | null, rules: Partial<GymRules>) =>
     send<RulesAdmin>("/api/gym/rules", { branch_id: branchId, rules }, "PUT"),
 };
+
+const branchQuery = (branchId: string | null) => (branchId ? `?branch_id=${encodeURIComponent(branchId)}` : "");
+
+/** Tutup shift: ringkasan ada di `summary`, di luar `data`. */
+async function closeDeskShift(url: string, body: unknown): Promise<DeskShiftSummary> {
+  const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || !json.success) throw new Error(json.error || "Gagal menutup shift");
+  return { ...json.summary, opening_cash: Number(json.summary.opening_cash) } as DeskShiftSummary;
+}
 
 /* ── Label & format ──────────────────────────────────────────────────── */
 

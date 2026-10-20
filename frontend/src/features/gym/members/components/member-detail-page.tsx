@@ -13,7 +13,9 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TableNote } from "@/features/crm/engagement/components/shared";
+import { Can } from "@/components/iam/can";
 import { METHOD_LABELS, type CreditPurchase } from "@/features/gym/credits/api";
+import { ReceiptButton } from "@/features/gym/credits/components/receipt-button";
 import { BOOKING_BADGE } from "@/features/gym/scheduling/api";
 import { GATE_DENIAL_LABEL } from "@/lib/gym/booking";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
@@ -89,9 +91,11 @@ export function MemberDetailPage({ customerId }: { customerId: string }) {
         description={[p.phone, p.member_code, p.email].filter(Boolean).join(" · ")}
         actions={
           <>
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              <Pencil /> Ubah profil
-            </Button>
+            <Can menu="gym.members" action="update" mode="disable">
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                <Pencil /> Ubah profil
+              </Button>
+            </Can>
             <Link href={`/dashboard/gym/credits?member=${p.id}`} className={buttonVariants({ variant: "outline" })}>
               <Coins /> Kelola kredit
             </Link>
@@ -375,6 +379,7 @@ function PurchaseTable({ purchases }: { purchases: CreditPurchase[] }) {
               <TableHead>Pembayaran</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Struk</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -394,6 +399,10 @@ function PurchaseTable({ purchases }: { purchases: CreditPurchase[] }) {
                   <TableCell className="text-right tabular-nums">{formatRupiah(x.total_idr)}</TableCell>
                   <TableCell>
                     <Badge variant={status.variant}>{status.label}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <ReceiptButton purchase={x} />
+                    {x.receipt_number && <p className="font-mono text-xs text-muted-foreground">{x.receipt_number}</p>}
                   </TableCell>
                 </TableRow>
               );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,8 +20,11 @@ import { cn } from "@/lib/utils";
 import { Field } from "@/features/crm/engagement/components/shared";
 import { formatNumber, formatRupiah } from "@/lib/format";
 import { defaultBranchId, useGymBranches } from "@/features/gym/branches";
-import { gymCreditsApi, METHOD_LABELS, type CreditPurchase, type MemberCredits, type PaymentMethod } from "../api";
+import { GymApiError } from "@/features/gym/shared";
+import { gymCreditsApi, METHOD_LABELS, TILL_METHODS, type CreditPurchase, type MemberCredits, type PaymentMethod } from "../api";
+import { printPurchaseReceipt } from "../print-receipt";
 import { priceAt, sellablePackages } from "../pricing";
+import { DeskShiftDialog, useDeskShift } from "./desk-shift";
 
 /**
  * Jual paket di front desk. Cabang awal = cabang staf (atau cabang sesi pada
@@ -54,6 +57,11 @@ export function SellDialog({
   const total = price - discountIdr;
   const arkShort = method === "ark_coin" && total > credits.member.ark_balance_idr;
   const branchOptions = branches.data?.branches ?? [];
+  // Tunai, kartu, transfer dan QRIS masuk shift kasir; tunai wajib ada shift.
+  const queryClient = useQueryClient();
+  const shift = useDeskShift(branchId || null, TILL_METHODS.includes(method));
+  const needsShift = method === "cash" && shift.isSuccess && !shift.data;
+  const [openingShift, setOpeningShift] = useState(false);
 
   const sell = useMutation({
     mutationFn: () =>
@@ -68,11 +76,25 @@ export function SellDialog({
       toast.success("Paket terjual", {
         description:
           purchase.kind === "pass" ? `${purchase.package_name}: pass ${formatNumber(purchase.validity_days)} hari` : `${purchase.package_name}: +${formatNumber(purchase.credits)} kredit`,
+        action: purchase.receipt_number
+          ? {
+              label: "Cetak struk",
+              onClick: () => void printPurchaseReceipt(purchase.id).catch((e: Error) => toast.error("Struk gagal dicetak", { description: e.message })),
+            }
+          : undefined,
       });
+      void queryClient.invalidateQueries({ queryKey: ["gym-credits", "shift"] });
       onDone(purchase);
       onClose();
     },
-    onError: (error) => toast.error("Penjualan gagal", { description: error.message }),
+    onError: (error) => {
+      // The shift may have closed since it was read: show the open-shift prompt.
+      if (error instanceof GymApiError && error.code === "SHIFT_REQUIRED") {
+        void shift.refetch();
+        return;
+      }
+      toast.error("Penjualan gagal", { description: error.message });
+    },
   });
 
   return (
@@ -152,6 +174,27 @@ export function SellDialog({
             <Field label="Catatan" className="sm:col-span-2">
               <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="No. struk EDC, nama kasir, dll." />
             </Field>
+            {needsShift ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-warning-soft px-4 py-3 text-sm sm:col-span-2">
+                <p className="min-w-0">Belum ada shift kasir di cabang ini. Buka shift dulu untuk menerima tunai.</p>
+                <Button type="button" size="sm" onClick={() => setOpeningShift(true)}>
+                  Buka shift
+                </Button>
+              </div>
+            ) : (
+              TILL_METHODS.includes(method) &&
+              shift.isSuccess && (
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  {shift.data ? (
+                    <>
+                      Masuk shift kasir <span className="font-mono">{shift.data.shift_number}</span>.
+                    </>
+                  ) : (
+                    "Belum ada shift kasir: penjualan ini tidak masuk shift mana pun."
+                  )}
+                </p>
+              )
+            )}
             <div className="rounded-2xl bg-surface px-4 py-3 sm:col-span-2">
               <p className="text-xs text-muted-foreground">Total dibayar</p>
               <p className="text-2xl font-bold tabular-nums">{formatRupiah(total)}</p>
@@ -170,12 +213,13 @@ export function SellDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Batal
             </Button>
-            <Button type="submit" disabled={!pkg || arkShort || sell.isPending}>
+            <Button type="submit" disabled={!pkg || arkShort || needsShift || sell.isPending}>
               {sell.isPending ? "Menyimpan…" : "Simpan penjualan"}
             </Button>
           </DialogFooter>
         </DialogPanelForm>
       </DialogPanel>
+      {openingShift && <DeskShiftDialog branchId={branchId || null} shift={null} onClose={() => setOpeningShift(false)} />}
     </Dialog>
   );
 }
