@@ -43,9 +43,38 @@ func (s *Service) AccessLog(ctx context.Context) (*Row, error) {
 	return object("log", log, "today", today), nil
 }
 
+// StrikeScope picks the branch whose rules count a member's pass strikes:
+// the session's when the search books into one, else BranchID (the staff
+// member's branch). Neither means the global rules.
+type StrikeScope struct {
+	SessionID, BranchID *string
+}
+
+// strikeBranch resolves the scope to a branch id (nil for the global rules)
+// and its name.
+func (s *Service) strikeBranch(ctx context.Context, scope StrikeScope) (id, name *string, err error) {
+	id = scope.BranchID
+	if scope.SessionID != nil {
+		session, err := s.GetSession(ctx, *scope.SessionID, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		if session == nil {
+			return nil, nil, schedulingError("Sesi tidak ditemukan", 404)
+		}
+		id = session.StrPtr("branch_id")
+	}
+	if id == nil {
+		return nil, nil, nil
+	}
+	name, err = s.repo.BranchName(ctx, s.db, *id)
+	return id, name, err
+}
+
 // SearchBookableMembers finds members by name or phone, with their balance
-// and their pass strikes under the global rules.
-func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]MemberHit, error) {
+// and their pass strikes under the rules of the scope's branch, the same
+// rules a booking into that branch applies.
+func (s *Service) SearchBookableMembers(ctx context.Context, term string, scope StrikeScope) ([]MemberHit, error) {
 	if validate.UTF16Len(term) < 2 {
 		return []MemberHit{}, nil
 	}
@@ -53,7 +82,11 @@ func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]Mem
 	if err != nil {
 		return nil, err
 	}
-	rules, err := s.Rules.ForBranch(ctx, s.db, nil)
+	branchID, branchName, err := s.strikeBranch(ctx, scope)
+	if err != nil {
+		return nil, err
+	}
+	rules, err := s.Rules.ForBranch(ctx, s.db, branchID)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +101,7 @@ func (s *Service) SearchBookableMembers(ctx context.Context, term string) ([]Mem
 		}
 		st := domain.EvaluatePassStrikes(strikes, rules, now)
 		hits[i].PassStrikes = st.Strikes
+		hits[i].RulesBranchID, hits[i].RulesBranchName = branchID, branchName
 		if st.SuspendedUntil != nil {
 			until := jsTime(*st.SuspendedUntil)
 			hits[i].SuspendedUntil = &until

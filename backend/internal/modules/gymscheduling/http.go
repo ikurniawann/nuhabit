@@ -567,8 +567,15 @@ func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User
 	return ok(w, out)
 }
 
-func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	hits, err := h.svc.SearchBookableMembers(r.Context(), strings.TrimSpace(r.URL.Query().Get("q")))
+// searchMembers counts strikes under the rules of ?session_id='s branch,
+// else ?branch_id=, else the caller's branch.
+func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, user *auth.User) error {
+	query := r.URL.Query()
+	scope := StrikeScope{SessionID: optionalUUID(query, "session_id"), BranchID: optionalUUID(query, "branch_id")}
+	if scope.BranchID == nil && user != nil {
+		scope.BranchID = user.BranchID
+	}
+	hits, err := h.svc.SearchBookableMembers(r.Context(), strings.TrimSpace(query.Get("q")), scope)
 	if err != nil {
 		return err
 	}
