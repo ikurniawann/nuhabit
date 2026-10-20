@@ -27,6 +27,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatNumber } from "@/lib/format";
+import { WAIVER_VERSION } from "@/lib/member-app/home";
 import { MemberCardSheet } from "../components/member-card";
 import { ApiError, memberApi } from "../lib/api";
 import { useT } from "../lib/i18n";
@@ -306,17 +307,17 @@ export function ProfilePage() {
         />
       </section>
 
-      <section className="nh-card flex flex-col gap-2 text-sm">
+      <Link href={m("/profile/waiver")} className="nh-card flex flex-col gap-2 text-sm">
         <p className="nh-label !mb-0">{t("Digital waiver")}</p>
         <div className="flex justify-between">
           <span className="text-nh-muted">{t("Version {v}", { v: member.waiverVersion ?? "-" })}</span>
-          <span className="font-bold text-nh-ok">
-            {member.waiverAcceptedAt
-              ? t("Signed {date}", { date: formatDay(member.waiverAcceptedAt) })
-              : t("Not signed")}
-          </span>
+          {member.waiverAcceptedAt && member.waiverVersion === WAIVER_VERSION ? (
+            <span className="font-bold text-nh-ok">{t("Signed {date}", { date: formatDay(member.waiverAcceptedAt) })}</span>
+          ) : (
+            <span className="font-bold text-nh-warn">{member.waiverAcceptedAt ? t("New version to sign") : t("Not signed")} →</span>
+          )}
         </div>
-      </section>
+      </Link>
 
       <button
         onClick={() => void logout()}

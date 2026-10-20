@@ -228,6 +228,10 @@ export function useCancelMutation() {
 export const confirmSpot = (bookingId: string) =>
   memberApi(`/gym/bookings/${bookingId}`, { method: "POST", json: { action: "confirm_offer" } });
 
+/** Tolak kursi yang ditawarkan: keluar dari waitlist, kursi pindah ke member berikutnya. */
+export const declineSpot = (bookingId: string) =>
+  memberApi(`/gym/bookings/${bookingId}`, { method: "POST", json: { action: "decline_offer" } });
+
 export const buyPackage = (packageId: string, method: "qris" | "ark_coin", voucherCode?: string) =>
   memberApi<RawPurchase>("/gym/credits/purchases", {
     method: "POST",

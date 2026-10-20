@@ -87,6 +87,11 @@ export const HOME_ID: Record<string, string> = {
   "Version {v}": "Versi {v}",
   "Signed {date}": "Ditandatangani {date}",
   "Not signed": "Belum ditandatangani",
+  "New version to sign": "Ada versi baru",
+  "You signed version {v}. Sign the new version to keep booking classes.":
+    "Kamu menyetujui versi {v}. Setujui versi baru supaya tetap bisa booking kelas.",
+  "Sign the waiver to book classes and enter the gym.": "Setujui waiver untuk booking kelas dan masuk gym.",
+  "Sign waiver": "Setujui waiver",
   "Save failed.": "Gagal menyimpan.",
   // Pengaturan
   "Loading settings…": "Memuat pengaturan…",
