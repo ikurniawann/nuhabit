@@ -40,9 +40,11 @@ type Testimonial struct {
 
 // Profile is the public face of a configuration.branches row.
 type Profile struct {
-	ID           string        `json:"id"`
-	Name         string        `json:"name"`
-	Slug         string        `json:"slug"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+	// Timezone is the IANA zone of the branch wall clock (localtime.Names).
+	Timezone     string        `json:"timezone"`
 	IsPublic     bool          `json:"is_public"`
 	Address      *string       `json:"address"`
 	City         *string       `json:"city"`
@@ -62,7 +64,9 @@ type Profile struct {
 
 // ProfileEdit is what staff may change on a profile.
 type ProfileEdit struct {
-	Slug         string
+	Slug string
+	// Timezone nil keeps the stored zone.
+	Timezone     *string
 	IsPublic     bool
 	Address      *string
 	City         *string
@@ -83,7 +87,7 @@ type ProfileEdit struct {
 // ErrSlugTaken is a slug another branch already uses.
 var ErrSlugTaken = errors.New("slug sudah dipakai cabang lain")
 
-const profileColumns = `id::text, name, coalesce(slug, ''), is_public, address, city, postcode,
+const profileColumns = `id::text, name, coalesce(slug, ''), timezone, is_public, address, city, postcode,
 	lat::text, lng::text, phone, email, instagram, directions, hero_image_url,
 	benefits, accordions, extras, testimonials`
 
@@ -91,7 +95,7 @@ func scanProfile(row pgx.Row) (*Profile, error) {
 	var p Profile
 	var lat, lng *string
 	var benefits, accordions, extras, testimonials []byte
-	err := row.Scan(&p.ID, &p.Name, &p.Slug, &p.IsPublic, &p.Address, &p.City, &p.Postcode,
+	err := row.Scan(&p.ID, &p.Name, &p.Slug, &p.Timezone, &p.IsPublic, &p.Address, &p.City, &p.Postcode,
 		&lat, &lng, &p.Phone, &p.Email, &p.Instagram, &p.Directions, &p.HeroImageURL,
 		&benefits, &accordions, &extras, &testimonials)
 	if err != nil {
@@ -189,11 +193,12 @@ func (s Service) SaveProfile(ctx context.Context, q database.Querier, id string,
 	tag, err := q.Exec(ctx, `UPDATE configuration.branches SET
 		slug = $2, is_public = $3, address = $4, city = $5, postcode = $6, lat = $7, lng = $8,
 		phone = $9, email = $10, instagram = $11, directions = $12, hero_image_url = $13,
-		benefits = $14, accordions = $15, extras = $16, testimonials = $17, updated_at = now()
+		benefits = $14, accordions = $15, extras = $16, testimonials = $17,
+		timezone = COALESCE($18, timezone), updated_at = now()
 		WHERE id = $1`,
 		id, in.Slug, in.IsPublic, in.Address, in.City, in.Postcode, in.Lat, in.Lng,
 		in.Phone, in.Email, in.Instagram, in.Directions, in.HeroImageURL,
-		benefits, accordions, extras, testimonials)
+		benefits, accordions, extras, testimonials, in.Timezone)
 	switch {
 	case database.IsUniqueViolation(err):
 		return nil, ErrSlugTaken

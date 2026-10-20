@@ -21,23 +21,25 @@ func TestBranchProfile(t *testing.T) {
 	r := e.do(&admin, "GET", path, nil)
 	expect(t, r, 200, "")
 	got := r.json(t)["data"].(map[string]any)
-	if got["is_public"] != false || got["slug"] == "" || got["benefits"] == nil {
+	if got["is_public"] != false || got["slug"] == "" || got["benefits"] == nil || got["timezone"] != "Asia/Jakarta" {
 		t.Fatalf("fresh profile %v", got)
 	}
 
 	expect(t, e.do(&admin, "PUT", path, map[string]any{"slug": "Bad Slug"}), 400, "")
 	expect(t, e.do(&admin, "PUT", path, map[string]any{"slug": "sulu-test", "lat": 95}), 400, "")
+	expect(t, e.do(&admin, "PUT", path, map[string]any{"slug": "sulu-test", "timezone": "Asia/Tokyo"}), 400, "")
 
 	slug := "go-test-" + testutil.RandomHex(3)
 	r = e.do(&admin, "PUT", path, map[string]any{
-		"slug": slug, "is_public": true, "city": " Bandung ", "lat": -6.9, "lng": 107.6,
+		"slug": slug, "is_public": true, "city": " Bandung ", "lat": -6.9, "lng": 107.6, "timezone": "Asia/Makassar",
 		"phone": "+62811", "benefits": []map[string]any{{"title": "Coach", "text": "Tersertifikasi"}},
 		"accordions":   map[string]any{"facilities": []string{"Rig", "Turf"}},
 		"testimonials": []map[string]any{{"name": "Ayu", "quote": "Mantap", "role": "Member"}},
 	})
 	expect(t, r, 200, "")
 	got = r.json(t)["data"].(map[string]any)
-	if got["slug"] != slug || got["is_public"] != true || got["city"] != "Bandung" || got["lat"] != -6.9 {
+	if got["slug"] != slug || got["is_public"] != true || got["city"] != "Bandung" || got["lat"] != -6.9 ||
+		got["timezone"] != "Asia/Makassar" {
 		t.Fatalf("saved profile %v", got)
 	}
 	acc := got["accordions"].(map[string]any)
@@ -54,6 +56,10 @@ func TestBranchProfile(t *testing.T) {
 	expect(t, e.do(&admin, "PUT", path, map[string]any{"slug": slug, "is_public": false}), 200, "")
 	if p, err := svc.PublicProfile(ctx, e.tx, slug); err != nil || p != nil {
 		t.Fatalf("hidden profile %v %v", p, err)
+	}
+	// A PUT without a zone keeps the stored one.
+	if p, err := svc.Profile(ctx, e.tx, org.BranchID); err != nil || p.Timezone != "Asia/Makassar" {
+		t.Fatalf("zone after save without one %v %v", p, err)
 	}
 
 	// A second branch may not take the slug.

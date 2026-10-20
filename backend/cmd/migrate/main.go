@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	_ "time/tzdata" // zone names resolve without the OS zoneinfo, as in cmd/api
 
 	"nuhabit/backend/internal/migrate"
 	"nuhabit/backend/internal/platform/config"

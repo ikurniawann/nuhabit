@@ -35,6 +35,7 @@ type businessBranch struct {
 	Name       string              `json:"name"`
 	Code       string              `json:"code"`
 	IsActive   bool                `json:"is_active"`
+	Timezone   string              `json:"timezone"`
 	Warehouses []businessWarehouse `json:"warehouses"`
 }
 
@@ -71,7 +72,7 @@ func fetchBusinessTree(ctx context.Context, q database.Querier) (businessTree, e
 		return businessTree{}, err
 	}
 	branches, err := queryStructs[businessBranch](ctx, q,
-		`SELECT id::text, company_id::text, name, code, is_active FROM configuration.branches ORDER BY name`)
+		`SELECT id::text, company_id::text, name, code, is_active, timezone FROM configuration.branches ORDER BY name`)
 	if err != nil {
 		return businessTree{}, err
 	}
@@ -129,7 +130,7 @@ func scanTargets(v any) []any {
 	case *businessCompany:
 		return []any{&x.ID, &x.HoldingID, &x.Name, &x.Code, &x.IsActive}
 	case *businessBranch:
-		return []any{&x.ID, &x.CompanyID, &x.Name, &x.Code, &x.IsActive}
+		return []any{&x.ID, &x.CompanyID, &x.Name, &x.Code, &x.IsActive, &x.Timezone}
 	case *businessWarehouse:
 		return []any{&x.ID, &x.BranchID, &x.Name, &x.Code, &x.IsDefault, &x.IsActive}
 	}

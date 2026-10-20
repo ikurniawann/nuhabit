@@ -20,6 +20,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // TZ and branch zone names resolve without the OS zoneinfo
 
 	"nuhabit/backend/internal/app"
 	"nuhabit/backend/internal/platform/auth"

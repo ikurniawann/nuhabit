@@ -9,11 +9,13 @@ import (
 	"nuhabit/backend/internal/modules/configuration/kit"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/validate"
 )
 
 // Branch public profile: GET and PUT /api/settings/business/branch/{id}/profile.
-// The public site reads the same columns through the site module's port.
+// The public site reads the same columns through the site module's port. The
+// branch time zone is edited here too; a PUT without it keeps the stored one.
 
 var slugPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
@@ -96,6 +98,7 @@ func parseProfileEdit(f *validate.Form) branches.ProfileEdit {
 		Slug: f.StrDefault("slug", "", validate.StrOpts{Trim: true, Min: 1, Max: 80, Check: func(s string) (string, string, bool) {
 			return "invalid_format", "Slug hanya huruf kecil, angka dan tanda hubung", slugPattern.MatchString(s)
 		}}),
+		Timezone:     f.Enum("timezone", validate.Rule{Optional: true}, localtime.Names),
 		IsPublic:     f.BoolDefault("is_public", false),
 		Address:      optional(f, "address", longText),
 		City:         optional(f, "city", shortText),
