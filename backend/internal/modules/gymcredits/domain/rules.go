@@ -24,6 +24,21 @@ type Rules struct {
 	ExpiryReminderDays     int `json:"expiryReminderDays"`
 	BookingOpensDaysBefore int `json:"bookingOpensDaysBefore"`
 	BookingClosesMinBefore int `json:"bookingClosesMinBefore"`
+	// MaxConcurrentBookings caps confirmed bookings for classes still to
+	// come; MaxBookingsPerDay caps bookings on one WIB day. 0 = no cap. Pass
+	// holders are capped too.
+	MaxConcurrentBookings int `json:"maxConcurrentBookings"`
+	MaxBookingsPerDay     int `json:"maxBookingsPerDay"`
+	// StrikeLimit pass strikes inside StrikeWindowDays suspend booking for
+	// StrikeSuspendDays. 0 = strikes never suspend.
+	StrikeLimit       int `json:"strikeLimit"`
+	StrikeWindowDays  int `json:"strikeWindowDays"`
+	StrikeSuspendDays int `json:"strikeSuspendDays"`
+	// WaitlistPromoteCutoffMin: closer than this to the start a freed seat is
+	// offered instead of confirmed. WaitlistOfferMinutes: how long an offer
+	// holds the seat.
+	WaitlistPromoteCutoffMin int `json:"waitlistPromoteCutoffMin"`
+	WaitlistOfferMinutes     int `json:"waitlistOfferMinutes"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -40,6 +55,13 @@ type RulesPatch struct {
 	ExpiryReminderDays        *int    `json:"expiryReminderDays,omitempty"`
 	BookingOpensDaysBefore    *int    `json:"bookingOpensDaysBefore,omitempty"`
 	BookingClosesMinBefore    *int    `json:"bookingClosesMinBefore,omitempty"`
+	MaxConcurrentBookings     *int    `json:"maxConcurrentBookings,omitempty"`
+	MaxBookingsPerDay         *int    `json:"maxBookingsPerDay,omitempty"`
+	StrikeLimit               *int    `json:"strikeLimit,omitempty"`
+	StrikeWindowDays          *int    `json:"strikeWindowDays,omitempty"`
+	StrikeSuspendDays         *int    `json:"strikeSuspendDays,omitempty"`
+	WaitlistPromoteCutoffMin  *int    `json:"waitlistPromoteCutoffMin,omitempty"`
+	WaitlistOfferMinutes      *int    `json:"waitlistOfferMinutes,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -59,6 +81,13 @@ var RuleDefaults = Rules{
 	ExpiryReminderDays:        7,
 	BookingOpensDaysBefore:    7,
 	BookingClosesMinBefore:    0,
+	MaxConcurrentBookings:     10,
+	MaxBookingsPerDay:         3,
+	StrikeLimit:               3,
+	StrikeWindowDays:          30,
+	StrikeSuspendDays:         7,
+	WaitlistPromoteCutoffMin:  60,
+	WaitlistOfferMinutes:      30,
 }
 
 type ruleKind int
@@ -103,6 +132,13 @@ var ruleSpecs = []ruleSpec{
 	intRule("expiryReminderDays", 1, 365, "Pengingat kedaluwarsa", func(p *RulesPatch) **int { return &p.ExpiryReminderDays }),
 	intRule("bookingOpensDaysBefore", 0, 365, "Booking dibuka", func(p *RulesPatch) **int { return &p.BookingOpensDaysBefore }),
 	intRule("bookingClosesMinBefore", 0, 10080, "Booking ditutup", func(p *RulesPatch) **int { return &p.BookingClosesMinBefore }),
+	intRule("maxConcurrentBookings", 0, 100, "Batas booking aktif", func(p *RulesPatch) **int { return &p.MaxConcurrentBookings }),
+	intRule("maxBookingsPerDay", 0, 20, "Batas booking per hari", func(p *RulesPatch) **int { return &p.MaxBookingsPerDay }),
+	intRule("strikeLimit", 0, 50, "Batas strike", func(p *RulesPatch) **int { return &p.StrikeLimit }),
+	intRule("strikeWindowDays", 1, 365, "Jendela strike", func(p *RulesPatch) **int { return &p.StrikeWindowDays }),
+	intRule("strikeSuspendDays", 1, 365, "Lama penangguhan", func(p *RulesPatch) **int { return &p.StrikeSuspendDays }),
+	intRule("waitlistPromoteCutoffMin", 0, 10080, "Batas promosi otomatis", func(p *RulesPatch) **int { return &p.WaitlistPromoteCutoffMin }),
+	intRule("waitlistOfferMinutes", 5, 1440, "Masa tawaran kursi", func(p *RulesPatch) **int { return &p.WaitlistOfferMinutes }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -262,6 +298,13 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.ExpiryReminderDays, p.ExpiryReminderDays)
 	setInt(&base.BookingOpensDaysBefore, p.BookingOpensDaysBefore)
 	setInt(&base.BookingClosesMinBefore, p.BookingClosesMinBefore)
+	setInt(&base.MaxConcurrentBookings, p.MaxConcurrentBookings)
+	setInt(&base.MaxBookingsPerDay, p.MaxBookingsPerDay)
+	setInt(&base.StrikeLimit, p.StrikeLimit)
+	setInt(&base.StrikeWindowDays, p.StrikeWindowDays)
+	setInt(&base.StrikeSuspendDays, p.StrikeSuspendDays)
+	setInt(&base.WaitlistPromoteCutoffMin, p.WaitlistPromoteCutoffMin)
+	setInt(&base.WaitlistOfferMinutes, p.WaitlistOfferMinutes)
 	return base
 }
 

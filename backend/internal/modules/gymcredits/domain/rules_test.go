@@ -11,6 +11,8 @@ func defaultsKV() []KV {
 		{"noShowPolicy", "forfeit"}, {"reEntryGraceMin", 15.0}, {"antiPassbackMin", 60.0}, {"qrTtlSec", 45.0},
 		{"waitlistAutoPromote", true}, {"lowBalanceThreshold", 3.0}, {"expiryReminderDays", 7.0},
 		{"bookingOpensDaysBefore", 7.0}, {"bookingClosesMinBefore", 0.0},
+		{"maxConcurrentBookings", 10.0}, {"maxBookingsPerDay", 3.0}, {"strikeLimit", 3.0}, {"strikeWindowDays", 30.0},
+		{"strikeSuspendDays", 7.0}, {"waitlistPromoteCutoffMin", 60.0}, {"waitlistOfferMinutes", 30.0},
 	}
 }
 
@@ -36,9 +38,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 12)
+	eq(t, len(RuleKeys()), 19)
 }
 
 func TestResolveRules(t *testing.T) {
@@ -82,6 +84,14 @@ func TestValidateRules(t *testing.T) {
 			t.Fatalf("%s=%v should be rejected", key, v)
 		}
 	}
+	for key, v := range map[string]any{"maxConcurrentBookings": -1.0, "maxBookingsPerDay": 21.0, "strikeLimit": 51.0,
+		"strikeWindowDays": 0.0, "strikeSuspendDays": 0.0, "waitlistPromoteCutoffMin": -5.0, "waitlistOfferMinutes": 4.0} {
+		if _, msg := ValidateRules(with(defaultsKV(), key, v)); msg == "" {
+			t.Fatalf("%s=%v should be rejected", key, v)
+		}
+	}
+	_, msg = ValidateRules(with(defaultsKV(), "waitlistOfferMinutes", 4.0))
+	eq(t, msg, "waitlistOfferMinutes: Masa tawaran kursi minimal 5")
 	_, msg = ValidateRules(with(defaultsKV(), "cancellationDeadlineHours", 1.5))
 	eq(t, msg, "cancellationDeadlineHours: Batas batal harus bilangan bulat")
 	_, msg = ValidateRules(with(with(defaultsKV(), "foo", 1.0), "qrTtlSec", 5.0))
