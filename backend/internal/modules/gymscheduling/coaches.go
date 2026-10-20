@@ -92,9 +92,9 @@ func (h *handler) mySession(w http.ResponseWriter, r *http.Request, user *auth.U
 
 // ── One coach's week ────────────────────────────────────────────────────────
 
-// CoachWorkload sums a coach's held sessions (published, full or
-// completed): this week, the calendar month the week starts in, and the
-// month's average fill (booked seats over capacity, no-shows included).
+// CoachWorkload counts a coach's held sessions (published, full or
+// completed) in a week and in a calendar month, with the month's average
+// fill (booked seats over capacity, no-shows included).
 type CoachWorkload struct {
 	WeekSessions  int      `json:"week_sessions"`
 	MonthSessions int      `json:"month_sessions"`
@@ -230,11 +230,10 @@ func photoURLCheck(s string) (string, string, bool) {
 
 // ── Public ──────────────────────────────────────────────────────────────────
 
-// PublicCoach is an active coach as the website shows it.
+// PublicCoach is an active coach's name and photo for the website.
 type PublicCoach struct {
-	Name           string  `json:"name"`
-	Specialization string  `json:"specialization"`
-	PhotoURL       *string `json:"photo_url"`
+	Name     string  `json:"name"`
+	PhotoURL *string `json:"photo_url"`
 }
 
 // publicCoaches is GET /api/public/site/coaches: active coaches, so the site
@@ -255,7 +254,7 @@ func (s *Service) PublicCoaches(ctx context.Context) ([]PublicCoach, error) {
 	}
 	out := make([]PublicCoach, len(rows))
 	for i, c := range rows {
-		out[i] = PublicCoach{Name: c.Str("name"), Specialization: c.Str("specialization"), PhotoURL: c.StrPtr("photo_url")}
+		out[i] = PublicCoach{Name: c.Str("name"), PhotoURL: c.StrPtr("photo_url")}
 	}
 	return out, nil
 }
