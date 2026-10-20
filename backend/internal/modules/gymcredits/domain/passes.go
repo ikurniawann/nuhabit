@@ -113,6 +113,33 @@ func RenewalDue(endsAt, now time.Time, leadDays int) bool {
 	return now.Before(endsAt) && !now.Before(endsAt.Add(-time.Duration(leadDays)*day))
 }
 
+// RenewalRetry is what follows a failed renewal payment: the next attempt
+// at At, or Final when no attempt is left.
+type RenewalRetry struct {
+	At    time.Time
+	Final bool
+}
+
+// NextRenewalRetry plans the attempt after a renewal payment failed at
+// failedAt. attempts counts the attempts made so far (the first included);
+// retryCount more are allowed, retryHours apart, and each must start before
+// the grace period of graceDays after endsAt is over.
+func NextRenewalRetry(attempts int, failedAt, endsAt time.Time, retryCount, retryHours, graceDays int) RenewalRetry {
+	if attempts > retryCount {
+		return RenewalRetry{Final: true}
+	}
+	at := failedAt.Add(time.Duration(retryHours) * time.Hour)
+	if !at.Before(RenewalGraceEnd(endsAt, graceDays)) {
+		return RenewalRetry{Final: true}
+	}
+	return RenewalRetry{At: at}
+}
+
+// RenewalGraceEnd is when a pass ending at endsAt stops being renewable.
+func RenewalGraceEnd(endsAt time.Time, graceDays int) time.Time {
+	return endsAt.Add(time.Duration(graceDays) * day)
+}
+
 // RefundQuote is the money back for a purchase: unused days of a pass, or
 // unused credits of a credit pack.
 type RefundQuote struct {

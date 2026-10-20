@@ -16,6 +16,7 @@ func defaultsKV() []KV {
 		{"classReminderMinutes", 120.0},
 		{"scheduleHorizonDays", 14.0},
 		{"maxFreezeDaysPerYear", 30.0}, {"minFreezeDays", 7.0}, {"renewalLeadDays", 3.0},
+		{"renewalRetryCount", 2.0}, {"renewalRetryHours", 24.0}, {"renewalGraceDays", 3.0},
 	}
 }
 
@@ -41,9 +42,9 @@ func decode(t *testing.T, raw string) any {
 
 func TestRuleDefaultsContract(t *testing.T) {
 	got, _ := json.Marshal(RuleDefaults)
-	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3}`
+	want := `{"creditExpiryDays":60,"cancellationDeadlineHours":4,"lateCancelPolicy":"forfeit","noShowPolicy":"forfeit","reEntryGraceMin":15,"antiPassbackMin":60,"qrTtlSec":45,"waitlistAutoPromote":true,"lowBalanceThreshold":3,"expiryReminderDays":7,"bookingOpensDaysBefore":7,"bookingClosesMinBefore":0,"maxConcurrentBookings":10,"maxBookingsPerDay":3,"strikeLimit":3,"strikeWindowDays":30,"strikeSuspendDays":7,"waitlistPromoteCutoffMin":60,"waitlistOfferMinutes":30,"classReminderMinutes":120,"scheduleHorizonDays":14,"maxFreezeDaysPerYear":30,"minFreezeDays":7,"renewalLeadDays":3,"renewalRetryCount":2,"renewalRetryHours":24,"renewalGraceDays":3}`
 	eq(t, string(got), want)
-	eq(t, len(RuleKeys()), 24)
+	eq(t, len(RuleKeys()), 27)
 }
 
 func TestResolveRules(t *testing.T) {
@@ -85,6 +86,7 @@ func TestValidateRules(t *testing.T) {
 	for key, v := range map[string]any{
 		"creditExpiryDays": 0.0, "expiryReminderDays": 0.0, "cancellationDeadlineHours": 1.5, "lateCancelPolicy": "charge",
 		"maxFreezeDaysPerYear": -1.0, "minFreezeDays": 0.0, "renewalLeadDays": 31.0,
+		"renewalRetryCount": 11.0, "renewalRetryHours": 0.0, "renewalGraceDays": 31.0,
 	} {
 		if _, msg := ValidateRules(with(defaultsKV(), key, v)); msg == "" {
 			t.Fatalf("%s=%v should be rejected", key, v)
