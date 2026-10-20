@@ -219,6 +219,32 @@ func (g *Gauge) Inc() { g.v.Add(1) }
 // Dec subtracts one.
 func (g *Gauge) Dec() { g.v.Add(-1) }
 
+// GaugeVec holds one float value per label set, such as a timestamp.
+type GaugeVec struct {
+	name, help string
+	labels     []string
+	series     series[atomic.Uint64] // math.Float64bits of the value
+}
+
+// NewGaugeVec registers a gauge with the given label names.
+func (r *Registry) NewGaugeVec(name, help string, labels ...string) *GaugeVec {
+	g := &GaugeVec{name: name, help: help, labels: labels}
+	r.add([]string{name}, g.write)
+	return g
+}
+
+// Set stores v in the series for values, given in label order.
+func (g *GaugeVec) Set(v float64, values ...string) {
+	g.series.get(g.labels, values, func() *atomic.Uint64 { return new(atomic.Uint64) }).Store(math.Float64bits(v))
+}
+
+func (g *GaugeVec) write(w *bufio.Writer) {
+	writeHeader(w, g.name, g.help, "gauge")
+	g.series.each(func(values []string, v *atomic.Uint64) {
+		writeSample(w, g.name, g.labels, values, "", "", math.Float64frombits(v.Load()))
+	})
+}
+
 // Type is a metric type in the exposition format.
 type Type string
 

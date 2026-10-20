@@ -42,6 +42,22 @@ busy 1
 	}
 }
 
+func TestGaugeVecKeepsLastValue(t *testing.T) {
+	r := NewRegistry()
+	g := r.NewGaugeVec("last_success_seconds", "Last success.", "job")
+	g.Set(10, "b")
+	g.Set(1.5, "a")
+	g.Set(1761000000, "a")
+	want := `# HELP last_success_seconds Last success.
+# TYPE last_success_seconds gauge
+last_success_seconds{job="a"} 1.761e+09
+last_success_seconds{job="b"} 10
+`
+	if got := text(t, r); got != want {
+		t.Fatalf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
 func TestHistogramBucketsAreCumulative(t *testing.T) {
 	r := NewRegistry()
 	h := r.NewHistogramVec("lat_seconds", "Latency.", []float64{0.1, 1}, "route")

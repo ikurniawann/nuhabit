@@ -41,9 +41,19 @@ func TestLoadDefaults(t *testing.T) {
 	t.Setenv("MODULES", "")
 	t.Setenv("APP_ENV", "")
 	t.Setenv("NODE_ENV", "production")
+	t.Setenv("JOBS_ENABLED", "")
 	c := Load()
-	if c.DatabaseURL != "postgres://x@localhost/db" || c.Port != "8080" || c.Modules != "all" || !c.IsProduction() {
+	if c.DatabaseURL != "postgres://x@localhost/db" || c.Port != "8080" || c.Modules != "all" || !c.IsProduction() || !c.JobsEnabled {
 		t.Fatalf("%+v", c)
+	}
+}
+
+func TestJobsEnabled(t *testing.T) {
+	for v, want := range map[string]bool{"": true, "true": true, "1": true, "false": false, " FALSE ": false, "0": false, "off": false, "no": false} {
+		t.Setenv("JOBS_ENABLED", v)
+		if got := Load().JobsEnabled; got != want {
+			t.Errorf("JOBS_ENABLED=%q: JobsEnabled = %v, want %v", v, got, want)
+		}
 	}
 }
 
