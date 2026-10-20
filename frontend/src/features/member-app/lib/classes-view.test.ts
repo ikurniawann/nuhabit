@@ -10,6 +10,7 @@ import {
   toTrainerViews,
   toWalletView,
   type RawCatalog,
+  type RawPass,
   type RawSession,
 } from "./classes-view";
 import { classImage, classTypeKey } from "./images";
@@ -148,7 +149,7 @@ describe("wallet coverage", () => {
     status,
     days_left: status === "active" ? 12 : 0,
   });
-  const raw = (lots: ReturnType<typeof lot>[], passes: ReturnType<typeof pass>[] = []) => ({
+  const raw = (lots: ReturnType<typeof lot>[], passes: RawPass[] = []) => ({
     balance: 4,
     expiring_credits: 0,
     lots,
@@ -177,6 +178,16 @@ describe("wallet coverage", () => {
     expect(w.passes).toHaveLength(2);
     expect(coverageFor(w, "ct-mob")).toBe(true);
     expect(toWalletView(raw([], [pass("expired")]), catalog).activePass).toBeNull();
+  });
+
+  it("a frozen pass is the membership but covers nothing; queued passes are listed apart", () => {
+    const frozen = { ...pass("active"), id: "pass-frozen", status: "frozen" as const, frozen_until: "2026-10-20T00:00:00.000Z", auto_renew: true, renew_with: "ark" as const };
+    const queued = { ...pass("active"), id: "pass-next", upcoming: true };
+    const w = toWalletView(raw([lot("l1", "pk-race")], [frozen, queued]), catalog);
+    expect(w.activePass).toBeNull();
+    expect(w.membership).toMatchObject({ id: "pass-frozen", status: "frozen", frozenUntil: "2026-10-20T00:00:00.000Z", autoRenew: true, renewWith: "ark" });
+    expect(w.queuedPasses.map((p) => p.id)).toEqual(["pass-next"]);
+    expect(coverageFor(w, "ct-mob")).toBe(false);
   });
 });
 

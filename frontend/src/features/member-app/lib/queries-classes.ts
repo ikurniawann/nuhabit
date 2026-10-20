@@ -17,6 +17,7 @@ import {
   type RawPurchase,
   type RawSession,
   type RawWallet,
+  type RenewWith,
 } from "./classes-view";
 
 /**
@@ -169,6 +170,29 @@ export const usePayment = (id: string) =>
 export function useInvalidateAll() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries();
+}
+
+export type PassAction =
+  | { kind: "freeze"; passId: string; days: number }
+  | { kind: "unfreeze"; passId: string }
+  | { kind: "auto-renew"; passId: string; autoRenew: boolean; renewWith?: RenewWith };
+
+/** Freeze, unfreeze or switch auto-renew on the member's own pass. */
+export function usePassMutation() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: (a: PassAction) =>
+      memberApi(`/gym/passes/${a.passId}/${a.kind}`, {
+        method: a.kind === "auto-renew" ? "PUT" : "POST",
+        json:
+          a.kind === "freeze"
+            ? { days: a.days }
+            : a.kind === "auto-renew"
+              ? { auto_renew: a.autoRenew, renew_with: a.renewWith }
+              : {},
+      }),
+    onSuccess: invalidate,
+  });
 }
 
 export function useBookMutation() {

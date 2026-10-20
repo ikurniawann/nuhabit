@@ -75,14 +75,29 @@ export interface RawLot {
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
 export type PackageKind = 'credits' | 'pass';
 
+export type RenewWith = 'ark' | 'invoice';
+
 export interface RawPass {
   id: string;
   package_id: string;
   package_name: string;
   starts_at: string;
   ends_at: string;
-  status: 'active' | 'expired' | 'refunded';
+  status: 'active' | 'frozen' | 'expired' | 'refunded';
+  /** Active but queued behind the pass that runs now. */
+  upcoming?: boolean;
   days_left: number;
+  frozen_until?: string | null;
+  auto_renew?: boolean;
+  renew_with?: RenewWith;
+}
+
+/** Freeze budget over the last 365 days. */
+export interface FreezeAllowance {
+  max_days_per_year: number;
+  min_days: number;
+  used_days: number;
+  remaining_days: number;
 }
 
 export interface RawWallet {
@@ -90,6 +105,7 @@ export interface RawWallet {
   expiring_credits: number;
   lots: RawLot[];
   passes: RawPass[];
+  freeze?: FreezeAllowance;
   entries: { id: string; type: string; amount: number; note: string | null; created_at: string }[];
 }
 
@@ -181,7 +197,11 @@ export interface PassView {
   startsAt: string;
   endsAt: string;
   status: RawPass['status'];
+  upcoming: boolean;
   daysLeft: number;
+  frozenUntil: string | null;
+  autoRenew: boolean;
+  renewWith: RenewWith;
 }
 
 export interface WalletView {
@@ -189,6 +209,11 @@ export interface WalletView {
   expiringCredits: number;
   /** The pass covering today, if any. */
   activePass: PassView | null;
+  /** The membership the member holds now: the running pass, or a frozen one. */
+  membership: PassView | null;
+  /** Passes bought ahead that start when the current one ends. */
+  queuedPasses: PassView[];
+  freeze: FreezeAllowance | null;
   passes: PassView[];
   myPackages: MyPackageView[];
   entries: { id: string; type: string; amount: number; description: string | null; createdAt: string }[];
@@ -335,15 +360,23 @@ const toPassView = (p: RawPass): PassView => ({
   startsAt: p.starts_at,
   endsAt: p.ends_at,
   status: p.status,
+  upcoming: p.upcoming ?? false,
   daysLeft: p.days_left,
+  frozenUntil: p.frozen_until ?? null,
+  autoRenew: p.auto_renew ?? false,
+  renewWith: p.renew_with ?? 'invoice',
 });
 
 export function toWalletView(raw: RawWallet, catalog: RawCatalog | undefined): WalletView {
   const passes = (raw.passes ?? []).map(toPassView);
+  const activePass = passes.find((p) => p.status === 'active' && !p.upcoming) ?? null;
   return {
     balance: raw.balance,
     expiringCredits: raw.expiring_credits,
-    activePass: passes.find((p) => p.status === 'active') ?? null,
+    activePass,
+    membership: activePass ?? passes.find((p) => p.status === 'frozen') ?? null,
+    queuedPasses: passes.filter((p) => p.status === 'active' && p.upcoming),
+    freeze: raw.freeze ?? null,
     passes,
     myPackages: raw.lots.map((lot) => {
       const coverageIds = coverageOf(catalog, lot.package_id);

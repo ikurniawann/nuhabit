@@ -99,7 +99,7 @@ function TopUp() {
               </p>
               <p className="mt-0.5 text-xs font-bold text-nh-muted">
                 {p.kind === "pass"
-                  ? t("Pass starts the moment you pay")
+                  ? t("Pass starts when you pay, or when your current pass ends")
                   : p.coverageNames
                     ? `${t("Covers:")} ${p.coverageNames.join(", ")}`
                     : t("Valid for every class")}
