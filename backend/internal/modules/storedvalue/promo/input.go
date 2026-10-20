@@ -64,7 +64,7 @@ var (
 	optionalNullable = validate.Rule{Optional: true, Nullable: true}
 
 	discountTypes = []string{"percent", "fixed"}
-	scopes        = []string{"ticketing_online", "ticketing_loket", "pos", "semua"}
+	scopes        = []string{"ticketing_online", "ticketing_loket", "pos", "gym", "semua"}
 	eligibilities = []string{domain.EligibilityAll, domain.EligibilityMember, domain.EligibilityNewMember}
 )
 

@@ -32,7 +32,7 @@ type CampaignRule struct {
 	UsageLimit *int
 	// PerPhoneLimit limits uses per WhatsApp number; nil = unlimited.
 	PerPhoneLimit *int
-	Scope         string // ticketing_online | ticketing_loket | pos | semua
+	Scope         string // ticketing_online | ticketing_loket | pos | gym | semua
 	IsActive      bool
 	// Empty = every product. The discount comes from matching lines only.
 	TargetProductIDs  []string

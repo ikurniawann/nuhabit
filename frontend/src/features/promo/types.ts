@@ -2,6 +2,7 @@ export type PromoScope =
   | "ticketing_online"
   | "ticketing_loket"
   | "pos"
+  | "gym"
   | "semua";
 
 export type PromoDiscountType = "percent" | "fixed";
@@ -18,6 +19,7 @@ export const PROMO_SCOPE_LABELS: Record<PromoScope, string> = {
   ticketing_online: "Booking Online",
   ticketing_loket: "Loket Tiket",
   pos: "Kasir POS",
+  gym: "Paket Kelas Gym",
   semua: "Semua Kanal",
 };
 
@@ -26,6 +28,7 @@ export const PROMO_SCOPE_PREFIX: Record<PromoScope, string> = {
   ticketing_online: "ONLINE",
   ticketing_loket: "LOKET",
   pos: "POS",
+  gym: "GYM",
   semua: "ALL",
 };
 
