@@ -1,21 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { buildHrisReport } from "./reports-summary";
-import { hrisReportCsv, hrisReportFileName, statusSlices } from "./hris-reports-csv";
+import { hrisReportCsv, hrisReportFileName, statusSlices, type HrisReport } from "./hris-reports-csv";
 
-const report = buildHrisReport(
-  {
-    employees: [
-      { id: "a", employment_status: "permanent", is_active: true, department_id: "d1", join_date: "2025-01-10", end_date: null },
-      { id: "b", employment_status: "probation", is_active: true, department_id: "d1", join_date: "2026-06-05", end_date: null },
-      { id: "c", employment_status: "freelance", is_active: true, department_id: null, join_date: "2026-01-05", end_date: null },
+const report: HrisReport = {
+  period: { month: 6, year: 2026 },
+  headcount: {
+    total_active: 3,
+    new_hires: 1,
+    turnover_count: 0,
+    turnover_rate: 0,
+    by_status: [
+      { status: "permanent", count: 1 },
+      { status: "probation", count: 1 },
+      { status: "freelance", count: 1 },
     ],
-    departments: [{ id: "d1", name: 'Bar "Utama"' }],
-    attendance: [{ status: "present", is_late: true, work_hours: 8, date: "2026-06-02" }],
-    leaves: [{ leave_type: "sick", status: "approved", total_days: 3 }],
+    by_department: [{ name: 'Bar "Utama"', count: 2 }],
+    monthly_trend: [
+      { month: "Jan 26", count: 2 },
+      { month: "Feb 26", count: 2 },
+      { month: "Mar 26", count: 2 },
+      { month: "Apr 26", count: 2 },
+      { month: "Mei 26", count: 2 },
+      { month: "Jun 26", count: 3 },
+    ],
   },
-  6,
-  2026
-);
+  attendance: {
+    total_records: 1,
+    present_count: 1,
+    absent_count: 0,
+    late_count: 1,
+    present_rate: 100,
+    late_rate: 100,
+    avg_work_hours: 8,
+    daily_trend: [{ date: "02 Jun", present: 1, absent: 0, late: 1 }],
+  },
+  leaves: {
+    approved_count: 1,
+    pending_count: 0,
+    total_days: 3,
+    by_type: [{ type: "Sakit", days: 3 }],
+  },
+};
 
 const lines = (csv: string) => csv.replace(/^﻿/, "").split("\n");
 

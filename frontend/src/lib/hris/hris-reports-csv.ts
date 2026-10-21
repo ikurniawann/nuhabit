@@ -4,9 +4,36 @@
  */
 
 import { toCsv } from "@/lib/recruitment/candidate-csv";
-import type { buildHrisReport } from "./reports-summary";
 
-export type HrisReport = ReturnType<typeof buildHrisReport>;
+/** Laporan HRIS bulanan dari Go /api/hris/reports (headcount, absensi, cuti). */
+export interface HrisReport {
+  period: { month: number; year: number };
+  headcount: {
+    total_active: number;
+    new_hires: number;
+    turnover_count: number;
+    turnover_rate: number;
+    by_status: { status: string; count: number }[];
+    by_department: { name: string; count: number }[];
+    monthly_trend: { month: string; count: number }[];
+  };
+  attendance: {
+    total_records: number;
+    present_count: number;
+    absent_count: number;
+    late_count: number;
+    present_rate: number;
+    late_rate: number;
+    avg_work_hours: number;
+    daily_trend: { date: string; present: number; absent: number; late: number }[];
+  };
+  leaves: {
+    approved_count: number;
+    pending_count: number;
+    total_days: number;
+    by_type: { type: string; days: number }[];
+  };
+}
 
 export type HrisReportCsvKind = "headcount" | "absensi" | "cuti" | "hris-lengkap";
 
