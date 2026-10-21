@@ -65,9 +65,18 @@ func (s *Service) ReclaimTransfer(ctx context.Context, tx database.Querier, tran
 	if len(plan) == 0 {
 		return nil, fail(http.StatusConflict, domain.TransferReclaimNothing)
 	}
-	sender, receiverProfile, err := s.transferParties(ctx, tx, TransferInput{FromCustomerID: transfer.FromCustomerID, ToCustomerID: transfer.ToCustomerID})
+	// Unlike a transfer, a reclaim goes through for an inactive receiver:
+	// that is one reason to take the credits back.
+	sender, err := s.ports.Members.Profile(ctx, tx, transfer.FromCustomerID)
 	if err != nil {
 		return nil, err
+	}
+	receiverProfile, err := s.ports.Members.Profile(ctx, tx, transfer.ToCustomerID)
+	if err != nil {
+		return nil, err
+	}
+	if sender == nil || receiverProfile == nil {
+		return nil, fail(http.StatusNotFound, "Member transfer tidak ditemukan")
 	}
 	total := domain.ReclaimTotal(plan)
 	note := strings.TrimSpace(reason)

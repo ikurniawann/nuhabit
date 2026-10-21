@@ -55,7 +55,9 @@ func TestTransferReclaimAndRefundVisibility(t *testing.T) {
 		t.Fatalf("receiver's row %v", row)
 	}
 
-	// Reclaim: the two unused credits go back to the sender's lot.
+	// Reclaim: the two unused credits go back to the sender's lot, even
+	// from a receiver whose membership has lapsed.
+	e.exec(`UPDATE pos.pos_customers SET is_active = false WHERE id = $1`, receiver.CustomerID)
 	reclaimPath := "/api/gym/credits/transfers/" + transferID + "/reclaim"
 	e.fail(asStaff, "POST", reclaimPath, map[string]any{"reason": ""}, 400, "Alasan penarikan wajib diisi")
 	if res := e.data(asStaff, "POST", reclaimPath, map[string]any{"reason": "refund paket pengirim"}); res["credits"] != 2.0 {
