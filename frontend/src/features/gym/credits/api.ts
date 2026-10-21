@@ -1,8 +1,77 @@
 /** Klien API admin Gym: paket kredit, kredit member, aturan gym. */
-import type { GymRules } from "@/lib/gym/rules";
 import { call, send } from "../shared";
 
-export type { GymRules };
+export type ForfeitPolicy = "forfeit" | "free";
+
+/**
+ * Aturan bisnis gym (Go /api/gym/rules): baris global + override per cabang
+ * yang hanya berisi kunci yang berbeda.
+ */
+export interface GymRules {
+  /** Masa berlaku default kredit bonus/penyesuaian (hari). */
+  creditExpiryDays: number;
+  /** Batal lebih dekat dari ini (jam sebelum mulai) = batal terlambat. */
+  cancellationDeadlineHours: number;
+  lateCancelPolicy: ForfeitPolicy;
+  noShowPolicy: ForfeitPolicy;
+  /** Keluar-masuk lagi dalam jendela ini tidak dihitung kunjungan baru (menit). */
+  reEntryGraceMin: number;
+  /** QR yang sama tidak bisa dipakai masuk lagi dalam jendela ini (menit). */
+  antiPassbackMin: number;
+  /** Umur QR check-in member (detik). */
+  qrTtlSec: number;
+  waitlistAutoPromote: boolean;
+  /** Saldo kredit di bawah/sama dengan ini = saldo menipis. */
+  lowBalanceThreshold: number;
+  /** Ingatkan member saat kredit akan kedaluwarsa dalam N hari. */
+  expiryReminderDays: number;
+  bookingOpensDaysBefore: number;
+  bookingClosesMinBefore: number;
+  /** Maksimal booking terkonfirmasi untuk kelas mendatang (0 = tanpa batas). Berlaku juga untuk pemegang pass. */
+  maxConcurrentBookings: number;
+  /** Maksimal booking per hari WIB (0 = tanpa batas). */
+  maxBookingsPerDay: number;
+  /** Strike pass sebanyak ini dalam jendela strike menangguhkan booking (0 = nonaktif). */
+  strikeLimit: number;
+  strikeWindowDays: number;
+  strikeSuspendDays: number;
+  /** Lebih dekat dari ini ke jam mulai, kursi kosong ditawarkan, tidak langsung dikonfirmasi (menit). */
+  waitlistPromoteCutoffMin: number;
+  /** Lama kursi yang ditawarkan ditahan untuk member (menit). */
+  waitlistOfferMinutes: number;
+  /** Member yang booking diingatkan N menit sebelum kelas; 0 = tanpa pengingat. */
+  classReminderMinutes: number;
+  /** Template jadwal membuat sesi sejauh N hari ke depan. */
+  scheduleHorizonDays: number;
+  /** Batas hari pass dibekukan dalam 365 hari; 0 = pembekuan mati. */
+  maxFreezeDaysPerYear: number;
+  /** Pembekuan terpendek; unfreeze lebih awal tetap memotong jatah sebanyak ini. */
+  minFreezeDays: number;
+  /** Pass dengan perpanjangan otomatis diperpanjang N hari sebelum berakhir. */
+  renewalLeadDays: number;
+  /** Pembayaran perpanjangan yang gagal atau kedaluwarsa dicoba ulang N kali. */
+  renewalRetryCount: number;
+  /** Jeda antar percobaan ulang perpanjangan, dalam jam. */
+  renewalRetryHours: number;
+  /** Percobaan ulang masih jalan sampai N hari setelah pass berakhir; lalu perpanjangan otomatis mati. */
+  renewalGraceDays: number;
+  /** Booking dan masuk gate butuh waiver versi terbaru. */
+  requireWaiver: boolean;
+  /** Gate menerima booking kelas mulai N menit sebelum kelas. */
+  checkinOpensMinBefore: number;
+  /** …sampai N menit setelah kelas selesai. */
+  checkinClosesMinAfter: number;
+  /** Member tanpa booking boleh masuk selama jam open gym cabang. */
+  openGymEnabled: boolean;
+  /** Kredit open gym per hari WIB (0 = gratis; pemegang pass tidak bayar). */
+  openGymCreditCost: number;
+  /** Staf bisa membatalkan check-in atau no-show sampai N hari setelah kelas. */
+  correctionWindowDays: number;
+  /** Member boleh mengirim kredit ke member lain dari aplikasi member. Staf selalu boleh. */
+  allowMemberCreditTransfer: boolean;
+  /** Batas kredit yang dikirim satu member per bulan WIB, staf dan member digabung (0 = tanpa batas). */
+  maxTransferCreditsPerMonth: number;
+}
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
 export type PackageKind = "credits" | "pass";
