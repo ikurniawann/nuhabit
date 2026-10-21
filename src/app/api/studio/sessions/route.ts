@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, validateBody } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
-import { assertSessionCoachFree } from "@/lib/studio/conflicts";
+import { assertCoachNotOnTimeOff, assertSessionCoachFree } from "@/lib/studio/conflicts";
 import { daysBetweenInclusive, isValidDate, toMinutes } from "@/lib/studio/schedule";
 import { sessionCreateSchema } from "@/lib/studio/schemas";
 import { loadSessions, requireStudioContext, studioRoute } from "@/lib/studio/server";
@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     );
     if (!program) throw ApiError.notFound("Program tidak ditemukan");
     await assertSessionCoachFree(ctx.branchId, b);
+    await assertCoachNotOnTimeOff(ctx.branchId, b.coach_id, b.session_date);
     const rows = await query(
       `INSERT INTO studio.class_sessions (company_id, branch_id, session_date, start_time, end_time, program_id,
          coach_id, capacity, status, notes, created_by)

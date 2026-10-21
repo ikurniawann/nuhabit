@@ -408,6 +408,25 @@ export async function applyCoversOnApproval(client: PoolClient, leaveId: string)
 }
 
 /**
+ * T-067-A5 — cuti coach yang disetujui menjadi time-off coach (di dalam
+ * transaksi persetujuan): slot Personal Training tertutup dan generate jadwal
+ * tidak memasang coach ini di tanggal cutinya. Idempoten per cuti.
+ */
+export async function syncLeaveTimeOff(client: PoolClient, ctx: CoachLeaveContext, label: string): Promise<void> {
+  await client.query(
+    `INSERT INTO studio.coach_time_off (company_id, branch_id, coach_id, date_from, date_to, reason, leave_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (leave_id) WHERE leave_id IS NOT NULL DO NOTHING`,
+    [ctx.companyId, ctx.branchId, ctx.coachId, ctx.startDate, ctx.endDate, label, ctx.leaveId]
+  );
+}
+
+/** Cuti dibatalkan → time-off hasil sinkron ikut dihapus (time-off manual tidak tersentuh). */
+export async function removeLeaveTimeOff(leaveId: string): Promise<void> {
+  await query(`DELETE FROM studio.coach_time_off WHERE leave_id = $1`, [leaveId]);
+}
+
+/**
  * Sesudah commit: kabari member (T-067-A6) — sesi batal diantrekan SEBELUM
  * booking dilepas & kredit dikembalikan, sesi yang coach-nya diganti
  * diantrekan langsung; lalu kirim yang boleh dikirim sekarang.

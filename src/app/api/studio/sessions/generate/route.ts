@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, validateBody } from "@/lib/api/auth";
 import { query, withTransaction } from "@/lib/db";
-import { daysBetweenInclusive, expandTemplates, isValidDate, MAX_GENERATE_DAYS, type TemplateSlot } from "@/lib/studio/schedule";
+import {
+  daysBetweenInclusive,
+  expandTemplates,
+  isValidDate,
+  MAX_GENERATE_DAYS,
+  type TemplateSlot,
+  type TimeOffRange,
+  withoutCoachOnTimeOff,
+} from "@/lib/studio/schedule";
 import { generateSchema } from "@/lib/studio/schemas";
 import { requireStudioContext, studioRoute } from "@/lib/studio/server";
 
@@ -41,12 +49,15 @@ export async function POST(request: NextRequest) {
         ).catch(() => [])
       : [];
 
-    const planned = expandTemplates(
-      templates,
-      b.from,
-      b.to,
-      new Set(existingRows.map((r) => r.key)),
-      new Set(holidays.map((h) => h.d))
+    // EPIC-067 T-067-A5: coach yang cuti / time-off tidak dipasang — sesinya dibuat tanpa coach.
+    const timeOff = await query<TimeOffRange>(
+      `SELECT coach_id, date_from::text AS date_from, date_to::text AS date_to FROM studio.coach_time_off
+       WHERE branch_id = $1 AND date_to >= $2::date AND date_from <= $3::date`,
+      [ctx.branchId, b.from, b.to]
+    );
+    const { sessions: planned, uncovered } = withoutCoachOnTimeOff(
+      expandTemplates(templates, b.from, b.to, new Set(existingRows.map((r) => r.key)), new Set(holidays.map((h) => h.d))),
+      timeOff
     );
 
     let created = 0;
@@ -55,11 +66,12 @@ export async function POST(request: NextRequest) {
         for (const p of planned) {
           const res = await client.query(
             `INSERT INTO studio.class_sessions (company_id, branch_id, session_date, start_time, end_time, program_id,
-               coach_id, capacity, template_id, created_by)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+               coach_id, capacity, template_id, created_by, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
              ON CONFLICT (template_id, session_date) WHERE template_id IS NOT NULL DO NOTHING`,
             [ctx.companyId, ctx.branchId, p.session_date, p.start_time, p.end_time, p.program_id, p.coach_id,
-             p.capacity, p.template_id, ctx.user.id]
+             p.capacity, p.template_id, ctx.user.id,
+             p.coach_on_leave ? "Coach template sedang cuti — tunjuk pengganti" : null]
           );
           created += res.rowCount ?? 0;
         }
@@ -69,10 +81,12 @@ export async function POST(request: NextRequest) {
     const skippedHolidays = holidays.length;
     return NextResponse.json({
       success: true,
-      data: { created, skipped_existing: existingRows.length, skipped_holidays: skippedHolidays },
+      data: { created, skipped_existing: existingRows.length, skipped_holidays: skippedHolidays, without_coach: uncovered },
       message:
         created > 0
-          ? `${created} sesi dibuat${skippedHolidays ? ` · ${skippedHolidays} hari libur dilewati` : ""}`
+          ? `${created} sesi dibuat${skippedHolidays ? ` · ${skippedHolidays} hari libur dilewati` : ""}${
+              uncovered ? ` · ${uncovered} sesi tanpa coach karena coach cuti — tunjuk pengganti di Kalender` : ""
+            }`
           : "Tidak ada sesi baru — jadwal di rentang ini sudah lengkap",
     });
   });

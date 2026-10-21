@@ -162,3 +162,32 @@ export function findCoachConflicts(candidate: CoachSlot, others: CoachSlot[]): C
     return timesOverlap(candidate.start_time, candidate.end_time, o.start_time, o.end_time);
   });
 }
+
+export interface TimeOffRange {
+  coach_id: string;
+  date_from: string;
+  date_to: string;
+}
+
+export function onTimeOff(timeOff: TimeOffRange[], coachId: string | null | undefined, date: string): boolean {
+  if (!coachId) return false;
+  return timeOff.some((t) => t.coach_id === coachId && t.date_from <= date && date <= t.date_to);
+}
+
+/**
+ * EPIC-067 T-067-A5 — sesi hasil generate yang coach template-nya sedang
+ * cuti/time-off dibuat tanpa coach (perlu pengganti), bukan diam-diam
+ * dijadwalkan ke coach yang tidak hadir.
+ */
+export function withoutCoachOnTimeOff(
+  planned: PlannedSession[],
+  timeOff: TimeOffRange[]
+): { sessions: (PlannedSession & { coach_on_leave?: true })[]; uncovered: number } {
+  let uncovered = 0;
+  const sessions = planned.map((p) => {
+    if (!onTimeOff(timeOff, p.coach_id, p.session_date)) return p;
+    uncovered += 1;
+    return { ...p, coach_id: null, coach_on_leave: true as const };
+  });
+  return { sessions, uncovered };
+}

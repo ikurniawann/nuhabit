@@ -9,9 +9,11 @@ import {
   isoWeekday,
   isValidDate,
   isValidTime,
+  onTimeOff,
   startOfWeek,
   timesOverlap,
   type TemplateSlot,
+  withoutCoachOnTimeOff,
 } from "./schedule";
 
 const slot = (over: Partial<TemplateSlot>): TemplateSlot => ({
@@ -121,5 +123,27 @@ describe("findCoachConflicts", () => {
     const templates = [{ id: "t1", coach_id: "c1", weekday: 2, start_time: "06:00", end_time: "07:00" }];
     expect(findCoachConflicts({ coach_id: "c1", weekday: 2, start_time: "06:30", end_time: "07:30" }, templates)).toHaveLength(1);
     expect(findCoachConflicts({ coach_id: "c1", weekday: 3, start_time: "06:30", end_time: "07:30" }, templates)).toHaveLength(0);
+  });
+});
+
+describe("time-off coach saat generate (EPIC-067 A5)", () => {
+  const p = (template_id: string, session_date: string, coach_id: string | null) => ({
+    template_id, session_date, start_time: "07:00", end_time: "08:00", program_id: "p", coach_id, capacity: 10,
+  });
+  const off = [{ coach_id: "pras", date_from: "2026-11-02", date_to: "2026-11-04" }];
+
+  it("onTimeOff memeriksa coach & rentang inklusif", () => {
+    expect(onTimeOff(off, "pras", "2026-11-02")).toBe(true);
+    expect(onTimeOff(off, "pras", "2026-11-04")).toBe(true);
+    expect(onTimeOff(off, "pras", "2026-11-05")).toBe(false);
+    expect(onTimeOff(off, "rara", "2026-11-03")).toBe(false);
+    expect(onTimeOff(off, null, "2026-11-03")).toBe(false);
+  });
+
+  it("sesi coach yang cuti dibuat tanpa coach; lainnya utuh", () => {
+    const r = withoutCoachOnTimeOff([p("a", "2026-11-01", "pras"), p("b", "2026-11-03", "pras"), p("c", "2026-11-03", "rara"), p("d", "2026-11-03", null)], off);
+    expect(r.uncovered).toBe(1);
+    expect(r.sessions.map((s) => s.coach_id)).toEqual(["pras", null, "rara", null]);
+    expect(r.sessions.map((s) => Boolean(s.coach_on_leave))).toEqual([false, true, false, false]);
   });
 });

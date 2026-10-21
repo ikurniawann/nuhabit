@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError, validateBody } from "@/lib/api/auth";
 import { query, queryOne } from "@/lib/db";
-import { assertSessionCoachFree } from "@/lib/studio/conflicts";
+import { assertCoachNotOnTimeOff, assertSessionCoachFree } from "@/lib/studio/conflicts";
 import { toMinutes } from "@/lib/studio/schedule";
 import { sessionPatchSchema } from "@/lib/studio/schemas";
 import { completeSession, releaseSessionBookings } from "@/lib/studio/booking-server";
@@ -31,6 +31,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       if (!ok) throw ApiError.notFound("Program tidak ditemukan");
     }
     if (merged.status !== "cancelled") await assertSessionCoachFree(ctx.branchId, { id, ...merged });
+    // Hanya saat coach / tanggal berubah — edit kuota sesi lama coach yang kemudian cuti tetap boleh.
+    const reassigned = (body.coach_id !== undefined && body.coach_id !== current.coach_id) || (body.session_date !== undefined && body.session_date !== current.session_date);
+    if (merged.status !== "cancelled" && reassigned) await assertCoachNotOnTimeOff(ctx.branchId, merged.coach_id, merged.session_date);
     if (current.status === "completed" && body.status && body.status !== "completed") {
       throw ApiError.conflict("Kelas yang sudah diselesaikan (revenue diakui) tidak bisa diubah statusnya");
     }

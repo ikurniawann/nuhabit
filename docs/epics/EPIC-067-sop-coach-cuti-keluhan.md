@@ -112,7 +112,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   perubahan dan **link booking** di Member App. Perluas `member_notifications.kind`, idempoten per sesi + member. Buka
   jendela batal tanpa penalti dengan kredit kembali penuh. Pengaturan "paling lambat N jam sebelum kelas"; perubahan
   yang lewat batas itu tetap dikirim dan ditandai *terlambat* di laporan Program Director.
-- [ ] T-067-A5 **(Tahap 2)** Sinkron cuti HRIS yang disetujui → `studio.coach_time_off` (dengan `leave_id`), dan cek
+- [x] T-067-A5 **(Tahap 2)** Sinkron cuti HRIS yang disetujui → `studio.coach_time_off` (dengan `leave_id`), dan cek
   bentrok `coach_time_off` terhadap kelas grup saat generate sesi dan saat input manual.
 - [ ] T-067-A8 **(Tahap 2)** Catatan ketidakhadiran coach (tidak hadir tanpa kabar, cuti mendadak, terlambat) per
   sesi; KPI `leave_request_discipline` memakai ambang H-N; potongan porsi insentif per kejadian di `commission_lines`
@@ -477,4 +477,27 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - `tsc` tanpa error baru (508); eslint bersih.
   - Catatan: `src/lib/dataroom/watermark.test.ts` gagal sejak rebranding NüHabit (`20eaaebb`, 2 Okt) — tidak terkait
     epic ini.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-A5 selesai.**
+  - Migrasi `20261022100000_studio_time_off_leave_sync.sql`:
+    - `coach_time_off.leave_id` (FK `hris.leaves` ON DELETE CASCADE, unik);
+    - **backfill** cuti coach yang sudah disetujui dan belum berakhir.
+  - **Sinkron:** persetujuan cuti coach (route approve HRIS, di transaksi yang sama dengan penerapan pengganti) membuat
+    time-off "Cuti: <jenis>" bertaut cuti. Idempoten. Pembatalan cuti menghapus time-off hasil sinkron saja; time-off
+    manual tidak tersentuh.
+  - **Cek bentrok kelas grup:**
+    - generate jadwal dari template tidak memasang coach yang sedang cuti/time-off. Sesinya dibuat tanpa coach dengan
+      catatan "Coach template sedang cuti — tunjuk pengganti", dan pesan hasil menyebut jumlahnya;
+    - tambah sesi manual dan ganti coach/tanggal sesi ditolak 409 bila coach sedang cuti/time-off
+      (`assertCoachNotOnTimeOff`). Edit lain (mis. kuota) pada sesi lama tetap boleh;
+    - input time-off manual memperingatkan kelas grup **dan** Personal Training yang masih terjadwal (sebelumnya hanya
+      Personal Training).
+  - Slot Personal Training otomatis tertutup selama cuti, karena `pt-server` sudah membaca `coach_time_off`.
+  - Bukti:
+    - 2 unit test + 3 test integrasi (sinkron idempoten, tolak penjadwalan, batal → hanya time-off sinkron hilang)
+      lulus di `nuhabit_test`;
+    - smoke API (coach/PD/admin uji, sudah dihapus): ajukan → setujui → time-off; generate 9–13 Nov → sesi Selasa
+      tanpa coach + catatan; pasang Pras 409, Rara OK; time-off manual Rara memperingatkan 1 kelas; batalkan cuti →
+      time-off hilang;
+    - `tsc` tanpa error baru; eslint tanpa error baru.
   - Belum di-deploy.

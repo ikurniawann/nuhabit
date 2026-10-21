@@ -11,9 +11,11 @@ import {
   finalizeAppliedCovers,
   getCoachLeaveContext,
   syncLeaveCovers,
+  syncLeaveTimeOff,
   voidLeaveCovers,
 } from "@/lib/studio/coach-cover-server";
 import { assertCanDecideCoachLeave } from "@/lib/studio/coach-leave-server";
+import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { z } from 'zod';
 
 // Validation schema for approval
@@ -116,7 +118,10 @@ export async function POST(request: NextRequest) {
     // Status + potong kuota (+ pengganti coach) harus atomik — gagal salah satu, batal semua
     let applied: AppliedCovers | null = null;
     await withTransaction(async (client) => {
-      if (coachLeave && isApprove) applied = await applyCoversOnApproval(client, validated.leave_id);
+      if (coachLeave && isApprove) {
+        applied = await applyCoversOnApproval(client, validated.leave_id);
+        await syncLeaveTimeOff(client, coachLeave, `Cuti: ${LEAVE_TYPE_LABELS[coachLeave.leaveType] ?? coachLeave.leaveType}`);
+      }
       await client.query(
         `UPDATE hris.leaves
          SET status = $2, approved_by = $3, approved_at = now(),
