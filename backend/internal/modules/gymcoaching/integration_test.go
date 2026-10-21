@@ -77,11 +77,19 @@ func (c testCredits) Deduct(ctx context.Context, q Q, m CreditMove) (bool, error
 	return ok, err
 }
 
+func (c testCredits) ActivePassAt(ctx context.Context, q Q, customerID string, at time.Time) (*ActivePass, error) {
+	p, err := c.svc.ActivePassAt(ctx, q, customerID, at)
+	if err != nil || p == nil {
+		return nil, err
+	}
+	return &ActivePass{ID: p.ID, CoversPersonal: p.CoversPersonal}, nil
+}
+
 func (c testCredits) ForBranch(ctx context.Context, q Q, branchID *string) (domain.Rules, error) {
 	r, err := c.svc.Rules(ctx, q, branchID)
 	return domain.Rules{
 		CancellationDeadlineHours: r.CancellationDeadlineHours, LateCancelPolicy: domain.Policy(r.LateCancelPolicy),
-		NoShowPolicy: domain.Policy(r.NoShowPolicy), ReminderMinutes: r.ClassReminderMinutes,
+		NoShowPolicy: domain.Policy(r.NoShowPolicy), ReminderMinutes: r.ClassReminderMinutes, RescheduleLimit: r.PtRescheduleLimit,
 	}, err
 }
 
@@ -138,7 +146,7 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{t: t, ctx: context.Background(), tx: tx, now: wib("2031-03-03 06:00"),
 		staff: "6f1c2a1e-0d7b-4c55-9a43-1b0b6a0f5e11", sfx: testutil.RandomHex(4)}
 	f.credits = testCredits{svc: gymcredits.NewDefaultService(module.Deps{}, tx)}
-	f.svc = NewService(tx, Ports{Credits: f.credits, Rules: f.credits, Schedule: testSchedule{}, Notifier: testNotifier{}},
+	f.svc = NewService(tx, Ports{Credits: f.credits, Passes: f.credits, Rules: f.credits, Schedule: testSchedule{}, Notifier: testNotifier{}, Staff: StaffInboxSQL{}},
 		func() time.Time { return f.now }, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	f.mux = testutil.Mux(mod{h: &handler{svc: f.svc, guard: headerGuard{}}})
 

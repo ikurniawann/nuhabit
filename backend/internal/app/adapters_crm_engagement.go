@@ -22,13 +22,17 @@ func crmEngagementPorts(d module.Deps) engagement.Ports {
 	return engagement.Ports{
 		Orders: engagement.OrdersSQL{},
 		Push:   engagement.NewWebPush(d.DB, d.Log, d.Now),
-		Gym: gymChannels{
-			db:   d.DB,
-			wa:   whatsapp.New(d.Log),
-			mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
-			from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("GYM_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
-			log:  d.Log,
-		},
+		Gym:    newGymChannels(d),
+	}
+}
+
+func newGymChannels(d module.Deps) gymChannels {
+	return gymChannels{
+		db:   d.DB,
+		wa:   whatsapp.New(d.Log),
+		mail: &resendMailer{apiKey: strings.TrimSpace(os.Getenv("RESEND_API_KEY")), log: d.Log, client: &http.Client{Timeout: 15 * time.Second}},
+		from: strings.TrimSpace(firstNonEmptyStr(os.Getenv("GYM_FROM_EMAIL"), os.Getenv("FROM_EMAIL"))),
+		log:  d.Log,
 	}
 }
 
@@ -73,14 +77,34 @@ SELECT c.phone, c.email, COALESCE(s.gym_whatsapp, true), COALESCE(s.gym_email, t
 		}
 		return
 	}
-	if waOn && phone != nil {
+	if !waOn {
+		phone = nil
+	}
+	if !emailOn {
+		email = nil
+	}
+	c.sendTo(ctx, phone, email, title, body)
+}
+
+// SendTo delivers a notice to a phone and an email address (nil skips a
+// channel) in the background, for staff accounts with no member settings.
+func (c gymChannels) SendTo(phone, email *string, title, body string) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), gymSendTimeout)
+		defer cancel()
+		c.sendTo(ctx, phone, email, title, body)
+	}()
+}
+
+func (c gymChannels) sendTo(ctx context.Context, phone, email *string, title, body string) {
+	if phone != nil {
 		if target := whatsapp.NormalizeRecipient(*phone); target != "" && c.wa.Configured(ctx, c.db) {
 			if res := c.wa.SendText(ctx, c.db, target, "*"+title+"*\n"+body, "notification", ""); !res.Success {
-				c.log.Warn("[gym-notify] WhatsApp gagal", "customer", customerID, "reason", res.Reason)
+				c.log.Warn("[gym-notify] WhatsApp gagal", "phone", target, "reason", res.Reason)
 			}
 		}
 	}
-	if emailOn && email != nil && strings.Contains(*email, "@") && c.from != "" {
+	if email != nil && strings.Contains(*email, "@") && c.from != "" {
 		c.mail.Send(ctx, strings.TrimSpace(*email), c.from, title, gymEmailHTML(title, body))
 	}
 }

@@ -1852,6 +1852,11 @@
   {
     "module": "gym-coaching",
     "method": "GET",
+    "path": "/api/gym/pt/pending-count"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "GET",
     "path": "/api/gym/pt/slots"
   },
   {
@@ -3432,6 +3437,11 @@
   {
     "module": "gym-coaching",
     "method": "DELETE",
+    "path": "/api/member-portal/gym/pt/appointments/{id}"
+  },
+  {
+    "module": "gym-coaching",
+    "method": "PATCH",
     "path": "/api/member-portal/gym/pt/appointments/{id}"
   },
   {

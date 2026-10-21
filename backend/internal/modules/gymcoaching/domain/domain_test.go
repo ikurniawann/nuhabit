@@ -22,7 +22,7 @@ func wib(s string) time.Time {
 	return t
 }
 
-var rules = Rules{CancellationDeadlineHours: 4, LateCancelPolicy: Forfeit, NoShowPolicy: Forfeit, ReminderMinutes: 60}
+var rules = Rules{CancellationDeadlineHours: 4, LateCancelPolicy: Forfeit, NoShowPolicy: Forfeit, ReminderMinutes: 60, RescheduleLimit: 2}
 
 func TestCanTransition(t *testing.T) {
 	eq(t, CanTransition(Requested, Confirmed), true)
@@ -43,6 +43,24 @@ func TestRequestProblem(t *testing.T) {
 	eq(t, RequestProblem(wib("2031-03-30 08:30"), now, rules), "Sesi PT hanya bisa diminta sampai 28 hari ke depan")
 	// A zero deadline still needs an hour of notice.
 	eq(t, EarliestRequest(now, Rules{}), wib("2031-03-02 09:00"))
+}
+
+func TestMemberReschedule(t *testing.T) {
+	start := wib("2031-03-03 18:00")
+	now := wib("2031-03-03 08:00")
+	move := func(status Status, newStart string, at time.Time, moved int, r Rules) string {
+		return MemberRescheduleProblem(status, start, wib(newStart), at, moved, r)
+	}
+	eq(t, move(Confirmed, "2031-03-04 18:00", now, 0, rules), "")
+	eq(t, move(Requested, "2031-03-04 18:00", now, 1, rules), "")
+	eq(t, move(Confirmed, "2031-03-04 18:00", now, 2, rules), "Sesi PT ini sudah dipindahkan 2 kali, batas maksimal")
+	eq(t, move(Confirmed, "2031-03-04 18:00", wib("2031-03-03 14:01"), 0, rules), "Batas ubah jadwal sudah lewat (4 jam sebelum mulai)")
+	eq(t, move(Confirmed, "2031-03-03 18:00", now, 0, rules), "Pilih jam yang berbeda")
+	eq(t, move(Confirmed, "2031-03-03 11:00", now, 0, rules), "Sesi PT harus diminta paling lambat 4 jam sebelum mulai")
+	eq(t, move(Cancelled, "2031-03-04 18:00", now, 0, rules), "Sesi PT sudah ditutup")
+	eq(t, move(Confirmed, "2031-03-04 18:00", now, 0, Rules{CancellationDeadlineHours: 4}), "Ubah jadwal PT hanya bisa lewat staf atau coach")
+	eq(t, CanMemberReschedule(Confirmed, start, now, 1, rules), true)
+	eq(t, CanMemberReschedule(Confirmed, start, wib("2031-03-03 14:01"), 0, rules), false)
 }
 
 func TestCredits(t *testing.T) {

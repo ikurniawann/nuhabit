@@ -125,26 +125,28 @@ type BranchPrice struct {
 
 // PackageRow is one package of the admin list (PACKAGE_SELECT).
 type PackageRow struct {
-	ID                     string        `json:"id"`
-	Name                   string        `json:"name"`
-	Description            string        `json:"description"`
-	Kind                   string        `json:"kind"`
-	Credits                int           `json:"credits"`
-	PriceIdr               float64       `json:"price_idr"`
-	ValidityDays           int           `json:"validity_days"`
-	PurchaseLimitPerMember *int          `json:"purchase_limit_per_member"`
-	ApplicableClassTypeIDs []string      `json:"applicable_class_type_ids"`
-	BranchID               *string       `json:"branch_id"`
-	BranchName             *string       `json:"branch_name"`
-	IsPublic               bool          `json:"is_public"`
-	Badge                  *string       `json:"badge"`
-	BranchPrices           []BranchPrice `json:"branch_prices"`
-	Status                 string        `json:"status"`
-	SortOrder              int           `json:"sort_order"`
-	CreatedAt              JSTime        `json:"created_at"`
-	UpdatedAt              JSTime        `json:"updated_at"`
-	SoldCount              int           `json:"sold_count"`
-	Referenced             bool          `json:"referenced"`
+	ID                     string   `json:"id"`
+	Name                   string   `json:"name"`
+	Description            string   `json:"description"`
+	Kind                   string   `json:"kind"`
+	Credits                int      `json:"credits"`
+	PriceIdr               float64  `json:"price_idr"`
+	ValidityDays           int      `json:"validity_days"`
+	PurchaseLimitPerMember *int     `json:"purchase_limit_per_member"`
+	ApplicableClassTypeIDs []string `json:"applicable_class_type_ids"`
+	BranchID               *string  `json:"branch_id"`
+	BranchName             *string  `json:"branch_name"`
+	IsPublic               bool     `json:"is_public"`
+	Badge                  *string  `json:"badge"`
+	// CoversPersonal: a pass of this package also pays for PT sessions.
+	CoversPersonal bool          `json:"covers_personal"`
+	BranchPrices   []BranchPrice `json:"branch_prices"`
+	Status         string        `json:"status"`
+	SortOrder      int           `json:"sort_order"`
+	CreatedAt      JSTime        `json:"created_at"`
+	UpdatedAt      JSTime        `json:"updated_at"`
+	SoldCount      int           `json:"sold_count"`
+	Referenced     bool          `json:"referenced"`
 }
 
 // PortalPackageRow is an active package as the portal query reads it.
@@ -160,6 +162,7 @@ type PortalPackageRow struct {
 	ApplicableClassTypeIDs []string
 	BranchID               *string
 	Badge                  *string
+	CoversPersonal         bool
 	Status                 string
 }
 
@@ -181,6 +184,8 @@ type PassRow struct {
 	BranchID    *string
 	// AutoRenewOffReason is why the system turned auto-renew off.
 	AutoRenewOffReason *string
+	// CoversPersonal: the package pays for PT sessions too.
+	CoversPersonal bool
 }
 
 func (p PassRow) state() domain.PassState {
@@ -209,6 +214,7 @@ type PassView struct {
 	PurchaseID  *string `json:"purchase_id"`
 	// AutoRenewOffReason is "renewal_failed" after the renewal retries ran out.
 	AutoRenewOffReason *string `json:"auto_renew_off_reason"`
+	CoversPersonal     bool    `json:"covers_personal"`
 }
 
 func passView(p PassRow, now time.Time) PassView {
@@ -216,7 +222,7 @@ func passView(p PassRow, now time.Time) PassView {
 		ID: p.ID, PackageID: p.PackageID, PackageName: p.PackageName, StartsAt: JSTime(p.StartsAt), EndsAt: JSTime(p.EndsAt),
 		Status: p.Status, Upcoming: p.Status == domain.PassActive && p.StartsAt.After(now), DaysLeft: p.state().DaysLeft(now),
 		FrozenAt: jsTimePtr(p.FrozenAt), FrozenUntil: jsTimePtr(p.FrozenUntil), AutoRenew: p.AutoRenew, RenewWith: p.RenewWith,
-		PurchaseID: p.PurchaseID, AutoRenewOffReason: p.AutoRenewOffReason,
+		PurchaseID: p.PurchaseID, AutoRenewOffReason: p.AutoRenewOffReason, CoversPersonal: p.CoversPersonal,
 	}
 }
 
@@ -313,6 +319,7 @@ type PortalPackage struct {
 	ValidityDays           int     `json:"validity_days"`
 	PurchaseLimitPerMember *int    `json:"purchase_limit_per_member"`
 	Badge                  *string `json:"badge"`
+	CoversPersonal         bool    `json:"covers_personal"`
 	Restricted             bool    `json:"restricted"`
 	CanBuy                 bool    `json:"can_buy"`
 	BlockedReason          *string `json:"blocked_reason"`

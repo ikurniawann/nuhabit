@@ -46,6 +46,20 @@ type Credits interface {
 	Deduct(ctx context.Context, q Q, m CreditMove) (bool, error)
 }
 
+// ActivePass is a membership pass covering one instant (owned by
+// gym-credits). CoversPersonal: the pass pays for PT sessions too.
+type ActivePass struct {
+	ID             string
+	CoversPersonal bool
+}
+
+// Passes reads member passes: one covering personal training replaces the
+// PT credit at booking, check-in and completion, as a pass does for classes.
+type Passes interface {
+	// ActivePassAt is the pass covering at, nil when none.
+	ActivePassAt(ctx context.Context, q Q, customerID string, at time.Time) (*ActivePass, error)
+}
+
 // RulesSource resolves the gym business rules of a branch (nil = global).
 type RulesSource interface {
 	ForBranch(ctx context.Context, q Q, branchID *string) (domain.Rules, error)
@@ -73,12 +87,21 @@ type Notifier interface {
 	NotifyMember(ctx context.Context, q Q, customerID string, n Notification) error
 }
 
+// StaffNotifier tells the staff account linked to a coach about a PT
+// request or move: the dashboard inbox, plus WhatsApp and email when the
+// account has them. Nil means coaches are not told.
+type StaffNotifier interface {
+	NotifyCoach(ctx context.Context, q Q, coachID string, n Notification) error
+}
+
 // Ports are the adapters internal/app wires in.
 type Ports struct {
 	Credits  Credits
+	Passes   Passes
 	Rules    RulesSource
 	Schedule Schedule
 	Notifier Notifier
+	Staff    StaffNotifier
 }
 
 // Service implements the PT and assessment use cases.
@@ -116,6 +139,34 @@ func (s *Service) notify(ctx context.Context, q Q, customerID string, n Notifica
 	}()
 	if err != nil {
 		s.log.WarnContext(ctx, "gym notification not sent", "type", n.Type, "customer_id", customerID, "error", err.Error())
+	}
+}
+
+// passCovers reports a pass of the member covering PT sessions at the
+// instant at. Without a Passes port passes never cover PT.
+func (s *Service) passCovers(ctx context.Context, q Q, customerID string, at time.Time) (bool, error) {
+	if s.ports.Passes == nil {
+		return false, nil
+	}
+	pass, err := s.ports.Passes.ActivePassAt(ctx, q, customerID, at)
+	return pass != nil && pass.CoversPersonal, err
+}
+
+// notifyStaff is notify for the coach's staff account; without a Staff
+// port nothing is sent.
+func (s *Service) notifyStaff(ctx context.Context, q Q, coachID string, n Notification) {
+	if s.ports.Staff == nil {
+		return
+	}
+	err := func() error {
+		tb, ok := q.(database.TxBeginner)
+		if !ok {
+			return s.ports.Staff.NotifyCoach(ctx, q, coachID, n)
+		}
+		return database.WithTx(ctx, tb, func(sp pgx.Tx) error { return s.ports.Staff.NotifyCoach(ctx, sp, coachID, n) })
+	}()
+	if err != nil {
+		s.log.WarnContext(ctx, "gym staff notification not sent", "type", n.Type, "coach_id", coachID, "error", err.Error())
 	}
 }
 

@@ -470,9 +470,11 @@ func (s *Service) passViews(ctx context.Context, q database.Querier, customerID 
 }
 
 // ActivePass is a pass that covers one instant (booking or check-in time).
+// CoversPersonal says the pass pays for PT sessions too.
 type ActivePass struct {
-	ID     string
-	EndsAt time.Time
+	ID             string
+	EndsAt         time.Time
+	CoversPersonal bool
 }
 
 // ActivePassAt returns the member's pass covering at, nil when none. Other
@@ -482,7 +484,7 @@ func (s *Service) ActivePassAt(ctx context.Context, q database.Querier, customer
 	if err != nil || row == nil {
 		return nil, err
 	}
-	return &ActivePass{ID: row.ID, EndsAt: row.EndsAt}, nil
+	return &ActivePass{ID: row.ID, EndsAt: row.EndsAt, CoversPersonal: row.CoversPersonal}, nil
 }
 
 func recentCreators(entries []RecentEntry) []string {

@@ -98,8 +98,9 @@ func (s *Service) CancelAppointment(ctx context.Context, id, reason string) erro
 }
 
 // Complete closes a session that has started and charges each member who
-// attended its credit cost. A member short of PT credits stops the whole
-// completion, so the desk can top up or mark the member absent first.
+// attended its credit cost, unless a pass covering PT paid for it. A member
+// short of PT credits stops the whole completion, so the desk can top up or
+// mark the member absent first.
 func (s *Service) Complete(ctx context.Context, id string) error {
 	return s.inTx(ctx, func(q Q) error {
 		a, err := lockAppointment(ctx, q, id)
@@ -117,24 +118,39 @@ func (s *Service) Complete(ctx context.Context, id string) error {
 			if p.Status != domain.Confirmed {
 				continue
 			}
-			ok, err := s.ports.Credits.Deduct(ctx, q, CreditMove{
-				CustomerID: p.CustomerID, ClassTypeID: a.ClassTypeID, Amount: a.CreditCost,
-				SourceType: "pt_session", SourceID: p.ID, IdempotencyKey: "gym:pt:" + p.ID,
-				Note: "Sesi PT: " + a.ClassTypeName + " " + a.when(),
-			})
+			ok, err := s.chargeSession(ctx, q, a, p)
 			if err != nil {
 				return err
 			}
 			if !ok {
 				return conflict("Kredit PT " + memberLabel(*p) + " tidak cukup untuk menyelesaikan sesi")
 			}
-			p.CreditsCharged = a.CreditCost
 			if err := setParticipant(ctx, q, p, domain.Completed); err != nil {
 				return err
 			}
 		}
 		return s.setStatus(ctx, q, a, domain.Completed, nil)
 	})
+}
+
+// chargeSession takes the session's credits from a confirmed member, once
+// per participant (the gate and completion share the key), and records
+// them on p. A pass covering PT at the start costs nothing. ok=false means
+// the PT credits were short.
+func (s *Service) chargeSession(ctx context.Context, q Q, a *Appointment, p *Participant) (bool, error) {
+	covered, err := s.passCovers(ctx, q, p.CustomerID, a.start())
+	if err != nil || covered {
+		return true, err
+	}
+	ok, err := s.ports.Credits.Deduct(ctx, q, CreditMove{
+		CustomerID: p.CustomerID, ClassTypeID: a.ClassTypeID, Amount: a.CreditCost,
+		SourceType: "pt_session", SourceID: p.ID, IdempotencyKey: "gym:pt:" + p.ID,
+		Note: "Sesi PT: " + a.ClassTypeName + " " + a.when(),
+	})
+	if err == nil && ok {
+		p.CreditsCharged = a.CreditCost
+	}
+	return ok, err
 }
 
 // AddMember adds a member to an open small group session with room left.
@@ -272,10 +288,13 @@ func (s *Service) NoShow(ctx context.Context, appointmentID, participantID strin
 }
 
 // chargePenalty deducts up to amount of the member's usable PT credits: a
-// short balance never goes negative.
+// short balance never goes negative, and a pass covering PT owes nothing.
 func (s *Service) chargePenalty(ctx context.Context, q Q, a *Appointment, p *Participant, amount int, kind, note string) (int, error) {
 	if amount <= 0 {
 		return 0, nil
+	}
+	if covered, err := s.passCovers(ctx, q, p.CustomerID, a.start()); err != nil || covered {
+		return 0, err
 	}
 	usable, err := s.ports.Credits.UsableBalance(ctx, q, p.CustomerID, a.ClassTypeID)
 	if err != nil {

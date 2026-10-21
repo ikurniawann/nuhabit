@@ -385,6 +385,7 @@ type PackageInput struct {
 	BranchID               *string
 	IsPublic               bool
 	Badge                  *string
+	CoversPersonal         bool
 	BranchPrices           []BranchPrice
 	SortOrder              int
 }

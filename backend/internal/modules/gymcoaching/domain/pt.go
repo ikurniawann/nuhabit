@@ -46,6 +46,9 @@ type Rules struct {
 	LateCancelPolicy          Policy
 	NoShowPolicy              Policy
 	ReminderMinutes           int
+	// RescheduleLimit is how many times a member may move one session
+	// themself; 0 leaves moves to staff and coaches.
+	RescheduleLimit int
 }
 
 // CanTransition lists the moves an appointment or a participant may make.

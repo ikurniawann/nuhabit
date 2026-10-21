@@ -27,9 +27,16 @@ func init() {
 	RegisterJob(gymcoaching.Name, "gym-coaching.pt-reminders", 5*time.Minute, coachingService, (*gymcoaching.Service).SendReminders)
 }
 
-func coachingPorts(d module.Deps) gymcoaching.Ports {
-	credits := coachingCredits{svc: gymcredits.NewDefaultService(d, d.DB)}
-	return gymcoaching.Ports{Credits: credits, Rules: credits, Schedule: coachingSchedule{}, Notifier: coachingNotifier{}}
+func coachingPorts(d module.Deps) gymcoaching.Ports { return coachingPortsOn(d, d.DB) }
+
+// coachingPortsOn is coachingPorts with the credit ports on db, a
+// transaction in tests.
+func coachingPortsOn(d module.Deps, db gymcredits.DB) gymcoaching.Ports {
+	credits := coachingCredits{svc: gymcredits.NewDefaultService(d, db)}
+	return gymcoaching.Ports{
+		Credits: credits, Passes: credits, Rules: credits, Schedule: coachingSchedule{}, Notifier: coachingNotifier{},
+		Staff: newCoachingStaff(d),
+	}
 }
 
 // coachingService is the gym-coaching service for background jobs.
@@ -42,6 +49,7 @@ type coachingCredits struct{ svc *gymcredits.Service }
 
 var (
 	_ gymcoaching.Credits     = coachingCredits{}
+	_ gymcoaching.Passes      = coachingCredits{}
 	_ gymcoaching.RulesSource = coachingCredits{}
 )
 
@@ -58,6 +66,14 @@ func (c coachingCredits) Deduct(ctx context.Context, q database.Querier, m gymco
 	return ok, creditErr(err)
 }
 
+func (c coachingCredits) ActivePassAt(ctx context.Context, q database.Querier, customerID string, at time.Time) (*gymcoaching.ActivePass, error) {
+	p, err := c.svc.ActivePassAt(ctx, q, customerID, at)
+	if err != nil || p == nil {
+		return nil, creditErr(err)
+	}
+	return &gymcoaching.ActivePass{ID: p.ID, CoversPersonal: p.CoversPersonal}, nil
+}
+
 func (c coachingCredits) ForBranch(ctx context.Context, q database.Querier, branchID *string) (coachingdomain.Rules, error) {
 	r, err := c.svc.Rules(ctx, q, branchID)
 	return coachingdomain.Rules{
@@ -65,6 +81,7 @@ func (c coachingCredits) ForBranch(ctx context.Context, q database.Querier, bran
 		LateCancelPolicy:          coachingdomain.Policy(r.LateCancelPolicy),
 		NoShowPolicy:              coachingdomain.Policy(r.NoShowPolicy),
 		ReminderMinutes:           r.ClassReminderMinutes,
+		RescheduleLimit:           r.PtRescheduleLimit,
 	}, err
 }
 

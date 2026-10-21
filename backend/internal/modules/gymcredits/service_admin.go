@@ -378,7 +378,7 @@ func (s *Service) PortalPackages(ctx context.Context, customerID string) (*Porta
 		}
 		view.Packages = append(view.Packages, PortalPackage{
 			ID: p.ID, Name: p.Name, Description: p.Description, Kind: p.Kind, Credits: p.Credits, PriceIdr: p.PriceIdr,
-			ValidityDays: p.ValidityDays, PurchaseLimitPerMember: p.PurchaseLimitPerMember, Badge: p.Badge,
+			ValidityDays: p.ValidityDays, PurchaseLimitPerMember: p.PurchaseLimitPerMember, Badge: p.Badge, CoversPersonal: p.CoversPersonal,
 			Restricted: p.ApplicableClassTypeIDs != nil, CanBuy: problem == "", BlockedReason: reason,
 		})
 	}
