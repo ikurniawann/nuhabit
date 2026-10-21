@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ExpiringBatchRow } from "@/lib/inventory/stock-queries";
+import type { ExpiringBatchRow } from "../types";
 import type { ExpirySummary } from "@/lib/inventory/batches";
 import { fetchJson, useWarehouseLookup } from "../../shared/inventory-lookups";
 import {

@@ -1,5 +1,5 @@
 import { apiGet, apiPut } from "@/lib/api-client";
-import type { ExecutiveDashboard } from "@/lib/dashboard/executive";
+import type { ExecutiveDashboard } from "./types";
 import type { SalesTargetConfig } from "@/lib/dashboard/sales-target";
 
 export const fetchExecutiveDashboard = () =>

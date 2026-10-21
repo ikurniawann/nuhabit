@@ -13,3 +13,4 @@ export {
   type Units,
 } from './format';
 export { gateReasonLabel } from './labels';
+export { chipClass } from './chip';

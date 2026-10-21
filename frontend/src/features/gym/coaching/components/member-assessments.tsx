@@ -21,11 +21,10 @@ import {
 } from "@/lib/gym/assessments";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { AXIS } from "@/features/gym/reports/components/charts";
 import { SELECT } from "@/features/gym/shared";
 import { COACHING_KEYS, coachingApi } from "../api";
 import { AssessmentDialog } from "./assessment-dialog";
-
-const AXIS = { fontSize: 11, fill: "var(--color-muted-foreground)" };
 
 /** Tab Asesmen di profil 360 member: progres per metrik, grafik, dan riwayat. */
 export function MemberAssessments({ customerId }: { customerId: string }) {

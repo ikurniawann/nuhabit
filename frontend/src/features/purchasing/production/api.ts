@@ -1,5 +1,5 @@
 import type { AdditionalCost, AdditionalCostPayload, AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import type {
   ProductionBatchDetail,
   ProductionBatchRow,

@@ -21,7 +21,7 @@ import {
   NAV_FROM_APPROVAL_PO,
   persistNavFrom,
 } from "@/lib/iam/nav-context";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { getApprovalModuleConfig } from "../approval-module";
 import { CheckCircle, Loader2, ShoppingCart } from "lucide-react";
 import { formatDate, formatRupiah } from "@/lib/format";

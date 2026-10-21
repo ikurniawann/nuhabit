@@ -3,7 +3,7 @@ import type {
   SubsidiaryKind,
   SubsidiaryLedgerReport,
   SubsidiaryPartyOption,
-} from "@/lib/accounting/subsidiary-ledger-store";
+} from "./types";
 
 const BASE = "/api/accounting/ledger/subsidiary";
 

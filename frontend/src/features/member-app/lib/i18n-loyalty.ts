@@ -7,7 +7,6 @@ export const LOYALTY_ID: Record<string, string> = {
   // Umum
   "Request failed": "Permintaan gagal",
   "Processing…": "Memproses…",
-  "Sending…": "Mengirim…",
   "See all": "Semua",
   Member: "Member",
   Email: "Email",
@@ -28,9 +27,7 @@ export const LOYALTY_ID: Record<string, string> = {
   "Top-up bonus": "Bonus top-up",
   Payment: "Pembayaran",
   Refund: "Refund",
-  Bonus: "Bonus",
   Expired: "Kedaluwarsa",
-  Adjustment: "Penyesuaian",
   Reversal: "Pembatalan",
   "Top-up refund": "Refund top-up",
   "Balance withdrawal": "Penarikan saldo",
@@ -182,7 +179,6 @@ export const LOYALTY_ID: Record<string, string> = {
   "{value} logged": "{value} tercatat",
   "rank #{rank} of {total}": "peringkat #{rank} dari {total}",
   Leaderboard: "Papan peringkat",
-  You: "Kamu",
   "Join challenge": "Ikut challenge",
 
   // Promo
@@ -251,7 +247,6 @@ export const LOYALTY_ID: Record<string, string> = {
   "discount {amount}": "diskon {amount}",
   Subtotal: "Subtotal",
   Discount: "Diskon",
-  Total: "Total",
   "Paid with ARK": "Dibayar ARK",
   "XP earned": "XP didapat",
 
@@ -271,7 +266,6 @@ export const LOYALTY_ID: Record<string, string> = {
 
   // Profil & pengaturan
   "{n} ARK · top up, history": "{n} ARK · top-up, riwayat",
-  Notifications: "Notifikasi",
   "Phone notifications": "Notifikasi di HP",
   "On for this device": "Aktif di perangkat ini",
   "Events, promos, and balance updates straight to your phone": "Kabar event, promo, dan saldo langsung ke HP",

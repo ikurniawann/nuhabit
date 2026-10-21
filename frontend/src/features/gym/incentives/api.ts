@@ -1,7 +1,7 @@
 /** Klien API Gym → Insentif Coach. */
 
 import type { CoachStatement, PayoutAction, PayoutStatus } from "@/lib/gym/incentive";
-import type { CoachStatementView, SchemeInput, SchemeRow } from "@/lib/gym/incentive-server";
+import type { CoachStatementView, SchemeInput, SchemeRow } from "@/features/gym/incentives/types";
 import { call, remove, send } from "../shared";
 
 export type { SchemeInput };

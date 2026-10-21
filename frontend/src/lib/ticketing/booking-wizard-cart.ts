@@ -8,9 +8,36 @@
 // aman dipakai di bundel klien; konstanta di bawah mencerminkan
 // BOOKING_MAX_QTY & BOOKING_MAX_DAYS_AHEAD server.
 
-import type { CatalogProduct, CatalogVariant } from "./booking-server";
+import type { SeasonKind } from "./pricing";
 
-export type { CatalogProduct, CatalogVariant };
+/** Satu anggota paket per 1 unit: menunjuk varian komponen + bobot alokasi. */
+export interface BundleMember {
+  component_variant_id: string;
+  member_label: string;
+  weight_price: number | null;
+}
+
+export interface CatalogVariant {
+  variant_id: string;
+  variant_name: string;
+  price: number;
+  season_kind: SeasonKind;
+  /**
+   * Fase P: hanya varian paket, daftar anggota per 1 unit (urut, 1 entri
+   * = 1 orang). Kosong untuk tiket satuan.
+   */
+  members?: BundleMember[];
+}
+
+export interface CatalogProduct {
+  ticket_product_id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  thumbnail_url: string | null;
+  product_kind: "single" | "bundle";
+  variants: CatalogVariant[];
+}
 
 export const WIZARD_MAX_QTY = 20;
 export const WIZARD_MAX_DAYS_AHEAD = 90;

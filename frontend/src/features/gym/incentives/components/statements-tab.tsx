@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogPanel, DialogPanelBody, DialogPanelDescription, DialogPanelHeader, DialogPanelTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PAYOUT_STATUS_LABELS, type CoachStatement } from "@/lib/gym/incentive";
-import type { CoachStatementView } from "@/lib/gym/incentive-server";
+import type { CoachStatementView } from "@/features/gym/incentives/types";
 import { formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import { incentivesApi } from "../api";
 import { useRefreshMonth } from "../queries";

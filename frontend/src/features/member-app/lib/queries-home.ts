@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useInvalidateAll } from "./queries";
 import type { MemberPromo } from "@/lib/member-portal/promos";
 import { promoLabel } from "@/lib/member-app/home";
 import type {
@@ -143,8 +144,4 @@ export const useMemberQr = () =>
     gcTime: 0,
   });
 
-/** Perubahan booking/kredit/profil menyentuh beberapa layar sekaligus. */
-export function useInvalidateAll() {
-  const qc = useQueryClient();
-  return () => qc.invalidateQueries();
-}
+export { useInvalidateAll };

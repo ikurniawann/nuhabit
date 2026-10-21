@@ -1,5 +1,18 @@
 import type { PaymentMode } from "../masters/types";
-import type { GateTapResult } from "@/lib/ticketing/gate-server";
+
+/** Hasil satu tap gelang di gate (Go /api/ticketing/gate/tap). */
+export type GateTapResult =
+  | "masuk"
+  | "masuk-lagi"
+  | "masuk-karyawan"
+  | "ditolak-gelang-tak-dikenal"
+  | "ditolak-tanpa-kunjungan"
+  | "ditolak-sudah-masuk"
+  | "ditolak-saldo-kurang"
+  | "ditolak-plafon"
+  | "ditolak-tanpa-kanal"
+  | "ditolak-harga-belum-diisi"
+  | "ditolak-karyawan-nonaktif";
 
 export type VisitStatus = "open" | "settled" | "void";
 export type CashMethod = "cash" | "qris" | "card";

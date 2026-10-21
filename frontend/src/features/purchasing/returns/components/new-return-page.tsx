@@ -12,7 +12,7 @@ import {
   PurchasingFormHeader,
 } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { getReturnsModuleConfig } from "../returns-module";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { useReturnFormData, useReturnGrnOptions } from "../queries";
 import { useCreateReturn } from "../mutations";
 import { ReturnReasonType, ReturnableItem } from "@/types/purchasing";

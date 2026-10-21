@@ -1,7 +1,7 @@
 /** Klien API Gym → Kelas Saya (portal coach). */
 import type { PayoutRow } from "@/features/gym/incentives/api";
 import type { RosterEntry, Session } from "@/features/gym/scheduling/api";
-import type { CoachStatementView } from "@/lib/gym/incentive-server";
+import type { CoachStatementView } from "@/features/gym/incentives/types";
 import { call } from "../shared";
 
 /** Profil coach yang tertaut ke akun yang login. */

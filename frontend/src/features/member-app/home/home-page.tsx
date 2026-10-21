@@ -3,9 +3,10 @@
 import { BookMarked, CalendarDays, CirclePlay, Coins, Dumbbell, Flag, Gift, QrCode } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { goLinkHref } from "@/lib/member-app/go-link";
 import { MemberCardSheet } from "../components/member-card";
+import { SectionHeader } from "../loyalty/loyalty-ui";
 import { useT } from "../lib/i18n";
 import { classImage } from "../lib/images";
 import { asset, m } from "../lib/links";
@@ -13,15 +14,6 @@ import { useAccount, useHomeFeed, useMyBookings, usePromos } from "../lib/querie
 import { Spinner, formatDay, formatDayTime, formatDuration, formatTime } from "../ui";
 import { PasswordPrompt } from "./password-prompt";
 
-/** Header seksi yang tenang: label huruf kapital kecil + tautan opsional. */
-function SectionHeader({ label, action }: { label: string; action?: ReactNode }) {
-  return (
-    <div className="mb-3 flex items-baseline justify-between px-1">
-      <p className="text-[11px] font-extrabold tracking-[0.16em] text-nh-muted uppercase">{label}</p>
-      {action}
-    </div>
-  );
-}
 
 /** Notifikasi & push membuka /member?go=<tujuan>; teruskan sekali ke rute aplikasi. */
 function useGoRedirect() {

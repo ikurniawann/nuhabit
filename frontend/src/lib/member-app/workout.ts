@@ -10,11 +10,12 @@ import {
   type Division,
   type WorkoutBlock,
   type WorkoutBlockResult,
+  type WorkoutHistoryItem,
+  type WorkoutSessionView as SessionRow,
   type WorkoutType,
+  type WorkoutView,
 } from "@/lib/gym/hyrox";
-import type { RaceAnalysis } from "@/lib/gym/races";
-import type { MemberRaceView, RaceEventRow } from "@/lib/gym/races-server";
-import type { WorkoutHistoryItem, WorkoutSessionView as SessionRow, WorkoutView } from "@/lib/gym/training-server";
+import type { MemberRaceView, RaceAnalysis, RaceEventRow } from "@/lib/gym/races";
 
 /* ── Workout ─────────────────────────────────────────────────────────── */
 

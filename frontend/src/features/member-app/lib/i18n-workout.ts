@@ -45,7 +45,6 @@ export const ID_WORKOUT: Record<string, string> = {
   complete: "selesai",
   "Up next": "Berikutnya",
   // Video
-  Close: "Tutup",
   "Watch on YouTube": "Tonton di YouTube",
   "Video opens from YouTube - technique first, speed second.": "Video dari YouTube - teknik dulu, kecepatan kemudian.",
   // Race
@@ -87,7 +86,6 @@ export const ID_WORKOUT: Record<string, string> = {
     "Latih simulasi penuh di Rekam - skor kesiapanmu ada di tab Race.",
   "Official registration": "Pendaftaran resmi",
   // Video teknik
-  Guides: "Panduan",
   "Loading guides…": "Memuat panduan…",
   "Technique library": "Pustaka teknik",
   "Master all 8 stations.": "Kuasai 8 stasiun.",

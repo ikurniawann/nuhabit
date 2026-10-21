@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PurchasingFormHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useErrorToast } from "@/features/purchasing/reports/use-error-toast";
 import { formatDate, formatNumber, formatRupiah } from "@/lib/format";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { getProductionModuleConfig } from "../production-module";
 import { useProductionBatch } from "../queries";
 import { ScrollRegion } from "@/components/ui/scroll-region";

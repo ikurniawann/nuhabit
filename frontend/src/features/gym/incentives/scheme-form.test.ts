@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SchemeRow } from "@/lib/gym/incentive-server";
+import type { SchemeRow } from "@/features/gym/incentives/types";
 import { initialSchemeForm, isSchemeFormValid, schemeFormReducer, toSchemeInput, usedClassTypes } from "./scheme-form";
 
 const coachScheme: SchemeRow = {

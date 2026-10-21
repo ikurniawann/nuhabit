@@ -10,7 +10,7 @@ import { initialsOf } from "../lib/initials";
 import { m } from "../lib/links";
 import { useBranches, useSessions, useTrainers } from "../lib/queries-classes";
 import { localDay } from "@/lib/timezone";
-import { Spinner, formatTime } from "../ui";
+import { Spinner, chipClass, formatTime } from "../ui";
 
 /** "YYYY-MM-DD" of an instant: in the class's branch zone when known, else on the device. */
 function dayKey(iso: string, timeZone?: string): string {
@@ -20,11 +20,6 @@ function dayKey(iso: string, timeZone?: string): string {
 }
 
 /** A filter chip: one line, never squeezed, so the row scrolls sideways instead. */
-const chipClass = (active: boolean) =>
-  `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${
-    active ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-  }`;
-
 export function SchedulePage() {
   const t = useT();
   const locale = useLang() === "id" ? "id-ID" : undefined;

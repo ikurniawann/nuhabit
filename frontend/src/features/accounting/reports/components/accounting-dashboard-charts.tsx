@@ -3,7 +3,7 @@
 import { useMemo, useSyncExternalStore } from "react";
 import type { ApexOptions } from "apexcharts";
 import { ApexChart } from "@/features/pos/reports/components/apex-chart";
-import type { AccountingDashboard } from "@/lib/accounting/dashboard-store";
+import type { AccountingDashboard } from "../types";
 import { formatLedgerAmount } from "@/lib/accounting/format";
 
 const FALLBACK_PRIMARY = "#00281a";

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useReturn } from "../queries";
 import { useApproveReturn, useRejectReturn, useReviseReturn } from "../mutations";
 import { getReturnsModuleConfig } from "../returns-module";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

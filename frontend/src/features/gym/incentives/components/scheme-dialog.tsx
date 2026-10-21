@@ -18,7 +18,7 @@ import {
   DialogPanelTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { SchemeRow } from "@/lib/gym/incentive-server";
+import type { SchemeRow } from "@/features/gym/incentives/types";
 import { incentivesApi, type NamedOption } from "../api";
 import {
   initialSchemeForm,

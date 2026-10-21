@@ -4,7 +4,6 @@ export const RACES_ID: Record<string, string> = {
   "My HYROX results": "Hasil HYROX saya",
   "Log result": "Catat hasil",
   "View splits": "Lihat split",
-  "HYROX simulation": "Simulasi HYROX",
   "Log a race or a full simulation to see your splits.": "Catat race atau simulasi penuh untuk melihat split-mu.",
   "Finish a full simulation or a race to log your splits.": "Selesaikan simulasi penuh atau race untuk mencatat split-mu.",
   // Form hasil

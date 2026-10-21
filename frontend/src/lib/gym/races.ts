@@ -130,3 +130,41 @@ export function analyzeRace(resultSec: number, goalSec: number | null, predictio
 export function daysUntil(startsAt: string | Date, now: Date): number {
   return Math.max(0, Math.ceil((new Date(startsAt).getTime() - now.getTime()) / 86_400_000));
 }
+
+/* ── Bentuk respons API race (Go: /api/member-portal/app/races) ─────── */
+
+export interface RaceEventRow {
+  id: string;
+  name: string;
+  country: string;
+  region: string;
+  city: string;
+  venue: string;
+  starts_at: string;
+  ends_at: string;
+  registration_url: string;
+  image_url: string | null;
+  status: RaceStatus;
+}
+
+export type RaceEventListRow = RaceEventRow & { my_entry_id: string | null; entrant_count: number };
+
+export interface MemberRaceEntry {
+  id: string;
+  race_event_id: string;
+  division: Division;
+  goal_sec: number | null;
+  result_sec: number | null;
+  status: MemberRaceStatus;
+  /** The member's HYROX result for this race (Go API), when logged. */
+  result_id?: string | null;
+}
+
+export interface MemberRaceView extends MemberRaceEntry {
+  created_at: string;
+  event: RaceEventRow;
+  days_until: number;
+  /** Prediksi dari simulasi penuh sebelum race dimulai. */
+  prediction_sec: number | null;
+  analysis: RaceAnalysis | null;
+}

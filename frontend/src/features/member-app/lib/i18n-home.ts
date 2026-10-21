@@ -2,7 +2,6 @@
 export const HOME_ID: Record<string, string> = {
   // Beranda
   "Hey,": "Hai,",
-  "My classes": "Kelas saya",
   Guides: "Panduan",
   Community: "Komunitas",
   "See what your crew is training": "Lihat latihan kru kamu",
@@ -54,7 +53,6 @@ export const HOME_ID: Record<string, string> = {
   "No class booked": "Belum ada kelas dipesan",
   "Entry requires a booked class - the gate denies a scan without one. Book a session first, then scan from {n} minutes before it starts.":
     "Masuk wajib dengan kelas yang dipesan - gate menolak scan tanpa booking. Pesan sesi dulu, lalu scan mulai {n} menit sebelum kelas dimulai.",
-  "Browse classes": "Lihat kelas",
   "Loading visits…": "Memuat kunjungan…",
   "No visits yet": "Belum ada kunjungan",
   "Your gate check-ins will appear here.": "Check-in gate kamu akan muncul di sini.",
@@ -82,7 +80,6 @@ export const HOME_ID: Record<string, string> = {
   "Digital member card": "Kartu member digital",
   "Show it at the gate": "Tunjukkan di gate",
   "What your packages cover": "Kelas yang dicakup paketmu",
-  "My gear": "Perlengkapan saya",
   "Shoes & bike mileage": "Jarak tempuh sepatu & sepeda",
   "Version {v}": "Versi {v}",
   "Signed {date}": "Ditandatangani {date}",
@@ -92,7 +89,6 @@ export const HOME_ID: Record<string, string> = {
     "Kamu menyetujui versi {v}. Setujui versi baru supaya tetap bisa booking kelas.",
   "Sign the waiver to book classes and enter the gym.": "Setujui waiver untuk booking kelas dan masuk gym.",
   "Sign waiver": "Setujui waiver",
-  "Save failed.": "Gagal menyimpan.",
   // Pengaturan
   "Loading settings…": "Memuat pengaturan…",
   "Language / Bahasa": "Bahasa / Language",
@@ -106,13 +102,9 @@ export const HOME_ID: Record<string, string> = {
   // Masuk
   "Train hard.": "Latihan keras.",
   "Check in faster.": "Check in lebih cepat.",
-  "Sign in": "Masuk",
   "Use the WhatsApp number on your membership.": "Pakai nomor WhatsApp yang terdaftar di membership kamu.",
-  "WhatsApp number": "Nomor WhatsApp",
-  "Verification code": "Kode verifikasi",
   "We sent a 6-digit code to WhatsApp {phone}.": "Kode 6 digit sudah dikirim ke WhatsApp {phone}.",
   "Change number or resend": "Ganti nomor atau kirim ulang",
-  "Send code": "Kirim kode",
   "Create your membership": "Buat membership kamu",
   "Something went wrong.": "Terjadi kesalahan.",
   // Daftar
@@ -123,12 +115,10 @@ export const HOME_ID: Record<string, string> = {
   "Verified by Google. Add your WhatsApp number to finish.": "Terverifikasi lewat Google. Lengkapi nomor WhatsApp untuk menyelesaikan.",
   "Step {n} of {total} - {step}": "Langkah {n} dari {total} - {step}",
   Contact: "Kontak",
-  Verify: "Verifikasi",
   Personal: "Data diri",
   Emergency: "Darurat",
   Waiver: "Waiver",
   "Send verification code": "Kirim kode verifikasi",
-  "We sent a code to WhatsApp {phone}.": "Kode dikirim ke WhatsApp {phone}.",
   "Local dev: no code needed, continue.": "Dev lokal: tanpa kode, lanjutkan.",
   "Full name": "Nama lengkap",
   "Date of birth": "Tanggal lahir",

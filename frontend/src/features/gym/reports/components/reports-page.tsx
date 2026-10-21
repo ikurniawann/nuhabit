@@ -14,6 +14,7 @@ import { MEMBER_KEYS, membersApi } from "@/features/gym/members/api";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { SELECT } from "@/features/gym/shared";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
+import { daysUntil } from "@/lib/gym/races";
 import { zoneAbbr, zoneName } from "@/lib/timezone";
 import { REPORT_KEYS, reportsApi, type ClassReport, type GroupStat, type MembersReport, type RevenueGroup, type RevenueReport } from "../api";
 import { percent, type ReportColumn } from "../csv";
@@ -307,10 +308,8 @@ function RevenueSection({ report, period }: { report: RevenueReport; period: Per
 }
 
 const memberCell = (r: { id: string; name: string | null }) => <MemberLink id={r.id} name={r.name ?? "Tanpa nama"} />;
-const daysLeft = (iso: string) => Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
-
 function MembersSection({ report, period }: { report: MembersReport; period: Period }) {
-  const within = (iso: string, days: number) => daysLeft(iso) <= days;
+  const within = (iso: string, days: number) => daysUntil(iso, new Date()) <= days;
   const passes14 = report.expiring_passes.filter((r) => within(r.ends_at, 14)).length;
   const credits14 = report.expiring_credits.filter((r) => within(r.expires_at, 14)).length;
   return (
@@ -352,7 +351,7 @@ function MembersSection({ report, period }: { report: MembersReport; period: Per
           { label: "Nomor HP", value: (r) => r.phone },
           { label: "Pass", value: (r) => r.package_name },
           { label: "Berakhir", value: (r) => r.ends_at.slice(0, 10), render: (r) => formatDate(r.ends_at) },
-          { label: "Sisa hari", value: (r) => daysLeft(r.ends_at), numeric: true },
+          { label: "Sisa hari", value: (r) => daysUntil(r.ends_at, new Date()), numeric: true },
         ]}
       />
       <ReportTable
@@ -367,7 +366,7 @@ function MembersSection({ report, period }: { report: MembersReport; period: Per
           { label: "Nomor HP", value: (r) => r.phone },
           { label: "Kredit", value: (r) => r.credits, numeric: true },
           { label: "Kedaluwarsa pertama", value: (r) => r.expires_at.slice(0, 10), render: (r) => formatDate(r.expires_at) },
-          { label: "Sisa hari", value: (r) => daysLeft(r.expires_at), numeric: true },
+          { label: "Sisa hari", value: (r) => daysUntil(r.expires_at, new Date()), numeric: true },
         ]}
       />
       <ReportTable

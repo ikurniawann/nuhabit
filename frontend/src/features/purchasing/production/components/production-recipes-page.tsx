@@ -14,7 +14,7 @@ import { PurchasingPageHeader } from "@/features/purchasing/components/shared/pu
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { useErrorToast } from "@/features/purchasing/reports/use-error-toast";
 import { formatNumber } from "@/lib/format";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { displayName, hasRecipe, matchesItemKeyword, paginate, toNumber } from "@/lib/purchasing/production-ui-display";
 import { getProductionModuleConfig } from "../production-module";
 import { useRecipeItems } from "../queries";

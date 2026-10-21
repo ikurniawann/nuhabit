@@ -435,9 +435,7 @@ export const waktu = (iso: string, timeZone?: string | null) => `${tanggal(iso, 
 
 /** "YYYY-MM-DD" → ISO awal hari itu di zona cabang (WIB tanpa zona). */
 export const dayStart = (day: string, timeZone?: string | null) => localInstant(day, "00:00", timeZone).toISOString();
-/** Geser "YYYY-MM-DD" sejumlah hari. */
-export const addDays = (day: string, days: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+export { addDays } from "@/lib/dates";
 
 export const SESSION_BADGE: Record<
   SessionStatus,

@@ -15,8 +15,8 @@ import type {
   RouteView,
   SaveActivityInput,
   SegmentView,
-} from "@/lib/gym/athlete-server";
-import type { TrackPoint } from "@/lib/gym/athlete";
+  TrackPoint,
+} from "@/lib/gym/athlete";
 import { memberApi } from "./api";
 
 /**

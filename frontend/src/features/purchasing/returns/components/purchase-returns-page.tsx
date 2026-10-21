@@ -12,7 +12,7 @@ import { PurchasingPageHeader } from "@/features/purchasing/components/shared/pu
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { PurchasingTablePagination } from "@/features/purchasing/components/shared/purchasing-table-pagination";
 import { getReturnsModuleConfig } from "../returns-module";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import {
   RETURN_STATUS_COLORS,
   RETURN_STATUS_LABELS,

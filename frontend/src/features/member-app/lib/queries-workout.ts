@@ -1,7 +1,16 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Division, Exercise, SubstitutionRule, WorkoutType } from "@/lib/gym/hyrox";
+import { useQuery } from "@tanstack/react-query";
+import { useInvalidateAll } from "./queries";
+import type {
+  Division,
+  Exercise,
+  SubstitutionRule,
+  WorkoutHistoryItem,
+  WorkoutSessionView as SessionRow,
+  WorkoutType,
+  WorkoutView,
+} from "@/lib/gym/hyrox";
 import {
   leaderboardParams,
   type AgeGroup,
@@ -13,9 +22,7 @@ import {
   type SplitCompare,
   type SplitList,
 } from "@/lib/gym/hyrox-results";
-import type { MemberRaceView } from "@/lib/gym/races-server";
-import type { WorkoutHistoryItem, WorkoutSessionView as SessionRow, WorkoutView } from "@/lib/gym/training-server";
-import type { MemberRaceEntry, RaceEventListRow } from "@/lib/member-app/workout-server";
+import type { MemberRaceEntry, MemberRaceView, RaceEventListRow } from "@/lib/gym/races";
 import {
   flattenWorkoutHistory,
   toMyRace,
@@ -173,8 +180,4 @@ export const useRaces = (query?: { region?: string; scope?: "upcoming" | "result
   });
 export const useMyRaces = () => useQuery({ queryKey: ["member-app", "races", "mine"], queryFn: api.races.mine });
 
-/** Referensi menyegarkan semua query setelah mutasi. */
-export function useInvalidateAll() {
-  const qc = useQueryClient();
-  return () => qc.invalidateQueries();
-}
+export { useInvalidateAll };

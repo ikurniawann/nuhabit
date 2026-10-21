@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useInvalidateAll } from "./queries";
 import { memberApi } from "./api";
 import {
   inBranch,
@@ -169,11 +170,7 @@ export const usePayment = (id: string) =>
     refetchInterval: (query) => (query.state.data?.payment.status === "pending" ? PAYMENT_POLL_MS : false),
   });
 
-/** Everything that changes bookings/credits touches several views at once. */
-export function useInvalidateAll() {
-  const qc = useQueryClient();
-  return () => qc.invalidateQueries();
-}
+export { useInvalidateAll };
 
 export type PassAction =
   | { kind: "freeze"; passId: string; days: number }
