@@ -8,7 +8,7 @@ import type {
   TrialBalanceReport,
 } from "./types";
 import type { ReportKind } from "./routes";
-import type { AccountingDashboard } from "@/lib/accounting/dashboard-store";
+import type { AccountingDashboard } from "./types";
 
 const BASE = "/api/accounting/reports";
 
