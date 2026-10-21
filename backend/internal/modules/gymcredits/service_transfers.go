@@ -4,21 +4,25 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	contracts "nuhabit/backend/internal/contracts/gymcredits"
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/localtime"
 )
 
 // Credit transfers between members. Staff transfer from the credits page;
 // members send from the member app when allowMemberCreditTransfer is on.
 // Each moved lot becomes a lot of the receiver with the same package and
-// expiry (see domain/transfer.go). Credits keep their purchase value, so no
-// journal is posted: deferred revenue stays where it is until the receiver
-// uses or loses them.
+// expiry (see domain/transfer.go) worth what they were in the sender's lot.
+// Inside one company no journal is posted: deferred revenue stays where it
+// is until the receiver uses or loses the credits. Across companies the
+// value moves between the two deferred revenue accounts (moveLot).
 
 // Values of gym.credit_transfers.channel.
 const (
@@ -127,7 +131,7 @@ func (s *Service) Transfer(ctx context.Context, tx database.Querier, in Transfer
 		return nil, err
 	}
 	now := s.clock()
-	moved, credits, err := s.planTransfer(ctx, tx, in, now)
+	moved, credits, remainders, err := s.planTransfer(ctx, tx, in, now)
 	if err != nil {
 		return nil, err
 	}
@@ -141,10 +145,14 @@ func (s *Service) Transfer(ctx context.Context, tx database.Querier, in Transfer
 	if transferID == "" {
 		return nil, fail(http.StatusConflict, "Transfer ini sedang diproses, coba lagi")
 	}
+	books, err := s.transferBooks(ctx, tx, in, moved, remainders)
+	if err != nil {
+		return nil, err
+	}
 	outNote := withNote(fmt.Sprintf("Kirim %d kredit ke %s", credits, displayName(receiver)), in.Note)
 	inNote := withNote(fmt.Sprintf("Terima %d kredit dari %s", credits, displayName(sender)), in.Note)
 	for _, m := range moved {
-		if err := s.moveLot(ctx, tx, in, transferID, m, outNote, inNote); err != nil {
+		if err := s.moveLot(ctx, tx, in, transferID, m, books, outNote, inNote, now); err != nil {
 			return nil, err
 		}
 	}
@@ -175,23 +183,24 @@ func (s *Service) transferParties(ctx context.Context, tx database.Querier, in T
 
 // planTransfer applies the rules (member transfers on, monthly cap) and
 // picks the lots, keeping what the sender's upcoming bookings need. It
-// returns the lots and the credits they add up to.
-func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in TransferInput, now time.Time) ([]domain.TransferLot, int, error) {
+// returns the lots, the credits they add up to and the sender's lots as
+// they stand before the transfer.
+func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in TransferInput, now time.Time) ([]domain.TransferLot, int, []domain.LotRemainder, error) {
 	rules, err := s.Rules(ctx, tx, in.BranchID)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	if in.Channel == TransferByMember && !rules.AllowMemberCreditTransfer {
-		return nil, 0, transferFail(domain.TransferDisabled)
+		return nil, 0, nil, transferFail(domain.TransferDisabled)
 	}
 	state, _, err := s.expireLapsedLots(ctx, tx, in.FromCustomerID, now)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	remainders := domain.LotRemainders(state.lots, state.entries)
 	moved, problem := domain.PlanTransfer(remainders, in.Lots, in.Credits, now)
 	if problem != "" {
-		return nil, 0, transferFail(problem)
+		return nil, 0, nil, transferFail(problem)
 	}
 	credits := 0
 	for _, m := range moved {
@@ -199,24 +208,24 @@ func (s *Service) planTransfer(ctx context.Context, tx database.Querier, in Tran
 	}
 	sent, err := s.repo.CreditsSentSince(ctx, tx, in.FromCustomerID, monthStart(now))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	if !domain.WithinTransferCap(rules.MaxTransferCreditsPerMonth, sent, credits) {
-		return nil, 0, fail(http.StatusConflict, fmt.Sprintf("%s Sisa bulan ini: %d kredit.",
+		return nil, 0, nil, fail(http.StatusConflict, fmt.Sprintf("%s Sisa bulan ini: %d kredit.",
 			domain.TransferProblemMessages[domain.TransferMonthlyCap], max(0, rules.MaxTransferCreditsPerMonth-sent)))
 	}
 	demands, err := s.creditBookings(ctx, tx, in.FromCustomerID, now)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	coverage, err := s.repo.PackageCoverage(ctx, tx)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	if !domain.CanCover(domain.AfterTransfer(remainders, moved), coverage, demands, now) {
-		return nil, 0, transferFail(domain.TransferReserved)
+		return nil, 0, nil, transferFail(domain.TransferReserved)
 	}
-	return moved, credits, nil
+	return moved, credits, remainders, nil
 }
 
 // creditBookings is what the member's upcoming bookings will draw, leaving
@@ -243,14 +252,58 @@ func (s *Service) creditBookings(ctx context.Context, tx database.Querier, custo
 	return out, nil
 }
 
+// transferBooks is what a transfer needs to value its lots: the sender's
+// lot values, how many credits each lot had used, and the company the
+// receiver's lots book to (the branch the transfer is made at, else the
+// default company) with its zone.
+type transferBooks struct {
+	values     map[string]LotValue
+	remainders []domain.LotRemainder
+	receiver   *string
+	zone       *time.Location
+}
+
+func (s *Service) transferBooks(ctx context.Context, tx database.Querier, in TransferInput, moved []domain.TransferLot, remainders []domain.LotRemainder) (transferBooks, error) {
+	ids := make([]string, 0, len(moved))
+	for _, m := range moved {
+		ids = append(ids, m.Lot.ID)
+	}
+	values, err := s.repo.LotValues(ctx, tx, ids)
+	if err != nil {
+		return transferBooks{}, err
+	}
+	receiver, zone, err := s.repo.CompanyFor(ctx, tx, in.BranchID)
+	if err != nil {
+		return transferBooks{}, err
+	}
+	return transferBooks{values: values, remainders: remainders, receiver: receiver, zone: zone}, nil
+}
+
 // moveLot cuts m out of the sender's lot and gives the receiver a lot with
-// the same package and expiry, linked to it.
-func (s *Service) moveLot(ctx context.Context, tx database.Querier, in TransferInput, transferID string, m domain.TransferLot, outNote, inNote string) error {
+// the same package and expiry, linked to it and worth what the credits
+// were in the sender's lot. Inside one company deferred revenue stays
+// where it is. When the receiver books to another company, the value moves
+// between the two companies' deferred revenue through the intercompany
+// accounts (GYM_TRANSFER_OUT at the sender's company, GYM_TRANSFER_IN at
+// the receiver's), keyed by the two ledger entries.
+func (s *Service) moveLot(ctx context.Context, tx database.Querier, in TransferInput, transferID string, m domain.TransferLot, books transferBooks, outNote, inNote string, now time.Time) error {
 	key := "gym-transfer:" + transferID + ":" + m.Lot.ID
-	if _, err := s.repo.InsertEntry(ctx, tx, NewEntry{
+	value, paid := books.values[m.Lot.ID]
+	var sen int64
+	company := value.CompanyID
+	if paid {
+		sen = domain.MoveValueSen(value.ValueSen, value.Credits, domain.UsedIn(books.remainders, m.Lot.ID), -m.Credits)
+		if books.receiver != nil {
+			company = books.receiver
+		}
+		trace := fmt.Sprintf(" · Transfer %s · nilai Rp %s", transferID, rupiah(sen))
+		outNote, inNote = outNote+trace, inNote+trace
+	}
+	outID, err := s.repo.InsertEntry(ctx, tx, NewEntry{
 		CustomerID: in.FromCustomerID, Type: domain.TransferOut, Amount: -m.Credits, LotID: m.Lot.ID,
 		SourceType: "transfer", SourceID: transferID, Note: outNote, IdempotencyKey: key + ":out", CreatedBy: in.ActorID,
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
 	lotID, err := s.repo.InsertLot(ctx, tx, NewLot{
@@ -259,13 +312,50 @@ func (s *Service) moveLot(ctx context.Context, tx database.Querier, in TransferI
 	if err != nil {
 		return err
 	}
-	if _, err := s.repo.InsertEntry(ctx, tx, NewEntry{
+	if paid {
+		if err := s.repo.SetLotBooks(ctx, tx, lotID, sen, company); err != nil {
+			return err
+		}
+	}
+	inID, err := s.repo.InsertEntry(ctx, tx, NewEntry{
 		CustomerID: in.ToCustomerID, Type: domain.TransferIn, Amount: m.Credits, LotID: lotID,
 		SourceType: "transfer", SourceID: transferID, Note: inNote, IdempotencyKey: key + ":in", CreatedBy: in.ActorID,
+	})
+	if err != nil {
+		return err
+	}
+	if err := s.repo.InsertTransferLot(ctx, tx, transferID, m.Lot.ID, lotID, m.Credits); err != nil {
+		return err
+	}
+	crossCompany := paid && sen > 0 && value.CompanyID != nil && company != nil && *value.CompanyID != *company
+	if !crossCompany {
+		return nil
+	}
+	description := fmt.Sprintf("%d kredit gym pindah perusahaan, transfer %s", m.Credits, transferID)
+	if err := s.publishJournal(ctx, tx, contracts.Journal{
+		EventCode: "GYM_TRANSFER_OUT", DocumentType: "gym_credit_entry", DocumentID: outID, CompanyID: value.CompanyID,
+		UserID: in.ActorID, EntryDate: localtime.DayKey(now, value.Zone), Amount: domain.SenToIdr(sen), Description: description,
 	}); err != nil {
 		return err
 	}
-	return s.repo.InsertTransferLot(ctx, tx, transferID, m.Lot.ID, lotID, m.Credits)
+	return s.publishJournal(ctx, tx, contracts.Journal{
+		EventCode: "GYM_TRANSFER_IN", DocumentType: "gym_credit_entry", DocumentID: inID, CompanyID: company,
+		UserID: in.ActorID, EntryDate: localtime.DayKey(now, books.zone), Amount: domain.SenToIdr(sen), Description: description,
+	})
+}
+
+// rupiah formats sen as "1.234.567,89".
+func rupiah(sen int64) string {
+	whole, cents := sen/100, sen%100
+	digits := strconv.FormatInt(whole, 10)
+	var b strings.Builder
+	for i, r := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(r)
+	}
+	return fmt.Sprintf("%s,%02d", b.String(), cents)
 }
 
 func (s *Service) notifyTransfer(ctx context.Context, tx database.Querier, in TransferInput, credits int, sender, receiver *MemberProfile) error {
