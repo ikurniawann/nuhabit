@@ -215,10 +215,17 @@ func (Postgres) RecentlyActive(ctx context.Context, q database.Querier, limit in
 	return pgx.CollectRows(rows, pgx.RowTo[string])
 }
 
-// purchaseCompany is the company purchase p books to: its branch's, else the
-// only company when there is exactly one.
+// defaultCompany is the company a sale without a branch books to: the only
+// company when there is exactly one, else the gym rules' defaultCompanyId.
+const defaultCompany = `(SELECT min(c.id::text)::uuid FROM configuration.companies c HAVING count(*) = 1),
+	(SELECT c.id FROM gym.business_rules r JOIN configuration.companies c ON c.id::text = r.rules->>'defaultCompanyId'
+	  WHERE r.branch_id IS NULL AND c.is_active)`
+
+// purchaseCompany is the company purchase p books to: its branch's, else
+// its package's branch's, else defaultCompany.
 const purchaseCompany = `COALESCE((SELECT b.company_id FROM configuration.branches b WHERE b.id = p.branch_id),
-	(SELECT min(c.id::text)::uuid FROM configuration.companies c HAVING count(*) = 1))`
+	(SELECT b.company_id FROM gym.credit_packages k JOIN configuration.branches b ON b.id = k.branch_id WHERE k.id = p.package_id),
+	` + defaultCompany + `)`
 
 // purchaseZone is the zone of purchase p's branch, Jakarta without one.
 const purchaseZone = `COALESCE((SELECT b.timezone FROM configuration.branches b WHERE b.id = p.branch_id), 'Asia/Jakarta')`
@@ -228,24 +235,31 @@ func (Postgres) LotValues(ctx context.Context, q database.Querier, ids []string)
 	if len(ids) == 0 {
 		return out, nil
 	}
-	// A lot received by transfer has no purchase: its credits are worth
-	// what they were in the lot they came from, followed back to the paid one.
+	// A purchase lot is worth its purchase total. A lot received by transfer
+	// stores the value that moved; one from before values were stored is
+	// worth its share of the paid lot it came from, followed back through
+	// the chain. Its company is the one set at the transfer, else the
+	// purchase company.
 	rows, err := q.Query(ctx,
 		`WITH RECURSIVE origin AS (
-		   SELECT l.id AS lot_id, l.source_lot_id, l.purchase_id, l.credits FROM gym.credit_lots l WHERE l.id = ANY($1::uuid[])
+		   SELECT l.id AS lot_id, l.source_lot_id, l.purchase_id, l.credits, l.value_sen, l.company_id
+		     FROM gym.credit_lots l WHERE l.id = ANY($1::uuid[])
 		   UNION ALL
-		   SELECT o.lot_id, s.source_lot_id, s.purchase_id, s.credits
+		   SELECT o.lot_id, s.source_lot_id, s.purchase_id, o.credits, o.value_sen, o.company_id
 		     FROM origin o JOIN gym.credit_lots s ON s.id = o.source_lot_id WHERE o.purchase_id IS NULL
 		 )
-		 SELECT o.lot_id::text, p.total_idr::float, o.credits, `+purchaseCompany+`::text, `+purchaseZone+`
-		   FROM origin o JOIN gym.credit_purchases p ON p.id = o.purchase_id
-		  WHERE p.total_idr > 0`, ids)
+		 SELECT o.lot_id::text, COALESCE(o.value_sen, round(p.total_idr * 100 * o.credits / op.credits))::bigint, o.credits,
+		        COALESCE(o.company_id, `+purchaseCompany+`)::text, `+purchaseZone+`
+		   FROM origin o
+		   JOIN gym.credit_purchases p ON p.id = o.purchase_id
+		   JOIN gym.credit_lots op ON op.purchase_id = p.id
+		  WHERE COALESCE(o.value_sen, p.total_idr * 100) > 0`, ids)
 	if err != nil {
 		return nil, err
 	}
 	var id, zone string
 	var v LotValue
-	_, err = pgx.ForEachRow(rows, []any{&id, &v.TotalIdr, &v.Credits, &v.CompanyID, &zone}, func() error {
+	_, err = pgx.ForEachRow(rows, []any{&id, &v.ValueSen, &v.Credits, &v.CompanyID, &zone}, func() error {
 		v.Zone = localtime.Zone(zone)
 		out[id] = v
 		v = LotValue{}

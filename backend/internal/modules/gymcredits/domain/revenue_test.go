@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-func TestUnitValue(t *testing.T) {
-	eq(t, UnitValue(300_000, 3, 2), 200_000.0)
-	eq(t, UnitValue(100_000, 3, 1), 33_333.33)
-	eq(t, UnitValue(0, 5, 2), 0.0)
-}
-
 func TestPassRevenueDue(t *testing.T) {
 	start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	end := start.Add(28 * day)

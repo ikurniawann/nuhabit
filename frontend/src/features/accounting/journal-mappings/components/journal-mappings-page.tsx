@@ -70,6 +70,13 @@ export function JournalMappingsPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             Mapping event POS / Purchasing ke akun COA — {rows.length} template
           </p>
+          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+            Jurnal paket gym (GYM_*) menilai tiap lot kredit dalam sen, jadi pemakaian, kedaluwarsa, pengurangan admin
+            (GYM_CREDIT_ADJUSTMENT), sisa pembulatan refund, dan transfer antar perusahaan (GYM_TRANSFER_OUT/IN) menutup
+            pendapatan diterima di muka lot itu tepat nol. Lot kredit bonus dan penyesuaian tidak membawa uang dan tidak
+            dijurnal; bonus referral hanya menjurnal sisi ARK Coin (WALLET_REFERRAL_BONUS: beban promosi ke kewajiban ARK
+            Coin). Paket yang terjual sebelum jurnal gym ada dibuka lewat GYM_OPENING_BALANCE (backend/docs/GYM_OPENING_BALANCE.md).
+          </p>
         </div>
         <Button
           type="button"

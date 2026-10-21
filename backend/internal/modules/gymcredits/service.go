@@ -389,13 +389,20 @@ type PackageInput struct {
 	SortOrder              int
 }
 
-// LotValue is what the credits of a paid lot are worth in the journals:
-// the purchase total over the lot's credits, booked to the purchase company.
+// LotValue is what a paid lot is worth in the journals: its deferred
+// revenue in sen over its credits, booked to CompanyID (the purchase
+// company, or the receiver's company after a cross-company transfer).
 type LotValue struct {
-	TotalIdr  float64
+	ValueSen  int64
 	Credits   int
 	CompanyID *string
 	Zone      *time.Location // the purchase branch's zone
+}
+
+// Company is one company a purchase can book to.
+type Company struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // PassRevenue is a paid pass with revenue still to release. Its days are
@@ -445,6 +452,13 @@ type Repository interface {
 	RecentlyActive(ctx context.Context, q database.Querier, limit int) ([]string, error)
 	// LotValues returns the value of the paid lots among ids.
 	LotValues(ctx context.Context, q database.Querier, ids []string) (map[string]LotValue, error)
+	// SetLotBooks stores the value and company of a lot received by transfer.
+	SetLotBooks(ctx context.Context, q database.Querier, lotID string, valueSen int64, companyID *string) error
+	// CompanyFor is the company and zone a branch books to; without a
+	// branch, the only company, else the gym rules' defaultCompanyId.
+	CompanyFor(ctx context.Context, q database.Querier, branchID *string) (*string, *time.Location, error)
+	// Companies lists the active companies, by name.
+	Companies(ctx context.Context, q database.Querier) ([]Company, error)
 	// MembersWithLapsedLots lists up to limit members, by id after after,
 	// whose lapsed lots still hold credits.
 	MembersWithLapsedLots(ctx context.Context, q database.Querier, now time.Time, after string, limit int) ([]string, error)
