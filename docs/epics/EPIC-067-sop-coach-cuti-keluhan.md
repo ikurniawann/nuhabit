@@ -561,3 +561,27 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       tanpa error;
     - `tsc` tanpa error baru; eslint bersih.
   - Belum di-deploy.
+- 2026-10-22 06.30 WIB — **Tahap 2 di-deploy ke DEV (https://nuhabitdev.reddie.id)** dari commit `553785ad`.
+  - Backup sebelum migrasi: `~/backups/nuhabitdev/nuhabit-20261022-062455-pre-epic067-t2.sql.gz` (dump lengkap; jumlah
+    baris coach/program/sesi/member/pass/penanda cocok dengan DB live).
+  - Migrasi: 4 delta (20261022090000 keluhan, 100000 sinkron time-off, 110000 disiplin, 120000 SOP); tidak ada migrasi
+    lain yang pending. Backfill tidak menyentuh data (belum ada cuti coach disetujui / baris komisi di live).
+  - Image: `nuhabitdev:local` baru. Image Tahap 1 disimpan sebagai `nuhabitdev:pre-epic067-t2` untuk rollback.
+    Container dibuat ulang dengan env yang sama persis. Cek CSS `#00281a` OK.
+  - Smoke test (hanya baca, super admin):
+    - halaman publik & redirect login OK;
+    - API baru 200: keluhan & pengaturannya, disiplin, SOP & template, cuti coach, member flags;
+    - halaman Keluhan Pelanggan, SOP Coach, Cuti & Pengganti Coach (dengan Disiplin coach), Komisi, Inbox WA,
+      Notifikasi WA 200, tampil benar, tanpa error console;
+    - komisi Oktober dengan data asli tampil kotor/potongan 0%/bersih;
+    - regresi 200: studio settings, automation, sessions, coaches, passes, cuti HRIS, notifikasi WA;
+    - container healthy, log bersih.
+  - Perlu disiapkan di live supaya fitur berguna:
+    1. nomor Head Coach/Ops di Settings → Notifikasi WA (eskalasi keluhan & alert SLA);
+    2. role Program Director di Manajemen User;
+    3. terbitkan SOP pertama dari template.
+    WA Gateway DEV masih belum terhubung (WA tercatat gagal kirim).
+  - Rollback:
+    1. jalankan ulang container dengan image `nuhabitdev:pre-epic067-t2`;
+    2. migrasi hanya menambah, jadi image lama tetap jalan dengan skema baru;
+    3. restore dump di atas bila perlu.
