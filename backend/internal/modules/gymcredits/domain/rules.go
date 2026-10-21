@@ -78,6 +78,9 @@ type Rules struct {
 	// MaxTransferCreditsPerMonth caps the credits one member sends in a Jakarta
 	// calendar month, staff and member transfers together. 0 = no cap.
 	MaxTransferCreditsPerMonth int `json:"maxTransferCreditsPerMonth"`
+	// PtRescheduleLimit: how many times a member may move one PT session
+	// from the member app, before its free cancellation deadline. 0 = never.
+	PtRescheduleLimit int `json:"ptRescheduleLimit"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -117,6 +120,7 @@ type RulesPatch struct {
 	CorrectionWindowDays       *int    `json:"correctionWindowDays,omitempty"`
 	AllowMemberCreditTransfer  *bool   `json:"allowMemberCreditTransfer,omitempty"`
 	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
+	PtRescheduleLimit          *int    `json:"ptRescheduleLimit,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -157,6 +161,7 @@ var RuleDefaults = Rules{
 	OpenGymEnabled:            false,
 	OpenGymCreditCost:         1,
 	CorrectionWindowDays:      7,
+	PtRescheduleLimit:         2,
 }
 
 type ruleKind int
@@ -228,6 +233,7 @@ var ruleSpecs = []ruleSpec{
 	intRule("correctionWindowDays", 0, 90, "Batas koreksi", func(p *RulesPatch) **int { return &p.CorrectionWindowDays }),
 	boolRule("allowMemberCreditTransfer", "Transfer kredit oleh member", func(p *RulesPatch) **bool { return &p.AllowMemberCreditTransfer }),
 	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
+	intRule("ptRescheduleLimit", 0, 20, "Batas ubah jadwal PT", func(p *RulesPatch) **int { return &p.PtRescheduleLimit }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -413,6 +419,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 	setInt(&base.CorrectionWindowDays, p.CorrectionWindowDays)
 	setBool(&base.AllowMemberCreditTransfer, p.AllowMemberCreditTransfer)
 	setInt(&base.MaxTransferCreditsPerMonth, p.MaxTransferCreditsPerMonth)
+	setInt(&base.PtRescheduleLimit, p.PtRescheduleLimit)
 	return base
 }
 

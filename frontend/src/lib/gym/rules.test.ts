@@ -47,8 +47,9 @@ describe("GYM_RULE_DEFAULTS", () => {
       correctionWindowDays: 7,
       allowMemberCreditTransfer: false,
       maxTransferCreditsPerMonth: 0,
+      ptRescheduleLimit: 2,
     });
-    expect(GYM_RULE_KEYS).toHaveLength(35);
+    expect(GYM_RULE_KEYS).toHaveLength(36);
   });
 });
 
@@ -64,6 +65,10 @@ describe("gate rules", () => {
     });
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, checkinClosesMinAfter: 1441 }).ok).toBe(false);
     expect(validateGymRules({ ...GYM_RULE_DEFAULTS, correctionWindowDays: 91 }).ok).toBe(false);
+    expect(validateGymRulesPatch({ ptRescheduleLimit: 21 })).toEqual({
+      ok: false,
+      error: "ptRescheduleLimit: Batas ubah jadwal PT maksimal 20",
+    });
     expect(validateGymRulesPatch({ openGymEnabled: true, openGymCreditCost: 0, requireWaiver: false })).toEqual({
       ok: true,
       rules: { openGymEnabled: true, openGymCreditCost: 0, requireWaiver: false },
