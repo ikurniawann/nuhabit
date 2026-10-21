@@ -7,7 +7,7 @@ import { requireStudioContext, studioRoute } from "@/lib/studio/server";
 
 const MENU = ["studio.complaints"] as const;
 
-/** Daftar tiket keluhan (EPIC-067 T-067-B1). ?status=open|<status>&category=&q=&wa_conversation_id= */
+/** Daftar tiket keluhan (EPIC-067 T-067-B1/B2). ?status=open|<status>&category=&q=&assignee=me&wa_conversation_id= */
 export async function GET(request: NextRequest) {
   return studioRoute("complaints GET", async () => {
     const ctx = await requireStudioContext(undefined, MENU);
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       status: status === "open" || (COMPLAINT_STATUSES as readonly string[]).includes(status ?? "") ? (status as ComplaintStatus | "open") : undefined,
       category: (COMPLAINT_CATEGORIES as readonly string[]).includes(category ?? "") ? (category as ComplaintCategory) : undefined,
       q: sp.get("q") ?? undefined,
+      assigneeUserId: sp.get("assignee") === "me" ? ctx.user.id : undefined,
     });
     return NextResponse.json({ success: true, data });
   });

@@ -1,30 +1,38 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPost } from "@/lib/api-client";
+import { apiGet, apiPatch, apiPost } from "@/lib/api-client";
 import { CS_PRIORITIES, PRIORITY_LABELS, type CsPriority } from "@/lib/crm/cs-rules";
 import {
+  actionLabel,
   COMPLAINT_CATEGORIES,
   COMPLAINT_CATEGORY_LABEL,
   COMPLAINT_SOURCE_LABEL,
   COMPLAINT_STATUS_LABEL,
   COMPLAINT_STATUSES,
   type ComplaintCategory,
+  type ComplaintSettings,
+  complaintSlaState,
   type ComplaintSource,
   type ComplaintStatus,
+  MAX_SLA_HOURS,
+  nextStatuses,
+  type SlaState,
+  transitionNeedsNote,
 } from "@/lib/studio/complaints";
 import type { MemberOption } from "../types";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
 
 /**
- * Keluhan Pelanggan (EPIC-067 T-067-B1): tiket resmi dari WA inbox, front desk,
- * atau Member App — kategori Hyrox, prioritas, dan tautan ke member, coach,
- * sesi. Alur penyelesaian (PIC, status, eskalasi) menyusul di T-067-B2.
+ * Keluhan Pelanggan (EPIC-067 T-067-B1/B2): tiket resmi dari WA inbox, front
+ * desk, atau Member App — kategori Hyrox, prioritas, tautan ke member, coach,
+ * sesi — dengan alur Diterima → Ditangani → Selesai → Dikonfirmasi member,
+ * PIC, catatan internal, dan batas waktu per kategori yang bisa diatur.
  */
 
 interface ComplaintItem {
@@ -43,9 +51,22 @@ interface ComplaintItem {
   session_label: string | null;
   respond_by: string | null;
   resolve_by: string | null;
+  first_response_at: string | null;
+  assignee_user_id: string | null;
+  assignee_name: string | null;
   created_by_name: string | null;
   created_at: string;
 }
+
+interface Staff {
+  id: string;
+  name: string;
+}
+
+const SLA_BADGE: Record<Exclude<SlaState, "ok">, string> = {
+  respond_overdue: "Lewat batas respons",
+  resolve_overdue: "Lewat batas selesai",
+};
 
 interface ComplaintDetail extends ComplaintItem {
   events: { id: string; kind: string; from_status: string | null; to_status: string | null; body: string | null; actor_name: string | null; created_at: string }[];
@@ -70,16 +91,32 @@ export function StudioComplaintsPage() {
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [mine, setMine] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [rev, setRev] = useState(0);
+
+  useEffect(() => {
+    apiGet<{ data: { assignees: Staff[] } }>("/api/studio/complaints/settings")
+      .then((r) => setStaff(r.data.assignees))
+      .catch(() => setStaff([]));
+  }, []);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
+    if (mine) params.set("assignee", "me");
     if (status) params.set("status", status);
     if (category) params.set("category", category);
     if (q.trim()) params.set("q", q.trim());
     return apiGet<{ data: ComplaintItem[] }>(`/api/studio/complaints?${params}`)
       .then((r) => setItems(r.data))
       .catch((e) => toast.error(e instanceof Error ? e.message : "Gagal memuat keluhan"));
-  }, [status, category, q]);
+  }, [status, category, q, mine]);
+
+  const changed = useCallback(async () => {
+    setRev((r) => r + 1);
+    await load();
+  }, [load]);
 
   useEffect(() => {
     const t = setTimeout(load, 250);
@@ -90,14 +127,20 @@ export function StudioComplaintsPage() {
     <div className="p-4 sm:p-6">
       <StudioPageHeader
         title="Keluhan Pelanggan"
-        subtitle="Setiap keluhan dicatat sebagai tiket — dari WhatsApp, front desk, atau Member App — dengan kategori, prioritas, dan batas waktu respons."
+        subtitle="Setiap keluhan dicatat sebagai tiket — dari WhatsApp, front desk, atau Member App — lalu ditangani PIC sampai selesai dan dikonfirmasi member, dalam batas waktu per kategori."
         actions={
-          <Button onClick={() => setCreating((v) => !v)}>
-            <Plus className="size-4" /> Buat tiket
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setShowSettings((v) => !v)}>
+              <Settings2 className="size-4" /> Pengaturan
+            </Button>
+            <Button onClick={() => setCreating((v) => !v)}>
+              <Plus className="size-4" /> Buat tiket
+            </Button>
+          </>
         }
       />
       <div className="grid gap-4">
+        {showSettings && <ComplaintSettingsPanel staff={staff} onSaved={() => setShowSettings(false)} />}
         {creating && (
           <CreateComplaint
             onCreated={async (id) => {
@@ -110,7 +153,7 @@ export function StudioComplaintsPage() {
 
         <div className="flex flex-wrap gap-2">
           <NativeSelect className="max-w-48" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
-            <option value="open">Terbuka</option>
+            <option value="open">Belum ditutup</option>
             <option value="">Semua status</option>
             {COMPLAINT_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -127,6 +170,9 @@ export function StudioComplaintsPage() {
             ))}
           </NativeSelect>
           <Input className="max-w-xs" placeholder="Cari kode, judul, atau nama" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Cari keluhan" />
+          <label className="flex items-center gap-2 rounded-lg border border-border px-3 text-sm text-foreground">
+            <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Ditugaskan ke saya
+          </label>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
@@ -140,7 +186,7 @@ export function StudioComplaintsPage() {
             ) : (
               <ul className="divide-y divide-border">
                 {items.map((k) => {
-                  const overdue = k.status === "received" && k.respond_by && new Date(k.respond_by) < new Date();
+                  const sla = complaintSlaState(k, new Date());
                   return (
                     <li key={k.id}>
                       <button
@@ -153,11 +199,11 @@ export function StudioComplaintsPage() {
                           <Pill tone={STATUS_TONE[k.status]}>{COMPLAINT_STATUS_LABEL[k.status]}</Pill>
                           <Pill tone={PRIORITY_TONE[k.priority]}>{PRIORITY_LABELS[k.priority]}</Pill>
                           <Pill>{COMPLAINT_CATEGORY_LABEL[k.category]}</Pill>
-                          {overdue && <Pill tone="danger">Lewat batas respons</Pill>}
+                          {sla !== "ok" && <Pill tone="danger">{SLA_BADGE[sla]}</Pill>}
                         </div>
                         <p className="font-medium text-foreground">{k.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {[k.member_name ?? k.contact_name ?? "Tanpa nama", k.coach_name, COMPLAINT_SOURCE_LABEL[k.source], waktu(k.created_at)]
+                          {[k.member_name ?? k.contact_name ?? "Tanpa nama", k.coach_name, k.assignee_name ? `PIC ${k.assignee_name}` : "Belum ada PIC", COMPLAINT_SOURCE_LABEL[k.source], waktu(k.created_at)]
                             .filter(Boolean)
                             .join(" · ")}
                         </p>
@@ -168,14 +214,14 @@ export function StudioComplaintsPage() {
               </ul>
             )}
           </section>
-          <ComplaintDetailPanel id={selected} />
+          <ComplaintDetailPanel id={selected} rev={rev} staff={staff} onChanged={changed} />
         </div>
       </div>
     </div>
   );
 }
 
-function ComplaintDetailPanel({ id }: { id: string | null }) {
+function ComplaintDetailPanel({ id, rev, staff, onChanged }: { id: string | null; rev: number; staff: Staff[]; onChanged: () => Promise<void> }) {
   const [detail, setDetail] = useState<ComplaintDetail | null>(null);
 
   useEffect(() => {
@@ -187,7 +233,7 @@ function ComplaintDetailPanel({ id }: { id: string | null }) {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, rev]);
 
   if (!id) {
     return (
@@ -225,18 +271,218 @@ function ComplaintDetailPanel({ id }: { id: string | null }) {
         <dd className="text-foreground">{d.respond_by ? `sebelum ${waktu(d.respond_by)}` : "-"}</dd>
         <dt className="text-muted-foreground">Selesai</dt>
         <dd className="text-foreground">{d.resolve_by ? `sebelum ${waktu(d.resolve_by)}` : "-"}</dd>
+        <dt className="text-muted-foreground">Respons pertama</dt>
+        <dd className="text-foreground">{d.first_response_at ? waktu(d.first_response_at) : "-"}</dd>
       </dl>
+      <ComplaintActions detail={d} staff={staff} onChanged={onChanged} />
       <p className="mt-4 text-[13px] font-semibold text-foreground">Riwayat</p>
       <ol className="mt-1.5 space-y-1.5 border-l border-border pl-3 text-xs">
         {d.events.map((e) => (
           <li key={e.id} className="text-muted-foreground">
-            <span className="text-foreground">{e.kind === "created" ? "Tiket dibuat" : e.kind === "status" && e.to_status ? COMPLAINT_STATUS_LABEL[e.to_status as ComplaintStatus] : e.body ?? e.kind}</span>
+            <span className="text-foreground">
+              {e.kind === "created"
+                ? "Tiket dibuat"
+                : e.kind === "status" && e.to_status
+                  ? e.from_status === "resolved" && e.to_status === "in_progress"
+                    ? "Dibuka lagi"
+                    : COMPLAINT_STATUS_LABEL[e.to_status as ComplaintStatus]
+                  : e.kind === "note"
+                    ? "Catatan"
+                    : (e.body ?? e.kind)}
+            </span>
             {" · "}
             {e.actor_name ?? "Sistem"} · {waktu(e.created_at)}
+            {(e.kind === "note" || e.kind === "status") && e.body && (
+              <span className="mt-0.5 block whitespace-pre-wrap rounded-md bg-secondary/50 px-2 py-1 text-foreground">{e.body}</span>
+            )}
           </li>
         ))}
       </ol>
     </aside>
+  );
+}
+
+/** Aksi tiket (T-067-B2): PIC, pindah status (dengan catatan bila wajib), catatan internal. */
+function ComplaintActions({ detail: d, staff, onChanged }: { detail: ComplaintDetail; staff: Staff[]; onChanged: () => Promise<void> }) {
+  const [pending, setPending] = useState<ComplaintStatus | null>(null);
+  const [note, setNote] = useState("");
+  const [internal, setInternal] = useState("");
+  const [busy, setBusy] = useState(false);
+  const options = nextStatuses(d.status);
+  const closed = options.length === 0;
+
+  async function run<T>(fn: () => Promise<T>, done?: () => void) {
+    setBusy(true);
+    try {
+      const res = (await fn()) as { message?: string };
+      toast.success(res?.message ?? "Tersimpan");
+      done?.();
+      await onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function act(to: ComplaintStatus) {
+    if (transitionNeedsNote(d.status, to)) {
+      setPending(to);
+      setNote("");
+      return;
+    }
+    void run(() => apiPost(`/api/studio/complaints/${d.id}/status`, { to }));
+  }
+
+  return (
+    <div className="mt-4 grid gap-3 border-t border-border pt-4">
+      {d.status !== "confirmed" && d.status !== "cancelled" && (
+        <Field label="PIC">
+          <NativeSelect
+            value={d.assignee_user_id ?? ""}
+            disabled={busy}
+            onChange={(e) => run(() => apiPost(`/api/studio/complaints/${d.id}/assign`, { user_id: e.target.value || null }))}
+          >
+            <option value="">— Belum ada PIC —</option>
+            {staff.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+      )}
+
+      {!closed && !pending && (
+        <div className="flex flex-wrap gap-2">
+          {options.map((to) => (
+            <Button key={to} size="sm" variant={to === "cancelled" ? "ghost" : to === options[0] ? "default" : "outline"} disabled={busy} onClick={() => act(to)}>
+              {actionLabel(d.status, to)}
+            </Button>
+          ))}
+        </div>
+      )}
+      {pending && (
+        <div className="grid gap-2 rounded-lg border border-border p-3">
+          <p className="text-[13px] font-semibold text-foreground">{actionLabel(d.status, pending)}</p>
+          <Textarea
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={pending === "resolved" ? "Apa yang sudah dilakukan untuk menyelesaikan keluhan ini?" : "Alasannya"}
+            aria-label="Catatan perubahan status"
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              disabled={busy || note.trim().length < 3}
+              onClick={() => run(() => apiPost(`/api/studio/complaints/${d.id}/status`, { to: pending, note: note.trim() }), () => setPending(null))}
+            >
+              {busy && <Loader2 className="size-3.5 animate-spin" />} Simpan
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
+              Batal
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-2">
+        <Textarea rows={2} value={internal} onChange={(e) => setInternal(e.target.value)} placeholder="Catatan internal (tidak dikirim ke member)" aria-label="Catatan internal" />
+        <div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy || internal.trim().length < 2}
+            onClick={() => run(() => apiPost(`/api/studio/complaints/${d.id}/notes`, { body: internal.trim() }), () => setInternal(""))}
+          >
+            Simpan catatan
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Batas waktu respons/selesai & PIC default per kategori (berlaku untuk tiket baru). */
+function ComplaintSettingsPanel({ staff, onSaved }: { staff: Staff[]; onSaved: () => void }) {
+  const [settings, setSettings] = useState<ComplaintSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    apiGet<{ data: { settings: ComplaintSettings } }>("/api/studio/complaints/settings")
+      .then((r) => setSettings(r.data.settings))
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Gagal memuat pengaturan"));
+  }, []);
+
+  if (!settings) return <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />;
+  const hours = (v: string) => Math.min(MAX_SLA_HOURS, Math.max(1, Math.floor(Number(v) || 1)));
+  const setRule = (c: ComplaintCategory, k: "respond_hours" | "resolve_hours", v: number) =>
+    setSettings((s) => (s ? { ...s, sla_rules: { ...s.sla_rules, [c]: { ...s.sla_rules[c], [k]: v } } } : s));
+
+  async function save() {
+    if (!settings) return;
+    setBusy(true);
+    try {
+      await apiPatch("/api/studio/complaints/settings", settings);
+      toast.success("Pengaturan keluhan disimpan");
+      onSaved();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Gagal menyimpan");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <p className="text-[13px] font-semibold text-foreground">Batas waktu & PIC default per kategori</p>
+      <p className="mt-0.5 text-sm text-muted-foreground">Berlaku untuk tiket baru; tiket lama tetap memakai batas waktu saat dibuat.</p>
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[520px] text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs text-muted-foreground">
+              <th className="py-2 pr-3 font-semibold">Kategori</th>
+              <th className="w-28 py-2 pr-3 font-semibold">Respons (jam)</th>
+              <th className="w-28 py-2 pr-3 font-semibold">Selesai (jam)</th>
+              <th className="py-2 font-semibold">PIC default</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {COMPLAINT_CATEGORIES.map((c) => (
+              <tr key={c}>
+                <td className="py-2 pr-3 text-foreground">{COMPLAINT_CATEGORY_LABEL[c]}</td>
+                <td className="py-2 pr-3">
+                  <Input type="number" min={1} max={MAX_SLA_HOURS} value={settings.sla_rules[c].respond_hours} onChange={(e) => setRule(c, "respond_hours", hours(e.target.value))} aria-label={`Respons ${COMPLAINT_CATEGORY_LABEL[c]}`} />
+                </td>
+                <td className="py-2 pr-3">
+                  <Input type="number" min={1} max={MAX_SLA_HOURS} value={settings.sla_rules[c].resolve_hours} onChange={(e) => setRule(c, "resolve_hours", hours(e.target.value))} aria-label={`Selesai ${COMPLAINT_CATEGORY_LABEL[c]}`} />
+                </td>
+                <td className="py-2">
+                  <NativeSelect
+                    value={settings.default_assignees[c] ?? ""}
+                    onChange={(e) => setSettings((s) => (s ? { ...s, default_assignees: { ...s.default_assignees, [c]: e.target.value || null } } : s))}
+                    aria-label={`PIC default ${COMPLAINT_CATEGORY_LABEL[c]}`}
+                  >
+                    <option value="">— Tidak ada —</option>
+                    {staff.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3">
+        <Button onClick={save} disabled={busy}>
+          {busy && <Loader2 className="size-4 animate-spin" />} Simpan pengaturan
+        </Button>
+      </div>
+    </section>
   );
 }
 

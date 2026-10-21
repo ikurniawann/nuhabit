@@ -2,19 +2,79 @@ import { ApiError } from "@/lib/api/auth";
 import { query, queryOne, withTransaction } from "@/lib/db";
 import type { CsCategory, CsPriority } from "@/lib/crm/cs-rules";
 import {
+  canTransition,
   categoryFromCs,
+  COMPLAINT_CATEGORIES,
+  COMPLAINT_SETTING_KEYS,
+  COMPLAINT_STATUS_LABEL,
   type ComplaintCategory,
   complaintCode,
   complaintDeadlines,
   type ComplaintPriority,
+  type ComplaintSettings,
+  type ComplaintSlaRules,
   type ComplaintSource,
   type ComplaintStatus,
   complaintTitle,
   defaultComplaintPriority,
+  isComplaintOpen,
+  normalizeSlaRules,
+  transitionNeedsNote,
 } from "@/lib/studio/complaints";
+import { listBackupCandidates as listBackofficeUsers } from "@/lib/studio/coach-leave-server";
 import { normalizeMemberPhone, VENUE_TODAY_SQL } from "@/lib/studio/pass-server";
 
-/** Tiket keluhan pelanggan (EPIC-067 T-067-B1) — query & pembuatan. */
+/** Tiket keluhan pelanggan (EPIC-067 T-067-B1/B2) — query, pembuatan, dan alur penyelesaian. */
+
+// ── Pengaturan (B2) ────────────────────────────────────────────────────────
+
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+export async function loadComplaintSettings(branchId: string): Promise<ComplaintSettings> {
+  const rows = await query<{ key: string; value: unknown }>(
+    `SELECT key, value FROM studio.settings WHERE branch_id = $1 AND key = ANY($2::varchar[])`,
+    [branchId, Object.values(COMPLAINT_SETTING_KEYS)]
+  );
+  const raw = (k: keyof ComplaintSettings) => rows.find((r) => r.key === COMPLAINT_SETTING_KEYS[k])?.value;
+  const assignees = (raw("default_assignees") ?? {}) as Record<string, unknown>;
+  const default_assignees: ComplaintSettings["default_assignees"] = {};
+  for (const c of COMPLAINT_CATEGORIES) {
+    const v = assignees[c];
+    if (typeof v === "string" && UUID_RE.test(v)) default_assignees[c] = v;
+  }
+  return { sla_rules: normalizeSlaRules(raw("sla_rules")), default_assignees };
+}
+
+export async function saveComplaintSettings(
+  branchId: string,
+  patch: { sla_rules?: Partial<ComplaintSlaRules>; default_assignees?: ComplaintSettings["default_assignees"] },
+  userId: string
+): Promise<ComplaintSettings> {
+  const current = await loadComplaintSettings(branchId);
+  const next: ComplaintSettings = {
+    sla_rules: patch.sla_rules ? normalizeSlaRules({ ...current.sla_rules, ...patch.sla_rules }) : current.sla_rules,
+    default_assignees: patch.default_assignees ? { ...current.default_assignees, ...patch.default_assignees } : current.default_assignees,
+  };
+  if (patch.default_assignees) {
+    const staff = new Set((await listBackofficeUsers(branchId)).map((u) => u.id));
+    for (const [c, id] of Object.entries(next.default_assignees)) {
+      if (id && !staff.has(id)) throw ApiError.badRequest(`PIC default untuk ${c} bukan user backoffice aktif`);
+    }
+  }
+  for (const key of Object.keys(COMPLAINT_SETTING_KEYS) as (keyof ComplaintSettings)[]) {
+    await query(
+      `INSERT INTO studio.settings (branch_id, key, value, updated_by) VALUES ($1, $2, $3::jsonb, $4)
+       ON CONFLICT (branch_id, key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = now()`,
+      [branchId, COMPLAINT_SETTING_KEYS[key], JSON.stringify(next[key]), userId]
+    );
+  }
+  return next;
+}
+
+/** Calon PIC: user backoffice aktif di venue. */
+export async function listComplaintAssignees(branchId: string) {
+  return listBackofficeUsers(branchId);
+}
 
 export interface ComplaintInput {
   source: ComplaintSource;
@@ -100,7 +160,9 @@ export async function createComplaint(
   await assertInVenue(venue.branchId, input);
   const coachId = input.coach_id ?? (input.session_id ? await sessionCoach(venue.branchId, input.session_id) : null);
   const priority = input.priority ?? defaultComplaintPriority(input.category);
-  const { respondBy, resolveBy } = complaintDeadlines(input.category, now);
+  const settings = await loadComplaintSettings(venue.branchId);
+  const { respondBy, resolveBy } = complaintDeadlines(input.category, now, settings.sla_rules);
+  const defaultAssignee = settings.default_assignees[input.category] ?? null;
   const phone = input.contact_phone ? (normalizeMemberPhone(input.contact_phone) ?? input.contact_phone.trim()) : null;
   const title = complaintTitle(input.title, input.description, input.category);
 
@@ -115,18 +177,25 @@ export async function createComplaint(
     const code = complaintCode(now, seqRows[0].n);
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO studio.complaints (company_id, branch_id, code, source, category, priority, title, description,
-         customer_id, contact_name, contact_phone, coach_id, session_id, wa_conversation_id, respond_by, resolve_by, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+         customer_id, contact_name, contact_phone, coach_id, session_id, wa_conversation_id, respond_by, resolve_by, created_by, assignee_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
       [
         venue.companyId, venue.branchId, code, input.source, input.category, priority, title, input.description?.trim() || null,
         input.customer_id ?? null, input.contact_name?.trim() || null, phone, coachId, input.session_id ?? null,
-        input.wa_conversation_id ?? null, respondBy.toISOString(), resolveBy.toISOString(), userId,
+        input.wa_conversation_id ?? null, respondBy.toISOString(), resolveBy.toISOString(), userId, defaultAssignee,
       ]
     );
     await client.query(
       `INSERT INTO studio.complaint_events (complaint_id, kind, to_status, actor_user_id) VALUES ($1, 'created', 'received', $2)`,
       [rows[0].id, userId]
     );
+    if (defaultAssignee) {
+      await client.query(
+        `INSERT INTO studio.complaint_events (complaint_id, kind, body)
+         SELECT $1, 'assign', 'PIC otomatis: ' || full_name FROM configuration.users WHERE id = $2`,
+        [rows[0].id, defaultAssignee]
+      );
+    }
     return { id: rows[0].id, code };
   });
 }
@@ -180,12 +249,14 @@ export interface ComplaintFilters {
   status?: ComplaintStatus | "open";
   category?: ComplaintCategory;
   q?: string;
+  assigneeUserId?: string;
 }
 
 export async function listComplaints(branchId: string, f: ComplaintFilters = {}): Promise<ComplaintRow[]> {
   const where = ["k.branch_id = $1"];
   const params: unknown[] = [branchId];
-  if (f.status === "open") where.push(`k.status IN ('received','in_progress')`);
+  // "open" = belum ditutup: termasuk Selesai yang masih menunggu konfirmasi member.
+  if (f.status === "open") where.push(`k.status IN ('received','in_progress','resolved')`);
   else if (f.status) {
     params.push(f.status);
     where.push(`k.status = $${params.length}`);
@@ -194,13 +265,17 @@ export async function listComplaints(branchId: string, f: ComplaintFilters = {})
     params.push(f.category);
     where.push(`k.category = $${params.length}`);
   }
+  if (f.assigneeUserId) {
+    params.push(f.assigneeUserId);
+    where.push(`k.assignee_user_id = $${params.length}`);
+  }
   if (f.q?.trim()) {
     params.push(`%${f.q.trim()}%`);
     where.push(`(k.code ILIKE $${params.length} OR k.title ILIKE $${params.length} OR c.name ILIKE $${params.length} OR k.contact_name ILIKE $${params.length})`);
   }
   return query<ComplaintRow>(
     `${COMPLAINT_SELECT} WHERE ${where.join(" AND ")}
-     ORDER BY CASE WHEN k.status IN ('received','in_progress') THEN 0 ELSE 1 END,
+     ORDER BY CASE WHEN k.status IN ('received','in_progress') THEN 0 WHEN k.status = 'resolved' THEN 1 ELSE 2 END,
               CASE k.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,
               k.created_at DESC
      LIMIT 200`,
@@ -245,4 +320,82 @@ export async function memberSessionsForComplaint(branchId: string, customerId: s
      LIMIT 30`,
     [customerId, branchId]
   );
+}
+
+// ── Alur penyelesaian (B2) ─────────────────────────────────────────────────
+
+/**
+ * Pindah status dalam satu transaksi + riwayat. Mulai ditangani mengisi
+ * waktu respons pertama (dan mengambil tiket bila belum ada PIC); selesai
+ * mengisi waktu selesai; buka lagi menghapusnya.
+ */
+export async function transitionComplaint(branchId: string, id: string, actorId: string, to: ComplaintStatus, note?: string | null) {
+  const body = note?.trim() || null;
+  return withTransaction(async (client) => {
+    const { rows } = await client.query<{ status: ComplaintStatus; assignee_user_id: string | null }>(
+      `SELECT status, assignee_user_id FROM studio.complaints WHERE id = $1 AND branch_id = $2 FOR UPDATE`,
+      [id, branchId]
+    );
+    const t = rows[0];
+    if (!t) throw ApiError.notFound("Tiket tidak ditemukan");
+    if (!canTransition(t.status, to)) {
+      throw ApiError.conflict(`Tiket ${COMPLAINT_STATUS_LABEL[t.status].toLowerCase()} tidak bisa diubah ke ${COMPLAINT_STATUS_LABEL[to].toLowerCase()}`);
+    }
+    if (transitionNeedsNote(t.status, to) && !body) {
+      throw ApiError.badRequest(to === "resolved" ? "Isi catatan penyelesaian" : "Isi alasannya");
+    }
+    const reopen = t.status === "resolved" && to === "in_progress";
+    await client.query(
+      `UPDATE studio.complaints SET status = $3::varchar,
+         first_response_at = CASE WHEN $3::varchar IN ('in_progress','resolved') THEN COALESCE(first_response_at, now()) ELSE first_response_at END,
+         resolved_at = CASE WHEN $3::varchar = 'resolved' THEN now() WHEN $4::boolean THEN NULL ELSE resolved_at END,
+         confirmed_at = CASE WHEN $3::varchar = 'confirmed' THEN now() ELSE confirmed_at END,
+         assignee_user_id = CASE WHEN $3::varchar = 'in_progress' AND assignee_user_id IS NULL THEN $5::uuid ELSE assignee_user_id END,
+         updated_at = now()
+       WHERE id = $1 AND branch_id = $2`,
+      [id, branchId, to, reopen, actorId]
+    );
+    await client.query(
+      `INSERT INTO studio.complaint_events (complaint_id, kind, from_status, to_status, body, actor_user_id) VALUES ($1, 'status', $2, $3, $4, $5)`,
+      [id, t.status, to, body, actorId]
+    );
+    if (to === "in_progress" && !t.assignee_user_id) {
+      await client.query(
+        `INSERT INTO studio.complaint_events (complaint_id, kind, body, actor_user_id)
+         SELECT $1, 'assign', 'PIC: ' || full_name, $2 FROM configuration.users WHERE id = $2`,
+        [id, actorId]
+      );
+    }
+  });
+}
+
+/** Tunjuk / ganti / lepas PIC (null). Hanya tiket yang masih terbuka atau menunggu konfirmasi. */
+export async function assignComplaint(branchId: string, id: string, actorId: string, userId: string | null) {
+  const t = await queryOne<{ status: ComplaintStatus; assignee_user_id: string | null }>(
+    `SELECT status, assignee_user_id FROM studio.complaints WHERE id = $1 AND branch_id = $2`,
+    [id, branchId]
+  );
+  if (!t) throw ApiError.notFound("Tiket tidak ditemukan");
+  if (!isComplaintOpen(t.status) && t.status !== "resolved") throw ApiError.conflict("Tiket sudah ditutup");
+  let name: string | null = null;
+  if (userId) {
+    const staff = (await listBackofficeUsers(branchId)).find((u) => u.id === userId);
+    if (!staff) throw ApiError.badRequest("PIC harus user backoffice aktif");
+    name = staff.name;
+  }
+  if (t.assignee_user_id === userId) return;
+  await query(`UPDATE studio.complaints SET assignee_user_id = $3, updated_at = now() WHERE id = $1 AND branch_id = $2`, [id, branchId, userId]);
+  await query(`INSERT INTO studio.complaint_events (complaint_id, kind, body, actor_user_id) VALUES ($1, 'assign', $2, $3)`, [
+    id,
+    name ? `PIC: ${name}` : "PIC dilepas",
+    actorId,
+  ]);
+}
+
+/** Catatan internal (tidak pernah dikirim ke member). */
+export async function addComplaintNote(branchId: string, id: string, actorId: string, body: string) {
+  const ok = await queryOne(`SELECT 1 FROM studio.complaints WHERE id = $1 AND branch_id = $2`, [id, branchId]);
+  if (!ok) throw ApiError.notFound("Tiket tidak ditemukan");
+  await query(`INSERT INTO studio.complaint_events (complaint_id, kind, body, actor_user_id) VALUES ($1, 'note', $2, $3)`, [id, body.trim(), actorId]);
+  await query(`UPDATE studio.complaints SET updated_at = now() WHERE id = $1`, [id]);
 }

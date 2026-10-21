@@ -99,3 +99,83 @@ export function complaintTitle(title: string | null | undefined, description: st
   if (d) return d.length > 80 ? `${d.slice(0, 77)}…` : d;
   return `Keluhan ${COMPLAINT_CATEGORY_LABEL[category].toLowerCase()}`;
 }
+
+// ── Alur penyelesaian (T-067-B2) ───────────────────────────────────────────
+
+/** Perpindahan status yang sah. Selesai bisa dibuka lagi bila member belum puas. */
+const TRANSITIONS: Record<ComplaintStatus, ComplaintStatus[]> = {
+  received: ["in_progress", "resolved", "cancelled"],
+  in_progress: ["resolved", "cancelled"],
+  resolved: ["confirmed", "in_progress"],
+  confirmed: [],
+  cancelled: [],
+};
+
+export function nextStatuses(from: ComplaintStatus): ComplaintStatus[] {
+  return TRANSITIONS[from];
+}
+
+export function canTransition(from: ComplaintStatus, to: ComplaintStatus): boolean {
+  return TRANSITIONS[from].includes(to);
+}
+
+/** Selesai wajib berisi catatan penyelesaian; batal & buka lagi wajib beralasan. */
+export function transitionNeedsNote(from: ComplaintStatus, to: ComplaintStatus): boolean {
+  return to === "resolved" || to === "cancelled" || (from === "resolved" && to === "in_progress");
+}
+
+export const COMPLAINT_ACTION_LABEL: Record<ComplaintStatus, string> = {
+  received: "Diterima",
+  in_progress: "Mulai tangani",
+  resolved: "Tandai selesai",
+  confirmed: "Dikonfirmasi member",
+  cancelled: "Batalkan tiket",
+};
+
+/** Label tombol: "Buka lagi" untuk resolved → in_progress. */
+export function actionLabel(from: ComplaintStatus, to: ComplaintStatus): string {
+  return from === "resolved" && to === "in_progress" ? "Buka lagi" : COMPLAINT_ACTION_LABEL[to];
+}
+
+export type SlaState = "ok" | "respond_overdue" | "resolve_overdue";
+
+/**
+ * Status SLA saat ini: respons dianggap terpenuhi begitu tiket mulai ditangani
+ * (first_response_at); penyelesaian terpenuhi saat selesai. Tiket tertutup = ok.
+ */
+export function complaintSlaState(
+  t: { status: ComplaintStatus; respond_by: string | null; resolve_by: string | null; first_response_at: string | null },
+  now: Date
+): SlaState {
+  if (!isComplaintOpen(t.status)) return "ok";
+  if (t.resolve_by && new Date(t.resolve_by) < now) return "resolve_overdue";
+  if (!t.first_response_at && t.respond_by && new Date(t.respond_by) < now) return "respond_overdue";
+  return "ok";
+}
+
+export const MAX_SLA_HOURS = 24 * 14;
+
+/** Gabungkan aturan tersimpan (sebagian / versi lama) dengan default per kategori. */
+export function normalizeSlaRules(raw: unknown): ComplaintSlaRules {
+  const stored = raw && typeof raw === "object" ? (raw as Record<string, Partial<ComplaintSla>>) : {};
+  const out = {} as ComplaintSlaRules;
+  const clamp = (v: unknown, fallback: number) => (Number.isInteger(v) ? Math.min(MAX_SLA_HOURS, Math.max(1, v as number)) : fallback);
+  for (const c of COMPLAINT_CATEGORIES) {
+    const base = DEFAULT_COMPLAINT_SLA[c];
+    const s = stored[c] ?? {};
+    const respond = clamp(s.respond_hours, base.respond_hours);
+    out[c] = { respond_hours: respond, resolve_hours: Math.max(respond, clamp(s.resolve_hours, base.resolve_hours)) };
+  }
+  return out;
+}
+
+export interface ComplaintSettings {
+  sla_rules: ComplaintSlaRules;
+  /** PIC otomatis per kategori (user id) saat tiket dibuat. */
+  default_assignees: Partial<Record<ComplaintCategory, string | null>>;
+}
+
+export const COMPLAINT_SETTING_KEYS: Record<keyof ComplaintSettings, string> = {
+  sla_rules: "complaint_sla_rules",
+  default_assignees: "complaint_default_assignees",
+};

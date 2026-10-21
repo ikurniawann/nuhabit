@@ -128,7 +128,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 - [x] T-067-B1 **(Tahap 2)** Tiket keluhan: sumber (WA/front desk/Member App), kategori Hyrox (coach, kelas,
   fasilitas, cedera, billing, lainnya), prioritas, tautan ke member, coach, sesi, dan percakapan WA. Buat tiket dari
   WA inbox dengan satu klik.
-- [ ] T-067-B2 **(Tahap 2)** Alur penyelesaian: diterima → ditangani → selesai → dikonfirmasi member; PIC, batas waktu
+- [x] T-067-B2 **(Tahap 2)** Alur penyelesaian: diterima → ditangani → selesai → dikonfirmasi member; PIC, batas waktu
   respons & selesai per kategori, catatan internal, riwayat status.
 - [ ] T-067-B3 **(Tahap 2)** Eskalasi aktif: saat batas waktu terlewat, kirim WA ke Head Coach / Ops (pakai jalur
   notifikasi owner yang ada); juga perbaiki SLA watcher WA inbox agar mengirim alert, bukan hanya menandai.
@@ -425,5 +425,28 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - E2E headless (admin uji + Maya + percakapan WA, sudah dihapus): satu klik di inbox → `KEL-2610-0001` billing
       tinggi; tiket cedera front desk tertaut sesi → coach otomatis, prioritas tinggi. Tidak ada error dari fitur baru;
       dua 403 `/api/settings/wa-gateway` berasal dari halaman inbox lama untuk role admin.
+    - `tsc` tanpa error baru (508); eslint bersih.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-B2 selesai.**
+  - Alur status (`nextStatuses`/`canTransition`): Diterima → Ditangani → Selesai → Dikonfirmasi member; Batal dari
+    Diterima/Ditangani; **Selesai bisa dibuka lagi** bila member belum puas.
+    - Selesai wajib catatan penyelesaian; batal & buka lagi wajib alasan.
+    - Dijalankan dalam satu transaksi (`FOR UPDATE`) + riwayat.
+    - Mulai tangani mengisi `first_response_at` (respons pertama) dan mengambil tiket bila belum ada PIC.
+    - Selesai mengisi `resolved_at`, buka lagi mengosongkannya; dikonfirmasi mengisi `confirmed_at`.
+  - **PIC:** tunjuk / ganti / lepas (hanya user backoffice aktif); PIC default per kategori di pengaturan, dipasang
+    otomatis saat tiket dibuat; filter "Ditugaskan ke saya".
+  - **Batas waktu bisa diatur** per kategori (respons & selesai, 1–336 jam, selesai ≥ respons) di `studio.settings`
+    `complaint_sla_rules`; berlaku untuk tiket baru. Status SLA di daftar: "Lewat batas respons" (belum ditangani
+    melewati batas) / "Lewat batas selesai".
+  - Catatan internal sebagai event `note` (tidak dikirim ke member); riwayat menampilkan isi catatan & alasan.
+  - Filter default "Belum ditutup" = Diterima, Ditangani, dan Selesai yang menunggu konfirmasi member.
+  - Perbaikan B1 (belum pernah di-deploy): `complaint_events.created_at` default `clock_timestamp()` supaya event dalam
+    satu transaksi tetap berurutan. Sempat terdeteksi tes yang kadang gagal; kini stabil 3× berturut-turut.
+  - Bukti:
+    - 10 unit test + 8 test integrasi lulus di `nuhabit_test`.
+    - E2E headless (admin uji, sudah dihapus): atur PIC default Billing & respons cedera 1 jam → tiket WA mendapat PIC
+      otomatis → Mulai tangani → catatan internal → Tandai selesai (dengan catatan) → Dikonfirmasi member; filter
+      "Ditugaskan ke saya" menampilkannya; tanpa error dari fitur baru.
     - `tsc` tanpa error baru (508); eslint bersih.
   - Belum di-deploy.

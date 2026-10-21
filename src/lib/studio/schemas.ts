@@ -3,7 +3,7 @@ import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
-import { COMPLAINT_CATEGORIES } from "@/lib/studio/complaints";
+import { COMPLAINT_CATEGORIES, COMPLAINT_STATUSES, MAX_SLA_HOURS } from "@/lib/studio/complaints";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
@@ -365,3 +365,19 @@ export const complaintCreateSchema = z.object({
 export const complaintFromWaSchema = complaintCreateSchema
   .pick({ priority: true, title: true, description: true, coach_id: true, session_id: true })
   .extend({ wa_conversation_id: z.string().uuid(), category: z.enum(COMPLAINT_CATEGORIES).optional() });
+export const complaintStatusSchema = z.object({
+  to: z.enum(COMPLAINT_STATUSES),
+  note: z.string().trim().max(2000).nullable().optional(),
+});
+export const complaintAssignSchema = z.object({ user_id: z.string().uuid().nullable() });
+export const complaintNoteSchema = z.object({ body: z.string().trim().min(2).max(2000) });
+const slaRuleSchema = z.object({
+  respond_hours: z.number().int().min(1).max(MAX_SLA_HOURS),
+  resolve_hours: z.number().int().min(1).max(MAX_SLA_HOURS),
+});
+export const complaintSettingsSchema = z
+  .object({
+    sla_rules: z.partialRecord(z.enum(COMPLAINT_CATEGORIES), slaRuleSchema),
+    default_assignees: z.partialRecord(z.enum(COMPLAINT_CATEGORIES), z.string().uuid().nullable()),
+  })
+  .partial();

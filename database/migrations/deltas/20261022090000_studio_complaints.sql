@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS studio.complaint_events (
   to_status varchar(15),
   body text,
   actor_user_id uuid,
-  created_at timestamptz NOT NULL DEFAULT now()
+  -- clock_timestamp: beberapa event dalam satu transaksi (mis. mulai tangani + ambil PIC) tetap berurutan.
+  created_at timestamptz NOT NULL DEFAULT clock_timestamp()
 );
 CREATE INDEX IF NOT EXISTS idx_studio_complaint_events_complaint ON studio.complaint_events (complaint_id, created_at);
 
