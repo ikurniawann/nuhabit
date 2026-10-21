@@ -140,7 +140,13 @@ export function PackagesPage() {
                     <p className="text-xs text-muted-foreground">
                       {[
                         p.purchase_limit_per_member ? `Maks. ${p.purchase_limit_per_member}× per member` : null,
-                        p.kind === "pass" ? "Booking tanpa batas" : p.applicable_class_type_ids ? `${p.applicable_class_type_ids.length} jenis kelas` : "Semua kelas",
+                        p.kind === "pass"
+                          ? p.covers_personal
+                            ? "Booking tanpa batas + PT"
+                            : "Booking tanpa batas"
+                          : p.applicable_class_type_ids
+                            ? `${p.applicable_class_type_ids.length} jenis kelas`
+                            : "Semua kelas",
                         p.branch_name ?? "Semua cabang",
                         p.branch_prices.length > 0 ? `${p.branch_prices.length} harga cabang` : null,
                       ]
@@ -223,6 +229,8 @@ function PackageDialog({
   const [coverage, setCoverage] = useState<string[]>(pkg?.applicable_class_type_ids ?? []);
   const [kind, setKind] = useState<PackageKind>(pkg?.kind ?? "credits");
   const [isPublic, setIsPublic] = useState(pkg?.is_public ?? true);
+  // Pass yang juga membayar sesi PT; pass tanpa tanda ini hanya untuk kelas.
+  const [coversPersonal, setCoversPersonal] = useState(pkg?.covers_personal ?? false);
   // Kosong = dijual di semua cabang.
   const [branchId, setBranchId] = useState(pkg?.branch_id ?? "");
   // Harga per cabang; kosong = pakai harga dasar.
@@ -257,6 +265,7 @@ function PackageDialog({
         applicable_class_type_ids: !isPass && coverage.length > 0 ? coverage : null,
         branch_id: branchId || null,
         is_public: isPublic,
+        covers_personal: isPass && coversPersonal,
         badge: form.badge.trim() || null,
         branch_prices: Object.entries(branchPrices)
           .filter(([, price]) => price.trim() !== "")
@@ -353,6 +362,23 @@ function PackageDialog({
               <Switch checked={isPublic} onCheckedChange={setIsPublic} aria-label="Tampil di daftar harga situs" />
               Tampil di daftar harga situs
             </label>
+            {isPass && (
+              <label className="flex items-start gap-3 text-sm sm:col-span-2">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={coversPersonal}
+                  onChange={(e) => setCoversPersonal(e.target.checked)}
+                  aria-label="Pass berlaku untuk PT"
+                />
+                <span>
+                  Pass berlaku untuk PT
+                  <span className="block text-xs text-muted-foreground">
+                    Pemegang pass ini booking, check-in dan menyelesaikan sesi PT tanpa kredit PT. Pass lain tetap hanya untuk kelas.
+                  </span>
+                </span>
+              </label>
+            )}
             {branches.length > 0 && (
               <Field label="Dijual di" className="sm:col-span-2" hint="Paket khusus cabang hanya muncul di front desk cabang itu.">
                 <select className={SELECT} value={branchId} onChange={(e) => setBranchId(e.target.value)}>

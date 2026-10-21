@@ -36,6 +36,20 @@ async function fetchNavBadges(): Promise<Record<string, number>> {
   }
 }
 
+const PT_HREF = "/dashboard/gym/pt";
+
+/** Permintaan PT yang menunggu konfirmasi, untuk badge menu Personal Training. */
+async function fetchPtPending(): Promise<number> {
+  try {
+    const res = await fetch("/api/gym/pt/pending-count", { cache: "no-store" });
+    if (!res.ok) return 0;
+    const json = (await res.json()) as { data?: { count?: number } };
+    return json.data?.count ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 interface AppSidebarNavProps {
   navItems: NavItem[];
   collapsed?: boolean;
@@ -140,12 +154,26 @@ export default function AppSidebarNav({
    */
   const queryClient = useQueryClient();
   // Dimuat ulang tiap pindah halaman agar angkanya menyusul aksi pengguna.
-  const { data: badges = NO_BADGES } = useQuery({
+  const { data: hrisBadges = NO_BADGES } = useQuery({
     queryKey: [...NAV_BADGES_KEY, pathname],
     queryFn: fetchNavBadges,
     placeholderData: keepPreviousData,
     retry: false,
   });
+  // The PT menu carries the requests waiting for a coach, polled once a minute.
+  const hasPt = allLeafHrefs.includes(PT_HREF);
+  const { data: ptPending = 0 } = useQuery({
+    queryKey: ["gym", "coaching", "pending", "nav", pathname],
+    queryFn: fetchPtPending,
+    enabled: hasPt,
+    refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const badges = useMemo(
+    () => (hasPt && ptPending > 0 ? { ...hrisBadges, [PT_HREF]: ptPending } : hrisBadges),
+    [hrisBadges, hasPt, ptPending]
+  );
 
   // Membuka halaman ESS berarti karyawan sudah melihat pembaruannya.
   useEffect(() => {

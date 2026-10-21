@@ -104,6 +104,8 @@ type Participant struct {
 	Status         domain.Status `json:"status"`
 	LateCancel     bool          `json:"late_cancel"`
 	CreditsCharged int           `json:"credits_charged"`
+	// CheckedInAt is when the member scanned in at the gate for this session.
+	CheckedInAt *httpx.JSTime `json:"checked_in_at"`
 }
 
 // Appointment is a PT session with its participants.
@@ -124,8 +126,10 @@ type Appointment struct {
 	Source        string        `json:"source"`
 	Notes         string        `json:"notes"`
 	CancelReason  *string       `json:"cancel_reason"`
-	CreatedAt     httpx.JSTime  `json:"created_at"`
-	Participants  []Participant `json:"participants"`
+	// RescheduleCount is how often a member moved the session themself.
+	RescheduleCount int           `json:"reschedule_count"`
+	CreatedAt       httpx.JSTime  `json:"created_at"`
+	Participants    []Participant `json:"participants"`
 }
 
 func (a *Appointment) start() time.Time { return time.Time(a.StartsAt) }
@@ -142,7 +146,8 @@ type Filter struct {
 }
 
 const appointmentSelect = `SELECT a.id::text, a.coach_id::text, c.name, a.class_type_id::text, t.name, a.branch_id::text, b.name,
-       COALESCE(b.timezone, 'Asia/Jakarta'), a.starts_at, a.ends_at, a.capacity, a.credit_cost, a.status, a.source, a.notes, a.cancel_reason, a.created_at
+       COALESCE(b.timezone, 'Asia/Jakarta'), a.starts_at, a.ends_at, a.capacity, a.credit_cost, a.status, a.source, a.notes, a.cancel_reason,
+       a.reschedule_count, a.created_at
   FROM gym.pt_appointments a
   JOIN gym.coaches c ON c.id = a.coach_id
   JOIN gym.class_types t ON t.id = a.class_type_id
@@ -152,7 +157,7 @@ func scanAppointment(r pgx.CollectableRow) (*Appointment, error) {
 	var a Appointment
 	var start, end, created time.Time
 	err := r.Scan(&a.ID, &a.CoachID, &a.CoachName, &a.ClassTypeID, &a.ClassTypeName, &a.BranchID, &a.BranchName,
-		&a.Timezone, &start, &end, &a.Capacity, &a.CreditCost, &a.Status, &a.Source, &a.Notes, &a.CancelReason, &created)
+		&a.Timezone, &start, &end, &a.Capacity, &a.CreditCost, &a.Status, &a.Source, &a.Notes, &a.CancelReason, &a.RescheduleCount, &created)
 	a.StartsAt, a.EndsAt, a.CreatedAt = httpx.JSTime(start), httpx.JSTime(end), httpx.JSTime(created)
 	a.Participants = []Participant{}
 	return &a, err
@@ -169,7 +174,7 @@ func withParticipants(ctx context.Context, q Q, list []*Appointment) error {
 		byID[a.ID], ids[i] = a, a.ID
 	}
 	rows, err := q.Query(ctx, `SELECT p.id::text, p.appointment_id::text, p.customer_id::text, c.name, c.phone,
-       p.status, p.late_cancel, p.credits_charged
+       p.status, p.late_cancel, p.credits_charged, p.checked_in_at
   FROM gym.pt_participants p
   JOIN pos.pos_customers c ON c.id = p.customer_id
  WHERE p.appointment_id = ANY($1::uuid[])
@@ -177,7 +182,13 @@ func withParticipants(ctx context.Context, q Q, list []*Appointment) error {
 	if err != nil {
 		return err
 	}
-	parts, err := pgx.CollectRows(rows, pgx.RowToStructByPos[Participant])
+	parts, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (Participant, error) {
+		var p Participant
+		var checkedIn *time.Time
+		err := r.Scan(&p.ID, &p.AppointmentID, &p.CustomerID, &p.Name, &p.Phone, &p.Status, &p.LateCancel, &p.CreditsCharged, &checkedIn)
+		p.CheckedInAt = httpx.NewJSTime(checkedIn)
+		return p, err
+	})
 	for _, p := range parts {
 		a := byID[p.AppointmentID]
 		a.Participants = append(a.Participants, p)
@@ -379,10 +390,20 @@ func (s *Service) Request(ctx context.Context, in RequestInput) (string, error) 
 		if err := s.addParticipant(ctx, q, id, in.CustomerID, domain.Requested); err != nil {
 			return err
 		}
+		when := localtime.Format(in.StartsAt, zone)
 		s.notify(ctx, q, in.CustomerID, Notification{
 			Type:  "gym_pt_requested",
 			Title: "Permintaan PT terkirim",
-			Body:  ct.Name + " pada " + localtime.Format(in.StartsAt, zone) + " menunggu konfirmasi coach.",
+			Body:  ct.Name + " pada " + when + " menunggu konfirmasi coach.",
+		})
+		var member string
+		if err := q.QueryRow(ctx, `SELECT COALESCE(name, 'Member') FROM pos.pos_customers WHERE id = $1`, in.CustomerID).Scan(&member); err != nil {
+			return err
+		}
+		s.notifyStaff(ctx, q, in.CoachID, Notification{
+			Type:  "gym_pt_requested",
+			Title: "Permintaan PT baru",
+			Body:  member + " minta " + ct.Name + " pada " + when + ". Konfirmasi di menu Personal Training.",
 		})
 		return nil
 	})
@@ -419,7 +440,8 @@ func (s *Service) claimCoach(ctx context.Context, q Q, appointmentID, coachID st
 
 // checkMember rejects an inactive member, one already in another PT session
 // at that time, or one whose PT credits do not cover this session on top of
-// their other open sessions.
+// their other open sessions. A pass covering PT at the start replaces the
+// credits.
 func (s *Service) checkMember(ctx context.Context, q Q, customerID string, ct PersonalType, start, end time.Time) error {
 	var name *string
 	var active *bool
@@ -437,18 +459,22 @@ func (s *Service) checkMember(ctx context.Context, q Q, customerID string, ct Pe
 	if active != nil && !*active {
 		return conflict(label + " tidak aktif")
 	}
-	var busy bool
-	var committed int
-	if err := q.QueryRow(ctx, `SELECT
-         COALESCE(bool_or(a.starts_at < $3 AND a.ends_at > $2), false),
-         COALESCE(sum(a.credit_cost) FILTER (WHERE a.class_type_id = $4), 0)
-       FROM gym.pt_participants p JOIN gym.pt_appointments a ON a.id = p.appointment_id
-      WHERE p.customer_id = $1 AND p.status IN ('requested', 'confirmed')`,
-		customerID, start, end, ct.ID).Scan(&busy, &committed); err != nil {
+	busy, err := memberBusy(ctx, q, customerID, nil, start, end)
+	if err != nil {
 		return err
 	}
 	if busy {
 		return conflict(label + " sudah punya sesi PT pada jam ini")
+	}
+	if covered, err := s.passCovers(ctx, q, customerID, start); err != nil || covered {
+		return err
+	}
+	var committed int
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(a.credit_cost), 0)
+       FROM gym.pt_participants p JOIN gym.pt_appointments a ON a.id = p.appointment_id
+      WHERE p.customer_id = $1 AND p.status IN ('requested', 'confirmed') AND a.class_type_id = $2`,
+		customerID, ct.ID).Scan(&committed); err != nil {
+		return err
 	}
 	usable, err := s.ports.Credits.UsableBalance(ctx, q, customerID, ct.ID)
 	if err != nil {

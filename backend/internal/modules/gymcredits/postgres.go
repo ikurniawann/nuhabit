@@ -520,7 +520,7 @@ func (Postgres) ExpireLapsedPasses(ctx context.Context, q database.Querier, cust
 
 const (
 	passCols = `mp.id, mp.customer_id, mp.package_id, pk.name, mp.purchase_id, mp.starts_at, mp.ends_at, mp.status,
-       mp.frozen_at, mp.frozen_until, mp.auto_renew, mp.renew_with, cp.branch_id, mp.auto_renew_off_reason`
+       mp.frozen_at, mp.frozen_until, mp.auto_renew, mp.renew_with, cp.branch_id, mp.auto_renew_off_reason, pk.covers_personal`
 	passFrom = `
   FROM gym.member_passes mp
   JOIN gym.credit_packages pk ON pk.id = mp.package_id
@@ -530,7 +530,7 @@ const (
 
 func (p *PassRow) scanTargets() []any {
 	return []any{&p.ID, &p.CustomerID, &p.PackageID, &p.PackageName, &p.PurchaseID, &p.StartsAt, &p.EndsAt, &p.Status,
-		&p.FrozenAt, &p.FrozenUntil, &p.AutoRenew, &p.RenewWith, &p.BranchID, &p.AutoRenewOffReason}
+		&p.FrozenAt, &p.FrozenUntil, &p.AutoRenew, &p.RenewWith, &p.BranchID, &p.AutoRenewOffReason, &p.CoversPersonal}
 }
 
 func (p *PassRow) truncate() {
@@ -775,7 +775,7 @@ func (Postgres) PassRevenueReleased(ctx context.Context, q database.Querier, pur
 func (Postgres) Packages(ctx context.Context, q database.Querier) ([]PackageRow, error) {
 	rows, err := q.Query(ctx,
 		`SELECT p.id, p.name, p.description, p.kind, p.credits, p.price_idr::float AS price_idr, p.validity_days,
-		        p.purchase_limit_per_member, p.applicable_class_type_ids::text[], p.branch_id, p.is_public, p.badge,
+		        p.purchase_limit_per_member, p.applicable_class_type_ids::text[], p.branch_id, p.is_public, p.badge, p.covers_personal,
 		        COALESCE((SELECT jsonb_agg(jsonb_build_object('branch_id', bp.branch_id, 'price_idr', bp.price_idr::float) ORDER BY bp.branch_id)
 		                    FROM gym.package_branch_prices bp WHERE bp.package_id = p.id), '[]'::jsonb) AS branch_prices,
 		        p.status, p.sort_order, p.created_at, p.updated_at,
@@ -791,7 +791,7 @@ func (Postgres) Packages(ctx context.Context, q database.Querier) ([]PackageRow,
 		p := PackageRow{BranchPrices: []BranchPrice{}}
 		var createdAt, updatedAt time.Time
 		err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Kind, &p.Credits, &p.PriceIdr, &p.ValidityDays,
-			&p.PurchaseLimitPerMember, &p.ApplicableClassTypeIDs, &p.BranchID, &p.IsPublic, &p.Badge, &p.BranchPrices,
+			&p.PurchaseLimitPerMember, &p.ApplicableClassTypeIDs, &p.BranchID, &p.IsPublic, &p.Badge, &p.CoversPersonal, &p.BranchPrices,
 			&p.Status, &p.SortOrder, &createdAt, &updatedAt, &p.SoldCount, &p.Referenced)
 		p.CreatedAt, p.UpdatedAt = JSTime(createdAt), JSTime(updatedAt)
 		return p, err
@@ -805,7 +805,7 @@ func (Postgres) Packages(ctx context.Context, q database.Querier) ([]PackageRow,
 func (Postgres) ActivePackages(ctx context.Context, q database.Querier) ([]PortalPackageRow, error) {
 	rows, err := q.Query(ctx,
 		`SELECT id, name, description, kind, credits, price_idr::float AS price_idr, validity_days,
-		        purchase_limit_per_member, applicable_class_type_ids::text[], branch_id, badge, status
+		        purchase_limit_per_member, applicable_class_type_ids::text[], branch_id, badge, covers_personal, status
 		   FROM gym.credit_packages WHERE status = 'active' ORDER BY sort_order, price_idr`)
 	if err != nil {
 		return nil, err
@@ -813,7 +813,7 @@ func (Postgres) ActivePackages(ctx context.Context, q database.Querier) ([]Porta
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (PortalPackageRow, error) {
 		var p PortalPackageRow
 		err := row.Scan(&p.ID, &p.Name, &p.Description, &p.Kind, &p.Credits, &p.PriceIdr, &p.ValidityDays,
-			&p.PurchaseLimitPerMember, &p.ApplicableClassTypeIDs, &p.BranchID, &p.Badge, &p.Status)
+			&p.PurchaseLimitPerMember, &p.ApplicableClassTypeIDs, &p.BranchID, &p.Badge, &p.CoversPersonal, &p.Status)
 		return p, err
 	})
 }
@@ -838,21 +838,21 @@ func (Postgres) PublicPackages(ctx context.Context, q database.Querier, branchID
 
 func (Postgres) SavePackage(ctx context.Context, q database.Querier, p PackageInput, actorID string) (string, error) {
 	args := []any{p.Name, p.Description, p.Credits, p.PriceIdr, p.ValidityDays, p.PurchaseLimitPerMember,
-		p.ApplicableClassTypeIDs, p.BranchID, p.SortOrder, p.Kind, p.IsPublic, p.Badge}
+		p.ApplicableClassTypeIDs, p.BranchID, p.SortOrder, p.Kind, p.IsPublic, p.Badge, p.CoversPersonal}
 	var row pgx.Row
 	if p.ID != nil {
 		row = q.QueryRow(ctx,
 			`UPDATE gym.credit_packages
 			    SET name=$1, description=$2, credits=$3, price_idr=$4, validity_days=$5, purchase_limit_per_member=$6,
 			        applicable_class_type_ids=$7::text[]::uuid[], branch_id=$8, sort_order=$9, kind=$10, is_public=$11, badge=$12,
-			        updated_at=now()
-			  WHERE id=$13 RETURNING id`, append(args, *p.ID)...)
+			        covers_personal=$13, updated_at=now()
+			  WHERE id=$14 RETURNING id`, append(args, *p.ID)...)
 	} else {
 		row = q.QueryRow(ctx,
 			`INSERT INTO gym.credit_packages
 			   (name, description, credits, price_idr, validity_days, purchase_limit_per_member,
-			    applicable_class_type_ids, branch_id, sort_order, kind, is_public, badge, created_by)
-			 VALUES ($1,$2,$3,$4,$5,$6,$7::text[]::uuid[],$8,$9,$10,$11,$12,$13) RETURNING id`, append(args, actorID)...)
+			    applicable_class_type_ids, branch_id, sort_order, kind, is_public, badge, covers_personal, created_by)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7::text[]::uuid[],$8,$9,$10,$11,$12,$13,$14) RETURNING id`, append(args, actorID)...)
 	}
 	var id string
 	err := row.Scan(&id)

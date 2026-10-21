@@ -34,6 +34,8 @@ export interface PtParticipant {
   status: ParticipantStatus;
   late_cancel: boolean;
   credits_charged: number;
+  /** Saat member scan di gate untuk sesi ini; null bila belum. */
+  checked_in_at: string | null;
 }
 
 export interface PtAppointment {
@@ -54,6 +56,8 @@ export interface PtAppointment {
   source: "member" | "staff";
   notes: string;
   cancel_reason: string | null;
+  /** Berapa kali member memindahkan sesi ini sendiri. */
+  reschedule_count: number;
   created_at: string;
   participants: PtParticipant[];
 }
@@ -123,6 +127,18 @@ export interface CancelResult {
   penalty: number;
 }
 
+/** Permintaan PT yang menunggu konfirmasi (semua, atau milik coach sendiri). */
+export interface PendingRequests {
+  count: number;
+  earliest_start: string | null;
+}
+
+export type AppointmentAction =
+  | { action: "confirm" | "complete" }
+  | { action: "cancel"; reason: string }
+  | { action: "add_member"; customer_id: string }
+  | { action: "reschedule"; starts_at: string; coach_id?: string };
+
 /** Isi form asesmen; metrik kosong = null. */
 export type AssessmentInput = { customer_id: string; coach_id: string | null; assessed_on: string; notes: string; goals: string } & Record<
   MetricKey,
@@ -143,8 +159,8 @@ export const coachingApi = {
   appointments: (params: { from: string; to: string; coach_id?: string; status?: string; customer_id?: string }) =>
     call<PtAppointment[]>(`${pt}/appointments?${qs(params)}`),
   book: (input: BookInput) => send<{ id: string }>(`${pt}/appointments`, input),
-  act: (id: string, body: { action: "confirm" | "cancel" | "complete" | "add_member"; reason?: string; customer_id?: string }) =>
-    send<PtAppointment>(`${pt}/appointments/${id}`, body),
+  act: (id: string, body: AppointmentAction) => send<PtAppointment>(`${pt}/appointments/${id}`, body),
+  pendingCount: () => call<PendingRequests>(`${pt}/pending-count`),
   participant: (id: string, body: { action: "cancel" | "no_show"; waive: boolean }) =>
     send<CancelResult>(`${pt}/participants/${id}`, body),
   slots: (params: { coach_id: string; class_type_id: string; from: string; days: number }) =>
@@ -169,6 +185,7 @@ export const COACHING_KEYS = {
   types: ["gym", "coaching", "types"] as const,
   coaches: (all: boolean) => ["gym", "coaching", "coaches", all] as const,
   appointments: ["gym", "coaching", "appointments"] as const,
+  pending: ["gym", "coaching", "pending"] as const,
   availability: (coachId: string) => ["gym", "coaching", "availability", coachId] as const,
   slots: ["gym", "coaching", "slots"] as const,
   members: ["gym", "coaching", "members"] as const,

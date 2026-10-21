@@ -123,6 +123,8 @@ export interface RawPackage {
   price_idr: number;
   validity_days: number;
   badge: string | null;
+  /** Pass: also pays for personal training sessions. */
+  covers_personal?: boolean;
   can_buy: boolean;
   blocked_reason: string | null;
 }
@@ -238,6 +240,8 @@ export interface PackageView {
   validityDays: number;
   badge: string | null;
   coverageNames: string[] | null;
+  /** Pass: PT sessions are covered too. */
+  coversPersonal: boolean;
   canBuy: boolean;
   blockedReason: string | null;
 }
@@ -427,6 +431,7 @@ export function toPackageView(raw: RawPackage, catalog: RawCatalog | undefined):
     validityDays: raw.validity_days,
     badge: raw.badge ?? null,
     coverageNames: raw.kind === 'pass' ? null : coverageNamesOf(catalog, coverageOf(catalog, raw.id)),
+    coversPersonal: raw.kind === 'pass' && raw.covers_personal === true,
     canBuy: raw.can_buy,
     blockedReason: raw.blocked_reason,
   };

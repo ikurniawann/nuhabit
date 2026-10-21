@@ -63,6 +63,7 @@ const SECTIONS: { title: string; fields: RuleField[] }[] = [
       { key: "noShowPolicy", kind: "policy", label: "Tidak hadir (no-show)", hint: "Hangus: kredit tidak kembali. Gratis: kredit dikembalikan." },
       { key: "maxConcurrentBookings", kind: "number", label: "Batas booking aktif", unit: "kelas mendatang", hint: "Berlaku juga untuk pemegang pass. 0 = tanpa batas.", min: 0 },
       { key: "maxBookingsPerDay", kind: "number", label: "Batas booking per hari", unit: "kelas", hint: "Dihitung per hari kalender di zona cabang kelas. 0 = tanpa batas.", min: 0 },
+      { key: "ptRescheduleLimit", kind: "number", label: "Batas ubah jadwal PT", unit: "kali per sesi", hint: "Member boleh memindahkan sesi PT-nya sendiri dari aplikasi sebanyak ini, selama belum lewat batas batal gratis. Staf dan coach tidak dibatasi. 0 = hanya lewat staf.", min: 0 },
     ],
   },
   {

@@ -26,6 +26,7 @@ export interface Assessment {
   notes: string;
   goals: string;
   created_by_name: string;
+  /** Saat dicatat, format toISOString (UTC, milidetik) seperti rute gym lain. */
   created_at: string;
 }
 

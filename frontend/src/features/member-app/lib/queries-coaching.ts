@@ -43,6 +43,8 @@ export interface PtOptions {
   coaches: PtCoach[];
   earliest_start: string;
   horizon_days: number;
+  /** The pass running now pays for PT sessions, so no PT credits are needed. */
+  pass_covers_pt: boolean;
 }
 
 export interface PtSession {
@@ -55,6 +57,7 @@ export interface PtSession {
   coach_id: string;
   coach_name: string;
   coach_photo_url: string | null;
+  class_type_id: string;
   class_type_name: string;
   branch_name: string | null;
   timezone?: string;
@@ -65,6 +68,9 @@ export interface PtSession {
   notes: string;
   cancel_reason: string | null;
   free_cancel_until: string;
+  /** The member may still move this 1:1 session themself, reschedules_left more times. */
+  can_reschedule: boolean;
+  reschedules_left: number;
 }
 
 export interface PtSlot {
@@ -109,6 +115,16 @@ export function useRequestPt() {
   return useMutation({
     mutationFn: (input: { coach_id: string; class_type_id: string; starts_at: string; notes: string }) =>
       memberApi<{ id: string }>("/gym/pt/appointments", { method: "POST", json: input }),
+    onSuccess: refresh,
+  });
+}
+
+/** Move an open 1:1 session to a free slot of the same coach. */
+export function useReschedulePt() {
+  const refresh = useRefreshPt();
+  return useMutation({
+    mutationFn: ({ appointmentId, startsAt }: { appointmentId: string; startsAt: string }) =>
+      memberApi<{ id: string }>(`/gym/pt/appointments/${appointmentId}`, { method: "PATCH", json: { starts_at: startsAt } }),
     onSuccess: refresh,
   });
 }

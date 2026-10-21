@@ -40,6 +40,18 @@ export const COACHING_ID: Record<string, string> = {
   "Request failed.": "Permintaan gagal.",
   "The coach confirms your request. PT credits are used when the session is done.":
     "Coach akan mengonfirmasi permintaanmu. Kredit PT dipakai setelah sesi selesai.",
+  "The coach confirms your request. Your pass covers the session.":
+    "Coach akan mengonfirmasi permintaanmu. Pass-mu menanggung sesi ini.",
+  "{min} min · covered by your pass": "{min} menit · ditanggung pass-mu",
+  // Moving a session
+  "Move session": "Pindah jadwal",
+  "Move your PT session": "Pindahkan sesi PT-mu",
+  "This session can no longer be moved.": "Sesi ini sudah tidak bisa dipindahkan.",
+  "Moves left after this one: {n}": "Sisa kesempatan pindah setelah ini: {n}",
+  "Confirm new time": "Pakai jam baru",
+  "Move failed.": "Pindah jadwal gagal.",
+  "Your coach is told about the move. The session keeps its status and credits.":
+    "Coach diberi tahu jadwal barunya. Status dan kredit sesi tidak berubah.",
   // Assessments
   "Body metrics and HYROX benchmarks your coach recorded.": "Metrik tubuh dan benchmark HYROX yang dicatat coach.",
   "Loading assessments…": "Memuat asesmen…",

@@ -16,6 +16,7 @@ const pkg = (over: Partial<CreditPackage>): CreditPackage => ({
   branch_name: null,
   is_public: true,
   badge: null,
+  covers_personal: false,
   branch_prices: [],
   status: "active",
   sort_order: 0,

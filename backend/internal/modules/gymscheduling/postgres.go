@@ -606,28 +606,33 @@ func (Postgres) LockCheckInCandidate(ctx context.Context, q Q, customerID string
 }
 
 func (Postgres) LogAccess(ctx context.Context, q Q, e AccessEntry) error {
-	_, err := q.Exec(ctx, `INSERT INTO gym.access_logs (customer_id, booking_id, branch_id, decision, reason, entry_kind, credit_delta, source, scanned_by, device_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		e.CustomerID, e.BookingID, e.BranchID, e.Decision, e.Reason, e.EntryKind, -e.CreditsDeducted, e.Source, e.ScannedBy, e.DeviceID)
+	_, err := q.Exec(ctx, `INSERT INTO gym.access_logs
+       (customer_id, booking_id, branch_id, decision, reason, entry_kind, credit_delta, source, scanned_by, device_id, pt_participant_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		e.CustomerID, e.BookingID, e.BranchID, e.Decision, e.Reason, e.EntryKind, -e.CreditsDeducted, e.Source, e.ScannedBy, e.DeviceID, e.PTParticipantID)
 	return err
 }
 
 func (Postgres) AccessLog(ctx context.Context, q Q) ([]*Row, *Row, error) {
 	log, err := queryRows(ctx, q, `SELECT l.id, l.decision, l.reason, l.entry_kind, l.credit_delta, l.source, l.created_at,
-              c.name AS member_name, c.phone AS member_phone, t.name AS class_type_name, s.starts_at,
+              c.name AS member_name, c.phone AS member_phone, COALESCE(t.name, pt.name) AS class_type_name,
+              COALESCE(s.starts_at, pa.starts_at) AS starts_at,
               u.full_name AS staff_name, d.name AS device_name
          FROM gym.access_logs l
          LEFT JOIN pos.pos_customers c ON c.id = l.customer_id
          LEFT JOIN gym.bookings b ON b.id = l.booking_id
          LEFT JOIN gym.class_sessions s ON s.id = b.session_id
          LEFT JOIN gym.class_types t ON t.id = s.class_type_id
+         LEFT JOIN gym.pt_participants pp ON pp.id = l.pt_participant_id
+         LEFT JOIN gym.pt_appointments pa ON pa.id = pp.appointment_id
+         LEFT JOIN gym.class_types pt ON pt.id = pa.class_type_id
          LEFT JOIN configuration.users u ON u.id = l.scanned_by
          LEFT JOIN gym.gate_devices d ON d.id = l.device_id
         ORDER BY l.created_at DESC LIMIT 100`)
 	if err != nil {
 		return nil, nil, err
 	}
-	today, err := queryRow(ctx, q, `SELECT count(*) FILTER (WHERE decision = 'allowed' AND entry_kind = 'booking')::int AS checked_in,
+	today, err := queryRow(ctx, q, `SELECT count(*) FILTER (WHERE decision = 'allowed' AND entry_kind IN ('booking', 'pt'))::int AS checked_in,
               count(*) FILTER (WHERE decision = 'allowed' AND entry_kind = 'open_gym')::int AS open_gym,
               count(*) FILTER (WHERE decision = 'denied')::int AS denied,
               COALESCE(-sum(credit_delta), 0)::int AS credits

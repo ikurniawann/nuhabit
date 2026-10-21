@@ -83,6 +83,9 @@ type Rules struct {
 	// package has no branch either, when there is more than one company.
 	// "" = none; such a purchase then posts no journal. Global rules only.
 	DefaultCompanyID string `json:"defaultCompanyId"`
+	// PtRescheduleLimit: how many times a member may move one PT session
+	// from the member app, before its free cancellation deadline. 0 = never.
+	PtRescheduleLimit int `json:"ptRescheduleLimit"`
 }
 
 // RulesPatch is a partial rule set; nil fields are absent.
@@ -123,6 +126,7 @@ type RulesPatch struct {
 	AllowMemberCreditTransfer  *bool   `json:"allowMemberCreditTransfer,omitempty"`
 	MaxTransferCreditsPerMonth *int    `json:"maxTransferCreditsPerMonth,omitempty"`
 	DefaultCompanyID           *string `json:"defaultCompanyId,omitempty"`
+	PtRescheduleLimit          *int    `json:"ptRescheduleLimit,omitempty"`
 }
 
 // IsEmpty reports whether no key is set.
@@ -163,6 +167,7 @@ var RuleDefaults = Rules{
 	OpenGymEnabled:            false,
 	OpenGymCreditCost:         1,
 	CorrectionWindowDays:      7,
+	PtRescheduleLimit:         2,
 }
 
 type ruleKind int
@@ -244,6 +249,7 @@ var ruleSpecs = []ruleSpec{
 	boolRule("allowMemberCreditTransfer", "Transfer kredit oleh member", func(p *RulesPatch) **bool { return &p.AllowMemberCreditTransfer }),
 	intRule("maxTransferCreditsPerMonth", 0, 1000, "Batas transfer kredit per bulan", func(p *RulesPatch) **int { return &p.MaxTransferCreditsPerMonth }),
 	uuidRule("defaultCompanyId", "Perusahaan default", func(p *RulesPatch) **string { return &p.DefaultCompanyID }),
+	intRule("ptRescheduleLimit", 0, 20, "Batas ubah jadwal PT", func(p *RulesPatch) **int { return &p.PtRescheduleLimit }),
 }
 
 // RuleKeys lists the rule keys in canonical order.
@@ -441,6 +447,7 @@ func (p RulesPatch) Over(base Rules) Rules {
 	if p.DefaultCompanyID != nil {
 		base.DefaultCompanyID = *p.DefaultCompanyID
 	}
+	setInt(&base.PtRescheduleLimit, p.PtRescheduleLimit)
 	return base
 }
 

@@ -2,24 +2,41 @@
 
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import { ApiError } from "../lib/api";
+import { joinDot } from "../lib/classes-view";
 import { fill, useT } from "../lib/i18n";
 import { initialsOf } from "../lib/initials";
 import { useLang } from "../lib/lang";
 import { m } from "../lib/links";
-import { usePtOptions, usePtSlots, useRequestPt } from "../lib/queries-coaching";
+import { useMyPtSessions, usePtOptions, usePtSlots, useReschedulePt, useRequestPt } from "../lib/queries-coaching";
 import { addDays } from "@/lib/dates";
 import { localDay } from "@/lib/timezone";
-import { Spinner, chipClass, formatTime } from "../ui";
+import { Spinner, chipClass, formatDayTime, formatTime } from "../ui";
 
-/** Request a PT session: pick the session type, a coach, a day, then a free slot. The coach confirms it. */
+/** useSearchParams needs a Suspense boundary for prerendering. */
 export function PtBookPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <PtBook />
+    </Suspense>
+  );
+}
+
+/**
+ * Request a PT session: pick the session type, a coach, a day, then a free
+ * slot. The coach confirms it. With ?move=<appointment id> the same picker
+ * moves an existing session: the coach and type stay, only the slot changes.
+ */
+function PtBook() {
   const t = useT();
   const router = useRouter();
   const locale = useLang() === "id" ? "id-ID" : undefined;
   const { data: options, isLoading } = usePtOptions();
+  const moveId = useSearchParams().get("move") ?? "";
+  const { data: sessions, isLoading: sessionsLoading } = useMyPtSessions();
+  const moving = moveId ? sessions?.find((s) => s.appointment_id === moveId && s.can_reschedule) : undefined;
   const [typeId, setTypeId] = useState("");
   const [coachId, setCoachId] = useState("");
   const [weekOffset, setWeekOffset] = useState(0);
@@ -28,12 +45,13 @@ export function PtBookPage() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
   const request = useRequestPt();
+  const reschedule = useReschedulePt();
 
   // Days and slots read in the coach's branch zone, the zone the coach's hours are set in.
-  const coach = options?.coaches.find((c) => c.id === coachId) ?? options?.coaches[0];
+  const coach = options?.coaches.find((c) => c.id === (moving?.coach_id ?? coachId)) ?? options?.coaches[0];
   const firstDay = options ? localDay(options.earliest_start, coach?.timezone) : "";
   const from = firstDay ? addDays(firstDay, weekOffset * 7) : "";
-  const type = options?.class_types.find((ct) => ct.id === typeId) ?? options?.class_types[0];
+  const type = options?.class_types.find((ct) => ct.id === (moving?.class_type_id ?? typeId)) ?? options?.class_types[0];
   const { data: slots, isLoading: slotsLoading } = usePtSlots(coach?.id ?? "", type?.id ?? "", from);
 
   const days = useMemo(
@@ -51,7 +69,15 @@ export function PtBookPage() {
   const activeDay = day && days.some((d) => d.key === day) ? day : (days.find((d) => byDay(d.key).length > 0)?.key ?? days[0]?.key ?? "");
   const maxOffset = options ? Math.floor((options.horizon_days - 1) / 7) : 0;
 
-  if (isLoading) return <Spinner label={t("Loading coaches…")} />;
+  if (isLoading || (moveId && sessionsLoading)) return <Spinner label={t("Loading coaches…")} />;
+  if (moveId && !moving) {
+    return (
+      <div className="flex flex-col gap-4">
+        <BackLink />
+        <div className="nh-card text-sm text-nh-muted">{t("This session can no longer be moved.")}</div>
+      </div>
+    );
+  }
   if (!options || options.class_types.length === 0 || options.coaches.length === 0) {
     return (
       <div className="flex flex-col gap-4">
@@ -61,24 +87,38 @@ export function PtBookPage() {
     );
   }
 
-  const short = type ? type.credits_available < type.credit_cost : true;
+  // A move keeps its credits reserved; a new request needs them, unless the pass covers PT.
+  const short = Boolean(!moving && !options.pass_covers_pt && type && type.credits_available < type.credit_cost);
+  const busy = request.isPending || reschedule.isPending;
   const submit = async () => {
     if (!type || !coach || !slot) return;
     setError("");
     try {
-      await request.mutateAsync({ coach_id: coach.id, class_type_id: type.id, starts_at: slot, notes: notes.trim() });
+      if (moving) {
+        await reschedule.mutateAsync({ appointmentId: moving.appointment_id, startsAt: slot });
+      } else {
+        await request.mutateAsync({ coach_id: coach.id, class_type_id: type.id, starts_at: slot, notes: notes.trim() });
+      }
       router.replace(m("/pt"));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("Request failed."));
+      setError(e instanceof ApiError ? e.message : moving ? t("Move failed.") : t("Request failed."));
     }
   };
 
   return (
     <div className="flex flex-col gap-5">
       <BackLink />
-      <h1 className="nh-display text-3xl font-black">{t("Book a PT session")}</h1>
+      <h1 className="nh-display text-3xl font-black">{moving ? t("Move your PT session") : t("Book a PT session")}</h1>
 
-      {options.class_types.length > 1 ? (
+      {moving ? (
+        <div className="nh-card flex flex-col gap-1 text-sm">
+          <p className="font-black">{moving.class_type_name}</p>
+          <p className="text-nh-muted">{joinDot(formatDayTime(moving.starts_at, moving.timezone), moving.coach_name)}</p>
+          <p className="text-xs font-bold text-nh-muted">{fill(t("Moves left after this one: {n}"), { n: moving.reschedules_left - 1 })}</p>
+        </div>
+      ) : null}
+
+      {!moving && options.class_types.length > 1 ? (
         <section className="flex flex-col gap-2">
           <p className="nh-label !mb-0">{t("Session type")}</p>
           <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-1">
@@ -97,13 +137,15 @@ export function PtBookPage() {
           </div>
         </section>
       ) : null}
-      {type ? (
+      {type && !moving ? (
         <p className="text-sm text-nh-muted">
-          {fill(t("{min} min · {cost} PT credit · you have {left}"), {
-            min: type.duration_min,
-            cost: type.credit_cost,
-            left: type.credits_available,
-          })}
+          {options.pass_covers_pt
+            ? fill(t("{min} min · covered by your pass"), { min: type.duration_min })
+            : fill(t("{min} min · {cost} PT credit · you have {left}"), {
+                min: type.duration_min,
+                cost: type.credit_cost,
+                left: type.credits_available,
+              })}
         </p>
       ) : null}
       {short ? (
@@ -115,30 +157,32 @@ export function PtBookPage() {
         </div>
       ) : null}
 
-      <section className="flex flex-col gap-2">
-        <p className="nh-label !mb-0">{t("Coach")}</p>
-        <div className="flex flex-col gap-2">
-          {options.coaches.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => {
-                setCoachId(c.id);
-                setSlot("");
-              }}
-              className={`nh-card flex items-center gap-3 !p-3 text-left ${c.id === coach?.id ? "ring-2 ring-nh-forest" : ""}`}
-              aria-pressed={c.id === coach?.id}
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nh-ink-soft text-sm font-black text-white">
-                {initialsOf(c.name)}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate font-black">{c.name}</span>
-                <span className="block truncate text-xs text-nh-muted">{c.specialization || t("Coach")}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {!moving ? (
+        <section className="flex flex-col gap-2">
+          <p className="nh-label !mb-0">{t("Coach")}</p>
+          <div className="flex flex-col gap-2">
+            {options.coaches.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setCoachId(c.id);
+                  setSlot("");
+                }}
+                className={`nh-card flex items-center gap-3 !p-3 text-left ${c.id === coach?.id ? "ring-2 ring-nh-forest" : ""}`}
+                aria-pressed={c.id === coach?.id}
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-nh-ink-soft text-sm font-black text-white">
+                  {initialsOf(c.name)}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-black">{c.name}</span>
+                  <span className="block truncate text-xs text-nh-muted">{c.specialization || t("Coach")}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
@@ -206,16 +250,18 @@ export function PtBookPage() {
         )}
       </section>
 
-      <section className="flex flex-col gap-2">
-        <p className="nh-label !mb-0">{t("Note for the coach")}</p>
-        <textarea
-          className="nh-input min-h-20"
-          value={notes}
-          maxLength={500}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder={t("What do you want to work on?")}
-        />
-      </section>
+      {!moving ? (
+        <section className="flex flex-col gap-2">
+          <p className="nh-label !mb-0">{t("Note for the coach")}</p>
+          <textarea
+            className="nh-input min-h-20"
+            value={notes}
+            maxLength={500}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t("What do you want to work on?")}
+          />
+        </section>
+      ) : null}
 
       {error ? (
         <p role="alert" className="rounded-xl bg-nh-danger/15 p-3 text-sm font-bold text-nh-danger">
@@ -223,11 +269,15 @@ export function PtBookPage() {
         </p>
       ) : null}
 
-      <button className="nh-btn-brand" disabled={!slot || short || request.isPending} onClick={() => void submit()}>
-        {t("Send request")}
+      <button className="nh-btn-brand" disabled={!slot || short || busy} onClick={() => void submit()}>
+        {moving ? t("Confirm new time") : t("Send request")}
       </button>
       <p className="text-center text-xs text-nh-muted">
-        {t("The coach confirms your request. PT credits are used when the session is done.")}
+        {moving
+          ? t("Your coach is told about the move. The session keeps its status and credits.")
+          : options.pass_covers_pt
+            ? t("The coach confirms your request. Your pass covers the session.")
+            : t("The coach confirms your request. PT credits are used when the session is done.")}
       </p>
     </div>
   );

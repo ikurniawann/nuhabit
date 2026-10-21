@@ -1,6 +1,7 @@
 package gymcoaching
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"slices"
@@ -61,6 +62,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "DELETE /api/gym/pt/availability/exceptions/{id}", Handler: h.scoped(h.deleteException, ptUpdate)},
 		{Pattern: "GET /api/gym/pt/slots", Handler: h.scoped(h.staffSlots, ptAny...)},
 		{Pattern: "GET /api/gym/pt/appointments", Handler: h.scoped(h.listAppointments, ptRead, ptOwn)},
+		{Pattern: "GET /api/gym/pt/pending-count", Handler: h.scoped(h.pendingCount, ptRead, ptOwn)},
 		{Pattern: "POST /api/gym/pt/appointments", Handler: h.scoped(h.book, ptCreate, ptUpdate)},
 		{Pattern: "GET /api/gym/pt/appointments/{id}", Handler: h.scoped(h.getAppointment, ptRead, ptOwn)},
 		{Pattern: "POST /api/gym/pt/appointments/{id}", Handler: h.scoped(h.appointmentAction, ptUpdate)},
@@ -77,6 +79,7 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "GET /api/member-portal/gym/pt/appointments", Handler: h.member(h.memberSessions)},
 		{Pattern: "POST /api/member-portal/gym/pt/appointments", Handler: h.member(h.memberRequest)},
 		{Pattern: "DELETE /api/member-portal/gym/pt/appointments/{id}", Handler: h.member(h.memberCancel)},
+		{Pattern: "PATCH /api/member-portal/gym/pt/appointments/{id}", Handler: h.member(h.memberReschedule)},
 		{Pattern: "GET /api/member-portal/gym/assessments", Handler: h.member(h.memberAssessments)},
 	}
 }
@@ -399,6 +402,20 @@ func (h *handler) listAppointments(w http.ResponseWriter, r *http.Request, sc sc
 	return httpx.OK(w, list)
 }
 
+// pendingCount is the requests waiting for the caller: all of them for the
+// desk, their own for a coach.
+func (h *handler) pendingCount(w http.ResponseWriter, r *http.Request, sc scope) error {
+	coachID := ""
+	if sc.coach != nil {
+		coachID = *sc.coach
+	}
+	out, err := h.svc.PendingRequests(r.Context(), coachID)
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, out)
+}
+
 // scopedAppointment reads an appointment the caller may see.
 func (h *handler) scopedAppointment(r *http.Request, sc scope, id string) (*Appointment, error) {
 	a, err := h.svc.Appointment(r.Context(), id)
@@ -472,6 +489,8 @@ func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc s
 		Action     string `json:"action"`
 		Reason     string `json:"reason"`
 		CustomerID string `json:"customer_id"`
+		StartsAt   string `json:"starts_at"`
+		CoachID    string `json:"coach_id"`
 	}
 	if err := httpx.DecodeJSON(r, &body); err != nil {
 		return err
@@ -481,6 +500,16 @@ func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc s
 	}
 	ctx := r.Context()
 	switch body.Action {
+	case "reschedule":
+		if body.CoachID != "" {
+			if !validate.IsUUID(body.CoachID) {
+				return httpx.BadRequest("Coach tidak valid")
+			}
+			if err := sc.require(body.CoachID); err != nil {
+				return err
+			}
+		}
+		err = h.reschedule(ctx, id, body.StartsAt, body.CoachID)
 	case "confirm":
 		err = h.svc.Confirm(ctx, id)
 	case "cancel":
@@ -506,6 +535,15 @@ func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc s
 		return err
 	}
 	return httpx.OK(w, a)
+}
+
+// reschedule parses the new start and moves the session.
+func (h *handler) reschedule(ctx context.Context, id, startsAt, coachID string) error {
+	start, err := parseInstant(startsAt)
+	if err != nil {
+		return err
+	}
+	return h.svc.Reschedule(ctx, RescheduleInput{AppointmentID: id, StartsAt: start, CoachID: coachID})
 }
 
 func (h *handler) participantAction(w http.ResponseWriter, r *http.Request, sc scope) error {
@@ -743,6 +781,28 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 		return err
 	}
 	return httpx.OK(w, res)
+}
+
+// memberReschedule moves the member's own session to starts_at.
+func (h *handler) memberReschedule(w http.ResponseWriter, r *http.Request, customerID string) error {
+	id, err := validate.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	var body struct {
+		StartsAt string `json:"starts_at"`
+	}
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		return err
+	}
+	start, err := parseInstant(body.StartsAt)
+	if err != nil {
+		return err
+	}
+	if err := h.svc.MemberReschedule(r.Context(), customerID, id, start); err != nil {
+		return err
+	}
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 func (h *handler) memberAssessments(w http.ResponseWriter, r *http.Request, customerID string) error {

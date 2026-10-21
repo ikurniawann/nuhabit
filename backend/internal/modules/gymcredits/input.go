@@ -454,6 +454,13 @@ func parsePackage(body any) (PackageInput, error) {
 		}
 		p.IsPublic = ok && b
 	}
+	if v := f.get("covers_personal"); v != undefined && v != nil {
+		b, ok := v.(bool)
+		if !ok {
+			f.add(typeIssue([]any{"covers_personal"}, "boolean", v, ""))
+		}
+		p.CoversPersonal = ok && b && p.Kind == KindPass
+	}
 	p.Badge = optString(f.str("badge", strRule{trim: true, max: 40, optional: true, nullable: true}))
 	if p.Badge != nil && *p.Badge == "" {
 		p.Badge = nil

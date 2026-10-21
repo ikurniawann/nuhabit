@@ -124,6 +124,8 @@ const (
 	EntryBooking GateEntryKind = "booking"
 	EntryReEntry GateEntryKind = "re_entry"
 	EntryOpenGym GateEntryKind = "open_gym"
+	// EntryPT is a confirmed personal training session (gym-coaching).
+	EntryPT GateEntryKind = "pt"
 )
 
 type Decision string
@@ -141,6 +143,9 @@ const (
 	EffectCheckIn       EffectKind = "check_in_booking"
 	// EffectChargeOpenGym takes the day's open gym fee.
 	EffectChargeOpenGym EffectKind = "charge_open_gym"
+	// EffectCheckInPT checks the member in to the PT session BookingID names
+	// (a participant id); gym-coaching charges the PT credits as it does so.
+	EffectCheckInPT EffectKind = "check_in_pt"
 )
 
 // GateEffect is one side effect the server applies, in order, inside the
@@ -158,12 +163,15 @@ type GateScanEvaluation struct {
 	Effects   []GateEffect
 }
 
-// GateCandidate is the confirmed booking around now that the scan may check in.
+// GateCandidate is the confirmed booking around now that the scan may check
+// in: a class booking, or a PT participant when Personal is set.
 type GateCandidate struct {
 	BookingID  string
 	CreditCost int
 	// HasPass: a pass covers the class, so entry costs no credits.
 	HasPass bool
+	// Personal: BookingID is a PT participant; the balance is the PT credits.
+	Personal bool
 }
 
 // OpenGymVisit is what open gym entry is decided on, when the rules enable it.
@@ -234,7 +242,18 @@ func EvaluateGateScan(in GateScanInput) GateScanEvaluation {
 		return evaluateOpenGym(*in.OpenGym, in.Balance, in.Rules.OpenGymCreditCost, consume)
 	}
 
-	// 5. A pass covers the class, or the balance does.
+	// 5. A pass covers the class, or the balance does. A PT session is
+	//    charged by gym-coaching inside its check-in effect.
+	if in.Candidate.Personal {
+		if !in.Candidate.HasPass && in.Balance < in.Candidate.CreditCost {
+			return denied(GateInsufficientCredits, consume)
+		}
+		return GateScanEvaluation{
+			Decision:  Allowed,
+			EntryKind: EntryPT,
+			Effects:   []GateEffect{consume, {Kind: EffectCheckInPT, BookingID: in.Candidate.BookingID}},
+		}
+	}
 	if in.Candidate.HasPass {
 		return GateScanEvaluation{
 			Decision:  Allowed,
@@ -301,8 +320,11 @@ func DescribeGateDecision(decision Decision, reason GateDenialReason, entryKind 
 		className = "kelas"
 	}
 	parts := []string{"Check-in " + className}
-	if entryKind == EntryOpenGym {
+	switch entryKind {
+	case EntryOpenGym:
 		parts = []string{"Open gym"}
+	case EntryPT:
+		parts = []string{"Check-in PT " + className}
 	}
 	if d.Pass {
 		return strings.Join(append(parts, "pass aktif, tanpa potong kredit"), " · ")

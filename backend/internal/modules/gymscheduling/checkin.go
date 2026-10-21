@@ -67,12 +67,27 @@ type gatePoint struct {
 	Source                        string
 }
 
-func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, bookingID *string, at gatePoint) error {
+// logAccess records the outcome; bookingID or ptParticipantID names what
+// the member was admitted for.
+func (s *Service) logAccess(ctx context.Context, q Q, res CheckInResult, bookingID, ptParticipantID *string, at gatePoint) error {
 	return s.repo.LogAccess(ctx, q, AccessEntry{
-		CustomerID: res.CustomerID, BookingID: bookingID, BranchID: at.BranchID,
+		CustomerID: res.CustomerID, BookingID: bookingID, PTParticipantID: ptParticipantID, BranchID: at.BranchID,
 		Decision: res.Decision, Reason: strPtr(res.Reason), EntryKind: strPtr(res.EntryKind),
 		CreditsDeducted: res.CreditsDeducted, Source: at.Source, ScannedBy: at.ScannedBy, DeviceID: at.DeviceID,
 	})
+}
+
+// lockPTCandidate is the PT session the gate may check the member in to,
+// when gym-coaching is wired and no class booking starts sooner.
+func (s *Service) lockPTCandidate(ctx context.Context, q Q, customerID string, at gatePoint, now time.Time, early, late time.Duration, class *Candidate) (*PTCandidate, error) {
+	if s.PT == nil {
+		return nil, nil
+	}
+	pt, err := s.PT.LockGateCandidate(ctx, q, customerID, at.BranchID, now, early, late)
+	if err != nil || pt == nil || (class != nil && !pt.StartsAt.Before(class.StartsAt)) {
+		return nil, err
+	}
+	return pt, nil
 }
 
 // openGymVisit gathers the open gym facts for a member without a booking
@@ -133,6 +148,13 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 	if err != nil {
 		return res, err
 	}
+	pt, err := s.lockPTCandidate(ctx, q, customerID, at, now, early, late, candidate)
+	if err != nil {
+		return res, err
+	}
+	if pt != nil {
+		candidate = nil
+	}
 	// A pass covers the class; otherwise credits from a package that does
 	// not cover this class cannot pay for it.
 	var pass *ActivePass
@@ -140,6 +162,12 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 	covered := true
 	balance := 0
 	switch {
+	case pt != nil:
+		if !pt.Covered {
+			if balance, err = s.usableBalance(ctx, q, customerID, pt.ClassTypeID); err != nil {
+				return res, err
+			}
+		}
 	case candidate != nil:
 		if pass, err = s.Passes.ActivePassAt(ctx, q, customerID, candidate.StartsAt); err != nil {
 			return res, err
@@ -174,6 +202,9 @@ func (s *Service) checkInBooking(ctx context.Context, q Q, customerID string, at
 	if candidate != nil {
 		in.Candidate = &domain.GateCandidate{BookingID: candidate.ID, CreditCost: candidate.CreditCost, HasPass: pass != nil}
 	}
+	if pt != nil {
+		in.Candidate = &domain.GateCandidate{BookingID: pt.ParticipantID, CreditCost: pt.CreditCost, HasPass: pt.Covered, Personal: true}
+	}
 	eval := domain.EvaluateGateScan(in)
 
 	decision, reason := eval.Decision, eval.Reason
@@ -207,6 +238,20 @@ effects:
 			if err := s.repo.MarkCheckedIn(ctx, q, effect.BookingID, now); err != nil {
 				return res, err
 			}
+		case domain.EffectCheckInPT:
+			charged, ok, err := s.PT.GateCheckIn(ctx, q, effect.BookingID, now)
+			if err != nil {
+				return res, err
+			}
+			if !ok {
+				decision, reason = domain.Denied, domain.GateInsufficientCredits
+				break effects
+			}
+			if creditsDeducted = charged; charged > 0 {
+				if balanceAfter, err = s.Credits.GetBalance(ctx, q, customerID); err != nil {
+					return res, err
+				}
+			}
 		}
 		if charge == nil {
 			continue
@@ -228,16 +273,20 @@ effects:
 	if decision == domain.Allowed {
 		entryKind = eval.EntryKind
 	}
-	className := ""
-	if candidate != nil {
-		className = candidate.ClassName
+	className, passCovered := "", pass != nil
+	var bookingID, ptID *string
+	switch {
+	case candidate != nil:
+		className, bookingID = candidate.ClassName, &candidate.ID
+	case pt != nil:
+		className, ptID, passCovered = pt.ClassName, &pt.ParticipantID, pt.Covered
 	}
 	res = CheckInResult{
 		Decision:  decision,
 		Reason:    nonEmpty(reason),
 		EntryKind: nonEmpty(entryKind),
 		Message: domain.DescribeGateDecision(decision, reason, entryKind,
-			domain.GateDetail{ClassName: className, Credits: creditsDeducted, BalanceAfter: &balanceAfter, Pass: pass != nil}),
+			domain.GateDetail{ClassName: className, Credits: creditsDeducted, BalanceAfter: &balanceAfter, Pass: passCovered}),
 		CustomerID:      &customerID,
 		CreditsDeducted: creditsDeducted,
 		BalanceAfter:    &balanceAfter,
@@ -245,25 +294,26 @@ effects:
 	if member != nil {
 		res.MemberName = member.Name
 	}
-	if entryKind == domain.EntryBooking {
+	switch entryKind {
+	case domain.EntryBooking:
 		res.Booking = &CheckInBookingRef{ID: candidate.ID, SessionID: candidate.SessionID, ClassName: candidate.ClassName, StartsAt: candidate.StartsAt}
+	case domain.EntryPT:
+		res.Booking = &CheckInBookingRef{ID: pt.ParticipantID, SessionID: pt.AppointmentID, ClassName: pt.ClassName, StartsAt: pt.StartsAt}
 	}
-	var bookingID *string
-	if candidate != nil {
-		bookingID = &candidate.ID
-	}
-	if err := s.logAccess(ctx, q, res, bookingID, at); err != nil {
+	if err := s.logAccess(ctx, q, res, bookingID, ptID, at); err != nil {
 		return res, err
 	}
 	switch {
-	case entryKind == domain.EntryBooking:
+	case entryKind == domain.EntryBooking || entryKind == domain.EntryPT:
 		body := strconv.Itoa(creditsDeducted) + " kredit dipotong. Sisa " + strconv.Itoa(balanceAfter) + " kredit. Selamat berlatih!"
-		if pass != nil {
+		if passCovered {
 			body = "Pass aktif, tanpa potong kredit. Selamat berlatih!"
 		}
-		if err := s.Notifier.NotifyMember(ctx, q, customerID, Notification{
-			Type: "gym_checked_in", Title: "Check-in: " + candidate.ClassName, Body: body,
-		}); err != nil {
+		title := "Check-in: " + className
+		if entryKind == domain.EntryPT {
+			title = "Check-in PT: " + className
+		}
+		if err := s.Notifier.NotifyMember(ctx, q, customerID, Notification{Type: "gym_checked_in", Title: title, Body: body}); err != nil {
 			return res, err
 		}
 	case entryKind == domain.EntryOpenGym && creditsDeducted > 0:
@@ -300,7 +350,7 @@ func (s *Service) scan(ctx context.Context, rawToken string, at gatePoint) (res 
 		if row != nil {
 			res.CustomerID = &row.CustomerID
 		}
-		return s.logAccess(ctx, q, res, nil, at)
+		return s.logAccess(ctx, q, res, nil, nil, at)
 	})
 	return res, err
 }
@@ -379,7 +429,7 @@ func (s *Service) CheckInManually(ctx context.Context, bookingID string, scanned
 			CreditsDeducted: creditsDeducted,
 			BalanceAfter:    detail.BalanceAfter,
 		}
-		return s.logAccess(ctx, q, res, &booking.ID, gatePoint{BranchID: session.BranchID, ScannedBy: scannedBy, Source: "manual"})
+		return s.logAccess(ctx, q, res, &booking.ID, nil, gatePoint{BranchID: session.BranchID, ScannedBy: scannedBy, Source: "manual"})
 	})
 	return res, err
 }

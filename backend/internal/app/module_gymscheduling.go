@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"nuhabit/backend/internal/modules/gymcoaching"
 	"nuhabit/backend/internal/modules/gymcredits"
 	creditsdomain "nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/modules/gymscheduling"
@@ -40,8 +41,12 @@ func init() {
 		})
 }
 
-func schedulingPorts(d module.Deps) gymscheduling.Ports {
-	credits := schedulingCredits{svc: gymcredits.NewDefaultService(d, d.DB)}
+func schedulingPorts(d module.Deps) gymscheduling.Ports { return schedulingPortsOn(d, d.DB) }
+
+// schedulingPortsOn is schedulingPorts with the credit and PT ports on db,
+// a transaction in tests.
+func schedulingPortsOn(d module.Deps, db gymcredits.DB) gymscheduling.Ports {
+	credits := schedulingCredits{svc: gymcredits.NewDefaultService(d, db)}
 	return gymscheduling.Ports{
 		Credits:       credits,
 		Packages:      credits,
@@ -50,6 +55,7 @@ func schedulingPorts(d module.Deps) gymscheduling.Ports {
 		Members:       gymscheduling.MembersSQL{},
 		Qr:            gymscheduling.QrTokensSQL{},
 		Notifier:      gymscheduling.NotificationsSQL{},
+		PT:            schedulingPT{svc: gymcoaching.NewService(db, coachingPortsOn(d, db), d.Now, d.Log)},
 		WaiverVersion: memberdomain.WaiverVersion,
 	}
 }
@@ -127,7 +133,7 @@ func (c schedulingCredits) ActivePassAt(ctx context.Context, q database.Querier,
 	if err != nil || p == nil {
 		return nil, creditErr(err)
 	}
-	return &gymscheduling.ActivePass{ID: p.ID, EndsAt: p.EndsAt}, nil
+	return &gymscheduling.ActivePass{ID: p.ID, EndsAt: p.EndsAt, CoversPersonal: p.CoversPersonal}, nil
 }
 
 func (c schedulingCredits) CoveredClassTypeIDs(ctx context.Context, q database.Querier, customerID string) ([]string, error) {

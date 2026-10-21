@@ -23,17 +23,19 @@ func jobNames(modules string) map[string]time.Duration {
 func TestJobsFollowMountedModules(t *testing.T) {
 	all := jobNames("all")
 	want := map[string]time.Duration{
-		"gym-credits.purchase-reconcile":         2 * time.Minute,
-		"gym-credits.reminders":                  time.Hour,
-		"gym-scheduling.class-reminders":         5 * time.Minute,
-		"gym-scheduling.waitlist-offers":         time.Minute,
-		"gym-scheduling.generate-from-templates": time.Hour,
-		"gym-scheduling.complete-past-sessions":  10 * time.Minute,
-		"gym-credits.pass-renewals":              time.Hour,
-		"gym-credits.pass-unfreeze":              15 * time.Minute,
-		"gym-credits.expiry":                     time.Hour,
-		"gym-credits.pass-revenue":               time.Hour,
-		"member-portal.referral-rewards":         15 * time.Minute,
+		"gym-credits.purchase-reconcile":          2 * time.Minute,
+		"gym-credits.reminders":                   time.Hour,
+		"gym-scheduling.class-reminders":          5 * time.Minute,
+		"gym-scheduling.waitlist-offers":          time.Minute,
+		"gym-scheduling.generate-from-templates":  time.Hour,
+		"gym-scheduling.complete-past-sessions":   10 * time.Minute,
+		"gym-coaching.pt-reminders":               5 * time.Minute,
+		"gym-coaching.complete-past-appointments": 10 * time.Minute,
+		"gym-credits.pass-renewals":               time.Hour,
+		"gym-credits.pass-unfreeze":               15 * time.Minute,
+		"gym-credits.expiry":                      time.Hour,
+		"gym-credits.pass-revenue":                time.Hour,
+		"member-portal.referral-rewards":          15 * time.Minute,
 	}
 	for name, every := range want {
 		if all[name] != every {

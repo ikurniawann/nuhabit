@@ -51,6 +51,8 @@ type MemberOptions struct {
 	// EarliestStart is the first start a request may take now.
 	EarliestStart httpx.JSTime `json:"earliest_start"`
 	HorizonDays   int          `json:"horizon_days"`
+	// PassCoversPT: the member's pass running now pays for PT sessions.
+	PassCoversPT bool `json:"pass_covers_pt"`
 }
 
 // Options lists the PT types with the member's credits, and PT coaches.
@@ -70,6 +72,9 @@ func (s *Service) Options(ctx context.Context, customerID string) (*MemberOption
 			return err
 		}
 		out.EarliestStart = httpx.JSTime(domain.EarliestRequest(s.now(), rules))
+		if out.PassCoversPT, err = s.passCovers(ctx, q, customerID, s.now()); err != nil {
+			return err
+		}
 		for _, t := range types {
 			n, err := s.availableCredits(ctx, q, customerID, t.ID)
 			if err != nil {
@@ -108,6 +113,7 @@ type MemberSession struct {
 	CoachID           string        `json:"coach_id"`
 	CoachName         string        `json:"coach_name"`
 	CoachPhotoURL     *string       `json:"coach_photo_url"`
+	ClassTypeID       string        `json:"class_type_id"`
 	ClassTypeName     string        `json:"class_type_name"`
 	BranchName        *string       `json:"branch_name"`
 	Timezone          string        `json:"timezone"`
@@ -119,6 +125,10 @@ type MemberSession struct {
 	CancelReason      *string       `json:"cancel_reason"`
 	// FreeCancelUntil is the last moment a confirmed session cancels without penalty.
 	FreeCancelUntil httpx.JSTime `json:"free_cancel_until"`
+	// CanReschedule: the member may still move this 1:1 session themself,
+	// ReschedulesLeft more times.
+	CanReschedule   bool `json:"can_reschedule"`
+	ReschedulesLeft int  `json:"reschedules_left"`
 }
 
 // MemberSessions lists the member's PT sessions, latest start first, at most 100.
@@ -126,8 +136,9 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string) ([]Memb
 	var out []MemberSession
 	err := s.inTx(ctx, func(q Q) error {
 		rows, err := q.Query(ctx, `SELECT p.id::text, a.id::text, p.status, a.status, p.late_cancel, p.credits_charged,
-       a.coach_id::text, c.name, c.photo_url, t.name, b.name, a.starts_at, a.ends_at, a.credit_cost, a.capacity,
-       a.notes, a.cancel_reason, a.branch_id::text, COALESCE(b.timezone, 'Asia/Jakarta')
+       a.coach_id::text, c.name, c.photo_url, a.class_type_id::text, t.name, b.name, a.starts_at, a.ends_at, a.credit_cost, a.capacity,
+       a.notes, a.cancel_reason, a.branch_id::text, COALESCE(b.timezone, 'Asia/Jakarta'), a.reschedule_count,
+       (SELECT count(*) FROM gym.pt_participants o WHERE o.appointment_id = a.id AND o.status IN ('requested', 'confirmed'))::int
   FROM gym.pt_participants p
   JOIN gym.pt_appointments a ON a.id = p.appointment_id
   JOIN gym.coaches c ON c.id = a.coach_id
@@ -139,29 +150,38 @@ func (s *Service) MemberSessions(ctx context.Context, customerID string) ([]Memb
 		if err != nil {
 			return err
 		}
-		var branches []*string
+		type extra struct {
+			branch      *string
+			moved, inIt int
+		}
+		var extras []extra
 		out, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (MemberSession, error) {
 			var m MemberSession
 			var start, end time.Time
-			var branch *string
+			var x extra
 			err := r.Scan(&m.ParticipantID, &m.AppointmentID, &m.Status, &m.AppointmentStatus, &m.LateCancel, &m.CreditsCharged,
-				&m.CoachID, &m.CoachName, &m.CoachPhotoURL, &m.ClassTypeName, &m.BranchName, &start, &end, &m.CreditCost,
-				&m.Capacity, &m.Notes, &m.CancelReason, &branch, &m.Timezone)
+				&m.CoachID, &m.CoachName, &m.CoachPhotoURL, &m.ClassTypeID, &m.ClassTypeName, &m.BranchName, &start, &end, &m.CreditCost,
+				&m.Capacity, &m.Notes, &m.CancelReason, &x.branch, &m.Timezone, &x.moved, &x.inIt)
 			m.StartsAt, m.EndsAt = httpx.JSTime(start), httpx.JSTime(end)
-			branches = append(branches, branch)
+			extras = append(extras, x)
 			return m, err
 		})
 		if err != nil {
 			return err
 		}
 		rules := s.branchRules(q)
+		now := s.now()
 		for i := range out {
-			r, err := rules(ctx, branches[i])
+			r, err := rules(ctx, extras[i].branch)
 			if err != nil {
 				return err
 			}
 			deadline := time.Duration(r.CancellationDeadlineHours) * time.Hour
 			out[i].FreeCancelUntil = httpx.JSTime(time.Time(out[i].StartsAt).Add(-deadline))
+			// Only a session the member is alone in moves with them.
+			alone := out[i].Status.Open() && extras[i].inIt == 1
+			out[i].CanReschedule = alone && domain.CanMemberReschedule(out[i].AppointmentStatus, time.Time(out[i].StartsAt), now, extras[i].moved, r)
+			out[i].ReschedulesLeft = max(r.RescheduleLimit-extras[i].moved, 0)
 		}
 		return nil
 	})

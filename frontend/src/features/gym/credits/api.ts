@@ -73,6 +73,8 @@ export interface GymRules {
   maxTransferCreditsPerMonth: number;
   /** Perusahaan pembukuan untuk pembelian tanpa cabang; "" = belum diatur. Hanya aturan global. */
   defaultCompanyId: string;
+  /** Berapa kali member boleh memindahkan satu sesi PT dari aplikasi (0 = hanya lewat staf). */
+  ptRescheduleLimit: number;
 }
 
 /** credits: a batch of class credits; pass: unlimited bookings for validity_days. */
@@ -97,6 +99,8 @@ export interface CreditPackage {
   branch_name: string | null;
   is_public: boolean;
   badge: string | null;
+  /** Pass: juga berlaku untuk sesi personal training. */
+  covers_personal: boolean;
   branch_prices: BranchPrice[];
   status: "active" | "archived";
   sort_order: number;

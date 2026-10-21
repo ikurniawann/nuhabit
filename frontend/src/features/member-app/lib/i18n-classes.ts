@@ -160,6 +160,8 @@ export const CLASSES_ID: Record<string, string> = {
   Refunded: "Direfund",
   Ended: "Berakhir",
   "Unlimited bookings": "Booking tanpa batas",
+  "Covers PT sessions too. Starts when you pay, or when your current pass ends":
+    "Termasuk sesi PT. Mulai saat kamu bayar, atau saat pass yang sedang jalan berakhir",
   "Pass starts when you pay, or when your current pass ends": "Pass mulai saat pembayaran lunas, atau saat pass sekarang berakhir",
   "Pass active for": "Pass aktif selama",
   "Pay on the secure checkout page": "Bayar di halaman pembayaran aman",

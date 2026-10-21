@@ -51,6 +51,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"DELETE /api/gym/pt/availability/exceptions/{id}":    update,
 		"GET /api/gym/pt/slots":                              anyPT,
 		"GET /api/gym/pt/appointments":                       view,
+		"GET /api/gym/pt/pending-count":                      view,
 		"POST /api/gym/pt/appointments":                      "create gym.pt | update gym.pt",
 		"GET /api/gym/pt/appointments/{id}":                  view,
 		"POST /api/gym/pt/appointments/{id}":                 update,
