@@ -37,6 +37,18 @@ var uuidPattern = regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a
 // IsUUID reports whether s is a zod v4 UUID.
 func IsUUID(s string) bool { return uuidPattern.MatchString(s) }
 
+// UUID is value when it is a UUID; anything else is 400 "ID tidak valid"
+// (requireUuid in the TS routes).
+func UUID(value string) (string, error) {
+	if !IsUUID(value) {
+		return "", httpx.BadRequest("ID tidak valid")
+	}
+	return value, nil
+}
+
+// PathUUID is UUID on the path value key.
+func PathUUID(r *http.Request, key string) (string, error) { return UUID(r.PathValue(key)) }
+
 // datetimePattern is zod v4's z.string().datetime({ offset: true }).
 var datetimePattern = regexp.MustCompile(`^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$`)
 

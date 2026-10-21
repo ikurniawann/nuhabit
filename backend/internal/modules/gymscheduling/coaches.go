@@ -68,7 +68,7 @@ func (s *Service) MyClasses(ctx context.Context, userID string, from, to time.Ti
 // mySession is GET /api/gym/my-classes/sessions/{id}: one of the caller's
 // classes with its roster; any other session is 404.
 func (h *handler) mySession(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func coachWorkload(rows []*Row, weekStart, weekEnd, monthStart, monthEnd time.Ti
 // coachSchedule is GET /api/gym/coaches/{id}/schedule?day=YYYY-MM-DD (in
 // the coach's branch zone, default today).
 func (h *handler) coachSchedule(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

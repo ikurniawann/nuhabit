@@ -6,6 +6,7 @@ import (
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // transferRoutes: staff move credits between members (update on the credits
@@ -102,7 +103,7 @@ func (h *Handler) transfer(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	from, err := requireUUID(r.PathValue("customerId"))
+	from, err := validate.PathUUID(r, "customerId")
 	if err != nil {
 		return err
 	}

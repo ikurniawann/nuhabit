@@ -155,14 +155,6 @@ func ok(w http.ResponseWriter, data any) error {
 	return httpx.JSON(w, http.StatusOK, envelope{Success: true, Data: data})
 }
 
-// requireUUID is requireUuid: anything but a UUID is 400 "ID tidak valid".
-func requireUUID(value string) (string, error) {
-	if !validate.IsUUID(value) {
-		return "", httpx.BadRequest("ID tidak valid")
-	}
-	return value, nil
-}
-
 // ── Query helpers (scheduling-route.ts) ──────────────────────────────────────
 
 // rangeParams is [from, to) from the query string; a bare date is 00:00 WIB
@@ -299,7 +291,7 @@ func (h *handler) createClassType(w http.ResponseWriter, r *http.Request, _ *aut
 }
 
 func (h *handler) updateClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -315,7 +307,7 @@ func (h *handler) updateClassType(w http.ResponseWriter, r *http.Request, _ *aut
 }
 
 func (h *handler) archiveClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -363,7 +355,7 @@ func (h *handler) createCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 }
 
 func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -463,7 +455,7 @@ func (h *handler) duplicateWeek(w http.ResponseWriter, r *http.Request, user *au
 }
 
 func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.User, ownCoach *string) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -486,7 +478,7 @@ func optionalField(f *validate.Form, key string, value *string) Optional[string]
 }
 
 func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -511,7 +503,7 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 }
 
 func (h *handler) sessionAction(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -528,7 +520,7 @@ func (h *handler) sessionAction(w http.ResponseWriter, r *http.Request, _ *auth.
 }
 
 func (h *handler) deleteSession(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -589,7 +581,7 @@ func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, user *au
 }
 
 func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

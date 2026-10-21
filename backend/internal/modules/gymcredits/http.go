@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Handler serves the staff (/api/gym/...) and member portal routes.
@@ -99,13 +100,6 @@ func (h *Handler) api(fn httpx.HandlerFunc) http.Handler {
 	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error { return asHTTP(fn(w, r)) })
 }
 
-func requireUUID(value string) (string, error) {
-	if !isUUID(value) {
-		return "", httpx.BadRequest("ID tidak valid")
-	}
-	return value, nil
-}
-
 // rejectIfArkCoinDisabled writes the 409 of the TS guard and reports
 // whether the request was rejected.
 func (h *Handler) rejectIfArkCoinDisabled(w http.ResponseWriter, r *http.Request, usesArk bool) (bool, error) {
@@ -161,7 +155,7 @@ func (h *Handler) setPackageStatus(w http.ResponseWriter, r *http.Request) error
 	if _, err := h.require(r, actUpdate, iam.GymPackages); err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -181,7 +175,7 @@ func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.require(r, actDelete, iam.GymPackages); err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -208,7 +202,7 @@ func (h *Handler) memberCredits(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
 		return err
 	}
-	customerID, err := requireUUID(r.PathValue("customerId"))
+	customerID, err := validate.PathUUID(r, "customerId")
 	if err != nil {
 		return err
 	}
@@ -224,7 +218,7 @@ func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	customerID, err := requireUUID(r.PathValue("customerId"))
+	customerID, err := validate.PathUUID(r, "customerId")
 	if err != nil {
 		return err
 	}
@@ -245,7 +239,7 @@ func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	customerID, err := requireUUID(r.PathValue("customerId"))
+	customerID, err := validate.PathUUID(r, "customerId")
 	if err != nil {
 		return err
 	}
@@ -289,7 +283,7 @@ func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -309,7 +303,7 @@ func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.require(r, actUpdate, iam.GymCredits); err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -325,7 +319,7 @@ func (h *Handler) receipt(w http.ResponseWriter, r *http.Request) error {
 	if _, err := h.require(r, actRead, iam.GymCredits); err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -345,7 +339,7 @@ func (h *Handler) staffPass(w http.ResponseWriter, r *http.Request, fn func(id s
 	if err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -512,7 +506,7 @@ func (h *Handler) previewVoucher(w http.ResponseWriter, r *http.Request, custome
 
 func (h *Handler) purchaseStatus(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return httpx.BadRequest("ID tidak valid")
 	}
 	view, err := h.svc.RefreshMemberPurchase(r.Context(), customerID, id)
@@ -530,7 +524,7 @@ func (h *Handler) simulatePaid(w http.ResponseWriter, r *http.Request, customerI
 		return httpx.NotFound("Not found")
 	}
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return httpx.BadRequest("ID tidak valid")
 	}
 	view, err := h.svc.SimulatePaid(r.Context(), customerID, id)
@@ -549,7 +543,7 @@ func (h *Handler) simulatePaid(w http.ResponseWriter, r *http.Request, customerI
 // render with their status like the purchase routes.
 func memberPass(w http.ResponseWriter, r *http.Request, customerID string, fn func(id string, by PassActor, body any) (*PassView, error)) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return httpx.BadRequest("ID tidak valid")
 	}
 	body, _ := readJSON(r, map[string]any{})
@@ -611,7 +605,7 @@ func (h *Handler) linkSavedMethod(w http.ResponseWriter, r *http.Request, custom
 
 func (h *Handler) unlinkSavedMethod(w http.ResponseWriter, r *http.Request, customerID string) error {
 	id := r.PathValue("id")
-	if !isUUID(id) {
+	if !validate.IsUUID(id) {
 		return httpx.BadRequest("ID tidak valid")
 	}
 	view, err := h.svc.UnlinkSavedMethod(r.Context(), customerID, id)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Expected messages were captured from zod 4.4.3 with the TS schemas.
@@ -188,7 +189,7 @@ func TestZodUUID(t *testing.T) {
 		"6f1c2a1e-0d7b-4c55-0a43-1b0b6a0f5e11": false,
 		"abc":                                  false,
 	} {
-		if isUUID(id) != want {
+		if validate.IsUUID(id) != want {
 			t.Errorf("%s: want %v", id, want)
 		}
 	}

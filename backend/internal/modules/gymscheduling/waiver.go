@@ -81,7 +81,7 @@ func (s *Service) RecordWaiverAtDesk(ctx context.Context, customerID string, sta
 // recordWaiver is POST /api/gym/checkin/members/{id}/waiver {accepted: true}:
 // the member read and accepted the waiver at the desk.
 func (h *handler) recordWaiver(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

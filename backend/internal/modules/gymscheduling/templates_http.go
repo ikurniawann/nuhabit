@@ -71,7 +71,7 @@ func (h *handler) createTemplate(w http.ResponseWriter, r *http.Request, user *a
 }
 
 func (h *handler) updateTemplate(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (h *handler) updateTemplate(w http.ResponseWriter, r *http.Request, _ *auth
 }
 
 func (h *handler) deleteTemplate(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

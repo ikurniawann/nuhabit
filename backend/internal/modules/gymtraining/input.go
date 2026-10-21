@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"nuhabit/backend/internal/modules/gymtraining/domain"
-	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -333,14 +332,6 @@ func parseRaceUpdate(r *http.Request) (domain.MemberRaceUpdate, bool) {
 }
 
 /* ── query and path parameters ───────────────────────────────────────── */
-
-// requireUUID mirrors requireUuid in staff-route.ts.
-func requireUUID(value, message string) (string, error) {
-	if value == "" || !validate.IsUUID(value) {
-		return "", httpx.BadRequest(message)
-	}
-	return value, nil
-}
 
 func deref[T any](p *T) T {
 	if p == nil {

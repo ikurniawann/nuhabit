@@ -46,14 +46,6 @@ func (h *handler) Routes() []module.Route {
 
 func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
 
-func pathUUID(r *http.Request, key string) (string, error) {
-	id := r.PathValue(key)
-	if !validate.IsUUID(id) {
-		return "", httpx.BadRequest("ID tidak valid")
-	}
-	return id, nil
-}
-
 /* ── Query parameters ──────────────────────────────────────────────────── */
 
 const (
@@ -153,7 +145,7 @@ func (h *handler) register(w http.ResponseWriter, r *http.Request, _ *auth.User)
 }
 
 func (h *handler) member(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -177,7 +169,7 @@ type profileBody struct {
 }
 
 func (h *handler) updateMember(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -200,7 +192,7 @@ func (h *handler) updateMember(w http.ResponseWriter, r *http.Request, _ *auth.U
 }
 
 func (h *handler) addNote(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -226,11 +218,11 @@ func (h *handler) addNote(w http.ResponseWriter, r *http.Request, user *auth.Use
 }
 
 func (h *handler) deleteNote(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	noteID, err := pathUUID(r, "noteId")
+	noteID, err := validate.PathUUID(r, "noteId")
 	if err != nil {
 		return err
 	}

@@ -75,11 +75,10 @@ func (h handlers) listResults(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	q := r.URL.Query()
 	var raceID *string
 	if raw := q.Get("race_id"); raw != "" {
-		id, err := requireUUID(raw, "ID race tidak valid")
-		if err != nil {
-			return err
+		if !validate.IsUUID(raw) {
+			return httpx.BadRequest("ID race tidak valid")
 		}
-		raceID = &id
+		raceID = &raw
 	}
 	var verified *bool
 	switch q.Get("verified") {
@@ -99,7 +98,7 @@ func (h handlers) listResults(w http.ResponseWriter, r *http.Request, _ *auth.Us
 }
 
 func (h handlers) verifyResult(w http.ResponseWriter, r *http.Request, u *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"), "ID tidak valid")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

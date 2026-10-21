@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/platform/testutil"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // Integration tests against TEST_DATABASE_URL. The ledger is append-only (a
@@ -299,7 +300,7 @@ func TestPackageRoutes(t *testing.T) {
 		"name": "  Go Paket  ", "credits": 4, "price_idr": 450000.5, "validity_days": 30,
 	})
 	id, _ := created["id"].(string)
-	if len(created) != 1 || !isUUID(id) {
+	if len(created) != 1 || !validate.IsUUID(id) {
 		t.Fatalf("created %v", created)
 	}
 	list := e.data(asStaff, "GET", "/api/gym/packages", nil)

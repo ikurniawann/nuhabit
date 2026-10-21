@@ -87,7 +87,7 @@ func (h handlers) saveExercise(w http.ResponseWriter, r *http.Request, _ *auth.U
 }
 
 func (h handlers) deleteExercise(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.URL.Query().Get("id"), "ID tidak valid")
+	id, err := validate.UUID(r.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func (h handlers) saveSubstitution(w http.ResponseWriter, r *http.Request, _ *au
 }
 
 func (h handlers) deleteSubstitution(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.URL.Query().Get("id"), "ID tidak valid")
+	id, err := validate.UUID(r.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func (h handlers) saveRace(w http.ResponseWriter, r *http.Request, _ *auth.User,
 }
 
 func (h handlers) deleteRace(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.URL.Query().Get("id"), "ID tidak valid")
+	id, err := validate.UUID(r.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (h handlers) deleteRace(w http.ResponseWriter, r *http.Request, _ *auth.Use
 }
 
 func (h handlers) raceEntrants(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"), "ID tidak valid")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (h handlers) saveScheme(w http.ResponseWriter, r *http.Request, u *auth.Use
 }
 
 func (h handlers) deleteScheme(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.URL.Query().Get("id"), "ID tidak valid")
+	id, err := validate.UUID(r.URL.Query().Get("id"))
 	if err != nil {
 		return err
 	}
@@ -215,11 +215,10 @@ func (h handlers) statements(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	}
 	var coachID *string
 	if raw := q.Get("coach_id"); raw != "" {
-		id, err := requireUUID(raw, "ID coach tidak valid")
-		if err != nil {
-			return err
+		if !validate.IsUUID(raw) {
+			return httpx.BadRequest("ID coach tidak valid")
 		}
-		coachID = &id
+		coachID = &raw
 	}
 	out, err := h.svc.Statements(r.Context(), month, coachID)
 	if err != nil {
@@ -260,7 +259,7 @@ func (h handlers) createPayout(w http.ResponseWriter, r *http.Request, u *auth.U
 }
 
 func (h handlers) getPayout(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"), "ID tidak valid")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -272,7 +271,7 @@ func (h handlers) getPayout(w http.ResponseWriter, r *http.Request, _ *auth.User
 }
 
 func (h handlers) actOnPayout(w http.ResponseWriter, r *http.Request, u *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"), "ID tidak valid")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

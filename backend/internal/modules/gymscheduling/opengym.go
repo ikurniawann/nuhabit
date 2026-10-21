@@ -49,7 +49,7 @@ func (s *Service) SaveOpenGymHours(ctx context.Context, branchID string, hours [
 }
 
 func (h *handler) openGymHours(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	branchID, err := requireUUID(r.URL.Query().Get("branch_id"))
+	branchID, err := validate.UUID(r.URL.Query().Get("branch_id"))
 	if err != nil {
 		return err
 	}

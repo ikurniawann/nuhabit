@@ -149,14 +149,6 @@ func created(w http.ResponseWriter, id string) error {
 	return httpx.Data(w, http.StatusCreated, map[string]string{"id": id})
 }
 
-func pathUUID(r *http.Request, key string) (string, error) {
-	id := r.PathValue(key)
-	if !validate.IsUUID(id) {
-		return "", httpx.BadRequest("ID tidak valid")
-	}
-	return id, nil
-}
-
 func queryUUID(q url.Values, key string) (string, error) {
 	v := q.Get(key)
 	if v != "" && !validate.IsUUID(v) {
@@ -192,7 +184,7 @@ func (h *handler) classTypeFlags(w http.ResponseWriter, r *http.Request, _ *auth
 }
 
 func (h *handler) setPersonal(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -244,7 +236,7 @@ func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.
 // ── Availability ────────────────────────────────────────────────────────────
 
 func coachParam(r *http.Request, sc scope) (string, error) {
-	id, err := pathUUID(r, "coachId")
+	id, err := validate.PathUUID(r, "coachId")
 	if err == nil && !sc.allows(id) {
 		err = httpx.NotFound("Coach tidak ditemukan")
 	}
@@ -316,7 +308,7 @@ func (h *handler) addException(w http.ResponseWriter, r *http.Request, sc scope)
 }
 
 func (h *handler) deleteException(w http.ResponseWriter, r *http.Request, sc scope) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -422,7 +414,7 @@ func (h *handler) scopedAppointment(r *http.Request, sc scope, id string) (*Appo
 }
 
 func (h *handler) getAppointment(w http.ResponseWriter, r *http.Request, sc scope) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -474,7 +466,7 @@ func (h *handler) book(w http.ResponseWriter, r *http.Request, sc scope) error {
 }
 
 func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc scope) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -519,7 +511,7 @@ func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc s
 }
 
 func (h *handler) participantAction(w http.ResponseWriter, r *http.Request, sc scope) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -578,7 +570,7 @@ func (h *handler) listAssessments(w http.ResponseWriter, r *http.Request, _ *aut
 }
 
 func (h *handler) getAssessment(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -656,7 +648,7 @@ func (h *handler) createAssessment(w http.ResponseWriter, r *http.Request, user 
 }
 
 func (h *handler) updateAssessment(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -675,7 +667,7 @@ func (h *handler) updateAssessment(w http.ResponseWriter, r *http.Request, _ *au
 }
 
 func (h *handler) deleteAssessment(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -744,7 +736,7 @@ func (h *handler) memberRequest(w http.ResponseWriter, r *http.Request, customer
 }
 
 func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerID string) error {
-	id, err := pathUUID(r, "id")
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

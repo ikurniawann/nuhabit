@@ -272,7 +272,7 @@ func (h *handler) createGateDevice(w http.ResponseWriter, r *http.Request, user 
 }
 
 func (h *handler) rotateGateDevice(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (h *handler) rotateGateDevice(w http.ResponseWriter, r *http.Request, user 
 }
 
 func (h *handler) revokeGateDevice(w http.ResponseWriter, r *http.Request, user *auth.User) error {
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}

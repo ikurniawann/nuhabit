@@ -7,23 +7,18 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf16"
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/httpx"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // This file reproduces the zod schemas of the TS routes closely enough that
 // the first issue message (what the routes return as "error") is identical,
 // and "details" carries zod-shaped issues.
-
-// zodUUID is the pattern of z.string().uuid() in zod 4.
-var zodUUID = regexp.MustCompile(`^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$`)
-
-func isUUID(s string) bool { return zodUUID.MatchString(s) }
 
 type issue struct {
 	Expected  string   `json:"expected,omitempty"`
@@ -163,7 +158,7 @@ func (f *form) str(key string, rule strRule) (string, bool) {
 			Message: fmt.Sprintf("Too big: expected string to have <=%d characters", rule.max)})
 		return "", false
 	}
-	if rule.uuid && !isUUID(s) {
+	if rule.uuid && !validate.IsUUID(s) {
 		f.add(uuidIssue(path, rule.uuidMsg))
 		return "", false
 	}
@@ -264,7 +259,7 @@ func (f *form) uuidList(key string) []string {
 		switch {
 		case !ok:
 			f.add(typeIssue([]any{key, i}, "string", el, ""))
-		case !isUUID(s):
+		case !validate.IsUUID(s):
 			f.add(uuidIssue([]any{key, i}, ""))
 		default:
 			out = append(out, s)

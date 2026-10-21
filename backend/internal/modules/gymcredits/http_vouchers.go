@@ -5,6 +5,7 @@ import (
 
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // voucherRoutes: the front desk checks a code before selling (create on
@@ -19,7 +20,7 @@ func (h *Handler) staffPreviewVoucher(w http.ResponseWriter, r *http.Request) er
 	if _, err := h.require(r, actCreate, iam.GymCredits); err != nil {
 		return err
 	}
-	customerID, err := requireUUID(r.PathValue("customerId"))
+	customerID, err := validate.PathUUID(r, "customerId")
 	if err != nil {
 		return err
 	}
