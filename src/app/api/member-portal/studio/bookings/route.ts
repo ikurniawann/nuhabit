@@ -17,7 +17,8 @@ export async function GET() {
               s.id AS session_id, s.session_date::text AS session_date, to_char(s.start_time,'HH24:MI') AS start_time,
               to_char(s.end_time,'HH24:MI') AS end_time, p.name AS program_name, p.kind AS program_kind,
               COALESCE(c.display_name, c.full_name) AS coach_name, mp.pass_code,
-              (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming
+              (s.session_date + s.start_time) > (now() AT TIME ZONE 'Asia/Jakarta') AS upcoming,
+              (s.coach_changed_at IS NOT NULL AND b.booked_at < s.coach_changed_at) AS free_cancel
        FROM studio.bookings b
        JOIN studio.class_sessions s ON s.id = b.session_id
        JOIN studio.programs p ON p.id = s.program_id

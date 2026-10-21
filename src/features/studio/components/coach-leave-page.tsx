@@ -18,7 +18,9 @@ import {
 } from "@/lib/studio/coach-leave";
 import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
+import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { CoachLeaveQueue } from "./coach-leave-queue";
+import { SessionChangeReport } from "./session-change-report";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
 
 interface CoachLeaveData {
@@ -41,6 +43,7 @@ export function StudioCoachLeavePage() {
   const [backupId, setBackupId] = useState("");
   const [rules, setRules] = useState<NoticeRules | null>(null);
   const [responseHours, setResponseHours] = useState(24);
+  const [noticeHours, setNoticeHours] = useState(12);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(
@@ -51,6 +54,7 @@ export function StudioCoachLeavePage() {
           setBackupId(res.data.settings.backup_approver_user_id ?? "");
           setRules(res.data.settings.notice_rules);
           setResponseHours(res.data.settings.substitute_response_hours);
+          setNoticeHours(res.data.settings.member_notice_min_hours);
         })
         .catch((e) => toast.error(e instanceof Error ? e.message : "Gagal memuat pengaturan")),
     []
@@ -73,6 +77,7 @@ export function StudioCoachLeavePage() {
   const dirty =
     backupId !== (data.settings.backup_approver_user_id ?? "") ||
     responseHours !== data.settings.substitute_response_hours ||
+    noticeHours !== data.settings.member_notice_min_hours ||
     JSON.stringify(rules) !== JSON.stringify(data.settings.notice_rules);
   const setRule = (type: keyof NoticeRules, patch: Partial<NoticeRules[keyof NoticeRules]>) =>
     setRules((r) => (r ? { ...r, [type]: { ...r[type], ...patch } } : r));
@@ -84,6 +89,7 @@ export function StudioCoachLeavePage() {
         backup_approver_user_id: backupId || null,
         notice_rules: rules,
         substitute_response_hours: responseHours,
+        member_notice_min_hours: noticeHours,
       });
       toast.success(res.message ?? "Tersimpan");
       await load();
@@ -102,6 +108,7 @@ export function StudioCoachLeavePage() {
       />
       <div className="grid max-w-3xl gap-4">
         <CoachLeaveQueue />
+        <SessionChangeReport minHours={data.settings.member_notice_min_hours} />
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-start gap-3">
@@ -174,6 +181,19 @@ export function StudioCoachLeavePage() {
               className="max-w-32"
               value={responseHours}
               onChange={(e) => setResponseHours(Math.min(MAX_SUBSTITUTE_RESPONSE_HOURS, Math.max(1, Math.floor(Number(e.target.value) || 1))))}
+            />
+          </Field>
+          <Field
+            label="Kabar perubahan ke member paling lambat (jam sebelum kelas)"
+            hint="Member tetap dikabari kapan pun; di bawah batas ini perubahan ditandai Terlambat di laporan."
+          >
+            <Input
+              type="number"
+              min={0}
+              max={MAX_MEMBER_NOTICE_MIN_HOURS}
+              className="max-w-32"
+              value={noticeHours}
+              onChange={(e) => setNoticeHours(Math.min(MAX_MEMBER_NOTICE_MIN_HOURS, Math.max(0, Math.floor(Number(e.target.value) || 0))))}
             />
           </Field>
         </section>

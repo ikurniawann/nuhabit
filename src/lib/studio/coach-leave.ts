@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
+import { DEFAULT_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { addDays } from "@/lib/studio/schedule";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 
@@ -59,12 +60,15 @@ export interface CoachLeaveSettings {
   notice_rules: NoticeRules;
   /** Batas jawaban calon pengganti (jam) sebelum permintaan kembali "butuh pengganti". */
   substitute_response_hours: number;
+  /** Perubahan jadwal dikabarkan ke member paling lambat N jam sebelum kelas; di bawahnya ditandai terlambat. */
+  member_notice_min_hours: number;
 }
 
 export const DEFAULT_COACH_LEAVE_SETTINGS: CoachLeaveSettings = {
   backup_approver_user_id: null,
   notice_rules: DEFAULT_NOTICE_RULES,
   substitute_response_hours: DEFAULT_SUBSTITUTE_RESPONSE_HOURS,
+  member_notice_min_hours: DEFAULT_MEMBER_NOTICE_MIN_HOURS,
 };
 
 /** Kunci di studio.settings (prefix leave_ supaya tidak bentrok Aturan Booking & job_). */
@@ -72,6 +76,7 @@ export const COACH_LEAVE_SETTING_KEYS: Record<keyof CoachLeaveSettings, string> 
   backup_approver_user_id: "leave_backup_approver_user_id",
   notice_rules: "leave_notice_rules",
   substitute_response_hours: "leave_substitute_response_hours",
+  member_notice_min_hours: "leave_member_notice_min_hours",
 };
 
 /** Gabungkan aturan tersimpan (bisa sebagian / dari versi lama) dengan default per jenis cuti. */

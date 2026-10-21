@@ -18,6 +18,7 @@ import {
   type SubstituteCandidate,
 } from "@/lib/studio/coach-cover";
 import { assertCanDecideCoachLeave, getCoachLeaveApprovers, listCoachSessionsInRange, loadCoachLeaveSettings } from "@/lib/studio/coach-leave-server";
+import { flushChangeNoticesSoon, queueSessionChangeNotices } from "@/lib/studio/session-change-server";
 import { sendWhatsAppText } from "@/lib/whatsapp";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 
@@ -347,13 +348,14 @@ export async function listPendingCoachLeaves(branchId: string): Promise<PendingC
 
 export interface AppliedCovers {
   swapped: number;
+  swappedSessions: string[];
   cancelled: { sessionId: string; reason: string }[];
 }
 
 /**
  * Terapkan pengganti di dalam transaksi persetujuan: semua baris harus sudah
  * tertangani; coach sesi diganti (coach asli disimpan) atau sesi dibatalkan.
- * Pelepasan booking sesi batal dilakukan sesudah commit (releaseCancelledSessions).
+ * Pelepasan booking sesi batal + kabar ke member dilakukan sesudah commit (finalizeAppliedCovers).
  */
 export async function applyCoversOnApproval(client: PoolClient, leaveId: string): Promise<AppliedCovers> {
   const { rows } = await client.query<{
@@ -371,7 +373,7 @@ export async function applyCoversOnApproval(client: PoolClient, leaveId: string)
   if (blockers.length > 0) {
     throw ApiError.conflict(`Masih ada ${blockers.length} sesi tanpa pengganti — tunjuk pengganti atau batalkan kelasnya dulu`);
   }
-  const out: AppliedCovers = { swapped: 0, cancelled: [] };
+  const out: AppliedCovers = { swapped: 0, swappedSessions: [], cancelled: [] };
   for (const r of rows) {
     if (r.session_status !== "scheduled") {
       await client.query(`UPDATE studio.coach_leave_covers SET status = 'void', note = 'Sesi sudah tidak terjadwal', updated_at = now() WHERE id = $1`, [r.id]);
@@ -399,21 +401,32 @@ export async function applyCoversOnApproval(client: PoolClient, leaveId: string)
         [r.session_id, r.substitute_coach_id, r.original_coach_id]
       );
       out.swapped += 1;
+      out.swappedSessions.push(r.session_id);
     }
     await client.query(`UPDATE studio.coach_leave_covers SET applied_at = now(), updated_at = now() WHERE id = $1`, [r.id]);
   }
   return out;
 }
 
-/** Sesudah commit: kembalikan kredit member di sesi yang dibatalkan karena coach cuti. */
-export async function releaseCancelledSessions(ctx: CoachLeaveContext, actorUserId: string, cancelled: AppliedCovers["cancelled"]) {
+/**
+ * Sesudah commit: kabari member (T-067-A6) — sesi batal diantrekan SEBELUM
+ * booking dilepas & kredit dikembalikan, sesi yang coach-nya diganti
+ * diantrekan langsung; lalu kirim yang boleh dikirim sekarang.
+ */
+export async function finalizeAppliedCovers(ctx: CoachLeaveContext, actorUserId: string, applied: AppliedCovers): Promise<number> {
   let released = 0;
-  for (const c of cancelled) {
+  for (const c of applied.cancelled) {
+    await queueSessionChangeNotices(c.sessionId, { kind: "cancelled" });
     released += await releaseSessionBookings(
       { companyId: ctx.companyId, branchId: ctx.branchId, actorId: actorUserId, staff: true },
       c.sessionId,
       c.reason
     );
+    flushChangeNoticesSoon(c.sessionId);
+  }
+  for (const sessionId of applied.swappedSessions) {
+    await queueSessionChangeNotices(sessionId, { kind: "coach_changed", oldCoachName: ctx.coachName });
+    flushChangeNoticesSoon(sessionId);
   }
   return released;
 }

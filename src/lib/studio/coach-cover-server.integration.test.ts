@@ -184,6 +184,7 @@ describe.skipIf(!IS_TEST_DB)("alur pengganti coach (DB)", () => {
     await markCoverCancelClass(wed.id, branchId, { id: pdUser, role: "program_director" }, "Tidak ada pengganti");
     const applied = await withTransaction((c) => applyCoversOnApproval(c, leaveId));
     expect(applied.swapped).toBe(2);
+    expect(applied.swappedSessions.sort()).toEqual([sessions.mon, sessions.tue_pt].sort());
     expect(applied.cancelled).toEqual([{ sessionId: sessions.wed, reason: "Tidak ada pengganti" }]);
 
     const mon = await queryOne<{ coach_id: string; original_coach_id: string }>(

@@ -8,6 +8,7 @@
 
 import { dailyCloseDue } from "./jobs";
 import { lastAutoRunDate, loadJobSettings, runDailyClose, runReminders, studioVenues } from "./jobs-server";
+import { flushChangeNotices } from "./session-change-server";
 
 const CHECK_INTERVAL_MS = 10 * 60_000;
 let started = false;
@@ -25,6 +26,9 @@ export async function studioJobsTick(now: Date = new Date()): Promise<void> {
       }
       if (s.reminders_enabled) await runReminders(v, { now, trigger: "auto" });
     }
+    // Kabar perubahan jadwal yang ditahan jam tenang (EPIC-067 T-067-A6) — tidak ikut saklar pengingat.
+    const changes = await flushChangeNotices(now);
+    if (changes.sent || changes.failed) console.log("[studio-jobs] kabar perubahan jadwal:", JSON.stringify(changes));
   } finally {
     running = false;
   }

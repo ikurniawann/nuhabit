@@ -239,7 +239,7 @@ function SlotSheet({
     }
   }
 
-  const late = hoursUntil(s.session_date, s.start_time) < rules.cancel_window_hours;
+  const late = !s.my_free_cancel && hoursUntil(s.session_date, s.start_time) < rules.cancel_window_hours;
 
   return (
     <Sheet open onClose={onClose} title={s.program_name}>
@@ -271,7 +271,7 @@ function SlotSheet({
           ) : s.my_status ? (
             <>
               <div className={`border-l-2 px-4 py-3 text-sm ${late && s.my_status === "booked" ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
-                {cancelNote(s.my_status, s.session_date, s.start_time, rules.cancel_window_hours)}
+                {cancelNote(s.my_status, s.session_date, s.start_time, rules.cancel_window_hours, Boolean(s.my_free_cancel))}
               </div>
               <PillButton variant="danger" className="w-full" disabled={busy} onClick={() => act("cancel")}>
                 {busy && <Loader2 className="size-4 animate-spin" />}

@@ -53,6 +53,8 @@ export interface ClassSlot {
   waitlist_count: number;
   my_booking_id: string | null;
   my_status: "booked" | "waitlisted" | "attended" | null;
+  /** Coach diganti setelah saya booking → batal gratis sampai kelas mulai (EPIC-067). */
+  my_free_cancel?: boolean | null;
 }
 
 export interface ScheduleRules {
@@ -72,6 +74,8 @@ export interface MyBooking {
   coach_name: string | null;
   pass_code: string | null;
   upcoming: boolean;
+  /** Coach diganti setelah booking → batal gratis sampai kelas mulai. */
+  free_cancel?: boolean;
 }
 
 export interface MyPass {

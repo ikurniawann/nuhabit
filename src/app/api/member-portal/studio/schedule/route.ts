@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
               s.capacity,
               GREATEST(s.capacity - COALESCE(bk.taken, 0), 0)::int AS spots_left,
               COALESCE(bk.waitlist, 0)::int AS waitlist_count,
-              mine.id AS my_booking_id, mine.status AS my_status
+              mine.id AS my_booking_id, mine.status AS my_status,
+              (s.coach_changed_at IS NOT NULL AND mine.booked_at < s.coach_changed_at) AS my_free_cancel
        FROM studio.class_sessions s
        JOIN studio.programs p ON p.id = s.program_id AND p.kind = 'class'
        LEFT JOIN studio.coaches c ON c.id = s.coach_id
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
          FROM studio.bookings b WHERE b.session_id = s.id
        ) bk ON true
        LEFT JOIN LATERAL (
-         SELECT b.id, b.status FROM studio.bookings b
+         SELECT b.id, b.status, b.booked_at FROM studio.bookings b
          WHERE b.session_id = s.id AND b.customer_id = $4 AND b.status IN ('booked','waitlisted','attended') LIMIT 1
        ) mine ON true
        WHERE s.branch_id = $1 AND s.status = 'scheduled' AND s.session_date BETWEEN $2::date AND $3::date

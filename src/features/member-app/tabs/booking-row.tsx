@@ -13,8 +13,9 @@ export function hoursUntil(date: string, time: string): number {
 }
 
 /** Konfirmasi batal: jelaskan apakah kredit kembali sesuai aturan venue. */
-export function cancelNote(status: string, date: string, time: string, windowHours: number): string {
+export function cancelNote(status: string, date: string, time: string, windowHours: number, freeCancel = false): string {
   if (status === "waitlisted") return "You'll leave the waitlist. No credit has been used.";
+  if (freeCancel) return "Your coach for this session has changed, so you can cancel free of charge — your credit goes back to your pass.";
   return hoursUntil(date, time) >= windowHours
     ? `More than ${windowHours} hours before the session — your credit goes back to your pass.`
     : `Less than ${windowHours} hours before the session — the credit won't be returned.`;
@@ -40,7 +41,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
     }
   }
 
-  const late = b.status === "booked" && hoursUntil(b.session_date, b.start_time) < cancelWindowHours;
+  const late = b.status === "booked" && !b.free_cancel && hoursUntil(b.session_date, b.start_time) < cancelWindowHours;
 
   return (
     <>
@@ -55,6 +56,9 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold uppercase tracking-[0.03em] text-white">{b.program_name}</p>
           <p className="truncate text-[11px] uppercase tracking-wide text-nh-beige/55">{b.coach_name ?? ""}</p>
+          {b.free_cancel && b.status === "booked" && (
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-nh-lemon">Coach changed · free cancel</p>
+          )}
         </div>
         <Tag tone={b.status === "waitlisted" ? "warn" : "lime"}>{b.status === "waitlisted" ? "Waitlist" : "Locked in"}</Tag>
       </button>
@@ -72,7 +76,7 @@ export function BookingRow({ booking: b }: { booking: MyBooking }) {
         ) : (
           <div className="mt-5 space-y-4">
             <div className={`border-l-2 px-4 py-3 text-sm ${late ? "border-nh-ochre bg-nh-ochre/10 text-nh-lemon" : "border-white/30 bg-white/[0.04] text-nh-beige/80"}`}>
-              {cancelNote(b.status, b.session_date, b.start_time, cancelWindowHours)}
+              {cancelNote(b.status, b.session_date, b.start_time, cancelWindowHours, b.free_cancel)}
             </div>
             <PillButton variant="danger" className="w-full" disabled={busy} onClick={cancel}>
               {busy && <Loader2 className="size-4 animate-spin" />}

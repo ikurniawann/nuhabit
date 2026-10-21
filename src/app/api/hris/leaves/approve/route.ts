@@ -8,8 +8,8 @@ import {
   type AppliedCovers,
   applyCoversOnApproval,
   expireStaleRequests,
+  finalizeAppliedCovers,
   getCoachLeaveContext,
-  releaseCancelledSessions,
   syncLeaveCovers,
   voidLeaveCovers,
 } from "@/lib/studio/coach-cover-server";
@@ -142,12 +142,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Kredit member sesi batal dikembalikan + WA ke member (T-067-A6).
     let releasedBookings = 0;
     if (coachLeave && applied) {
-      const { cancelled } = applied as AppliedCovers;
-      if (cancelled.length > 0) {
-        releasedBookings = await releaseCancelledSessions(coachLeave, actor.userId, cancelled);
-      }
+      releasedBookings = await finalizeAppliedCovers(coachLeave, actor.userId, applied as AppliedCovers);
     }
     if (coachLeave && !isApprove) await voidLeaveCovers(validated.leave_id, 'Cuti ditolak');
 

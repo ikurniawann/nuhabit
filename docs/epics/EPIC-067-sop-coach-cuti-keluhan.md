@@ -108,7 +108,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   Portal + WA dengan batas waktu yang bisa diatur; antrean "butuh pengganti" untuk Program Director (tunjuk langsung
   atau batalkan dengan alasan); cuti disetujui hanya bila semua sesi tertangani. Saat disetujui,
   `class_sessions.coach_id` diganti otomatis dan coach asli disimpan.
-- [ ] T-067-A6 **(Tahap 1)** WA ke member yang sudah booking saat coach diganti atau kelas dibatalkan, berisi info
+- [x] T-067-A6 **(Tahap 1)** WA ke member yang sudah booking saat coach diganti atau kelas dibatalkan, berisi info
   perubahan dan **link booking** di Member App. Perluas `member_notifications.kind`, idempoten per sesi + member. Buka
   jendela batal tanpa penalti dengan kredit kembali penuh. Pengaturan "paling lambat N jam sebelum kelas"; perubahan
   yang lewat batas itu tetap dikirim dan ditandai *terlambat* di laporan Program Director.
@@ -309,3 +309,37 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - WA ke member saat coach diganti / kelas dibatalkan (T-067-A6);
     - badge jumlah permintaan di tombol tab Cuti;
     - belum di-deploy.
+- 2026-10-21 — **T-067-A6 selesai.**
+  - Migrasi `20261021120000_studio_session_change_notices.sql`:
+    - `member_notifications.kind` + `session_coach_changed`/`session_cancelled`, kolom `session_id`;
+    - `class_sessions.coach_changed_at`, `changed_at`, `change_kind`, `change_notice_late`.
+  - Pemicu:
+    - Persetujuan cuti coach (`finalizeAppliedCovers`): sesi batal diantrekan **sebelum** booking dilepas & kredit
+      kembali; sesi yang coach-nya diganti diantrekan langsung.
+    - Juga perubahan manual di Kalender/Jadwal (`PATCH /api/studio/sessions/[id]`): ganti coach (coach asli disimpan
+      di `original_coach_id`) atau batalkan sesi.
+  - Pesan:
+    - Bahasa Inggris seperti pesan member lain, dengan link `/member`; dedup per booking (+ coach baru).
+    - Penerima: member booked & waitlist.
+    - Pesan layanan → **tetap dikirim walau member mematikan pengingat WA**, dan tidak ikut saklar pengingat.
+  - Jam tenang:
+    - di 08.00–21.00 langsung dikirim;
+    - di luar itu ditahan sampai 08.00, **kecuali** kelas mulai kurang dari 3 jam setelah 08.00 (mis. coach sakit
+      pukul 05.30 untuk kelas 07.00) → dikirim saat itu juga;
+    - yang ditahan dikirim watcher job (`flushChangeNotices` tiap tick);
+    - kelas yang sudah mulai → skipped.
+  - **Batal gratis:** booking yang dibuat sebelum `coach_changed_at` bisa dibatalkan member sampai kelas mulai dengan
+    kredit kembali (`cancelBooking`). Member App menampilkan "Coach changed · free cancel" dan penjelasannya.
+  - Pengaturan "Kabar perubahan ke member paling lambat (jam sebelum kelas)", default 12. Di bawahnya perubahan
+    ditandai **Terlambat** di laporan baru "Kabar perubahan jadwal ke member" (halaman Cuti & Pengganti Coach).
+  - Bukti:
+    - 7 unit test + 4 test integrasi (WA di-mock) lulus di `nuhabit_test`. Test integrasi menemukan bug tipe parameter
+      SQL di `queueSessionChangeNotices` — sudah diperbaiki.
+    - E2E headless (alur A4 + member Maya booking Senin & Rabu, sudah dihapus):
+      - setelah disetujui, Maya dapat 1 kabar ganti coach + 1 kabar batal, status pending karena pukul ±22.20 WIB
+        (ditahan jam tenang, sesuai aturan);
+      - laporan PD menampilkan ketiga perubahan;
+      - Member App menampilkan "Coach changed · free cancel" dan catatan batal gratis;
+      - tanpa error console.
+    - `tsc` tanpa error baru (508); eslint tanpa error baru.
+  - Belum di-deploy.

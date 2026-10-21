@@ -6,6 +6,7 @@ import { toMinutes } from "@/lib/studio/schedule";
 import { sessionPatchSchema } from "@/lib/studio/schemas";
 import { completeSession, releaseSessionBookings } from "@/lib/studio/booking-server";
 import { buildSet, requireStudioContext, staffActor, studioRoute } from "@/lib/studio/server";
+import { flushChangeNoticesSoon, queueSessionChangeNotices } from "@/lib/studio/session-change-server";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -43,10 +44,23 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     // "Selesai" harus lewat penyelesaian kelas supaya no-show & revenue diproses.
     const completing = body.status === "completed" && current.status !== "completed";
     if (body.status === "completed") delete body.status;
+    // Ganti coach sesi terjadwal → simpan coach asli & kabari member (EPIC-067 T-067-A6).
+    const coachChanged =
+      body.coach_id !== undefined && body.coach_id !== current.coach_id && body.coach_id !== null && merged.status === "scheduled" && current.status === "scheduled";
+    const oldCoach = coachChanged && current.coach_id
+      ? await queryOne<{ name: string }>(`SELECT COALESCE(display_name, full_name) AS name FROM studio.coaches WHERE id = $1`, [current.coach_id])
+      : null;
     const { sets, values } = buildSet(body);
     if (sets.length === 0 && !completing) return NextResponse.json({ success: true, data: { id } });
     if (sets.length > 0) {
       await query(`UPDATE studio.class_sessions SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, [id, ...values]);
+    }
+    if (coachChanged) {
+      if (current.coach_id) {
+        await query(`UPDATE studio.class_sessions SET original_coach_id = COALESCE(original_coach_id, $2) WHERE id = $1`, [id, current.coach_id]);
+      }
+      await queueSessionChangeNotices(id, { kind: "coach_changed", oldCoachName: oldCoach?.name ?? null });
+      flushChangeNoticesSoon(id);
     }
     if (completing) {
       const r = await completeSession(staffActor(ctx), id);
@@ -54,7 +68,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
     let released = 0;
     if (body.status === "cancelled" && current.status !== "cancelled") {
+      await queueSessionChangeNotices(id, { kind: "cancelled" });
       released = await releaseSessionBookings(staffActor(ctx), id, merged.cancel_reason ?? "dibatalkan");
+      flushChangeNoticesSoon(id);
     }
     const message =
       body.status === "cancelled" ? `Sesi dibatalkan${released ? ` · ${released} booking dibatalkan, kredit dikembalikan` : ""}` : "Sesi diperbarui";

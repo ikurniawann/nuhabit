@@ -17,6 +17,7 @@ import { redeemValue } from "@/lib/studio/pass";
 import { PASS_SELECT, PASS_USAGE_JOIN, type PassRow } from "@/lib/studio/pass-server";
 import { applyBookingBenefits } from "@/lib/studio/loyalty";
 import { assertCanBook, awardSessionXp, memberBenefits } from "@/lib/studio/loyalty-server";
+import { freeCancelAfterCoachChange } from "@/lib/studio/session-change";
 
 /**
  * Mesin booking kelas (EPIC-054). Semua mutasi berjalan dalam transaksi dengan
@@ -313,13 +314,22 @@ export async function cancelBooking(
 
     const cancelWindow = applyBookingBenefits(settings, await memberBenefits(b.customer_id)).cancel_window_hours;
     const timing = classifyCancel(Date.now(), sessionEpoch(session.session_date, session.start_time), cancelWindow);
-    const refund = timing === "in_time" || (actor.staff && Boolean(opts.waive));
+    // Coach diganti setelah member booking → boleh batal tanpa penalti sampai kelas mulai (EPIC-067 T-067-A6).
+    const changed = await client.query<{ booked_at: string | null; coach_changed_at: string | null }>(
+      `SELECT b.booked_at, s.coach_changed_at FROM studio.bookings b JOIN studio.class_sessions s ON s.id = b.session_id WHERE b.id = $1`,
+      [b.id]
+    );
+    const coachChanged = freeCancelAfterCoachChange(changed.rows[0]?.booked_at ?? null, changed.rows[0]?.coach_changed_at ?? null);
+    const refund = timing === "in_time" || coachChanged || (actor.staff && Boolean(opts.waive));
     const status: BookingStatus = refund ? "cancelled" : "late_cancelled";
     await client.query(
       `UPDATE studio.bookings SET status = $2, cancelled_at = now(), cancel_reason = $3, updated_at = now() WHERE id = $1`,
       [b.id, status, opts.reason ?? null]
     );
-    if (refund) await releaseCredit(client, actor, b, refund && timing === "late" ? "Batal (dikecualikan staf)" : "Batal tepat waktu");
+    if (refund) {
+      const note = timing === "in_time" ? "Batal tepat waktu" : coachChanged ? "Batal gratis (coach diganti)" : "Batal (dikecualikan staf)";
+      await releaseCredit(client, actor, b, note);
+    }
     if (session.program_kind === "pt") {
       // Sesi Personal Training milik satu member: batal tepat waktu → slot coach dibebaskan.
       // Batal telat → sesi tetap ada supaya kredit yang hangus diakui saat sesi diselesaikan.
