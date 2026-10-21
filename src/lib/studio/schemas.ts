@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
+import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
 
 /**
  * Skema validasi API Studio (EPIC-052). Dipisah dari route.ts karena file route
@@ -332,3 +333,17 @@ export const coachLeaveSettingsSchema = z
 export const substituteChoiceSchema = z.object({ substitute_coach_id: z.string().uuid() });
 export const substituteResponseSchema = z.object({ accept: z.boolean() });
 export const coverCancelSchema = z.object({ reason: z.string().trim().min(5).max(300) });
+
+// ── Penanda member perhatian khusus (EPIC-067 C1/C2) ──────────────────────
+export const memberFlagSchema = z.object({
+  type_id: z.string().uuid(),
+  severity: z.enum(FLAG_SEVERITIES),
+  note: z.string().trim().max(FLAG_NOTE_MAX).nullable().optional(),
+  valid_until: date.nullable().optional(),
+});
+export const backofficeMemberFlagSchema = memberFlagSchema.extend({ customer_id: z.string().uuid() });
+export const flagTypeCreateSchema = z.object({
+  label: z.string().trim().min(2).max(60),
+  category: z.enum(["general", "medical"]),
+});
+export const flagTypePatchSchema = z.object({ is_active: z.boolean() });

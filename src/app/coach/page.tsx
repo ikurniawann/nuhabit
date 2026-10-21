@@ -7,6 +7,7 @@ import { periodLabel } from "@/lib/studio/commission";
 import { COACH_LEVEL_LABEL } from "@/lib/studio/schedule";
 import { formatDayLabel, rupiah } from "@/features/studio/types";
 import { CoachLeaveTab } from "@/features/studio/components/coach-leave-tab";
+import { RosterMemberFlags, type RosterFlag } from "@/features/studio/components/coach-member-flags";
 
 interface Me {
   id: string;
@@ -32,8 +33,10 @@ interface Session {
 interface RosterRow {
   id: string;
   status: string;
+  customer_id: string;
   member_name: string;
   checked_in_at: string | null;
+  flags: RosterFlag[];
 }
 
 interface CommissionData {
@@ -257,26 +260,29 @@ function SessionCard({ session: s, canMark, expanded, onToggle, onChanged }: { s
           ) : active.length === 0 ? (
             <p className="py-2 text-sm text-nh-beige/60">Belum ada peserta.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-3">
               {active.map((r) => {
                 const attended = r.status === "attended";
                 const markable = canMark && (r.status === "booked" || attended);
                 return (
-                  <li key={r.id} className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm">{r.member_name}</span>
-                    {markable ? (
-                      <button
-                        type="button"
-                        disabled={busy === r.id}
-                        onClick={() => toggle(r)}
-                        className={`flex min-w-24 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${attended ? "bg-nh-lime text-nh-forest" : "border border-white/20 text-nh-beige hover:bg-white/10"}`}
-                      >
-                        {busy === r.id ? <Loader2 className="size-3.5 animate-spin" /> : attended ? <Check className="size-3.5" /> : null}
-                        {attended ? "Hadir" : "Tandai hadir"}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-nh-beige/60">{STATUS_LABEL[r.status] ?? r.status}</span>
-                    )}
+                  <li key={r.id}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="truncate text-sm">{r.member_name}</span>
+                      {markable ? (
+                        <button
+                          type="button"
+                          disabled={busy === r.id}
+                          onClick={() => toggle(r)}
+                          className={`flex min-w-24 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${attended ? "bg-nh-lime text-nh-forest" : "border border-white/20 text-nh-beige hover:bg-white/10"}`}
+                        >
+                          {busy === r.id ? <Loader2 className="size-3.5 animate-spin" /> : attended ? <Check className="size-3.5" /> : null}
+                          {attended ? "Hadir" : "Tandai hadir"}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-nh-beige/60">{STATUS_LABEL[r.status] ?? r.status}</span>
+                      )}
+                    </div>
+                    <RosterMemberFlags customerId={r.customer_id} flags={r.flags ?? []} onChanged={loadRoster} />
                   </li>
                 );
               })}

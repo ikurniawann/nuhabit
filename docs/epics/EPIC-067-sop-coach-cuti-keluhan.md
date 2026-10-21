@@ -138,10 +138,10 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 
 ### C. Member perhatian khusus
 
-- [ ] T-067-C1 **(Tahap 1)** Penanda member terstruktur (cedera, kondisi medis, hamil, pemula, VIP, pernah komplain;
+- [x] T-067-C1 **(Tahap 1)** Penanda member terstruktur (cedera, kondisi medis, hamil, pemula, VIP, pernah komplain;
   bisa ditambah) dengan tingkat, catatan, masa berlaku. Penanda umum dikelola dari profil member di backoffice;
   penanda medis dibuat dari Coach Portal dan detailnya tidak pernah dikirim ke API backoffice.
-- [ ] T-067-C2 **(Tahap 1)** Tampilkan penanda di roster kelas dan sesi Personal Training di Coach Portal (ikon + catatan
+- [x] T-067-C2 **(Tahap 1)** Tampilkan penanda di roster kelas dan sesi Personal Training di Coach Portal (ikon + catatan
   singkat). Detail medis hanya untuk coach yang memegang sesi aktif/mendatang dengan member tersebut, dengan
   pembatasan di level query/API, bukan hanya disembunyikan di UI.
 - [ ] T-067-C3 **(Tahap 3)** Integrasi waiver & PAR-Q [EPIC-064](./EPIC-064-calon-member-waiver-trial.md): jawaban
@@ -343,3 +343,35 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       - tanpa error console.
     - `tsc` tanpa error baru (508); eslint tanpa error baru.
   - Belum di-deploy.
+- 2026-10-21 — **T-067-C1 & C2 selesai — Tahap 1 lengkap** (A9, A1, A3, A4, A6, C1, C2).
+  - Migrasi `20261021130000_studio_member_flags.sql`:
+    - `studio.member_flag_types` (bawaan: Cedera, Kondisi medis, Hamil = medis; Pemula, VIP, Pernah komplain = umum;
+      bisa ditambah/nonaktifkan);
+    - `studio.member_flags` (tingkat info/perhatian/kritis, catatan ≤ 200, masa berlaku, `removed_at`);
+    - menu `studio.member-flags` "Member Perhatian Khusus" (super_admin, admin, direksi, program_director).
+  - **Aturan akses medis ditegakkan di SQL** (`member-flags-server.ts`):
+    - jalur backoffice tidak pernah men-SELECT baris medis, hanya `medical_count`;
+    - backoffice tidak bisa menambah/menghapus penanda medis (403);
+    - coach melihat detail medis hanya bila memegang sesi (tidak batal) hari ini/mendatang yang dibooking member itu
+      (termasuk pengganti setelah diterapkan), atau dia pembuatnya;
+    - mencatat penanda butuh relasi mengajar 30 hari terakhir s/d mendatang.
+  - **Tafsiran keputusan client no. 9:** Super Admin/admin pun tidak melihat detail medis. Ini sesuai rancangan epic;
+    bila client ingin admin melihat, cukup ubah satu aturan.
+  - UI:
+    - backoffice `/dashboard/studio/member-flags`: cari member → tambah penanda umum, daftar member dengan penanda
+      aktif (medis tampil "n catatan medis · hanya coach"), kelola jenis;
+    - Coach Portal: roster sesi menampilkan penanda (ikon medis/umum, warna per tingkat), "+ Catatan", dan hapus.
+  - Bukti:
+    - 6 unit test + 6 test integrasi akses (Pras sesi besok melihat medis, Rara pembuat melihat, Budi tidak; backoffice
+      hanya jumlah & tidak bocor; kedaluwarsa tersembunyi; hapus sesuai hak) lulus di `nuhabit_test`.
+    - E2E headless (PD + Coach Pras + 2 member uji, sudah dihapus):
+      - PD menandai Maya VIP; form backoffice tidak menawarkan jenis medis;
+      - Pras melihat VIP di roster & menambah Cedera kritis;
+      - PD melihat "1 catatan medis · hanya coach", dan HTML halaman maupun respons API backoffice tidak memuat
+        catatan medis;
+      - tanpa error console.
+    - `tsc` tanpa error baru (508); eslint tanpa error baru.
+  - Belum:
+    - penanda di layar Check-in & Booking front desk;
+    - pengisian otomatis dari PAR-Q (T-067-C3);
+    - belum di-deploy.

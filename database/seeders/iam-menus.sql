@@ -283,5 +283,6 @@ WHERE deleted_at IS NULL
     'studio.automation',
     -- EPIC-066 Program Loyalitas:
     'studio.loyalty',
-    -- EPIC-067 Cuti & Pengganti Coach:
-    'studio.coach-leave');
+    -- EPIC-067 SOP Coach (cuti & pengganti, member perhatian khusus):
+    'studio.coach-leave',
+    'studio.member-flags');

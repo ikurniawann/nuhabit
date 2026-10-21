@@ -14,3 +14,4 @@ export { StudioNewsPage } from "./components/news-page";
 export { StudioAutomationPage } from "./components/automation-page";
 export { StudioLoyaltyPage } from "./components/loyalty-page";
 export { StudioCoachLeavePage } from "./components/coach-leave-page";
+export { StudioMemberFlagsPage } from "./components/member-flags-page";
