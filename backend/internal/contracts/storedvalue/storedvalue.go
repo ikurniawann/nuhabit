@@ -12,7 +12,23 @@ const (
 	// posts a deposit journal (postJournalFromMapping in
 	// lib/pos/member-bill-server.ts recordMemberBillPayment).
 	TopicMemberBillPaid = "wallet.member_bill.paid"
+	// TopicWalletBonus is ARK Coin given away (a referral bonus): accounting
+	// posts EventCode from its mapping, debit the promotion expense, credit
+	// the ARK Coin liability, keyed by the wallet row.
+	TopicWalletBonus = "wallet.bonus.granted"
 )
+
+// WalletBonus is the TopicWalletBonus payload. EventCode is
+// WALLET_REFERRAL_BONUS; dates are YYYY-MM-DD, amounts rupiah.
+type WalletBonus struct {
+	BonusID     string  `json:"bonus_id"`
+	CustomerID  string  `json:"customer_id"`
+	CompanyID   *string `json:"company_id"`
+	EventCode   string  `json:"event_code"`
+	EntryDate   string  `json:"entry_date"`
+	Amount      float64 `json:"amount"`
+	Description string  `json:"description"`
+}
 
 // MemberNotified is crm.member_notifications' row plus the push.
 type MemberNotified struct {
