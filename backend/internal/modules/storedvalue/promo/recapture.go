@@ -8,17 +8,20 @@ import (
 
 // Recapture outcomes.
 const (
-	RecaptureNone      = ""           // the context holds no released redemption
-	RecaptureCaptured  = "captured"   // the use counts again
-	RecaptureQuotaUsed = "quota_used" // the code or campaign limit is reached meanwhile
+	RecaptureNone           = ""                // the context holds no released redemption
+	RecaptureCaptured       = "captured"        // the use counts again
+	RecaptureQuotaUsed      = "quota_used"      // the code or campaign limit is reached meanwhile
+	RecaptureCampaignClosed = "campaign_closed" // the campaign or code was switched off, or today is outside the campaign's dates
 )
 
 // RecapturePromoRedemption takes a released redemption back when its
 // context is paid after all (a late payment). Under the campaign lock it
-// checks the code limit, the campaign limit and the per-phone limit the way
-// a hold does, then captures the redemption and counts the use again.
-// Dates and other campaign rules are not checked again: the buyer already
-// paid the discounted price. Idempotent: a captured redemption is left alone.
+// checks that the campaign and code are still active and that today falls
+// inside the campaign's dates, then the code limit, the campaign limit and
+// the per-phone limit the way a hold does, and captures the redemption and
+// counts the use again. Scope, targets and eligibility are not checked
+// again: the buyer already paid the discounted price. Idempotent: a
+// captured redemption is left alone.
 func (s *Service) RecapturePromoRedemption(ctx context.Context, q database.Querier, contextType, contextID string) (string, error) {
 	var id, codeID, campaignID string
 	var phone *string
@@ -36,18 +39,24 @@ func (s *Service) RecapturePromoRedemption(ctx context.Context, q database.Queri
 	if _, err := q.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('promo'), hashtext($1::text))`, campaignID); err != nil {
 		return "", err
 	}
-	var free bool
+	var open, free bool
 	if err := q.QueryRow(ctx, `
-		SELECT CASE WHEN k.usage_limit IS NOT NULL THEN k.usage_count < k.usage_limit
+		SELECT c.is_active AND k.is_active
+		   AND (c.valid_from IS NULL OR c.valid_from <= $3::date)
+		   AND (c.valid_until IS NULL OR c.valid_until >= $3::date),
+		       CASE WHEN k.usage_limit IS NOT NULL THEN k.usage_count < k.usage_limit
 		            ELSE c.usage_limit IS NULL OR (SELECT count(*) FROM promo.promo_redemptions r
 		                                            WHERE r.campaign_id = c.id AND r.status <> 'released') < c.usage_limit END
 		   AND (c.per_phone_limit IS NULL OR (SELECT count(*) FROM promo.promo_redemptions r
 		                                       WHERE r.campaign_id = c.id AND r.status <> 'released' AND r.phone = $2) < c.per_phone_limit)
 		  FROM promo.promo_codes k JOIN promo.promo_campaigns c ON c.id = k.campaign_id
-		 WHERE k.id = $1`, codeID, phone).Scan(&free); err != nil {
+		 WHERE k.id = $1`, codeID, phone, s.TodayJakarta()).Scan(&open, &free); err != nil {
 		return "", err
 	}
-	if !free {
+	switch {
+	case !open:
+		return RecaptureCampaignClosed, nil
+	case !free:
 		return RecaptureQuotaUsed, nil
 	}
 	if _, err := q.Exec(ctx, `UPDATE promo.promo_redemptions SET status = 'captured', updated_at = now() WHERE id = $1`, id); err != nil {

@@ -95,4 +95,22 @@ func TestGymVoucherTargetsRefundsAndLatePayments(t *testing.T) {
 	if r, err := vouchers.Recapture(ctx, tx, first); err != nil || r != gymcredits.RecaptureNone || usage() != "2" {
 		t.Fatalf("repeat recapture %q %v usage %s", r, err, usage())
 	}
+
+	// A campaign that ended, or was switched off, before the late payment
+	// keeps the discount without a use, even with quota left.
+	exec(`UPDATE promo.promo_campaigns SET usage_limit = NULL WHERE id = $1`, campaign)
+	ended := pending()
+	hold(ended)
+	exec(`UPDATE promo.promo_campaigns SET valid_until = current_date - 1 WHERE id = $1`, campaign)
+	if r, err := vouchers.Recapture(ctx, tx, ended); err != nil || r != gymcredits.RecaptureCampaignClosed {
+		t.Fatalf("ended campaign recapture %q %v", r, err)
+	}
+	exec(`UPDATE promo.promo_campaigns SET valid_until = NULL, is_active = false WHERE id = $1`, campaign)
+	if r, err := vouchers.Recapture(ctx, tx, ended); err != nil || r != gymcredits.RecaptureCampaignClosed || usage() != "2" {
+		t.Fatalf("inactive campaign recapture %q %v usage %s", r, err, usage())
+	}
+	exec(`UPDATE promo.promo_campaigns SET is_active = true WHERE id = $1`, campaign)
+	if r, err := vouchers.Recapture(ctx, tx, ended); err != nil || r != gymcredits.RecaptureCaptured || usage() != "3" {
+		t.Fatalf("reopened campaign recapture %q %v usage %s", r, err, usage())
+	}
 }

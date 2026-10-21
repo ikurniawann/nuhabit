@@ -50,7 +50,17 @@ const (
 	RecaptureNone      VoucherRecapture = ""
 	RecaptureCaptured  VoucherRecapture = "captured"
 	RecaptureQuotaUsed VoucherRecapture = "quota_used"
+	// RecaptureCampaignClosed: the campaign or code was switched off, or the
+	// payment came outside the campaign's dates.
+	RecaptureCampaignClosed VoucherRecapture = "campaign_closed"
 )
+
+// recaptureNotes is what the purchase records when a late payment could
+// not take its code again; the member keeps the discount they paid.
+var recaptureNotes = map[VoucherRecapture]string{
+	RecaptureQuotaUsed:      "Kuota voucher habis saat pembayaran terlambat, diskon tetap berlaku",
+	RecaptureCampaignClosed: "Campaign voucher sudah tidak aktif atau di luar masa berlaku saat pembayaran terlambat, diskon tetap berlaku",
+}
 
 // Vouchers is the promo-code port. Every method runs in the caller's
 // transaction; Capture, Release and Recapture are idempotent.
@@ -141,8 +151,9 @@ func (s *Service) holdVoucher(ctx context.Context, tx database.Querier, customer
 
 // captureVoucher makes the purchase's code final once it is paid. A
 // purchase paid after it expired or failed had its code released: the code
-// is taken again when its quota allows, else the member keeps the discount
-// they paid with and the purchase notes it.
+// is taken again when the campaign is still open and its quota allows,
+// else the member keeps the discount they paid with and the purchase
+// notes it.
 func (s *Service) captureVoucher(ctx context.Context, tx database.Querier, p *Purchase) error {
 	if s.ports.Vouchers == nil {
 		return nil
@@ -155,9 +166,10 @@ func (s *Service) captureVoucher(ctx context.Context, tx database.Querier, p *Pu
 		return err
 	}
 	note := "Voucher dipakai lagi karena pembayaran terlambat"
-	if result == RecaptureQuotaUsed {
-		note = "Kuota voucher habis saat pembayaran terlambat, diskon tetap berlaku"
-		s.log.WarnContext(ctx, "gym-credits: late payment kept a voucher discount without quota", "purchase_id", p.ID)
+	if kept, ok := recaptureNotes[result]; ok {
+		note = kept
+		s.log.WarnContext(ctx, "gym-credits: late payment kept a voucher discount the code no longer covers",
+			"purchase_id", p.ID, "reason", string(result))
 	}
 	return s.repo.NotePurchase(ctx, tx, p.ID, note, map[string]any{"voucher_late_payment": string(result)})
 }
