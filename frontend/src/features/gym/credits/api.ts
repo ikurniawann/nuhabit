@@ -26,6 +26,8 @@ export interface CreditPackage {
   branch_name: string | null;
   is_public: boolean;
   badge: string | null;
+  /** Pass: juga berlaku untuk sesi personal training. */
+  covers_personal: boolean;
   branch_prices: BranchPrice[];
   status: "active" | "archived";
   sort_order: number;
