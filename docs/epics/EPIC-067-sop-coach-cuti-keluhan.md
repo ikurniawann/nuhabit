@@ -375,3 +375,25 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - penanda di layar Check-in & Booking front desk;
     - pengisian otomatis dari PAR-Q (T-067-C3);
     - belum di-deploy.
+- 2026-10-21 23.15 WIB — **Tahap 1 di-deploy ke DEV (https://nuhabitdev.reddie.id)** dari commit `79bd589f`.
+  - Backup sebelum migrasi: `~/backups/nuhabitdev/nuhabit-20261021-230556-pre-epic067.sql.gz` (dump lengkap,
+    jumlah baris coach/program/sesi/member/pass cocok dengan DB live).
+  - Migrasi: 5 delta EPIC-067 (090000–130000) diterapkan ke DB `nuhabit`; tidak ada migrasi lain yang pending.
+  - Image: `nuhabitdev:local` baru. Image lama disimpan sebagai `nuhabitdev:pre-epic067` untuk rollback. Container
+    dibuat ulang dengan env yang sama persis (6 variabel), `--network host`, volume `nuhabitdev-storage`.
+    Cek CSS `color-pink-700:#00281a` OK.
+  - Smoke test (hanya baca, super admin):
+    - `/login` & `/member` 200; `/coach` & halaman dashboard tanpa login → redirect login;
+    - API baru 200 (coach-leave settings/queue/changes, member-flags);
+    - halaman Cuti & Pengganti Coach dan Member Perhatian Khusus 200, tampil benar, tanpa error console;
+    - regresi 200: studio settings, automation, sessions, coaches, passes, HRIS leaves, kalender, check-in,
+      cuti HRIS, manajemen user;
+    - container healthy, tanpa error di log.
+  - Kondisi data live:
+    - **belum ada user ber-role Program Director**, jadi cuti coach sementara hanya bisa diputus Super Admin;
+    - 2 coach aktif (Fahmi Syaban, Coach Pras) sudah tertaut karyawan, akun login, dan nomor HP.
+  - Catatan: WA Gateway DEV belum terhubung, jadi WA staf/member tercatat gagal kirim, bukan terkirim.
+  - Rollback bila perlu:
+    1. `docker rm -f nuhabitdev-app`;
+    2. jalankan ulang dengan image `nuhabitdev:pre-epic067`;
+    3. restore dump di atas — migrasinya hanya menambah, jadi image lama tetap jalan dengan skema baru.
