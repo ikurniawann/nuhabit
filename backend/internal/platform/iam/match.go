@@ -1,6 +1,9 @@
 package iam
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // HasMenuCode mirrors hasIamMenuCode: exact code granted.
 func HasMenuCode(granted []string, code string) bool {
@@ -45,6 +48,11 @@ func HasGrantedAction(granted map[string][]string, prefixes []string, action str
 type Grant struct {
 	Action   string
 	Prefixes []string
+}
+
+// Can is a Grant of action on a menu under any of the prefix groups.
+func Can(action string, groups ...[]string) Grant {
+	return Grant{Action: action, Prefixes: slices.Concat(groups...)}
 }
 
 // FirstGrant is the index of the first grant the granted actions satisfy,

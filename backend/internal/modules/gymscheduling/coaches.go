@@ -22,10 +22,10 @@ import (
 
 var (
 	// myClassesRead opens the coach portal: the caller's own classes.
-	myClassesRead = can(actRead, iam.GymMyClasses)
+	myClassesRead = iam.Can(actRead, iam.GymMyClasses)
 	// myClassesAttendance checks members in and marks no-shows in the
 	// caller's own classes.
-	myClassesAttendance = can(actUpdate, iam.GymMyClasses)
+	myClassesAttendance = iam.Can(actUpdate, iam.GymMyClasses)
 )
 
 // ownOnly reports whether a grant only reaches the caller's own classes.

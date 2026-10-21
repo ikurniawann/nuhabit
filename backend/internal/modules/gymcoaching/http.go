@@ -37,15 +37,11 @@ const (
 	actDelete  = "delete"
 )
 
-func can(action string, groups ...[]string) iam.Grant {
-	return iam.Grant{Action: action, Prefixes: slices.Concat(groups...)}
-}
-
 var (
-	ptRead   = can(actRead, iam.GymPt)
-	ptOwn    = can(actReadOwn, iam.GymPt)
-	ptCreate = can(actCreate, iam.GymPt)
-	ptUpdate = can(actUpdate, iam.GymPt)
+	ptRead   = iam.Can(actRead, iam.GymPt)
+	ptOwn    = iam.Can(actReadOwn, iam.GymPt)
+	ptCreate = iam.Can(actCreate, iam.GymPt)
+	ptUpdate = iam.Can(actUpdate, iam.GymPt)
 	// ptAny is anyone working with PT: the desk, coaches and managers.
 	ptAny = []iam.Grant{ptRead, ptOwn, ptCreate}
 )
@@ -55,10 +51,10 @@ func (h *handler) Routes() []module.Route {
 	assess := iam.GymAssessments
 	return []module.Route{
 		{Pattern: "GET /api/gym/pt/class-types", Handler: h.staff(h.classTypes, ptAny...)},
-		{Pattern: "GET /api/gym/pt/class-type-flags", Handler: h.staff(h.classTypeFlags, can(actUpdate, iam.GymClassTypes))},
-		{Pattern: "PATCH /api/gym/pt/class-type-flags/{id}", Handler: h.staff(h.setPersonal, can(actUpdate, iam.GymClassTypes))},
+		{Pattern: "GET /api/gym/pt/class-type-flags", Handler: h.staff(h.classTypeFlags, iam.Can(actUpdate, iam.GymClassTypes))},
+		{Pattern: "PATCH /api/gym/pt/class-type-flags/{id}", Handler: h.staff(h.setPersonal, iam.Can(actUpdate, iam.GymClassTypes))},
 		{Pattern: "GET /api/gym/pt/coaches", Handler: h.scoped(h.coaches, ptAny...)},
-		{Pattern: "GET /api/gym/pt/members", Handler: h.staff(h.searchMembers, ptRead, ptOwn, ptCreate, can(actRead, assess), can(actCreate, assess))},
+		{Pattern: "GET /api/gym/pt/members", Handler: h.staff(h.searchMembers, ptRead, ptOwn, ptCreate, iam.Can(actRead, assess), iam.Can(actCreate, assess))},
 		{Pattern: "GET /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.availability, ptAny...)},
 		{Pattern: "PUT /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.setWeekly, ptUpdate)},
 		{Pattern: "POST /api/gym/pt/availability/{coachId}/exceptions", Handler: h.scoped(h.addException, ptUpdate)},
@@ -70,11 +66,11 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "POST /api/gym/pt/appointments/{id}", Handler: h.scoped(h.appointmentAction, ptUpdate)},
 		{Pattern: "POST /api/gym/pt/participants/{id}", Handler: h.scoped(h.participantAction, ptUpdate)},
 
-		{Pattern: "GET /api/gym/assessments", Handler: h.staff(h.listAssessments, can(actRead, assess))},
-		{Pattern: "POST /api/gym/assessments", Handler: h.staff(h.createAssessment, can(actCreate, assess))},
-		{Pattern: "GET /api/gym/assessments/{id}", Handler: h.staff(h.getAssessment, can(actRead, assess))},
-		{Pattern: "PUT /api/gym/assessments/{id}", Handler: h.staff(h.updateAssessment, can(actUpdate, assess))},
-		{Pattern: "DELETE /api/gym/assessments/{id}", Handler: h.staff(h.deleteAssessment, can(actDelete, assess))},
+		{Pattern: "GET /api/gym/assessments", Handler: h.staff(h.listAssessments, iam.Can(actRead, assess))},
+		{Pattern: "POST /api/gym/assessments", Handler: h.staff(h.createAssessment, iam.Can(actCreate, assess))},
+		{Pattern: "GET /api/gym/assessments/{id}", Handler: h.staff(h.getAssessment, iam.Can(actRead, assess))},
+		{Pattern: "PUT /api/gym/assessments/{id}", Handler: h.staff(h.updateAssessment, iam.Can(actUpdate, assess))},
+		{Pattern: "DELETE /api/gym/assessments/{id}", Handler: h.staff(h.deleteAssessment, iam.Can(actDelete, assess))},
 
 		{Pattern: "GET /api/member-portal/gym/pt/options", Handler: h.member(h.memberOptions)},
 		{Pattern: "GET /api/member-portal/gym/pt/slots", Handler: h.member(h.memberSlots)},

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -25,11 +24,6 @@ type Guard interface {
 	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
 }
 
-// can is a grant of action on any menu under the prefix groups.
-func can(action string, groups ...[]string) iam.Grant {
-	return iam.Grant{Action: action, Prefixes: slices.Concat(groups...)}
-}
-
 type handler struct {
 	svc   *Service
 	guard Guard
@@ -39,17 +33,17 @@ type handler struct {
 func (h *handler) Routes() []module.Route {
 	members, reports := iam.GymMembers, iam.GymReports
 	return []module.Route{
-		{Pattern: "GET /api/gym/members", Handler: h.staff(h.listMembers, can("read", members))},
-		{Pattern: "POST /api/gym/members", Handler: h.staff(h.register, can("create", members))},
-		{Pattern: "GET /api/gym/members/{id}", Handler: h.staff(h.member, can("read", members))},
-		{Pattern: "PATCH /api/gym/members/{id}", Handler: h.staff(h.updateMember, can("update", members))},
-		{Pattern: "POST /api/gym/members/{id}/notes", Handler: h.staff(h.addNote, can("read", members))},
-		{Pattern: "DELETE /api/gym/members/{id}/notes/{noteId}", Handler: h.staff(h.deleteNote, can("read", members))},
-		{Pattern: "GET /api/gym/reports/branches", Handler: h.staff(h.branches, can("read", members, reports))},
-		{Pattern: "GET /api/gym/reports/classes", Handler: h.staff(h.classReport, can("read", reports))},
-		{Pattern: "GET /api/gym/reports/revenue", Handler: h.staff(h.revenueReport, can("read", reports))},
-		{Pattern: "GET /api/gym/reports/members", Handler: h.staff(h.membersReport, can("read", reports))},
-		{Pattern: "GET /api/gym/checkin/log", Handler: h.staff(h.checkinLog, can("read", iam.GymCheckin))},
+		{Pattern: "GET /api/gym/members", Handler: h.staff(h.listMembers, iam.Can("read", members))},
+		{Pattern: "POST /api/gym/members", Handler: h.staff(h.register, iam.Can("create", members))},
+		{Pattern: "GET /api/gym/members/{id}", Handler: h.staff(h.member, iam.Can("read", members))},
+		{Pattern: "PATCH /api/gym/members/{id}", Handler: h.staff(h.updateMember, iam.Can("update", members))},
+		{Pattern: "POST /api/gym/members/{id}/notes", Handler: h.staff(h.addNote, iam.Can("read", members))},
+		{Pattern: "DELETE /api/gym/members/{id}/notes/{noteId}", Handler: h.staff(h.deleteNote, iam.Can("read", members))},
+		{Pattern: "GET /api/gym/reports/branches", Handler: h.staff(h.branches, iam.Can("read", members, reports))},
+		{Pattern: "GET /api/gym/reports/classes", Handler: h.staff(h.classReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/reports/revenue", Handler: h.staff(h.revenueReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/reports/members", Handler: h.staff(h.membersReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/checkin/log", Handler: h.staff(h.checkinLog, iam.Can("read", iam.GymCheckin))},
 	}
 }
 
