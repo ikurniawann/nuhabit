@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { AdditionalCostReferenceType } from "@/lib/purchasing/cogs-additional-cost-ui";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { recipeOwnerId, type RecipeOwner } from "@/lib/purchasing/production-recipe-settings";
 import {
   listAdditionalCosts,

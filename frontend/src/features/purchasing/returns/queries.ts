@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import type { ReturnListParams } from "@/types/purchasing";
 import { listReturnsPaged, getReturn, getReturnFormData, listReturnGrnOptions } from "./api";
 import { returnsQueryKeys } from "./query-keys";

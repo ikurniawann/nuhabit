@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { useErrorToast } from "@/features/purchasing/reports/use-error-toast";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { hasRecipe, isActiveProductionStatus } from "@/lib/purchasing/production-ui-display";
 import { useProductionOrderActions } from "../hooks/use-production-order-actions";
 import { getProductionModuleConfig } from "../production-module";

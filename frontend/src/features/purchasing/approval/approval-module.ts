@@ -1,4 +1,4 @@
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import {
   GENERAL_ROUTES,
   PRODUCT_ROUTES,

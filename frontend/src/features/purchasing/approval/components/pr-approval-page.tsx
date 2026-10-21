@@ -20,7 +20,7 @@ import {
 import { PurchasingPageHeader } from "@/features/purchasing/components/shared/purchasing-page-header";
 import { PurchasingListSection } from "@/features/purchasing/components/shared/purchasing-list-section";
 import { persistNavFrom, NAV_FROM_APPROVAL_PR } from "@/lib/iam/nav-context";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { getApprovalModuleConfig } from "../approval-module";
 import { CheckCircle, FileText, Loader2, XCircle } from "lucide-react";
 import { formatDate, formatRupiah } from "@/lib/format";

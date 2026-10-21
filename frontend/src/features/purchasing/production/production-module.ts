@@ -1,4 +1,4 @@
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 import { PRODUCT_ROUTES, RM_ROUTES } from "@/lib/purchasing/item-routes";
 
 export function getProductionModuleConfig(moduleType: PurchasingModuleType = "raw_material") {

@@ -1,5 +1,5 @@
 import type { ApprovalPR } from "./types";
-import type { PurchasingModuleType } from "@/lib/purchasing/module-scope";
+import type { PurchasingModuleType } from "@/features/purchasing/module-type";
 
 export type { ApprovalPR } from "./types";
 
