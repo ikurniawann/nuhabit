@@ -21,6 +21,7 @@ import (
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/localtime"
+	"nuhabit/backend/internal/platform/members"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
 )
@@ -103,7 +104,7 @@ func (testSchedule) CoachClash(ctx context.Context, q Q, appointmentID, coachID 
 type testNotifier struct{}
 
 func (testNotifier) NotifyMember(ctx context.Context, q Q, customerID string, n Notification) error {
-	return gymscheduling.NotificationsSQL{}.NotifyMember(ctx, q, customerID, gymscheduling.Notification(n))
+	return members.Notify(ctx, q, customerID, members.Notice(n))
 }
 
 type fixture struct {

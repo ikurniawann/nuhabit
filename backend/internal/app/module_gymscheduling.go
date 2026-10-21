@@ -19,9 +19,9 @@ import (
 // gym-scheduling: class types, coaches, sessions, bookings, gate check-in.
 //
 // Credits, package coverage and business rules come from the gym-credits
-// service, on the caller's transaction. Members, QR tokens and member
-// notifications still use the module's stopgap SQL adapters until the
-// POS/CRM modules expose those operations.
+// service, on the caller's transaction. Members and QR tokens still use the
+// module's SQL adapters until the POS/CRM modules expose those operations;
+// member notifications go through platform/members.
 func init() {
 	Register(gymscheduling.Name, func(d module.Deps) module.Module {
 		return gymscheduling.New(d, schedulingPorts(d))

@@ -11,6 +11,7 @@ import (
 	"nuhabit/backend/internal/modules/hris"
 	"nuhabit/backend/internal/modules/payroll"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/members"
 )
 
 // gymTrainingScheduling serves gym-training's Scheduling port from
@@ -101,13 +102,12 @@ func gymCatalog(entries []gymscheduling.CatalogEntry, err error) ([]gymtraining.
 	return out, err
 }
 
-// gymTrainingNotifier sends gym-training's member notifications through the
-// gym notifier (crm.member_notifications plus the push, WhatsApp and email
-// delivery).
+// gymTrainingNotifier stores gym-training's member notifications through
+// platform/members (the inbox row plus the push, WhatsApp and email delivery).
 type gymTrainingNotifier struct{}
 
 var _ gymtraining.Notifier = gymTrainingNotifier{}
 
 func (gymTrainingNotifier) NotifyMember(ctx context.Context, q database.Querier, customerID string, n gymtraining.Notification) error {
-	return gymscheduling.NotificationsSQL{}.NotifyMember(ctx, q, customerID, gymscheduling.Notification(n))
+	return members.Notify(ctx, q, customerID, members.Notice(n))
 }

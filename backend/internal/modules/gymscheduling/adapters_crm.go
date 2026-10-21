@@ -7,15 +7,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"nuhabit/backend/internal/contracts/gym"
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
-	"nuhabit/backend/internal/platform/outbox"
+	"nuhabit/backend/internal/platform/members"
 )
 
-// Stopgap adapters for data owned by the POS/CRM contexts, with the SQL the
-// TS gym code runs today. internal/app wires them until those modules expose
-// the same operations.
+// Adapters for data owned by the POS/CRM contexts. internal/app wires them
+// until those modules expose the same operations.
 
 // MembersSQL reads pos.pos_customers.
 type MembersSQL struct{}
@@ -67,21 +65,13 @@ func (QrTokensSQL) Consume(ctx context.Context, q database.Querier, token string
 	return err
 }
 
-// NotificationsSQL writes crm.member_notifications and publishes
-// gym.member.notified in the same transaction; the CRM subscriber sends the
-// web push, WhatsApp and email after commit, so a delivery failure never
-// fails the booking.
+// NotificationsSQL stores member notifications through platform/members,
+// which publishes gym.member.notified in the same transaction, so a
+// delivery failure never fails the booking.
 type NotificationsSQL struct{}
 
 var _ Notifier = NotificationsSQL{}
 
 func (NotificationsSQL) NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error {
-	if _, err := q.Exec(ctx,
-		`INSERT INTO crm.member_notifications (customer_id, type, title, body) VALUES ($1, $2, $3, $4)`,
-		customerID, n.Type, n.Title, n.Body); err != nil {
-		return err
-	}
-	return outbox.Publish(ctx, q, gym.TopicMemberNotified, customerID, gym.MemberNotified{
-		CustomerID: customerID, Type: n.Type, Title: n.Title, Body: n.Body,
-	})
+	return members.Notify(ctx, q, customerID, members.Notice(n))
 }

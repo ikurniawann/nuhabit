@@ -10,6 +10,7 @@ import (
 	"nuhabit/backend/internal/modules/gymscheduling"
 	scheddomain "nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/database"
+	"nuhabit/backend/internal/platform/members"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -18,8 +19,7 @@ import (
 //
 // PT credits and the business rules come from gym-credits, the coach
 // timetable lock and overlap check from gym-scheduling, on the caller's
-// transaction. Member notifications use the scheduling notifier, which
-// publishes gym.member.notified.
+// transaction. Member notifications go through platform/members.
 func init() {
 	Register(gymcoaching.Name, func(d module.Deps) module.Module {
 		return gymcoaching.New(d, coachingPorts(d))
@@ -94,5 +94,5 @@ func (coachingSchedule) CoachClash(ctx context.Context, q database.Querier, appo
 type coachingNotifier struct{}
 
 func (coachingNotifier) NotifyMember(ctx context.Context, q database.Querier, customerID string, n gymcoaching.Notification) error {
-	return gymscheduling.NotificationsSQL{}.NotifyMember(ctx, q, customerID, gymscheduling.Notification(n))
+	return members.Notify(ctx, q, customerID, members.Notice(n))
 }
