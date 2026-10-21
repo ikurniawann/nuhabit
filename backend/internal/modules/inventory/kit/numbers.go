@@ -138,9 +138,6 @@ func (n Num) Value() (driver.Value, error) { return JSNum(n.f), nil }
 // RoundQty is Math.round(v * 1000) / 1000.
 func RoundQty(v float64) float64 { return JSRound(v*1000) / 1000 }
 
-// Round2 is Math.round(v * 100) / 100.
-func Round2(v float64) float64 { return JSRound(v*100) / 100 }
-
 // JSRound is Math.round: halves round toward +Infinity.
 func JSRound(v float64) float64 { return math.Floor(v + 0.5) }
 

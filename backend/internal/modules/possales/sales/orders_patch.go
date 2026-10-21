@@ -55,8 +55,6 @@ func (s *setList) set(col string, v any) {
 	s.vals[col] = v
 }
 
-func (s *setList) has(col string) bool { _, ok := s.vals[col]; return ok }
-
 func (s *setList) str(col string) string {
 	v, _ := s.vals[col].(string)
 	return v

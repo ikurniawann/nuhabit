@@ -5,10 +5,6 @@ import (
 	"net/http"
 	ps "nuhabit/backend/internal/platform/scope"
 	"nuhabit/backend/internal/platform/stall"
-	"regexp"
-	"sort"
-	"strconv"
-	"strings"
 
 	"nuhabit/backend/internal/platform/database"
 )
@@ -136,103 +132,4 @@ func RawMaterialStockSource(ctx context.Context, q database.Querier, r *http.Req
 		return StockSource{View: "v_raw_materials_stock_by_warehouse", WarehouseID: w}, nil
 	}
 	return StockSource{View: "v_raw_materials_stock"}, nil
-}
-
-/* ── warehouses ordering (frontend/src/lib/configuration/sort-warehouses.ts) */
-
-var stallCodeNum = regexp.MustCompile(`^STALL-0*(\d+)$`)
-
-func stallNumber(code string) (int, bool) {
-	m := stallCodeNum.FindStringSubmatch(strings.ToUpper(strings.TrimSpace(code)))
-	if m == nil {
-		return 0, false
-	}
-	n, err := strconv.Atoi(m[1])
-	return n, err == nil
-}
-
-// CompareWarehouses is compareWarehouses (default first, MAIN, then stalls
-// numerically). Locale comparison is approximated case-insensitively with
-// numeric runs compared by value.
-func CompareWarehouses(aDefault bool, aCode, aName string, bDefault bool, bCode, bName string) int {
-	if aDefault != bDefault {
-		if aDefault {
-			return -1
-		}
-		return 1
-	}
-	an, aStall := stallNumber(aCode)
-	bn, bStall := stallNumber(bCode)
-	switch {
-	case aStall && bStall:
-		return an - bn
-	case aStall:
-		return 1
-	case bStall:
-		return -1
-	}
-	if strings.ToUpper(aCode) == "MAIN" {
-		return -1
-	}
-	if strings.ToUpper(bCode) == "MAIN" {
-		return 1
-	}
-	if c := naturalCompare(aCode, bCode); c != 0 {
-		return c
-	}
-	return naturalCompare(aName, bName)
-}
-
-// SortWarehouses sorts rows with id/code/name/is_default columns.
-func SortWarehouses(rows Rows) {
-	sort.SliceStable(rows, func(i, j int) bool {
-		a, b := rows[i], rows[j]
-		return CompareWarehouses(a.Bool("is_default"), a.Str("code"), a.Str("name"), b.Bool("is_default"), b.Str("code"), b.Str("name")) < 0
-	})
-}
-
-// naturalCompare approximates localeCompare(..., {numeric: true,
-// sensitivity: "base"}).
-func naturalCompare(a, b string) int {
-	a, b = strings.ToLower(a), strings.ToLower(b)
-	for a != "" && b != "" {
-		ad, bd := isDigit(a[0]), isDigit(b[0])
-		if ad && bd {
-			ai, bi := digitRun(a), digitRun(b)
-			an, _ := strconv.ParseFloat(a[:ai], 64)
-			bn, _ := strconv.ParseFloat(b[:bi], 64)
-			if an != bn {
-				if an < bn {
-					return -1
-				}
-				return 1
-			}
-			a, b = a[ai:], b[bi:]
-			continue
-		}
-		if a[0] != b[0] {
-			if a[0] < b[0] {
-				return -1
-			}
-			return 1
-		}
-		a, b = a[1:], b[1:]
-	}
-	switch {
-	case a == "" && b == "":
-		return 0
-	case a == "":
-		return -1
-	}
-	return 1
-}
-
-func isDigit(c byte) bool { return c >= '0' && c <= '9' }
-
-func digitRun(s string) int {
-	i := 0
-	for i < len(s) && isDigit(s[i]) {
-		i++
-	}
-	return i
 }

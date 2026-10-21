@@ -3,7 +3,6 @@ package members
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -16,15 +15,6 @@ import (
 // transaction usable.
 func quietly(ctx context.Context, db database.DB, fn func(q database.Querier) error) {
 	_ = database.WithTx(ctx, db, func(tx pgx.Tx) error { return fn(tx) })
-}
-
-// arrayIndex reports whether a JS engine orders key as an integer index.
-func arrayIndex(key string) (uint64, bool) {
-	if key == "" || (len(key) > 1 && key[0] == '0') {
-		return 0, false
-	}
-	n, err := strconv.ParseUint(key, 10, 32)
-	return n, err == nil && n < 1<<32-1
 }
 
 func quoteIdent(id string) string { return `"` + strings.ReplaceAll(id, `"`, `""`) + `"` }

@@ -43,12 +43,6 @@ var (
 	ackIgnored = InvoiceAck{Success: true, Ignored: true}
 )
 
-// IsTicketingInvoice reports whether an external_id belongs to a booking or
-// a season pass.
-func IsTicketingInvoice(externalID string) bool {
-	return strings.HasPrefix(externalID, bookingInvoicePrefix) || strings.HasPrefix(externalID, passInvoicePrefix)
-}
-
 func isPaid(status string) bool { return status == "PAID" || status == "SETTLED" }
 
 // SettleInvoice is handleTicketingInvoiceCallback on db (a pool or the

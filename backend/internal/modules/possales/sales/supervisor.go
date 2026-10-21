@@ -32,14 +32,6 @@ type Approval struct {
 	RetryMinutes int // > 0 when locked
 }
 
-// reject writes the standard rejection: 429 when locked, else 403 with msg.
-func (a Approval) reject(w http.ResponseWriter, invalidMsg string) error {
-	if a.RetryMinutes > 0 {
-		return kit.Fail(w, 429, domain.SupervisorPinLockedMessage(a.RetryMinutes))
-	}
-	return kit.Fail(w, 403, invalidMsg)
-}
-
 // verifyPosPin is verifyPosPin: bcrypt hashes through pgcrypto's crypt(),
 // legacy plaintext compared as-is. bcryptjs 3 writes $2b$, which pgcrypto
 // does not parse; $2a$ and $2b$ differ only for passwords over 255 bytes,

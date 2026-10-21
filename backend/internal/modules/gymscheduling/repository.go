@@ -171,12 +171,6 @@ func (s *SessionRow) Move() domain.SessionMove {
 	return domain.SessionMove{MovedAt: s.MovedAt, OriginalStartsAt: s.OriginalStartsAt}
 }
 
-// slot is the session's place in the timetable for overlap checks.
-func (s *SessionRow) slot() domain.Slot {
-	return domain.Slot{ID: s.ID, ClassName: s.ClassTypeName, CoachID: s.CoachID, CoachName: s.CoachName,
-		BranchID: s.BranchID, Area: s.Area, StartsAt: s.StartsAt, EndsAt: s.EndsAt, Zone: s.Zone}
-}
-
 // when is the start as "Sab, 24 Okt, 18.00" in the branch zone.
 func (s *SessionRow) when() string { return s.at(s.StartsAt) }
 

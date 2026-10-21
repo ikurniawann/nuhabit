@@ -130,15 +130,6 @@ func readForm(r *http.Request, message string) (*validate.Form, error) {
 	return validate.New(body, true), nil
 }
 
-// optionalForm is readOptionalJson: a missing or non-JSON body is {}.
-func optionalForm(r *http.Request) *validate.Form {
-	body, present := validate.ReadBody(r)
-	if !present || body == nil {
-		body = map[string]any{}
-	}
-	return validate.New(body, true)
-}
-
 // formErr is parseInput's failure: 400 with message, or the first issue's
 // message, and the issues as details.
 func formErr(f *validate.Form, message string) error {

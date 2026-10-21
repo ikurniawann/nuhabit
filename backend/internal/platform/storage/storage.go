@@ -97,9 +97,6 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// RandomFileToken is randomFileToken: 128 random bits as 32 hex characters.
-func RandomFileToken() string { return randomHex(16) }
-
 // SafeSegments checks request path segments: every segment
 // is decoded once more (catching %252F) and rejected when empty, starting
 // with ".", or holding "/", "\" or NUL. nil means reject.
