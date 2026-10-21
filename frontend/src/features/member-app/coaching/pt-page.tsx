@@ -134,9 +134,16 @@ export function PtPage() {
                   </p>
                 ) : null}
                 {upcoming(s) ? (
-                  <button className="nh-btn-ghost !py-2 text-sm text-nh-danger" onClick={() => setCancelling(s)}>
-                    {s.status === "requested" ? t("Withdraw request") : t("Cancel session")}
-                  </button>
+                  <div className="flex gap-2">
+                    {s.can_reschedule ? (
+                      <Link href={m(`/pt/book?move=${s.appointment_id}`)} className="nh-btn-ghost flex-1 !py-2 text-sm">
+                        {t("Move session")}
+                      </Link>
+                    ) : null}
+                    <button className="nh-btn-ghost flex-1 !py-2 text-sm text-nh-danger" onClick={() => setCancelling(s)}>
+                      {s.status === "requested" ? t("Withdraw request") : t("Cancel session")}
+                    </button>
+                  </div>
                 ) : null}
               </div>
             );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck, ChevronLeft, ChevronRight, Hourglass, Plus, UserCheck } from "lucide-react";
+import { BellRing, CalendarCheck, ChevronLeft, ChevronRight, Hourglass, Plus, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { SELECT } from "@/features/gym/shared";
 import { addDays, dayStart, rentangJam, tanggal } from "@/features/gym/scheduling/api";
 import { localDay } from "@/lib/timezone";
-import { COACHING_KEYS, coachingApi, PT_BADGE, type PtAppointment } from "../api";
+import { COACHING_KEYS, coachingApi, PT_BADGE, type PendingRequests, type PtAppointment } from "../api";
 import { AppointmentDialog } from "./appointment-dialog";
 import { AvailabilityPanel } from "./availability-panel";
 import { BookDialog } from "./book-dialog";
@@ -38,6 +38,8 @@ export function PtPage() {
   const requested = searchParams.get("tab");
   const tab: TabValue = TABS.some((t) => t.value === requested) ? (requested as TabValue) : "jadwal";
   const coaches = useQuery({ queryKey: COACHING_KEYS.coaches(true), queryFn: () => coachingApi.coaches(true) });
+  // ?status=requested (the inbox link) opens the agenda on the waiting requests.
+  const initialStatus = searchParams.get("status") ?? "";
 
   return (
     <div className="space-y-4">
@@ -65,7 +67,7 @@ export function PtPage() {
           ))}
         </TabsList>
         <TabsContent value="jadwal" className="mt-4">
-          <Agenda coachOptions={coaches.data ?? []} />
+          <Agenda coachOptions={coaches.data ?? []} initialStatus={initialStatus} />
         </TabsContent>
         <TabsContent value="ketersediaan" className="mt-4">
           {coaches.isLoading ? (
@@ -88,11 +90,11 @@ export function PtPage() {
   );
 }
 
-function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[] }) {
+function Agenda({ coachOptions, initialStatus }: { coachOptions: { id: string; name: string }[]; initialStatus: string }) {
   const queryClient = useQueryClient();
   const [week, setWeek] = useState(() => weekStartWib(new Date()));
   const [coachId, setCoachId] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [booking, setBooking] = useState(false);
   const [open, setOpen] = useState<PtAppointment | null>(null);
   const params = { from: dayStart(week), to: dayStart(addDays(week, 7)), coach_id: coachId, status };
@@ -100,7 +102,11 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
     queryKey: [...COACHING_KEYS.appointments, params],
     queryFn: () => coachingApi.appointments(params),
   });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: COACHING_KEYS.appointments });
+  const pending = useQuery({ queryKey: COACHING_KEYS.pending, queryFn: coachingApi.pendingCount, refetchInterval: 60_000 });
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: COACHING_KEYS.appointments });
+    void queryClient.invalidateQueries({ queryKey: COACHING_KEYS.pending });
+  };
 
   const rows = list.data ?? [];
   const days = Array.from({ length: 7 }, (_, i) => addDays(week, i));
@@ -111,6 +117,16 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
 
   return (
     <div className="space-y-4">
+      {pending.data && pending.data.count > 0 && (
+        <PendingStrip
+          pending={pending.data}
+          onShow={() => {
+            setStatus("requested");
+            setCoachId("");
+            if (pending.data?.earliest_start) setWeek(weekStartWib(new Date(pending.data.earliest_start)));
+          }}
+        />
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard
           label="Menunggu konfirmasi"
@@ -185,6 +201,24 @@ function Agenda({ coachOptions }: { coachOptions: { id: string; name: string }[]
       {booking && <BookDialog coachId={coachId || undefined} date={days.includes(today) ? today : week} onClose={() => setBooking(false)} onBooked={refresh} />}
       {open && <AppointmentDialog appointment={open} onClose={() => setOpen(null)} onChanged={refresh} />}
     </div>
+  );
+}
+
+/** Permintaan member yang belum dijawab coach, di semua minggu. */
+function PendingStrip({ pending, onShow }: { pending: PendingRequests; onShow: () => void }) {
+  return (
+    <Card size="sm" className="flex-row items-center gap-3 bg-info-soft p-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-card text-info">
+        <BellRing className="size-4" />
+      </span>
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="font-semibold">Menunggu konfirmasi:</span> {formatNumber(pending.count)} permintaan PT
+        {pending.earliest_start && `, paling awal ${tanggal(pending.earliest_start)}`}.
+      </p>
+      <Button size="sm" variant="outline" onClick={onShow}>
+        Lihat permintaan
+      </Button>
+    </Card>
   );
 }
 
