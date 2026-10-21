@@ -4,6 +4,7 @@ import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
 import { COMPLAINT_CATEGORIES, COMPLAINT_STATUSES, MAX_SLA_HOURS } from "@/lib/studio/complaints";
+import { SOP_BODY_MAX, SOP_TITLE_MAX } from "@/lib/studio/sop";
 import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
@@ -404,3 +405,11 @@ export const warningDecisionSchema = z.object({
   decision: z.enum(["issued", "dismissed"]),
   note: z.string().trim().max(500).nullable().optional(),
 });
+
+// ── SOP coach (EPIC-067 D1) ───────────────────────────────────────────────
+export const sopInputSchema = z.object({
+  title: z.string().trim().min(3).max(SOP_TITLE_MAX),
+  body: z.string().trim().min(20).max(SOP_BODY_MAX),
+  change_note: z.string().trim().max(300).nullable().optional(),
+});
+export const sopActiveSchema = z.object({ is_active: z.boolean() });

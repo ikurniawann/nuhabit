@@ -151,7 +151,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 
 ### D. Dokumen SOP
 
-- [ ] T-067-D1 **(Tahap 2)** Dokumen SOP berversi dengan konfirmasi "Saya sudah membaca dan setuju" per coach
+- [x] T-067-D1 **(Tahap 2)** Dokumen SOP berversi dengan konfirmasi "Saya sudah membaca dan setuju" per coach
   (perluas `hris.announcements` atau tabel kebijakan baru); coach yang belum konfirmasi versi terbaru diingatkan di Coach
   Portal; laporan siapa yang belum konfirmasi.
 
@@ -532,4 +532,32 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     - `tsc` tanpa error baru; eslint tanpa error baru.
     - Tampilan potongan di halaman Komisi belum dicek visual (butuh revenue bulan berjalan); perhitungannya teruji
       unit.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-D1 selesai — Tahap 2 lengkap** (B1, B2, B3, A5, A8, D1).
+  - Migrasi `20261022120000_studio_sop.sql`:
+    - `studio.sop_documents` / `sop_versions` (setiap terbitan = versi baru, isi tidak diubah setelah terbit) /
+      `sop_acknowledgements` (per coach per versi);
+    - menu `studio.sop` "SOP Coach" (super_admin, admin, direksi, program_director).
+  - **Template SOP coach** (`buildSopCoachTemplate`) disusun dari pengaturan venue yang berlaku sekarang, supaya isi
+    dokumen sama dengan perilaku sistem:
+    - H-N per jenis cuti, jenis yang boleh mendadak;
+    - alur & batas jawaban pengganti, kabar ke member;
+    - potongan & ambang SP, batas waktu keluhan per kategori, eskalasi, penanganan cedera;
+    - member perhatian khusus & kerahasiaan data medis.
+    Tombol "Isi dari template" di editor. Ini menjawab permintaan awal client "Siapkan SOP coach".
+  - **Backoffice `/dashboard/studio/sop`:**
+    - buat SOP (terbit v1), terbitkan versi baru (wajib ringkasan perubahan → semua coach konfirmasi ulang),
+      arsipkan/aktifkan;
+    - laporan konfirmasi per coach ("Setuju <waktu>" / "Belum konfirmasi" / "Belum punya akun Coach Portal");
+    - riwayat versi;
+    - "Kirim pengingat WA" hanya ke coach ber-akun yang belum konfirmasi (dedup per coach/versi/hari).
+  - **Coach Portal:** banner "Ada N SOP yang perlu dibaca & dikonfirmasi" di semua tab, ikon SOP di header untuk
+    membaca kapan pun, centang "Saya sudah membaca dan setuju" + Konfirmasi. Konfirmasi versi lama ditolak (409).
+  - Bukti:
+    - 3 unit test template + 4 test integrasi (versi & konfirmasi idempoten, versi baru meminta ulang & versi lama
+      ditolak, laporan, pengingat hanya coach ber-akun, arsip) lulus di `nuhabit_test`;
+    - E2E headless (PD + coach uji, sudah dihapus): PD membuat SOP dari template → terbit v1 → coach melihat banner,
+      membaca, mengonfirmasi → banner hilang → laporan PD menandai coach setuju → PD terbitkan v2 → banner muncul lagi;
+      tanpa error;
+    - `tsc` tanpa error baru; eslint bersih.
   - Belum di-deploy.

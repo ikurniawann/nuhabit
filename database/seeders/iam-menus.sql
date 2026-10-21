@@ -285,4 +285,4 @@ WHERE deleted_at IS NULL
     'studio.loyalty',
     -- EPIC-067 SOP Coach (cuti & pengganti, member perhatian khusus):
     'studio.coach-leave',
-    'studio.member-flags', 'studio.complaints');
+    'studio.member-flags', 'studio.complaints', 'studio.sop');

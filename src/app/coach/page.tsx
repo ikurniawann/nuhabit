@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CalendarDays, CalendarOff, Check, ChevronDown, Loader2, LogOut, Users, Wallet } from "lucide-react";
+import { CalendarDays, CalendarOff, Check, ChevronDown, FileText, Loader2, LogOut, Users, Wallet } from "lucide-react";
 import { periodLabel } from "@/lib/studio/commission";
 import { COACH_LEVEL_LABEL } from "@/lib/studio/schedule";
 import { formatDayLabel, rupiah } from "@/features/studio/types";
 import { CoachLeaveTab } from "@/features/studio/components/coach-leave-tab";
 import { RosterMemberFlags, type RosterFlag } from "@/features/studio/components/coach-member-flags";
+import { CoachSopBanner, CoachSopSheet, useCoachSop } from "@/features/studio/components/coach-sop";
 
 interface Me {
   id: string;
@@ -67,6 +68,8 @@ const kindLabel = (kind: string) => (kind === "pt" ? "Personal Training" : "Kela
 export default function CoachPortalPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const sop = useCoachSop();
+  const [sopOpen, setSopOpen] = useState(false);
   // ?tab=leave dari link WA permintaan pengganti (EPIC-067).
   const [tab, setTab] = useState<"schedule" | "leave" | "commission">(() =>
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "leave" ? "leave" : "schedule"
@@ -94,6 +97,11 @@ export default function CoachPortalPage() {
               <p className="text-[11px] text-nh-lime">{COACH_LEVEL_LABEL[me.level]}</p>
             </div>
           )}
+          {me && (
+            <button type="button" onClick={() => setSopOpen(true)} aria-label="SOP Coach" className="rounded-full p-2 text-nh-beige/70 transition hover:bg-white/10 hover:text-nh-beige">
+              <FileText className="size-4" />
+            </button>
+          )}
           <button type="button" onClick={logout} aria-label="Keluar" className="rounded-full p-2 text-nh-beige/70 transition hover:bg-white/10 hover:text-nh-beige">
             <LogOut className="size-4" />
           </button>
@@ -113,6 +121,8 @@ export default function CoachPortalPage() {
         </div>
       ) : (
         <>
+          <CoachSopBanner pending={sop.pending} onOpen={() => setSopOpen(true)} />
+          {sopOpen && sop.items && <CoachSopSheet items={sop.items} onClose={() => setSopOpen(false)} onChanged={sop.reload} />}
           <main className="flex-1 px-4 pb-28 pt-4">{tab === "schedule" ? <ScheduleTab /> : tab === "leave" ? <CoachLeaveTab /> : <CommissionTab />}</main>
           <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex max-w-xl gap-2 border-t border-white/10 bg-nh-forest/95 p-3 backdrop-blur">
             <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")} icon={<CalendarDays className="size-4" />} label="Jadwal" />
