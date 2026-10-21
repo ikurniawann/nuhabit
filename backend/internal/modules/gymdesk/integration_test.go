@@ -14,11 +14,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"nuhabit/backend/internal/modules/gymcredits"
 	"nuhabit/backend/internal/platform/auth"
 	"nuhabit/backend/internal/platform/database"
 	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/localtime"
+	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/testutil"
 )
 
@@ -51,10 +53,21 @@ func (f *fakeAccounts) UpdateProfile(_ context.Context, _ database.DB, id string
 	return nil
 }
 
-type fakeCredits struct{}
+// fakeCredits stubs the member 360 credit block and runs the expiring
+// credits query through the real gym-credits ledger.
+type fakeCredits struct{ ledger *gymcredits.Service }
 
 func (fakeCredits) MemberCredits(_ context.Context, id string) (json.RawMessage, error) {
 	return json.RawMessage(`{"member":{"id":"` + id + `"},"balance":8}`), nil
+}
+
+func (f fakeCredits) Expiring(ctx context.Context, q database.Querier, now time.Time, withinDays int) ([]CreditExpiry, error) {
+	list, err := f.ledger.ExpiringCredits(ctx, q, now, withinDays)
+	out := make([]CreditExpiry, len(list))
+	for i, e := range list {
+		out[i] = CreditExpiry(e)
+	}
+	return out, err
 }
 
 var testNow = time.Date(2031, 3, 20, 12, 0, 0, 0, localtime.Jakarta)
@@ -91,7 +104,7 @@ func newFixture(t *testing.T) *fixture {
 	tx := testutil.Tx(t)
 	f := &fixture{t: t, ctx: context.Background(), tx: tx, accounts: &fakeAccounts{patched: map[string]ProfilePatch{}},
 		sfx: testutil.RandomHex(4), num: fmt.Sprintf("%07d", time.Now().UnixNano()%10_000_000)}
-	svc := &Service{db: tx, ports: Ports{Accounts: f.accounts, Credits: fakeCredits{}, WaiverVersion: "1.0"}, now: func() time.Time { return testNow }}
+	svc := &Service{db: tx, ports: Ports{Accounts: f.accounts, Credits: fakeCredits{ledger: gymcredits.NewDefaultService(module.Deps{}, tx)}, WaiverVersion: "1.0"}, now: func() time.Time { return testNow }}
 	f.mux = testutil.Mux(mod{h: &handler{svc: svc, guard: headerGuard{}}})
 	f.seed()
 	return f

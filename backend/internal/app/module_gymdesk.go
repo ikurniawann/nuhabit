@@ -55,3 +55,12 @@ func (a gymDeskCredits) MemberCredits(ctx context.Context, customerID string) (j
 	}
 	return json.Marshal(view)
 }
+
+func (a gymDeskCredits) Expiring(ctx context.Context, q database.Querier, now time.Time, withinDays int) ([]gymdesk.CreditExpiry, error) {
+	list, err := a.svc.ExpiringCredits(ctx, q, now, withinDays)
+	out := make([]gymdesk.CreditExpiry, len(list))
+	for i, e := range list {
+		out[i] = gymdesk.CreditExpiry(e)
+	}
+	return out, err
+}

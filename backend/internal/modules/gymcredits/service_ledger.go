@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
 	"nuhabit/backend/internal/platform/database"
@@ -511,4 +514,46 @@ func (s *Service) Rules(ctx context.Context, q database.Querier, branchID *strin
 		}
 	}
 	return domain.ResolveRules(global, branch), nil
+}
+
+// ExpiringCredits are the credits of one member that lapse soon: the sum
+// left on the lots expiring in the window and the earliest of their expiries.
+type ExpiringCredits struct {
+	CustomerID string
+	Credits    int
+	ExpiresAt  time.Time
+}
+
+// ExpiringCredits lists the members holding credits that lapse within
+// withinDays days of now, earliest expiry first: lots with credits left
+// under the FIFO rule (domain.ExpiringLots). The desk's "credits expiring"
+// filter and member report read it.
+func (s *Service) ExpiringCredits(ctx context.Context, q database.Querier, now time.Time, withinDays int) ([]ExpiringCredits, error) {
+	rows, err := q.Query(ctx, `SELECT DISTINCT customer_id::text FROM gym.credit_lots WHERE expires_at > $1 AND expires_at <= $2`,
+		now, now.Add(time.Duration(withinDays)*24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, err
+	}
+	out := []ExpiringCredits{}
+	for _, id := range ids {
+		state, err := s.loadState(ctx, q, id)
+		if err != nil {
+			return nil, err
+		}
+		lots := domain.ExpiringLots(state.lots, state.entries, now, withinDays)
+		if len(lots) == 0 {
+			continue
+		}
+		e := ExpiringCredits{CustomerID: id, ExpiresAt: lots[0].Lot.ExpiresAt}
+		for _, r := range lots {
+			e.Credits += r.Remaining
+		}
+		out = append(out, e)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].ExpiresAt.Before(out[j].ExpiresAt) })
+	return out, nil
 }

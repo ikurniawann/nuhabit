@@ -92,41 +92,9 @@ func phoneCore(term string) string {
 	return digits
 }
 
-// lotRemainders lists every credit lot of the members who hold a lot that
-// lapses in (from, to], with the credits left on it; from and to are
-// placeholders such as "$1". It is the FIFO rule of gym-credits
-// (domain.LotRemainders) in SQL: debits pinned to a lot come off that lot,
-// the rest of the usage is taken from lots in expiry order.
-func lotRemainders(from, to string) string {
-	return `
-  WITH cand AS (
-    SELECT DISTINCT customer_id FROM gym.credit_lots WHERE expires_at > ` + from + ` AND expires_at <= ` + to + `
-  ), entries AS (
-    SELECT e.customer_id, e.lot_id, e.amount,
-           (e.amount < 0 AND e.lot_id IS NOT NULL AND e.type IN ('expiration', 'reversal')) AS pinned,
-           (e.amount > 0 AND e.lot_id IS NOT NULL) AS owns_lot
-      FROM gym.credit_ledger e JOIN cand USING (customer_id)
-  ), pinned AS (
-    SELECT lot_id, sum(-amount) AS credits FROM entries WHERE pinned GROUP BY lot_id
-  ), pool AS (
-    SELECT customer_id, greatest(0, sum(-amount)) AS consumed
-      FROM entries WHERE NOT pinned AND NOT owns_lot GROUP BY customer_id
-  ), lots AS (
-    SELECT l.id, l.customer_id, l.package_id, l.expires_at, l.created_at,
-           greatest(0, l.credits - COALESCE(p.credits, 0)) AS available
-      FROM gym.credit_lots l JOIN cand USING (customer_id) LEFT JOIN pinned p ON p.lot_id = l.id
-  ), ordered AS (
-    SELECT lots.*, COALESCE(sum(available) OVER (PARTITION BY customer_id ORDER BY expires_at, created_at, id
-                                                 ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS before
-      FROM lots
-  )
-  SELECT o.id, o.customer_id, o.package_id, o.expires_at,
-         (o.available - least(o.available, greatest(0, COALESCE(pool.consumed, 0) - o.before)))::int AS remaining
-    FROM ordered o LEFT JOIN pool USING (customer_id)`
-}
-
 // memberWhere builds the WHERE clause of the member list; args start at $1.
-func memberWhere(f MemberFilter, now time.Time) (string, []any) {
+// expiring are the members the Expiring filter keeps.
+func memberWhere(f MemberFilter, now time.Time, expiring []string) (string, []any) {
 	var conds []string
 	args := []any{}
 	arg := func(v any) string {
@@ -134,9 +102,7 @@ func memberWhere(f MemberFilter, now time.Time) (string, []any) {
 		return fmt.Sprintf("$%d", len(args))
 	}
 	if f.Expiring {
-		from, to := arg(now), arg(now.AddDate(0, 0, ExpiringDays))
-		conds = append(conds, fmt.Sprintf(`c.id IN (SELECT r.customer_id FROM (%s) r
-			WHERE r.remaining > 0 AND r.expires_at > %s AND r.expires_at <= %s)`, lotRemainders(from, to), from, to))
+		conds = append(conds, fmt.Sprintf(`c.id = ANY(%s::uuid[])`, arg(expiring)))
 	}
 	if q := strings.TrimSpace(f.Q); q != "" {
 		like := arg(likePattern(q))
@@ -174,7 +140,17 @@ func memberWhere(f MemberFilter, now time.Time) (string, []any) {
 // ListMembers is one page of the member list, ordered by name.
 func (s *Service) ListMembers(ctx context.Context, f MemberFilter) (*MemberPage, error) {
 	now := s.now()
-	where, args := memberWhere(f, now)
+	expiring := []string{}
+	if f.Expiring {
+		list, err := s.ports.Credits.Expiring(ctx, s.db, now, ExpiringDays)
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range list {
+			expiring = append(expiring, e.CustomerID)
+		}
+	}
+	where, args := memberWhere(f, now, expiring)
 	from := ` FROM pos.pos_customers c LEFT JOIN crm.crm_member_profiles p ON p.customer_id = c.id` + where
 	out := &MemberPage{Rows: []MemberRow{}, Page: f.Page, PageSize: f.PageSize}
 	if err := s.db.QueryRow(ctx, `SELECT count(*)::int`+from, args...).Scan(&out.Total); err != nil {

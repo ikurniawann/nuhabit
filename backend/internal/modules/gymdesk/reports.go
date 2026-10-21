@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"nuhabit/backend/internal/modules/gymdesk/domain"
+	"nuhabit/backend/internal/platform/members"
 )
 
 // Report queries filter on indexed time columns first (class_sessions
@@ -214,21 +215,25 @@ func (s *Service) MembersReport(ctx context.Context, p domain.Period, branchID *
 		return nil, err
 	}
 
-	rows, err = s.db.Query(ctx, `
-		WITH r AS (`+lotRemainders("$1", "$2")+`)
-		SELECT c.id::text, c.name, c.phone, sum(r.remaining)::int, min(r.expires_at)
-		  FROM r JOIN pos.pos_customers c ON c.id = r.customer_id
-		 WHERE r.remaining > 0 AND r.expires_at > $1 AND r.expires_at <= $2
-		 GROUP BY c.id, c.name, c.phone
-		 ORDER BY min(r.expires_at) LIMIT $3`, now, horizon, reportListLimit)
+	expiring, err := s.ports.Credits.Expiring(ctx, s.db, now, ExpiryHorizonDays)
 	if err != nil {
 		return nil, err
 	}
-	if out.ExpiringCredit, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (ExpiringCredits, error) {
-		var m ExpiringCredits
-		return m, row.Scan(&m.ID, &m.Name, &m.Phone, &m.Credits, &m.ExpiresAt)
-	}); err != nil {
+	expiring = expiring[:min(len(expiring), reportListLimit)]
+	ids := make([]string, len(expiring))
+	for i, e := range expiring {
+		ids[i] = e.CustomerID
+	}
+	refs, err := members.GetMany(ctx, s.db, ids)
+	if err != nil {
 		return nil, err
+	}
+	out.ExpiringCredit = make([]ExpiringCredits, 0, len(expiring))
+	for _, e := range expiring {
+		m := refs[e.CustomerID]
+		out.ExpiringCredit = append(out.ExpiringCredit, ExpiringCredits{
+			MemberRef: MemberRef{ID: e.CustomerID, Name: m.Name, Phone: m.Phone}, Credits: e.Credits, ExpiresAt: e.ExpiresAt,
+		})
 	}
 	return out, nil
 }

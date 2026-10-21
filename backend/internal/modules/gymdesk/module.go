@@ -40,10 +40,20 @@ type Accounts interface {
 	UpdateProfile(ctx context.Context, db database.DB, customerID string, p ProfilePatch) error
 }
 
-// Credits reads the staff credit view of a member (owned by gym-credits):
-// balance, lots, passes, ledger and package purchases, as JSON.
+// CreditExpiry is the credits of one member that lapse within a horizon:
+// the sum left on the lots expiring in it and the earliest of their expiries.
+type CreditExpiry struct {
+	CustomerID string
+	Credits    int
+	ExpiresAt  time.Time
+}
+
+// Credits reads gym-credits: the staff credit view of a member (balance,
+// lots, passes, ledger and package purchases, as JSON) and the members
+// whose credits lapse within withinDays days of now, earliest first.
 type Credits interface {
 	MemberCredits(ctx context.Context, customerID string) (json.RawMessage, error)
+	Expiring(ctx context.Context, q database.Querier, now time.Time, withinDays int) ([]CreditExpiry, error)
 }
 
 // Ports are the adapters internal/app wires in.
