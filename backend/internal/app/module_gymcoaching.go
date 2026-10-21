@@ -25,6 +25,7 @@ func init() {
 		return gymcoaching.New(d, coachingPorts(d))
 	})
 	RegisterJob(gymcoaching.Name, "gym-coaching.pt-reminders", 5*time.Minute, coachingService, (*gymcoaching.Service).SendReminders)
+	RegisterJob(gymcoaching.Name, "gym-coaching.complete-past-appointments", 10*time.Minute, coachingService, (*gymcoaching.Service).CompletePastAppointments)
 }
 
 func coachingPorts(d module.Deps) gymcoaching.Ports { return coachingPortsOn(d, d.DB) }

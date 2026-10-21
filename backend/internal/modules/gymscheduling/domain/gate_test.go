@@ -44,6 +44,24 @@ func TestGatePassSkipsCredits(t *testing.T) {
 	}
 }
 
+func TestGatePersonalTrainingCandidate(t *testing.T) {
+	pt := func(in *GateScanInput) { in.Candidate.Personal = true }
+	out := scan(pt)
+	want := []GateEffect{{Kind: EffectConsumeToken}, {Kind: EffectCheckInPT, BookingID: "bk1"}}
+	if out.Decision != Allowed || out.EntryKind != EntryPT || !reflect.DeepEqual(out.Effects, want) {
+		t.Errorf("pt: %+v", out)
+	}
+	if out := scan(func(in *GateScanInput) { pt(in); in.Balance = 1 }); out.Decision != Denied || out.Reason != GateInsufficientCredits {
+		t.Errorf("short PT credits: %+v", out)
+	}
+	if out := scan(func(in *GateScanInput) { pt(in); in.Balance, in.Candidate.HasPass = 0, true }); out.Decision != Allowed || !reflect.DeepEqual(out.Effects, want) {
+		t.Errorf("pass covering PT: %+v", out)
+	}
+	if got := DescribeGateDecision(Allowed, "", EntryPT, GateDetail{ClassName: "Personal Training", Credits: 1, BalanceAfter: ptr(4)}); got != "Check-in PT Personal Training · 1 kredit dipotong · sisa 4 kredit" {
+		t.Errorf("message: %q", got)
+	}
+}
+
 func TestGateInactiveMemberConsumesToken(t *testing.T) {
 	want := GateScanEvaluation{Decision: Denied, Reason: GateMemberNotActive, Effects: []GateEffect{{Kind: EffectConsumeToken}}}
 	if got := scan(func(in *GateScanInput) { in.MemberActive = false }); !reflect.DeepEqual(got, want) {

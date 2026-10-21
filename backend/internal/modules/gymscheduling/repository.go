@@ -272,10 +272,12 @@ type Candidate struct {
 // AccessEntry is one gym.access_logs row.
 type AccessEntry struct {
 	CustomerID, BookingID, BranchID, DeviceID *string
-	Decision                                  domain.Decision
-	Reason                                    *string
-	EntryKind                                 *string
-	CreditsDeducted                           int
-	Source                                    string
-	ScannedBy                                 *string
+	// PTParticipantID is set for an entry on a PT session.
+	PTParticipantID *string
+	Decision        domain.Decision
+	Reason          *string
+	EntryKind       *string
+	CreditsDeducted int
+	Source          string
+	ScannedBy       *string
 }

@@ -77,9 +77,11 @@ type RulesSource interface {
 }
 
 // ActivePass is a membership pass covering one instant (owned by gym-credits).
+// CoversPersonal: the pass pays for PT sessions too, not only classes.
 type ActivePass struct {
-	ID     string
-	EndsAt time.Time
+	ID             string
+	EndsAt         time.Time
+	CoversPersonal bool
 }
 
 // Passes reads member passes: a pass covering a session start replaces the
@@ -138,6 +140,28 @@ type Notification struct {
 	Body  string
 }
 
+// PTCandidate is a confirmed personal training session the gate may check
+// the member in to (owned by gym-coaching). BookingID is the participant row.
+type PTCandidate struct {
+	ParticipantID, AppointmentID, ClassTypeID, ClassName string
+	CreditCost                                           int
+	StartsAt, EndsAt                                     time.Time
+	// Covered: a pass pays for the session, so check-in costs no credits.
+	Covered bool
+}
+
+// PersonalTraining lets the gate admit a member for a PT session when no
+// class booking starts sooner. nil means PT sessions are not checked in.
+type PersonalTraining interface {
+	// LockGateCandidate is the member's first confirmed PT session at the
+	// branch starting by now+early and ending at or after now-late that the
+	// member has not checked in to; nil when none.
+	LockGateCandidate(ctx context.Context, q database.Querier, customerID string, branchID *string, now time.Time, early, late time.Duration) (*PTCandidate, error)
+	// GateCheckIn marks the participant checked in and charges the session
+	// the way its completion does. ok=false means the PT credits were short.
+	GateCheckIn(ctx context.Context, q database.Querier, participantID string, now time.Time) (charged int, ok bool, err error)
+}
+
 // Notifier delivers member notifications (owned by CRM).
 type Notifier interface {
 	NotifyMember(ctx context.Context, q database.Querier, customerID string, n Notification) error
@@ -159,6 +183,7 @@ type Ports struct {
 	Members  Members
 	Qr       QrTokens
 	Notifier Notifier
+	PT       PersonalTraining
 	// WaiverVersion is the waiver text members accept today; "" accepts
 	// any version on record.
 	WaiverVersion string
