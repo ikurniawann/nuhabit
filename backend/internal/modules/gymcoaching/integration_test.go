@@ -563,6 +563,9 @@ func TestAssessments(t *testing.T) {
 		t.Fatalf("history: %s", hist.Raw)
 	}
 	latest, first := l[0].(map[string]any), l[1].(map[string]any)
+	if created, _ := latest["created_at"].(string); !strings.HasSuffix(created, "Z") || len(created) != len("2031-03-03T00:00:00.000Z") {
+		t.Fatalf("created_at = %v, want the JS toISOString form", latest["created_at"])
+	}
 	if latest["assessed_on"] != "2031-03-03" || latest["coach_id"] != nil || latest["created_by_name"] != "Staf Uji" ||
 		first["weight_kg"] != 72.5 || first["body_fat_pct"] != 18.4 || first["coach_name"] != "Coach PT "+f.sfx {
 		t.Fatalf("history rows: %s", hist.Raw)

@@ -31,10 +31,10 @@ type AssessmentRow struct {
 	SledPullSec        *int `json:"sled_pull_sec"`
 	BurpeeBroadJumpSec *int `json:"burpee_broad_jump_sec"`
 
-	Notes         string    `json:"notes"`
-	Goals         string    `json:"goals"`
-	CreatedByName string    `json:"created_by_name"`
-	CreatedAt     time.Time `json:"created_at"`
+	Notes         string       `json:"notes"`
+	Goals         string       `json:"goals"`
+	CreatedByName string       `json:"created_by_name"`
+	CreatedAt     httpx.JSTime `json:"created_at"`
 }
 
 const assessmentSelect = `SELECT f.id::text, f.customer_id::text, m.name, f.coach_id::text, c.name, f.assessed_on::text,
@@ -50,7 +50,16 @@ func (s *Service) queryAssessments(ctx context.Context, where string, args ...an
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectRows(rows, pgx.RowToStructByPos[AssessmentRow])
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (AssessmentRow, error) {
+		var a AssessmentRow
+		var created time.Time
+		err := r.Scan(&a.ID, &a.CustomerID, &a.MemberName, &a.CoachID, &a.CoachName, &a.AssessedOn,
+			&a.WeightKg, &a.BodyFatPct, &a.MuscleMassKg, &a.RestingHR,
+			&a.Run1kmSec, &a.Ski1kmSec, &a.Row1kmSec, &a.WallBallsMaxReps, &a.SledPushSec, &a.SledPullSec, &a.BurpeeBroadJumpSec,
+			&a.Notes, &a.Goals, &a.CreatedByName, &created)
+		a.CreatedAt = httpx.JSTime(created)
+		return a, err
+	})
 }
 
 // MemberAssessments lists a member's assessments, newest first.
