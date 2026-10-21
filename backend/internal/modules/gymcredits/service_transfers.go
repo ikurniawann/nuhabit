@@ -300,45 +300,12 @@ func withNote(base, note string) string {
 
 /* ── Member app ──────────────────────────────────────────────────────── */
 
-// normalizePhone reduces an Indonesian number to 62 + digits, so 0812...,
-// +62812... and 62812... compare equal.
-func normalizePhone(phone string) string {
-	var b strings.Builder
-	for _, r := range phone {
-		if r >= '0' && r <= '9' {
-			b.WriteRune(r)
-		}
-	}
-	digits := b.String()
-	switch {
-	case strings.HasPrefix(digits, "0"):
-		return "62" + digits[1:]
-	case strings.HasPrefix(digits, "8"):
-		return "62" + digits
-	}
-	return digits
-}
-
 // MemberTransfer sends credits from the signed-in member to the member
-// with that phone number.
+// with that phone number (see service_transfer_lookup.go).
 func (s *Service) MemberTransfer(ctx context.Context, customerID, phone string, credits int, note, key string) (*TransferResult, error) {
-	want := normalizePhone(phone)
-	if len(want) < 9 {
-		return nil, fail(http.StatusBadRequest, "Nomor HP penerima tidak valid")
-	}
-	hits, err := s.ports.Members.Search(ctx, s.db, want[len(want)-9:], 20)
+	to, err := s.findTransferReceiver(ctx, phone)
 	if err != nil {
 		return nil, err
-	}
-	to := ""
-	for _, h := range hits {
-		if normalizePhone(h.Phone) == want {
-			to = h.ID
-			break
-		}
-	}
-	if to == "" {
-		return nil, fail(http.StatusNotFound, "Tidak ada member dengan nomor HP itu")
 	}
 	return s.TransferTx(ctx, TransferInput{
 		FromCustomerID: customerID, ToCustomerID: to, Credits: credits, Note: note,
