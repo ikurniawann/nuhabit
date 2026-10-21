@@ -390,6 +390,6 @@ func (s *service) payrollInput(ctx context.Context, e EmployeeBrief, month, year
 	}
 	emp := domain.Employee{ID: e.ID, EmploymentStatus: e.EmploymentStatus, JoinDate: e.JoinDate}
 	in := domain.BuildInput(emp, *salary, records, loans, holidays, month, year, includeThr)
-	in.Bonus = additions
+	in.Bonus, in.IrregularIncome = additions, additions
 	return &in, nil
 }

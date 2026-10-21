@@ -27,6 +27,9 @@ type Input struct {
 	OvertimeHolidayHrs  float64
 	OvertimeHolidayRate *float64 // nil: config.OvertimeHolidayMult
 	Bonus               float64
+	// IrregularIncome is the part of the month's earnings that is paid once
+	// (payroll additions): taxed in the month, never annualised.
+	IrregularIncome float64
 
 	WorkingDays     float64
 	PresentDays     float64
@@ -68,6 +71,8 @@ type Result struct {
 	BpjsKesEmployer, TaperaEmployer, TotalEmployerContribution                float64
 
 	TaxableIncome, PTKPAmount, Pph21Annual, Pph21Monthly float64
+	// Pph21Irregular is the part of Pph21Monthly that the irregular income adds.
+	Pph21Irregular float64
 }
 
 // PTKPAmount is getPTKPAmount: unknown statuses fall back to TK/0.
@@ -219,11 +224,20 @@ func Calculate(in Input, c Config) Result {
 	unpaid := UnpaidLeave(base, in.WorkingDays, in.UnpaidLeaveDays)
 	late := LateDeduction(in.LateMinutes, in.LateDays, c)
 
-	annualGross := gross * 12
-	taxable := math.Max(0, annualGross-b.Employee.Total*12-JabatanExpense(annualGross, c))
-	pphAnnual, pph := 0.0, 0.0
+	// Regular pay is annualised (x12). A one-off addition is not: it is taxed
+	// as the difference between the annual tax with and without it, withheld
+	// in the month it is paid. See docs/PAYROLL_PPH21.md.
+	irregular := math.Min(math.Max(0, in.IrregularIncome), gross)
+	regularAnnual := (gross - irregular) * 12
+	taxableRegular := math.Max(0, regularAnnual-b.Employee.Total*12-JabatanExpense(regularAnnual, c))
+	withAnnual := regularAnnual + irregular
+	taxable := math.Max(0, withAnnual-b.Employee.Total*12-JabatanExpense(withAnnual, c))
+	pphAnnual, pph, pphIrregular := 0.0, 0.0, 0.0
 	if in.IsTaxable {
-		pphAnnual, pph = PPh21(taxable, in.PTKPStatus, c)
+		regularTax, regularMonthly := PPh21(taxableRegular, in.PTKPStatus, c)
+		pphAnnual, _ = PPh21(taxable, in.PTKPStatus, c)
+		pphIrregular = pphAnnual - regularTax
+		pph = regularMonthly + pphIrregular
 	}
 
 	total := b.Employee.TkJht + b.Employee.TkJp + b.Employee.Kes + b.Employee.Tapera +
@@ -252,7 +266,7 @@ func Calculate(in Input, c Config) Result {
 		TotalEmployerContribution: Round(employer),
 
 		TaxableIncome: Round(taxable), PTKPAmount: PTKPAmount(in.PTKPStatus, c),
-		Pph21Annual: Round(pphAnnual), Pph21Monthly: Round(pph),
+		Pph21Annual: Round(pphAnnual), Pph21Monthly: Round(pph), Pph21Irregular: Round(pphIrregular),
 	}
 }
 
