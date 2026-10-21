@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
@@ -119,7 +120,7 @@ func (h *Handler) transfer(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
 
 func (h *Handler) memberTransfer(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -132,5 +133,5 @@ func (h *Handler) memberTransfer(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return asHTTP(err)
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }

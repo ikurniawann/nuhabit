@@ -21,7 +21,7 @@ func (h *handler) branches(w http.ResponseWriter, r *http.Request, user *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, object("branches", rows, "current_branch_id", user.BranchID))
+	return httpx.OK(w, object("branches", rows, "current_branch_id", user.BranchID))
 }
 
 // staffUsers lists active staff accounts for the coach to user link.
@@ -36,7 +36,7 @@ func (h *handler) staffUsers(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 // deskMembers finds members by name, phone or member code, each with the
@@ -46,7 +46,7 @@ func (h *handler) staffUsers(w http.ResponseWriter, r *http.Request, _ *auth.Use
 func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	term := strings.TrimSpace(r.URL.Query().Get("q"))
 	if len(term) < 2 {
-		return ok(w, []any{})
+		return httpx.OK(w, []any{})
 	}
 	rows, err := queryRows(r.Context(), h.svc.db,
 		`SELECT c.id, c.name, c.phone, c.is_active, p.member_code,
@@ -75,7 +75,7 @@ func (h *handler) deskMembers(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 // CoachForUser is the active coach profile linked to a staff account, ""

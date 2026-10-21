@@ -145,16 +145,6 @@ func (h *handler) scoped(fn scopedFunc, grants ...iam.Grant) http.Handler {
 	})
 }
 
-type envelope struct {
-	Success bool `json:"success"`
-	Data    any  `json:"data"`
-}
-
-// ok is `{ success: true, data }` (staff ok() and memberJson()).
-func ok(w http.ResponseWriter, data any) error {
-	return httpx.JSON(w, http.StatusOK, envelope{Success: true, Data: data})
-}
-
 // ── Query helpers (scheduling-route.ts) ──────────────────────────────────────
 
 // rangeParams is [from, to) from the query string; a bare date is 00:00 WIB
@@ -271,7 +261,7 @@ func (h *handler) listClassTypes(w http.ResponseWriter, r *http.Request, _ *auth
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) createClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -287,7 +277,7 @@ func (h *handler) createClassType(w http.ResponseWriter, r *http.Request, _ *aut
 	if err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) updateClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -303,7 +293,7 @@ func (h *handler) updateClassType(w http.ResponseWriter, r *http.Request, _ *aut
 	if err := h.svc.UpdateClassType(r.Context(), id, in); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) archiveClassType(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -314,7 +304,7 @@ func (h *handler) archiveClassType(w http.ResponseWriter, r *http.Request, _ *au
 	if err := h.svc.ArchiveClassType(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 // coachFields reads coachSchema; the bool results say whether photo_url and
@@ -338,7 +328,7 @@ func (h *handler) listCoaches(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) createCoach(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -351,7 +341,7 @@ func (h *handler) createCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -377,7 +367,7 @@ func (h *handler) updateCoach(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	}); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────
@@ -394,7 +384,7 @@ func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.U
 	coachID := optionalUUID(query, "coach_id")
 	if ownCoach != nil {
 		if *ownCoach == "" {
-			return ok(w, []any{})
+			return httpx.OK(w, []any{})
 		}
 		coachID = ownCoach
 	}
@@ -408,7 +398,7 @@ func (h *handler) listSessions(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) createSession(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -433,7 +423,7 @@ func (h *handler) createSession(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) duplicateWeek(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -451,7 +441,7 @@ func (h *handler) duplicateWeek(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.User, ownCoach *string) error {
@@ -470,7 +460,7 @@ func (h *handler) getSession(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, object("session", session, "roster", roster))
+	return httpx.OK(w, object("session", session, "roster", roster))
 }
 
 func optionalField(f *validate.Form, key string, value *string) Optional[string] {
@@ -499,7 +489,7 @@ func (h *handler) updateSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err := h.svc.UpdateSession(r.Context(), id, patch); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) sessionAction(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -516,7 +506,7 @@ func (h *handler) sessionAction(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) deleteSession(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -527,7 +517,7 @@ func (h *handler) deleteSession(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err := h.svc.DeleteSession(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 // ── Bookings & check-in ─────────────────────────────────────────────────────
@@ -546,7 +536,7 @@ func (h *handler) listBookings(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -562,7 +552,7 @@ func (h *handler) staffBook(w http.ResponseWriter, r *http.Request, _ *auth.User
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // searchMembers counts strikes under the rules of ?session_id='s branch,
@@ -577,7 +567,7 @@ func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	return ok(w, hits)
+	return httpx.OK(w, hits)
 }
 
 func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -622,7 +612,7 @@ func (h *handler) bookingAction(w http.ResponseWriter, r *http.Request, user *au
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) accessLog(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -630,7 +620,7 @@ func (h *handler) accessLog(w http.ResponseWriter, r *http.Request, _ *auth.User
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) scan(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -644,7 +634,7 @@ func (h *handler) scan(w http.ResponseWriter, r *http.Request, user *auth.User) 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // ── Member portal ───────────────────────────────────────────────────────────
@@ -720,7 +710,7 @@ func (h *handler) memberSessions(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) memberSession(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -735,7 +725,7 @@ func (h *handler) memberSession(w http.ResponseWriter, r *http.Request, customer
 	if session == nil {
 		return memberError(w, "Kelas tidak ditemukan", http.StatusNotFound)
 	}
-	return ok(w, session)
+	return httpx.OK(w, session)
 }
 
 func (h *handler) memberBookings(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -743,7 +733,7 @@ func (h *handler) memberBookings(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) memberBook(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -759,7 +749,7 @@ func (h *handler) memberBook(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -771,7 +761,7 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, object("late", out.Late, "deadline", jsTime(out.Deadline), "penalty_credits", out.PenaltyCredits, "pass_strike", out.PassStrike))
+	return httpx.OK(w, object("late", out.Late, "deadline", jsTime(out.Deadline), "penalty_credits", out.PenaltyCredits, "pass_strike", out.PassStrike))
 }
 
 func (h *handler) memberConfirmOffer(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -788,12 +778,12 @@ func (h *handler) memberConfirmOffer(w http.ResponseWriter, r *http.Request, cus
 		if err := h.svc.ConfirmWaitlistOffer(r.Context(), id, customerID); err != nil {
 			return err
 		}
-		return ok(w, object("id", id, "status", "confirmed"))
+		return httpx.OK(w, object("id", id, "status", "confirmed"))
 	case "decline_offer":
 		if err := h.svc.DeclineWaitlistOffer(r.Context(), id, customerID); err != nil {
 			return err
 		}
-		return ok(w, object("id", id, "status", "cancelled"))
+		return httpx.OK(w, object("id", id, "status", "cancelled"))
 	}
 	return errInvalidData
 }
@@ -803,7 +793,7 @@ func (h *handler) memberCoaches(w http.ResponseWriter, r *http.Request, _ string
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) memberCoach(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -818,7 +808,7 @@ func (h *handler) memberCoach(w http.ResponseWriter, r *http.Request, customerID
 	if coach == nil {
 		return memberError(w, "Coach tidak ditemukan", http.StatusNotFound)
 	}
-	return ok(w, coach)
+	return httpx.OK(w, coach)
 }
 
 func (h *handler) catalog(w http.ResponseWriter, r *http.Request, _ string) error {
@@ -826,5 +816,5 @@ func (h *handler) catalog(w http.ResponseWriter, r *http.Request, _ string) erro
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }

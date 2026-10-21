@@ -44,7 +44,7 @@ func (h *handler) myClasses(w http.ResponseWriter, r *http.Request, user *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // MyClasses is the coach linked to userID and its sessions starting in
@@ -88,7 +88,7 @@ func (h *handler) mySession(w http.ResponseWriter, r *http.Request, user *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, object("session", session, "roster", roster))
+	return httpx.OK(w, object("session", session, "roster", roster))
 }
 
 // ── One coach's week ────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ func (h *handler) coachSchedule(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // CoachSchedule is the coach's sessions in the week holding rawDay (Monday
@@ -223,7 +223,7 @@ func (h *handler) uploadCoachPhoto(w http.ResponseWriter, r *http.Request, _ *au
 		h.log.ErrorContext(r.Context(), "gym: coach photo upload failed", "error", err)
 		return httpx.Status(http.StatusInternalServerError, "Gagal mengunggah foto")
 	}
-	return ok(w, object("url", url))
+	return httpx.OK(w, object("url", url))
 }
 
 // photoURLCheck accepts an absolute URL or a file served by /api/files.
@@ -249,7 +249,7 @@ func (h *handler) publicCoaches(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // PublicCoaches lists the active coaches by name.

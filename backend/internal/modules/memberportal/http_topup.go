@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -22,7 +23,7 @@ func (h *Handler) topupOptions(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // parseTopupRequest mirrors the zod schema of topup/route.ts, including the
@@ -101,7 +102,7 @@ func (h *Handler) createTopup(w http.ResponseWriter, r *http.Request, customerID
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // appOrigin mirrors lib/app-origin: NEXT_PUBLIC_APP_URL (or the old
@@ -132,7 +133,7 @@ func (h *Handler) topupStatus(w http.ResponseWriter, r *http.Request, customerID
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // POST /topup/{id}/simulate-paid (local dev only).
@@ -148,5 +149,5 @@ func (h *Handler) simulateTopup(w http.ResponseWriter, r *http.Request, customer
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }

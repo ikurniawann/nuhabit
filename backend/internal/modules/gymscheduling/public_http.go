@@ -40,7 +40,7 @@ func (h *handler) publicSessions(w http.ResponseWriter, r *http.Request) error {
 	if out == nil {
 		return httpx.NotFound("Cabang tidak ditemukan")
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // PublicTimetable lists the branch's published sessions for the week

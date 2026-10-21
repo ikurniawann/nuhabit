@@ -143,8 +143,6 @@ func (h *handler) member(fn memberFunc) http.Handler {
 	})
 }
 
-func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
-
 func created(w http.ResponseWriter, id string) error {
 	return httpx.Data(w, http.StatusCreated, map[string]string{"id": id})
 }
@@ -172,7 +170,7 @@ func (h *handler) classTypes(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 func (h *handler) classTypeFlags(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -180,7 +178,7 @@ func (h *handler) classTypeFlags(w http.ResponseWriter, r *http.Request, _ *auth
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 func (h *handler) setPersonal(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -200,7 +198,7 @@ func (h *handler) setPersonal(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err := h.svc.SetPersonal(r.Context(), id, *body.IsPersonal); err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"is_personal": *body.IsPersonal})
+	return httpx.OK(w, map[string]bool{"is_personal": *body.IsPersonal})
 }
 
 // coaches lists PT coaches; a coach sees only themself. all=1 lists every
@@ -213,14 +211,14 @@ func (h *handler) coaches(w http.ResponseWriter, r *http.Request, sc scope) erro
 	if sc.coach != nil {
 		list = slices.DeleteFunc(list, func(c PTCoach) bool { return c.ID != *sc.coach })
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
 	q := r.URL.Query()
 	term := strings.TrimSpace(q.Get("q"))
 	if len([]rune(term)) < 2 {
-		return ok(w, []MemberHit{})
+		return httpx.OK(w, []MemberHit{})
 	}
 	classType, err := queryUUID(q, "class_type_id")
 	if err != nil {
@@ -230,7 +228,7 @@ func (h *handler) searchMembers(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, hits)
+	return httpx.OK(w, hits)
 }
 
 // ── Availability ────────────────────────────────────────────────────────────
@@ -252,7 +250,7 @@ func (h *handler) availability(w http.ResponseWriter, r *http.Request, sc scope)
 	if err != nil {
 		return err
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 func (h *handler) setWeekly(w http.ResponseWriter, r *http.Request, sc scope) error {
@@ -276,7 +274,7 @@ func (h *handler) setWeekly(w http.ResponseWriter, r *http.Request, sc scope) er
 	if err != nil {
 		return err
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 func (h *handler) addException(w http.ResponseWriter, r *http.Request, sc scope) error {
@@ -322,7 +320,7 @@ func (h *handler) deleteException(w http.ResponseWriter, r *http.Request, sc sco
 	if err := h.svc.DeleteException(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 // slots lists free slots for the query coach_id, class_type_id, from
@@ -352,7 +350,7 @@ func (h *handler) slots(w http.ResponseWriter, r *http.Request, earliest time.Ti
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // staffSlots lists free slots from now: staff book inside the free
@@ -398,7 +396,7 @@ func (h *handler) listAppointments(w http.ResponseWriter, r *http.Request, sc sc
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // scopedAppointment reads an appointment the caller may see.
@@ -422,7 +420,7 @@ func (h *handler) getAppointment(w http.ResponseWriter, r *http.Request, sc scop
 	if err != nil {
 		return err
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 func (h *handler) book(w http.ResponseWriter, r *http.Request, sc scope) error {
@@ -507,7 +505,7 @@ func (h *handler) appointmentAction(w http.ResponseWriter, r *http.Request, sc s
 	if err != nil {
 		return err
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 func (h *handler) participantAction(w http.ResponseWriter, r *http.Request, sc scope) error {
@@ -538,13 +536,13 @@ func (h *handler) participantAction(w http.ResponseWriter, r *http.Request, sc s
 		if err != nil {
 			return err
 		}
-		return ok(w, res)
+		return httpx.OK(w, res)
 	case "no_show":
 		penalty, err := h.svc.NoShow(r.Context(), appointmentID, id, body.Waive)
 		if err != nil {
 			return err
 		}
-		return ok(w, CancelResult{Penalty: penalty})
+		return httpx.OK(w, CancelResult{Penalty: penalty})
 	}
 	return httpx.BadRequest("Aksi tidak dikenal")
 }
@@ -566,7 +564,7 @@ func (h *handler) listAssessments(w http.ResponseWriter, r *http.Request, _ *aut
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 func (h *handler) getAssessment(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -581,7 +579,7 @@ func (h *handler) getAssessment(w http.ResponseWriter, r *http.Request, _ *auth.
 	if a == nil {
 		return httpx.NotFound("Asesmen tidak ditemukan")
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 // assessmentBody is the JSON of an assessment form.
@@ -663,7 +661,7 @@ func (h *handler) updateAssessment(w http.ResponseWriter, r *http.Request, _ *au
 	if err != nil {
 		return err
 	}
-	return ok(w, a)
+	return httpx.OK(w, a)
 }
 
 func (h *handler) deleteAssessment(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -674,7 +672,7 @@ func (h *handler) deleteAssessment(w http.ResponseWriter, r *http.Request, _ *au
 	if err := h.svc.DeleteAssessment(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 // ── Member portal ───────────────────────────────────────────────────────────
@@ -684,7 +682,7 @@ func (h *handler) memberOptions(w http.ResponseWriter, r *http.Request, customer
 	if err != nil {
 		return err
 	}
-	return ok(w, o)
+	return httpx.OK(w, o)
 }
 
 // memberSlots lists slots a member may request: from the earliest request
@@ -702,7 +700,7 @@ func (h *handler) memberSessions(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 func (h *handler) memberRequest(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -744,7 +742,7 @@ func (h *handler) memberCancel(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
 
 func (h *handler) memberAssessments(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -752,5 +750,5 @@ func (h *handler) memberAssessments(w http.ResponseWriter, r *http.Request, cust
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }

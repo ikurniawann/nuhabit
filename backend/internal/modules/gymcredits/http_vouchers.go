@@ -3,6 +3,7 @@ package gymcredits
 import (
 	"net/http"
 
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
 	"nuhabit/backend/internal/platform/module"
 	"nuhabit/backend/internal/platform/validate"
@@ -33,5 +34,5 @@ func (h *Handler) staffPreviewVoucher(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }

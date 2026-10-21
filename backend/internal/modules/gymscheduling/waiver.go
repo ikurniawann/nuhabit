@@ -97,5 +97,5 @@ func (h *handler) recordWaiver(w http.ResponseWriter, r *http.Request, user *aut
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }

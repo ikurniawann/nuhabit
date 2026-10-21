@@ -52,7 +52,7 @@ func (h *Handler) memberReferral(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // GET /referral/{code}: who invited and what the friend gets.
@@ -61,7 +61,7 @@ func (h *Handler) referralLookup(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, invite)
+	return httpx.OK(w, invite)
 }
 
 func (h *Handler) referralSettings(w http.ResponseWriter, r *http.Request, _ *auth.User) error {

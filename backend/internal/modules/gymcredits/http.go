@@ -74,17 +74,6 @@ func (h *Handler) Routes() []module.Route {
 	}, slices.Concat(h.transferRoutes(), h.voucherRoutes())...)
 }
 
-/* ── Envelopes ───────────────────────────────────────────────────────── */
-
-type okEnvelope struct {
-	Success bool `json:"success"`
-	Data    any  `json:"data"`
-}
-
-func ok(w http.ResponseWriter, data any) error {
-	return httpx.JSON(w, http.StatusOK, okEnvelope{Success: true, Data: data})
-}
-
 // asHTTP renders a credit rule failure (GymCreditError) with its status.
 func asHTTP(err error) error {
 	var e *Error
@@ -122,7 +111,7 @@ func (h *Handler) listPackages(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) savePackage(w http.ResponseWriter, r *http.Request) error {
@@ -148,7 +137,7 @@ func (h *Handler) savePackage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, saved)
+	return httpx.OK(w, saved)
 }
 
 func (h *Handler) setPackageStatus(w http.ResponseWriter, r *http.Request) error {
@@ -168,7 +157,7 @@ func (h *Handler) setPackageStatus(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	return ok(w, row)
+	return httpx.OK(w, row)
 }
 
 func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) error {
@@ -182,7 +171,7 @@ func (h *Handler) deletePackage(w http.ResponseWriter, r *http.Request) error {
 	if err := h.svc.DeletePackage(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]any{"id": id, "deleted": true})
+	return httpx.OK(w, map[string]any{"id": id, "deleted": true})
 }
 
 /* ── Staff: member credits ───────────────────────────────────────────── */
@@ -195,7 +184,7 @@ func (h *Handler) searchMembers(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *Handler) memberCredits(w http.ResponseWriter, r *http.Request) error {
@@ -210,7 +199,7 @@ func (h *Handler) memberCredits(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
@@ -231,7 +220,7 @@ func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
 
 func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
@@ -258,7 +247,7 @@ func (h *Handler) sell(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, purchase)
+	return httpx.OK(w, purchase)
 }
 
 func (h *Handler) reverse(w http.ResponseWriter, r *http.Request) error {
@@ -275,7 +264,7 @@ func (h *Handler) reverse(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
 
 func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
@@ -296,7 +285,7 @@ func (h *Handler) refund(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, purchase)
+	return httpx.OK(w, purchase)
 }
 
 func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
@@ -311,7 +300,7 @@ func (h *Handler) refundQuote(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, quote)
+	return httpx.OK(w, quote)
 }
 
 // receipt is the printable receipt of a purchase, for reprints too.
@@ -327,7 +316,7 @@ func (h *Handler) receipt(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 /* ── Staff: pass lifecycle ───────────────────────────────────────────── */
@@ -348,7 +337,7 @@ func (h *Handler) staffPass(w http.ResponseWriter, r *http.Request, fn func(id s
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) freezePass(w http.ResponseWriter, r *http.Request) error {
@@ -397,7 +386,7 @@ func (h *Handler) rules(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) saveRules(w http.ResponseWriter, r *http.Request) error {
@@ -421,7 +410,7 @@ func (h *Handler) saveRules(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 /* ── Public site ─────────────────────────────────────────────────────── */
@@ -433,7 +422,7 @@ func (h *Handler) publicPlans(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 /* ── Member portal ───────────────────────────────────────────────────── */
@@ -443,7 +432,7 @@ func (h *Handler) memberWallet(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, wallet)
+	return httpx.OK(w, wallet)
 }
 
 func (h *Handler) portalPackages(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -451,7 +440,7 @@ func (h *Handler) portalPackages(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -487,7 +476,7 @@ func (h *Handler) buy(w http.ResponseWriter, r *http.Request, customerID string)
 	if err != nil {
 		return asHTTP(err) // these routes catch GymCreditError
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // previewVoucher quotes a voucher code for a package without claiming it.
@@ -501,7 +490,7 @@ func (h *Handler) previewVoucher(w http.ResponseWriter, r *http.Request, custome
 	if err != nil {
 		return asHTTP(err)
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) purchaseStatus(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -516,7 +505,7 @@ func (h *Handler) purchaseStatus(w http.ResponseWriter, r *http.Request, custome
 	if view == nil {
 		return httpx.NotFound("Pembelian tidak ditemukan")
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) simulatePaid(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -534,7 +523,7 @@ func (h *Handler) simulatePaid(w http.ResponseWriter, r *http.Request, customerI
 	if view == nil {
 		return httpx.NotFound("Pembelian tidak ditemukan")
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 /* ── Member portal: own passes ───────────────────────────────────────── */
@@ -551,7 +540,7 @@ func memberPass(w http.ResponseWriter, r *http.Request, customerID string, fn fu
 	if err != nil {
 		return asHTTP(err)
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) memberFreeze(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -587,7 +576,7 @@ func (h *Handler) savedMethods(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // linkSavedMethod opens the Xendit hosted page; Xendit sends the member
@@ -600,7 +589,7 @@ func (h *Handler) linkSavedMethod(w http.ResponseWriter, r *http.Request, custom
 	if err != nil {
 		return asHTTP(err)
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) unlinkSavedMethod(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -612,7 +601,7 @@ func (h *Handler) unlinkSavedMethod(w http.ResponseWriter, r *http.Request, cust
 	if err != nil {
 		return asHTTP(err)
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // appOrigin mirrors frontend/src/lib/app-origin.ts: NEXT_PUBLIC_APP_URL (or

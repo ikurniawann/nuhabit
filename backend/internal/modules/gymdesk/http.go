@@ -44,8 +44,6 @@ func (h *handler) Routes() []module.Route {
 	}
 }
 
-func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
-
 /* ── Query parameters ──────────────────────────────────────────────────── */
 
 const (
@@ -125,7 +123,7 @@ func (h *handler) listMembers(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) register(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -156,7 +154,7 @@ func (h *handler) member(w http.ResponseWriter, r *http.Request, user *auth.User
 	if out == nil {
 		return httpx.NotFound("Member tidak ditemukan")
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // profileBody is the PATCH body: absent keys keep their value.
@@ -188,7 +186,7 @@ func (h *handler) updateMember(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err := h.svc.UpdateProfile(r.Context(), id, patch); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 func (h *handler) addNote(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -229,7 +227,7 @@ func (h *handler) deleteNote(w http.ResponseWriter, r *http.Request, user *auth.
 	if err := h.svc.DeleteNote(r.Context(), id, noteID, user.ID); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": noteID})
+	return httpx.OK(w, map[string]string{"id": noteID})
 }
 
 /* ── Reports ──────────────────────────────────────────────────────────── */
@@ -239,7 +237,7 @@ func (h *handler) branches(w http.ResponseWriter, r *http.Request, _ *auth.User)
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) classReport(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -251,7 +249,7 @@ func (h *handler) classReport(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) revenueReport(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -263,7 +261,7 @@ func (h *handler) revenueReport(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) membersReport(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -275,7 +273,7 @@ func (h *handler) membersReport(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 /* ── Check-in log ─────────────────────────────────────────────────────── */
@@ -309,5 +307,5 @@ func (h *handler) checkinLog(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }

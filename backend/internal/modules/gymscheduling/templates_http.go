@@ -5,6 +5,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/localtime"
 	"nuhabit/backend/internal/platform/validate"
 )
@@ -46,7 +47,7 @@ func (h *handler) listTemplates(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) createTemplate(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -67,7 +68,7 @@ func (h *handler) createTemplate(w http.ResponseWriter, r *http.Request, user *a
 	if err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) updateTemplate(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -83,7 +84,7 @@ func (h *handler) updateTemplate(w http.ResponseWriter, r *http.Request, _ *auth
 	if err := h.svc.UpdateTemplate(r.Context(), id, p); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 func (h *handler) deleteTemplate(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -94,7 +95,7 @@ func (h *handler) deleteTemplate(w http.ResponseWriter, r *http.Request, _ *auth
 	if err := h.svc.DeleteTemplate(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }
 
 // generateTemplates is "Generate sekarang": horizon_days is optional and
@@ -109,5 +110,5 @@ func (h *handler) generateTemplates(w http.ResponseWriter, r *http.Request, _ *a
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }

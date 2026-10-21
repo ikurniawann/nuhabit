@@ -18,8 +18,6 @@ type handlers struct {
 	guard auth.Granter
 }
 
-func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
-
 const (
 	actRead   = "read"
 	actCreate = "create"
@@ -68,7 +66,7 @@ func (h handlers) listExercises(w http.ResponseWriter, r *http.Request, _ *auth.
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) saveExercise(w http.ResponseWriter, r *http.Request, _ *auth.User, require func(id *string) error) error {
@@ -83,7 +81,7 @@ func (h handlers) saveExercise(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) deleteExercise(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -94,7 +92,7 @@ func (h handlers) deleteExercise(w http.ResponseWriter, r *http.Request, _ *auth
 	if err := h.svc.DeleteExercise(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 func (h handlers) saveSubstitution(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -106,7 +104,7 @@ func (h handlers) saveSubstitution(w http.ResponseWriter, r *http.Request, _ *au
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) deleteSubstitution(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -117,7 +115,7 @@ func (h handlers) deleteSubstitution(w http.ResponseWriter, r *http.Request, _ *
 	if err := h.svc.DeleteSubstitution(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 /* ── Staff: races ────────────────────────────────────────────────────── */
@@ -127,7 +125,7 @@ func (h handlers) listRaces(w http.ResponseWriter, r *http.Request, _ *auth.User
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) saveRace(w http.ResponseWriter, r *http.Request, _ *auth.User, require func(id *string) error) error {
@@ -142,7 +140,7 @@ func (h handlers) saveRace(w http.ResponseWriter, r *http.Request, _ *auth.User,
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) deleteRace(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -154,7 +152,7 @@ func (h handlers) deleteRace(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id, "outcome": outcome})
+	return httpx.OK(w, map[string]string{"id": id, "outcome": outcome})
 }
 
 func (h handlers) raceEntrants(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -166,7 +164,7 @@ func (h handlers) raceEntrants(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 /* ── Staff: incentives ───────────────────────────────────────────────── */
@@ -176,7 +174,7 @@ func (h handlers) schemeForm(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) saveScheme(w http.ResponseWriter, r *http.Request, u *auth.User, require func(id *string) error) error {
@@ -191,7 +189,7 @@ func (h handlers) saveScheme(w http.ResponseWriter, r *http.Request, u *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) deleteScheme(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -202,7 +200,7 @@ func (h handlers) deleteScheme(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err := h.svc.DeleteScheme(r.Context(), id); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 const badMonth = "Bulan harus berformat YYYY-MM"
@@ -224,7 +222,7 @@ func (h handlers) statements(w http.ResponseWriter, r *http.Request, _ *auth.Use
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) listPayouts(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -243,7 +241,7 @@ func (h handlers) listPayouts(w http.ResponseWriter, r *http.Request, _ *auth.Us
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) createPayout(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -255,7 +253,7 @@ func (h handlers) createPayout(w http.ResponseWriter, r *http.Request, u *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) getPayout(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -267,7 +265,7 @@ func (h handlers) getPayout(w http.ResponseWriter, r *http.Request, _ *auth.User
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) actOnPayout(w http.ResponseWriter, r *http.Request, u *auth.User) error {
@@ -282,7 +280,7 @@ func (h handlers) actOnPayout(w http.ResponseWriter, r *http.Request, u *auth.Us
 	if err := h.svc.ActOnPayout(r.Context(), u.ID, id, in); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 /* ── Staff: coach portal ─────────────────────────────────────────────── */
@@ -299,7 +297,7 @@ func (h handlers) myIncentives(w http.ResponseWriter, r *http.Request, u *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 /* ── Member: workouts ────────────────────────────────────────────────── */
@@ -309,7 +307,7 @@ func (h handlers) workoutsPage(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) generateWorkout(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -321,7 +319,7 @@ func (h handlers) generateWorkout(w http.ResponseWriter, r *http.Request, custom
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // workoutAction serves POST /workouts/{a}/{b}: Next routes the static
@@ -353,7 +351,7 @@ func (h handlers) startWorkout(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) getSession(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -365,7 +363,7 @@ func (h handlers) getSession(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) actOnSession(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -381,7 +379,7 @@ func (h handlers) actOnSession(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) exerciseLibrary(w http.ResponseWriter, r *http.Request, _ string) error {
@@ -389,7 +387,7 @@ func (h handlers) exerciseLibrary(w http.ResponseWriter, r *http.Request, _ stri
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) getWorkout(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -401,7 +399,7 @@ func (h handlers) getWorkout(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) replaceBlock(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -417,7 +415,7 @@ func (h handlers) replaceBlock(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 /* ── Member: races ───────────────────────────────────────────────────── */
@@ -427,7 +425,7 @@ func (h handlers) raceOverview(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) registerRace(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -439,7 +437,7 @@ func (h handlers) registerRace(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 func (h handlers) updateRace(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -454,7 +452,7 @@ func (h handlers) updateRace(w http.ResponseWriter, r *http.Request, customerID 
 	if err := h.svc.UpdateMemberRace(r.Context(), customerID, id, u); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"id": id})
+	return httpx.OK(w, map[string]string{"id": id})
 }
 
 func (h handlers) raceCalendar(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -474,7 +472,7 @@ func (h handlers) raceCalendar(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) myRaces(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -482,7 +480,7 @@ func (h handlers) myRaces(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h handlers) raceDetail(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -494,7 +492,7 @@ func (h handlers) raceDetail(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 // Routes lists the module's routes.

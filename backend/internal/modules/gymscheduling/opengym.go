@@ -9,6 +9,7 @@ import (
 
 	"nuhabit/backend/internal/modules/gymscheduling/domain"
 	"nuhabit/backend/internal/platform/auth"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/validate"
 )
 
@@ -57,7 +58,7 @@ func (h *handler) openGymHours(w http.ResponseWriter, r *http.Request, _ *auth.U
 	if err != nil {
 		return err
 	}
-	return ok(w, object("branch_id", branchID, "hours", hours))
+	return httpx.OK(w, object("branch_id", branchID, "hours", hours))
 }
 
 // saveOpenGymHours is PUT {branch_id, hours: [{weekday, opens_at, closes_at}]}:
@@ -98,5 +99,5 @@ func (h *handler) saveOpenGymHours(w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		return err
 	}
-	return ok(w, object("branch_id", *branchID, "hours", out))
+	return httpx.OK(w, object("branch_id", *branchID, "hours", out))
 }

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"slices"
 
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/storage"
 )
 
@@ -39,5 +40,5 @@ func (h *Handler) uploadPhoto(w http.ResponseWriter, r *http.Request, customerID
 	if err := h.svc.repo.SetPhotoURL(r.Context(), customerID, url); err != nil {
 		return err
 	}
-	return ok(w, map[string]string{"photo_url": url})
+	return httpx.OK(w, map[string]string{"photo_url": url})
 }

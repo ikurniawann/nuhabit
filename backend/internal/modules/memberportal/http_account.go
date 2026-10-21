@@ -119,7 +119,7 @@ func (h *Handler) visits(w http.ResponseWriter, r *http.Request, customerID stri
 		return err
 	}
 	view.Venues = nonNil(view.Venues)
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // GET /transactions.
@@ -129,7 +129,7 @@ func (h *Handler) transactions(w http.ResponseWriter, r *http.Request, customerI
 		return err
 	}
 	view.Wallet, view.Orders = nonNil(view.Wallet), nonNil(view.Orders)
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // GET /orders/{id}.
@@ -138,7 +138,7 @@ func (h *Handler) orderDetail(w http.ResponseWriter, r *http.Request, customerID
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // GET /notifications.
@@ -147,7 +147,7 @@ func (h *Handler) notifications(w http.ResponseWriter, r *http.Request, customer
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // POST /notifications { ids? } marks the given (or all) notifications read.
@@ -173,7 +173,7 @@ func (h *Handler) markNotifications(w http.ResponseWriter, r *http.Request, cust
 	if err := h.svc.repo.MarkRead(r.Context(), customerID, ids); err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"ok": true})
+	return httpx.OK(w, map[string]bool{"ok": true})
 }
 
 // POST /notifications/track { id, event } records the first open/click.
@@ -191,7 +191,7 @@ func (h *Handler) trackNotification(w http.ResponseWriter, r *http.Request, cust
 	if !found {
 		return fail(404, "Notifikasi tidak ditemukan")
 	}
-	return ok(w, map[string]*string{"link_url": link})
+	return httpx.OK(w, map[string]*string{"link_url": link})
 }
 
 // GET /push: the VAPID public key (null when push is off) and device count.
@@ -206,7 +206,7 @@ func (h *Handler) pushStatus(w http.ResponseWriter, r *http.Request, customerID 
 			key = &k
 		}
 	}
-	return ok(w, struct {
+	return httpx.OK(w, struct {
 		PublicKey *string `json:"public_key"`
 		Devices   int     `json:"devices"`
 	}{key, n})
@@ -231,7 +231,7 @@ func (h *Handler) pushSubscribe(w http.ResponseWriter, r *http.Request, customer
 	if err := h.svc.repo.SavePushSubscription(r.Context(), customerID, endpoint, p256dh, authKey, ua); err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"ok": true})
+	return httpx.OK(w, map[string]bool{"ok": true})
 }
 
 // DELETE /push { endpoint } turns push off on this device.
@@ -244,7 +244,7 @@ func (h *Handler) pushUnsubscribe(w http.ResponseWriter, r *http.Request, custom
 	if err := h.svc.repo.DeletePushSubscription(r.Context(), customerID, endpoint); err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"ok": true})
+	return httpx.OK(w, map[string]bool{"ok": true})
 }
 
 // POST /qr issues a single-use check-in QR valid for 60 seconds.
@@ -253,7 +253,7 @@ func (h *Handler) issueQR(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, qr)
+	return httpx.OK(w, qr)
 }
 
 // GET /app/home.
@@ -262,7 +262,7 @@ func (h *Handler) homeFeed(w http.ResponseWriter, r *http.Request, customerID st
 	if err != nil {
 		return err
 	}
-	return ok(w, feed)
+	return httpx.OK(w, feed)
 }
 
 // GET /app/home/bookings.
@@ -271,7 +271,7 @@ func (h *Handler) homeBookings(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // GET /app/home/visits.
@@ -280,7 +280,7 @@ func (h *Handler) homeVisits(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // GET /app/home/announcements/{id}.
@@ -289,7 +289,7 @@ func (h *Handler) homeAnnouncement(w http.ResponseWriter, r *http.Request, custo
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // GET /app/home/me.
@@ -298,7 +298,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // PATCH /app/home/me { emergencyContact?, acceptWaiver? }.
@@ -334,7 +334,7 @@ func (h *Handler) saveAccount(w http.ResponseWriter, r *http.Request, customerID
 	if err := h.svc.repo.SaveAccount(r.Context(), customerID, setContact, contact, accept, domain.WaiverVersion); err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"ok": true})
+	return httpx.OK(w, map[string]bool{"ok": true})
 }
 
 type emergencyContactBody struct {

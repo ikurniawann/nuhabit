@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -47,7 +48,7 @@ func (h *Handler) forgotPassword(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
 
 // POST /password/reset { username, code, new_password }.

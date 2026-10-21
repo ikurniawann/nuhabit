@@ -233,7 +233,7 @@ func (h *handler) deviceScan(w http.ResponseWriter, r *http.Request, d *GateDevi
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) deviceHeartbeat(w http.ResponseWriter, r *http.Request, d *GateDevice) error {
@@ -241,7 +241,7 @@ func (h *handler) deviceHeartbeat(w http.ResponseWriter, r *http.Request, d *Gat
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) listGateDevices(w http.ResponseWriter, r *http.Request, _ *auth.User) error {
@@ -249,7 +249,7 @@ func (h *handler) listGateDevices(w http.ResponseWriter, r *http.Request, _ *aut
 	if err != nil {
 		return err
 	}
-	return ok(w, rows)
+	return httpx.OK(w, rows)
 }
 
 func (h *handler) createGateDevice(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -268,7 +268,7 @@ func (h *handler) createGateDevice(w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) rotateGateDevice(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -280,7 +280,7 @@ func (h *handler) rotateGateDevice(w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		return err
 	}
-	return ok(w, out)
+	return httpx.OK(w, out)
 }
 
 func (h *handler) revokeGateDevice(w http.ResponseWriter, r *http.Request, user *auth.User) error {
@@ -291,5 +291,5 @@ func (h *handler) revokeGateDevice(w http.ResponseWriter, r *http.Request, user 
 	if err := h.svc.RevokeGateDevice(r.Context(), id, user, r); err != nil {
 		return err
 	}
-	return ok(w, object("id", id))
+	return httpx.OK(w, object("id", id))
 }

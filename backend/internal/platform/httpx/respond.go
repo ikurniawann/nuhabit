@@ -107,6 +107,9 @@ func Data(w http.ResponseWriter, status int, data any) error {
 	return JSON(w, status, dataEnvelope{Success: true, Data: data})
 }
 
+// OK is Data with status 200.
+func OK(w http.ResponseWriter, data any) error { return Data(w, http.StatusOK, data) }
+
 // DataMessage writes {"success":true,"data":data,"message":msg}
 // (successResponse/createdResponse with a message).
 func DataMessage(w http.ResponseWriter, status int, data any, msg string) error {

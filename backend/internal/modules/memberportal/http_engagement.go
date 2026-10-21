@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/memberportal/domain"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/module"
 )
 
@@ -27,7 +28,7 @@ func (h *Handler) promos(w http.ResponseWriter, r *http.Request, customerID stri
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // GET /events: published events that have not ended, with the member's booking.
@@ -36,7 +37,7 @@ func (h *Handler) events(w http.ResponseWriter, r *http.Request, customerID stri
 	if err != nil {
 		return err
 	}
-	return ok(w, nonNil(list))
+	return httpx.OK(w, nonNil(list))
 }
 
 // POST /events { event_id }: confirmed, waitlisted, or denied with a reason.
@@ -53,7 +54,7 @@ func (h *Handler) bookEvent(w http.ResponseWriter, r *http.Request, customerID s
 	if decision.Kind == "deny" {
 		return fail(409, domain.BookingDenialLabel[decision.Reason])
 	}
-	return ok(w, decision)
+	return httpx.OK(w, decision)
 }
 
 // DELETE /events?booking_id= cancels the member's own booking.
@@ -66,7 +67,7 @@ func (h *Handler) cancelEventBooking(w http.ResponseWriter, r *http.Request, cus
 	if err != nil {
 		return err
 	}
-	return ok(w, result)
+	return httpx.OK(w, result)
 }
 
 // GET /challenges.
@@ -75,7 +76,7 @@ func (h *Handler) challenges(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, list)
+	return httpx.OK(w, list)
 }
 
 // POST /challenges { challenge_id } joins an active challenge.
@@ -92,7 +93,7 @@ func (h *Handler) joinChallenge(w http.ResponseWriter, r *http.Request, customer
 	if !joined {
 		return fail(409, "Challenge ini sudah berakhir atau sudah Anda ikuti")
 	}
-	return ok(w, map[string]bool{"ok": true})
+	return httpx.OK(w, map[string]bool{"ok": true})
 }
 
 // GET /reviews.
@@ -101,7 +102,7 @@ func (h *Handler) reviews(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // POST /reviews { order_id, rating, comment? }.
@@ -123,7 +124,7 @@ func (h *Handler) writeReview(w http.ResponseWriter, r *http.Request, customerID
 	if err != nil {
 		return err
 	}
-	return ok(w, review)
+	return httpx.OK(w, review)
 }
 
 // GET /bills.
@@ -132,5 +133,5 @@ func (h *Handler) bills(w http.ResponseWriter, r *http.Request, customerID strin
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }

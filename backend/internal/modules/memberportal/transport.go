@@ -34,16 +34,6 @@ type failureBody struct {
 	Code    string `json:"code,omitempty"`
 }
 
-type dataBody struct {
-	Success bool `json:"success"`
-	Data    any  `json:"data"`
-}
-
-// ok writes {"success":true,"data":data} (memberJson in TS).
-func ok(w http.ResponseWriter, data any) error {
-	return httpx.JSON(w, http.StatusOK, dataBody{Success: true, Data: data})
-}
-
 // success writes {"success":true}.
 func success(w http.ResponseWriter) error {
 	return httpx.JSON(w, http.StatusOK, struct {

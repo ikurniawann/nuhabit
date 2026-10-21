@@ -24,7 +24,7 @@ func (h *Handler) config(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return ok(w, config)
+	return httpx.OK(w, config)
 }
 
 // POST /otp { phone } sends a login code to a registered member.
@@ -73,7 +73,7 @@ func (h *Handler) writeSignedIn(w http.ResponseWriter, r *http.Request, s *Signe
 		data.Token = s.Token
 	}
 	http.SetCookie(w, sessionCookie(r, s.Token, h.svc.now(), domain.SessionTTL))
-	return ok(w, data)
+	return httpx.OK(w, data)
 }
 
 // POST /verify { phone, code } opens a member session.
@@ -126,14 +126,14 @@ func (h *Handler) googleSignIn(w http.ResponseWriter, r *http.Request) error {
 	}
 	if res.SignedIn == nil {
 		t := res.Ticket
-		return ok(w, googleNeedsPhone{Status: "needs_phone", Email: t.Email, Name: t.Name, GoogleSub: t.Sub, Ticket: res.TicketValue})
+		return httpx.OK(w, googleNeedsPhone{Status: "needs_phone", Email: t.Email, Name: t.Name, GoogleSub: t.Sub, Ticket: res.TicketValue})
 	}
 	data := googleSignedIn{Status: "signed_in", Name: res.SignedIn.Name}
 	if r.Header.Get("x-app-client") == "1" {
 		data.Token = res.SignedIn.Token
 	}
 	http.SetCookie(w, sessionCookie(r, res.SignedIn.Token, h.svc.now(), domain.SessionTTL))
-	return ok(w, data)
+	return httpx.OK(w, data)
 }
 
 // POST /logout ends the session and clears the cookie, even on failure.
@@ -151,7 +151,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request, customerID string) 
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 // PUT /consent { enabled }.
@@ -165,5 +165,5 @@ func (h *Handler) consent(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, map[string]bool{"marketing_opt_in": optIn})
+	return httpx.OK(w, map[string]bool{"marketing_opt_in": optIn})
 }

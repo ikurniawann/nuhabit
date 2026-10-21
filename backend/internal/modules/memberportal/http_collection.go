@@ -61,7 +61,7 @@ func (h *Handler) badges(w http.ResponseWriter, r *http.Request, customerID stri
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) showcaseBadge(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -85,7 +85,7 @@ func (h *Handler) rewards(w http.ResponseWriter, r *http.Request, customerID str
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) redeemReward(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -120,7 +120,7 @@ func (h *Handler) collectibles(w http.ResponseWriter, r *http.Request, customerI
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) wallpapers(w http.ResponseWriter, r *http.Request, customerID string) error {
@@ -128,7 +128,7 @@ func (h *Handler) wallpapers(w http.ResponseWriter, r *http.Request, customerID 
 	if err != nil {
 		return err
 	}
-	return ok(w, view)
+	return httpx.OK(w, view)
 }
 
 func (h *Handler) equipCollectible(w http.ResponseWriter, r *http.Request, customerID string) error {
