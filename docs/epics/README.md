@@ -69,6 +69,7 @@ deploying-dev · ready-for-qa · blocked · done).
 | [EPIC-064](./EPIC-064-calon-member-waiver-trial.md) | Calon Member — waiver PAR-Q & trial class | backlog | 2026-10-02 |
 | [EPIC-065](./EPIC-065-pembersihan-teknis.md) | Pembersihan teknis sisa BCD & PR ke development | backlog | 2026-10-02 |
 | [EPIC-066](./EPIC-066-nuhabit-progress-loyalitas.md) | NüHabit Progress — XP konsistensi, tier Starter/Open/Pro/Elite, reward, leaderboard, CRM retensi | on-progress | 2026-10-02 |
+| [EPIC-067](./EPIC-067-sop-coach-cuti-keluhan.md) | SOP Coach — cuti terencana, keluhan & member perhatian khusus | backlog | 2026-10-21 |
 
 Aturan:
 - Epic + registry ini adalah sumber kebenaran status pekerjaan (canonical).
