@@ -3,6 +3,7 @@
  * siklus payout. Terpisah dari kredit member. Port dari
  * packages/domain/src/incentive.ts. Fungsi murni.
  */
+import type { BookingStatus, SessionStatus as ClassSessionStatus } from "./booking";
 
 /** Tarif satu tipe kelas di sebuah skema. */
 export interface SchemeRate {
@@ -72,8 +73,7 @@ export function monthPeriod(periodMonth: string): StatementPeriod {
 
 /* ── Statement ───────────────────────────────────────────────────────── */
 
-export type BookingStatus = "confirmed" | "waitlist" | "cancelled" | "checked_in" | "completed" | "no_show";
-export type ClassSessionStatus = "draft" | "published" | "full" | "completed" | "cancelled";
+export type { BookingStatus, ClassSessionStatus };
 
 export interface StatementSession {
   id: string;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useInvalidateAll } from "./queries";
 import type {
   Division,
   Exercise,
@@ -179,8 +180,4 @@ export const useRaces = (query?: { region?: string; scope?: "upcoming" | "result
   });
 export const useMyRaces = () => useQuery({ queryKey: ["member-app", "races", "mine"], queryFn: api.races.mine });
 
-/** Referensi menyegarkan semua query setelah mutasi. */
-export function useInvalidateAll() {
-  const qc = useQueryClient();
-  return () => qc.invalidateQueries();
-}
+export { useInvalidateAll };

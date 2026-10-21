@@ -10,15 +10,9 @@ import { initialsOf } from "../lib/initials";
 import { useLang } from "../lib/lang";
 import { m } from "../lib/links";
 import { usePtOptions, usePtSlots, useRequestPt } from "../lib/queries-coaching";
+import { addDays } from "@/lib/dates";
 import { localDay } from "@/lib/timezone";
-import { Spinner, formatTime } from "../ui";
-
-const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-
-const chipClass = (active: boolean) =>
-  `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${
-    active ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-  }`;
+import { Spinner, chipClass, formatTime } from "../ui";
 
 /** Request a PT session: pick the session type, a coach, a day, then a free slot. The coach confirms it. */
 export function PtBookPage() {

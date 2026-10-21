@@ -1,4 +1,5 @@
 import { CHECKIN_EARLY_MIN, CHECKIN_LATE_MIN } from "@/lib/gym/booking";
+import { todayWib } from "@/lib/dates";
 import type { PromoDiscountType } from "@/lib/promo/promo";
 import { raceImagePath } from "./workout";
 
@@ -37,7 +38,6 @@ export function promoLabel(discountType: PromoDiscountType, value: number): stri
   return discountType === "percent" ? `${value}% OFF` : `Rp${Math.round(value).toLocaleString("id-ID")} OFF`;
 }
 
-const wibDay = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
 
 /**
  * Rel "di studio": kelas hari ini (WIB) yang belum mulai; setelah kelas
@@ -48,10 +48,10 @@ export function pickRailDay<T extends { startsAt: string | Date }>(
   now: Date
 ): { railDay: "TODAY" | "TOMORROW"; sessions: T[] } {
   const upcoming = sessions.filter((s) => new Date(s.startsAt).getTime() > now.getTime());
-  const today = upcoming.filter((s) => wibDay(new Date(s.startsAt)) === wibDay(now));
+  const today = upcoming.filter((s) => todayWib(new Date(s.startsAt)) === todayWib(now));
   if (today.length > 0) return { railDay: "TODAY", sessions: today };
-  const tomorrow = wibDay(new Date(now.getTime() + 86_400_000));
-  return { railDay: "TOMORROW", sessions: upcoming.filter((s) => wibDay(new Date(s.startsAt)) === tomorrow) };
+  const tomorrow = todayWib(new Date(now.getTime() + 86_400_000));
+  return { railDay: "TOMORROW", sessions: upcoming.filter((s) => todayWib(new Date(s.startsAt)) === tomorrow) };
 }
 
 export interface GateBookingCandidate {

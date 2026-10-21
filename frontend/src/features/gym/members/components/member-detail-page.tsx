@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TableNote } from "@/features/crm/engagement/components/shared";
 import { Can } from "@/components/iam/can";
-import { METHOD_LABELS, type CreditPurchase } from "@/features/gym/credits/api";
+import { METHOD_LABELS, PURCHASE_BADGE, type CreditPurchase } from "@/features/gym/credits/api";
 import { ReceiptButton } from "@/features/gym/credits/components/receipt-button";
 import { BOOKING_BADGE, entryLabel } from "@/features/gym/scheduling/api";
 import { WaiverDeskForm } from "@/features/gym/scheduling/components/waiver-desk-form";
@@ -36,13 +36,6 @@ const TABS = [
 ] as const;
 type TabValue = (typeof TABS)[number]["value"];
 
-const PURCHASE_STATUS: Record<CreditPurchase["status"], { label: string; variant: "success" | "info" | "muted" | "warning" }> = {
-  paid: { label: "Lunas", variant: "success" },
-  pending: { label: "Menunggu bayar", variant: "info" },
-  failed: { label: "Gagal", variant: "muted" },
-  expired: { label: "Kedaluwarsa", variant: "muted" },
-  refunded: { label: "Direfund", variant: "warning" },
-};
 
 const GENDER_LABEL = { male: "Laki-laki", female: "Perempuan" } as const;
 
@@ -399,7 +392,7 @@ function PurchaseTable({ purchases }: { purchases: CreditPurchase[] }) {
           </TableHeader>
           <TableBody>
             {purchases.map((x) => {
-              const status = PURCHASE_STATUS[x.status];
+              const status = PURCHASE_BADGE[x.status];
               return (
                 <TableRow key={x.id}>
                   <TableCell className="max-w-[16rem] whitespace-normal">

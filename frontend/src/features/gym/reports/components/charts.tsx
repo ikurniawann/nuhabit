@@ -10,7 +10,8 @@ import { formatDate, formatNumber, formatRupiahCompact } from "@/lib/format";
  * dengan angka yang sama di bawahnya.
  */
 const SERIES = { primary: "var(--color-success)", secondary: "var(--color-ochre)" };
-const AXIS = { fontSize: 11, fill: "var(--color-muted-foreground)" };
+/** Gaya label sumbu grafik gym. */
+export const AXIS = { fontSize: 11, fill: "var(--color-muted-foreground)" };
 
 const shortDay = (day: string) => formatDate(day).replace(/ \d{4}$/, "");
 

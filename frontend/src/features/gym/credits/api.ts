@@ -423,6 +423,14 @@ export const ENTRY_LABELS: Record<EntryType, string> = {
   transfer_out: "Kirim transfer",
 };
 
+export const PURCHASE_BADGE: Record<CreditPurchase["status"], { label: string; variant: "success" | "info" | "muted" | "warning" }> = {
+  paid: { label: "Lunas", variant: "success" },
+  pending: { label: "Menunggu bayar", variant: "info" },
+  failed: { label: "Gagal", variant: "muted" },
+  expired: { label: "Kedaluwarsa", variant: "muted" },
+  refunded: { label: "Direfund", variant: "warning" },
+};
+
 export const METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Tunai",
   card: "Kartu",

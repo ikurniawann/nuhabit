@@ -1,4 +1,5 @@
 /** Rentang tanggal, cabang dan tab laporan gym di URL. Tanggal adalah hari kalender (YYYY-MM-DD, inklusif) di zona cabang filter, atau WIB untuk semua cabang. */
+import { addDays, todayWib } from "@/lib/dates";
 
 export const REPORT_TABS = [
   { value: "kehadiran", label: "Kehadiran" },
@@ -29,17 +30,7 @@ export interface ReportParams {
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Hari ini di WIB sebagai YYYY-MM-DD. */
-export function wibToday(now = new Date()): string {
-  return new Date(now.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
-}
-
-/** Geser hari kalender YYYY-MM-DD sebanyak n hari. */
-export function addDays(day: string, n: number): string {
-  const d = new Date(`${day}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
+export { addDays, todayWib as wibToday };
 
 /** Rentang preset yang berakhir di today (atau di akhir bulan lalu). */
 export function presetRange(preset: RangePreset, today: string): { from: string; to: string } {

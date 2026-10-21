@@ -1,7 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, memberApi } from "./api";
+
+/** Perubahan booking, kredit atau profil menyentuh beberapa layar sekaligus: segarkan semua query. */
+export function useInvalidateAll() {
+  const qc = useQueryClient();
+  return () => qc.invalidateQueries();
+}
 
 /** Bentuk `me` yang dipakai kerangka aplikasi (header, guard). */
 export interface MeView {

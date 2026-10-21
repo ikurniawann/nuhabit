@@ -1,7 +1,6 @@
 /** Kamus ID modul Latihan (feed, rekam, segmen, klub). Digabung ke kamus ID di i18n.ts. */
 export const TRAIN_ID: Record<string, string> = {
   // Tabs, feed & cards
-  Guides: "Panduan",
   Comments: "Komentar",
   "Loading feed…": "Memuat feed…",
   "Quiet in here": "Masih sepi di sini",
@@ -68,7 +67,6 @@ export const TRAIN_ID: Record<string, string> = {
   "No sensors nearby": "Tidak ada sensor di sekitar",
   "Pairing needs Bluetooth on a real device - this demo build stops here.":
     "Pairing butuh Bluetooth di perangkat asli, versi web berhenti di sini.",
-  Close: "Tutup",
   "Add exercise": "Tambah latihan",
   "Search exercises…": "Cari latihan…",
   Added: "Ditambahkan",
@@ -199,7 +197,6 @@ export const TRAIN_ID: Record<string, string> = {
   Challenge: "Tantangan",
   "You're in -": "Kamu ikut,",
   "athletes joined": "atlet bergabung",
-  Leaderboard: "Papan peringkat",
   you: "kamu",
   "Nobody has logged kilometres yet.": "Belum ada yang mencatat kilometer.",
   "Loading athlete…": "Memuat atlet…",

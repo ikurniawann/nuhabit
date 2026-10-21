@@ -4,7 +4,7 @@ import { CirclePlay, Dumbbell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Division, WorkoutType } from "@/lib/gym/hyrox";
+import { DIVISION_LABELS, DIVISIONS as HYROX_DIVISIONS, type Division, type WorkoutType } from "@/lib/gym/hyrox";
 import { ApiError } from "../lib/api";
 import { useT } from "../lib/i18n";
 import { m } from "../lib/links";
@@ -17,12 +17,7 @@ const TYPE_INFO: { id: WorkoutType; label: string; hint: string }[] = [
   { id: "QUICK", label: "Quick", hint: "400 m runs + 4 stations at half volume" },
   { id: "PRACTICE", label: "Practice", hint: "3 rounds on a single station" },
 ];
-export const DIVISIONS: { id: Division; label: string }[] = [
-  { id: "MEN_OPEN", label: "Men Open" },
-  { id: "MEN_PRO", label: "Men Pro" },
-  { id: "WOMEN_OPEN", label: "Women Open" },
-  { id: "WOMEN_PRO", label: "Women Pro" },
-];
+export const DIVISIONS = HYROX_DIVISIONS.map((id) => ({ id, label: DIVISION_LABELS[id] }));
 
 export function WorkoutGeneratorPage() {
   const router = useRouter();

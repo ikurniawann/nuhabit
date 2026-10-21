@@ -14,12 +14,7 @@ import {
 import { fill, useT } from "../lib/i18n";
 import { useLang } from "../lib/lang";
 import { useMyAssessments } from "../lib/queries-coaching";
-import { EmptyState, Spinner, formatDay } from "../ui";
-
-const chipClass = (active: boolean) =>
-  `shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-bold transition ${
-    active ? "bg-nh-forest/10 text-nh-forest ring-1 ring-nh-forest/20" : "bg-nh-cream text-nh-muted"
-  }`;
+import { EmptyState, Spinner, chipClass, formatDay } from "../ui";
 
 /** Fitness assessments: latest numbers, progress chart per metric, and the full history. */
 export function AssessmentsPage() {

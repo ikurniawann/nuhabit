@@ -31,6 +31,7 @@ import {
   gymCreditsApi,
   isReversible,
   METHOD_LABELS,
+  PURCHASE_BADGE,
   type CreditEntry,
   type CreditPurchase,
   type MemberCredits,
@@ -46,14 +47,6 @@ import { TransferDialog } from "./transfer-dialog";
 import { useDebounced } from "@/features/gym/use-debounced";
 
 const memberKey = (id: string) => ["gym-credits", "member", id];
-
-const PURCHASE_BADGE: Record<CreditPurchase["status"], { label: string; variant: "success" | "info" | "muted" | "warning" }> = {
-  paid: { label: "Lunas", variant: "success" },
-  pending: { label: "Menunggu bayar", variant: "info" },
-  failed: { label: "Gagal", variant: "muted" },
-  expired: { label: "Kedaluwarsa", variant: "muted" },
-  refunded: { label: "Direfund", variant: "warning" },
-};
 
 /** Gym → Kredit Member: cari member, lihat saldo & lot, koreksi, jual paket di front desk. */
 export function CreditsPage() {
