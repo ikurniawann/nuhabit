@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"nuhabit/backend/internal/modules/gymcredits/domain"
+	"nuhabit/backend/internal/platform/httpx"
 	"nuhabit/backend/internal/platform/iam"
+	"nuhabit/backend/internal/platform/validate"
 )
 
 // reclaimTransfer is POST /api/gym/credits/transfers/{id}/reclaim with
@@ -14,7 +16,7 @@ func (h *Handler) reclaimTransfer(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	id, err := requireUUID(r.PathValue("id"))
+	id, err := validate.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
@@ -28,5 +30,5 @@ func (h *Handler) reclaimTransfer(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	return ok(w, res)
+	return httpx.OK(w, res)
 }
