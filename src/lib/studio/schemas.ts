@@ -3,6 +3,8 @@ import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
 import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 import { FLAG_NOTE_MAX, FLAG_SEVERITIES } from "@/lib/studio/member-flags";
+import { COMPLAINT_CATEGORIES } from "@/lib/studio/complaints";
+import { CS_PRIORITIES } from "@/lib/crm/cs-rules";
 
 /**
  * Skema validasi API Studio (EPIC-052). Dipisah dari route.ts karena file route
@@ -347,3 +349,19 @@ export const flagTypeCreateSchema = z.object({
   category: z.enum(["general", "medical"]),
 });
 export const flagTypePatchSchema = z.object({ is_active: z.boolean() });
+
+// ── Tiket keluhan (EPIC-067 B1) ───────────────────────────────────────────
+export const complaintCreateSchema = z.object({
+  category: z.enum(COMPLAINT_CATEGORIES),
+  priority: z.enum(CS_PRIORITIES).optional(),
+  title: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(2000).nullable().optional(),
+  customer_id: z.string().uuid().nullable().optional(),
+  contact_name: z.string().trim().max(120).nullable().optional(),
+  contact_phone: z.string().trim().max(30).nullable().optional(),
+  coach_id: z.string().uuid().nullable().optional(),
+  session_id: z.string().uuid().nullable().optional(),
+});
+export const complaintFromWaSchema = complaintCreateSchema
+  .pick({ priority: true, title: true, description: true, coach_id: true, session_id: true })
+  .extend({ wa_conversation_id: z.string().uuid(), category: z.enum(COMPLAINT_CATEGORIES).optional() });

@@ -12,6 +12,7 @@ import {
   type CsPriority,
 } from "@/lib/crm/cs-rules";
 import type { InboxConversation, InternalNote } from "../types";
+import { ComplaintTicketButton } from "./complaint-ticket-button";
 
 /**
  * EPIC-012 Fase D — panel komplain: kategori/prioritas, metrik SLA, dan
@@ -63,6 +64,7 @@ export function ComplaintPanel({
 
   return (
     <div className="space-y-4 border-t border-slate-200 p-4">
+      <ComplaintTicketButton conversationId={conversation.id} />
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">

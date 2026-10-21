@@ -125,7 +125,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 
 ### B. Keluhan pelanggan
 
-- [ ] T-067-B1 **(Tahap 2)** Tiket keluhan: sumber (WA/front desk/Member App), kategori Hyrox (coach, kelas,
+- [x] T-067-B1 **(Tahap 2)** Tiket keluhan: sumber (WA/front desk/Member App), kategori Hyrox (coach, kelas,
   fasilitas, cedera, billing, lainnya), prioritas, tautan ke member, coach, sesi, dan percakapan WA. Buat tiket dari
   WA inbox dengan satu klik.
 - [ ] T-067-B2 **(Tahap 2)** Alur penyelesaian: diterima → ditangani → selesai → dikonfirmasi member; PIC, batas waktu
@@ -397,3 +397,33 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
     1. `docker rm -f nuhabitdev-app`;
     2. jalankan ulang dengan image `nuhabitdev:pre-epic067`;
     3. restore dump di atas — migrasinya hanya menambah, jadi image lama tetap jalan dengan skema baru.
+- 2026-10-22 — **T-067-B1 selesai** (mulai Tahap 2).
+  - Migrasi `20261022090000_studio_complaints.sql`:
+    - `studio.complaints`: kode `KEL-YYMM-NNNN` berurutan per bulan WIB (advisory lock per prefix);
+    - sumber wa / front_desk / member_app;
+    - kategori coach, kelas, fasilitas, cedera, billing, lainnya;
+    - prioritas mengikuti WA inbox (low–urgent);
+    - tautan member / kontak non-member, coach, sesi, percakapan WA;
+    - kolom status, PIC, `respond_by`/`resolve_by`, waktu respons/selesai/konfirmasi sudah disiapkan untuk B2;
+    - unik: satu tiket aktif per percakapan WA;
+    - `studio.complaint_events` (riwayat);
+    - menu `studio.complaints` "Keluhan Pelanggan" (super_admin, admin, direksi, program_director).
+  - Batas waktu dihitung saat tiket dibuat dari default keputusan client no. 7: cedera 2 jam / 24 jam, lainnya 24 jam /
+    3 hari. Pengaturannya dibuat di B2. Prioritas otomatis: cedera = tinggi.
+  - **WA inbox:** tombol "Buat tiket keluhan" di panel komplain, hanya untuk yang punya akses menu Keluhan.
+    - Kontak, member, prioritas, dan pesan terakhir diambil dari percakapan; kategori `pembayaran` → billing, sisanya
+      Lainnya untuk dipilah.
+    - Percakapan ditandai komplain. Bila sudah ada tiket aktif → tampil tautan tiketnya (409 berisi tiket).
+  - **Backoffice `/dashboard/studio/complaints`:**
+    - daftar (terbuka dulu, prioritas tertinggi dulu) dengan filter status/kategori/cari, tanda "Lewat batas respons";
+    - panel detail + riwayat;
+    - form front desk: cari member atau isi kontak non-member, tautkan sesi member (30 hari terakhir s/d 7 hari ke
+      depan) — coach otomatis mengikuti sesi.
+  - Bukti:
+    - 7 unit test + 4 test integrasi lulus di `nuhabit_test` (kode berurutan, coach dari sesi, batas waktu cedera,
+      tiket dari WA + anti-dobel 409, urutan & filter daftar).
+    - E2E headless (admin uji + Maya + percakapan WA, sudah dihapus): satu klik di inbox → `KEL-2610-0001` billing
+      tinggi; tiket cedera front desk tertaut sesi → coach otomatis, prioritas tinggi. Tidak ada error dari fitur baru;
+      dua 403 `/api/settings/wa-gateway` berasal dari halaman inbox lama untuk role admin.
+    - `tsc` tanpa error baru (508); eslint bersih.
+  - Belum di-deploy.

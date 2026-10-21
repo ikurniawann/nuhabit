@@ -15,3 +15,4 @@ export { StudioAutomationPage } from "./components/automation-page";
 export { StudioLoyaltyPage } from "./components/loyalty-page";
 export { StudioCoachLeavePage } from "./components/coach-leave-page";
 export { StudioMemberFlagsPage } from "./components/member-flags-page";
+export { StudioComplaintsPage } from "./components/complaints-page";
