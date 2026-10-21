@@ -16,12 +16,7 @@ import (
 type Handler struct {
 	svc   *Service
 	auth  *auth.Service
-	guard Guard
-}
-
-// Guard is the slice of platform/auth the staff routes use; tests swap it.
-type Guard interface {
-	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
+	guard auth.Granter
 }
 
 // Menu actions. On gym.credits, create sells a package; update corrects the

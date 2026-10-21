@@ -18,7 +18,7 @@ import (
 
 // Guard is the slice of platform/auth the handlers use; tests swap it.
 type Guard interface {
-	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
+	auth.Granter
 	RequireMember(r *http.Request) (string, error)
 }
 
@@ -50,11 +50,11 @@ var (
 func (h *handler) Routes() []module.Route {
 	assess := iam.GymAssessments
 	return []module.Route{
-		{Pattern: "GET /api/gym/pt/class-types", Handler: h.staff(h.classTypes, ptAny...)},
-		{Pattern: "GET /api/gym/pt/class-type-flags", Handler: h.staff(h.classTypeFlags, iam.Can(actUpdate, iam.GymClassTypes))},
-		{Pattern: "PATCH /api/gym/pt/class-type-flags/{id}", Handler: h.staff(h.setPersonal, iam.Can(actUpdate, iam.GymClassTypes))},
+		{Pattern: "GET /api/gym/pt/class-types", Handler: auth.Staff(h.guard, h.classTypes, ptAny...)},
+		{Pattern: "GET /api/gym/pt/class-type-flags", Handler: auth.Staff(h.guard, h.classTypeFlags, iam.Can(actUpdate, iam.GymClassTypes))},
+		{Pattern: "PATCH /api/gym/pt/class-type-flags/{id}", Handler: auth.Staff(h.guard, h.setPersonal, iam.Can(actUpdate, iam.GymClassTypes))},
 		{Pattern: "GET /api/gym/pt/coaches", Handler: h.scoped(h.coaches, ptAny...)},
-		{Pattern: "GET /api/gym/pt/members", Handler: h.staff(h.searchMembers, ptRead, ptOwn, ptCreate, iam.Can(actRead, assess), iam.Can(actCreate, assess))},
+		{Pattern: "GET /api/gym/pt/members", Handler: auth.Staff(h.guard, h.searchMembers, ptRead, ptOwn, ptCreate, iam.Can(actRead, assess), iam.Can(actCreate, assess))},
 		{Pattern: "GET /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.availability, ptAny...)},
 		{Pattern: "PUT /api/gym/pt/availability/{coachId}", Handler: h.scoped(h.setWeekly, ptUpdate)},
 		{Pattern: "POST /api/gym/pt/availability/{coachId}/exceptions", Handler: h.scoped(h.addException, ptUpdate)},
@@ -66,11 +66,11 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "POST /api/gym/pt/appointments/{id}", Handler: h.scoped(h.appointmentAction, ptUpdate)},
 		{Pattern: "POST /api/gym/pt/participants/{id}", Handler: h.scoped(h.participantAction, ptUpdate)},
 
-		{Pattern: "GET /api/gym/assessments", Handler: h.staff(h.listAssessments, iam.Can(actRead, assess))},
-		{Pattern: "POST /api/gym/assessments", Handler: h.staff(h.createAssessment, iam.Can(actCreate, assess))},
-		{Pattern: "GET /api/gym/assessments/{id}", Handler: h.staff(h.getAssessment, iam.Can(actRead, assess))},
-		{Pattern: "PUT /api/gym/assessments/{id}", Handler: h.staff(h.updateAssessment, iam.Can(actUpdate, assess))},
-		{Pattern: "DELETE /api/gym/assessments/{id}", Handler: h.staff(h.deleteAssessment, iam.Can(actDelete, assess))},
+		{Pattern: "GET /api/gym/assessments", Handler: auth.Staff(h.guard, h.listAssessments, iam.Can(actRead, assess))},
+		{Pattern: "POST /api/gym/assessments", Handler: auth.Staff(h.guard, h.createAssessment, iam.Can(actCreate, assess))},
+		{Pattern: "GET /api/gym/assessments/{id}", Handler: auth.Staff(h.guard, h.getAssessment, iam.Can(actRead, assess))},
+		{Pattern: "PUT /api/gym/assessments/{id}", Handler: auth.Staff(h.guard, h.updateAssessment, iam.Can(actUpdate, assess))},
+		{Pattern: "DELETE /api/gym/assessments/{id}", Handler: auth.Staff(h.guard, h.deleteAssessment, iam.Can(actDelete, assess))},
 
 		{Pattern: "GET /api/member-portal/gym/pt/options", Handler: h.member(h.memberOptions)},
 		{Pattern: "GET /api/member-portal/gym/pt/slots", Handler: h.member(h.memberSlots)},
@@ -79,19 +79,6 @@ func (h *handler) Routes() []module.Route {
 		{Pattern: "DELETE /api/member-portal/gym/pt/appointments/{id}", Handler: h.member(h.memberCancel)},
 		{Pattern: "GET /api/member-portal/gym/assessments", Handler: h.member(h.memberAssessments)},
 	}
-}
-
-type staffFunc func(w http.ResponseWriter, r *http.Request, user *auth.User) error
-
-// staff passes the caller holding any of grants.
-func (h *handler) staff(fn staffFunc, grants ...iam.Grant) http.Handler {
-	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		user, _, err := h.guard.RequireAnyGrant(r, grants...)
-		if err != nil {
-			return err
-		}
-		return fn(w, r, user)
-	})
 }
 
 // scope is the caller of a PT route. A coach (read_own without read on
@@ -113,7 +100,7 @@ func (sc scope) require(coachID string) error {
 
 type scopedFunc func(w http.ResponseWriter, r *http.Request, sc scope) error
 
-// scoped is staff for PT routes. Unless read on gym.pt let the caller in,
+// scoped is auth.Staff for PT routes. Unless read on gym.pt let the caller in,
 // a second check tells a full grant (read) from a coach (read_own): the
 // coach is limited to their own sessions and availability.
 func (h *handler) scoped(fn scopedFunc, grants ...iam.Grant) http.Handler {

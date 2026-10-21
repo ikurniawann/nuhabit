@@ -19,46 +19,29 @@ import (
 	"nuhabit/backend/internal/platform/validate"
 )
 
-// Guard is the slice of platform/auth the handlers use; tests swap it.
-type Guard interface {
-	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
-}
-
 type handler struct {
 	svc   *Service
-	guard Guard
+	guard auth.Granter
 }
 
 // Routes lists the staff routes.
 func (h *handler) Routes() []module.Route {
 	members, reports := iam.GymMembers, iam.GymReports
 	return []module.Route{
-		{Pattern: "GET /api/gym/members", Handler: h.staff(h.listMembers, iam.Can("read", members))},
-		{Pattern: "POST /api/gym/members", Handler: h.staff(h.register, iam.Can("create", members))},
-		{Pattern: "GET /api/gym/members/{id}", Handler: h.staff(h.member, iam.Can("read", members))},
-		{Pattern: "PATCH /api/gym/members/{id}", Handler: h.staff(h.updateMember, iam.Can("update", members))},
-		{Pattern: "POST /api/gym/members/{id}/notes", Handler: h.staff(h.addNote, iam.Can("read", members))},
-		{Pattern: "DELETE /api/gym/members/{id}/notes/{noteId}", Handler: h.staff(h.deleteNote, iam.Can("read", members))},
-		{Pattern: "GET /api/gym/reports/branches", Handler: h.staff(h.branches, iam.Can("read", members, reports))},
-		{Pattern: "GET /api/gym/reports/classes", Handler: h.staff(h.classReport, iam.Can("read", reports))},
-		{Pattern: "GET /api/gym/reports/revenue", Handler: h.staff(h.revenueReport, iam.Can("read", reports))},
-		{Pattern: "GET /api/gym/reports/members", Handler: h.staff(h.membersReport, iam.Can("read", reports))},
-		{Pattern: "GET /api/gym/checkin/log", Handler: h.staff(h.checkinLog, iam.Can("read", iam.GymCheckin))},
+		{Pattern: "GET /api/gym/members", Handler: auth.Staff(h.guard, h.listMembers, iam.Can("read", members))},
+		{Pattern: "POST /api/gym/members", Handler: auth.Staff(h.guard, h.register, iam.Can("create", members))},
+		{Pattern: "GET /api/gym/members/{id}", Handler: auth.Staff(h.guard, h.member, iam.Can("read", members))},
+		{Pattern: "PATCH /api/gym/members/{id}", Handler: auth.Staff(h.guard, h.updateMember, iam.Can("update", members))},
+		// Staff notes need only read: anyone who can open the member can
+		// leave a note and delete their own.
+		{Pattern: "POST /api/gym/members/{id}/notes", Handler: auth.Staff(h.guard, h.addNote, iam.Can("read", members))},
+		{Pattern: "DELETE /api/gym/members/{id}/notes/{noteId}", Handler: auth.Staff(h.guard, h.deleteNote, iam.Can("read", members))},
+		{Pattern: "GET /api/gym/reports/branches", Handler: auth.Staff(h.guard, h.branches, iam.Can("read", members, reports))},
+		{Pattern: "GET /api/gym/reports/classes", Handler: auth.Staff(h.guard, h.classReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/reports/revenue", Handler: auth.Staff(h.guard, h.revenueReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/reports/members", Handler: auth.Staff(h.guard, h.membersReport, iam.Can("read", reports))},
+		{Pattern: "GET /api/gym/checkin/log", Handler: auth.Staff(h.guard, h.checkinLog, iam.Can("read", iam.GymCheckin))},
 	}
-}
-
-type staffFunc func(w http.ResponseWriter, r *http.Request, user *auth.User) error
-
-// staff passes the caller holding any of grants. Staff notes need only read:
-// anyone who can open the member can leave a note and delete their own.
-func (h *handler) staff(fn staffFunc, grants ...iam.Grant) http.Handler {
-	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		user, _, err := h.guard.RequireAnyGrant(r, grants...)
-		if err != nil {
-			return err
-		}
-		return fn(w, r, user)
-	})
 }
 
 func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }

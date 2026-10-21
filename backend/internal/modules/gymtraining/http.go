@@ -15,12 +15,7 @@ import (
 type handlers struct {
 	svc   *Service
 	auth  *auth.Service
-	guard Guard
-}
-
-// Guard is the slice of platform/auth the staff routes use; tests swap it.
-type Guard interface {
-	RequireAnyGrant(r *http.Request, grants ...iam.Grant) (*auth.User, int, error)
+	guard auth.Granter
 }
 
 func ok(w http.ResponseWriter, data any) error { return httpx.Data(w, http.StatusOK, data) }
@@ -31,17 +26,6 @@ const (
 	actUpdate = "update"
 	actDelete = "delete"
 )
-
-// staff wraps a /api/gym route: the caller holds action on a menu under prefixes.
-func (h handlers) staff(action string, prefixes []string, fn func(w http.ResponseWriter, r *http.Request, u *auth.User) error) http.Handler {
-	return httpx.Handle(func(w http.ResponseWriter, r *http.Request) error {
-		u, _, err := h.guard.RequireAnyGrant(r, iam.Grant{Action: action, Prefixes: prefixes})
-		if err != nil {
-			return err
-		}
-		return fn(w, r, u)
-	})
-}
 
 // upsert wraps a save route that creates without an id and edits with one.
 // The caller needs create or update to reach fn, and fn passes the parsed id
@@ -518,30 +502,30 @@ func (h handlers) raceDetail(w http.ResponseWriter, r *http.Request, customerID 
 func (h handlers) Routes() []module.Route {
 	ex, races, inc := iam.GymExercises, iam.GymRaces, iam.GymIncentives
 	return []module.Route{
-		{Pattern: "GET /api/gym/exercises", Handler: h.staff(actRead, ex, h.listExercises)},
+		{Pattern: "GET /api/gym/exercises", Handler: auth.Staff(h.guard, h.listExercises, iam.Can(actRead, ex))},
 		{Pattern: "POST /api/gym/exercises", Handler: h.upsert(ex, h.saveExercise)},
-		{Pattern: "DELETE /api/gym/exercises", Handler: h.staff(actDelete, ex, h.deleteExercise)},
-		{Pattern: "POST /api/gym/exercises/substitutions", Handler: h.staff(actCreate, ex, h.saveSubstitution)},
-		{Pattern: "DELETE /api/gym/exercises/substitutions", Handler: h.staff(actDelete, ex, h.deleteSubstitution)},
+		{Pattern: "DELETE /api/gym/exercises", Handler: auth.Staff(h.guard, h.deleteExercise, iam.Can(actDelete, ex))},
+		{Pattern: "POST /api/gym/exercises/substitutions", Handler: auth.Staff(h.guard, h.saveSubstitution, iam.Can(actCreate, ex))},
+		{Pattern: "DELETE /api/gym/exercises/substitutions", Handler: auth.Staff(h.guard, h.deleteSubstitution, iam.Can(actDelete, ex))},
 
-		{Pattern: "GET /api/gym/races", Handler: h.staff(actRead, races, h.listRaces)},
+		{Pattern: "GET /api/gym/races", Handler: auth.Staff(h.guard, h.listRaces, iam.Can(actRead, races))},
 		{Pattern: "POST /api/gym/races", Handler: h.upsert(races, h.saveRace)},
-		{Pattern: "DELETE /api/gym/races", Handler: h.staff(actDelete, races, h.deleteRace)},
-		{Pattern: "GET /api/gym/races/{id}/entrants", Handler: h.staff(actRead, races, h.raceEntrants)},
-		{Pattern: "GET /api/gym/races/results", Handler: h.staff(actRead, races, h.listResults)},
-		{Pattern: "POST /api/gym/races/results/{id}/verify", Handler: h.staff(actUpdate, races, h.verifyResult)},
-		{Pattern: "GET /api/gym/races/leaderboard", Handler: h.staff(actRead, races, h.staffLeaderboard)},
+		{Pattern: "DELETE /api/gym/races", Handler: auth.Staff(h.guard, h.deleteRace, iam.Can(actDelete, races))},
+		{Pattern: "GET /api/gym/races/{id}/entrants", Handler: auth.Staff(h.guard, h.raceEntrants, iam.Can(actRead, races))},
+		{Pattern: "GET /api/gym/races/results", Handler: auth.Staff(h.guard, h.listResults, iam.Can(actRead, races))},
+		{Pattern: "POST /api/gym/races/results/{id}/verify", Handler: auth.Staff(h.guard, h.verifyResult, iam.Can(actUpdate, races))},
+		{Pattern: "GET /api/gym/races/leaderboard", Handler: auth.Staff(h.guard, h.staffLeaderboard, iam.Can(actRead, races))},
 
-		{Pattern: "GET /api/gym/incentives/schemes", Handler: h.staff(actRead, inc, h.schemeForm)},
+		{Pattern: "GET /api/gym/incentives/schemes", Handler: auth.Staff(h.guard, h.schemeForm, iam.Can(actRead, inc))},
 		{Pattern: "POST /api/gym/incentives/schemes", Handler: h.upsert(inc, h.saveScheme)},
-		{Pattern: "DELETE /api/gym/incentives/schemes", Handler: h.staff(actDelete, inc, h.deleteScheme)},
-		{Pattern: "GET /api/gym/incentives/statements", Handler: h.staff(actRead, inc, h.statements)},
-		{Pattern: "GET /api/gym/incentives/payouts", Handler: h.staff(actRead, inc, h.listPayouts)},
-		{Pattern: "POST /api/gym/incentives/payouts", Handler: h.staff(actCreate, inc, h.createPayout)},
-		{Pattern: "GET /api/gym/incentives/payouts/{id}", Handler: h.staff(actRead, inc, h.getPayout)},
-		{Pattern: "POST /api/gym/incentives/payouts/{id}", Handler: h.staff(actUpdate, inc, h.actOnPayout)},
+		{Pattern: "DELETE /api/gym/incentives/schemes", Handler: auth.Staff(h.guard, h.deleteScheme, iam.Can(actDelete, inc))},
+		{Pattern: "GET /api/gym/incentives/statements", Handler: auth.Staff(h.guard, h.statements, iam.Can(actRead, inc))},
+		{Pattern: "GET /api/gym/incentives/payouts", Handler: auth.Staff(h.guard, h.listPayouts, iam.Can(actRead, inc))},
+		{Pattern: "POST /api/gym/incentives/payouts", Handler: auth.Staff(h.guard, h.createPayout, iam.Can(actCreate, inc))},
+		{Pattern: "GET /api/gym/incentives/payouts/{id}", Handler: auth.Staff(h.guard, h.getPayout, iam.Can(actRead, inc))},
+		{Pattern: "POST /api/gym/incentives/payouts/{id}", Handler: auth.Staff(h.guard, h.actOnPayout, iam.Can(actUpdate, inc))},
 
-		{Pattern: "GET /api/gym/my-classes/incentives", Handler: h.staff(actRead, iam.GymMyClasses, h.myIncentives)},
+		{Pattern: "GET /api/gym/my-classes/incentives", Handler: auth.Staff(h.guard, h.myIncentives, iam.Can(actRead, iam.GymMyClasses))},
 
 		{Pattern: "GET /api/member-portal/gym/workouts", Handler: h.member("Gagal memuat workout", h.workoutsPage)},
 		{Pattern: "POST /api/member-portal/gym/workouts", Handler: h.member("Gagal menyusun workout", h.generateWorkout)},
