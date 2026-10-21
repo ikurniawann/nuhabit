@@ -158,9 +158,8 @@ func (Postgres) ClassDetails(ctx context.Context, q Q, classTypeID string, coach
 
 // ── Member app catalog ──────────────────────────────────────────────────────
 
-func (Postgres) Catalog(ctx context.Context, q Q) (branches, classTypes, coaches []*Row, err error) {
-	if branches, err = queryRows(ctx, q,
-		`SELECT id, name, timezone FROM configuration.branches WHERE is_active = true ORDER BY name`); err != nil {
+func (p Postgres) Catalog(ctx context.Context, q Q) (branches, classTypes, coaches []*Row, err error) {
+	if branches, err = p.Branches(ctx, q); err != nil {
 		return
 	}
 	if classTypes, err = queryRows(ctx, q, `SELECT id, name, description, default_duration_min, default_credit_cost
