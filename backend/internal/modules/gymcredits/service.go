@@ -543,4 +543,12 @@ type Repository interface {
 	InsertTransferLot(ctx context.Context, q database.Querier, transferID, sourceLotID, targetLotID string, credits int) error
 	// CreditsSentSince sums the credits the member transferred out since.
 	CreditsSentSince(ctx context.Context, q database.Querier, customerID string, since time.Time) (int, error)
+	// TransferForReclaim locks the transfer and returns it with its lots;
+	// nil when unknown.
+	TransferForReclaim(ctx context.Context, q database.Querier, id string) (*TransferDetail, error)
+	AddReclaimed(ctx context.Context, q database.Querier, transferLotID string, credits int) error
+	TransfersOf(ctx context.Context, q database.Querier, customerID string, limit int) ([]TransferDetail, error)
+	// LotTransfersOut lists the credits of a lot that transfers moved out
+	// and no reclaim brought back.
+	LotTransfersOut(ctx context.Context, q database.Querier, lotID string) ([]LotTransferOut, error)
 }

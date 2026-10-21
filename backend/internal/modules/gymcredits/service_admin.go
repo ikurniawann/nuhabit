@@ -275,7 +275,11 @@ func (s *Service) MemberCredits(ctx context.Context, customerID string) (*Member
 	if err != nil {
 		return nil, err
 	}
-	return &MemberCreditsView{Member: profile, WalletView: *wallet, Purchases: purchases}, nil
+	transfers, err := s.TransferHistory(ctx, s.db, customerID, 50)
+	if err != nil {
+		return nil, err
+	}
+	return &MemberCreditsView{Member: profile, WalletView: *wallet, Purchases: purchases, Transfers: transfers}, nil
 }
 
 // AdjustTx is Adjust in a new transaction.

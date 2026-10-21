@@ -72,6 +72,15 @@ export interface FreezeAllowance {
   remaining_days: number;
 }
 
+/** Kredit dari pembelian ini yang dipegang member lain lewat transfer; tidak ikut direfund. */
+export interface TransferredCredits {
+  transfer_id: string;
+  customer_id: string;
+  name: string | null;
+  phone: string;
+  credits: number;
+}
+
 export interface RefundQuote {
   purchase_id: string;
   kind: PackageKind;
@@ -82,6 +91,9 @@ export interface RefundQuote {
   total_days: number;
   unused_days: number;
   unused_credits: number;
+  transferred: TransferredCredits[];
+  /** "N kredit sudah ditransfer ke <member>", kosong bila tidak ada. */
+  transferred_note: string;
 }
 
 export type RefundMode = "prorated" | "full";
@@ -132,6 +144,20 @@ export interface TransferResult {
   transferId: string;
   credits: number;
   replayed: boolean;
+}
+
+/** Satu transfer di riwayat member; reclaimable_credits = yang masih bisa ditarik kembali staf. */
+export interface TransferHistory {
+  id: string;
+  direction: "out" | "in";
+  counterparty: { id: string; name: string | null; phone: string };
+  credits: number;
+  reclaimed_credits: number;
+  reclaimable_credits: number;
+  channel: "staff" | "member";
+  note: string | null;
+  created_by_name: string | null;
+  created_at: string;
 }
 
 export interface VoucherQuote {
@@ -264,6 +290,7 @@ export interface MemberCredits {
   transfer: TransferAllowance;
   entries: CreditEntry[];
   purchases: CreditPurchase[];
+  transfers: TransferHistory[];
 }
 
 export interface RulesAdmin {
@@ -300,6 +327,8 @@ export const gymCreditsApi = {
     customerId: string,
     input: { to_customer_id: string; lots: { lot_id: string; credits: number }[]; note: string; idempotency_key: string }
   ) => send<TransferResult>(`/api/gym/credits/${customerId}/transfer`, input),
+  reclaimTransfer: (transferId: string, reason: string) =>
+    send<{ transferId: string; credits: number }>(`/api/gym/credits/transfers/${transferId}/reclaim`, { reason }),
   reverse: (entryId: string, reason: string) => send("/api/gym/credits/reverse", { entry_id: entryId, reason }),
   refundQuote: (purchaseId: string) => call<RefundQuote>(`/api/gym/credits/purchases/${purchaseId}/refund-quote`),
   refundPurchase: (purchaseId: string, reason: string, mode: RefundMode) =>
@@ -341,6 +370,12 @@ async function closeDeskShift(url: string, body: unknown): Promise<DeskShiftSumm
 }
 
 /* ── Label & format ──────────────────────────────────────────────────── */
+
+/** Label mutasi; entri tarik-kembali transfer dibedakan dari transfer biasa lewat sumbernya. */
+export function entryLabel(e: Pick<CreditEntry, "type" | "amount" | "source_type">): string {
+  if (e.source_type === "transfer_reclaim") return e.amount > 0 ? "Transfer ditarik kembali" : "Transfer ditarik staf";
+  return ENTRY_LABELS[e.type];
+}
 
 export const ENTRY_LABELS: Record<EntryType, string> = {
   top_up: "Beli paket",

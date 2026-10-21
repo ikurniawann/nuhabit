@@ -289,11 +289,13 @@ type WalletView struct {
 	Entries  []EntryView            `json:"entries"`
 }
 
-// MemberCreditsView is loadMemberCredits: { member, ...wallet, purchases }.
+// MemberCreditsView is loadMemberCredits: { member, ...wallet, purchases,
+// transfers }.
 type MemberCreditsView struct {
 	Member *MemberProfile `json:"member"`
 	WalletView
-	Purchases []Purchase `json:"purchases"`
+	Purchases []Purchase     `json:"purchases"`
+	Transfers []TransferView `json:"transfers"`
 }
 
 // CreditMember is a search row: the customer plus its credit balance.

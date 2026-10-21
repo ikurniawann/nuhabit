@@ -1566,6 +1566,11 @@
   },
   {
     "module": "gym-credits",
+    "method": "POST",
+    "path": "/api/gym/credits/transfers/{id}/reclaim"
+  },
+  {
+    "module": "gym-credits",
     "method": "GET",
     "path": "/api/gym/credits/{customerId}"
   },

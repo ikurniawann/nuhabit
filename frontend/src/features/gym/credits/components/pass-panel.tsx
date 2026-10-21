@@ -317,6 +317,11 @@ export function RefundDialog({ purchase, onClose, onDone }: { purchase: CreditPu
                   ? `${formatNumber(q.unused_credits)} dari ${formatNumber(purchase.credits)} kredit belum terpakai dan ditarik. Refund dihitung dari kredit sisa itu.`
                   : "Kredit yang belum terpakai dari pembelian ini ditarik."}
             </DialogPanelDescription>
+            {q?.transferred_note && (
+              <p className="text-xs text-warning">
+                {q.transferred_note}. Kredit itu tidak ikut direfund; tarik kembali transfernya dulu dari riwayat transfer bila penerima belum memakainya.
+              </p>
+            )}
           </DialogPanelHeader>
           <DialogPanelBody className="grid grid-cols-1 gap-4">
             {quote.isLoading ? (

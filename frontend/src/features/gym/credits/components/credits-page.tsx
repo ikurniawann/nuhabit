@@ -27,13 +27,14 @@ import { Field, TableNote } from "@/features/crm/engagement/components/shared";
 import { MemberLink } from "@/features/gym/members/member-link";
 import { formatDate, formatDateTime, formatNumber, formatRupiah } from "@/lib/format";
 import {
-  ENTRY_LABELS,
+  entryLabel,
   gymCreditsApi,
   isReversible,
   METHOD_LABELS,
   type CreditEntry,
   type CreditPurchase,
   type MemberCredits,
+  type TransferHistory,
 } from "../api";
 import { Can } from "@/components/iam/can";
 import { useCan } from "@/components/iam/iam-access-provider";
@@ -143,6 +144,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
   const detail = useQuery({ queryKey: memberKey(customerId), queryFn: () => gymCreditsApi.memberCredits(customerId) });
   const [dialog, setDialog] = useState<"adjust" | "sell" | "transfer" | null>(null);
   const [reversing, setReversing] = useState<CreditEntry | null>(null);
+  const [reclaiming, setReclaiming] = useState<TransferHistory | null>(null);
   const [refunding, setRefunding] = useState<CreditPurchase | null>(null);
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: memberKey(customerId) });
@@ -252,7 +254,7 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
                 <TableRow key={e.id} className={e.reversed ? "opacity-60" : undefined}>
                   <TableCell className="max-w-[18rem] whitespace-normal">
                     <p className="font-medium">
-                      {ENTRY_LABELS[e.type]}
+                      {entryLabel(e)}
                       {e.reversed && <Badge variant="muted" className="ml-2">Dibatalkan</Badge>}
                     </p>
                     {(e.note || e.created_by_name) && (
@@ -278,6 +280,59 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
           </Table>
         )}
       </Card>
+
+      {d.transfers.length > 0 && (
+        <Card className="py-0">
+          <h3 className="px-5 pt-4 text-sm font-semibold">Riwayat transfer</h3>
+          <p className="px-5 pt-1 text-xs text-muted-foreground">
+            Kredit yang sudah ditransfer tidak ikut refund pembelian. Transfer yang belum dipakai penerima bisa ditarik kembali.
+          </p>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Transfer</TableHead>
+                <TableHead className="text-right">Kredit</TableHead>
+                <TableHead className="hidden md:table-cell">Waktu</TableHead>
+                <TableHead className="text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {d.transfers.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="max-w-[18rem] whitespace-normal">
+                    <p className="font-medium">
+                      {t.direction === "out" ? "Kirim ke " : "Terima dari "}
+                      <MemberLink id={t.counterparty.id} name={t.counterparty.name ?? t.counterparty.phone} className="font-medium" />
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {[
+                        t.channel === "member" ? "Dari aplikasi member" : t.created_by_name,
+                        t.note,
+                        t.reclaimed_credits > 0 ? `${formatNumber(t.reclaimed_credits)} kredit ditarik kembali` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                    <p className="text-xs text-muted-foreground md:hidden">{formatDateTime(t.created_at)}</p>
+                  </TableCell>
+                  <TableCell className={cn("text-right font-medium tabular-nums", t.direction === "in" ? "text-success" : "text-danger")}>
+                    {t.direction === "in" ? "+" : "-"}
+                    {formatNumber(t.credits)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">{formatDateTime(t.created_at)}</TableCell>
+                  <TableCell className="text-right">
+                    {canCorrect && t.reclaimable_credits > 0 && (
+                      <Button variant="ghost" size="sm" onClick={() => setReclaiming(t)}>
+                        Tarik kembali transfer
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
       {d.passes.length > 0 && <PassesCard credits={d} onDone={refresh} />}
 
@@ -349,12 +404,23 @@ function MemberCreditsPanel({ customerId }: { customerId: string }) {
       )}
       {reversing && (
         <ReasonDialog
-          title={`Batalkan ${ENTRY_LABELS[reversing.type].toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}
+          title={`Batalkan ${entryLabel(reversing).toLowerCase()} ${reversing.amount > 0 ? "+" : ""}${formatNumber(reversing.amount)}?`}
           description="Entri asli tetap ada. Sistem menulis entri pembatalan dengan jumlah berlawanan."
           confirmLabel="Batalkan entri"
           action={(reason) => gymCreditsApi.reverse(reversing.id, reason)}
           onClose={() => setReversing(null)}
           onDone={refresh}
+        />
+      )}
+      {reclaiming && (
+        <ReasonDialog
+          title={`Tarik kembali ${formatNumber(reclaiming.reclaimable_credits)} kredit dari ${reclaiming.counterparty.name ?? reclaiming.counterparty.phone}?`}
+          description="Kredit yang belum dipakai penerima kembali ke lot asal pengirim. Kedua member mendapat notifikasi."
+          confirmLabel="Tarik kembali transfer"
+          action={(reason) => gymCreditsApi.reclaimTransfer(reclaiming.id, reason)}
+          onClose={() => setReclaiming(null)}
+          // The receiver's balance changes too.
+          onDone={() => void queryClient.invalidateQueries({ queryKey: ["gym-credits"] })}
         />
       )}
       {refunding && <RefundDialog purchase={refunding} onClose={() => setRefunding(null)} onDone={refresh} />}
