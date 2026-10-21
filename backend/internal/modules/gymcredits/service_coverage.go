@@ -8,8 +8,8 @@ import (
 )
 
 // CanCover reports whether the member's live lots can pay for the credits
-// their upcoming bookings (pending) will draw at check-in plus next, with
-// the deduction priority of the ledger (see domain.CanCover). Booking calls
+// their upcoming bookings (pending) will draw at check-in plus next: some
+// assignment of lots to classes exists (see domain.CanCover). Booking calls
 // it instead of subtracting reserved credits across class types.
 func (s *Service) CanCover(ctx context.Context, q database.Querier, customerID string, pending []domain.Demand, next domain.Demand) (bool, error) {
 	now := s.clock()

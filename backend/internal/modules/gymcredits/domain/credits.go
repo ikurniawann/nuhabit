@@ -227,9 +227,11 @@ type Allocation struct {
 
 // usableLots are the live lots with credits left that may pay for
 // classTypeID, in the order a deduction draws them: lots restricted to a list
-// that names the class, then unrestricted lots, each earliest expiry first.
-// An empty classTypeID (class unknown) takes any live lot, earliest expiry
-// first.
+// that names the class, narrowest list first (fewest class types) and
+// earliest expiry within a width, then unrestricted lots earliest expiry
+// first. A narrow lot pays before a wide one so the wide lot stays for the
+// classes only it covers. An empty classTypeID (class unknown) takes any
+// live lot, earliest expiry first.
 func usableLots(remainders []LotRemainder, coverage map[string][]string, classTypeID string, now time.Time) []LotRemainder {
 	var restricted, open []LotRemainder
 	for _, r := range remainders {
@@ -249,6 +251,11 @@ func usableLots(remainders []LotRemainder, coverage map[string][]string, classTy
 			open = append(open, r)
 		}
 	}
+	// Remainders arrive earliest expiry first; a stable sort keeps that
+	// order among lots of one width.
+	sort.SliceStable(restricted, func(i, j int) bool {
+		return len(coverage[restricted[i].Lot.PackageID]) < len(coverage[restricted[j].Lot.PackageID])
+	})
 	return append(restricted, open...)
 }
 

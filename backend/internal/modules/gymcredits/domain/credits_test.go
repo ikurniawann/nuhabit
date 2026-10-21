@@ -196,6 +196,17 @@ func TestAllocateDeduction(t *testing.T) {
 		eq(t, got, []Allocation{{"race", 3}, {"bonus", 1}, {"open-early", 1}})
 	})
 
+	t.Run("the narrowest restricted lot pays first, even when a wider one expires sooner", func(t *testing.T) {
+		wide := map[string][]string{"race": {"sim"}, "mixed": {"sim", "lift"}, "trio": {"sim", "lift", "row"}}
+		rs := LotRemainders([]Lot{lot("trio", 1, 2, "trio"), lot("mixed", 1, 5, "mixed"), lot("race", 1, 40, "race"), lot("bonus", 1, 3, "")}, nil)
+		got, ok := AllocateDeduction(rs, wide, "sim", 3, now)
+		eq(t, ok, true)
+		eq(t, got, []Allocation{{"race", 1}, {"mixed", 1}, {"trio", 1}})
+		got, ok = AllocateDeduction(rs, wide, "lift", 3, now)
+		eq(t, ok, true)
+		eq(t, got, []Allocation{{"mixed", 1}, {"trio", 1}, {"bonus", 1}})
+	})
+
 	t.Run("lots restricted to other classes and lapsed lots never pay", func(t *testing.T) {
 		eq(t, UsableBalance(rs, coverage, "sim", now), 6)
 		eq(t, UsableBalance(rs, coverage, "lift", now), 7)
