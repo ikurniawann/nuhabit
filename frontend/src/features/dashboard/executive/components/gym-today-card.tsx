@@ -4,7 +4,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
 import { formatRupiahCompact } from "@/lib/format";
 import { jam } from "@/features/gym/scheduling/api";
-import type { ExecutiveDashboard } from "@/lib/dashboard/executive";
+import type { ExecutiveDashboard } from "@/features/dashboard/executive/types";
 import { SectionCard } from "./executive-parts";
 
 export function GymTodayCard({

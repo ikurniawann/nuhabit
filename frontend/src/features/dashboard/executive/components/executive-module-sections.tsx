@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Package, Truck } from "lucide-react";
 import { IconTile } from "@/components/ui/stat-card";
 import { cn } from "@/lib/utils";
-import type { ExecutiveDashboard } from "@/lib/dashboard/executive";
+import type { ExecutiveDashboard } from "@/features/dashboard/executive/types";
 import { formatNumber, formatRupiahCompact } from "@/lib/format";
 import { SectionCard } from "./executive-parts";
 
