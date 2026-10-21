@@ -3,6 +3,7 @@
  * siapa yang boleh memutus bisa dites. Query ada di coach-leave-server.ts.
  */
 
+import { DEFAULT_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { addDays } from "@/lib/studio/schedule";
 import { LEAVE_TYPE_LABELS, type LeaveType } from "@/types/hris";
 
@@ -56,17 +57,21 @@ export interface CoachLeaveSettings {
   /** User yang memutus bila tidak ada Program Director yang aktif. */
   backup_approver_user_id: string | null;
   notice_rules: NoticeRules;
+  /** Batas jawaban calon pengganti (jam) sebelum permintaan kembali "butuh pengganti". */
+  substitute_response_hours: number;
 }
 
 export const DEFAULT_COACH_LEAVE_SETTINGS: CoachLeaveSettings = {
   backup_approver_user_id: null,
   notice_rules: DEFAULT_NOTICE_RULES,
+  substitute_response_hours: DEFAULT_SUBSTITUTE_RESPONSE_HOURS,
 };
 
 /** Kunci di studio.settings (prefix leave_ supaya tidak bentrok Aturan Booking & job_). */
 export const COACH_LEAVE_SETTING_KEYS: Record<keyof CoachLeaveSettings, string> = {
   backup_approver_user_id: "leave_backup_approver_user_id",
   notice_rules: "leave_notice_rules",
+  substitute_response_hours: "leave_substitute_response_hours",
 };
 
 /** Gabungkan aturan tersimpan (bisa sebagian / dari versi lama) dengan default per jenis cuti. */

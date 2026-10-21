@@ -3,6 +3,17 @@ import { createServerPgClient } from "@/lib/pg/create-client";
 import { withTransaction } from "@/lib/db";
 import { getWorkforceActor } from "@/lib/hris/workforce-auth";
 import { buildWaLink } from "@/lib/recruitment/wa";
+import { ApiError } from "@/lib/api/auth";
+import {
+  type AppliedCovers,
+  applyCoversOnApproval,
+  expireStaleRequests,
+  getCoachLeaveContext,
+  releaseCancelledSessions,
+  syncLeaveCovers,
+  voidLeaveCovers,
+} from "@/lib/studio/coach-cover-server";
+import { assertCanDecideCoachLeave } from "@/lib/studio/coach-leave-server";
 import { z } from 'zod';
 
 // Validation schema for approval
@@ -56,14 +67,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // MSS: selain HR, ATASAN LANGSUNG karyawan (reporting_to) boleh approve
-    const isDirectManager =
-      actor.employeeId !== null && leave.employee?.reporting_to === actor.employeeId;
-    if (!actor.isHr && !isDirectManager) {
-      return NextResponse.json(
-        { error: 'Forbidden: hanya HRD/admin atau atasan langsung yang bisa memproses' },
-        { status: 403 }
+    // SOP coach (EPIC-067): cuti coach diputus Program Director (atau approver
+    // cadangan), bukan HRD/atasan. Karyawan lain tetap alur MSS di bawah.
+    const coachLeave = await getCoachLeaveContext(validated.leave_id);
+    if (coachLeave) {
+      await assertCanDecideCoachLeave(
+        coachLeave.branchId,
+        { id: actor.userId, role: actor.role },
+        coachLeave.requesterUserId
       );
+    } else {
+      // MSS: selain HR, ATASAN LANGSUNG karyawan (reporting_to) boleh approve
+      const isDirectManager =
+        actor.employeeId !== null && leave.employee?.reporting_to === actor.employeeId;
+      if (!actor.isHr && !isDirectManager) {
+        return NextResponse.json(
+          { error: 'Forbidden: hanya HRD/admin atau atasan langsung yang bisa memproses' },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if already processed
@@ -85,8 +107,16 @@ export async function POST(request: NextRequest) {
     const isApprove = validated.action === 'approve';
     const newStatus = isApprove ? 'approved' : 'rejected';
 
-    // Status + potong kuota harus atomik — gagal salah satu, batal semua
+    // Cuti coach: semua sesi terdampak harus sudah punya pengganti / diputuskan batal.
+    if (coachLeave && isApprove) {
+      await expireStaleRequests();
+      await syncLeaveCovers(coachLeave);
+    }
+
+    // Status + potong kuota (+ pengganti coach) harus atomik — gagal salah satu, batal semua
+    let applied: AppliedCovers | null = null;
     await withTransaction(async (client) => {
+      if (coachLeave && isApprove) applied = await applyCoversOnApproval(client, validated.leave_id);
       await client.query(
         `UPDATE hris.leaves
          SET status = $2, approved_by = $3, approved_at = now(),
@@ -111,6 +141,15 @@ export async function POST(request: NextRequest) {
         );
       }
     });
+
+    let releasedBookings = 0;
+    if (coachLeave && applied) {
+      const { cancelled } = applied as AppliedCovers;
+      if (cancelled.length > 0) {
+        releasedBookings = await releaseCancelledSessions(coachLeave, actor.userId, cancelled);
+      }
+    }
+    if (coachLeave && !isApprove) await voidLeaveCovers(validated.leave_id, 'Cuti ditolak');
 
     const { data } = await db
       .from('leaves')
@@ -144,8 +183,10 @@ export async function POST(request: NextRequest) {
       action: validated.action,
       wa_link: waLink,
       data,
+      ...(applied ? { covers: { ...(applied as AppliedCovers), released_bookings: releasedBookings } } : {}),
     });
   } catch (error) {
+    if (error instanceof ApiError) return error.toResponse();
     console.error('Error in leave approval:', error);
 
     if (error instanceof z.ZodError) {

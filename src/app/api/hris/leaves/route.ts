@@ -5,6 +5,7 @@ import { notifyLeaveRequestWa } from "@/lib/hris/leave-wa";
 import { loadHolidayIndex } from "@/lib/hris/holidays-db";
 import { describeLeaveDays } from "@/lib/hris/holidays";
 import { evaluateCoachLeaveNotice } from "@/lib/studio/coach-leave-server";
+import { onCoachLeaveSubmitted } from "@/lib/studio/coach-cover-server";
 import { noticeRejectionMessage, shortNoticeMessage } from "@/lib/studio/coach-leave";
 import { z } from 'zod';
 
@@ -291,6 +292,9 @@ export async function POST(request: NextRequest) {
       reason: validated.reason ?? null,
       shortNotice: isShortNotice,
     });
+
+    // Cuti coach: siapkan daftar sesi yang butuh pengganti + kabari approver (EPIC-067 T-067-A4).
+    if (notice) void onCoachLeaveSubmitted(String(data.id));
 
     return NextResponse.json({
       message: notice && isShortNotice

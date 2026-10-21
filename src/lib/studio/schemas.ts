@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_NOTICE_DAYS, NOTICE_LEAVE_TYPES } from "@/lib/studio/coach-leave";
 
 /**
@@ -323,5 +324,9 @@ export const coachLeaveSettingsSchema = z
   .object({
     backup_approver_user_id: z.string().uuid().nullable(),
     notice_rules: z.partialRecord(z.enum(NOTICE_LEAVE_TYPES), noticeRuleSchema),
+    substitute_response_hours: z.number().int().min(1).max(MAX_SUBSTITUTE_RESPONSE_HOURS),
   })
   .partial();
+export const substituteChoiceSchema = z.object({ substitute_coach_id: z.string().uuid() });
+export const substituteResponseSchema = z.object({ accept: z.boolean() });
+export const coverCancelSchema = z.object({ reason: z.string().trim().min(5).max(300) });

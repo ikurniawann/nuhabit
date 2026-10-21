@@ -104,7 +104,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   `is_short_notice`; konfigurasi di pengaturan HRIS/studio; validasi di API cuti (ESS & Coach Portal). Tes logika murni.
 - [x] T-067-A3 **(Tahap 1)** Pengajuan cuti dari Coach Portal: pilih tanggal → tampil daftar kelas & sesi Personal
   Training yang terdampak → kirim. Status pengajuan terlihat di Coach Portal.
-- [ ] T-067-A4 **(Tahap 1)** Alur pengganti sesuai Keputusan desain: saran coach yang kosong; terima/tolak dari Coach
+- [x] T-067-A4 **(Tahap 1)** Alur pengganti sesuai Keputusan desain: saran coach yang kosong; terima/tolak dari Coach
   Portal + WA dengan batas waktu yang bisa diatur; antrean "butuh pengganti" untuk Program Director (tunjuk langsung
   atau batalkan dengan alasan); cuti disetujui hanya bila semua sesi tertangani. Saat disetujui,
   `class_sessions.coach_id` diganti otomatis dan coach asli disimpan.
@@ -272,3 +272,40 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       - tanpa error console.
     - `tsc` tanpa error baru (508); eslint bersih untuk file baru.
   - Catatan: unggah lampiran (surat dokter) belum ada di Coach Portal, masih lewat Area Karyawan. Belum di-deploy.
+- 2026-10-21 — **T-067-A4 selesai.**
+  - Migrasi `20261021110000_studio_coach_leave_cover.sql`:
+    - tabel `studio.coach_leave_covers`, satu baris per (cuti, sesi terdampak). Status: open → requested (dengan
+      `respond_by`) → accepted / assigned / cancel; void bila cuti ditolak/dibatalkan atau sesi tidak lagi terdampak;
+    - kolom `class_sessions.original_coach_id`.
+  - Logika murni `src/lib/studio/coach-cover.ts`, query & aksi `coach-cover-server.ts`:
+    - **Saran pengganti:** coach aktif venue yang tidak bentrok (termasuk dengan permintaan pengganti lain yang masih
+      berjalan) dan tidak cuti/time-off. Personal Training hanya coach yang membawakan program itu. Urutan: yang
+      membawakan program dulu, lalu beban minggu itu paling ringan.
+    - **Batas jawaban:** pengaturan "Batas jawaban calon pengganti" (default 24 jam), tetapi tidak melewati 1 jam
+      sebelum sesi mulai. Lewat batas → kembali open (diperiksa saat data dibaca).
+  - **Persetujuan cuti coach lewat `POST /api/hris/leaves/approve` yang sama.**
+    - Untuk karyawan yang terhubung ke coach, hak memutus = `assertCanDecideCoachLeave` (Program Director / approver
+      cadangan / Super Admin), **bukan HRD/atasan lagi**.
+    - Approve ditolak 409 selama ada sesi open/requested.
+    - Dalam transaksi yang sama: coach sesi diganti (coach asli disimpan) atau sesi dibatalkan. Setelah commit, kredit
+      member di sesi batal dikembalikan (`releaseSessionBookings`).
+    - Tolak / batalkan cuti → baris pengganti void. Pengganti yang sudah diterapkan tidak dikembalikan otomatis.
+  - WA staf (dedup `configuration.wa_notif_log` tipe `coach_cover`), dengan link `/coach?tab=leave`:
+    - ke calon pengganti (diminta / ditunjuk);
+    - ke peminta (permintaan ditolak);
+    - ke approver aktif saat coach mengajukan cuti, judul "CUTI MENDADAK" bila mendadak.
+  - UI:
+    - **Coach Portal:** status pengganti per sesi + "Pilih pengganti", kartu "Permintaan menggantikan" (Terima/Tolak).
+    - **Backoffice:** "Antrean cuti coach" (mendadak paling atas), tunjuk / ganti pengganti, batalkan kelas dengan
+      alasan, Setujui (nonaktif sampai semua tertangani) / Tolak.
+  - Bukti:
+    - 9 unit test + 7 test integrasi alur lengkap di `nuhabit_test`: sinkron, saran, minta → tolak → minta → terima,
+      kedaluwarsa, hanya PD yang menunjuk (admin 403), approve 409 lalu terapkan.
+    - E2E headless dengan coach Pras/Rara/Budi + PD uji (sudah dihapus): Pras mengajukan & meminta Rara → Rara
+      menerima → PD menunjuk Budi untuk Selasa & membatalkan Rabu → Setujui aktif → disetujui. DB: Senin → Rara,
+      Selasa → Budi (original Pras), Rabu cancelled; tanpa error console.
+    - `tsc` tanpa error baru (508); eslint bersih untuk file baru.
+  - Belum:
+    - WA ke member saat coach diganti / kelas dibatalkan (T-067-A6);
+    - badge jumlah permintaan di tombol tab Cuti;
+    - belum di-deploy.

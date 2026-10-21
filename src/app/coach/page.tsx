@@ -61,7 +61,10 @@ const kindLabel = (kind: string) => (kind === "pt" ? "Personal Training" : "Kela
 export default function CoachPortalPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"schedule" | "leave" | "commission">("schedule");
+  // ?tab=leave dari link WA permintaan pengganti (EPIC-067).
+  const [tab, setTab] = useState<"schedule" | "leave" | "commission">(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "leave" ? "leave" : "schedule"
+  );
 
   useEffect(() => {
     getJson<{ data: Me }>("/api/coach/me")

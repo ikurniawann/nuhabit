@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { voidLeaveCovers } from "@/lib/studio/coach-cover-server";
 import { createServerPgClient } from "@/lib/pg/create-client";
 import { withTransaction } from "@/lib/db";
 import { getWorkforceActor } from "@/lib/hris/workforce-auth";
@@ -123,6 +124,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           );
         }
       });
+      // Cuti coach (EPIC-067): permintaan pengganti yang belum diterapkan gugur.
+      // Pengganti yang sudah diterapkan (cuti sempat disetujui) tidak dikembalikan
+      // otomatis — jadwal diatur ulang Program Director di Kalender bila perlu.
+      await voidLeaveCovers(id, 'Cuti dibatalkan');
 
       return NextResponse.json({
         message: refund

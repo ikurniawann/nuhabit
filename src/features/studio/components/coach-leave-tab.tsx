@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Loader2, Users } from "lucide-react";
+import { AlertTriangle, Check, Loader2, Users, X } from "lucide-react";
+import { COVER_STATUS_LABEL, type CoverStatus, type SubstituteCandidate } from "@/lib/studio/coach-cover";
 import {
   evaluateLeaveNotice,
   type ImpactedSession,
@@ -29,10 +30,28 @@ interface LeaveRow {
   is_short_notice: boolean;
 }
 
+/** Baris pengganti per sesi (subset CoverRow dari API). */
+interface CoverItem {
+  id: string;
+  status: CoverStatus;
+  original_coach_name: string;
+  substitute_name: string | null;
+  respond_by: string | null;
+  cancel_reason: string | null;
+  note: string | null;
+  session_date: string;
+  start_time: string;
+  program_name: string;
+  program_kind: string;
+  booked_count: number;
+}
+
 interface LeaveData {
   today: string;
   rules: NoticeRules;
   leaves: LeaveRow[];
+  covers: Record<string, CoverItem[]>;
+  incoming: CoverItem[];
 }
 
 interface ImpactData {
@@ -58,6 +77,11 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   if (!res.ok || body.success === false) throw new Error(body.error ?? body.message ?? "Terjadi kesalahan");
   return body as T;
 }
+
+const jamBatas = (iso: string) =>
+  new Date(iso).toLocaleString("id-ID", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jakarta" });
+const sesiLabel = (c: Pick<CoverItem, "session_date" | "start_time" | "program_name" | "program_kind">) =>
+  `${formatDayLabel(c.session_date)} ${c.start_time} · ${c.program_name}${c.program_kind === "pt" ? " · Personal Training" : ""}`;
 
 const rangeLabel = (start: string, end: string) => (start === end ? formatDayLabel(start) : `${formatDayLabel(start)} – ${formatDayLabel(end)}`);
 
@@ -151,6 +175,8 @@ export function CoachLeaveTab() {
 
   return (
     <div className="space-y-6">
+      {data.incoming.length > 0 && <IncomingRequests items={data.incoming} onChanged={load} />}
+
       <section className="rounded-3xl border border-white/10 bg-white/5 p-4">
         <h2 className="font-display text-base font-semibold">Ajukan cuti</h2>
         <p className="mt-1 text-xs text-nh-beige/60">Ajukan jauh hari sesuai SOP. Kelas dan sesi Personal Training di tanggal cuti perlu pengganti sebelum cuti disetujui.</p>
@@ -262,6 +288,9 @@ export function CoachLeaveTab() {
                     </div>
                     <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${st.className}`}>{st.label}</span>
                   </div>
+                  {l.status === "pending" && (data.covers[l.id]?.length ?? 0) > 0 && (
+                    <CoverList covers={data.covers[l.id]} onChanged={load} />
+                  )}
                   {l.status === "pending" && (
                     <button
                       type="button"
@@ -313,5 +342,200 @@ function ImpactList({ impact }: { impact: { data?: ImpactData; error?: string } 
         ))}
       </ul>
     </div>
+  );
+}
+
+const COVER_TONE: Record<CoverStatus, string> = {
+  open: "bg-red-400/20 text-red-200",
+  requested: "bg-white/10 text-nh-beige",
+  accepted: "bg-nh-lime text-nh-forest",
+  assigned: "bg-nh-lime text-nh-forest",
+  cancel: "bg-amber-300/20 text-amber-200",
+  void: "text-nh-beige/50",
+};
+
+/** Status pengganti tiap sesi pada cuti yang menunggu + pilih pengganti untuk sesi yang masih kosong (T-067-A4). */
+function CoverList({ covers, onChanged }: { covers: CoverItem[]; onChanged: () => Promise<unknown> }) {
+  const open = covers.filter((c) => c.status === "open").length;
+  return (
+    <div className="mt-3 rounded-2xl bg-nh-forest/60 p-3">
+      <p className="text-xs font-semibold text-nh-beige/80">
+        Pengganti · {covers.length - open}/{covers.length} sesi tertangani
+      </p>
+      <ul className="mt-2 space-y-2.5">
+        {covers.map((c) => (
+          <CoverRowItem key={c.id} cover={c} onChanged={onChanged} />
+        ))}
+      </ul>
+      {open > 0 && <p className="mt-2 text-[11px] text-nh-beige/50">Cuti baru bisa disetujui setelah semua sesi punya pengganti.</p>}
+    </div>
+  );
+}
+
+function CoverRowItem({ cover: c, onChanged }: { cover: CoverItem; onChanged: () => Promise<unknown> }) {
+  const [candidates, setCandidates] = useState<SubstituteCandidate[] | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [choice, setChoice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function startPick() {
+    setPicking(true);
+    setErr(null);
+    try {
+      const list = (await requestJson<{ data: SubstituteCandidate[] }>(`/api/coach/leave/covers/${c.id}/candidates`)).data;
+      setCandidates(list);
+      setChoice(list[0]?.coach_id ?? "");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal memuat coach");
+    }
+  }
+
+  async function send() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await requestJson(`/api/coach/leave/covers/${c.id}/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ substitute_coach_id: choice }),
+      });
+      setPicking(false);
+      await onChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal mengirim");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const detail =
+    c.status === "requested" && c.substitute_name && c.respond_by
+      ? `Menunggu ${c.substitute_name} · jawab sebelum ${jamBatas(c.respond_by)}`
+      : c.status === "accepted"
+        ? `${c.substitute_name} menerima`
+        : c.status === "assigned"
+          ? `${c.substitute_name} ditunjuk Program Director`
+          : c.status === "cancel"
+            ? `Diputuskan batal: ${c.cancel_reason ?? "-"}`
+            : c.note;
+
+  return (
+    <li className="text-xs">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-nh-beige">{sesiLabel(c)}</p>
+          {detail && <p className="mt-0.5 text-nh-beige/60">{detail}</p>}
+        </div>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${COVER_TONE[c.status]}`}>{COVER_STATUS_LABEL[c.status]}</span>
+      </div>
+      {c.status === "open" && !picking && (
+        <button type="button" onClick={startPick} className="mt-1.5 font-semibold text-nh-lime underline underline-offset-4">
+          Pilih pengganti
+        </button>
+      )}
+      {picking && (
+        <div className="mt-2 space-y-2">
+          {!candidates ? (
+            <Loader2 className="size-4 animate-spin text-nh-lime" />
+          ) : candidates.length === 0 ? (
+            <p className="text-amber-200">Tidak ada coach yang kosong di jam ini — Program Director akan menunjuk atau membatalkan kelas.</p>
+          ) : (
+            <div className="flex gap-2">
+              <select className={`${inputClass} py-2 text-xs`} value={choice} onChange={(e) => setChoice(e.target.value)} aria-label="Coach pengganti">
+                {candidates.map((k) => (
+                  <option key={k.coach_id} value={k.coach_id} className="bg-nh-forest">
+                    {k.name} · {k.week_load} sesi minggu ini{k.teaches_program ? " · bawakan program ini" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={busy || !choice}
+                onClick={send}
+                className="flex shrink-0 items-center gap-1 rounded-full bg-nh-lime px-3 font-semibold text-nh-forest disabled:opacity-40"
+              >
+                {busy && <Loader2 className="size-3 animate-spin" />}
+                Minta
+              </button>
+            </div>
+          )}
+          <button type="button" onClick={() => setPicking(false)} className="text-nh-beige/60 underline underline-offset-4">
+            Batal
+          </button>
+        </div>
+      )}
+      {err && <p className="mt-1 text-red-300">{err}</p>}
+    </li>
+  );
+}
+
+/** Permintaan menggantikan yang masuk ke coach ini (T-067-A4). */
+function IncomingRequests({ items, onChanged }: { items: CoverItem[]; onChanged: () => Promise<unknown> }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+
+  async function respond(id: string, accept: boolean) {
+    setBusy(id);
+    setMsg(null);
+    try {
+      const r = await requestJson<{ message?: string }>(`/api/coach/leave/covers/${id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accept }),
+      });
+      setMsg({ tone: "ok", text: r.message ?? "Tersimpan" });
+      await onChanged();
+    } catch (e) {
+      setMsg({ tone: "error", text: e instanceof Error ? e.message : "Gagal menyimpan" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-nh-lime/40 bg-nh-lime/5 p-4">
+      <h2 className="font-display text-base font-semibold text-nh-lime">Permintaan menggantikan</h2>
+      <ul className="mt-3 space-y-3">
+        {items.map((c) => (
+          <li key={c.id} className="rounded-2xl bg-nh-forest/60 p-3">
+            <p className="text-sm font-semibold">{sesiLabel(c)}</p>
+            <p className="mt-0.5 text-xs text-nh-beige/60">
+              Menggantikan {c.original_coach_name} · {c.booked_count} member sudah booking
+            </p>
+            {c.status === "requested" ? (
+              <>
+                {c.respond_by && <p className="mt-1 text-xs text-amber-200">Jawab sebelum {jamBatas(c.respond_by)}</p>}
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={busy === c.id}
+                    onClick={() => respond(c.id, true)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-nh-lime py-2 text-xs font-semibold text-nh-forest disabled:opacity-50"
+                  >
+                    {busy === c.id ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                    Terima
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy === c.id}
+                    onClick={() => respond(c.id, false)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/20 py-2 text-xs font-semibold text-nh-beige disabled:opacity-50"
+                  >
+                    <X className="size-3.5" />
+                    Tolak
+                  </button>
+                </div>
+              </>
+            ) : (
+              <p className="mt-1 text-xs text-nh-lime">
+                {c.status === "assigned" ? "Ditunjuk Program Director" : "Anda menerima"} · berlaku setelah cuti disetujui
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+      {msg && <p className={`mt-2 text-xs ${msg.tone === "error" ? "text-red-300" : "text-nh-lime"}`}>{msg.text}</p>}
+    </section>
   );
 }
