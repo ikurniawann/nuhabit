@@ -14,6 +14,8 @@ export interface PayrollRun {
   processed_at?: string;
   approved_at?: string;
   paid_at?: string;
+  /** Ada penambahan gaji setelah run draft dihitung; hitung ulang dulu. */
+  needs_recalculation?: boolean;
 }
 
 export interface CreatePayrollPayload {

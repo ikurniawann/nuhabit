@@ -201,6 +201,9 @@ export function PayrollPage() {
                         <Badge className={STATUS_COLORS[run.status]}>
                           {STATUS_LABELS[run.status]}
                         </Badge>
+                        {run.needs_recalculation ? (
+                          <Badge className="ml-2 bg-amber-100 text-amber-800">Perlu dihitung ulang</Badge>
+                        ) : null}
                       </td>
                       <td className="text-right py-3 px-4">{run.total_employees || 0}</td>
                       <td className="text-right py-3 px-4 font-medium">

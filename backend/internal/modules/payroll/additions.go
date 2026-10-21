@@ -68,7 +68,12 @@ func AddToOpenPeriod(ctx context.Context, q database.Querier, a Addition, from P
 	if tag.RowsAffected() == 0 {
 		return Period{}, ErrDuplicateAddition
 	}
-	return p, nil
+	// A draft run already calculated for the period shows stale slips until
+	// it is calculated again; the run page says so.
+	_, err = q.Exec(ctx, `UPDATE hris.payroll_runs SET needs_recalculation = true, updated_at = now()
+		WHERE period_month = $1 AND period_year = $2 AND status = 'draft'
+		  AND EXISTS (SELECT 1 FROM hris.payroll_details d WHERE d.payroll_run_id = payroll_runs.id)`, p.Month, p.Year)
+	return p, err
 }
 
 // HasActiveSalary reports whether payroll would calculate the employee: an
