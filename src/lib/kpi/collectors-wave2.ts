@@ -74,8 +74,10 @@ export async function collectPosSalesShift(
 }
 
 // ============================================================
-// leave_request_discipline — pengajuan sebelum H (bukan susulan) / total,
-// utk cuti non-cancelled yang MULAI dalam periode
+// leave_request_discipline — pengajuan tepat waktu / total, utk cuti
+// non-cancelled yang MULAI dalam periode. Tepat waktu = memenuhi minimal
+// pemberitahuan H-N SOP coach bila tercatat (EPIC-067 T-067-A8: notice_days
+// terisi → bukan is_short_notice); selain itu aturan lama: sebelum H.
 // ============================================================
 export async function collectLeaveDiscipline(
   pool: Pool,
@@ -84,7 +86,9 @@ export async function collectLeaveDiscipline(
 ): Promise<CollectorMap> {
   const { rows } = await pool.query(
     `SELECT employee_id,
-            COUNT(*) FILTER (WHERE created_at::date <= start_date)::int AS ontime_requests,
+            COUNT(*) FILTER (WHERE CASE WHEN notice_days IS NOT NULL THEN NOT is_short_notice
+                                        ELSE created_at::date <= start_date END)::int AS ontime_requests,
+            COUNT(*) FILTER (WHERE is_short_notice)::int AS short_notice_requests,
             COUNT(*)::int AS total_requests
      FROM hris.leaves
      WHERE start_date BETWEEN $1 AND $2 AND status <> 'cancelled'
@@ -98,6 +102,7 @@ export async function collectLeaveDiscipline(
       sampleSize: row.total_requests,
       sourceDetail: {
         ontime_requests: row.ontime_requests,
+        short_notice_requests: row.short_notice_requests,
         total_requests: row.total_requests,
       },
     });

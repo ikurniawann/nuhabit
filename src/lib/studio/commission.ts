@@ -36,7 +36,11 @@ export interface CommissionResult {
   /** Sisa pool yang tidak dialokasikan → revenue perusahaan (opsi B). */
   retained_amount: number;
   over_allocated: boolean;
-  lines: { coach_id: string; share_percent: number; amount: number }[];
+  /**
+   * amount = bersih yang dibayar. gross_amount = porsi sebelum potongan
+   * disiplin (EPIC-067 T-067-A8); potongan ikut jadi sisa (revenue perusahaan).
+   */
+  lines: { coach_id: string; share_percent: number; gross_amount: number; deduction_percent: number; deduction_amount: number; amount: number }[];
 }
 
 const cents = (v: number) => Math.round(v * 100);
@@ -57,13 +61,25 @@ export function computeCommission(input: {
   ptRevenue: number;
   settings: CommissionSettings;
   coaches: CommissionCoach[];
+  /** Potongan disiplin per coach (%), sudah dibatasi maksimum. */
+  deductions?: Record<string, number>;
 }): CommissionResult {
   const classPool = Math.round((cents(input.classRevenue) * input.settings.class_pool_percent) / 100);
   const ptPool = Math.round((cents(input.ptRevenue) * input.settings.pt_pool_percent) / 100);
   const total = classPool + ptPool;
   const lines = input.coaches.map((c) => {
     const share = shareFor(c, input.settings);
-    return { coach_id: c.id, share_percent: share, amount: rupiah(Math.round((total * share) / 100)) };
+    const grossCents = Math.round((total * share) / 100);
+    const pct = Math.min(100, Math.max(0, input.deductions?.[c.id] ?? 0));
+    const deductionCents = Math.round((grossCents * pct) / 100);
+    return {
+      coach_id: c.id,
+      share_percent: share,
+      gross_amount: rupiah(grossCents),
+      deduction_percent: pct,
+      deduction_amount: rupiah(deductionCents),
+      amount: rupiah(grossCents - deductionCents),
+    };
   });
   const allocatedPercent = Math.round(lines.reduce((s, l) => s + l.share_percent, 0) * 100) / 100;
   const allocated = lines.reduce((s, l) => s + cents(l.amount), 0);

@@ -19,6 +19,7 @@ import {
 import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { MAX_SUBSTITUTE_RESPONSE_HOURS } from "@/lib/studio/coach-cover";
 import { MAX_MEMBER_NOTICE_MIN_HOURS } from "@/lib/studio/session-change";
+import { CoachDisciplineSection } from "./coach-discipline-section";
 import { CoachLeaveQueue } from "./coach-leave-queue";
 import { SessionChangeReport } from "./session-change-report";
 import { EmptyState, Field, NativeSelect, Pill, StudioPageHeader } from "./ui-bits";
@@ -109,6 +110,7 @@ export function StudioCoachLeavePage() {
       <div className="grid max-w-3xl gap-4">
         <CoachLeaveQueue />
         <SessionChangeReport minHours={data.settings.member_notice_min_hours} />
+        <CoachDisciplineSection />
 
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-start gap-3">

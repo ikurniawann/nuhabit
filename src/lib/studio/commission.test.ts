@@ -45,6 +45,18 @@ describe("computeCommission (skema Excel owner)", () => {
   });
 });
 
+describe("potongan disiplin (EPIC-067 A8)", () => {
+  it("potongan mengurangi bersih coach dan menambah sisa pool", () => {
+    const r = computeCommission({ classRevenue: 50_000_000, ptRevenue: 10_000_000, settings: DEFAULT_COMMISSION_SETTINGS, coaches: team, deductions: { c1: 20 } });
+    const c1 = r.lines.find((l) => l.coach_id === "c1")!;
+    expect(c1).toMatchObject({ gross_amount: 1_440_000, deduction_percent: 20, deduction_amount: 288_000, amount: 1_152_000 });
+    expect(r.lines.find((l) => l.coach_id === "c2")).toMatchObject({ gross_amount: 1_440_000, deduction_amount: 0, amount: 1_440_000 });
+    expect(r.allocated_amount).toBe(9_000_000 - 288_000);
+    expect(r.retained_amount).toBe(288_000);
+    expect(r.allocated_percent).toBe(100); // persentase tetap; potongan tidak mengubah pembagian pool
+  });
+});
+
 describe("periode", () => {
   it("validasi, label, dan geser bulan", () => {
     expect(isValidPeriod("2026-10")).toBe(true);

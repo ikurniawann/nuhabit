@@ -381,3 +381,26 @@ export const complaintSettingsSchema = z
     default_assignees: z.partialRecord(z.enum(COMPLAINT_CATEGORIES), z.string().uuid().nullable()),
   })
   .partial();
+
+// ── Disiplin coach (EPIC-067 A8) ──────────────────────────────────────────
+export const incidentCreateSchema = z.object({
+  coach_id: z.string().uuid(),
+  kind: z.enum(["no_show", "late"]),
+  occurred_on: date,
+  session_id: z.string().uuid().nullable().optional(),
+  minutes_late: z.number().int().min(1).max(600).nullable().optional(),
+  note: z.string().trim().max(500).nullable().optional(),
+});
+export const incidentVoidSchema = z.object({ reason: z.string().trim().min(5).max(300) });
+export const disciplineRulesSchema = z
+  .object({
+    deduction_percent: z.partialRecord(z.enum(["no_show", "short_notice_leave", "late"]), z.number().int().min(0).max(100)),
+    max_deduction_percent: z.number().int().min(0).max(100),
+    warning_threshold: z.number().int().min(1).max(20),
+    warning_window_days: z.number().int().min(7).max(365),
+  })
+  .partial();
+export const warningDecisionSchema = z.object({
+  decision: z.enum(["issued", "dismissed"]),
+  note: z.string().trim().max(500).nullable().optional(),
+});

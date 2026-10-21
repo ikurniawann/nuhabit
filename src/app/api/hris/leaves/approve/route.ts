@@ -15,6 +15,7 @@ import {
   voidLeaveCovers,
 } from "@/lib/studio/coach-cover-server";
 import { assertCanDecideCoachLeave } from "@/lib/studio/coach-leave-server";
+import { recordShortNoticeLeaveIncident } from "@/lib/studio/coach-discipline-server";
 import { LEAVE_TYPE_LABELS } from "@/types/hris";
 import { z } from 'zod';
 
@@ -153,6 +154,12 @@ export async function POST(request: NextRequest) {
       releasedBookings = await finalizeAppliedCovers(coachLeave, actor.userId, applied as AppliedCovers);
     }
     if (coachLeave && !isApprove) await voidLeaveCovers(validated.leave_id, 'Cuti ditolak');
+    // Cuti mendadak yang disetujui = pelanggaran disiplin (T-067-A8); PD bisa membatalkannya.
+    if (coachLeave && isApprove && leave.is_short_notice) {
+      await recordShortNoticeLeaveIncident(coachLeave, leave.notice_days ?? null).catch((e) =>
+        console.error('[coach-discipline] catat cuti mendadak gagal:', e)
+      );
+    }
 
     const { data } = await db
       .from('leaves')

@@ -45,11 +45,14 @@ interface CommissionData {
     total_pool: number;
     share_percent: number;
     amount: number;
+    gross_amount: number;
+    deduction_percent: number;
+    deduction_amount: number;
     class_sessions: number;
     pt_sessions: number;
     attendees: number;
   };
-  history: { id: string; period: string; period_status: string; share_percent: number; amount: number; class_sessions: number; pt_sessions: number; status: string; paid_at: string | null }[];
+  history: { id: string; period: string; period_status: string; share_percent: number; amount: number; deduction_amount: number; class_sessions: number; pt_sessions: number; status: string; paid_at: string | null }[];
 }
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -328,6 +331,11 @@ function CommissionTab() {
         <p className="mt-2 text-xs opacity-80">
           {c.share_percent}% dari pool {rupiah(c.total_pool)} · berjalan sampai hari ini, angka final setelah disetujui akhir bulan.
         </p>
+        {c.deduction_amount > 0 && (
+          <p className="mt-1 text-xs font-semibold">
+            Potongan disiplin {c.deduction_percent}%: −{rupiah(c.deduction_amount)} dari {rupiah(c.gross_amount)}
+          </p>
+        )}
         <div className="mt-4 grid grid-cols-3 gap-2 text-center">
           <MiniStat label="Kelas" value={c.class_sessions} />
           <MiniStat label="Personal Training" value={c.pt_sessions} />
@@ -347,6 +355,7 @@ function CommissionTab() {
                   <p className="font-semibold">{periodLabel(h.period)}</p>
                   <p className="text-xs text-nh-beige/60">
                     {h.class_sessions} kelas · {h.pt_sessions} Personal Training · {h.share_percent}%
+                    {h.deduction_amount > 0 ? ` · potongan ${rupiah(h.deduction_amount)}` : ""}
                   </p>
                 </div>
                 <div className="text-right">

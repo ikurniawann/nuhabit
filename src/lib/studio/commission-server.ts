@@ -10,6 +10,7 @@ import {
   shiftPeriod,
   type CommissionSettings,
 } from "@/lib/studio/commission";
+import { periodDeductions } from "@/lib/studio/coach-discipline-server";
 import { venueToday } from "@/lib/studio/pass-server";
 
 /**
@@ -122,6 +123,10 @@ export interface PeriodView {
     coach_name: string;
     level: string;
     share_percent: number;
+    /** Sebelum potongan disiplin (EPIC-067 A8); amount = bersih. */
+    gross_amount: number;
+    deduction_percent: number;
+    deduction_amount: number;
     amount: number;
     class_sessions: number;
     pt_sessions: number;
@@ -165,6 +170,8 @@ export async function loadPeriod(branchId: string, period: string): Promise<Peri
   if (stored && stored.status !== "draft") {
     const lines = await query<PeriodView["lines"][number]>(
       `SELECT id, coach_id, coach_name, level, share_percent::float8 AS share_percent, amount::float8 AS amount,
+              COALESCE(gross_amount, amount)::float8 AS gross_amount, deduction_percent::float8 AS deduction_percent,
+              deduction_amount::float8 AS deduction_amount,
               class_sessions, pt_sessions, attendees, status, paid_at, payment_method, payment_ref
        FROM studio.commission_lines WHERE period_id = $1 ORDER BY CASE level WHEN 'head_coach' THEN 0 ELSE 1 END, coach_name`,
       [stored.id]
@@ -179,8 +186,13 @@ export async function loadPeriod(branchId: string, period: string): Promise<Peri
     };
   }
 
-  const [settings, revenue, coaches] = await Promise.all([loadCommissionSettings(branchId), periodRevenue(branchId, period), coachActivity(branchId, period)]);
-  const r = computeCommission({ classRevenue: revenue.class, ptRevenue: revenue.pt, settings, coaches });
+  const [settings, revenue, coaches, deductions] = await Promise.all([
+    loadCommissionSettings(branchId),
+    periodRevenue(branchId, period),
+    coachActivity(branchId, period),
+    periodDeductions(branchId, period),
+  ]);
+  const r = computeCommission({ classRevenue: revenue.class, ptRevenue: revenue.pt, settings, coaches, deductions });
   return {
     period, status: stored ? "draft" : "preview", settings,
     class_revenue: revenue.class, pt_revenue: revenue.pt, class_pool: r.class_pool, pt_pool: r.pt_pool, total_pool: r.total_pool,
@@ -190,6 +202,7 @@ export async function loadPeriod(branchId: string, period: string): Promise<Peri
       const line = r.lines.find((l) => l.coach_id === c.id)!;
       return {
         id: null, coach_id: c.id, coach_name: c.full_name, level: c.level, share_percent: shareFor(c, settings), amount: line.amount,
+        gross_amount: line.gross_amount, deduction_percent: line.deduction_percent, deduction_amount: line.deduction_amount,
         class_sessions: c.class_sessions, pt_sessions: c.pt_sessions, attendees: c.attendees, status: "pending" as const,
         paid_at: null, payment_method: null, payment_ref: null,
       };
@@ -234,9 +247,11 @@ export async function approvePeriod(ctx: { companyId: string; branchId: string; 
     await client.query(`DELETE FROM studio.commission_lines WHERE period_id = $1`, [id]);
     for (const l of view.lines) {
       await client.query(
-        `INSERT INTO studio.commission_lines (period_id, branch_id, coach_id, coach_name, level, share_percent, amount, class_sessions, pt_sessions, attendees)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [id, ctx.branchId, l.coach_id, l.coach_name, l.level, l.share_percent, l.amount, l.class_sessions, l.pt_sessions, l.attendees]
+        `INSERT INTO studio.commission_lines (period_id, branch_id, coach_id, coach_name, level, share_percent, amount, class_sessions, pt_sessions, attendees,
+           gross_amount, deduction_percent, deduction_amount)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [id, ctx.branchId, l.coach_id, l.coach_name, l.level, l.share_percent, l.amount, l.class_sessions, l.pt_sessions, l.attendees,
+         l.gross_amount, l.deduction_percent, l.deduction_amount]
       );
     }
     // Coach dengan komisi 0 langsung dianggap lunas supaya periode bisa ditutup.
@@ -310,7 +325,8 @@ export async function payLine(
 export async function coachStatements(branchId: string, coachId: string) {
   return query(
     `SELECT l.id, to_char(p.period,'YYYY-MM') AS period, p.status AS period_status, l.share_percent::float8 AS share_percent,
-            l.amount::float8 AS amount, l.class_sessions, l.pt_sessions, l.attendees, l.status, l.paid_at, l.payment_method
+            l.amount::float8 AS amount, l.deduction_percent::float8 AS deduction_percent, l.deduction_amount::float8 AS deduction_amount,
+            l.class_sessions, l.pt_sessions, l.attendees, l.status, l.paid_at, l.payment_method
      FROM studio.commission_lines l JOIN studio.commission_periods p ON p.id = l.period_id
      WHERE l.branch_id = $1 AND l.coach_id = $2
      ORDER BY p.period DESC LIMIT 24`,

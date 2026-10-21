@@ -20,6 +20,9 @@ interface PeriodLine {
   level: "coach" | "head_coach";
   share_percent: number;
   amount: number;
+  gross_amount: number;
+  deduction_percent: number;
+  deduction_amount: number;
   class_sessions: number;
   pt_sessions: number;
   attendees: number;
@@ -172,7 +175,14 @@ export function StudioCommissionsPage() {
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold tabular-nums text-foreground">{rupiah(l.amount)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      <div className="font-semibold text-foreground">{rupiah(l.amount)}</div>
+                      {l.deduction_amount > 0 && (
+                        <div className="text-xs text-destructive" title="Potongan disiplin (Cuti & Pengganti Coach → Disiplin coach)">
+                          −{rupiah(l.deduction_amount)} ({l.deduction_percent}%) dari {rupiah(l.gross_amount)}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {!locked ? (
                         <Pill>Estimasi</Pill>

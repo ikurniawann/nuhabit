@@ -114,7 +114,7 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
   yang lewat batas itu tetap dikirim dan ditandai *terlambat* di laporan Program Director.
 - [x] T-067-A5 **(Tahap 2)** Sinkron cuti HRIS yang disetujui → `studio.coach_time_off` (dengan `leave_id`), dan cek
   bentrok `coach_time_off` terhadap kelas grup saat generate sesi dan saat input manual.
-- [ ] T-067-A8 **(Tahap 2)** Catatan ketidakhadiran coach (tidak hadir tanpa kabar, cuti mendadak, terlambat) per
+- [x] T-067-A8 **(Tahap 2)** Catatan ketidakhadiran coach (tidak hadir tanpa kabar, cuti mendadak, terlambat) per
   sesi; KPI `leave_request_discipline` memakai ambang H-N; potongan porsi insentif per kejadian di `commission_lines`
   (persentase bisa diatur); SP otomatis diusulkan ke Program Director setelah N kejadian dalam periode (N & periode
   bisa diatur). Ketiganya aktif bersamaan sesuai keputusan client no. 3.
@@ -500,4 +500,36 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
       tanpa coach + catatan; pasang Pras 409, Rara OK; time-off manual Rara memperingatkan 1 kelas; batalkan cuti →
       time-off hilang;
     - `tsc` tanpa error baru; eslint tanpa error baru.
+  - Belum di-deploy.
+- 2026-10-22 — **T-067-A8 selesai** (keputusan client no. 3: kombinasi KPI + potongan + SP).
+  - Migrasi `20261022110000_studio_coach_discipline.sql`:
+    - `studio.coach_incidents`: tidak hadir tanpa kabar / cuti mendadak / terlambat, potongan % snapshot, void
+      beralasan, unik per cuti;
+    - `studio.coach_warnings`: usulan/terbit/abaikan SP1–SP3, maks satu usulan terbuka per coach;
+    - `commission_lines.gross_amount`/`deduction_percent`/`deduction_amount`; baris lama di-backfill
+      `gross_amount = amount`.
+  - **Aturan (pengaturan, default menunggu konfirmasi client):**
+    - potongan per kejadian: tidak hadir 15%, cuti mendadak 5%, terlambat 5%;
+    - maks potongan 50%/bulan;
+    - usulan SP setelah 3 kejadian dalam 90 hari.
+    - SP berlaku 180 hari (level berikutnya dihitung dari SP terbit 180 hari terakhir); kejadian yang sudah masuk SP
+      (terbit / diabaikan) tidak dihitung ulang.
+  - Cuti mendadak yang disetujui tercatat otomatis (route approve). Tidak hadir/terlambat dicatat Program Director di
+    halaman Cuti & Pengganti Coach → "Disiplin coach". Catatan bisa dibatalkan dengan alasan (mis. surat dokter).
+  - **Komisi:** `computeCommission` menerima potongan per coach. Baris: kotor → potongan → bersih (amount); potongan
+    menjadi sisa pool (revenue perusahaan); persentase pembagian tidak berubah. Pratinjau, persetujuan periode
+    (tersimpan), halaman Komisi Coach, dan tab Komisi Coach Portal menampilkan potongannya.
+  - **SP:** usulan otomatis + WA ke approver aktif; hanya Program Director (atau cadangan / Super Admin) yang
+    menerbitkan; abaikan wajib alasan.
+  - **KPI** `leave_request_discipline`: cuti ber-`notice_days` (cuti coach, A1) dinilai tepat waktu bila tidak
+    mendadak; lainnya tetap aturan lama "sebelum H". `source_detail` menambah `short_notice_requests`.
+  - Bukti:
+    - 5 unit test disiplin + 1 unit test potongan komisi;
+    - 4 test integrasi (snapshot potongan, cuti mendadak sekali, usulan SP1 + WA, hanya PD memutus, SP2 berikutnya,
+      potongan dibatasi & void mengurangi) lulus di `nuhabit_test`;
+    - E2E headless (PD + coach uji, sudah dihapus): 2 catatan via API + 1 via form → usulan SP1 → Terbitkan →
+      riwayat; tanpa error;
+    - `tsc` tanpa error baru; eslint tanpa error baru.
+    - Tampilan potongan di halaman Komisi belum dicek visual (butuh revenue bulan berjalan); perhitungannya teruji
+      unit.
   - Belum di-deploy.
