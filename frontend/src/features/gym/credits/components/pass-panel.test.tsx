@@ -35,6 +35,7 @@ const credits = {
   transfer: { member_enabled: false, monthly_cap: 0, sent_this_month: 0 },
   entries: [],
   purchases: [],
+  transfers: [],
 } satisfies MemberCredits;
 
 function renderAs(creditsActions: string[]) {

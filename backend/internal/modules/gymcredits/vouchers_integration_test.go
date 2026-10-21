@@ -18,6 +18,7 @@ type fakeVouchers struct {
 	state     map[string]string // purchase id -> held | captured | released
 	last      VoucherCheck
 	quotaUsed bool
+	closed    bool
 }
 
 func (f *fakeVouchers) quote(in VoucherCheck) VoucherQuote {
@@ -55,12 +56,15 @@ func (f *fakeVouchers) Release(_ context.Context, _ database.Querier, purchaseID
 	return true, nil
 }
 
-// Recapture takes a released code again unless quotaUsed is set.
+// Recapture takes a released code again unless closed or quotaUsed is set.
 func (f *fakeVouchers) Recapture(_ context.Context, _ database.Querier, purchaseID string) (VoucherRecapture, error) {
 	if f.state[purchaseID] != "released" {
 		return RecaptureNone, nil
 	}
-	if f.quotaUsed {
+	switch {
+	case f.closed:
+		return RecaptureCampaignClosed, nil
+	case f.quotaUsed:
 		return RecaptureQuotaUsed, nil
 	}
 	f.state[purchaseID] = "captured"

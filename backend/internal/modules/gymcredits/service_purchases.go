@@ -251,7 +251,9 @@ func (s *Service) payWithArk(ctx context.Context, tx database.Querier, p *Purcha
 
 // RefundQuoteView is what a refund pays back, shown before confirming. A
 // pass offers the prorated amount and the full price; a credit pack pays
-// for its unused credits only.
+// for its unused credits only. Transferred lists the credits another
+// member holds by transfer, which the refund leaves out; TransferredNote
+// says the same in words.
 type RefundQuoteView struct {
 	PurchaseID    string  `json:"purchase_id"`
 	Kind          string  `json:"kind"`
@@ -259,6 +261,8 @@ type RefundQuoteView struct {
 	PaymentMethod *string `json:"payment_method"`
 	FullIdr       float64 `json:"full_idr"`
 	domain.RefundQuote
+	Transferred     []TransferredCredits `json:"transferred"`
+	TransferredNote string               `json:"transferred_note"`
 }
 
 // RefundQuote prices the refund of a paid purchase.
@@ -274,12 +278,16 @@ func (s *Service) RefundQuote(ctx context.Context, purchaseID string) (*RefundQu
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
 	quote := domain.RefundQuote{ProratedIdr: purchase.TotalIdr}
+	transferred := []TransferredCredits{}
 	if purchase.Kind != KindPass {
 		unused, err := s.unusedCredits(ctx, purchase)
 		if err != nil {
 			return nil, err
 		}
 		quote = domain.RefundQuote{UnusedCredits: unused, ProratedIdr: domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, unused)}
+		if transferred, err = s.transferredFromPurchase(ctx, s.db, purchase); err != nil {
+			return nil, err
+		}
 	} else {
 		pass, err := s.repo.PassByPurchase(ctx, s.db, purchaseID)
 		if err != nil {
@@ -291,7 +299,7 @@ func (s *Service) RefundQuote(ctx context.Context, purchaseID string) (*RefundQu
 	}
 	return &RefundQuoteView{
 		PurchaseID: purchase.ID, Kind: purchase.Kind, Credits: purchase.Credits, PaymentMethod: purchase.PaymentMethod,
-		FullIdr: purchase.TotalIdr, RefundQuote: quote,
+		FullIdr: purchase.TotalIdr, RefundQuote: quote, Transferred: transferred, TransferredNote: transferredNote(transferred),
 	}, nil
 }
 
@@ -312,6 +320,7 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 		return nil, fail(http.StatusConflict, "Hanya pembelian lunas yang bisa direfund")
 	}
 	refund, meta := purchase.TotalIdr, map[string]any{}
+	note := "Refund: " + strings.TrimSpace(reason)
 	if purchase.Kind == KindPass {
 		if refund, err = s.refundPass(ctx, tx, purchase, full, actorID); err != nil {
 			return nil, err
@@ -323,6 +332,16 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 		}
 		refund = domain.PurchaseRefundIdr(purchase.TotalIdr, purchase.Credits, credits)
 		meta["refund_credits"] = credits
+		// Credits another member holds by transfer stay there; the note
+		// says so.
+		transferred, err := s.transferredFromPurchase(ctx, tx, purchase)
+		if err != nil {
+			return nil, err
+		}
+		if len(transferred) > 0 {
+			note += " · " + transferredNote(transferred)
+			meta["transferred_credits"] = transferredTotal(transferred)
+		}
 	}
 	meta["refund_idr"] = refund
 	var shiftID *string
@@ -339,7 +358,6 @@ func (s *Service) RefundPurchase(ctx context.Context, tx database.Querier, purch
 			return nil, err
 		}
 	}
-	note := "Refund: " + strings.TrimSpace(reason)
 	if released, err := s.releaseVoucher(ctx, tx, purchaseID); err != nil {
 		return nil, err
 	} else if released {

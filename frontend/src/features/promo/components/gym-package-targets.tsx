@@ -4,8 +4,10 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { gymCreditsApi } from "@/features/gym/credits/api";
+import { fetchGymPackages } from "../api";
 import { TargetPicker } from "./target-picker";
+
+const KIND_LABELS = { credits: "paket kredit", pass: "pass" } as const;
 
 export function GymPackageTargets({
   value,
@@ -16,12 +18,12 @@ export function GymPackageTargets({
   onChange: (next: string[]) => void;
   disabled?: boolean;
 }) {
-  const packages = useQuery({ queryKey: ["gym-credits", "packages"], queryFn: gymCreditsApi.packages, retry: false });
+  const packages = useQuery({ queryKey: ["promo", "gym-packages"], queryFn: fetchGymPackages, retry: false });
   const options = useMemo(
     () =>
-      (packages.data?.packages ?? []).map((p) => ({
+      (packages.data ?? []).map((p) => ({
         id: p.id,
-        label: p.status === "archived" ? `${p.name} (diarsipkan)` : p.name,
+        label: `${p.name} (${KIND_LABELS[p.kind]}${p.status === "archived" ? ", diarsipkan" : ""})`,
       })),
     [packages.data]
   );

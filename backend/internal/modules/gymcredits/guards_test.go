@@ -65,6 +65,7 @@ func TestStaffRouteGrants(t *testing.T) {
 		"GET /api/gym/rules":                                  "read gym.rules",
 		"PUT /api/gym/rules":                                  "update gym.rules",
 		"POST /api/gym/credits/{customerId}/transfer":         "update gym.credits",
+		"POST /api/gym/credits/transfers/{id}/reclaim":        "update gym.credits",
 		"POST /api/gym/credits/{customerId}/vouchers/preview": "create gym.credits",
 	}
 	seen := 0

@@ -15,6 +15,7 @@ import (
 func (h *Handler) transferRoutes() []module.Route {
 	return []module.Route{
 		{Pattern: "POST /api/gym/credits/{customerId}/transfer", Handler: h.api(h.transfer)},
+		{Pattern: "POST /api/gym/credits/transfers/{id}/reclaim", Handler: h.api(h.reclaimTransfer)},
 		{Pattern: "POST /api/member-portal/gym/credits/transfer", Handler: h.auth.MemberHandler("Gagal mengirim kredit", h.memberTransfer)},
 	}
 }

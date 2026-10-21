@@ -81,4 +81,14 @@ func TestVoucherDeskRefundAndLatePayment(t *testing.T) {
 	if outcome != "quota_used" || total != 175_000 || vouchers.state[kept] != "released" {
 		t.Fatalf("quota used: %q total %v state %v", outcome, total, vouchers.state[kept])
 	}
+
+	// A campaign switched off or past its dates by payment time: the same.
+	vouchers.quotaUsed, vouchers.closed = false, true
+	closed := late()
+	e.scalar(&outcome, `SELECT payment_meta->>'voucher_late_payment' FROM gym.credit_purchases WHERE id = $1`, closed)
+	e.scalar(&lateNote, `SELECT note FROM gym.credit_purchases WHERE id = $1`, closed)
+	e.scalar(&total, `SELECT total_idr::float FROM gym.credit_purchases WHERE id = $1`, closed)
+	if outcome != "campaign_closed" || total != 175_000 || vouchers.state[closed] != "released" || !strings.Contains(lateNote, "tidak aktif atau di luar masa berlaku") {
+		t.Fatalf("campaign closed: %q %q total %v state %v", outcome, lateNote, total, vouchers.state[closed])
+	}
 }
