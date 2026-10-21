@@ -148,11 +148,13 @@ type BranchRules struct {
 	Override domain.RulesPatch `json:"override"`
 }
 
-// RulesAdminView is GET /api/gym/rules.
+// RulesAdminView is GET /api/gym/rules. Companies is what defaultCompanyId
+// can be set to.
 type RulesAdminView struct {
-	Defaults domain.Rules  `json:"defaults"`
-	Global   domain.Rules  `json:"global"`
-	Branches []BranchRules `json:"branches"`
+	Defaults  domain.Rules  `json:"defaults"`
+	Global    domain.Rules  `json:"global"`
+	Branches  []BranchRules `json:"branches"`
+	Companies []Company     `json:"companies"`
 }
 
 // RulesAdmin returns the defaults, the effective global rules and each
@@ -166,6 +168,10 @@ func (s *Service) RulesAdmin(ctx context.Context) (*RulesAdminView, error) {
 	if err != nil {
 		return nil, err
 	}
+	companies, err := s.repo.Companies(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
 	var global any
 	byBranch := map[string]any{}
 	for _, row := range rows {
@@ -175,7 +181,7 @@ func (s *Service) RulesAdmin(ctx context.Context) (*RulesAdminView, error) {
 			byBranch[*row.BranchID] = row.Rules
 		}
 	}
-	view := &RulesAdminView{Defaults: domain.RuleDefaults, Global: domain.ResolveRules(global, nil), Branches: []BranchRules{}}
+	view := &RulesAdminView{Defaults: domain.RuleDefaults, Global: domain.ResolveRules(global, nil), Branches: []BranchRules{}, Companies: companies}
 	for _, b := range branches {
 		view.Branches = append(view.Branches, BranchRules{ID: b.ID, Name: b.Name, Override: domain.SanitizeStoredRules(byBranch[b.ID])})
 	}

@@ -75,6 +75,8 @@ export interface GymRules {
   allowMemberCreditTransfer: boolean;
   /** Batas kredit yang dikirim satu member per bulan WIB, staf dan member digabung (0 = tanpa batas). */
   maxTransferCreditsPerMonth: number;
+  /** Perusahaan tempat pembelian tanpa cabang dibukukan bila perusahaan lebih dari satu ("" = tidak ada). Hanya aturan global. */
+  defaultCompanyId: string;
 }
 
 export type GymRuleKey = keyof GymRules;
@@ -115,6 +117,7 @@ export const GYM_RULE_DEFAULTS: GymRules = {
   correctionWindowDays: 7,
   allowMemberCreditTransfer: false,
   maxTransferCreditsPerMonth: 0,
+  defaultCompanyId: "",
 };
 
 const int = (min: number, max: number, label: string) =>
@@ -127,6 +130,8 @@ const int = (min: number, max: number, label: string) =>
 const policy = z.enum(["forfeit", "free"], { error: "Kebijakan harus forfeit atau free" });
 
 const bool = (label: string) => z.boolean({ error: `${label} harus ya/tidak` });
+
+const UUID_OR_EMPTY = /^(|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
 
 /** Batas nilai mengikuti CHECK constraint di skema referensi NüHabit. */
 const rulesShape = {
@@ -165,10 +170,21 @@ const rulesShape = {
   correctionWindowDays: int(0, 90, "Batas koreksi"),
   allowMemberCreditTransfer: z.boolean({ error: "Transfer kredit oleh member harus ya/tidak" }),
   maxTransferCreditsPerMonth: int(0, 1000, "Batas transfer kredit per bulan"),
+  defaultCompanyId: z.string({ error: "Perusahaan default harus id perusahaan atau kosong" }).regex(UUID_OR_EMPTY, "Perusahaan default harus id perusahaan atau kosong"),
 } satisfies Record<GymRuleKey, z.ZodType>;
 
 const fullSchema = z.object(rulesShape).strict();
-const patchSchema = z.object(rulesShape).partial().strict();
+// Kunci yang hanya berlaku global tidak boleh di-override cabang.
+const GLOBAL_ONLY_KEYS = ["defaultCompanyId"] as const;
+const patchSchema = z
+  .object(rulesShape)
+  .partial()
+  .strict()
+  .superRefine((patch, ctx) => {
+    for (const key of GLOBAL_ONLY_KEYS) {
+      if (key in patch) ctx.addIssue({ code: "custom", path: [key], message: "Perusahaan default hanya berlaku di aturan global" });
+    }
+  });
 
 export const GYM_RULE_KEYS = Object.keys(GYM_RULE_DEFAULTS) as GymRuleKey[];
 

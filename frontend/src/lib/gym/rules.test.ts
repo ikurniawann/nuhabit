@@ -47,8 +47,28 @@ describe("GYM_RULE_DEFAULTS", () => {
       correctionWindowDays: 7,
       allowMemberCreditTransfer: false,
       maxTransferCreditsPerMonth: 0,
+      defaultCompanyId: "",
     });
-    expect(GYM_RULE_KEYS).toHaveLength(35);
+    expect(GYM_RULE_KEYS).toHaveLength(36);
+  });
+});
+
+describe("accounting rules", () => {
+  it("takes a company id or nothing in the global rules only", () => {
+    const company = "3f2b1c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d";
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, defaultCompanyId: company })).toEqual({
+      ok: true,
+      rules: { ...GYM_RULE_DEFAULTS, defaultCompanyId: company },
+    });
+    expect(validateGymRules({ ...GYM_RULE_DEFAULTS, defaultCompanyId: "acme" })).toEqual({
+      ok: false,
+      error: "defaultCompanyId: Perusahaan default harus id perusahaan atau kosong",
+    });
+    expect(validateGymRulesPatch({ defaultCompanyId: company })).toEqual({
+      ok: false,
+      error: "defaultCompanyId: Perusahaan default hanya berlaku di aturan global",
+    });
+    expect(sanitizeStoredRules({ defaultCompanyId: "nope" })).toEqual({});
   });
 });
 

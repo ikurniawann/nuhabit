@@ -270,6 +270,8 @@ export interface RulesAdmin {
   defaults: GymRules;
   global: GymRules;
   branches: { id: string; name: string; override: Partial<GymRules> }[];
+  /** Pilihan untuk defaultCompanyId. */
+  companies: { id: string; name: string }[];
 }
 
 export const gymCreditsApi = {

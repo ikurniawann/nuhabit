@@ -23,9 +23,19 @@ type RuleKey = keyof GymRules;
 type RuleField =
   | { key: RuleKey; kind: "number"; label: string; unit: string; hint: string; min: number }
   | { key: RuleKey; kind: "policy"; label: string; hint: string }
-  | { key: RuleKey; kind: "boolean"; label: string; hint: string };
+  | { key: RuleKey; kind: "boolean"; label: string; hint: string }
+  // company: pilihan perusahaan, hanya di aturan global.
+  | { key: RuleKey; kind: "company"; label: string; hint: string; globalOnly: true };
+
+const NO_COMPANY = "none";
 
 const SECTIONS: { title: string; fields: RuleField[] }[] = [
+  {
+    title: "Akuntansi",
+    fields: [
+      { key: "defaultCompanyId", kind: "company", label: "Perusahaan default", hint: "Pembelian dari aplikasi member tanpa cabang (paketnya juga tanpa cabang) dibukukan ke perusahaan ini bila perusahaan lebih dari satu. Tanpa ini jurnalnya dilewati.", globalOnly: true },
+    ],
+  },
   {
     title: "Kredit",
     fields: [
@@ -191,7 +201,9 @@ function RulesForm({ data, branch }: { data: RulesAdmin; branch: RulesAdmin["bra
         save.mutate();
       }}
     >
-      {SECTIONS.map((section) => (
+      {SECTIONS.map((section) => ({ ...section, fields: section.fields.filter((f) => !branch || !("globalOnly" in f)) }))
+        .filter((section) => section.fields.length > 0)
+        .map((section) => (
         <Card key={section.title} className="gap-0 py-2">
           <h2 className="px-5 pt-3 pb-1 text-sm font-semibold">{section.title}</h2>
           <ul className="divide-y divide-border/60">
@@ -221,7 +233,7 @@ function RulesForm({ data, branch }: { data: RulesAdmin; branch: RulesAdmin["bra
                       </label>
                     )}
                   </div>
-                  <RuleInput field={field} value={values[field.key]} disabled={!editable} onChange={(v) => setValue(field.key, v as never)} />
+                  <RuleInput field={field} value={values[field.key]} disabled={!editable} companies={data.companies} onChange={(v) => setValue(field.key, v as never)} />
                 </li>
               );
             })}
@@ -247,6 +259,7 @@ function RulesForm({ data, branch }: { data: RulesAdmin; branch: RulesAdmin["bra
 function formatValue(field: RuleField, value: GymRules[RuleKey]) {
   if (field.kind === "policy") return POLICY_LABEL[value as keyof typeof POLICY_LABEL];
   if (field.kind === "boolean") return value ? "ya" : "tidak";
+  if (field.kind === "company") return value ? "dipilih" : "tidak ada";
   return `${value} ${field.unit}`;
 }
 
@@ -254,13 +267,34 @@ function RuleInput({
   field,
   value,
   disabled,
+  companies,
   onChange,
 }: {
   field: RuleField;
   value: GymRules[RuleKey];
   disabled: boolean;
+  companies: RulesAdmin["companies"];
   onChange: (value: GymRules[RuleKey]) => void;
 }) {
+  if (field.kind === "company") {
+    return (
+      <div className="flex md:justify-end">
+        <Select value={value ? String(value) : NO_COMPANY} disabled={disabled} onValueChange={(v) => onChange(v === NO_COMPANY ? "" : v)}>
+          <SelectTrigger aria-label={field.label} className="min-w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_COMPANY}>Tidak ada</SelectItem>
+            {companies.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  }
   if (field.kind === "boolean") {
     return (
       <div className="flex md:justify-end">
