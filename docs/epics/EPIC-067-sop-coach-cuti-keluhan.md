@@ -31,18 +31,27 @@ Referensi: [PRD](../product/PRD.md) · [BACKLOG](../BACKLOG.md) ·
 | Perhatian khusus | `pos.pos_customers.notes`, `studio.bookings.notes` (teks bebas) | Tidak ada penanda terstruktur; roster Coach Portal (`/api/coach/sessions/[id]/roster`) tidak menampilkan catatan |
 | Dokumen SOP | `hris.announcements` + `announcement_reads` | Tidak ada versi & konfirmasi "Saya sudah membaca dan setuju" |
 
-## Keputusan yang menunggu client
+## Keputusan client (2026-10-21)
 
-Angka di bawah adalah **usulan default** dan semuanya harus bisa dikonfigurasi dari backoffice; konfirmasi sebelum
-Tahap 1 dikerjakan.
-
-1. **Minimal pemberitahuan per jenis cuti** — usulan: tahunan H-7, unpaid H-7, menstrual/sakit/darurat boleh
-   mendadak tapi wajib lampiran atau alasan dan otomatis ditandai *mendadak*.
-2. **Approver** cuti & pengganti — Head Coach, Ops Director, atau berjenjang.
-3. **Konsekuensi cuti mendadak / tidak hadir tanpa kabar** — hanya tercatat di KPI, memotong porsi insentif, atau
-   memicu SP setelah N kali dalam periode.
-4. **Batas waktu keluhan per kategori** — usulan: cedera 2 jam respons / 24 jam selesai; lainnya 24 jam / 3 hari.
-5. **Tanggal blackout** — siapa yang mengatur dan apakah boleh ada pengecualian.
+1. **Minimal pemberitahuan per jenis cuti dikonfigurasi di pengaturan.** Default awal: tahunan & unpaid H-7,
+   melahirkan & ibadah H-30; sakit, darurat & haid boleh mendadak dengan lampiran/alasan dan otomatis ditandai
+   *mendadak*.
+2. **Approver cuti & pengganti = role Program Director.** Role ini belum ada di sistem (`coaches.level` hanya
+   `coach`/`head_coach`) → dibuat di T-067-A9. Approver cadangan (dipakai saat Program Director sendiri cuti atau
+   tidak ada) dikonfigurasi di pengaturan.
+3. **Sanksi cuti mendadak / tidak hadir tanpa kabar = kombinasi**: tercatat di KPI, potongan porsi insentif per
+   kejadian, dan SP setelah N kejadian dalam satu periode. Persentase potongan, N, dan panjang periode dikonfigurasi.
+4. **Tanggal blackout wajib ada.** Diatur oleh Program Director; pengecualian hanya oleh Program Director dengan alasan.
+5. **Pengganti — ikut best practice** (diputuskan tim, lihat Keputusan desain): pengganti harus menerima; bila tidak
+   ada yang menerima dalam batas waktu, Program Director boleh menunjuk langsung; bila tidak ada pengganti sama sekali,
+   hanya Program Director yang boleh membatalkan kelas, dengan alasan.
+6. **Member saat coach diganti / kelas dibatalkan**: dapat WA berisi info perubahan **beserta link booking**; member
+   boleh membatalkan booking **tanpa penalti dan kredit kembali**, walau sudah lewat batas batal normal. Batas paling
+   lambat pemberitahuan (jam sebelum kelas) dikonfigurasi.
+7. **Batas waktu keluhan ikut usulan**: cedera respons 2 jam / selesai 24 jam; coach, kelas, fasilitas, billing &
+   lainnya respons 24 jam / selesai 3 hari. Semua bisa diubah di pengaturan.
+8. **Penanda member ikut usulan**: cedera, kondisi medis, hamil, pemula, VIP, pernah komplain (bisa ditambah).
+9. **Data medis hanya terlihat oleh coach** (lihat Keputusan desain untuk batasnya).
 
 ## Keputusan desain
 
@@ -51,15 +60,36 @@ Tahap 1 dikerjakan.
   ESS memakai aturan yang sama.
 - **Aturan H-N dihitung dari tanggal pengajuan ke tanggal mulai**, per jenis cuti; pengajuan di bawah H-N untuk jenis
   yang tidak dikecualikan ditolak, untuk jenis yang dikecualikan diterima dengan flag `is_short_notice`.
-- **Cuti coach baru bisa disetujui bila semua sesi terdampak sudah punya pengganti yang menerima** (atau sesi
-  dibatalkan secara sadar oleh approver dengan alasan). Kelas grup dan Personal Training sama-sama dicek.
+- **Cuti coach baru bisa disetujui bila semua sesi terdampak sudah tertangani**: punya pengganti yang menerima,
+  ditunjuk langsung oleh Program Director, atau dibatalkan oleh Program Director dengan alasan. Kelas grup dan
+  Personal Training sama-sama dicek.
+- **Alur pengganti (best practice, keputusan client no. 5)**:
+  1. Coach yang cuti memilih calon pengganti per sesi dari daftar yang disarankan sistem: coach aktif, bisa mengajar
+     program tersebut, tidak bentrok jadwal, tidak sedang cuti; diurutkan dari beban sesi minggu itu yang paling
+     ringan.
+  2. Calon pengganti menerima atau menolak dari Coach Portal (WA berisi link). Batas waktu respons dikonfigurasi
+     (default 24 jam). Tolak atau lewat batas waktu → sesi kembali ke status "butuh pengganti".
+  3. Program Director bisa menunjuk langsung coach mana pun yang tidak bentrok; coach yang ditunjuk mendapat WA.
+  4. Tanpa pengganti, hanya Program Director yang boleh membatalkan kelas, dan wajib dengan alasan. Pembatalan
+     memakai alur yang sudah ada (`releaseSessionBookings`: kredit kembali) dan mengirim WA ke member.
+  5. Pengganti tercatat per sesi (`class_sessions.coach_id` diganti, coach asli disimpan) supaya komisi dan KPI
+     mengikuti coach yang benar-benar mengajar.
+- **Cuti mendadak yang sudah berjalan** (mis. sakit pagi hari) memakai alur yang sama tetapi langsung masuk ke antrean
+  Program Director dengan prioritas tinggi, tanpa menunggu persetujuan cuti lebih dulu.
+- **Hak batal member saat ada perubahan**: booking pada sesi yang coach-nya diganti atau dipindah membuka jendela
+  batal tanpa penalti sampai sesi dimulai, walau batas batal normal sudah lewat. Kredit kembali penuh.
 - **Notifikasi member** memperluas `studio.member_notifications.kind` (mis. `session_coach_changed`,
   `session_cancelled`, `pt_rescheduled`) lewat jalur WA yang sudah ada di EPIC-058.
 - **Tiket keluhan** adalah objek baru (bukan memperluas `wa_conversations`) agar bisa berasal dari WA, front desk, atau
   Member App; percakapan WA cukup ditautkan ke tiket.
 - **Penanda member** adalah daftar tetap yang bisa ditambah dari backoffice, dengan tingkat (info/perhatian/kritis),
-  catatan singkat, dan masa berlaku opsional. Data medis hanya terlihat oleh coach yang punya sesi dengan member
-  tersebut dan oleh admin studio.
+  catatan singkat, dan masa berlaku opsional. Penanda dibagi dua kelompok:
+  - **Umum** (pemula, VIP, pernah komplain): bisa dibuat dan dilihat oleh front desk, admin studio, dan coach.
+  - **Medis** (cedera, kondisi medis, hamil): **detailnya hanya terlihat oleh coach**, sesuai keputusan client no. 9.
+    Dibuat oleh coach atau berasal dari isian member sendiri (PAR-Q, T-067-C3). Coach yang dimaksud adalah coach
+    yang memegang sesi aktif atau mendatang dengan member tersebut, termasuk pengganti, dan coach yang membuat
+    penanda. Front desk dan admin hanya melihat bahwa member punya penanda medis (ikon tanpa isi), supaya tahu harus
+    mengarahkan ke coach. Detail medis tidak ikut export dan tidak tampil di backoffice.
 - **Member App tetap berbahasa Inggris**; backoffice dan Coach Portal berbahasa Indonesia. Tulis "Personal Training"
   lengkap di UI.
 
@@ -67,22 +97,29 @@ Tahap 1 dikerjakan.
 
 ### A. Cuti & ketidakhadiran coach
 
+- [ ] T-067-A9 **(Tahap 1)** Role **Program Director**: role IAM yang bisa di-assign ke user, dengan hak menyetujui cuti
+  coach, menunjuk pengganti, membatalkan kelas, mengatur blackout, dan melihat antrean "butuh pengganti". Pengaturan
+  approver cadangan. Komisi tidak berubah: peran Ops Director 0% di EPIC-056 tetap terpisah dari role ini.
 - [ ] T-067-A1 **(Tahap 1)** Aturan minimal pemberitahuan H-N per jenis cuti + daftar jenis yang dikecualikan; flag
   `is_short_notice`; konfigurasi di pengaturan HRIS/studio; validasi di API cuti (ESS & Coach Portal). Tes logika murni.
 - [ ] T-067-A3 **(Tahap 1)** Pengajuan cuti dari Coach Portal: pilih tanggal → tampil daftar kelas & sesi Personal
   Training yang terdampak → kirim. Status pengajuan terlihat di Coach Portal.
-- [ ] T-067-A4 **(Tahap 1)** Alur pengganti: coach mengusulkan pengganti per sesi terdampak (sistem menyarankan coach
-  yang kosong & tidak bentrok); pengganti menerima/menolak dari Coach Portal + WA; approver menyetujui cuti hanya bila
-  semua sesi tertangani. Saat disetujui, `class_sessions.coach_id` diganti otomatis.
-- [ ] T-067-A6 **(Tahap 1)** WA ke member yang sudah booking saat coach diganti atau kelas dibatalkan (perluas
-  `member_notifications.kind`, idempoten per sesi + member).
+- [ ] T-067-A4 **(Tahap 1)** Alur pengganti sesuai Keputusan desain: saran coach yang kosong; terima/tolak dari Coach
+  Portal + WA dengan batas waktu yang bisa diatur; antrean "butuh pengganti" untuk Program Director (tunjuk langsung
+  atau batalkan dengan alasan); cuti disetujui hanya bila semua sesi tertangani. Saat disetujui,
+  `class_sessions.coach_id` diganti otomatis dan coach asli disimpan.
+- [ ] T-067-A6 **(Tahap 1)** WA ke member yang sudah booking saat coach diganti atau kelas dibatalkan, berisi info
+  perubahan dan **link booking** di Member App. Perluas `member_notifications.kind`, idempoten per sesi + member. Buka
+  jendela batal tanpa penalti dengan kredit kembali penuh. Pengaturan "paling lambat N jam sebelum kelas"; perubahan
+  yang lewat batas itu tetap dikirim dan ditandai *terlambat* di laporan Program Director.
 - [ ] T-067-A5 **(Tahap 2)** Sinkron cuti HRIS yang disetujui → `studio.coach_time_off` (dengan `leave_id`), dan cek
   bentrok `coach_time_off` terhadap kelas grup saat generate sesi dan saat input manual.
 - [ ] T-067-A8 **(Tahap 2)** Catatan ketidakhadiran coach (tidak hadir tanpa kabar, cuti mendadak, terlambat) per
-  sesi; KPI `leave_request_discipline` memakai ambang H-N; opsi potongan porsi insentif di `commission_lines` dan/atau
-  SP sesuai keputusan client.
-- [ ] T-067-A2 **(Tahap 3)** Tanggal blackout cuti (rentang tanggal + alasan) yang menolak pengajuan, dengan
-  pengecualian oleh approver.
+  sesi; KPI `leave_request_discipline` memakai ambang H-N; potongan porsi insentif per kejadian di `commission_lines`
+  (persentase bisa diatur); SP otomatis diusulkan ke Program Director setelah N kejadian dalam periode (N & periode
+  bisa diatur). Ketiganya aktif bersamaan sesuai keputusan client no. 3.
+- [ ] T-067-A2 **(Tahap 3)** Tanggal blackout cuti (rentang tanggal + alasan) diatur Program Director dan menolak
+  pengajuan; pengecualian per pengajuan hanya oleh Program Director dengan alasan.
 - [ ] T-067-A7 **(Tahap 3)** Reschedule sesi Personal Training (coach/admin/member) tanpa batal-lalu-booking; kredit tetap,
   WA ke pihak lain.
 
@@ -102,9 +139,11 @@ Tahap 1 dikerjakan.
 ### C. Member perhatian khusus
 
 - [ ] T-067-C1 **(Tahap 1)** Penanda member terstruktur (cedera, kondisi medis, hamil, pemula, VIP, pernah komplain;
-  bisa ditambah) dengan tingkat, catatan, masa berlaku; kelola dari profil member di backoffice.
+  bisa ditambah) dengan tingkat, catatan, masa berlaku. Penanda umum dikelola dari profil member di backoffice;
+  penanda medis dibuat dari Coach Portal dan detailnya tidak pernah dikirim ke API backoffice.
 - [ ] T-067-C2 **(Tahap 1)** Tampilkan penanda di roster kelas dan sesi Personal Training di Coach Portal (ikon + catatan
-  singkat), dibatasi ke coach yang memegang sesi tersebut.
+  singkat). Detail medis hanya untuk coach yang memegang sesi aktif/mendatang dengan member tersebut, dengan
+  pembatasan di level query/API, bukan hanya disembunyikan di UI.
 - [ ] T-067-C3 **(Tahap 3)** Integrasi waiver & PAR-Q [EPIC-064](./EPIC-064-calon-member-waiver-trial.md): jawaban
   "ya" pada pertanyaan kesehatan otomatis membuat penanda kondisi medis untuk ditinjau.
 - [ ] T-067-C4 **(Tahap 3)** Catatan coach setelah sesi per member (mis. "hindari lunges") yang terbawa ke sesi
@@ -118,7 +157,7 @@ Tahap 1 dikerjakan.
 
 ## Urutan pengerjaan
 
-1. **Tahap 1 — inti permintaan client:** A1, A3, A4, A6, C1, C2.
+1. **Tahap 1 — inti permintaan client:** A9, A1, A3, A4, A6, C1, C2.
 2. **Tahap 2:** B1, B2, B3, A5, A8, D1.
 3. **Tahap 3:** A2, A7, B4, B5, C3, C4.
 
@@ -127,11 +166,14 @@ Tahap 1 dikerjakan.
 - [ ] Coach tidak bisa mengajukan cuti tahunan di bawah minimal pemberitahuan; cuti sakit/darurat tetap bisa diajukan
   dan tercatat sebagai *mendadak*.
 - [ ] Coach bisa mengajukan cuti dari Coach Portal dan melihat semua kelas & sesi Personal Training yang terdampak.
-- [ ] Cuti coach tidak bisa disetujui selama masih ada sesi terdampak tanpa pengganti yang menerima (atau pembatalan
-  dengan alasan).
-- [ ] Member yang sudah booking menerima WA saat coach kelasnya diganti atau kelas dibatalkan, tepat sekali.
-- [ ] Coach melihat penanda perhatian khusus member di roster sebelum sesi; coach lain yang tidak memegang sesi tidak
-  melihat data medisnya.
+- [ ] Hanya user dengan role Program Director (atau approver cadangan) yang bisa menyetujui cuti coach, menunjuk
+  pengganti, dan membatalkan kelas.
+- [ ] Cuti coach tidak bisa disetujui selama masih ada sesi terdampak tanpa pengganti yang menerima, penunjukan
+  langsung, atau pembatalan dengan alasan.
+- [ ] Member yang sudah booking menerima WA tepat sekali, berisi link booking, saat coach kelasnya diganti atau kelas
+  dibatalkan, dan bisa membatalkan booking tanpa penalti dengan kredit kembali penuh.
+- [ ] Coach melihat penanda perhatian khusus member di roster sebelum sesi. Detail medis tidak bisa diambil lewat API
+  oleh coach yang tidak memegang sesi, front desk, atau admin.
 - [ ] Setiap keluhan punya PIC, kategori, dan batas waktu; keluhan yang lewat batas waktu memicu WA eskalasi.
 - [ ] Dashboard menampilkan coach yang belum mengonfirmasi SOP versi terbaru.
 - [ ] Tes unit untuk aturan H-N, pemilihan pengganti, dan perhitungan batas waktu tiket; tes integrasi dijalankan di
@@ -143,3 +185,14 @@ Tahap 1 dikerjakan.
   khusus). Audit kode Nuhabit-dev (branch `feat/nuhabit-foundation`) mencatat yang sudah ada vs celah (tabel di atas).
   Prioritas Tahap 1/2/3 disetujui owner proyek; angka H-N, approver, konsekuensi, dan batas waktu keluhan masih menunggu
   keputusan client.
+- 2026-10-21 — Keputusan client masuk (9 poin, lihat "Keputusan client"):
+  - H-N dikonfigurasi di pengaturan.
+  - Approver adalah role Program Director (belum ada di sistem → task baru T-067-A9 masuk Tahap 1).
+  - Sanksi memakai kombinasi KPI, potongan insentif, dan SP.
+  - Blackout wajib ada.
+  - Member mendapat WA dengan link booking, boleh batal tanpa penalti dengan kredit kembali; batas jam dikonfigurasi.
+  - Batas waktu keluhan dan daftar penanda mengikuti usulan.
+  - Data medis hanya untuk coach.
+  - Alur pengganti diserahkan ke best practice: pengganti menerima → Program Director menunjuk → Program Director
+    membatalkan dengan alasan.
+  - Tafsiran poin 9: front desk/admin hanya melihat ikon "ada penanda medis" tanpa isi.
