@@ -1,5 +1,5 @@
 {
- "generated_route_count": 1385,
+ "generated_route_count": 1425,
  "paths": {
   "/api/accounting/account-types/{id}": {
    "put": {
@@ -6209,6 +6209,34 @@
     ]
    }
   },
+  "/api/gym/checkin/members/{id}/waiver": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/checkin/members/{id}/waiver",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/checkin/members": {
    "get": {
     "tags": [
@@ -6377,6 +6405,52 @@
     ]
    }
   },
+  "/api/gym/coaches/{id}/schedule": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/coaches/{id}/schedule",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/coaches/photo": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/coaches/photo",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/coaches": {
    "get": {
     "tags": [
@@ -6494,6 +6568,90 @@
     "parameters": [
      {
       "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/{customerId}/transfer": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/{customerId}/transfer",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/{customerId}/vouchers/preview": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/credits/{customerId}/vouchers/preview",
+    "parameters": [
+     {
+      "name": "customerId",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/credits/purchases/{id}/receipt": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/credits/purchases/{id}/receipt",
+    "parameters": [
+     {
+      "name": "id",
       "in": "path",
       "required": true,
       "schema": {
@@ -6677,6 +6835,132 @@
      "gym"
     ],
     "summary": "DELETE /api/gym/exercises/substitutions",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/gate/devices/heartbeat": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/gate/devices/heartbeat",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/gate/devices/scan": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/gate/devices/scan",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/gate-devices/{id}/revoke": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/gate-devices/{id}/revoke",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/gate-devices/{id}/rotate": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/gate-devices/{id}/rotate",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/gate-devices": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/gate-devices",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/gate-devices",
     "responses": {
      "200": {
       "description": "OK"
@@ -6985,6 +7269,104 @@
      "gym"
     ],
     "summary": "POST /api/gym/members",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/my-classes/incentives": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/my-classes/incentives",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/my-classes": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/my-classes",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/my-classes/sessions/{id}": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/my-classes/sessions/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/open-gym-hours": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/open-gym-hours",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/open-gym-hours",
     "responses": {
      "200": {
       "description": "OK"
@@ -7569,6 +7951,70 @@
     ]
    }
   },
+  "/api/gym/races/leaderboard": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/races/leaderboard",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/races/results/{id}/verify": {
+   "post": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "POST /api/gym/races/results/{id}/verify",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/races/results": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/races/results",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/gym/races": {
    "get": {
     "tags": [
@@ -7607,6 +8053,76 @@
      "gym"
     ],
     "summary": "DELETE /api/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/referrals/leaderboard": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/referrals/leaderboard",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/referrals": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/referrals",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/gym/referrals/settings": {
+   "get": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "GET /api/gym/referrals/settings",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "gym"
+    ],
+    "summary": "PUT /api/gym/referrals/settings",
     "responses": {
      "200": {
       "description": "OK"
@@ -12801,6 +13317,24 @@
     ]
    }
   },
+  "/api/member-portal/app/referral": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/referral",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/app/train/activities/{id}/comments": {
    "post": {
     "tags": [
@@ -13439,6 +13973,24 @@
     ]
    }
   },
+  "/api/member-portal/app/workout/leaderboard": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/leaderboard",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/app/workout/races/{id}": {
    "get": {
     "tags": [
@@ -13491,6 +14043,52 @@
      "member-portal"
     ],
     "summary": "GET /api/member-portal/app/workout/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/results/{id}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/results/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/app/workout/results": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/app/workout/results",
     "responses": {
      "200": {
       "description": "OK"
@@ -13703,6 +14301,24 @@
      "member-portal"
     ],
     "summary": "EPIC-014 Task 1 — etalase koleksi di portal member.",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/config": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/config",
     "responses": {
      "200": {
       "description": "OK"
@@ -14045,6 +14661,24 @@
     ]
    }
   },
+  "/api/member-portal/gym/credits/transfer": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/credits/transfer",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
   "/api/member-portal/gym/credits/vouchers/preview": {
    "post": {
     "tags": [
@@ -14135,6 +14769,68 @@
       }
      }
     ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/payment-methods/{id}": {
+   "delete": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "DELETE /api/member-portal/gym/payment-methods/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/payment-methods": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/gym/payment-methods",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/payment-methods",
     "responses": {
      "200": {
       "description": "OK"
@@ -14295,6 +14991,52 @@
      "member-portal"
     ],
     "summary": "POST /api/member-portal/gym/races",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/results/{id}": {
+   "put": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "PUT /api/member-portal/gym/results/{id}",
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/gym/results": {
+   "post": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "POST /api/member-portal/gym/results",
     "responses": {
      "200": {
       "description": "OK"
@@ -14767,6 +15509,34 @@
      "member-portal"
     ],
     "summary": "POST /api/member-portal/qr",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/member-portal/referral/{code}": {
+   "get": {
+    "tags": [
+     "member-portal"
+    ],
+    "summary": "GET /api/member-portal/referral/{code}",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
     "responses": {
      "200": {
       "description": "OK"
@@ -17227,6 +17997,58 @@
      "pos"
     ],
     "summary": "GET /api/pos/shifts/current?cashier_id=uuid",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/shifts/mine/close": {
+   "patch": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "PATCH /api/pos/shifts/mine/close",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/pos/shifts/mine": {
+   "get": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "GET /api/pos/shifts/mine",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   },
+   "post": {
+    "tags": [
+     "pos"
+    ],
+    "summary": "POST /api/pos/shifts/mine",
     "responses": {
      "200": {
       "description": "OK"
@@ -19917,6 +20739,24 @@
      "public"
     ],
     "summary": "GET /api/public/site/branches",
+    "responses": {
+     "200": {
+      "description": "OK"
+     }
+    },
+    "security": [
+     {
+      "bearerAuth": []
+     }
+    ]
+   }
+  },
+  "/api/public/site/coaches": {
+   "get": {
+    "tags": [
+     "public"
+    ],
+    "summary": "GET /api/public/site/coaches",
     "responses": {
      "200": {
       "description": "OK"
