@@ -1,5 +1,5 @@
 /** State form skema honor coach: reducer murni + konversi ke payload API. */
-import type { SchemeRow } from "@/lib/gym/incentive-server";
+import type { SchemeRow } from "@/features/gym/incentives/types";
 import type { SchemeInput } from "./api";
 
 export interface RateDraft {

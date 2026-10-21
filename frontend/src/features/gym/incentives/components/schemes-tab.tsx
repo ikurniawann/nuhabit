@@ -11,7 +11,7 @@ import { useCan } from "@/components/iam/iam-access-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { SchemeRow } from "@/lib/gym/incentive-server";
+import type { SchemeRow } from "@/features/gym/incentives/types";
 import { formatRupiah } from "@/lib/format";
 import { incentivesApi } from "../api";
 import { useRefreshAll, useSchemes } from "../queries";
